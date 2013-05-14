@@ -34,161 +34,176 @@ import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 
 import java.nio.Buffer;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.UnaryOperator;
 
 public class NGExternalNode extends NGNode implements PGExternalNode {
-
-    // pixel buffer of the source image
-    volatile private Buffer srcbuffer;
-
-    // line stride of the source buffer
-    volatile private int linestride;
-
-    // source image bounds
-    volatile private int srcx;
-    volatile private int srcy;
-    volatile private int srcwidth;
-    volatile private int srcheight;
-
-    // of the same size as the source image buffer
+    
     private Texture dsttexture;
 
-    // size of the source image buffer
-    volatile private int dstwidth;
-    volatile private int dstheight;
+    private BufferData bufferData;
+    private final AtomicReference<RenderData> renderData = new AtomicReference<RenderData>(null);
 
-    // when the content shrinks, we need to clear the target
-    volatile private boolean clearTarget = false;
-
-    // relative to the [srcx, srcy]
-    volatile private Rectangle dirtyRect;
-    volatile private boolean isDirty;
-
-    volatile private Lock paintLock;
+    private volatile ReentrantLock bufferLock;
 
     @Override
     protected void renderContent(Graphics g) {
-        paintLock.lock();
-        try {
-            if (srcbuffer == null) {
-                // the buffer may be initialized with some delay, asynchronously
+        
+        RenderData rd = renderData.getAndSet(null);
+        
+        if (rd == null) return;
+            
+        int x = rd.bdata.srcbounds.x;
+        int y = rd.bdata.srcbounds.y;
+        int w = rd.bdata.srcbounds.width;
+        int h = rd.bdata.srcbounds.height;
+
+        if ((dsttexture == null) ||
+            (dsttexture.getContentWidth() != rd.bdata.dstwidth) ||
+            (dsttexture.getContentHeight() != rd.bdata.dstheight))
+        {
+            ResourceFactory factory = g.getResourceFactory();
+            if (!factory.isDeviceReady()) {
+                System.err.println("NGExternalNode: graphics device is not ready");
                 return;
             }
-            if ((dsttexture == null) ||
-                (dsttexture.getContentWidth() != dstwidth) ||
-                (dsttexture.getContentHeight() != dstheight))
-            {
-                ResourceFactory factory = g.getResourceFactory();
-                if (!factory.isDeviceReady()) {
-                    System.err.println("NGExternalNode: graphics device is not ready");
-                    return;
-                }
-                if (dsttexture != null) {
-                    dsttexture.dispose();
-                }
-                dsttexture =
-                    factory.createTexture(PixelFormat.INT_ARGB_PRE,
-                                          Texture.Usage.DYNAMIC,
-                                          Texture.WrapMode.CLAMP_NOT_NEEDED,
-                                          dstwidth, dstheight);
-
-                if (dsttexture == null) {
-                    System.err.println("NGExternalNode: failed to create a texture");
-                    return;
-                }
+            if (dsttexture != null) {
+                dsttexture.dispose();
             }
-            if (dirtyRect == null) return;
-
-            dsttexture.update(srcbuffer,
-                              PixelFormat.INT_ARGB_PRE,
-                              srcx + dirtyRect.x, srcy + dirtyRect.y, // dst
-                              srcx + dirtyRect.x, srcy + dirtyRect.y, dirtyRect.width, dirtyRect.height, // src
-                              linestride * 4,
-                              false);
-
-            if (clearTarget) {
-                clearTarget = false;
-                g.clear();
+            dsttexture =
+                factory.createTexture(PixelFormat.INT_ARGB_PRE,
+                                      Texture.Usage.DYNAMIC,
+                                      Texture.WrapMode.CLAMP_NOT_NEEDED,
+                                      rd.bdata.dstwidth, rd.bdata.dstheight);
+            
+            if (dsttexture == null) {
+                System.err.println("NGExternalNode: failed to create a texture");
+                return;
             }
-            g.drawTexture(dsttexture,
-                          srcx, srcy, srcx + srcwidth, srcy + srcheight, // dst
-                          srcx, srcy, srcx + srcwidth, srcy + srcheight); // src
-
-            isDirty = false;
-
-        } finally {
-            paintLock.unlock();
         }
+        
+        bufferLock.lock();
+        try {
+            dsttexture.update(rd.bdata.srcbuffer,
+                              PixelFormat.INT_ARGB_PRE,
+                              x + rd.dirtyRect.x, y + rd.dirtyRect.y, // dst
+                              x + rd.dirtyRect.x, y + rd.dirtyRect.y, rd.dirtyRect.width, rd.dirtyRect.height, // src
+                              rd.bdata.linestride * 4,
+                              false);
+        } finally {
+            bufferLock.unlock();
+        }
+
+        if (rd.clearTarget) {
+            g.clear();
+        }
+        g.drawTexture(dsttexture,
+                      x, y, x + w, y + h, // dst
+                      x, y, x + w, y + h); // src
     }
 
     @Override
     public void setLock(ReentrantLock lock) {
-        this.paintLock = lock;
+        this.bufferLock = lock;
     }
 
-    @Override
-    public void setImageBuffer(Buffer buffer, int x, int y, int width, int height, int linestride) {
-        paintLock.lock();
-        try {
-            this.srcbuffer = buffer;
+    private static class BufferData {
+        // the source pixel buffer
+        final Buffer srcbuffer;
 
-            this.srcx = x;
-            this.srcy = y;
-            this.srcwidth = width;
-            this.srcheight = height;
+        // line stride of the source buffer
+        final int linestride;
 
+        // source image bounds
+        final Rectangle srcbounds;
+        
+        // source image buffer size
+        final int dstwidth;
+        final int dstheight;
+        
+        BufferData(Buffer srcbuffer, int linestride,
+                   int x, int y, int width, int height)
+        {
+            this.srcbuffer = srcbuffer;            
             this.linestride = linestride;
-
+            this.srcbounds = new Rectangle(x, y, width, height);
             this.dstwidth = linestride;
-            this.dstheight = buffer.capacity() / linestride;
-
-            dirtyRect = new Rectangle(x, y, width, height);
-
-        } finally {
-            paintLock.unlock();
+            this.dstheight = srcbuffer.capacity() / linestride;            
         }
+        
+        BufferData copyWithBounds(int x, int y, int width, int height) {            
+            return new BufferData(this.srcbuffer, this.linestride, x, y, width, height);
+        }
+    }
+    
+    private static class RenderData {
+        final BufferData bdata;
+        final Rectangle dirtyRect;
+        final boolean clearTarget;
+        
+        RenderData(BufferData bdata,
+                   int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight,
+                   boolean clearTarget)
+        {
+            this.bdata = bdata;
+            this.dirtyRect = new Rectangle(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+            this.clearTarget = clearTarget;
+        }
+
+        RenderData copyAddDirtyRect(int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight) {
+            
+            Rectangle r = new Rectangle(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+            r.add(this.dirtyRect);
+            return new RenderData(this.bdata,
+                                  r.x, r.y, r.width, r.height,
+                                  this.clearTarget);
+        }
+    }
+    
+    @Override
+    public void setImageBuffer(Buffer buffer,
+                               int x, int y, int width, int height,
+                               int linestride)
+    {
+        bufferData = new BufferData(buffer, linestride, x, y, width, height);
+        renderData.set(new RenderData(bufferData, x, y, width, height, true));
     }
 
     @Override
-    public void setImageBounds(int x, int y, int width, int height) {
-        paintLock.lock();
-        try {
-            // content shrinked
-            if (width < srcwidth || height < srcheight) {
-                clearTarget = true;
+    public void setImageBounds(final int x, final int y, final int width, final int height) {
+        
+        final boolean shrinked = width < bufferData.srcbounds.width ||
+                                 height < bufferData.srcbounds.height;
+        
+        bufferData = bufferData.copyWithBounds(x, y, width, height);
+        renderData.updateAndGet(new UnaryOperator<RenderData>() {
+            @Override
+            public RenderData apply(RenderData prev) {
+                boolean clearTarget = (prev != null ? prev.clearTarget : false);
+                return new RenderData(bufferData, x, y, width, height, clearTarget | shrinked);
             }
-            this.srcx = x;
-            this.srcy = y;
-            this.srcwidth = width;
-            this.srcheight = height;
-
-            dirtyRect.setBounds(x, y, width, height);
-
-        } finally {
-            paintLock.unlock();
-        }
+        });
     }
 
     @Override
-    public void repaintDirtyRegion(int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight) {
-        paintLock.lock();
-        try {
-            if (isDirty) {
-                dirtyRect.add(new Rectangle(dirtyX, dirtyY, dirtyWidth, dirtyHeight));
-            } else {
-                dirtyRect.setBounds(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+    public void repaintDirtyRegion(final int dirtyX, final int dirtyY,
+                                   final int dirtyWidth, final int dirtyHeight)
+    {
+        renderData.updateAndGet(new UnaryOperator<RenderData>() {
+            @Override
+            public RenderData apply(RenderData prev) {
+                if (prev != null) {
+                    return prev.copyAddDirtyRect(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+                } else {
+                    return new RenderData(bufferData, dirtyX, dirtyY, dirtyWidth, dirtyHeight, false);
+                }
             }
-            // System.out.println("NGExternalNode.repaintDirtyRegion: " + dirtyRect);
-
-            isDirty = true;
-            visualsChanged();
-
-        } finally {
-            paintLock.unlock();
-        }
+        });
+        
+        visualsChanged();
     }
-
+    
     @Override
     protected boolean hasOverlappingContents() {  return false; }
 }

@@ -115,8 +115,7 @@ public class SwingNode extends Node {
     private double height;
 
     private volatile JComponent content;
-    private SwingNodeContent contentProvider;
-    private JLightweightFrame lwFrame;
+    private volatile JLightweightFrame lwFrame;
 
     private volatile PGExternalNode peer;
 
@@ -124,7 +123,7 @@ public class SwingNode extends Node {
 
     private boolean skipBackwardUnrgabNotification;
     private boolean grabbed; // lwframe initiated grab
-
+    
     /**
      * Constructs a new instance of {@code SwingNode}.
      */
@@ -206,8 +205,7 @@ public class SwingNode extends Node {
                 }
             });
 
-            contentProvider = new SwingNodeContent(content);
-            lwFrame.setContent(contentProvider);
+            lwFrame.setContent(new SwingNodeContent(content));
             lwFrame.setVisible(true);
 
             locateLwFrame(); // initialize location
@@ -232,7 +230,6 @@ public class SwingNode extends Node {
             @Override
             public void run() {
                 peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h, linestride);
-                impl_markDirty(DirtyBits.NODE_CONTENTS);
             }
         };
         if (peer != null) {
@@ -251,7 +248,6 @@ public class SwingNode extends Node {
             @Override
             public void run() {
                 peer.setImageBounds(x, y, w, h);
-                impl_markDirty(DirtyBits.NODE_CONTENTS);
             }
         };
         if (peer != null) {
