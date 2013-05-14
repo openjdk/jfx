@@ -212,9 +212,6 @@ typedef struct _Renderer {
      */
     jint _compositeRule;
 
-    jfloat _gamma;
-    jfloat _invgamma;
-
     Surface* _surface;
 
     // Image layout

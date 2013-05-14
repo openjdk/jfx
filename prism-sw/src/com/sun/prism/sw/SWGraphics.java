@@ -755,24 +755,15 @@ final class SWGraphics implements ReadbackGraphics {
                     (p.getType() == Paint.Type.COLOR) &&
                     tx.is2D();
 
-            final float gamma, invgamma;
             if (doLCDText) {
-                invgamma = PrismFontUtils.getLCDContrast();
-                gamma = 1.0f/invgamma;
-                final Color c = (Color)p;
-                final Color correctedColor = new Color((float)Math.pow(c.getRed(), invgamma),
-                                                       (float)Math.pow(c.getGreen(), invgamma),
-                                                       (float)Math.pow(c.getBlue(), invgamma),
-                                                       (float)Math.pow(c.getAlpha(), invgamma));
-                this.setColor(correctedColor, this.compositeAlpha);
+                this.pr.setLCDGammaCorrection(1f / PrismFontUtils.getLCDContrast());
             } else {
-                gamma = invgamma = 0;
                 final FontResource fr = strike.getFontResource();
                 final float origSize = strike.getSize();
                 final BaseTransform origTx = strike.getTransform();
                 strike = fr.getStrike(origSize, origTx, FontResource.AA_GREYSCALE);
-                this.setPaintBeforeDraw(p, bx, by, bw, bh);
             }
+            this.setPaintBeforeDraw(p, bx, by, bw, bh);
 
             for (int i = strFrom; i < strTo; i++) {
                 final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
@@ -787,8 +778,7 @@ final class SWGraphics implements ReadbackGraphics {
                             (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
                             subPosX,
                             g.getWidth(), g.getHeight(),
-                            0, g.getWidth(),
-                            gamma, invgamma);
+                            0, g.getWidth());
                 } else {
                     this.pr.fillAlphaMask(g.getPixelData(),
                             (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f),
