@@ -64,11 +64,6 @@ public class FXVK extends Control {
         EMAIL,
     }
 
-    private final ObjectProperty<Type> type = new SimpleObjectProperty<Type>(this, "type");
-    public final Type getType() { return type.get(); }
-    public final void setType(Type value) { type.set(value); }
-    public final ObjectProperty<Type> typeProperty() { return type; }
-
 
     private final ObjectProperty<EventHandler<KeyEvent>> onAction =
             new SimpleObjectProperty<EventHandler<KeyEvent>>(this, "onAction");
@@ -83,11 +78,6 @@ public class FXVK extends Control {
     String[] chars;
 
     public FXVK() {
-        this(Type.TEXT);
-    }
-
-    public FXVK(Type type) {
-        this.type.set(type);
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         getStyleClass().add(DEFAULT_STYLE_CLASS);
     }
@@ -113,15 +103,9 @@ public class FXVK extends Control {
     static FXVK vk;
 
     public static void attach(final Node textInput) {
-        int type = 0;
-        Object typeValue = textInput.getProperties().get(VK_TYPE_PROP_KEY);
-        String typeStr = "";
-        if (typeValue instanceof String) {
-            typeStr = ((String)typeValue).toLowerCase();
-        }
 
         if (vk == null) {
-            vk = new FXVK(Type.TEXT);
+            vk = new FXVK();
             vk.setSkin(new FXVKSkin(vk));
         }
         vk.setAttachedNode(textInput);
