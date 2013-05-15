@@ -43,7 +43,6 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import com.sun.javafx.stage.StageHelper;
-import com.sun.javafx.stage.WindowHelper;
 import javafx.geometry.NodeOrientation;
 
 /**
@@ -697,9 +696,9 @@ public class Utils {
             if ((scene == null) || (scene.getWindow() == null)) {
                 return 0;
             }
-            return scene.getX() + WindowHelper.getScreenX(scene.getWindow());
+            return scene.getX() + scene.getWindow().getX();
         } else if (obj instanceof Window) {
-            return WindowHelper.getScreenX((Window)obj);
+            return ((Window)obj).getX();
         } else {
             return 0;
         }
@@ -717,9 +716,9 @@ public class Utils {
             if ((scene == null) || (scene.getWindow() == null)) {
                 return 0;
             }
-            return scene.getY() + WindowHelper.getScreenY(scene.getWindow());
+            return scene.getY() + scene.getWindow().getY();
         } else if (obj instanceof Window) {
-            return WindowHelper.getScreenY((Window)obj);
+            return ((Window)obj).getY();
         } else {
             return 0;
         }

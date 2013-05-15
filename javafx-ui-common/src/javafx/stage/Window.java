@@ -80,23 +80,6 @@ public class Window implements EventTarget {
     static {
         WindowHelper.setWindowAccessor(
                 new WindowHelper.WindowAccessor() {
-                    @Override
-                    public void setWindowTranslate(Window window,
-                                                   double translateX,
-                                                   double translateY) {
-                        window.setWindowTranslate(translateX, translateY);
-                    }
-
-                    @Override
-                    public double getScreenX(Window window) {
-                        return window.getX() + window.winTranslateX;
-                    }
-
-                    @Override
-                    public double getScreenY(Window window) {
-                        return window.getY() + window.winTranslateY;
-                    }
-
                     /**
                      * Allow window peer listeners to directly change window
                      * location and size without changing the xExplicit,

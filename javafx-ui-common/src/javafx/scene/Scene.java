@@ -415,6 +415,12 @@ public class Scene implements EventTarget {
                             return scene.getEffectiveCamera();
                         }
 
+                        @Override
+                        public void setSceneDelta(Scene scene,
+                                                  double deltaX,
+                                                  double deltaY) {
+                            scene.setSceneDelta(deltaX, deltaY);
+                        }
                     });
         }
 
@@ -923,6 +929,19 @@ public class Scene implements EventTarget {
             };
         }
         return height;
+    }
+
+    private double sceneDeltaX;
+    private double sceneDeltaY;
+
+    private void setSceneDelta(final double deltaX, final double deltaY) {
+        if ((sceneDeltaX != deltaX) || (sceneDeltaY != deltaY)) {
+            setX(getX() - sceneDeltaX + deltaX);
+            setY(getY() - sceneDeltaY + deltaY);
+
+            sceneDeltaX = deltaX;
+            sceneDeltaY = deltaY;
+        }
     }
 
     // Reusable target wrapper (to avoid creating new one for each picking)
@@ -2426,8 +2445,12 @@ public class Scene implements EventTarget {
     class ScenePeerListener implements TKSceneListener {
         @Override
         public void changedLocation(float x, float y) {
-            if (x != Scene.this.getX()) Scene.this.setX(x);
-            if (y != Scene.this.getY()) Scene.this.setY(y);
+            if ((x + sceneDeltaX) != Scene.this.getX()) {
+                Scene.this.setX(x + sceneDeltaX);
+            }
+            if ((y + sceneDeltaY) != Scene.this.getY()) {
+                Scene.this.setY(y + sceneDeltaY);
+            }
         }
 
         @Override

@@ -480,16 +480,24 @@ public abstract class PopupWindow extends Window {
         final Parent rootNode = getScene().getRoot();
         final Bounds layoutBounds = rootNode.getLayoutBounds();
 
+        final double layoutX = layoutBounds.getMinX();
+        final double layoutY = layoutBounds.getMinY();
+
         // update popup dimensions
-        setWidth(layoutBounds.getMaxX() - layoutBounds.getMinX());
-        setHeight(layoutBounds.getMaxY() - layoutBounds.getMinY());
+        setWidth(layoutBounds.getMaxX() - layoutX);
+        setHeight(layoutBounds.getMaxY() - layoutY);
         // update transform
-        rootNode.setTranslateX(-layoutBounds.getMinX());
-        rootNode.setTranslateY(-layoutBounds.getMinY());
+        rootNode.setTranslateX(-layoutX);
+        rootNode.setTranslateY(-layoutY);
 
         if (isAlignWithContentOrigin()) {
             // update window position
-            setWindowTranslate(layoutBounds.getMinX(), layoutBounds.getMinY());
+            setWindowTranslate(layoutX, layoutY);
+            // compensate with scene's delta, so the manual Node.localToScene
+            // + sceenXY + windowXY calculation still works for local to screen
+            // conversions
+            SceneHelper.setSceneDelta(getScene(), layoutX, layoutY);
+
             if (autofixActive) {
                 autofixHandler.adjustPosition();
             }
@@ -521,8 +529,12 @@ public abstract class PopupWindow extends Window {
                                     getScene().getRoot().getLayoutBounds();
                             setWindowTranslate(layoutBounds.getMinX(),
                                                layoutBounds.getMinY());
+                            SceneHelper.setSceneDelta(getScene(),
+                                                      layoutBounds.getMinX(),
+                                                      layoutBounds.getMinY());
                         } else {
                             setWindowTranslate(0, 0);
+                            SceneHelper.setSceneDelta(getScene(), 0, 0);
                         }
 
                         if (autofixActive) {
