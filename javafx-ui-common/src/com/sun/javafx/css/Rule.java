@@ -175,29 +175,6 @@ final public class Rule {
         if (Rule.strings == null) Rule.strings = stringStoreStrings;
     }
 
-    /**
-     * Checks all selectors for a match, returning an array of all relevant
-     * matches.  A match is considered irrelevant if its presence or absence
-     * cannot affect whether or not the selector applies;  this means that among
-     * static (non-pseudoclass) matches, only the highest priority one is
-     * relevant, and among pseudoclass matches, only ones with higher priority
-     * than the most specific static match are relevant.
-     *
-     *@param node the object to test against
-     *@return an array of all relevant matches, or <code>null</code> if none
-     */
-    List<Match> matches(Node node) {
-        List<Match> matches = new ArrayList<Match>();
-        for (int i = 0; i < selectors.size(); i++) {
-            Selector sel = selectors.get(i);
-            Match match = sel.matches(node);
-            if (match != null) {
-                matches.add(match);
-            }
-        }
-        return matches;
-    }
-
     // Return mask of selectors that match
     long applies(Node node, Set<PseudoClass>[] triggerStates) {
         long mask = 0;
