@@ -674,7 +674,7 @@ public class SubScene extends Node {
         final PickResultChooser result = new PickResultChooser();
         final PickRay pickRay = getEffectiveCamera().computePickRay(localX, localY, new PickRay());
         getRoot().impl_pickNode(pickRay, result);
-        return result.toPickResult(!pickRay.isParallel());
+        return result.toPickResult();
     }
 
     /**

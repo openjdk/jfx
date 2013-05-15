@@ -1849,7 +1849,7 @@ public class Scene implements EventTarget {
                     o.x + mag * d.x,
                     o.y + mag * d.y,
                     o.z + mag * d.z),
-                    pickRay.isParallel() ? Double.POSITIVE_INFINITY : mag),
+                    mag),
                     isInScene(x, y) ? this : null);
         }
     }
@@ -3731,7 +3731,7 @@ public class Scene implements EventTarget {
         private PickResult pickNode(PickRay pickRay) {
             PickResultChooser r = new PickResultChooser();
             Scene.this.getRoot().impl_pickNode(pickRay, r);
-            return r.toPickResult(!pickRay.isParallel());
+            return r.toPickResult();
         }
     }
 
