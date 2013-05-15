@@ -121,17 +121,6 @@ public class RuleTest {
         StyleOrigin result = instance.getOrigin();
         assertNull(result);
     }
-    
-    @Ignore @Test
-    public void testMatches_Node() {
-        System.out.println("matches");
-        Node node = null;
-        Rule instance = null;
-        List expResult = null;
-        List result = instance.matches(node);
-        assertEquals(expResult, result);
-        fail("The test case is a prototype.");
-    }
 
     @Ignore @Test
     public void testApplies() {
