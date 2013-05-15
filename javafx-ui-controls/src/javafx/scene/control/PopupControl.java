@@ -44,6 +44,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.PopupWindow;
 import com.sun.javafx.application.PlatformImpl;
@@ -1284,6 +1285,14 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         @Override
         public Styleable getStyleableParent() {
             return PopupControl.this.getStyleableParent();
+        }
+
+        @Override public List<String> impl_getAllParentStylesheets() {
+            Styleable styleable = getStyleableParent();
+            if (styleable instanceof Parent) {
+                return ((Parent)styleable).impl_getAllParentStylesheets();
+            }
+            return null;
         }
     }
 

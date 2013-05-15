@@ -806,7 +806,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             setNeedsLayout(true);
         }
     }
-
+    
     @Override protected void layoutChildren() {
        if (needsRecreateCells) {
             maxPrefBreadth = -1;
@@ -1289,7 +1289,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         setNeedsLayout(true);
         requestLayout();
     }
-    
+
     @Override protected void setHeight(double value) {
         super.setHeight(value);
         setNeedsLayout(true);
@@ -1669,6 +1669,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     private void resizeCellSize(T cell) {
         if (cell == null) return;
+        
+        
         if (isVertical()) {
             double width = cell.getWidth();
             cell.resize(width, cell.prefHeight(width));
@@ -1679,9 +1681,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void setCellIndex(T cell, int index) {
-        if (cell == null) return;
+        assert cell != null;
 
         cell.updateIndex(index);
+        
         if (cell.isNeedsLayout() && cell.getScene() != null && cell.getProperties().containsKey(NEW_CELL)) {
             cell.impl_processCSS(false);
             cell.getProperties().remove(NEW_CELL);
@@ -1713,7 +1716,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // than just grab a random cell from the pile (or create another cell).
         for (int i = 0, max = pile.size(); i < max; i++) {
             T _cell = pile.get(i);
-            if (_cell != null && _cell.getIndex() == prefIndex) {
+            assert _cell != null;
+            
+            if (_cell.getIndex() == prefIndex) {
                 cell = _cell;
                 pile.remove(i);
                 break;
@@ -1732,7 +1737,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         cell.setManaged(true);
         
-        if (! sheetChildren.contains(cell)) {
+//        if (! sheetChildren.contains(cell)) {
+        if (cell.getParent() == null) {
             sheetChildren.add(cell);
         }
         

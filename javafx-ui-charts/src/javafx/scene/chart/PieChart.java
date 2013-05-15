@@ -715,7 +715,8 @@ public class PieChart extends Chart {
      * This is called whenever a series is added or removed and the legend needs to be updated
      */
     private void updateLegend() {
-        if (getLegend() != legend) return; // RT-23569 dont update when user has set legend.
+        Node legendNode = getLegend();
+        if (legendNode != null && legendNode != legend) return; // RT-23569 dont update when user has set legend.
         legend.setVertical(getLegendSide().equals(Side.LEFT) || getLegendSide().equals(Side.RIGHT));
         legend.getItems().clear();
         if (getData() != null) {
@@ -727,7 +728,7 @@ public class PieChart extends Chart {
             }
         }
         if (legend.getItems().size() > 0) {
-            if (getLegend() == null) {
+            if (legendNode == null) {
                 setLegend(legend);
             }
         } else {

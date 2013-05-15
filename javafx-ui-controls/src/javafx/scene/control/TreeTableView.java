@@ -2359,21 +2359,39 @@ public class TreeTableView<S> extends Control {
                 if (row >= 0 && row < rowCount) {
                     TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), row, null);
                     
-                    if (! selectedCells.contains(pos)) {
+                    // refer to the multi-line comment below for the justification for the following
+                    // code.
+                    boolean match = false;
+                    for (int j = 0; j < selectedCells.size(); j++) {
+                        TreeTablePosition<S,?> selectedCell = selectedCells.get(j);
+                        if (selectedCell.getRow() == row) {
+                            match = true;
+                            break;
+                        }
+                    }
+                    if (! match) {
                         positions.add(pos);
                         lastIndex = row;
                     }
                 }
 
-                for (int i = 0; i < rows.length; i++) {
+                outer: for (int i = 0; i < rows.length; i++) {
                     int index = rows[i];
                     if (index < 0 || index >= rowCount) continue;
                     lastIndex = index;
-                    TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), index, null);
-                    if (! selectedCells.contains(pos)) {
-                        positions.add(pos);
+                    
+                    // we need to manually check all selected cells to see whether this index is already
+                    // selected. This is because selectIndices is inherently row-based, but there may
+                    // be a selected cell where the column is non-null. If we were to simply do a
+                    // selectedCells.contains(pos), then we would not find the match and duplicate the
+                    // row selection. This leads to bugs such as RT-29930.
+                    for (int j = 0; j < selectedCells.size(); j++) {
+                        TreeTablePosition<S,?> selectedCell = selectedCells.get(j);
+                        if (selectedCell.getRow() == index) continue outer;
                     }
-
+                    
+                    // if we are here then we have successfully gotten through the for-loop above
+                    TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), index, null);
                     positions.add(pos);
                 }
 
