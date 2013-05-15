@@ -163,18 +163,19 @@ public class TriangleMesh extends Mesh {
      * geometry. The face smoothing group value is used to control the smoothing
      * between adjacent faces.
      *
-     * The face smoothing group is represented by an array of bits and up to 32
-     * unique groups is possible. The face smoothing group value can range from
-     * zero to all 32 groups. A face is said to belong to a group is by having
-     * the associated bit set. A value of 0 implies no smoothing group or hard
-     * edges. A face can have no or more smoothing groups. Smoothing is applied
-     * when adjacent pair of faces shared a smoothing group. Otherwise the faces
-     * are rendered with a hard edge between them.
+     * <p> The face smoothing group is represented by an array of bits and up to
+     * 32 unique groups is possible; (1 <<  0) to (1 << 31). The face smoothing
+     * group value can range from 0 (no smoothing group) to all 32 groups. A face
+     * can belong to zero or more smoothing groups. A face is a member of group
+     * N if bit N is set, for example, groups |= (1 << N). A value of 0 implies
+     * no smoothing group or hard edges.
+     * Smoothing is applied when adjacent pair of faces shared a smoothing group.
+     * Otherwise the faces are rendered with a hard edge between them.
      *
-     * An empty faceSmoothingGroups implies all faces in this mesh have a
+     * <p> An empty faceSmoothingGroups implies all faces in this mesh have a
      * smoothing group value of 1.
      *
-     * Note: If faceSmoothingGroups is not empty, is size must
+     * <p> Note: If faceSmoothingGroups is not empty, is size must
      * be equal to number of faces.
      */    
     public ObservableIntegerArray getFaceSmoothingGroups() {
