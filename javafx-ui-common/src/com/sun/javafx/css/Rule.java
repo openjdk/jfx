@@ -48,11 +48,13 @@ import javafx.scene.Scene;
  */
 final public class Rule {
 
-    private final ObservableList<Selector> selectors =
-            new TrackableObservableList<Selector>() {
+    private final List<Selector> _selectors;
+    private ObservableList<Selector> selectors;
 
-                @Override
-                protected void onChanged(Change<Selector> c) {
+    public final List<Selector> getSelectors() {
+        if (selectors == null) {
+            selectors = new TrackableObservableList<Selector>() {
+                @Override protected void onChanged(Change<Selector> c) {
                     while (c.next()) {
                         if (c.wasAdded()) {
                             List<Selector> added = c.getAddedSubList();
@@ -73,46 +75,51 @@ final public class Rule {
                 }
             };
 
-    public List<Selector> getSelectors() {
+            if (_selectors != null) {
+                selectors.setAll(_selectors);
+            }
+        }
         return selectors;
     }
 
-    private final ObservableList<Declaration> declarations =
-        new TrackableObservableList<Declaration>() {
+    private final List<Declaration> _declarations;
+    private ObservableList<Declaration> declarations;
+    
+    public final List<Declaration> getDeclarations() {
+        if (declarations == null) {
+            declarations = new TrackableObservableList<Declaration>() {
+                @Override protected void onChanged(Change<Declaration> c) {
+                    while (c.next()) {
+                        if (c.wasAdded()) {
+                            List<Declaration> added = c.getAddedSubList();
+                            for(int i = 0, max = added.size(); i < max; i++) {
+                                Declaration decl = added.get(i);
+                                decl.rule = Rule.this;
 
-        @Override
-        protected void onChanged(Change<Declaration> c) {
-            while (c.next()) {
-                if (c.wasAdded()) {
-                    List<Declaration> added = c.getAddedSubList();
-                    for(int i = 0, max = added.size(); i < max; i++) {
-                        Declaration decl = added.get(i);
-                        decl.rule = Rule.this;
-                        
-                        if (stylesheet != null && stylesheet.getUrl() != null) {
-
-                            final URL stylesheetUrl = stylesheet.getUrl();
-                            decl.fixUrl(stylesheetUrl);
-
+                                if (stylesheet != null && stylesheet.getUrl() != null) {
+                                    final URL stylesheetUrl = stylesheet.getUrl();
+                                    decl.fixUrl(stylesheetUrl);
+                                }
+                            }
                         }
-                        
+
+                        if (c.wasRemoved()) {
+                            List<Declaration> removed = c.getRemoved();
+                            for(int i = 0, max = removed.size(); i < max; i++) {
+                                Declaration decl = removed.get(i);
+                                if (decl.rule == Rule.this) decl.rule = null;
+                            }
+                        }
                     }
                 }
-                
-                if (c.wasRemoved()) {
-                    List<Declaration> removed = c.getRemoved();
-                    for(int i = 0, max = removed.size(); i < max; i++) {
-                        Declaration decl = removed.get(i);
-                        if (decl.rule == Rule.this) decl.rule = null;
-                    }
-                }
+            };
+
+            if (_declarations != null) {
+                declarations.setAll(_declarations);
             }
         }
-    };
-    
-    public List<Declaration> getDeclarations() {
-        if (serializedDecls != null && Rule.strings != null) {
 
+        if (serializedDecls != null && Rule.strings != null) {
             try {
                 ByteArrayInputStream bis = new ByteArrayInputStream(serializedDecls);
                 DataInputStream dis = new DataInputStream(bis);
@@ -146,12 +153,12 @@ final public class Rule {
         this.stylesheet = stylesheet;
         
         if (stylesheet != null && stylesheet.getUrl() != null) {
-            
             final URL stylesheetUrl = stylesheet.getUrl();
+
+            List<Declaration> declarations = getDeclarations();
             for (int d=0, dMax=declarations.size(); d<dMax; d++) {
                 declarations.get(d).fixUrl(stylesheetUrl);
             }
-            
         }
     }
 
@@ -161,8 +168,8 @@ final public class Rule {
 
 
     public Rule(List<Selector> selectors, List<Declaration> declarations) {
-        this.selectors.setAll(selectors);
-        this.declarations.setAll(declarations);
+        this._selectors = selectors;
+        this._declarations = declarations;
         serializedDecls = null;
     }
 
@@ -170,7 +177,8 @@ final public class Rule {
     private byte[] serializedDecls;
 
     private Rule(List<Selector> selectors, byte[] buf, String[] stringStoreStrings) {
-        this.selectors.setAll(selectors);
+        this._selectors = selectors;
+        this._declarations = null;
         this.serializedDecls = buf;
         if (Rule.strings == null) Rule.strings = stringStoreStrings;
     }
@@ -199,7 +207,7 @@ final public class Rule {
             sb.append(selectors.get(n));
         }
         sb.append("{\n");
-        for (Declaration decl : declarations) {
+        for (Declaration decl : getDeclarations()) {
             sb.append("\t");
             sb.append(decl);
             sb.append("\n");
@@ -218,6 +226,8 @@ final public class Rule {
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream(5192);
         DataOutputStream dos = new DataOutputStream(bos);
+
+        List<Declaration> declarations = getDeclarations();
 
         dos.writeShort(declarations.size());
 
