@@ -33,6 +33,8 @@ import javafx.beans.property.SimpleListProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import com.sun.javafx.binding.ErrorLoggingUtiltity;
+import javafx.collections.ObservableFloatArray;
+import javafx.collections.ObservableIntegerArray;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -43,7 +45,7 @@ import static org.junit.Assert.*;
 
 /**
  */
-public class BindingsListTest {
+public class BindingsArrayTest {
 
     private static final double EPSILON_DOUBLE = 1e-12;
     private static final float EPSILON_FLOAT = 1e-5f;
@@ -696,7 +698,7 @@ public class BindingsListTest {
 
     @Test(expected = NullPointerException.class)
     public void testFloatValueAt_Constant_Null() {
-        Bindings.floatValueAt((ObservableList) null, 0);
+        Bindings.floatValueAt((ObservableFloatArray) null, 0);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -867,7 +869,7 @@ public class BindingsListTest {
 
     @Test(expected = NullPointerException.class)
     public void testIntegerValueAt_Constant_Null() {
-        Bindings.integerValueAt((ObservableList) null, 0);
+        Bindings.integerValueAt((ObservableIntegerArray) null, 0);
     }
 
     @Test(expected = IllegalArgumentException.class)

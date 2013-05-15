@@ -409,7 +409,7 @@ public class Sphere extends Shape3D {
         }
 
         TriangleMesh m = new TriangleMesh(points, tPoints, faces);
-        m.setFaceSmoothingGroups(smoothing);
+        m.getFaceSmoothingGroups().setAll(smoothing);
         return m;
     }
 

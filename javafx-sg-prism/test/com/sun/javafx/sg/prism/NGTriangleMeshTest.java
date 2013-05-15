@@ -24,36 +24,184 @@
  */
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.collections.FloatArraySyncer;
+import com.sun.javafx.collections.IntegerArraySyncer;
 import java.util.Arrays;
 import static org.junit.Assert.assertArrayEquals;
 import org.junit.Test;
 
 public class NGTriangleMeshTest {
 
+    private static final float EPSILON_FLOAT = 1e-5f;
+
     /**
-     * Test of setFaceSmoothingGroups method, of class NGTriangleMesh.
+     * Test of syncFaceSmoothingGroups method, of class NGTriangleMesh.
      */
     @Test
-    public void testSetFaceSmoothingGroups_intArr() {
-        int[] faceSmoothingGroups = new int[]{0, 1, 2, 3, 4, 5};
+    public void testSyncFaceSmoothingGroups() {
+        final int[] faceSmoothingGroups = new int[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.setFaceSmoothingGroups(faceSmoothingGroups);
+        instance.syncFaceSmoothingGroups(new IntegerArraySyncer() {
+
+            public int[] syncTo(int[] array) {
+                return faceSmoothingGroups;
+            }
+        });
         int[] actuals = instance.test_getFaceSmoothingGroups();
         int[] expecteds = new int[]{0, 1, 2, 3, 4, 5};
         assertArrayEquals(expecteds, actuals);
     }
 
     /**
-     * Test of setFaceSmoothingGroups method, of class NGTriangleMesh.
+     * Test of syncFaceSmoothingGroups method, of class NGTriangleMesh.
      */
     @Test
-    public void testSetFaceSmoothingGroups_3args() {
-        int[] faceSmoothingGroups = new int[]{0, 1, 2, 3, 4, 5};
+    public void testSyncFaceSmoothingGroups2() {
+        final int[] faceSmoothingGroups = new int[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.setFaceSmoothingGroups(faceSmoothingGroups);
-        Arrays.fill(faceSmoothingGroups, 1);
-        instance.setFaceSmoothingGroups(faceSmoothingGroups, 1, 4);
+        instance.syncFaceSmoothingGroups(new IntegerArraySyncer() {
+
+            public int[] syncTo(int[] array) {
+                return faceSmoothingGroups;
+            }
+        });
+        instance.syncFaceSmoothingGroups(new IntegerArraySyncer() {
+
+            public int[] syncTo(int[] array) {
+                Arrays.fill(array, 1, 1 + 4, 1);
+                return array;
+            }
+        });
         int[] actuals = instance.test_getFaceSmoothingGroups();
+        int[] expecteds = new int[]{0, 1, 1, 1, 1, 5};
+        assertArrayEquals(expecteds, actuals);
+    }
+
+    /**
+     * Test of syncPoints method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncPoints() {
+        final float[] points = new float[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMesh instance = new NGTriangleMesh();
+        instance.syncPoints(new FloatArraySyncer() {
+
+            public float[] syncTo(float[] array) {
+                return points;
+            }
+        });
+        float[] actuals = instance.test_getPoints();
+        float[] expecteds = new float[]{0, 1, 2, 3, 4, 5};
+        assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
+    }
+
+    /**
+     * Test of syncPoints method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncPoints2() {
+        final float[] points = new float[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMesh instance = new NGTriangleMesh();
+        instance.syncPoints(new FloatArraySyncer() {
+
+            public float[] syncTo(float[] array) {
+                return points;
+            }
+        });
+        instance.syncPoints(new FloatArraySyncer() {
+
+            public float[] syncTo(float[] array) {
+                Arrays.fill(array, 1, 1 + 4, 1);
+                return array;
+            }
+        });
+        float[] actuals = instance.test_getPoints();
+        float[] expecteds = new float[]{0, 1, 1, 1, 1, 5};
+        assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
+    }
+
+    /**
+     * Test of syncTexCoords method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncTexCoords() {
+        final float[] texcoords = new float[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMesh instance = new NGTriangleMesh();
+        instance.syncTexCoords(new FloatArraySyncer() {
+
+            public float[] syncTo(float[] array) {
+                return texcoords;
+            }
+        });
+        float[] actuals = instance.test_getTexCoords();
+        float[] expecteds = new float[]{0, 1, 2, 3, 4, 5};
+        assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
+    }
+
+    /**
+     * Test of syncTexCoords method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncTexCoords2() {
+        final float[] texcoords = new float[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMesh instance = new NGTriangleMesh();
+        instance.syncTexCoords(new FloatArraySyncer() {
+
+            public float[] syncTo(float[] array) {
+                return texcoords;
+            }
+        });
+        instance.syncTexCoords(new FloatArraySyncer() {
+
+            public float[] syncTo(float[] array) {
+                Arrays.fill(array, 1, 1 + 4, 1);
+                return array;
+            }
+        });
+        float[] actuals = instance.test_getTexCoords();
+        float[] expecteds = new float[]{0, 1, 1, 1, 1, 5};
+        assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
+    }
+
+    /**
+     * Test of syncFaces method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncFaces() {
+        final int[] faces = new int[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMesh instance = new NGTriangleMesh();
+        instance.syncFaces(new IntegerArraySyncer() {
+
+            public int[] syncTo(int[] array) {
+                return faces;
+            }
+        });
+        int[] actuals = instance.test_getFaces();
+        int[] expecteds = new int[]{0, 1, 2, 3, 4, 5};
+        assertArrayEquals(expecteds, actuals);
+    }
+
+    /**
+     * Test of syncFaces method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncFaces2() {
+        final int[] faces = new int[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMesh instance = new NGTriangleMesh();
+        instance.syncFaces(new IntegerArraySyncer() {
+
+            public int[] syncTo(int[] array) {
+                return faces;
+            }
+        });
+        instance.syncFaces(new IntegerArraySyncer() {
+
+            public int[] syncTo(int[] array) {
+                Arrays.fill(array, 1, 1 + 4, 1);
+                return array;
+            }
+        });
+        int[] actuals = instance.test_getFaces();
         int[] expecteds = new int[]{0, 1, 1, 1, 1, 5};
         assertArrayEquals(expecteds, actuals);
     }

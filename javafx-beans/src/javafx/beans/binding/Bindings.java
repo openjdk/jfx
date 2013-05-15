@@ -63,6 +63,9 @@ import com.sun.javafx.binding.StringConstant;
 import com.sun.javafx.binding.StringFormatter;
 import com.sun.javafx.collections.ImmutableObservableList;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import javafx.collections.ObservableArray;
+import javafx.collections.ObservableFloatArray;
+import javafx.collections.ObservableIntegerArray;
 
 /**
  * Bindings is a helper class with a lot of utility functions to create simple
@@ -6935,6 +6938,254 @@ public final class Bindings {
             @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
+            }
+        };
+    }
+
+    // Array
+    // =================================================================================================================
+
+    /**
+     * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the size
+     * of an {@link javafx.collections.ObservableArray}.
+     *
+     * @param op the {@code ObservableArray}
+     * @return the new {@code IntegerBinding}
+     * @throws NullPointerException
+     *             if the {@code ObservableArray} is {@code null}
+     */
+    public static IntegerBinding size(final ObservableArray op) {
+        if (op == null) {
+            throw new NullPointerException("Array cannot be null.");
+        }
+
+        return new IntegerBinding() {
+            {
+                super.bind(op);
+            }
+
+            @Override
+            public void dispose() {
+                super.unbind(op);
+            }
+
+            @Override
+            protected int computeValue() {
+                return op.size();
+            }
+
+            @Override
+            @ReturnsUnmodifiableCollection
+            public ObservableList<?> getDependencies() {
+                return FXCollections.singletonObservableList(op);
+            }
+        };
+    }
+
+    /**
+     * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the element
+     * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code FloatBinding}
+     * will hold {@code 0.0f}, if the {@code index} points behind the {@code ObservableArray}.
+     *
+     * @param op the {@code ObservableArray}
+     * @param index the position in the {@code ObservableArray}
+     * @return the new {@code FloatBinding}
+     * @throws NullPointerException if the {@code ObservableArray} is {@code null}
+     * @throws IllegalArgumentException if (@code index < 0}
+     */
+    public static FloatBinding floatValueAt(final ObservableFloatArray op, final int index) {
+        if (op == null) {
+            throw new NullPointerException("Array cannot be null.");
+        }
+        if (index < 0) {
+            throw new IllegalArgumentException("Index cannot be negative");
+        }
+
+        return new FloatBinding() {
+            {
+                super.bind(op);
+            }
+
+            @Override
+            public void dispose() {
+                super.unbind(op);
+            }
+
+            @Override
+            protected float computeValue() {
+                try {
+                    return op.get(index);
+                } catch (IndexOutOfBoundsException ex) {
+                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                }
+                return 0.0f;
+            }
+
+            @Override
+            @ReturnsUnmodifiableCollection
+            public ObservableList<?> getDependencies() {
+                return FXCollections.singletonObservableList(op);
+            }
+        };
+    }
+
+    /**
+     * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the element
+     * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code FloatBinding}
+     * will hold {@code 0.0f}, if the {@code index} is outside of the {@code ObservableArray}.
+     *
+     * @param op the {@code ObservableArray}
+     * @param index the position in the {@code ObservableArray}
+     * @return the new {@code FloatBinding}
+     * @throws NullPointerException if the {@code ObservableArray} or {@code index} is {@code null}
+     */
+    public static FloatBinding floatValueAt(final ObservableFloatArray op, final ObservableIntegerValue index) {
+        return floatValueAt(op, (ObservableNumberValue)index);
+    }
+
+    /**
+     * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the element
+     * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code FloatBinding}
+     * will hold {@code 0.0f}, if the {@code index} is outside of the {@code ObservableArray}.
+     *
+     * @param op the {@code ObservableArray}
+     * @param index the position in the {@code ObservableArray}, converted to int
+     * @return the new {@code FloatBinding}
+     * @throws NullPointerException if the {@code ObservableArray} or {@code index} is {@code null}
+     */
+    public static FloatBinding floatValueAt(final ObservableFloatArray op, final ObservableNumberValue index) {
+        if ((op == null) || (index == null)) {
+            throw new NullPointerException("Operands cannot be null.");
+        }
+
+        return new FloatBinding() {
+            {
+                super.bind(op, index);
+            }
+
+            @Override
+            public void dispose() {
+                super.unbind(op, index);
+            }
+
+            @Override
+            protected float computeValue() {
+                try {
+                    return op.get(index.intValue());
+                } catch (IndexOutOfBoundsException ex) {
+                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                }
+                return 0.0f;
+            }
+
+            @Override
+            @ReturnsUnmodifiableCollection
+            public ObservableList<?> getDependencies() {
+                return new ImmutableObservableList<>(op, index);
+            }
+        };
+    }
+
+    /**
+     * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the element
+     * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code IntegerBinding}
+     * will hold {@code 0}, if the {@code index} points behind the {@code ObservableArray}.
+     *
+     * @param op the {@code ObservableArray}
+     * @param index the position in the {@code ObservableArray}
+     * @return the new {@code IntegerBinding}
+     * @throws NullPointerException if the {@code ObservableArray} is {@code null}
+     * @throws IllegalArgumentException if (@code index < 0}
+     */
+    public static IntegerBinding integerValueAt(final ObservableIntegerArray op, final int index) {
+        if (op == null) {
+            throw new NullPointerException("Array cannot be null.");
+        }
+        if (index < 0) {
+            throw new IllegalArgumentException("Index cannot be negative");
+        }
+
+        return new IntegerBinding() {
+            {
+                super.bind(op);
+            }
+
+            @Override
+            public void dispose() {
+                super.unbind(op);
+            }
+
+            @Override
+            protected int computeValue() {
+                try {
+                    return op.get(index);
+                } catch (IndexOutOfBoundsException ex) {
+                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                }
+                return 0;
+            }
+
+            @Override
+            @ReturnsUnmodifiableCollection
+            public ObservableList<?> getDependencies() {
+                return FXCollections.singletonObservableList(op);
+            }
+        };
+    }
+
+    /**
+     * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the element
+     * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code IntegerBinding}
+     * will hold {@code 0}, if the {@code index} is outside of the {@code ObservableArray}.
+     *
+     * @param op the {@code ObservableArray}
+     * @param index the position in the {@code ObservableArray}
+     * @return the new {@code IntegerBinding}
+     * @throws NullPointerException if the {@code ObservableArray} or {@code index} is {@code null}
+     */
+    public static IntegerBinding integerValueAt(final ObservableIntegerArray op, final ObservableIntegerValue index) {
+        return integerValueAt(op, (ObservableNumberValue)index);
+    }
+
+    /**
+     * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the element
+     * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code IntegerBinding}
+     * will hold {@code 0}, if the {@code index} is outside of the {@code ObservableArray}.
+     *
+     * @param op the {@code ObservableArray}
+     * @param index the position in the {@code ObservableArray}, converted to int
+     * @return the new {@code IntegerBinding}
+     * @throws NullPointerException if the {@code ObservableArray} or {@code index} is {@code null}
+     */
+    public static IntegerBinding integerValueAt(final ObservableIntegerArray op, final ObservableNumberValue index) {
+        if ((op == null) || (index == null)) {
+            throw new NullPointerException("Operands cannot be null.");
+        }
+
+        return new IntegerBinding() {
+            {
+                super.bind(op, index);
+            }
+
+            @Override
+            public void dispose() {
+                super.unbind(op, index);
+            }
+
+            @Override
+            protected int computeValue() {
+                try {
+                    return op.get(index.intValue());
+                } catch (IndexOutOfBoundsException ex) {
+                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                }
+                return 0;
+            }
+
+            @Override
+            @ReturnsUnmodifiableCollection
+            public ObservableList<?> getDependencies() {
+                return new ImmutableObservableList<>(op, index);
             }
         };
     }

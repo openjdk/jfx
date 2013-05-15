@@ -53,6 +53,8 @@ import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.collections.ObservableMapWrapper;
 import com.sun.javafx.collections.ObservableSetWrapper;
 import com.sun.javafx.collections.MapAdapterChange;
+import com.sun.javafx.collections.ObservableFloatArrayImpl;
+import com.sun.javafx.collections.ObservableIntegerArrayImpl;
 import com.sun.javafx.collections.ObservableSequentialListWrapper;
 import com.sun.javafx.collections.SetAdapterChange;
 import com.sun.javafx.collections.SortableList;
@@ -224,6 +226,60 @@ public class FXCollections {
     @ReturnsUnmodifiableCollection
     public static <K, V> ObservableMap<K, V> emptyObservableMap() {
         return EMPTY_OBSERVABLE_MAP;
+    }
+
+    /**
+     * Creates a new empty observable integer array.
+     * @return a newly created ObservableIntegerArray
+     */
+    public static ObservableIntegerArray observableIntegerArray() {
+        return new ObservableIntegerArrayImpl();
+    }
+
+    /**
+     * Creates a new observable integer array with {@code values} set to it.
+     * @param values the values that will be in the new observable integer array
+     * @return a newly created ObservableIntegerArray
+     */
+    public static ObservableIntegerArray observableIntegerArray(int... values) {
+        return new ObservableIntegerArrayImpl(values);
+    }
+
+    /**
+     * Creates a new observable integer array with copy of elements in given
+     * {@code array}.
+     * @param array observable integer array to copy
+     * @return a newly created ObservableIntegerArray
+     */
+    public static ObservableIntegerArray observableIntegerArray(ObservableIntegerArray array) {
+        return new ObservableIntegerArrayImpl(array);
+    }
+
+    /**
+     * Creates a new empty observable float array.
+     * @return a newly created ObservableFloatArray
+     */
+    public static ObservableFloatArray observableFloatArray() {
+        return new ObservableFloatArrayImpl();
+    }
+
+    /**
+     * Creates a new observable float array with {@code values} set to it.
+     * @param values the values that will be in the new observable float array
+     * @return a newly created ObservableFloatArray
+     */
+    public static ObservableFloatArray observableFloatArray(float... values) {
+        return new ObservableFloatArrayImpl(values);
+    }
+
+    /**
+     * Creates a new observable float array with copy of elements in given
+     * {@code array}.
+     * @param array observable float array to copy
+     * @return a newly created ObservableFloatArray
+     */
+    public static ObservableFloatArray observableFloatArray(ObservableFloatArray array) {
+        return new ObservableFloatArrayImpl(array);
     }
 
     /**

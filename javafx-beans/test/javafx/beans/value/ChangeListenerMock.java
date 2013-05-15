@@ -78,4 +78,8 @@ public class ChangeListenerMock<T> implements ChangeListener<T> {
         assertEquals(counter, this.counter);
         reset();
     }
+
+    public void check0() {
+        assertEquals(0, counter);
+    }
 }

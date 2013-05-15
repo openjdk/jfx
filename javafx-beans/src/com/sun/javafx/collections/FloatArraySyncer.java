@@ -22,35 +22,19 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.javafx.collections;
 
-package com.sun.javafx.pgstub;
+/**
+ */
+public interface FloatArraySyncer {
 
-
-import com.sun.javafx.collections.FloatArraySyncer;
-import com.sun.javafx.collections.IntegerArraySyncer;
-import com.sun.javafx.sg.PGTriangleMesh;
-
-
-public class StubTriangleMesh implements PGTriangleMesh {
-
-    private float[] points;
-    private float[] texCoords;
-    private int[] faces;
-    private int[] faceSmoothingGroups;
-
-    @Override public void syncPoints(FloatArraySyncer array) {
-        points = array.syncTo(points);
-    }
-    
-    @Override public void syncTexCoords(FloatArraySyncer array) {
-        texCoords = array.syncTo(texCoords);
-    }
-
-    @Override public void syncFaces(IntegerArraySyncer array) {
-        faces = array.syncTo(faces);    
-    }
-
-    @Override public void syncFaceSmoothingGroups(IntegerArraySyncer array) {
-        faceSmoothingGroups = array.syncTo(faceSmoothingGroups);
-    }
+    /**
+     * This method is used to sync arrays on pulses. This method expects
+     * the same array was synced before. The usage is similar to toArray method
+     * so always use it as following: {@code dest = source.syncTo(dest);}
+     * @param array previously synced array
+     * @return a synced array, which is the same or new array (depending on
+     * the change).
+     */
+    float[] syncTo(float[] array);
 }
