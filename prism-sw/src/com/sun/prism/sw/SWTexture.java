@@ -25,22 +25,10 @@
 
 package com.sun.prism.sw;
 
-
-import com.sun.javafx.image.PixelConverter;
-import com.sun.javafx.image.PixelGetter;
-import com.sun.javafx.image.PixelUtils;
-import com.sun.javafx.image.impl.ByteBgraPre;
-import com.sun.javafx.image.impl.ByteGray;
-import com.sun.javafx.image.impl.ByteRgb;
-import com.sun.javafx.image.impl.IntArgbPre;
 import com.sun.prism.Image;
-import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
-
-import java.nio.Buffer;
-import java.nio.IntBuffer;
 
 abstract class SWTexture implements Texture {
 
@@ -78,8 +66,6 @@ abstract class SWTexture implements Texture {
         // REMIND: Use indirection to share the serial number?
         this.lastImageSerial = sharedTex.lastImageSerial;
         this.wrapMode = altMode;
-        // The lock is transferred to this texture...
-        sharedTex.unlock();
         lock();
     }
 
@@ -203,7 +189,9 @@ abstract class SWTexture implements Texture {
     }
 
     public Texture getSharedTexture(WrapMode altMode) {
+        assertLocked();
         if (wrapMode == altMode) {
+            lock();
             return this;
         }
         switch (altMode) {
@@ -219,7 +207,7 @@ abstract class SWTexture implements Texture {
             default:
                 return null;
         }
-        return this.createSharedTexture(altMode);
+        return this.createSharedLockedTexture(altMode);
     }
 
     @Override
@@ -254,5 +242,15 @@ abstract class SWTexture implements Texture {
 
     abstract void allocateBuffer();
 
-    abstract Texture createSharedTexture(WrapMode altMode);
+    /**
+     * Returns a new {@code Texture} object sharing all of the information
+     * from this texture, but using the new {@code WrapMode}.
+     * The new texture will be locked (in contrast to the similarly-named
+     * method in BaseTexture).
+     * 
+     * @param altMode the new {@code WrapMode} for the new texture
+     * @return a new, locked, texture object sharing all information with
+     *         this texture except for the {@code WrapMode}
+     */
+    abstract Texture createSharedLockedTexture(WrapMode altMode);
 }
