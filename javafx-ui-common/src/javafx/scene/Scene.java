@@ -719,9 +719,6 @@ public class Scene implements EventTarget {
     @Deprecated
     public void impl_setWindow(Window value) {
         setWindow(value);
-        if (impl_peer != null) {
-            impl_peer.markDirty();
-        }
     }
 
     /**
@@ -730,21 +727,26 @@ public class Scene implements EventTarget {
      */
     @Deprecated
     public void impl_initPeer() {
-        if (impl_peer != null) {
-            return;
-        }
-        PerformanceTracker.logEvent("Scene.initPeer started");
-        Toolkit tk = Toolkit.getToolkit();
-        if (getWindow() == null) {
-            return;
-        }
-        TKStage windowPeer = getWindow().impl_getPeer();
+        assert impl_peer == null;
+
+        Window window = getWindow();
+        // impl_initPeer() is only called from Window, either when the window
+        // is being shown, or the window scene is being changed. In any case
+        // this scene's window cannot be null.
+        assert window != null;
+
+        TKStage windowPeer = window.impl_getPeer();
         if (windowPeer == null) {
+            // This is fine, the window is not visible. impl_initPeer() will
+            // be called again later, when the window is being shown.
             return;
         }
+
+        PerformanceTracker.logEvent("Scene.initPeer started");
 
         impl_setAllowPGAccess(true);
 
+        Toolkit tk = Toolkit.getToolkit();
         impl_peer = windowPeer.createTKScene(isDepthBufferInteral());
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
         impl_peer.setSecurityContext(acc);
@@ -755,10 +757,11 @@ public class Scene implements EventTarget {
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
         getEffectiveCamera().impl_updatePG();
         impl_peer.setCamera(getEffectiveCamera().getPlatformCamera());
+        impl_peer.markDirty();
+        PerformanceTracker.logEvent("Scene.initPeer TKScene initialized");
 
         impl_setAllowPGAccess(false);
 
-        PerformanceTracker.logEvent("Scene.initPeer TKScene initialized");
         tk.addSceneTkPulseListener(scenePulseListener);
         // listen to dnd gestures coming from the platform
         if (PLATFORM_DRAG_GESTURE_INITIATION) {
@@ -769,6 +772,7 @@ public class Scene implements EventTarget {
         }
         tk.enableDrop(impl_peer, new DropTargetListener());
         tk.installInputMethodRequests(impl_peer, new InputMethodRequestsDelegate());
+
         PerformanceTracker.logEvent("Scene.initPeer finished");
     }
 
@@ -779,12 +783,20 @@ public class Scene implements EventTarget {
     @Deprecated
     public void impl_disposePeer() {
         if (impl_peer == null) {
+            // This is fine, the window is either not shown yet and there is no
+            // need in disposing scene peer, or is hidden and impl_disposePeer()
+            // has already been called.
             return;
         }
+
+        PerformanceTracker.logEvent("Scene.disposePeer started");
+
         Toolkit tk = Toolkit.getToolkit();
         tk.removeSceneTkPulseListener(scenePulseListener);
         impl_peer.dispose();
         impl_peer = null;
+
+        PerformanceTracker.logEvent("Scene.disposePeer finished");
     }
 
     DnDGesture dndGesture = null;

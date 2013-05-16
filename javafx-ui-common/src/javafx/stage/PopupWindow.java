@@ -445,10 +445,6 @@ public abstract class PopupWindow extends Window {
     @Deprecated
     @Override protected void impl_visibleChanged(boolean visible) {
         super.impl_visibleChanged(visible);
-        if (!visible && (impl_peer != null)) {
-            peerListener = null;
-            impl_peer = null;
-        }
 
         final Window ownerWindowValue = getOwnerWindow();
         if (visible) {

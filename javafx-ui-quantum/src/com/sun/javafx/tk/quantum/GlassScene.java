@@ -85,7 +85,7 @@ abstract class GlassScene implements TKScene {
 
     @Override
     public void dispose() {
-        // Overridden in subclasses
+        assert stage == null; // dispose() is called after setStage(null)
     }
 
     // To be used by subclasses to enforce context check
