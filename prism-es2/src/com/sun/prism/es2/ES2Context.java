@@ -444,7 +444,7 @@ class ES2Context extends BaseShaderContext {
 
     void setCullingMode(long nativeHandle, int cullingMode) {
         // TODO: 3D - compute determinant whenever projViewTx or worldTx changes.
-        cullingMode = 0;
+        // NOTE: Native code has set clockwise order as front-facing
         glContext.setCullingMode(nativeHandle, cullingMode);
     }
 
