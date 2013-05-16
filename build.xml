@@ -91,9 +91,14 @@
         </condition>
 
         <condition property="include.prism.sw">
-          <not>
-            <isset property="isIOS"/>
-          </not>
+          <and>
+            <not>
+              <isset property="isIOS"/>
+            </not>
+            <not>
+              <isset property="isAndroid"/>
+            </not>
+          </and>
         </condition>
     </target>
 
@@ -138,6 +143,7 @@
         <antcall target="jar-prism-es2-all"/>
         <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="jar" inheritAll="false"/>
+        <antcall target="jar-javafx-android"/>
         <antcall target="jar-javafx-embed-swt"/>
     </target>
 
@@ -199,6 +205,9 @@
         <ant antfile="${rt.root.dir}/prism-es2-x11/build.xml" target="jar" inheritAll="false"/>
     </target>
 
+    <target name="jar-javafx-android" if="isAndroid">
+        <ant antfile="${rt.root.dir}/javafx-android/build.xml" target="jar" inheritAll="false"/>
+    </target>
 
     <target name="jar-javafx-embed-swt" if="swt.available">
         <ant antfile="${rt.root.dir}/javafx-embed-swt/build.xml" target="jar" inheritAll="false"/>
@@ -267,6 +276,7 @@
         <antcall target="clean-prism-sw"/>
         <antcall target="clean-prism-d3d"/>
         <antcall target="clean-prism-es2-all"/>
+        <antcall target="clean-javafx-android"/>
         <antcall target="clean-javafx-embed-swt"/>
     </target>
 
@@ -326,6 +336,10 @@
 
     <target name="clean-javafx-embed-swt" if="swt.available">
         <ant antfile="${rt.root.dir}/javafx-embed-swt/build.xml" target="clean" inheritAll="false"/>
+    </target>
+    
+    <target name="clean-javafx-android" if="isAndroid">
+        <ant antfile="${rt.root.dir}/javafx-android/build.xml" target="clean" inheritAll="false"/>
     </target>
  
     <!--
