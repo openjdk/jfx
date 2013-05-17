@@ -63,8 +63,11 @@ extern "C" {
         jclass cls_InputStream = (*env)->FindClass(env, "java/io/InputStream");
         if (cls_InputStream == NULL) {
 
-            return; // can't find/load the class
-            // should throw an exception in Java
+            throwException(env,
+                           "java/lang/ClassNotFoundException",
+                           "Cannot find class java.io.InputStream");
+
+            return;
         }
 
         InputStream_readID = (*env)->GetMethodID(env,
