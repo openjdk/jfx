@@ -64,6 +64,11 @@ bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
     if (XFilterEvent((XEvent*) & xevent, GDK_WINDOW_XID(gdk_window))) {
         return TRUE;
     }
+    
+    if (event->type == GDK_KEY_RELEASE) {
+        process_key(event);
+        return TRUE;
+    }
 
     int len = Xutf8LookupString(xim.ic, &xevent, buffer, buf_len - 1, &keysym, &status);
     if (status == XBufferOverflow) {
@@ -73,16 +78,14 @@ bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
                 &keysym, &status);
     }
     switch (status) {
-        case XLookupNone:
-            if (event->type == GDK_KEY_RELEASE) {
-                process_key(event);
-            }
-            break;
         case XLookupKeySym:
         case XLookupBoth:
-            //process it as a normal key
-            process_key(event);
-            break;
+            if (xevent.keycode) {
+                //process it as a normal key
+                process_key(event);
+                break;
+            }
+            // fall-through
         case XLookupChars:
             buffer[len] = 0;
             jstring str = mainEnv->NewStringUTF(buffer);
@@ -160,7 +163,8 @@ static XIMStyle get_best_supported_style(XIM im_xim)
     }
 
     for (i = 0; i < styles->count_styles; ++i) {
-        if (styles->supported_styles[i] == (XIMPreeditCallbacks | XIMStatusNothing)) {
+        if (styles->supported_styles[i] == (XIMPreeditCallbacks | XIMStatusNothing)
+                || styles->supported_styles[i] == (XIMPreeditNothing | XIMStatusNothing)) {
             result = styles->supported_styles[i];
             break;
         }
