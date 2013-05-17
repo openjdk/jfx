@@ -45,6 +45,17 @@ typedef GlassThreadData;
 
 extern pthread_key_t GlassThreadDataKey;
 
+// assert there is no outstanding java exception pending
+#define GLASS_CHECK_EXCEPTION(ENV)                                                 \
+do {                                                                               \
+    jthrowable t = (*ENV)->ExceptionOccurred(ENV);                                 \
+    if (t) {                                                                       \
+        (*ENV)->ExceptionClear(ENV);                                               \
+        (*ENV)->CallStaticVoidMethod(                                              \
+            ENV, jApplicationClass, jApplicationReportException, t);               \
+    };                                                                             \
+} while (0)
+
 // assert main Java thread is still attached
 #define GLASS_ASSERT_MAIN_JAVA_THREAD(env) \
     if ((pthread_main_np() == 0) && (jEnv == NULL)) { \
