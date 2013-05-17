@@ -54,7 +54,7 @@
  *  - Integrate Parfait reports for C code
  *  - FXML Project tests are not running
  */
-defaultTasks = ["assemble"]
+defaultTasks = ["sdk"]
 
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
@@ -217,6 +217,32 @@ void setupTools(String name, Closure loader, Closure processor) {
  *                                                                            *
  *****************************************************************************/
 
+// BUILD_CLOSED is a short-hand to specify that a "closed" build should be done.
+// It is false by default and is set by a command line property. If true then
+// SUPPLEMENTAL_BUILD_FILE and SUPPLEMENTAL_PROPERTY_FILE will be set to
+// ../rt-closed/closed-build.gradle and ../rt-closed/closed-properties.gradle
+// respectively
+
+defineProperty("BUILD_CLOSED", "false");
+def buildClosed = false;
+if (BUILD_CLOSED instanceof String) buildClosed = Boolean.parseBoolean(BUILD_CLOSED);
+
+if (buildClosed) {
+    def closedDir = file("../rt-closed");
+    defineProperty("SUPPLEMENTAL_BUILD_FILE", "$closedDir/closed-build.gradle");
+}
+
+// The IS_CLOSED property should be used for logic that needs to do something
+// conditionally based on whether or not we are doing a closed build.
+ext.IS_CLOSED = hasProperty("SUPPLEMENTAL_BUILD_FILE");
+
+if (IS_CLOSED) {
+    def closedDir = file("$SUPPLEMENTAL_BUILD_FILE").getParentFile();
+    defineProperty("SUPPLEMENTAL_PROPERTY_FILE", "$closedDir/closed-properties.gradle");
+
+    apply from: SUPPLEMENTAL_PROPERTY_FILE
+}
+
 // These variables indicate what platform is running the build. Is
 // this build running on a Mac, Windows, or Linux machine? 32 or 64 bit?
 ext.OS_NAME = System.getProperty("os.name").toLowerCase()
@@ -290,10 +316,13 @@ defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}"
 // Define settings used when creating the VersionInfo. These settings are generally left alone
 // by developers and set only from Hudson. We have to manually rev this version number from
 // release to release.
+//
 defineProperty("HUDSON_JOB_NAME", "not_hudson")
 defineProperty("HUDSON_BUILD_NUMBER","0000")
 defineProperty("PROMOTED_BUILD_NUMBER", "00")
 defineProperty("PRODUCT_NAME", "OpenJFX")
+// TODO: set the values of RAW_VERSION, RELEASE_NAME, and RELEASE_MILESTONE based on the
+// settings in build.properties
 defineProperty("RAW_VERSION", "8.0.0")
 defineProperty("RELEASE_NAME", "8.0")
 defineProperty("RELEASE_MILESTONE", "ea")
@@ -1308,7 +1337,71 @@ task javadoc(type: Javadoc) {
 }
 
 task jfxrt()
+
 task sdk()
+
+task apps() {
+    dependsOn(sdk)
+
+    // TODO: implement this
+    doLast {
+        println "rt/apps not yet built"
+    }
+}
+
+task fullTest() {
+// TODO: WHY DOES THE FOLLOWING NOT WORK???
+//    dependsOn(test)
+
+    // TODO additional tests
+    doLast {
+        println "fullTest task is not implemented"
+    }
+}
+
+task findbugs() {
+    dependsOn(sdk)
+
+    // TODO: implement this
+    doLast {
+        if (!IS_CLOSED) {
+            println "findbugs task is not implemented"
+        }
+    }
+}
+
+// The following tasks are for the closed build only. They are a no-op for the open build
+
+// TODO: consider moving the "public-sdk" portion of this task here
+task publicExports() {
+    dependsOn(sdk)
+    doLast {
+        if (!IS_CLOSED) {
+            println "publicExports task is only run for a closed build"
+        }
+    }
+}
+
+task perf() {
+    dependsOn(sdk,apps)
+    doLast {
+        if (!IS_CLOSED) {
+            println "perf task is only run for a closed build"
+        }
+    }
+}
+
+task zips() {
+    dependsOn(sdk,publicExports,apps,perf)
+        if (!IS_CLOSED) {
+            println "zips task is only run for a closed build"
+        }
+}
+
+task all() {
+    dependsOn(sdk,publicExports,apps,perf,zips)
+}
+
 
 compileTargets { t ->
     def targetProperties = project.ext[t.upper]
@@ -1791,6 +1884,6 @@ cleanIdeaWorkspace.description = "Deletes the javafx.ipw file"
  *                                                                            *
  *****************************************************************************/
 
-if (hasProperty("SUPPLEMENTAL_BUILD_FILE")) {
+if (IS_CLOSED) {
     apply from: SUPPLEMENTAL_BUILD_FILE
 }
