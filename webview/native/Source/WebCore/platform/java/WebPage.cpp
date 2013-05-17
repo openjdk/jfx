@@ -255,6 +255,37 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
     gc.platformContext()->rq().flushBuffer();
 }
 
+void WebPage::scroll(const IntSize& scrollDelta,
+                     const IntRect& rectToScroll,
+                     const IntRect& clipRect)
+{
+#if USE(ACCELERATED_COMPOSITING)
+    if (m_rootLayer) {
+        m_rootLayer->setNeedsDisplayInRect(rectToScroll);
+        return;
+    }
+#endif
+
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    static jmethodID mid = env->GetMethodID(
+            PG_GetWebPageClass(env),
+            "fwkScroll",
+            "(IIIIII)V");
+    ASSERT(mid);
+
+    env->CallVoidMethod(
+            jobjectFromPage(m_page.get()),
+            mid,
+            rectToScroll.x(),
+            rectToScroll.y(),
+            rectToScroll.width(),
+            rectToScroll.height(),
+            scrollDelta.width(),
+            scrollDelta.height());
+    CheckAndClearException(env);
+}
+
 void WebPage::repaint(const IntRect& rect)
 {
 #if USE(ACCELERATED_COMPOSITING)
