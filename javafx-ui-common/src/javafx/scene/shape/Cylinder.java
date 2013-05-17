@@ -514,7 +514,10 @@ public class Cylinder extends Shape3D {
             smoothing[i] = 2;
         }
 
-        TriangleMesh m = new TriangleMesh(points, tPoints, faces);
+        TriangleMesh m = new TriangleMesh();
+        m.getPoints().setAll(points);
+        m.getTexCoords().setAll(tPoints);
+        m.getFaces().setAll(faces);
         m.getFaceSmoothingGroups().setAll(smoothing);
 
         return m;

@@ -2231,7 +2231,11 @@ public class Mouse3DTest {
 
     private static class TestMesh extends MeshView {
         public TestMesh(float[] points, float[] tex, int[] faces) {
-            super(new TriangleMesh(points, tex, faces));
+            super(new TriangleMesh());
+            TriangleMesh mesh = (TriangleMesh)getMesh();
+            mesh.getPoints().setAll(points);
+            mesh.getTexCoords().setAll(tex);
+            mesh.getFaces().setAll(faces);
         }
 
         public TestMesh rotate(char ax, double angle) {

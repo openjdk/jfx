@@ -424,7 +424,10 @@ public class TriangleMeshTest {
         int faceCount = subDivX * subDivY * 2;
         int faces[] = new int[faceCount * faceSize];
 
-        TriangleMesh triangleMesh = new TriangleMesh(points, texCoords, faces);
+        TriangleMesh triangleMesh = new TriangleMesh();
+        triangleMesh.getPoints().setAll(points);
+        triangleMesh.getTexCoords().setAll(texCoords);
+        triangleMesh.getFaces().setAll(faces);
 
         return triangleMesh;
     }

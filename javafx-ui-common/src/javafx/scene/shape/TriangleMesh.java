@@ -103,23 +103,7 @@ public class TriangleMesh extends Mesh {
      */
     public TriangleMesh() {
     }
-    
-    /**
-     * Creates a new instance of {@code TriangleMesh} class.
-     * TODO: 3D - doc. follows array semantic
-     *
-     * @param points points array (points.length must be divisible by NUM_COMPONENTS_PER_POINT)
-     * @param texCoords texCoords array (texCoords.length must be divisible by
-     * NUM_COMPONENTS_PER_TEXCOORD)
-     * @param faces faces (or triangles) array (faces.length must be divisible
-     * by NUM_COMPONENTS_PER_FACE)
-     */
-    public TriangleMesh(float[] points, float[] texCoords, int[] faces) {
-        this.points.setAll(points);
-        this.texCoords.setAll(texCoords);
-        this.faces.setAll(faces);
-    }
-    
+
     /**
      * Gets the {@code ObservableFloatArray} of points of this {@code TriangleMesh}.
      *
