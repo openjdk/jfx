@@ -595,14 +595,14 @@ public class J2DPrinterJob implements PrinterJobImpl {
         case LANDSCAPE:
             ix = layout.getBottomMargin();
             iy = layout.getLeftMargin();
-            iw = pHgt - ix - layout.getTopMargin();
-            ih = pWid - iy - layout.getRightMargin();
+            iw = pWid - ix - layout.getTopMargin();
+            ih = pHgt - iy - layout.getRightMargin();
             break;
         case REVERSE_LANDSCAPE:
             ix = layout.getTopMargin();
             iy = layout.getRightMargin();
-            iw = pHgt - ix - layout.getBottomMargin();
-            ih = pWid - iy - layout.getLeftMargin();
+            iw = pWid - ix - layout.getBottomMargin();
+            ih = pHgt - iy - layout.getLeftMargin();
         }
         ix /= 72.0;
         iy /= 72.0;
@@ -950,14 +950,14 @@ public class J2DPrinterJob implements PrinterJobImpl {
             case LANDSCAPE:
                 ix = layout.getBottomMargin();
                 iy = layout.getLeftMargin();
-                iw = pHgt - ix - layout.getTopMargin();
-                ih = pWid - iy - layout.getRightMargin();
+                iw = pWid - ix - layout.getTopMargin();
+                ih = pHgt - iy - layout.getRightMargin();
                 break;
             case REVERSE_LANDSCAPE:
                 ix = layout.getTopMargin();
                 iy = layout.getRightMargin();
-                iw = pHgt - ix - layout.getBottomMargin();
-                ih = pWid - iy - layout.getLeftMargin();
+                iw = pWid - ix - layout.getBottomMargin();
+                ih = pHgt - iy - layout.getLeftMargin();
             }
             paper.setSize(pWid, pHgt);
             paper.setImageableArea(ix, iy, iw, ih);
@@ -990,7 +990,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
             int h = (int)pf.getImageableHeight();
             Node appNode = currPageInfo.getNode();
             g.translate(x, y);
-System.out.println("x="+x+" y="+y+" w="+w+" h="+h);
             printNode(appNode, g, w, h);
             return Printable.PAGE_EXISTS;
         }
