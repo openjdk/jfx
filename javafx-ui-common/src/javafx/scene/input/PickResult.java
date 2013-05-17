@@ -82,7 +82,7 @@ public class PickResult {
      * Creates a pick result for a 2D case where no additional information is needed.
      * Converts the given scene coordinates to the target's local coordinate space
      * and stores the value as the intersected point. Sets intersected node
-     * to the given target, distance to POSITIVE_INFINITY,
+     * to the given target, distance to 1.0,
      * face to FACE_UNDEFINED and texCoord to null.
      * @param target The picked target (null in case of a Scene)
      * @param sceneX The scene X coordinate
@@ -91,7 +91,7 @@ public class PickResult {
     public PickResult(EventTarget target, double sceneX, double sceneY) {
         this(target instanceof Node ? (Node) target : null,
                 target instanceof Node ? ((Node) target).sceneToLocal(sceneX, sceneY, 0) : new Point3D(sceneX, sceneY, 0),
-                Double.POSITIVE_INFINITY);
+                1.0);
     }
 
     /**
@@ -118,8 +118,7 @@ public class PickResult {
 
     /**
      * Returns the intersected distance between camera position 
-     * and the intersected point. Returns POSITIVE_INFINITY in case of
-     * parallel camera.
+     * and the intersected point.
      *
      * @return the distance from camera to the intersection
      */

@@ -141,7 +141,6 @@ import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleableProperty;
 import javafx.geometry.NodeOrientation;
@@ -3837,10 +3836,8 @@ public abstract class Node implements EventTarget, Styleable {
         }
         final com.sun.javafx.geom.Point2D tempPt =
                 TempState.getInstance().point;
-        tempPt.setLocation((float)(screenX - scene.getX()
-                                       - WindowHelper.getScreenX(window)),
-                           (float)(screenY - scene.getY()
-                                       - WindowHelper.getScreenY(window)));
+        tempPt.setLocation((float)(screenX - scene.getX() - window.getX()),
+                           (float)(screenY - scene.getY() - window.getY()));
         try {
             sceneToLocal(tempPt);
         } catch (NoninvertibleTransformException e) {
@@ -3850,7 +3847,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link javafx.scene.Screen}
+     * Transforms a point from the coordinate space of the {@link javafx.stage.Screen}
      * into the local coordinate space of this {@code Node}.
      * @param screenPoint a point on a Screen
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
@@ -3862,7 +3859,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a rectangle from the coordinate space of the
-     * {@link javafx.scene.Screen} into the local coordinate space of this
+     * {@link javafx.stage.Screen} into the local coordinate space of this
      * {@code Node}.
      * @param screenBounds bounds on a Screen
      * @return bounds in the local Node'space or null if Node is not in a {@link Window}.
@@ -3876,9 +3873,9 @@ public abstract class Node implements EventTarget, Styleable {
         }
         Bounds sceneBounds =
                 new BoundingBox(screenBounds.getMinX() - scene.getX()
-                                    - WindowHelper.getScreenX(window),
+                                    - window.getX(),
                                 screenBounds.getMinY() - scene.getY()
-                                    - WindowHelper.getScreenY(window),
+                                    - window.getY(),
                                 screenBounds.getMinZ(),
                                 screenBounds.getWidth(),
                                 screenBounds.getHeight(),
@@ -3993,7 +3990,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Screen}.
+     * into the coordinate space of its {@link javafx.stage.Screen}.
      * @param localX x coordinate of a point in Node's space
      * @param localY y coordinate of a point in Node's space
      * @return screen coordinates of the point or null if Node is not in a {@link Window}
@@ -4010,15 +4007,13 @@ public abstract class Node implements EventTarget, Styleable {
         tempPt.setLocation((float)localX, (float)localY);
         localToScene(tempPt);
 
-        return new Point2D(tempPt.x + scene.getX()
-                               + WindowHelper.getScreenX(window),
-                           tempPt.y + scene.getY()
-                               + WindowHelper.getScreenY(window));
+        return new Point2D(tempPt.x + scene.getX() + window.getX(),
+                           tempPt.y + scene.getY() + window.getY());
     }
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Screen}.
+     * into the coordinate space of its {@link javafx.stage.Screen}.
      * @param localPoint a point in Node's space
      * @return screen coordinates of the point or null if Node is not in a {@link Window}
      */
@@ -4028,7 +4023,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a bounds from the local coordinate space of this
-     * {@code Node} into the coordinate space of its {@link javafx.scene.Screen}.
+     * {@code Node} into the coordinate space of its {@link javafx.stage.Screen}.
      * @param localBounds bounds in Node's space
      * @return the bounds in screen coordinates or null if Node is not in a {@link Window}
      */
@@ -4041,9 +4036,9 @@ public abstract class Node implements EventTarget, Styleable {
 
         Bounds sceneBounds = localToScene(localBounds);
         return new BoundingBox(sceneBounds.getMinX() + scene.getX()
-                                   + WindowHelper.getScreenX(window),
+                                   + window.getX(),
                                sceneBounds.getMinY() + scene.getY()
-                                   + WindowHelper.getScreenY(window),
+                                   + window.getY(),
                                sceneBounds.getMinZ(),
                                sceneBounds.getWidth(),
                                sceneBounds.getHeight(),

@@ -696,7 +696,7 @@ public class BindingsListTest {
 
     @Test(expected = NullPointerException.class)
     public void testFloatValueAt_Constant_Null() {
-        Bindings.floatValueAt(null, 0);
+        Bindings.floatValueAt((ObservableList) null, 0);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -867,7 +867,7 @@ public class BindingsListTest {
 
     @Test(expected = NullPointerException.class)
     public void testIntegerValueAt_Constant_Null() {
-        Bindings.integerValueAt(null, 0);
+        Bindings.integerValueAt((ObservableList) null, 0);
     }
 
     @Test(expected = IllegalArgumentException.class)

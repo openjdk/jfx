@@ -77,7 +77,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         this.pos = pos;
         this.uv = uv;
         this.faces = faces;
-        this.smoothing = smoothing;
+        this.smoothing = smoothing != null && smoothing.length >= nFaces ? smoothing : null;
 
         // System.err.println("*********** MeshBase.buildGeometry() .....");
         // MeshData.cc

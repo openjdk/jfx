@@ -51,7 +51,6 @@ class ES2Context extends BaseShaderContext {
     // Temporary variables
     private static GeneralTransform3D scratchTx = new GeneralTransform3D();
     private static final GeneralTransform3D flipTx = new GeneralTransform3D();
-    private static Affine3D powerOfTwoCompensation = new Affine3D();
     // contains the combined projection/modelview matrix (elements 0-15)
     private static float rawMatrix[] = new float[GLContext.NUM_MATRIX_ELEMENTS];
 
@@ -248,12 +247,10 @@ class ES2Context extends BaseShaderContext {
             scratchTx = camera.getProjViewTx(scratchTx);
             // TODO: verify that this is the right solution. There may be
             // other use-cases where rendering needs different viewport size.
-            if (!glContext.canCreateNonPowTwoTextures()) {
-                powerOfTwoCompensation.setToScale(
-                        camera.getViewWidth() / w,
-                        camera.getViewHeight() / h,
-                        1.0);
-                scratchTx.mul(powerOfTwoCompensation);
+            double vw = camera.getViewWidth();
+            double vh = camera.getViewHeight();
+            if (w != vw || h != vh) {
+                scratchTx.scale(vw / w, vh / h, 1.0);
             }
         }
 
@@ -447,7 +444,7 @@ class ES2Context extends BaseShaderContext {
 
     void setCullingMode(long nativeHandle, int cullingMode) {
         // TODO: 3D - compute determinant whenever projViewTx or worldTx changes.
-        cullingMode = 0;
+        // NOTE: Native code has set clockwise order as front-facing
         glContext.setCullingMode(nativeHandle, cullingMode);
     }
 

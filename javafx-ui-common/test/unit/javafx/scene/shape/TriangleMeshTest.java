@@ -40,9 +40,9 @@ public class TriangleMeshTest {
         TriangleMesh instance = buildTriangleMesh(divX, divY);
         int[] faceSmoothingGroups = new int[divX * divY * 2];
         Arrays.fill(faceSmoothingGroups, 1);
-        instance.setFaceSmoothingGroups(faceSmoothingGroups);
-        assertTrue(instance.getFaceSmoothingGroupCount() == faceSmoothingGroups.length);
-        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups(null));
+        instance.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
+        assertTrue(instance.getFaceSmoothingGroups().size() == faceSmoothingGroups.length);
+        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups().toArray(null));
     }
 
     /**
@@ -60,16 +60,16 @@ public class TriangleMeshTest {
         int index = 1;
         int start = 0;
         int length = setterArray.length;
-        instance.setFaceSmoothingGroups(faceSmoothingGroups);
-        instance.setFaceSmoothingGroups(index, setterArray, start, length);
-        assertArrayEquals(setterArray, instance.getFaceSmoothingGroups(index, expected, length));
+        instance.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
+        instance.getFaceSmoothingGroups().set(index, setterArray, start, length);
+        assertArrayEquals(setterArray, instance.getFaceSmoothingGroups().toArray(index, expected, length));
     }
 
     /**
      * Test faceSmoothingGroups with illegal value of setFaceSmoothingGroups
      * method, of class TriangleMesh.
      */
-    @Test (expected=IllegalArgumentException.class)
+    @Test (expected=ArrayIndexOutOfBoundsException.class)
     public void testSetFaceSmoothingGroups_4argsValueOutOfRange() {
         int divX = 10;
         int divY = 10;
@@ -80,36 +80,36 @@ public class TriangleMeshTest {
         int index = 0;
         int start = 0;
         int length = setterArray.length;
-        instance.setFaceSmoothingGroups(index, setterArray, start, length); // expect IllegalArgumentException
+        instance.getFaceSmoothingGroups().set(index, setterArray, start, length); // expect IllegalArgumentException
         // faceSmoothingGroups should not change
-        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups(null));
+        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups().toArray(null));
     }
 
     /**
      * Test setFaceSmoothingGroups with illegal value of setFaceSmoothingGroups
      * method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testSetFaceSmoothingGroups_4argsIllegalArgument() {
         int divX = 10;
         int divY = 10;
         TriangleMesh instance = buildTriangleMesh(divX, divY);
         int[] faceSmoothingGroups = new int[divX * divY * 2];
         Arrays.fill(faceSmoothingGroups, 1);
-        instance.setFaceSmoothingGroups(faceSmoothingGroups);
+        instance.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
         int[] setterArray = new int[]{2, 0, 1};
         int index = 0;
         int start = 0;
-        instance.setFaceSmoothingGroups(index, setterArray, start, -1); // expect IllegalArgumentException
+        instance.getFaceSmoothingGroups().set(index, setterArray, start, -1); // expect IllegalArgumentException
         // faceSmoothingGroups should not change
-        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups(null));
+        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups().toArray(null));
     }
 
     /**
      * Test setFaceSmoothingGroups with illegal value of setFaceSmoothingGroups
      * method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testSetFaceSmoothingGroups_4argsIndexOutOfRange() {
         int divX = 10;
         int divY = 10;
@@ -119,17 +119,17 @@ public class TriangleMeshTest {
         int[] setterArray = new int[]{2, 0, 1};
         int start = 0;
         int length = setterArray.length;
-        instance.setFaceSmoothingGroups(faceSmoothingGroups);
-        instance.setFaceSmoothingGroups(198, setterArray, start, length); // expect IllegalArgumentException
+        instance.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
+        instance.getFaceSmoothingGroups().set(198, setterArray, start, length); // expect ArrayIndexOutOfBoundsException
         // faceSmoothingGroups should not change
-        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups(null));
+        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups().toArray(null));
     }
 
     /**
      * Test setFaceSmoothingGroups with illegal value of setFaceSmoothingGroups
      * method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testSetFaceSmoothingGroups_4argsStartOutOfRange() {
         int divX = 10;
         int divY = 10;
@@ -139,10 +139,10 @@ public class TriangleMeshTest {
         int[] setterArray = new int[]{2, 0, 1};
         int index = 0;
         int length = setterArray.length;
-        instance.setFaceSmoothingGroups(faceSmoothingGroups);
-        instance.setFaceSmoothingGroups(index, setterArray, 2, length); // expect IllegalArgumentException
+        instance.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
+        instance.getFaceSmoothingGroups().set(index, setterArray, 2, length); // expect IllegalArgumentException
         // faceSmoothingGroups should not change
-        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups(null));
+        assertArrayEquals(faceSmoothingGroups, instance.getFaceSmoothingGroups().toArray(null));
     }
 
     /**
@@ -166,54 +166,54 @@ public class TriangleMeshTest {
             2, 2, 4, 1, 6, 3,
             1, 0, 3, 1, 5, 2,
             5, 2, 3, 1, 7, 3,};
-        int index = 1;
+        int index = 6;
         int start = 0;
-        int length = faces.length / 6;
-        instance.setFaces(index, faces, start, length);
+        int length = faces.length;
+        instance.getFaces().set(index, faces, start, length);
         int[] expected = new int[faces.length];
-        assertArrayEquals(instance.getFaces(index, expected, length), faces);
+        assertArrayEquals(instance.getFaces().toArray(index, expected, length), faces);
     }
 
     /**
      * Test setFaces with illegal value of setFaceSmoothingGroups method, of
      * class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testSetFaces_4argsIllegalArgument() {
         int divX = 10;
         int divY = 10;
         TriangleMesh instance = buildTriangleMesh(divX, divY); // 1200 faces
         int faces[] = {0, 0, 2, 2, 1, 1,};
-        int[] expecteds = instance.getFaces(null);
-        int length = faces.length / 6;
-        instance.setFaces(-1, faces, -1, length);
+        int[] expecteds = instance.getFaces().toArray(null);
+        int length = faces.length;
+        instance.getFaces().set(-1, faces, -1, length);
         // faces should not change
-        assertArrayEquals(expecteds, instance.getFaces(null));
+        assertArrayEquals(expecteds, instance.getFaces().toArray(null));
     }
 
     /**
      * Test setFaces with index argument out of range of setFaceSmoothingGroups
      * method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testSetFaces_4argsIndexOutOfRange() {
         int divX = 10;
         int divY = 10;
         TriangleMesh instance = buildTriangleMesh(divX, divY); // 1200 faces
         int faces[] = {0, 0, 2, 2, 1, 1,};
-        int[] expecteds = instance.getFaces(null);
+        int[] expecteds = instance.getFaces().toArray(null);
         int start = 0;
-        int length = faces.length / 6;
-        instance.setFaces(200, faces, start, length);
+        int length = faces.length;
+        instance.getFaces().set(1200, faces, start, length);
         // faces should not change
-        assertArrayEquals(expecteds, instance.getFaces(null));
+        assertArrayEquals(expecteds, instance.getFaces().toArray(null));
     }
 
     /**
      * Test setFaces with start argument out of range of setFaceSmoothingGroups
      * method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testSetFaces_4argsStartOutOfRange() {
         int divX = 10;
         int divY = 10;
@@ -221,12 +221,12 @@ public class TriangleMeshTest {
         int faces[] = {
             0, 0, 2, 2, 1, 1,
             2, 2, 3, 3, 1, 1,};
-        int[] expecteds = instance.getFaces(null);
-        int index = 1;
-        int length = faces.length / 6;
-        instance.setFaces(index, faces, 1, length);
+        int[] expecteds = instance.getFaces().toArray(null);
+        int index = 6;
+        int length = faces.length;
+        instance.getFaces().set(index, faces, 1, length);
         // faces should not change
-        assertArrayEquals(expecteds, instance.getFaces(null));
+        assertArrayEquals(expecteds, instance.getFaces().toArray(null));
     }
 
     /**
@@ -242,18 +242,18 @@ public class TriangleMeshTest {
                              1, 0,
                              1, 1};
         float[] expecteds = new float[texCoords.length];
-        int index = 1;
+        int index = 2;
         int start = 0;
-        int length = texCoords.length / 2;
-        instance.setTexCoords(index, texCoords, start, length);
-        assertArrayEquals(instance.getTexCoords(index, expecteds, length), texCoords, 1e-3f);
+        int length = texCoords.length;
+        instance.getTexCoords().set(index, texCoords, start, length);
+        assertArrayEquals(instance.getTexCoords().toArray(index, expecteds, length), texCoords, 1e-3f);
     }
 
     /**
      * Test setTexCoords with illegal value of setTexCoordsmoothingGroups
      * method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testsetTexCoords_4argsIllegalArgument() {
         int divX = 10;
         int divY = 10;
@@ -262,18 +262,18 @@ public class TriangleMeshTest {
                              0, 1,
                              1, 0,
                              1, 1};
-        float[] expecteds = instance.getTexCoords(null);
-        int length = texCoords.length / 2;
-        instance.setTexCoords(-1, texCoords, -1, length);
+        float[] expecteds = instance.getTexCoords().toArray(null);
+        int length = texCoords.length;
+        instance.getTexCoords().set(-1, texCoords, -1, length);
         // texCoords should not change
-        assertArrayEquals(instance.getTexCoords(null), expecteds, 1e-3f);
+        assertArrayEquals(instance.getTexCoords().toArray(null), expecteds, 1e-3f);
     }
 
     /**
      * Test setTexCoords with index argument out of range of
      * setTexCoordsmoothingGroups method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testsetTexCoords_4argsIndexOutOfRange() {
         int divX = 10;
         int divY = 10;
@@ -282,19 +282,19 @@ public class TriangleMeshTest {
                              0, 1,
                              1, 0,
                              1, 1};
-        float[] expecteds = instance.getTexCoords(null);
+        float[] expecteds = instance.getTexCoords().toArray(null);
         int start = 0;
-        int length = texCoords.length / 2;
-        instance.setTexCoords(120, texCoords, start, length);
+        int length = texCoords.length;
+        instance.getTexCoords().set(240, texCoords, start, length);
         // texCoords should not change
-        assertArrayEquals(instance.getTexCoords(null), expecteds, 1e-3f);
+        assertArrayEquals(instance.getTexCoords().toArray(null), expecteds, 1e-3f);
     }
 
     /**
      * Test setTexCoords with start argument out of range of
      * setTexCoordsmoothingGroups method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testsetTexCoords_4argsStartOutOfRange() {
         int divX = 10;
         int divY = 10;
@@ -303,12 +303,12 @@ public class TriangleMeshTest {
                              0, 1,
                              1, 0,
                              1, 1};
-        float[] expecteds = instance.getTexCoords(null);
-        int index = 1;
-        int length = texCoords.length / 2;
-        instance.setTexCoords(index, texCoords, 1, length);
+        float[] expecteds = instance.getTexCoords().toArray(null);
+        int index = 2;
+        int length = texCoords.length;
+        instance.getTexCoords().set(index, texCoords, 1, length);
         // texCoords should not change
-        assertArrayEquals(instance.getTexCoords(null), expecteds, 1e-3f);
+        assertArrayEquals(instance.getTexCoords().toArray(null), expecteds, 1e-3f);
     }
 
     /**
@@ -329,18 +329,18 @@ public class TriangleMeshTest {
             -1, -1, 1,
             -1, -1, -1,};
         float[] expecteds = new float[points.length];
-        int index = 1;
+        int index = 3;
         int start = 0;
-        int length = points.length / 3;
-        instance.setPoints(index, points, start, length);
-        assertArrayEquals(instance.getPoints(index, expecteds, length), points, 1e-3f);
+        int length = points.length;
+        instance.getPoints().set(index, points, start, length);
+        assertArrayEquals(instance.getPoints().toArray(index, expecteds, length), points, 1e-3f);
     }
 
     /**
      * Test setPoints with illegal value of setPointsmoothingGroups method, of
      * class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testSetPoints_4argsIllegalArgument() {
         int divX = 10;
         int divY = 10;
@@ -354,18 +354,18 @@ public class TriangleMeshTest {
             -1, 1, -1,
             -1, -1, 1,
             -1, -1, -1,};
-        float[] expecteds = instance.getPoints(null);
-        int length = points.length / 3;
-        instance.setPoints(-1, points, -1, length);
+        float[] expecteds = instance.getPoints().toArray(null);
+        int length = points.length;
+        instance.getPoints().set(-1, points, -1, length);
         // points should not change
-        assertArrayEquals(instance.getPoints(null), expecteds, 1e-3f);
+        assertArrayEquals(instance.getPoints().toArray(null), expecteds, 1e-3f);
     }
 
     /**
      * Test setPoints with index argument out of range of
      * setPointsmoothingGroups method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testSetPoints_4argsIndexOutOfRange() {
         int divX = 10;
         int divY = 10;
@@ -379,19 +379,19 @@ public class TriangleMeshTest {
             -1, 1, -1,
             -1, -1, 1,
             -1, -1, -1,};
-        float[] expecteds = instance.getPoints(null);
+        float[] expecteds = instance.getPoints().toArray(null);
         int start = 0;
-        int length = points.length / 3;
-        instance.setPoints(120, points, start, length);
+        int length = points.length;
+        instance.getPoints().set(120 * 3, points, start, length);
         // points should not change
-        assertArrayEquals(instance.getPoints(null), expecteds, 1e-3f);
+        assertArrayEquals(instance.getPoints().toArray(null), expecteds, 1e-3f);
     }
 
     /**
      * Test setPoints with start argument out of range of
      * setPointsmoothingGroups method, of class TriangleMesh.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
     public void testSetPoints_4argsStartOutOfRange() {
         int divX = 10;
         int divY = 10;
@@ -405,12 +405,12 @@ public class TriangleMeshTest {
             -1, 1, -1,
             -1, -1, 1,
             -1, -1, -1,};
-        float[] expecteds = instance.getPoints(null);
-        int index = 1;
-        int length = points.length / 3;
-        instance.setPoints(index, points, 1, length);
+        float[] expecteds = instance.getPoints().toArray(null);
+        int index = 3;
+        int length = points.length;
+        instance.getPoints().set(index, points, 1, length);
         // points should not change
-        assertArrayEquals(instance.getPoints(null), expecteds, 1e-3f);
+        assertArrayEquals(instance.getPoints().toArray(null), expecteds, 1e-3f);
     }
 
     TriangleMesh buildTriangleMesh(int subDivX, int subDivY) {

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-android-closed" default="jar" basedir=".">
+    <description>Builds, tests, and jars the closed version of the javafx-android project.</description>
+
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />
+    <property name="rt.dist.root.dir" value="../../rt" />
+
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+
+    <target name="jar" depends="javafx-android-common.jar"/>
+    <target name="clean" depends="javafx-android-common.clean"/>
+</project>

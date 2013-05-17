@@ -165,7 +165,7 @@ class SWArgbPreTexture extends SWTexture {
         this.data = new int[width * height];
     }
 
-    Texture createSharedTexture(WrapMode altMode) {
+    Texture createSharedLockedTexture(WrapMode altMode) {
         return new SWArgbPreTexture(this, altMode);
     }
 }

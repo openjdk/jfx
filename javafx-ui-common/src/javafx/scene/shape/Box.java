@@ -426,7 +426,7 @@ public class Box extends Shape3D {
         };
 
         TriangleMesh mesh = new TriangleMesh(points, texCoords, faces);
-        mesh.setFaceSmoothingGroups(faceSmoothingGroups);
+        mesh.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
 
         return mesh;
     }
