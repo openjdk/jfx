@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="rt-closed-tests" default="test" basedir=".">
+
+    <description>Functional tests for rt-closed</description>
+
+    <import file="../../build-defs.xml"/>
+
+    <target name="default" depends="test"/>
+
+    <target name="test">
+        <ant antfile="graphics/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="app-lifecycle/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="glass/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="quantum/build.xml" target="test" inheritAll="false"/>
+    </target>
+
+    <target name="full-test">
+        <ant target="test">
+            <property name="is-full-test" value="true"/>
+        </ant>
+    </target>
+
+    <target name="clean">
+        <ant antfile="graphics/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="app-lifecycle/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="glass/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="quantum/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+</project>
