@@ -25,11 +25,13 @@
 
 package com.sun.prism.d3d;
 
+import com.sun.prism.Image;
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.Texture;
 import com.sun.prism.TextureMap;
 import com.sun.prism.impl.BaseGraphicsResource;
 import com.sun.prism.impl.Disposer;
+import sun.util.logging.PlatformLogger;
 
 /**
  * TODO: 3D - Need documentation
@@ -64,41 +66,62 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
     }
 
     public void setTextureMap(TextureMap map) {
+        maps[map.getType().ordinal()] = map;
+    }
+
+    private Texture setupTexture(TextureMap map) {
         boolean isSpecularAlpha = false;
         boolean isBumpAlpha = false;
+        Image image = map.getImage();
+        Texture texture = (image == null) ? null
+                : context.getResourceFactory().getCachedTexture(image, Texture.WrapMode.CLAMP_TO_EDGE);
         switch (map.getType()) {
             case SPECULAR:
-                isSpecularAlpha = map.getTexture() == null ?
-                        false : !map.getTexture().getPixelFormat().isOpaque();
-                maps[SPECULAR] = map;
+                isSpecularAlpha = texture == null ? false : !texture.getPixelFormat().isOpaque();
                 break;
             case BUMP:
-                isBumpAlpha = map.getTexture() == null ?
-                        false : !map.getTexture().getPixelFormat().isOpaque();
-                maps[BUMP] = map;
+                isBumpAlpha = texture == null ? false : !texture.getPixelFormat().isOpaque();
                 break;
             case DIFFUSE:
-                maps[DIFFUSE] = map;
                 break;
             case SELF_ILLUM:
-                maps[SELF_ILLUM] = map;
                 break;
             default:
-                // NOP
+            // NOP
         }
-        long hTexture;
-        Texture texture = map.getTexture();
-        if (texture != null) {
-            // TODO: 3D - This is a workaround only. See JIRA RT-29543 for detail.
-            texture.contentsUseful();
-            texture.makePermanent();
-
-            hTexture = ((D3DTexture) texture).getNativeTextureObject();
-        } else {
-            hTexture = 0;
-        }
+        long hTexture = (texture != null) ? ((D3DTexture) texture).getNativeTextureObject() : 0;
         context.setMap(nativeHandle, map.getType().ordinal(),
                 hTexture, isSpecularAlpha, isBumpAlpha);
+        return texture;
+    }
+
+    public void lockTextureMaps() {
+        for (int i = 0; i < MAX_MAP_TYPE; i++) {
+            Texture texture = maps[i].getTexture();
+            if (!maps[i].isDirty() && texture != null) {
+                texture.lock();
+                if (!texture.isSurfaceLost()) {
+                    continue;
+                }
+            }
+            texture = setupTexture(maps[i]);
+            maps[i].setTexture(texture);
+            maps[i].setDirty(false);
+            if (maps[i].getImage() != null && texture == null) {
+                String logname = PhongMaterial.class.getName();
+                PlatformLogger.getLogger(logname).warning(
+                        "Warning: Low on texture resources. Cannot create texture.");
+            }
+        }
+    }
+
+    public void unlockTextureMaps() {
+        for (int i = 0; i < MAX_MAP_TYPE; i++) {
+            Texture texture = maps[i].getTexture();
+            if (texture != null) {
+                texture.unlock();
+            }
+        }
     }
 
     @Override

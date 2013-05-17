@@ -42,5 +42,9 @@ public interface PhongMaterial extends Material {
     public void setSolidColor(float r, float g, float b, float a);
 
     public void setTextureMap(TextureMap map);
+    
+    public void lockTextureMaps();
+
+    public void unlockTextureMaps();
 
 }
