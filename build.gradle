@@ -1393,9 +1393,11 @@ task perf() {
 
 task zips() {
     dependsOn(sdk,publicExports,apps,perf)
+    doLast {
         if (!IS_CLOSED) {
             println "zips task is only run for a closed build"
         }
+    }
 }
 
 task all() {
