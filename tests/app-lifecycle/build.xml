@@ -10,6 +10,7 @@
     <target name="jar">
         <ant antfile="ClassLoaderApp/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="ClassLoaderTest/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="LauncherTests/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="LifeCycleTests/build.xml" target="jar" inheritAll="false"/>
     </target>
 
@@ -19,6 +20,7 @@
     <!-- Smoke tests that are run for both test and full-test targets -->
     <target name="-smoke-test">
         <ant antfile="ClassLoaderTest/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="LauncherTests/build.xml" target="test" inheritAll="false"/>
     </target>
 
     <!-- Extra tests that are run only for full-test target -->
@@ -29,6 +31,7 @@
     <target name="clean">
         <ant antfile="ClassLoaderApp/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="ClassLoaderTest/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="LauncherTests/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="LifeCycleTests/build.xml" target="clean" inheritAll="false"/>
     </target>
 
