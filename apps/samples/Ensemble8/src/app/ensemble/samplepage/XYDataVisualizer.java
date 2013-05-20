@@ -62,7 +62,6 @@ import javafx.scene.control.MenuItemBuilder;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableColumn.CellDataFeatures;
-import javafx.scene.control.TreeTableColumnBuilder;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
 import javafx.scene.input.ContextMenuEvent;
@@ -178,19 +177,16 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         yValueColumn.setMinWidth(50);
         
         Class<XYChartItem<X, Y>> clz = (Class<XYChartItem<X, Y>>) root.getClass();
-        TreeTableColumn<XYChartItem<X, Y>, Object> extraValueColumn = TreeTableColumnBuilder.create(clz, Object.class)
-                .cellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<XYChartItem<X, Y>, Object>, ObservableValue<Object>>() {
+        TreeTableColumn<XYChartItem<X, Y>, Object> extraValueColumn = new TreeTableColumn<>("Extra Value");
+        extraValueColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<XYChartItem<X, Y>, Object>, ObservableValue<Object>>() {
+            @Override
+            public ObservableValue<Object> call(CellDataFeatures<XYChartItem<X, Y>, Object> p) {
+                return p.getValue().getValue().extraValueProperty();
+            }
+        });
+        extraValueColumn.setMinWidth(100);
+        extraValueColumn.setSortable(false);
 
-                    @Override
-                    public ObservableValue<Object> call(CellDataFeatures<XYChartItem<X, Y>, Object> p) {
-                        return p.getValue().getValue().extraValueProperty();
-                    }
-                })
-                .text("Extra Value")
-                .minWidth(100)
-                .sortable(false)
-                .build();
-        
         getColumns().setAll(nameColumn, xValueColumn, yValueColumn, extraValueColumn);
         
         setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {

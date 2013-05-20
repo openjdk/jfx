@@ -111,7 +111,6 @@
         <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/glass/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-beans/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-geom/build.xml" target="jar" inheritAll="false"/>
@@ -145,6 +144,7 @@
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="jar" inheritAll="false"/>
         <antcall target="jar-javafx-android"/>
         <antcall target="jar-javafx-embed-swt"/>
+        <ant antfile="${rt.root.dir}/javafx-builders/build.xml" target="jar" inheritAll="false"/>
     </target>
 
     <target name="jar-decora-d3d" if="include.d3d">
@@ -233,6 +233,7 @@
         <ant antfile="${rt.root.dir}/prism-common/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-builders/build.xml" target="test" inheritAll="false"/>
     </target>
 
     <!--
@@ -252,7 +253,6 @@
         <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-beans/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="clean" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-geom/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-sg-prism/build.xml" target="clean" inheritAll="false"/>
@@ -278,6 +278,7 @@
         <antcall target="clean-prism-es2-all"/>
         <antcall target="clean-javafx-android"/>
         <antcall target="clean-javafx-embed-swt"/>
+        <ant antfile="${rt.root.dir}/javafx-builders/build.xml" target="clean" inheritAll="false"/>
     </target>
 
     <target name="clean-decora-d3d" if="include.d3d">

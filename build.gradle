@@ -1233,10 +1233,6 @@ allprojects {
     // and instead each module that depends on closed bits is going to need to
     // add BINARY_STUB to its list of dependencies.
     tasks.withType(Compile) { compile ->
-        // Defer actually creating generated-src/builders until task execution
-        doFirst {
-            mkdir("$buildDir/generated-src/builders");
-        }
         // It looks like we have to use ant to compile instead of the built-in gradle
         // compiler stuff because otherwise it won't compile on CYGWIN
         // TODO need to file issue with Gradle
@@ -1267,10 +1263,6 @@ allprojects {
             if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
         } else if (name == "compileJava") {
             // Not everything needs the builder processor
-            if (["graphics", "controls", "swing", "swt", "base", "fxml"].contains(project.name)){
-                compile.options.compilerArgs += ["-s", "$buildDir/generated-src/builders"]
-                compile.options.compilerArgs += ["-processor", "javafx.builder.processor.BuilderProcessor"]
-            }
             classpath = sourceSets.main.compileClasspath
             if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
         } else {
@@ -1649,7 +1641,6 @@ allprojects {
     apply plugin: 'idea'
     if (project == rootProject || project.name == "media" || project.name == "web") return
 
-    // Configure all projects to include $buildDir/generated-src/builders in the generated IDEA project files.
     // Also need to un-exclude the build-dir since we put stuff in it, and then re-exclude other stuff
     if (rootProject.BINARY_STUB != null) {
         configurations {
@@ -1665,7 +1656,6 @@ allprojects {
     idea {
         module {
             inheritOutputDirs = true;
-            sourceDirs += file("$buildDir/generated-src/builders");
             excludeDirs -= buildDir;
             excludeDirs += [
                     new File(buildDir, "classes"),

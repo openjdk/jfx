@@ -40,8 +40,6 @@ import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.effect.BlendMode;
-import javafx.scene.effect.ColorAdjustBuilder;
-import javafx.scene.effect.DropShadowBuilder;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;

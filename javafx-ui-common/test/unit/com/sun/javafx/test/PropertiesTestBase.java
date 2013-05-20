@@ -57,11 +57,6 @@ public abstract class PropertiesTestBase {
     }
 
     @Test
-    public void testBuilder() {
-        configuration.builderTest();
-    }
-
-    @Test
     public void testBinding() {
         configuration.bindingTest();
     }
@@ -323,70 +318,6 @@ public abstract class PropertiesTestBase {
 
             // set to the first value again and test
             propertyAReference.setValue(beanA, propertyAValue1);
-            propertyBComparator.assertEquals(
-                    propertyBValue1,
-                    propertyBReference.getValue(beanB));
-
-            // verify that the listener has not been called
-            valueInvalidationListener.assertNotCalled();
-        }
-
-        public void builderTest() {
-            final BuilderProxy builderProxy =
-                    BuilderProxy.createForBean(beanA.getClass());
-
-            if (builderProxy == null) {
-                // no builder, no test
-                return;
-            }
-
-            final Object builder = builderProxy.createBuilder();
-            final PropertyReference builderPropRefA =
-                    builderProxy.createPropertyReference(
-                            propertyAReference.getPropertyName(),
-                            propertyAReference.getValueType());
-
-            // set to first value and verify dependet value
-            builderPropRefA.setValue(builder, propertyAValue1);
-            builderProxy.applyTo(builder, beanA);
-            propertyBComparator.assertEquals(
-                    propertyBValue1,
-                    propertyBReference.getValue(beanB));
-
-            final ValueInvalidationListener valueInvalidationListener =
-                    new ValueInvalidationListener(allowMultipleNotifications);
-            final ObservableValue observableValueB =
-                    (ObservableValue) BindingHelper.getPropertyModel(
-                                                  beanB, propertyBReference);
-
-            // register listener
-            observableValueB.addListener(valueInvalidationListener);
-
-            // set to second value
-            builderPropRefA.setValue(builder, propertyAValue2);
-            builderProxy.applyTo(builder, beanA);
-
-            // verify that the listener has been called
-            valueInvalidationListener.assertCalled();
-            valueInvalidationListener.reset();
-
-            // test whether the second dependent value is set
-            propertyBComparator.assertEquals(
-                    propertyBValue2,
-                    propertyBReference.getValue(beanB));
-
-            // set to the second value again
-            builderProxy.applyTo(builder, beanA);
-
-            // verify that the listener has not been called
-            valueInvalidationListener.assertNotCalled();
-
-            // unregister listener
-            observableValueB.removeListener(valueInvalidationListener);
-
-            // set to the first value again and test
-            builderPropRefA.setValue(builder, propertyAValue1);
-            builderProxy.applyTo(builder, beanA);
             propertyBComparator.assertEquals(
                     propertyBValue1,
                     propertyBReference.getValue(beanB));
