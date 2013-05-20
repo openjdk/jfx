@@ -32,7 +32,6 @@ import javafx.geometry.Point2D;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import javafx.event.Event;
@@ -49,6 +48,10 @@ import org.junit.Test;
 import com.sun.javafx.pgstub.StubPopupStage;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
+import javafx.geometry.Bounds;
+import javafx.geometry.Point3D;
+import javafx.scene.shape.Box;
+import static org.junit.Assert.assertEquals;
 
 public class PopupTest {
     
@@ -171,11 +174,14 @@ public class PopupTest {
         popup.getContent().add(contentRect);
         popup.show(stage, 100, 200);
 
-        assertEquals(new Point2D(100, 200),
-                     contentRect.localToScreen(new Point2D(0, 0)));
-        assertEquals(new BoundingBox(110, 210, 50, 50),
-                     contentRect.localToScreen(
-                                     new BoundingBox(10, 10, 50, 50)));
+        Point2D p = contentRect.localToScreen(new Point2D(0, 0));
+        assertEquals(100.0, p.getX(), 0.0001);
+        assertEquals(200.0, p.getY(), 0.0001);
+        Bounds b = contentRect.localToScreen(new BoundingBox(10, 10, 50, 50));
+        assertEquals(110.0, b.getMinX(), 0.0001);
+        assertEquals(210.0, b.getMinY(), 0.0001);
+        assertEquals(50.0, b.getWidth(), 0.0001);
+        assertEquals(50.0, b.getHeight(), 0.0001);
     }
 
     @Test

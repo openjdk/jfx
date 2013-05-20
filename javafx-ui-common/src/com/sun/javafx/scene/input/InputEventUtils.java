@@ -28,10 +28,12 @@ package com.sun.javafx.scene.input;
 import com.sun.javafx.scene.CameraAccess;
 import com.sun.javafx.scene.NodeAccess;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.SubSceneAccess;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Collections;
+import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
 import javafx.scene.SubScene;
@@ -77,15 +79,8 @@ public class InputEventUtils {
             // transform to scene/nearest-subScene coordinates
             coordinates = oldSourceNode.localToScene(coordinates);
             if (subScenesDiffer && oldSubScene != null) {
-                Node n = oldSourceNode;
-                SubScene sub;
-                while((sub = na.getSubScene(n)) != null) {
-                    // flatten the coords - project them by subScene's camera
-                    coordinates = ca.project(sa.getEffectiveCamera(sub), coordinates);
-                    // transform to scene/outer-subScene coords
-                    coordinates = sub.localToScene(coordinates);
-                    n = sub;
-                }
+                // transform to scene coordiantes
+                coordinates = SceneUtils.subSceneToScene(oldSubScene, coordinates);
             }
         }
 
@@ -93,20 +88,18 @@ public class InputEventUtils {
             if (subScenesDiffer && newSubScene != null) {
                 // flatten the coords to flat mouse coordinates - project
                 // by scene's camera
-                coordinates = ca.project(
+                Point2D planeCoords = ca.project(
                         SceneHelper.getEffectiveCamera(newSourceNode.getScene()),
                         coordinates);
-                // compute pick ray intersection with the subScene, recursively
-                // over all parent subScenes
-                coordinates = computeSubSceneCoordinates(
-                        coordinates.getX(), coordinates.getY(),
-                        na.getSubScene(newSourceNode));
+                // convert the point to subScene coordinates
+                planeCoords = SceneUtils.sceneToSubScenePlane(newSubScene, planeCoords);
                 // compute inner intersection with the subScene's camera
                 // projection plane
-                if (coordinates != null) {
-                    coordinates = ca.pickProjectPlane(
-                            sa.getEffectiveCamera(newSubScene),
-                            coordinates.getX(), coordinates.getY());
+                if (planeCoords == null) {
+                    coordinates = null;
+                } else {
+                    coordinates = ca.pickProjectPlane(sa.getEffectiveCamera(newSubScene),
+                            planeCoords.getX(), planeCoords.getY());
                 }
             }
             // transform the point to source's local coordinates
@@ -119,29 +112,6 @@ public class InputEventUtils {
         }
 
         return coordinates;
-    }
-
-    /**
-     * Computes subScene local intersection point from the given scene mouse
-     * coordinates. Works recursively over all outer subScenes.
-     */
-    private static Point3D computeSubSceneCoordinates(
-            double x, double y, SubScene subScene) {
-        SubScene outer = NodeAccess.getNodeAccess().getSubScene(subScene);
-
-        if (outer == null) {
-            return CameraAccess.getCameraAccess().pickNodeXYPlane(
-                    SceneHelper.getEffectiveCamera(subScene.getScene()),
-                    subScene, x, y);
-        } else {
-            Point3D coords = computeSubSceneCoordinates(x, y, outer);
-            if (coords != null) {
-                coords = CameraAccess.getCameraAccess().pickNodeXYPlane(
-                        SubSceneAccess.getSubSceneAccess().getEffectiveCamera(outer),
-                        subScene, coords.getX(), coords.getY());
-            }
-            return coords;
-        }
     }
 
     private static final List<TransferMode> TM_ANY =

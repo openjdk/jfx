@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene;
 
+import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.Camera;
 import javafx.scene.Node;
@@ -45,7 +46,7 @@ public abstract class CameraAccess {
         return access;
     }
 
-    public abstract Point3D project(Camera camera, Point3D p);
-    public abstract Point3D pickNodeXYPlane(Camera camera, Node node, double x, double y);
+    public abstract Point2D project(Camera camera, Point3D p);
+    public abstract Point2D pickNodeXYPlane(Camera camera, Node node, double x, double y);
     public abstract Point3D pickProjectPlane(Camera camera, double x, double y);
 }
