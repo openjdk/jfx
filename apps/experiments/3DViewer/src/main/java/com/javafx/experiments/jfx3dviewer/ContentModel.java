@@ -31,6 +31,7 @@
  */
 package com.javafx.experiments.jfx3dviewer;
 
+import java.io.File;
 import java.io.IOException;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
@@ -39,6 +40,7 @@ import javafx.event.EventHandler;
 import javafx.scene.AmbientLight;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.PointLight;
 import javafx.scene.SubScene;
@@ -47,10 +49,13 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
+import javafx.scene.shape.DrawMode;
+import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import com.javafx.experiments.importers.Importer3D;
+import com.javafx.experiments.shape3d.PolygonMeshView;
 
 /**
  * 3D Content Model for Viewer App. Contains the 3D scene and everything related to it: light, cameras etc.
@@ -128,6 +133,8 @@ public class ContentModel {
             }
         }
     };
+    private boolean wireframe = false;
+    private int subdivision = 0;
 
     public ContentModel() {
         subScene = new SubScene(root3D,400,400,true,false);
@@ -294,6 +301,8 @@ public class ContentModel {
         autoScalingGroup.getChildren().remove(this.content);
         this.content = content;
         autoScalingGroup.getChildren().add(this.content);
+        setWireFrame(content,wireframe);
+        setSubdivision(content,subdivision);
     }
 
     public SubScene getSubScene() {
@@ -328,6 +337,41 @@ public class ContentModel {
         return cameraLookZRotate;
     }
 
+    public void setWireFrame(boolean wireframe) {
+        this.wireframe = wireframe;
+        setWireFrame(root3D,wireframe);
+    }
+
+    public boolean isWireframe() {
+        return wireframe;
+    }
+
+    private void setWireFrame(Node node, boolean wireframe) {
+        if (node instanceof PolygonMeshView) {
+            ((PolygonMeshView)node).setDrawMode(wireframe ? DrawMode.LINE: DrawMode.FILL);
+        } else if (node instanceof MeshView) {
+            ((MeshView)node).setDrawMode(wireframe ? DrawMode.LINE: DrawMode.FILL);
+        } else if (node instanceof Parent) {
+            for (Node child: ((Parent)node).getChildrenUnmodifiable()) setWireFrame(child,wireframe);
+        }
+    }
+
+    public int getSubdivision() {
+        return subdivision;
+    }
+
+    public void setSubdivision(int subdivision) {
+        this.subdivision = subdivision;
+        setSubdivision(root3D,subdivision);
+    }
+
+    private void setSubdivision(Node node, int subdivision) {
+        if (node instanceof PolygonMeshView) {
+            ((PolygonMeshView)node).setSubdivision(subdivision);
+        } else if (node instanceof Parent) {
+            for (Node child: ((Parent)node).getChildrenUnmodifiable()) setSubdivision(child,subdivision);
+        }
+    }
 
     private void createAxes() {
         final PhongMaterial redMaterial = new PhongMaterial();

@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor>
+      <author>Johnny</author>
+      <authoring_tool>OpenCOLLADA2009 Service Pack 1a</authoring_tool>
+      <comments>
+			ColladaMaya export options: 
+			bakeTransforms=0;relativePaths=0;copyTextures=0;exportTriangles=0;exportCgfxFileReferences=1;
+			isSampling=0;curveConstrainSampling=0;removeStaticCurves=1;exportPolygonMeshes=1;exportLights=1;
+			exportCameras=1;exportJointsAndSkin=1;exportAnimations=1;exportInvisibleNodes=0;exportDefaultCameras=0;
+			exportTexCoords=1;exportNormals=1;exportNormalsPerVertex=1;exportVertexColors=1;exportVertexColorsPerVertex=1;
+			exportTexTangents=0;exportTangents=0;exportReferencedMaterials=0;exportMaterialsOnly=0;
+			exportXRefs=1;dereferenceXRefs=1;exportCameraAsLookat=0;cameraXFov=0;cameraYFov=1;doublePrecision=0
+		</comments>
+      <source_data>file:///C:/Assets/Basic/plane_withCamera.ma</source_data>
+    </contributor>
+    <created>2013-04-26T12:05:04</created>
+    <modified>2013-04-26T12:05:04</modified>
+    <unit name="centimeter" meter="0.01"/>
+    <up_axis>Y_UP</up_axis>
+  </asset>
+  <library_cameras>
+    <camera id="cameraShape1" name="cameraShape1">
+      <optics>
+        <technique_common>
+          <perspective>
+            <yfov>37.84928</yfov>
+            <aspect_ratio>1.5</aspect_ratio>
+            <znear>0.00999999</znear>
+            <zfar>1000</zfar>
+          </perspective>
+        </technique_common>
+      </optics>
+      <extra>
+        <technique profile="OpenCOLLADAMaya">
+          <film_fit>0</film_fit>
+          <film_fit_offset>0</film_fit_offset>
+          <film_offsetX>0</film_offsetX>
+          <film_offsetY>0</film_offsetY>
+          <horizontal_aperture>3.599993</horizontal_aperture>
+          <lens_squeeze>1</lens_squeeze>
+          <originalMayaNodeId>cameraShape1</originalMayaNodeId>
+          <vertical_aperture>2.399995</vertical_aperture>
+        </technique>
+      </extra>
+    </camera>
+  </library_cameras>
+  <library_materials>
+    <material id="lambert1" name="lambert1">
+      <instance_effect url="#lambert1-fx"/>
+    </material>
+    <material id="lambert1_1" name="lambert1_1">
+      <instance_effect url="#lambert1-fx_1"/>
+    </material>
+    <material id="phong1" name="phong1">
+      <instance_effect url="#phong1-fx"/>
+    </material>
+  </library_materials>
+  <library_effects>
+    <effect id="lambert1-fx">
+      <profile_COMMON>
+        <technique sid="common">
+          <lambert>
+            <emission>
+              <color>0 0 0 1</color>
+            </emission>
+            <ambient>
+              <color>0 0 0 1</color>
+            </ambient>
+            <diffuse>
+              <color>0.4 0.4 0.4 1</color>
+            </diffuse>
+            <transparent opaque="RGB_ZERO">
+              <color>0 0 0 1</color>
+            </transparent>
+            <transparency>
+              <float>1</float>
+            </transparency>
+          </lambert>
+        </technique>
+      </profile_COMMON>
+    </effect>
+    <effect id="lambert1-fx_1">
+      <profile_COMMON>
+        <technique sid="common">
+          <lambert>
+            <emission>
+              <color>0 0 0 1</color>
+            </emission>
+            <ambient>
+              <color>0 0 0 1</color>
+            </ambient>
+            <diffuse>
+              <color>0.4 0.4 0.4 1</color>
+            </diffuse>
+            <transparent opaque="RGB_ZERO">
+              <color>0 0 0 1</color>
+            </transparent>
+            <transparency>
+              <float>1</float>
+            </transparency>
+          </lambert>
+        </technique>
+      </profile_COMMON>
+    </effect>
+    <effect id="phong1-fx">
+      <profile_COMMON>
+        <technique sid="common">
+          <phong>
+            <emission>
+              <color>0 0 0 1</color>
+            </emission>
+            <ambient>
+              <color>0 0 0 1</color>
+            </ambient>
+            <diffuse>
+              <color>0.099397 0.110831 0.6808 1</color>
+            </diffuse>
+            <specular>
+              <color>0.5 0.5 0.5 1</color>
+            </specular>
+            <shininess>
+              <float>20</float>
+            </shininess>
+            <reflective>
+              <color>0 0 0 1</color>
+            </reflective>
+            <reflectivity>
+              <float>0.5</float>
+            </reflectivity>
+            <transparent opaque="RGB_ZERO">
+              <color>0 0 0 1</color>
+            </transparent>
+            <transparency>
+              <float>1</float>
+            </transparency>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_geometries>
+    <geometry id="pPlaneShape1" name="pPlaneShape1">
+      <mesh>
+        <source id="pPlaneShape1-positions" name="pPlaneShape1-positions">
+          <float_array id="pPlaneShape1-positions-array" count="12">-0.5 0 0.5 0.5 0 0.5 -0.5 0 -0.5 0.5 0 -0.5</float_array>
+          <technique_common>
+            <accessor source="#pPlaneShape1-positions-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlaneShape1-normals" name="pPlaneShape1-normals">
+          <float_array id="pPlaneShape1-normals-array" count="12">0 0.9999999 0 0 0.9999999 0 0 0.9999999 0 0 0.9999999 0</float_array>
+          <technique_common>
+            <accessor source="#pPlaneShape1-normals-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlaneShape1-pPlaneShape1-map1" name="pPlaneShape1-pPlaneShape1-map1">
+          <float_array id="pPlaneShape1-pPlaneShape1-map1-array" count="8">0 0 1 0 0 1 1 1</float_array>
+          <technique_common>
+            <accessor source="#pPlaneShape1-pPlaneShape1-map1-array" count="4" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="pPlaneShape1-vertices" name="pPlaneShape1-vertices">
+          <input semantic="POSITION" source="#pPlaneShape1-positions"/>
+          <input semantic="NORMAL" source="#pPlaneShape1-normals"/>
+        </vertices>
+        <polylist material="phong1SG" count="1">
+          <input semantic="VERTEX" source="#pPlaneShape1-vertices" offset="0"/>
+          <input semantic="TEXCOORD" source="#pPlaneShape1-pPlaneShape1-map1" offset="1" set="0"/>
+          <vcount>4</vcount>
+          <p>0 0 1 1 3 3 2 2</p>
+        </polylist>
+      </mesh>
+      <extra>
+        <technique profile="OpenCOLLADAMaya">
+          <originalMayaNodeId>pPlaneShape1</originalMayaNodeId>
+          <double_sided>1</double_sided>
+        </technique>
+      </extra>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="VisualSceneNode" name="plane_withCamera">
+      <node id="pPlane1" name="pPlane1" type="NODE">
+        <translate sid="translate">0 0 0</translate>
+        <rotate sid="rotateZ">0 0 1 0</rotate>
+        <rotate sid="rotateY">0 1 0 0</rotate>
+        <rotate sid="rotateX">1 0 0 0</rotate>
+        <scale sid="scale">1 1 1</scale>
+        <instance_geometry url="#pPlaneShape1">
+          <bind_material>
+            <technique_common>
+              <instance_material symbol="phong1SG" target="#phong1"/>
+            </technique_common>
+          </bind_material>
+        </instance_geometry>
+        <extra>
+          <technique profile="OpenCOLLADAMaya">
+            <originalMayaNodeId>pPlane1</originalMayaNodeId>
+          </technique>
+        </extra>
+      </node>
+      <node id="camera1" name="camera1" type="NODE">
+        <translate sid="translate">0 2.815199 5.516433</translate>
+        <rotate sid="rotateX">1 0 0 -27.83524</rotate>
+        <scale sid="scale">1 1 1</scale>
+        <instance_camera url="#cameraShape1"/>
+        <extra>
+          <technique profile="OpenCOLLADAMaya">
+            <originalMayaNodeId>camera1</originalMayaNodeId>
+          </technique>
+        </extra>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#VisualSceneNode"/>
+  </scene>
+</COLLADA>
