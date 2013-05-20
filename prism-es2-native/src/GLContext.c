@@ -330,7 +330,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateDepthBuffer
     // create a depth buffer
     ctxInfo->glGenRenderbuffers(1, &dbID);
     ctxInfo->glBindRenderbuffer(GL_RENDERBUFFER, dbID);
-#if TARGET_OS_IPHONE
+#if IS_EGL
     ctxInfo->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,
             width, height);
 #else
