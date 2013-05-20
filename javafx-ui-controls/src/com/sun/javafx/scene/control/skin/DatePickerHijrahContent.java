@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.skin;
 
 import java.time.LocalDate;
 import java.time.DateTimeException;
+import java.time.YearMonth;
 // import java.time.format.DateTimeFormatSymbols;
 import java.time.chrono.Chronology;
 import java.time.chrono.HijrahChronology;
@@ -88,10 +89,18 @@ class DatePickerHijrahContent extends DatePickerContent {
         String firstMonthStr = null;
         String firstYearStr = null;
         String hijrahStr = null;
+        YearMonth displayedYearMonth = displayedYearMonthProperty().get();
 
         for (DateCell dayCell : dayCells) {
+            LocalDate date = dayCellDate(dayCell);
+
+            // Display Hijra month names only for current ISO month.
+            if (!displayedYearMonth.equals(YearMonth.from(date))) {
+                continue;
+            }
+
             try {
-                HijrahDate cDate = chrono.date(dayCellDate(dayCell));
+                HijrahDate cDate = chrono.date(date);
                 long month = cDate.getLong(MONTH_OF_YEAR);
                 long year = cDate.getLong(YEAR);
 
