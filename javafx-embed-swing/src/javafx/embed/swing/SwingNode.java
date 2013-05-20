@@ -419,6 +419,9 @@ public class SwingNode extends Node {
         if (impl_isDirty(DirtyBits.NODE_VISIBLE)) {
             locateLwFrame(); // initialize location
         }
+        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+            peer.markContentDirty();
+        }
     }
 
     private void locateLwFrame() {

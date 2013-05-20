@@ -200,7 +200,10 @@ public class NGExternalNode extends NGNode implements PGExternalNode {
                 }
             }
         });
-        
+    }
+    
+    @Override
+    public void markContentDirty() {
         visualsChanged();
     }
     
