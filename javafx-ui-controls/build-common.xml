@@ -2,61 +2,64 @@
 <project name="javafx-ui-controls-common" default="jar" basedir=".">
 
     <path id="class-path-ref">
-      <pathelement location="${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"/>
-      <pathelement location="${rt.dist.root.dir}/javafx-beans/dist/javafx-beans.jar"/>
-      <pathelement location="${rt.dist.root.dir}/javafx-anim/dist/javafx-anim.jar"/>
-      <pathelement location="${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar"/>
-      <pathelement location="${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar"/>
-      <pathelement location="${JFXRT_HOME}/lib/ext/jfxrt.jar"/>
+        <pathelement location="${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"/>
+        <pathelement location="${rt.dist.root.dir}/javafx-beans/dist/javafx-beans.jar"/>
+        <pathelement location="${rt.dist.root.dir}/javafx-anim/dist/javafx-anim.jar"/>
+        <pathelement location="${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar"/>
+        <pathelement location="${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar"/>
+        <pathelement location="${JFXRT_HOME}/lib/ext/jfxrt.jar"/>
     </path>
 
     <!-- .css -> .bss -->
     <target name="check-binary-css">
-      <uptodate property="binaryCssUpToDate">
-        <srcfiles dir="${basedir}/${src.dir}" includes="**/*.css"/>
-        <mapper type="regexp" from="(.*)/(.*)\.css$$" to="${basedir}/${build.dir}/classes/\1/\2.bss"/>
-      </uptodate>
+        <uptodate property="binaryCssUpToDate">
+            <srcfiles dir="${basedir}/${src.dir}" includes="**/*.css"/>
+            <mapper type="regexp" from="(.*)/(.*)\.css$$" to="${basedir}/${build.dir}/classes/\1/\2.bss"/>
+        </uptodate>
     </target>
 
     <target name="-pre-init" depends="check-binary-css" unless="binaryCssUpToDate">
-      <mkdir dir="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian"/>
-      <mkdir dir="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/modena"/>
+        <mkdir dir="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian"/>
+        <mkdir dir="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/modena"/>
 
-      <!-- compile all .css files in the build dir to .bss files, for faster startup -->
-      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
-        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
-        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/modena/modena.css"/>
-        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/modena/modena.bss"/>
-      </java>
-      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
-        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
-        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/caspian.css"/>
-        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.bss"/>
-      </java>
-      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
-        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
-        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/highcontrast.css"/>
-        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"/>
-      </java>
-      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
-        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
-        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/embedded.css"/>
-        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/embedded.bss"/>
-      </java>
-      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
-        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
-        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css"/>
-        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.bss"/>
-      </java>
+        <!-- compile all .css files in the build dir to .bss files, for faster startup -->
+        <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+            <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+            <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/modena/modena.css"/>
+            <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/modena/modena.bss"/>
+        </java>
+        <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+            <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+            <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/modena/modena-embedded-performance.css"/>
+            <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/modena/modena-embedded-performance.bss"/>
+        </java>
+        <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+            <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+            <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/modena/touch.css"/>
+            <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/modena/touch.bss"/>
+        </java>
+        <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+            <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+            <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/caspian.css"/>
+            <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.bss"/>
+        </java>
+        <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+            <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+            <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/highcontrast.css"/>
+            <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"/>
+        </java>
+        <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+            <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+            <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/embedded.css"/>
+            <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/embedded.bss"/>
+        </java>
+        <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+            <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+            <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css"/>
+            <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.bss"/>
+        </java>
     </target>
 
-    <!-- .css -> .java -->
-    <target name="check-java-css">
-        <uptodate property="javaCssUpToDate" targetfile="${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.java">
-            <srcfiles dir="${src.dir}/com/sun/javafx/scene/control/skin/caspian" includes="caspian.css"/>
-        </uptodate>
-    </target> 
-   
     <!-- misc -->
     <target name="debug-test-file" depends="jar">
         <echo message="${run.test.classpath}" />
