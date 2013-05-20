@@ -219,15 +219,15 @@ public abstract class TableRowSkinBase<T,
 //        node.setManaged(false);
 //        node.setVisible(false);
 //    }
-    
-    /**
-     * Used in layoutChildren to specify that the node is now visible.
-     */
-    private void show(Node node) {
-        node.setManaged(true);
-        node.setVisible(true);
-    }
-    
+//    
+//    /**
+//     * Used in layoutChildren to specify that the node is now visible.
+//     */
+//    private void show(Node node) {
+//        node.setManaged(true);
+//        node.setVisible(true);
+//    }
+//    
 //    // TODO we can optimise this code if we cache the spanTypeArray, which at
 //    //      present is created for every query
 //    // TODO we can optimise this code if we set a maximum span distance
@@ -316,7 +316,7 @@ public abstract class TableRowSkinBase<T,
         
         // TEMPORARY CODE (RT-24975)
         // we check the TableView to see if a fixed cell length is specified
-        ObservableMap p = control.getProperties();
+        ObservableMap p = getVirtualFlowOwner().getProperties();
         String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
         fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
         fixedCellLengthEnabled = fixedCellLength > 0;
@@ -370,7 +370,7 @@ public abstract class TableRowSkinBase<T,
 //            getSkinnable().requestLayout();
         }
     }
-
+    
     @Override protected void layoutChildren(double x, final double y,
             final double w, final double h) {
         
@@ -382,6 +382,8 @@ public abstract class TableRowSkinBase<T,
             super.layoutChildren(x,y,w,h);
             return;
         }
+        
+        C control = getSkinnable();
         
         ///////////////////////////////////////////
         // indentation code starts here
@@ -401,7 +403,7 @@ public abstract class TableRowSkinBase<T,
             indentationColumnIndex = treeColumn == null ? 0 : visibleLeafColumns.indexOf(treeColumn);
             indentationColumnIndex = indentationColumnIndex < 0 ? 0 : indentationColumnIndex;
             
-            int indentationLevel = getIndentationLevel(getSkinnable());
+            int indentationLevel = getIndentationLevel(control);
             if (! isShowRoot()) indentationLevel--;
             final double indentationPerLevel = getIndentationPerLevel();
             leftMargin = indentationLevel * indentationPerLevel;
@@ -432,8 +434,9 @@ public abstract class TableRowSkinBase<T,
         double width;
         double height;
         
-        double verticalPadding = snappedTopInset() + snappedBottomInset();
-        double horizontalPadding = snappedLeftInset() + snappedRightInset();
+        final double verticalPadding = snappedTopInset() + snappedBottomInset();
+        final double horizontalPadding = snappedLeftInset() + snappedRightInset();
+        final double controlHeight = control.getHeight();
 
         /**
          * RT-26743:TreeTableView: Vertical Line looks unfinished.
@@ -442,17 +445,17 @@ public abstract class TableRowSkinBase<T,
          * where expected in cases where the vertical height exceeds the 
          * number of items.
          */
-        int index = getSkinnable().getIndex();
+        int index = control.getIndex();
         if (index < 0/* || row >= itemsProperty().get().size()*/) return;
         
         for (int column = 0, max = cells.size(); column < max; column++) {
             R tableCell = cells.get(column);
             TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
             
-            show(tableCell);
+//            show(tableCell);
             
             width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
-            height = Math.max(getSkinnable().getHeight(), tableCell.prefHeight(-1));
+            height = Math.max(controlHeight, tableCell.prefHeight(-1));
             height = snapSize(height) - snapSize(verticalPadding);
             
             boolean isVisible = true;
@@ -470,10 +473,7 @@ public abstract class TableRowSkinBase<T,
             } 
 
             if (isVisible) {
-                // not ideal to have to do this O(n) lookup, but compared
-                // to what we had previously this is still a massive step
-                // forward
-                if (fixedCellLengthEnabled && ! getChildren().contains(tableCell)) {
+                if (fixedCellLengthEnabled && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
                 
@@ -563,7 +563,7 @@ public abstract class TableRowSkinBase<T,
 //                                // to the height variable
 //                                for (int i = 1; i < cellSpan.getRowSpan(); i++) {
 //                                    // calculate the height
-//                                    double rowHeight = getTableRowHeight(row + i, getSkinnable());
+//                                    double rowHeight = getTableRowHeight(row + i, control);
 //                                    height += snapSize(rowHeight);
 //                                }
 //                            }
@@ -576,7 +576,8 @@ public abstract class TableRowSkinBase<T,
                 tableCell.resize(width, height);
                 tableCell.relocate(x, snappedTopInset());
                 
-                // Request layout is here as (partial) fix for RT-28684
+                // Request layout is here as (partial) fix for RT-28684.
+                // This does not appear to impact performance...
                 tableCell.requestLayout();
             } else {
                 if (fixedCellLengthEnabled) {
