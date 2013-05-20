@@ -41,6 +41,8 @@ import java.util.concurrent.CountDownLatch;
 
 public class CloseWindowTest {
 
+    private static final CountDownLatch startupLatch = new CountDownLatch(1);
+
     private static Stage primaryStage;
 
     private static volatile Throwable exception;
@@ -61,17 +63,20 @@ public class CloseWindowTest {
                     exception = e;
                 }
             });
+
+            startupLatch.countDown();
         }
     }
 
     @BeforeClass
-    public static void setup() {
+    public static void setup() throws Exception {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 Application.launch(TestApp.class);
             }
         }).start();
+        startupLatch.await();
     }
 
     @AfterClass
