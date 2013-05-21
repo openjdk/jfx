@@ -75,3 +75,31 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacSystemClipboard_00024Form
 
     return result;
 }
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacSystemClipboard
+ * Method:    _convertFileReferencePath
+ * Signature: (Ljava/lang/String;)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacSystemClipboard__1convertFileReferencePath
+(JNIEnv *env, jclass clazz, jstring jPath)
+{
+    jstring result = nil;
+
+    GLASS_POOL_ENTER;
+    {
+        NSString* path = [GlassHelper nsStringWithJavaString:jPath withEnv:env];
+        NSURL *url = [NSURL URLWithString:path];
+        if (url != nil) {
+            url = [url filePathURL];
+            if (url != nil) {
+                path = [url absoluteString];
+            }
+        }
+        result = (*env) -> NewStringUTF(env, [path UTF8String]);
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+
+    return result;
+}
