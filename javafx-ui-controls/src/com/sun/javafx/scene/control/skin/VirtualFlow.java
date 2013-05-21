@@ -1059,6 +1059,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         lastCellCount = getCellCount();
         lastVertical = isVertical();
         lastPosition = getPosition();
+
+        cleanPile();
     }
 
     /**
@@ -1555,7 +1557,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // check the pile
         for (int i = 0; i < pile.size(); i++) {
             T cell = pile.get(i);
-            if (cell != null && cell.getIndex() == index) {
+            if (cell.getIndex() == index) {
                 // Note that we don't remove from the pile: if we do it leads
                 // to a severe performance decrease. This seems to be OK, as
                 // getCell() is only used for cell measurement purposes.
@@ -1565,19 +1567,17 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         if (pile.size() > 0) {
-            // TODO The above code checks for null values returned from the pile. Is that possible?
-            // TODO I would not have thought so, there should be an assert added to addToPile to
-            // TODO make sure we never add null to the pile (since it doesn't make sense to do so)
-            // TODO and then we can get rid of the cell != null check on line 1422 above.
             accumCell = pile.get(0);
         }
 
         // We need to use the accumCell and return that
-        Callback<VirtualFlow,T> createCell = getCreateCell();
-        if (accumCell == null && createCell != null) {
-            accumCell = createCell.call(this);
-            accumCell.getProperties().put(NEW_CELL, null);
-            accumCellParent.getChildren().setAll(accumCell);
+        if (accumCell == null) {
+            Callback<VirtualFlow,T> createCell = getCreateCell();
+            if (createCell != null) {
+                accumCell = createCell.call(this);
+                accumCell.getProperties().put(NEW_CELL, null);
+                accumCellParent.getChildren().setAll(accumCell);
+            }
         }
         setCellIndex(accumCell, index);
         resizeCellSize(accumCell);
@@ -1728,7 +1728,29 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         if (cell == null) {
             if (pile.size() > 0) {
-                cell = (prefIndex < pile.getFirst().getIndex())? pile.removeLast() : pile.removeFirst();
+                // we try to get a cell with an index that is the same even/odd
+                // as the prefIndex. This saves us from having to run so much
+                // css on the cell as it will not change from even to odd, or
+                // vice versa
+                final boolean prefIndexIsEven = (prefIndex & 1) == 0;
+                for (int i = 0, max = pile.size(); i < max; i++) {
+                    final T c = pile.get(i);
+                    final int cellIndex = c.getIndex();
+
+                    if ((cellIndex & 1) == 0 && prefIndexIsEven) {
+                        cell = c;
+                        pile.remove(i);
+                        break;
+                    } else if ((cellIndex & 1) == 1 && ! prefIndexIsEven) {
+                        cell = c;
+                        pile.remove(i);
+                        break;
+                    }
+                }
+
+                if (cell == null) {
+                    cell = pile.removeFirst();
+                }
             } else {
                 cell = createCell.call(this);
                 cell.getProperties().put(NEW_CELL, null);
@@ -1737,7 +1759,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         cell.setManaged(true);
         
-//        if (! sheetChildren.contains(cell)) {
         if (cell.getParent() == null) {
             sheetChildren.add(cell);
         }
@@ -1756,9 +1777,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * fallen off the flow's start.
      */
     private void addToPile(T cell) {
-        cell.setVisible(false);
-        cell.setManaged(false);
+        assert cell != null;
         pile.addLast(cell);
+    }
+
+    private void cleanPile() {
+        for (int i = 0, max = pile.size(); i < max; i++) {
+            T cell = pile.get(i);
+            cell.setVisible(false);
+            cell.setManaged(false);
+        }
     }
 
     /**
