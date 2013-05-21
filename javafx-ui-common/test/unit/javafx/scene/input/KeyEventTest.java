@@ -48,7 +48,7 @@ public class KeyEventTest {
     @Test
     public void shouldCreateKeyTypedEvent() {
         KeyEvent event = new KeyEvent(null, node1, KeyEvent.KEY_TYPED, "A", "A", KeyCodeMap.valueOf(0x41), true,
-                false, false, false);
+                false, true, false);
 
         assertSame(node1, event.getTarget());
         assertEquals("A", event.getCharacter());
@@ -56,24 +56,24 @@ public class KeyEventTest {
         assertSame(KeyCode.UNDEFINED, event.getCode());
         assertTrue(event.isShiftDown());
         assertFalse(event.isControlDown());
-        assertFalse(event.isAltDown());
+        assertTrue(event.isAltDown());
         assertFalse(event.isMetaDown());
         assertSame(KeyEvent.KEY_TYPED, event.getEventType());
     }
 
     @Test
     public void shouldCreateKeyReleasedEvent() {
-        KeyEvent event = new KeyEvent(null, node1, KeyEvent.KEY_RELEASED, "A", "A", KeyCodeMap.valueOf(0x41), true,
-                false, false, false);
+        KeyEvent event = new KeyEvent(null, node1, KeyEvent.KEY_RELEASED, "A", "A", KeyCodeMap.valueOf(0x41), false,
+                true, false, true);
 
         assertSame(node1, event.getTarget());
         assertEquals(KeyEvent.CHAR_UNDEFINED, event.getCharacter());
         assertEquals("A", event.getText());
         assertSame(KeyCode.A, event.getCode());
-        assertTrue(event.isShiftDown());
-        assertFalse(event.isControlDown());
+        assertFalse(event.isShiftDown());
+        assertTrue(event.isControlDown());
         assertFalse(event.isAltDown());
-        assertFalse(event.isMetaDown());
+        assertTrue(event.isMetaDown());
         assertSame(KeyEvent.KEY_RELEASED, event.getEventType());
     }
 

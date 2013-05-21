@@ -26,12 +26,16 @@
 package javafx.scene.input;
 
 import com.sun.javafx.pgstub.StubScene;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
+import javafx.event.Event;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.event.EventHandler;
+import javafx.geometry.Point3D;
 import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -41,6 +45,129 @@ public class TouchEventTest {
     private static final int CRAZY_BENCHMARK_CYCLES = 500000;
 
     private int touched;
+
+    @Test public void testTouchPointConstructor() {
+        Rectangle node = new Rectangle();
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+        PickResult pickRes = new PickResult(node, new Point3D(15, 25, 100), 33);
+        TouchPoint tp = new TouchPoint(2, TouchPoint.State.STATIONARY,
+                10, 20, 30, 40, node, pickRes);
+
+        assertEquals(2, tp.getId());
+        assertSame(TouchPoint.State.STATIONARY, tp.getState());
+        assertEquals(18, tp.getX(), 10e-20);
+        assertEquals(27, tp.getY(), 10e-20);
+        assertEquals(150, tp.getZ(), 10e-20);
+        assertEquals(10, tp.getSceneX(), 10e-20);
+        assertEquals(20, tp.getSceneY(), 10e-20);
+        assertEquals(30, tp.getScreenX(), 10e-20);
+        assertEquals(40, tp.getScreenY(), 10e-20);
+        assertSame(node, tp.getTarget());
+        assertSame(pickRes, tp.getPickResult());
+    }
+
+    @Test public void testTouchPointConstructorWithoutPickResult() {
+        Rectangle node = new Rectangle();
+        TouchPoint tp = new TouchPoint(2, TouchPoint.State.STATIONARY,
+                10, 20, 30, 40, node, null);
+
+        assertEquals(10, tp.getX(), 10e-20);
+        assertEquals(20, tp.getY(), 10e-20);
+        assertEquals(0, tp.getZ(), 10e-20);
+        assertEquals(10, tp.getSceneX(), 10e-20);
+        assertEquals(20, tp.getSceneY(), 10e-20);
+        assertEquals(30, tp.getScreenX(), 10e-20);
+        assertEquals(40, tp.getScreenY(), 10e-20);
+        assertNotNull(tp.getPickResult());
+        assertNotNull(tp.getPickResult().getIntersectedPoint());
+        assertEquals(10, tp.getPickResult().getIntersectedPoint().getX(), 10e-20);
+        assertEquals(20, tp.getPickResult().getIntersectedPoint().getY(), 10e-20);
+        assertEquals(0, tp.getPickResult().getIntersectedPoint().getZ(), 10e-20);
+    }
+
+    @Test public void testShortConstructor() {
+        Rectangle node = new Rectangle();
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+
+        PickResult pickRes1 = new PickResult(node, new Point3D(15, 25, 100), 33);
+        PickResult pickRes2 = new PickResult(node, new Point3D(16, 26, 101), 33);
+        TouchPoint tp1 = new TouchPoint(2, TouchPoint.State.STATIONARY, 10, 20, 30, 40, node, pickRes1);
+        TouchPoint tp2 = new TouchPoint(3, TouchPoint.State.PRESSED, 11, 21, 31, 41, node, pickRes2);
+
+        TouchEvent e = new TouchEvent(
+                TouchEvent.TOUCH_PRESSED, tp2,
+                new ArrayList<>(Arrays.asList(tp1, tp2)), 158,
+                false, true, false, true);
+
+        assertSame(TouchEvent.TOUCH_PRESSED, e.getEventType());
+        assertSame(tp2, e.getTouchPoint());
+        assertEquals(2, e.getTouchPoints().size());
+        assertSame(tp1, e.getTouchPoints().get(0));
+        assertSame(tp2, e.getTouchPoints().get(1));
+        assertEquals(158, e.getEventSetId());
+        assertFalse(e.isShiftDown());
+        assertTrue(e.isControlDown());
+        assertFalse(e.isAltDown());
+        assertTrue(e.isMetaDown());
+        assertSame(Event.NULL_SOURCE_TARGET, e.getSource());
+        assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
+        assertFalse(e.isConsumed());
+
+        e = new TouchEvent(
+                TouchEvent.TOUCH_PRESSED, tp2,
+                new ArrayList<>(Arrays.asList(tp1, tp2)), 158,
+                true, false, true, false);
+        assertTrue(e.isShiftDown());
+        assertFalse(e.isControlDown());
+        assertTrue(e.isAltDown());
+        assertFalse(e.isMetaDown());
+    }
+
+    @Test public void testLongConstructor() {
+        Rectangle node = new Rectangle(10, 10);
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+
+        PickResult pickRes1 = new PickResult(node, new Point3D(15, 25, 100), 33);
+        PickResult pickRes2 = new PickResult(node, new Point3D(16, 26, 101), 33);
+        TouchPoint tp1 = new TouchPoint(2, TouchPoint.State.STATIONARY, 10, 20, 30, 40, node, pickRes1);
+        TouchPoint tp2 = new TouchPoint(3, TouchPoint.State.PRESSED, 11, 21, 31, 41, node, pickRes2);
+
+        TouchEvent e = new TouchEvent(n1, n2,
+                TouchEvent.TOUCH_PRESSED, tp2,
+                new ArrayList<>(Arrays.asList(tp1, tp2)), 158,
+                false, true, false, true);
+
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertSame(TouchEvent.TOUCH_PRESSED, e.getEventType());
+        assertSame(tp2, e.getTouchPoint());
+        assertEquals(2, e.getTouchPoints().size());
+        assertSame(tp1, e.getTouchPoints().get(0));
+        assertSame(tp2, e.getTouchPoints().get(1));
+        assertEquals(158, e.getEventSetId());
+        assertFalse(e.isShiftDown());
+        assertTrue(e.isControlDown());
+        assertFalse(e.isAltDown());
+        assertTrue(e.isMetaDown());
+        assertFalse(e.isConsumed());
+
+        e = new TouchEvent(n1, n2,
+                TouchEvent.TOUCH_PRESSED, tp2,
+                new ArrayList<>(Arrays.asList(tp1, tp2)), 158,
+                true, false, true, false);
+        assertTrue(e.isShiftDown());
+        assertFalse(e.isControlDown());
+        assertTrue(e.isAltDown());
+        assertFalse(e.isMetaDown());
+    }
 
     @Test
     public void shouldPassModifiers() {
