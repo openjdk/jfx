@@ -198,8 +198,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsIntArray
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         int *data = NULL;
-        data = (int*)env->GetPrimitiveArrayCritical(array, 0);
         assert((width*height + offset) == env->GetArrayLength(array));
+        data = (int*)env->GetPrimitiveArrayCritical(array, 0);
 
         view->current_window->paint(data + offset, width, height);
 
@@ -219,8 +219,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
     if (view->current_window) {
         unsigned char *data = NULL;
 
-        data = (unsigned char*)env->GetPrimitiveArrayCritical(array, 0);
         assert((4*width*height + offset) == env->GetArrayLength(array));
+        data = (unsigned char*)env->GetPrimitiveArrayCritical(array, 0);
 
         view->current_window->paint(data + offset, width, height);
 
