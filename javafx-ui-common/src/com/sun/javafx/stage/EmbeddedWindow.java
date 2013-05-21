@@ -69,12 +69,4 @@ public class EmbeddedWindow extends Window {
         }
     }
 
-    @Override
-    protected void impl_visibleChanged(boolean visible) {
-        super.impl_visibleChanged(visible);
-        if (!visible && (impl_peer != null)) {
-            peerListener = null;
-            impl_peer = null;
-        }
-    }
 }

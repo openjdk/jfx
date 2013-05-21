@@ -27,9 +27,6 @@ package com.sun.prism.sw;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import com.sun.javafx.image.PixelConverter;
-import com.sun.javafx.image.PixelUtils;
-import com.sun.javafx.image.impl.ByteGray;
 import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
@@ -96,7 +93,7 @@ public class SWMaskTexture extends SWTexture {
         this.data = new byte[width * height];
     }
 
-    Texture createSharedTexture(WrapMode altMode) {
+    Texture createSharedLockedTexture(WrapMode altMode) {
         return new SWMaskTexture(this, altMode);
     }
 }

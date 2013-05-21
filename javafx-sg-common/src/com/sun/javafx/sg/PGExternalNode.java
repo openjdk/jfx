@@ -36,4 +36,6 @@ public interface PGExternalNode extends PGNode {
     public void setImageBounds(int x, int y, int width, int height);
 
     public void repaintDirtyRegion(int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight);
+    
+    public void markContentDirty();
 }

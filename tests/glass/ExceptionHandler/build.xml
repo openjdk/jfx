@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="ExceptionHandlerTests" default="test" basedir=".">
+
+    <import file="../../build-defs.xml"/>
+
+    <property name="jfxrt-jar" value="../../../../artifacts/sdk/rt/lib/ext/jfxrt.jar"/>
+
+    <target name="init">
+        <mkdir dir="build"/>
+        <mkdir dir="results"/>
+    </target>
+
+    <target name="jar" depends="init">
+        <javac srcdir="test" destdir="build">
+            <classpath path="${jfxrt-jar}"/>
+            <classpath path="${libs.junit_4.classpath}"/>
+        </javac>
+    </target>
+
+    <target name="test" depends="init,jar">
+        <junit errorproperty="tests.failed" failureproperty="tests.failed" haltonfailure="true">
+            <classpath path="build"/>
+            <classpath path="${jfxrt-jar}"/>
+            <classpath path="${libs.junit_4.classpath}"/>
+            <batchtest fork="true" todir="results">
+                <fileset dir="test">
+                    <include name="**/*.java"/>
+                </fileset>
+            </batchtest>
+            <formatter type="plain" usefile="false"/>
+            <jvmarg value="-ea"/>
+            <jvmarg value="-Xcheck:jni"/>
+        </junit>
+    </target>
+
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+</project>

@@ -257,10 +257,10 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             setCurrentDisplayedYValue(item, getYAxis().toRealValue(getYAxis().getZeroPosition()));
             getPlotChildren().add(bar);
             item.setYValue(getYAxis().toRealValue(barVal));
-            animate(
-                    TimelineBuilder.create().keyFrames(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item), getCurrentDisplayedYValue(item))),
-                    new KeyFrame(Duration.millis(700), new KeyValue(currentDisplayedYValueProperty(item), item.getYValue(), Interpolator.EASE_BOTH))).build());
+            animate(new Timeline(
+                        new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item), getCurrentDisplayedYValue(item))),
+                        new KeyFrame(Duration.millis(700), new KeyValue(currentDisplayedYValueProperty(item), item.getYValue(), Interpolator.EASE_BOTH)))
+                    );
         } else {
             barVal = ((Number) item.getXValue()).doubleValue();
             if (barVal < 0) {
@@ -270,10 +270,10 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             setCurrentDisplayedXValue(item, getXAxis().toRealValue(getXAxis().getZeroPosition()));
             getPlotChildren().add(bar);
             item.setXValue(getXAxis().toRealValue(barVal));
-            animate(
-                    TimelineBuilder.create().keyFrames(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item), getCurrentDisplayedXValue(item))),
-                    new KeyFrame(Duration.millis(700), new KeyValue(currentDisplayedXValueProperty(item), item.getXValue(), Interpolator.EASE_BOTH))).build());
+            animate(new Timeline(
+                        new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item), getCurrentDisplayedXValue(item))),
+                        new KeyFrame(Duration.millis(700), new KeyValue(currentDisplayedXValueProperty(item), item.getXValue(), Interpolator.EASE_BOTH)))
+                    );
         }
     }
 

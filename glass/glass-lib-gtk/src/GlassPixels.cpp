@@ -71,8 +71,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachInt
         data = (jint*) env->GetDirectBufferAddress(ints);
         assert((w*h*4 + offset * 4) == env->GetDirectBufferCapacity(ints));
     } else {
-        data = (jint*) env->GetPrimitiveArrayCritical(array, 0);
         assert((w*h + offset) == env->GetArrayLength(array));
+        data = (jint*) env->GetPrimitiveArrayCritical(array, 0);
     }
 
     pixbuf = (GdkPixbuf**)JLONG_TO_PTR(ptr);
@@ -101,8 +101,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachByte
         data = (jbyte*) env->GetDirectBufferAddress(bytes);
         assert((w*h*4 + offset) == env->GetDirectBufferCapacity(bytes));
     } else {
-        data = (jbyte*) env->GetPrimitiveArrayCritical(array, 0);
         assert((w*h*4 + offset) == env->GetArrayLength(array));
+        data = (jbyte*) env->GetPrimitiveArrayCritical(array, 0);
     }
 
     pixbuf = (GdkPixbuf**)JLONG_TO_PTR(ptr);

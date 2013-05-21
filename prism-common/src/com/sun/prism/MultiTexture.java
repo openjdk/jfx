@@ -62,7 +62,9 @@ public final class MultiTexture implements Texture {
 
     @Override
     public Texture getSharedTexture(WrapMode altMode) {
+        assertLocked();
         if (wrapMode == altMode) {
+            lock();
             return this;
         }
         switch (altMode) {
@@ -78,7 +80,9 @@ public final class MultiTexture implements Texture {
             default:
                 return null;
         }
-        return new MultiTexture(this, altMode);
+        Texture altTex = new MultiTexture(this, altMode);
+        altTex.lock();
+        return altTex;
     }
 
     public int textureCount() {

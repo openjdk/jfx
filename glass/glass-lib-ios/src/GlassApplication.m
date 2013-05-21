@@ -55,6 +55,9 @@ jclass mat_jScreenClass = NULL;
 
 jclass mat_jViewClass = NULL;
 
+jclass jApplicationClass = NULL;
+jmethodID jApplicationReportException = 0;
+
 jmethodID mat_jViewNotifyResize = 0;
 jmethodID mat_jViewNotifyRepaint = 0;
 jmethodID mat_jViewNotifyKey = 0;
@@ -525,12 +528,12 @@ jclass classForName(JNIEnv *env, char *className)
 
 
 /*
- * Class:     com_sun_glass_ui_x11_X11Application
+ * Class:     com_sun_glass_ui_ios_IosApplication
  * Method:    _initIDs
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1initIDs
-(JNIEnv *env, jclass jx11ApplicationClass)
+(JNIEnv *env, jclass jClass)
 {
     
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1initIDs");
@@ -540,6 +543,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1initIDs
     haveIDs = 1;
 
     assert(pthread_key_create(&GlassThreadDataKey, NULL) == 0);
+    
+    jApplicationClass = (*env)->NewGlobalRef(env, jClass);
+    jApplicationReportException = (*env)->GetStaticMethodID(env, jClass, "reportException", "(Ljava/lang/Throwable;)V");
 
     mat_jIntegerClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/Integer"));
     mat_jMapClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/util/Map"));

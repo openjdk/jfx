@@ -80,23 +80,6 @@ public class Window implements EventTarget {
     static {
         WindowHelper.setWindowAccessor(
                 new WindowHelper.WindowAccessor() {
-                    @Override
-                    public void setWindowTranslate(Window window,
-                                                   double translateX,
-                                                   double translateY) {
-                        window.setWindowTranslate(translateX, translateY);
-                    }
-
-                    @Override
-                    public double getScreenX(Window window) {
-                        return window.getX() + window.winTranslateX;
-                    }
-
-                    @Override
-                    public double getScreenY(Window window) {
-                        return window.getY() + window.winTranslateY;
-                    }
-
                     /**
                      * Allow window peer listeners to directly change window
                      * location and size without changing the xExplicit,
@@ -437,47 +420,46 @@ public class Window implements EventTarget {
 
         @Override protected void invalidated() {
             final Scene newScene = get();
-            if (oldScene != newScene) {
-                Toolkit.getToolkit().checkFxUserThread();
-                // Clear the "window" on the old scene, if there was one. This
-                // will also trigger scene's peer disposal.
-                if (oldScene != null) {
-                    oldScene.impl_setWindow(null);
-                    StyleManager.getInstance().forget(oldScene);
-                }
-                if (newScene != null) {
-                    final Window oldWindow = newScene.getWindow();
-                    if (oldWindow != null) {
-                        // if the new scene was previously set to a window
-                        // we need to remove it from that window without
-                        // generating unnecessary changes in the new scene's
-                        // window property
-                        oldWindow.scene.notifySceneLost();
-                    }
-
-                    // Set the "window" on the new scene. This will also trigger
-                    // scene's peer creation.
-                    newScene.impl_setWindow(Window.this);
-                    // Set scene impl on stage impl
-                    updatePeerStage(newScene.impl_getPeer());
-
-                    // Fix for RT-15432: we should update new Scene's stylesheets, if the
-                    // window is already showing. For not yet shown windows, the update is
-                    // performed in Window.visibleChanging()
-                    if (isShowing()) {
-                        newScene.getRoot().impl_reapplyCSS();
-                        getScene().impl_preferredSize();
-
-                        if (!widthExplicit || !heightExplicit) {
-                            adjustSize(true);
-                        }
-                    }
-                } else {
-                    updatePeerStage(null);
-                }
-
-                oldScene = newScene;
+            if (oldScene == newScene) {
+                return;
             }
+            Toolkit.getToolkit().checkFxUserThread();
+            // First, detach scene peer from this window
+            updatePeerScene(null);
+            // Second, dispose scene peer
+            if (oldScene != null) {
+                oldScene.impl_setWindow(null);
+                StyleManager.getInstance().forget(oldScene);
+            }
+            if (newScene != null) {
+                final Window oldWindow = newScene.getWindow();
+                if (oldWindow != null) {
+                    // if the new scene was previously set to a window
+                    // we need to remove it from that window
+                    // NOTE: can this "scene" property be bound?
+                    oldWindow.setScene(null);
+                }
+
+                // Set the "window" on the new scene. This will also trigger
+                // scene's peer creation.
+                newScene.impl_setWindow(Window.this);
+                // Set scene impl on stage impl
+                updatePeerScene(newScene.impl_getPeer());
+
+                // Fix for RT-15432: we should update new Scene's stylesheets, if the
+                // window is already showing. For not yet shown windows, the update is
+                // performed in Window.visibleChanging()
+                if (isShowing()) {
+                    newScene.getRoot().impl_reapplyCSS();
+                    getScene().impl_preferredSize();
+
+                    if (!widthExplicit || !heightExplicit) {
+                        adjustSize(true);
+                    }
+                }
+            }
+
+            oldScene = newScene;
         }
 
         @Override
@@ -490,20 +472,7 @@ public class Window implements EventTarget {
             return "scene";
         }
 
-        public void notifySceneLost() {
-            // we are going to change the scene to null, if the sceen is
-            // bound we have to unbind first
-            if (isBound()) {
-                unbind();
-            }
-
-            // don't call oldScene.impl_setWindow(null)
-            oldScene = null;
-            set(null);
-            updatePeerStage(null);
-        }
-
-        private void updatePeerStage(final TKScene tkScene) {
+        private void updatePeerScene(final TKScene tkScene) {
             if (impl_peer != null) {
                 // Set scene impl on stage impl
                 impl_peer.setScene(tkScene);
@@ -871,6 +840,11 @@ public class Window implements EventTarget {
      */
     @Deprecated
     protected void impl_visibleChanged(boolean visible) {
+        assert impl_peer != null;
+        if (!visible) {
+            peerListener = null;
+            impl_peer = null;
+        }
     }
 
     // PENDING_DOC_REVIEW

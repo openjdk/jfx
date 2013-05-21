@@ -38,12 +38,20 @@ import javafx.beans.binding.DoubleBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.Toggle;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.DrawMode;
+import javafx.scene.shape.MeshView;
+import com.javafx.experiments.shape3d.PolygonMesh;
+import com.javafx.experiments.shape3d.PolygonMeshView;
 
 /**
  * Controller class for settings panel
@@ -75,6 +83,8 @@ public class SettingsController implements Initializable {
     public Slider light3x;
     public Slider light3y;
     public Slider light3z;
+    public CheckBox wireFrameCheckbox;
+    public ToggleGroup subdivideGroup;
 
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
@@ -95,6 +105,16 @@ public class SettingsController implements Initializable {
         contentModel.yUpProperty().bind(yUpCheckBox.selectedProperty());
         backgroundColorPicker.setValue((Color)contentModel.getSubScene().getFill());
         contentModel.getSubScene().fillProperty().bind(backgroundColorPicker.valueProperty());
+        wireFrameCheckbox.selectedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean isWireframe) {
+                contentModel.setWireFrame(isWireframe);
+            }
+        });
+        subdivideGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+            @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
+                contentModel.setSubdivision(Integer.parseInt((String)selectedToggle.getUserData()));
+            }
+        });
         // wire up settings in LIGHTS
         ambientEnableCheckbox.setSelected(contentModel.getAmbientLightEnabled());
         contentModel.ambientLightEnabledProperty().bind(ambientEnableCheckbox.selectedProperty());
@@ -157,4 +177,7 @@ public class SettingsController implements Initializable {
         fovSlider.setValue(contentModel.getCamera().getFieldOfView());
         contentModel.getCamera().fieldOfViewProperty().bind(fovSlider.valueProperty());
     }
+
+
+
 }

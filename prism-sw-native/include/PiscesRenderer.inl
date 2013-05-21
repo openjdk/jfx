@@ -305,7 +305,7 @@ renderer_setRadialGradient(Renderer* rdr,
 
 
 static INLINE void
-renderer_setTexture(Renderer* rdr, jint paintType, jint* data, jint width, jint height, jint stride,
+renderer_setTexture(Renderer* rdr, jint renderMode, jint* data, jint width, jint height, jint stride,
                     jboolean repeat, jboolean smooth, 
                     const Transform6* transform, jboolean freeData,
                     jboolean textureHasAlpha,
@@ -317,7 +317,8 @@ renderer_setTexture(Renderer* rdr, jint paintType, jint* data, jint width, jint 
     pisces_transform_assign(&compoundTransform, transform);
     pisces_transform_invert(&compoundTransform);
 
-    setPaintMode(rdr, paintType);
+    setPaintMode(rdr, (renderMode == IMAGE_MODE_NORMAL) ?
+        PAINT_TEXTURE8888 : PAINT_TEXTURE8888_MULTIPLY);
 
     if (rdr->_texture_free == JNI_TRUE) {
         my_free(rdr->_texture_intData);
@@ -511,36 +512,29 @@ updateRendererSurface(Renderer* rdr) {
     rdr->_rendererState &= ~INVALID_RENDERER_SURFACE;
 }
 
-
 static void
 updateSurfaceDependedRoutines(Renderer* rdr) {
     switch (rdr->_imageType) {
         case TYPE_INT_ARGB:
             rdr->_bl_SourceOverNoMask = blitSrcOver8888;
             rdr->_bl_PT_SourceOverNoMask = blitPTSrcOver8888;
-            rdr->_bl_Image_SourceOverNoMask = blitImageSrcOver8888;
             rdr->_bl_SourceNoMask = blitSrc8888;
             rdr->_bl_PT_SourceNoMask = blitPTSrc8888;
-            rdr->_bl_Image_SourceNoMask = NULL;
-            
+
             rdr->_bl_SourceOverMask = NULL;
             rdr->_bl_PT_SourceOverMask = NULL;
-            rdr->_bl_Image_SourceOverMask = NULL;
             rdr->_bl_SourceMask = NULL;
             rdr->_bl_PT_SourceMask = NULL;
-            rdr->_bl_Image_SourceMask = NULL;
-            
+
             rdr->_bl_SourceOverLCDMask = NULL;
             rdr->_bl_PT_SourceOverLCDMask = NULL;
-            rdr->_bl_Image_SourceOverLCDMask = NULL;
             rdr->_bl_SourceLCDMask = NULL;
             rdr->_bl_PT_SourceLCDMask = NULL;
-            rdr->_bl_Image_SourceLCDMask = NULL;
-            
+
             rdr->_bl_Clear = blitSrc8888;
             rdr->_bl_PT_Clear = blitSrc8888;
             rdr->_clearRect = clearRect8888;
-            
+
             rdr->_el_Source = emitLineSource8888;
             rdr->_el_SourceOver = emitLineSourceOver8888;
             rdr->_el_PT_Source = emitLinePTSource8888;
@@ -549,29 +543,23 @@ updateSurfaceDependedRoutines(Renderer* rdr) {
         case TYPE_INT_ARGB_PRE:
             rdr->_bl_SourceOverNoMask = blitSrcOver8888_pre;
             rdr->_bl_PT_SourceOverNoMask = blitPTSrcOver8888_pre;
-            rdr->_bl_Image_SourceOverNoMask = blitImageSrcOver8888_pre;
             rdr->_bl_SourceNoMask = blitSrc8888_pre;
             rdr->_bl_PT_SourceNoMask = blitPTSrc8888_pre;
-            rdr->_bl_Image_SourceNoMask = blitImageSrc8888_pre;
-            
+
             rdr->_bl_SourceOverMask = blitSrcOverMask8888_pre;
             rdr->_bl_PT_SourceOverMask = blitPTSrcOverMask8888_pre;
-            rdr->_bl_Image_SourceOverMask = NULL;
             rdr->_bl_SourceMask = blitSrcMask8888_pre;
             rdr->_bl_PT_SourceMask = blitPTSrcMask8888_pre;
-            rdr->_bl_Image_SourceMask = NULL;
-            
+
             rdr->_bl_SourceOverLCDMask = blitSrcOverLCDMask8888_pre;
             rdr->_bl_PT_SourceOverLCDMask = NULL;
-            rdr->_bl_Image_SourceOverLCDMask = NULL;
             rdr->_bl_SourceLCDMask = NULL;
             rdr->_bl_PT_SourceLCDMask = NULL;
-            rdr->_bl_Image_SourceLCDMask = NULL;
-            
+
             rdr->_bl_Clear = blitSrc8888_pre;
             rdr->_bl_PT_Clear = blitSrc8888_pre;
             rdr->_clearRect = clearRect8888;
-            
+
             rdr->_el_Source = emitLineSource8888_pre;
             rdr->_el_SourceOver = emitLineSourceOver8888_pre;
             rdr->_el_PT_Source = emitLinePTSource8888_pre;
@@ -581,7 +569,7 @@ updateSurfaceDependedRoutines(Renderer* rdr) {
             // unsupported!
             break;
     }
-    
+
     updateMaskDependedRoutines(rdr);
 }
 
@@ -591,26 +579,20 @@ updateMaskDependedRoutines(Renderer* rdr) {
         case NO_MASK:
             rdr->_bl_SourceOver = rdr->_bl_SourceOverNoMask;
             rdr->_bl_PT_SourceOver = rdr->_bl_PT_SourceOverNoMask;
-            rdr->_bl_Image_SourceOver = rdr->_bl_Image_SourceOverNoMask;
             rdr->_bl_Source = rdr->_bl_SourceNoMask;
             rdr->_bl_PT_Source = rdr->_bl_PT_SourceNoMask;
-            rdr->_bl_Image_Source = rdr->_bl_Image_SourceNoMask;
             break;
         case ALPHA_MASK:
             rdr->_bl_SourceOver = rdr->_bl_SourceOverMask;
             rdr->_bl_PT_SourceOver = rdr->_bl_PT_SourceOverMask;
-            rdr->_bl_Image_SourceOver = rdr->_bl_Image_SourceOverMask;
             rdr->_bl_Source = rdr->_bl_SourceMask;
             rdr->_bl_PT_Source = rdr->_bl_PT_SourceMask;
-            rdr->_bl_Image_Source = rdr->_bl_Image_SourceMask;
             break;
         case LCD_ALPHA_MASK:
             rdr->_bl_SourceOver = rdr->_bl_SourceOverLCDMask;
             rdr->_bl_PT_SourceOver = rdr->_bl_PT_SourceOverLCDMask;
-            rdr->_bl_Image_SourceOver = rdr->_bl_Image_SourceOverLCDMask;
             rdr->_bl_Source = rdr->_bl_SourceLCDMask;
             rdr->_bl_PT_Source = rdr->_bl_PT_SourceLCDMask;
-            rdr->_bl_Image_Source = rdr->_bl_Image_SourceLCDMask;
             break;
         default:
             // unsupported!
@@ -626,14 +608,12 @@ updateCompositeDependedRoutines(Renderer* rdr) {
         case COMPOSITE_SRC_OVER:
             rdr->_bl = rdr->_bl_SourceOver;
             rdr->_bl_PT = rdr->_bl_PT_SourceOver;
-            rdr->_bl_Image = rdr->_bl_Image_SourceOver;
             rdr->_el = rdr->_el_SourceOver;
             rdr->_el_PT = rdr->_el_PT_SourceOver;
             break;
         case COMPOSITE_SRC:
             rdr->_bl = rdr->_bl_Source;
             rdr->_bl_PT = rdr->_bl_PT_Source;
-            rdr->_bl_Image = rdr->_bl_Image_Source;
             rdr->_el = rdr->_el_Source;
             rdr->_el_PT = rdr->_el_PT_Source;
             break;
@@ -662,12 +642,13 @@ updatePaintDependedRoutines(Renderer* rdr) {
             rdr->_emitRows = rdr->_bl_PT;
             rdr->_emitLine = rdr->_el_PT;
             break;
-        case PAINT_IMAGE:
-            rdr->_genPaint = genTexturePaint;
-            rdr->_emitRows = rdr->_bl_Image;
-            break;
         case PAINT_TEXTURE8888:
             rdr->_genPaint = genTexturePaint;
+            rdr->_emitRows = rdr->_bl_PT;
+            rdr->_emitLine = rdr->_el_PT;
+            break;
+        case PAINT_TEXTURE8888_MULTIPLY:
+            rdr->_genPaint = genTexturePaintMultiply;
             rdr->_emitRows = rdr->_bl_PT;
             rdr->_emitLine = rdr->_el_PT;
             break;
@@ -695,10 +676,9 @@ setPaintMode(Renderer* rdr, jint newPaintMode) {
         rdr->_texture_intData = NULL;
         rdr->_texture_byteData = NULL;
         rdr->_texture_alphaData = NULL;
-        
-        // when changing paint mode, the alpha maps should be checked
-        rdr->_rendererState |= /* VALIDATE_ALPHA_MAP | */ 
-                               INVALID_PAINT_DEPENDED_ROUTINES;
+
+        rdr->_rendererState |= INVALID_PAINT_DEPENDED_ROUTINES;
+        rdr->_prevPaintMode = rdr->_paintMode;
         rdr->_paintMode = newPaintMode;
     }
 }

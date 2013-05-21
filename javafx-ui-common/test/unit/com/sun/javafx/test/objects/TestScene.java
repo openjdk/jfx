@@ -78,6 +78,8 @@ public class TestScene extends Scene {
     public TestScene(final String name, final Parent root) {
         super(root);
         this.name = name;
+        // init size for camera to work
+        impl_preferredSize();
     }
 
     public void set_window(final Window window) {

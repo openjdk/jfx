@@ -64,6 +64,8 @@ public:
     void postPaint(jobject, jint, jint, jint, jint);
     bool processKeyEvent(const PlatformKeyboardEvent& event);
 
+    void scroll(const IntSize& scrollDelta, const IntRect& rectToScroll,
+                const IntRect& clipRect);
     void repaint(const IntRect&);
 #if USE(ACCELERATED_COMPOSITING)
     void setRootChildLayer(GraphicsLayer*);

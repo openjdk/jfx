@@ -43,7 +43,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.effect.BlendMode;
-import javafx.scene.effect.ColorAdjustBuilder;
+import javafx.scene.effect.ColorAdjust;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
@@ -84,8 +84,7 @@ public class LabeledImplTest {
             if ("-fx-cursor".equals(prop)) {
                 value = Cursor.HAND;                
             } else if ("-fx-effect".equals(prop)) {
-                value = 
-                    ColorAdjustBuilder.create().brightness(.5).contrast(.5).hue(.5).saturation(.5).build();
+                value = new ColorAdjust(.5, .5, .5, .5);
             } else if ("-fx-focus-traversable".equals(prop)) {
                 value = Boolean.FALSE;
             } else if ("-fx-opacity".equals(prop)) {

@@ -63,7 +63,7 @@ import javafx.stage.Window;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import com.sun.javafx.scene.NodeAccess;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.glass.ui.Application;
 
@@ -87,7 +87,7 @@ import javafx.print.PrintColor;
 import javafx.print.PrintResolution;
 import javafx.print.PrintSides;
 
-import com.sun.javafx.print.PrintAccess;
+import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.PrinterImpl;
 import com.sun.javafx.print.PrinterJobImpl;
 
@@ -373,8 +373,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         }
         int cfr = res.getCrossFeedResolution(ResolutionSyntax.DPI);
         int fr = res.getFeedResolution(ResolutionSyntax.DPI);
-        settings.setPrintResolution
-            (PrintAccess.getPrintAccess().createPrintResolution(cfr, fr));
+        settings.setPrintResolution(PrintHelper.createPrintResolution(cfr, fr));
     }
 
     private void updatePageLayout() {
@@ -443,10 +442,9 @@ public class J2DPrinterJob implements PrinterJobImpl {
     }
 
     private Printer getFXPrinterForService(PrintService service) {
-        PrintAccess printAccess = PrintAccess.getPrintAccess();
         Set<Printer> printerSet = Printer.getAllPrinters();
         for (Printer p : printerSet) {
-            J2DPrinter p2d = (J2DPrinter)printAccess.getPrinterImpl(p);
+            J2DPrinter p2d = (J2DPrinter)PrintHelper.getPrinterImpl(p);
             PrintService s = p2d.getService();
             if (s.equals(service)) {
                 return p;
@@ -465,8 +463,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     }
 
     private J2DPrinter getJ2DPrinter(Printer printer) {
-        PrintAccess printAccess = PrintAccess.getPrintAccess();
-        return (J2DPrinter)printAccess.getPrinterImpl(printer);
+        return (J2DPrinter)PrintHelper.getPrinterImpl(printer);
     }
 
     public Printer getPrinter() {
@@ -595,14 +592,14 @@ public class J2DPrinterJob implements PrinterJobImpl {
         case LANDSCAPE:
             ix = layout.getBottomMargin();
             iy = layout.getLeftMargin();
-            iw = pHgt - ix - layout.getTopMargin();
-            ih = pWid - iy - layout.getRightMargin();
+            iw = pWid - ix - layout.getTopMargin();
+            ih = pHgt - iy - layout.getRightMargin();
             break;
         case REVERSE_LANDSCAPE:
             ix = layout.getTopMargin();
             iy = layout.getRightMargin();
-            iw = pHgt - ix - layout.getBottomMargin();
-            ih = pWid - iy - layout.getLeftMargin();
+            iw = pWid - ix - layout.getBottomMargin();
+            ih = pHgt - iy - layout.getLeftMargin();
         }
         ix /= 72.0;
         iy /= 72.0;
@@ -752,7 +749,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
             if (pageInfo.tempScene && pageInfo.root.getScene() == null) {
                 new Scene(pageInfo.root);
             }
-            NodeAccess.getNodeAccess().layoutNodeForPrinting(pageInfo.root);
+            NodeHelper.layoutNodeForPrinting(pageInfo.root);
         }
     }
 
@@ -844,7 +841,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 if (tempScene && root.getScene() == null) {
                     new Scene(root); // don't need to keep the scene variable
                 }
-                NodeAccess.getNodeAccess().layoutNodeForPrinting(root);
+                NodeHelper.layoutNodeForPrinting(root);
             } else {
                 Application.invokeAndWait(new LayoutRunnable(this));
             }
@@ -950,14 +947,14 @@ public class J2DPrinterJob implements PrinterJobImpl {
             case LANDSCAPE:
                 ix = layout.getBottomMargin();
                 iy = layout.getLeftMargin();
-                iw = pHgt - ix - layout.getTopMargin();
-                ih = pWid - iy - layout.getRightMargin();
+                iw = pWid - ix - layout.getTopMargin();
+                ih = pHgt - iy - layout.getRightMargin();
                 break;
             case REVERSE_LANDSCAPE:
                 ix = layout.getTopMargin();
                 iy = layout.getRightMargin();
-                iw = pHgt - ix - layout.getBottomMargin();
-                ih = pWid - iy - layout.getLeftMargin();
+                iw = pWid - ix - layout.getBottomMargin();
+                ih = pHgt - iy - layout.getLeftMargin();
             }
             paper.setSize(pWid, pHgt);
             paper.setImageableArea(ix, iy, iw, ih);
@@ -990,7 +987,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
             int h = (int)pf.getImageableHeight();
             Node appNode = currPageInfo.getNode();
             g.translate(x, y);
-System.out.println("x="+x+" y="+y+" w="+w+" h="+h);
             printNode(appNode, g, w, h);
             return Printable.PAGE_EXISTS;
         }

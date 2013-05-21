@@ -32,7 +32,6 @@
 package com.javafx.experiments.importers.obj;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -313,10 +312,10 @@ public class ObjImporter {
         }
 
         TriangleMesh mesh = new TriangleMesh();
-        mesh.setPoints(newVertexes.toFloatArray());
-        mesh.setTexCoords(newUVs.toFloatArray());
-        mesh.setFaces(((IntegerArrayList) faces.subList(facesStart, faces.size())).toIntArray());
-        mesh.setFaceSmoothingGroups(((IntegerArrayList) smoothingGroups.subList(smoothingGroupsStart, smoothingGroups.size())).toIntArray());
+        mesh.getPoints().setAll(newVertexes.toFloatArray());
+        mesh.getTexCoords().setAll(newUVs.toFloatArray());
+        mesh.getFaces().setAll(((IntegerArrayList) faces.subList(facesStart, faces.size())).toIntArray());
+        mesh.getFaceSmoothingGroups().setAll(((IntegerArrayList) smoothingGroups.subList(smoothingGroupsStart, smoothingGroups.size())).toIntArray());
 
         int keyIndex = 2;
         String keyBase = key;
@@ -327,10 +326,10 @@ public class ObjImporter {
         materials.put(key, material);
 
         log(
-                "Added mesh '" + key + "' of " + mesh.getPointCount() + " vertexes, "
-                        + mesh.getTexCoordCount() + " uvs, "
-                        + mesh.getFaceCount() + " faces, "
-                        + mesh.getFaceSmoothingGroupCount() + " smoothing groups.");
+                "Added mesh '" + key + "' of " + mesh.getPoints().size() / TriangleMesh.NUM_COMPONENTS_PER_POINT + " vertexes, "
+                        + mesh.getTexCoords().size() / TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD + " uvs, "
+                        + mesh.getFaces().size() / TriangleMesh.NUM_COMPONENTS_PER_FACE + " faces, "
+                        + mesh.getFaceSmoothingGroups().size() + " smoothing groups.");
         log("material diffuse color = " + ((PhongMaterial) material).getDiffuseColor());
         log("material diffuse map = " + ((PhongMaterial) material).getDiffuseMap());
 

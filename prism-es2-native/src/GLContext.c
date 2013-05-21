@@ -330,7 +330,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateDepthBuffer
     // create a depth buffer
     ctxInfo->glGenRenderbuffers(1, &dbID);
     ctxInfo->glBindRenderbuffer(GL_RENDERBUFFER, dbID);
-#if TARGET_OS_IPHONE
+#ifdef IS_EGL
     ctxInfo->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,
             width, height);
 #else
@@ -1625,6 +1625,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDeviceParametersFor3
     ctxInfo->state.cullEnable = GL_TRUE;
     glCullFace(GL_BACK);
     ctxInfo->state.cullMode = GL_BACK;
+    glFrontFace(GL_CW); // set clockwise order as front-facing
 #ifndef IS_EGL
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 #endif

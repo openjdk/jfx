@@ -35,7 +35,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.SubSceneAccess;
+import com.sun.javafx.scene.SubSceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.PGLightBase;
@@ -674,7 +674,7 @@ public class SubScene extends Node {
         final PickResultChooser result = new PickResultChooser();
         final PickRay pickRay = getEffectiveCamera().computePickRay(localX, localY, new PickRay());
         getRoot().impl_pickNode(pickRay, result);
-        return result.toPickResult(!pickRay.isParallel());
+        return result.toPickResult();
     }
 
     /**
@@ -759,24 +759,20 @@ public class SubScene extends Node {
         return lightOwnerChanged;
     }
 
-    /**
-     * This class is used by classes in different packages to get access to
-     * private and package private methods.
-     */
-    private static class SubSceneAccessImpl extends SubSceneAccess {
-
-        @Override
-        public boolean isDepthBuffer(SubScene subScene) {
-            return subScene.isDepthBufferInteral();
-        };
-
-        @Override
-        public Camera getEffectiveCamera(SubScene subScene) {
-            return subScene.getEffectiveCamera();
-        }
-    }
-
     static {
-        SubSceneAccess.setSubSceneAccess(new SubSceneAccessImpl());
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        SubSceneHelper.setSubSceneAccessor(new SubSceneHelper.SubSceneAccessor() {
+
+            @Override
+            public boolean isDepthBuffer(SubScene subScene) {
+                return subScene.isDepthBufferInteral();
+            };
+
+            @Override
+            public Camera getEffectiveCamera(SubScene subScene) {
+                return subScene.getEffectiveCamera();
+            }
+        });
     }
 }

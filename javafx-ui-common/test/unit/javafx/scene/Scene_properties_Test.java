@@ -39,6 +39,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.sun.javafx.test.PropertiesTestBase;
+import com.sun.javafx.test.PropertiesTestBase.Configuration;
 import com.sun.javafx.test.objects.TestScene;
 import com.sun.javafx.test.objects.TestStage;
 import javafx.scene.layout.Pane;
@@ -59,10 +60,14 @@ public final class Scene_properties_Test extends PropertiesTestBase {
                     }
                 };
         
+        final Configuration windowCfg =
+            new Configuration(testScene,
+                              "_window", testStage1, testStage2,
+                              "window", testStage1, testStage2);
+        windowCfg.setAllowMultipleNotifications(true);
+
         return Arrays.asList(new Object[] {
-            config(testScene,
-                   "_window", testStage1, testStage2,
-                   "window", testStage1, testStage2),
+            config(windowCfg),
 //            config(testScene, "x", , ),
 //            config(testScene, "y", , ),
 //            config(testScene, "width", , ),

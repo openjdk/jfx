@@ -25,6 +25,8 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.collections.FloatArraySyncer;
+import com.sun.javafx.collections.IntegerArraySyncer;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
@@ -32,8 +34,11 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.property.ReadOnlyIntegerProperty;
-import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.collections.ArrayChangeListener;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableArray;
+import javafx.collections.ObservableFloatArray;
+import javafx.collections.ObservableIntegerArray;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
@@ -51,10 +56,10 @@ import javafx.scene.transform.Rotate;
  * descriptions, actually refers to a set of x, y, and z point
  * representing the position of a single vertex. The term points (plural) is
  * used to indicate sets of x, y, and z points for multiple vertices.
- * Similarly, the term texCoord is used to indicate a set of u and v texture 
+ * Similarly, the term texCoord is used to indicate a set of u and v texture
  * coordinates for a single vertex, while the term texCoords (plural) is used
  * to indicate sets of u and v texture coordinates for multiple vertices.
- * Lastly, the term face is used to indicate 3 set of interleaving points 
+ * Lastly, the term face is used to indicate 3 set of interleaving points
  * and texture coordinates that together represent the geometric topology of a 
  * single triangle, while the term faces (plural) is used to indicate sets of 
  * triangles (each represent by a face).
@@ -79,29 +84,17 @@ public class TriangleMesh extends Mesh {
     public static final int NUM_COMPONENTS_PER_TEXCOORD = 2;
     public static final int NUM_COMPONENTS_PER_FACE = 6;
 
-    private float[] points;
-    private float[] texCoords;
-    private int[] faces;
-    private int[] faceSmoothingGroups;
+    private final ObservableFloatArray points = FXCollections.observableFloatArray();
+    private final ObservableFloatArray texCoords = FXCollections.observableFloatArray();
+    private final ObservableIntegerArray faces = FXCollections.observableIntegerArray();
+    private final ObservableIntegerArray faceSmoothingGroups = FXCollections.observableIntegerArray();
+    
+    private final Listener pointsSyncer = new Listener(points);
+    private final Listener texCoordsSyncer = new Listener(texCoords);
+    private final Listener facesSyncer = new Listener(faces);
+    private final Listener faceSmoothingGroupsSyncer = new Listener(faceSmoothingGroups);
 
-    private boolean pointsDirty = true;
-    private boolean texCoordsDirty = true;
-    private boolean facesDirty = true;
-    private boolean fsgDirty = true;
-
-    // Partial Update constants and variables
-    private static final int RANGE_INDEX = 0;
-    private static final int RANGE_LENGTH = 1;
-    private static final int MAX_RANGE_SIZE = 2;
     private int refCount = 1;
-    private boolean pointUpdateRange = false;   
-    private int[] pointRangeInfos;
-    private boolean texCoordUpdateRange = false;
-    private int[] texCoordRangeInfos;
-    private boolean faceUpdateRange = false;
-    private int[] faceRangeInfos;
-    private boolean fsgUpdateRange = false;
-    private int[] fsgRangeInfos;
 
     private BaseBounds cachedBounds;
 
@@ -110,672 +103,76 @@ public class TriangleMesh extends Mesh {
      */
     public TriangleMesh() {
     }
-    
+
     /**
-     * Creates a new instance of {@code TriangleMesh} class.
-     * TODO: 3D - doc. follows array semantic
+     * Gets the {@code ObservableFloatArray} of points of this {@code TriangleMesh}.
      *
-     * @param points points array (points.length must be divisible by NUM_COMPONENTS_PER_POINT)
-     * @param texCoords texCoords array (texCoords.length must be divisible by
-     * NUM_COMPONENTS_PER_TEXCOORD)
-     * @param faces faces (or triangles) array (faces.length must be divisible
-     * by NUM_COMPONENTS_PER_FACE)
-     */
-    public TriangleMesh(float[] points, float[] texCoords, int[] faces) {
-        setPoints(points);
-        setTexCoords(texCoords);
-        setFaces(faces);
-    }
-
-    /**
-     * The total number of points of this {@code TriangleMesh}
-     */
-    private ReadOnlyIntegerWrapper pointCount;
-
-    final void setPointCount(int value) {
-        pointCountPropertyImpl().set(value);
-    }
-
-    /**
-     * Retrieve total number of points of this {@code TriangleMesh}
-     *
-     * @return the total number of points
-     */
-    public final int getPointCount() {
-        return pointCount == null ? 0 : pointCount.get();
-    }
-
-    public ReadOnlyIntegerProperty pointCountProperty() {
-        return pointCountPropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyIntegerWrapper pointCountPropertyImpl() {
-        if (pointCount == null) {
-            pointCount = new ReadOnlyIntegerWrapper(this, "pointCount");
-        }
-        return pointCount;
-    }
-
-    /**
-     * The total number of texture coordinates of this {@code TriangleMesh}
-     */
-    private ReadOnlyIntegerWrapper texCoordCount;
-
-    final void setTexCoordCount(int value) {
-        texCoordCountPropertyImpl().set(value);
-    }
-
-    /**
-     * Retrieve total number of texture coordinates of this {@code TriangleMesh}
-     *
-     * @return the total number of texture coordinates
-     */
-    public final int getTexCoordCount() {
-        return texCoordCount == null ? 0 : texCoordCount.get();
-    }
-
-    public ReadOnlyIntegerProperty texCoordCountProperty() {
-        return texCoordCountPropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyIntegerWrapper texCoordCountPropertyImpl() {
-        if (texCoordCount == null) {
-            texCoordCount = new ReadOnlyIntegerWrapper(this, "texCoordCount");
-        }
-        return texCoordCount;
-    }
-
-    /**
-     * The total number of faces of this {@code TriangleMesh}
-     */
-    private ReadOnlyIntegerWrapper faceCount;
-
-    final void setFaceCount(int value) {
-        faceCountPropertyImpl().set(value);
-    }
-
-    /**
-     * Retrieve total number of faces of this {@code TriangleMesh}
-     *
-     * @return the total number of faces
-     */
-    public final int getFaceCount() {
-        return faceCount == null ? 0 : faceCount.get();
-    }
-
-    public ReadOnlyIntegerProperty faceCountProperty() {
-        return faceCountPropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyIntegerWrapper faceCountPropertyImpl() {
-        if (faceCount == null) {
-            faceCount = new ReadOnlyIntegerWrapper(this, "faceCount");
-        }
-        return faceCount;
-    }
-    
-    /**
-     * The total number of faceSmoothingGroups of this {@code TriangleMesh}
-     */
-    private ReadOnlyIntegerWrapper faceSmoothingGroupCount;
-
-    final void setFaceSmoothingGroupCount(int value) {
-        faceSmoothingGroupCountPropertyImpl().set(value);
-    }
-
-    /**
-     * Retrieve total number of faceSmoothingGroups of this {@code TriangleMesh}
-     *
-     * @return the total number of faceSmoothingGroups
-     */
-    public final int getFaceSmoothingGroupCount() {
-        return faceSmoothingGroupCount == null ? 0 : faceSmoothingGroupCount.get();
-    }
-
-    public ReadOnlyIntegerProperty faceSmoothingGroupCountProperty() {
-        return faceSmoothingGroupCountPropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyIntegerWrapper faceSmoothingGroupCountPropertyImpl() {
-        if (faceSmoothingGroupCount == null) {
-            faceSmoothingGroupCount = new ReadOnlyIntegerWrapper(this, "faceSmoothingGroupCount");
-        }
-        return faceSmoothingGroupCount;
-    }
-
-    /**
-     * Sets the points of this {@code TriangleMesh}
-     * 
-     * @param points source array of NUM_COMPONENTS_PER_POINT * n values containing n new points.
-     */
-    public final void setPoints(float[] points) {
-        // Check that points.length is divisible by NUM_COMPONENTS_PER_POINT
-        if ((points.length % NUM_COMPONENTS_PER_POINT) != 0) {
-            throw new IllegalArgumentException("points.length has to be divisible by NUM_COMPONENTS_PER_POINT." 
-                    + " It is to store multiple x, y, and z coordinates of this mesh");
-        }
-
-        if ((this.points == null) || (this.points.length < points.length)) {
-            this.points = new float[points.length];
-        }
-        System.arraycopy(points, 0, this.points, 0, points.length);
-        // Store the valid point count.
-        // Note this.points.length can be bigger than points.length.
-        setPointCount(points.length / NUM_COMPONENTS_PER_POINT);
-
-        pointsDirty = true;
-        setDirty(true);
-    }
-    
-    /**
-     * Sets the points associated with this {@code TriangleMesh}
-     * starting at the specified {@code index} using data in {@code points} 
-     * starting at index {@code start} for {@code length} number of points.
-     * 
-     * @param index the starting destination index in this TriangleMesh's points array
-     * @param points source array of floats containing the new points
-     * @param start starting source index in the points array.
-     * @param length number of point elements to be copied.
-     */
-    public final void setPoints(int index, float[] points,
-                      int start, int length) {
-
-        if (index < 0 || start < 0 || length < 0) {
-            throw new IllegalArgumentException("index, start and length have to be non-zero");
-        }
-        int startOffset = start * NUM_COMPONENTS_PER_POINT;
-        int lengthInFloatUnit = length * NUM_COMPONENTS_PER_POINT;
-        if ((startOffset >= points.length) || ((startOffset + lengthInFloatUnit) > points.length)) {
-            throw new IllegalArgumentException("start or (start + length) is out of range for input points");
-        }
-        int indexOffset = index * NUM_COMPONENTS_PER_POINT;
-        int pointCountInFloatUnit = getPointCount() * NUM_COMPONENTS_PER_POINT;
-        if ((indexOffset >= pointCountInFloatUnit) || 
-                ((indexOffset + lengthInFloatUnit) > pointCountInFloatUnit)) {
-            throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's points");
-        }
-        System.arraycopy(points, startOffset, this.points, indexOffset, lengthInFloatUnit);
-
-        if (pointRangeInfos == null) {
-            pointRangeInfos = new int[MAX_RANGE_SIZE];
-        }
-
-        if (!pointUpdateRange) {
-            pointsDirty = pointUpdateRange = true;
-            pointRangeInfos[RANGE_INDEX] = index;
-            pointRangeInfos[RANGE_LENGTH] = length;
-        } else {
-            pointsDirty = true;
-            int fromIndex = Math.min(pointRangeInfos[RANGE_INDEX], index);
-            int toIndex = Math.max(pointRangeInfos[RANGE_INDEX] + pointRangeInfos[RANGE_LENGTH], index + length);
-            pointRangeInfos[RANGE_INDEX] = fromIndex;
-            pointRangeInfos[RANGE_LENGTH] = toIndex - fromIndex;
-        }
-        
-        setDirty(true);
-    }
-    
-    /**
-     * Gets the points of this {@code TriangleMesh}
-     *
-     * @param points a float array that will receive the points
-     * if it not null and has sufficient capacity.
-     * @return a float array of points
-     */
-    public final float[] getPoints(float[] points) {
-        if (this.points == null) {
-            return null;
-        }
-        int pointCountInFloatUnit = getPointCount() * NUM_COMPONENTS_PER_POINT;
-        if ((points == null) || (pointCountInFloatUnit > points.length)) {
-            points = new float[pointCountInFloatUnit];
-        }
-        System.arraycopy(this.points, 0, points, 0, pointCountInFloatUnit);
+     * @return {@code ObservableFloatArray} of points where each point is
+     * represented by 3 float values x, y and z, in that order.
+     */    
+    public ObservableFloatArray getPoints() {
         return points;
     }
 
     /**
-     * Gets the points associated with this {@code TriangleMesh} starting at the
-     * specified {@code index} for {@code length} number of points.
-     * 
-     * @param index starting source points index in this {@code TriangleMesh}
-     * @param points destination array that will receive this {@code TriangleMesh}'s points data
-     * @param length number of point elements to be copied
-     * @return a float array of points
-     */
-    public final float[] getPoints(int index, float[] points, int length) {
-        if (index < 0 || length < 0) {
-            throw new IllegalArgumentException("index and length have to be non-zero");
-        }
-
-        int lengthInFloatUnit = length * NUM_COMPONENTS_PER_POINT;
-        if (lengthInFloatUnit > points.length) {
-            throw new IllegalArgumentException("length is out of range for input points");
-        }
-        int indexOffset = index * NUM_COMPONENTS_PER_POINT;
-        int pointCountInFloatUnit = getPointCount() * NUM_COMPONENTS_PER_POINT;
-        if ((indexOffset >= pointCountInFloatUnit) || 
-                ((indexOffset + lengthInFloatUnit) > pointCountInFloatUnit)) {
-            throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's points");
-        }
-
-        if (this.points == null) {
-            return null;
-        }
-        System.arraycopy(this.points, indexOffset, points, 0, lengthInFloatUnit);
-        return points;
-    }
-    
-    /**
-     * Sets the texture coordinates of this {@code TriangleMesh}.
-     * 
-     * @param texCoords source array of NUM_COMPONENTS_PER_TEXCOORD * n values containing n new texCoords.
-     */
-    public final void setTexCoords(float[] texCoords) {
-        // Check that texCoords.length is divisible by NUM_COMPONENTS_PER_TEXCOORD
-        if ((texCoords.length % NUM_COMPONENTS_PER_TEXCOORD) != 0) {
-            throw new IllegalArgumentException("texCoords.length has to be divisible by NUM_COMPONENTS_PER_TEXCOORD."
-                    +" It is to store multiple u and v texture coordinates of this mesh");
-        }
-
-        if ((this.texCoords == null) || (this.texCoords.length < texCoords.length)) {
-            this.texCoords = new float[texCoords.length];
-        }
-        System.arraycopy(texCoords, 0, this.texCoords, 0, texCoords.length);
-        // Store the valid texCoords count.
-        // Note this.texCoords.length can be bigger than texCoords.length.
-        setTexCoordCount(texCoords.length / NUM_COMPONENTS_PER_TEXCOORD);
-
-        texCoordsDirty = true;
-        setDirty(true);
-    }
-
-    /**
-     * Sets the texture coordinates associated with this {@code TriangleMesh}
-     * starting at the specified {@code index} using data in {@code texCoords}
-     * starting at index {@code start} for {@code length} number of texCoords.
-     * 
-     * @param index the starting destination index in this TriangleMesh's texCoords array
-     * @param texCoords an float array containing the new texture coordinates
-     * @param start starting source index in the texture coordinates array
-     * @param length number of texCoord elements to be copied.
-     */
-    public final void setTexCoords(int index, float[] texCoords, int start,
-            int length) {
-        if (index < 0 || start < 0 || length < 0) {
-            throw new IllegalArgumentException("index, start and length have to be non-zero");
-        }
-        int startOffset = start * NUM_COMPONENTS_PER_TEXCOORD;
-        int lengthInFloatUnit = length * NUM_COMPONENTS_PER_TEXCOORD;
-        if ((startOffset >= texCoords.length) || ((startOffset + lengthInFloatUnit) > texCoords.length)) {
-            throw new IllegalArgumentException("start or (start + length) is out of range for input texCoords");
-        }
-        int indexOffset = index * NUM_COMPONENTS_PER_TEXCOORD;
-        int texCoordCountInFloatUnit = getTexCoordCount() * NUM_COMPONENTS_PER_TEXCOORD;
-        if ((indexOffset >= texCoordCountInFloatUnit) || 
-                ((indexOffset + lengthInFloatUnit) > texCoordCountInFloatUnit)) {
-            throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's texCoords");
-        }
-        System.arraycopy(texCoords, startOffset, this.texCoords, indexOffset, lengthInFloatUnit);
-      
-        if (texCoordRangeInfos == null) {
-            texCoordRangeInfos = new int[MAX_RANGE_SIZE];
-        }
-        if (!texCoordUpdateRange) {
-            texCoordsDirty = texCoordUpdateRange = true;
-            texCoordRangeInfos[RANGE_INDEX] = index;
-            texCoordRangeInfos[RANGE_LENGTH] = length;
-        } else {
-            texCoordsDirty = true;
-            int fromIndex = Math.min(texCoordRangeInfos[RANGE_INDEX], index);
-            int toIndex = Math.max(texCoordRangeInfos[RANGE_INDEX] + texCoordRangeInfos[RANGE_LENGTH], index + length);
-            texCoordRangeInfos[RANGE_INDEX] = fromIndex;
-            texCoordRangeInfos[RANGE_LENGTH] = toIndex - fromIndex;            
-        }
-        setDirty(true);
-    }
-
-    /**
-     * Gets the texture coordinates of this {@code TriangleMesh}.
+     * Gets the {@code ObservableFloatArray} of texture coordinates of this {@code TriangleMesh}.
      *
-     * @param texCoords a float array that will receive the texture coordinates
-     * if it not null and has sufficient capacity
-     * @return a float array of texture coordinates
-     */
-    public final float[] getTexCoords(float[] texCoords) {
-        if (this.texCoords == null) {
-            return null;
-        }
-
-        int texCoordCountInFloatUnit = getTexCoordCount() * NUM_COMPONENTS_PER_TEXCOORD;
-        if ((texCoords == null) || (texCoordCountInFloatUnit > texCoords.length)) {
-            texCoords = new float[texCoordCountInFloatUnit];
-        }
-        System.arraycopy(this.texCoords, 0, texCoords, 0, texCoordCountInFloatUnit);
+     * @return {@code ObservableFloatArray} array of texture coordinates
+     * where each texture coordinate is represented by 2 float values: u and v,
+     * in that order
+     */    
+    public ObservableFloatArray getTexCoords() {
         return texCoords;
     }
-
+ 
     /**
-     * Gets the texture coordinates associated with this {@code TriangleMesh}
-     * starting at the specified {@code index} for {@code length} number of
-     * texCoords.
-     * 
-     * @param index starting source texCoords index in this {@code TriangleMesh}
-     * @param texCoords destination array that will receive this {@code TriangleMesh}'s texCoords data 
-     * @param length number of texCoord elements to be copied
-     * @return a float array of texture coordinates
-     */
-    public final float[] getTexCoords(int index, float[] texCoords, int length) {
-        if (index < 0 || length < 0) {
-            throw new IllegalArgumentException("index and length have to be non-zero");
-        }
-
-        int lengthInFloatUnit = length * NUM_COMPONENTS_PER_TEXCOORD;
-        if (lengthInFloatUnit > texCoords.length) {
-            throw new IllegalArgumentException("length is out of range for input texCoords");
-        }
-        int indexOffset = index * NUM_COMPONENTS_PER_TEXCOORD;
-        int texCoordCountInFloatUnit = getTexCoordCount() * NUM_COMPONENTS_PER_TEXCOORD;
-        if ((indexOffset >= texCoordCountInFloatUnit) || 
-                ((indexOffset + lengthInFloatUnit) > texCoordCountInFloatUnit)) {
-            throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's texCoords");
-        }
-
-        if (this.texCoords == null) {
-            return null;
-        }
-        System.arraycopy(this.texCoords, indexOffset, texCoords, 0, lengthInFloatUnit);
-        return texCoords;
-    }
-
-    /**
-     * Sets the faces, indices into the points and texCoords arrays,
-     * associated with this {@code TriangleMesh}.
-     * 
-     * @param faces source array of NUM_COMPONENTS_PER_FACE * n indices 
-     * (3 point indices and 3 texCood indices) containing n new faces
-     */
-    public final void setFaces(int[] faces) {
-        // Check that faces.length is divisible by NUM_COMPONENTS_PER_FACE
-        if ((faces.length % NUM_COMPONENTS_PER_FACE) != 0) {
-            throw new IllegalArgumentException("faces.length has to be divisible by NUM_COMPONENTS_PER_FACE.");
-        }
-
-        if ((this.faces == null) || (this.faces.length < faces.length)) {
-            this.faces = new int[faces.length];
-        }
-        System.arraycopy(faces, 0, this.faces, 0, faces.length);
-        // Store the valid face count.
-        // Note this.faces.length can be bigger than faces.length.
-        setFaceCount(faces.length / NUM_COMPONENTS_PER_FACE);
-
-        facesDirty = true;
-        setDirty(true);
-    }
-
-    /**
-     * Sets the faces, indices into the points and texCoords arrays, 
-     * associated with this {@code TriangleMesh}
-     * starting at the specified{@code index} using data in {@code faces} 
-     * starting at index {@code start} for {@code length} number of faces.
-     * 
-     * @param index the starting destination index in this TriangleMesh's faces array
-     * @param faces an int array containing the new interleaved vertices
-     * @param start starting source index in the faces array.
-     * @param length number of interleaved vertex elements to be copied
-     */
-    public final void setFaces(int index, int[] faces, int start, int length) {
-        if (index < 0 || start < 0 || length < 0) {
-            throw new IllegalArgumentException("index, start and length have to be non-zero");
-        }
-        int startOffset = start * NUM_COMPONENTS_PER_FACE;
-        int lengthInIntUnit = length * NUM_COMPONENTS_PER_FACE;
-        if ((startOffset >= faces.length) || ((startOffset + lengthInIntUnit) > faces.length)) {
-            throw new IllegalArgumentException("start or (start + length) is out of range for input faces");
-        }
-        int indexOffset = index * NUM_COMPONENTS_PER_FACE;
-        int faceCountInIntUnit = getFaceCount() * NUM_COMPONENTS_PER_FACE;
-        if ((indexOffset >= faceCountInIntUnit) || 
-                ((indexOffset + lengthInIntUnit) > faceCountInIntUnit)) {
-            throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's faces");
-        }
-        System.arraycopy(faces, startOffset, this.faces, indexOffset, lengthInIntUnit);
-
-        if (faceRangeInfos == null) {
-            faceRangeInfos = new int[MAX_RANGE_SIZE];
-        }
-        if (!faceUpdateRange) {
-            facesDirty = faceUpdateRange = true;
-            faceRangeInfos[RANGE_INDEX] = index;
-            faceRangeInfos[RANGE_LENGTH] = length;
-        } else {
-            facesDirty = true;
-            int fromIndex = Math.min(faceRangeInfos[RANGE_INDEX], index);
-            int toIndex = Math.max(faceRangeInfos[RANGE_INDEX] + faceRangeInfos[RANGE_LENGTH], index + length);
-            faceRangeInfos[RANGE_INDEX] = fromIndex;
-            faceRangeInfos[RANGE_LENGTH] = toIndex - fromIndex;
-        }
-        setDirty(true);
-    }
-
-    /**
-     * Gets the faces, indices into the points and texCoords arrays, of this 
-     * {@code TriangleMesh}
+     * Gets the {@code ObservableIntegerArray} of faces, indices into the points 
+     * and texCoords arrays, of this  {@code TriangleMesh}
      *
-     * @param faces an int array that will receive the faces if it not null and 
-     * has sufficient capacity.
-     * @return an int array of faces
-     * 
-     */
-    public final int[] getFaces(int[] faces) {
-        if (this.faces == null) {
-            return null;
-        }
-
-        int faceCountInIntUnit = getFaceCount() * NUM_COMPONENTS_PER_FACE;
-        if ((faces == null) || (faceCountInIntUnit > faces.length)) {
-            faces = new int[faceCountInIntUnit];
-        }
-        System.arraycopy(this.faces, 0, faces, 0, faceCountInIntUnit);
+     * @return {@code ObservableIntegerArray} of faces where each face is
+     * 6 integers p0, t0, p1, t1, p3, t3, where p0, p1 and p2 are indices of 
+     * points in points {@code ObservableFloatArray} and t0, t1 and t2 are 
+     * indices of texture coordinates in texCoords {@code ObservableFloatArray}.
+     * Both indices are in terms of elements (points or textCoords), not individual
+     * floats.
+     */    
+    public ObservableIntegerArray getFaces() {
         return faces;
     }
 
     /**
-     * Gets the faces, indices into the points and texCoords arrays,
-     * associated with this {@code TriangleMesh} starting at the specified
-     * {@code index} for {@code length} number of faces.
-     * 
-     * @param index starting source faces index in this {@code TriangleMesh}
-     * @param faces destination array that will receive this {@code TriangleMesh}'s faces data
-     * @param length number of face elements to be copied
-     * @return an int array of faces
-     */
-    public final int[] getFaces(int index, int[] faces, int length) {
-        if (index < 0 || length < 0) {
-            throw new IllegalArgumentException("index and length have to be non-zero");
-        }
-
-        int lengthInIntUnit = length * NUM_COMPONENTS_PER_FACE;
-        if (lengthInIntUnit > faces.length) {
-            throw new IllegalArgumentException("length is out of range for input faces");
-        }
-        int indexOffset = index * NUM_COMPONENTS_PER_FACE;
-        int faceCountInIntUnit = getFaceCount() * NUM_COMPONENTS_PER_FACE;
-        if ((indexOffset >= faceCountInIntUnit) || 
-                ((indexOffset + lengthInIntUnit) > faceCountInIntUnit)) {
-            throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's faces");
-        }
-
-        if (this.faces == null) {
-            return null;
-        }
-        System.arraycopy(this.faces, indexOffset, faces, 0, lengthInIntUnit);
-        return faces;
-    }
-    
-    /**
-     * Sets the face smoothing group for each face in this {@code TriangleMesh}
+     * Gets the {@code ObservableIntegerArray} of face smoothing groups 
+     * of this {@code TriangleMesh}.
      * Smoothing affects how a mesh is rendered but it does not effect its
      * geometry. The face smoothing group value is used to control the smoothing
      * between adjacent faces.
      *
-     * The face smoothing group is represented by an array of bits and up to 32
-     * unique groups is possible. The face smoothing group value can range from
-     * zero to all 32 groups. A face is said to belong to a group is by having
-     * the associated bit set. A value of 0 implies no smoothing group or hard
-     * edges. A face can have no or more smoothing groups. Smoothing is applied
-     * when adjacent pair of faces shared a smoothing group. Otherwise the faces
-     * are rendered with a hard edge between them.
+     * <p> The face smoothing group is represented by an array of bits and up to
+     * 32 unique groups is possible; (1 <<  0) to (1 << 31). The face smoothing
+     * group value can range from 0 (no smoothing group) to all 32 groups. A face
+     * can belong to zero or more smoothing groups. A face is a member of group
+     * N if bit N is set, for example, groups |= (1 << N). A value of 0 implies
+     * no smoothing group or hard edges.
+     * Smoothing is applied when adjacent pair of faces shared a smoothing group.
+     * Otherwise the faces are rendered with a hard edge between them.
      *
-     * A null faceSmoothingGroups implies all faces in this mesh have a
+     * <p> An empty faceSmoothingGroups implies all faces in this mesh have a
      * smoothing group value of 1.
      *
-     * Note: If faceSmoothingGroups is not null, faceSmoothingGroups.length must
-     * be equal to faces.length/NUM_COMPONENTS_PER_FACE.
-     */
-    public final void setFaceSmoothingGroups(int[] faceSmoothingGroups) {
-        if (faceSmoothingGroups == null) {
-            this.faceSmoothingGroups = null;
-            setFaceSmoothingGroupCount(0);
-        } else {
-            // Check that faceSmoothingGroups.length is 1/NUM_COMPONENTS_PER_FACE of faces.length
-            if (faceSmoothingGroups.length != (faces.length / NUM_COMPONENTS_PER_FACE)) {
-                throw new IllegalArgumentException("faceSmoothingGroups.length has to be equal to (faces.length / NUM_COMPONENTS_PER_FACE).");
-            }
-
-            if ((this.faceSmoothingGroups == null)
-                    || (this.faceSmoothingGroups.length < faceSmoothingGroups.length)) {
-                this.faceSmoothingGroups = new int[faceSmoothingGroups.length];
-            }
-            System.arraycopy(faceSmoothingGroups, 0, this.faceSmoothingGroups, 0, faceSmoothingGroups.length);
-            // Store the valid faceSmoothingGroup count.
-            // Note this.faceSmoothingGroups.length can be bigger than faceSmoothingGroups.length.
-            setFaceSmoothingGroupCount(faceSmoothingGroups.length);
-        }
-
-        fsgDirty = true;
-        setDirty(true);
-    }
-
-    /**
-     * Sets the faceSmoothingGroups associated with this {@code TriangleMesh}
-     * starting at the specified {@code index} using data in {@code faceSmoothingGroups} 
-     * starting at index {@code start} for {@code length} number of faceSmoothingGroups.
-     * The face smoothing group value is used to control the smoothing
-     * between adjacent faces.
-     *
-     * The face smoothing group is represented by an array of bits and up to 32
-     * unique groups is possible. The face smoothing group value can range from
-     * zero to all 32 groups. A face is said to belong to a group is by having
-     * the associated bit set. A value of 0 implies no smoothing group or hard
-     * edges. A face can have no or more smoothing groups. Smoothing is applied
-     * when adjacent pair of faces shared a smoothing group. Otherwise the faces
-     * are rendered with a hard edge between them.
-     *
-     * @param index the starting destination index in this TriangleMesh's faceSmoothingGroups array
-     * @param points source array of floats containing the new faceSmoothingGroups
-     * @param start starting source index in the faceSmoothingGroups array.
-     * @param length number of faceSmoothingGroup elements to be copied.
-     */
-    public final void setFaceSmoothingGroups(int index, int[] faceSmoothingGroups,
-                      int start, int length) {
-
-        if (index < 0 || start < 0 || length < 0) {
-            throw new IllegalArgumentException("index, start and length have to be non-zero");
-        }
-        
-        if ((start >= faceSmoothingGroups.length) || ((start + length) > faceSmoothingGroups.length)) {
-            throw new IllegalArgumentException("start or (start + length) is out of range for input faceSmoothingGroups");
-        }
-        int fsgCount = getFaceSmoothingGroupCount();
-        if ((index >= fsgCount) || 
-                ((index + length) > fsgCount)) {
-            throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's faceSmoothingGroups");
-        }
-
-        System.arraycopy(faceSmoothingGroups, start, this.faceSmoothingGroups, index, length);
-              
-        if (fsgRangeInfos == null) {
-            fsgRangeInfos = new int[MAX_RANGE_SIZE];
-        }
-         if (!fsgUpdateRange) {
-            fsgDirty = fsgUpdateRange = true;
-            fsgRangeInfos[RANGE_INDEX] = index;
-            fsgRangeInfos[RANGE_LENGTH] = length;
-        } else {
-            fsgDirty = true;
-            int fromIndex = Math.min(fsgRangeInfos[RANGE_INDEX], index);
-            int toIndex = Math.max(fsgRangeInfos[RANGE_INDEX] + fsgRangeInfos[RANGE_LENGTH], index + length);
-            fsgRangeInfos[RANGE_INDEX] = fromIndex;
-            fsgRangeInfos[RANGE_LENGTH] = toIndex - fromIndex;
-        }
-        setDirty(true);
-    }
-
-    /**
-     * Gets the face smoothing group for each face in this {@code TriangleMesh}
-     * @return an int array to smoothing group bits for each face
-     */
-    public final int[] getFaceSmoothingGroups(int[] faceSmoothingGroups) {
-        if (this.faceSmoothingGroups == null) {
-            return null;
-        }
-
-        int fsgCount = getFaceSmoothingGroupCount();
-        if ((faceSmoothingGroups == null) || 
-                (fsgCount > faceSmoothingGroups.length)) {
-            faceSmoothingGroups = new int[fsgCount];
-        }
-        System.arraycopy(this.faceSmoothingGroups, 0, faceSmoothingGroups, 0, fsgCount);
+     * <p> Note: If faceSmoothingGroups is not empty, is size must
+     * be equal to number of faces.
+     */    
+    public ObservableIntegerArray getFaceSmoothingGroups() {
         return faceSmoothingGroups;
     }
 
-    /**
-     * Gets the face smoothing group for each face in this {@code TriangleMesh}
-     * starting at the specified {@code index} for {@code length} number of face
-     * smoothing groups.
-     * 
-     * @param index starting source face smoothing groups index in this {@code TriangleMesh}
-     * @param faceSmoothingGroups destination array that will receive this 
-     * {@code TriangleMesh}'s faceSmoothingGroups data
-     * @param length number of faceSmoothingGroup elements to be copied
-     * @return an int array of faceSmoothingGroups
-     */
-    public final int[] getFaceSmoothingGroups(int index, int[] faceSmoothingGroups, int length) {
-        if (index < 0 || length < 0) {
-            throw new IllegalArgumentException("index and length have to be non-zero");
-        }
-
-        if (length > faceSmoothingGroups.length) {
-            throw new IllegalArgumentException("length is out of range for input faceSmoothingGroups");
-        }
-        
-        int fsgCount = getFaceSmoothingGroupCount();
-        if ((index >= fsgCount) || ((index + length) > fsgCount)) {
-            throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's faceSmoothingGroups");
-        }
-
-        if (this.faceSmoothingGroups == null) {
-            return null;
-        }
-        System.arraycopy(this.faceSmoothingGroups, index, faceSmoothingGroups, 0, length);
-        return faceSmoothingGroups;
-    }
-
-    @Override
-    void setDirty(boolean value) {
+    @Override void setDirty(boolean value) {
         super.setDirty(value);
         if (!value) { // false
-            pointsDirty = false;
-            texCoordsDirty = false;
-            facesDirty = false;
-            fsgDirty = false;
-            pointUpdateRange = false;
-            texCoordUpdateRange = false;
-            faceUpdateRange = false;
-            fsgUpdateRange = false;
-            // We don't clear up XXXPartialUpdateInfos array since we will
-            // overwrite every element when we update the array.   
+            pointsSyncer.setDirty(false);
+            texCoordsSyncer.setDirty(false);
+            facesSyncer.setDirty(false);
+            faceSmoothingGroupsSyncer.setDirty(false);
         }
     }
 
@@ -831,42 +228,18 @@ public class TriangleMesh extends Mesh {
 
         PGTriangleMesh pgTriMesh = impl_getPGTriangleMesh();
         // sync points 
-        if (pointsDirty) {
-            if (pointUpdateRange) {
-                pgTriMesh.setPoints(points, pointRangeInfos[RANGE_INDEX],
-                        pointRangeInfos[RANGE_LENGTH]);
-            } else {
-                pgTriMesh.setPoints(points);
-            }
+        if (pointsSyncer.dirty) {
+            pgTriMesh.syncPoints(pointsSyncer);
         }
-        // sync texCoords
-        if (texCoordsDirty) {
-            if (texCoordUpdateRange) {
-                pgTriMesh.setTexCoords(texCoords, texCoordRangeInfos[RANGE_INDEX],
-                                       texCoordRangeInfos[RANGE_LENGTH]);
-            } else {
-                pgTriMesh.setTexCoords(texCoords);
-            }
+        if (texCoordsSyncer.dirty) {
+            pgTriMesh.syncTexCoords(texCoordsSyncer);
         }
-        // sync faces
-        if (facesDirty) {
-            if (faceUpdateRange) {
-                pgTriMesh.setFaces(faces, faceRangeInfos[RANGE_INDEX],
-                                   faceRangeInfos[RANGE_LENGTH]);
-            } else {
-                pgTriMesh.setFaces(faces);
-            }
+        if (facesSyncer.dirty) {
+            pgTriMesh.syncFaces(facesSyncer);
         }
-        // sync faceSmoothingGroups
-        if (fsgDirty) {
-            if (fsgUpdateRange) {
-                pgTriMesh.setFaceSmoothingGroups(faceSmoothingGroups, fsgRangeInfos[RANGE_INDEX],
-                                                 fsgRangeInfos[RANGE_LENGTH]);
-            } else {
-                pgTriMesh.setFaceSmoothingGroups(faceSmoothingGroups);
-            }
+        if (faceSmoothingGroupsSyncer.dirty) {
+            pgTriMesh.syncFaceSmoothingGroups(faceSmoothingGroupsSyncer);
         }
-
         setDirty(false);
     }
 
@@ -875,9 +248,9 @@ public class TriangleMesh extends Mesh {
         if (isDirty() || cachedBounds == null) {
             cachedBounds = new BoxBounds();
 
-            final double len = points.length;
-            for (int i = 0; i < len; i += 3) {
-                cachedBounds.add(points[i], points[i + 1], points[i + 2]);
+            final double len = points.size();
+            for (int i = 0; i < len; i += NUM_COMPONENTS_PER_POINT) {
+                cachedBounds.add(points.get(i), points.get(i + 1), points.get(i + 2));
             }
         }
         return bounds.deriveWithNewBounds(cachedBounds);
@@ -934,13 +307,13 @@ public class TriangleMesh extends Mesh {
             PickRay pickRay, Point3D origin, Point3D dir, int faceIndex,
             CullFace cullFace, Node candidate, boolean reportFace, PickResultChooser result) {
 
-        final int v0Idx = faces[faceIndex] * 3;
-        final int v1Idx = faces[faceIndex + 2] * 3;
-        final int v2Idx = faces[faceIndex + 4] * 3;
+        final int v0Idx = faces.get(faceIndex) * NUM_COMPONENTS_PER_POINT;
+        final int v1Idx = faces.get(faceIndex + 2) * NUM_COMPONENTS_PER_POINT;
+        final int v2Idx = faces.get(faceIndex + 4) * NUM_COMPONENTS_PER_POINT;
 
-        final Point3D v0 = new Point3D(points[v0Idx], points[v0Idx + 1], points[v0Idx + 2]);
-        final Point3D v1 = new Point3D(points[v1Idx], points[v1Idx + 1], points[v1Idx + 2]);
-        final Point3D v2 = new Point3D(points[v2Idx], points[v2Idx + 1], points[v2Idx + 2]);
+        final Point3D v0 = new Point3D(points.get(v0Idx), points.get(v0Idx + 1), points.get(v0Idx + 2));
+        final Point3D v1 = new Point3D(points.get(v1Idx), points.get(v1Idx + 1), points.get(v1Idx + 2));
+        final Point3D v2 = new Point3D(points.get(v2Idx), points.get(v2Idx + 1), points.get(v2Idx + 2));
 
         final Point3D e1 = v1.subtract(v0);
         final Point3D e2 = v2.subtract(v0);
@@ -1028,13 +401,13 @@ public class TriangleMesh extends Mesh {
 
             // Obtain the texture triangle
 
-            final int t0Idx = faces[faceIndex + 1] * 2;
-            final int t1Idx = faces[faceIndex + 3] * 2;
-            final int t2Idx = faces[faceIndex + 5] * 2;
+            final int t0Idx = faces.get(faceIndex + 1) * NUM_COMPONENTS_PER_TEXCOORD;
+            final int t1Idx = faces.get(faceIndex + 3) * NUM_COMPONENTS_PER_TEXCOORD;
+            final int t2Idx = faces.get(faceIndex + 5) * NUM_COMPONENTS_PER_TEXCOORD;
 
-            final Point2D u0 = new Point2D(texCoords[t0Idx], texCoords[t0Idx + 1]);
-            final Point2D u1 = new Point2D(texCoords[t1Idx], texCoords[t1Idx + 1]);
-            final Point2D u2 = new Point2D(texCoords[t2Idx], texCoords[t2Idx + 1]);
+            final Point2D u0 = new Point2D(texCoords.get(t0Idx), texCoords.get(t0Idx + 1));
+            final Point2D u1 = new Point2D(texCoords.get(t1Idx), texCoords.get(t1Idx + 1));
+            final Point2D u2 = new Point2D(texCoords.get(t2Idx), texCoords.get(t2Idx + 1));
 
             final Point2D txCentroid = computeCentroid(u0, u1, u2);
 
@@ -1082,7 +455,7 @@ public class TriangleMesh extends Mesh {
             Node candidate, CullFace cullFace, boolean reportFace) {
 
         boolean found = false;
-        final int size = faces.length;
+        final int size = faces.size();
 
         final Vec3d o = pickRay.getOriginNoClone();
         final Point3D origin = new Point3D(o.x, o.y, o.z);
@@ -1098,5 +471,93 @@ public class TriangleMesh extends Mesh {
         }
 
         return found;
+    }
+
+    private class Listener<T extends ObservableArray<T>> implements ArrayChangeListener<T>, FloatArraySyncer, IntegerArraySyncer {
+        
+        protected final T array;
+        protected boolean dirty;
+        /**
+         * Array was replaced
+         * @return true if array was replaced; false otherwise
+         */
+        protected boolean dirtyInFull;
+        protected int dirtyRangeFrom;
+        protected int dirtyRangeLength;
+
+        public Listener(T array) {
+            this.array = array;
+            array.addListener(this);
+        }
+
+        /**
+         * Adds a dirty range
+         * @param from index of the first modified element
+         * @param length length of the modified range
+         */
+        protected final void addDirtyRange(int from, int length) {
+            if (length > 0 && !dirtyInFull) {
+                markDirty();
+                if (dirtyRangeLength == 0) {
+                    dirtyRangeFrom = from;
+                    dirtyRangeLength = length;
+                } else {
+                    int fromIndex = Math.min(dirtyRangeFrom, from);
+                    int toIndex = Math.max(dirtyRangeFrom + dirtyRangeLength, from + length);
+                    dirtyRangeFrom = fromIndex;
+                    dirtyRangeLength = toIndex - fromIndex;
+                }
+            }
+        }
+
+        protected void markDirty() {
+            dirty = true;
+            TriangleMesh.this.setDirty(true);
+        }
+
+        @Override
+        public void onChanged(T observableArray, boolean sizeChanged, int from, int to) {
+            if (sizeChanged) {
+                setDirty(true);
+            } else {
+                addDirtyRange(from, to - from);
+            }
+        }
+
+        /**
+         * @param dirty if true, the whole collection is marked as dirty;
+         * if false, the whole collection is marked as not-dirty
+         */
+        public final void setDirty(boolean dirty) {
+            this.dirtyInFull = dirty;
+            if (dirty) {
+                markDirty();
+                dirtyRangeFrom = 0;
+                dirtyRangeLength = array.size();
+            } else {
+                this.dirty = false;
+                dirtyRangeFrom = dirtyRangeLength = 0;
+            }
+        }
+
+        @Override
+        public float[] syncTo(float[] array) {
+            ObservableFloatArray floatArray = (ObservableFloatArray) this.array;
+            if (dirtyInFull || array == null || array.length != floatArray.size()) {
+                return floatArray.toArray(array);
+            }
+            floatArray.copyTo(dirtyRangeFrom, array, dirtyRangeFrom, dirtyRangeLength);
+            return array;
+        }
+
+        @Override
+        public int[] syncTo(int[] array) {
+            ObservableIntegerArray intArray = (ObservableIntegerArray) this.array;
+            if (dirtyInFull || array == null || array.length != intArray.size()) {
+                return intArray.toArray(array);
+            }
+            intArray.copyTo(dirtyRangeFrom, array, dirtyRangeFrom, dirtyRangeLength);
+            return array;
+        }
     }
 }

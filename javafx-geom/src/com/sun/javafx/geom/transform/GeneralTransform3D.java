@@ -711,6 +711,55 @@ public class GeneralTransform3D implements CanTransformVec3d{
 
     /**
      * Sets the value of this transform to the result of multiplying itself
+     * with a scale transform:
+     * <pre>
+     * scaletx =
+     *     [ sx  0  0  0 ]
+     *     [  0 sy  0  0 ]
+     *     [  0  0 sz  0 ]
+     *     [  0  0  0  1 ].
+     * this = this * scaletx.
+     * </pre>
+     * 
+     * @param sx the X coordinate scale factor
+     * @param sy the Y coordinate scale factor
+     * @param sz the Z coordinate scale factor
+     *
+     * @return this transform
+     */
+    public GeneralTransform3D scale(double sx, double sy, double sz) {
+        boolean update = false;
+
+        if (sx != 1.0) {
+            mat[0]  *= sx;
+            mat[4]  *= sx;
+            mat[8]  *= sx;
+            mat[12] *= sx;
+            update = true;
+        }
+        if (sy != 1.0) {
+            mat[1]  *= sy;
+            mat[5]  *= sy;
+            mat[9]  *= sy;
+            mat[13] *= sy;
+            update = true;
+        }
+        if (sz != 1.0) {
+            mat[2]  *= sz;
+            mat[6]  *= sz;
+            mat[10] *= sz;
+            mat[14] *= sz;
+            update = true;
+        }
+
+        if (update) {
+            updateState();
+        }
+        return this;
+    }
+
+    /**
+     * Sets the value of this transform to the result of multiplying itself
      * with transform t1 : this = this * t1.
       *
      * @param t1 the other transform

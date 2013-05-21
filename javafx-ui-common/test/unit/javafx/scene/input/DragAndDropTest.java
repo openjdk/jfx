@@ -25,12 +25,7 @@
 
 package javafx.scene.input;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.security.AccessControlContext;
@@ -42,7 +37,6 @@ import java.util.Set;
 
 import com.sun.javafx.tk.TKScene;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -61,8 +55,15 @@ import com.sun.javafx.tk.TKDragSourceListener;
 import com.sun.javafx.tk.TKDropTargetListener;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.test.MouseEventGenerator;
+import javafx.event.Event;
+import javafx.geometry.Point3D;
 import javafx.scene.SubScene;
 import javafx.scene.image.Image;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class DragAndDropTest {
     
@@ -85,6 +86,161 @@ public class DragAndDropTest {
         toolkit = null;
     }
     
+    /************************************************************************/
+    /*                      DRAG EVENT CONSTRUCTOR                          */
+    /************************************************************************/
+
+    @Test public void testShortConstructor() {
+        Rectangle node = new Rectangle(10, 10);
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+        Dragboard db = new Dragboard(new ClipboardImpl());
+        Rectangle gsrc = new Rectangle(10, 10);
+        Rectangle gtrg = new Rectangle(10, 10);
+
+        PickResult pickRes = new PickResult(node, new Point3D(15, 25, 100), 33);
+        DragEvent e = new DragEvent(DragEvent.DRAG_ENTERED, db, 10, 20, 30, 40,
+            TransferMode.LINK, gsrc, gtrg, pickRes);
+
+        assertSame(DragEvent.DRAG_ENTERED, e.getEventType());
+        assertEquals(18, e.getX(), 10e-20);
+        assertEquals(27, e.getY(), 10e-20);
+        assertEquals(150, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertSame(db, e.getDragboard());
+        assertSame(gsrc, e.getGestureSource());
+        assertSame(gtrg, e.getGestureTarget());
+        assertSame(TransferMode.LINK, e.getTransferMode());
+        assertSame(pickRes, e.getPickResult());
+        assertSame(Event.NULL_SOURCE_TARGET, e.getSource());
+        assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
+        assertFalse(e.isAccepted());
+        assertNull(e.getAcceptedTransferMode());
+        assertFalse(e.isConsumed());
+    }
+
+    @Test public void testShortConstructorWithoutPickResult() {
+        Dragboard db = new Dragboard(new ClipboardImpl());
+        Rectangle gsrc = new Rectangle(10, 10);
+        Rectangle gtrg = new Rectangle(10, 10);
+        DragEvent e = new DragEvent(DragEvent.DRAG_ENTERED, db, 10, 20, 30, 40,
+            TransferMode.LINK, gsrc, gtrg, null);
+
+        assertEquals(10, e.getX(), 10e-20);
+        assertEquals(20, e.getY(), 10e-20);
+        assertEquals(0, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertNotNull(e.getPickResult());
+        assertNotNull(e.getPickResult().getIntersectedPoint());
+        assertEquals(10, e.getPickResult().getIntersectedPoint().getX(), 10e-20);
+        assertEquals(20, e.getPickResult().getIntersectedPoint().getY(), 10e-20);
+        assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
+        assertSame(Event.NULL_SOURCE_TARGET, e.getSource());
+        assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
+    }
+
+    @Test public void testLongConstructor() {
+        Rectangle node = new Rectangle(10, 10);
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+        Dragboard db = new Dragboard(new ClipboardImpl());
+        Rectangle gsrc = new Rectangle(10, 10);
+        Rectangle gtrg = new Rectangle(10, 10);
+
+        PickResult pickRes = new PickResult(node, new Point3D(15, 25, 100), 33);
+        DragEvent e = new DragEvent(n1, n2, DragEvent.DRAG_ENTERED, db,
+                10, 20, 30, 40, TransferMode.LINK, gsrc, gtrg, pickRes);
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertSame(DragEvent.DRAG_ENTERED, e.getEventType());
+        assertEquals(18, e.getX(), 10e-20);
+        assertEquals(27, e.getY(), 10e-20);
+        assertEquals(150, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertSame(TransferMode.LINK, e.getTransferMode());
+        assertSame(db, e.getDragboard());
+        assertSame(gsrc, e.getGestureSource());
+        assertSame(gtrg, e.getGestureTarget());
+        assertSame(pickRes, e.getPickResult());
+        assertFalse(e.isConsumed());
+        assertFalse(e.isAccepted());
+        assertNull(e.getAcceptedTransferMode());
+    }
+
+    @Test public void testLongConstructorWithoutPickResult() {
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+        Dragboard db = new Dragboard(new ClipboardImpl());
+        Rectangle gsrc = new Rectangle(10, 10);
+        Rectangle gtrg = new Rectangle(10, 10);
+        DragEvent e = new DragEvent(n1, n2, DragEvent.DRAG_ENTERED, db,
+                10, 20, 30, 40, TransferMode.LINK, gsrc, gtrg, null);
+
+        assertEquals(10, e.getX(), 10e-20);
+        assertEquals(20, e.getY(), 10e-20);
+        assertEquals(0, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertNotNull(e.getPickResult());
+        assertNotNull(e.getPickResult().getIntersectedPoint());
+        assertEquals(10, e.getPickResult().getIntersectedPoint().getX(), 10e-20);
+        assertEquals(20, e.getPickResult().getIntersectedPoint().getY(), 10e-20);
+        assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
+    }
+
+    @Test public void shortConstructorMakesDropAccepted() {
+        DragEvent e = new DragEvent(DragEvent.DRAG_DROPPED,
+                new Dragboard(new ClipboardImpl()), 10, 20, 30, 40,
+                TransferMode.LINK, new Rectangle(), new Rectangle(), null);
+        assertSame(DragEvent.DRAG_DROPPED, e.getEventType());
+        assertTrue(e.isAccepted());
+        assertSame(TransferMode.LINK, e.getAcceptedTransferMode());
+    }
+
+    @Test public void shortConstructorMakesDoneAccepted() {
+        DragEvent e = new DragEvent(DragEvent.DRAG_DONE,
+                new Dragboard(new ClipboardImpl()), 10, 20, 30, 40,
+                TransferMode.LINK, new Rectangle(), new Rectangle(), null);
+        assertSame(DragEvent.DRAG_DONE, e.getEventType());
+        assertTrue(e.isAccepted());
+        assertSame(TransferMode.LINK, e.getAcceptedTransferMode());
+    }
+
+    @Test public void longConstructorMakesDropAccepted() {
+        DragEvent e = new DragEvent(new Rectangle(), new Rectangle(),
+                DragEvent.DRAG_DROPPED,
+                new Dragboard(new ClipboardImpl()), 10, 20, 30, 40,
+                TransferMode.LINK, new Rectangle(), new Rectangle(), null);
+        assertSame(DragEvent.DRAG_DROPPED, e.getEventType());
+        assertTrue(e.isAccepted());
+        assertSame(TransferMode.LINK, e.getAcceptedTransferMode());
+    }
+
+    @Test public void longConstructorMakesDoneAccepted() {
+        DragEvent e = new DragEvent(new Rectangle(), new Rectangle(),
+                DragEvent.DRAG_DONE,
+                new Dragboard(new ClipboardImpl()), 10, 20, 30, 40,
+                TransferMode.LINK, new Rectangle(), new Rectangle(), null);
+        assertSame(DragEvent.DRAG_DONE, e.getEventType());
+        assertTrue(e.isAccepted());
+        assertSame(TransferMode.LINK, e.getAcceptedTransferMode());
+    }
+
     /************************************************************************/
     /*                         DRAG INITIATION                              */
     /************************************************************************/

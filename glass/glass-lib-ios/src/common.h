@@ -29,14 +29,6 @@
 #define jlong_to_ptr(value) (intptr_t)value
 #define ptr_to_jlong(value) (jlong)((intptr_t)value)
 
-#ifndef USE_GLASS_CHECK
-        #define GLASS_CHECK_EXCEPTION(ENV)
-#else
-        #define GLASS_CHECK_EXCEPTION(ENV) if ((*ENV)->ExceptionCheck(ENV) == JNI_TRUE) \
-            { fprintf(stderr, "Java exception detected in at %s:%s:%d\n", __FUNCTION__, __FILE__, __LINE__); \
-                     (*ENV)->ExceptionDescribe(ENV); }; 
-#endif
-
 extern JavaVM *jVM;
 extern JNIEnv *jEnv;
 
@@ -104,4 +96,7 @@ extern jfieldID mat_jPixelsInts;
 extern jmethodID mat_jPixelsAttachData;
 
 extern jclass mat_jCursorClass;
+
+extern jclass jApplicationClass;
+extern jmethodID jApplicationReportException;
 

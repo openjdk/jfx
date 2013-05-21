@@ -43,13 +43,64 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 <?scenebuilder-stylesheet viewer.css?>
 <!--suppress JavaFxUnresolvedStyleClassReference -->
 
-<Accordion fx:id="settings" minWidth="0.0" prefHeight="798.0" prefWidth="254.0" xmlns:fx="http://javafx.com/fxml" fx:controller="com.javafx.experiments.jfx3dviewer.SettingsController">
+<Accordion fx:id="settings" minWidth="0.0" prefHeight="798.0" prefWidth="279.0" xmlns:fx="http://javafx.com/fxml" fx:controller="com.javafx.experiments.jfx3dviewer.SettingsController">
   <expandedPane>
+    <TitledPane fx:id="x4" animated="false" expanded="true" text="Options">
+      <content>
+        <GridPane hgap="5.0" styleClass="settings" vgap="5.0">
+          <children>
+            <Label text="Show Axis:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+            <Label text="Y Up:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+            <CheckBox fx:id="showAxisCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+            <CheckBox fx:id="yUpCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <Label text="Scale to Fit" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+            <CheckBox id="yUpCheckBox" fx:id="scaleToFitCheckBox" mnemonicParsing="false" selected="true" text="" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            <Label text="Background Color" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+            <ColorPicker fx:id="backgroundColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+            <Label text="Wireframe" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+            <CheckBox fx:id="wireFrameCheckbox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+            <Label text="Subdivide" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+            <HBox prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="5">
+              <children>
+                <ToggleButton mnemonicParsing="false" selected="true" styleClass="left-pill" text="None" userData="0">
+                  <toggleGroup>
+                    <ToggleGroup fx:id="subdivideGroup" />
+                  </toggleGroup>
+                </ToggleButton>
+                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="1" toggleGroup="$subdivideGroup" userData="1" />
+                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="2" toggleGroup="$subdivideGroup" userData="2" />
+                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="3" toggleGroup="$subdivideGroup" userData="3" />
+              </children>
+            </HBox>
+            <Region maxHeight="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+          </children>
+          <columnConstraints>
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+          </columnConstraints>
+          <padding>
+            <Insets bottom="8.0" left="8.0" right="8.0" top="8.0" fx:id="x3" />
+          </padding>
+          <rowConstraints>
+            <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="ALWAYS" />
+          </rowConstraints>
+        </GridPane>
+      </content>
+    </TitledPane>
+  </expandedPane>
+  <panes>
+    <fx:reference source="x4" />
     <TitledPane fx:id="x2" animated="false" text="Lights">
       <content>
         <ScrollPane fitToWidth="true" prefHeight="200.0" prefWidth="200.0">
           <content>
-            <GridPane hgap="5.0" styleClass="settings" vgap="5.0">
+            <GridPane hgap="5.0" padding="$x3" styleClass="settings" vgap="5.0">
               <children>
                 <Label text="Color:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                 <Label maxWidth="1.7976931348623157E308" styleClass="settings-header" text="Ambient" GridPane.columnIndex="0" GridPane.columnSpan="2147483647" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
@@ -96,9 +147,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
                 <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
               </columnConstraints>
-              <padding>
-                <Insets bottom="8.0" left="8.0" right="8.0" top="8.0" fx:id="x3" />
-              </padding>
               <rowConstraints>
                 <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
                 <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
@@ -128,35 +176,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </ScrollPane>
       </content>
     </TitledPane>
-  </expandedPane>
-  <panes>
-    <TitledPane fx:id="x4" animated="false" expanded="false" text="Options">
-      <content>
-        <GridPane hgap="5.0" padding="$x3" styleClass="settings" vgap="5.0">
-          <children>
-            <Label text="Show Axis:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-            <Label text="Y Up:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-            <CheckBox fx:id="showAxisCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-            <CheckBox fx:id="yUpCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-            <Label text="Scale to Fit" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-            <CheckBox id="yUpCheckBox" fx:id="scaleToFitCheckBox" mnemonicParsing="false" selected="true" text="" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-            <Label text="Background Color" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-            <ColorPicker fx:id="backgroundColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-          </children>
-          <columnConstraints>
-            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-          </columnConstraints>
-          <rowConstraints>
-            <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
-            <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
-            <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
-            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-          </rowConstraints>
-        </GridPane>
-      </content>
-    </TitledPane>
-    <fx:reference source="x2" />
     <TitledPane fx:id="x1" animated="false" text="Camera">
       <content>
         <GridPane hgap="5.0" padding="$x3" styleClass="settings" vgap="5.0">

@@ -25,16 +25,15 @@
 
 package com.sun.javafx.sg;
 
+import com.sun.javafx.collections.FloatArraySyncer;
+import com.sun.javafx.collections.IntegerArraySyncer;
+
 /**
  * TODO: 3D - Need documentation
  */
 public interface PGTriangleMesh {
-    public void setPoints(float[] points);
-    public void setPoints(float[] points, int index, int length);
-    public void setTexCoords(float[] texCoords);
-    public void setTexCoords(float[] texCoords, int index, int length);
-    public void setFaces(int[] faces);
-    public void setFaces(int[] faces, int index, int length);
-    public void setFaceSmoothingGroups(int[] faceSmoothingGroups);
-    public void setFaceSmoothingGroups(int[] faceSmoothingGroups, int index, int length);
+    public void syncPoints(FloatArraySyncer array);
+    public void syncTexCoords(FloatArraySyncer array);
+    public void syncFaces(IntegerArraySyncer array);
+    public void syncFaceSmoothingGroups(IntegerArraySyncer array);
 }

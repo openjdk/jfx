@@ -39,8 +39,35 @@
         <arg value="SRC_DIR=${glass-lib.src.dir}"/>
         <arg value="OUT_LIB=${glass-lib.fullname}"/>
         <arg value="EXTRA_CFLAGS=${cross.glass.cflags}"/>
+        <arg value="IOS_ARCH=armv7"/>
+        <arg value="IOS_PLATFORM=iPhoneOS"/>
+        <arg value="IOS_VERSION=${ios.version}"/>
         <arg value="all"/>
       </exec>
+
+      <exec executable="make" dir="." failonerror="true">
+        <arg value="JDK_HOME=${platform.home}"/>
+        <arg value="CONF=${build.conf}"/>
+        <arg value="DIST_DIR=${glass-lib.dist.dir}"/>
+        <arg value="BUILD_DIR=${glass-lib.build.dir}"/>
+        <arg value="CLASS_DIR=${glass.class.dir}"/>
+        <arg value="SRC_DIR=${glass-lib.src.dir}"/>
+        <arg value="OUT_LIB=${glass-lib.fullname}"/>
+        <arg value="EXTRA_CFLAGS=${cross.glass.cflags}"/>
+        <arg value="IOS_ARCH=i386"/>
+        <arg value="IOS_PLATFORM=iPhoneSimulator"/>
+        <arg value="IOS_VERSION=${ios.version}"/>
+        <arg value="all"/>
+      </exec>
+
+      <exec executable="lipo" dir="." failonerror="true">
+        <arg value="-create"/>
+        <arg value="-output"/>
+        <arg value="${glass-lib.dist.dir}/libglass.a"/>
+        <arg value="${glass-lib.dist.dir}/libglass-armv7.a"/>
+        <arg value="${glass-lib.dist.dir}/libglass-i386.a"/>
+      </exec>
+
       <copy todir="${glass.dist.bin.dir}" flatten="true">
         <fileset file="${glass-lib.fullname}"/>
       </copy>

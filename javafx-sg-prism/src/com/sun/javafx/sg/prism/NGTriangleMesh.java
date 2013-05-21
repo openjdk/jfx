@@ -25,10 +25,11 @@
 
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.collections.FloatArraySyncer;
+import com.sun.javafx.collections.IntegerArraySyncer;
 import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.prism.Mesh;
 import com.sun.prism.ResourceFactory;
-import javafx.scene.shape.TriangleMesh;
 
 /**
  * TODO: 3D - Need documentation
@@ -99,109 +100,40 @@ public class NGTriangleMesh implements PGTriangleMesh {
         this.faceSmoothingGroups = faceSmoothingGroups;
     }
 
-    public void setPoints(float[] points) {
+    public void syncPoints(FloatArraySyncer array) {
         meshDirty = true;
-        if (points == null) {
-            this.points = null;
-            return;
-        }
-        if ((this.points == null) || (this.points.length != points.length)) {
-            this.points = new float[points.length];
-        }
-        System.arraycopy(points, 0, this.points, 0, this.points.length);      
+        points = array.syncTo(points);
+    }
+    
+    public void syncTexCoords(FloatArraySyncer array) {
+        meshDirty = true;
+        texCoords = array.syncTo(texCoords);
     }
 
-    public void setPoints(float[] points, int index, int length) {
+    public void syncFaces(IntegerArraySyncer array) {
         meshDirty = true;
-        if (points == null) {
-            this.points = null;
-            return;
-        }
-
-        // Range check were done in the FX layer.
-        int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_POINT;
-        int lengthInFloatUnit = length * TriangleMesh.NUM_COMPONENTS_PER_POINT;
-        System.arraycopy(points, indexOffset, this.points, indexOffset, lengthInFloatUnit);
+        faces = array.syncTo(faces);    
     }
 
-    public void setTexCoords(float[] texCoords) {
+    public void syncFaceSmoothingGroups(IntegerArraySyncer array) {
         meshDirty = true;
-        if (texCoords == null) {
-            this.texCoords = null;
-            return;
-        }
-        if ((this.texCoords == null) || (this.texCoords.length != texCoords.length)) {
-            this.texCoords = new float[texCoords.length];
-        }
-        System.arraycopy(texCoords, 0, this.texCoords, 0, this.texCoords.length);
-    }
-
-    public void setTexCoords(float[] texCoords, int index, int length) {
-        meshDirty = true;
-        if (texCoords == null) {
-            this.texCoords = null;
-            return;
-        }
-
-        // Range check were done in the FX layer.
-        int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
-        int lengthInFloatUnit = length * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
-        System.arraycopy(texCoords, indexOffset, this.texCoords, indexOffset, lengthInFloatUnit);
-    }
-
-    public void setFaces(int[] faces) {
-        meshDirty = true;
-        if (faces == null) {
-            this.faces = null;
-            return;
-        }
-        if ((this.faces == null) || (this.faces.length != faces.length)) {
-            this.faces = new int[faces.length];
-        }
-        System.arraycopy(faces, 0, this.faces, 0, this.faces.length);
-    }
-
-    public void setFaces(int[] faces, int index, int length) {
-        meshDirty = true;
-        if (faces == null) {
-            this.faces = null;
-            return;
-        }
-
-        // Range check were done in the FX layer.
-        int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_FACE;
-        int lengthInIntUnit = length * TriangleMesh.NUM_COMPONENTS_PER_FACE;
-        System.arraycopy(faces, indexOffset, this.faces, indexOffset, lengthInIntUnit);
-    }
-
-    public void setFaceSmoothingGroups(int[] faceSmoothingGroups) {
-        meshDirty = true;
-        if (faceSmoothingGroups == null) {
-            this.faceSmoothingGroups = null;
-            return;
-        }
-        if ((this.faceSmoothingGroups == null) || 
-                (this.faceSmoothingGroups.length != faceSmoothingGroups.length)) {
-            this.faceSmoothingGroups = new int[faceSmoothingGroups.length];
-        }
-
-        System.arraycopy(faceSmoothingGroups, 0, this.faceSmoothingGroups, 0,
-                this.faceSmoothingGroups.length);
-    }
-
-    public void setFaceSmoothingGroups(int[] faceSmoothingGroups, int index, int length) {
-        meshDirty = true;
-        if (faceSmoothingGroups == null) {
-            this.faceSmoothingGroups = null;
-            return;
-        }
-
-        // Range check were done in the FX layer.
-        System.arraycopy(faceSmoothingGroups, index, this.faceSmoothingGroups, index, length);
+        faceSmoothingGroups = array.syncTo(faceSmoothingGroups);
     }
 
     // NOTE: This method is used for unit test purpose only.
     int[] test_getFaceSmoothingGroups() {
         return this.faceSmoothingGroups;
+    }
+    // NOTE: This method is used for unit test purpose only.
+    int[] test_getFaces() {
+        return this.faces;
+    }
+    // NOTE: This method is used for unit test purpose only.
+    float[] test_getPoints() {
+        return this.points;
+    }
+    // NOTE: This method is used for unit test purpose only.
+    float[] test_getTexCoords() {
+        return this.texCoords;
     }
 }

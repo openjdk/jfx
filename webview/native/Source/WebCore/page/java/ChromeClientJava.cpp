@@ -67,8 +67,6 @@ static jmethodID promptMID = NULL;
 
 static jmethodID addMessageToConsoleMID = NULL; // WebPage
 
-static jmethodID scrollMID = NULL;
-
 static jmethodID screenToWindowMID = NULL; // WebPage
 static jmethodID windowToScreenMID = NULL; // WebPage
 
@@ -125,9 +123,6 @@ static void initRefs(JNIEnv* env)
                 "fwkAddMessageToConsole",
                 "(Ljava/lang/String;ILjava/lang/String;)V");
         ASSERT(addMessageToConsoleMID);
-
-        scrollMID = env->GetMethodID(getWebPageCls(), "fwkScroll", "(IIIIII)V");
-        ASSERT(scrollMID);
 
         screenToWindowMID = env->GetMethodID(getWebPageCls(), "fwkScreenToWindow",
             "(Lcom/sun/webkit/graphics/WCPoint;)Lcom/sun/webkit/graphics/WCPoint;");
@@ -662,13 +657,7 @@ void ChromeClientJava::cancelGeolocationPermissionRequestForFrame(Frame*, Geoloc
 // HostWindow interface
 void ChromeClientJava::scroll(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
-    initRefs(env);
-
-    env->CallVoidMethod(m_webPage, scrollMID, rectToScroll.x(), rectToScroll.y(),
-                        rectToScroll.width(), rectToScroll.height(),
-                        scrollDelta.width(), scrollDelta.height());
-    CheckAndClearException(env);
+    WebPage::webPageFromJObject(m_webPage)->scroll(scrollDelta, rectToScroll, clipRect);
 }
 
 void ChromeClientJava::scrollRectIntoView(const IntRect&, const ScrollView*) const

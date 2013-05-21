@@ -1025,9 +1025,9 @@ void WindowContextTop::applyShapeMask(cairo_surface_t* cairo_surface, uint width
 
     if (xshape.surface == NULL || width != xshape.width || height != xshape.height) {
         if (xshape.surface != NULL) {
+            cairo_surface_destroy(xshape.surface);
             XFreePixmap(display,
                     xshape.pixmap);
-            cairo_surface_destroy(xshape.surface);
         }
         xshape.pixmap = XCreatePixmap(
                 display,

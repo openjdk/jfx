@@ -42,4 +42,7 @@ public class StubExternalNode extends StubNode implements PGExternalNode {
 
     @Override
     public void repaintDirtyRegion(int x, int y, int width, int height) {}
+    
+    @Override
+    public void markContentDirty() {}
 }

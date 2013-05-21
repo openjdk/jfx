@@ -27,8 +27,8 @@ package com.sun.javafx.scene.input;
 
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
-import com.sun.javafx.scene.NodeAccess;
-import com.sun.javafx.scene.SubSceneAccess;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.SubSceneHelper;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
@@ -72,20 +72,13 @@ public class PickResultChooser {
     /**
      * Converts the current content of this instance to the unmodifiable
      * PickResult.
-     * @param publishDistance Whether to publish the distance. If set to
-     *        {@code false}, {@code POSITIVE_INFINITY} will be used instead
-     *        of the distance. This is intended for a parallel camera
-     *        that has no position.
-     *
      * @return PickResult containing the current values of this chooser
      */
-    public PickResult toPickResult(boolean publishDistance) {
+    public PickResult toPickResult() {
         if (empty) {
             return null;
         }
-        return new PickResult(node, point,
-                publishDistance ? distance : Double.POSITIVE_INFINITY,
-                face, texCoord);
+        return new PickResult(node, point, distance, face, texCoord);
     }
 
     /**
@@ -183,14 +176,14 @@ public class PickResultChooser {
     private boolean processOffer(Node node, Node depthTestNode, double distance,
             Point3D point, int face, Point2D texCoord) {
 
-        final NodeAccess na = NodeAccess.getNodeAccess();
-        final SubSceneAccess sa = SubSceneAccess.getSubSceneAccess();
-        final SubScene subScene = na.getSubScene(depthTestNode);
+        final SubScene subScene = NodeHelper.getSubScene(depthTestNode);
         final boolean hasDepthBuffer = Platform.isSupported(ConditionalFeature.SCENE3D)
-                ? (subScene != null ? sa.isDepthBuffer(subScene) : depthTestNode.getScene().isDepthBuffer())
+                ? (subScene != null
+                    ? SubSceneHelper.isDepthBuffer(subScene)
+                    : depthTestNode.getScene().isDepthBuffer())
                 : false;
-        final boolean hasDepthTest = 
-                hasDepthBuffer && na.isDerivedDepthTest(depthTestNode);
+        final boolean hasDepthTest =
+                hasDepthBuffer && NodeHelper.isDerivedDepthTest(depthTestNode);
 
         boolean accepted = false;
         if ((empty || (hasDepthTest && distance < this.distance)) && !closed) {

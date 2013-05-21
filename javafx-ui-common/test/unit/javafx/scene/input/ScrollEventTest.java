@@ -27,7 +27,9 @@ package javafx.scene.input;
 
 import com.sun.javafx.pgstub.StubScene;
 import com.sun.javafx.test.MouseEventGenerator;
+import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Point3D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
@@ -40,7 +42,166 @@ public class ScrollEventTest {
     private boolean scrolled;
     private boolean scrolled2;
     private PickResult pickRes;
-    
+
+    @Test public void testShortConstructor() {
+        Rectangle node = new Rectangle();
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+
+        pickRes = new PickResult(node, new Point3D(15, 25, 100), 33);
+        ScrollEvent e = new ScrollEvent(
+                ScrollEvent.SCROLL_STARTED, 10, 20, 30, 40,
+                false, true, false, true, false, true,
+                2, 3, 4, 5, ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, 6,
+                ScrollEvent.VerticalTextScrollUnits.PAGES, 7, 8, pickRes);
+
+        assertSame(ScrollEvent.SCROLL_STARTED, e.getEventType());
+        assertSame(pickRes, e.getPickResult());
+        assertEquals(18, e.getX(), 10e-20);
+        assertEquals(27, e.getY(), 10e-20);
+        assertEquals(150, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertFalse(e.isShiftDown());
+        assertTrue(e.isControlDown());
+        assertFalse(e.isAltDown());
+        assertTrue(e.isMetaDown());
+        assertFalse(e.isDirect());
+        assertTrue(e.isInertia());
+        assertEquals(2.0, e.getDeltaX(), 10e-20);
+        assertEquals(3.0, e.getDeltaY(), 10e-20);
+        assertEquals(4.0, e.getTotalDeltaX(), 10e-20);
+        assertEquals(5.0, e.getTotalDeltaY(), 10e-20);
+        assertSame(ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, e.getTextDeltaXUnits());
+        assertEquals(6.0, e.getTextDeltaX(), 10e-20);
+        assertSame(ScrollEvent.VerticalTextScrollUnits.PAGES, e.getTextDeltaYUnits());
+        assertEquals(7.0, e.getTextDeltaY(), 10e-20);
+        assertEquals(8.0, e.getTouchCount(), 10e-20);
+        assertSame(Event.NULL_SOURCE_TARGET, e.getSource());
+        assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
+        assertFalse(e.isConsumed());
+
+        e = new ScrollEvent(
+                ScrollEvent.SCROLL_STARTED, 10, 20, 30, 40,
+                true, false, true, false, true, false,
+                2, 3, 4, 5, ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, 6,
+                ScrollEvent.VerticalTextScrollUnits.PAGES, 7, 8, pickRes);
+        assertTrue(e.isShiftDown());
+        assertFalse(e.isControlDown());
+        assertTrue(e.isAltDown());
+        assertFalse(e.isMetaDown());
+        assertTrue(e.isDirect());
+        assertFalse(e.isInertia());
+    }
+
+    @Test public void testShortConstructorWithoutPickResult() {
+        ScrollEvent e = new ScrollEvent(
+                ScrollEvent.SCROLL_STARTED, 10, 20, 30, 40,
+                false, true, false, true, false, true,
+                2, 3, 4, 5, ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, 6,
+                ScrollEvent.VerticalTextScrollUnits.PAGES, 7, 8, null);
+
+        assertEquals(10, e.getX(), 10e-20);
+        assertEquals(20, e.getY(), 10e-20);
+        assertEquals(0, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertNotNull(e.getPickResult());
+        assertNotNull(e.getPickResult().getIntersectedPoint());
+        assertEquals(10, e.getPickResult().getIntersectedPoint().getX(), 10e-20);
+        assertEquals(20, e.getPickResult().getIntersectedPoint().getY(), 10e-20);
+        assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
+        assertSame(Event.NULL_SOURCE_TARGET, e.getSource());
+        assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
+    }
+
+    @Test public void testLongConstructor() {
+        Rectangle node = new Rectangle(10, 10);
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+
+        pickRes = new PickResult(node, new Point3D(15, 25, 100), 33);
+        ScrollEvent e = new ScrollEvent(n1, n2,
+                ScrollEvent.SCROLL_STARTED, 10, 20, 30, 40,
+                false, true, false, true, false, true,
+                2, 3, 4, 5, ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, 6,
+                ScrollEvent.VerticalTextScrollUnits.PAGES, 7, 8, pickRes);
+
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertSame(ScrollEvent.SCROLL_STARTED, e.getEventType());
+        assertSame(pickRes, e.getPickResult());
+        assertEquals(18, e.getX(), 10e-20);
+        assertEquals(27, e.getY(), 10e-20);
+        assertEquals(150, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertFalse(e.isShiftDown());
+        assertTrue(e.isControlDown());
+        assertFalse(e.isAltDown());
+        assertTrue(e.isMetaDown());
+        assertFalse(e.isDirect());
+        assertTrue(e.isInertia());
+        assertEquals(2.0, e.getDeltaX(), 10e-20);
+        assertEquals(3.0, e.getDeltaY(), 10e-20);
+        assertEquals(4.0, e.getTotalDeltaX(), 10e-20);
+        assertEquals(5.0, e.getTotalDeltaY(), 10e-20);
+        assertSame(ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, e.getTextDeltaXUnits());
+        assertEquals(6.0, e.getTextDeltaX(), 10e-20);
+        assertSame(ScrollEvent.VerticalTextScrollUnits.PAGES, e.getTextDeltaYUnits());
+        assertEquals(7.0, e.getTextDeltaY(), 10e-20);
+        assertEquals(8.0, e.getTouchCount(), 10e-20);
+        assertFalse(e.isConsumed());
+
+        e = new ScrollEvent(n1, n2,
+                ScrollEvent.SCROLL_STARTED, 10, 20, 30, 40,
+                true, false, true, false, true, false,
+                2, 3, 4, 5, ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, 6,
+                ScrollEvent.VerticalTextScrollUnits.PAGES, 7, 8, pickRes);
+        assertTrue(e.isShiftDown());
+        assertFalse(e.isControlDown());
+        assertTrue(e.isAltDown());
+        assertFalse(e.isMetaDown());
+        assertTrue(e.isDirect());
+        assertFalse(e.isInertia());
+    }
+
+    @Test public void testLongConstructorWithoutPickResult() {
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+        ScrollEvent e = new ScrollEvent(n1, n2,
+                ScrollEvent.SCROLL_STARTED, 10, 20, 30, 40,
+                false, true, false, true, false, true,
+                2, 3, 4, 5, ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, 6,
+                ScrollEvent.VerticalTextScrollUnits.PAGES, 7, 8, null);
+
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertEquals(10, e.getX(), 10e-20);
+        assertEquals(20, e.getY(), 10e-20);
+        assertEquals(0, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertNotNull(e.getPickResult());
+        assertNotNull(e.getPickResult().getIntersectedPoint());
+        assertEquals(10, e.getPickResult().getIntersectedPoint().getX(), 10e-20);
+        assertEquals(20, e.getPickResult().getIntersectedPoint().getY(), 10e-20);
+        assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
+    }
+
+
     @Test
     public void shouldDeliverScrollEventToPickedNode() {
         Scene scene = createScene();

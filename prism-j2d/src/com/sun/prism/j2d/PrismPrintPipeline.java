@@ -43,7 +43,7 @@ import javafx.collections.ObservableSet;
 import javafx.print.Printer;
 import javafx.print.PrinterJob;
 
-import com.sun.javafx.print.PrintAccess;
+import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.PrinterImpl;
 import com.sun.javafx.print.PrinterJobImpl;
 
@@ -73,16 +73,15 @@ public final class PrismPrintPipeline extends PrintPipeline {
         if (defaultPrinter == null) {
             PrintService defPrt =
                 PrintServiceLookup.lookupDefaultPrintService();
-            PrintAccess printAccess = PrintAccess.getPrintAccess();
             if (defPrt == null) {
                 defaultPrinter = null;
             } else {
                 if (printerSet == null) {
                     PrinterImpl impl = new J2DPrinter(defPrt);
-                    defaultPrinter = printAccess.createPrinter(impl);
+                    defaultPrinter = PrintHelper.createPrinter(impl);
                 } else {
                     for (Printer p : printerSet) {
-                        PrinterImpl impl = printAccess.getPrinterImpl(p);
+                        PrinterImpl impl = PrintHelper.getPrinterImpl(p);
                         J2DPrinter j2dp = (J2DPrinter)impl;
                         if (j2dp.getService().equals(defPrt)) {
                             defaultPrinter = p;
@@ -109,14 +108,13 @@ public final class PrismPrintPipeline extends PrintPipeline {
     private static ObservableSet<Printer> printerSet = null;
     public synchronized ObservableSet<Printer> getAllPrinters() {
         if (printerSet == null) {
-            PrintAccess printAccess = PrintAccess.getPrintAccess();
             Set printers = new TreeSet<Printer>(nameComparator);
             // Trigger getting default first, so we don't recreate that.
             Printer defPrinter = getDefaultPrinter();
             PrintService defService = null;
             if (defPrinter != null) {
                 J2DPrinter def2D =
-                    (J2DPrinter)printAccess.getPrinterImpl(defPrinter);
+                    (J2DPrinter)PrintHelper.getPrinterImpl(defPrinter);
                 defService = def2D.getService();
             }
             PrintService[] allServices =
@@ -126,7 +124,7 @@ public final class PrismPrintPipeline extends PrintPipeline {
                     printers.add(defPrinter);
                 } else {
                     PrinterImpl impl = new J2DPrinter(allServices[i]);
-                    Printer printer = printAccess.createPrinter(impl);
+                    Printer printer = PrintHelper.createPrinter(impl);
                     impl.setPrinter(printer);
                     printers.add(printer);
                 }

@@ -418,8 +418,10 @@ public class PlatformImpl {
                 return isSWTSupported;
             case SWING:
                 if (isSwingSupported == null) {
-                    isSwingSupported = checkForClass(
-                            "javafx.embed.swing.JFXPanel");
+                    isSwingSupported = 
+                        // check for JComponent first, it may not be present
+                        checkForClass("javax.swing.JComponent") &&
+                        checkForClass("javafx.embed.swing.JFXPanel");
                 }
                 return isSwingSupported;
             case FXML:

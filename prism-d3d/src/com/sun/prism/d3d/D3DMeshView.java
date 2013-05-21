@@ -42,7 +42,7 @@ class D3DMeshView extends BaseMeshView {
     // TODO: 3D - Need a mechanism to "decRefCount" Mesh and Material
     //            if we need to do eager clean up
     final private D3DMesh mesh;
-    private Material material;
+    private D3DPhongMaterial material;
 
     private D3DMeshView(D3DContext context, long nativeHandle, D3DMesh mesh,
             Disposer.Record disposerRecord) {
@@ -67,7 +67,7 @@ class D3DMeshView extends BaseMeshView {
     public void setMaterial(Material material) {
         context.setMaterial(nativeHandle,
                 ((D3DPhongMaterial) material).getNativeHandle());
-        this.material = material;
+        this.material = (D3DPhongMaterial) material;
     }
 
     @Override
@@ -87,7 +87,9 @@ class D3DMeshView extends BaseMeshView {
 
     @Override
     public void render(Graphics g) {
+        material.lockTextureMaps();
         context.renderMeshView(nativeHandle, g.getTransformNoClone());
+        material.unlockTextureMaps();
     }
 
     @Override

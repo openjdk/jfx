@@ -535,7 +535,7 @@ class MacSystemClipboard extends SystemClipboard {
     private URL createUrl(String path, String message) {
         URL url = null;
         try {
-            url = new URL(path);
+            url = new URL(_convertFileReferencePath(path));
         } catch (MalformedURLException ex) {
             System.err.println(message+path);
             Thread.dumpStack();
@@ -543,6 +543,8 @@ class MacSystemClipboard extends SystemClipboard {
         }
         return url;
     }
+
+    private static native String _convertFileReferencePath(String path);
     
     private byte[] serialize(Object object) {
         if (object instanceof String) {

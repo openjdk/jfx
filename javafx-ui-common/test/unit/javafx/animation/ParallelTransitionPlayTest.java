@@ -115,7 +115,7 @@ public class ParallelTransitionPlayTest {
         assertEquals(10000, yProperty.get());
 
         amt.pulse();
-        
+
         assertEquals(Status.RUNNING, pt.getStatus());
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
@@ -175,7 +175,7 @@ public class ParallelTransitionPlayTest {
         assertEquals(10000, yProperty.get());
 
         amt.pulse();
-        
+
         assertEquals(Status.RUNNING, pt.getStatus());
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.RUNNING, child1Y.getStatus());
@@ -467,7 +467,7 @@ public class ParallelTransitionPlayTest {
         assertEquals(Status.RUNNING, pt.getStatus());
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
-        
+
         assertEquals(10000 + TICK_STEP, xProperty.get());
         assertEquals(10000, yProperty.get());
     }
@@ -825,6 +825,75 @@ public class ParallelTransitionPlayTest {
         assertEquals(Status.RUNNING, child1Y.getStatus());
         assertEquals(0 + TICK_STEP, xProperty.get());
         assertEquals(0 + TICK_STEP, yProperty.get());
+    }
+
+
+    @Test public void testNestedParallelTransition() {
+        ParallelTransition pt2 = new ParallelTransition();
+
+        pt.getChildren().addAll(pt2, child1X);
+        pt2.getChildren().add(child1Y);
+
+        pt.play();
+
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, pt2.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(TICK_STEP, xProperty.get());
+        assertEquals(TICK_STEP, yProperty.get());
+
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, pt2.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(Math.round(TICK_MILLIS * 2), xProperty.get());
+        assertEquals(Math.round(TICK_MILLIS * 2), yProperty.get());
+
+
+        pt.jumpTo(Duration.seconds(60).subtract(TickCalculation.toDuration(100)));
+
+        amt.pulse();
+
+        assertEquals(Status.STOPPED, pt.getStatus());
+        assertEquals(Status.STOPPED, pt2.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+
+        pt.play();
+
+
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, pt2.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(TICK_STEP, xProperty.get());
+        assertEquals(TICK_STEP, yProperty.get());
+
+        amt.pulse();
+
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, pt2.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(Math.round(TICK_MILLIS * 2), xProperty.get());
+        assertEquals(Math.round(TICK_MILLIS * 2), yProperty.get());
+
+
+        pt.jumpTo(Duration.seconds(60).subtract(TickCalculation.toDuration(100)));
+
+        amt.pulse();
+
+        assertEquals(Status.STOPPED, pt.getStatus());
+        assertEquals(Status.STOPPED, pt2.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
     }
 
 }

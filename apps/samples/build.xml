@@ -41,6 +41,14 @@
             <include name="build.xml"/>
             <replacetoken><![CDATA[<import file="../../build-tasks.xml"/>]]></replacetoken>
         </replace>
+        <replace dir="${jfx.apps.ga-samples.dist}/Ensemble8">
+            <include name="build.xml"/>
+            <replacetoken><![CDATA[<target name="jfx-deployment">]]></replacetoken>
+            <replacevalue><![CDATA[<target name="jfx-deployment">
+        <taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
+            uri="javafx:com.sun.javafx.tools.ant"
+            classpath="${java.home}/../lib/ant-javafx.jar"/>]]></replacevalue>
+        </replace>
     </target>
 
     <target name="default" depends="dist-apps"/>

@@ -125,7 +125,9 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
 
     @Override
     public Texture getSharedTexture(WrapMode altMode) {
+        assertLocked();
         if (wrapMode == altMode) {
+            lock();
             return this;
         }
         switch (altMode) {
@@ -141,9 +143,20 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
             default:
                 return null;
         }
-        return createSharedTexture(altMode);
+        Texture altTex = createSharedTexture(altMode);
+        altTex.lock();
+        return altTex;
     }
 
+    /**
+     * Create a new version of this texture which shares the same
+     * {@code ManagedResource} reference.
+     * The lock counts for the shared resource reference are not
+     * changed in the processing of this method.
+     * 
+     * @param newMode the {@code WrapMode} to use for the new texture.
+     * @return a new {@code Texture} object sharing the underlying resource.
+     */
     protected abstract Texture createSharedTexture(WrapMode newMode);
 
     @Override
