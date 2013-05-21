@@ -4,8 +4,11 @@
     
     <import file="../build-defs.xml"/>
 
-    <condition property="runtime.excludes" value="javafx/scene/web/WebEngineBuilder.java, javafx/scene/web/WebViewBuilder.java">
-      <isset property="isAndroid"/>
+    <condition property="runtime.excludes" value="javafx/scene/web/*, javafx/embed/swt/*, javafx/embed/swing/*">
+      <or>
+        <isset property="isAndroid"/>
+        <isset property="isIOS"/>
+      </or>
     </condition>
 
     <property name="runtime.dist.root.dir" value="../../rt-closed" />    
