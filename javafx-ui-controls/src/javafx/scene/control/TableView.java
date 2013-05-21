@@ -28,6 +28,7 @@ package javafx.scene.control;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -39,11 +40,13 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -53,15 +56,23 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.skin.TableViewSkin;
@@ -818,8 +829,74 @@ public class TableView<S> extends Control {
         }
         return editable;
     }
-    
-    
+
+
+    // --- Fixed cell size
+    private DoubleProperty fixedCellSize;
+
+    /**
+     * Sets the new fixed cell size for this control. Any value greater than
+     * zero will enable fixed cell size mode, whereas a zero or negative value
+     * (or Region.USE_COMPUTED_SIZE) will be used to disabled fixed cell size
+     * mode.
+     *
+     * @param value The new fixed cell size value, or -1 (or Region.USE_COMPUTED_SIZE)
+     *                  to disable.
+     */
+    public final void setFixedCellSize(double value) {
+        fixedCellSizeProperty().set(value);
+    }
+
+    /**
+     * Returns the fixed cell size value, which may be -1 to represent fixed cell
+     * size mode is disabled, or a value greater than zero to represent the size
+     * of all cells in this control.
+     *
+     * @return A double representing the fixed cell size of this control, or -1
+     *      if fixed cell size mode is disabled.
+     */
+    public final double getFixedCellSize() {
+        return fixedCellSize == null ? Region.USE_COMPUTED_SIZE : fixedCellSize.get();
+    }
+    /**
+     * Specifies whether this control has cells that are a fixed height (of the
+     * specified value). If this value is -1 (i.e. {@link Region#USE_COMPUTED_SIZE}),
+     * then all cells are individually sized and positioned. This is a slow
+     * operation. Therefore, when performance matters and developers are not
+     * dependent on variable cell sizes it is a good idea to set the fixed cell
+     * size value. Generally cells are around 24px, so setting a fixed cell size
+     * of 24 is likely to result in very little difference in visuals, but a
+     * improvement to performance.
+     *
+     * <p>To set this property via CSS, use the -fx-fixed-cell-size property.
+     * This should not be confused with the -fx-cell-size property. The difference
+     * between these two CSS properties is that -fx-cell-size will size all
+     * cells to the specified size, but it will not enforce that this is the
+     * only size (thus allowing for variable cell sizes, and preventing the
+     * performance gains from being possible). Therefore, when performance matters
+     * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
+     * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
+     */
+    public final DoubleProperty fixedCellSizeProperty() {
+        if (fixedCellSize == null) {
+            fixedCellSize = new StyleableDoubleProperty(Region.USE_COMPUTED_SIZE) {
+                @Override public CssMetaData<TableView<?>,Number> getCssMetaData() {
+                    return StyleableProperties.FIXED_CELL_SIZE;
+                }
+
+                @Override public Object getBean() {
+                    return TableView.this;
+                }
+
+                @Override public String getName() {
+                    return "fixedCellSize";
+                }
+            };
+        }
+        return fixedCellSize;
+    }
+
+
     // --- Editing Cell
     private ReadOnlyObjectWrapper<TablePosition<S,?>> editingCell;
     private void setEditingCell(TablePosition<S,?> value) {
@@ -1304,12 +1381,57 @@ public class TableView<S> extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "table-view";
-    private static final String CELL_SPAN_TABLE_VIEW_STYLE_CLASS = "cell-span-table-view";
-    
-    private static final PseudoClass PSEUDO_CLASS_CELL_SELECTION = 
+
+    private static final PseudoClass PSEUDO_CLASS_CELL_SELECTION =
             PseudoClass.getPseudoClass("cell-selection");
-    private static final PseudoClass PSEUDO_CLASS_ROW_SELECTION = 
+    private static final PseudoClass PSEUDO_CLASS_ROW_SELECTION =
             PseudoClass.getPseudoClass("row-selection");
+
+    /** @treatAsPrivate */
+    private static class StyleableProperties {
+        private static final CssMetaData<TableView<?>,Number> FIXED_CELL_SIZE =
+                new CssMetaData<TableView<?>,Number>("-fx-fixed-cell-size",
+                                                    SizeConverter.getInstance(),
+                                                    Region.USE_COMPUTED_SIZE) {
+
+                    @Override public Double getInitialValue(TableView node) {
+                        return node.getFixedCellSize();
+                    }
+
+                    @Override public boolean isSettable(TableView n) {
+                        return n.fixedCellSize == null || !n.fixedCellSize.isBound();
+                    }
+
+                    @Override public StyleableProperty<Number> getStyleableProperty(TableView n) {
+                        return (StyleableProperty<Number>) n.fixedCellSizeProperty();
+                    }
+                };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+        static {
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                    new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(FIXED_CELL_SIZE);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
+        return getClassCssMetaData();
+    }
+    
 
 
     /***************************************************************************

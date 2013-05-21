@@ -75,15 +75,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
                 return ListViewSkin.this.createCell();
             }
         });
+        flow.setFixedCellSize(listView.getFixedCellSize());
         getChildren().add(flow);
-        
-        // TEMPORARY CODE (RT-24795)
-        // we check the TableView to see if a fixed cell length is specified
-        ObservableMap<Object,Object> p = listView.getProperties();
-        String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
-        double fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
-        flow.setFixedCellLength(fixedCellLength);
-        // --- end of TEMPORARY CODE
         
         EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent event) { 
@@ -140,6 +133,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         registerChangeListener(listView.parentProperty(), "PARENT");
         registerChangeListener(listView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(listView.placeholderProperty(), "PLACEHOLDER");
+        registerChangeListener(listView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
     }
     
     @Override public void dispose() {
@@ -163,6 +157,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         } else if ("PLACEHOLDER".equals(p)) {
             updatePlaceholderRegionVisibility();
+        } else if ("FIXED_CELL_SIZE".equals(p)) {
+            flow.setFixedCellSize(getSkinnable().getFixedCellSize());
         }
     }
 
