@@ -35,7 +35,7 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.scene.CameraAccess;
+import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGCamera;
 import javafx.beans.InvalidationListener;
@@ -445,29 +445,26 @@ public abstract class Camera extends Node {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * This class is used by classes in different packages to get access to
-     * private and package private methods.
-     */
-    private static class CameraAccessImpl extends CameraAccess {
-
-        @Override
-        public Point2D project(Camera camera, Point3D p) {
-            return camera.project(p);
-        }
-
-        @Override
-        public Point2D pickNodeXYPlane(Camera camera, Node node, double x, double y) {
-            return camera.pickNodeXYPlane(node, x, y);
-        }
-
-        @Override
-        public Point3D pickProjectPlane(Camera camera, double x, double y) {
-            return camera.pickProjectPlane(x, y);
-        }
-    }
 
     static {
-        CameraAccess.setCameraAccess(new CameraAccessImpl());
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        CameraHelper.setCameraAccessor(new CameraHelper.CameraAccessor() {
+
+            @Override
+            public Point2D project(Camera camera, Point3D p) {
+                return camera.project(p);
+            }
+
+            @Override
+            public Point2D pickNodeXYPlane(Camera camera, Node node, double x, double y) {
+                return camera.pickNodeXYPlane(node, x, y);
+            }
+
+            @Override
+            public Point3D pickProjectPlane(Camera camera, double x, double y) {
+                return camera.pickProjectPlane(x, y);
+            }
+        });
     }
 }

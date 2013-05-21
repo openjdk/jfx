@@ -27,8 +27,8 @@ package com.sun.javafx.scene.input;
 
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
-import com.sun.javafx.scene.NodeAccess;
-import com.sun.javafx.scene.SubSceneAccess;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.SubSceneHelper;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
@@ -176,14 +176,14 @@ public class PickResultChooser {
     private boolean processOffer(Node node, Node depthTestNode, double distance,
             Point3D point, int face, Point2D texCoord) {
 
-        final NodeAccess na = NodeAccess.getNodeAccess();
-        final SubSceneAccess sa = SubSceneAccess.getSubSceneAccess();
-        final SubScene subScene = na.getSubScene(depthTestNode);
+        final SubScene subScene = NodeHelper.getSubScene(depthTestNode);
         final boolean hasDepthBuffer = Platform.isSupported(ConditionalFeature.SCENE3D)
-                ? (subScene != null ? sa.isDepthBuffer(subScene) : depthTestNode.getScene().isDepthBuffer())
+                ? (subScene != null
+                    ? SubSceneHelper.isDepthBuffer(subScene)
+                    : depthTestNode.getScene().isDepthBuffer())
                 : false;
-        final boolean hasDepthTest = 
-                hasDepthBuffer && na.isDerivedDepthTest(depthTestNode);
+        final boolean hasDepthTest =
+                hasDepthBuffer && NodeHelper.isDerivedDepthTest(depthTestNode);
 
         boolean accepted = false;
         if ((empty || (hasDepthTest && distance < this.distance)) && !closed) {

@@ -131,16 +131,15 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
-import com.sun.javafx.scene.NodeAccess;
 import com.sun.javafx.scene.BoundsAccessor;
-import com.sun.javafx.scene.CameraAccess;
+import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.EventHandlerProperties;
 import com.sun.javafx.scene.NodeEventDispatcher;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.SceneUtils;
-import com.sun.javafx.scene.SubSceneAccess;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
@@ -4049,7 +4048,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (subScene != null) {
             pt = SceneUtils.subSceneToScene(subScene, pt);
         }
-        final Point2D projection = CameraAccess.getCameraAccess().project(
+        final Point2D projection = CameraHelper.project(
                 SceneHelper.getEffectiveCamera(getScene()), pt);
 
         return new Point2D(projection.getX() + scene.getX() + window.getX(),
@@ -8737,30 +8736,26 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated
     public abstract Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
 
-    /**
-     * This class is used by classes in different packages to get access to
-     * private and package private methods.
-     */
-    private static class NodeAccessImpl extends NodeAccess {
-
-        @Override
-        public void layoutNodeForPrinting(Node node) {
-            node.doCSSLayoutSyncForSnapshot();
-        }
-
-        @Override
-        public boolean isDerivedDepthTest(Node node) {
-            return node.isDerivedDepthTest();
-        }
-
-        @Override
-        public SubScene getSubScene(Node node) {
-            return node.getSubScene();
-        }
-    }
-
     static {
-        NodeAccess.setNodeAccess(new NodeAccessImpl());
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        NodeHelper.setNodeAccessor(new NodeHelper.NodeAccessor() {
+
+            @Override
+            public void layoutNodeForPrinting(Node node) {
+                node.doCSSLayoutSyncForSnapshot();
+            }
+
+            @Override
+            public boolean isDerivedDepthTest(Node node) {
+                return node.isDerivedDepthTest();
+            }
+
+            @Override
+            public SubScene getSubScene(Node node) {
+                return node.getSubScene();
+            }
+        });
     }
 }
 

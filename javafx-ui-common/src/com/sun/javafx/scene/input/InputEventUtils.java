@@ -25,11 +25,11 @@
 
 package com.sun.javafx.scene.input;
 
-import com.sun.javafx.scene.CameraAccess;
-import com.sun.javafx.scene.NodeAccess;
+import com.sun.javafx.scene.CameraHelper;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.SceneUtils;
-import com.sun.javafx.scene.SubSceneAccess;
+import com.sun.javafx.scene.SubSceneHelper;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Collections;
@@ -65,14 +65,10 @@ public class InputEventUtils {
         final Node newSourceNode =
                 (newSource instanceof Node) ? (Node) newSource : null;
 
-        NodeAccess na = NodeAccess.getNodeAccess();
-        SubSceneAccess sa = SubSceneAccess.getSubSceneAccess();
-        CameraAccess ca = CameraAccess.getCameraAccess();
-
         final SubScene oldSubScene =
-                (oldSourceNode == null ? null : na.getSubScene(oldSourceNode));
+                (oldSourceNode == null ? null : NodeHelper.getSubScene(oldSourceNode));
         final SubScene newSubScene =
-                (newSourceNode == null ? null : na.getSubScene(newSourceNode));
+                (newSourceNode == null ? null : NodeHelper.getSubScene(newSourceNode));
         final boolean subScenesDiffer = (oldSubScene != newSubScene);
 
         if (oldSourceNode != null) {
@@ -88,7 +84,7 @@ public class InputEventUtils {
             if (subScenesDiffer && newSubScene != null) {
                 // flatten the coords to flat mouse coordinates - project
                 // by scene's camera
-                Point2D planeCoords = ca.project(
+                Point2D planeCoords = CameraHelper.project(
                         SceneHelper.getEffectiveCamera(newSourceNode.getScene()),
                         coordinates);
                 // convert the point to subScene coordinates
@@ -98,7 +94,8 @@ public class InputEventUtils {
                 if (planeCoords == null) {
                     coordinates = null;
                 } else {
-                    coordinates = ca.pickProjectPlane(sa.getEffectiveCamera(newSubScene),
+                    coordinates = CameraHelper.pickProjectPlane(
+                            SubSceneHelper.getEffectiveCamera(newSubScene),
                             planeCoords.getX(), planeCoords.getY());
                 }
             }

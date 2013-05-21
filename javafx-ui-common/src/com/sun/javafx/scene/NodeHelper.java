@@ -25,25 +25,55 @@
 
 package com.sun.javafx.scene;
 
-import javafx.scene.Camera;
+import javafx.scene.Node;
 import javafx.scene.SubScene;
 
-public abstract class SubSceneAccess {
-    private static SubSceneAccess access;
+/**
+ * Used to access internal methods of Node.
+ */
+public class NodeHelper {
+    private static NodeAccessor nodeAccessor;
 
-    public static synchronized void setSubSceneAccess(SubSceneAccess acc) {
-        if (access == null) {
-            access = acc;
+    static {
+        forceInit(Node.class);
+    }
+
+    private NodeHelper() {
+    }
+
+    public static void layoutNodeForPrinting(Node node) {
+        nodeAccessor.layoutNodeForPrinting(node);
+    }
+
+    public static boolean isDerivedDepthTest(Node node) {
+        return nodeAccessor.isDerivedDepthTest(node);
+    };
+
+    public static SubScene getSubScene(Node node) {
+        return nodeAccessor.getSubScene(node);
+    };
+
+
+    public static void setNodeAccessor(final NodeAccessor newAccessor) {
+        if (nodeAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        nodeAccessor = newAccessor;
+    }
+
+    public interface NodeAccessor {
+        void layoutNodeForPrinting(Node node);
+        boolean isDerivedDepthTest(Node node);
+        SubScene getSubScene(Node node);
+    }
+
+    private static void forceInit(final Class<?> classToInit) {
+        try {
+            Class.forName(classToInit.getName(), true,
+                          classToInit.getClassLoader());
+        } catch (final ClassNotFoundException e) {
+            throw new AssertionError(e);  // Can't happen
         }
     }
-
-    /**
-     * Return the accessor created by the Node class when its loaded.
-     */
-    public static synchronized SubSceneAccess getSubSceneAccess() {
-        return access;
-    }
-
-    public abstract boolean isDepthBuffer(SubScene subScene);
-    public abstract Camera getEffectiveCamera(SubScene subScene);
 }

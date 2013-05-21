@@ -43,12 +43,11 @@ public class SceneUtils {
         Node n = subScene;
         while(n != null) {
             // flatten the coords - project them by subScene's camera
-            final Point2D projection = CameraAccess.getCameraAccess().project(
-                    SubSceneAccess.getSubSceneAccess().getEffectiveCamera(subScene),
-                    point);
+            final Point2D projection = CameraHelper.project(
+                    SubSceneHelper.getEffectiveCamera(subScene), point);
             // transform to scene/outer-subScene coords
             point = subScene.localToScene(projection.getX(), projection.getY(), 0.0);
-            n = NodeAccess.getNodeAccess().getSubScene(n);
+            n = NodeHelper.getSubScene(n);
         }
 
         return point;
@@ -72,17 +71,17 @@ public class SceneUtils {
      */
     private static Point2D computeSubSceneCoordinates(
             double x, double y, SubScene subScene) {
-        SubScene outer = NodeAccess.getNodeAccess().getSubScene(subScene);
+        SubScene outer = NodeHelper.getSubScene(subScene);
 
         if (outer == null) {
-            return CameraAccess.getCameraAccess().pickNodeXYPlane(
+            return CameraHelper.pickNodeXYPlane(
                     SceneHelper.getEffectiveCamera(subScene.getScene()),
                     subScene, x, y);
         } else {
             Point2D coords = computeSubSceneCoordinates(x, y, outer);
             if (coords != null) {
-                coords = CameraAccess.getCameraAccess().pickNodeXYPlane(
-                        SubSceneAccess.getSubSceneAccess().getEffectiveCamera(outer),
+                coords = CameraHelper.pickNodeXYPlane(
+                        SubSceneHelper.getEffectiveCamera(outer),
                         subScene, coords.getX(), coords.getY());
             }
             return coords;
@@ -107,7 +106,7 @@ public class SceneUtils {
 //        }
 //
 //        Point2D pt = new Point2D(screenX, screenY);
-//        final SubScene subScene = NodeAccess.getNodeAccess().getSubScene(n);
+//        final SubScene subScene = NodeHelper.getSubScene(n);
 //        if (subScene != null) {
 //            pt = SceneUtils.sceneToSubScenePlane(subScene, pt);
 //            if (pt == null) {
@@ -117,7 +116,7 @@ public class SceneUtils {
 //
 //        // compute pick ray
 //        final Camera cam = subScene != null
-//                ? SubSceneAccess.getSubSceneAccess().getEffectiveCamera(subScene)
+//                ? SubSceneHelper.getEffectiveCamera(subScene)
 //                : SceneHelper.getEffectiveCamera(scene);
 //        final PickRay pickRay = cam.computePickRay(pt.getX(), pt.getY(), null);
 //
