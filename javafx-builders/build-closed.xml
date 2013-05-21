@@ -4,6 +4,10 @@
     
     <import file="../build-defs.xml"/>
 
+    <condition property="runtime.excludes" value="javafx/scene/web/WebEngineBuilder.java, javafx/scene/web/WebViewBuilder.java">
+      <isset property="isAndroid"/>
+    </condition>
+
     <property name="runtime.dist.root.dir" value="../../rt-closed" />    
     <property name="rt.dist.root.dir" value="../../rt" />
     <path id="javac.closed.classpath.path" path="
