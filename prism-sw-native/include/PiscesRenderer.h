@@ -36,6 +36,8 @@
 #include <PiscesSurface.h>
 #include <PiscesTransform.h>
 
+#include "com_sun_pisces_RendererBase.h"
+
 /**
  * @defgroup CompositingRules Compositing rules supported by PISCES
  * When drawing two objects to one pixel area, there are several possibilities
@@ -67,9 +69,9 @@
  * renderer_setComposite(Renderer *, jint, jfloat)
  */
 //Compositing rules
-#define COMPOSITE_CLEAR    0
-#define COMPOSITE_SRC      1
-#define COMPOSITE_SRC_OVER 2
+#define COMPOSITE_CLEAR    com_sun_pisces_RendererBase_COMPOSITE_CLEAR
+#define COMPOSITE_SRC      com_sun_pisces_RendererBase_COMPOSITE_SRC
+#define COMPOSITE_SRC_OVER com_sun_pisces_RendererBase_COMPOSITE_SRC_OVER
 
 /**
  * @defgroup WindingRules Winding rules - shape interior
@@ -123,8 +125,11 @@
 #define PAINT_FLAT_COLOR 0
 #define PAINT_LINEAR_GRADIENT 1
 #define PAINT_RADIAL_GRADIENT 2
-#define PAINT_TEXTURE8888 3
-#define PAINT_IMAGE 4
+#define PAINT_TEXTURE8888 4
+#define PAINT_TEXTURE8888_MULTIPLY 5
+
+#define IMAGE_MODE_NORMAL   com_sun_pisces_RendererBase_IMAGE_MODE_NORMAL
+#define IMAGE_MODE_MULTIPLY com_sun_pisces_RendererBase_IMAGE_MODE_MULTIPLY
 
 #define LG_GRADIENT_MAP_SIZE 8
 #define GRADIENT_MAP_SIZE (1 << LG_GRADIENT_MAP_SIZE)
@@ -184,6 +189,7 @@ typedef struct _Renderer {
 
     // Flat color or (Java2D) linear gradient
     jint _paintMode;
+    jint _prevPaintMode;
 
     // Current (internal) color
     jint _cred, _cgreen, _cblue, _calpha;
@@ -224,32 +230,24 @@ typedef struct _Renderer {
 
     void (*_bl_SourceOverMask)(struct _Renderer *rdr, jint height);
     void (*_bl_PT_SourceOverMask)(struct _Renderer *rdr, jint height);
-    void (*_bl_Image_SourceOverMask)(struct _Renderer *rdr, jint height);
     void (*_bl_SourceMask)(struct _Renderer *rdr, jint height);
     void (*_bl_PT_SourceMask)(struct _Renderer *rdr, jint height);
-    void (*_bl_Image_SourceMask)(struct _Renderer *rdr, jint height);
-    
+
     void (*_bl_SourceOverLCDMask)(struct _Renderer *rdr, jint height);
     void (*_bl_PT_SourceOverLCDMask)(struct _Renderer *rdr, jint height);
-    void (*_bl_Image_SourceOverLCDMask)(struct _Renderer *rdr, jint height);
     void (*_bl_SourceLCDMask)(struct _Renderer *rdr, jint height);
     void (*_bl_PT_SourceLCDMask)(struct _Renderer *rdr, jint height);
-    void (*_bl_Image_SourceLCDMask)(struct _Renderer *rdr, jint height);
-    
+
     void (*_bl_SourceOverNoMask)(struct _Renderer *rdr, jint height);
     void (*_bl_PT_SourceOverNoMask)(struct _Renderer *rdr, jint height);
-    void (*_bl_Image_SourceOverNoMask)(struct _Renderer *rdr, jint height);
     void (*_bl_SourceNoMask)(struct _Renderer *rdr, jint height);
     void (*_bl_PT_SourceNoMask)(struct _Renderer *rdr, jint height);
-    void (*_bl_Image_SourceNoMask)(struct _Renderer *rdr, jint height);
-    
+
     void (*_bl_SourceOver)(struct _Renderer *rdr, jint height);
     void (*_bl_PT_SourceOver)(struct _Renderer *rdr, jint height);
-    void (*_bl_Image_SourceOver)(struct _Renderer *rdr, jint height);
     void (*_bl_Source)(struct _Renderer *rdr, jint height);
     void (*_bl_PT_Source)(struct _Renderer *rdr, jint height);
-    void (*_bl_Image_Source)(struct _Renderer *rdr, jint height);
-    
+
     void (*_el_Source)(struct _Renderer *rdr, jint height, jint frac);
     void (*_el_SourceOver)(struct _Renderer *rdr, jint height, jint frac);
     void (*_el_PT_Source)(struct _Renderer *rdr, jint height, jint frac);
@@ -281,8 +279,7 @@ typedef struct _Renderer {
      * @see renderer_setCompositeRule()
      */
     void (*_bl_PT)(struct _Renderer *rdr, jint height);
-    void (*_bl_Image)(struct _Renderer *rdr, jint height);
-    
+
     void (*_el)(struct _Renderer *rdr, jint height, jint frac);
     void (*_el_PT)(struct _Renderer *rdr, jint height, jint frac);
 
@@ -296,25 +293,23 @@ typedef struct _Renderer {
     jint _alphaOffset;
     jint _minTouched;
     jint _maxTouched;
-    jint _scanLineAlpha[NUM_ALPHA_ROWS];
     jint _currX, _currY;
     jint _currImageOffset;
-    
+
     jbyte* alphaMap;
     jint* _rowAAInt;
 
     // Mask
     jboolean _mask_free;
     jint _mask_subPosX;
-    
+
     // Mask data
     jint _maskType;
     jbyte* _mask_byteData;
     jint _maskOffset;
     jint _mask_width;
     jint _mask_height;
-    
-    
+
     // Paint buffer
     jint *_paint;
     size_t _paint_length;
@@ -340,7 +335,7 @@ typedef struct _Renderer {
 
     // Texture paint
     jint* _texture_intData;
-    
+
     //hint to image rendering
     jboolean _texture_hasAlpha;
 
@@ -348,6 +343,7 @@ typedef struct _Renderer {
     jbyte* _texture_byteData;
     jbyte* _texture_alphaData;
 
+    jint _texture_renderMode;
     jint _texture_imageWidth;
     jint _texture_imageHeight;
     jint _texture_stride;
@@ -368,7 +364,7 @@ typedef struct _Renderer {
     jint _clip_bbMinY;
     jint _clip_bbMaxX;
     jint _clip_bbMaxY;
-    
+
     jint _el_lfrac, _el_rfrac;
 
     jint _rendererState;
