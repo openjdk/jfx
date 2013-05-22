@@ -209,15 +209,15 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nReleaseD3DMesh
  * Signature: (JJ[F[I)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nBuildNativeGeometry
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMesh, jfloatArray vb, jintArray ib)
+  (JNIEnv *env, jclass, jlong ctx, jlong nativeMesh, jfloatArray vb, jshortArray ib)
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nBuildNativeGeometry");
     D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
 
     UINT vertexBufferSize = env->GetArrayLength(vb);
-    float *vertexBuffer = (jfloat*) (env->GetPrimitiveArrayCritical(vb, NULL));
+    float *vertexBuffer = (float *) (env->GetPrimitiveArrayCritical(vb, NULL));
     UINT indexBufferSize = env->GetArrayLength(ib);
-    UINT *indexBuffer = (UINT*) (env->GetPrimitiveArrayCritical(ib, NULL));
+    USHORT *indexBuffer = (USHORT *) (env->GetPrimitiveArrayCritical(ib, NULL));
 
     boolean result = mesh->buildBuffers(vertexBuffer, vertexBufferSize,
             indexBuffer, indexBufferSize);

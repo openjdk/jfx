@@ -411,7 +411,7 @@ class ES2Context extends BaseShaderContext {
         glContext.releaseES2Mesh(nativeHandle);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int[] indexBuffer) {
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, short[] indexBuffer) {
         return glContext.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
     }
 

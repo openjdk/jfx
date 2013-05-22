@@ -66,7 +66,7 @@ class ES2Mesh extends BaseMesh {
     @Override
     public boolean buildNativeGeometry() {
         float vertexBuffer[] = getVertsGM();
-        int indexBuffer[] = getIndexGM();
+        short indexBuffer[] = getIndexGM();
         return context.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
 
     }

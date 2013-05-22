@@ -1689,11 +1689,11 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nReleaseES2Mesh
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
   (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshInfo,
-        jfloatArray vbArray, jintArray ibArray)
+        jfloatArray vbArray, jshortArray ibArray)
 {
     GLuint vertexBufferSize;
     GLuint indexBufferSize;
-    GLuint *indexBuffer;
+    GLushort *indexBuffer;
     GLfloat *vertexBuffer;
     jboolean status = JNI_TRUE;
 
@@ -1710,7 +1710,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
     vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
 
     indexBufferSize = (*env)->GetArrayLength(env, ibArray);
-    indexBuffer = (GLuint *) ((*env)->GetPrimitiveArrayCritical(env, ibArray, NULL));
+    indexBuffer = (GLushort *) ((*env)->GetPrimitiveArrayCritical(env, ibArray, NULL));
 
     if ((vertexBuffer == NULL ) || (vertexBufferSize == 0)
             || (indexBuffer == NULL) || (indexBufferSize == 0)) {
@@ -1729,7 +1729,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
 
             // Initialize index buffer
             ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_INDEXBUFFER]);
-            ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize * sizeof (GLuint),
+            ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize * sizeof (GLushort),
                     indexBuffer, GL_STATIC_DRAW);
             meshInfo->indexBufferSize = indexBufferSize;
 
@@ -2091,7 +2091,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nRenderMeshView
             VERT_3D_STRIDE, (const void*) offset);
 
     glDrawElements(GL_TRIANGLES, mvInfo->meshInfo->indexBufferSize,
-            GL_UNSIGNED_INT, 0);
+            GL_UNSIGNED_SHORT, 0);
 
     // Reset states
     ctxInfo->glDisableVertexAttribArray(VC_3D_INDEX);

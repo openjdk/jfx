@@ -358,7 +358,7 @@ class D3DContext extends BaseShaderContext {
     private static native long nCreateD3DMesh(long pContext);
     private static native void nReleaseD3DMesh(long pContext, long nativeHandle);
     private static native boolean nBuildNativeGeometry(long pContext, long nativeHandle,
-            float vertexBuffer[], int indexBuffer[]);
+            float vertexBuffer[], short indexBuffer[]);
     private static native long nCreateD3DPhongMaterial(long pContext);
     private static native void nReleaseD3DPhongMaterial(long pContext, long nativeHandle);
     private static native void nSetSolidColor(long pContext, long nativePhongMaterial,
@@ -424,7 +424,7 @@ class D3DContext extends BaseShaderContext {
     }
 
     boolean buildNativeGeometry(long nativeHandle, float vertexBuffer[],
-            int indexBuffer[]) {
+            short indexBuffer[]) {
         return nBuildNativeGeometry(pContext, nativeHandle, vertexBuffer, indexBuffer);
     }
 

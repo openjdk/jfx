@@ -90,7 +90,7 @@ void printResult(const char *str, HRESULT result) {
 
 }
 
-boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, UINT *ib, UINT ibSize) {
+boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, USHORT *ib, UINT ibSize) {
 //    cout << "D3DMesh::buildBuffers: vertexBufferSize = " << vbSize
 //            << ", indexBufferSize = " << ibSize << endl;
 
@@ -111,12 +111,11 @@ boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, UINT *ib, UINT ibSize) {
 //    printResult("D3DMesh.buildBuffers: VertexBuffer's result = ", result);
 
     if (SUCCEEDED(result)) {
-        size = ibSize * sizeof (UINT);
+        size = ibSize * sizeof (USHORT);
         result = device->CreateIndexBuffer(size, D3DUSAGE_WRITEONLY,
-                sizeof (UINT) == 2 ? D3DFMT_INDEX16 : sizeof (UINT) == 4 ? D3DFMT_INDEX32 : D3DFMT_UNKNOWN,
-                D3DPOOL_DEFAULT, &indexBuffer, NULL);
+                D3DFMT_INDEX16, D3DPOOL_DEFAULT, &indexBuffer, NULL);
         if (SUCCEEDED(result)) {
-            int *data;
+            USHORT *data;
             result = indexBuffer->Lock(0, size, (void **) &data, 0);
             if (SUCCEEDED(result)) {
                 memcpy_s(data, size, ib, size);
