@@ -459,7 +459,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         // --- accumCellParent
         accumCellParent = new Group();
-        accumCellParent.setManaged(false);
         accumCellParent.setVisible(false);
         getChildren().add(accumCellParent);
 
@@ -1278,15 +1277,19 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     @Override protected void setWidth(double value) {
-        super.setWidth(value);
-        setNeedsLayout(true);
-        requestLayout();
+        if (value != lastWidth) {
+            super.setWidth(value);
+            setNeedsLayout(true);
+            requestLayout();
+        }
     }
 
     @Override protected void setHeight(double value) {
-        super.setHeight(value);
-        setNeedsLayout(true);
-        requestLayout();
+        if (value != lastHeight) {
+            super.setHeight(value);
+            setNeedsLayout(true);
+            requestLayout();
+        }
     }
 
     private void updateScrollBarsAndCells() {
@@ -1747,8 +1750,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
-        cell.setManaged(true);
-        
         if (cell.getParent() == null) {
             sheetChildren.add(cell);
         }
@@ -1775,7 +1776,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
             cell.setVisible(false);
-            cell.setManaged(false);
         }
     }
 
