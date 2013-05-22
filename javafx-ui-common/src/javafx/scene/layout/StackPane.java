@@ -39,6 +39,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.css.Styleable;
+import javafx.geometry.HPos;
 
 /**
  *
@@ -329,22 +330,26 @@ public class StackPane extends Pane {
     @Override protected void layoutChildren() {
         List<Node> managed = getManagedChildren();
         Pos align = getAlignmentInternal();
+        HPos alignHpos = align.getHpos();
+        VPos alignVpos = align.getVpos();
         double width = getWidth();
         double height = getHeight();
         double top = getInsets().getTop();
         double right = getInsets().getRight();
         double left = getInsets().getLeft();
         double bottom = getInsets().getBottom();
-        double baselineOffset = align.getVpos() == VPos.BASELINE ? getMaxBaselineOffset(managed)
+        double baselineOffset = alignVpos == VPos.BASELINE ? getMaxBaselineOffset(managed)
                                     : height/2;
+        double contentWidth = width - left - right;
+        double contentHeight = height - top - bottom;
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Pos childAlignment = StackPane.getAlignment(child);
             layoutInArea(child, left, top,
-                           width - left - right, height - top - bottom,
+                           contentWidth, contentHeight,
                            baselineOffset, getMargin(child),
-                           childAlignment != null? childAlignment.getHpos() : align.getHpos(),
-                           childAlignment != null? childAlignment.getVpos() : align.getVpos());
+                           childAlignment != null? childAlignment.getHpos() : alignHpos,
+                           childAlignment != null? childAlignment.getVpos() : alignVpos);
         }
     }
 
