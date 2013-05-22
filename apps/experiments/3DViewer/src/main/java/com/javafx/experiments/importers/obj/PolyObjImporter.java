@@ -39,6 +39,7 @@ import com.javafx.experiments.shape3d.PolygonMesh;
 import com.javafx.experiments.shape3d.PolygonMeshView;
 
 import java.io.*;
+import java.net.URL;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -65,7 +66,7 @@ public class PolyObjImporter {
         }
     }
 
-    private static boolean debug = true;
+    private static boolean debug = false;
     private static float scale = 1;
     private static boolean flatXZ = false;
 
@@ -86,8 +87,8 @@ public class PolyObjImporter {
 
     public PolyObjImporter(String filename) throws FileNotFoundException, IOException {
         this.objFilename = filename;
-        log("Reading filename = " + filename);
-        read(new FileInputStream(filename));
+        log("Reading filename = " + filename);;
+        read(new URL(filename).openStream());
     }
 
     public PolyObjImporter(InputStream inputStream) throws IOException {
@@ -282,11 +283,13 @@ public class PolyObjImporter {
                 newUVs.toFloatArray(),
                 faceArrays
         );
-        System.out.println("mesh.points = " + Arrays.toString(mesh.points));
-        System.out.println("mesh.texCoords = " + Arrays.toString(mesh.texCoords));
-        System.out.println("mesh.faces: ");
-        for (int[] face: mesh.faces) {
-            System.out.println("    face:: "+Arrays.toString(face));
+        if (debug) {
+            System.out.println("mesh.points = " + Arrays.toString(mesh.points));
+            System.out.println("mesh.texCoords = " + Arrays.toString(mesh.texCoords));
+            System.out.println("mesh.faces: ");
+            for (int[] face: mesh.faces) {
+                System.out.println("    face:: "+Arrays.toString(face));
+            }
         }
 
         int keyIndex = 2;
