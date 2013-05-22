@@ -56,6 +56,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
@@ -553,6 +554,10 @@ yearSpinner.setFillHeight(false);
     protected void createDayCells() {
         final EventHandler<MouseEvent> dayCellActionHandler = new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent ev) {
+                if (ev.getButton() != MouseButton.PRIMARY) {
+                    return;
+                }
+
                 DateCell dayCell = (DateCell)ev.getSource();
                 LocalDate date = dayCellDate(dayCell);
                 YearMonth yearMonth = YearMonth.from(date);

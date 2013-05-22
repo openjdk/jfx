@@ -43,10 +43,9 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.KeyCode;
-
 import javafx.stage.Stage;
-import org.junit.After;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -2309,5 +2308,29 @@ public class TreeTableViewKeyInputTest {
         assertTrue(fm.isFocused(13));
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         assertTrue(debug(), fm.isFocused(13));
+    }
+    
+    @Test public void test_rt29930() {
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.clearAndSelect(0);
+        
+        keyboard.doDownArrowPress(KeyModifier.SHIFT); // select rows [0,1]
+        keyboard.doDownArrowPress(KeyModifier.SHIFT); // select rows [0,1,2]
+        assertTrue(isSelected(0,1,2));
+        assertEquals(2, fm.getFocusedIndex());
+        assertEquals(0, getAnchor().getRow());
+        
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set new anchor point
+        assertTrue(isSelected(0,1));
+        assertEquals(2, fm.getFocusedIndex());
+        assertEquals(2, getAnchor().getRow());
+        
+        keyboard.doDownArrowPress(KeyModifier.SHIFT); // select rows [2,3]
+        assertTrue(isSelected(2,3));
+        assertTrue(debug(), isNotSelected(0,1));
+        assertEquals(3, fm.getFocusedIndex());
+        assertEquals(2, getAnchor().getRow());
     }
 }

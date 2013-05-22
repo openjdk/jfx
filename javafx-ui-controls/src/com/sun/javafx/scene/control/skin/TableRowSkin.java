@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 
+import javafx.beans.property.DoubleProperty;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
@@ -102,6 +103,10 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
 
     @Override protected ObjectProperty<ObservableList<T>> itemsProperty() {
         return tableView.itemsProperty();
+    }
+
+    @Override protected DoubleProperty fixedCellSizeProperty() {
+        return tableView.fixedCellSizeProperty();
     }
 
     @Override protected boolean isColumnPartiallyOrFullyVisible(TableColumnBase tc) {

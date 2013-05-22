@@ -451,6 +451,11 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     private EventHandler<ActionEvent> menuActionEventHandler = new EventHandler<ActionEvent>() {
         @Override
         public void handle(ActionEvent t) {
+            if (t.getSource() instanceof CustomMenuItem) {
+                // RT-29614 If CustomMenuItem hideOnClick is false, dont hide
+                CustomMenuItem cmi = (CustomMenuItem)t.getSource();
+                if (!cmi.isHideOnClick()) return;
+            }
             unSelectMenus();
         }
     };

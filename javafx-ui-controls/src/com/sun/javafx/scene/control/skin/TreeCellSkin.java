@@ -95,6 +95,9 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
     
     private boolean disclosureNodeDirty = true;
     private TreeItem<?> treeItem;
+
+    private double fixedCellSize;
+    private boolean fixedCellSizeEnabled;
     
     private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
         @Override public Void call(String p) {
@@ -107,12 +110,16 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
     
     public TreeCellSkin(TreeCell<T> control) {
         super(control, new TreeCellBehavior<T>(control));
+
+        this.fixedCellSize = control.getTreeView().getFixedCellSize();
+        this.fixedCellSizeEnabled = fixedCellSize > 0;
         
         updateTreeItem();
         updateDisclosureNodeRotation(false);
         
         registerChangeListener(control.treeItemProperty(), "TREE_ITEM");
         registerChangeListener(control.textProperty(), "TEXT");
+        registerChangeListener(control.getTreeView().fixedCellSizeProperty(), "FIXED_CELL_SIZE");
     }
     
     @Override protected void handleControlPropertyChanged(String p) {
@@ -123,6 +130,9 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
             getSkinnable().requestLayout();
         } else if ("TEXT".equals(p)) {
             getSkinnable().requestLayout();
+        } else if ("FIXED_CELL_SIZE".equals(p)) {
+            this.fixedCellSize = getSkinnable().getTreeView().getFixedCellSize();
+            this.fixedCellSizeEnabled = fixedCellSize > 0;
         }
     }
     
@@ -248,12 +258,20 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
     }
     
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
+        }
+
         double pref = super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset);
         Node d = getSkinnable().getDisclosureNode();
         return (d == null) ? pref : Math.max(d.minHeight(-1), pref);
     }
     
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
+        }
+
         final TreeCell cell = getSkinnable();
         
         final double pref = super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
@@ -262,6 +280,14 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         
         // RT-30212: TreeCell does not honor minSize of cells
         return Math.max(cell.getMinHeight(), prefHeight);
+    }
+
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
+        }
+
+        return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
     }
     
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
