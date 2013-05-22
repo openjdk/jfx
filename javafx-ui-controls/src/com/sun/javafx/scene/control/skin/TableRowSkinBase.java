@@ -755,7 +755,14 @@ public abstract class TableRowSkinBase<T,
         }
         return minHeight;
     }
-    
+
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
+        }
+        return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
     private void checkState(boolean doRecreateIfNecessary) {
         if (isDirty) {
             // doRecreateIfNecessary was added to resolve RT-29382, which was
