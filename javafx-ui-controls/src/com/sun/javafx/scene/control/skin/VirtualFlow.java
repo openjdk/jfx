@@ -249,25 +249,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
     
     /**
-     * Use this (temporary) key to set a fixed cell length in the ListView,
-     * TreeView and TableView controls.
-     */
-    public static final String FIXED_CELL_LENGTH_KEY = 
-            "com.sun.javafx.scene.control.virtualFlow.fixedCellLength";
-    
-    /**
      * For optimisation purposes, some use cases can trade dynamic cell length
-     * for speed - if fixedCellLength is greater than zero we'll use that rather
+     * for speed - if fixedCellSize is greater than zero we'll use that rather
      * than determine it by querying the cell itself.
      */
-    private double fixedCellLength = 0;
+    private double fixedCellSize = 0;
+    private boolean fixedCellSizeEnabled = false;
 
-    public double getFixedCellLength() {
-        return fixedCellLength;
-    }
-    
-    public void setFixedCellLength(final double value) {
-        this.fixedCellLength = value;
+    public void setFixedCellSize(final double value) {
+        this.fixedCellSize = value;
+        this.fixedCellSizeEnabled = fixedCellSize > 0;
         layoutChildren();
     }
     
@@ -1602,7 +1593,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * to use a cell as a helper for computing cell size in some cases.
      */
     double getCellLength(int index) {
-        if (fixedCellLength > 0) return fixedCellLength;
+        if (fixedCellSizeEnabled) return fixedCellSize;
         
         T cell = getCell(index);
         double length = getCellLength(cell);
@@ -1624,7 +1615,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     private double getCellLength(T cell) {
         if (cell == null) return 0;
-        if (fixedCellLength > 0) return fixedCellLength;
+        if (fixedCellSizeEnabled) return fixedCellSize;
 
         return isVertical() ?
             cell.getLayoutBounds().getHeight()
@@ -1670,13 +1661,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void resizeCellSize(T cell) {
         if (cell == null) return;
         
-        
         if (isVertical()) {
             double width = cell.getWidth();
-            cell.resize(width, cell.prefHeight(width));
+            cell.resize(width, fixedCellSizeEnabled ? fixedCellSize : cell.prefHeight(width));
         } else {
             double height = cell.getHeight();
-            cell.resize(cell.prefWidth(height), cell.getHeight());
+            cell.resize(fixedCellSizeEnabled ? fixedCellSize : cell.prefWidth(height), height);
         }
     }
 

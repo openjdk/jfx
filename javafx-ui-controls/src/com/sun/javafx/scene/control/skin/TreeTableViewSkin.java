@@ -74,6 +74,8 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         this.tableBackingListProperty = new SimpleObjectProperty<TreeTableViewBackingList<S>>(tableBackingList);
         
         treeItemToListMap.put(treeTableView, tableBackingList);
+
+        flow.setFixedCellSize(treeTableView.getFixedCellSize());
         
         super.init(treeTableView);
         
@@ -136,6 +138,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         registerChangeListener(treeTableView.showRootProperty(), "SHOW_ROOT");
         registerChangeListener(treeTableView.rowFactoryProperty(), "ROW_FACTORY");
         registerChangeListener(treeTableView.expandedItemCountProperty(), "TREE_ITEM_COUNT");
+        registerChangeListener(treeTableView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
     }
     
     @Override public void dispose() {
@@ -162,6 +165,8 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             flow.recreateCells();
         } else if ("TREE_ITEM_COUNT".equals(p)) {
             rowCountDirty = true;
+        } else if ("FIXED_CELL_SIZE".equals(p)) {
+            flow.setFixedCellSize(getSkinnable().getFixedCellSize());
         }
     }
     
@@ -402,8 +407,13 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         cell.updateTreeTableView(treeTableView);
         return cell;
     }
-    
 
+    @Override protected void horizontalScroll() {
+        super.horizontalScroll();
+        if (getSkinnable().getFixedCellSize() > 0) {
+            flow.requestCellLayout();
+        }
+    }
     
     
     /***************************************************************************

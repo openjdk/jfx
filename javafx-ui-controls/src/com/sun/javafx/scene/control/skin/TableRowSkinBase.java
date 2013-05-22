@@ -32,10 +32,10 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import javafx.animation.FadeTransition;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
 import javafx.collections.WeakListChangeListener;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
@@ -129,6 +129,8 @@ public abstract class TableRowSkinBase<T,
     protected abstract void updateCell(R cell, C row);  // cell.updateTableRow(skinnable); (i.e cell.updateTableRow(row))
     
     protected abstract ObjectProperty<ObservableList<T>> itemsProperty();
+
+    protected abstract DoubleProperty fixedCellSizeProperty();
     
     protected abstract boolean isColumnPartiallyOrFullyVisible(TableColumnBase tc); // tableViewSkin.isColumnPartiallyOrFullyVisible(tc)
 
@@ -177,8 +179,8 @@ public abstract class TableRowSkinBase<T,
     protected boolean isDirty = false;
     protected boolean updateCells = false;
     
-    private final double fixedCellLength;
-    private final boolean fixedCellLengthEnabled;
+    private double fixedCellSize;
+    private boolean fixedCellSizeEnabled;
     
     private ListChangeListener<TableColumnBase> visibleLeafColumnsListener = new ListChangeListener<TableColumnBase>() {
         @Override public void onChanged(Change<? extends TableColumnBase> c) {
@@ -314,14 +316,6 @@ public abstract class TableRowSkinBase<T,
     public TableRowSkinBase(C control, B behavior) {
         super(control, behavior);
         
-        // TEMPORARY CODE (RT-24975)
-        // we check the TableView to see if a fixed cell length is specified
-        ObservableMap p = getVirtualFlowOwner().getProperties();
-        String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
-        fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
-        fixedCellLengthEnabled = fixedCellLength > 0;
-        // --- end of TEMPORARY CODE
-        
         // init(control) should not be called here - it should be called by the
         // subclass after initialising itself. This is to prevent NPEs (for 
         // example, getVisibleLeafColumns() throws a NPE as the control itself
@@ -345,7 +339,13 @@ public abstract class TableRowSkinBase<T,
 //        registerChangeListener(control.graphicProperty(), "GRAPHIC");
 //        registerChangeListener(control.editingProperty(), "EDITING");
         registerChangeListener(control.itemProperty(), "ITEM");
-        
+
+        if (fixedCellSizeProperty() != null) {
+            registerChangeListener(fixedCellSizeProperty(), "FIXED_CELL_SIZE");
+            fixedCellSize = fixedCellSizeProperty().get();
+            fixedCellSizeEnabled = fixedCellSize > 0;
+        }
+
 //        // add listener to cell span model
 //        spanModel = spanModelProperty().get();
 //        registerChangeListener(spanModelProperty(), "SPAN_MODEL");
@@ -368,6 +368,9 @@ public abstract class TableRowSkinBase<T,
 //            // TODO update layout based on changes to span model
 //            spanModel = spanModelProperty().get();
 //            getSkinnable().requestLayout();
+        } else if ("FIXED_CELL_SIZE".equals(p)) {
+            fixedCellSize = fixedCellSizeProperty().get();
+            fixedCellSizeEnabled = fixedCellSize > 0;
         }
     }
     
@@ -459,7 +462,7 @@ public abstract class TableRowSkinBase<T,
             height = snapSize(height) - snapSize(verticalPadding);
             
             boolean isVisible = true;
-            if (fixedCellLengthEnabled) {
+            if (fixedCellSizeEnabled) {
                 // we determine if the cell is visible, and if not we have the
                 // ability to take it out of the scenegraph to help improve 
                 // performance. However, we only do this when there is a 
@@ -473,7 +476,7 @@ public abstract class TableRowSkinBase<T,
             } 
 
             if (isVisible) {
-                if (fixedCellLengthEnabled && tableCell.getParent() == null) {
+                if (fixedCellSizeEnabled && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
                 
@@ -580,7 +583,7 @@ public abstract class TableRowSkinBase<T,
                 // This does not appear to impact performance...
                 tableCell.requestLayout();
             } else {
-                if (fixedCellLengthEnabled) {
+                if (fixedCellSizeEnabled) {
                     // we only add/remove to the scenegraph if the fixed cell
                     // length support is enabled - otherwise we keep all
                     // TableCells in the scenegraph
@@ -678,7 +681,7 @@ public abstract class TableRowSkinBase<T,
         }
 
         // update children of each row
-        if (! fixedCellLengthEnabled && (resetChildren || cellsEmpty)) {
+        if (!fixedCellSizeEnabled && (resetChildren || cellsEmpty)) {
             getChildren().setAll(cells);
         }
     }
@@ -698,8 +701,8 @@ public abstract class TableRowSkinBase<T,
     }
     
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellLengthEnabled) {
-            return fixedCellLength;
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
         }
         
         // fix for RT-29080
@@ -727,8 +730,8 @@ public abstract class TableRowSkinBase<T,
     }
     
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellLengthEnabled) {
-            return fixedCellLength;
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
         }
         
         // fix for RT-29080
