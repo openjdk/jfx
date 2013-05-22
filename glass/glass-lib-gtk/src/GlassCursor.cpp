@@ -156,13 +156,10 @@ GdkCursor* get_native_cursor(int type)
             if (cursor == NULL)
                 cursor = gdk_cursor_new(GDK_SIZING);
             break;
-        case com_sun_glass_ui_Cursor_CURSOR_DISAPPEAR:
-            // Not implemented, using CURSOR_DEFAULT instead
-            cursor = gdk_cursor_new(GDK_LEFT_PTR);
-            break;
         case com_sun_glass_ui_Cursor_CURSOR_WAIT:
             cursor = gdk_cursor_new(GDK_WATCH);
             break;
+        case com_sun_glass_ui_Cursor_CURSOR_DISAPPEAR:
         case com_sun_glass_ui_Cursor_CURSOR_NONE:
             cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
             break;
