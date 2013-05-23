@@ -1643,7 +1643,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_GLContext_nCreateES2Mesh
 {
     MeshInfo *meshInfo = NULL;
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
-    if (ctxInfo == NULL) {
+    if ((ctxInfo == NULL) || (ctxInfo->glGenBuffers == NULL)) {
         return 0;
     }
 
@@ -1654,10 +1654,14 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_GLContext_nCreateES2Mesh
         return 0;
     }
 
-    /* initialize the structure */
+    /* initialize the structure */    
     meshInfo->vboIDArray[MESH_VERTEXBUFFER] = 0;
     meshInfo->vboIDArray[MESH_INDEXBUFFER] = 0;
     meshInfo->indexBufferSize = 0;
+
+    /* create vbo ids */
+    ctxInfo->glGenBuffers(MESH_MAX_BUFFERS, (meshInfo->vboIDArray));
+
     return ptr_to_jlong(meshInfo);
 }
 
@@ -1702,7 +1706,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
     if ((ctxInfo == NULL) || (meshInfo == NULL) ||
             (vbArray == NULL) || (ibArray == NULL) ||
             (ctxInfo->glBindBuffer == NULL) ||
-            (ctxInfo->glBufferData == NULL) || (ctxInfo->glGenBuffers == NULL)) {
+            (ctxInfo->glBufferData == NULL) ||
+            (meshInfo->vboIDArray[MESH_VERTEXBUFFER] == 0)||
+            (meshInfo->vboIDArray[MESH_INDEXBUFFER] == 0)) {
         return JNI_FALSE;
     }
 
@@ -1718,25 +1724,20 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
     }
 
     if (status) {
-        ctxInfo->glGenBuffers(MESH_MAX_BUFFERS, (meshInfo->vboIDArray));
+        // Initialize vertex buffer
+        ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_VERTEXBUFFER]);
+        ctxInfo->glBufferData(GL_ARRAY_BUFFER, vertexBufferSize * sizeof (GLfloat),
+                vertexBuffer, GL_STATIC_DRAW);
 
-        status = meshInfo->vboIDArray[MESH_VERTEXBUFFER] && meshInfo->vboIDArray[MESH_INDEXBUFFER];
-        if (status) {
-            // Initialize vertex buffer
-            ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_VERTEXBUFFER]);
-            ctxInfo->glBufferData(GL_ARRAY_BUFFER, vertexBufferSize * sizeof (GLfloat),
-                    vertexBuffer, GL_STATIC_DRAW);
+        // Initialize index buffer
+        ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_INDEXBUFFER]);
+        ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize * sizeof (GLushort),
+                indexBuffer, GL_STATIC_DRAW);
+        meshInfo->indexBufferSize = indexBufferSize;
 
-            // Initialize index buffer
-            ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_INDEXBUFFER]);
-            ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize * sizeof (GLushort),
-                    indexBuffer, GL_STATIC_DRAW);
-            meshInfo->indexBufferSize = indexBufferSize;
-
-            // Unbind VBOs
-            ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, 0);
-            ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        }
+        // Unbind VBOs
+        ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
     if (indexBuffer) {

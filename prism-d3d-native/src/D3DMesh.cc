@@ -32,21 +32,9 @@ using std::endl;
 // Destructor definition
 
 D3DMesh::~D3DMesh() {
-    //    cout << "@@@ D3DMesh Destructor called." << endl;
-    if (indexBuffer) {
-        ULONG status = indexBuffer->Release();
-        //        cout << " - Release indexBuffer: status = " << status << endl;
-        if (status == 0L) {
-            indexBuffer = NULL;
-        }
-    }
-    if (vertexBuffer) {
-        ULONG status = vertexBuffer->Release();
-        //        cout << " - Release vertexBuffer: status = " << status << endl;
-        if (status == 0L) {
-            vertexBuffer = NULL;
-        }
-    }
+//    cout << "@@@ D3DMesh Destructor called." << endl;
+    releaseIndexBuffer();
+    releaseVertexBuffer();
     context = NULL;
 }
 
@@ -90,17 +78,44 @@ void printResult(const char *str, HRESULT result) {
 
 }
 
+void D3DMesh::releaseIndexBuffer() {
+    if (indexBuffer) {
+        ULONG status = indexBuffer->Release();
+//        cout << " - Release indexBuffer: status = " << status << endl;
+        if (status == 0L) {
+            indexBuffer = NULL;
+        }
+    }
+    numIndices = 0;
+}
+
+void D3DMesh::releaseVertexBuffer() {
+    if (vertexBuffer) {
+        ULONG status = vertexBuffer->Release();
+//        cout << " - Release vertexBuffer: status = " << status << endl;
+        if (status == 0L) {
+            vertexBuffer = NULL;
+        }
+    }
+    numVertices = 0;
+}
+
 boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, USHORT *ib, UINT ibSize) {
 //    cout << "D3DMesh::buildBuffers: vertexBufferSize = " << vbSize
 //            << ", indexBufferSize = " << ibSize << endl;
 
     IDirect3DDevice9 *device = context->Get3DDevice();
     UINT size = vbSize * sizeof (float);
+    HRESULT result = D3D_OK;
 
-    HRESULT result = device->CreateVertexBuffer(size, D3DUSAGE_WRITEONLY, fvf,
-            D3DPOOL_DEFAULT, &vertexBuffer, NULL);
+    if (numVertices != vbSize) {
+        releaseVertexBuffer();
+        result = device->CreateVertexBuffer(size, D3DUSAGE_WRITEONLY, fvf,
+                D3DPOOL_DEFAULT, &vertexBuffer, NULL);
+        numVertices = vbSize;
+    }
 
-    if (SUCCEEDED(result)) {
+    if (SUCCEEDED(result) && (vertexBuffer != NULL)) {
         float *data;
         result = vertexBuffer->Lock(0, size, (void **) &data, 0);
         if (SUCCEEDED(result)) {
@@ -109,23 +124,24 @@ boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, USHORT *ib, UINT ibSize) {
         }
     }
 //    printResult("D3DMesh.buildBuffers: VertexBuffer's result = ", result);
+    size = ibSize * sizeof (USHORT);
 
-    if (SUCCEEDED(result)) {
-        size = ibSize * sizeof (USHORT);
+    if (SUCCEEDED(result) && (numIndices != ibSize)) {
+        releaseIndexBuffer();
         result = device->CreateIndexBuffer(size, D3DUSAGE_WRITEONLY,
                 D3DFMT_INDEX16, D3DPOOL_DEFAULT, &indexBuffer, NULL);
+        numIndices = ibSize;
+    }
+
+    if (SUCCEEDED(result) && (indexBuffer != NULL)) {
+        USHORT *data;
+                result = indexBuffer->Lock(0, size, (void **) &data, 0);
         if (SUCCEEDED(result)) {
-            USHORT *data;
-            result = indexBuffer->Lock(0, size, (void **) &data, 0);
-            if (SUCCEEDED(result)) {
-                memcpy_s(data, size, ib, size);
-                result = indexBuffer->Unlock();
-            }
+            memcpy_s(data, size, ib, size);
+            result = indexBuffer->Unlock();
         }
     }
 //    printResult("D3DMesh.buildBuffers: IndexBuffer's result = ", result);
-    numVertices = vbSize;
-    numIndices = ibSize;
     return SUCCEEDED(result);
 
 }

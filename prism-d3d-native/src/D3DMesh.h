@@ -55,6 +55,8 @@ private:
     UINT numVertices;
     UINT numIndices;
 
+    void releaseIndexBuffer();
+    void releaseVertexBuffer();
 };
 
 #endif  /* D3DMESH_H */
