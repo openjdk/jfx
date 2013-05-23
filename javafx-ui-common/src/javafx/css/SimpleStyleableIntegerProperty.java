@@ -40,7 +40,6 @@ import javafx.beans.property.SimpleIntegerProperty;
  * @see StyleableProperty
  * @see StyleableIntegerProperty
  */
-@com.sun.javafx.beans.annotations.NoBuilder
 public class SimpleStyleableIntegerProperty extends StyleableIntegerProperty {
 
     private static final Object DEFAULT_BEAN = null;

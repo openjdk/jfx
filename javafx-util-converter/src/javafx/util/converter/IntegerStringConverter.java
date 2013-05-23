@@ -25,14 +25,12 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link Integer}
  * (and int primitive) values.</p>
  */
-@NoBuilder
 public class IntegerStringConverter extends StringConverter<Integer> {
     /** {@inheritDoc} */
     @Override public Integer fromString(String value) {

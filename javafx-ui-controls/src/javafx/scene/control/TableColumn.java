@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.scene.control.skin.NestedTableColumnHeader;
 import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import com.sun.javafx.scene.control.skin.TableHeaderRow;
@@ -134,10 +133,6 @@ import javafx.beans.value.WritableValue;
  * @see TableCell
  * @see TablePosition
  */
-@DuplicateInBuilderProperties(properties =
-        {"comparator", "contextMenu", "editable", "graphic", "id", "maxWidth",
-         "minWidth", "prefWidth", "resizable", "sortable", "sortNode",
-         "sortType", "style", "styleClass", "userdata", "text", "visible"})
 public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
     
     /***************************************************************************

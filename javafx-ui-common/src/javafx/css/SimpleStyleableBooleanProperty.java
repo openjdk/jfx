@@ -40,7 +40,6 @@ import javafx.beans.property.SimpleBooleanProperty;
  * @see StyleableProperty
  * @see StyleableBooleanProperty
  */
-@com.sun.javafx.beans.annotations.NoBuilder
 public class SimpleStyleableBooleanProperty extends StyleableBooleanProperty {
 
     private static final Object DEFAULT_BEAN = null;

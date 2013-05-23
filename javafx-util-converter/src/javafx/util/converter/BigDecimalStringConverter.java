@@ -25,14 +25,12 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.math.BigDecimal;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link BigDecimal} values.</p>
  */
-@NoBuilder
 public class BigDecimalStringConverter extends StringConverter<BigDecimal> {
     
     /** {@inheritDoc} */

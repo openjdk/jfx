@@ -51,7 +51,6 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 
 import com.sun.javafx.WeakReferenceQueue;
-import com.sun.javafx.beans.annotations.NoInit;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.stage.WindowHelper;
@@ -109,7 +108,6 @@ public class Window implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @NoInit
     public static Iterator<Window> impl_getWindows() {
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {

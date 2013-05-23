@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.lang.ref.WeakReference;
 
 /**
@@ -45,7 +44,6 @@ import java.lang.ref.WeakReference;
  * @see TableView
  * @see TableColumn
  */
-@NoBuilder
 public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
     
     /***************************************************************************

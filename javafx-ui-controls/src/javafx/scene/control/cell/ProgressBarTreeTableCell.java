@@ -25,7 +25,6 @@
 
 package javafx.scene.control.cell;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TreeTableCell;
@@ -39,7 +38,6 @@ import javafx.util.Callback;
  * @param <S> The type of the elements contained within the TableView.
  * @since 8.0
  */
-@NoBuilder // @NoBuilder because if the builder is generated, it does not compile
 public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
     
     /***************************************************************************

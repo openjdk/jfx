@@ -40,7 +40,6 @@ import javafx.beans.property.SimpleDoubleProperty;
  * @see StyleableProperty
  * @see StyleableDoubleProperty
  */
-@com.sun.javafx.beans.annotations.NoBuilder
 public class SimpleStyleableDoubleProperty extends StyleableDoubleProperty {
 
     private static final Object DEFAULT_BEAN = null;

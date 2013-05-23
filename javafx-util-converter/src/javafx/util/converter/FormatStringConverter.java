@@ -25,7 +25,6 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.text.*;
 import javafx.util.StringConverter;
 
@@ -35,7 +34,6 @@ import javafx.util.StringConverter;
  *
  * @since 2.2
  */
-@NoBuilder
 public class FormatStringConverter<T> extends StringConverter<T> {
     
     // ------------------------------------------------------ Private properties

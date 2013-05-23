@@ -25,7 +25,6 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -40,7 +39,6 @@ import javafx.util.StringConverter;
  * @see DateStringConverter
  * @see TimeStringConverter
  */
-@NoBuilder
 public class DateTimeStringConverter extends StringConverter<Date> {
     
     // ------------------------------------------------------ Private properties
