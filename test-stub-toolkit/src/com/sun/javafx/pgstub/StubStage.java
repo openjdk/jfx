@@ -59,6 +59,9 @@ public class StubStage implements TKStage {
         if (scene != null) {
             StubScene s = (StubScene) scene;
             s.stage = this;
+            notificationSender.setScene(s);
+            if (width != -1 && height != -1)
+                s.getListener().changedSize(width, height);
         }
     }
 
@@ -82,7 +85,7 @@ public class StubStage implements TKStage {
                           float xGravity, float yGravity)
     {
         numTimesSetSizeAndLocation++;
-        
+
         boolean locationChanged = false;
 
         if (xSet && (this.x != x)) {
@@ -124,7 +127,7 @@ public class StubStage implements TKStage {
                 sizeChanged = true;
             }
         }
-        
+
         if (sizeChanged) {
             notificationSender.changedSize(width, height);
         }
@@ -197,7 +200,7 @@ public class StubStage implements TKStage {
     public void requestFocus() {
         notificationSender.changedFocused(true, FocusCause.ACTIVATED);
     }
-    
+
     @Override
     public void requestFocus(FocusCause cause) {
         notificationSender.changedFocused(true, cause);
@@ -231,7 +234,7 @@ public class StubStage implements TKStage {
     @Override
     public void setMaximumSize(int maxWidth, int maxHeight) {
     }
-    
+
     public void holdNotifications() {
         notificationSender.holdNotifications();
     }
@@ -249,9 +252,9 @@ public class StubStage implements TKStage {
     }
 
     @Override
-    public void requestInput(String text, int type, double width, double height, 
+    public void requestInput(String text, int type, double width, double height,
                                 double Mxx, double Mxy, double Mxz, double Mxt,
-                                double Myx, double Myy, double Myz, double Myt, 
+                                double Myx, double Myy, double Myz, double Myt,
                                 double Mzx, double Mzy, double Mzz, double Mzt) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -262,25 +265,25 @@ public class StubStage implements TKStage {
     }
 
     /**
-     * 
+     *
      * Accessibility glue for native
-     * 
+     *
      */
-    
+
     /**
      * Initialize Accessiblility
-     * 
+     *
      * @param ac    the Glass accessible root object.
      */
     @Override public void setAccessibilityInitIsComplete(Object ac) {
         // TODO: Add code later
-    } 
+    }
 
     /**
      * Create accessible Glass object corresponding to stage
-     * 
+     *
      * @param ac    the FX accessible root/stage node.
-     * 
+     *
      * @return the Glass AccessibleRoot object.
      */
     @Override
@@ -291,8 +294,8 @@ public class StubStage implements TKStage {
 
     /**
      * Create accessible native object corresponding to controls
-     * 
-     * @param ac 
+     *
+     * @param ac
      * returns native Object
      */
     @Override public Object accessibleCreateBasicProvider(AccessibleProvider ac) {
@@ -302,7 +305,7 @@ public class StubStage implements TKStage {
 
     /**
      * Delete accessible native object corresponding to controls
-     * 
+     *
      * @param nativeAcc
      * returns native Object
      */
@@ -312,15 +315,15 @@ public class StubStage implements TKStage {
 
     /**
      * Fire accessible event
-     * 
+     *
      * @param eventID   identifies the event.
      */
     @Override public void accessibleFireEvent(Object nativeAcc, int eventID) {
         // TODO: Add code later
     }
-    
+
     /** Fire accessible property change event
-     * 
+     *
      * @param propertyId    identifies the property
      * @param oldProperty   the old value of the property
      * @param newProperty   the new value of the property
@@ -329,12 +332,12 @@ public class StubStage implements TKStage {
                                              int newProperty ) {
         // TODO: Add code later
     }
-    
+
     @Override public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, boolean oldProperty,
                                              boolean newProperty ) {
         // TODO: Add code later
-    }        
-    
+    }
+
     private interface Notification {
         void execute(TKStageListener listener);
     }
@@ -345,9 +348,14 @@ public class StubStage implements TKStage {
 
         private boolean hold;
         private TKStageListener listener;
+        private StubScene scene;
 
         public void setListener(final TKStageListener listener) {
             this.listener = listener;
+        }
+
+        public void setScene(final StubScene scene) {
+            this.scene = scene;
         }
 
         public void holdNotifications() {
@@ -379,6 +387,9 @@ public class StubStage implements TKStage {
                         @Override
                         public void execute(final TKStageListener listener) {
                             listener.changedSize(width, height);
+                            if (scene != null && width != -1 && height != -1) {
+                                scene.getListener().changedSize(width, height);
+                            }
                         }
                     });
         }
@@ -495,7 +506,7 @@ public class StubStage implements TKStage {
         public void initAccessibleTKStageListener() {
             // TODO: Add code later
         }
-                
+
     }
 
     public void setRTL(boolean b) {

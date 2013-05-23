@@ -217,7 +217,7 @@ public class Window implements EventTarget {
 
     private static final float CENTER_ON_SCREEN_X_FRACTION = 1.0f / 2;
     private static final float CENTER_ON_SCREEN_Y_FRACTION = 1.0f / 3;
-    
+
     /**
      * Sets x and y properties on this Window so that it is centered on the screen.
      */
@@ -226,7 +226,7 @@ public class Window implements EventTarget {
         yExplicit = false;
         if (impl_peer != null) {
             Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-            double centerX = 
+            double centerX =
                     bounds.getMinX() + (bounds.getWidth() - getWidth())
                                            * CENTER_ON_SCREEN_X_FRACTION;
             double centerY =
@@ -385,7 +385,7 @@ public class Window implements EventTarget {
      */
     @Deprecated
     public final void setFocused(boolean value) { focused.set(value); }
-    
+
     /**
      * Requests that this {@code Window} get the input focus.
      */
@@ -451,9 +451,9 @@ public class Window implements EventTarget {
                 // performed in Window.visibleChanging()
                 if (isShowing()) {
                     newScene.getRoot().impl_reapplyCSS();
-                    getScene().impl_preferredSize();
 
                     if (!widthExplicit || !heightExplicit) {
+                        getScene().impl_preferredSize();
                         adjustSize(true);
                     }
                 }
@@ -737,7 +737,7 @@ public class Window implements EventTarget {
                         peerBoundsConfigurator.setSize(
                                 getWidth(), getHeight(), -1, -1);
                     }
-                    
+
                     if (!xExplicit && !yExplicit) {
                         centerOnScreen();
                     } else {
@@ -1037,7 +1037,7 @@ public class Window implements EventTarget {
     final void applyBounds() {
         peerBoundsConfigurator.apply();
     }
-    
+
     /**
      * Caches all requested bounds settings and applies them at once during
      * the next pulse.
