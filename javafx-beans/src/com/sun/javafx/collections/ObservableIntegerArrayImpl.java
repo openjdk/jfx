@@ -264,4 +264,23 @@ public final class ObservableIntegerArrayImpl extends ObservableArrayBase<Observ
         }
         if (length < 0) throw new ArrayIndexOutOfBoundsException(-1);
     }
+
+    @Override
+    public String toString() {
+        if (array == null)
+            return "null";
+
+        int iMax = size() - 1;
+        if (iMax == -1)
+            return "[]";
+
+        StringBuilder b = new StringBuilder();
+        b.append('[');
+        for (int i = 0; ; i++) {
+            b.append(array[i]);
+            if (i == iMax)
+                return b.append(']').toString();
+            b.append(", ");
+        }
+    }
 }
