@@ -938,7 +938,12 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      */
     public static class TreeModificationEvent<T> extends Event {
         private static final long serialVersionUID = 4741889985221719579L;
-        
+
+        /**
+         * Common supertype for all tree modification event types.
+         */
+        public static final EventType<?> ANY = TREE_NOTIFICATION_EVENT;
+
         private transient final TreeItem<T> treeItem;
         private final T newValue;
 

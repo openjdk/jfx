@@ -41,6 +41,11 @@ public class ActionEvent extends Event {
             new EventType<ActionEvent>(Event.ANY, "ACTION");
 
     /**
+     * Common supertype for all action event types.
+     */
+    public static final EventType<ActionEvent> ANY = ACTION;
+
+    /**
      * Creates a new {@code ActionEvent} with an event type of {@code ACTION}.
      * The source and target of the event is set to {@code NULL_SOURCE_TARGET}.
      */

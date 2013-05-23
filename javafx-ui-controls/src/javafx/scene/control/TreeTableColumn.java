@@ -720,6 +720,11 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     public static class CellEditEvent<S,T> extends Event {
         private static final long serialVersionUID = -609964441682677579L;
 
+        /**
+         * Common supertype for all cell edit event types.
+         */
+        public static final EventType<?> ANY = EDIT_ANY_EVENT;
+
         // represents the new value input by the end user. This is NOT the value
         // to go back into the TableView.items list - this new value represents
         // just the input for a single cell, so it is likely that it needs to go
