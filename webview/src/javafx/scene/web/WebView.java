@@ -25,8 +25,6 @@ import com.sun.webkit.event.WCInputMethodEvent;
 import com.sun.webkit.event.WCKeyEvent;
 import com.sun.webkit.event.WCMouseEvent;
 import com.sun.webkit.event.WCMouseWheelEvent;
-import com.sun.webkit.event.WCTouchEvent;
-import com.sun.webkit.event.WCTouchPoint;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -61,8 +59,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.TouchEvent;
-import javafx.scene.input.TouchPoint;
 import javafx.scene.input.TransferMode;
 import javafx.scene.text.FontSmoothingType;
 
@@ -1025,33 +1021,6 @@ final public class WebView extends Parent {
         }
     }
 
-    private void processTouchEvent(TouchEvent event) {
-        if (page == null) return;
-
-        Integer id = idMap.get(event.getEventType());
-        if (id == null) return;
-
-        List<WCTouchPoint> points = new ArrayList<WCTouchPoint>(event.getTouchCount());
-        for (TouchPoint point : event.getTouchPoints()) {
-            points.add(new WCTouchPoint(
-                    point.getId(),
-                    idMap.get(point.getState()),
-                    point.getX(),
-                    point.getY(),
-                    point.getScreenX(),
-                    point.getScreenY()));
-        }
-        WCTouchEvent touchEvent = new WCTouchEvent(
-                id, points,
-                System.currentTimeMillis(),
-                event.isShiftDown(),
-                event.isControlDown(),
-                event.isAltDown(),
-                event.isMetaDown());
-        page.dispatchTouchEvent(touchEvent);
-        event.consume();
-    }
-
     private InputMethodClientImpl getInputMethodClient() {
          if (imClient == null) {
              synchronized (this) {
@@ -1145,12 +1114,6 @@ final public class WebView extends Parent {
             new EventHandler<ScrollEvent>() {
                 @Override public void handle(final ScrollEvent event) {
                     processScrollEvent(event);
-                }
-            });
-        addEventHandler(TouchEvent.ANY,
-            new EventHandler<TouchEvent>() {
-                @Override public void handle(final TouchEvent event) {
-                    processTouchEvent(event);
                 }
             });
         setOnInputMethodTextChanged(
@@ -1305,14 +1268,5 @@ final public class WebView extends Parent {
         idMap.put(KeyEvent.KEY_PRESSED, WCKeyEvent.KEY_PRESSED);
         idMap.put(KeyEvent.KEY_RELEASED, WCKeyEvent.KEY_RELEASED);
         idMap.put(KeyEvent.KEY_TYPED, WCKeyEvent.KEY_TYPED);
-
-        idMap.put(TouchEvent.TOUCH_PRESSED, WCTouchEvent.TOUCH_START);
-        idMap.put(TouchEvent.TOUCH_MOVED, WCTouchEvent.TOUCH_MOVE);
-        idMap.put(TouchEvent.TOUCH_RELEASED, WCTouchEvent.TOUCH_END);
-
-        idMap.put(TouchPoint.State.MOVED, WCTouchPoint.STATE_MOVED);
-        idMap.put(TouchPoint.State.PRESSED, WCTouchPoint.STATE_PRESSED);
-        idMap.put(TouchPoint.State.RELEASED, WCTouchPoint.STATE_RELEASED);
-        idMap.put(TouchPoint.State.STATIONARY, WCTouchPoint.STATE_STATIONARY);
     }
 }

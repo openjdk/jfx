@@ -270,7 +270,6 @@ public class DOMTest extends TestBase {
                     , false //boolean altGraphKey
             );
             WheelEventImpl evWheelUp = (WheelEventImpl)((DocumentEvent)htmlDoc).createEvent("WheelEvent");
-            TouchEventImpl evTouch = (TouchEventImpl)((DocumentEvent)htmlDoc).createEvent("TouchEvent");
 
             // dispatch test
             MouseEvent evClick = (MouseEvent)((DocumentEvent)htmlDoc).createEvent("MouseEvent");

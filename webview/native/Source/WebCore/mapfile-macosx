@@ -286,10 +286,6 @@
                _Java_com_sun_webkit_dom_DOMWindowImpl_getOnsubmitImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_getOnsuspendImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_getOntimeupdateImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOntouchcancelImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOntouchendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOntouchmoveImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOntouchstartImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_getOnunloadImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_getOnvolumechangeImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_getOnwaitingImpl
@@ -387,10 +383,6 @@
                _Java_com_sun_webkit_dom_DOMWindowImpl_setOnsubmitImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_setOnsuspendImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_setOntimeupdateImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOntouchcancelImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOntouchendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOntouchmoveImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOntouchstartImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_setOnunloadImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_setOnvolumechangeImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_setOnwaitingImpl
@@ -420,7 +412,6 @@
                _Java_com_sun_webkit_dom_DocumentImpl_createProcessingInstructionImpl
                _Java_com_sun_webkit_dom_DocumentImpl_createRangeImpl
                _Java_com_sun_webkit_dom_DocumentImpl_createTextNodeImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_createTouchImpl
                _Java_com_sun_webkit_dom_DocumentImpl_createTreeWalkerImpl
                _Java_com_sun_webkit_dom_DocumentImpl_elementFromPointImpl
                _Java_com_sun_webkit_dom_DocumentImpl_evaluateImpl
@@ -491,10 +482,6 @@
                _Java_com_sun_webkit_dom_DocumentImpl_getOnselectionchangeImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getOnselectstartImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getOnsubmitImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_getOntouchcancelImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_getOntouchendImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_getOntouchmoveImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_getOntouchstartImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getOverrideStyleImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getPreferredStylesheetSetImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getReadyStateImpl
@@ -561,10 +548,6 @@
                _Java_com_sun_webkit_dom_DocumentImpl_setOnselectionchangeImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setOnselectstartImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setOnsubmitImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_setOntouchcancelImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_setOntouchendImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_setOntouchmoveImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_setOntouchstartImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setSelectedStylesheetSetImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setTitleImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setXmlStandaloneImpl
@@ -636,10 +619,6 @@
                _Java_com_sun_webkit_dom_ElementImpl_getOnselectImpl
                _Java_com_sun_webkit_dom_ElementImpl_getOnselectstartImpl
                _Java_com_sun_webkit_dom_ElementImpl_getOnsubmitImpl
-               _Java_com_sun_webkit_dom_ElementImpl_getOntouchcancelImpl
-               _Java_com_sun_webkit_dom_ElementImpl_getOntouchendImpl
-               _Java_com_sun_webkit_dom_ElementImpl_getOntouchmoveImpl
-               _Java_com_sun_webkit_dom_ElementImpl_getOntouchstartImpl
                _Java_com_sun_webkit_dom_ElementImpl_getPreviousElementSiblingImpl
                _Java_com_sun_webkit_dom_ElementImpl_getScrollHeightImpl
                _Java_com_sun_webkit_dom_ElementImpl_getScrollLeftImpl
@@ -703,10 +682,6 @@
                _Java_com_sun_webkit_dom_ElementImpl_setOnselectImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnselectstartImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnsubmitImpl
-               _Java_com_sun_webkit_dom_ElementImpl_setOntouchcancelImpl
-               _Java_com_sun_webkit_dom_ElementImpl_setOntouchendImpl
-               _Java_com_sun_webkit_dom_ElementImpl_setOntouchmoveImpl
-               _Java_com_sun_webkit_dom_ElementImpl_setOntouchstartImpl
                _Java_com_sun_webkit_dom_ElementImpl_setScrollLeftImpl
                _Java_com_sun_webkit_dom_ElementImpl_setScrollTopImpl
                _Java_com_sun_webkit_dom_ElementImpl_webkitMatchesSelectorImpl
@@ -1725,30 +1700,6 @@
                _Java_com_sun_webkit_dom_TextImpl_getWholeTextImpl
                _Java_com_sun_webkit_dom_TextImpl_replaceWholeTextImpl
                _Java_com_sun_webkit_dom_TextImpl_splitTextImpl
-               _Java_com_sun_webkit_dom_TouchEventImpl_getAltKeyImpl
-               _Java_com_sun_webkit_dom_TouchEventImpl_getChangedTouchesImpl
-               _Java_com_sun_webkit_dom_TouchEventImpl_getCtrlKeyImpl
-               _Java_com_sun_webkit_dom_TouchEventImpl_getMetaKeyImpl
-               _Java_com_sun_webkit_dom_TouchEventImpl_getShiftKeyImpl
-               _Java_com_sun_webkit_dom_TouchEventImpl_getTargetTouchesImpl
-               _Java_com_sun_webkit_dom_TouchEventImpl_getTouchesImpl
-               _Java_com_sun_webkit_dom_TouchEventImpl_initTouchEventImpl
-               _Java_com_sun_webkit_dom_TouchImpl_dispose
-               _Java_com_sun_webkit_dom_TouchImpl_getClientXImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getClientYImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getIdentifierImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getPageXImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getPageYImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getScreenXImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getScreenYImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getTargetImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getWebkitForceImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getWebkitRadiusXImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getWebkitRadiusYImpl
-               _Java_com_sun_webkit_dom_TouchImpl_getWebkitRotationAngleImpl
-               _Java_com_sun_webkit_dom_TouchListImpl_dispose
-               _Java_com_sun_webkit_dom_TouchListImpl_getLengthImpl
-               _Java_com_sun_webkit_dom_TouchListImpl_itemImpl
                _Java_com_sun_webkit_dom_TreeWalkerImpl_dispose
                _Java_com_sun_webkit_dom_TreeWalkerImpl_firstChildImpl
                _Java_com_sun_webkit_dom_TreeWalkerImpl_getCurrentNodeImpl
@@ -1885,7 +1836,6 @@
                _Java_com_sun_webkit_WebPage_twkProcessKeyEvent
                _Java_com_sun_webkit_WebPage_twkProcessMouseEvent
                _Java_com_sun_webkit_WebPage_twkProcessMouseWheelEvent
-               _Java_com_sun_webkit_WebPage_twkProcessTouchEvent
                _Java_com_sun_webkit_WebPage_twkQueryCommandEnabled
                _Java_com_sun_webkit_WebPage_twkQueryCommandState
                _Java_com_sun_webkit_WebPage_twkQueryCommandValue

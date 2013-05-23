@@ -20,10 +20,10 @@
  *
  */
 
+#if ENABLE(TOUCH_EVENTS)
+
 #include "com_sun_webkit_event_WCTouchEvent.h"
 #include "PlatformTouchEvent.h"
-
-#if ENABLE(TOUCH_EVENTS)
 
 namespace WebCore {
 

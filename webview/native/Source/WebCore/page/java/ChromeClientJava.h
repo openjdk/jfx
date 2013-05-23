@@ -129,8 +129,8 @@ namespace WebCore {
 
 #if ENABLE(TOUCH_EVENTS)
         virtual void needTouchEvents(bool) { }
-        virtual void numTouchEventHandlersChanged(unsigned) OVERRIDE { }
 #endif
+        virtual void numTouchEventHandlersChanged(unsigned) OVERRIDE { }
         virtual bool shouldRunModalDialogDuringPageDismissal(const DialogType&, const String& dialogMessage, FrameLoader::PageDismissalType) const;
 
         virtual bool shouldRubberBandInDirection(ScrollDirection) const;
