@@ -314,7 +314,7 @@ public class BorderPaneTest {
     }
 
     @Test public void testWithBiasedChildren() {
-        MockBiased top = new MockBiased(Orientation.HORIZONTAL, 100, 20); // 280 x 7.1428
+        MockBiased top = new MockBiased(Orientation.HORIZONTAL, 100, 20); // 300 x 6.666
         borderpane.setTop(top);
 
         MockBiased left = new MockBiased(Orientation.VERTICAL, 40, 100); // 20 x 200
@@ -326,7 +326,7 @@ public class BorderPaneTest {
         MockBiased right = new MockBiased(Orientation.VERTICAL, 60, 200); // 60 x 200
         borderpane.setRight(right);
 
-        MockBiased bottom = new MockBiased(Orientation.HORIZONTAL, 200, 20); // 280 x 14.284
+        MockBiased bottom = new MockBiased(Orientation.HORIZONTAL, 200, 20); // 300 x 13.333
         borderpane.setBottom(bottom);
 
         assertEquals(40/*l*/ + 60/*r*/ + 200/*c*/, borderpane.prefWidth(-1), 1e-100);
@@ -336,38 +336,41 @@ public class BorderPaneTest {
         assertEquals(90, borderpane.minWidth(240), 1e-100);
         assertEquals(221, borderpane.minHeight(300), 1e-10);
 
-        borderpane.resize(280, 240);
+        borderpane.resize(300, 240);
         borderpane.layout();
 
         assertEquals(0, top.getLayoutX(), 1e-100);
         assertEquals(0, top.getLayoutY(), 1e-100);
-        assertEquals(280, top.getWidth(), 1e-100);
-        assertEquals(8, top.getHeight(), 1e-100);
+        assertEquals(300, top.getWidth(), 1e-100);
+        assertEquals(7, top.getHeight(), 1e-100);
+
+        assertEquals(0, bottom.getLayoutX(), 1e-100);
+        assertEquals(226, bottom.getLayoutY(), 1e-100);
+        assertEquals(300, bottom.getWidth(), 1e-100);
+        assertEquals(14, bottom.getHeight(), 1e-100);
 
         assertEquals(0, left.getLayoutX(), 1e-100);
-        assertEquals(8, left.getLayoutY(), 1e-100);
-        assertEquals(19, left.getWidth(), 1e-100);
-        assertEquals(217, left.getHeight(), 1e-100);
+        assertEquals(7, left.getLayoutY(), 1e-100);
+        assertEquals(240 - 14 - 7, left.getHeight(), 1e-100);
+        final double leftWidth = Math.ceil(40*100.0/(240 - 14 - 7));
+        assertEquals(leftWidth, left.getWidth(), 1e-100);
+
+        assertEquals(7, right.getLayoutY(), 1e-100);
+        assertEquals(240 - 14 - 7, right.getHeight(), 1e-100);
+        final double rightWidth = Math.ceil(60*200.0/(240 - 14 - 7));
+        assertEquals(rightWidth, right.getWidth(), 1e-100);
+        assertEquals(300 - rightWidth, right.getLayoutX(), 1e-100);
 
         // Center is HORIZONTALLY biased, so when width is stretched, height is lower
-        double centerWidth = 280 - 19 - 56;
+        double centerWidth = 300 - leftWidth - rightWidth;
         double centerHeight = Math.ceil(200 * 200 / centerWidth);
 
         assertEquals(19, center.getLayoutX(), 1e-100);
         // center alignment, Math.round == snapPosition
-        assertEquals(Math.round(8 + (240 - 8 - 15 - centerHeight) / 2), center.getLayoutY(), 1e-100);
+        assertEquals(Math.round(7 + (240 - 7 - 14 - centerHeight) / 2), center.getLayoutY(), 1e-100);
         assertEquals(centerWidth, center.getWidth(), 1e-100);
         assertEquals(centerHeight, center.getHeight(), 1e-100);
 
-        assertEquals(224, right.getLayoutX(), 1e-100);
-        assertEquals(8, right.getLayoutY(), 1e-100);
-        assertEquals(56, right.getWidth(), 1e-100);
-        assertEquals(217, right.getHeight(), 1e-100);
-
-        assertEquals(0, bottom.getLayoutX(), 1e-100);
-        assertEquals(225, bottom.getLayoutY(), 1e-100);
-        assertEquals(280, bottom.getWidth(), 1e-100);
-        assertEquals(15, bottom.getHeight(), 1e-100);
     }
 
     @Test public void testWithHorizontalBiasedChildrenAtPrefSize() {
@@ -700,7 +703,7 @@ public class BorderPaneTest {
         borderpane.layout();
 
         assertEquals(50, child.getWidth(), 1e-100);
-        assertEquals(50, child.getHeight(), 1e-100);
+        assertEquals(200, child.getHeight(), 1e-100); //Top always at it's pref height
     }
 
     @Test public void testFitsBottomChildWithinBounds() {
@@ -711,7 +714,7 @@ public class BorderPaneTest {
         borderpane.layout();
 
         assertEquals(50, child.getWidth(), 1e-100);
-        assertEquals(50, child.getHeight(), 1e-100);
+        assertEquals(200, child.getHeight(), 1e-100); //Bottom always at it's pref height
     }
 
     @Test public void testFitsLeftChildWithinBounds() {
@@ -721,7 +724,7 @@ public class BorderPaneTest {
         borderpane.resize(50,50);
         borderpane.layout();
 
-        assertEquals(50, child.getWidth(), 1e-100);
+        assertEquals(100, child.getWidth(), 1e-100); //Left always at it's pref width
         assertEquals(50, child.getHeight(), 1e-100);
     }
 
@@ -732,7 +735,7 @@ public class BorderPaneTest {
         borderpane.resize(50,50);
         borderpane.layout();
 
-        assertEquals(50, child.getWidth(), 1e-100);
+        assertEquals(100, child.getWidth(), 1e-100); //Right always at it's pref width
         assertEquals(50, child.getHeight(), 1e-100);
     }
 
@@ -910,4 +913,26 @@ public class BorderPaneTest {
         assertEquals(20, center.getLayoutX(), 1e-100);
         assertEquals(5, center.getLayoutY(), 1e-100);
     }
+
+    @Test
+    public void testResizeBelowMinimum() {
+        MockResizable left = new MockResizable(10,10,100,100,150,150);
+        MockResizable center = new MockResizable(30,30,100,100,200,200);
+
+        borderpane.setCenter(center);
+        borderpane.setLeft(left);
+
+        borderpane.resize(30, 30);
+
+        borderpane.layout();
+
+        assertEquals(100, left.getWidth(), 1e-100); // Always at pref.
+        assertEquals(30, left.getHeight(), 1e-100);
+
+        assertEquals(100, center.getLayoutX(), 1e-100);
+        assertEquals(0, center.getLayoutY(), 1e-100);
+        assertEquals(30, center.getWidth(), 1e-100);
+        assertEquals(30, center.getHeight(), 1e-100);
+    }
+
 }
