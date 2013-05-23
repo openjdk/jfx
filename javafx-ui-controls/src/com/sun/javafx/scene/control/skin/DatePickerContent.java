@@ -31,6 +31,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.chrono.Chronology;
 import java.time.chrono.ChronoLocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.ValueRange;
 import java.time.temporal.WeekFields;
 import java.time.YearMonth;
@@ -41,12 +42,14 @@ import java.util.Locale;
 import static java.time.temporal.ChronoField.*;
 import static java.time.temporal.ChronoUnit.*;
 
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
@@ -56,6 +59,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
@@ -66,13 +70,14 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
+import com.sun.javafx.scene.traversal.Direction;
 
 /**
  * The full content for the DatePicker popup. This class could
  * probably be used more or less as-is with an embeddable type of date
  * picker that doesn't use a popup.
  */
-class DatePickerContent extends VBox {
+public class DatePickerContent extends VBox {
     protected DatePicker datePicker;
     private Button backMonthButton;
     private Label monthLabel;
@@ -84,6 +89,7 @@ class DatePickerContent extends VBox {
     private List<DateCell> weekNumberCells = new ArrayList<DateCell>();
     protected List<DateCell> dayCells = new ArrayList<DateCell>();
     private LocalDate[] dayCellDates;
+    private DateCell lastFocusedDayCell = null;
 
     final DateTimeFormatter monthFormatter =
         DateTimeFormatter.ofPattern("MMMM");
@@ -156,9 +162,26 @@ class DatePickerContent extends VBox {
         getChildren().add(createMonthYearPane());
 
         gridPane = new GridPane();
+        gridPane.setFocusTraversable(true);
         gridPane.getStyleClass().add("calendar-grid");
         gridPane.setVgap(-1);
         gridPane.setHgap(-1);
+
+        gridPane.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
+                if (hasFocus) {
+                    if (lastFocusedDayCell != null) {
+                        Platform.runLater(new Runnable() {
+                            @Override public void run() {
+                                lastFocusedDayCell.requestFocus();
+                            }
+                        });
+                    } else {
+                        clearFocus();
+                    }
+                }
+            }
+        });
 
         // get the weekday labels starting with the weekday that is the
         // first-day-of-the-week according to the locale in the
@@ -181,6 +204,48 @@ class DatePickerContent extends VBox {
         getChildren().add(gridPane);
 
         refresh();
+
+        // RT-30511: This enables traversal (not sure why Scene doesn't handle this),
+        // plus it prevents key events from reaching the popup's owner.
+        addEventHandler(KeyEvent.ANY, new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent e) {
+                Node node = getScene().getFocusOwner();
+                if (e.getEventType() == KeyEvent.KEY_PRESSED) {
+                    switch (e.getCode()) {
+                      case TAB:
+                          node.impl_traverse(e.isShiftDown() ? Direction.PREVIOUS : Direction.NEXT);
+                          e.consume(); break;
+                      case UP:
+                          node.impl_traverse(Direction.UP);
+                          e.consume(); break;
+                      case DOWN:
+                          node.impl_traverse(Direction.DOWN);
+                          e.consume(); break;
+                      case LEFT:
+                          node.impl_traverse(Direction.LEFT);
+                          e.consume(); break;
+                      case RIGHT:
+                          node.impl_traverse(Direction.RIGHT);
+                          e.consume(); break;
+                    }
+                    if (e.isConsumed() && node instanceof DateCell) {
+                        lastFocusedDayCell = (DateCell)node;
+                    }
+                }
+
+                // Consume all key events except those that control
+                // showing the popup.
+                switch (e.getCode()) {
+                  case ESCAPE:
+                  case F4:
+                  case F10:
+                      break;
+
+                  default:
+                    e.consume();
+                }
+            }
+        });
     }
 
     private ObjectProperty<YearMonth> displayedYearMonth =
@@ -528,6 +593,23 @@ yearSpinner.setFillHeight(false);
         return dayCellDates[dayCells.indexOf(dateCell)];
     }
 
+    // public for behavior class
+    public void goToDayCell(DateCell dateCell, int offset, ChronoUnit unit) {
+        goToDate(dayCellDate(dateCell).plus(offset, unit));
+    }
+
+    // public for behavior class
+    public void goToDate(LocalDate date) {
+        displayedYearMonth.set(YearMonth.from(date));
+        findDayCellForDate(date).requestFocus();
+    }
+
+    // public for behavior class
+    public void selectDayCell(DateCell dateCell) {
+        datePicker.setValue(dayCellDate(dateCell));
+        datePicker.hide();
+    }
+
     private DateCell findDayCellForDate(LocalDate date) {
         for (int i = 0; i < dayCellDates.length; i++) {
             if (date.equals(dayCellDates[i])) {
@@ -544,7 +626,7 @@ yearSpinner.setFillHeight(false);
         }
         if (YearMonth.from(focusDate).equals(displayedYearMonth.get())) {
             // focus date
-            findDayCellForDate(focusDate).requestFocus();
+            goToDate(focusDate);
         } else {
             // focus month spinner (should not happen)
             backMonthButton.requestFocus();
@@ -563,12 +645,10 @@ yearSpinner.setFillHeight(false);
                 YearMonth yearMonth = YearMonth.from(date);
 
                 if (yearMonth.equals(displayedYearMonth.get())) {
-                    datePicker.setValue(date);
-                    datePicker.hide();
+                    selectDayCell(dayCell);
                 } else {
                     // previous or next month
-                    displayedYearMonth.set(yearMonth);
-                    findDayCellForDate(date).requestFocus();
+                    goToDate(date);
                 }
             }
         };
