@@ -3,7 +3,6 @@
  */
 package javafx.scene.web;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -73,7 +72,6 @@ import javafx.scene.text.FontSmoothingType;
  * <p>{@code WebView} objects must be created and accessed solely from the
  * FX thread.
  */
-@NoBuilder
 final public class WebView extends Parent {
 
     private static final Map<Object, Integer> idMap = new HashMap<Object, Integer>();
