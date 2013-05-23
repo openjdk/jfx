@@ -619,10 +619,10 @@ public class SceneTest {
     @Test(expected = IllegalArgumentException.class)
     public void testSetIllegalCameraFromOtherScene() {
         Camera camera = new PerspectiveCamera();
-        
+
         Scene scene1 = new Scene(new Group(camera));
         Scene scene2 = new Scene(new Group());
-        
+
         scene1.setCamera(camera);
         scene2.setCamera(camera);
     }
