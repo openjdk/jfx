@@ -140,6 +140,7 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
                 if (wrapMode != WrapMode.REPEAT) {
                     return null;
                 }
+                break;
             default:
                 return null;
         }
