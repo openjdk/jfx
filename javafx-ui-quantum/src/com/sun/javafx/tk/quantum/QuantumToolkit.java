@@ -144,7 +144,6 @@ import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.RTTexture;
-import com.sun.prism.RenderingContext;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture.WrapMode;
@@ -1557,11 +1556,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
                     return;
                 }
 
-                RenderingContext context = rf.createRenderingContext(null);
                 try {
-
-                    context.begin();
-
                     QuantumImage pImage = (params.platformImage instanceof QuantumImage) ?
                             (QuantumImage)params.platformImage : new QuantumImage(null);
 
@@ -1599,7 +1594,6 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
                     t.printStackTrace(System.err);
                 } finally {
                     Disposer.cleanUp();
-                    context.end();
                 }
             }
         });

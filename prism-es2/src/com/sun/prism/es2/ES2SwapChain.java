@@ -113,6 +113,13 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 stableBackbuffer = null;
             }
         }
+        drawable = null;
+        if (pState != null) {
+            long nativeWindow = pState.getNativeWindow();
+            drawable = ES2Pipeline.glFactory.createGLDrawable(
+                    nativeWindow, context.getPixelFormat());
+        }
+        context.makeCurrent(drawable);
         return false;
     }
 
@@ -137,8 +144,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 }
                 stableBackbuffer.unlock();
             }
-            drawable = context.getCurrentRenderingContext().getDrawable();
-            return (drawable != null);
+            return drawable != null;
         } catch (Throwable th) {
             if (PrismSettings.verbose) {
                 th.printStackTrace();
@@ -168,7 +174,9 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     }
 
     public boolean present() {
-        return drawable.swapBuffers(context.getGLContext());
+        boolean presented = drawable.swapBuffers(context.getGLContext());
+        context.makeCurrent(null);
+        return presented;
     }
 
     public ES2Graphics createGraphics() {

@@ -84,12 +84,9 @@ final class EmbeddedPainter extends AbstractPainter {
             return;
         }
 
-        context = factory.createRenderingContext(null);
         escene.sizeLock.lock();
         
         try {
-            context.begin();
-            
             if ((texture == null) || (escene.textureBits == null) || escene.needsReset) {
                 texture = factory.createRTTexture(escene.width, escene.height,
                                                   WrapMode.CLAMP_NOT_NEEDED);
@@ -116,7 +113,6 @@ final class EmbeddedPainter extends AbstractPainter {
             th.printStackTrace(System.err);
         } finally {
             Disposer.cleanUp();
-            context.end();
             escene.sizeLock.unlock();
         }
     }

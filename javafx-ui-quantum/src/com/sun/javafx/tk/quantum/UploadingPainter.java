@@ -96,16 +96,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             }
 
             if (needsReset) {
-                context = factory.createRenderingContext(null);
-            }
-            
-            context.begin();
-            
-            if (needsReset) {
                 disposeRTTexture();
                 rttexture = factory.createRTTexture(viewWidth, viewHeight, WrapMode.CLAMP_NOT_NEEDED);
                 if (rttexture == null) {
-                    context.end();
                     return;
                 }
                 penWidth    = viewWidth;
@@ -170,9 +163,8 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         } catch (Throwable th) {
             th.printStackTrace(System.err);
         } finally {
-            if (valid && context != null) {
+            if (valid) {
                 Disposer.cleanUp();
-                context.end();            
             }
             if (locked) {
                 sceneState.unlock();

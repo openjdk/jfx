@@ -35,11 +35,9 @@ import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
-import com.sun.prism.RenderingContext;
 import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.VertexBuffer;
-import com.sun.prism.impl.BaseRenderingContext;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.ps.BaseShaderFactory;
 import com.sun.prism.ps.Shader;
@@ -107,18 +105,6 @@ class DummyResourceFactory extends BaseShaderFactory {
 
     public Shader createStockShader(String name) {
         return new DummyShader(context, name);
-    }
-
-    /**
-     * Returns dummy implementation of the RenderingContext interface.
-     *
-     * @param pState the PresentableState from which to construct a rendering
-     * context. if pState is null, then the rendering context is in offscreen
-     * mode.
-     */
-    @Override
-    public RenderingContext createRenderingContext(PresentableState pState) {
-        return new BaseRenderingContext();
     }
 
     @Override
