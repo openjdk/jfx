@@ -4658,6 +4658,26 @@ public abstract class Node implements EventTarget, Styleable {
             tmin = ((signZ ? maxZ : minZ) - originZ) * invDirZ;
             tmax = ((signZ ? minZ : maxZ) - originZ) * invDirZ;
 
+        } else if (tempBounds.getDepth() == 0.0) {
+            // fast path for 3D picking of 2D bounds
+
+            if (almostZero(dir.z)) {
+                return Double.NaN;
+            }
+
+            final double t = (tempBounds.getMinZ() - originZ) / dir.z;
+            final double x = originX + (dir.x * t);
+            final double y = originY + (dir.y * t);
+
+            if (x < tempBounds.getMinX() ||
+                    x > tempBounds.getMaxX() ||
+                    y < tempBounds.getMinY() ||
+                    y > tempBounds.getMaxY()) {
+                return Double.NaN;
+            }
+
+            tmin = tmax = t;
+
         } else {
 
             final double invDirX = dir.x == 0.0 ? Double.POSITIVE_INFINITY : (1.0 / dir.x);
