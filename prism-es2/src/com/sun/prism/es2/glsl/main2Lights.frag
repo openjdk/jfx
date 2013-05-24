@@ -24,7 +24,6 @@
  */
 
 // main fragment shader
-#version 120
 
 vec4 apply_diffuse();
 vec4 apply_specular();
@@ -36,15 +35,11 @@ struct Light {
     vec3 color;
 };
 
-uniform mat4 viewProjectionMatrix;
-uniform mat4 worldMatrix;
-uniform vec3 camPos;
 uniform vec3 ambientColor;
 uniform Light lights[3];
 
 varying vec3 eyePos;
-varying vec3 localBump;
-varying vec4[3] lightTangentSpacePositions;
+varying vec4 lightTangentSpacePositions[3];
 
 void main()
 {
@@ -53,16 +48,16 @@ void main()
 
     vec3 n = apply_normal();
 
-    vec3 d = vec3(0);
-    vec3 s = vec3(0);
+    vec3 d = vec3(0.0);
+    vec3 s = vec3(0.0);
 
     vec3 refl = reflect(normalize(eyePos), n);
     vec4 specular = apply_specular();
-    float power = specular.a * 32 + 1;
+    float power = specular.a * 32.0 + 1.0;
 
     vec3 l = normalize(lightTangentSpacePositions[0].xyz);
-    d += clamp(dot(n,l), 0.0, 1.0)*(lights[0].color).rgb;
-    s += pow(clamp(dot(-refl, l), 0.0, 1.0), power)*lights[0].color.rgb;
+    d = clamp(dot(n,l), 0.0, 1.0)*(lights[0].color).rgb;
+    s = pow(clamp(dot(-refl, l), 0.0, 1.0), power)*lights[0].color.rgb;
 
     l = normalize(lightTangentSpacePositions[1].xyz);
     d += clamp(dot(n,l), 0.0, 1.0)*(lights[1].color).rgb;

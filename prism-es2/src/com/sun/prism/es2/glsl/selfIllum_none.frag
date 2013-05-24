@@ -24,11 +24,11 @@
  */
 
 // no-op selfIllum fragment shader
-#version 120
+//#version 120
 
 uniform sampler2D selfIllumTexture;
 
 vec4 apply_selfIllum() {
-    return vec4(0);
+    return vec4(0.0);
 }
 

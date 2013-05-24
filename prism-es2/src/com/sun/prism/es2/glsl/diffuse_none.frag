@@ -24,10 +24,12 @@
  */
 
 // diffuse fragment shader
-#version 120
+//#version 120
 
 uniform vec4 diffuseColor;
 uniform sampler2D diffuseTexture;
+
+varying vec2 oTexCoords;
 
 vec4 apply_diffuse() {
     return vec4(0);

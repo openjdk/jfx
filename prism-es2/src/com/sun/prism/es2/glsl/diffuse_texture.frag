@@ -24,13 +24,14 @@
  */
 
 // main fragment shader
-#version 120
+//#version 120
 
 uniform vec4 diffuseColor;
 uniform sampler2D diffuseTexture;
 
+varying vec2 oTexCoords;
+
 vec4 apply_diffuse() {
-    vec4 dTexColor = texture2D(diffuseTexture, gl_TexCoord[0].xy);
+    vec4 dTexColor = texture2D(diffuseTexture, oTexCoords);
     return dTexColor * diffuseColor; 
 }
-
