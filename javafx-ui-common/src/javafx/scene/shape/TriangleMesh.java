@@ -356,9 +356,7 @@ public class TriangleMesh extends Mesh {
 
         final double t = f * e2.dotProduct(q);
 
-        final double minDistance = pickRay.isParallel()
-                ? Double.NEGATIVE_INFINITY : 0.0;
-        if (t >= minDistance) {
+        if (t >= pickRay.getNearClip() && t <= pickRay.getFarClip()) {
             if (cullFace != CullFace.NONE) {
                 final Point3D normal = e1.crossProduct(e2);
                 final double nangle = normal.angle(

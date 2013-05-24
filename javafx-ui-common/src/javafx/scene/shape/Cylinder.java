@@ -262,8 +262,8 @@ public class Cylinder extends Shape3D {
         final double discriminant = b * b - 4 * a * c;
 
         double t0, t1, t = Double.POSITIVE_INFINITY;
-        final double minDistance = pickRay.isParallel()
-                ? Double.NEGATIVE_INFINITY : 0.0;
+        final double minDistance = pickRay.getNearClip();
+        final double maxDistance = pickRay.getFarClip();
 
         if (discriminant >= 0 && (dirX != 0.0 || dirZ != 0.0)) {
             // the line hits the infinite cylinder
@@ -280,11 +280,11 @@ public class Cylinder extends Shape3D {
                 t1 = temp;
             }
 
-            // let's see if the hit is in front of us and within the cylinder's height
+            // let's see if the hit is between clipping planes and within the cylinder's height
             final double y0 = originY + t0 * dirY;
             if (t0 < minDistance || y0 < -halfHeight || y0 > halfHeight || cullFace == CullFace.FRONT) {
                 final double y1 = originY + t1 * dirY;
-                if (t1 >= minDistance && y1 >= -halfHeight && y1 <= halfHeight) {
+                if (t1 >= minDistance && t1 <= maxDistance && y1 >= -halfHeight && y1 <= halfHeight) {
                     if (cullFace != CullFace.BACK || exactPicking) {
                         // t0 is outside or behind but t1 hits.
 
@@ -294,10 +294,10 @@ public class Cylinder extends Shape3D {
                         t = t1;
                     }
                 } // else no hit (but we need to check the caps)
-            } else {
-                // t0 hits the height in front of us
+            } else if (t0 <= maxDistance) {
+                // t0 hits the height between clipping planes
                 t = t0;
-            }
+            } // else no hit (but we need to check the caps)
         }
 
         // Now check the caps
@@ -320,7 +320,7 @@ public class Cylinder extends Shape3D {
                 t1 = tBottom;
             }
 
-            if (t0 > minDistance && t0 < t && cullFace != CullFace.FRONT) {
+            if (t0 >= minDistance && t0 <= maxDistance && t0 < t && cullFace != CullFace.FRONT) {
                 final double tX = originX + dirX * t0;
                 final double tZ = originZ + dirZ * t0;
                 if (tX * tX + tZ * tZ <= r * r) {
@@ -329,7 +329,7 @@ public class Cylinder extends Shape3D {
                 }
             }
 
-            if (t1 > minDistance && t1 < t && (cullFace != CullFace.BACK || exactPicking)) {
+            if (t1 >= minDistance && t1 <= maxDistance && t1 < t && (cullFace != CullFace.BACK || exactPicking)) {
                 final double tX = originX + dirX * t1;
                 final double tZ = originZ + dirZ * t1;
                 if (tX * tX + tZ * tZ <= r * r) {
