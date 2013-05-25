@@ -132,8 +132,9 @@ public abstract class Camera extends Node {
     }
 
     /**
-     * Specifies the near clipping plane of this {@code Camera} in the local
-     * coordinate system of this node.
+     * Specifies the near clipping plane of this {@code Camera} in the eye
+     * coordinate system of this node. Objects closer to the eye than the 
+     * {@code nearClip} plane are not drawn.
      *
      * @defaultValue 0.1
      * @since JavaFX 8
@@ -162,8 +163,9 @@ public abstract class Camera extends Node {
     }
 
     /**
-     * Specifies the far clipping plane of this {@code Camera} in the local
-     * coordinate system of this node.
+     * Specifies the far clipping plane of this {@code Camera} in the eye
+     * coordinate system of this node. Objects farther away from the eye than
+     * the {@code farClip} plane are not drawn.
      * <p>
      *
      * @defaultValue 100.0
