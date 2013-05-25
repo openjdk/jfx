@@ -210,15 +210,21 @@ public abstract class BaseCacheFilter {
         lastYDelta = lastYDelta * xformInfo[1];
 
         if (cachedImageData != null) {
-            cachedImageData.getUntransformedImage().lock();
-            if (!cachedImageData.validate(fctx)) {
-                cachedImageData.getUntransformedImage().unlock();
-                invalidate();
+            Filterable implImage = cachedImageData.getUntransformedImage();
+            if (implImage != null) {
+                implImage.lock();
+                if (!cachedImageData.validate(fctx)) {
+                    implImage.unlock();
+                    invalidate();
+                }
             }
         }
         if (needToRenderCache(fctx, xform, xformInfo)) {
             if (cachedImageData != null) {
-                cachedImageData.getUntransformedImage().unlock();
+                Filterable implImage = cachedImageData.getUntransformedImage();
+                if (implImage != null) {
+                    implImage.unlock();
+                }
                 invalidate();
             }
             // Update the cachedXform to the current xform (ignoring translate).
@@ -426,7 +432,10 @@ public abstract class BaseCacheFilter {
             // While we hold on to this ImageData we leave the texture
             // unlocked so it can be reclaimed, but the default unref()
             // method assumes it was locked.
-            cachedImageData.getUntransformedImage().lock();
+            Filterable implImage = cachedImageData.getUntransformedImage();
+            if (implImage != null) {
+                implImage.lock();
+            }
             cachedImageData.unref();
             cachedImageData = null;
         }
