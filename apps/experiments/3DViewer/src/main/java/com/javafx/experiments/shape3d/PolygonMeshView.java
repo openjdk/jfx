@@ -126,7 +126,7 @@ public class PolygonMeshView extends Parent {
         } else {
             subdividedMesh = getMesh();
             for (int i=0; i<iterations; i++) {
-                subdividedMesh = Subdivision.subdivide(subdividedMesh);
+                subdividedMesh = SubDivision.subdivide(subdividedMesh);
             }
         }
         updateMesh();
