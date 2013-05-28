@@ -50,6 +50,12 @@ public enum ConditionalFeature {
     CONTROLS,
 
     /**
+     * Indicates that the javafx.scene.media package is available on this
+     * platform.
+     */
+    MEDIA,
+
+    /**
      * Indicates that the javafx.scene.web packages is available on this
      * platform.
      */
