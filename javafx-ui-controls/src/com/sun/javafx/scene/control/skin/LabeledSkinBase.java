@@ -106,7 +106,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
     };
 
-    private Rectangle textClip;
+    private double wrapWidth;
+    private double wrapHeight;
+
 
     /**
      * Constructor for LabeledSkinBase. The Labeled must be specified, and cannot be null.
@@ -123,9 +125,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         // Configure the Text node with all of the attributes from the
         // Labeled which apply to it.
         text = new LabeledText(labeled);
-        
-        textClip = new Rectangle();
-        text.setClip(textClip);
         
         updateChildren();
 
@@ -470,7 +469,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 w -= graphicW;
                 minW -= graphicW;
             }
-            w = Math.max(minW, w);
+            wrapWidth = Math.max(minW, w);
 
             boolean verticalPosition =
                     (labeled.getContentDisplay() == ContentDisplay.TOP ||
@@ -483,16 +482,14 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (h == -1) {
                 h = availableHeight;
             }
-            double minH = Math.min(computeMinHeight(w, snappedTopInset() , snappedRightInset(), snappedBottomInset(), snappedLeftInset()), availableHeight);
+            double minH = Math.min(computeMinHeight(wrapWidth, snappedTopInset() , snappedRightInset(), snappedBottomInset(), snappedLeftInset()), availableHeight);
             if (verticalPosition && labeled.getGraphic() != null) {
                 double graphicH = labeled.getGraphic().getLayoutBounds().getHeight() + labeled.getGraphicTextGap();
                 h -= graphicH;
                 minH -= graphicH;
             }
-            h = Math.max(minH, h);
+            wrapHeight = Math.max(minH, h);
 
-            textClip.setWidth(w);
-            textClip.setHeight(h);
             updateWrappingWidth();
 
             Font font = text.getFont();
@@ -500,13 +497,13 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             String ellipsisString = labeled.getEllipsisString();
 
             if (labeled.isWrapText()) {
-                result = Utils.computeClippedWrappedText(font, s, w, h, truncationStyle, ellipsisString, text.getBoundsType());
+                result = Utils.computeClippedWrappedText(font, s, wrapWidth, wrapHeight, truncationStyle, ellipsisString, text.getBoundsType());
             } else if (multiline) {
                 StringBuilder sb = new StringBuilder();
 
                 String[] splits = s.split("\n");
                 for (int i = 0; i < splits.length; i++) {
-                    sb.append(Utils.computeClippedText(font, splits[i], w, truncationStyle, ellipsisString));
+                    sb.append(Utils.computeClippedText(font, splits[i], wrapWidth, truncationStyle, ellipsisString));
                     if (i < splits.length - 1) {
                         sb.append('\n');
                     }
@@ -532,7 +529,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
                 result = sb.toString();
             } else {
-                result = Utils.computeClippedText(font, s, w, truncationStyle, ellipsisString);
+                result = Utils.computeClippedText(font, s, wrapWidth, truncationStyle, ellipsisString);
             }
 
             if (result != null && result.endsWith("\n")) {
@@ -558,7 +555,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         if (labeled.isWrapText()) {
             // Note that the wrapping width needs to be set to zero before
             // getting the text's real preferred width.
-            double w = Math.min(text.prefWidth(-1), textClip.getWidth());
+            double w = Math.min(text.prefWidth(-1), wrapWidth);
             text.setWrappingWidth(w);
         }
     }
@@ -934,8 +931,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             text.setText("");
         } else {
             updateDisplayedText(w, h); // Have to do this just in case it needs to be recomputed
-            textWidth  = Math.min(text.getLayoutBounds().getWidth(),  textClip.getWidth());
-            textHeight = Math.min(text.getLayoutBounds().getHeight(), textClip.getHeight());
+            textWidth  = Math.min(text.getLayoutBounds().getWidth(),  wrapWidth);
+            textHeight = Math.min(text.getLayoutBounds().getHeight(), wrapHeight);
         }
 
         final double gap = (ignoreText || ignoreGraphic) ? 0 : labeled.getGraphicTextGap();
@@ -1081,8 +1078,5 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             }
             graphic.relocate(snapPosition(graphicX), snapPosition(graphicY));
         }
-
-        textClip.setX(text.getLayoutBounds().getMinX());
-        textClip.setY(text.getLayoutBounds().getMinY());
     }   
 }
