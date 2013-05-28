@@ -994,7 +994,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         // that was defined on the Labeled). I also know the content width and
         // height. So now I just need to lay out the graphic and text within
         // that content x/y/w/h area.
-        text.setManaged(true);
+        if ((!ignoreGraphic || !ignoreText) && !text.isManaged()) {
+            text.setManaged(true);
+        }
+
         if (ignoreGraphic && ignoreText) {
             // There might be a text node as a child, or a graphic node as
             // a child. However we don't have to do anything for the graphic
@@ -1003,7 +1006,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             // be a child but still not matter, in which case we will just
             // stop managing it (although really I wish it just wasn't here
             // all all in that case)
-            text.setManaged(false);
+            if (text.isManaged()) {
+                text.setManaged(false);
+            }
             text.relocate(snapPosition(contentX), snapPosition(contentY));
         } else if (ignoreGraphic) {
             // Since I only have to position the text, it goes at the
