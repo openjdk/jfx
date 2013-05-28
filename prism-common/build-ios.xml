@@ -2,11 +2,9 @@
 <project name="prism-common" default="all" basedir=".">
 
   <target name="compile-native">
-    <delete dir="${native.build.dir}"/>
-    
     <exec executable="make" dir="../prism-common-native" failonerror="true">
       <arg value="DIST_DIR=${native.dist.dir}"/>
-      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}/armv7"/>
       <arg value="PRISM_COM_CP=${prismcom.classes.dir}"/>
       <arg value="JDK_HOME=${platform.home}"/>
       <arg value="IS_IOS=true"/>
@@ -16,12 +14,10 @@
       <arg value="CONF=${build.conf}"/>
       <arg value="all"/>
     </exec>
-    
-    <delete dir="${native.build.dir}"/>
-    
+
     <exec executable="make" dir="../prism-common-native" failonerror="true">
       <arg value="DIST_DIR=${native.dist.dir}"/>
-      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}/i386"/>
       <arg value="PRISM_COM_CP=${prismcom.classes.dir}"/>
       <arg value="JDK_HOME=${platform.home}"/>
       <arg value="IS_IOS=true"/>

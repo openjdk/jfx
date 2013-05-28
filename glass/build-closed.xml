@@ -27,7 +27,7 @@
     <target name="copy-sdk-binaries-ios" if="isIOS">
       <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
         <fileset dir="${basedir}">
-          <include name="glass-lib-ios/dist/*"/>
+          <include name="glass-lib-ios/dist/libglass.a"/>
         </fileset>
       </copy>
     </target>
