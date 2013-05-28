@@ -102,6 +102,12 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         this.pixelScaleFactor = PrismSettings.allowHiDPIScaling
                                 ? pState.getScale() //TODO fix getScale
                                 : 1.0f;
+        drawable = null;
+        if (pState != null) {
+            long nativeWindow = pState.getNativeWindow();
+            drawable = ES2Pipeline.glFactory.createGLDrawable(
+                    nativeWindow, context.getPixelFormat());
+        }
     }
 
     public boolean lockResources() {
@@ -113,13 +119,6 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 stableBackbuffer = null;
             }
         }
-        drawable = null;
-        if (pState != null) {
-            long nativeWindow = pState.getNativeWindow();
-            drawable = ES2Pipeline.glFactory.createGLDrawable(
-                    nativeWindow, context.getPixelFormat());
-        }
-        context.makeCurrent(drawable);
         return false;
     }
 
@@ -180,6 +179,8 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     }
 
     public ES2Graphics createGraphics() {
+        context.makeCurrent(drawable);
+
         GLContext glContext = context.getGLContext();
         nativeDestHandle = glContext.getBoundFBO();
 
