@@ -1496,7 +1496,21 @@ public class TableView<S> extends Control {
      */
     public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S, TableColumn<S,?>> {
 
+        /***********************************************************************
+         *                                                                     *
+         * Private fields                                                      *
+         *                                                                     *
+         **********************************************************************/
+
         private final TableView<S> tableView;
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Constructors                                                        *
+         *                                                                     *
+         **********************************************************************/
 
         /**
          * Builds a default TableViewSelectionModel instance with the provided
@@ -1513,18 +1527,88 @@ public class TableView<S> extends Control {
             this.tableView = tableView;
         }
 
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Abstract API                                                        *
+         *                                                                     *
+         **********************************************************************/
+
         /**
          * A read-only ObservableList representing the currently selected cells 
          * in this TableView. Rather than directly modify this list, please
          * use the other methods provided in the TableViewSelectionModel.
          */
-        public abstract ObservableList<TablePosition<S,?>> getSelectedCells();
+        public abstract ObservableList<TablePosition> getSelectedCells();
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Public API                                                          *
+         *                                                                     *
+         **********************************************************************/
 
         /**
          * Returns the TableView instance that this selection model is installed in.
          */
         public TableView<S> getTableView() {
             return tableView;
+        }
+
+        /**
+         * Convenience method that returns getTableView().getItems().
+         * @return The items list of the current TableView.
+         */
+        protected ObservableList<S> getTableModel()  {
+            return tableView.getItems();
+        }
+
+        /** {@inheritDoc} */
+        @Override protected S getModelItem(int index) {
+            if (index < 0 || index > getItemCount()) return null;
+            return tableView.getItems().get(index);
+        }
+
+        /** {@inheritDoc} */
+        @Override protected int getItemCount() {
+            return getTableModel().size();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void focus(int row) {
+            focus(row, null);
+        }
+
+        /** {@inheritDoc} */
+        @Override public int getFocusedIndex() {
+            return getFocusedCell().getRow();
+        }
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Private implementation                                              *
+         *                                                                     *
+         **********************************************************************/
+
+        void focus(int row, TableColumn<S,?> column) {
+            focus(new TablePosition(getTableView(), row, column));
+        }
+
+        void focus(TablePosition pos) {
+            if (getTableView().getFocusModel() == null) return;
+
+            getTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
+        }
+
+        TablePosition getFocusedCell() {
+            if (getTableView().getFocusModel() == null) {
+                return new TablePosition(getTableView(), -1, null);
+            }
+            return getTableView().getFocusModel().getFocusedCell();
         }
     }
     
@@ -1694,8 +1778,9 @@ public class TableView<S> extends Control {
             tableView.itemsProperty().addListener(weakItemsPropertyListener);
             
             // watching for changes to the items list content
-            if (tableView.getItems() != null) {
-                tableView.getItems().addListener(weakItemsContentListener);
+            ObservableList<S> items = getTableModel();
+            if (items != null) {
+                items.addListener(weakItemsContentListener);
             }
         }
         
@@ -1715,15 +1800,17 @@ public class TableView<S> extends Control {
         final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
             @Override public void onChanged(Change<? extends S> c) {
                 updateItemCount();
-                
+
+                List<S> items = getTableModel();
+
                 while (c.next()) {
                     final S selectedItem = getSelectedItem();
                     final int selectedIndex = getSelectedIndex();
                     
-                    if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
+                    if (items == null || items.isEmpty()) {
                         clearSelection();
                     } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                        int newIndex = tableView.getItems().indexOf(getSelectedItem());
+                        int newIndex = items.indexOf(getSelectedItem());
                         if (newIndex != -1) {
                             setSelectedIndex(newIndex);
                         }
@@ -1784,8 +1871,8 @@ public class TableView<S> extends Control {
         }
 
         private final ReadOnlyUnbackedObservableList<TablePosition<S,?>> selectedCellsSeq;
-        @Override public ObservableList<TablePosition<S,?>> getSelectedCells() {
-            return selectedCellsSeq;
+        @Override public ObservableList<TablePosition> getSelectedCells() {
+            return (ObservableList<TablePosition>)(Object)selectedCellsSeq;
         }
 
 
@@ -1878,7 +1965,8 @@ public class TableView<S> extends Control {
                     }
 
                     // (2)
-                    List<TablePosition<S,?>> selectedIndices = new ArrayList<TablePosition<S,?>>(getSelectedCells());
+                    List<TablePosition<S,?>> selectedIndices =
+                            new ArrayList<TablePosition<S,?>>((ObservableList<TablePosition<S,?>>)(Object)getSelectedCells());
 
 
                     // (3)
@@ -2310,51 +2398,19 @@ public class TableView<S> extends Control {
             setSelectedItem(getModelItem(row));
         }
         
-        @Override public void focus(int row) {
-            focus(row, null);
-        }
-
-        private void focus(int row, TableColumn<S,?> column) {
-            focus(new TablePosition(getTableView(), row, column));
-        }
-
-        private void focus(TablePosition pos) {
-            if (getTableView().getFocusModel() == null) return;
-
-            getTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
-        }
-
-        @Override public int getFocusedIndex() {
-            return getFocusedCell().getRow();
-        }
-
-        private TablePosition getFocusedCell() {
-            if (getTableView().getFocusModel() == null) {
-                return new TablePosition(getTableView(), -1, null);
-            }
-            return getTableView().getFocusModel().getFocusedCell();
-        }
-
         /** {@inheritDoc} */
         @Override protected int getItemCount() {
             return itemCount;
-//            List<S> items = tableView.getItems();
-//            return items == null ? -1 : items.size();
         }
 
-        @Override protected S getModelItem(int index) {
-            if (index < 0 || index > getItemCount()) return null;
-            return tableView.getItems().get(index);
-        }
-        
         private void updateItemCount() {
             if (tableView == null) {
                 itemCount = -1;
             } else {
-                List<S> items = tableView.getItems();
+                List<S> items = getTableModel();
                 itemCount = items == null ? -1 : items.size();
             }
-        } 
+        }
     }
     
     
