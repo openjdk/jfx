@@ -148,19 +148,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
     }
 
 
-    boolean showScenicView=false;
     @Override public void show() {
-        if (showScenicView) try {
-            Class scenicview = Class.forName("com.javafx.experiments.scenicview.ScenicView");
-            Class params[] = new Class[1];
-            params[0] = javafx.scene.Scene.class;
-            java.lang.reflect.Method method = scenicview.getDeclaredMethod("show", params);
-            method.invoke(null, getPopup().getScene());
-            showScenicView=false;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
         super.show();
         datePickerContent.clearFocus();
     }

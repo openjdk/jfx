@@ -59,6 +59,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -230,6 +231,19 @@ public class DatePickerContent extends VBox {
                     }
                     if (e.isConsumed() && node instanceof DateCell) {
                         lastFocusedDayCell = (DateCell)node;
+                    }
+                }
+
+                // our little secret... borrowed from Scene.java
+                if (!e.isConsumed() && e.getCode() == KeyCode.DIGIT8 &&
+                     e.getEventType() == KeyEvent.KEY_PRESSED && e.isControlDown() && e.isShiftDown()) {
+                    try {
+                        Class scenicview = Class.forName("com.javafx.experiments.scenicview.ScenicView");
+                        Class params[] = new Class[] { getScene().getClass() };
+                        java.lang.reflect.Method method = scenicview.getDeclaredMethod("show", params);
+                        method.invoke(null, getScene());
+                    } catch (Exception ex) {
+                        //System.out.println("exception instantiating ScenicView:"+ex);
                     }
                 }
 
