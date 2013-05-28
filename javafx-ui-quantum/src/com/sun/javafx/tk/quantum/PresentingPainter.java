@@ -61,13 +61,15 @@ final class PresentingPainter extends ViewPainter {
             sceneState.lock();
             locked = true;
 
-            boolean needsReset = (presentable == null) || presentable.lockResources() ||
+            boolean needsReset = (presentable == null) ||
                                  (penWidth != viewWidth) || (penHeight != viewHeight);
+            if (presentable != null) {
+                needsReset = presentable.lockResources() || needsReset;
+            }
             if (needsReset) {
                 if (presentable == null || presentable.recreateOnResize()) {
                     disposePresentable();
                     presentable = factory.createPresentable(sceneState);
-                    presentable.lockResources(); // report if failed?
                     needsReset = false;
                 }
                 penWidth  = viewWidth;
