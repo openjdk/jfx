@@ -25,7 +25,6 @@
 
 package javafx.stage;
 
-import com.sun.javafx.pgstub.StubScene;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
@@ -40,6 +39,7 @@ import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubStage;
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.tk.Toolkit;
 
 public class StageTest {
@@ -235,6 +235,57 @@ public class StageTest {
 
         assertTrue(Math.abs(peer.width - 400) > 0.0001);
         assertTrue(Math.abs(peer.height - 300) > 0.0001);
+    }
+
+    @Test
+    public void testCenterOnScreenForWindowOnSecondScreen() {
+        toolkit.setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
+                new ScreenConfiguration(1920, 160, 1440, 900,
+                                        1920, 160, 1440, 900, 96));
+
+        try {
+            s.setX(1920);
+            s.setY(160);
+            s.setWidth(300);
+            s.setHeight(200);
+
+            s.centerOnScreen();
+            pulse();
+
+            assertTrue(peer.x > 1930);
+            assertTrue(peer.y > 170);
+        } finally {
+            toolkit.resetScreens();
+        }
+    }
+
+    @Test
+    public void testCenterOnScreenForOwnerOnSecondScreen() {
+        toolkit.setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
+                new ScreenConfiguration(1920, 160, 1440, 900,
+                                        1920, 160, 1440, 900, 96));
+
+        try {
+            s.setX(1920);
+            s.setY(160);
+            s.setWidth(300);
+            s.setHeight(200);
+
+            final Stage childStage = new Stage();
+            childStage.setWidth(100);
+            childStage.setHeight(100);
+            childStage.initOwner(s);
+            childStage.show();
+
+            childStage.centerOnScreen();
+
+            assertTrue(childStage.getX() > 1930);
+            assertTrue(childStage.getY() > 170);
+        } finally {
+            toolkit.resetScreens();
+        }
     }
 
     @Test

@@ -1113,4 +1113,9 @@ public class Stage extends Window {
     public void close() {
         hide();
     }
+
+    @Override
+    Window getWindowOwner() {
+        return getOwner();
+    }
 }
