@@ -1887,7 +1887,21 @@ public class TreeTableView<S> extends Control {
     public static abstract class TreeTableViewSelectionModel<S> extends 
             TableSelectionModel<TreeItem<S>, TreeTableColumn<S, ?>> {
 
+        /***********************************************************************
+         *                                                                     *
+         * Private fields                                                      *
+         *                                                                     *
+         **********************************************************************/
+
         private final TreeTableView<S> treeTableView;
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Constructors                                                        *
+         *                                                                     *
+         **********************************************************************/
 
         /**
          * Builds a default TableViewSelectionModel instance with the provided
@@ -1911,20 +1925,81 @@ public class TreeTableView<S> extends Control {
             });
         }
 
-        /**
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Abstract API                                                        *
+         *                                                                     *
+         **********************************************************************/
+
+         /**
          * A read-only ObservableList representing the currently selected cells 
          * in this TableView. Rather than directly modify this list, please
          * use the other methods provided in the TableViewSelectionModel.
          */
         public abstract ObservableList<TreeTablePosition<S,?>> getSelectedCells();
 
-        /**
-         * Returns the TableView instance that this selection model is installed in.
-         */
-        public TreeTableView<S> getTreeTableView() {
-            return treeTableView;
-        }
-    }
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Public API                                                          *
+         *                                                                     *
+         **********************************************************************/
+
+         /**
+          * Returns the TableView instance that this selection model is installed in.
+          */
+         public TreeTableView<S> getTreeTableView() {
+             return treeTableView;
+         }
+
+         /** {@inheritDoc} */
+         @Override public TreeItem<S> getModelItem(int index) {
+             return treeTableView.getTreeItem(index);
+         }
+
+         /** {@inheritDoc} */
+         @Override protected int getItemCount() {
+             return treeTableView.getExpandedItemCount();
+         }
+
+         /** {@inheritDoc} */
+         @Override public void focus(int row) {
+             focus(row, null);
+         }
+
+         /** {@inheritDoc} */
+         @Override public int getFocusedIndex() {
+             return getFocusedCell().getRow();
+         }
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Private implementation                                              *
+         *                                                                     *
+         **********************************************************************/
+
+         private void focus(int row, TreeTableColumn<S,?> column) {
+             focus(new TreeTablePosition(getTreeTableView(), row, column));
+         }
+
+         private void focus(TreeTablePosition pos) {
+             if (getTreeTableView().getFocusModel() == null) return;
+
+             getTreeTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
+         }
+
+         private TreeTablePosition getFocusedCell() {
+             if (treeTableView.getFocusModel() == null) {
+                 return new TreeTablePosition(treeTableView, -1, null);
+             }
+             return treeTableView.getFocusModel().getFocusedCell();
+         }
+     }
     
     
 
@@ -2649,14 +2724,6 @@ public class TreeTableView<S> extends Control {
         }
 
         private int getRowCount() {
-            return treeTableView.getExpandedItemCount();
-        }
-
-        @Override public TreeItem<S> getModelItem(int index) {
-            return treeTableView.getTreeItem(index);
-        }
-
-        @Override protected int getItemCount() {
             return treeTableView.getExpandedItemCount();
         }
     }

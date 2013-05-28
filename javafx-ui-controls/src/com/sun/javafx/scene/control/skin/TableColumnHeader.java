@@ -771,7 +771,7 @@ public class TableColumnHeader extends Region {
     }
 
     private int getIndex() {
-        ObservableList<TableColumnBase> columns = column.getParentColumn() == null ?
+        ObservableList columns = column.getParentColumn() == null ?
             getTableViewSkin().getColumns() :
             column.getParentColumn().getColumns();
         return columns.indexOf(column);

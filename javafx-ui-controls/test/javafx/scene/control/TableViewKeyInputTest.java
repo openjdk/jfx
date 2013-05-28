@@ -101,7 +101,7 @@ public class TableViewKeyInputTest {
     private String debug() {
         StringBuilder sb = new StringBuilder("Selected Cells: [");
         
-        List<TablePosition<String,?>> cells = sm.getSelectedCells();
+        List<TablePosition> cells = sm.getSelectedCells();
         for (TablePosition<String,?> tp : cells) {
             sb.append("(");
             sb.append(tp.getRow());
