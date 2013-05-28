@@ -1630,6 +1630,7 @@ public class GridPane extends Pane {
             return;
         }
         metricsDirty = true;
+        bias = null;
         rowGrow = null;
         rowMinHeight = rowPrefHeight = rowMaxHeight = null;
         columnGrow = null;

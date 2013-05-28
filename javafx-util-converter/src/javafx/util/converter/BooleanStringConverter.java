@@ -25,14 +25,12 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link Boolean}
  * (and boolean primitive) values.</p>
  */
-@NoBuilder
 public class BooleanStringConverter extends StringConverter<Boolean> {
     /** {@inheritDoc} */
     @Override public Boolean fromString(String value) {

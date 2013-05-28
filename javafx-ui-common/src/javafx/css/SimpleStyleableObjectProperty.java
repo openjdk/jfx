@@ -40,7 +40,6 @@ import javafx.beans.property.SimpleObjectProperty;
  * @see StyleableProperty
  * @see StyleableObjectProperty
  */
-@com.sun.javafx.beans.annotations.NoBuilder
 public class SimpleStyleableObjectProperty<T> extends StyleableObjectProperty<T> {
 
     private static final Object DEFAULT_BEAN = null;

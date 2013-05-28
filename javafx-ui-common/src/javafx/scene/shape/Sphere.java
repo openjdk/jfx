@@ -234,17 +234,18 @@ public class Sphere extends Shape3D {
             t1 = temp;
         }
 
-        if (t1 < 0.0 && !pickRay.isParallel()) {
-            // the sphere is behind us
+        final double minDistance = pickRay.getNearClip();
+        final double maxDistance = pickRay.getFarClip();
+
+        if (t1 < minDistance || t0 > maxDistance) {
+            // the sphere is out of clipping planes
             return false;
         }
 
         double t = t0;
         final CullFace cullFace = getCullFace();
-        final double minDistance = pickRay.isParallel()
-                ? Double.NEGATIVE_INFINITY : 0.0;
         if (t0 < minDistance || cullFace == CullFace.FRONT) {
-            if (getCullFace() != CullFace.BACK) {
+            if (t1 <= maxDistance && getCullFace() != CullFace.BACK) {
                 // picking the back wall
                 t = t1;
             } else {

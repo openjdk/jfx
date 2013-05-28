@@ -83,6 +83,7 @@ public class ObservableArrayTest  {
         abstract int arrayLength(A array);
         abstract P get(A array, int index);
         abstract void assertElementsEqual(A actual, int from, int to, A expected, int expFrom);
+        abstract String primitiveArrayToString(A array);
     }
 
     private static class IntegerArrayWrapper extends ArrayWrapper<ObservableIntegerArray, int[], Integer> {
@@ -195,6 +196,11 @@ public class ObservableArrayTest  {
 
         @Override int[] clonePrimitiveArray(int[] array) {
             return Arrays.copyOf(array, array.length);
+        }
+
+        @Override
+        String primitiveArrayToString(int[] array) {
+            return Arrays.toString(array);
         }
     }
 
@@ -311,6 +317,11 @@ public class ObservableArrayTest  {
 
         @Override void setT(int destIndex, ObservableFloatArray src, int srcIndex, int length) {
             array.set(destIndex, src, srcIndex, length);
+        }
+
+        @Override
+        String primitiveArrayToString(float[] array) {
+            return Arrays.toString(array);
         }
     }
 
@@ -2593,5 +2604,32 @@ public class ObservableArrayTest  {
 
         mao.checkOnlySizeChanged(array);
         assertEquals(0, array.size());
+    }
+
+    // ================= toString() tests ===================
+
+    @Test public void testToString() {
+        String actual = array.toString();
+        String expected = wrapper.primitiveArrayToString(wrapper.toArray(null));
+        assertEquals(expected, actual);
+        String regex = "\\[[0-9]+(\\.[0-9]+){0,1}(\\, [0-9]+(.[0-9]+){0,1}){" + (initialSize - 1) + "}\\]";
+        assertTrue("toString() output matches to regex '" + regex + "'. Actual = '" + actual + "'",
+                actual.matches(regex));
+    }
+
+    @Test public void testToStringAfterResize() {
+        array.resize(initialSize / 2);
+        String actual = array.toString();
+        String expected = wrapper.primitiveArrayToString(wrapper.toArray(null));
+        assertEquals(expected, actual);
+        String regex = "\\[[0-9]+(\\.[0-9]+){0,1}(\\, [0-9]+(.[0-9]+){0,1}){" + (array.size() - 1) + "}\\]";
+        assertTrue("toString() output matches to regex '" + regex + "'. Actual = '" + actual + "'",
+                actual.matches(regex));
+    }
+
+    @Test public void testToStringAfterClear() {
+        array.clear();
+        String actual = array.toString();
+        assertEquals("[]", actual);
     }
 }

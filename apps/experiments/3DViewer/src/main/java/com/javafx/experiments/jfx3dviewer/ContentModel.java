@@ -136,7 +136,7 @@ public class ContentModel {
     private boolean wireframe = false;
     private int subdivision = 0;
 
-    public ContentModel() {
+    public ContentModel(String fileToLoad) {
         subScene = new SubScene(root3D,400,400,true,false);
         subScene.setFill(Color.ALICEBLUE);
 
@@ -169,7 +169,11 @@ public class ContentModel {
 
         // LOAD DROP HERE MODEL
         try {
-            content = Importer3D.load(ContentModel.class.getResource("drop-here.obj").toExternalForm());
+            if (fileToLoad != null) {
+                content = Importer3D.load(new File(fileToLoad).toURI().toURL().toExternalForm());
+            } else {
+                content = Importer3D.load(ContentModel.class.getResource("drop-here.obj").toExternalForm());
+            }
             autoScalingGroup.getChildren().add(content);
         } catch (IOException e) {
             e.printStackTrace();

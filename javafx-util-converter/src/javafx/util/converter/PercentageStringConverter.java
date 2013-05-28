@@ -25,7 +25,6 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.text.NumberFormat;
 import java.util.Locale;
 import javafx.util.StringConverter;
@@ -38,7 +37,6 @@ import javafx.util.StringConverter;
  * @see NumberStringConverter
  * @see StringConverter
  */
-@NoBuilder
 public class PercentageStringConverter extends NumberStringConverter {
     
     

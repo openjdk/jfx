@@ -66,7 +66,6 @@ class ES2Context extends BaseShaderContext {
     private int quadIndices;
     // The drawable that is current to the glContext
     private GLDrawable currentDrawable = null;
-    private ES2RenderingContext currentRenderingContext = null;
     private int indexBuffer = 0;
     private int shaderProgram;
 
@@ -117,10 +116,6 @@ class ES2Context extends BaseShaderContext {
         return glContext;
     }
 
-    GLDrawable getDummyDrawable() {
-        return dummyGLDrawable;
-    }
-
     GLPixelFormat getPixelFormat() {
         return pixelFormat;
     }
@@ -129,24 +124,14 @@ class ES2Context extends BaseShaderContext {
         return ES2PhongShader.getShader(meshView, this);
     }
 
-    void setCurrentRenderingContext(ES2RenderingContext rc, GLDrawable drawable) {
-        if ((rc != null) && (drawable == null)) {
-            System.err.println("Warning: ES2Context.setCurrentRenderingContext: "
-                    + "rc = " + rc + ", drawable = " + drawable);
-        }
-        currentRenderingContext = rc;
-        makeCurrent(drawable);
-     }
-
-    ES2RenderingContext getCurrentRenderingContext() {
-        return currentRenderingContext;
-    }
-
     // JIRA: RT-21738
     // TODO: If we can't resolve this platform specific treatment code
     // by 3.0, we need to refactor it to platform specific project
     private int savedFBO = 0;
-    private void makeCurrent(GLDrawable drawable) {
+    void makeCurrent(GLDrawable drawable) {
+        if (drawable == null) {
+            drawable = dummyGLDrawable;
+        }
         if (PlatformUtil.isMac() || PlatformUtil.isIOS()) {
             if (drawable != currentDrawable) {
                 if (drawable == dummyGLDrawable) {
@@ -411,7 +396,7 @@ class ES2Context extends BaseShaderContext {
         glContext.releaseES2Mesh(nativeHandle);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int[] indexBuffer) {
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, short[] indexBuffer) {
         return glContext.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
     }
 

@@ -45,17 +45,22 @@ static jint invGammaArray[256];
 
 static INLINE void blendSrcOver8888(jint *intData, jint aval,
                              jint sred, jint sgreen, jint sblue);
-                             
-static INLINE void blendSrcOver8888_pre(jint *intData, jint aval, jint sred, 
+
+static INLINE void blendSrcOver8888_pre(jint *intData, jint aval, jint sred,
                                  jint sgreen, jint sblue);
+static INLINE void blendSrcOver8888_pre_pre(jint *intData, jint frac,
+                             jint aval,
+                             jint sred, jint sgreen, jint sblue);
 
 static INLINE void blendLCDSrcOver8888_pre(jint *intData,
     jint ared, jint agreen, jint ablue, jint sred, jint sgreen, jint sblue);
 
 static INLINE void blendSrc8888(jint *intData, jint aval, jint aaval,
                          jint sred, jint sgreen, jint sblue);
-                         
-static INLINE void blendSrc8888_pre(jint *intData, jint aval, jint raaval, jint sred, 
+
+static INLINE void blendSrc8888_pre(jint *intData, jint aval, jint raaval, jint sred,
+                             jint sgreen, jint sblue);
+static INLINE void blendSrc8888_pre_pre(jint *intData, jint aval, jint raaval, jint sred,
                              jint sgreen, jint sblue);
 
 static INLINE jint div255(jint x) {
@@ -431,13 +436,12 @@ emitLinePTSource8888_pre(Renderer *rdr, jint height, jint frac) {
             cred = (cval >> 16) & 0xFF;
             cgreen = (cval >> 8) & 0xFF;
             cblue = cval & 0xFF;
-            if (IS_TEXTURE_PAINT(paintMode) && calpha > 0) {
+            if (IS_TEXTURE_PAINT(paintMode)) {
                 // image is in premultiplied form
-                cred = (cred * 255)/calpha;
-                cgreen = (cgreen * 255)/calpha;
-                cblue = (cblue * 255)/calpha;
+                blendSrc8888_pre_pre(a, calpha, 255 - (lfrac >> 8), cred, cgreen, cblue);
+            } else {
+                blendSrc8888_pre(a, calpha, 255 - (lfrac >> 8), cred, cgreen, cblue);
             }
-            blendSrc8888_pre(a, calpha, 255 - (lfrac >> 8), cred, cgreen, cblue);
             a += imagePixelStride;
             aidx++;
         }
@@ -451,13 +455,12 @@ emitLinePTSource8888_pre(Renderer *rdr, jint height, jint frac) {
                 cred = (cval >> 16) & 0xFF;
                 cgreen = (cval >> 8) & 0xFF;
                 cblue = cval & 0xFF;
-                if (IS_TEXTURE_PAINT(paintMode) && calpha > 0) {
+                if (IS_TEXTURE_PAINT(paintMode)) {
                     // image is in premultiplied form
-                    cred = (cred * 255)/calpha;
-                    cgreen = (cgreen * 255)/calpha;
-                    cblue = (cblue * 255)/calpha;
+                    blendSrc8888_pre_pre(a, calpha, comp_frac, cred, cgreen, cblue);
+                } else {
+                    blendSrc8888_pre(a, calpha, comp_frac, cred, cgreen, cblue);
                 }
-                blendSrc8888_pre(a, calpha, comp_frac, cred, cgreen, cblue);
             }
             a += imagePixelStride;
             aidx++;
@@ -468,13 +471,12 @@ emitLinePTSource8888_pre(Renderer *rdr, jint height, jint frac) {
             cred = (cval >> 16) & 0xFF;
             cgreen = (cval >> 8) & 0xFF;
             cblue = cval & 0xFF;
-            if (IS_TEXTURE_PAINT(paintMode) && calpha > 0) {
+            if (IS_TEXTURE_PAINT(paintMode)) {
                 // image is in premultiplied form
-                cred = (cred * 255)/calpha;
-                cgreen = (cgreen * 255)/calpha;
-                cblue = (cblue * 255)/calpha;
+                blendSrc8888_pre_pre(a, calpha, 255 - (rfrac >> 8), cred, cgreen, cblue);
+            } else {
+                blendSrc8888_pre(a, calpha, 255 - (rfrac >> 8), cred, cgreen, cblue);
             }
-            blendSrc8888_pre(a, calpha, 255 - (rfrac >> 8), cred, cgreen, cblue);
         }
         imageOffset += imageScanlineStride;
         paint_offset += paint_stride;
@@ -586,14 +588,13 @@ emitLinePTSourceOver8888_pre(Renderer *rdr, jint height, jint frac) {
             cred = (cval >> 16) & 0xFF;
             cgreen = (cval >> 8) & 0xFF;
             cblue = cval & 0xFF;
-            if (IS_TEXTURE_PAINT(paintMode) && calpha > 0) {
+            if (IS_TEXTURE_PAINT(paintMode)) {
                 // image is in premultiplied form
-                cred = (cred * 255)/calpha;
-                cgreen = (cgreen * 255)/calpha;
-                cblue = (cblue * 255)/calpha;
+                blendSrcOver8888_pre_pre(a, lfrac >> 8, calpha, cred, cgreen, cblue);
+            } else {
+                palpha = (lfrac * calpha) >> 16;
+                blendSrcOver8888_pre(a, palpha, cred, cgreen, cblue);
             }
-            palpha = (lfrac * calpha) >> 16;
-            blendSrcOver8888_pre(a, palpha, cred, cgreen, cblue);
             a += imagePixelStride;
             aidx++;
         }
@@ -608,13 +609,12 @@ emitLinePTSourceOver8888_pre(Renderer *rdr, jint height, jint frac) {
                 cred = (cval >> 16) & 0xFF;
                 cgreen = (cval >> 8) & 0xFF;
                 cblue = cval & 0xFF;
-                if (IS_TEXTURE_PAINT(paintMode) && calpha > 0) {
+                if (IS_TEXTURE_PAINT(paintMode)) {
                     // image is in premultiplied form
-                    cred = (cred * 255)/calpha;
-                    cgreen = (cgreen * 255)/calpha;
-                    cblue = (cblue * 255)/calpha;
+                    blendSrcOver8888_pre_pre(a, frac >> 8, calpha, cred, cgreen, cblue);
+                } else {
+                    blendSrcOver8888_pre(a, palpha, cred, cgreen, cblue);
                 }
-                blendSrcOver8888_pre(a, palpha, cred, cgreen, cblue);
             }
             a += imagePixelStride;
             aidx++;
@@ -627,12 +627,11 @@ emitLinePTSourceOver8888_pre(Renderer *rdr, jint height, jint frac) {
             cblue = cval & 0xFF;
             if (IS_TEXTURE_PAINT(paintMode) && calpha > 0) {
                 // image is in premultiplied form
-                cred = (cred * 255)/calpha;
-                cgreen = (cgreen * 255)/calpha;
-                cblue = (cblue * 255)/calpha;
+                blendSrcOver8888_pre_pre(a, rfrac >> 8, calpha, cred, cgreen, cblue);
+            } else {
+                palpha = (rfrac * calpha) >> 16;
+                blendSrcOver8888_pre(a, palpha, cred, cgreen, cblue);
             }
-            palpha = (rfrac * calpha) >> 16;
-            blendSrcOver8888_pre(a, palpha, cred, cgreen, cblue);
         }
         imageOffset += imageScanlineStride;
         paint_offset += paint_stride;
@@ -1481,6 +1480,30 @@ blendSrcOver8888_pre(jint *intData,
     *intData = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
 }
 
+// *intData are premultiplied, sred, sgreen, sblue are premultiplied
+static void
+blendSrcOver8888_pre_pre(jint *intData, jint frac,
+                             jint aval,
+                             jint sred, jint sgreen, jint sblue) {
+    jint ival = *intData;
+    //destination alpha
+    jint dalpha = (ival >> 24) & 0xff;
+    //destination components premultiplied by dalpha
+    jint dred = (ival >> 16) & 0xff;
+    jint dgreen = (ival >> 8) & 0xff;
+    jint dblue = ival & 0xff;
+
+    jint aval2 = (aval * frac) >> 8;
+    jint oneminusaval = (255 - aval2);
+
+    jint oalpha  = aval2                  + div255(oneminusaval * dalpha);
+    jint ored    = ((sred * frac) >> 8)   + div255(oneminusaval * dred);
+    jint ogreen  = ((sgreen * frac) >> 8) + div255(oneminusaval * dgreen);
+    jint oblue   = ((sblue * frac) >> 8)  + div255(oneminusaval * dblue);
+
+    *intData = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
+}
+
 // *intData are premultiplied, sred, sgreen, sblue are NOT premultiplied
 // it is required that final alpha must be fully opaque (0xFF)
 static void
@@ -1567,6 +1590,36 @@ blendSrc8888_pre(jint *intData,
         ogreen  = div255(aval * sgreen + raaval * dgreen);
         oblue   = div255(aval * sblue  + raaval * dblue);
         
+        ival = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
+        *intData = ival;
+    }
+}
+
+// sred, sgreen, sblue are all premultiplied
+static void
+blendSrc8888_pre_pre(jint *intData,
+                 jint aval, jint raaval,
+                 jint sred, jint sgreen, jint sblue) {
+    jint denom;
+
+    jint ival = *intData;
+    jint dalpha = (ival >> 24) & 0xff;
+    //premultiplied color components
+    jint dred =   (ival >> 16) & 0xff;
+    jint dgreen = (ival >>  8) & 0xff;
+    jint dblue =  (ival & 0xff);
+
+    denom = 255 * aval + dalpha * raaval;
+    if (denom == 0) {
+        // The output is transparent black
+        *intData = 0x00000000;
+    } else {
+        jint oalpha, ored, ogreen, oblue;
+        oalpha  = div255(denom);
+        ored    = sred   + div255(raaval * dred);
+        ogreen  = sgreen + div255(raaval * dgreen);
+        oblue   = sblue  + div255(raaval * dblue);
+
         ival = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
         *intData = ival;
     }

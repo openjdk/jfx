@@ -26,10 +26,13 @@
   <target name="get-libname-android" if="isAndroid">
     <property name="native.lib.file" value="libjavafx-iio.so"/>
   </target>
+  <target name="get-libname-ios" if="isIOS">
+    <property name="native.lib.file" value="libjavafx-iio.a"/>
+  </target>
 
-  <target name="get-libname" depends="get-libname-macosx,get-libname-linux,get-libname-solaris,get-libname-windows, get-libname-android"/>
+  <target name="get-libname" depends="get-libname-macosx,get-libname-linux,get-libname-solaris,get-libname-windows, get-libname-android,get-libname-ios"/>
 
-  <target name="-pre-init" depends="get-libname"/>
+  <target name="-local-pre-init" depends="get-libname"/>
 
   <target name="check-native">
     <uptodate property="native.uptodate" targetfile="${native.dist.dir}/${native.lib.file}" >
@@ -50,7 +53,7 @@
          includes="${native.lib.file}"/>
   </target>
 
-  <target name="jar" depends="init">
+  <target name="jar" depends="-local-pre-init,init">
     <build-project/>
     <antcall target="compile-native"/>
     <available property="native.lib.file.exists" file="${native.dist.dir}/${native.lib.file}"/>

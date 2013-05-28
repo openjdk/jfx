@@ -26,6 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import com.sun.glass.events.WindowEvent;
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Window;
 
 import com.sun.javafx.tk.FocusCause;
@@ -63,6 +64,18 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 break;
             case WindowEvent.MOVE:
                 stage.stageListener.changedLocation(window.getX(), window.getY());
+                //We need to sync the new x,y for painting
+                if (!Application.GetApplication().hasWindowManager()) {
+                    AbstractPainter.renderLock.lock();
+                    try { 
+                        GlassScene scene = stage.getScene();
+                        if (scene != null) {
+                            scene.updateSceneState();
+                        }
+                    } finally { 
+                        AbstractPainter.renderLock.unlock(); 
+                    }
+                }
                 break;
             case WindowEvent.RESIZE:
                 stage.stageListener.changedSize(window.getWidth(), window.getHeight());

@@ -7,22 +7,11 @@
 #include "FileMetadata.h"
 #include "JavaEnv.h"
 
-static JGClass fileSystemClass;
-static jmethodID pathGetFileNameMID;
-
-static void initRefs(JNIEnv* env)
+static jclass GetFileSystemClass(JNIEnv* env)
 {
-    if (!fileSystemClass) {
-        fileSystemClass = JLClass(env->FindClass(
-                "com/sun/webkit/FileSystem"));
-        ASSERT(fileSystemClass);
-
-        pathGetFileNameMID = env->GetStaticMethodID(
-                fileSystemClass,
-                "fwkPathGetFileName",
-                "(Ljava/lang/String;)Ljava/lang/String;");
-        ASSERT(pathGetFileNameMID);
-    }
+    static JGClass clazz(env->FindClass("com/sun/webkit/FileSystem"));
+    ASSERT(clazz);
+    return clazz;
 }
 
 namespace WebCore {
@@ -45,10 +34,28 @@ bool deleteEmptyDirectory(String const &)
     return false;
 }
 
-bool getFileSize(String const&, long long&)
+bool getFileSize(const String& path, long long& result)
 {
-    notImplemented();
-    return false;
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    static jmethodID mid = env->GetStaticMethodID(
+            GetFileSystemClass(env),
+            "fwkGetFileSize",
+            "(Ljava/lang/String;)J");
+    ASSERT(mid);
+
+    jlong size = env->CallStaticLongMethod(
+            GetFileSystemClass(env),
+            mid,
+            (jstring) path.toJavaString(env));
+    CheckAndClearException(env);
+
+    if (size >= 0) {
+        result = size;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool getFileModificationTime(const String&, time_t& result)
@@ -127,15 +134,20 @@ bool unloadModule(PlatformModule)
 String pathGetFileName(const String& path)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
-    initRefs(env);
-    
+
+    static jmethodID mid = env->GetStaticMethodID(
+            GetFileSystemClass(env),
+            "fwkPathGetFileName",
+            "(Ljava/lang/String;)Ljava/lang/String;");
+    ASSERT(mid);
+
     JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
-            fileSystemClass,
-            pathGetFileNameMID,
-            (jstring)path.toJavaString(env)));
+            GetFileSystemClass(env),
+            mid,
+            (jstring) path.toJavaString(env)));
     CheckAndClearException(env);
 
-    return String(env, result);    
+    return String(env, result);
 }
 
 } // namespace WebCore

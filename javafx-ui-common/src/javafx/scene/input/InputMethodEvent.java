@@ -63,6 +63,11 @@ public final class InputMethodEvent extends InputEvent{
             new EventType<InputMethodEvent>(InputEvent.ANY, "INPUT_METHOD_TEXT_CHANGED");
 
     /**
+     * Common supertype for all input method event types.
+     */
+    public static final EventType<InputMethodEvent> ANY = INPUT_METHOD_TEXT_CHANGED;
+
+    /**
      * Constructs new InputMethodEvent event.
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.

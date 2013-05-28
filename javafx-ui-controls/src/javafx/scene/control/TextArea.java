@@ -43,7 +43,6 @@ import javafx.css.StyleConverter;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableProperty;
-import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
@@ -67,7 +66,6 @@ import javafx.css.Styleable;
  *
  * @see TextField
  */
-@DuplicateInBuilderProperties(properties = {"promptText"})
 public class TextArea extends TextInputControl {
     // Text area content model
     private static final class TextAreaContent implements Content {

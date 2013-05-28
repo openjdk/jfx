@@ -1029,6 +1029,7 @@ public abstract class BaseNode<G> implements PGNode {
         //and possibly save a few intersects() calls        
         
         DirtyRegionContainer originalDirtyRegion = null;
+        BaseTransform originalRenderTx = null;
         if (effectFilter != null) {
             try {
                 myClip = new RectBounds();
@@ -1040,7 +1041,8 @@ public abstract class BaseNode<G> implements PGNode {
             } catch (NoninvertibleTransformException ex) {
                 return DirtyRegionContainer.DTR_OK;
             }
-
+            
+            originalRenderTx = renderTx;
             renderTx = BaseTransform.IDENTITY_TRANSFORM;
             originalDirtyRegion = dirtyRegionContainer;
             dirtyRegionContainer = regionPool.checkOut();
@@ -1097,7 +1099,8 @@ public abstract class BaseNode<G> implements PGNode {
             }
 
             //apply transform on effect dirty regions
-            applyTransform(tx, dirtyRegionContainer);
+            applyTransform(originalRenderTx, dirtyRegionContainer);
+            renderTx = originalRenderTx;
             
             originalDirtyRegion.merge(dirtyRegionContainer);
             regionPool.checkIn(dirtyRegionContainer);

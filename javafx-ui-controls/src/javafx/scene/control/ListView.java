@@ -912,6 +912,11 @@ public class ListView<T> extends Control {
         private final int editIndex;
 
         /**
+         * Common supertype for all edit event types.
+         */
+        public static final EventType<?> ANY = EDIT_ANY_EVENT;
+
+        /**
          * Creates a new EditEvent instance to represent an edit event. This 
          * event is used for {@link #EDIT_START_EVENT}, 
          * {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT} types.

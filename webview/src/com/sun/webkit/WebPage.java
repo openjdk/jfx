@@ -9,7 +9,6 @@ import com.sun.webkit.event.WCInputMethodEvent;
 import com.sun.webkit.event.WCKeyEvent;
 import com.sun.webkit.event.WCMouseEvent;
 import com.sun.webkit.event.WCMouseWheelEvent;
-import com.sun.webkit.event.WCTouchEvent;
 import com.sun.webkit.graphics.*;
 import com.sun.webkit.network.CookieManager;
 import static com.sun.webkit.network.URLs.newURL;
@@ -828,22 +827,6 @@ public final class WebPage {
                                              me.getDeltaX(), me.getDeltaY(),
                                              me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(),
                                              me.getWhen() / 1000.0f);
-        } finally {
-            unlockPage();
-        }
-    }
-
-    public boolean dispatchTouchEvent(WCTouchEvent ev) {
-        lockPage();
-        try {
-            log.log(Level.FINEST, "dispatchTouchEvent");
-            if (isDisposed) {
-                log.log(Level.FINE, "Touch event for a disposed web page.");
-                return false;
-            }
-            return twkProcessTouchEvent(getPage(), ev.getID(), ev.getTouchData(),
-                    ev.isShiftDown(), ev.isControlDown(), ev.isAltDown(), ev.isMetaDown(),
-                    ev.getWhen() / 1000f);
         } finally {
             unlockPage();
         }
@@ -2511,9 +2494,6 @@ public final class WebPage {
                                                      float dx, float dy,
                                                      boolean shift, boolean control, boolean alt, boolean meta,
                                                      float when);
-    private native boolean twkProcessTouchEvent(long pPage, int id, ByteBuffer touchData,
-            boolean shift, boolean control, boolean alt, boolean meta, float when);
-
     private native boolean twkProcessInputTextChange(long pPage, String committed, String composed,
                                                      int[] attributes, int caretPosition);
     private native boolean twkProcessCaretPositionChange(long pPage, int caretPosition);

@@ -25,7 +25,6 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -36,7 +35,6 @@ import javafx.util.StringConverter;
 /**
  * <p>{@link StringConverter} implementation for {@link Number} values.</p>
  */
-@NoBuilder
 public class NumberStringConverter extends StringConverter<Number> {
     
     // ------------------------------------------------------ Private properties

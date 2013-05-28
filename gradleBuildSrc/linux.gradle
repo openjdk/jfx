@@ -74,7 +74,7 @@ def commonFlags = [
 // Specify the compilation parameters and link parameters
 def ccFlags = [
         commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
-        IS_DEBUG ? ["-ggdb", "-DVERBOSE"] : "-O2", "-DINLINE=inline"].flatten()
+        IS_DEBUG ? ["-ggdb", "-DVERBOSE"] : "-O2"].flatten()
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def linkFlags = ["-shared", commonFlags].flatten()
 
@@ -128,7 +128,7 @@ LINUX.prism = [:]
 LINUX.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 LINUX.prism.nativeSource = file("modules/graphics/src/main/native-prism")
 LINUX.prism.compiler = "cc"
-LINUX.prism.ccFlags = [ccFlags].flatten()
+LINUX.prism.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prism.linker = linker
 LINUX.prism.linkFlags = [linkFlags].flatten()
 LINUX.prism.lib = "prism-common"
@@ -137,7 +137,7 @@ LINUX.prismSW = [:]
 LINUX.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 LINUX.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
 LINUX.prismSW.compiler = "cc"
-LINUX.prismSW.ccFlags = [ccFlags].flatten()
+LINUX.prismSW.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prismSW.linker = linker
 LINUX.prismSW.linkFlags = [linkFlags].flatten()
 LINUX.prismSW.lib = "prism-sw"

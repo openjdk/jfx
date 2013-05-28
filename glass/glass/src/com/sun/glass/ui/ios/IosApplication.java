@@ -280,4 +280,14 @@ public final class IosApplication extends Application {
      * See iOS developers documentation.
      */
     public native static int _getStatusBarOrientation();
+
+    @Override
+    public boolean hasTouch() {
+        return true;
+    }
+
+    @Override
+    public boolean hasMultiTouch() {
+        return true;
+    }   
 }

@@ -3,7 +3,6 @@
  */
 package javafx.scene.web;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import com.sun.javafx.scene.web.Debugger;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
@@ -269,7 +268,6 @@ window.setMember("app", new JavaApplication());
  * JavaFX Application thread. This rule also applies to any DOM and JavaScript
  * objects obtained from the {@code WebEngine} object.
  */
-@NoBuilder
 final public class WebEngine {
     static {
         Accessor.setPageAccessor(new Accessor.PageAccessor() {

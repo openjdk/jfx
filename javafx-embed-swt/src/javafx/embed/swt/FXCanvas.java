@@ -89,6 +89,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlListener;
@@ -442,7 +443,8 @@ public class FXCanvas extends Canvas {
         if ((stagePeer == null) /*|| !isShowing()*/) {
             return;
         }
-        Point los = toDisplay(getLocation());
+        Rectangle rect = getClientArea();
+        Point los = toDisplay(rect.x, rect.y);
         stagePeer.setLocation(los.x, los.y);
     }
     

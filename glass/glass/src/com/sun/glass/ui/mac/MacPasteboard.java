@@ -24,10 +24,6 @@
  */
 package com.sun.glass.ui.mac;
 
-import com.sun.glass.ui.Application;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 import java.util.HashMap;
 
 final class MacPasteboard {
@@ -113,14 +109,6 @@ final class MacPasteboard {
         return _getItemAsRawImage(this.ptr, index);
     }
     
-    // get the item representation for the given index as String
-    // the platform will try to find the best representation
-    private native String _getItemAsString(long ptr, int index);
-    public String getItemAsString(int index) {
-        assertValid();
-        return _getItemAsString(this.ptr, index);
-    }
-    
     // get the item representation for the given utf type as String
     private native String _getItemStringForUTF(long ptr, int index, String utf);
     public String getItemStringForUTF(int index, String utf) {
@@ -133,15 +121,6 @@ final class MacPasteboard {
     public byte[] getItemBytesForUTF(int index, String utf) {
         assertValid();
         return _getItemBytesForUTF(this.ptr, index, utf);
-    }
-    
-    // get the item representation for the given utf type as native Objective-C object id
-    // the item retain count will increase by 1
-    // requires client to drop into Obj-C to do anything useful with the item
-    private native long _getItemForUTF(long ptr, int index, String utf);
-    public long getItemForUTF(int index, String utf) {
-        assertValid();
-        return _getItemForUTF(this.ptr, index, utf);
     }
     
     // paste the items with their corresponding representations
@@ -163,16 +142,13 @@ final class MacPasteboard {
     public long putItemsFromArray(Object[] items, int supportedActions) {
         return _putItemsFromArray(this.ptr, items, supportedActions);
     }
-    private Object[] hashMapToArray(HashMap hashmap) {
+    private Object[] hashMapToArray(HashMap<String, Object> hashmap) {
         Object[] array = null;
         if ((hashmap != null) && (hashmap.size() > 0)) {
             array = new Object[hashmap.size()];
-            java.util.Set keys = hashmap.keySet();
-            java.util.Iterator iterator = keys.iterator();
             int index = 0;
-            while (iterator.hasNext() == true) {
+            for (String utf : hashmap.keySet()) {
                 Object item[] = new Object[2];
-                String utf = (String)iterator.next();
                 item[MacPasteboard.UtfIndex] = utf;
                 item[MacPasteboard.ObjectIndex] = hashmap.get(utf);
                 array[index++] = item;
@@ -217,7 +193,7 @@ final class MacPasteboard {
     private native void _release(long ptr);
     public void release() {
         assertValid();
-        if ((this.ptr != 0L) && (this.user == true)) {
+        if ((this.ptr != 0L) && (this.user)) {
             _release(ptr);
         }
         this.ptr = 0L;

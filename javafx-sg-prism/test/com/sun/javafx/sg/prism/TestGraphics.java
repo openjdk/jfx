@@ -44,7 +44,6 @@ import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
-import com.sun.prism.RenderingContext;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
@@ -228,7 +227,6 @@ public class TestGraphics extends BaseGraphics {
         @Override public ShapeRep createArcRep(boolean needs3D) { return null; }
         @Override public void addFactoryListener(ResourceFactoryListener l) { }
         @Override public void removeFactoryListener(ResourceFactoryListener l) { }
-        @Override public RenderingContext createRenderingContext(PresentableState pstate) { return null; }
         @Override public void dispose() { }
 
         @Override public PhongMaterial createPhongMaterial() { return null; }

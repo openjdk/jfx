@@ -76,6 +76,7 @@ public class ImageData {
     private final Rectangle bounds;
     private BaseTransform transform;
     private Throwable fromwhere;
+    private boolean reusable;
 
     public ImageData(FilterContext fctx, Filterable image, Rectangle bounds) {
         this(fctx, image, bounds, BaseTransform.IDENTITY_TRANSFORM);
@@ -113,6 +114,10 @@ public class ImageData {
     {
         this(original.fctx, original.image, bounds, transform);
         this.sharedOwner = original;
+    }
+
+    public void setReusable(boolean reusable) {
+        this.reusable = reusable;
     }
 
     public FilterContext getFilterContext() {
@@ -166,8 +171,14 @@ public class ImageData {
         return refcount;
     }
 
-    public void addref() {
+    public boolean addref() {
+        if (reusable && refcount == 0) {
+            if (image != null) {
+                image.lock();
+            }
+        }
         ++refcount;
+        return image != null && !image.isLost();
     }
 
     public void unref() {
@@ -176,6 +187,10 @@ public class ImageData {
                 sharedOwner.unref();
                 sharedOwner = null;
             } else if (fctx != null && image != null) {
+                if (reusable) {
+                    image.unlock();
+                    return;
+                }
                 Effect.releaseCompatibleImage(fctx, image);
             }
             // Just in case - to prevent releasing it twice

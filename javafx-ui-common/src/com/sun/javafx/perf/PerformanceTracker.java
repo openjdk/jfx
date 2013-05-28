@@ -212,7 +212,10 @@ public abstract class PerformanceTracker {
     }
 
     public void frameRendered() {
-        calcFPS();
+        calcFPS();        
+        if (onRenderedFrameTask != null) {
+            onRenderedFrameTask.run();
+        }            
     }
 
     private void calcPulses() {
@@ -258,5 +261,9 @@ public abstract class PerformanceTracker {
     private Runnable onFirstPulse;
     public void setOnFirstPulse(Runnable value) { onFirstPulse = value; }
     public Runnable getOnFirstPulse() { return onFirstPulse; }
+    
+    private Runnable onRenderedFrameTask;
+    public void setOnRenderedFrameTask(Runnable value) { onRenderedFrameTask = value; }
+    public Runnable getOnRenderedFrameTask() { return onRenderedFrameTask; }        
 }
 

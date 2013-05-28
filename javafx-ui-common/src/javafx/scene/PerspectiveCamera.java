@@ -212,7 +212,11 @@ public  class PerspectiveCamera extends Camera {
         return PickRay.computePerspectivePickRay(x, y, fixedEyeAtCameraZero,
                 getViewWidth(), getViewHeight(),
                 getFieldOfView(), isVerticalFieldOfView(),
-                getCameraTransform(), pickRay);
+                getCameraTransform(),
+                //TODO: use actual clips always after rendering uses them
+                fixedEyeAtCameraZero ? getNearClip() : 0.0,
+                fixedEyeAtCameraZero ? getFarClip() : Double.POSITIVE_INFINITY,
+                pickRay);
     }
 
     @Override Camera copy() {

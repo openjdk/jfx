@@ -24,7 +24,7 @@
  */
 
 // no specular fragment shader
-#version 120
+//#version 120
 
 uniform sampler2D specularMap;
 

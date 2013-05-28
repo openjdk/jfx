@@ -38,7 +38,6 @@ import javafx.scene.text.Font;
  * parsed CSS values. Elsewhere the value returned by 
  * {@link #getValue()} is likely to be obscure, abstruse and perplexing. 
  */
-@com.sun.javafx.beans.annotations.NoBuilder
 public class ParsedValue<V, T> {
 
     /**

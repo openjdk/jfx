@@ -49,14 +49,12 @@ import com.sun.prism.PixelFormat;
 import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
 import com.sun.prism.Texture;
-import com.sun.prism.RenderingContext;
 import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.d3d.D3DResource.D3DRecord;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.impl.ps.BaseShaderFactory;
-import com.sun.prism.impl.BaseRenderingContext;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderFactory;
@@ -390,18 +388,6 @@ class D3DResourceFactory extends BaseShaderFactory {
             e.printStackTrace();
             throw new InternalError("Error loading stock shader " + name);
         }
-    }
-
-    /**
-     * Returns dummy implementation of the RenderingContext interface.
-     *
-     * @param pState the PresentableState from which to construct a rendering
-     * context. if pState is null, then the rendering context is in offscreen
-     * mode.
-     */
-    @Override
-    public RenderingContext createRenderingContext(PresentableState pState) {
-        return new BaseRenderingContext();
     }
 
     @Override

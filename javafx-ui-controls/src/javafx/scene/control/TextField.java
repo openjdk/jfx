@@ -40,7 +40,6 @@ import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
-import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -64,7 +63,6 @@ import javafx.css.Styleable;
  * 
  * @see TextArea
  */
-@DuplicateInBuilderProperties(properties = {"promptText"})
 public class TextField extends TextInputControl {
     // Text field content
     private static final class TextFieldContent implements Content {

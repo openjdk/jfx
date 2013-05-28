@@ -35,11 +35,9 @@ import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
-import com.sun.prism.RenderingContext;
 import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.BaseResourceFactory;
-import com.sun.prism.impl.BaseRenderingContext;
 import com.sun.prism.impl.ManagedResource;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.VertexBuffer;
@@ -153,17 +151,6 @@ class J2DResourceFactory extends BaseResourceFactory
         // This is only used by ES1 and ES2 - it should perhaps be
         // moved to an ES-specific subclass of ResourceFactory?
         throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    /**
-     * Returns dummy implementation of the RenderingContext interface.
-     *
-     * @param view the view to construct rendering context. if view is null,
-     *             then the rendering context is in offscreen mode.
-     */
-    @Override
-    public RenderingContext createRenderingContext(PresentableState pState) {
-        return new BaseRenderingContext();
     }
 
     public void dispose() {

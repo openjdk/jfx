@@ -26,7 +26,6 @@
 package javafx.stage;
 
 import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.assertSame;
@@ -40,16 +39,17 @@ import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubStage;
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.tk.Toolkit;
 
 public class StageTest {
-    
+
     private StubToolkit toolkit;
     private Stage s;
     private StubStage peer;
 
     private int initialNumTimesSetSizeAndLocation;
-    
+
     @Before
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
@@ -63,11 +63,11 @@ public class StageTest {
     public void tearDown() {
         s.hide();
     }
-    
+
     private void pulse() {
         toolkit.fireTestPulse();
     }
-    
+
     /**
      * Simple test which checks whether changing the x/y position of the Stage
      * ends up invoking the appropriate methods on the TKStage interface.
@@ -238,6 +238,82 @@ public class StageTest {
     }
 
     @Test
+    public void testCenterOnScreenForWindowOnSecondScreen() {
+        toolkit.setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
+                new ScreenConfiguration(1920, 160, 1440, 900,
+                                        1920, 160, 1440, 900, 96));
+
+        try {
+            s.setX(1920);
+            s.setY(160);
+            s.setWidth(300);
+            s.setHeight(200);
+
+            s.centerOnScreen();
+            pulse();
+
+            assertTrue(peer.x > 1930);
+            assertTrue(peer.y > 170);
+        } finally {
+            toolkit.resetScreens();
+        }
+    }
+
+    @Test
+    public void testCenterOnScreenForOwnerOnSecondScreen() {
+        toolkit.setScreens(
+                new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
+                new ScreenConfiguration(1920, 160, 1440, 900,
+                                        1920, 160, 1440, 900, 96));
+
+        try {
+            s.setX(1920);
+            s.setY(160);
+            s.setWidth(300);
+            s.setHeight(200);
+
+            final Stage childStage = new Stage();
+            childStage.setWidth(100);
+            childStage.setHeight(100);
+            childStage.initOwner(s);
+            childStage.show();
+
+            childStage.centerOnScreen();
+
+            assertTrue(childStage.getX() > 1930);
+            assertTrue(childStage.getY() > 170);
+        } finally {
+            toolkit.resetScreens();
+        }
+    }
+
+    @Test
+    public void testSwitchSceneWithFixedSize() {
+        Scene scene = new Scene(new Group(), 200, 100);
+        s.setScene(scene);
+
+        s.setWidth(400);
+        s.setHeight(300);
+
+        pulse();
+
+        assertEquals(400, peer.width, 0.0001);
+        assertEquals(300, peer.height, 0.0001);
+        assertEquals(400, scene.getWidth(), 0.0001);
+        assertEquals(300, scene.getHeight(), 0.0001);
+
+        s.setScene(scene = new Scene(new Group(), 220, 110));
+
+        pulse();
+
+        assertEquals(400, peer.width, 0.0001);
+        assertEquals(300, peer.height, 0.0001);
+        assertEquals(400, scene.getWidth(), 0.0001);
+        assertEquals(300, scene.getHeight(), 0.0001);
+    }
+
+    @Test
     public void testSetBoundsNotLostForAsyncNotifications() {
         s.setX(20);
         s.setY(50);
@@ -270,12 +346,12 @@ public class StageTest {
 
         s.setFullScreen(false);
         assertFalse(s.isFullScreen());
-        
+
         peer.releaseSingleNotification();
         assertTrue(s.isFullScreen());
 
         peer.releaseNotifications();
-        
+
         assertFalse(s.isFullScreen());
     }
 
@@ -312,7 +388,7 @@ public class StageTest {
         peer.setResizable(true);
         assertTrue(s.isResizable());
     }
-    
+
     @Test
     public void testIconifiedNotLostForAsyncNotifications() {
         peer.holdNotifications();

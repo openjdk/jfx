@@ -25,13 +25,11 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.scene.control.skin.PasswordFieldSkin;
 
 /**
  * Text field that masks entered characters.
  */
-@DuplicateInBuilderProperties(properties = {"promptText"})
 public class PasswordField extends TextField {
     public PasswordField() {
         getStyleClass().add("password-field");

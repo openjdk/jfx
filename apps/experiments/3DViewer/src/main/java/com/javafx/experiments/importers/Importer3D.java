@@ -13,6 +13,7 @@ import com.javafx.experiments.importers.max.MaxLoader;
 import com.javafx.experiments.importers.maya.MayaGroup;
 import com.javafx.experiments.importers.maya.MayaImporter;
 import com.javafx.experiments.importers.obj.ObjImporter;
+import com.javafx.experiments.importers.obj.PolyObjImporter;
 
 /**
  * Base Importer for all supported 3D file formats
@@ -78,10 +79,11 @@ public final class Importer3D {
     }
 
     private static Node loadObjFile(String fileUrl) throws IOException {
-        ObjImporter reader = new ObjImporter(fileUrl);
+//        ObjImporter reader = new ObjImporter(fileUrl);
+        PolyObjImporter reader = new PolyObjImporter(fileUrl);
         Group res = new Group();
         for (String key : reader.getMeshes()) {
-            res.getChildren().add(reader.buildMeshView(key));
+            res.getChildren().add(reader.buildPolygonMeshView(key));
         }
         return res;
     }

@@ -8,9 +8,6 @@ import com.sun.javafx.webkit.KeyCodeMap;
 import com.sun.webkit.event.WCKeyEvent;
 import com.sun.webkit.event.WCMouseEvent;
 import com.sun.webkit.event.WCMouseWheelEvent;
-import com.sun.webkit.event.WCTouchEvent;
-import com.sun.webkit.event.WCTouchPoint;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -85,11 +82,6 @@ final class EventSender {
      * The current modifiers for touch events.
      */
     private int modifiers;
-
-    /**
-     * The current points for touch events.
-     */
-    private final List<WCTouchPoint> points = new ArrayList<WCTouchPoint>();
 
     /**
      * Creates a new {@code EventSender}.
@@ -203,7 +195,7 @@ final class EventSender {
      * method of the DRT event sender object.
      */
     private void touchStart() {
-        dispatchTouchEvent(WCTouchEvent.TOUCH_START);
+        throw new UnsupportedOperationException("touchStart");
     }
 
     /**
@@ -211,7 +203,7 @@ final class EventSender {
      * method of the DRT event sender object.
      */
     private void touchCancel() {
-        dispatchTouchEvent(WCTouchEvent.TOUCH_CANCEL);
+        throw new UnsupportedOperationException("touchCancel");
     }
 
     /**
@@ -219,7 +211,7 @@ final class EventSender {
      * method of the DRT event sender object.
      */
     private void touchMove() {
-        dispatchTouchEvent(WCTouchEvent.TOUCH_MOVE);
+        throw new UnsupportedOperationException("touchMove");
     }
 
     /**
@@ -227,7 +219,7 @@ final class EventSender {
      * method of the DRT event sender object.
      */
     private void touchEnd() {
-        dispatchTouchEvent(WCTouchEvent.TOUCH_END);
+        throw new UnsupportedOperationException("touchEnd");
     }
 
     /**
@@ -235,13 +227,7 @@ final class EventSender {
      * method of the DRT event sender object.
      */
     private void addTouchPoint(int x, int y) {
-        int id = 0;
-        for (WCTouchPoint point : points) {
-            if (id == point.getID())
-                id++;
-        }
-        points.add(new WCTouchPoint(id, WCTouchPoint.STATE_PRESSED, x, y, x, y));
-
+        throw new UnsupportedOperationException("addTouchPoint");
     }
 
     /**
@@ -249,7 +235,7 @@ final class EventSender {
      * method of the DRT event sender object.
      */
     private void updateTouchPoint(int i, int x, int y) {
-        points.get(i).update(x, y);
+        throw new UnsupportedOperationException("updateTouchPoint");
     }
 
     /**
@@ -257,7 +243,7 @@ final class EventSender {
      * method of the DRT event sender object.
      */
     private void cancelTouchPoint(int i) {
-        points.get(i).update(WCTouchPoint.STATE_CANCELLED);
+        throw new UnsupportedOperationException("cancelTouchPoint");
     }
 
     /**
@@ -265,7 +251,7 @@ final class EventSender {
      * method of the DRT event sender object.
      */
     private void releaseTouchPoint(int i) {
-        points.get(i).update(WCTouchPoint.STATE_RELEASED);
+        throw new UnsupportedOperationException("releaseTouchPoint");
     }
 
     /**
@@ -273,7 +259,7 @@ final class EventSender {
      * method of the DRT event sender object.
      */
     private void clearTouchPoints() {
-        points.clear();
+        throw new UnsupportedOperationException("clearTouchPoints");
     }
 
     /**
@@ -358,27 +344,6 @@ final class EventSender {
                 isSet(modifiers, META),
                 false
         ));
-    }
-
-    private void dispatchTouchEvent(int type) {
-        webPage.dispatchTouchEvent(new WCTouchEvent(
-                type, points,
-                getEventTime(),
-                isSet(modifiers, SHIFT),
-                isSet(modifiers, CTRL),
-                isSet(modifiers, ALT),
-                isSet(modifiers, META)
-        ));
-        Iterator<WCTouchPoint> it = points.iterator();
-        while (it.hasNext()) {
-            WCTouchPoint point = it.next();
-            if (WCTouchPoint.STATE_RELEASED == point.getState()) {
-                it.remove();
-            }
-            else {
-                point.update(WCTouchPoint.STATE_STATIONARY);
-            }
-        }
     }
 
     private static boolean isSet(int modifiers, int modifier) {

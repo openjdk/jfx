@@ -25,14 +25,12 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link Double}
  * (and double primitive) values.</p>
  */
-@NoBuilder
 public class DoubleStringConverter extends StringConverter<Double> {
     /** {@inheritDoc} */
     @Override public Double fromString(String value) {

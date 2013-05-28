@@ -40,7 +40,7 @@ public:
     D3DMesh(D3DContext *pCtx);
     virtual ~D3DMesh();
     boolean buildBuffers(float *vertexBuffer, UINT vertexBufferSize,
-            UINT *indexBuffer, UINT indexBufferSize);
+            USHORT *indexBuffer, UINT indexBufferSize);
     DWORD getVertexFVF();
     IDirect3DIndexBuffer9 *getIndexBuffer();
     IDirect3DVertexBuffer9 *getVertexBuffer();
@@ -55,6 +55,8 @@ private:
     UINT numVertices;
     UINT numIndices;
 
+    void releaseIndexBuffer();
+    void releaseVertexBuffer();
 };
 
 #endif  /* D3DMESH_H */

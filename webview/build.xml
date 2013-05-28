@@ -22,7 +22,6 @@
             <class name="com.sun.webkit.event.WCKeyEvent"/>
             <class name="com.sun.webkit.event.WCMouseEvent"/>
             <class name="com.sun.webkit.event.WCMouseWheelEvent"/>
-            <class name="com.sun.webkit.event.WCTouchEvent"/>
             <class name="com.sun.webkit.graphics.GraphicsDecoder"/>
             <class name="com.sun.webkit.graphics.RenderMediaControls"/>
             <class name="com.sun.webkit.graphics.RenderTheme"/>

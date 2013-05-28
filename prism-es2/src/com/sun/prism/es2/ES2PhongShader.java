@@ -153,12 +153,13 @@ class ES2PhongShader {
         ES2Shader shader = shaders[diffuseState.ordinal()][specularState.ordinal()]
                 [selfIllumState.ordinal()][bumpState.ordinal()][numLights];
         if (shader == null) {
+            String fragShader = lightingShaderParts[numLights].replace("vec4 apply_diffuse();", diffuseShaderParts[diffuseState.ordinal()]);
+            fragShader = fragShader.replace("vec4 apply_specular();", SpecularShaderParts[specularState.ordinal()]);
+            fragShader = fragShader.replace("vec3 apply_normal();", normalMapShaderParts[bumpState.ordinal()]);
+            fragShader = fragShader.replace("vec4 apply_selfIllum();", selfIllumShaderParts[selfIllumState.ordinal()]);
+                  
             String[] pixelShaders = new String[]{
-                diffuseShaderParts[diffuseState.ordinal()],
-                SpecularShaderParts[specularState.ordinal()],
-                selfIllumShaderParts[selfIllumState.ordinal()],
-                normalMapShaderParts[bumpState.ordinal()],
-                lightingShaderParts[numLights]
+                fragShader
             };
 
             //TODO: 3D - should be done in state checking?
@@ -190,10 +191,10 @@ class ES2PhongShader {
                 material.diffuseColor.getGreen(), material.diffuseColor.getBlue(),
                 material.diffuseColor.getAlpha());
 
-        context.updateTexture(ES2PhongMaterial.DIFFUSE, material.maps[ES2PhongMaterial.DIFFUSE].getTexture());
-        context.updateTexture(ES2PhongMaterial.SPECULAR, material.maps[ES2PhongMaterial.SPECULAR].getTexture());
-        context.updateTexture(ES2PhongMaterial.BUMP, material.maps[ES2PhongMaterial.BUMP].getTexture());
-        context.updateTexture(ES2PhongMaterial.SELF_ILLUM, material.maps[ES2PhongMaterial.SELF_ILLUM].getTexture());
+        context.updateTexture(0, material.maps[ES2PhongMaterial.DIFFUSE].getTexture());
+        context.updateTexture(1, material.maps[ES2PhongMaterial.SPECULAR].getTexture());
+        context.updateTexture(2, material.maps[ES2PhongMaterial.BUMP].getTexture());
+        context.updateTexture(3, material.maps[ES2PhongMaterial.SELF_ILLUM].getTexture());
 
         shader.setConstant("ambientColor", meshView.getAmbientLightRed(),
                 meshView.getAmbientLightGreen(), meshView.getAmbientLightBlue());

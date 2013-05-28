@@ -1518,6 +1518,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseWheelEvent
     return bool_to_jbool(consumeEvent);
 }
 
+#if ENABLE(TOUCH_EVENTS)
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessTouchEvent
     (JNIEnv* env, jobject self, jlong pPage, jint id, jobject touchData,
      jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jfloat timestamp)
@@ -1534,6 +1535,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessTouchEvent
     bool consumeEvent = frame->eventHandler()->handleTouchEvent(ev);
     return bool_to_jbool(consumeEvent);
 }
+#endif
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
     (JNIEnv* env, jobject self, jlong pPage,

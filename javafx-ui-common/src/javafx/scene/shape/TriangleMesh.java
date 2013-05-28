@@ -76,6 +76,20 @@ import javafx.scene.transform.Rotate;
  * where p0, p1, p2 and p3 are indices into the points array, and t0, t1, t2
  * and t3 are indices into the texCoords array.
  * 
+ * <p> The maximum number of vertices in the mesh can not exceed 65536.
+ * Therefore the maximum array lengths are 65536 * 3 (x, y, z per point) for points,
+ * and 65536 * 2 (u, v per texture coordinate) for texCoords. 
+ * The length of {@code points}, {@code texCoords}, and {@code faces} must be
+ * divisible by 3, 2, and 6 respectively.
+ * The values in the faces array must be within the range of the number of vertices
+ * in the points array (0 to points.length / 3 - 1) for the point indices and 
+ * within the range of the number of the vertices in 
+ * the texCoords array (0 to texCoords.length / 2 - 1) for the texture coordinate indices.
+ * 
+ * <p> A warning will be recorded to the logger and the mesh will not be rendered
+ * (and will have an empty bounds) if any of the array lengths are invalid
+ * or if any of the values in the faces array are out of range.
+ * 
  * @since JavaFX 8
  */
 public class TriangleMesh extends Mesh {
@@ -84,6 +98,12 @@ public class TriangleMesh extends Mesh {
     public static final int NUM_COMPONENTS_PER_TEXCOORD = 2;
     public static final int NUM_COMPONENTS_PER_FACE = 6;
 
+    // TODO: 3D - Need to validate the size and range of these arrays.
+    // A warning will be recorded to the logger and the mesh will have an empty
+    // bounds if the validation failed. (RT-30451)
+    // The maximum length for points (65536 * 3), texCoords (65536 * 2)
+    // or faces (65536 * 6) arrays. The values in faces must be within range.
+    // The length of points, texCoords and faces must be divisible by 3, 2 and 6 respectively.
     private final ObservableFloatArray points = FXCollections.observableFloatArray();
     private final ObservableFloatArray texCoords = FXCollections.observableFloatArray();
     private final ObservableIntegerArray faces = FXCollections.observableIntegerArray();
@@ -133,7 +153,7 @@ public class TriangleMesh extends Mesh {
      * 6 integers p0, t0, p1, t1, p3, t3, where p0, p1 and p2 are indices of 
      * points in points {@code ObservableFloatArray} and t0, t1 and t2 are 
      * indices of texture coordinates in texCoords {@code ObservableFloatArray}.
-     * Both indices are in terms of elements (points or textCoords), not individual
+     * Both indices are in terms of vertices (points or texCoords), not individual
      * floats.
      */    
     public ObservableIntegerArray getFaces() {
@@ -148,7 +168,7 @@ public class TriangleMesh extends Mesh {
      * between adjacent faces.
      *
      * <p> The face smoothing group is represented by an array of bits and up to
-     * 32 unique groups is possible; (1 <<  0) to (1 << 31). The face smoothing
+     * 32 unique groups is possible; (1 << 0) to (1 << 31). The face smoothing
      * group value can range from 0 (no smoothing group) to all 32 groups. A face
      * can belong to zero or more smoothing groups. A face is a member of group
      * N if bit N is set, for example, groups |= (1 << N). A value of 0 implies
@@ -186,17 +206,10 @@ public class TriangleMesh extends Mesh {
 
     synchronized void decRef() {
         this.refCount -= 1;
-        if (this.refCount == 0) {
-            release();
-        }
-    }
-
-    void release(){
-        // TODO: 3D - release native resoure
     }
 
     private PGTriangleMesh peer;
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -343,9 +356,7 @@ public class TriangleMesh extends Mesh {
 
         final double t = f * e2.dotProduct(q);
 
-        final double minDistance = pickRay.isParallel()
-                ? Double.NEGATIVE_INFINITY : 0.0;
-        if (t >= minDistance) {
+        if (t >= pickRay.getNearClip() && t <= pickRay.getFarClip()) {
             if (cullFace != CullFace.NONE) {
                 final Point3D normal = e1.crossProduct(e2);
                 final double nangle = normal.angle(

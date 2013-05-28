@@ -322,11 +322,14 @@ public class Box extends Shape3D {
         char side = side0;
         double t = t0;
         final CullFace cullFace = getCullFace();
-        final double minDistance = pickRay.isParallel()
-                ? Double.NEGATIVE_INFINITY : 0.0;
+        final double minDistance = pickRay.getNearClip();
+        final double maxDistance = pickRay.getFarClip();
 
+        if (t0 > maxDistance) {
+            return false;
+        }
         if (t0 < minDistance || cullFace == CullFace.FRONT) {
-            if (t1 >= minDistance && cullFace != CullFace.BACK) {
+            if (t1 >= minDistance && t1 <= maxDistance && cullFace != CullFace.BACK) {
                 side = side1;
                 t = t1;
             } else {

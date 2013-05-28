@@ -43,64 +43,86 @@ public class NGExternalNode extends NGNode implements PGExternalNode {
     private Texture dsttexture;
 
     private BufferData bufferData;
-    private final AtomicReference<RenderData> renderData = new AtomicReference<RenderData>(null);
+    private final AtomicReference<RenderData> renderData = new AtomicReference<RenderData>(null);    
+    private RenderData rd; // last rendered data
 
     private volatile ReentrantLock bufferLock;
 
     @Override
     protected void renderContent(Graphics g) {
         
-        RenderData rd = renderData.getAndSet(null);
+        RenderData curRenderData = renderData.getAndSet(null);
         
+        if (curRenderData != null) {
+            rd = curRenderData;
+        }
         if (rd == null) return;
-            
+        
         int x = rd.bdata.srcbounds.x;
         int y = rd.bdata.srcbounds.y;
         int w = rd.bdata.srcbounds.width;
         int h = rd.bdata.srcbounds.height;
 
-        if ((dsttexture == null) ||
-            (dsttexture.getContentWidth() != rd.bdata.dstwidth) ||
-            (dsttexture.getContentHeight() != rd.bdata.dstheight))
-        {
-            ResourceFactory factory = g.getResourceFactory();
-            if (!factory.isDeviceReady()) {
-                System.err.println("NGExternalNode: graphics device is not ready");
-                return;
-            }
-            if (dsttexture != null) {
-                dsttexture.dispose();
-            }
-            dsttexture =
-                factory.createTexture(PixelFormat.INT_ARGB_PRE,
-                                      Texture.Usage.DYNAMIC,
-                                      Texture.WrapMode.CLAMP_NOT_NEEDED,
-                                      rd.bdata.dstwidth, rd.bdata.dstheight);
+        if (dsttexture != null) {
             
-            if (dsttexture == null) {
-                System.err.println("NGExternalNode: failed to create a texture");
-                return;
+            dsttexture.lock();
+            
+            if (dsttexture.isSurfaceLost() ||
+               (dsttexture.getContentWidth() != rd.bdata.dstwidth) ||
+               (dsttexture.getContentHeight() != rd.bdata.dstheight))
+            {
+                dsttexture.unlock();
+                dsttexture.dispose();
+                dsttexture = createTexture(g, rd);
             }
+        } else {
+            dsttexture = createTexture(g, rd);
         }
-        
-        bufferLock.lock();
+        if (dsttexture == null) {
+            return;
+        }        
         try {
-            dsttexture.update(rd.bdata.srcbuffer,
-                              PixelFormat.INT_ARGB_PRE,
-                              x + rd.dirtyRect.x, y + rd.dirtyRect.y, // dst
-                              x + rd.dirtyRect.x, y + rd.dirtyRect.y, rd.dirtyRect.width, rd.dirtyRect.height, // src
-                              rd.bdata.linestride * 4,
-                              false);
-        } finally {
-            bufferLock.unlock();
+            if (curRenderData != null) {
+                bufferLock.lock();
+                try {
+                    dsttexture.update(rd.bdata.srcbuffer,
+                                      PixelFormat.INT_ARGB_PRE,
+                                      x + rd.dirtyRect.x, y + rd.dirtyRect.y, // dst
+                                      x + rd.dirtyRect.x, y + rd.dirtyRect.y,  // src
+                                      rd.dirtyRect.width, rd.dirtyRect.height, // src
+                                      rd.bdata.linestride * 4,
+                                      false);
+                } finally {
+                    bufferLock.unlock();
+                }
+                if (rd.clearTarget) {
+                    g.clear();
+                }
+            }
+            g.drawTexture(dsttexture,
+                          x, y, x + w, y + h, // dst
+                          x, y, x + w, y + h); // src
+        } finally {        
+            dsttexture.unlock();
         }
-
-        if (rd.clearTarget) {
-            g.clear();
+    }
+    
+    private Texture createTexture(Graphics g, RenderData rd) {
+        ResourceFactory factory = g.getResourceFactory();
+        if (!factory.isDeviceReady()) {
+            System.err.println("NGExternalNode: graphics device is not ready");
+            return null;
+        }                
+        Texture txt = factory.createTexture(PixelFormat.INT_ARGB_PRE,
+                                            Texture.Usage.DYNAMIC,
+                                            Texture.WrapMode.CLAMP_NOT_NEEDED,
+                                            rd.bdata.dstwidth, rd.bdata.dstheight);            
+        if (txt != null) {
+            txt.contentsUseful();
+        } else {
+            System.err.println("NGExternalNode: failed to create a texture");            
         }
-        g.drawTexture(dsttexture,
-                      x, y, x + w, y + h, // dst
-                      x, y, x + w, y + h); // src
+        return txt;
     }
 
     @Override

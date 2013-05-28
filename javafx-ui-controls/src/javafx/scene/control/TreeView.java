@@ -852,7 +852,12 @@ public class TreeView<T> extends Control {
      */
     public static class EditEvent<T> extends Event {
         private static final long serialVersionUID = -4437033058917528976L;
-        
+
+        /**
+         * Common supertype for all edit event types.
+         */
+        public static final EventType<?> ANY = EDIT_ANY_EVENT;
+
         private final T oldValue;
         private final T newValue;
         private transient final TreeItem<T> treeItem;

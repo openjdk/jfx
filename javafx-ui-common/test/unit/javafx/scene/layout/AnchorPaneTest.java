@@ -41,8 +41,8 @@ public class AnchorPaneTest {
         child.relocate(10, 20); // should honor position if no anchors set
         anchorpane.getChildren().add(child);
 
-        assertEquals(110, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(220, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(310, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(420, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(310, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(420, anchorpane.prefHeight(-1), 1e-100);
 
@@ -67,11 +67,11 @@ public class AnchorPaneTest {
         anchorpane.setTopAnchor(child, 10.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(100, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(210, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(300, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(410, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(300, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(410, anchorpane.prefHeight(-1), 1e-100);
-        
+
         anchorpane.autosize();
         anchorpane.layout();
         assertEquals(0, child.getLayoutX(), 1e-100);
@@ -93,8 +93,8 @@ public class AnchorPaneTest {
         anchorpane.setLeftAnchor(child, 10.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(110, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(200, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(310, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(400, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(310, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(400, anchorpane.prefHeight(-1), 1e-100);
 
@@ -119,8 +119,8 @@ public class AnchorPaneTest {
         anchorpane.setBottomAnchor(child, 10.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(100, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(210, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(300, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(410, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(300, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(410, anchorpane.prefHeight(-1), 1e-100);
 
@@ -145,8 +145,8 @@ public class AnchorPaneTest {
         anchorpane.setRightAnchor(child, 10.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(110, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(200, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(310, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(400, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(310, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(400, anchorpane.prefHeight(-1), 1e-100);
 
@@ -172,8 +172,8 @@ public class AnchorPaneTest {
         anchorpane.setLeftAnchor(child, 10.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(110, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(220, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(310, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(420, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(310, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(420, anchorpane.prefHeight(-1), 1e-100);
 
@@ -199,7 +199,7 @@ public class AnchorPaneTest {
         anchorpane.setBottomAnchor(child, 10.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(100, anchorpane.minWidth(-1), 1e-100);
+        assertEquals(300, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
         assertEquals(230, anchorpane.minHeight(-1), 1e-100);
         assertEquals(300, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(430, anchorpane.prefHeight(-1), 1e-100);
@@ -226,8 +226,8 @@ public class AnchorPaneTest {
         anchorpane.setRightAnchor(child, 10.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(110, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(220, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(310, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(420, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(310, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(420, anchorpane.prefHeight(-1), 1e-100);
 
@@ -253,8 +253,8 @@ public class AnchorPaneTest {
         anchorpane.setLeftAnchor(child, 10.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(110, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(220, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(310, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(420, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(310, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(420, anchorpane.prefHeight(-1), 1e-100);
 
@@ -281,7 +281,7 @@ public class AnchorPaneTest {
         anchorpane.getChildren().add(child);
 
         assertEquals(130, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(200, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(400, anchorpane.minHeight(-1), 1e-100); // Not restricted, will be always at pref. size
         assertEquals(330, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(400, anchorpane.prefHeight(-1), 1e-100);
 
@@ -309,7 +309,7 @@ public class AnchorPaneTest {
         anchorpane.getChildren().add(child);
 
         assertEquals(130, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(230, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(430, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(330, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(430, anchorpane.prefHeight(-1), 1e-100);
 
@@ -337,7 +337,7 @@ public class AnchorPaneTest {
         anchorpane.getChildren().add(child);
 
         assertEquals(130, anchorpane.minWidth(-1), 1e-100);
-        assertEquals(230, anchorpane.minHeight(-1), 1e-100);
+        assertEquals(430, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
         assertEquals(330, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(430, anchorpane.prefHeight(-1), 1e-100);
 
@@ -364,7 +364,7 @@ public class AnchorPaneTest {
         anchorpane.setLeftAnchor(child, 30.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(130, anchorpane.minWidth(-1), 1e-100);
+        assertEquals(330, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
         assertEquals(230, anchorpane.minHeight(-1), 1e-100);
         assertEquals(330, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(430, anchorpane.prefHeight(-1), 1e-100);
@@ -392,7 +392,7 @@ public class AnchorPaneTest {
         anchorpane.setRightAnchor(child, 30.0);
         anchorpane.getChildren().add(child);
 
-        assertEquals(130, anchorpane.minWidth(-1), 1e-100);
+        assertEquals(330, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
         assertEquals(230, anchorpane.minHeight(-1), 1e-100);
         assertEquals(330, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(430, anchorpane.prefHeight(-1), 1e-100);
@@ -593,34 +593,34 @@ public class AnchorPaneTest {
 
     @Test public void testAnchorPaneWithChildPrefSizeLessThanMinSize() {
         AnchorPane anchorpane = new AnchorPane();
-        MockResizable resizable = new MockResizable(30, 30, 20, 20, Double.MAX_VALUE, Double.MAX_VALUE);        
+        MockResizable resizable = new MockResizable(30, 30, 20, 20, Double.MAX_VALUE, Double.MAX_VALUE);
         anchorpane.getChildren().add(resizable);
 
         anchorpane.autosize();
         anchorpane.layout();
-        
+
         assertEquals(0, resizable.getLayoutX(), 1e-100);
         assertEquals(0, resizable.getLayoutY(), 1e-100);
         assertEquals(30, resizable.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(30, resizable.getLayoutBounds().getHeight(), 1e-100);
     }
-    
+
     @Test public void testAnchorPanePrefHeightWithHorizontalBiasedChild_RT21745() {
         AnchorPane anchorpane = new AnchorPane();
-        
-        AnchorPane internalAnchorpane = new AnchorPane();        
+
+        AnchorPane internalAnchorpane = new AnchorPane();
 
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 30, 256);
-                        
+
         internalAnchorpane.getChildren().add(biased);
         anchorpane.getChildren().add(internalAnchorpane);
-      
+
         anchorpane.resize(500, 500);
-        anchorpane.layout();        
-        
+        anchorpane.layout();
+
         assertEquals(30, anchorpane.prefWidth(-1), 1e-100);
         assertEquals(256, anchorpane.prefHeight(-1), 1e-100);
         assertEquals(30, internalAnchorpane.prefWidth(-1), 1e-100);
-        assertEquals(256, internalAnchorpane.prefHeight(-1), 1e-100);        
-    }    
+        assertEquals(256, internalAnchorpane.prefHeight(-1), 1e-100);
+    }
 }

@@ -50,8 +50,8 @@ import javafx.event.EventType;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 
+import com.sun.javafx.Utils;
 import com.sun.javafx.WeakReferenceQueue;
-import com.sun.javafx.beans.annotations.NoInit;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.stage.WindowHelper;
@@ -109,7 +109,6 @@ public class Window implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @NoInit
     public static Iterator<Window> impl_getWindows() {
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
@@ -217,7 +216,7 @@ public class Window implements EventTarget {
 
     private static final float CENTER_ON_SCREEN_X_FRACTION = 1.0f / 2;
     private static final float CENTER_ON_SCREEN_Y_FRACTION = 1.0f / 3;
-    
+
     /**
      * Sets x and y properties on this Window so that it is centered on the screen.
      */
@@ -225,8 +224,8 @@ public class Window implements EventTarget {
         xExplicit = false;
         yExplicit = false;
         if (impl_peer != null) {
-            Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-            double centerX = 
+            Rectangle2D bounds = getWindowScreen().getVisualBounds();
+            double centerX =
                     bounds.getMinX() + (bounds.getWidth() - getWidth())
                                            * CENTER_ON_SCREEN_X_FRACTION;
             double centerY =
@@ -385,7 +384,7 @@ public class Window implements EventTarget {
      */
     @Deprecated
     public final void setFocused(boolean value) { focused.set(value); }
-    
+
     /**
      * Requests that this {@code Window} get the input focus.
      */
@@ -451,9 +450,9 @@ public class Window implements EventTarget {
                 // performed in Window.visibleChanging()
                 if (isShowing()) {
                     newScene.getRoot().impl_reapplyCSS();
-                    getScene().impl_preferredSize();
 
                     if (!widthExplicit || !heightExplicit) {
+                        getScene().impl_preferredSize();
                         adjustSize(true);
                     }
                 }
@@ -737,7 +736,7 @@ public class Window implements EventTarget {
                         peerBoundsConfigurator.setSize(
                                 getWidth(), getHeight(), -1, -1);
                     }
-                    
+
                     if (!xExplicit && !yExplicit) {
                         centerOnScreen();
                     } else {
@@ -1037,7 +1036,31 @@ public class Window implements EventTarget {
     final void applyBounds() {
         peerBoundsConfigurator.apply();
     }
-    
+
+    Window getWindowOwner() {
+        return null;
+    }
+
+    private Screen getWindowScreen() {
+        Window window = this;
+        do {
+            if (!Double.isNaN(window.getX())
+                    && !Double.isNaN(window.getY())
+                    && !Double.isNaN(window.getWidth())
+                    && !Double.isNaN(window.getHeight())) {
+                return Utils.getScreenForRectangle(
+                                     new Rectangle2D(window.getX(),
+                                                     window.getY(),
+                                                     window.getWidth(),
+                                                     window.getHeight()));
+            }
+
+            window = window.getWindowOwner();
+        } while (window != null);
+
+        return Screen.getPrimary();
+    }
+
     /**
      * Caches all requested bounds settings and applies them at once during
      * the next pulse.

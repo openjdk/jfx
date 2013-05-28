@@ -13,7 +13,7 @@ import javafx.geometry.Point3D;
  * 
  * @author akouznet
  */
-public class Subdivision {
+public class SubDivision {
     
     private PolygonMesh oldMesh;
     private Map<Edge, EdgeInfo> edgeInfos;
@@ -23,7 +23,7 @@ public class Subdivision {
     private int[] reindex;
     private int newPointIndex;
 
-    public Subdivision(PolygonMesh oldMesh) {
+    public SubDivision(PolygonMesh oldMesh) {
         this.oldMesh = oldMesh;
     }
     
@@ -57,7 +57,7 @@ public class Subdivision {
     }
     
     public static PolygonMesh subdivide(PolygonMesh oldMesh) {
-        return new Subdivision(oldMesh).subdivide();
+        return new SubDivision(oldMesh).subdivide();
     }
 
     private void addEdge(Edge edge, FaceInfo faceInfo, Point3D midPoint) {

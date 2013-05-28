@@ -25,13 +25,11 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link String} values.</p>
  */
-@NoBuilder
 public class DefaultStringConverter extends StringConverter<String> {
     /** {@inheritDoc} */
     @Override public String toString(String value) {

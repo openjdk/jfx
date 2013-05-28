@@ -601,6 +601,11 @@ public abstract class PopupWindow extends Window {
 
     }
 
+    @Override
+    Window getWindowOwner() {
+        return getOwnerWindow();
+    }
+
     private void startMonitorOwnerEvents(final Window ownerWindowValue) {
         final EventRedirector parentEventRedirector =
                 ownerWindowValue.getInternalEventDispatcher()
@@ -674,25 +679,13 @@ public abstract class PopupWindow extends Window {
         }
     }
 
-    private static Window getOwnerWindow(final Window window) {
-       if (window instanceof PopupWindow) {
-           return ((PopupWindow) window).getOwnerWindow();
-       }
-
-       if (window instanceof Stage) {
-           return ((Stage) window).getOwner();
-       }
-
-       return null;
-    }
-
     private static boolean wouldCreateCycle(Window parent, final Window child) {
        while (parent != null) {
            if (parent == child) {
                return true;
            }
 
-           parent = getOwnerWindow(parent);
+           parent = parent.getWindowOwner();
        }
 
        return false;

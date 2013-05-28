@@ -107,7 +107,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
         return (EventType<TreeModificationEvent<T>>) CHECK_BOX_SELECTION_CHANGED_EVENT;
     }
     private static final EventType<? extends Event> CHECK_BOX_SELECTION_CHANGED_EVENT
-            = new EventType<Event>(Event.ANY, "checkBoxSelectionChangedEvent"); 
+            = new EventType<Event>(TreeModificationEvent.ANY, "checkBoxSelectionChangedEvent");
 
     /***************************************************************************
      *                                                                         *
@@ -332,6 +332,12 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
 
         private transient final CheckBoxTreeItem<T> treeItem;
         private final boolean selectionChanged;
+
+        /**
+         * Common supertype for all tree modification event types.
+         */
+        public static final EventType<Event> ANY =
+                new EventType<Event> (Event.ANY, "TREE_MODIFICATION");
 
         /**
          * Creates a default TreeModificationEvent instance to represent the 

@@ -63,6 +63,9 @@ public class SearchBox extends TextField implements ChangeListener<String>{
             }
         });
         clearButton.setVisible(false);
+        clearButton.setManaged(false);
+        innerBackground.setManaged(false);
+        icon.setManaged(false);
     }
 
     @Override protected void layoutChildren() {

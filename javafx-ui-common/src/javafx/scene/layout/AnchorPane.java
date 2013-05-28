@@ -252,8 +252,9 @@ public class AnchorPane extends Pane {
         return computeHeight(false, width);
     }
 
-    private double computeWidth(boolean minimum, double height) {
+    private double computeWidth(final boolean minimum, final double height) {
         double max = 0;
+        double contentHeight = height != -1 ? height - getInsets().getTop() - getInsets().getBottom() : -1;
         final List<Node> children = getChildren();
         for (int i=0, size=children.size(); i<size; i++) {
             Node child = children.get(i);
@@ -264,11 +265,13 @@ public class AnchorPane extends Pane {
                 double left = leftAnchor != null? leftAnchor :
                     (rightAnchor != null? 0 : child.getLayoutBounds().getMinX() + child.getLayoutX());
                 double right = rightAnchor != null? rightAnchor : 0;
-                if (child.getContentBias() == Orientation.VERTICAL) {
+                double childHeight = -1;
+                if (child.getContentBias() == Orientation.VERTICAL && contentHeight != -1) {
                     // The width depends on the node's height!
-                    height = (minimum? child.minHeight(-1) : child.prefHeight(-1));
+                    childHeight = computeChildHeight(child, getTopAnchor(child), getBottomAnchor(child), contentHeight, -1);
                 }
-                max = Math.max(max, left + (minimum? child.minWidth(height) : child.prefWidth(height)) + right);
+                max = Math.max(max, left + (minimum && leftAnchor != null && rightAnchor != null?
+                        child.minWidth(childHeight) : child.prefWidth(childHeight)) + right);
             }
         }
 
@@ -276,8 +279,9 @@ public class AnchorPane extends Pane {
         return insets.getLeft() + max + insets.getRight();
     }
 
-    private double computeHeight(boolean minimum, double width) {
+    private double computeHeight(final boolean minimum, final double width) {
         double max = 0;
+        double contentWidth = width != -1 ? width - getInsets().getLeft()- getInsets().getRight() : -1;
         final List<Node> children = getChildren();
         for (int i=0, size=children.size(); i<size; i++) {
             Node child = children.get(i);
@@ -288,10 +292,12 @@ public class AnchorPane extends Pane {
                 double top = topAnchor != null? topAnchor :
                     (bottomAnchor != null? 0 : child.getLayoutBounds().getMinY() + child.getLayoutY());
                 double bottom = bottomAnchor != null? bottomAnchor : 0;
-                if (child.getContentBias() == Orientation.HORIZONTAL) {
-                    width = (minimum? child.minWidth(-1) : child.prefWidth(-1));
+                double childWidth = -1;
+                if (child.getContentBias() == Orientation.HORIZONTAL && contentWidth != -1) {
+                    childWidth = computeChildWidth(child, getLeftAnchor(child), getRightAnchor(child), contentWidth, -1);
                 }
-                max = Math.max(max, top + (minimum? child.minHeight(width) : child.prefHeight(width)) + bottom);
+                max = Math.max(max, top + (minimum && topAnchor != null && bottomAnchor != null?
+                        child.minHeight(childWidth) : child.prefHeight(childWidth)) + bottom);
             }
         }
 
@@ -299,18 +305,18 @@ public class AnchorPane extends Pane {
         return insets.getTop() + max + insets.getBottom();
     }
 
-    private double computeChildWidth(Node child, Double leftAnchor, Double rightAnchor, double height) {
+    private double computeChildWidth(Node child, Double leftAnchor, Double rightAnchor, double areaWidth, double height) {
         if (leftAnchor != null && rightAnchor != null && child.isResizable()) {
             final Insets insets = getInsets();
-            return getWidth() - insets.getLeft() - insets.getRight() - leftAnchor - rightAnchor;
+            return areaWidth - insets.getLeft() - insets.getRight() - leftAnchor - rightAnchor;
         }
         return computeChildPrefAreaWidth(child, Insets.EMPTY, height);
     }
 
-    private double computeChildHeight(Node child, Double topAnchor, Double bottomAnchor, double width) {
+    private double computeChildHeight(Node child, Double topAnchor, Double bottomAnchor, double areaHeight, double width) {
         if (topAnchor != null && bottomAnchor != null && child.isResizable()) {
             final Insets insets = getInsets();
-            return getHeight() - insets.getTop() - insets.getBottom() - topAnchor - bottomAnchor;
+            return areaHeight - insets.getTop() - insets.getBottom() - topAnchor - bottomAnchor;
         }
         return computeChildPrefAreaHeight(child, Insets.EMPTY, width);
     }
@@ -330,22 +336,22 @@ public class AnchorPane extends Pane {
 
                 double x = child.getLayoutX() + childLayoutBounds.getMinX();
                 double y = child.getLayoutY() + childLayoutBounds.getMinY();
-                double w = -1;
-                double h = -1;
+                double w;
+                double h;
 
                 if (bias == Orientation.VERTICAL) {
                     // width depends on height
                     // WARNING: The order of these calls is crucial, there is some
                     // hidden ordering dependency here!
-                    h = computeChildHeight(child, topAnchor, bottomAnchor, -1);
-                    w = computeChildWidth(child, leftAnchor, rightAnchor, h);
+                    h = computeChildHeight(child, topAnchor, bottomAnchor, getHeight(), -1);
+                    w = computeChildWidth(child, leftAnchor, rightAnchor, getWidth(), h);
                 } else if (bias == Orientation.HORIZONTAL) {
-                    w = computeChildWidth(child, leftAnchor, rightAnchor, -1);
-                    h = computeChildHeight(child, topAnchor, bottomAnchor, w);
+                    w = computeChildWidth(child, leftAnchor, rightAnchor, getWidth(), -1);
+                    h = computeChildHeight(child, topAnchor, bottomAnchor, getHeight(), w);
                 } else {
                     // bias may be null
-                    w = computeChildWidth(child, leftAnchor, rightAnchor, -1);
-                    h = computeChildHeight(child, topAnchor, bottomAnchor, -1);
+                    w = computeChildWidth(child, leftAnchor, rightAnchor, getWidth(), -1);
+                    h = computeChildHeight(child, topAnchor, bottomAnchor, getHeight(), -1);
                 }
 
                 if (leftAnchor != null) {

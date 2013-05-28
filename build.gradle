@@ -330,7 +330,8 @@ defineProperty("RELEASE_MILESTONE", "ea")
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default
 // to building the normal desktop build for this machine
-defineProperty("COMPILE_TARGETS", IS_MAC ? "mac" : IS_WINDOWS ? "win" : IS_LINUX ? "linux" : "")
+project.ext.set("defaultHostTarget", IS_MAC ? "mac" : IS_WINDOWS ? "win" : IS_LINUX ? "linux" : "");
+defineProperty("COMPILE_TARGETS", "$defaultHostTarget")
 
 // Now we need to define the native compilation tasks. The set of parameters to
 // native compiliation depends on the target platform (and also to some extent what platform

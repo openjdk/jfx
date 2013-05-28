@@ -25,14 +25,12 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link Long}
  * (and long primitive) values.</p>
  */
-@NoBuilder
 public class LongStringConverter extends StringConverter<Long> {
     /** {@inheritDoc} */
     @Override public Long fromString(String value) {

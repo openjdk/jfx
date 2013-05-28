@@ -4592,7 +4592,7 @@ public abstract class Node implements EventTarget, Styleable {
             return false;
         }
         double t = -origZ / dirZ;
-        if (t < 0.0 && !pickRay.isParallel()) {
+        if (t < pickRay.getNearClip() || t > pickRay.getFarClip()) {
             return false;
         }
         double x = pickRay.getOriginNoClone().x + (pickRay.getDirectionNoClone().x * t);
@@ -4657,6 +4657,26 @@ public abstract class Node implements EventTarget, Styleable {
             final double maxZ = tempBounds.getMaxZ();
             tmin = ((signZ ? maxZ : minZ) - originZ) * invDirZ;
             tmax = ((signZ ? minZ : maxZ) - originZ) * invDirZ;
+
+        } else if (tempBounds.getDepth() == 0.0) {
+            // fast path for 3D picking of 2D bounds
+
+            if (almostZero(dir.z)) {
+                return Double.NaN;
+            }
+
+            final double t = (tempBounds.getMinZ() - originZ) / dir.z;
+            final double x = originX + (dir.x * t);
+            final double y = originY + (dir.y * t);
+
+            if (x < tempBounds.getMinX() ||
+                    x > tempBounds.getMaxX() ||
+                    y < tempBounds.getMinY() ||
+                    y > tempBounds.getMaxY()) {
+                return Double.NaN;
+            }
+
+            tmin = tmax = t;
 
         } else {
 
@@ -4761,17 +4781,17 @@ public abstract class Node implements EventTarget, Styleable {
             return Double.NaN;
         }
 
-        if (pickRay.isParallel()) {
-            return tmin;
-        }
-
-        if (tmin < 0.0) {
-            if (tmax >= 0.0) {
+        final double minDistance = pickRay.getNearClip();
+        final double maxDistance = pickRay.getFarClip();
+        if (tmin < minDistance) {
+            if (tmax >= minDistance && tmax <= maxDistance) {
                 // we are inside bounds
                 return 0.0;
             } else {
                 return Double.NaN;
             }
+        } else if (tmin > maxDistance) {
+            return Double.NaN;
         }
 
         return tmin;

@@ -105,7 +105,6 @@ import javafx.scene.Node;
  * @param <S> The type of Styleable
  * @param <V> The type into which the parsed value is converted. 
  */
-@com.sun.javafx.beans.annotations.NoBuilder
 public abstract class CssMetaData<S extends Styleable, V> {
     
     /**

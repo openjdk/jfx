@@ -135,6 +135,10 @@ import javafx.css.Styleable;
  */
 public class VBox extends Pane {
 
+    private boolean biasDirty = true;
+    private boolean performingLayout = false;
+    private Orientation bias;
+
 /********************************************************************
      *  BEGIN static methods
      ********************************************************************/
@@ -348,14 +352,18 @@ public class VBox extends Pane {
      * @return null unless one of its children has a content bias.
      */
     @Override public Orientation getContentBias() {
-        final List<Node> children = getChildren();
-        for (int i=0, size=children.size(); i<size; i++) {
-            Node child = children.get(i);
-            if (child.isManaged() && child.getContentBias() != null) {
-                return child.getContentBias();
+        if (biasDirty) {
+            final List<Node> children = getChildren();
+            for (Node child : children) {
+                Orientation contentBias = child.getContentBias();
+                if (child.isManaged() && contentBias != null) {
+                    bias = contentBias;
+                    break;
+                }
             }
-        }
-        return null;
+            biasDirty = false;
+        }        
+        return bias;
     }
 
     @Override protected double computeMinWidth(double height) {
@@ -501,7 +509,17 @@ public class VBox extends Pane {
 
     private double[] actualAreaHeights;
 
+    @Override public void requestLayout() {
+        if (performingLayout) {
+            return;
+        }
+        biasDirty = true;
+        bias = null;
+        super.requestLayout();
+    }
+
     @Override protected void layoutChildren() {
+        performingLayout = true;
         List<Node> managed = getManagedChildren();
         Insets insets = getInsets();
         double width = getWidth();
@@ -513,6 +531,7 @@ public class VBox extends Pane {
         double space = snapSpace(getSpacing());
         HPos hpos = getAlignmentInternal().getHpos();
         VPos vpos = getAlignmentInternal().getVpos();
+        boolean isFillWidth = isFillWidth();
 
         actualAreaHeights = getAreaHeights(managed, width, false);
         double contentWidth = width - left - right;
@@ -525,10 +544,11 @@ public class VBox extends Pane {
             Node child = managed.get(i);
             layoutInArea(child, x, y, contentWidth, actualAreaHeights[i],
                        /* baseline shouldn't matter */actualAreaHeights[i],
-                       getMargin(child), isFillWidth(), true,
+                       getMargin(child), isFillWidth, true,
                        hpos, vpos);
             y += actualAreaHeights[i] + space;
         }
+        performingLayout = false;
     }
 
     /***************************************************************************

@@ -40,7 +40,6 @@ import javafx.beans.property.SimpleFloatProperty;
  * @see StyleableProperty
  * @see StyleableFloatProperty
  */
-@com.sun.javafx.beans.annotations.NoBuilder
 public class SimpleStyleableFloatProperty extends StyleableFloatProperty {
 
     private static final Object DEFAULT_BEAN = null;

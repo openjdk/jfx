@@ -25,14 +25,12 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.math.BigInteger;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link BigInteger} values.</p>
  */
-@NoBuilder
 public class BigIntegerStringConverter extends StringConverter<BigInteger> {
     /** {@inheritDoc} */
     @Override public BigInteger fromString(String value) {

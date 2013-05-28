@@ -52,7 +52,7 @@ FEATURE_DEFINES += \
     ENABLE_SVG_FONTS=1 \
     ENABLE_SVG_FOREIGN_OBJECT=1 \
     ENABLE_SVG_USE=1 \
-    ENABLE_TOUCH_EVENTS=1 \
+    ENABLE_TOUCH_EVENTS=0 \
     ENABLE_VIDEO=1 \
     ENABLE_WCSS=0 \
     ENABLE_WEB_SOCKETS=1 \
@@ -182,9 +182,6 @@ IDL_BINDINGS_JAVA = \
     $$PWD/dom/ProcessingInstruction.idl \
     $$PWD/dom/Range.idl \
     $$PWD/dom/Text.idl \
-    $$PWD/dom/Touch.idl \
-    $$PWD/dom/TouchEvent.idl \
-    $$PWD/dom/TouchList.idl \
     $$PWD/dom/TreeWalker.idl \
     $$PWD/dom/UIEvent.idl \
     $$PWD/dom/WheelEvent.idl \
@@ -771,6 +768,13 @@ contains(DEFINES, ENABLE_SVG=1) {
     $$PWD/svg/SVGViewSpec.idl \
     $$PWD/svg/SVGZoomAndPan.idl \
     $$PWD/svg/SVGZoomEvent.idl
+}
+
+contains(DEFINES, ENABLE_TOUCH_EVENTS=1) {
+  IDL_BINDINGS_JAVA += \
+    $$PWD/dom/Touch.idl \
+    $$PWD/dom/TouchEvent.idl \
+    $$PWD/dom/TouchList.idl
 }
 
 contains(DEFINES, ENABLE_VIDEO_TRACK=1) {

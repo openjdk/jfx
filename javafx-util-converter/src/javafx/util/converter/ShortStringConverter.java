@@ -25,13 +25,11 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link Short} values.</p>
  */
-@NoBuilder
 public class ShortStringConverter extends StringConverter<Short> {
     /** {@inheritDoc} */
     @Override public Short fromString(String text) {

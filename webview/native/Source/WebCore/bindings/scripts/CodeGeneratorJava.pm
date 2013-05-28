@@ -11,9 +11,6 @@ my %domExtension = (
     KeyboardEvent => 1,
     WheelEvent => 1,
     DOMSelection => 1,
-    Touch => 1,
-    TouchList => 1,
-    TouchEvent => 1
 );
 
 my %class2pkg = (
@@ -272,7 +269,6 @@ my %classData = (
             "WheelEvent",
             "MouseEvent",
             "KeyboardEvent",
-            "TouchEvent",
             "UIEvent",
             "MutationEvent"
         ],
@@ -281,7 +277,6 @@ my %classData = (
                 "        case TYPE_MouseEvent: return new MouseEventImpl(peer);\n" .
                 "        case TYPE_KeyboardEvent: return new KeyboardEventImpl(peer);\n" .
                 "        case TYPE_WheelEvent: return new WheelEventImpl(peer);\n" .
-                "        case TYPE_TouchEvent: return new TouchEventImpl(peer);\n" .
                 "        case TYPE_UIEvent: return new UIEventImpl(peer);\n" .
                 "        case TYPE_MutationEvent: return new MutationEventImpl(peer);\n" .
                 "        }\n"

@@ -58,6 +58,7 @@ public class PrismPerspectiveCameraImpl extends PrismCameraImpl {
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
         return PickRay.computePerspectivePickRay(x, y, fixedEyeAtCameraZero, 
                 viewWidth, viewHeight, fov, verticalFieldOfView, worldTransform,
+                zNear, zFar,
                 pickRay);
     }
 

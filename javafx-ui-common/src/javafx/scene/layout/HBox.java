@@ -45,6 +45,7 @@ import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.css.Styleable;
+import javafx.geometry.HPos;
 
 
 
@@ -144,6 +145,10 @@ import javafx.css.Styleable;
  * </code></pre>
  */
 public class HBox extends Pane {
+
+    private boolean biasDirty = true;
+    private boolean performingLayout = false;
+    private Orientation bias;
 
     /********************************************************************
      *  BEGIN static methods
@@ -366,14 +371,18 @@ public class HBox extends Pane {
      * @return null unless one of its children has a content bias.
      */
     @Override public Orientation getContentBias() {
-        final List<Node> children = getChildren();
-        for (int i=0, size=children.size(); i<size; i++) {
-            Node child = children.get(i);
-            if (child.isManaged() && child.getContentBias() != null) {
-                return child.getContentBias();
+        if (biasDirty) {
+            final List<Node> children = getChildren();
+            for (Node child : children) {
+                Orientation contentBias = child.getContentBias();
+                if (child.isManaged() && contentBias != null) {
+                    bias = contentBias;
+                    break;
+                }
             }
-        }
-        return null;
+            biasDirty = false;
+        }        
+        return bias;
     }
 
     @Override protected double computeMinWidth(double height) {
@@ -530,10 +539,22 @@ public class HBox extends Pane {
 
     private double[] actualAreaWidths;
 
+    @Override public void requestLayout() {
+        if (performingLayout) {
+            return;
+        }
+        biasDirty = true;
+        bias = null;
+        super.requestLayout();
+    }
+
     @Override protected void layoutChildren() {
+        performingLayout = true;
         List<Node> managed = getManagedChildren();
         Insets insets = getInsets();
         Pos align = getAlignmentInternal();
+        HPos alignHpos = align.getHpos();
+        VPos alignVpos = align.getVpos();
         double width = getWidth();
         double height = getHeight();
         double top = snapSpace(insets.getTop());
@@ -541,6 +562,7 @@ public class HBox extends Pane {
         double bottom = snapSpace(insets.getBottom());
         double right = snapSpace(insets.getRight());
         double space = snapSpace(getSpacing());
+        boolean shouldFillHeight = shouldFillHeight();
 
         actualAreaWidths = getAreaWidths(managed, height, false);
         double contentWidth = adjustAreaWidths(managed, actualAreaWidths, width, height);
@@ -548,17 +570,18 @@ public class HBox extends Pane {
 
         double x = snapSpace(insets.getLeft()) + computeXOffset(width - left - right, contentWidth, align.getHpos());
         double y = snapSpace(insets.getTop());
-        double baselineOffset = align.getVpos() == VPos.BASELINE ? getMaxBaselineOffset(managed)
+        double baselineOffset = alignVpos == VPos.BASELINE ? getMaxBaselineOffset(managed)
                                     : height/2;
 
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Insets margin = getMargin(child);
             layoutInArea(child, x, y, actualAreaWidths[i], contentHeight,
-                    baselineOffset, margin, true, shouldFillHeight(),
-                    align.getHpos(), align.getVpos());
+                    baselineOffset, margin, true, shouldFillHeight,
+                    alignHpos, alignVpos);
             x += actualAreaWidths[i] + space;
         }
+        performingLayout = false;
     }
 
 

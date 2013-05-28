@@ -77,6 +77,7 @@ public final class MultiTexture implements Texture {
                 if (wrapMode != WrapMode.REPEAT) {
                     return null;
                 }
+                break;
             default:
                 return null;
         }
