@@ -26,7 +26,10 @@
   <target name="get-libname-windows" if="isWindows">
     <property name="native.lib.file" value="prism-common.dll"/>
   </target>
-  <target name="get-libname" depends="get-libname-macosx,get-libname-android,get-libname-linux,get-libname-solaris,get-libname-windows"/>
+  <target name="get-libname-ios" if="isIOS">
+    <property name="native.lib.file" value="prism-common.a"/>
+  </target>
+  <target name="get-libname" depends="get-libname-macosx,get-libname-android,get-libname-linux,get-libname-solaris,get-libname-windows,get-libname-ios"/>
 
   <target name="-local-pre-init" depends="get-libname"/>
 

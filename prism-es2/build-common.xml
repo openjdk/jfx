@@ -29,7 +29,7 @@
   </target>
   <target name="get-libname" depends="get-libname-macosx,get-libname-android,get-libname-ios,get-libname-linux,get-libname-solaris,get-libname-windows"/>
 
-  <target name="-pre-init" depends="get-libname">
+  <target name="-local-pre-init" depends="get-libname">
     <mkdir dir="build/gensrc"/>
   </target>
 
@@ -64,7 +64,7 @@
         </build-project>
   </target>
 
-  <target name="build-native" depends="init">
+  <target name="build-native" depends="-local-pre-init,init">
         <antcall target="compile-native"/>
         <jar destfile="${dist.dir}/prism-es2-native.jar"
            basedir="${native.dist.dir}"
