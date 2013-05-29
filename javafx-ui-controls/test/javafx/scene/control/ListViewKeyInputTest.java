@@ -1072,7 +1072,7 @@ public class ListViewKeyInputTest {
         assertEquals("Apple", listView.getFocusModel().getFocusedItem());
     }
     
-    @Test public void test_rt29930() {
+    @org.junit.Ignore("pending RT-30739") @Test public void test_rt29930() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         sm.clearAndSelect(0);
