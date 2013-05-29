@@ -25,16 +25,20 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.animation.Animation;
-import javafx.animation.Animation.Status;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -44,41 +48,28 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
+import javafx.geometry.HPos;
+import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
-
-import javafx.geometry.HPos;
-import javafx.geometry.Insets;
-import javafx.geometry.Point2D;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.input.TouchEvent;
-import javafx.scene.input.InputEvent;
-import static javafx.scene.input.TouchEvent.*;
-import static javafx.scene.input.MouseEvent.*;
-import static javafx.scene.input.KeyEvent.*;
-import javafx.stage.*;
+import javafx.scene.layout.Region;
+import javafx.scene.text.Text;
+import javafx.stage.Popup;
 import javafx.util.Duration;
-
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.robot.impl.FXRobotHelper.FXRobotInputAccessor;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
+import static javafx.scene.input.MouseEvent.*;
+import static javafx.scene.input.TouchEvent.*;
 import static javafx.scene.layout.Region.*;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import javafx.scene.layout.Region;
-import javafx.scene.text.Text;
-import com.sun.javafx.css.StyleManager;
 
 
 public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
@@ -236,7 +227,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
     private boolean isVKHidden = false;
     
-    private void registerUnhideHandler(Node node) {
+    private void registerUnhideHandler(final Node node) {
         if (unHideEventHandler == null) {
             unHideEventHandler = new EventHandler<InputEvent> () {
                 public void handle(InputEvent event) {

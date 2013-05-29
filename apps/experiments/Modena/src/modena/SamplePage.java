@@ -79,7 +79,7 @@ import javafx.scene.control.ToggleButtonBuilder;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TooltipBuilder;
-import javafx.scene.control.TreeTableViewBuilder;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeViewBuilder;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -88,13 +88,13 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.paint.Color;
-import javafx.scene.web.HTMLEditorBuilder;
+import javafx.scene.web.HTMLEditor;
 
 import static modena.SamplePageChartHelper.*;
 import static modena.SamplePageHelpers.*;
 import static modena.SamplePageTableHelper.*;
-import static modena.SamplePageTreeHelper.*;
-import static modena.SamplePageTreeTableHelper.*;
+import static modena.SamplePageTreeHelper.createTreeView;
+import static modena.SamplePageTreeTableHelper.createTreeTableView;
 
 /**
  * Page showing every control in every state.
@@ -302,32 +302,32 @@ public class SamplePage extends GridPane {
         choiceBoxLongList.add(100, "Long List");
         newSection(
                 "ChoiceBox:",
-                ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item A").build(),
-                ChoiceBoxBuilder.create(String.class).items(choiceBoxLongList).value("Long List").build(),
-                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
-                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
-                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
-                ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item C").disable(true).build()
+                ChoiceBoxBuilder.<String>create().items(sampleItems()).value("Item A").build(),
+                ChoiceBoxBuilder.<String>create().items(choiceBoxLongList).value("Long List").build(),
+                withState(ChoiceBoxBuilder.<String>create().items(sampleItems()).value("Item B").build(), "hover"),
+                withState(ChoiceBoxBuilder.<String>create().items(sampleItems()).value("Item B").build(), "showing"),
+                withState(ChoiceBoxBuilder.<String>create().items(sampleItems()).value("Item B").build(), "focused"),
+                ChoiceBoxBuilder.<String>create().items(sampleItems()).value("Item C").disable(true).build()
         );
         newSection(
                 "ComboBox:",
-                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").build(),
-                ComboBoxBuilder.create(String.class).items(choiceBoxLongList).value("Long List").build(),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
-                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").disable(true).build()
+                ComboBoxBuilder.<String>create().items(sampleItems()).value("Item A").build(),
+                ComboBoxBuilder.<String>create().items(choiceBoxLongList).value("Long List").build(),
+                withState(ComboBoxBuilder.<String>create().items(sampleItems()).value("Item B").build(), "hover"),
+                withState(ComboBoxBuilder.<String>create().items(sampleItems()).value("Item B").build(), "showing"),
+                withState(ComboBoxBuilder.<String>create().items(sampleItems()).value("Item B").build(), "focused"),
+                ComboBoxBuilder.<String>create().items(sampleItems()).value("Item C").disable(true).build()
                 );
         newSection(
                 "ComboBox\nEditable:",
-                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").editable(true).build(),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "hover"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "pressed")
+                ComboBoxBuilder.<String>create().items(sampleItems()).value("Item A").editable(true).build(),
+                withState(ComboBoxBuilder.<String>create().items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "hover"),
+                withState(ComboBoxBuilder.<String>create().items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "pressed")
                 );
         newSection(
                 "ComboBox\nEditable\n(More):",
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable,contains-focus", ".text-field", "focused"),
-                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).disable(true).build()
+                withState(ComboBoxBuilder.<String>create().items(sampleItems()).value("Item B").editable(true).build(), "editable,contains-focus", ".text-field", "focused"),
+                ComboBoxBuilder.<String>create().items(sampleItems()).value("Item C").editable(true).disable(true).build()
                 );
         newSection(
                 "Color Picker:",
@@ -465,11 +465,16 @@ public class SamplePage extends GridPane {
         );
         newSection(
                 "HTMLEditor:",
-                HTMLEditorBuilder.create().htmlText("Hello <b>Bold</b> Text").prefWidth(650).prefHeight(120).build()
-                );
+                new HTMLEditor() {{
+                    setHtmlText("Hello <b>Bold</b> Text");
+                    setPrefSize(650, 120);
+                }});
         newSection(
                 "HTMLEditor\nFocused:",
-                withState(HTMLEditorBuilder.create().htmlText("<i>Focused</i>").prefWidth(650).prefHeight(120).build(), "focused")
+                withState(new HTMLEditor() {{
+                    setHtmlText("<i>Focused</i>");
+                    setPrefSize(650, 120);
+                }}, "focused")
                 );
         newDetailedSection(
                 new String[] { "ToolBar (H|TOP):", "normal", "overflow", "disabled" },
@@ -640,10 +645,12 @@ public class SamplePage extends GridPane {
                 );
         newDetailedSection(
                 new String[] {"Empty:", "ListView", "TableView", "TreeView", "TreeTableView"},
-                ListViewBuilder.create(String.class).prefWidth(150).prefHeight(100).build(),
-                TableViewBuilder.create(Object.class).prefWidth(150).prefHeight(100).build(),
-                TreeViewBuilder.create(Object.class).prefWidth(150).prefHeight(100).build(),
-                TreeTableViewBuilder.create(Object.class).prefWidth(150).prefHeight(100).build()
+                ListViewBuilder.<String>create().prefWidth(150).prefHeight(100).build(),
+                TableViewBuilder.create().prefWidth(150).prefHeight(100).build(),
+                TreeViewBuilder.create().prefWidth(150).prefHeight(100).build(),
+                new TreeTableView() {{
+                    setPrefSize(150, 100);
+                }}
                 );
         newDetailedSection(
                 new String[] {"ToolTip:","inline","inline + graphic", "popup"},
