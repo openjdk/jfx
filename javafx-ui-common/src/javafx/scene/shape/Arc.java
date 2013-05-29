@@ -190,7 +190,7 @@ public class Arc extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusX = new DoublePropertyBase() {
+    private final DoubleProperty radiusX = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
@@ -227,7 +227,7 @@ public class Arc extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusY = new DoublePropertyBase() {
+    private final DoubleProperty radiusY = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
@@ -304,7 +304,7 @@ public class Arc extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty length = new DoublePropertyBase() {
+    private final DoubleProperty length = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {

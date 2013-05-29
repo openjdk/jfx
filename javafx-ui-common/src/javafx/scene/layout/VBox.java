@@ -46,6 +46,7 @@ import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.css.Styleable;
+import javafx.util.Callback;
 
 /**
  * VBox lays out its children in a single vertical column.
@@ -185,6 +186,12 @@ public class VBox extends Pane {
     public static Insets getMargin(Node child) {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
+
+    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
+        public Insets call(Node n) {
+            return getMargin(n);
+        }
+    };
 
     /**
      * Removes all vbox constraints from the child node.
@@ -365,9 +372,9 @@ public class VBox extends Pane {
         if (getContentBias() == Orientation.VERTICAL) {
             double prefHeights[] = getAreaHeights(managed, -1, false);
             adjustAreaHeights(managed, prefHeights, height, -1);
-            contentWidth = computeMaxMinAreaWidth(managed, getMargins(managed), prefHeights, getAlignmentInternal().getHpos());
+            contentWidth = computeMaxMinAreaWidth(managed, marginAccessor, prefHeights, getAlignmentInternal().getHpos());
         } else {
-            contentWidth = computeMaxMinAreaWidth(managed, getMargins(managed), getAlignmentInternal().getHpos());
+            contentWidth = computeMaxMinAreaWidth(managed, marginAccessor, getAlignmentInternal().getHpos());
         }
         return snapSpace(insets.getLeft()) + contentWidth + snapSpace(insets.getRight());
     }
@@ -386,9 +393,9 @@ public class VBox extends Pane {
         if (getContentBias() == Orientation.VERTICAL) {
             double prefHeights[] = getAreaHeights(managed, -1, false);
             adjustAreaHeights(managed, prefHeights, height, -1);
-            contentWidth = computeMaxPrefAreaWidth(managed, getMargins(managed), prefHeights, getAlignmentInternal().getHpos());
+            contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor, prefHeights, getAlignmentInternal().getHpos());
         } else {
-            contentWidth = computeMaxPrefAreaWidth(managed, getMargins(managed), getAlignmentInternal().getHpos());
+            contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor, getAlignmentInternal().getHpos());
         }
         return snapSpace(insets.getLeft()) + contentWidth + snapSpace(insets.getRight());
     }
@@ -401,13 +408,6 @@ public class VBox extends Pane {
         return d;
     }
 
-    private Insets[] getMargins(List<Node>managed) {
-        Insets margins[] = new Insets[managed.size()];
-        for(int i = 0; i < margins.length; i++) {
-            margins[i] = getMargin(managed.get(i));
-        }
-        return margins;
-    }
 
     private double[] getAreaHeights(List<Node>managed, double width, boolean minimum) {
         double[] prefAreaHeights = new double [managed.size()];

@@ -72,6 +72,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
+import javafx.util.Callback;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -251,11 +252,19 @@ public class Region extends Parent {
         return snapToPixel ? Math.round(value) : value;
     }
 
-    static double getMaxAreaBaselineOffset(List<Node> content, Insets margins[]) {
+    private static double snapPortion(double value, boolean snapToPixel) {
+        if (snapToPixel) {
+            return (value > 0 ? Math.max(1, Math.floor(value)) : Math.min(-1, Math.ceil(value)));
+        }
+        return value;
+    }
+
+    static double getMaxAreaBaselineOffset(List<Node> content, Callback<Node, Insets> margins) {
         double max = 0;
         for (int i = 0, maxPos = content.size(); i < maxPos; i++) {
             final Node node = content.get(i);
-            final double topMargin = margins[i] != null ? margins[i].getTop() : 0;
+            final Insets margin = margins.call(node);
+            final double topMargin = margin != null ? margin.getTop() : 0;
             final double position = topMargin + node.getBaselineOffset();
             max = max >= position ? max : position; // Math.max
         }
@@ -531,7 +540,7 @@ public class Region extends Parent {
      * within the content area. The insets are computed based on the Border which has been specified,
      * if any, and also the padding.
      */
-    private InsetsProperty insets = new InsetsProperty();
+    private final InsetsProperty insets = new InsetsProperty();
     public final Insets getInsets() { return insets.get(); }
     public final ReadOnlyObjectProperty<Insets> insetsProperty() { return insets; }
     private final class InsetsProperty extends ReadOnlyObjectProperty<Insets> {
@@ -1382,6 +1391,10 @@ public class Region extends Parent {
         return snapPosition(value, isSnapToPixel());
     }
 
+    double snapPortion(double value) {
+        return snapPortion(value, isSnapToPixel());
+    }
+
 
     /**
      * Utility method to get the top inset which includes padding and border
@@ -1537,57 +1550,57 @@ public class Region extends Parent {
 
     /* Max of children's minimum area widths */
 
-    double computeMaxMinAreaWidth(List<Node> children, Insets margins[], HPos halignment /* ignored for now */) {
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> margins, HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, margins, new double[] { -1 }, true);
     }
 
-    double computeMaxMinAreaWidth(List<Node> children, Insets margins[], HPos halignment /* ignored for now */, double height) {
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> margins, HPos halignment /* ignored for now */, double height) {
         return getMaxAreaWidth(children, margins, new double[] { height }, true);
     }
 
-    double computeMaxMinAreaWidth(List<Node> children, Insets childMargins[], double childHeights[], HPos halignment /* ignored for now */) {
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> childMargins, double childHeights[], HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, childMargins, childHeights, true);
     }
 
     /* Max of children's minimum area heights */
 
-    double computeMaxMinAreaHeight(List<Node>children, Insets margins[], VPos valignment) {
-        return getMaxAreaHeight(children, margins, new double[] { -1 }, valignment, true);
+    double computeMaxMinAreaHeight(List<Node>children, Callback<Node, Insets> margins, VPos valignment) {
+        return getMaxAreaHeight(children, margins, null, valignment, true);
     }
 
-    double computeMaxMinAreaHeight(List<Node>children, Insets margins[], VPos valignment, double width) {
+    double computeMaxMinAreaHeight(List<Node>children, Callback<Node, Insets> margins, VPos valignment, double width) {
         return getMaxAreaHeight(children, margins, new double[] { width }, valignment, true);
     }
 
-    double computeMaxMinAreaHeight(List<Node>children, Insets childMargins[], double childWidths[], VPos valignment) {
+    double computeMaxMinAreaHeight(List<Node>children, Callback<Node, Insets> childMargins, double childWidths[], VPos valignment) {
         return getMaxAreaHeight(children, childMargins, childWidths, valignment, true);
     }
 
     /* Max of children's pref area widths */
 
-    double computeMaxPrefAreaWidth(List<Node>children, Insets margins[], HPos halignment /* ignored for now */) {
+    double computeMaxPrefAreaWidth(List<Node>children, Callback<Node, Insets> margins, HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, margins, new double[] { -1 }, false);
     }
 
-    double computeMaxPrefAreaWidth(List<Node>children, Insets margins[], double height, HPos halignment /* ignored for now */) {
+    double computeMaxPrefAreaWidth(List<Node>children, Callback<Node, Insets> margins, double height, HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, margins, new double[] { height }, false);
     }
 
-    double computeMaxPrefAreaWidth(List<Node>children, Insets childMargins[], double childHeights[], HPos halignment /* ignored for now */) {
+    double computeMaxPrefAreaWidth(List<Node>children, Callback<Node, Insets> childMargins, double childHeights[], HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, childMargins, childHeights, false);
     }
 
     /* Max of children's pref area heights */
 
-    double computeMaxPrefAreaHeight(List<Node>children, Insets margins[], VPos valignment) {
-        return getMaxAreaHeight(children, margins, createDoubleArray(children.size(), -1), valignment, false);
+    double computeMaxPrefAreaHeight(List<Node>children, Callback<Node, Insets> margins, VPos valignment) {
+        return getMaxAreaHeight(children, margins, null, valignment, false);
     }
 
-    double computeMaxPrefAreaHeight(List<Node>children, Insets margins[], double width, VPos valignment) {
-        return getMaxAreaHeight(children, margins, createDoubleArray(children.size(), width), valignment, false);
+    double computeMaxPrefAreaHeight(List<Node>children, Callback<Node, Insets> margins, double width, VPos valignment) {
+        return getMaxAreaHeight(children, margins, new double[] { width }, valignment, false);
     }
 
-    double computeMaxPrefAreaHeight(List<Node>children, Insets childMargins[], double childWidths[], VPos valignment) {
+    double computeMaxPrefAreaHeight(List<Node>children, Callback<Node, Insets> childMargins, double childWidths[], VPos valignment) {
         return getMaxAreaHeight(children, childMargins, childWidths, valignment, false);
     }
 
@@ -1650,17 +1663,18 @@ public class Region extends Parent {
     }
 
     /* utility method for computing the max of children's min or pref heights, taking into account baseline alignment */
-    private double getMaxAreaHeight(List<Node> children, Insets childMargins[],  double childWidths[], VPos valignment, boolean minimum) {
-        final double lastChildWidth = childWidths.length > 0 ? childWidths[childWidths.length - 1] : 0;
+    private double getMaxAreaHeight(List<Node> children, Callback<Node,Insets> childMargins,  double childWidths[], VPos valignment, boolean minimum) {
+        final double singleChildWidth = childWidths == null ? -1 : childWidths.length == 1 ? childWidths[0] : Double.NaN;
         if (valignment == VPos.BASELINE) {
             double maxAbove = 0;
             double maxBelow = 0;
             for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
                 final Node child = children.get(i);
                 final double baseline = child.getBaselineOffset();
-                final double top = childMargins[i] != null? snapSpace(childMargins[i].getTop()) : 0;
-                final double bottom = childMargins[i] != null? snapSpace(childMargins[i].getBottom()) : 0;
-                final double childWidth = i < childWidths.length ? childWidths[i] : lastChildWidth;
+                Insets margin = childMargins.call(child);
+                final double top = margin != null? snapSpace(margin.getTop()) : 0;
+                final double bottom = margin != null? snapSpace(margin.getBottom()) : 0;
+                final double childWidth = Double.isNaN(singleChildWidth) ? childWidths[i] : singleChildWidth;
                 maxAbove = Math.max(maxAbove, baseline + top);
                 maxBelow = Math.max(maxBelow,
                         snapSpace(minimum?snapSize(child.minHeight(childWidth)) : snapSize(child.prefHeight(childWidth))) -
@@ -1671,25 +1685,27 @@ public class Region extends Parent {
             double max = 0;
             for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
                 final Node child = children.get(i);
-                final double childWidth = i < childWidths.length ? childWidths[i] : lastChildWidth;
+                Insets margin = childMargins.call(child);
+                final double childWidth = Double.isNaN(singleChildWidth) ? childWidths[i] : singleChildWidth;
                 max = Math.max(max, minimum?
-                    computeChildMinAreaHeight(child, childMargins[i], childWidth) :
-                        computeChildPrefAreaHeight(child, childMargins[i], childWidth));
+                    computeChildMinAreaHeight(child, margin, childWidth) :
+                        computeChildPrefAreaHeight(child, margin, childWidth));
             }
             return max;
         }
     }
 
     /* utility method for computing the max of children's min or pref width, horizontal alignment is ignored for now */
-    private double getMaxAreaWidth(List<javafx.scene.Node> children, Insets childMargins[], double childHeights[], boolean minimum) {
+    private double getMaxAreaWidth(List<javafx.scene.Node> children, Callback<Node, Insets> childMargins, double childHeights[], boolean minimum) {
         final double lastChildHeight = childHeights.length > 0 ? childHeights[childHeights.length - 1] : 0;
         double max = 0;
         for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
             final Node child = children.get(i);
+            final Insets margin = childMargins.call(child);
             final double childHeight = i < childHeights.length ? childHeights[i] : lastChildHeight;
             max = Math.max(max, minimum?
-                computeChildMinAreaWidth(children.get(i), childMargins[i], childHeight) :
-                    computeChildPrefAreaWidth(child, childMargins[i], childHeight));
+                computeChildMinAreaWidth(children.get(i), margin, childHeight) :
+                    computeChildPrefAreaWidth(child, margin, childHeight));
         }
         return max;
     }

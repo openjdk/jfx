@@ -67,6 +67,7 @@ import static javafx.scene.layout.Priority.SOMETIMES;
 import static javafx.scene.layout.Region.USE_COMPUTED_SIZE;
 import static javafx.scene.layout.Region.boundedSize;
 import static javafx.scene.layout.Region.getMaxAreaBaselineOffset;
+import javafx.util.Callback;
 
 
 
@@ -399,6 +400,12 @@ public class GridPane extends Pane {
     public static Insets getMargin(Node child) {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
+
+    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
+        public Insets call(Node n) {
+            return getMargin(n);
+        }
+    };
 
     /**
      * Sets the horizontal alignment for the child when contained by a gridpane.
@@ -905,7 +912,7 @@ public class GridPane extends Pane {
      * Returns list of row constraints. Row constraints can be added to
      * explicitly control individual row sizing and layout behavior.
      * If not set, row sizing and layout behavior is computed based on content.
-     * 
+     *
      * Index in the ObservableList denotes the row number, so the row constraint for the first row
      * is at the position of 0.
      */
@@ -938,7 +945,7 @@ public class GridPane extends Pane {
      * Returns list of column constraints. Column constraints can be added to
      * explicitly control individual column sizing and layout behavior.
      * If not set, column sizing and layout behavior is computed based on content.
-     * 
+     *
      * Index in the ObservableList denotes the column number, so the column constraint for the first column
      * is at the position of 0.
      */
@@ -1096,16 +1103,14 @@ public class GridPane extends Pane {
                     rowGrow[i] = vGrow;
 
                 VPos rowVPos = getRowValignment(i);
-                List<Insets> margins = new ArrayList<>(numColumns);
                 List<Node> baselineNodes = new ArrayList<>(numColumns);
                 for (int j = 0, size = children.size(); j < size; j++) {
                     Node n = children.get(j);
                     if (getNodeRowIndex(n) == i && (rowVPos == VPos.BASELINE || getValignment(n) == VPos.BASELINE)) {
                         baselineNodes.add(n);
-                        margins.add(getMargin(n));
                     }
                 }
-                rowBaseline[i] = getMaxAreaBaselineOffset(baselineNodes, margins.toArray(new Insets[margins.size()]));
+                rowBaseline[i] = getMaxAreaBaselineOffset(baselineNodes, marginAccessor);
                 baselineNodes.clear();
 
             }
