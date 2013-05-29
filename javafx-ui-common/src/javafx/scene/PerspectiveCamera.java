@@ -263,7 +263,7 @@ public  class PerspectiveCamera extends Camera {
     }
 
     @Override
-    protected void computeViewTransform(Affine3D view) {
+    void computeViewTransform(Affine3D view) {
 
         // In the case of fixedEyeAtCameraZero the camera position is (0,0,0) in
         // local coord. of the camera node. In non-fixed eye case, the camera
