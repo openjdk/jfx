@@ -25,8 +25,8 @@
 
 package com.sun.javafx.test;
 
-import com.sun.javafx.test.binding.ReflectionHelper;
 import java.lang.reflect.Method;
+import com.sun.javafx.test.binding.ReflectionHelper;
 
 public final class BuilderProxy {
     private final Class<?> builderClass;
@@ -48,9 +48,9 @@ public final class BuilderProxy {
     public PropertyReference createPropertyReference(
             final String propertyName,
             final Class<?> propertyValueType) {
-        return PropertyReference.createForBuilder(builderClass,
-                                                  propertyName,
-                                                  propertyValueType);
+        return createForBuilder(builderClass,
+                                propertyName,
+                                propertyValueType);
     }
 
     public void applyTo(final Object builder, final Object bean) {
@@ -75,4 +75,27 @@ public final class BuilderProxy {
                                                       "applyTo",
                                                       beanClass));
     }
+
+    public static PropertyReference createForBuilder(
+            final Class<?> builderClass,
+            final String propertyName,
+            final Class<?> propertyValueType) {
+        try {
+            final Method propertySetterMethod =
+                    ReflectionHelper.getMethod(
+                            builderClass,
+                            propertyName,
+                            propertyValueType);
+
+            return new PropertyReference(
+                               propertyName,
+                               propertyValueType,
+                               null,
+                               propertySetterMethod);
+        } catch (final RuntimeException e) {
+            throw new RuntimeException("Failed to obtain setter for "
+                                           + propertyName + "!");
+        }
+    }
+
 }
