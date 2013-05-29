@@ -88,7 +88,7 @@ public class ParallelCamera extends Camera {
     }
 
     @Override
-    protected void computeViewTransform(Affine3D view) {
+    void computeViewTransform(Affine3D view) {
         view.setToIdentity();
     }
 

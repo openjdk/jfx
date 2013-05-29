@@ -593,14 +593,18 @@ public class Image implements PlatformImage {
             switch (getPixelFormat()) {
                 case BYTE_ALPHA:
                 case BYTE_APPLE_422:
-                case BYTE_GRAY:
                 case FLOAT_XYZW:
                 case MULTI_YCbCr_420:
                 default:
                     pixelaccessor = new UnsupportedAccess();
                     break;
+                case BYTE_GRAY:
+                    pixelaccessor = new ByteAccess(getGrayFXPixelFormat(),
+                                                   ByteGray.getter, null,
+                                                   (ByteBuffer) pixelBuffer, 1);
+                    break;
                 case BYTE_RGB:
-                    pixelaccessor = new ByteRgbAccess();
+                    pixelaccessor = new ByteRgbAccess((ByteBuffer) pixelBuffer);
                     break;
                 case BYTE_BGRA_PRE:
                     pixelaccessor = new ByteAccess(FX_ByteBgraPre_FORMAT,
@@ -884,6 +888,15 @@ public class Image implements PlatformImage {
         }
     }
 
+    static <I extends Buffer> PixelSetter<I>
+        getSetterIfWritable(javafx.scene.image.PixelFormat<I> theFormat)
+    {
+        if (theFormat instanceof WritablePixelFormat) {
+            return PixelUtils.getSetter((WritablePixelFormat) theFormat);
+        }
+        return null;
+    }
+
     abstract class BaseAccessor<I extends Buffer> extends Accessor<I> {
         javafx.scene.image.PixelFormat<I> theFormat;
         PixelGetter<I> theGetter;
@@ -894,11 +907,17 @@ public class Image implements PlatformImage {
         int offsetElems;
 
         BaseAccessor(javafx.scene.image.PixelFormat<I> theFormat, I buffer, int pixelStride) {
+            this(theFormat, PixelUtils.getGetter(theFormat), getSetterIfWritable(theFormat),
+                 buffer, pixelStride);
+        }
+
+        BaseAccessor(javafx.scene.image.PixelFormat<I> theFormat,
+                     PixelGetter<I> getter, PixelSetter<I> setter,
+                     I buffer, int pixelStride)
+        {
             this.theFormat = theFormat;
-            this.theGetter = PixelUtils.getGetter(theFormat);
-            if (theFormat instanceof WritablePixelFormat) {
-                this.theSetter = PixelUtils.getSetter((WritablePixelFormat) theFormat);
-            }
+            this.theGetter = getter;
+            this.theSetter = setter;
             this.theBuffer = buffer;
             this.pixelElems = pixelStride;
             this.scanlineElems = scanlineStride / pixelFormat.getDataType().getSizeInBytes();
@@ -987,6 +1006,13 @@ public class Image implements PlatformImage {
     }
 
     class ByteAccess extends BaseAccessor<ByteBuffer> {
+        ByteAccess(javafx.scene.image.PixelFormat<ByteBuffer> fmt,
+                   PixelGetter<ByteBuffer> getter, PixelSetter<ByteBuffer> setter,
+                   ByteBuffer buffer, int numbytes)
+        {
+            super(fmt, getter, setter, buffer, numbytes);
+        }
+
         ByteAccess(javafx.scene.image.PixelFormat<ByteBuffer> fmt,
                    ByteBuffer buffer, int numbytes)
         {
@@ -1124,15 +1150,30 @@ public class Image implements PlatformImage {
         }
     }
 
+    static javafx.scene.image.PixelFormat FX_ByteGray_FORMAT;
+    static javafx.scene.image.PixelFormat getGrayFXPixelFormat() {
+        if (FX_ByteGray_FORMAT == null) {
+            int grays[] = new int[256];
+            int gray = 0xff000000;
+            for (int i = 0; i < 256; i++) {
+                grays[i] = gray;
+                gray += 0x00010101;
+            }
+            FX_ByteGray_FORMAT =
+                javafx.scene.image.PixelFormat.createByteIndexedPremultipliedInstance(grays);
+        }
+        return FX_ByteGray_FORMAT;
+    }
+
     class UnsupportedAccess extends ByteAccess {
         private UnsupportedAccess() {
-            super(null, null, 0);
+            super(null, null, null, null, 0);
         }
     }
 
     class ByteRgbAccess extends ByteAccess {
-        public ByteRgbAccess() {
-            super(FX_ByteRgb_FORMAT, (ByteBuffer) pixelBuffer, 3);
+        public ByteRgbAccess(ByteBuffer buffer) {
+            super(FX_ByteRgb_FORMAT, buffer, 3);
         }
 
         @Override

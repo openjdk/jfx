@@ -202,7 +202,7 @@ public class Circle extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radius = new DoublePropertyBase() {
+    private final DoubleProperty radius = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {

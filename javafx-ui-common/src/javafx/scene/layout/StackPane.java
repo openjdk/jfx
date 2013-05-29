@@ -40,6 +40,7 @@ import javafx.scene.Node;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.css.Styleable;
 import javafx.geometry.HPos;
+import javafx.util.Callback;
 
 /**
  *
@@ -179,6 +180,12 @@ public class StackPane extends Pane {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
 
+    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
+        public Insets call(Node n) {
+            return getMargin(n);
+        }
+    };
+
     /**
      * Removes all stackpane constraints from the child node.
      * @param child the child node
@@ -270,20 +277,19 @@ public class StackPane extends Pane {
     @Override protected double computeMinWidth(double height) {
         List<Node>managed = getManagedChildren();
         return getInsets().getLeft() +
-               computeMaxMinAreaWidth(managed, getMargins(managed), getAlignmentInternal().getHpos(), height) +
+               computeMaxMinAreaWidth(managed, marginAccessor, getAlignmentInternal().getHpos(), height) +
                getInsets().getRight();
     }
 
     @Override protected double computeMinHeight(double width) {
         List<Node>managed = getManagedChildren();
         return getInsets().getTop() +
-               computeMaxMinAreaHeight(managed, getMargins(managed), getAlignmentInternal().getVpos(), width) +
+               computeMaxMinAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos(), width) +
                getInsets().getBottom();
     }
 
     @Override protected double computePrefWidth(double height) {
         List<Node>managed = getManagedChildren();
-        Insets[] margins = getMargins(managed);
 //        double h = -1;
 //        boolean vertBias = false;
 //        for (Node child: managed) {
@@ -298,7 +304,7 @@ public class StackPane extends Pane {
 //        }
         Insets padding = getInsets();
         return padding.getLeft() +
-               computeMaxPrefAreaWidth(managed, margins,
+               computeMaxPrefAreaWidth(managed, marginAccessor,
                                        (height == -1) ? -1 : (height - padding.getTop() - padding.getBottom()),
                                        getAlignmentInternal().getHpos()) +
                padding.getRight();
@@ -306,7 +312,6 @@ public class StackPane extends Pane {
 
     @Override protected double computePrefHeight(double width) {
         List<Node>managed = getManagedChildren();
-        Insets[] margins = getMargins(managed);
 //        double w = -1;
 //        boolean horizBias = false;
 //        for (Node child: managed) {
@@ -321,19 +326,12 @@ public class StackPane extends Pane {
 //        }
         Insets padding = getInsets();
         return padding.getTop() +
-               computeMaxPrefAreaHeight(managed, margins,
+               computeMaxPrefAreaHeight(managed, marginAccessor,
                                         (width == -1) ? -1 : (width - padding.getLeft() - padding.getRight()),
                                         getAlignmentInternal().getVpos()) +
                padding.getBottom();
     }
 
-    private Insets[] getMargins(List<Node>managed) {
-        Insets margins[] = new Insets[managed.size()];
-        for(int i = 0; i < margins.length; i++) {
-            margins[i] = getMargin(managed.get(i));
-        }
-        return margins;
-    }
 
     @Override public void requestLayout() {
         if (performingLayout) {
@@ -421,8 +419,8 @@ public class StackPane extends Pane {
      * {@inheritDoc}
      *
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();

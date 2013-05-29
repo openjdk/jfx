@@ -46,6 +46,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import javafx.css.Styleable;
 
 import static javafx.geometry.Orientation.*;
+import javafx.util.Callback;
 
 /**
  * FlowPane lays out its children in a flow that wraps at the flowpane's boundary.
@@ -79,7 +80,7 @@ import static javafx.geometry.Orientation.*;
  *
  *<p>
  * Example of a vertical flowpane:
- * <pre><code>     FlowPane flow = new FlowPane(Orientation.VERTICAL); 
+ * <pre><code>     FlowPane flow = new FlowPane(Orientation.VERTICAL);
  *     flow.setColumnHalignment(HPos.LEFT); // align labels on left
  *     flow.setPrefWrapLength(200); // preferred height = 200
  *     for (int i = 0; i < titles.size(); i++) {
@@ -170,6 +171,12 @@ public class FlowPane extends Pane {
     public static Insets getMargin(Node child) {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
+
+    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
+        public Insets call(Node n) {
+            return getMargin(n);
+        }
+    };
 
     /**
      * Removes all flowpane constraints from the child node.
@@ -285,7 +292,7 @@ public class FlowPane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
+
                 @Override
                 public CssMetaData<FlowPane, Orientation> getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
@@ -304,7 +311,7 @@ public class FlowPane extends Pane {
         }
         return orientation;
     }
-    
+
     private ObjectProperty<Orientation> orientation;
     public final void setOrientation(Orientation value) { orientationProperty().set(value); }
     public final Orientation getOrientation() { return orientation == null ? HORIZONTAL : orientation.get();  }
@@ -321,7 +328,7 @@ public class FlowPane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
+
                 @Override
                 public CssMetaData<FlowPane, Number> getCssMetaData() {
                     return StyleableProperties.HGAP;
@@ -340,7 +347,7 @@ public class FlowPane extends Pane {
         }
         return hgap;
     }
-    
+
     private DoubleProperty hgap;
     public final void setHgap(double value) { hgapProperty().set(value); }
     public final double getHgap() { return hgap == null ? 0 : hgap.get(); }
@@ -375,7 +382,7 @@ public class FlowPane extends Pane {
         }
         return vgap;
     }
-    
+
     private DoubleProperty vgap;
     public final void setVgap(double value) { vgapProperty().set(value); }
     public final double getVgap() { return vgap == null ? 0 : vgap.get(); }
@@ -436,7 +443,7 @@ public class FlowPane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
+
                 @Override
                 public CssMetaData<FlowPane, Pos> getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
@@ -455,7 +462,7 @@ public class FlowPane extends Pane {
         }
         return alignment;
     }
-    
+
     private ObjectProperty<Pos> alignment;
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.TOP_LEFT : alignment.get(); }
@@ -476,7 +483,7 @@ public class FlowPane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
+
                 @Override
                 public CssMetaData<FlowPane, HPos> getCssMetaData() {
                     return StyleableProperties.COLUMN_HALIGNMENT;
@@ -495,7 +502,7 @@ public class FlowPane extends Pane {
         }
         return columnHalignment;
     }
-    
+
     private ObjectProperty<HPos> columnHalignment;
     public final void setColumnHalignment(HPos value) { columnHalignmentProperty().set(value); }
     public final HPos getColumnHalignment() { return columnHalignment == null ? HPos.LEFT : columnHalignment.get(); }
@@ -519,11 +526,11 @@ public class FlowPane extends Pane {
                     requestLayout();
                 }
 
-                @Override 
+                @Override
                 public CssMetaData<FlowPane, VPos> getCssMetaData() {
                     return StyleableProperties.ROW_VALIGNMENT;
                 }
-                
+
                 @Override
                 public Object getBean() {
                     return FlowPane.this;
@@ -537,7 +544,7 @@ public class FlowPane extends Pane {
         }
         return rowValignment;
     }
-    
+
     private ObjectProperty<VPos> rowValignment;
     public final void setRowValignment(VPos value) { rowValignmentProperty().set(value); }
     public final VPos getRowValignment() { return rowValignment == null ? VPos.CENTER : rowValignment.get(); }
@@ -587,9 +594,9 @@ public class FlowPane extends Pane {
         if (getOrientation() == HORIZONTAL) {
             // horizontal
             double maxRunWidth = getPrefWrapLength();
-            List<Run> hruns = getRuns(maxRunWidth);            
+            List<Run> hruns = getRuns(maxRunWidth);
             double w = computeContentWidth(hruns);
-            w = getPrefWrapLength() > w ? getPrefWrapLength() : w;            
+            w = getPrefWrapLength() > w ? getPrefWrapLength() : w;
             return insets.getLeft() + snapSize(w) + insets.getRight();
         } else {
             // vertical
@@ -613,7 +620,7 @@ public class FlowPane extends Pane {
             double maxRunHeight = getPrefWrapLength();
             List<Run> vruns = getRuns(maxRunHeight);
             double h = computeContentHeight(vruns);
-            h = getPrefWrapLength() > h ? getPrefWrapLength() : h;            
+            h = getPrefWrapLength() > h ? getPrefWrapLength() : h;
             return insets.getTop() + snapSize(h) + insets.getBottom();
         }
     }
@@ -690,16 +697,14 @@ public class FlowPane extends Pane {
             // horizontal
             ArrayList<Node> rownodes = new ArrayList();
             run.width = (run.rects.size()-1)*snapSpace(getHgap());
-            Insets margins[] = new Insets[run.rects.size()];
             for (int i=0, max=run.rects.size(); i<max; i++) {
                 LayoutRect lrect = run.rects.get(i);
-                margins[i] = getMargin(lrect.node);
                 rownodes.add(lrect.node);
                 run.width += lrect.width;
                 lrect.y = runOffset;
             }
-            run.height = computeMaxPrefAreaHeight(rownodes, margins, getRowValignment());
-            run.baselineOffset = getRowValignment() == VPos.BASELINE? getMaxAreaBaselineOffset(rownodes, margins) : run.height;
+            run.height = computeMaxPrefAreaHeight(rownodes, marginAccessor, getRowValignment());
+            run.baselineOffset = getRowValignment() == VPos.BASELINE? getMaxAreaBaselineOffset(rownodes, marginAccessor) : run.height;
 
         } else {
             // vertical
@@ -797,7 +802,7 @@ public class FlowPane extends Pane {
       */
      private static class StyleableProperties {
 
-         private static final CssMetaData<FlowPane,Pos> ALIGNMENT = 
+         private static final CssMetaData<FlowPane,Pos> ALIGNMENT =
              new CssMetaData<FlowPane,Pos>("-fx-alignment",
                  new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT) {
 
@@ -810,10 +815,10 @@ public class FlowPane extends Pane {
             public StyleableProperty<Pos> getStyleableProperty(FlowPane node) {
                 return (StyleableProperty<Pos>)node.alignmentProperty();
             }
-                 
+
          };
 
-         private static final CssMetaData<FlowPane,HPos> COLUMN_HALIGNMENT = 
+         private static final CssMetaData<FlowPane,HPos> COLUMN_HALIGNMENT =
              new CssMetaData<FlowPane,HPos>("-fx-column-halignment",
                  new EnumConverter<HPos>(HPos.class), HPos.LEFT) {
 
@@ -826,10 +831,10 @@ public class FlowPane extends Pane {
             public StyleableProperty<HPos> getStyleableProperty(FlowPane node) {
                 return (StyleableProperty<HPos>)node.columnHalignmentProperty();
             }
-                     
+
          };
-         
-         private static final CssMetaData<FlowPane,Number> HGAP = 
+
+         private static final CssMetaData<FlowPane,Number> HGAP =
              new CssMetaData<FlowPane,Number>("-fx-hgap",
                  SizeConverter.getInstance(), 0.0){
 
@@ -842,10 +847,10 @@ public class FlowPane extends Pane {
             public StyleableProperty<Number> getStyleableProperty(FlowPane node) {
                 return (StyleableProperty<Number>)node.hgapProperty();
             }
-                     
+
          };
-         
-         private static final CssMetaData<FlowPane,VPos> ROW_VALIGNMENT = 
+
+         private static final CssMetaData<FlowPane,VPos> ROW_VALIGNMENT =
              new CssMetaData<FlowPane,VPos>("-fx-row-valignment",
                  new EnumConverter<VPos>(VPos.class), VPos.CENTER) {
 
@@ -858,20 +863,20 @@ public class FlowPane extends Pane {
             public StyleableProperty<VPos> getStyleableProperty(FlowPane node) {
                 return (StyleableProperty<VPos>)node.rowValignmentProperty();
             }
-                     
-         }; 
 
-         private static final CssMetaData<FlowPane,Orientation> ORIENTATION = 
+         };
+
+         private static final CssMetaData<FlowPane,Orientation> ORIENTATION =
              new CssMetaData<FlowPane,Orientation>("-fx-orientation",
-                 new EnumConverter<Orientation>(Orientation.class), 
+                 new EnumConverter<Orientation>(Orientation.class),
                  Orientation.HORIZONTAL) {
-                
+
             @Override
             public Orientation getInitialValue(FlowPane node) {
-                // A vertical flow pane should remain vertical 
+                // A vertical flow pane should remain vertical
                 return node.getOrientation();
             }
-                     
+
             @Override
             public boolean isSettable(FlowPane node) {
                 return node.orientation == null || !node.orientation.isBound();
@@ -881,10 +886,10 @@ public class FlowPane extends Pane {
             public StyleableProperty<Orientation> getStyleableProperty(FlowPane node) {
                 return (StyleableProperty<Orientation>)node.orientationProperty();
             }
-                     
-         };  
-         
-         private static final CssMetaData<FlowPane,Number> VGAP = 
+
+         };
+
+         private static final CssMetaData<FlowPane,Number> VGAP =
              new CssMetaData<FlowPane,Number>("-fx-vgap",
                  SizeConverter.getInstance(), 0.0){
 
@@ -897,8 +902,8 @@ public class FlowPane extends Pane {
             public StyleableProperty<Number> getStyleableProperty(FlowPane node) {
                 return (StyleableProperty<Number>)node.vgapProperty();
             }
-                     
-         }; 
+
+         };
 
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
@@ -929,8 +934,8 @@ public class FlowPane extends Pane {
      * {@inheritDoc}
      *
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();

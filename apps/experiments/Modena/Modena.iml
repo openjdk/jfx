@@ -53,9 +53,12 @@
     <orderEntry type="module" module-name="prism-ps" />
     <orderEntry type="module" module-name="prism-util" />
     <orderEntry type="module" module-name="test-stub-toolkit" />
-    <orderEntry type="module" module-name="webkit" />
+    <orderEntry type="module" module-name="webview" />
     <orderEntry type="inheritedJdk" />
     <orderEntry type="library" name="webkit-impl" level="project" />
+    <orderEntry type="module" module-name="javafx-builders" />
+    <orderEntry type="module" module-name="javafx-font-t2k" />
+    <orderEntry type="module" module-name="prism-sw" />
   </component>
 </module>
 

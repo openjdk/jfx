@@ -210,7 +210,7 @@ public  class Rectangle extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty width = new DoublePropertyBase() {
+    private final DoubleProperty width = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
@@ -246,7 +246,7 @@ public  class Rectangle extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty height = new DoublePropertyBase() {
+    private final DoubleProperty height = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
