@@ -155,7 +155,7 @@
             <attribute name="optional" value="true"/>
         </attributes>
     </classpathentry>
-    <classpathentry kind="lib" path="../caches/sdk/build/lib/desktop/webview.jar">
+    <classpathentry kind="lib" path="../caches/sdk/build/lib/desktop/jfxwebkit.jar">
         <attributes>
             <attribute name="optional" value="true"/>
         </attributes>
