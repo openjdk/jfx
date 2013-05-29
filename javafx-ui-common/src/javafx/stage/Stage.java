@@ -1073,11 +1073,9 @@ public class Stage extends Window {
             }
         }
 
-        if (!value && (impl_peer != null)) {
+        if (!value) {
             // Remove form active stage list
             stages.remove(this);
-            peerListener = null;
-            impl_peer = null;
         }
 
         if (!value && inNestedEventLoop) {
@@ -1114,5 +1112,10 @@ public class Stage extends Window {
      */
     public void close() {
         hide();
+    }
+
+    @Override
+    Window getWindowOwner() {
+        return getOwner();
     }
 }

@@ -25,14 +25,12 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link Character}
  * (and char primitive) values.</p>
  */
-@NoBuilder
 public class CharacterStringConverter extends StringConverter<Character> {
     /** {@inheritDoc} */
     @Override public Character fromString(String value) {

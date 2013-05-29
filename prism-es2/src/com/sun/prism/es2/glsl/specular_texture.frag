@@ -24,12 +24,12 @@
  */
 
 // specular texture fragment shader
-#version 120
+//#version 120
 
 uniform sampler2D specularMap;
 
 vec4 apply_specular()
 {
-    vec4 tSpec = texture2D(specularMap, gl_TexCoord[0].xy);
+    vec4 tSpec = texture2D(specularMap, oTexCoords);
     return tSpec;
 }

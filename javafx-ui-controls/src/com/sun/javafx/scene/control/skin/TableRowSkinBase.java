@@ -32,10 +32,10 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import javafx.animation.FadeTransition;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
 import javafx.collections.WeakListChangeListener;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
@@ -129,6 +129,8 @@ public abstract class TableRowSkinBase<T,
     protected abstract void updateCell(R cell, C row);  // cell.updateTableRow(skinnable); (i.e cell.updateTableRow(row))
     
     protected abstract ObjectProperty<ObservableList<T>> itemsProperty();
+
+    protected abstract DoubleProperty fixedCellSizeProperty();
     
     protected abstract boolean isColumnPartiallyOrFullyVisible(TableColumnBase tc); // tableViewSkin.isColumnPartiallyOrFullyVisible(tc)
 
@@ -177,8 +179,8 @@ public abstract class TableRowSkinBase<T,
     protected boolean isDirty = false;
     protected boolean updateCells = false;
     
-    private final double fixedCellLength;
-    private final boolean fixedCellLengthEnabled;
+    private double fixedCellSize;
+    private boolean fixedCellSizeEnabled;
     
     private ListChangeListener<TableColumnBase> visibleLeafColumnsListener = new ListChangeListener<TableColumnBase>() {
         @Override public void onChanged(Change<? extends TableColumnBase> c) {
@@ -219,15 +221,15 @@ public abstract class TableRowSkinBase<T,
 //        node.setManaged(false);
 //        node.setVisible(false);
 //    }
-    
-    /**
-     * Used in layoutChildren to specify that the node is now visible.
-     */
-    private void show(Node node) {
-        node.setManaged(true);
-        node.setVisible(true);
-    }
-    
+//    
+//    /**
+//     * Used in layoutChildren to specify that the node is now visible.
+//     */
+//    private void show(Node node) {
+//        node.setManaged(true);
+//        node.setVisible(true);
+//    }
+//    
 //    // TODO we can optimise this code if we cache the spanTypeArray, which at
 //    //      present is created for every query
 //    // TODO we can optimise this code if we set a maximum span distance
@@ -314,14 +316,6 @@ public abstract class TableRowSkinBase<T,
     public TableRowSkinBase(C control, B behavior) {
         super(control, behavior);
         
-        // TEMPORARY CODE (RT-24975)
-        // we check the TableView to see if a fixed cell length is specified
-        ObservableMap p = control.getProperties();
-        String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
-        fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
-        fixedCellLengthEnabled = fixedCellLength > 0;
-        // --- end of TEMPORARY CODE
-        
         // init(control) should not be called here - it should be called by the
         // subclass after initialising itself. This is to prevent NPEs (for 
         // example, getVisibleLeafColumns() throws a NPE as the control itself
@@ -345,7 +339,13 @@ public abstract class TableRowSkinBase<T,
 //        registerChangeListener(control.graphicProperty(), "GRAPHIC");
 //        registerChangeListener(control.editingProperty(), "EDITING");
         registerChangeListener(control.itemProperty(), "ITEM");
-        
+
+        if (fixedCellSizeProperty() != null) {
+            registerChangeListener(fixedCellSizeProperty(), "FIXED_CELL_SIZE");
+            fixedCellSize = fixedCellSizeProperty().get();
+            fixedCellSizeEnabled = fixedCellSize > 0;
+        }
+
 //        // add listener to cell span model
 //        spanModel = spanModelProperty().get();
 //        registerChangeListener(spanModelProperty(), "SPAN_MODEL");
@@ -368,9 +368,12 @@ public abstract class TableRowSkinBase<T,
 //            // TODO update layout based on changes to span model
 //            spanModel = spanModelProperty().get();
 //            getSkinnable().requestLayout();
+        } else if ("FIXED_CELL_SIZE".equals(p)) {
+            fixedCellSize = fixedCellSizeProperty().get();
+            fixedCellSizeEnabled = fixedCellSize > 0;
         }
     }
-
+    
     @Override protected void layoutChildren(double x, final double y,
             final double w, final double h) {
         
@@ -382,6 +385,8 @@ public abstract class TableRowSkinBase<T,
             super.layoutChildren(x,y,w,h);
             return;
         }
+        
+        C control = getSkinnable();
         
         ///////////////////////////////////////////
         // indentation code starts here
@@ -401,7 +406,7 @@ public abstract class TableRowSkinBase<T,
             indentationColumnIndex = treeColumn == null ? 0 : visibleLeafColumns.indexOf(treeColumn);
             indentationColumnIndex = indentationColumnIndex < 0 ? 0 : indentationColumnIndex;
             
-            int indentationLevel = getIndentationLevel(getSkinnable());
+            int indentationLevel = getIndentationLevel(control);
             if (! isShowRoot()) indentationLevel--;
             final double indentationPerLevel = getIndentationPerLevel();
             leftMargin = indentationLevel * indentationPerLevel;
@@ -432,8 +437,9 @@ public abstract class TableRowSkinBase<T,
         double width;
         double height;
         
-        double verticalPadding = snappedTopInset() + snappedBottomInset();
-        double horizontalPadding = snappedLeftInset() + snappedRightInset();
+        final double verticalPadding = snappedTopInset() + snappedBottomInset();
+        final double horizontalPadding = snappedLeftInset() + snappedRightInset();
+        final double controlHeight = control.getHeight();
 
         /**
          * RT-26743:TreeTableView: Vertical Line looks unfinished.
@@ -442,21 +448,21 @@ public abstract class TableRowSkinBase<T,
          * where expected in cases where the vertical height exceeds the 
          * number of items.
          */
-        int index = getSkinnable().getIndex();
+        int index = control.getIndex();
         if (index < 0/* || row >= itemsProperty().get().size()*/) return;
         
         for (int column = 0, max = cells.size(); column < max; column++) {
             R tableCell = cells.get(column);
             TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
             
-            show(tableCell);
+//            show(tableCell);
             
             width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
-            height = Math.max(getSkinnable().getHeight(), tableCell.prefHeight(-1));
+            height = Math.max(controlHeight, tableCell.prefHeight(-1));
             height = snapSize(height) - snapSize(verticalPadding);
             
             boolean isVisible = true;
-            if (fixedCellLengthEnabled) {
+            if (fixedCellSizeEnabled) {
                 // we determine if the cell is visible, and if not we have the
                 // ability to take it out of the scenegraph to help improve 
                 // performance. However, we only do this when there is a 
@@ -470,10 +476,7 @@ public abstract class TableRowSkinBase<T,
             } 
 
             if (isVisible) {
-                // not ideal to have to do this O(n) lookup, but compared
-                // to what we had previously this is still a massive step
-                // forward
-                if (fixedCellLengthEnabled && ! getChildren().contains(tableCell)) {
+                if (fixedCellSizeEnabled && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
                 
@@ -563,7 +566,7 @@ public abstract class TableRowSkinBase<T,
 //                                // to the height variable
 //                                for (int i = 1; i < cellSpan.getRowSpan(); i++) {
 //                                    // calculate the height
-//                                    double rowHeight = getTableRowHeight(row + i, getSkinnable());
+//                                    double rowHeight = getTableRowHeight(row + i, control);
 //                                    height += snapSize(rowHeight);
 //                                }
 //                            }
@@ -576,10 +579,11 @@ public abstract class TableRowSkinBase<T,
                 tableCell.resize(width, height);
                 tableCell.relocate(x, snappedTopInset());
                 
-                // Request layout is here as (partial) fix for RT-28684
+                // Request layout is here as (partial) fix for RT-28684.
+                // This does not appear to impact performance...
                 tableCell.requestLayout();
             } else {
-                if (fixedCellLengthEnabled) {
+                if (fixedCellSizeEnabled) {
                     // we only add/remove to the scenegraph if the fixed cell
                     // length support is enabled - otherwise we keep all
                     // TableCells in the scenegraph
@@ -677,7 +681,7 @@ public abstract class TableRowSkinBase<T,
         }
 
         // update children of each row
-        if (! fixedCellLengthEnabled && (resetChildren || cellsEmpty)) {
+        if (!fixedCellSizeEnabled && (resetChildren || cellsEmpty)) {
             getChildren().setAll(cells);
         }
     }
@@ -697,8 +701,8 @@ public abstract class TableRowSkinBase<T,
     }
     
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellLengthEnabled) {
-            return fixedCellLength;
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
         }
         
         // fix for RT-29080
@@ -726,8 +730,8 @@ public abstract class TableRowSkinBase<T,
     }
     
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellLengthEnabled) {
-            return fixedCellLength;
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
         }
         
         // fix for RT-29080
@@ -751,7 +755,14 @@ public abstract class TableRowSkinBase<T,
         }
         return minHeight;
     }
-    
+
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
+        }
+        return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
     private void checkState(boolean doRecreateIfNecessary) {
         if (isDirty) {
             // doRecreateIfNecessary was added to resolve RT-29382, which was

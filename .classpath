@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+    <classpathentry kind="src" path="apps/experiments/3DViewer/src/main/java"/>
+    <classpathentry kind="src" path="apps/experiments/3DViewer/src/test/java"/>
+    <classpathentry kind="src" path="apps/experiments/3DViewer/src/test/resources"/>
     <!--
     <classpathentry kind="src" path="apps/experiments/ConferenceScheduleApp/src"/>
     <classpathentry kind="src" path="apps/experiments/ModenaTest/test"/>
-    -->
     <classpathentry kind="src" path="apps/experiments/Modena/src"/>
+    -->
     <classpathentry kind="src" path="apps/samples/Ensemble8/src/app"/>
     <classpathentry kind="src" path="apps/samples/Ensemble8/src/compiletime"/>
     <classpathentry kind="src" path="apps/samples/Ensemble8/src/generated"/>
@@ -38,18 +41,28 @@
     <classpathentry kind="src" path="glass/glass/src"/>
 
     <classpathentry kind="src" path="javafx-anim/src"/>
-    <classpathentry kind="src" path="javafx-anim/build/builders"/>
     <classpathentry kind="src" path="javafx-anim/test/unit"/>
+    <!--
     <classpathentry kind="src" path="javafx-annotation-processor/src"/>
+    -->
     <classpathentry kind="src" path="javafx-beans/src"/>
     <classpathentry kind="src" path="javafx-beans/test"/>
     <classpathentry kind="src" path="javafx-beans-dt/src"/>
     <classpathentry kind="src" path="javafx-beans-dt/test"/>
+
+    <!--
+    <classpathentry kind="src" path="javafx-builders/test/unit"/>
+    <classpathentry kind="src" path="javafx-builders/src"/>
+    -->
+    <classpathentry kind="lib" exported="true" path="javafx-builders/dist/javafx-builders.jar">
+        <attributes>
+            <attribute name="optional" value="true"/>
+        </attributes>
+    </classpathentry>
+    
     <classpathentry kind="src" path="javafx-concurrent/src"/>
     <classpathentry kind="src" path="javafx-concurrent/test"/>
-    <classpathentry kind="src" path="javafx-concurrent/build/builders"/>
     <classpathentry kind="src" path="javafx-common/test/unit"/>
-    <classpathentry kind="src" path="javafx-common/build/builders"/>
     <classpathentry kind="src" path="javafx-common/build/gensrc/classes"/>
     <classpathentry kind="src" path="javafx-common/src"/>
     <classpathentry kind="src" path="javafx-designtime/src"/>
@@ -57,7 +70,10 @@
     <classpathentry kind="src" path="javafx-designtime/test"/>
     -->
     <!-- Temporarily excluding SwingNode as it requires Java 8 -->
+    <!--
     <classpathentry kind="src" excluding="javafx/embed/swing/SwingNode.java" path="javafx-embed-swing/src"/>
+    -->
+    <classpathentry kind="src" path="javafx-embed-swing/src"/>
     <classpathentry kind="src" path="javafx-embed-swt/src"/>
     <classpathentry kind="src" path="javafx-fxml/src"/>
     <classpathentry kind="src" path="javafx-fxml/test"/>
@@ -72,13 +88,12 @@
     <classpathentry kind="src" path="javafx-sg-prism/test"/>
     <classpathentry kind="src" path="javafx-ui-charts/src"/>
     <classpathentry kind="src" path="javafx-ui-charts/test"/>
-    <classpathentry kind="src" path="javafx-ui-charts/build/builders"/>
     <classpathentry kind="src" path="javafx-ui-common/src"/>
+    <!--
     <classpathentry kind="src" path="javafx-ui-common/test/unit"/>
-    <classpathentry kind="src" path="javafx-ui-common/build/builders"/>
+    -->
     <classpathentry kind="src" path="javafx-ui-controls/src"/>
     <classpathentry kind="src" path="javafx-ui-controls/test"/>
-    <classpathentry kind="src" path="javafx-ui-controls/build/builders"/>
     <classpathentry kind="src" path="javafx-ui-quantum/src"/>
     <classpathentry kind="src" path="javafx-util-converter/src"/>
     <classpathentry kind="src" path="javafx-util-converter/test"/>
@@ -119,13 +134,45 @@
     <classpathentry kind="src" path="prism-util/src"/>
 
     <classpathentry kind="src" path="test-stub-toolkit/src"/>
+	<classpathentry kind="src" path="tests/app-lifecycle/ClassLoaderApp/src"/>
+	<classpathentry kind="src" path="tests/app-lifecycle/ClassLoaderTest/test"/>
+	<classpathentry kind="src" path="tests/app-lifecycle/LauncherTests/test"/>
+	<classpathentry kind="src" path="tests/app-lifecycle/LifeCycleTests/test"/>
+	<classpathentry kind="src" path="tests/glass/ExceptionHandler/test"/>
+	<classpathentry kind="src" path="tests/graphics/MaterialTests/test"/>
+	<classpathentry kind="src" path="tests/graphics/SnapshotTests/test"/>
+	<classpathentry kind="src" path="tests/graphics/SwingInterop/test"/>
+	<classpathentry kind="src" path="tests/manual/printing"/>
+	<classpathentry kind="src" path="tests/quantum/CloseWindow/test"/>
+	<classpathentry kind="src" path="tests/quantum/WindowSceneInitDispose/test"/>
 
-    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-    <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
-    <classpathentry kind="lib" path="../import/antlr-3.1.3/antlr-3.1.3/lib/antlr-3.1.3.jar"/>
-    <classpathentry kind="lib" path="../import/findbugs-2.0.1/findbugs-2.0.1/lib/ant.jar"/>
+	<classpathentry kind="src" path="webview/src"/>
+	<!--
+	<classpathentry kind="src" path="webview/test"/>
+	-->
+	<classpathentry combineaccessrules="false" kind="src" path="webview/native/WebKitBuild/Release/WebCore/generated/java">
+        <attributes>
+            <attribute name="optional" value="true"/>
+        </attributes>
+    </classpathentry>
+    <classpathentry kind="lib" path="../caches/sdk/build/lib/desktop/webview.jar">
+        <attributes>
+            <attribute name="optional" value="true"/>
+        </attributes>
+    </classpathentry>
 
     <classpathentry kind="src" path="/rt-closed"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/media">
+		<attributes>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="../caches/sdk/build/lib/desktop/jfxmedia.jar">
+		<attributes>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+
     <classpathentry kind="src" path="/org.eclipse.swt">
         <attributes>
             <attribute name="optional" value="true"/>
@@ -133,4 +180,9 @@
     </classpathentry>
     <classpathentry kind="lib" path="../import/swt-3.7.1/swt-debug.jar"/>
     <classpathentry kind="output" path="bin"/>
+    
+    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+    <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+    <classpathentry kind="lib" path="../import/antlr-3.1.3/antlr-3.1.3/lib/antlr-3.1.3.jar"/>
+    <classpathentry kind="lib" path="../import/findbugs-2.0.1/findbugs-2.0.1/lib/ant.jar"/>
 </classpath>

@@ -28,7 +28,6 @@ package javafx.scene;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.pgstub.StubGroup;
 import com.sun.javafx.pgstub.StubCircle;
-import com.sun.javafx.stage.WindowHelper;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -67,7 +66,11 @@ import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.test.objects.TestScene;
 import com.sun.javafx.test.objects.TestStage;
 import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
+import javafx.geometry.Point3D;
+import javafx.scene.shape.Box;
 import javafx.scene.shape.Circle;
+import javafx.scene.transform.Rotate;
 /**
  * Tests various aspects of Node.
  *
@@ -248,10 +251,10 @@ public class NodeTest {
         scene.getRoot().getChildren().add(rect);
 
         PickResultChooser res = new PickResultChooser();
-        rect.impl_pickNode(new PickRay(50, 50), res);
+        rect.impl_pickNode(new PickRay(50, 50, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
         assertSame(rect, res.getIntersectedNode());
         res = new PickResultChooser();
-        rect.impl_pickNode(new PickRay(0, 0), res);
+        rect.impl_pickNode(new PickRay(0, 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
         assertNull(res.getIntersectedNode());
     }
 
@@ -267,10 +270,10 @@ public class NodeTest {
         scene.getRoot().getChildren().add(rect);
 
         PickResultChooser res = new PickResultChooser();
-        rect.impl_pickNode(new PickRay(50, 50), res);
+        rect.impl_pickNode(new PickRay(50, 50, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
         assertSame(rect, res.getIntersectedNode());
         res = new PickResultChooser();
-        rect.impl_pickNode(new PickRay(0, 0), res);
+        rect.impl_pickNode(new PickRay(0, 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
         assertNull(res.getIntersectedNode());
     }
 
@@ -1054,9 +1057,39 @@ public class NodeTest {
         testStage.setX(100);
         testStage.setY(200);
         scene.set_window(testStage);
+        Point2D p = rect.localToScreen(new Point2D(1, 2));
+        assertEquals(111.0, p.getX(), 0.0001);
+        assertEquals(222.0, p.getY(), 0.0001);
+        Bounds b = rect.localToScreen(new BoundingBox(1, 2, 3, 4));
+        assertEquals(111.0, b.getMinX(), 0.0001);
+        assertEquals(222.0, b.getMinY(), 0.0001);
+        assertEquals(3.0, b.getWidth(), 0.0001);
+        assertEquals(4.0, b.getHeight(), 0.0001);
+    }
 
-        assertEquals(new Point2D(111, 222), rect.localToScreen(new Point2D(1, 2)));
-        assertEquals(new BoundingBox(111, 222, 3, 4), rect.localToScreen(new BoundingBox(1, 2, 3, 4)));
+    @Test
+    public void testLocalToScreen3D() {
+        Box box = new Box(10, 10, 10);
+
+        box.setTranslateX(10);
+        box.setTranslateY(20);
+
+        TestScene scene = new TestScene(new Group(box));
+        scene.setCamera(new PerspectiveCamera());
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        scene.set_window(testStage);
+
+        Point2D p = box.localToScreen(new Point3D(1, 2, -5));
+        assertEquals(111.42, p.getX(), 0.1);
+        assertEquals(223.14, p.getY(), 0.1);
+        Bounds b = box.localToScreen(new BoundingBox(1, 2, -5, 1, 2, 10));
+        assertEquals(110.66, b.getMinX(), 0.1);
+        assertEquals(221.08, b.getMinY(), 0.1);
+        assertEquals(1.88, b.getWidth(), 0.1);
+        assertEquals(4.3, b.getHeight(), 0.1);
+        assertEquals(0.0, b.getDepth(), 0.0001);
     }
 
     @Test
@@ -1077,38 +1110,184 @@ public class NodeTest {
     }
 
     @Test
-    public void testLocalToScreenWithTranslatedWindow() {
+    public void testLocalToScreenWithTranslatedCamera() {
         Rectangle rect = new Rectangle();
 
         rect.setTranslateX(10);
         rect.setTranslateY(20);
 
-        TestScene scene = new TestScene(new Group(rect));
+        ParallelCamera cam = new ParallelCamera();
+        TestScene scene = new TestScene(new Group(rect, cam));
+        scene.setCamera(cam);
         final TestStage testStage = new TestStage("");
         testStage.setX(100);
         testStage.setY(200);
-        WindowHelper.setWindowTranslate(testStage, -30, -20);
+        cam.setTranslateX(30);
+        cam.setTranslateY(20);
         scene.set_window(testStage);
 
-        assertEquals(new Point2D(81, 202), rect.localToScreen(new Point2D(1, 2)));
-        assertEquals(new BoundingBox(81, 202, 3, 4), rect.localToScreen(new BoundingBox(1, 2, 3, 4)));
+        Point2D p = rect.localToScreen(new Point2D(1, 2));
+        assertEquals(81.0, p.getX(), 0.0001);
+        assertEquals(202.0, p.getY(), 0.0001);
+        Bounds b = rect.localToScreen(new BoundingBox(1, 2, 3, 4));
+        assertEquals(81.0, b.getMinX(), 0.0001);
+        assertEquals(202.0, b.getMinY(), 0.0001);
+        assertEquals(3.0, b.getWidth(), 0.0001);
+        assertEquals(4.0, b.getHeight(), 0.0001);
     }
 
     @Test
-    public void testScreenToLocalWithTranslatedWindow() {
+    public void testScreenToLocalWithTranslatedCamera() {
         Rectangle rect = new Rectangle();
 
         rect.setTranslateX(10);
         rect.setTranslateY(20);
 
-        TestScene scene = new TestScene(new Group(rect));
+        ParallelCamera cam = new ParallelCamera();
+        TestScene scene = new TestScene(new Group(rect, cam));
+        scene.setCamera(cam);
         final TestStage testStage = new TestStage("");
         testStage.setX(100);
         testStage.setY(200);
-        WindowHelper.setWindowTranslate(testStage, -30, -20);
+        cam.setTranslateX(30);
+        cam.setTranslateY(20);
         scene.set_window(testStage);
 
         assertEquals(new Point2D(31, 22), rect.screenToLocal(new Point2D(111, 222)));
         assertEquals(new BoundingBox(31, 22, 3, 4), rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
+    }
+
+    @Test
+    public void testLocalToScreenInsideSubScene() {
+        Rectangle rect = new Rectangle();
+        rect.setTranslateX(4);
+        rect.setTranslateY(9);
+        SubScene subScene = new SubScene(new Group(rect), 100, 100);
+        subScene.setTranslateX(6);
+        subScene.setTranslateY(11);
+
+        TestScene scene = new TestScene(new Group(subScene));
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        scene.set_window(testStage);
+
+        Point2D p = rect.localToScreen(new Point2D(1, 2));
+        assertEquals(111.0, p.getX(), 0.0001);
+        assertEquals(222.0, p.getY(), 0.0001);
+        Bounds b = rect.localToScreen(new BoundingBox(1, 2, 3, 4));
+        assertEquals(111.0, b.getMinX(), 0.0001);
+        assertEquals(222.0, b.getMinY(), 0.0001);
+        assertEquals(3.0, b.getWidth(), 0.0001);
+        assertEquals(4.0, b.getHeight(), 0.0001);
+    }
+
+    @Test
+    public void testScreenToLocalInsideSubScene() {
+        Rectangle rect = new Rectangle();
+        rect.setTranslateX(4);
+        rect.setTranslateY(9);
+        SubScene subScene = new SubScene(new Group(rect), 100, 100);
+        subScene.setTranslateX(6);
+        subScene.setTranslateY(11);
+
+        TestScene scene = new TestScene(new Group(subScene));
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        scene.set_window(testStage);
+
+        assertEquals(new Point2D(1, 2), rect.screenToLocal(new Point2D(111, 222)));
+        assertEquals(new BoundingBox(1, 2, 3, 4), rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
+    }
+
+    @Test
+    public void test2DLocalToScreenOn3DRotatedSubScene() {
+        Rectangle rect = new Rectangle();
+        rect.setTranslateX(5);
+        rect.setTranslateY(10);
+        SubScene subScene = new SubScene(new Group(rect), 100, 100);
+        subScene.setTranslateX(5);
+        subScene.setTranslateY(10);
+        subScene.setRotationAxis(Rotate.Y_AXIS);
+        subScene.setRotate(40);
+
+        TestScene scene = new TestScene(new Group(subScene));
+        scene.setCamera(new PerspectiveCamera());
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        scene.set_window(testStage);
+
+        Point2D p = rect.localToScreen(new Point2D(1, 2));
+        assertEquals(124.36, p.getX(), 0.1);
+        assertEquals(226.0, p.getY(), 0.1);
+        Bounds b = rect.localToScreen(new BoundingBox(1, 2, 3, 4));
+        assertEquals(124.36, b.getMinX(), 0.1);
+        assertEquals(225.75, b.getMinY(), 0.1);
+        assertEquals(1.85, b.getWidth(), 0.1);
+        assertEquals(3.76, b.getHeight(), 0.1);
+    }
+
+    @Test
+    public void test2DScreenToLocalTo3DRotatedSubScene() {
+        Rectangle rect = new Rectangle();
+        rect.setTranslateX(5);
+        rect.setTranslateY(10);
+        SubScene subScene = new SubScene(new Group(rect), 100, 100);
+        subScene.setTranslateX(5);
+        subScene.setTranslateY(10);
+        subScene.setRotationAxis(Rotate.Y_AXIS);
+        subScene.setRotate(40);
+
+        TestScene scene = new TestScene(new Group(subScene));
+        scene.setCamera(new PerspectiveCamera());
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        scene.set_window(testStage);
+
+        Point2D p = rect.screenToLocal(new Point2D(124.36, 226.0));
+        assertEquals(1, p.getX(), 0.1);
+        assertEquals(2, p.getY(), 0.1);
+        Bounds b = rect.screenToLocal(new BoundingBox(124.36, 225.75, 1.85, 3.76));
+        assertEquals(1, b.getMinX(), 0.1);
+        assertEquals(1.72, b.getMinY(), 0.1);
+        assertEquals(3, b.getWidth(), 0.1);
+        assertEquals(4.52, b.getHeight(), 0.1);
+    }
+
+    @Test
+    public void testScreenToLocalWithNonInvertibleTransform() {
+        Rectangle rect = new Rectangle();
+
+        rect.setScaleX(0.0);
+
+        TestScene scene = new TestScene(new Group(rect));
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        scene.set_window(testStage);
+
+        assertNull(rect.screenToLocal(new Point2D(111, 222)));
+        assertNull(rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
+    }
+
+    @Test
+    public void testScreenToLocalInsideNonInvertibleSubScene() {
+        Rectangle rect = new Rectangle();
+        rect.setTranslateX(4);
+        rect.setTranslateY(9);
+        SubScene subScene = new SubScene(new Group(rect), 100, 100);
+        subScene.setScaleX(0.0);
+
+        TestScene scene = new TestScene(new Group(subScene));
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        scene.set_window(testStage);
+
+        assertNull(rect.screenToLocal(new Point2D(111, 222)));
+        assertNull(rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
     }
 }

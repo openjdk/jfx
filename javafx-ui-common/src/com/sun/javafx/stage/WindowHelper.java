@@ -40,28 +40,6 @@ public final class WindowHelper {
     private WindowHelper() {
     }
 
-    public static void setWindowTranslate(final Window window,
-                                          final double translateX,
-                                          final double translateY) {
-        windowAccessor.setWindowTranslate(window, translateX, translateY);
-    }
-
-    /**
-     * Returns the x coordinate of the window's upper left corner on screen. The
-     * value differs from Window.x only if winTranslateX is non-zero.
-     */
-    public static double getScreenX(final Window window) {
-        return windowAccessor.getScreenX(window);
-    }
-
-    /**
-     * Returns the y coordinate of the window's upper left corner on screen. The
-     * value differs from Window.y only if winTranslateY is non-zero.
-     */
-    public static double getScreenY(final Window window) {
-        return windowAccessor.getScreenY(window);
-    }
-
     public static void setLocation(final Window window,
                                    final double x,
                                    final double y) {
@@ -83,14 +61,6 @@ public final class WindowHelper {
     }
 
     public interface WindowAccessor {
-        void setWindowTranslate(Window window,
-                                double translateX,
-                                double translateY);
-
-        double getScreenX(Window window);
-
-        double getScreenY(Window window);
-
         void setLocation(Window window, double x, double y);
 
         void setSize(Window window, double width, double height);

@@ -43,14 +43,36 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 <?scenebuilder-stylesheet viewer.css?>
 <!--suppress JavaFxUnresolvedStyleClassReference -->
 
-<Accordion fx:id="settings" minWidth="0.0" xmlns:fx="http://javafx.com/fxml" fx:controller="com.javafx.experiments.jfx3dviewer.SettingsController">
+<Accordion fx:id="settings" minWidth="0.0" prefHeight="798.0" prefWidth="279.0" xmlns:fx="http://javafx.com/fxml" fx:controller="com.javafx.experiments.jfx3dviewer.SettingsController">
   <expandedPane>
-    <TitledPane fx:id="x1" animated="false" text="Camera">
+    <TitledPane fx:id="x4" animated="false" expanded="true" text="Options">
       <content>
         <GridPane hgap="5.0" styleClass="settings" vgap="5.0">
           <children>
-            <Label text="Field of view:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-            <Slider fx:id="fovSlider" majorTickUnit="40.0" max="180.0" min="0.0" minorTickCount="4" showTickLabels="true" showTickMarks="true" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+            <Label text="Show Axis:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+            <Label text="Y Up:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+            <CheckBox fx:id="showAxisCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+            <CheckBox fx:id="yUpCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <Label text="Scale to Fit" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+            <CheckBox id="yUpCheckBox" fx:id="scaleToFitCheckBox" mnemonicParsing="false" selected="true" text="" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            <Label text="Background Color" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+            <ColorPicker fx:id="backgroundColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+            <Label text="Wireframe" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+            <CheckBox fx:id="wireFrameCheckbox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+            <Label text="Subdivide" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+            <HBox prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="5">
+              <children>
+                <ToggleButton mnemonicParsing="false" selected="true" styleClass="left-pill" text="None" userData="0">
+                  <toggleGroup>
+                    <ToggleGroup fx:id="subdivideGroup" />
+                  </toggleGroup>
+                </ToggleButton>
+                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="1" toggleGroup="$subdivideGroup" userData="1" />
+                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="2" toggleGroup="$subdivideGroup" userData="2" />
+                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="3" toggleGroup="$subdivideGroup" userData="3" />
+              </children>
+            </HBox>
+            <Region maxHeight="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="6" />
           </children>
           <columnConstraints>
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
@@ -60,43 +82,106 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <Insets bottom="8.0" left="8.0" right="8.0" top="8.0" fx:id="x3" />
           </padding>
           <rowConstraints>
-            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="ALWAYS" />
           </rowConstraints>
         </GridPane>
       </content>
     </TitledPane>
   </expandedPane>
   <panes>
-    <TitledPane animated="false" expanded="false" text="Options">
-      <content>
-        <GridPane hgap="5.0" padding="$x3" styleClass="settings" vgap="5.0">
-          <children>
-            <Label text="Show Axis:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-            <Label text="Y Up:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-            <CheckBox fx:id="showAxisCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-            <CheckBox fx:id="yUpCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-          </children>
-          <columnConstraints>
-            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-          </columnConstraints>
-          <rowConstraints>
-            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-          </rowConstraints>
-        </GridPane>
-      </content>
-    </TitledPane>
+    <fx:reference source="x4" />
     <TitledPane fx:id="x2" animated="false" text="Lights">
       <content>
+        <ScrollPane fitToWidth="true" prefHeight="200.0" prefWidth="200.0">
+          <content>
+            <GridPane hgap="5.0" padding="$x3" styleClass="settings" vgap="5.0">
+              <children>
+                <Label text="Color:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                <Label maxWidth="1.7976931348623157E308" styleClass="settings-header" text="Ambient" GridPane.columnIndex="0" GridPane.columnSpan="2147483647" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
+                <ColorPicker fx:id="ambientColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                <Label text="Enabled" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                <CheckBox fx:id="ambientEnableCheckbox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                <Label text="Color:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+                <ColorPicker id="ambientColorPicker" fx:id="light1ColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                <Label maxWidth="1.7976931348623157E308" styleClass="settings-header" text="Light 1 (Camera)" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.hgrow="ALWAYS" GridPane.rowIndex="3" />
+                <Label text="Enabled" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                <CheckBox fx:id="light1EnabledCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                <Label text="Lock to Camera" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+                <CheckBox fx:id="light1followCameraCheckBox" mnemonicParsing="false" selected="true" text="" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                <Label text="X" GridPane.columnIndex="0" GridPane.rowIndex="7" />
+                <Slider fx:id="light1x" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+                <Label text="Y" GridPane.columnIndex="0" GridPane.rowIndex="8" />
+                <Slider fx:id="light1y" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="8" />
+                <Label text="Z" GridPane.columnIndex="0" GridPane.rowIndex="9" />
+                <Slider fx:id="light1z" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="9" />
+                <Label maxWidth="1.7976931348623157E308" styleClass="settings-header" text="Light 2" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.hgrow="ALWAYS" GridPane.rowIndex="10" />
+                <Label text="Enabled" GridPane.columnIndex="0" GridPane.rowIndex="11" />
+                <CheckBox fx:id="light2EnabledCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="11" />
+                <Label text="X" GridPane.columnIndex="0" GridPane.rowIndex="13" />
+                <Slider fx:id="light2x" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="13" />
+                <Label text="Y" GridPane.columnIndex="0" GridPane.rowIndex="14" />
+                <Slider fx:id="light2y" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="14" />
+                <Label text="Z" GridPane.columnIndex="0" GridPane.rowIndex="15" />
+                <Slider fx:id="light2z" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="15" />
+                <Label maxWidth="1.7976931348623157E308" styleClass="settings-header" text="Light 3" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.hgrow="ALWAYS" GridPane.rowIndex="16" />
+                <Label text="Enabled" GridPane.columnIndex="0" GridPane.rowIndex="17" />
+                <CheckBox fx:id="light3EnabledCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="17" />
+                <Label text="Lock to Camera" GridPane.columnIndex="0" GridPane.rowIndex="19" />
+                <Slider fx:id="light3x" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="19" />
+                <Label text="Y" GridPane.columnIndex="0" GridPane.rowIndex="20" />
+                <Slider fx:id="light3y" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="20" />
+                <Label text="Z" GridPane.columnIndex="0" GridPane.rowIndex="21" />
+                <Slider fx:id="light3z" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="21" />
+                <Label text="Color:" GridPane.columnIndex="0" GridPane.rowIndex="12" />
+                <ColorPicker fx:id="light2ColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="12" />
+                <Label text="Color" GridPane.columnIndex="0" GridPane.rowIndex="18" />
+                <ColorPicker fx:id="light3ColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="18" />
+              </children>
+              <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+              </columnConstraints>
+              <rowConstraints>
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+              </rowConstraints>
+            </GridPane>
+          </content>
+        </ScrollPane>
+      </content>
+    </TitledPane>
+    <TitledPane fx:id="x1" animated="false" text="Camera">
+      <content>
         <GridPane hgap="5.0" padding="$x3" styleClass="settings" vgap="5.0">
           <children>
-            <Label text="Color:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-            <Label maxWidth="1.7976931348623157E308" styleClass="settings-header" text="Camera Light" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2" />
-            <Label maxWidth="1.7976931348623157E308" styleClass="settings-header" text="Ambient" GridPane.columnIndex="0" GridPane.columnSpan="2147483647" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
-            <ColorPicker fx:id="ambientColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-            <Label text="Color:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-            <ColorPicker id="ambientColorPicker" fx:id="cameraColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+            <Label text="Field of view:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+            <Slider fx:id="fovSlider" majorTickUnit="40.0" max="180.0" min="0.0" minorTickCount="4" showTickLabels="true" showTickMarks="true" GridPane.columnIndex="1" GridPane.rowIndex="0" />
           </children>
           <columnConstraints>
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
@@ -104,13 +189,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           </columnConstraints>
           <rowConstraints>
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
           </rowConstraints>
         </GridPane>
       </content>
     </TitledPane>
-    <fx:reference source="x1" />
   </panes>
 </Accordion>

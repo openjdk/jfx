@@ -35,13 +35,14 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.scene.CameraAccess;
+import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGCamera;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.transform.Transform;
 import sun.util.logging.PlatformLogger;
@@ -131,8 +132,9 @@ public abstract class Camera extends Node {
     }
 
     /**
-     * Specifies the near clipping plane of this {@code Camera} in the local
-     * coordinate system of this node.
+     * Specifies the near clipping plane of this {@code Camera} in the eye
+     * coordinate system of this node. Objects closer to the eye than the 
+     * {@code nearClip} plane are not drawn.
      *
      * @defaultValue 0.1
      * @since JavaFX 8
@@ -161,8 +163,9 @@ public abstract class Camera extends Node {
     }
 
     /**
-     * Specifies the far clipping plane of this {@code Camera} in the local
-     * coordinate system of this node.
+     * Specifies the far clipping plane of this {@code Camera} in the eye
+     * coordinate system of this node. Objects farther away from the eye than
+     * the {@code farClip} plane are not drawn.
      * <p>
      *
      * @defaultValue 100.0
@@ -295,7 +298,7 @@ public abstract class Camera extends Node {
             ownerScene.markCameraDirty();
         }
         if (ownerSubScene != null && ownerSubScene != getSubScene()) {
-            ownerSubScene.markCameraDirty();
+            ownerSubScene.markContentDirty();
         }
     }
 
@@ -339,7 +342,7 @@ public abstract class Camera extends Node {
     /**
      * Transforms the given 3D point to the flat projected coordinates.
      */
-    private Point3D project(Point3D p) {
+    private Point2D project(Point3D p) {
 
         final Vec3d vec = getProjViewTransform().transform(new Vec3d(
                 p.getX(), p.getY(), p.getZ()));
@@ -347,17 +350,16 @@ public abstract class Camera extends Node {
         final double halfViewWidth = getViewWidth() / 2.0;
         final double halfViewHeight = getViewHeight() / 2.0;
 
-        return new Point3D(
+        return new Point2D(
                 halfViewWidth * (1 + vec.x),
-                halfViewHeight * (1 - vec.y),
-                0.0);
+                halfViewHeight * (1 - vec.y));
     }
 
     /**
      * Computes intersection point of the pick ray cast by the given coordinates
      * and the node's local XY plane.
      */
-    private Point3D pickNodeXYPlane(Node node, double x, double y) {
+    private Point2D pickNodeXYPlane(Node node, double x, double y) {
         final PickRay ray = computePickRay(x, y, null);
 
         final Affine3D localToScene = new Affine3D();
@@ -378,14 +380,14 @@ public abstract class Camera extends Node {
         }
 
         final double t = -o.z / d.z;
-        return new Point3D(o.x + (d.x * t), o.y + (d.y * t), 0.0);
+        return new Point2D(o.x + (d.x * t), o.y + (d.y * t));
     }
 
     /**
      * Computes intersection point of the pick ray cast by the given coordinates
      * and the projection plane.
      */
-    private Point3D pickProjectPlane(double x, double y) {
+    Point3D pickProjectPlane(double x, double y) {
         final PickRay ray = computePickRay(x, y, null);
         final Vec3d p = new Vec3d();
         p.add(ray.getOriginNoClone(), ray.getDirectionNoClone());
@@ -445,29 +447,26 @@ public abstract class Camera extends Node {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * This class is used by classes in different packages to get access to
-     * private and package private methods.
-     */
-    private static class CameraAccessImpl extends CameraAccess {
-
-        @Override
-        public Point3D project(Camera camera, Point3D p) {
-            return camera.project(p);
-        }
-
-        @Override
-        public Point3D pickNodeXYPlane(Camera camera, Node node, double x, double y) {
-            return camera.pickNodeXYPlane(node, x, y);
-        }
-
-        @Override
-        public Point3D pickProjectPlane(Camera camera, double x, double y) {
-            return camera.pickProjectPlane(x, y);
-        }
-    }
 
     static {
-        CameraAccess.setCameraAccess(new CameraAccessImpl());
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        CameraHelper.setCameraAccessor(new CameraHelper.CameraAccessor() {
+
+            @Override
+            public Point2D project(Camera camera, Point3D p) {
+                return camera.project(p);
+            }
+
+            @Override
+            public Point2D pickNodeXYPlane(Camera camera, Node node, double x, double y) {
+                return camera.pickNodeXYPlane(node, x, y);
+            }
+
+            @Override
+            public Point3D pickProjectPlane(Camera camera, double x, double y) {
+                return camera.pickProjectPlane(x, y);
+            }
+        });
     }
 }

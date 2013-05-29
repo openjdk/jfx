@@ -119,7 +119,7 @@ public abstract class NodeOrientationTestBase {
                                   final Node... childNodes) {
         final Group group = new Group() {
                                     @Override
-                                    public boolean isAutomaticallyMirrored() {
+                                    public boolean usesMirroring() {
                                         return false;
                                     }
                                 };

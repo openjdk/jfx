@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="rt-closed-tests" default="test" basedir=".">
+
+    <description>Functional tests for rt-closed</description>
+
+    <import file="../../../build-defs.xml"/>
+
+    <target name="default" depends="test"/>
+
+    <target name="jar">
+        <ant antfile="ClassLoaderApp/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="ClassLoaderTest/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="LauncherTests/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="LifeCycleTests/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="test" depends="jar,-smoke-test,-extra-test">
+    </target>
+
+    <!-- Smoke tests that are run for both test and full-test targets -->
+    <target name="-smoke-test">
+        <ant antfile="ClassLoaderTest/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="LauncherTests/build.xml" target="test" inheritAll="false"/>
+    </target>
+
+    <!-- Extra tests that are run only for full-test target -->
+    <target name="-extra-test" if="is-full-test">
+        <ant antfile="LifeCycleTests/build.xml" target="test" inheritAll="false"/>
+    </target>
+
+    <target name="clean">
+        <ant antfile="ClassLoaderApp/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="ClassLoaderTest/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="LauncherTests/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="LifeCycleTests/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+</project>

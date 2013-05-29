@@ -606,7 +606,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
     }
 
     private void notifyObservers(T element, boolean removed) {
-        if (element != null) {
+        if (element != null && SetListenerHelper.hasListeners(listenerHelper)) {
             Change change = new Change(element, removed);
             SetListenerHelper.fireValueChangedEvent(listenerHelper, change);
         }

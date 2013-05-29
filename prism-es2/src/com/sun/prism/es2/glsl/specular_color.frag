@@ -24,13 +24,13 @@
  */
 
 //specular auto fragment shader
-#version 120
+//#version 120
 
 uniform sampler2D specularMap;
 
 vec4 apply_specular()
 {
-    vec3 tSpec = texture2D(specularMap, gl_TexCoord[0].xy).rgb;
+    vec3 tSpec = texture2D(specularMap, oTexCoords).rgb;
     float sLevel = dot(tSpec, vec3(0.299, 0.587, 0.114));
     return vec4(tSpec, sLevel);
 }

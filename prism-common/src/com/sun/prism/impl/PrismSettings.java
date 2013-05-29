@@ -323,7 +323,7 @@ public final class PrismSettings {
                                           "prism.disableRegionCaching",
                                           false);
 
-        disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", false);
+        disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", true);
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,

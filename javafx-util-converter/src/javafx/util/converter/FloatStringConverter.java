@@ -25,14 +25,12 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link Float}
  * (and float primitive) values.</p>
  */
-@NoBuilder
 public class FloatStringConverter extends StringConverter<Float> {
     /** {@inheritDoc} */
     @Override public Float fromString(String value) {

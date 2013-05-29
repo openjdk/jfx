@@ -235,7 +235,10 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      */
     public final BooleanProperty showWeekNumbersProperty() {
         if (showWeekNumbers == null) {
-            boolean localizedDefault = "true".equals(ControlResources.getString("DatePicker.showWeekNumbers"));
+            String country = Locale.getDefault(Locale.Category.FORMAT).getCountry();
+            boolean localizedDefault =
+                (!country.isEmpty() &&
+                 ControlResources.getNonTranslatableString("DatePicker.showWeekNumbers").contains(country));
             showWeekNumbers = new StyleableBooleanProperty(localizedDefault) {
                 @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.SHOW_WEEK_NUMBERS;
@@ -456,10 +459,13 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
       * @treatAsPrivate implementation detail
       */
     private static class StyleableProperties {
+        private static final String country =
+            Locale.getDefault(Locale.Category.FORMAT).getCountry();
         private static final CssMetaData<DatePicker, Boolean> SHOW_WEEK_NUMBERS =
-                new CssMetaData<DatePicker, Boolean>("-fx-show-week-numbers",
-                                                     BooleanConverter.getInstance(),
-                                                     "true".equals(ControlResources.getString("DatePicker.showWeekNumbers"))) {
+              new CssMetaData<DatePicker, Boolean>("-fx-show-week-numbers",
+                   BooleanConverter.getInstance(),
+                   (!country.isEmpty() &&
+                    ControlResources.getNonTranslatableString("DatePicker.showWeekNumbers").contains(country))) {
             @Override public boolean isSettable(DatePicker n) {
                 return n.showWeekNumbers == null || !n.showWeekNumbers.isBound();
             }

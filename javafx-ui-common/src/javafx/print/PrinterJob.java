@@ -92,10 +92,6 @@ import com.sun.javafx.tk.PrintPipeline;
 
 public final class PrinterJob {
 
-    static {
-        PrintAccessor.init();
-    }
-
     // Delegating all the work keeps whatever classes
     // are being used out of the API packages.
     private PrinterJobImpl jobImpl;

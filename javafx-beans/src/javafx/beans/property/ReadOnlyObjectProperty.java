@@ -26,15 +26,22 @@
 package javafx.beans.property;
 
 import javafx.beans.binding.ObjectExpression;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
 
 /**
  * Super class for all readonly properties wrapping an arbitrary {@code Object}.
- * 
+ *
+ * For specialized implementations for {@link ObservableList}, {@link ObservableSet} and
+ * {@link ObservableMap} that also report changes inside the collections, see
+ * {@link ReadOnlyListProperty}, {@link ReadOnlySetProperty} and {@link ReadOnlyMapProperty}, respectively.
+ *
  * @see javafx.beans.value.ObservableObjectValue
  * @see javafx.beans.binding.ObjectExpression
  * @see ReadOnlyProperty
- * 
- * 
+ *
+ *
  * @param <T>
  *            the type of the wrapped {@code Object}
  */
@@ -50,7 +57,7 @@ public abstract class ReadOnlyObjectProperty<T> extends ObjectExpression<T>
     /**
      * Returns a string representation of this {@code ReadOnlyObjectProperty} object.
      * @return a string representation of this {@code ReadOnlyObjectProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();

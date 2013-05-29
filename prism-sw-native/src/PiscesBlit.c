@@ -33,24 +33,34 @@
 
 #include <limits.h>
 
+#define IS_TEXTURE_PAINT(x) (x & PAINT_TEXTURE8888)
+
 #define HALF_ALPHA (MAX_ALPHA >> 1)
 #define ALPHA_SHIFT 8
 #define HALF_1_SHIFT_23 (jint)(1L << 23) 
 
+static jfloat currentGamma = -1;
+static jint gammaArray[256];
+static jint invGammaArray[256];
+
 static INLINE void blendSrcOver8888(jint *intData, jint aval,
                              jint sred, jint sgreen, jint sblue);
-                             
-static INLINE void blendSrcOver8888_pre(jint *intData, jint aval, jint sred, 
+
+static INLINE void blendSrcOver8888_pre(jint *intData, jint aval, jint sred,
                                  jint sgreen, jint sblue);
+static INLINE void blendSrcOver8888_pre_pre(jint *intData, jint frac,
+                             jint aval,
+                             jint sred, jint sgreen, jint sblue);
 
 static INLINE void blendLCDSrcOver8888_pre(jint *intData,
-    jint ared, jint agreen, jint ablue, jint sred, jint sgreen, jint sblue,
-    jfloat gamma, jfloat invgamma);
+    jint ared, jint agreen, jint ablue, jint sred, jint sgreen, jint sblue);
 
 static INLINE void blendSrc8888(jint *intData, jint aval, jint aaval,
                          jint sred, jint sgreen, jint sblue);
-                         
-static INLINE void blendSrc8888_pre(jint *intData, jint aval, jint raaval, jint sred, 
+
+static INLINE void blendSrc8888_pre(jint *intData, jint aval, jint raaval, jint sred,
+                             jint sgreen, jint sblue);
+static INLINE void blendSrc8888_pre_pre(jint *intData, jint aval, jint raaval, jint sred,
                              jint sgreen, jint sblue);
 
 static INLINE jint div255(jint x) {
@@ -85,7 +95,7 @@ emitLineSource8888(Renderer *rdr, jint height, jint frac) {
     w -= (rfrac) ? 1 : 0;
 
     if (frac == 0x10000) { // full coverage
-        jint solid_pixel =  0xFF000000 | (cred << 16) | (cgreen << 8) | cblue;
+        jint pixel = (calpha << 24) | (cred << 16) | (cgreen << 8) | cblue;
         for (j = 0; j < height; j++) {
             iidx = imageOffset + minX * imagePixelStride;
             a = intData + iidx;
@@ -95,7 +105,7 @@ emitLineSource8888(Renderer *rdr, jint height, jint frac) {
             }
             am = a + w;
             while (a < am) {
-                *a = solid_pixel;
+                *a = pixel;
                 a += imagePixelStride;
             }
             if (rfrac) {
@@ -341,7 +351,10 @@ emitLineSource8888_pre(Renderer *rdr, jint height, jint frac) {
     w -= (rfrac) ? 1 : 0;
 
     if (frac == 0x10000) { // full coverage
-        jint solid_pixel =  0xFF000000 | (cred << 16) | (cgreen << 8) | cblue;
+        jint pre_red = ((calpha+1) * cred) >> 8;
+        jint pre_green = ((calpha+1) * cgreen) >> 8;
+        jint pre_blue = ((calpha+1) * cblue) >> 8;
+        jint pixel = (calpha << 24) | (pre_red << 16) | (pre_green << 8) | pre_blue;
         for (j = 0; j < height; j++) {
             iidx = imageOffset + minX * imagePixelStride;
             a = intData + iidx;
@@ -351,7 +364,7 @@ emitLineSource8888_pre(Renderer *rdr, jint height, jint frac) {
             }
             am = a + w;
             while (a < am) {
-                *a = solid_pixel;
+                *a = pixel;
                 a += imagePixelStride;
             }
             if (rfrac) {
@@ -396,7 +409,9 @@ emitLinePTSource8888_pre(Renderer *rdr, jint height, jint frac) {
     jint imagePixelStride = rdr->_imagePixelStride;
 
     jint* paint = rdr->_paint;
+    jint paintMode = rdr->_paintMode;
     jint cval, paint_stride;
+    jint calpha, cred, cgreen, cblue;
 
     jint *a, *am;
     jint comp_frac = 255 - (frac >> 8);
@@ -417,27 +432,51 @@ emitLinePTSource8888_pre(Renderer *rdr, jint height, jint frac) {
         a = intData + iidx;
         if (lfrac) {
             cval = paint[aidx];
-            blendSrc8888_pre(a, (cval >> 24) & 0xFF, 255 - (lfrac >> 8),
-                (cval >> 16) & 0xFF, (cval >> 8) & 0xFF, cval & 0xFF);
+            calpha = (cval >> 24) & 0xFF;
+            cred = (cval >> 16) & 0xFF;
+            cgreen = (cval >> 8) & 0xFF;
+            cblue = cval & 0xFF;
+            if (IS_TEXTURE_PAINT(paintMode)) {
+                // image is in premultiplied form
+                blendSrc8888_pre_pre(a, calpha, 255 - (lfrac >> 8), cred, cgreen, cblue);
+            } else {
+                blendSrc8888_pre(a, calpha, 255 - (lfrac >> 8), cred, cgreen, cblue);
+            }
             a += imagePixelStride;
             aidx++;
         }
-        am = a + w;        
+        am = a + w;
         while (a < am) {
             cval = paint[aidx];
             if (frac == 0x10000) { // full coverage
                 *a = cval;
             } else {
-                blendSrc8888_pre(a, (cval >> 24) & 0xFF, comp_frac,
-                    (cval >> 16) & 0xFF, (cval >> 8) & 0xFF, cval & 0xFF);
+                calpha = (cval >> 24) & 0xFF;
+                cred = (cval >> 16) & 0xFF;
+                cgreen = (cval >> 8) & 0xFF;
+                cblue = cval & 0xFF;
+                if (IS_TEXTURE_PAINT(paintMode)) {
+                    // image is in premultiplied form
+                    blendSrc8888_pre_pre(a, calpha, comp_frac, cred, cgreen, cblue);
+                } else {
+                    blendSrc8888_pre(a, calpha, comp_frac, cred, cgreen, cblue);
+                }
             }
             a += imagePixelStride;
             aidx++;
         }
         if (rfrac) {
             cval = paint[aidx];
-            blendSrc8888_pre(a, (cval >> 24) & 0xFF, 255 - (rfrac >> 8),
-                (cval >> 16) & 0xFF, (cval >> 8) & 0xFF, cval & 0xFF);
+            calpha = (cval >> 24) & 0xFF;
+            cred = (cval >> 16) & 0xFF;
+            cgreen = (cval >> 8) & 0xFF;
+            cblue = cval & 0xFF;
+            if (IS_TEXTURE_PAINT(paintMode)) {
+                // image is in premultiplied form
+                blendSrc8888_pre_pre(a, calpha, 255 - (rfrac >> 8), cred, cgreen, cblue);
+            } else {
+                blendSrc8888_pre(a, calpha, 255 - (rfrac >> 8), cred, cgreen, cblue);
+            }
         }
         imageOffset += imageScanlineStride;
         paint_offset += paint_stride;
@@ -523,7 +562,9 @@ emitLinePTSourceOver8888_pre(Renderer *rdr, jint height, jint frac) {
     jint imagePixelStride = rdr->_imagePixelStride;
     
     jint* paint = rdr->_paint;
+    jint paintMode = rdr->_paintMode;
     jint cval, palpha, paint_stride;
+    jint calpha, cred, cgreen, cblue;
 
     jint *a, *am;
     jlong llfrac = (rdr->_el_lfrac * (jlong)frac);
@@ -543,27 +584,54 @@ emitLinePTSourceOver8888_pre(Renderer *rdr, jint height, jint frac) {
         a = intData + iidx;
         if (lfrac) {
             cval = paint[aidx];
-            palpha = (lfrac * ((cval >> 24) & 0xFF)) >> 16;
-            blendSrcOver8888_pre(a, palpha, (cval >> 16) & 0xFF, (cval >> 8) & 0xFF, cval & 0xFF);
+            calpha = (cval >> 24) & 0xFF;
+            cred = (cval >> 16) & 0xFF;
+            cgreen = (cval >> 8) & 0xFF;
+            cblue = cval & 0xFF;
+            if (IS_TEXTURE_PAINT(paintMode)) {
+                // image is in premultiplied form
+                blendSrcOver8888_pre_pre(a, lfrac >> 8, calpha, cred, cgreen, cblue);
+            } else {
+                palpha = (lfrac * calpha) >> 16;
+                blendSrcOver8888_pre(a, palpha, cred, cgreen, cblue);
+            }
             a += imagePixelStride;
             aidx++;
         }
         am = a + w;        
         while (a < am) {
             cval = paint[aidx];
-            palpha = (frac * ((cval >> 24) & 0xFF)) >> 16;
+            calpha = (cval >> 24) & 0xFF;
+            palpha = (frac * calpha) >> 16;
             if (palpha == MAX_ALPHA) {
                 *a = cval;
             } else {
-                blendSrcOver8888_pre(a, palpha, (cval >> 16) & 0xFF, (cval >> 8) & 0xFF, cval & 0xFF);
+                cred = (cval >> 16) & 0xFF;
+                cgreen = (cval >> 8) & 0xFF;
+                cblue = cval & 0xFF;
+                if (IS_TEXTURE_PAINT(paintMode)) {
+                    // image is in premultiplied form
+                    blendSrcOver8888_pre_pre(a, frac >> 8, calpha, cred, cgreen, cblue);
+                } else {
+                    blendSrcOver8888_pre(a, palpha, cred, cgreen, cblue);
+                }
             }
             a += imagePixelStride;
             aidx++;
         }
         if (rfrac) {
             cval = paint[aidx];
-            palpha = (rfrac * ((cval >> 24) & 0xFF)) >> 16;
-            blendSrcOver8888_pre(a, palpha, (cval >> 16) & 0xFF, (cval >> 8) & 0xFF, cval & 0xFF);
+            calpha = (cval >> 24) & 0xFF;
+            cred = (cval >> 16) & 0xFF;
+            cgreen = (cval >> 8) & 0xFF;
+            cblue = cval & 0xFF;
+            if (IS_TEXTURE_PAINT(paintMode) && calpha > 0) {
+                // image is in premultiplied form
+                blendSrcOver8888_pre_pre(a, rfrac >> 8, calpha, cred, cgreen, cblue);
+            } else {
+                palpha = (rfrac * calpha) >> 16;
+                blendSrcOver8888_pre(a, palpha, cred, cgreen, cblue);
+            }
         }
         imageOffset += imageScanlineStride;
         paint_offset += paint_stride;
@@ -886,67 +954,6 @@ blitPTSrcMask8888_pre(Renderer *rdr, jint height) {
 }
 
 void
-blitImageSrc8888_pre(Renderer *rdr, jint height) {
-    jint j;
-    jint minX, maxX, w, scanA;
-    jint cval, aidx, iidx, aval, acoverage;
-
-    jint paintOffset = 0;
-    jint *intData = rdr->_data;
-    jint imageOffset = rdr->_currImageOffset;
-    jint imageScanlineStride = rdr->_imageScanlineStride;
-    jint imagePixelStride = rdr->_imagePixelStride;
-    jint alphaStride = rdr->_alphaWidth;
-    jint textureStride = rdr->_texture_stride;
-    jint *scanLineAlpha = rdr->_scanLineAlpha;
-
-    jint* paint = rdr->_paint;
-    jint pre_rval, pre_gval, pre_bval;
-    
-    jint am;
-    
-    minX = rdr->_minTouched;
-    maxX = rdr->_maxTouched;
-    w = (maxX >= minX) ? (maxX - minX + 1) : 0;
-    
-    aidx = 0;
-    for (j = 0; j < height; j++) {
-        scanA = scanLineAlpha[j];
-      
-        iidx = imageOffset + minX * imagePixelStride;
-        
-        am = aidx + w;
-        while (aidx < am) {
-            assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length);
-
-            cval = paint[aidx];
-            acoverage = aval = (cval >> 24) & 0xff;
-      
-            if (scanA < MAX_ALPHA) {
-                aval = ((aval+1) * scanA) >> 8;
-            }
-            
-            if (aval == MAX_ALPHA) {
-                intData[iidx] = cval;
-            } else if (acoverage > 0) {
-                pre_rval = (cval >> 16) & 0xff;
-                pre_gval = (cval >> 8) & 0xff;
-                pre_bval = cval & 0xff;
-                blendSrc8888_pre(&intData[iidx], aval, 255 - acoverage, 
-                    (pre_rval * 255)/acoverage,
-                    (pre_gval * 255)/acoverage,
-                    (pre_bval * 255)/acoverage);
-            }
-            iidx += imagePixelStride;
-            ++aidx;
-        }
-        imageOffset += imageScanlineStride;
-        paintOffset += textureStride;
-    }
-}
-
-void
 blitSrcOver8888(Renderer *rdr, jint height) {
     jint j;
     jint minX, maxX, w;
@@ -1122,13 +1129,10 @@ blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height) {
 
     jbyte *a, *am;
 
-    jint calpha = rdr->_calpha;
-    jint cred = rdr->_cred;
-    jint cgreen = rdr->_cgreen;
-    jint cblue = rdr->_cblue;
-
-    jfloat gamma = rdr->_gamma;
-    jfloat invgamma = rdr->_invgamma;
+    jint calpha = invGammaArray[rdr->_calpha];
+    jint cred = invGammaArray[rdr->_cred];
+    jint cgreen = invGammaArray[rdr->_cgreen];
+    jint cblue = invGammaArray[rdr->_cblue];
 
     minX = rdr->_minTouched;
     maxX = rdr->_maxTouched;
@@ -1159,7 +1163,7 @@ blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height) {
                 ablue = ((ablue+1) * calpha) >> 8;
             }
             blendLCDSrcOver8888_pre(&intData[iidx], ared, agreen, ablue,
-                cred, cgreen, cblue, gamma, invgamma);
+                cred, cgreen, cblue);
             iidx += imagePixelStride;
         }
 
@@ -1177,8 +1181,7 @@ blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height) {
                 intData[iidx] = 0xff000000 | (cred << 16) | (cgreen << 8) | cblue;
             } else {
                 blendLCDSrcOver8888_pre(&intData[iidx], ared, agreen, ablue,
-                    cred, cgreen, cblue,
-                    gamma, invgamma);
+                    cred, cgreen, cblue);
             }
             iidx += imagePixelStride;
         }
@@ -1202,7 +1205,7 @@ blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height) {
                 ablue = ((ablue+1) * calpha) >> 8;
             }
             blendLCDSrcOver8888_pre(&intData[iidx], ared, agreen, ablue,
-                cred, cgreen, cblue, gamma, invgamma);
+                cred, cgreen, cblue);
             iidx += imagePixelStride;
         }
 
@@ -1266,122 +1269,6 @@ blitPTSrcOver8888(Renderer *rdr, jint height) {
         }
 
         imageOffset += imageScanlineStride;
-    }
-}
-
-void
-blitImageSrcOver8888(Renderer *rdr, jint height) {
-    jint j;
-    jint minX, maxX, w, scanA;
-    jint cval, aidx, iidx, aval;
-
-    jint paintOffset = 0;
-    jint *intData = rdr->_data;
-    jint imageOffset = rdr->_currImageOffset;
-    jint imageScanlineStride = rdr->_imageScanlineStride;
-    jint imagePixelStride = rdr->_imagePixelStride;
-    jint alphaStride = rdr->_alphaWidth;
-    jint textureStride = rdr->_texture_stride;
-    jint *scanLineAlpha = rdr->_scanLineAlpha;
-
-    jint* paint = rdr->_paint;
-    
-    jint am;
-    
-    minX = rdr->_minTouched;
-    maxX = rdr->_maxTouched;
-    w = (maxX >= minX) ? (maxX - minX + 1) : 0;
-    
-    aidx = 0;
-    for (j = 0; j < height; j++) {
-        scanA = scanLineAlpha[j];
-      
-        iidx = imageOffset + minX * imagePixelStride;
-        
-        am = aidx + w;
-        while (aidx < am) {
-            assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length);
-
-            cval = paint[aidx];
-            aval = (cval >> 24) & 0xff;
-      
-            if (scanA < MAX_ALPHA) {
-                aval = ((aval+1) * scanA) >> 8;
-            }
-            
-            if (aval == MAX_ALPHA) {
-                intData[iidx] = cval;
-            } else if (aval > 0) {
-                blendSrcOver8888(&intData[iidx], aval, (cval >> 16) & 0xff,
-                                 (cval >> 8) & 0xff, cval & 0xff);
-            }
-            iidx += imagePixelStride;
-            ++aidx;
-        }
-        imageOffset += imageScanlineStride;
-        paintOffset += textureStride;
-    }
-}
-
-void
-blitImageSrcOver8888_pre(Renderer *rdr, jint height) {
-    jint j;
-    jint minX, maxX, w, scanA;
-    jint cval, aidx, iidx, aval, avalOrig;
-
-    jint paintOffset = 0;
-    jint *intData = rdr->_data;
-    jint imageOffset = rdr->_currImageOffset;
-    jint imageScanlineStride = rdr->_imageScanlineStride;
-    jint imagePixelStride = rdr->_imagePixelStride;
-    jint alphaStride = rdr->_alphaWidth;
-    jint textureStride = rdr->_texture_stride;
-    jint *scanLineAlpha = rdr->_scanLineAlpha;
-
-    jint* paint = rdr->_paint;
-    jint pre_rval, pre_gval, pre_bval;
-    
-    jint am;
-    
-    minX = rdr->_minTouched;
-    maxX = rdr->_maxTouched;
-    w = (maxX >= minX) ? (maxX - minX + 1) : 0;
-    
-    aidx = 0;
-    for (j = 0; j < height; j++) {
-        scanA = scanLineAlpha[j];
-
-        iidx = imageOffset + minX * imagePixelStride;
-        
-        am = aidx + w;
-        while (aidx < am) {
-            assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length);
-
-            cval = paint[aidx];
-            avalOrig = aval = (cval >> 24) & 0xff;
-      
-            if (scanA < MAX_ALPHA) {
-                aval = ((aval+1) * scanA) >> 8;
-            }
-            
-            if (aval == MAX_ALPHA) {
-                intData[iidx] = cval;
-            } else if (aval > 0) {
-                pre_rval = (cval >> 16) & 0xff;
-                pre_gval = (cval >> 8) & 0xff;
-                pre_bval = cval & 0xff;
-                blendSrcOver8888_pre(&intData[iidx], aval, 
-                    (pre_rval * 255)/avalOrig,
-                    (pre_gval * 255)/avalOrig,
-                    (pre_bval * 255)/avalOrig);
-            }
-            iidx += imagePixelStride;
-            ++aidx;
-        }
-        imageOffset += imageScanlineStride;
-        paintOffset += textureStride;
     }
 }
 
@@ -1593,13 +1480,36 @@ blendSrcOver8888_pre(jint *intData,
     *intData = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
 }
 
+// *intData are premultiplied, sred, sgreen, sblue are premultiplied
+static void
+blendSrcOver8888_pre_pre(jint *intData, jint frac,
+                             jint aval,
+                             jint sred, jint sgreen, jint sblue) {
+    jint ival = *intData;
+    //destination alpha
+    jint dalpha = (ival >> 24) & 0xff;
+    //destination components premultiplied by dalpha
+    jint dred = (ival >> 16) & 0xff;
+    jint dgreen = (ival >> 8) & 0xff;
+    jint dblue = ival & 0xff;
+
+    jint aval2 = (aval * frac) >> 8;
+    jint oneminusaval = (255 - aval2);
+
+    jint oalpha  = aval2                  + div255(oneminusaval * dalpha);
+    jint ored    = ((sred * frac) >> 8)   + div255(oneminusaval * dred);
+    jint ogreen  = ((sgreen * frac) >> 8) + div255(oneminusaval * dgreen);
+    jint oblue   = ((sblue * frac) >> 8)  + div255(oneminusaval * dblue);
+
+    *intData = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
+}
+
 // *intData are premultiplied, sred, sgreen, sblue are NOT premultiplied
 // it is required that final alpha must be fully opaque (0xFF)
 static void
 blendLCDSrcOver8888_pre(jint *intData,
                              jint ared, jint agreen, jint ablue,
-                             jint sred, jint sgreen, jint sblue,
-                             jfloat gamma, jfloat invgamma)
+                             jint sred, jint sgreen, jint sblue)
 {
     jint ival = *intData;
     //destination alpha
@@ -1611,17 +1521,17 @@ blendLCDSrcOver8888_pre(jint *intData,
 
     jint ored, ogreen, oblue;
 
-    dred = (jint) (255 * (pow(dred / 255.0, invgamma)));
-    dgreen = (jint) (255 * (pow(dgreen / 255.0, invgamma)));
-    dblue = (jint) (255 * (pow(dblue / 255.0, invgamma)));
+    dred = invGammaArray[dred];
+    dgreen = invGammaArray[dgreen];
+    dblue = invGammaArray[dblue];
 
-    ored    = ared * sred     + (255 - ared) * dred;
-    ogreen  = agreen * sgreen + (255 - agreen) * dgreen;
-    oblue   = ablue * sblue   + (255 - ablue) * dblue;
+    ored    = div255(ared * sred     + (255 - ared) * dred);
+    ogreen  = div255(agreen * sgreen + (255 - agreen) * dgreen);
+    oblue   = div255(ablue * sblue   + (255 - ablue) * dblue);
 
-    ored = (jint) (255 * (pow(ored / 65025.0, gamma)));    // 65025 = 255*255
-    ogreen = (jint) (255 * (pow(ogreen / 65025.0, gamma)));
-    oblue = (jint) (255 * (pow(oblue / 65025.0, gamma)));
+    ored = gammaArray[ored];
+    ogreen = gammaArray[ogreen];
+    oblue = gammaArray[oblue];
 
     *intData = 0xFF000000 | (ored << 16) | (ogreen << 8) | oblue;
 }
@@ -1682,6 +1592,48 @@ blendSrc8888_pre(jint *intData,
         
         ival = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
         *intData = ival;
+    }
+}
+
+// sred, sgreen, sblue are all premultiplied
+static void
+blendSrc8888_pre_pre(jint *intData,
+                 jint aval, jint raaval,
+                 jint sred, jint sgreen, jint sblue) {
+    jint denom;
+
+    jint ival = *intData;
+    jint dalpha = (ival >> 24) & 0xff;
+    //premultiplied color components
+    jint dred =   (ival >> 16) & 0xff;
+    jint dgreen = (ival >>  8) & 0xff;
+    jint dblue =  (ival & 0xff);
+
+    denom = 255 * aval + dalpha * raaval;
+    if (denom == 0) {
+        // The output is transparent black
+        *intData = 0x00000000;
+    } else {
+        jint oalpha, ored, ogreen, oblue;
+        oalpha  = div255(denom);
+        ored    = sred   + div255(raaval * dred);
+        ogreen  = sgreen + div255(raaval * dgreen);
+        oblue   = sblue  + div255(raaval * dblue);
+
+        ival = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
+        *intData = ival;
+    }
+}
+
+void initGammaArrays(jfloat gamma) {
+    if (currentGamma != gamma) {
+        int i;
+        jfloat invgamma = 1.0f / gamma;
+        currentGamma = gamma;
+        for (i = 0; i < 256; i++) {
+            gammaArray[i] = (jint)(255 * pow(i/255.0, gamma));
+            invGammaArray[i] = (jint)(255 * pow(i/255.0, invgamma));
+        }
     }
 }
 

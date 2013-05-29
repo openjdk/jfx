@@ -91,10 +91,13 @@ public final class InvokeLaterDispatcher extends Thread {
         }
 
         @Override public void run() {
-            this.runnable.run();
-            synchronized (LOCK) {
-                this.done = true;
-                LOCK.notifyAll();
+            try {
+                this.runnable.run();
+            } finally {
+                synchronized (LOCK) {
+                    this.done = true;
+                    LOCK.notifyAll();
+                }
             }
         }
     }

@@ -33,13 +33,11 @@ import com.sun.prism.PhongMaterial;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
-import com.sun.prism.RenderingContext;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.impl.BaseRenderingContext;
 import com.sun.prism.impl.BaseResourceFactory;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.TextureResourcePool;
@@ -79,10 +77,6 @@ final class SWResourceFactory
         context.dispose();
     }
 
-    @Override public RenderingContext createRenderingContext(PresentableState pstate) {
-        return new BaseRenderingContext();
-    }
-    
     @Override public ShapeRep createArcRep(boolean needs3D) {
         return theRep;
     }

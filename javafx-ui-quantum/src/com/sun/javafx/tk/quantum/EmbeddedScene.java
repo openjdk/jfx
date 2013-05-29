@@ -95,7 +95,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     void setStage(GlassStage stage) {
         super.setStage(stage);
 
-        assert host != null;
+        assert host != null; // setStage() is called before dispose()
         host.setEmbeddedScene(stage != null ? this : null);
     }
 

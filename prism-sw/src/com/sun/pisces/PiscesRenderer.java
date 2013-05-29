@@ -327,39 +327,37 @@ public final class PiscesRenderer {
 
     private native void fillAlphaMaskImpl(byte[] mask, int x, int y, int width, int height, int offset, int stride);
 
-    public void fillLCDAlphaMask(byte[] mask, int x, int y, int subPosX, int width, int height, int offset, int stride,
-                                 float gamma, float invgamma)
+    public native void setLCDGammaCorrection(float gamma);
+
+    public void fillLCDAlphaMask(byte[] mask, int x, int y, int subPosX, int width, int height, int offset, int stride)
     {
         this.inputImageCheck(width, height, offset, stride, mask.length);
         if (subPosX < 0 || subPosX > 2) {
             throw new IllegalArgumentException("subPosX must be 0,1 or 2, curVal: " + subPosX);
         }
-        this.fillLCDAlphaMaskImpl(mask, x, y, subPosX, width, height, offset, stride, gamma, invgamma);
+        this.fillLCDAlphaMaskImpl(mask, x, y, subPosX, width, height, offset, stride);
     }
 
-    private native void fillLCDAlphaMaskImpl(byte[] mask, int x, int y, int subPosX, int width, int height, int offset, int stride,
-        float gamma, float invgamma);
+    private native void fillLCDAlphaMaskImpl(byte[] mask, int x, int y, int subPosX, int width, int height, int offset, int stride);
 
-    public void drawImage(int imageType, int data[],  int width, int height, int offset, int stride,
+    public void drawImage(int imageType, int imageMode, int data[],  int width, int height, int offset, int stride,
         Transform6 textureTransform, boolean repeat,
         int bboxX, int bboxY, int bboxW, int bboxH,
         int interpolateMinX, int interpolateMinY, int interpolateMaxX, int interpolateMaxY,
-        int topOpacity, int bottomOpacity,
         boolean hasAlpha)
     {
         this.inputImageCheck(width, height, offset, stride, data.length);
-        this.drawImageImpl(imageType, data, width, height, offset, stride,
+        this.drawImageImpl(imageType, imageMode, data, width, height, offset, stride,
             textureTransform, repeat,
             bboxX, bboxY, bboxW, bboxH,
             interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY,
-            topOpacity, bottomOpacity, hasAlpha);
+            hasAlpha);
     }
 
-    private native void drawImageImpl(int imageType, int data[], int width, int height, int offset, int stride,
+    private native void drawImageImpl(int imageType, int imageMode, int data[], int width, int height, int offset, int stride,
         Transform6 textureTransform, boolean repeat,
         int bboxX, int bboxY, int bboxW, int bboxH,
         int interpolateMinX, int interpolateMinY, int interpolateMaxX, int interpolateMaxY,
-        int topOpacity, int bottomOpacity,
         boolean hasAlpha);
 
     private void inputImageCheck(int width, int height, int offset, int stride, int data_length) {

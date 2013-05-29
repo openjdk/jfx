@@ -74,7 +74,7 @@ def commonFlags = [
 // Specify the compilation parameters and link parameters
 def ccFlags = [
         commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
-        IS_DEBUG ? ["-ggdb", "-DVERBOSE"] : "-O2", "-DINLINE=inline"].flatten()
+        IS_DEBUG ? ["-ggdb", "-DVERBOSE"] : "-O2"].flatten()
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def linkFlags = ["-shared", commonFlags].flatten()
 
@@ -128,7 +128,7 @@ LINUX.prism = [:]
 LINUX.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 LINUX.prism.nativeSource = file("modules/graphics/src/main/native-prism")
 LINUX.prism.compiler = "cc"
-LINUX.prism.ccFlags = [ccFlags].flatten()
+LINUX.prism.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prism.linker = linker
 LINUX.prism.linkFlags = [linkFlags].flatten()
 LINUX.prism.lib = "prism-common"
@@ -137,7 +137,7 @@ LINUX.prismSW = [:]
 LINUX.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 LINUX.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
 LINUX.prismSW.compiler = "cc"
-LINUX.prismSW.ccFlags = [ccFlags].flatten()
+LINUX.prismSW.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prismSW.linker = linker
 LINUX.prismSW.linkFlags = [linkFlags].flatten()
 LINUX.prismSW.lib = "prism-sw"
@@ -169,7 +169,7 @@ LINUX.prismES2.nativeSource = [
 LINUX.prismES2.compiler = compiler
 LINUX.prismES2.ccFlags = ["-DLINUX", "-DGRADLE_BUILD", ccFlags].flatten()
 LINUX.prismES2.linker = linker
-LINUX.prismES2.linkFlags = [linkFlags].flatten()
+LINUX.prismES2.linkFlags = [linkFlags, "-lX11", "-lXxf86vm", "-lGL"].flatten()
 LINUX.prismES2.lib = "prism-es2"
 
 def closedDir = file("$projectDir/../rt-closed")
@@ -177,12 +177,21 @@ LINUX.font = [:]
 LINUX.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-LINUX.font.nativeSource = [
-    file("$closedDir/javafx-font-native/src"),
-    file("$closedDir/javafx-font-native/src/layout"),
-    file("$closedDir/javafx-font-native/src/layoutfx")]
 LINUX.font.compiler = compiler
+LINUX.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
 LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 LINUX.font.linker = linker
 LINUX.font.linkFlags = [linkFlags].flatten()
 LINUX.font.lib = "javafx-font"
+
+LINUX.fontT2K = [:]
+LINUX.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
+LINUX.fontT2K.nativeSource = [
+        file("$closedDir/javafx-font-t2k-native/src"),
+        file("$closedDir/javafx-font-t2k-native/src/layout"),
+        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+LINUX.fontT2K.compiler = compiler
+LINUX.fontT2K.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
+LINUX.fontT2K.linker = linker
+LINUX.fontT2K.linkFlags = [linkFlags].flatten()
+LINUX.fontT2K.lib = "javafx-font-t2k"

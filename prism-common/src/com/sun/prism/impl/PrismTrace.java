@@ -25,8 +25,6 @@
 
 package com.sun.prism.impl;
 
-import com.sun.prism.RenderingContext;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -130,16 +128,6 @@ public class PrismTrace {
             "id=" + id + " size=" + size +
             summary(SummaryType.TYPE_RTT) +
             summary(SummaryType.TYPE_ALL));
-    }
-
-    public static void checkRenderingContext(RenderingContext targetRenderingContext,
-            RenderingContext currentRenderingContext) {
-        if (!enabled) return;
-
-        if (targetRenderingContext == null || targetRenderingContext != currentRenderingContext) {
-            System.out.println("RT accessed from the wrong context");
-            Thread.dumpStack();
-        }
     }
 
     private PrismTrace() {

@@ -41,7 +41,6 @@ import javafx.beans.value.ObservableValue;
  * @see CssMetaData
  * @see StyleableProperty
  */
-@com.sun.javafx.beans.annotations.NoBuilder
 public abstract class StyleableIntegerProperty 
     extends IntegerPropertyBase implements StyleableProperty<Number> {
 

@@ -72,7 +72,9 @@ public class ParallelCamera extends Camera {
 
     @Override
     final PickRay computePickRay(double x, double y, PickRay pickRay) {
-        return PickRay.computeParallelPickRay(x, y, getCameraTransform(), pickRay);
+        return PickRay.computeParallelPickRay(x, y, getCameraTransform(),
+                //TODO: use actual clips after rendering uses them
+                Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, pickRay);
     }
 
     @Override

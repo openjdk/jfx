@@ -77,7 +77,12 @@ class NativeCompileTask extends DefaultTask {
         final File nativeDependenciesFile = project.file("$project.buildDir/dependency-cache/native-dependencies");
         if (nativeDependenciesFile.exists()) {
             nativeDependenciesFile.splitEachLine("\t", { strings ->
-                dependencies.put(strings[0], ["DATE":Long.parseLong(strings[1]), "SIZE":Long.parseLong(strings[2])]);
+                try {
+                    dependencies.put(strings[0], ["DATE":Long.parseLong(strings[1]), "SIZE":Long.parseLong(strings[2])]);
+                } catch (Exception e) {
+                    // Might fail due to a corrupt native-dependencies file, in which case, we'll just not
+                    // do anything which will cause the native code to execute again
+                }
             });
         }
 
@@ -85,10 +90,12 @@ class NativeCompileTask extends DefaultTask {
         // Combine the different source roots into a single FileCollection based on all files in each source root
         def allFiles = [];
         sourceRoots.each {
-            allFiles += project.file(it).listFiles()
+            def dir = project.file(it);
+            allFiles += dir.isDirectory() ? dir.listFiles() : dir;
         }
         def source = project.files(allFiles);
         final Set<File> files = matches == null ? new HashSet<File>(source.files) : source.filter{it.name.matches(matches)}.files;
+        project.logger.info("Compiling native files: $files");
         boolean shouldCompileAnyway = false;
         final boolean forceCompile = shouldCompileAnyway;
         final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));

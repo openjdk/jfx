@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.scene.control.skin.NestedTableColumnHeader;
 import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import com.sun.javafx.scene.control.skin.TableHeaderRow;
@@ -134,10 +133,6 @@ import javafx.beans.value.WritableValue;
  * @see TableCell
  * @see TablePosition
  */
-@DuplicateInBuilderProperties(properties =
-        {"comparator", "contextMenu", "editable", "graphic", "id", "maxWidth",
-         "minWidth", "prefWidth", "resizable", "sortable", "sortNode",
-         "sortType", "style", "styleClass", "userdata", "text", "visible"})
 public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
     
     /***************************************************************************
@@ -730,6 +725,11 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      */
     public static class CellEditEvent<S,T> extends Event {
         private static final long serialVersionUID = -609964441682677579L;
+
+        /**
+         * Common supertype for all cell edit event types.
+         */
+        public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
         // represents the new value input by the end user. This is NOT the value
         // to go back into the TableView.items list - this new value represents

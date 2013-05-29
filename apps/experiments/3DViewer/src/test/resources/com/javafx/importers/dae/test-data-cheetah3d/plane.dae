@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+    <asset>
+        <contributor>
+            <author>Unknown</author>
+            <authoring_tool>Cheetah3D</authoring_tool>
+            <comments>http://www.cheetah3d.com</comments>
+            <copyright>Unknown</copyright>
+        </contributor>
+        <created>2013-04-26T11:38:18Z</created>
+        <modified>2013-04-26T11:38:18Z</modified>
+        <unit meter="1.0" name="meter"/>
+        <up_axis>Y_UP</up_axis>
+    </asset>
+    <library_cameras>
+        <camera id="ID-1566159488-persp">
+            <optics>
+                <technique_common>
+                    <perspective>
+                        <yfov>40.000000</yfov>
+                        <aspect_ratio>0.6</aspect_ratio>
+                        <znear>0.010000</znear>
+                        <zfar>1000.000000</zfar>
+                    </perspective>
+                </technique_common>
+            </optics>
+        </camera>
+    </library_cameras>
+    <library_geometries>
+        <geometry id="ID-1566049728-mesh" name="ID-1566049728">
+            <mesh>
+                <source id="ID-1566049728-mesh-verts" name="verts">
+                    <float_array id="ID-1566049728-mesh-verts-array" count="12">-0.500000 -0.000000 -0.500000 -0.500000 0.000000 0.500000 0.500000 0.000000 -0.500000 0.500000 0.000000 0.500000 </float_array>
+                    <technique_common>
+                        <accessor count="4" offset="0" source="#ID-1566049728-mesh-verts-array" stride="3">
+                            <param name="X" type="float"/>
+                            <param name="Y" type="float"/>
+                            <param name="Z" type="float"/>
+                        </accessor>
+                    </technique_common>
+                </source>
+                <source id="ID-1566049728-mesh-normal" name="normal">
+                    <float_array id="ID-1566049728-mesh-normal-array" count="12">0.000000 1.000000 0.000000 0.000000 1.000000 0.000000 0.000000 1.000000 0.000000 0.000000 1.000000 0.000000 </float_array>
+                    <technique_common>
+                        <accessor count="4" offset="0" source="#ID-1566049728-mesh-normal-array" stride="3">
+                            <param name="X" type="float"/>
+                            <param name="Y" type="float"/>
+                            <param name="Z" type="float"/>
+                        </accessor>
+                    </technique_common>
+                </source>
+                <source id="ID-1566049728-mesh-uv1" name="uv1">
+                    <float_array id="ID-1566049728-mesh-uv1-array" count="8">0.000000 1.000000 1.000000 1.000000 1.000000 0.000000 0.000000 0.000000 </float_array>
+                    <technique_common>
+                        <accessor count="4" offset="0" source="#ID-1566049728-mesh-uv1-array" stride="2">
+                            <param name="S" type="float"/>
+                            <param name="T" type="float"/>
+                        </accessor>
+                    </technique_common>
+                </source>
+                <vertices id="ID-1566049728-mesh-vertices">
+                    <input semantic="POSITION" source="#ID-1566049728-mesh-verts"/>
+                </vertices>
+                <polygons count="1">
+                    <input offset="0" semantic="VERTEX" source="#ID-1566049728-mesh-vertices"/>
+                    <input offset="1" semantic="NORMAL" source="#ID-1566049728-mesh-normal"/>
+                    <input offset="1" semantic="TEXCOORD" source="#ID-1566049728-mesh-uv1" set="0"/>
+                    <p>1 3 3 2 2 1 0 0 </p>
+                </polygons>
+            </mesh>
+        </geometry>
+    </library_geometries>
+    <library_visual_scenes>
+        <visual_scene id="RootNode" name="RootNode">
+            <node id="ID-1566159488" sid="ID-1566159488" name="Camera">
+                <matrix sid="matrix">0.866025 -0.211309 0.453154 2.500000 0.000000 0.906308 0.422618 2.340000 -0.500000 -0.365998 0.784886 4.340000 0.000000 0.000000 0.000000 1.000000</matrix>
+                <instance_camera url="#ID-1566159488-persp"/>
+            </node>
+            <node id="ID-1566049728" sid="ID-1566049728" name="Plane">
+                <matrix sid="matrix">1.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                <instance_geometry url="#ID-1566049728-mesh"/>
+            </node>
+        </visual_scene>
+    </library_visual_scenes>
+    <scene>
+        <instance_visual_scene url="#RootNode"/>
+    </scene>
+</COLLADA>

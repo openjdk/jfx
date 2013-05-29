@@ -755,24 +755,15 @@ final class SWGraphics implements ReadbackGraphics {
                     (p.getType() == Paint.Type.COLOR) &&
                     tx.is2D();
 
-            final float gamma, invgamma;
             if (doLCDText) {
-                invgamma = PrismFontUtils.getLCDContrast();
-                gamma = 1.0f/invgamma;
-                final Color c = (Color)p;
-                final Color correctedColor = new Color((float)Math.pow(c.getRed(), invgamma),
-                                                       (float)Math.pow(c.getGreen(), invgamma),
-                                                       (float)Math.pow(c.getBlue(), invgamma),
-                                                       (float)Math.pow(c.getAlpha(), invgamma));
-                this.setColor(correctedColor, this.compositeAlpha);
+                this.pr.setLCDGammaCorrection(1f / PrismFontUtils.getLCDContrast());
             } else {
-                gamma = invgamma = 0;
                 final FontResource fr = strike.getFontResource();
                 final float origSize = strike.getSize();
                 final BaseTransform origTx = strike.getTransform();
                 strike = fr.getStrike(origSize, origTx, FontResource.AA_GREYSCALE);
-                this.setPaintBeforeDraw(p, bx, by, bw, bh);
             }
+            this.setPaintBeforeDraw(p, bx, by, bw, bh);
 
             for (int i = strFrom; i < strTo; i++) {
                 final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
@@ -787,8 +778,7 @@ final class SWGraphics implements ReadbackGraphics {
                             (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
                             subPosX,
                             g.getWidth(), g.getHeight(),
-                            0, g.getWidth(),
-                            gamma, invgamma);
+                            0, g.getWidth());
                 } else {
                     this.pr.fillAlphaMask(g.getPixelData(),
                             (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f),
@@ -819,43 +809,23 @@ final class SWGraphics implements ReadbackGraphics {
 
     public void drawTexture(Texture tex,
                             float dx1, float dy1, float dx2, float dy2,
+                            float sx1, float sy1, float sx2, float sy2)
+    {
+        final int imageMode;
+        if (compositeAlpha == 1f) {
+            imageMode = RendererBase.IMAGE_MODE_NORMAL;
+        } else {
+            imageMode = RendererBase.IMAGE_MODE_MULTIPLY;
+            this.pr.setColor(255, 255, 255, (int)(255 * compositeAlpha));
+        }
+        this.drawTexture(tex, imageMode, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
+    }
+
+    private void drawTexture(Texture tex, int imageMode,
+                            float dx1, float dy1, float dx2, float dy2,
                             float sx1, float sy1, float sx2, float sy2) {
         if (PrismSettings.debug) {
-            System.out.println("+ drawTexture2");
-        }
-        this.drawTextureVO(tex, 1, 1, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
-    }
-
-    private void computeScaleAndPixelCorrection(float[] target, float dv1, float dv2, float sv1, float sv2) {
-        final float dv_diff = dv2 - dv1;
-        float scale = dv_diff / (sv2 - sv1);
-        float pixel_correction = 0;
-        if (Math.abs(scale) > 2*Math.abs(dv_diff)) {
-            // scaling "single" pixel
-            // we need to "2*" since there is half-pixel shift for
-            // the purpose of interpolation in the native
-            scale = 2 * Math.signum(scale) * Math.abs(dv_diff);
-            if ((int)sv2 != (int)sv1) {
-                // scaling parts of two neighboring pixels
-                final float sx_min = Math.min(sv1, sv2);
-                final float pixel_reminder = (float)(Math.ceil(sx_min)) - sx_min;
-                pixel_correction = pixel_reminder / (2*(sv2 - sv1));
-            }
-        }
-        target[0] = scale;
-        target[1] = pixel_correction;
-    }
-
-    private Rectangle srcBBox;
-    private Rectangle dstBBox;
-
-    public void drawTextureVO(Texture tex,
-                              float topopacity, float botopacity,
-                              float dx1, float dy1, float dx2, float dy2,
-                              float sx1, float sy1, float sx2, float sy2)
-    {
-        if (PrismSettings.debug) {
-            System.out.println("+ drawTextureVO: "+tex+", tOpacity: " + topopacity + ", bOpacity: " + botopacity +
+            System.out.println("+ drawTexture: " + tex + ", imageMode: " + imageMode +
                     ", tex.w: " + tex.getPhysicalWidth() + ", tex.h: " + tex.getPhysicalHeight());
             System.out.println("target: " + target + " t.w: " + target.getPhysicalWidth() + ", t.h: " + target.getPhysicalHeight() +
                     ", t.dims: " + target.getDimensions());
@@ -869,19 +839,9 @@ final class SWGraphics implements ReadbackGraphics {
         final SWArgbPreTexture swTex = (SWArgbPreTexture) tex;
         int data[] = swTex.getDataNoClone();
 
-        final int ix1 = SWUtils.fastFloor(dx1);
-        final int iy1 = SWUtils.fastFloor(dy1);
-        final int ix2 = SWUtils.fastFloor(dx2);
-        final int iy2 = SWUtils.fastFloor(dy2);
-        if (srcBBox == null) {
-            srcBBox = new Rectangle();
-        }
-        srcBBox.setBounds(Math.min(ix1, ix2), Math.min(iy1, iy2),
-                Math.abs(SWUtils.fastCeil(dx2 - dx1)), Math.abs(SWUtils.fastCeil(dy2 - dy1)));
-        if (dstBBox == null) {
-            dstBBox = new Rectangle();
-        }
-
+        final RectBounds srcBBox = new RectBounds(Math.min(dx1, dx2), Math.min(dy1, dy2),
+                Math.max(dx1, dx2), Math.max(dy1, dy2));
+        final RectBounds dstBBox = new RectBounds();
         tx.transform(srcBBox, dstBBox);
 
         paintTx.setTransform(tx);
@@ -909,12 +869,6 @@ final class SWGraphics implements ReadbackGraphics {
 
         convertToPiscesTransform(paintTx, piscesTx);
 
-        if (scaleY == -1) {
-            final float swap = topopacity;
-            topopacity = botopacity;
-            botopacity = swap;
-        }
-
         if (PrismSettings.debug) {
             System.out.println("tx: " + tx);
             System.out.println("piscesTx: " + piscesTx);
@@ -928,17 +882,56 @@ final class SWGraphics implements ReadbackGraphics {
         final int interpolateMaxX = SWUtils.fastCeil(Math.max(sx1, sx2)) - 1;
         final int interpolateMaxY = SWUtils.fastCeil(Math.max(sy1, sy2)) - 1;
 
-        this.pr.drawImage(RendererBase.TYPE_INT_ARGB_PRE, data, tex.getPhysicalWidth(), tex.getPhysicalHeight(),
+        this.pr.drawImage(RendererBase.TYPE_INT_ARGB_PRE, imageMode,
+                data, tex.getPhysicalWidth(), tex.getPhysicalHeight(),
                 swTex.getOffset(), swTex.getStride(),
                 piscesTx, false,
-                dstBBox.x, dstBBox.y, dstBBox.width, dstBBox.height,
+                (int)(TO_PISCES * dstBBox.getMinX()), (int)(TO_PISCES * dstBBox.getMinY()),
+                (int)(TO_PISCES * dstBBox.getWidth()), (int)(TO_PISCES * dstBBox.getHeight()),
                 interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY,
-                (int)(topopacity * this.compositeAlpha * 255), (int)(botopacity * this.compositeAlpha * 255),
                 swTex.hasAlpha());
 
         if (PrismSettings.debug) {
-            System.out.println("* drawTextureVO, DONE");
+            System.out.println("* drawTexture, DONE");
         }
+    }
+
+    private void computeScaleAndPixelCorrection(float[] target, float dv1, float dv2, float sv1, float sv2) {
+        final float dv_diff = dv2 - dv1;
+        float scale = dv_diff / (sv2 - sv1);
+        float pixel_correction = 0;
+        if (Math.abs(scale) > 2*Math.abs(dv_diff)) {
+            // scaling "single" pixel
+            // we need to "2*" since there is half-pixel shift for
+            // the purpose of interpolation in the native
+            scale = 2 * Math.signum(scale) * Math.abs(dv_diff);
+            if ((int)sv2 != (int)sv1) {
+                // scaling parts of two neighboring pixels
+                final float sx_min = Math.min(sv1, sv2);
+                final float pixel_reminder = (float)(Math.ceil(sx_min)) - sx_min;
+                pixel_correction = pixel_reminder / (2*(sv2 - sv1));
+            }
+        }
+        target[0] = scale;
+        target[1] = pixel_correction;
+    }
+
+    public void drawTextureVO(Texture tex,
+                              float topopacity, float botopacity,
+                              float dx1, float dy1, float dx2, float dy2,
+                              float sx1, float sy1, float sx2, float sy2)
+    {
+        if (PrismSettings.debug) {
+            System.out.println("* drawTextureVO");
+        }
+        final int[] fractions = { 0x0000, 0x10000 };
+        final int[] argb = { 0xffffff | (((int)(topopacity * 255)) << 24),
+                             0xffffff | (((int)(botopacity * 255)) << 24) };
+        final Transform6 t6 = new Transform6();
+        convertToPiscesTransform(this.tx, t6);
+        this.pr.setLinearGradient(0, (int)(TO_PISCES * dy1), 0, (int)(TO_PISCES * dy2), fractions, argb,
+                                  GradientColorMap.CYCLE_NONE, t6);
+        this.drawTexture(tex, RendererBase.IMAGE_MODE_MULTIPLY, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
     }
 
     public void drawTextureRaw(Texture tex,

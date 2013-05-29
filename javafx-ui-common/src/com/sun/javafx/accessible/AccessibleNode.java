@@ -36,7 +36,6 @@ import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.utils.NavigateDirection;
 import com.sun.javafx.accessible.utils.PropertyIds;
 import com.sun.javafx.accessible.utils.Rect;
-import com.sun.javafx.stage.WindowHelper;
 import sun.util.logging.PlatformLogger;
 
 public class AccessibleNode implements AccessibleProvider
@@ -140,12 +139,12 @@ public class AccessibleNode implements AccessibleProvider
         Bounds bounds = node.getBoundsInParent() ;
         double x =
             Screen.getPrimary().getBounds().getMinX() +
-            WindowHelper.getScreenX(scene.getWindow()) +
+            scene.getWindow().getX() +
             scene.getX() +
             bounds.getMinX();
         double y =
             Screen.getPrimary().getBounds().getMinY() +
-            WindowHelper.getScreenY(scene.getWindow()) +
+            scene.getWindow().getY() +
             scene.getY() +
             bounds.getMinY();
         

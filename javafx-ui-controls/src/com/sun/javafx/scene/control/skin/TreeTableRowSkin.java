@@ -336,6 +336,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     @Override protected Control getVirtualFlowOwner() {
         return getSkinnable().getTreeTableView();
     }
+
+    @Override protected DoubleProperty fixedCellSizeProperty() {
+        return getSkinnable().getTreeTableView().fixedCellSizeProperty();
+    }
     
     
     

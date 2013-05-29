@@ -317,10 +317,10 @@ class Loader {
         //            targetMesh.getVertices().add(tv);
         //        }
         //        targetMesh.getJoints().addAll(sourceMesh.getJoints());// NO_JOINTS
-        targetMesh.setPoints(sourceMesh.getPoints(null));
-        targetMesh.setTexCoords(sourceMesh.getTexCoords(null));
-        targetMesh.setFaces(sourceMesh.getFaces(null));
-        targetMesh.setFaceSmoothingGroups(sourceMesh.getFaceSmoothingGroups(null));
+        targetMesh.getPoints().setAll(sourceMesh.getPoints());
+        targetMesh.getTexCoords().setAll(sourceMesh.getTexCoords());
+        targetMesh.getFaces().setAll(sourceMesh.getFaces());
+        targetMesh.getFaceSmoothingGroups().setAll(sourceMesh.getFaceSmoothingGroups());
     }
 
     protected Image loadImageFromFtnAttr(MNode fileNode, String name) {
@@ -811,7 +811,7 @@ class Loader {
             res[i * 2] = uvsData[2 * i];
             res[i * 2 + 1] = 1 - uvsData[2 * i + 1];
         }
-        mesh.setTexCoords(res);
+        mesh.getTexCoords().setAll(res);
         return true;
     }
 
@@ -1612,11 +1612,11 @@ class Loader {
                 points[index + 2] = verts[index + 2];
             }
         }
-        mesh.setPoints(points);
+        mesh.getPoints().setAll(points);
 
         // copy UV as-is
         if (!addUVs(mesh, uvChannel)) {
-            mesh.setTexCoords(new float[] { 0, 0 });
+            mesh.getTexCoords().setAll(0, 0);
         }
 
         int startFace = 0;
@@ -1662,14 +1662,14 @@ class Loader {
         for (int i = 0; i < fff.length; i++) {
             fff[i] = ff.get(i);
         }
-        mesh.setFaces(fff);
+        mesh.getFaces().setAll(fff);
         fff = null;
         ff = null;
         int[] sgsg = new int[sg.size()];
         for (int i = 0; i < sgsg.length; i++) {
             sgsg[i] = sg.get(i);
         }
-        mesh.setFaceSmoothingGroups(sgsg);
+        mesh.getFaceSmoothingGroups().setAll(sgsg);
         return mesh;
     }
 

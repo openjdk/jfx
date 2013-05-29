@@ -36,6 +36,7 @@ public class PrismParallelCameraImpl extends PrismCameraImpl {
 
     @Override
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        return PickRay.computeParallelPickRay(x, y, worldTransform, pickRay);
+        return PickRay.computeParallelPickRay(x, y, worldTransform, zNear, zFar,
+                pickRay);
     }
 }

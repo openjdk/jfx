@@ -32,7 +32,7 @@ import com.sun.glass.ui.*;
 final class MacRobot extends Robot {
 
     // TODO: get rid of native Robot object
-    private long ptr = 0;
+    private long ptr;
 
     private native long _init();
     @Override protected void _create() {

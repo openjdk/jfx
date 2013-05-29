@@ -153,12 +153,13 @@ public class SubSceneTest {
         assertEquals(20, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
                 .getCamera())).getNearClip(), 0.00001);
 
-        sub.setCamera(null);
+        sub.setCamera(null); // Sets the default camera, which is parallel camera
+        ParallelCamera pCam = new ParallelCamera(); // Like default cam
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         // verify owner was removed
         cam.setNearClip(30);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(20, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
+        assertEquals(pCam.getNearClip(), ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
                 .getCamera())).getNearClip(), 0.00001);
 
         sub.setCamera(cam);

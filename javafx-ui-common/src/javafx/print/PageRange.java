@@ -30,7 +30,6 @@ import java.util.Arrays;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
-import com.sun.javafx.beans.annotations.NoBuilder;
 
 /**
  * A {@code PageRange} is used to select or constrain the job print
@@ -43,8 +42,6 @@ import com.sun.javafx.beans.annotations.NoBuilder;
  * during printing.
  * @since JavaFX 8
  */
-
-@NoBuilder
 public final class PageRange {
 
     private ReadOnlyIntegerWrapper startPage, endPage;

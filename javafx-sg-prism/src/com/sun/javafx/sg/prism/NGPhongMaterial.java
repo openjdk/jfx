@@ -27,11 +27,11 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.sg.PGPhongMaterial;
 import com.sun.prism.Image;
-import com.sun.prism.TextureMap;
 import com.sun.prism.Material;
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
+import com.sun.prism.TextureMap;
 import com.sun.prism.paint.Color;
 
 /**
@@ -39,6 +39,7 @@ import com.sun.prism.paint.Color;
  */
 public class NGPhongMaterial implements PGPhongMaterial {
 
+    private static final Image WHITE_1X1 = Image.fromIntArgbPreData(new int[]{0xffffffff}, 1, 1);
     private PhongMaterial material;
 
     private Color diffuseColor;
@@ -63,10 +64,6 @@ public class NGPhongMaterial implements PGPhongMaterial {
         return material;
     }
 
-    private static Texture getCachedTexture(ResourceFactory f, Image img) {
-        return img != null ? f.getCachedTexture(img, Texture.WrapMode.CLAMP_TO_EDGE) : null;
-    }
-
     private void validate(ResourceFactory f) {
 
         if (diffuseColorDirty) {
@@ -81,23 +78,16 @@ public class NGPhongMaterial implements PGPhongMaterial {
         }
 
         if (diffuseMap.isDirty()) {
-            if (diffuseMap.getImage() == null) { 
-                int pixel = 0xffffffff;
-                diffuseMap.setImage(Image.fromIntArgbPreData( new int[]{pixel}, 1, 1));
+            if (diffuseMap.getImage() == null) {
+                diffuseMap.setImage(WHITE_1X1);
             }
-            diffuseMap.setTexture(getCachedTexture(f, diffuseMap.getImage()));
             material.setTextureMap(diffuseMap);
-            diffuseMap.setDirty(false);
         }
         if (bumpMap.isDirty()) {
-            bumpMap.setTexture(getCachedTexture(f, bumpMap.getImage()));
             material.setTextureMap(bumpMap);
-            bumpMap.setDirty(false);
         }
         if (selfIllumMap.isDirty()) {
-            selfIllumMap.setTexture(getCachedTexture(f, selfIllumMap.getImage()));
             material.setTextureMap(selfIllumMap);
-            selfIllumMap.setDirty(false);
         }
         if (specularMap.isDirty() || specularColorDirty || specularPowerDirty) {
             Image specular = specularMap.getImage();
@@ -112,11 +102,10 @@ public class NGPhongMaterial implements PGPhongMaterial {
                     specular = Image.fromIntArgbPreData(new int[]{pixel}, 1, 1);
                 }
             }
-            specularMap.setTexture(getCachedTexture(f, specular));
+            specularMap.setImage(specular);
             material.setTextureMap(specularMap);
             specularColorDirty = false;
             specularPowerDirty = false;
-            specularMap.setDirty(false);
         }
     }
 

@@ -131,17 +131,19 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
-import com.sun.javafx.scene.NodeAccess;
 import com.sun.javafx.scene.BoundsAccessor;
+import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.EventHandlerProperties;
 import com.sun.javafx.scene.NodeEventDispatcher;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleableProperty;
 import javafx.geometry.NodeOrientation;
@@ -3837,10 +3839,24 @@ public abstract class Node implements EventTarget, Styleable {
         }
         final com.sun.javafx.geom.Point2D tempPt =
                 TempState.getInstance().point;
-        tempPt.setLocation((float)(screenX - scene.getX()
-                                       - WindowHelper.getScreenX(window)),
-                           (float)(screenY - scene.getY()
-                                       - WindowHelper.getScreenY(window)));
+
+        tempPt.setLocation((float)(screenX - scene.getX() - window.getX()),
+                           (float)(screenY - scene.getY() - window.getY()));
+
+        final SubScene subScene = getSubScene();
+        if (subScene != null) {
+            final Point2D ssCoord = SceneUtils.sceneToSubScenePlane(subScene,
+                    new Point2D(tempPt.x, tempPt.y));
+            if (ssCoord == null) {
+                return null;
+            }
+            tempPt.setLocation((float) ssCoord.getX(), (float) ssCoord.getY());
+        }
+
+        final Point3D ppIntersect =
+                scene.getEffectiveCamera().pickProjectPlane(tempPt.x, tempPt.y);
+        tempPt.setLocation((float) ppIntersect.getX(), (float) ppIntersect.getY());
+
         try {
             sceneToLocal(tempPt);
         } catch (NoninvertibleTransformException e) {
@@ -3850,7 +3866,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link javafx.scene.Screen}
+     * Transforms a point from the coordinate space of the {@link javafx.stage.Screen}
      * into the local coordinate space of this {@code Node}.
      * @param screenPoint a point on a Screen
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
@@ -3862,28 +3878,28 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a rectangle from the coordinate space of the
-     * {@link javafx.scene.Screen} into the local coordinate space of this
-     * {@code Node}.
+     * {@link javafx.stage.Screen} into the local coordinate space of this
+     * {@code Node}. Returns reasonable result only in 2D space.
      * @param screenBounds bounds on a Screen
      * @return bounds in the local Node'space or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
      */
     public Bounds screenToLocal(Bounds screenBounds) {
-        Scene scene = getScene();
-        Window window = scene.getWindow();
-        if (scene == null || window == null) {
+        final Point2D p1 = screenToLocal(screenBounds.getMinX(), screenBounds.getMinY());
+        final Point2D p2 = screenToLocal(screenBounds.getMinX(), screenBounds.getMaxY());
+        final Point2D p3 = screenToLocal(screenBounds.getMaxX(), screenBounds.getMinY());
+        final Point2D p4 = screenToLocal(screenBounds.getMaxX(), screenBounds.getMaxY());
+
+        if (p1 == null || p2 == null || p3 == null || p4 == null) {
             return null;
         }
-        Bounds sceneBounds =
-                new BoundingBox(screenBounds.getMinX() - scene.getX()
-                                    - WindowHelper.getScreenX(window),
-                                screenBounds.getMinY() - scene.getY()
-                                    - WindowHelper.getScreenY(window),
-                                screenBounds.getMinZ(),
-                                screenBounds.getWidth(),
-                                screenBounds.getHeight(),
-                                screenBounds.getDepth());
-        return sceneToLocal(sceneBounds);
+
+        final double minX = min4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
+        final double maxX = max4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
+        final double minY = min4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
+        final double maxY = max4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
+
+        return new BoundingBox(minX, minY, 0.0, maxX - minX, maxY - minY, 0.0);
     }
 
     /**
@@ -3993,32 +4009,18 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Screen}.
+     * into the coordinate space of its {@link javafx.stage.Screen}.
      * @param localX x coordinate of a point in Node's space
      * @param localY y coordinate of a point in Node's space
      * @return screen coordinates of the point or null if Node is not in a {@link Window}
      */
     public Point2D localToScreen(double localX, double localY) {
-        Scene scene = getScene();
-        Window window = scene.getWindow();
-        if (scene == null || window == null) {
-            return null;
-        }
-
-        final com.sun.javafx.geom.Point2D tempPt =
-                TempState.getInstance().point;
-        tempPt.setLocation((float)localX, (float)localY);
-        localToScene(tempPt);
-
-        return new Point2D(tempPt.x + scene.getX()
-                               + WindowHelper.getScreenX(window),
-                           tempPt.y + scene.getY()
-                               + WindowHelper.getScreenY(window));
+        return localToScreen(localX, localY, 0.0);
     }
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Screen}.
+     * into the coordinate space of its {@link javafx.stage.Screen}.
      * @param localPoint a point in Node's space
      * @return screen coordinates of the point or null if Node is not in a {@link Window}
      */
@@ -4027,27 +4029,73 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its {@link javafx.stage.Screen}.
+     * @param localX x coordinate of a point in Node's space
+     * @param localY y coordinate of a point in Node's space
+     * @param localZ z coordinate of a point in Node's space
+     * @return screen coordinates of the point or null if Node is not in a {@link Window}
+     */
+    public Point2D localToScreen(double localX, double localY, double localZ) {
+        Scene scene = getScene();
+        Window window = scene.getWindow();
+        if (scene == null || window == null) {
+            return null;
+        }
+
+        Point3D pt = localToScene(localX, localY, localZ);
+        final SubScene subScene = getSubScene();
+        if (subScene != null) {
+            pt = SceneUtils.subSceneToScene(subScene, pt);
+        }
+        final Point2D projection = CameraHelper.project(
+                SceneHelper.getEffectiveCamera(getScene()), pt);
+
+        return new Point2D(projection.getX() + scene.getX() + window.getX(),
+                           projection.getY() + scene.getY() + window.getY());
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its {@link javafx.stage.Screen}.
+     * @param localPoint a point in Node's space
+     * @return screen coordinates of the point or null if Node is not in a {@link Window}
+     */
+    public Point2D localToScreen(Point3D localPoint) {
+        return localToScreen(localPoint.getX(), localPoint.getY(), localPoint.getZ());
+    }
+
+    /**
      * Transforms a bounds from the local coordinate space of this
-     * {@code Node} into the coordinate space of its {@link javafx.scene.Screen}.
+     * {@code Node} into the coordinate space of its {@link javafx.stage.Screen}.
      * @param localBounds bounds in Node's space
      * @return the bounds in screen coordinates or null if Node is not in a {@link Window}
      */
     public Bounds localToScreen(Bounds localBounds) {
-        Scene scene = getScene();
-        Window window = scene.getWindow();
-        if (scene == null || window == null) {
-            return  null;
+        final Point2D p1 = localToScreen(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMinZ());
+        final Point2D p2 = localToScreen(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMaxZ());
+        final Point2D p3 = localToScreen(localBounds.getMinX(), localBounds.getMaxY(), localBounds.getMinZ());
+        final Point2D p4 = localToScreen(localBounds.getMinX(), localBounds.getMaxY(), localBounds.getMaxZ());
+        final Point2D p5 = localToScreen(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMinZ());
+        final Point2D p6 = localToScreen(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMaxZ());
+        final Point2D p7 = localToScreen(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ());
+        final Point2D p8 = localToScreen(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ());
+
+        if (p1 == null || p2 == null || p3 == null || p4 == null
+                || p5 == null || p6 == null || p7 == null || p8 == null) {
+            return null;
         }
 
-        Bounds sceneBounds = localToScene(localBounds);
-        return new BoundingBox(sceneBounds.getMinX() + scene.getX()
-                                   + WindowHelper.getScreenX(window),
-                               sceneBounds.getMinY() + scene.getY()
-                                   + WindowHelper.getScreenY(window),
-                               sceneBounds.getMinZ(),
-                               sceneBounds.getWidth(),
-                               sceneBounds.getHeight(),
-                               sceneBounds.getDepth());
+        final double minX = min8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
+                p5.getX(), p6.getX(), p7.getX(), p8.getX());
+        final double maxX = max8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
+                p5.getX(), p6.getX(), p7.getX(), p8.getX());
+        final double minY = min8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
+                p5.getY(), p6.getY(), p7.getY(), p8.getY());
+        final double maxY = max8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
+                p5.getY(), p6.getY(), p7.getY(), p8.getY());
+
+        return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
     }
 
     /**
@@ -4544,6 +4592,9 @@ public abstract class Node implements EventTarget, Styleable {
             return false;
         }
         double t = -origZ / dirZ;
+        if (t < pickRay.getNearClip() || t > pickRay.getFarClip()) {
+            return false;
+        }
         double x = pickRay.getOriginNoClone().x + (pickRay.getDirectionNoClone().x * t);
         double y = pickRay.getOriginNoClone().y + (pickRay.getDirectionNoClone().y * t);
 
@@ -4606,6 +4657,26 @@ public abstract class Node implements EventTarget, Styleable {
             final double maxZ = tempBounds.getMaxZ();
             tmin = ((signZ ? maxZ : minZ) - originZ) * invDirZ;
             tmax = ((signZ ? minZ : maxZ) - originZ) * invDirZ;
+
+        } else if (tempBounds.getDepth() == 0.0) {
+            // fast path for 3D picking of 2D bounds
+
+            if (almostZero(dir.z)) {
+                return Double.NaN;
+            }
+
+            final double t = (tempBounds.getMinZ() - originZ) / dir.z;
+            final double x = originX + (dir.x * t);
+            final double y = originY + (dir.y * t);
+
+            if (x < tempBounds.getMinX() ||
+                    x > tempBounds.getMaxX() ||
+                    y < tempBounds.getMinY() ||
+                    y > tempBounds.getMaxY()) {
+                return Double.NaN;
+            }
+
+            tmin = tmax = t;
 
         } else {
 
@@ -4710,17 +4781,17 @@ public abstract class Node implements EventTarget, Styleable {
             return Double.NaN;
         }
 
-        if (pickRay.isParallel()) {
-            return tmin;
-        }
-
-        if (tmin < 0.0) {
-            if (tmax >= 0.0) {
+        final double minDistance = pickRay.getNearClip();
+        final double maxDistance = pickRay.getFarClip();
+        if (tmin < minDistance) {
+            if (tmax >= minDistance && tmax <= maxDistance) {
                 // we are inside bounds
                 return 0.0;
             } else {
                 return Double.NaN;
             }
+        } else if (tmin > maxDistance) {
+            return Double.NaN;
         }
 
         return tmin;
@@ -5744,7 +5815,7 @@ public abstract class Node implements EventTarget, Styleable {
      * orientation without using the automatic transformation.
      * </p>
      */
-    public boolean isAutomaticallyMirrored() {
+    public boolean usesMirroring() {
         return true;
     }
 
@@ -5823,7 +5894,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private byte calcAutomaticNodeOrientation() {
-        if (!isAutomaticallyMirrored()) {
+        if (!usesMirroring()) {
             return AUTOMATIC_ORIENTATION_LTR;
         }
 
@@ -8685,30 +8756,26 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated
     public abstract Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
 
-    /**
-     * This class is used by classes in different packages to get access to
-     * private and package private methods.
-     */
-    private static class NodeAccessImpl extends NodeAccess {
-
-        @Override
-        public void layoutNodeForPrinting(Node node) {
-            node.doCSSLayoutSyncForSnapshot();
-        }
-
-        @Override
-        public boolean isDerivedDepthTest(Node node) {
-            return node.isDerivedDepthTest();
-        }
-
-        @Override
-        public SubScene getSubScene(Node node) {
-            return node.getSubScene();
-        }
-    }
-
     static {
-        NodeAccess.setNodeAccess(new NodeAccessImpl());
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        NodeHelper.setNodeAccessor(new NodeHelper.NodeAccessor() {
+
+            @Override
+            public void layoutNodeForPrinting(Node node) {
+                node.doCSSLayoutSyncForSnapshot();
+            }
+
+            @Override
+            public boolean isDerivedDepthTest(Node node) {
+                return node.isDerivedDepthTest();
+            }
+
+            @Override
+            public SubScene getSubScene(Node node) {
+                return node.getSubScene();
+            }
+        });
     }
 }
 

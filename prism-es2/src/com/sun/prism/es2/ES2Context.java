@@ -51,7 +51,6 @@ class ES2Context extends BaseShaderContext {
     // Temporary variables
     private static GeneralTransform3D scratchTx = new GeneralTransform3D();
     private static final GeneralTransform3D flipTx = new GeneralTransform3D();
-    private static Affine3D powerOfTwoCompensation = new Affine3D();
     // contains the combined projection/modelview matrix (elements 0-15)
     private static float rawMatrix[] = new float[GLContext.NUM_MATRIX_ELEMENTS];
 
@@ -67,7 +66,6 @@ class ES2Context extends BaseShaderContext {
     private int quadIndices;
     // The drawable that is current to the glContext
     private GLDrawable currentDrawable = null;
-    private ES2RenderingContext currentRenderingContext = null;
     private int indexBuffer = 0;
     private int shaderProgram;
 
@@ -118,10 +116,6 @@ class ES2Context extends BaseShaderContext {
         return glContext;
     }
 
-    GLDrawable getDummyDrawable() {
-        return dummyGLDrawable;
-    }
-
     GLPixelFormat getPixelFormat() {
         return pixelFormat;
     }
@@ -130,24 +124,14 @@ class ES2Context extends BaseShaderContext {
         return ES2PhongShader.getShader(meshView, this);
     }
 
-    void setCurrentRenderingContext(ES2RenderingContext rc, GLDrawable drawable) {
-        if ((rc != null) && (drawable == null)) {
-            System.err.println("Warning: ES2Context.setCurrentRenderingContext: "
-                    + "rc = " + rc + ", drawable = " + drawable);
-        }
-        currentRenderingContext = rc;
-        makeCurrent(drawable);
-     }
-
-    ES2RenderingContext getCurrentRenderingContext() {
-        return currentRenderingContext;
-    }
-
     // JIRA: RT-21738
     // TODO: If we can't resolve this platform specific treatment code
     // by 3.0, we need to refactor it to platform specific project
     private int savedFBO = 0;
-    private void makeCurrent(GLDrawable drawable) {
+    void makeCurrent(GLDrawable drawable) {
+        if (drawable == null) {
+            drawable = dummyGLDrawable;
+        }
         if (PlatformUtil.isMac() || PlatformUtil.isIOS()) {
             if (drawable != currentDrawable) {
                 if (drawable == dummyGLDrawable) {
@@ -248,12 +232,10 @@ class ES2Context extends BaseShaderContext {
             scratchTx = camera.getProjViewTx(scratchTx);
             // TODO: verify that this is the right solution. There may be
             // other use-cases where rendering needs different viewport size.
-            if (!glContext.canCreateNonPowTwoTextures()) {
-                powerOfTwoCompensation.setToScale(
-                        camera.getViewWidth() / w,
-                        camera.getViewHeight() / h,
-                        1.0);
-                scratchTx.mul(powerOfTwoCompensation);
+            double vw = camera.getViewWidth();
+            double vh = camera.getViewHeight();
+            if (w != vw || h != vh) {
+                scratchTx.scale(vw / w, vh / h, 1.0);
             }
         }
 
@@ -414,7 +396,7 @@ class ES2Context extends BaseShaderContext {
         glContext.releaseES2Mesh(nativeHandle);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int[] indexBuffer) {
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, short[] indexBuffer) {
         return glContext.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
     }
 
@@ -447,7 +429,7 @@ class ES2Context extends BaseShaderContext {
 
     void setCullingMode(long nativeHandle, int cullingMode) {
         // TODO: 3D - compute determinant whenever projViewTx or worldTx changes.
-        cullingMode = 0;
+        // NOTE: Native code has set clockwise order as front-facing
         glContext.setCullingMode(nativeHandle, cullingMode);
     }
 

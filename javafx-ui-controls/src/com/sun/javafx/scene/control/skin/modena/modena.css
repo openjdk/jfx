@@ -462,6 +462,7 @@ is being used to size a border should also be in pixels.
 
 /* ====   DISABLED THINGS   ================================================= */
 
+.label:disabled,
 .button:disabled,
 .toggle-button:disabled,
 .radio-button:disabled,

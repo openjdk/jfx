@@ -54,6 +54,12 @@ public final class SceneHelper {
         return sceneAccessor.getEffectiveCamera(scene);
     }
 
+    public static void setSceneDelta(final Scene scene,
+                                     final double deltaX,
+                                     final double deltaY) {
+        sceneAccessor.setSceneDelta(scene, deltaX, deltaY);
+    }
+
     public static void setSceneAccessor(final SceneAccessor newAccessor) {
         if (sceneAccessor != null) {
             throw new IllegalStateException();
@@ -68,6 +74,8 @@ public final class SceneHelper {
         void parentEffectiveOrientationInvalidated(Scene scene);
 
         Camera getEffectiveCamera(Scene scene);
+
+        void setSceneDelta(Scene scene, double deltaX, double deltaY);
     }
 
     private static void forceInit(final Class<?> classToInit) {

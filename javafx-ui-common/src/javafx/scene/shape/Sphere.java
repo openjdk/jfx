@@ -147,12 +147,17 @@ public class Sphere extends Shape3D {
         super.impl_updatePG();
         if (impl_isDirty(DirtyBits.MESH_GEOM)) {
             PGSphere pgSphere = (PGSphere) impl_getPGNode();
-            if (key == 0) {
-                key = generateKey((float) getRadius(), divisions);
+            final float r = (float) getRadius();
+            if (r < 0) {
+                pgSphere.updateMesh(null);
+            } else {
+                if (key == 0) {
+                    key = generateKey(r, divisions);
+                }
+                mesh = manager.getSphereMesh(r, divisions, key);
+                mesh.impl_updatePG();
+                pgSphere.updateMesh(mesh.impl_getPGTriangleMesh());
             }
-            mesh = manager.getSphereMesh((float) getRadius(), divisions, key);
-            mesh.impl_updatePG();
-            pgSphere.updateMesh(mesh.impl_getPGTriangleMesh());
         }
     }
 
@@ -163,7 +168,11 @@ public class Sphere extends Shape3D {
     @Deprecated
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        float r = (float) getRadius();
+        final float r = (float) getRadius();
+        
+        if (r < 0) {
+            return bounds.makeEmpty();
+        }        
         
         bounds = bounds.deriveWithNewBounds(-r, -r, -r, r, r ,r);
         bounds = tx.transform(bounds, bounds);
@@ -225,17 +234,18 @@ public class Sphere extends Shape3D {
             t1 = temp;
         }
 
-        if (t1 < 0.0 && !pickRay.isParallel()) {
-            // the sphere is behind us
+        final double minDistance = pickRay.getNearClip();
+        final double maxDistance = pickRay.getFarClip();
+
+        if (t1 < minDistance || t0 > maxDistance) {
+            // the sphere is out of clipping planes
             return false;
         }
 
         double t = t0;
         final CullFace cullFace = getCullFace();
-        final double minDistance = pickRay.isParallel()
-                ? Double.NEGATIVE_INFINITY : 0.0;
         if (t0 < minDistance || cullFace == CullFace.FRONT) {
-            if (getCullFace() != CullFace.BACK) {
+            if (t1 <= maxDistance && getCullFace() != CullFace.BACK) {
                 // picking the back wall
                 t = t1;
             } else {
@@ -281,10 +291,7 @@ public class Sphere extends Shape3D {
     static TriangleMesh createMesh(int div, float r) {
         div = correctDivisions(div);
 
-        if (div==0 || r==0) {
-            return null;
-        }
-
+        // NOTE: still create mesh for degenerated sphere
         final int div2 = div / 2;
 
         final int nPoints = (div + 1) * (div2 - 1) + 2;
@@ -402,8 +409,11 @@ public class Sphere extends Shape3D {
             smoothing[i] = 1;
         }
 
-        TriangleMesh m = new TriangleMesh(points, tPoints, faces);
-        m.setFaceSmoothingGroups(smoothing);
+        TriangleMesh m = new TriangleMesh();
+        m.getPoints().setAll(points);
+        m.getTexCoords().setAll(tPoints);
+        m.getFaces().setAll(faces);
+        m.getFaceSmoothingGroups().setAll(smoothing);
         return m;
     }
 

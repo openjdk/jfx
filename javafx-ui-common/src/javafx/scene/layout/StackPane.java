@@ -39,6 +39,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.css.Styleable;
+import javafx.geometry.HPos;
 
 /**
  *
@@ -126,6 +127,10 @@ import javafx.css.Styleable;
  */
 
 public class StackPane extends Pane {
+    
+    private boolean biasDirty = true;
+    private boolean performingLayout = false;
+    private Orientation bias;
 
     /********************************************************************
      *  BEGIN static methods
@@ -248,14 +253,18 @@ public class StackPane extends Pane {
      * have a content bias.
      */
     @Override public Orientation getContentBias() {
-        final List<Node> children = getChildren();
-        for (int i = 0, size = children.size(); i < size; i++) {
-            Node child = children.get(i);
-            if (child.isManaged() && child.getContentBias() != null) {
-                return child.getContentBias();
+        if (biasDirty) {
+            final List<Node> children = getChildren();
+            for (Node child : children) {
+                Orientation contentBias = child.getContentBias();
+                if (child.isManaged() && contentBias != null) {
+                    bias = contentBias;
+                    break;
+                }
             }
-        }
-        return null;
+            biasDirty = false;
+        }        
+        return bias;
     }
 
     @Override protected double computeMinWidth(double height) {
@@ -326,26 +335,41 @@ public class StackPane extends Pane {
         return margins;
     }
 
+    @Override public void requestLayout() {
+        if (performingLayout) {
+            return;
+        }
+        biasDirty = true;
+        bias = null;
+        super.requestLayout();
+    }
+
     @Override protected void layoutChildren() {
+        performingLayout = true;
         List<Node> managed = getManagedChildren();
         Pos align = getAlignmentInternal();
+        HPos alignHpos = align.getHpos();
+        VPos alignVpos = align.getVpos();
         double width = getWidth();
         double height = getHeight();
         double top = getInsets().getTop();
         double right = getInsets().getRight();
         double left = getInsets().getLeft();
         double bottom = getInsets().getBottom();
-        double baselineOffset = align.getVpos() == VPos.BASELINE ? getMaxBaselineOffset(managed)
+        double baselineOffset = alignVpos == VPos.BASELINE ? getMaxBaselineOffset(managed)
                                     : height/2;
+        double contentWidth = width - left - right;
+        double contentHeight = height - top - bottom;
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Pos childAlignment = StackPane.getAlignment(child);
             layoutInArea(child, left, top,
-                           width - left - right, height - top - bottom,
+                           contentWidth, contentHeight,
                            baselineOffset, getMargin(child),
-                           childAlignment != null? childAlignment.getHpos() : align.getHpos(),
-                           childAlignment != null? childAlignment.getVpos() : align.getVpos());
+                           childAlignment != null? childAlignment.getHpos() : alignHpos,
+                           childAlignment != null? childAlignment.getVpos() : alignVpos);
         }
+        performingLayout = false;
     }
 
     /***************************************************************************

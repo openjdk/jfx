@@ -69,4 +69,7 @@ public final class RendererBase {
      * in a <code>int</code> array.
      */
     public static final int TYPE_INT_ARGB_PRE = 2;
+
+    public static final int IMAGE_MODE_NORMAL = 1;
+    public static final int IMAGE_MODE_MULTIPLY = 2;
 }

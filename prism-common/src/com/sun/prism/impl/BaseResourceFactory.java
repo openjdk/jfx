@@ -152,7 +152,7 @@ public abstract class BaseResourceFactory implements ResourceFactory {
                         // the contents are useful, but for completeness we
                         // will register both references as "useful"
                         tex.contentsUseful();
-                        texCache.put(image, othertex);
+                        texCache.put(image, tex);
                     }
                 }
                 othertex.unlock();

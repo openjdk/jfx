@@ -25,14 +25,12 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link Byte}
  * (and byte primitive) values.</p>
  */
-@NoBuilder
 public class ByteStringConverter extends StringConverter<Byte> {
     /** {@inheritDoc} */
     @Override public Byte fromString(String value) {

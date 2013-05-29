@@ -1,0 +1,275 @@
+#  -*- mode: Python;-*-
+#
+# When editing this file, please run the following command to make sure you
+# haven't introduced any syntax errors:
+#
+# ./Tools/Scripts/check-webkit-style
+#
+# If you want to test your regular expressions, you can edit various files and
+# then try following command:
+#
+# ./Tools/Scripts/webkit-patch apply-watchlist-local
+#
+{
+    "DEFINITIONS": {
+        "ChromiumDumpRenderTree": {
+            "filename": r"Tools/DumpRenderTree/chromium/",
+        },
+        "ChromiumGraphics": {
+            "filename": r"Source/WebCore/platform/graphics/chromium/",
+        },
+        "ChromiumPublicApi": {
+            "filename": r"Source/WebKit/chromium/public/"
+                        r"|Source/Platform/chromium/public/",
+        },
+        "AppleMacPublicApi": {
+            "filename": r"Source/WebCore/bindings/objc/PublicDOMInterfaces.h"
+        },
+        "Forms": {
+            "filename": r"Source/WebCore/html/HTML(DataList|FieldSet|Form|FormControl|Input|Keygen|Label"
+                        r"|Legend|OptGroup|Option|Output|Select|TextArea|TextFormControl)Element\."
+                        r"|Source/WebCore/html/FormAssociatedElement\."
+                        r"|Source/WebCore/html/\w*InputType\."
+                        r"|Source/WebCore/html/shadow/(SliderThumbElement|TextControlInnerElements)\."
+                        r"|Source/WebCore/rendering/Render(FileUploadControl|ListBox|MenuList|Slider|TextControl"
+                        r"|TextControlMultiLine|TextControlSingleLine)\."
+        },
+        "GStreamerGraphics": {
+            "filename": r"Source/WebCore/platform/graphics/gstreamer/",
+        },
+        "WebIDL": {
+            "filename": r"Source/WebCore/(?!inspector)(?!testing).*\.idl"
+        },
+        "ThreadingFiles": {
+            "filename": r"Source/JavaScriptCore/wtf/ThreadSpecific\."
+                        r"|Source/JavaScriptCore/wtf/ThreadSafeRefCounted\."
+                        r"|Source/JavaScriptCore/wtf/ThreadingPrimitives\."
+                        r"|Source/JavaScriptCore/wtf/Threading\."
+                        r"|Source/WebCore/dom/CrossThreadTask\."
+                        r"|Source/WebCore/platform/CrossThreadCopier\.",
+        },
+        "ThreadingUsage": {
+            # The intention of this regex is to detect places where people are using common threading mechanisms,
+            # so that one can look them over for common mistakes. This list is long and likely to get longer over time.
+            # Note the negative look-ahead to avoid new mentions of the files (for builds or includes).
+            "more": r"(AllowCrossThreadAccess|AtomicallyInitialize|CrossThreadCopier|CrossThreadRefCounted|Mutex|ReadWriteLock|ThreadCondition|ThreadSafeRefCounted|ThreadSpecific"
+                    r"|createCallbackTask|crossThreadString|deprecatedTurnOffVerifier|threadsafeCopy)(?!\.(h|cpp))",
+        },
+        "WatchListScript": {
+            "filename": r"Tools/Scripts/webkitpy/common/watchlist/",
+        },
+        "webkitpy": {
+            "filename": r"Tools/Scripts/webkitpy/",
+        },
+        "TestFailures": {
+            "filename": r"Tools/BuildSlaveSupport/build.webkit.org-config/public_html/TestFailures/",
+        },
+        "SecurityCritical": {
+            "more": r"[Ss]ecurityOrigin(?!\.(h|cpp))",
+            "less": r"[Ss]ecurityOrigin(?!\.(h|cpp))",
+            "filename": r"XSS|[Ss]ecurity",
+        },
+        "V8Bindings": {
+            "filename": r"Source/WebCore/bindings/v8/",
+        },
+        "BindingsScripts": {
+            "filename": r"Source/WebCore/bindings/scripts/",
+        },
+        "FrameLoader": {
+            "more": r"FrameLoader\.(cpp|h)",
+        },
+        "Loader": {
+            "filename": r"Source/WebCore/loader/",
+        },
+        "Rendering": {
+            "filename": r"Source/WebCore/rendering/",
+        },
+        "StyleChecker": {
+            "filename": r"Tools/Scripts/webkitpy/style/",
+        },
+        "GtkWebKit2PublicAPI": {
+            "filename": r"Source/WebKit2/UIProcess/API/gtk/",
+        },
+        "QtBuildSystem": {
+            # Project files for each target are intentionally left out, as those
+            # mostly list source and header files, which would just add noise.
+            "filename": r"Tools/qmake/"
+                        r"|WebKit.pro"
+                        r"|.*DerivedSources\.pri",
+        },
+        "QtWebKit2PublicAPI": {
+            "filename": r"Source/WebKit2/UIProcess/API/qt/"
+                        r"|Source/WebKit2/UIProcess/API/cpp/qt/"
+                        r"|Source/WebKit2/UIProcess/API/C/qt/",
+        },
+        "QtGraphics": {
+            "filename": r"Source/WebCore/platform/graphics/qt/"
+                        r"|Source/WebKit2/WebProcess/WebPage/LayerTreeCoordinator/"
+                        r"|Source/WebKit2/UIProcess/WebLayerTreeRenderer(?!\.(h|cpp))",
+        },
+        "TextureMapper": {
+            "filename": r"Source/WebCore/platform/graphics/texmap/",
+        },
+        "OpenGL": {
+            "filename": r"Source/WebCore/platform/graphics/opengl/",
+        },
+        "QtWebKit2PlatformSpecific": {
+            "filename": r"Source/WebKit2/.*\.(pri|pro)"
+                        r"|Source/WebKit2/Platform/qt/"
+                        r"|Source/WebKit2/qt/"
+                        r"|Source/WebKit2/PluginProcess/qt/"
+                        r"|Source/WebKit2/Platform/qt/"
+                        r"|Source/WebKit2/Shared/API/c/qt/"
+                        r"|Source/WebKit2/Shared/qt/"
+                        r"|Source/WebKit2/WebProcess/InjectedBundle/qt/"
+                        r"|Source/WebKit2/WebProcess/FullScreen/qt/"
+                        r"|Source/WebKit2/WebProcess/WebPage/qt/"
+                        r"|Source/WebKit2/WebProcess/qt/"
+                        r"|Source/WebKit2/WebProcess/Plugins/Netscape/qt/"
+                        r"|Source/WebKit2/WebProcess/Downloads/qt/"
+                        r"|Source/WebKit2/WebProcess/WebCoreSupport/qt/"
+                        r"|Source/WebKit2/WebProcess/Cookies/qt/"
+                        r"|Source/WebKit2/UIProcess/qt/"
+                        r"|Source/WebKit2/UIProcess/Plugins/qt/"
+                        r"|Source/WebKit2/UIProcess/Launcher/qt/",
+        },
+        "CSS": {
+            "filename": r"Source/WebCore/css/",
+        },
+        "DOMAttributes": {
+            "filename": r"Source/WebCore/dom/.*Attr.*"
+                        r"|Source/WebCore/dom/NamedNodeMap\.(cpp|h|idl)"
+                        r"|Source/WebCore/dom/Element\.(cpp|h|idl)",
+        },
+        "EFL": {
+            "filename": r"Source/WebKit/efl/"
+                        r"|Source/WebCore/platform/efl/"
+                        r"|Source/WTF/wtf/efl/"
+                        r"|Tools/EWebLauncher"
+                        r"|Tools/DumpRenderTree/efl/"
+                        r"|LayoutTests/platform/efl/",
+        },
+        "EFLWebKit2PublicAPI": {
+            "filename": r"Source/WebKit2/UIProcess/API/efl/"
+                        r"|Source/WebKit2/UIProcess/API/C/efl/",
+        },
+        "EFLWebKit2PlatformSpecific": {
+            "filename": r"Source/WebKit2/.*\.(cmake|txt)"
+                        r"|Source/WebKit2/Platform/efl/"
+                        r"|Source/WebKit2/efl/"
+                        r"|Source/WebKit2/Shared/API/c/efl/"
+                        r"|Source/WebKit2/Shared/efl/"
+                        r"|Source/WebKit2/WebProcess/InjectedBundle/efl/"
+                        r"|Source/WebKit2/WebProcess/WebPage/efl/"
+                        r"|Source/WebKit2/WebProcess/efl/"
+                        r"|Source/WebKit2/WebProcess/Downloads/efl/"
+                        r"|Source/WebKit2/WebProcess/WebCoreSupport/efl/"
+                        r"|Source/WebKit2/UIProcess/efl/"
+                        r"|Source/WebKit2/UIProcess/Launcher/efl/",
+        },
+        "CMake": {
+            "filename": r".*CMakeLists\w*\.txt"
+                        r"|.*\w+\.cmake"
+                        r"|Source/cmake/",
+        },
+        "SoupNetwork": {
+            "filename": r"Source/WebCore/platform/network/soup/",
+        },
+        "ScrollingCoordinator": {
+            "filename": r"Source/WebCore/page/scrolling/",
+        },
+        "WebKitGTKTranslations": {
+            "filename": r"Source/WebKit/gtk/po/",
+        },
+        "Media": {
+            "filename": r"(Source|LayoutTests)/.*([Mm]edia|[Aa]udio|[Vv]ideo)",
+        },
+        "MathML": {
+            "filename": r"(Source|LayoutTests|Websites)/.*mathml",
+        },
+        "Editing": {
+            "filename": r"Source/WebCore/editing/",
+        },
+        "BlackBerry": {
+            "filename": r"Source/WebKit/blackberry/"
+                        r"|Source/WebCore/page/blackberry"
+                        r"|Source/WebCore/history/blackberry"
+                        r"|Source/WebCore/plugins/blackberry"
+                        r"|Source/WebCore/editing/blackberry"
+                        r"|Source/WebCore/Resources/blackberry"
+                        r"|Source/WebCore/platform/image-decoders/blackberry"
+                        r"|Source/WebCore/platform/blackberry"
+                        r"|Source/WebCore/platform/text/blackberry"
+                        r"|Source/WebCore/platform/network/blackberry"
+                        r"|Source/WebCore/platform/graphics/blackberry"
+                        r"|Source/WTF/wtf/blackberry"
+                        r"|ManualTests/blackberry"
+                        r"|Tools/DumpRenderTree/blackberry"
+                        r"|LayoutTests/platform/blackberry",
+        },
+        "NetworkInfo": {
+            "filename": r"Source/WebCore/Modules/networkinfo",
+        },
+        "Battery": {
+            "filename": r"Source/WebCore/Modules/battery",
+        },
+
+    },
+    "CC_RULES": {
+        # Note: All email addresses listed must be registered with bugzilla.
+        # Specifically, levin@chromium.org and levin+threading@chromium.org are
+        # two different accounts as far as bugzilla is concerned.
+        "AppleMacPublicApi": [ "timothy@apple.com" ],
+        "Battery": [ "gyuyoung.kim@samsung.com" ],
+        "BlackBerry": [ "mifenton@rim.com" ],
+        "CMake": [ "rakuco@webkit.org", "gyuyoung.kim@samsung.com" ],
+        "CSS": [ "alexis.menard@openbossa.org", "macpherson@chromium.org", "cmarcelo@webkit.org" ],
+        "ChromiumDumpRenderTree": [ "tkent@chromium.org", ],
+        "ChromiumGraphics": [ "jamesr@chromium.org", "cc-bugs@google.com" ],
+        "ChromiumPublicApi": [ "abarth@webkit.org", "dglazkov@chromium.org", "fishd@chromium.org", "jamesr@chromium.org", "tkent+wkapi@chromium.org" ],
+        "DOMAttributes": [ "cmarcelo@webkit.org", ],
+        "EFL": [ "rakuco@webkit.org", "gyuyoung.kim@samsung.com" ],
+        "EFLWebKit2PlatformSpecific": [ "gyuyoung.kim@samsung.com" ],
+        "EFLWebKit2PublicAPI": [ "gyuyoung.kim@samsung.com" ],
+        "Editing": [ "mifenton@rim.com" ],
+        "Forms": [ "tkent@chromium.org", "mifenton@rim.com" ],
+        "FrameLoader": [ "abarth@webkit.org", "japhet@chromium.org", "jochen@chromium.org" ],
+        "GStreamerGraphics": [ "alexis.menard@openbossa.org", "pnormand@igalia.com", "gns@gnome.org", "mrobinson@webkit.org" ],
+        "GtkWebKit2PublicAPI": [ "cgarcia@igalia.com", "gns@gnome.org", "mrobinson@webkit.org" ],
+        "Loader": [ "japhet@chromium.org", "jochen@chromium.org" ],
+        "MathML": [ "dbarton@mathscribe.com" ],
+        "Media": [ "feature-media-reviews@chromium.org", "eric.carlson@apple.com" ],
+        "NetworkInfo": [ "gyuyoung.kim@samsung.com" ],
+        "OpenGL" : [ "noam.rosenthal@nokia.com" ],
+        "QtBuildSystem" : [ "vestbo@webkit.org", ],
+        "QtGraphics" : [ "noam.rosenthal@nokia.com" ],
+        "QtWebKit2PlatformSpecific": [ "alexis.menard@openbossa.org", "zoltan@webkit.org", "cmarcelo@webkit.org" ],
+        "QtWebKit2PublicAPI": [ "alexis.menard@openbossa.org", "zoltan@webkit.org", "cmarcelo@webkit.org" ],
+        "Rendering": [ "eric@webkit.org" ],
+        "ScrollingCoordinator": [ "andersca@apple.com", "jamesr@chromium.org", "tonikitoo@webkit.org" ],
+        "SecurityCritical": [ "abarth@webkit.org" ],
+        "SoupNetwork": [ "rakuco@webkit.org", "gns@gnome.org", "mrobinson@webkit.org", "danw@gnome.org" ],
+        "StyleChecker": [ "levin@chromium.org", ],
+        "TestFailures": [ "abarth@webkit.org", "dglazkov@chromium.org" ],
+        "TextureMapper" : [ "noam.rosenthal@nokia.com" ],
+        "ThreadingFiles|ThreadingUsage": [ "levin+threading@chromium.org", ],
+        "V8Bindings|BindingsScripts": [ "abarth@webkit.org", "japhet@chromium.org", "haraken@chromium.org", "jochen@chromium.org" ],
+        "WatchListScript": [ "levin+watchlist@chromium.org", ],
+        "WebIDL": [ "abarth@webkit.org", "ojan@chromium.org" ],
+        "WebKitGTKTranslations": [ "gns@gnome.org", "mrobinson@webkit.org" ],
+        "webkitpy": [ "abarth@webkit.org", "ojan@chromium.org", "dpranke@chromium.org" ],
+    },
+    "MESSAGE_RULES": {
+        "ChromiumPublicApi": [ "Please wait for approval from abarth@webkit.org, dglazkov@chromium.org, "
+                               "fishd@chromium.org, jamesr@chromium.org or tkent@chromium.org before "
+                               "submitting, as this patch contains changes to the Chromium public API. "
+                               "See also https://trac.webkit.org/wiki/ChromiumWebKitAPI." ],
+        "AppleMacPublicApi": [ "Please wait for approval from timothy@apple.com (or another member "
+                               "of the Apple Safari Team) before submitting "
+                               "because this patch contains changes to the Apple Mac "
+                               "WebKit.framework public API.", ],
+        "GtkWebKit2PublicAPI": [ "Thanks for the patch. If this patch contains new public API "
+                                 "please make sure it follows the guidelines for new WebKit2 GTK+ API. "
+                                 "See http://trac.webkit.org/wiki/WebKitGTK/AddingNewWebKit2API", ],
+    },
+}

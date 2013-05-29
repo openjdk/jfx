@@ -83,10 +83,52 @@ public class Mouse3DTest {
         PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(0.0, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(0.0, pickRay.getOriginNoClone().y, 0.00001);
-        assertEquals(-1.0, pickRay.getOriginNoClone().z, 0.00001);
+        assertEquals(0.0, pickRay.getOriginNoClone().z, 0.00001);
         assertEquals(10 - PERSPECTIVE_CAMERA_X, pickRay.getDirectionNoClone().x, 0.00001);
         assertEquals(20 - PERSPECTIVE_CAMERA_Y, pickRay.getDirectionNoClone().y, 0.00001);
         assertEquals(-PERSPECTIVE_CAMERA_Z, pickRay.getDirectionNoClone().z, 0.00001);
+    }
+
+    @Test
+    public void shouldComputeCorrectParallelClipDistances() {
+        Camera cam = new ParallelCamera();
+        cam.setNearClip(100.0);
+        cam.setFarClip(200.0);
+        scene(group(), cam, true);
+        cam.impl_updatePG();
+        PickRay pickRay = cam.computePickRay(100, 200, null);
+        assertTrue(Double.isInfinite(pickRay.getNearClip()));
+        assertTrue(Double.isInfinite(pickRay.getFarClip()));
+        //TODO: replace the conditions by the following:
+//        assertEquals(100.0, pickRay.getNearClip(), 0.01);
+//        assertEquals(200.0, pickRay.getFarClip(), 0.01);
+    }
+
+    @Test
+    public void shouldComputeCorrectPerspectiveClipDistances() {
+        Camera cam = new PerspectiveCamera();
+        cam.setNearClip(100.0);
+        cam.setFarClip(200.0);
+        scene(group(), cam, true);
+        cam.impl_updatePG();
+        PickRay pickRay = cam.computePickRay(100, 200, null);
+        assertEquals(0.0, pickRay.getNearClip(), 0.01);
+        assertTrue(Double.isInfinite(pickRay.getFarClip()));
+        //TODO: replace the conditions by the following:
+//        assertEquals(104.39, pickRay.getNearClip(), 0.01);
+//        assertEquals(208.78, pickRay.getFarClip(), 0.01);
+    }
+
+    @Test
+    public void shouldComputeCorrectClipDistancesWithFixedEye() {
+        Camera cam = new PerspectiveCamera(true);
+        cam.setNearClip(100.0);
+        cam.setFarClip(200.0);
+        scene(group(), cam, true);
+        cam.impl_updatePG();
+        PickRay pickRay = cam.computePickRay(100, 200, null);
+        assertEquals(104.39, pickRay.getNearClip(), 0.01);
+        assertEquals(208.78, pickRay.getFarClip(), 0.01);
     }
 
     @Test
@@ -272,7 +314,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.6, 0.7));
+                b, point(10, 40, -200), -199, NOFACE, point(0.6, 0.7));
     }
 
     @Test
@@ -286,7 +328,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 10, -40, 200);
         assertPickResult(e.getPickResult(),
-                b, point(10, -40, 200), Double.POSITIVE_INFINITY, NOFACE, point(0.4, 0.3));
+                b, point(10, -40, 200), -199, NOFACE, point(0.4, 0.3));
     }
 
     @Test
@@ -413,7 +455,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.6, 0.7));
+                b, point(10, 40, -200), -1199, NOFACE, point(0.6, 0.7));
     }
 
     @Test
@@ -442,7 +484,73 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.6, 0.7));
+                b, point(10, 40, -200), -3199, NOFACE, point(0.6, 0.7));
+    }
+
+    @Test
+    public void shouldPickBoxByFixedEye() {
+        Box b = box().handleMove(me);
+        b.setTranslateZ(250);
+        b.setCullFace(CullFace.NONE);
+        Scene s = scene(group(b), perspective(true), true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(-200, e.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+    }
+
+    @Test
+    public void shouldNotPickBoxCloserThanNearClip() {
+        Box b = box().handleMove(me);
+        b.setTranslateZ(250);
+        b.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(800);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(b), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldNotPickBoxFartherThanFarClip() {
+        Box b = box().handleMove(me);
+        b.setTranslateZ(250);
+        b.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(10);
+        cam.setFarClip(40);
+
+        Scene s = scene(group(b), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldPickBoxInteriorBetweenClips() {
+        Box b = box().handleMove(me);
+        b.setTranslateZ(250);
+        b.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(250);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(b), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(200, e.getPickResult().getIntersectedPoint().getZ(), 0.0001);
     }
 
     /*****************  SPHERE picking ********************/
@@ -656,7 +764,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 10, 20, -97.46794);
         assertPickResult(e.getPickResult(),
-                sph, point(10, 20, -97.46794), Double.POSITIVE_INFINITY, NOFACE, point(0.516273, 0.6));
+                sph, point(10, 20, -97.46794), -1096.46794, NOFACE, point(0.516273, 0.6));
     }
 
     @Test
@@ -685,9 +793,74 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 10, 20, -97.46794);
         assertPickResult(e.getPickResult(),
-                sph, point(10, 20, -97.46794), Double.POSITIVE_INFINITY, NOFACE, point(0.516273, 0.6));
+                sph, point(10, 20, -97.46794), -1194.46794, NOFACE, point(0.516273, 0.6));
     }
 
+    @Test
+    public void shouldPickSphereByFixedEye() {
+        Sphere sp = sphere().handleMove(me);
+        sp.setTranslateZ(150);
+        sp.setCullFace(CullFace.NONE);
+        Scene s = scene(group(sp), perspective(true), true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(-100, e.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+    }
+
+    @Test
+    public void shouldNotPickSphereCloserThanNearClip() {
+        Sphere sp = sphere().handleMove(me);
+        sp.setTranslateZ(150);
+        sp.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(800);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(sp), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldNotPickSphereFartherThanFarClip() {
+        Sphere sp = sphere().handleMove(me);
+        sp.setTranslateZ(150);
+        sp.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(10);
+        cam.setFarClip(40);
+
+        Scene s = scene(group(sp), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldPickSphereInteriorBetweenClips() {
+        Sphere sp = sphere().handleMove(me);
+        sp.setTranslateZ(150);
+        sp.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(150);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(sp), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(100, e.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+    }
 
     /*****************  CYLINDER picking ********************/
 
@@ -996,7 +1169,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 10, 20, -48.98979);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, -48.98979), Double.POSITIVE_INFINITY, NOFACE, point(0.532048, 0.6));
+                c, point(10, 20, -48.98979), -1047.98979, NOFACE, point(0.532048, 0.6));
     }
 
     @Test
@@ -1025,7 +1198,139 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 10, 20, -48.98979);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, -48.98979), Double.POSITIVE_INFINITY, NOFACE, point(0.532048, 0.6));
+                c, point(10, 20, -48.98979), -1096.98979, NOFACE, point(0.532048, 0.6));
+    }
+
+    @Test
+    public void shouldPickCylinderByFixedEye() {
+        Cylinder c = cylinder().handleMove(me);
+        c.setTranslateZ(100);
+        c.setCullFace(CullFace.NONE);
+        Scene s = scene(group(c), perspective(true), true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(-50, e.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+    }
+
+    @Test
+    public void shouldPickCylinderCapByFixedEye() {
+        Cylinder c = cylinder().rotate('x', 90).handleMove(me);
+        c.setTranslateZ(150);
+        c.setCullFace(CullFace.NONE);
+        Scene s = scene(group(c), perspective(true), true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(-100, e.getPickResult().getIntersectedPoint().getY(), 0.0001);
+    }
+
+    @Test
+    public void shouldNotPickCylinderCloserThanNearClip() {
+        Cylinder c = cylinder().handleMove(me);
+        c.setTranslateZ(100);
+        c.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(800);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(c), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldNotPickCylinderCapCloserThanNearClip() {
+        Cylinder c = cylinder().rotate('x', 90).handleMove(me);
+        c.setTranslateZ(150);
+        c.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(800);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(c), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldNotPickCylinderFartherThanFarClip() {
+        Cylinder c = cylinder().handleMove(me);
+        c.setTranslateZ(100);
+        c.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(10);
+        cam.setFarClip(40);
+
+        Scene s = scene(group(c), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldNotPickCylinderCapFartherThanFarClip() {
+        Cylinder c = cylinder().rotate('x', 90).handleMove(me);
+        c.setTranslateZ(150);
+        c.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(10);
+        cam.setFarClip(40);
+
+        Scene s = scene(group(c), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldPickCylinderInteriorBetweenClips() {
+        Cylinder c = cylinder().handleMove(me);
+        c.setTranslateZ(100);
+        c.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(100);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(c), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(50, e.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+    }
+
+    @Test
+    public void shouldPickCylinderCapInteriorBetweenClips() {
+        Cylinder c = cylinder().rotate('x', 90).handleMove(me);
+        c.setTranslateZ(150);
+        c.setCullFace(CullFace.NONE);
+        Camera cam = perspective(true);
+        cam.setNearClip(150);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(c), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(100, e.getPickResult().getIntersectedPoint().getY(), 0.0001);
     }
 
 
@@ -1224,7 +1529,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 60, 20, 60, 20, 0);
         assertPickResult(e.getPickResult(),
-                m, point(60, 20, 0), Double.POSITIVE_INFINITY, 0, point(0.6, 0.2));
+                m, point(60, 20, 0), -2999, 0, point(0.6, 0.2));
     }
 
     @Test
@@ -1251,9 +1556,72 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 10, 20, 10);
         assertPickResult(e.getPickResult(),
-                m, point(10, 20, 10), Double.POSITIVE_INFINITY, 0, point(0.1, 0.2));
+                m, point(10, 20, 10), -1000, 0, point(0.1, 0.2));
     }
 
+    @Test
+    public void shouldPickMeshByFixedEye() {
+        Node m = meshesXY().handleMove(me);
+        m.setTranslateZ(50);
+        Scene s = scene(group(m), perspective(true), true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(-7, e.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+        assertEquals(1, e.getPickResult().getIntersectedFace());
+    }
+
+    @Test
+    public void shouldNotPickMeshCloserThanNearClip() {
+        Node m = meshesXY().handleMove(me);
+        m.setTranslateZ(50);
+        Camera cam = perspective(true);
+        cam.setNearClip(800);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(m), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldNotPickMeshFartherThanFarClip() {
+        Node m = meshesXY().handleMove(me);
+        m.setTranslateZ(50);
+        Camera cam = perspective(true);
+        cam.setNearClip(10);
+        cam.setFarClip(40);
+
+        Scene s = scene(group(m), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+    }
+
+    @Test
+    public void shouldPickMeshInteriorBetweenClips() {
+        Node m = meshesXY().handleMove(me);
+        m.setTranslateZ(50);
+        Camera cam = perspective(true);
+        cam.setNearClip(47);
+        cam.setFarClip(1800);
+
+        Scene s = scene(group(m), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+        assertEquals(0, e.getPickResult().getIntersectedFace());
+    }
 
     /*****************  DEPTH BUFFER ********************/
 
@@ -1666,14 +2034,14 @@ public class Mouse3DTest {
         MouseEvent e = me.event;
         assertNotNull(e);
         assertCoordinates(e, 10, 50, 10, 50, 0);
-        assertPickResult(e.getPickResult(), r, point(10, 50, 0),
-                Double.POSITIVE_INFINITY, NOFACE, null);
+        assertPickResult(e.getPickResult(), r, point(10, 50, 0), 
+                71, NOFACE, null);
 
         e = sme.event;
         assertNotNull(e);
         assertCoordinates(e, 10, 50, 10, 50, 70);
         assertPickResult(e.getPickResult(), r, point(10, 50, 0),
-                Double.POSITIVE_INFINITY, NOFACE, null);
+                71, NOFACE, null);
     }
 
     @Test
@@ -1692,7 +2060,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 50, 10, 50, 0);
         assertPickResult(e.getPickResult(), null, point(10, 50, 0),
-                Double.POSITIVE_INFINITY, NOFACE, null);
+                1, NOFACE, null);
         sme.clear();
 
         s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 50));
@@ -1700,13 +2068,13 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 50, 21.71572, 50, 0);
         assertPickResult(e.getPickResult(), r, point(21.71572, 50, 0),
-                Double.POSITIVE_INFINITY, NOFACE, null);
+                21, NOFACE, null);
 
         e = sme.event;
         assertNotNull(e);
         assertCoordinates(e, 30, 50, 30, 50, 20);
         assertPickResult(e.getPickResult(), r, point(21.71572, 50, 0),
-                Double.POSITIVE_INFINITY, NOFACE, null);
+                21, NOFACE, null);
     }
 
 
@@ -1916,7 +2284,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 40, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.6, 0.7));
+                b, point(10, 40, -200), -199, NOFACE, point(0.6, 0.7));
     }
 
 
@@ -1942,7 +2310,11 @@ public class Mouse3DTest {
     }
 
     private Camera perspective() {
-        PerspectiveCamera cam = new PerspectiveCamera();
+        return perspective(false);
+    }
+
+    private Camera perspective(boolean fixedEye) {
+        PerspectiveCamera cam = new PerspectiveCamera(fixedEye);
         // this field of view makes camera Z position to be -1000
         cam.setFieldOfView(43.60281897);
         return cam;
@@ -2231,7 +2603,11 @@ public class Mouse3DTest {
 
     private static class TestMesh extends MeshView {
         public TestMesh(float[] points, float[] tex, int[] faces) {
-            super(new TriangleMesh(points, tex, faces));
+            super(new TriangleMesh());
+            TriangleMesh mesh = (TriangleMesh)getMesh();
+            mesh.getPoints().setAll(points);
+            mesh.getTexCoords().setAll(tex);
+            mesh.getFaces().setAll(faces);
         }
 
         public TestMesh rotate(char ax, double angle) {

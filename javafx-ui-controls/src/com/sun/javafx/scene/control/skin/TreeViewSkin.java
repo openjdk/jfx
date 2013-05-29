@@ -60,16 +60,9 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 return TreeViewSkin.this.createCell();
             }
         });
+        flow.setFixedCellSize(treeView.getFixedCellSize());
         getChildren().add(flow);
         
-        // TEMPORARY CODE (RT-24795)
-        // we check the TableView to see if a fixed cell length is specified
-        ObservableMap p = treeView.getProperties();
-        String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
-        double fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
-        flow.setFixedCellLength(fixedCellLength);
-        // --- end of TEMPORARY CODE
-
         setRoot(getSkinnable().getRoot());
         
         EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
@@ -121,6 +114,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         registerChangeListener(treeView.showRootProperty(), "SHOW_ROOT");
         registerChangeListener(treeView.cellFactoryProperty(), "CELL_FACTORY");
         registerChangeListener(treeView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
+        registerChangeListener(treeView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
         
         updateRowCount();
     }
@@ -148,6 +142,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             flow.recreateCells();
         } else if ("FOCUS_TRAVERSABLE".equals(p)) {
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
+        } else if ("FIXED_CELL_SIZE".equals(p)) {
+            flow.setFixedCellSize(getSkinnable().getFixedCellSize());
         }
     }
     

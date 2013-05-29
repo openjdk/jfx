@@ -120,7 +120,7 @@
        </java>
     </target>
     
-   <target name="jfx-deployment">
+    <target name="jfx-deployment">
         <!-- Delete the Ensemble8.jar build by netbeans as we will build one with JavaFX packager -->
         <delete file="${dist.jar}"/>  
         <fx:application id="ensemble8"

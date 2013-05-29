@@ -44,7 +44,7 @@ import static org.junit.Assert.*;
 /**
  */
 public class BindingsListTest {
-    
+
     private static final double EPSILON_DOUBLE = 1e-12;
     private static final float EPSILON_FLOAT = 1e-5f;
 
@@ -80,7 +80,7 @@ public class BindingsListTest {
     public void testSize() {
         final IntegerBinding size = Bindings.size(property);
         DependencyUtils.checkDependencies(size.getDependencies(), property);
-        
+
         assertEquals(0, size.get());
         property.set(list1);
         assertEquals(2, size.get());
@@ -205,12 +205,12 @@ public class BindingsListTest {
     public void testValueAt_Constant_Null() {
         Bindings.valueAt(null, 0);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testValueAt_Constant_NegativeIndex() {
         Bindings.valueAt(property, -1);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testValueAt_Variable() {
@@ -283,12 +283,12 @@ public class BindingsListTest {
     public void testValueAt_Variable_Null() {
         Bindings.valueAt((ObservableList<Object>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
-    public void testValueAt_Variable_NegativeIndex() {
+    public void testValueAt_Variable_NullIndex() {
         Bindings.valueAt(property, null);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testBooleanValueAt_Constant() {
@@ -356,13 +356,13 @@ public class BindingsListTest {
     public void testBooleanValueAt_Constant_Null() {
         Bindings.booleanValueAt(null, 0);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testBooleanValueAt_Constant_NegativeIndex() {
         final ListProperty<Boolean> localProperty = new SimpleListProperty<Boolean>();
         Bindings.booleanValueAt(localProperty, -1);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testBooleanValueAt_Variable() {
@@ -453,13 +453,13 @@ public class BindingsListTest {
     public void testBooleanValueAt_Variable_Null() {
         Bindings.booleanValueAt((ObservableList<Boolean>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
-    public void testBooleanValueAt_Variable_NegativeIndex() {
+    public void testBooleanValueAt_Variable_NullIndex() {
         final ListProperty<Boolean> localProperty = new SimpleListProperty<Boolean>();
         Bindings.booleanValueAt(localProperty, null);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testDoubleValueAt_Constant() {
@@ -527,13 +527,13 @@ public class BindingsListTest {
     public void testDoubleValueAt_Constant_Null() {
         Bindings.doubleValueAt(null, 0);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testDoubleValueAt_Constant_NegativeIndex() {
         final ListProperty<Double> localProperty = new SimpleListProperty<Double>();
         Bindings.doubleValueAt(localProperty, -1);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testDoubleValueAt_Variable() {
@@ -624,13 +624,13 @@ public class BindingsListTest {
     public void testDoubleValueAt_Variable_Null() {
         Bindings.doubleValueAt((ObservableList<Double>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
-    public void testDoubleValueAt_Variable_NegativeIndex() {
+    public void testDoubleValueAt_Variable_NullIndex() {
         final ListProperty<Double> localProperty = new SimpleListProperty<Double>();
         Bindings.doubleValueAt(localProperty, null);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testFloatValueAt_Constant() {
@@ -696,15 +696,15 @@ public class BindingsListTest {
 
     @Test(expected = NullPointerException.class)
     public void testFloatValueAt_Constant_Null() {
-        Bindings.floatValueAt(null, 0);
+        Bindings.floatValueAt((ObservableList) null, 0);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testFloatValueAt_Constant_NegativeIndex() {
         final ListProperty<Float> localProperty = new SimpleListProperty<Float>();
         Bindings.floatValueAt(localProperty, -1);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testFloatValueAt_Variable() {
@@ -795,13 +795,13 @@ public class BindingsListTest {
     public void testFloatValueAt_Variable_Null() {
         Bindings.floatValueAt((ObservableList<Float>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
-    public void testFloatValueAt_Variable_NegativeIndex() {
+    public void testFloatValueAt_Variable_NullIndex() {
         final ListProperty<Float> localProperty = new SimpleListProperty<Float>();
         Bindings.floatValueAt(localProperty, null);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testIntegerValueAt_Constant() {
@@ -867,15 +867,15 @@ public class BindingsListTest {
 
     @Test(expected = NullPointerException.class)
     public void testIntegerValueAt_Constant_Null() {
-        Bindings.integerValueAt(null, 0);
+        Bindings.integerValueAt((ObservableList) null, 0);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testIntegerValueAt_Constant_NegativeIndex() {
         final ListProperty<Integer> localProperty = new SimpleListProperty<Integer>();
         Bindings.integerValueAt(localProperty, -1);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testIntegerValueAt_Variable() {
@@ -966,13 +966,13 @@ public class BindingsListTest {
     public void testIntegerValueAt_Variable_Null() {
         Bindings.integerValueAt((ObservableList<Integer>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
-    public void testIntegerValueAt_Variable_NegativeIndex() {
+    public void testIntegerValueAt_Variable_NullIndex() {
         final ListProperty<Integer> localProperty = new SimpleListProperty<Integer>();
         Bindings.integerValueAt(localProperty, null);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testLongValueAt_Constant() {
@@ -1040,13 +1040,13 @@ public class BindingsListTest {
     public void testLongValueAt_Constant_Null() {
         Bindings.longValueAt(null, 0);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testLongValueAt_Constant_NegativeIndex() {
         final ListProperty<Long> localProperty = new SimpleListProperty<Long>();
         Bindings.longValueAt(localProperty, -1);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testLongValueAt_Variable() {
@@ -1137,13 +1137,13 @@ public class BindingsListTest {
     public void testLongValueAt_Variable_Null() {
         Bindings.longValueAt((ObservableList<Long>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
-    public void testLongValueAt_Variable_NegativeIndex() {
+    public void testLongValueAt_Variable_NullIndex() {
         final ListProperty<Long> localProperty = new SimpleListProperty<Long>();
         Bindings.longValueAt(localProperty, null);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testStringValueAt_Constant() {
@@ -1211,13 +1211,13 @@ public class BindingsListTest {
     public void testStringValueAt_Constant_Null() {
         Bindings.stringValueAt(null, 0);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testStringValueAt_Constant_NegativeIndex() {
         final ListProperty<String> localProperty = new SimpleListProperty<String>();
         Bindings.stringValueAt(localProperty, -1);
     }
-    
+
     @Ignore("RT-27128")
     @Test
     public void testStringValueAt_Variable() {
@@ -1297,12 +1297,12 @@ public class BindingsListTest {
     public void testStringValueAt_Variable_Null() {
         Bindings.stringValueAt((ObservableList<String>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
-    public void testStringValueAt_Variable_NegativeIndex() {
+    public void testStringValueAt_Variable_NullIndex() {
         final ListProperty<String> localProperty = new SimpleListProperty<String>();
         Bindings.stringValueAt(localProperty, null);
     }
-    
-    
+
+
 }

@@ -25,23 +25,33 @@
 
 package javafx.scene.control;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
+import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
 import javafx.event.WeakEventHandler;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
@@ -520,6 +530,71 @@ public class TreeView<T> extends Control {
     }
 
 
+    // --- Fixed cell size
+    private DoubleProperty fixedCellSize;
+
+    /**
+     * Sets the new fixed cell size for this control. Any value greater than
+     * zero will enable fixed cell size mode, whereas a zero or negative value
+     * (or Region.USE_COMPUTED_SIZE) will be used to disabled fixed cell size
+     * mode.
+     *
+     * @param value The new fixed cell size value, or -1 (or Region.USE_COMPUTED_SIZE)
+     *                  to disable.
+     */
+    public final void setFixedCellSize(double value) {
+        fixedCellSizeProperty().set(value);
+    }
+
+    /**
+     * Returns the fixed cell size value, which may be -1 to represent fixed cell
+     * size mode is disabled, or a value greater than zero to represent the size
+     * of all cells in this control.
+     *
+     * @return A double representing the fixed cell size of this control, or -1
+     *      if fixed cell size mode is disabled.
+     */
+    public final double getFixedCellSize() {
+        return fixedCellSize == null ? Region.USE_COMPUTED_SIZE : fixedCellSize.get();
+    }
+    /**
+     * Specifies whether this control has cells that are a fixed height (of the
+     * specified value). If this value is -1 (i.e. {@link Region#USE_COMPUTED_SIZE}),
+     * then all cells are individually sized and positioned. This is a slow
+     * operation. Therefore, when performance matters and developers are not
+     * dependent on variable cell sizes it is a good idea to set the fixed cell
+     * size value. Generally cells are around 24px, so setting a fixed cell size
+     * of 24 is likely to result in very little difference in visuals, but a
+     * improvement to performance.
+     *
+     * <p>To set this property via CSS, use the -fx-fixed-cell-size property.
+     * This should not be confused with the -fx-cell-size property. The difference
+     * between these two CSS properties is that -fx-cell-size will size all
+     * cells to the specified size, but it will not enforce that this is the
+     * only size (thus allowing for variable cell sizes, and preventing the
+     * performance gains from being possible). Therefore, when performance matters
+     * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
+     * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
+     */
+    public final DoubleProperty fixedCellSizeProperty() {
+        if (fixedCellSize == null) {
+            fixedCellSize = new StyleableDoubleProperty(Region.USE_COMPUTED_SIZE) {
+                @Override public CssMetaData<TreeView<?>,Number> getCssMetaData() {
+                    return StyleableProperties.FIXED_CELL_SIZE;
+                }
+
+                @Override public Object getBean() {
+                    return TreeView.this;
+                }
+
+                @Override public String getName() {
+                    return "fixedCellSize";
+                }
+            };
+        }
+        return fixedCellSize;
+    }
+
     
     // --- Editable
     private BooleanProperty editable;
@@ -824,7 +899,54 @@ public class TreeView<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
- 
+    private static final String DEFAULT_STYLE_CLASS = "table-view";
+
+    /** @treatAsPrivate */
+    private static class StyleableProperties {
+        private static final CssMetaData<TreeView<?>,Number> FIXED_CELL_SIZE =
+                new CssMetaData<TreeView<?>,Number>("-fx-fixed-cell-size",
+                                                     SizeConverter.getInstance(),
+                                                     Region.USE_COMPUTED_SIZE) {
+
+                    @Override public Double getInitialValue(TreeView node) {
+                        return node.getFixedCellSize();
+                    }
+
+                    @Override public boolean isSettable(TreeView n) {
+                        return n.fixedCellSize == null || !n.fixedCellSize.isBound();
+                    }
+
+                    @Override public StyleableProperty<Number> getStyleableProperty(TreeView n) {
+                        return (StyleableProperty<Number>) n.fixedCellSizeProperty();
+                    }
+                };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+        static {
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                    new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(FIXED_CELL_SIZE);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
+        return getClassCssMetaData();
+    }
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -852,7 +974,12 @@ public class TreeView<T> extends Control {
      */
     public static class EditEvent<T> extends Event {
         private static final long serialVersionUID = -4437033058917528976L;
-        
+
+        /**
+         * Common supertype for all edit event types.
+         */
+        public static final EventType<?> ANY = EDIT_ANY_EVENT;
+
         private final T oldValue;
         private final T newValue;
         private transient final TreeItem<T> treeItem;

@@ -47,7 +47,6 @@ final class PresentingPainter extends ViewPainter {
 
         try {
             valid = validateStageGraphics();
-
             if (!valid) {
                 if (QuantumToolkit.verbose) {
                     System.err.println("PresentingPainter: validateStageGraphics failed");
@@ -62,18 +61,11 @@ final class PresentingPainter extends ViewPainter {
             sceneState.lock();
             locked = true;
 
-            boolean needsReset = (presentable == null) || (penWidth != viewWidth) || (penHeight != viewHeight);
-            if (!needsReset && presentable.lockResources()) {
-                needsReset=true;
+            boolean needsReset = (presentable == null) ||
+                                 (penWidth != viewWidth) || (penHeight != viewHeight);
+            if (presentable != null) {
+                needsReset = presentable.lockResources() || needsReset;
             }
-            if (needsReset) {
-                if (presentable == null || presentable.recreateOnResize()) {
-                    context = factory.createRenderingContext(sceneState);
-                }
-            }
-            
-            context.begin();
-            
             if (needsReset) {
                 if (presentable == null || presentable.recreateOnResize()) {
                     disposePresentable();
@@ -112,9 +104,8 @@ final class PresentingPainter extends ViewPainter {
         } catch (Throwable th) {
             th.printStackTrace(System.err);
         } finally {
-            if (valid && context != null) {
+            if (valid) {
                 Disposer.cleanUp();
-                context.end();
             }
             if (locked) {
                 sceneState.unlock();

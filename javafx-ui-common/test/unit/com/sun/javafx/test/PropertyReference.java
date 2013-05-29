@@ -112,28 +112,6 @@ public final class PropertyReference {
                            propertySetterMethod);
     }
 
-    public static PropertyReference createForBuilder(
-            final Class<?> builderClass,
-            final String propertyName,
-            final Class<?> propertyValueType) {
-        try {
-            final Method propertySetterMethod =
-                    ReflectionHelper.getMethod(
-                            builderClass,
-                            propertyName,
-                            propertyValueType);
-
-            return new PropertyReference(
-                               propertyName,
-                               propertyValueType,
-                               null,
-                               propertySetterMethod);
-        } catch (final RuntimeException e) {
-            throw new RuntimeException("Failed to obtain setter for "
-                                           + propertyName + "!");
-        }
-    }
-
     private static String capitalizeName(final String input) {
         return !input.isEmpty() 
                 ? Character.toUpperCase(input.charAt(0)) + input.substring(1)

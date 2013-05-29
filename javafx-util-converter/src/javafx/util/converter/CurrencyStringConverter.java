@@ -25,7 +25,6 @@
 
 package javafx.util.converter;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -40,7 +39,6 @@ import javafx.util.StringConverter;
  * @see NumberStringConverter
  * @see StringConverter
  */
-@NoBuilder
 public class CurrencyStringConverter extends NumberStringConverter {
     
     // ------------------------------------------------------------ Constructors

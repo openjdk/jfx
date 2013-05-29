@@ -85,21 +85,26 @@ class SWArgbPreTexture extends SWTexture {
         this.allocate();
 
         final PixelGetter getter;
+        final int elementsPerPixel;
         switch (img.getPixelFormat()) {
             case BYTE_RGB:
                 getter = ByteRgb.getter;
+                elementsPerPixel = img.getBytesPerPixelUnit();
                 this.hasAlpha = false;
                 break;
             case INT_ARGB_PRE:
                 getter = IntArgbPre.getter;
+                elementsPerPixel = 1;
                 this.hasAlpha = true;
                 break;
             case BYTE_BGRA_PRE:
                 getter = ByteBgraPre.getter;
+                elementsPerPixel = img.getBytesPerPixelUnit();
                 this.hasAlpha = true;
                 break;
             case BYTE_GRAY:
                 getter = ByteGray.getter;
+                elementsPerPixel = img.getBytesPerPixelUnit();
                 this.hasAlpha = false;
                 break;
             default:
@@ -107,7 +112,7 @@ class SWArgbPreTexture extends SWTexture {
         }
 
         PixelConverter converter = PixelUtils.getConverter(getter, IntArgbPre.setter);
-        converter.convert(img.getPixelBuffer(), 0, srcw * img.getBytesPerPixelUnit(),
+        converter.convert(img.getPixelBuffer(), 0, srcw * elementsPerPixel,
                 IntBuffer.wrap(this.data), (dsty * width) + dstx, width, srcw, srch);
     }
 
@@ -165,7 +170,7 @@ class SWArgbPreTexture extends SWTexture {
         this.data = new int[width * height];
     }
 
-    Texture createSharedTexture(WrapMode altMode) {
+    Texture createSharedLockedTexture(WrapMode altMode) {
         return new SWArgbPreTexture(this, altMode);
     }
 }

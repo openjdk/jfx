@@ -170,6 +170,7 @@ private:
     extern jfieldID jApplicationDisplay; //com.sun.glass.ui.gtk.GtkApplication#display
     extern jfieldID jApplicationScreen; //com.sun.glass.ui.gtk.GtkApplication#screen
     extern jfieldID jApplicationVisualID; //com.sun.glass.ui.gtk.GtkApplication#visualID
+    extern jmethodID jApplicationReportException; // reportException(Ljava/lang/Throwable;)V
 
 #ifdef VERBOSE
 #define LOG0(msg) {printf(msg);fflush(stdout);}

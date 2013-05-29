@@ -47,7 +47,7 @@ class ES2MeshView extends BaseMeshView {
     // TODO: 3D - Need a mechanism to "decRefCount" Mesh and Material
     //            if we need to do eager clean up
     final private ES2Mesh mesh;
-    private Material material;
+    private ES2PhongMaterial material;
 
     private ES2MeshView(ES2Context context, long nativeHandle, ES2Mesh mesh,
             Disposer.Record disposerRecord) {
@@ -71,7 +71,7 @@ class ES2MeshView extends BaseMeshView {
     @Override
     public void setMaterial(Material material) {
         context.setMaterial(nativeHandle, material);
-        this.material = material;
+        this.material = (ES2PhongMaterial) material;
     }
 
     @Override
@@ -111,11 +111,13 @@ class ES2MeshView extends BaseMeshView {
 
     @Override
     public void render(Graphics g) {
+        material.lockTextureMaps();
         context.renderMeshView(nativeHandle, g.getTransformNoClone(), this);
+        material.unlockTextureMaps();
     }
 
     ES2PhongMaterial getMaterial() {
-        return (ES2PhongMaterial) material;
+        return material;
     }
 
     @Override

@@ -54,8 +54,9 @@
   </target>
 
     <target name="compile-native-eglfb" unless="uptodate">
-        <exec executable="${ndk.build.cmd}" dir="${basedir}" failonerror="true">
-     <arg line="APP_BUILD_SCRIPT=Android.mk NDK_PROJECT_PATH=. TARGET_PLATFORM=${android.ndk.target}"/>
+        <echo>Compile native-eglfb with command: ${android.ndk}/${ndk.build.cmd}</echo>
+        <exec executable="${android.ndk}/${ndk.build.cmd}" dir="${basedir}" failonerror="true">
+          <arg line="APP_BUILD_SCRIPT=Android.mk NDK_PROJECT_PATH=. TARGET_PLATFORM=${android.ndk.target}"/>
         </exec>
     </target>
 

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-android-common" default="jar" basedir=".">
+
+    <description>Builds javafx-android-common.</description>
+
+    <target name="build-vmlauncher">
+      <ant antfile="vmlauncher/build.xml" inheritAll="true" useNativeBasedir="true"/>
+    </target>
+    
+    <target name="build-activity">
+      <ant antfile="activity/build.xml" inheritAll="true" useNativeBasedir="true"/>
+    </target>
+
+    <target name="jar">
+      <antcall target="build-vmlauncher"/>
+      <antcall target="build-activity" />
+  </target>
+
+  <target name="clean">
+     <ant antfile="vmlauncher/build.xml" target="clean" inheritAll="false" />
+     <ant antfile="activity/build.xml" target="clean" inheritAll="false" />
+  </target>
+  
+</project>

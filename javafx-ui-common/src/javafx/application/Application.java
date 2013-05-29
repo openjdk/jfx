@@ -78,7 +78,8 @@ import com.sun.javafx.css.StyleManager;
  * method, processing input events, and running animation timelines. Creation
  * of JavaFX {@link Scene} and {@link Stage} objects as well as modification of
  * scene graph operations to <em>live</em> objects (those objects already
- * attached to a scene) must be done on the JavaFX application thread.<p>
+ * attached to a scene) must be done on the JavaFX application thread.
+ * </p>
  *
  * <p>
  * The Application constructor and {@code init} method are called on
@@ -88,6 +89,13 @@ import com.sun.javafx.css.StyleManager;
  * method.
  * An application may construct other JavaFX objects in the {@code init}
  * method.
+ * </p>
+ *
+ * <p>
+ * All the unhandled exceptions on the JavaFX application thread that occur during
+ * event dispatching, running animation timelines, or any other code, are forwarded
+ * to the thread's {@link java.lang.Thread.UncaughtExceptionHandler uncaught
+ * exception handler}.
  * </p>
  *
  * <p><b>Example</b></p>

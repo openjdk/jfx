@@ -32,6 +32,8 @@
 #define MIN_ALPHA 0
 #define MAX_ALPHA 255
 
+void initGammaArrays(jfloat gamma);
+
 void genLinearGradientPaint(Renderer *rdr, jint height);
 void genRadialGradientPaint(Renderer *rdr, jint height);
 void genTexturePaint(Renderer *rdr, jint height);
@@ -48,8 +50,6 @@ void blitPTSrc8888_pre(Renderer *rdr, jint height);
 
 void blitPTSrcMask8888_pre(Renderer *rdr, jint height);
 
-void blitImageSrc8888_pre(Renderer *rdr, jint height);
-
 void blitSrcOver8888(Renderer *rdr, jint height);
 void blitSrcOver8888_pre(Renderer *rdr, jint height);
 
@@ -61,9 +61,6 @@ void blitPTSrcOver8888(Renderer *rdr, jint height);
 void blitPTSrcOver8888_pre(Renderer *rdr, jint height);
 
 void blitPTSrcOverMask8888_pre(Renderer *rdr, jint height);
-
-void blitImageSrcOver8888(Renderer *rdr, jint height);
-void blitImageSrcOver8888_pre(Renderer *rdr, jint height);
 
 void clearRect8888(Renderer *rdr, jint x, jint y, jint w, jint h);
 

@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.lang.ref.WeakReference;
 
 /**
@@ -45,7 +44,6 @@ import java.lang.ref.WeakReference;
  * @see TreeTableView
  * @see TreeTableColumn
  */
-@NoBuilder
 public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,T>> {
     
     /***************************************************************************

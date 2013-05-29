@@ -25,7 +25,6 @@
 
 package com.sun.prism.es2;
 
-import com.sun.prism.RenderingContext;
 import java.io.InputStream;
 import java.util.Map;
 
@@ -70,6 +69,10 @@ public class ES2ResourceFactory extends BaseShaderFactory {
             maxTextureSize = computeMaxTextureSize();
         } else {
             maxTextureSize = max;
+        }
+        if (PrismSettings.verbose) {
+            System.out.println("Non power of two texture support = " + 
+                    context.getGLContext().canCreateNonPowTwoTextures());
         }
     }
 
@@ -263,19 +266,6 @@ public class ES2ResourceFactory extends BaseShaderFactory {
 
     public VertexBuffer createVertexBuffer(int maxQuads) {
         return new VertexBuffer(maxQuads);
-    }
-
-    /**
-     * Returns a rendering context associated with the specified PresentableState.
-     * If PresentableState is null, then this method returns an offscreen
-     * rendering context.
-     *
-     * @param pState the PresentableState from which to construct a rendering
-     * context. if pState is null, then the rendering context is in offscreen
-     * mode.
-     */
-    public RenderingContext createRenderingContext(PresentableState pState) {
-        return new ES2RenderingContext(context, pState);
     }
 
     public void dispose() {

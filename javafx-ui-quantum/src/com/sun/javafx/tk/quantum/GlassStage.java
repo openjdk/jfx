@@ -60,6 +60,7 @@ abstract class GlassStage implements TKStage {
     }
 
     @Override public void close() {
+        assert scene == null; // close() is called after setScene(null)
         windows.remove(this);
         importantWindows.remove(this);
         notifyWindowListeners();

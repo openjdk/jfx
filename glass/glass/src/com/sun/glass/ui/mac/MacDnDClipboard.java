@@ -24,38 +24,13 @@
  */
 package com.sun.glass.ui.mac;
 
-import com.sun.glass.events.MouseEvent;
-
 final class MacDnDClipboard extends MacSystemClipboard {
 
     public MacDnDClipboard(String name) {
         super(name);
     }
 
-    /*
-     * called from native
-     */
-    static MacDnDClipboard getInstance() {
-        return (MacDnDClipboard)get(DND);
-    }
-
     @Override public String toString() {
         return "Mac DnD Clipboard";
-    }
-
-    /*
-     * The MouseEvent.BUTTON_XXXX const if Java is DnD source.
-     */
-    protected int dragButton = 0;
-
-    public int getDragButton() {
-        return dragButton;
-    }
-
-    /*
-     * Called from native code
-     */
-    private void setDragButton(int dragButton) {
-        this.dragButton = dragButton;
     }
 }

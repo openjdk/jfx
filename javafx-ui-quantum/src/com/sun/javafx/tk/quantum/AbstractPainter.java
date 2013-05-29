@@ -43,7 +43,6 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsResource;
 import com.sun.prism.Presentable;
-import com.sun.prism.RenderingContext;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 import com.sun.prism.impl.PrismSettings;
@@ -68,7 +67,6 @@ abstract class AbstractPainter implements Runnable {
     protected SceneState sceneState;
 
     protected Presentable       presentable;
-    protected RenderingContext  context = null;
     protected ResourceFactory   factory;
 
     protected int               width;

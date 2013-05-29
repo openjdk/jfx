@@ -71,7 +71,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
         sorted = (Element<E>[]) new Element[source.size() *3/2 + 1];
         size = source.size();
         for (int i = 0; i < size; ++i) {
-            sorted[i] = new Element<>(source.get(i), i);
+            sorted[i] = new Element<E>(source.get(i), i);
         }
         if (comparator == null) {
             elementComparator = new NaturalElementComparator<>();

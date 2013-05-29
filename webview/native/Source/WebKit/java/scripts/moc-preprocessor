@@ -1,0 +1,3 @@
+#! /bin/sh
+
+cl /nologo /EP "$@" | tr -d '\r'

@@ -415,6 +415,12 @@ public class Scene implements EventTarget {
                             return scene.getEffectiveCamera();
                         }
 
+                        @Override
+                        public void setSceneDelta(Scene scene,
+                                                  double deltaX,
+                                                  double deltaY) {
+                            scene.setSceneDelta(deltaX, deltaY);
+                        }
                     });
         }
 
@@ -713,9 +719,6 @@ public class Scene implements EventTarget {
     @Deprecated
     public void impl_setWindow(Window value) {
         setWindow(value);
-        if (impl_peer != null) {
-            impl_peer.markDirty();
-        }
     }
 
     /**
@@ -724,21 +727,26 @@ public class Scene implements EventTarget {
      */
     @Deprecated
     public void impl_initPeer() {
-        if (impl_peer != null) {
-            return;
-        }
-        PerformanceTracker.logEvent("Scene.initPeer started");
-        Toolkit tk = Toolkit.getToolkit();
-        if (getWindow() == null) {
-            return;
-        }
-        TKStage windowPeer = getWindow().impl_getPeer();
+        assert impl_peer == null;
+
+        Window window = getWindow();
+        // impl_initPeer() is only called from Window, either when the window
+        // is being shown, or the window scene is being changed. In any case
+        // this scene's window cannot be null.
+        assert window != null;
+
+        TKStage windowPeer = window.impl_getPeer();
         if (windowPeer == null) {
+            // This is fine, the window is not visible. impl_initPeer() will
+            // be called again later, when the window is being shown.
             return;
         }
+
+        PerformanceTracker.logEvent("Scene.initPeer started");
 
         impl_setAllowPGAccess(true);
 
+        Toolkit tk = Toolkit.getToolkit();
         impl_peer = windowPeer.createTKScene(isDepthBufferInteral());
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
         impl_peer.setSecurityContext(acc);
@@ -749,10 +757,11 @@ public class Scene implements EventTarget {
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
         getEffectiveCamera().impl_updatePG();
         impl_peer.setCamera(getEffectiveCamera().getPlatformCamera());
+        impl_peer.markDirty();
+        PerformanceTracker.logEvent("Scene.initPeer TKScene initialized");
 
         impl_setAllowPGAccess(false);
 
-        PerformanceTracker.logEvent("Scene.initPeer TKScene initialized");
         tk.addSceneTkPulseListener(scenePulseListener);
         // listen to dnd gestures coming from the platform
         if (PLATFORM_DRAG_GESTURE_INITIATION) {
@@ -763,6 +772,7 @@ public class Scene implements EventTarget {
         }
         tk.enableDrop(impl_peer, new DropTargetListener());
         tk.installInputMethodRequests(impl_peer, new InputMethodRequestsDelegate());
+
         PerformanceTracker.logEvent("Scene.initPeer finished");
     }
 
@@ -773,12 +783,20 @@ public class Scene implements EventTarget {
     @Deprecated
     public void impl_disposePeer() {
         if (impl_peer == null) {
+            // This is fine, the window is either not shown yet and there is no
+            // need in disposing scene peer, or is hidden and impl_disposePeer()
+            // has already been called.
             return;
         }
+
+        PerformanceTracker.logEvent("Scene.disposePeer started");
+
         Toolkit tk = Toolkit.getToolkit();
         tk.removeSceneTkPulseListener(scenePulseListener);
         impl_peer.dispose();
         impl_peer = null;
+
+        PerformanceTracker.logEvent("Scene.disposePeer finished");
     }
 
     DnDGesture dndGesture = null;
@@ -923,6 +941,19 @@ public class Scene implements EventTarget {
             };
         }
         return height;
+    }
+
+    private double sceneDeltaX;
+    private double sceneDeltaY;
+
+    private void setSceneDelta(final double deltaX, final double deltaY) {
+        if ((sceneDeltaX != deltaX) || (sceneDeltaY != deltaY)) {
+            setX(getX() - sceneDeltaX + deltaX);
+            setY(getY() - sceneDeltaY + deltaY);
+
+            sceneDeltaX = deltaX;
+            sceneDeltaY = deltaY;
+        }
     }
 
     // Reusable target wrapper (to avoid creating new one for each picking)
@@ -1803,7 +1834,8 @@ public class Scene implements EventTarget {
      */
     Node test_pick(double x, double y) {
         inMousePick = true;
-        PickResult result = mouseHandler.pickNode(new PickRay(x, y));
+        PickResult result = mouseHandler.pickNode(new PickRay(x, y,
+                Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
         inMousePick = false;
         if (result != null) {
             return result.getIntersectedNode();
@@ -1849,7 +1881,7 @@ public class Scene implements EventTarget {
                     o.x + mag * d.x,
                     o.y + mag * d.y,
                     o.z + mag * d.z),
-                    pickRay.isParallel() ? Double.POSITIVE_INFINITY : mag),
+                    mag),
                     isInScene(x, y) ? this : null);
         }
     }
@@ -2426,8 +2458,12 @@ public class Scene implements EventTarget {
     class ScenePeerListener implements TKSceneListener {
         @Override
         public void changedLocation(float x, float y) {
-            if (x != Scene.this.getX()) Scene.this.setX(x);
-            if (y != Scene.this.getY()) Scene.this.setY(y);
+            if ((x + sceneDeltaX) != Scene.this.getX()) {
+                Scene.this.setX(x + sceneDeltaX);
+            }
+            if ((y + sceneDeltaY) != Scene.this.getY()) {
+                Scene.this.setY(y + sceneDeltaY);
+            }
         }
 
         @Override
@@ -3731,7 +3767,7 @@ public class Scene implements EventTarget {
         private PickResult pickNode(PickRay pickRay) {
             PickResultChooser r = new PickResultChooser();
             Scene.this.getRoot().impl_pickNode(pickRay, r);
-            return r.toPickResult(!pickRay.isParallel());
+            return r.toPickResult();
         }
     }
 

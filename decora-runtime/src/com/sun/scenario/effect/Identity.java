@@ -132,6 +132,12 @@ public class Identity extends Effect {
         // TODO: cache needs to be cleared on display changes
         // TODO: cache based on transform?
         ImageData id = datacache.get(fctx);
+        if (id != null && !id.addref()) {
+            id.setReusable(false);
+            datacache.remove(fctx);
+            id.unref();
+            id = null;
+        }
         if (id == null) {
             Renderer r = Renderer.getRenderer(fctx);
             Filterable f = src;
@@ -144,9 +150,9 @@ public class Identity extends Effect {
             if (id == null) {
                 return new ImageData(fctx, null, null);
             }
+            id.setReusable(true);
             datacache.put(fctx, id);
         }
-        id.addref();
 
         transform = Offset.getOffsetTransform(transform, loc.x, loc.y);
         id = id.transform(transform);

@@ -31,6 +31,7 @@
  */
 package com.javafx.experiments.jfx3dviewer;
 
+import java.util.List;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -48,7 +49,8 @@ public class Jfx3dViewerApp extends Application {
     }
 
     @Override public void start(Stage stage) throws Exception {
-        contentModel = new ContentModel();
+        List<String> args = getParameters().getRaw();
+        contentModel = new ContentModel(args.isEmpty() ? null : args.get(0));
         Scene scene = new Scene(
                 FXMLLoader.<Parent>load(Jfx3dViewerApp.class.getResource("main.fxml")),
                 1024,600);

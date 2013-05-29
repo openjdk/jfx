@@ -34,6 +34,8 @@ project(":fxml").projectDir = file("modules/fxml")
 project(":designTime").projectDir = file("modules/designTime")
 project(":fxpackager").projectDir = file("modules/fxpackager")
 
+// TODO: this needs to be updated to also recognize -PBUILD_CLOSED=true (ideally
+// without duplicating the logic)
 if (hasProperty("SUPPLEMENTAL_BUILD_FILE")) {
     File supplementalBuildFile = file(SUPPLEMENTAL_BUILD_FILE)
     File supplementalSettingsFile = new File(supplementalBuildFile.getParentFile(), "closed-settings.gradle");

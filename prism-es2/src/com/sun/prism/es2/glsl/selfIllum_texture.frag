@@ -24,11 +24,11 @@
  */
 
 // texture selfIllum fragment shader
-#version 120
+//#version 120
 
 uniform sampler2D selfIllumTexture;
 
 vec4 apply_selfIllum() {
-    return texture2D(selfIllumTexture, gl_TexCoord[0].xy);
+    return texture2D(selfIllumTexture, oTexCoords);
 }
 

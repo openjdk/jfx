@@ -1,5 +1,8 @@
-[`|~ ][1|! ][2|, ][3|# ][4|\$ ][5|% ][6|^ ][7|& ][8|* ][9|( ][0|) ][-|_ ][=|+ ][$backspace  ]
-[$tab  ][q ][w ][e ][r ][t ][y ][u ][i ][o ][p ][\[|{ ][\]|} ][\\|\| ]
-[$caps   ][a ][s ][d ][f ][g ][h ][j ][k ][l ][;|: ]['|" ][$enter  ]
-[$shift    ][z ][x ][c ][v ][b ][n ][m ][@|< ][.|> ][/|? ][$shift   ]
-[$hide ][$.org  ][$.net  ][$space           ][$.com  ][$oracle.com   ][$hide ]
+#removed unsupported ymacron, yhook
+[q|1|\[ ][w|2|\] ][e|3|{|egrave|eacute|ecirc|euml ][r|4|}|reg ][t|5|<|tm ][y|6|>|ygrave|yacute|ycirc|yuml ][u|7|laquo|ugrave|uacute|ucirc|uuml ][i|8|raquo|igrave|iacute|icirc|iuml ][o|9|`|ograve|oacute|ocirc|otilde|ouml|oslash|deg ][p|0|~|para|pi ]
+
+ [a|#|agrave|aacute|acirc|atilde|auml|aring ][s|\$|euro|pound|yen|scedil|scaron|szlig|sigma ][d|%|eth ][f|& ][g|*|sect ][h|(|middot ][j|)|deg ][k|_|neq ][l|" ]
+
+[$shift ][z|/|iexcl ][x|\\|iquest ][c|;|permil|ccedil|copy|cent ][v|:|reg ][b|=|tm ][n|+|ntilde ][m|-|micro ][@|' ][$backspace ]
+
+[$hide][$SymbolABC ][$space       ][,|! ][.|? ][.com|.org|.net ][$enter  ]

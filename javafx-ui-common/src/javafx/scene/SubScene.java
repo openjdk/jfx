@@ -35,7 +35,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.SubSceneAccess;
+import com.sun.javafx.scene.SubSceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.PGLightBase;
@@ -104,7 +104,7 @@ public class SubScene extends Node {
             boolean depthBuffer, boolean antiAliasing) {
         this(root, width, height);
         this.depthBuffer = depthBuffer;
-        
+
         // NOTE: this block will be removed once implement anti-aliasing
         if (antiAliasing) {
             String logname = SubScene.class.getName();
@@ -243,7 +243,6 @@ public class SubScene extends Node {
     private ObjectProperty<Camera> camera;
 
     public final void setCamera(Camera value) {
-        
         cameraProperty().set(value);
     }
 
@@ -258,7 +257,7 @@ public class SubScene extends Node {
 
                 @Override
                 protected void invalidated() {
-                    Camera _value = get();                    
+                    Camera _value = get();
                     if (_value != null) {
                         if (_value instanceof PerspectiveCamera
                                 && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
@@ -277,6 +276,7 @@ public class SubScene extends Node {
                         _value.setViewWidth(getWidth());
                         _value.setViewHeight(getHeight());
                     }
+                    markDirty(SubSceneDirtyBits.CAMERA_DIRTY);
                     if (oldCamera != null && oldCamera != _value) {
                         oldCamera.setOwnerSubScene(null);
                     }
@@ -317,8 +317,8 @@ public class SubScene extends Node {
     }
 
     // Used by the camera
-    void markCameraDirty() {
-        markDirty(SubSceneDirtyBits.CAMERA_DIRTY);
+    final void markContentDirty() {
+        markDirty(SubSceneDirtyBits.CONTENT_DIRTY);
     }
 
     /**
@@ -468,27 +468,41 @@ public class SubScene extends Node {
         dirtyNodes = dirtyLayout = false;
         if (isDirty()) {
             PGSubScene peer = (PGSubScene) impl_getPGNode();
-            if (isDirty(SubSceneDirtyBits.ROOT_SG_DIRTY)) {
-                // TODO: Will call peer.setRoot either if root has changed or
-                // if root is dirty. This is a workaround for dirty region support.
-                peer.setRoot(getRoot().impl_getPGNode());
+            final Camera cam = getEffectiveCamera();
+            boolean contentChanged = false;
+            if (cam.getSubScene() == null &&
+                    isDirty(SubSceneDirtyBits.CONTENT_DIRTY)) {
+                // When camera is not a part of the graph, then its
+                // owner(subscene) must take care of syncing it. And when a
+                // property on the camera changes it will mark subscenes
+                // CONTENT_DIRTY.
+                cam.impl_syncPGNode();
             }
             if (isDirty(SubSceneDirtyBits.FILL_DIRTY)) {
                 Object platformPaint = getFill() == null ? null :
                         Toolkit.getPaintAccessor().getPlatformPaint(getFill());
                 peer.setFillPaint(platformPaint);
+                contentChanged = true;
             }
             peer.setDepthBuffer(isDepthBufferInteral());
             if (isDirty(SubSceneDirtyBits.SIZE_DIRTY)) {
+                // Note change in size is a geom change and is handled by peer
                 peer.setWidth((float)getWidth());
                 peer.setHeight((float)getHeight());
             }
             if (isDirty(SubSceneDirtyBits.CAMERA_DIRTY)) {
-                final Camera cam = getEffectiveCamera();
-                cam.impl_syncPGNode();
                 peer.setCamera(cam.getPlatformCamera());
+                contentChanged = true;
             }
-            syncLights();
+            if (isDirty(SubSceneDirtyBits.ROOT_SG_DIRTY)) {
+                peer.setRoot(getRoot().impl_getPGNode());
+                contentChanged = true;
+            }
+            contentChanged |= syncLights();
+            if (contentChanged || isDirty(SubSceneDirtyBits.CONTENT_DIRTY)) {
+                peer.markContentDirty();
+            }
+
             clearDirtyBits();
         }
 
@@ -564,7 +578,7 @@ public class SubScene extends Node {
         if (!dirtyLayout && p != null && p.getSubScene() == this &&
                 this.getScene() != null) {
             dirtyLayout = true;
-            markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
+            markDirty(SubSceneDirtyBits.CONTENT_DIRTY);
         }
     }
 
@@ -573,20 +587,17 @@ public class SubScene extends Node {
         if (!dirtyNodes && n != null && n.getSubScene() == this &&
                 this.getScene() != null) {
             dirtyNodes = true;
-            markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
+            markDirty(SubSceneDirtyBits.CONTENT_DIRTY);
         }
     }
 
     private enum SubSceneDirtyBits {
         SIZE_DIRTY,
         FILL_DIRTY,
-        /* ROOT_SG_DIRTY is set either when the root has changed or hint that
-         * root scene graph needs to be re-rendered. For example when layout
-         * occurs, or node has been added or removed.
-         */
         ROOT_SG_DIRTY,
         CAMERA_DIRTY,
-        LIGHTS_DIRTY;
+        LIGHTS_DIRTY,
+        CONTENT_DIRTY;
 
         private int mask;
 
@@ -595,7 +606,7 @@ public class SubScene extends Node {
         public final int getMask() { return mask; }
     }
 
-    private int dirtyBits;
+    private int dirtyBits = ~0;
 
     private void clearDirtyBits() { dirtyBits = 0; }
 
@@ -663,7 +674,7 @@ public class SubScene extends Node {
         final PickResultChooser result = new PickResultChooser();
         final PickRay pickRay = getEffectiveCamera().computePickRay(localX, localY, new PickRay());
         getRoot().impl_pickNode(pickRay, result);
-        return result.toPickResult(!pickRay.isParallel());
+        return result.toPickResult();
     }
 
     /**
@@ -719,9 +730,10 @@ public class SubScene extends Node {
     /**
      * PG Light synchronizer.
      */
-    private void syncLights() {
+    private boolean syncLights() {
+        boolean lightOwnerChanged = false;
         if (!isDirty(SubSceneDirtyBits.LIGHTS_DIRTY)) {
-            return;
+            return lightOwnerChanged;
         }
         PGSubScene pgSubScene = (PGSubScene) impl_getPGNode();
         Object peerLights[] = pgSubScene.getLights();
@@ -742,27 +754,25 @@ public class SubScene extends Node {
                 }
                 pgSubScene.setLights(peerLights);
             }
+            lightOwnerChanged = true;
         }
-    }
-
-    /**
-     * This class is used by classes in different packages to get access to
-     * private and package private methods.
-     */
-    private static class SubSceneAccessImpl extends SubSceneAccess {
-
-        @Override
-        public boolean isDepthBuffer(SubScene subScene) {
-            return subScene.isDepthBufferInteral();
-        };
-
-        @Override
-        public Camera getEffectiveCamera(SubScene subScene) {
-            return subScene.getEffectiveCamera();
-        }
+        return lightOwnerChanged;
     }
 
     static {
-        SubSceneAccess.setSubSceneAccess(new SubSceneAccessImpl());
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        SubSceneHelper.setSubSceneAccessor(new SubSceneHelper.SubSceneAccessor() {
+
+            @Override
+            public boolean isDepthBuffer(SubScene subScene) {
+                return subScene.isDepthBufferInteral();
+            };
+
+            @Override
+            public Camera getEffectiveCamera(SubScene subScene) {
+                return subScene.getEffectiveCamera();
+            }
+        });
     }
 }

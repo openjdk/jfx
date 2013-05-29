@@ -6,10 +6,14 @@ import javafx.animation.Timeline;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
+import com.javafx.experiments.importers.dae.DaeImporter;
 import com.javafx.experiments.importers.max.MaxLoader;
 import com.javafx.experiments.importers.maya.MayaGroup;
 import com.javafx.experiments.importers.maya.MayaImporter;
 import com.javafx.experiments.importers.obj.ObjImporter;
+import com.javafx.experiments.importers.obj.PolyObjImporter;
 
 /**
  * Base Importer for all supported 3D file formats
@@ -22,7 +26,7 @@ public final class Importer3D {
      * @return array of extension filters for supported file formats.
      */
     public static String[] getSupportedFormatExtensionFilters() {
-        return new String[]{"*.ma", "*.ase", "*.obj", "*.fxml"};
+        return new String[]{"*.ma", "*.ase", "*.obj", "*.fxml", "*.dae"};
     }
 
     /**
@@ -47,7 +51,15 @@ public final class Importer3D {
             case "obj":
                 return loadObjFile(fileUrl);
             case "fxml":
-                return FXMLLoader.load(new URL(fileUrl));
+                Object fxmlRoot = FXMLLoader.load(new URL(fileUrl));
+                if (fxmlRoot instanceof Node) {
+                    return (Node)fxmlRoot;
+                } else if (fxmlRoot instanceof TriangleMesh) {
+                    return new MeshView((TriangleMesh)fxmlRoot);
+                }
+                throw new IOException("Unknown object in FXML file ["+fxmlRoot.getClass().getName()+"]");
+            case "dae":
+                return loadDaeFile(fileUrl);
             default:
                 throw new IOException("Unknown 3D file format ["+extension+"]");
         }
@@ -67,11 +79,17 @@ public final class Importer3D {
     }
 
     private static Node loadObjFile(String fileUrl) throws IOException {
-        ObjImporter reader = new ObjImporter(fileUrl);
+//        ObjImporter reader = new ObjImporter(fileUrl);
+        PolyObjImporter reader = new PolyObjImporter(fileUrl);
         Group res = new Group();
         for (String key : reader.getMeshes()) {
-            res.getChildren().add(reader.buildMeshView(key));
+            res.getChildren().add(reader.buildPolygonMeshView(key));
         }
         return res;
+    }
+
+    private static Node loadDaeFile(String fileUrl) throws IOException {
+        DaeImporter importer = new DaeImporter(fileUrl, true);
+        return importer.getRootNode();
     }
 }

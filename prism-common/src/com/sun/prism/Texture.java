@@ -383,12 +383,22 @@ public interface Texture extends GraphicsResource {
     /**
      * Constructs an alternate version of this {@code Texture} with an
      * alternate WrapMode if the two modes allow the underlying texture
-     * to be shared.
+     * to be shared, otherwise a null value is returned.
      * This method can only be used to create a shared texture for
      * {@code REPEAT} or {@code CLAMP_TO_EDGE} textures, which must
      * necessarily have content that spans their entire physical dimensions
      * (if their content was smaller then they would have a {@code _SIMULATED}
      * type of wrap mode).
+     * This method expects the texture to be already locked (and checked for
+     * a valid surface) and if it returns a non-null value then that return
+     * value will have an outstanding lock in addition to retaining the lock
+     * on the original texture.
+     * Note that if the requested {@code WrapMode} is the same as the wrap
+     * mode of this texture, then this same object will be returned after
+     * having its lock count increased by 1.
+     * Thus, in all cases, the caller is responsible for locking this texture
+     * before the call, and eventually unlocking this texture after the call,
+     * and also for eventually unlocking the return value if it is non-null.
      */
     public Texture getSharedTexture(WrapMode altMode);
 

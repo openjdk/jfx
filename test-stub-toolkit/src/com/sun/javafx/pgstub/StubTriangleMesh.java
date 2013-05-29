@@ -25,99 +25,32 @@
 
 package com.sun.javafx.pgstub;
 
+
+import com.sun.javafx.collections.FloatArraySyncer;
+import com.sun.javafx.collections.IntegerArraySyncer;
 import com.sun.javafx.sg.PGTriangleMesh;
-import javafx.scene.shape.TriangleMesh;
+
 
 public class StubTriangleMesh implements PGTriangleMesh {
 
     private float[] points;
     private float[] texCoords;
     private int[] faces;
-    private int[] smoothingGroups;
+    private int[] faceSmoothingGroups;
 
-
-    @Override
-    public void setPoints(float[] points) {
-        if (points == null) {
-            this.points = null;
-            return;
-        }
-        this.points = new float[points.length];
-        System.arraycopy(points, 0, this.points, 0, points.length);
+    @Override public void syncPoints(FloatArraySyncer array) {
+        points = array.syncTo(points);
+    }
+    
+    @Override public void syncTexCoords(FloatArraySyncer array) {
+        texCoords = array.syncTo(texCoords);
     }
 
-    @Override
-    public void setPoints(float[] points, int index, int length) {
-        if (points == null) {
-            this.points = null;
-            return;
-        }
-
-        int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_POINT;
-        int lengthInFloatUnit = length * TriangleMesh.NUM_COMPONENTS_PER_POINT;
-        System.arraycopy(points, indexOffset, this.points, indexOffset, lengthInFloatUnit);
+    @Override public void syncFaces(IntegerArraySyncer array) {
+        faces = array.syncTo(faces);    
     }
 
-    @Override
-    public void setTexCoords(float[] texCoords) {
-        if (texCoords == null) {
-            this.texCoords = null;
-            return;
-        }
-        this.texCoords = new float[texCoords.length];
-        System.arraycopy(texCoords, 0, this.texCoords, 0, texCoords.length);
-    }
-
-    @Override
-    public void setTexCoords(float[] texCoords, int index, int length) {
-        if (texCoords == null) {
-            this.texCoords = null;
-            return;
-        }
-        int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
-        int lengthInFloatUnit = length * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
-        System.arraycopy(texCoords, indexOffset, this.texCoords, indexOffset, lengthInFloatUnit);
-    }
-
-    @Override
-    public void setFaces(int[] faces) {
-        if (faces == null) {
-            this.faces = null;
-            return;
-        }
-        this.faces = new int[faces.length];
-        System.arraycopy(faces, 0, this.faces, 0, faces.length);
-    }
-
-    @Override
-    public void setFaces(int[] faces, int index, int length) {
-        if (faces == null) {
-            this.faces = null;
-            return;
-        }
-        int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_FACE;
-        int lengthInIntUnit = length * TriangleMesh.NUM_COMPONENTS_PER_FACE;
-        System.arraycopy(faces, indexOffset, this.faces, indexOffset, lengthInIntUnit);
-    }
-
-    @Override
-    public void setFaceSmoothingGroups(int[] faceSmoothingGroups) {
-        if (faceSmoothingGroups == null) {
-            this.smoothingGroups = null;
-            return;
-        }
-        this.smoothingGroups = new int[faceSmoothingGroups.length];
-        System.arraycopy(faceSmoothingGroups, 0, this.smoothingGroups, 0,
-                faceSmoothingGroups.length);
-    }
-
-    @Override
-    public void setFaceSmoothingGroups(int[] faceSmoothingGroups, int index, int length) {
-        if (faceSmoothingGroups == null) {
-            this.smoothingGroups = null;
-            return;
-        }
-
-        System.arraycopy(faceSmoothingGroups, index, this.smoothingGroups, index, length);
+    @Override public void syncFaceSmoothingGroups(IntegerArraySyncer array) {
+        faceSmoothingGroups = array.syncTo(faceSmoothingGroups);
     }
 }

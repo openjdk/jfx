@@ -24,10 +24,10 @@
  */
 
 // no texture normal map fragment shader
-#version 120
+//#version 120
 uniform sampler2D normalMap;
 
 vec3 apply_normal() {
-    return vec3(0,0,1);
+    return vec3(0.0,0.0,1.0);
 }
 

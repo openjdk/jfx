@@ -50,8 +50,8 @@ import javafx.event.EventType;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 
+import com.sun.javafx.Utils;
 import com.sun.javafx.WeakReferenceQueue;
-import com.sun.javafx.beans.annotations.NoInit;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.stage.WindowHelper;
@@ -80,23 +80,6 @@ public class Window implements EventTarget {
     static {
         WindowHelper.setWindowAccessor(
                 new WindowHelper.WindowAccessor() {
-                    @Override
-                    public void setWindowTranslate(Window window,
-                                                   double translateX,
-                                                   double translateY) {
-                        window.setWindowTranslate(translateX, translateY);
-                    }
-
-                    @Override
-                    public double getScreenX(Window window) {
-                        return window.getX() + window.winTranslateX;
-                    }
-
-                    @Override
-                    public double getScreenY(Window window) {
-                        return window.getY() + window.winTranslateY;
-                    }
-
                     /**
                      * Allow window peer listeners to directly change window
                      * location and size without changing the xExplicit,
@@ -126,7 +109,6 @@ public class Window implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @NoInit
     public static Iterator<Window> impl_getWindows() {
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
@@ -234,7 +216,7 @@ public class Window implements EventTarget {
 
     private static final float CENTER_ON_SCREEN_X_FRACTION = 1.0f / 2;
     private static final float CENTER_ON_SCREEN_Y_FRACTION = 1.0f / 3;
-    
+
     /**
      * Sets x and y properties on this Window so that it is centered on the screen.
      */
@@ -242,8 +224,8 @@ public class Window implements EventTarget {
         xExplicit = false;
         yExplicit = false;
         if (impl_peer != null) {
-            Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-            double centerX = 
+            Rectangle2D bounds = getWindowScreen().getVisualBounds();
+            double centerX =
                     bounds.getMinX() + (bounds.getWidth() - getWidth())
                                            * CENTER_ON_SCREEN_X_FRACTION;
             double centerY =
@@ -402,7 +384,7 @@ public class Window implements EventTarget {
      */
     @Deprecated
     public final void setFocused(boolean value) { focused.set(value); }
-    
+
     /**
      * Requests that this {@code Window} get the input focus.
      */
@@ -437,47 +419,46 @@ public class Window implements EventTarget {
 
         @Override protected void invalidated() {
             final Scene newScene = get();
-            if (oldScene != newScene) {
-                Toolkit.getToolkit().checkFxUserThread();
-                // Clear the "window" on the old scene, if there was one. This
-                // will also trigger scene's peer disposal.
-                if (oldScene != null) {
-                    oldScene.impl_setWindow(null);
-                    StyleManager.getInstance().forget(oldScene);
-                }
-                if (newScene != null) {
-                    final Window oldWindow = newScene.getWindow();
-                    if (oldWindow != null) {
-                        // if the new scene was previously set to a window
-                        // we need to remove it from that window without
-                        // generating unnecessary changes in the new scene's
-                        // window property
-                        oldWindow.scene.notifySceneLost();
-                    }
-
-                    // Set the "window" on the new scene. This will also trigger
-                    // scene's peer creation.
-                    newScene.impl_setWindow(Window.this);
-                    // Set scene impl on stage impl
-                    updatePeerStage(newScene.impl_getPeer());
-
-                    // Fix for RT-15432: we should update new Scene's stylesheets, if the
-                    // window is already showing. For not yet shown windows, the update is
-                    // performed in Window.visibleChanging()
-                    if (isShowing()) {
-                        newScene.getRoot().impl_reapplyCSS();
-                        getScene().impl_preferredSize();
-
-                        if (!widthExplicit || !heightExplicit) {
-                            adjustSize(true);
-                        }
-                    }
-                } else {
-                    updatePeerStage(null);
-                }
-
-                oldScene = newScene;
+            if (oldScene == newScene) {
+                return;
             }
+            Toolkit.getToolkit().checkFxUserThread();
+            // First, detach scene peer from this window
+            updatePeerScene(null);
+            // Second, dispose scene peer
+            if (oldScene != null) {
+                oldScene.impl_setWindow(null);
+                StyleManager.getInstance().forget(oldScene);
+            }
+            if (newScene != null) {
+                final Window oldWindow = newScene.getWindow();
+                if (oldWindow != null) {
+                    // if the new scene was previously set to a window
+                    // we need to remove it from that window
+                    // NOTE: can this "scene" property be bound?
+                    oldWindow.setScene(null);
+                }
+
+                // Set the "window" on the new scene. This will also trigger
+                // scene's peer creation.
+                newScene.impl_setWindow(Window.this);
+                // Set scene impl on stage impl
+                updatePeerScene(newScene.impl_getPeer());
+
+                // Fix for RT-15432: we should update new Scene's stylesheets, if the
+                // window is already showing. For not yet shown windows, the update is
+                // performed in Window.visibleChanging()
+                if (isShowing()) {
+                    newScene.getRoot().impl_reapplyCSS();
+
+                    if (!widthExplicit || !heightExplicit) {
+                        getScene().impl_preferredSize();
+                        adjustSize(true);
+                    }
+                }
+            }
+
+            oldScene = newScene;
         }
 
         @Override
@@ -490,20 +471,7 @@ public class Window implements EventTarget {
             return "scene";
         }
 
-        public void notifySceneLost() {
-            // we are going to change the scene to null, if the sceen is
-            // bound we have to unbind first
-            if (isBound()) {
-                unbind();
-            }
-
-            // don't call oldScene.impl_setWindow(null)
-            oldScene = null;
-            set(null);
-            updatePeerStage(null);
-        }
-
-        private void updatePeerStage(final TKScene tkScene) {
+        private void updatePeerScene(final TKScene tkScene) {
             if (impl_peer != null) {
                 // Set scene impl on stage impl
                 impl_peer.setScene(tkScene);
@@ -768,7 +736,7 @@ public class Window implements EventTarget {
                         peerBoundsConfigurator.setSize(
                                 getWidth(), getHeight(), -1, -1);
                     }
-                    
+
                     if (!xExplicit && !yExplicit) {
                         centerOnScreen();
                     } else {
@@ -871,6 +839,11 @@ public class Window implements EventTarget {
      */
     @Deprecated
     protected void impl_visibleChanged(boolean visible) {
+        assert impl_peer != null;
+        if (!visible) {
+            peerListener = null;
+            impl_peer = null;
+        }
     }
 
     // PENDING_DOC_REVIEW
@@ -1063,7 +1036,31 @@ public class Window implements EventTarget {
     final void applyBounds() {
         peerBoundsConfigurator.apply();
     }
-    
+
+    Window getWindowOwner() {
+        return null;
+    }
+
+    private Screen getWindowScreen() {
+        Window window = this;
+        do {
+            if (!Double.isNaN(window.getX())
+                    && !Double.isNaN(window.getY())
+                    && !Double.isNaN(window.getWidth())
+                    && !Double.isNaN(window.getHeight())) {
+                return Utils.getScreenForRectangle(
+                                     new Rectangle2D(window.getX(),
+                                                     window.getY(),
+                                                     window.getWidth(),
+                                                     window.getHeight()));
+            }
+
+            window = window.getWindowOwner();
+        } while (window != null);
+
+        return Screen.getPrimary();
+    }
+
     /**
      * Caches all requested bounds settings and applies them at once during
      * the next pulse.

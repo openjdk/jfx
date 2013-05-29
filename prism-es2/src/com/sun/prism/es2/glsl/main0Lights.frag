@@ -24,26 +24,14 @@
  */
 
 // main fragment shader
-#version 120
+//#version 120
 
 vec4 apply_diffuse();
-vec4 apply_specular();
 vec4 apply_selfIllum();
 
-struct Light {
-    vec4 pos;
-    vec3 color;
-};
-
-uniform mat4 viewProjectionMatrix;
-uniform mat4 worldMatrix;
-uniform vec3 camPos;
 uniform vec3 ambientColor;
-uniform Light lights[3];
 
 varying vec3 eyePos;
-varying vec3 localBump;
-varying vec4[3] lightTangentSpacePositions;
 
 void main()
 {

@@ -35,6 +35,7 @@ apply plugin: "java"
 repositories {
     if ("true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
         ivy {
+            // TODO: get this from a closed property file or a system property
             url "http://jfx.us.oracle.com/shared-webrev/rbair/"
             layout "pattern", {
                 artifact "[artifact]-[revision].[ext]"

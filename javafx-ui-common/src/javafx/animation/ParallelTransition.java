@@ -53,21 +53,21 @@ import javafx.beans.value.ObservableValue;
  * <p>
  * Children of this {@code Transition} inherit {@link #nodeProperty() node}, if their
  * {@code node} property is not specified.
- * 
+ *
  * <p>
  * Code Segment Example:
  * </p>
- * 
+ *
  * <pre>
  * <code>
  *     Rectangle rect = new Rectangle (100, 40, 100, 100);
  *     rect.setArcHeight(50);
  *     rect.setArcWidth(50);
  *     rect.setFill(Color.VIOLET);
- * 
+ *
  *     final Duration SEC_2 = Duration.millis(2000);
  *     final Duration SEC_3 = Duration.millis(3000);
- * 
+ *
  *     FadeTransition ft = new FadeTransition(SEC_3);
  *     ft.setFromValue(1.0f);
  *     ft.setToValue(0.3f);
@@ -87,15 +87,15 @@ import javafx.beans.value.ObservableValue;
  *     st.setByY(1.5f);
  *     st.setCycleCount(2f);
  *     st.setAutoReverse(true);
- * 
+ *
  *     ParallelTransition pt = new ParallelTransition(rect, ft, tt, rt, st);
  *     pt.play();
  * </code>
  * </pre>
- * 
+ *
  * @see Transition
  * @see Animation
- * 
+ *
  */
 public final class ParallelTransition extends Transition {
 
@@ -112,7 +112,7 @@ public final class ParallelTransition extends Transition {
     private long cycleTime;
     private boolean childrenChanged = true;
     private boolean toggledRate;
-    
+
     private final InvalidationListener childrenListener = new InvalidationListener() {
         @Override
         public void invalidated(Observable observable) {
@@ -122,7 +122,7 @@ public final class ParallelTransition extends Transition {
             }
         }
     };
-    
+
     private final ChangeListener<Number> rateListener = new ChangeListener<Number>() {
 
         @Override
@@ -252,7 +252,7 @@ public final class ParallelTransition extends Transition {
 
     /**
      * The constructor of {@code ParallelTransition}.
-     * 
+     *
      * @param node
      *            The target {@link javafx.scene.Node} to be used in child
      *            {@link Transition Transitions} that have no {@code Node} specified
@@ -269,7 +269,7 @@ public final class ParallelTransition extends Transition {
 
     /**
      * The constructor of {@code ParallelTransition}.
-     * 
+     *
      * @param children
      *            The child {@link javafx.animation.Animation Animations} of
      *            this {@code ParallelTransition}
@@ -280,7 +280,7 @@ public final class ParallelTransition extends Transition {
 
     /**
      * The constructor of {@code ParallelTransition}.
-     * 
+     *
      * @param node
      *            The target {@link javafx.scene.Node} to be used in child
      *            {@link Transition Transitions} that have no {@code Node} specified
@@ -297,7 +297,7 @@ public final class ParallelTransition extends Transition {
     public ParallelTransition() {
         this((Node) null);
     }
-    
+
     // For testing purposes
     ParallelTransition(AbstractMasterTimer timer) {
         super(timer);
@@ -318,7 +318,7 @@ public final class ParallelTransition extends Transition {
         Duration maxTime = Duration.ZERO;
         for (final Animation animation : getChildren()) {
             final double absRate = Math.abs(animation.getRate());
-            final Duration totalDuration = (absRate < EPSILON) ? 
+            final Duration totalDuration = (absRate < EPSILON) ?
                     animation.getTotalDuration() : animation.getTotalDuration().divide(absRate);
             final Duration childDuration = totalDuration.add(animation.getDelay());
             if (childDuration.isIndefinite()) {
@@ -459,7 +459,8 @@ public final class ParallelTransition extends Transition {
         if (getCurrentRate() > 0) {
             int i = 0;
             for (final Animation animation : cachedChildren) {
-                if ((newTicks >= delays[i]) && ((oldTicks <= delays[i]) || ((oldTicks < add(delays[i], durations[i])) && (animation.getStatus() == Status.STOPPED)))) {
+                if ((newTicks >= delays[i]) && ((oldTicks <= delays[i]) ||
+                        ((newTicks < add(delays[i], durations[i])) && (animation.getStatus() == Status.STOPPED)))) {
                     final boolean enteringCycle = oldTicks <= delays[i];
                     if (startChild(animation, i)) {
                         animation.clipEnvelope.jumpTo(0);
@@ -487,7 +488,7 @@ public final class ParallelTransition extends Transition {
             int i = 0;
             for (final Animation animation : cachedChildren) {
                 if (newTicks < add(durations[i], delays[i])) {
-                    if ((oldTicks >= add(durations[i], delays[i])) || ((oldTicks >= delays[i]) && (animation.getStatus() == Status.STOPPED))){
+                    if ((oldTicks >= add(durations[i], delays[i])) || ((newTicks >= delays[i]) && (animation.getStatus() == Status.STOPPED))){
                         final boolean enteringCycle = oldTicks >= add(durations[i], delays[i]);
                         if (startChild(animation, i)) {
                             animation.clipEnvelope.jumpTo(Math.round(durations[i] * rates[i]));
@@ -587,5 +588,5 @@ public final class ParallelTransition extends Transition {
             cachedChildren[i].impl_jumpTo(0, durations[i], true);
         }
     }
-    
+
 }

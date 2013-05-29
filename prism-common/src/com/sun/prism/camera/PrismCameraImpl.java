@@ -45,8 +45,8 @@ public abstract class PrismCameraImpl {
     protected double viewWidth = 1.0;
     protected double viewHeight = 1.0;
     
-    private double zNear = 0.1;
-    private double zFar = 100.0;
+    protected double zNear = 0.1;
+    protected double zFar = 100.0;
 
     // Camera position in world coord.
     private Vec3d worldPosition = new Vec3d();

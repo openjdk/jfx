@@ -27,10 +27,11 @@ package javafx.stage;
 
 import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.test.MouseEventGenerator;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Point2D;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import javafx.event.Event;
@@ -47,6 +48,10 @@ import org.junit.Test;
 import com.sun.javafx.pgstub.StubPopupStage;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
+import javafx.geometry.Bounds;
+import javafx.geometry.Point3D;
+import javafx.scene.shape.Box;
+import static org.junit.Assert.assertEquals;
 
 public class PopupTest {
     
@@ -117,7 +122,7 @@ public class PopupTest {
     }
 
     @Test
-    public void testContentAdjustment() {
+    public void testContentAlignment() {
         final Popup popup = new Popup();
         final Rectangle contentRect = new Rectangle(10, 20, 100, 100);
 
@@ -139,7 +144,7 @@ public class PopupTest {
     }
 
     @Test
-    public void testContentAdjustmentChange() {
+    public void testContentAlignmentChange() {
         final Popup popup = new Popup();
         final Rectangle contentRect = new Rectangle(-20, -10, 100, 100);
 
@@ -157,6 +162,42 @@ public class PopupTest {
 
         assertEquals(30.0, peer.x, 1e-100);
         assertEquals(40.0, peer.y, 1e-100);
+    }
+
+
+    @Test
+    public void testLocalToScreenWithContentAlignment() {
+        final Popup popup = new Popup();
+        final Rectangle contentRect = new Rectangle(-30, -20, 100, 100);
+
+        popup.setAlignWithContentOrigin(true);
+        popup.getContent().add(contentRect);
+        popup.show(stage, 100, 200);
+
+        Point2D p = contentRect.localToScreen(new Point2D(0, 0));
+        assertEquals(100.0, p.getX(), 0.0001);
+        assertEquals(200.0, p.getY(), 0.0001);
+        Bounds b = contentRect.localToScreen(new BoundingBox(10, 10, 50, 50));
+        assertEquals(110.0, b.getMinX(), 0.0001);
+        assertEquals(210.0, b.getMinY(), 0.0001);
+        assertEquals(50.0, b.getWidth(), 0.0001);
+        assertEquals(50.0, b.getHeight(), 0.0001);
+    }
+
+    @Test
+    public void testScreenToLocalWithContentAlignment() {
+        final Popup popup = new Popup();
+        final Rectangle contentRect = new Rectangle(10, 20, 100, 100);
+
+        popup.setAlignWithContentOrigin(true);
+        popup.getContent().add(contentRect);
+        popup.show(stage, 100, 200);
+
+        assertEquals(new Point2D(60, 70),
+                     contentRect.screenToLocal(new Point2D(160, 270)));
+        assertEquals(new BoundingBox(0, 0, 50, 50),
+                     contentRect.screenToLocal(
+                                     new BoundingBox(100, 200, 50, 50)));
     }
 
     @Test

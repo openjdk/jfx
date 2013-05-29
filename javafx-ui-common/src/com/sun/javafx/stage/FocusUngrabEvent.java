@@ -35,6 +35,8 @@ public final class FocusUngrabEvent extends Event {
     public static final EventType<FocusUngrabEvent> FOCUS_UNGRAB =
             new EventType<FocusUngrabEvent>(Event.ANY, "FOCUS_UNGRAB");
 
+    public static final EventType<FocusUngrabEvent> ANY = FOCUS_UNGRAB;
+
     public FocusUngrabEvent() {
         super(FOCUS_UNGRAB);
     }

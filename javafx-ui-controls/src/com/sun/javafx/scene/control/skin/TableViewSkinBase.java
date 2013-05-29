@@ -109,26 +109,13 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
             }
         });
         
-        // TEMPORARY CODE (RT-24795)
-        // we check the TableView to see if a fixed cell length is specified
-        ObservableMap p = control.getProperties();
-        String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
-        final double fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
-        final boolean fixedCellLengthEnabled = fixedCellLength > 0;
-        flow.setFixedCellLength(fixedCellLength);
-        // --- end of TEMPORARY CODE
-        
         /*
          * Listening for scrolling along the X axis, but we need to be careful
          * to handle the situation appropriately when the hbar is invisible.
          */
         final InvalidationListener hbarValueListener = new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                tableHeaderRow.updateScrollX();
-                
-                if (fixedCellLengthEnabled) {
-                    flow.requestCellLayout();
-                }
+                horizontalScroll();
             }
         };
         flow.getHbar().valueProperty().addListener(hbarValueListener);
@@ -438,7 +425,10 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         
         return (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
     }
-    
+
+    protected void horizontalScroll() {
+        tableHeaderRow.updateScrollX();
+    }
     
     
     /***************************************************************************

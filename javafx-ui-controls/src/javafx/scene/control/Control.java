@@ -43,7 +43,6 @@ import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.css.CssError;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleManager;
@@ -73,7 +72,6 @@ import sun.util.logging.PlatformLogger;
  * controls that are containers {@link ScrollPane} and {@link ToolBar} do not.
  * Consult individual control documentation for details.
  */
-@DuplicateInBuilderProperties(properties = {"minHeight", "minWidth", "maxHeight", "maxWidth", "prefHeight", "prefWidth"})
 public abstract class Control extends Region implements Skinnable {
 
     static {

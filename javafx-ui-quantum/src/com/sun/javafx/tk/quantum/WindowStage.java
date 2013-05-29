@@ -375,14 +375,15 @@ class WindowStage extends GlassStage {
         if (!visible) {
             removeActiveWindow(this);
             if (modality == Modality.WINDOW_MODAL) {
-                assert (owner != null);
-                ((WindowStage) owner).setEnabled(true);
+                if (owner != null && owner instanceof WindowStage) {
+                    ((WindowStage) owner).setEnabled(true);
+                }
             } else if (modality == Modality.APPLICATION_MODAL) {
                 windowsSetEnabled(true);
             } else {
                 // Note: This method is required to workaround a glass issue
                 // mentioned in RT-12607
-                if (owner != null) {
+                if (owner != null && owner instanceof WindowStage) {
                     WindowStage ownerStage = (WindowStage)owner;
                     ownerStage.requestToFront();
                 }
@@ -403,8 +404,9 @@ class WindowStage extends GlassStage {
         // other windows.
         if (visible) {
             if (modality == Modality.WINDOW_MODAL) {
-                assert (owner != null);
-                ((WindowStage) owner).setEnabled(false);
+                if (owner != null && owner instanceof WindowStage) {
+                    ((WindowStage) owner).setEnabled(false);
+                }
             } else if (modality == Modality.APPLICATION_MODAL) {
                 windowsSetEnabled(false);
             }

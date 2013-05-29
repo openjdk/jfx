@@ -473,8 +473,27 @@ public class BorderPane extends Pane {
 
     @Override protected void layoutChildren() {
         final Insets insets = getInsets();
-        final double width = getWidth();
-        final double height = getHeight();
+        double width = getWidth();
+        double height = getHeight();
+        final Orientation bias = getContentBias();
+
+        if (bias == null) {
+            final double minWidth = minWidth(-1);
+            final double minHeight = minHeight(-1);
+            width = width < minWidth ? minWidth : width;
+            height = height < minHeight ? minHeight : height;
+        } else if (bias == Orientation.HORIZONTAL) {
+            final double minWidth = minWidth(-1);
+            width = width < minWidth ? minWidth : width;
+            final double minHeight = minHeight(width);
+            height = height < minHeight ? minHeight : height;
+        } else {
+            final double minHeight = minHeight(-1);
+            height = height < minHeight ? minHeight : height;
+            final double minWidth = minWidth(height);
+            width = width < minWidth ? minWidth : width;
+        }
+
         final double insideX = insets.getLeft();
         final double insideY = insets.getTop();
         final double insideWidth = width - insideX - insets.getRight();

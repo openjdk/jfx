@@ -334,12 +334,12 @@ public class Cell<T> extends Labeled {
      * Sets the item to the given value - should not be called directly as the
      * item is managed by the virtualized control.
      */
-    public final void setItem(T value) { itemProperty().set(value); }
+    public final void setItem(T value) { item.set(value); }
     
     /**
      * Returns the data value associated with this Cell.
      */
-    public final T getItem() { return itemProperty().get(); }
+    public final T getItem() { return item.get(); }
     
     
 
@@ -380,7 +380,7 @@ public class Cell<T> extends Labeled {
      * Returns a boolean representing whether the cell is considered to be empty
      * or not.
      */
-    public final boolean isEmpty() { return emptyProperty().get(); }
+    public final boolean isEmpty() { return empty.get(); }
     
     
 
@@ -413,7 +413,7 @@ public class Cell<T> extends Labeled {
      * Returns whether this cell is currently selected or not.
      * @return True if the cell is selected, false otherwise.
      */
-    public final boolean isSelected() { return selectedProperty().get(); }
+    public final boolean isSelected() { return selected.get(); }
     
     
     

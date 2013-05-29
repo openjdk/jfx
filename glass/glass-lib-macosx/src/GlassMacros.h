@@ -149,13 +149,15 @@ static __inline__ void GlassLog(char *message, ...)
 #define GLASS_LOG(MSG, ...) GlassLog(MSG, ## __VA_ARGS__ )
 
 // assert there is no outstanding java exception pending
-#define GLASS_CHECK_EXCEPTION(ENV) \
-    if ((*ENV)->ExceptionCheck(ENV) == JNI_TRUE) {                                 \
-        fprintf(stderr, "Glass detected outstanding Java exception at %s:%s:%d\n", \
-                __FUNCTION__, __FILE__, __LINE__);                                 \
-        (*ENV)->ExceptionDescribe(ENV);                                            \
+#define GLASS_CHECK_EXCEPTION(ENV)                                                 \
+do {                                                                               \
+    jthrowable t = (*ENV)->ExceptionOccurred(ENV);                                 \
+    if (t) {                                                                       \
         (*ENV)->ExceptionClear(ENV);                                               \
-    };
+        (*ENV)->CallStaticVoidMethod(                                              \
+            ENV, jApplicationClass, javaIDs.Application.reportException, t);       \
+    };                                                                             \
+} while (0)
 
 // assert main Java thread is still attached
 #define GLASS_ASSERT_MAIN_JAVA_THREAD(env) \

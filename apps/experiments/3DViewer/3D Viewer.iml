@@ -6,6 +6,8 @@
       <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/resources" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/src/test/resources" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/build" />
       <excludeFolder url="file://$MODULE_DIR$/nbproject" />
     </content>
     <orderEntry type="inheritedJdk" />
@@ -43,7 +45,6 @@
     <orderEntry type="module" module-name="javafx-ui-controls" />
     <orderEntry type="module" module-name="javafx-ui-desktop" />
     <orderEntry type="module" module-name="javafx-ui-quantum" />
-    <orderEntry type="module" module-name="javafx-ui-webnode" />
     <orderEntry type="module" module-name="javafx-util-converter" />
     <orderEntry type="module" module-name="jfxmedia" />
     <orderEntry type="module" module-name="pisces" />

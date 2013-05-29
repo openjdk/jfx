@@ -166,15 +166,6 @@ public interface ResourceFactory extends GraphicsResource {
     public void addFactoryListener(ResourceFactoryListener l);
     public void removeFactoryListener(ResourceFactoryListener l);
 
-    /**
-     * Returns a rendering context associated with the specified PresentableState.
-     * If view is null, then this method returns an offscreen rendering context.
-     *
-     * @param view the view to construct rendering context. if view is null,
-     *             then the rendering context is in offscreen mode.
-     */
-    public RenderingContext createRenderingContext(PresentableState pState);
-
     public void dispose();
     
     /*

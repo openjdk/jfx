@@ -334,7 +334,7 @@ static INLINE jboolean isInBounds(jint *a, jlong *la, jint min, jint max, jboole
     if (aval < min || aval > max) {
         if (repeat) {
             if (max > 0) {
-                *la = lmod(*la, max << 16);
+                *la = lmod(*la, (max+1) << 16);
                 *a = (jint)(*la >> 16);
             } else {
                 *la = 0;
@@ -358,10 +358,9 @@ static INLINE void getPointsToInterpolate(jint *pts, jint *data, jint sidx, jint
 }
 
 void
-genTexturePaint(Renderer *rdr, jint height) {
+genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
     jint j;
     jint minX, maxX;
-    jint *paint = rdr->_paint;
     jint paintStride = rdr->_alphaWidth;
     jint firstRowNum = rdr->_rowNum;
 
@@ -483,6 +482,7 @@ genTexturePaint(Renderer *rdr, jint height) {
                     ++a;
                     ++pidx;
                     ++tx;
+                    ltx += 0x10000;
                 } // while (a < am)
                 paintOffset += paintStride;
             } // for
@@ -541,6 +541,7 @@ genTexturePaint(Renderer *rdr, jint height) {
                     ++a;
                     ++pidx;
                     ++tx;
+                    ltx += 0x10000;
                 } // while (a < am)
                 paintOffset += paintStride;
             } // for
@@ -688,6 +689,89 @@ genTexturePaint(Renderer *rdr, jint height) {
                 }
                 paintOffset += paintStride;
             }
+        }
+        }
+        break;
+    }
+}
+
+void
+genTexturePaint(Renderer *rdr, jint height) {
+    genTexturePaintTarget(rdr, rdr->_paint, height);
+}
+
+void
+genTexturePaintMultiply(Renderer *rdr, jint height) {
+    jint i, j, idx;
+    jint x_from = rdr->_minTouched;
+    jint x_to = rdr->_maxTouched;
+    jint w = (x_to - x_from + 1);
+    jint *paint = rdr->_paint;
+    jint paintStride = rdr->_alphaWidth;
+    jint pval, tval, palpha_1;
+    jint calpha = rdr->_calpha;
+    jint cred = rdr->_cred;
+    jint cgreen = rdr->_cgreen;
+    jint cblue = rdr->_cblue;
+    jint oalpha, ored, ogreen, oblue;
+
+    switch (rdr->_prevPaintMode) {
+    case PAINT_FLAT_COLOR:
+        genTexturePaintTarget(rdr, paint, height);
+        palpha_1 = calpha + 1;
+        if (cred == 0xFF && cgreen == 0xFF && cblue == 0xFF) {
+            if (calpha < 0xFF) {
+                for (i = 0; i < height; i++) {
+                    idx = i * paintStride;
+                    for (j = 0; j < w; j++) {
+                        tval = paint[idx + j];
+                        oalpha = (palpha_1 * ((tval >> 24) & 0xFF)) >> 8;
+                        ored = (palpha_1 * ((tval >> 16) & 0xFF)) >> 8;
+                        ogreen = (palpha_1 * ((tval >> 8) & 0xFF)) >> 8;
+                        oblue = (palpha_1 * (tval & 0xFF)) >> 8;
+                        paint[idx + j] = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
+                    }
+                }
+            }
+        } else {
+            for (i = 0; i < height; i++) {
+                idx = i * paintStride;
+                for (j = 0; j < w; j++) {
+                    tval = paint[idx + j];
+                    oalpha = (palpha_1 * ((tval >> 24) & 0xFF)) >> 8;
+                    ored = ((((cred + 1) * ((tval >> 16) & 0xFF)) >> 8) * palpha_1) >> 8;
+                    ogreen = ((((cgreen + 1) * ((tval >> 8) & 0xFF)) >> 8) * palpha_1) >> 8;
+                    oblue = ((((cblue + 1) * (tval & 0xFF)) >> 8) * palpha_1) >> 8;
+                    paint[idx + j] = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
+                }
+            }
+        }
+        break;
+    case PAINT_LINEAR_GRADIENT:
+    case PAINT_RADIAL_GRADIENT:
+        {
+        jint *imagePaint = my_malloc(jint, w * height);
+        if (imagePaint != NULL) {
+            if (rdr->_prevPaintMode == PAINT_LINEAR_GRADIENT) {
+                genLinearGradientPaint(rdr, height);
+            } else {
+                genRadialGradientPaint(rdr, height);
+            }
+            genTexturePaintTarget(rdr, imagePaint, height);
+            for (i = 0; i < height; i++) {
+                idx = i * paintStride;
+                for (j = 0; j < w; j++) {
+                    pval = paint[idx + j];
+                    tval = imagePaint[idx + j];
+                    palpha_1 = ((pval >> 24) & 0xFF) + 1;
+                    oalpha = (palpha_1 * ((tval >> 24) & 0xFF)) >> 8;
+                    ored = ((((((pval >> 16) & 0xFF) + 1) * ((tval >> 16) & 0xFF)) >> 8) * palpha_1) >> 8;
+                    ogreen = ((((((pval >> 8) & 0xFF) + 1) * ((tval >> 8) & 0xFF)) >> 8) * palpha_1) >> 8;
+                    oblue = (((((pval & 0xFF) + 1) * (tval & 0xFF)) >> 8) * palpha_1) >> 8;
+                    paint[idx + j] = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
+                }
+            }
+            my_free(imagePaint);
         }
         }
         break;

@@ -69,7 +69,7 @@ class CCTask extends NativeCompileTask {
             // Add the source roots in as include directories
             sourceRoots.each { root ->
                 final File file = root instanceof File ? (File) root : project.file(root)
-                args("-I$file");
+                if (file.isDirectory()) args("-I$file");
             }
 
             // Add the name of the source file to compile

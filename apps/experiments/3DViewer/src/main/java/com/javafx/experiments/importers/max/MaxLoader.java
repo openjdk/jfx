@@ -107,10 +107,10 @@ public class MaxLoader {
         }
 
         TriangleMesh mesh = new TriangleMesh();
-        mesh.setPoints(vts);
-        mesh.setTexCoords(uvs);
-        mesh.setFaces(faces);
-        mesh.setFaceSmoothingGroups(sg);
+        mesh.getPoints().setAll(vts);
+        mesh.getTexCoords().setAll(uvs);
+        mesh.getFaces().setAll(faces);
+        mesh.getFaceSmoothingGroups().setAll(sg);
         return mesh;
     }
 

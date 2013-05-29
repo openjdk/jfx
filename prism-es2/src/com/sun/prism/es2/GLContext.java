@@ -207,7 +207,7 @@ abstract class GLContext {
     private static native long nCreateES2Mesh(long nativeCtxInfo);
     private static native void nReleaseES2Mesh(long nativeCtxInfo, long nativeHandle);
     private static native boolean nBuildNativeGeometry(long nativeCtxInfo, long nativeHandle,
-            float vertexBuffer[], int indexBuffer[]);
+            float vertexBuffer[], short indexBuffer[]);
     private static native long nCreateES2PhongMaterial(long nativeCtxInfo);
     private static native void nReleaseES2PhongMaterial(long nativeCtxInfo, long nativeHandle);
     private static native void nSetSolidColor(long nativeCtxInfo, long nativePhongMaterial,
@@ -252,7 +252,8 @@ abstract class GLContext {
              * GLContext class. */
             nonPowTwoExtAvailable = PrismSettings.forcePow2
                 ? Boolean.FALSE
-                : ES2Pipeline.glFactory.isGLExtensionSupported("GL_ARB_texture_non_power_of_two");
+                : (ES2Pipeline.glFactory.isGLExtensionSupported("GL_ARB_texture_non_power_of_two")
+                    || ES2Pipeline.glFactory.isGLExtensionSupported("GL_OES_texture_npot"));
         }
         return nonPowTwoExtAvailable.booleanValue();
     }
@@ -646,7 +647,7 @@ abstract class GLContext {
         nReleaseES2Mesh(nativeCtxInfo, nativeHandle);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int[] indexBuffer) {
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, short[] indexBuffer) {
         // See MeshVbIb.h : ctor()
         return nBuildNativeGeometry(nativeCtxInfo, nativeHandle, vertexBuffer, indexBuffer);
     }

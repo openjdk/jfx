@@ -25,6 +25,7 @@
 
 package javafx.print;
 
+import com.sun.javafx.print.PrintHelper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableSet;
@@ -52,10 +53,6 @@ import com.sun.javafx.print.PrinterImpl;
  * @since JavaFX 8
  */
 public final class Printer {
-
-    static {
-        PrintAccessor.init();
-    }
 
     /**
      * Retrieve the installed printers.
@@ -391,5 +388,52 @@ public final class Printer {
 
     @Override public String toString() {
         return "Printer " + getName();
+    }
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        PrintHelper.setPrintAccessor(new PrintHelper.PrintAccessor() {
+
+            @Override
+            public PrintResolution createPrintResolution(int fr, int cfr) {
+                return new PrintResolution(fr, cfr);
+            }
+
+            @Override
+            public Paper createPaper(String paperName,
+                                     double paperWidth,
+                                     double paperHeight,
+                                     Paper.Units units) {
+                return new Paper(paperName, paperWidth, paperHeight, units);
+            }
+
+            @Override
+            public PaperSource createPaperSource(String name) {
+                return new PaperSource(name);
+            }
+
+            @Override
+            public JobSettings createJobSettings(Printer printer) {
+                return new JobSettings(printer);
+            }
+
+            /**
+             * PrintAccess is used so that implementation code outside this package
+             * package can construct printer instances using a non-visible API.
+             * We need this since its not valid for applications to create
+             * Printer instances, and we also need to pass in the delegate
+             * impl object which is not intended to be public.
+             */
+            @Override
+            public Printer createPrinter(PrinterImpl impl) {
+                return new Printer(impl);
+            }
+
+            @Override
+            public PrinterImpl getPrinterImpl(Printer printer) {
+                return printer.getPrinterImpl();
+            }
+        });
     }
 }

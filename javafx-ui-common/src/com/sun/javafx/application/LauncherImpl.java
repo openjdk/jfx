@@ -87,12 +87,20 @@ public class LauncherImpl {
     // Ensure that launchApplication method is only called once
     private static AtomicBoolean launchCalled = new AtomicBoolean(false);
 
+    // Flag indicating that the toolkit has been started
+    private static final AtomicBoolean toolkitStarted = new AtomicBoolean(false);
+
     // Exception found during launching
     private static volatile RuntimeException launchException = null;
 
     // The current preloader, used for notification in the standalone
     // launcher mode
     private static Preloader currentPreloader = null;
+
+    // Saved preloader class from the launchApplicationWithArgs method (called
+    // from the Java 8 launcher). It is used in the case where we call main,
+    // which is turn calls into launchApplication.
+    private static Class<? extends Preloader> savedPreloaderClass = null;
 
     /**
      * This method is called by the Application.launch method.
@@ -107,7 +115,7 @@ public class LauncherImpl {
     public static void launchApplication(final Class<? extends Application> appClass,
             final String[] args) {
 
-        launchApplication(appClass, null, args);
+        launchApplication(appClass, savedPreloaderClass, args);
     }
 
     /**
@@ -191,6 +199,12 @@ public class LauncherImpl {
     public static void launchApplication(final String launchName,
             final String launchMode,
             final String[] args) {
+
+        if (verbose) {
+            System.err.println("Java 8 launchApplication method: launchMode="
+                    + launchMode);
+        }
+
         /*
          * For now, just open the jar and get JavaFX-Application-Class and
          * JavaFX-Preloader and pass them to launchApplication. In the future
@@ -296,48 +310,64 @@ public class LauncherImpl {
             String preloaderClassName, String[] args) {
         Class<? extends Application> appClass;
         Class<? extends Preloader> preClass = null;
-        Class<?> tempClass = null;
+        Class<?> tempAppClass = null;
+        Class<?> tempPreClass = null;
 
         final ClassLoader loader = Thread.currentThread().getContextClassLoader();
         try {
-            tempClass = loader.loadClass(mainClassName);
+            tempAppClass = loader.loadClass(mainClassName);
         } catch (ClassNotFoundException cnfe) {
             abort(cnfe, "Missing JavaFX application class %1$s", mainClassName);
         }
-        
-        // Verify appClass extends Application
-        if (!Application.class.isAssignableFrom(tempClass)) {
-            // See if it has a main(String[]) method
-            try {
-                Method mainMethod = tempClass.getMethod("main",
-                        new Class[] { (new String[0]).getClass() });
-                mainMethod.invoke(null, new Object[] { args });
-            } catch (NoSuchMethodException ex) {
-                abort(null, "JavaFX application class %1$s does not extend javafx.application.Application", tempClass.getName());
-            } catch (IllegalAccessException ex) {
-                abort(ex, "JavaFX application class %1$s does not extend javafx.application.Application", tempClass.getName());
-            } catch (InvocationTargetException ex) {
-                ex.printStackTrace();
-                abort(null, "Exception running application %1$s", tempClass.getName());
-            }
-            return;
-        }
-        appClass = tempClass.asSubclass(Application.class);
 
         if (preloaderClassName != null) {
             try {
-                tempClass = loader.loadClass(preloaderClassName);
+                tempPreClass = loader.loadClass(preloaderClassName);
             } catch (ClassNotFoundException cnfe) {
                 abort(cnfe, "Missing JavaFX preloader class %1$s", preloaderClassName);
             }
 
-            if (!Preloader.class.isAssignableFrom(tempClass)) {
+            if (!Preloader.class.isAssignableFrom(tempPreClass)) {
                 abort(null, "JavaFX preloader class %1$s does not extend javafx.application.Preloader", preClass.getName());
             }
-            preClass = tempClass.asSubclass(Preloader.class);
+            preClass = tempPreClass.asSubclass(Preloader.class);
         }
 
-        // For now just hand off to the other launchApplication method
+        // Save the preloader class in a static field for later use when
+        // main calls back into launchApplication.
+        savedPreloaderClass = preClass;
+
+        // If there is a public static void main(String[]) method then call it
+        // otherwise just hand off to the other launchApplication method
+
+        Exception theEx = null;
+        try {
+            startToolkit();
+            Method mainMethod = tempAppClass.getMethod("main",
+                    new Class[] { (new String[0]).getClass() });
+            if (verbose) {
+                System.err.println("Calling main(String[]) method");
+            }
+            mainMethod.invoke(null, new Object[] { args });
+            return;
+        } catch (NoSuchMethodException | IllegalAccessException | InterruptedException ex) {
+            theEx = ex;
+            savedPreloaderClass = null;
+        } catch (InvocationTargetException ex) {
+            ex.printStackTrace();
+            abort(null, "Exception running application %1$s", tempAppClass.getName());
+            return;
+        }
+
+        // Verify appClass extends Application
+        if (!Application.class.isAssignableFrom(tempAppClass)) {
+            abort(theEx, "JavaFX application class %1$s does not extend javafx.application.Application", tempAppClass.getName());
+        }
+        appClass = tempAppClass.asSubclass(Application.class);
+
+        if (verbose) {
+            System.err.println("Launching application directly");
+        }
         launchApplication(appClass, preClass, args);
     }
 
@@ -594,19 +624,10 @@ public class LauncherImpl {
         return null;
     }
 
-    private static volatile boolean error = false;
-    private static volatile Throwable pConstructorError = null;
-    private static volatile Throwable pInitError = null;
-    private static volatile Throwable pStartError = null;
-    private static volatile Throwable pStopError = null;
-    private static volatile Throwable constructorError = null;
-    private static volatile Throwable initError = null;
-    private static volatile Throwable startError = null;
-    private static volatile Throwable stopError = null;
-
-    private static void launchApplication1(final Class<? extends Application> appClass,
-            final Class<? extends Preloader> preloaderClass,
-            final String[] args) throws Exception {
+    private static void startToolkit() throws InterruptedException {
+        if (toolkitStarted.getAndSet(true)) {
+            return;
+        }
 
         if (SystemProperties.isDebug()) {
             MXExtension.initializeIfAvailable();
@@ -622,6 +643,23 @@ public class LauncherImpl {
 
         // Wait for FX platform to start
         startupLatch.await();
+    }
+
+    private static volatile boolean error = false;
+    private static volatile Throwable pConstructorError = null;
+    private static volatile Throwable pInitError = null;
+    private static volatile Throwable pStartError = null;
+    private static volatile Throwable pStopError = null;
+    private static volatile Throwable constructorError = null;
+    private static volatile Throwable initError = null;
+    private static volatile Throwable startError = null;
+    private static volatile Throwable stopError = null;
+
+    private static void launchApplication1(final Class<? extends Application> appClass,
+            final Class<? extends Preloader> preloaderClass,
+            final String[] args) throws Exception {
+
+        startToolkit();
 
         final AtomicBoolean pStartCalled = new AtomicBoolean(false);
         final AtomicBoolean startCalled = new AtomicBoolean(false);

@@ -49,8 +49,8 @@ public class XYChartTest extends ChartTestBase {
     
     protected Chart createChart() {
         ObservableList<String> cat = FXCollections.observableArrayList();
-        cataxis = CategoryAxisBuilder.create().build();
-        yaxis = NumberAxisBuilder.create().build();
+        cataxis = new CategoryAxis();
+        yaxis = new NumberAxis();
         ObservableList<XYChart.Series<String, Number>> nodata = FXCollections.observableArrayList();
         AreaChart<?, ?> areachart = new AreaChart<String, Number>(cataxis, yaxis, nodata);
         areachart.setId("AreaChart");

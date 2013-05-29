@@ -155,6 +155,9 @@ public class TimelineTest {
         assertEquals(Duration.ZERO, timeline.getCycleDuration());
     }
 
+// The following test needs to be removed or else moved to javafx-builders
+// since we no longer want any other module to depend on builders
+/*
     @Test
     public void testBuilder() {
         Timeline t = TimelineBuilder.create().targetFramerate(23).delay(Duration.ONE)
@@ -163,4 +166,5 @@ public class TimelineTest {
         assertEquals(Duration.ONE, t.getDelay());
         assertEquals(Collections.singletonList(new KeyFrame(Duration.millis(1500))), t.getKeyFrames());
     }
+*/
 }

@@ -32,5 +32,6 @@
 void genLinearGradientPaint(Renderer *rdr, jint height);
 void genRadialGradientPaint(Renderer *rdr, jint height);
 void genTexturePaint(Renderer *rdr, jint height);
+void genTexturePaintMultiply(Renderer *rdr, jint height);
 
 #endif

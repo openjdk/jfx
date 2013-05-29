@@ -27,7 +27,9 @@ package javafx.scene.input;
 
 import com.sun.javafx.pgstub.StubScene;
 import com.sun.javafx.test.MouseEventGenerator;
+import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Point3D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
@@ -39,6 +41,136 @@ public class SwipeEventTest {
 
     private boolean swiped;
     private boolean swiped2;
+
+    @Test public void testShortConstructor() {
+        Rectangle node = new Rectangle();
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+
+        PickResult pickRes = new PickResult(node, new Point3D(15, 25, 100), 33);
+        SwipeEvent e = new SwipeEvent(
+                SwipeEvent.SWIPE_UP, 10, 20, 30, 40,
+                false, true, false, true, false, 3, pickRes);
+
+        assertSame(SwipeEvent.SWIPE_UP, e.getEventType());
+        assertSame(pickRes, e.getPickResult());
+        assertEquals(18, e.getX(), 10e-20);
+        assertEquals(27, e.getY(), 10e-20);
+        assertEquals(150, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertFalse(e.isShiftDown());
+        assertTrue(e.isControlDown());
+        assertFalse(e.isAltDown());
+        assertTrue(e.isMetaDown());
+        assertFalse(e.isDirect());
+        assertFalse(e.isInertia());
+        assertEquals(3.0, e.getTouchCount(), 10e-20);
+        assertSame(Event.NULL_SOURCE_TARGET, e.getSource());
+        assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
+        assertFalse(e.isConsumed());
+
+        e = new SwipeEvent(
+                SwipeEvent.SWIPE_UP, 10, 20, 30, 40,
+                true, false, true, false, true, 3, pickRes);
+        assertTrue(e.isShiftDown());
+        assertFalse(e.isControlDown());
+        assertTrue(e.isAltDown());
+        assertFalse(e.isMetaDown());
+        assertTrue(e.isDirect());
+        assertFalse(e.isInertia());
+    }
+
+    @Test public void testShortConstructorWithoutPickResult() {
+        SwipeEvent e = new SwipeEvent(
+                SwipeEvent.SWIPE_UP, 10, 20, 30, 40,
+                false, true, false, true, false, 3, null);
+
+        assertEquals(10, e.getX(), 10e-20);
+        assertEquals(20, e.getY(), 10e-20);
+        assertEquals(0, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertNotNull(e.getPickResult());
+        assertNotNull(e.getPickResult().getIntersectedPoint());
+        assertEquals(10, e.getPickResult().getIntersectedPoint().getX(), 10e-20);
+        assertEquals(20, e.getPickResult().getIntersectedPoint().getY(), 10e-20);
+        assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
+        assertSame(Event.NULL_SOURCE_TARGET, e.getSource());
+        assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
+    }
+
+    @Test public void testLongConstructor() {
+        Rectangle node = new Rectangle(10, 10);
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+
+        PickResult pickRes = new PickResult(node, new Point3D(15, 25, 100), 33);
+        SwipeEvent e = new SwipeEvent(n1, n2,
+                SwipeEvent.SWIPE_UP, 10, 20, 30, 40,
+                false, true, false, true, false, 3, pickRes);
+
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertSame(SwipeEvent.SWIPE_UP, e.getEventType());
+        assertSame(pickRes, e.getPickResult());
+        assertEquals(18, e.getX(), 10e-20);
+        assertEquals(27, e.getY(), 10e-20);
+        assertEquals(150, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertFalse(e.isShiftDown());
+        assertTrue(e.isControlDown());
+        assertFalse(e.isAltDown());
+        assertTrue(e.isMetaDown());
+        assertFalse(e.isDirect());
+        assertFalse(e.isInertia());
+        assertEquals(3.0, e.getTouchCount(), 10e-20);
+        assertFalse(e.isConsumed());
+
+        e = new SwipeEvent(n1, n2,
+                SwipeEvent.SWIPE_UP, 10, 20, 30, 40,
+                true, false, true, false, true, 3, pickRes);
+        assertTrue(e.isShiftDown());
+        assertFalse(e.isControlDown());
+        assertTrue(e.isAltDown());
+        assertFalse(e.isMetaDown());
+        assertTrue(e.isDirect());
+        assertFalse(e.isInertia());
+    }
+
+    @Test public void testLongConstructorWithoutPickResult() {
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+        SwipeEvent e = new SwipeEvent(n1, n2,
+                SwipeEvent.SWIPE_UP, 10, 20, 30, 40,
+                false, true, false, true, false, 3, null);
+
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertEquals(10, e.getX(), 10e-20);
+        assertEquals(20, e.getY(), 10e-20);
+        assertEquals(0, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertNotNull(e.getPickResult());
+        assertNotNull(e.getPickResult().getIntersectedPoint());
+        assertEquals(10, e.getPickResult().getIntersectedPoint().getX(), 10e-20);
+        assertEquals(20, e.getPickResult().getIntersectedPoint().getY(), 10e-20);
+        assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
+    }
 
     @Test
     public void shouldDeliverSwipeLeftEventToPickedNode() {

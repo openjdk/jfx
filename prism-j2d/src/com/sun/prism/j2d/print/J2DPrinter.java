@@ -73,7 +73,7 @@ import javafx.print.Paper;
 import javafx.print.PaperSource;
 import javafx.print.PrintSides;
 
-import com.sun.javafx.print.PrintAccess;
+import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.PrinterImpl;
 
 
@@ -107,8 +107,7 @@ public class J2DPrinter implements PrinterImpl {
      * a new instance.
      */
     public JobSettings getDefaultJobSettings() {
-        PrintAccess access = PrintAccess.getPrintAccess();
-        return access.createJobSettings(fxPrinter);
+        return PrintHelper.createJobSettings(fxPrinter);
     }
 
     //////////////// BEGIN COPIES ////////////////////
@@ -437,7 +436,7 @@ public class J2DPrinter implements PrinterImpl {
         PrinterResolution res = getDefaultPrinterResolution();
         int cfr = res.getCrossFeedResolution(ResolutionSyntax.DPI);
         int fr = res.getFeedResolution(ResolutionSyntax.DPI);
-        defRes = PrintAccess.getPrintAccess().createPrintResolution(cfr, fr);
+        defRes = PrintHelper.createPrintResolution(cfr, fr);
         return defRes;
     }
 
@@ -492,8 +491,7 @@ public class J2DPrinter implements PrinterImpl {
             for (int i=0;i<pr.length;i++) {
                 int cfr = pr[i].getCrossFeedResolution(ResolutionSyntax.DPI);
                 int fr = pr[i].getFeedResolution(ResolutionSyntax.DPI);
-                rSet.add(PrintAccess.
-                         getPrintAccess().createPrintResolution(cfr, fr));
+                rSet.add(PrintHelper.createPrintResolution(cfr, fr));
             }
         }
         resSet = Collections.unmodifiableSet(rSet);
@@ -773,8 +771,7 @@ public class J2DPrinter implements PrinterImpl {
         PaperSource source = preDefinedTrayMap.get(tray);
 
         if (source == null) {
-            PrintAccess access = PrintAccess.getPrintAccess();
-            source = access.createPaperSource(tray.toString());
+            source = PrintHelper.createPaperSource(tray.toString());
         }
 
         if (trayToSourceMap == null) {
@@ -806,8 +803,7 @@ public class J2DPrinter implements PrinterImpl {
             MediaSize sz = MediaSize.getMediaSizeForName(media);
             if (sz != null) {
                 int mm = (int)((25400/72.0)+0.5);
-                PrintAccess access = PrintAccess.getPrintAccess();
-                paper = access.createPaper(media.toString(),
+                paper = PrintHelper.createPaper(media.toString(),
                                            sz.getX(mm), sz.getY(mm), Units.MM);
             }
         }
