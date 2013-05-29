@@ -234,6 +234,51 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
     EventHandler<InputEvent> unHideEventHandler;
 
+    private boolean isVKHidden = false;
+    
+    private void registerUnhideHandler(Node node) {
+        if (unHideEventHandler == null) {
+            unHideEventHandler = new EventHandler<InputEvent> () {
+                public void handle(InputEvent event) {
+                    if (node != null && isVKHidden) {
+                        double screenHeight = com.sun.javafx.Utils.getScreen(node).getBounds().getHeight();
+                        if (fxvk.getHeight() > 0 && (vkPopup.getY() > screenHeight - fxvk.getHeight())) {
+                            if (slideInTimeline.getStatus() != Animation.Status.RUNNING) {
+                                startSlideIn();
+                            }
+                        }
+                    }
+                    isVKHidden = false;
+                }                    
+            };
+        }
+        attachedNode.addEventHandler(TOUCH_PRESSED, unHideEventHandler);
+        attachedNode.addEventHandler(MOUSE_PRESSED, unHideEventHandler);
+    }
+
+    private void unRegisterUnhideHandler(Node node) {
+        if (unHideEventHandler != null) {
+            node.removeEventHandler(TOUCH_PRESSED, unHideEventHandler);
+            node.removeEventHandler(MOUSE_PRESSED, unHideEventHandler);
+        }
+    }
+
+    private void updateKeyboardType() {
+        String oldType = vkType;
+        int typeIndex = 0;
+        Object typeValue = attachedNode.getProperties().get(FXVK.VK_TYPE_PROP_KEY);
+        String typeStr = null;
+        if (typeValue instanceof String) {
+            typeStr = ((String)typeValue).toLowerCase();
+        }
+        vkType = (typeStr != null ? typeStr : "text");
+        
+        //VK type changed, rebuild
+        if ( oldType == null || !vkType.equals(oldType) ) {
+            rebuild();
+        }
+    }
+
     public FXVKSkin(final FXVK fxvk) {
         super(fxvk, new BehaviorBase<FXVK>(fxvk));
         this.fxvk = fxvk;
@@ -242,11 +287,27 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
         fxvk.setFocusTraversable(false);
 
+        if (fxvk != secondaryVK) {
+            //init secondary VK delay animation
+            if (secondaryVKDelay == null) {
+                secondaryVKDelay = new Timeline();
+            }
+            KeyFrame kf = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent event) {
+                    if (secondaryVKKey != null) {
+                        showSecondaryVK(secondaryVKKey);
+                    }
+                }
+            });
+            secondaryVKDelay.getKeyFrames().setAll(kf);
+        }
+
+
         fxvk.attachedNodeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
                 Node oldNode = attachedNode;
                 attachedNode = fxvk.getAttachedNode();
-
+                isVKHidden = false;
                 if (fxvk != FXVK.vk) {
                     // This is not the current vk, so nothing more to do
                     return;
@@ -255,54 +316,23 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                     return;
                 }
                 
+                //close secondary VK if open
+                if (secondaryVK != null) {
+                    secondaryVK.setAttachedNode(null);
+                    secondaryPopup.hide();
+                }
+                
                 if (attachedNode != null) {
-                    if (unHideEventHandler == null) {
-                        unHideEventHandler = new EventHandler<InputEvent> (){
-                            public void handle(InputEvent event) {
-                                if (attachedNode != null) {
-                                    double screenHeight = com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getHeight();
-                                    if (fxvk.getHeight() > 0 && (vkPopup.getY() > screenHeight - fxvk.getHeight())) {
-                                        if (slideInTimeline.getStatus() != Animation.Status.RUNNING) {
-                                            startSlideIn();
-                                        }
-                                    }
-                                }
-                            }                    
-                        };
+                    if (oldNode != null) {
+                        unRegisterUnhideHandler(oldNode);
                     }
-                    attachedNode.addEventHandler(TOUCH_PRESSED, unHideEventHandler);
-                    attachedNode.addEventHandler(MOUSE_PRESSED, unHideEventHandler);
-                    attachedNode.addEventHandler(KEY_PRESSED, unHideEventHandler);                    
-                    String oldType = vkType;
-                    int typeIndex = 0;
-
-                    Object typeValue = attachedNode.getProperties().get(FXVK.VK_TYPE_PROP_KEY);
-                    String typeStr = null;
-                    if (typeValue instanceof String) {
-                        typeStr = ((String)typeValue).toLowerCase();
-                    }
-                    vkType = (typeStr != null ? typeStr : "text");
+                    registerUnhideHandler(attachedNode);
+                    updateKeyboardType();
                     
-                    if ( oldType == null || !vkType.equals(oldType) ) {
-                        rebuild();
-                    }
-
-                    final Scene scene = attachedNode.getScene();
                     fxvk.setVisible(true);
 
                     if (fxvk != secondaryVK) {
-                        if (secondaryVKDelay == null) {
-                            secondaryVKDelay = new Timeline();
-                        }
-                        KeyFrame kf = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
-                            @Override public void handle(ActionEvent event) {
-                                if (secondaryVKKey != null) {
-                                    showSecondaryVK(secondaryVKKey);
-                                }
-                            }
-                        });
-                        secondaryVKDelay.getKeyFrames().setAll(kf);
-                        
+                        // init popup window and slide animations
                         if (vkPopup == null) {
                             vkPopup = new Popup();
                             vkPopup.setAutoFix(false);
@@ -325,14 +355,20 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
                         vkPopup.getContent().setAll(fxvk);
 
+                        //owner window has changed so hide VK and show with new owner
+                        if (oldNode == null || oldNode.getScene() == null || oldNode.getScene().getWindow() != attachedNode.getScene().getWindow()) {
+                            if (vkPopup.isShowing()) {
+                                vkPopup.hide();
+                            }
+                        }
+                        
                         if (!vkPopup.isShowing()) {
                             Platform.runLater(new Runnable() {
                                 public void run() {
                                     Rectangle2D screenBounds =
                                         com.sun.javafx.Utils.getScreen(attachedNode).getBounds();
 
-                                        
-                                    vkPopup.show(attachedNode,
+                                    vkPopup.show(attachedNode.getScene().getWindow(),
                                                  (screenBounds.getWidth() - fxvk.prefWidth(-1)) / 2,
                                                  screenBounds.getHeight() - fxvk.prefHeight(-1));
                                 }
@@ -350,16 +386,14 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                         }
 
                         if (fxvk.getHeight() > 0 &&
-                                (fxvk.getLayoutY() == 0 || fxvk.getLayoutY() > scene.getHeight() - fxvk.getHeight())) {
+                                (fxvk.getLayoutY() == 0 || fxvk.getLayoutY() > attachedNode.getScene().getHeight() - fxvk.getHeight())) {
                             startSlideIn();
                         }
                     }
                 } else {
                     if (fxvk != secondaryVK) {
-                        if (oldNode != null && unHideEventHandler != null) {
-                            oldNode.removeEventHandler(TOUCH_PRESSED, unHideEventHandler);
-                            oldNode.removeEventHandler(MOUSE_PRESSED, unHideEventHandler);
-                            oldNode.removeEventHandler(KEY_PRESSED, unHideEventHandler);
+                        if (oldNode != null) {
+                            unRegisterUnhideHandler(oldNode);
                         }
                         startSlideOut();
                     }
@@ -953,6 +987,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                             } else if ("$hide".equals(chars)) {
                                 key = new KeyboardStateKey("Hide", null) {
                                     @Override protected void release() {
+                                        isVKHidden = true;
                                         startSlideOut();
                                     }
                                 };
