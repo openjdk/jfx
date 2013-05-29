@@ -58,7 +58,9 @@
     <orderEntry type="module" module-name="prism-sw" />
     <orderEntry type="module" module-name="prism-util" />
     <orderEntry type="module" module-name="test-stub-toolkit" />
-    <orderEntry type="module" module-name="webkit" />
+    <orderEntry type="module" module-name="webview" />
+    <orderEntry type="module" module-name="javafx-builders" />
+    <orderEntry type="module" module-name="javafx-font-t2k" />
   </component>
 </module>
 
