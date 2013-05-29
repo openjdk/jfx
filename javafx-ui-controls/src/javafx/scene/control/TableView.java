@@ -28,6 +28,7 @@ package javafx.scene.control;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -39,11 +40,13 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -53,15 +56,23 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.skin.TableViewSkin;
@@ -818,8 +829,74 @@ public class TableView<S> extends Control {
         }
         return editable;
     }
-    
-    
+
+
+    // --- Fixed cell size
+    private DoubleProperty fixedCellSize;
+
+    /**
+     * Sets the new fixed cell size for this control. Any value greater than
+     * zero will enable fixed cell size mode, whereas a zero or negative value
+     * (or Region.USE_COMPUTED_SIZE) will be used to disabled fixed cell size
+     * mode.
+     *
+     * @param value The new fixed cell size value, or -1 (or Region.USE_COMPUTED_SIZE)
+     *                  to disable.
+     */
+    public final void setFixedCellSize(double value) {
+        fixedCellSizeProperty().set(value);
+    }
+
+    /**
+     * Returns the fixed cell size value, which may be -1 to represent fixed cell
+     * size mode is disabled, or a value greater than zero to represent the size
+     * of all cells in this control.
+     *
+     * @return A double representing the fixed cell size of this control, or -1
+     *      if fixed cell size mode is disabled.
+     */
+    public final double getFixedCellSize() {
+        return fixedCellSize == null ? Region.USE_COMPUTED_SIZE : fixedCellSize.get();
+    }
+    /**
+     * Specifies whether this control has cells that are a fixed height (of the
+     * specified value). If this value is -1 (i.e. {@link Region#USE_COMPUTED_SIZE}),
+     * then all cells are individually sized and positioned. This is a slow
+     * operation. Therefore, when performance matters and developers are not
+     * dependent on variable cell sizes it is a good idea to set the fixed cell
+     * size value. Generally cells are around 24px, so setting a fixed cell size
+     * of 24 is likely to result in very little difference in visuals, but a
+     * improvement to performance.
+     *
+     * <p>To set this property via CSS, use the -fx-fixed-cell-size property.
+     * This should not be confused with the -fx-cell-size property. The difference
+     * between these two CSS properties is that -fx-cell-size will size all
+     * cells to the specified size, but it will not enforce that this is the
+     * only size (thus allowing for variable cell sizes, and preventing the
+     * performance gains from being possible). Therefore, when performance matters
+     * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
+     * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
+     */
+    public final DoubleProperty fixedCellSizeProperty() {
+        if (fixedCellSize == null) {
+            fixedCellSize = new StyleableDoubleProperty(Region.USE_COMPUTED_SIZE) {
+                @Override public CssMetaData<TableView<?>,Number> getCssMetaData() {
+                    return StyleableProperties.FIXED_CELL_SIZE;
+                }
+
+                @Override public Object getBean() {
+                    return TableView.this;
+                }
+
+                @Override public String getName() {
+                    return "fixedCellSize";
+                }
+            };
+        }
+        return fixedCellSize;
+    }
+
+
     // --- Editing Cell
     private ReadOnlyObjectWrapper<TablePosition<S,?>> editingCell;
     private void setEditingCell(TablePosition<S,?> value) {
@@ -1304,12 +1381,57 @@ public class TableView<S> extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "table-view";
-    private static final String CELL_SPAN_TABLE_VIEW_STYLE_CLASS = "cell-span-table-view";
-    
-    private static final PseudoClass PSEUDO_CLASS_CELL_SELECTION = 
+
+    private static final PseudoClass PSEUDO_CLASS_CELL_SELECTION =
             PseudoClass.getPseudoClass("cell-selection");
-    private static final PseudoClass PSEUDO_CLASS_ROW_SELECTION = 
+    private static final PseudoClass PSEUDO_CLASS_ROW_SELECTION =
             PseudoClass.getPseudoClass("row-selection");
+
+    /** @treatAsPrivate */
+    private static class StyleableProperties {
+        private static final CssMetaData<TableView<?>,Number> FIXED_CELL_SIZE =
+                new CssMetaData<TableView<?>,Number>("-fx-fixed-cell-size",
+                                                    SizeConverter.getInstance(),
+                                                    Region.USE_COMPUTED_SIZE) {
+
+                    @Override public Double getInitialValue(TableView node) {
+                        return node.getFixedCellSize();
+                    }
+
+                    @Override public boolean isSettable(TableView n) {
+                        return n.fixedCellSize == null || !n.fixedCellSize.isBound();
+                    }
+
+                    @Override public StyleableProperty<Number> getStyleableProperty(TableView n) {
+                        return (StyleableProperty<Number>) n.fixedCellSizeProperty();
+                    }
+                };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+        static {
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                    new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(FIXED_CELL_SIZE);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
+        return getClassCssMetaData();
+    }
+    
 
 
     /***************************************************************************
@@ -1374,7 +1496,21 @@ public class TableView<S> extends Control {
      */
     public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S, TableColumn<S,?>> {
 
+        /***********************************************************************
+         *                                                                     *
+         * Private fields                                                      *
+         *                                                                     *
+         **********************************************************************/
+
         private final TableView<S> tableView;
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Constructors                                                        *
+         *                                                                     *
+         **********************************************************************/
 
         /**
          * Builds a default TableViewSelectionModel instance with the provided
@@ -1391,18 +1527,88 @@ public class TableView<S> extends Control {
             this.tableView = tableView;
         }
 
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Abstract API                                                        *
+         *                                                                     *
+         **********************************************************************/
+
         /**
          * A read-only ObservableList representing the currently selected cells 
          * in this TableView. Rather than directly modify this list, please
          * use the other methods provided in the TableViewSelectionModel.
          */
-        public abstract ObservableList<TablePosition<S,?>> getSelectedCells();
+        public abstract ObservableList<TablePosition> getSelectedCells();
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Public API                                                          *
+         *                                                                     *
+         **********************************************************************/
 
         /**
          * Returns the TableView instance that this selection model is installed in.
          */
         public TableView<S> getTableView() {
             return tableView;
+        }
+
+        /**
+         * Convenience method that returns getTableView().getItems().
+         * @return The items list of the current TableView.
+         */
+        protected ObservableList<S> getTableModel()  {
+            return tableView.getItems();
+        }
+
+        /** {@inheritDoc} */
+        @Override protected S getModelItem(int index) {
+            if (index < 0 || index > getItemCount()) return null;
+            return tableView.getItems().get(index);
+        }
+
+        /** {@inheritDoc} */
+        @Override protected int getItemCount() {
+            return getTableModel().size();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void focus(int row) {
+            focus(row, null);
+        }
+
+        /** {@inheritDoc} */
+        @Override public int getFocusedIndex() {
+            return getFocusedCell().getRow();
+        }
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Private implementation                                              *
+         *                                                                     *
+         **********************************************************************/
+
+        void focus(int row, TableColumn<S,?> column) {
+            focus(new TablePosition(getTableView(), row, column));
+        }
+
+        void focus(TablePosition pos) {
+            if (getTableView().getFocusModel() == null) return;
+
+            getTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
+        }
+
+        TablePosition getFocusedCell() {
+            if (getTableView().getFocusModel() == null) {
+                return new TablePosition(getTableView(), -1, null);
+            }
+            return getTableView().getFocusModel().getFocusedCell();
         }
     }
     
@@ -1572,8 +1778,9 @@ public class TableView<S> extends Control {
             tableView.itemsProperty().addListener(weakItemsPropertyListener);
             
             // watching for changes to the items list content
-            if (tableView.getItems() != null) {
-                tableView.getItems().addListener(weakItemsContentListener);
+            ObservableList<S> items = getTableModel();
+            if (items != null) {
+                items.addListener(weakItemsContentListener);
             }
         }
         
@@ -1593,15 +1800,17 @@ public class TableView<S> extends Control {
         final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
             @Override public void onChanged(Change<? extends S> c) {
                 updateItemCount();
-                
+
+                List<S> items = getTableModel();
+
                 while (c.next()) {
                     final S selectedItem = getSelectedItem();
                     final int selectedIndex = getSelectedIndex();
                     
-                    if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
+                    if (items == null || items.isEmpty()) {
                         clearSelection();
                     } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                        int newIndex = tableView.getItems().indexOf(getSelectedItem());
+                        int newIndex = items.indexOf(getSelectedItem());
                         if (newIndex != -1) {
                             setSelectedIndex(newIndex);
                         }
@@ -1662,8 +1871,8 @@ public class TableView<S> extends Control {
         }
 
         private final ReadOnlyUnbackedObservableList<TablePosition<S,?>> selectedCellsSeq;
-        @Override public ObservableList<TablePosition<S,?>> getSelectedCells() {
-            return selectedCellsSeq;
+        @Override public ObservableList<TablePosition> getSelectedCells() {
+            return (ObservableList<TablePosition>)(Object)selectedCellsSeq;
         }
 
 
@@ -1756,7 +1965,8 @@ public class TableView<S> extends Control {
                     }
 
                     // (2)
-                    List<TablePosition<S,?>> selectedIndices = new ArrayList<TablePosition<S,?>>(getSelectedCells());
+                    List<TablePosition<S,?>> selectedIndices =
+                            new ArrayList<TablePosition<S,?>>((ObservableList<TablePosition<S,?>>)(Object)getSelectedCells());
 
 
                     // (3)
@@ -1901,20 +2111,40 @@ public class TableView<S> extends Control {
                 if (row >= 0 && row < rowCount) {
                     TablePosition<S,Object> tp = new TablePosition<S,Object>(getTableView(), row, null);
                     
-                    if (! selectedCells.contains(tp)) {
+                    // refer to the multi-line comment below for the justification for the following
+                    // code.
+                    boolean match = false;
+                    for (int j = 0; j < selectedCells.size(); j++) {
+                        TablePosition<S,?> selectedCell = selectedCells.get(j);
+                        if (selectedCell.getRow() == row) {
+                            match = true;
+                            break;
+                        }
+                    }
+                    if (! match) {
                         positions.add(tp);
                         lastIndex = row;
                     }
                 }
 
-                for (int i = 0; i < rows.length; i++) {
+                outer: for (int i = 0; i < rows.length; i++) {
                     int index = rows[i];
                     if (index < 0 || index >= rowCount) continue;
                     lastIndex = index;
-                    TablePosition<S,Object> pos = new TablePosition<S,Object>(getTableView(), index, null);
-                    if (! selectedCells.contains(pos)) {
-                        positions.add(pos);
+                    
+                    // we need to manually check all selected cells to see whether this index is already
+                    // selected. This is because selectIndices is inherently row-based, but there may
+                    // be a selected cell where the column is non-null. If we were to simply do a
+                    // selectedCells.contains(pos), then we would not find the match and duplicate the
+                    // row selection. This leads to bugs such as RT-29930.
+                    for (int j = 0; j < selectedCells.size(); j++) {
+                        TablePosition<S,?> selectedCell = selectedCells.get(j);
+                        if (selectedCell.getRow() == index) continue outer;
                     }
+                    
+                    // if we are here then we have successfully gotten through the for-loop above
+                    TablePosition<S,Object> pos = new TablePosition<S,Object>(getTableView(), index, null);
+                    positions.add(pos);
                 }
                 
                 selectedCells.addAll(positions);
@@ -2168,51 +2398,19 @@ public class TableView<S> extends Control {
             setSelectedItem(getModelItem(row));
         }
         
-        @Override public void focus(int row) {
-            focus(row, null);
-        }
-
-        private void focus(int row, TableColumn<S,?> column) {
-            focus(new TablePosition(getTableView(), row, column));
-        }
-
-        private void focus(TablePosition pos) {
-            if (getTableView().getFocusModel() == null) return;
-
-            getTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
-        }
-
-        @Override public int getFocusedIndex() {
-            return getFocusedCell().getRow();
-        }
-
-        private TablePosition getFocusedCell() {
-            if (getTableView().getFocusModel() == null) {
-                return new TablePosition(getTableView(), -1, null);
-            }
-            return getTableView().getFocusModel().getFocusedCell();
-        }
-
         /** {@inheritDoc} */
         @Override protected int getItemCount() {
             return itemCount;
-//            List<S> items = tableView.getItems();
-//            return items == null ? -1 : items.size();
         }
 
-        @Override protected S getModelItem(int index) {
-            if (index < 0 || index > getItemCount()) return null;
-            return tableView.getItems().get(index);
-        }
-        
         private void updateItemCount() {
             if (tableView == null) {
                 itemCount = -1;
             } else {
-                List<S> items = tableView.getItems();
+                List<S> items = getTableModel();
                 itemCount = items == null ? -1 : items.size();
             }
-        } 
+        }
     }
     
     

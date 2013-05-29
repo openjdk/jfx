@@ -1350,7 +1350,7 @@ final class CssStyleHelper {
             try {
                 // The computed value
                 Object val = null;
-                CalculatedValue fontForFontRelativeSizes = null;
+                Font fontForFontRelativeSizes = null;
 
                 //
                 // Avoid using a font calculated from a relative size
@@ -1373,63 +1373,50 @@ final class CssStyleHelper {
                      "-fx-font-size".equals(property)))  {
                     
                     Styleable parent = node;
-                    CalculatedValue cachedFont = fontFromCacheEntry;
-                    while(parent != null) {
+                    CalculatedValue childsCachedFont = fontFromCacheEntry;
+                    do {
 
-                        fontForFontRelativeSizes = getCachedFont(parent.getStyleableParent());
+                        CalculatedValue parentsCachedFont = getCachedFont(parent.getStyleableParent());
 
-                            if (fontForFontRelativeSizes != null && fontForFontRelativeSizes.isRelative()) {
+                        if (parentsCachedFont != null)  {
 
-                                // If cacheEntry.font is null, then we're here by 
-                                // way of getFontForUseInConvertingRelativeSize
-                                // If  the fontValue is not relative, then the
-                                // cacheEntry.font needs to be calculated. If
-                                // fontValue is relative, then we can use it as
-                                // is - this is a hack for Control and SkinBase
-                                // which share the same styles (hence the check
-                                // for parent == node).
-                                // TBD - should check that they are the same styles
-    //                                if (parent == node && childCacheEntry.font == null) {
-    //                                    return fontValue;
-    //                                } 
+                            if (parentsCachedFont.isRelative()) {
 
-                                if (cachedFont != null) {
-                                    final Font ceFont = (Font)cachedFont.getValue();
-                                    final Font fvFont = (Font)fontForFontRelativeSizes.getValue();
-                                    if (ceFont.getSize() != fvFont.getSize()) {
-                                        // if the font sizes don't match, then
-                                        // the fonts came from distinct styles,
-                                        // otherwise, we need another level of
-                                        // indirection
-                                        break;
-                                    }
-                                } 
+                                //
+                                // If the cached fonts are the same, then the cached font came from the same
+                                // style and we need to keep looking. Otherwise, use the font we found.
+                                //
+                                if (parentsCachedFont.equals(childsCachedFont)) {
+                                    childsCachedFont = parentsCachedFont;
+                                } else {
+                                    fontForFontRelativeSizes = (Font)parentsCachedFont.getValue();
+                                }
 
-                                // cachedFont is null or the sizes match
-                                // (implies the fonts came from the same style)
-                                cachedFont = fontForFontRelativeSizes;
-
-                            } else if (fontForFontRelativeSizes != null) {
-                                // fontValue.isRelative() == false
-                                break;
+                            } else  {
+                                // fontValue.isRelative() == false!
+                                fontForFontRelativeSizes = (Font)parentsCachedFont.getValue();
                             }
 
-                        parent = parent.getStyleableParent();
+                        }
+
+                    } while(fontForFontRelativeSizes == null &&
+                            (parent = parent.getStyleableParent()) != null);
+                }
+
+                // did we get a fontValue from the preceding block?
+                // if not, get it from our cacheEntry or choose the default
+                if (fontForFontRelativeSizes == null) {
+                    if (fontFromCacheEntry != null && fontFromCacheEntry.isRelative() == false) {
+                        fontForFontRelativeSizes = (Font)fontFromCacheEntry.getValue();
+                    } else {
+                        fontForFontRelativeSizes = Font.getDefault();
                     }
                 }
 
-                // did we get a fontValue from the preceding block (from the hack)?
-                // if not, get it from our cachEntry or choose the default
-                if (fontForFontRelativeSizes == null && fontFromCacheEntry != null) {
-                    fontForFontRelativeSizes = fontFromCacheEntry;
-                }
-                final Font font = (fontForFontRelativeSizes != null) ? (Font)fontForFontRelativeSizes.getValue() : Font.getDefault();
-
-
                 if (resolved.getConverter() != null)
-                    val = resolved.convert(font);
+                    val = resolved.convert(fontForFontRelativeSizes);
                 else
-                    val = cssMetaData.getConverter().convert(resolved, font);
+                    val = cssMetaData.getConverter().convert(resolved, fontForFontRelativeSizes);
 
                 final StyleOrigin origin = whence.get();
                 return new CalculatedValue(val, origin, resolved.isNeedsFont());
@@ -1810,8 +1797,8 @@ final class CssStyleHelper {
      * @param styleList
      * @return
      */
-    private CalculatedValue lookupFont(Node node, CssMetaData styleable,
-                                       Node originatingNode,
+    private CalculatedValue lookupFont(Styleable node, CssMetaData styleable,
+                                       Styleable originatingNode,
                                        CalculatedValue fontFromCacheEntry, List<Style> styleList) {
 
         // To make the code easier to read, define CONSIDER_INLINE_STYLES as true. 
@@ -1828,7 +1815,7 @@ final class CssStyleHelper {
         // many parents we've looked at. nlooks should never exceed distance. 
         int distance = 0, nlooks = 0;
         
-        Node parent = node;
+        Styleable parent = node;
         CssStyleHelper helper = this;
         String property = styleable == null ? null : styleable.getProperty();
         CascadingStyle csShorthand = null;
@@ -1839,7 +1826,7 @@ final class CssStyleHelper {
 
         while (parent != null) {
             
-            final Set<PseudoClass> states = parent.pseudoClassStates;
+            final Set<PseudoClass> states = parent.getPseudoClassStates();
             final Map<String,CascadingStyle> inlineStyles = CssStyleHelper.getInlineStyleMap(parent);
             
             final CascadingStyle cascadingStyle =
@@ -1893,9 +1880,9 @@ final class CssStyleHelper {
             // up the parent chain for the next -fx-font.
             //
             do {
-                parent = parent.getParent();
+                parent = parent.getStyleableParent();
                 nlooks += 1;
-                helper = parent != null ? parent.styleHelper : null;
+                helper = parent instanceof Node ? ((Node)parent).styleHelper : null;
             } while (parent != null && helper == null);
 
         }
@@ -1905,8 +1892,8 @@ final class CssStyleHelper {
         }
         nlooks = 0;
         
-        final Set<PseudoClass> states = node.pseudoClassStates;
         final Map<String,CascadingStyle> inlineStyles = getInlineStyleMap(node);
+        final Set<PseudoClass> states = node.getPseudoClassStates();
 
         String family = null;
         double size = -1;

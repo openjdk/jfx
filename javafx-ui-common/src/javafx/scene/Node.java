@@ -5815,7 +5815,7 @@ public abstract class Node implements EventTarget, Styleable {
      * orientation without using the automatic transformation.
      * </p>
      */
-    public boolean isAutomaticallyMirrored() {
+    public boolean usesMirroring() {
         return true;
     }
 
@@ -5894,7 +5894,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private byte calcAutomaticNodeOrientation() {
-        if (!isAutomaticallyMirrored()) {
+        if (!usesMirroring()) {
             return AUTOMATIC_ORIENTATION_LTR;
         }
 

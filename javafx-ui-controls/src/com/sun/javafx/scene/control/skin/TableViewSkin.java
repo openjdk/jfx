@@ -55,6 +55,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
         super(tableView, new TableViewBehavior(tableView));
         
         this.tableView = tableView;
+        flow.setFixedCellSize(tableView.getFixedCellSize());
         
         super.init(tableView);
 
@@ -110,9 +111,18 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
         behavior.setOnSelectRightCell(new Runnable() {
             @Override public void run() { onSelectRightCell(); }
         });
+
+        registerChangeListener(tableView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
     }
 
-    
+    @Override protected void handleControlPropertyChanged(String p) {
+        super.handleControlPropertyChanged(p);
+
+        if ("FIXED_CELL_SIZE".equals(p)) {
+            flow.setFixedCellSize(getSkinnable().getFixedCellSize());
+        }
+    }
+
     /***************************************************************************
      *                                                                         *
      * Listeners                                                               *
@@ -275,7 +285,12 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
         return cell;
     }
 
-    
+    @Override protected void horizontalScroll() {
+        super.horizontalScroll();
+        if (getSkinnable().getFixedCellSize() > 0) {
+            flow.requestCellLayout();
+        }
+    }
     
     
     /***************************************************************************

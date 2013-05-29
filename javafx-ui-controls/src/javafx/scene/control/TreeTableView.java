@@ -29,12 +29,19 @@ import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparatorBase;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.WeakEventHandler;
 
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
@@ -43,6 +50,7 @@ import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -79,6 +87,7 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.MultipleSelectionModelBase.ShiftParams;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
 /**
@@ -1212,6 +1221,71 @@ public class TreeTableView<S> extends Control {
     }
 
 
+    // --- Fixed cell size
+    private DoubleProperty fixedCellSize;
+
+    /**
+     * Sets the new fixed cell size for this control. Any value greater than
+     * zero will enable fixed cell size mode, whereas a zero or negative value
+     * (or Region.USE_COMPUTED_SIZE) will be used to disabled fixed cell size
+     * mode.
+     *
+     * @param value The new fixed cell size value, or -1 (or Region.USE_COMPUTED_SIZE)
+     *                  to disable.
+     */
+    public final void setFixedCellSize(double value) {
+        fixedCellSizeProperty().set(value);
+    }
+
+    /**
+     * Returns the fixed cell size value, which may be -1 to represent fixed cell
+     * size mode is disabled, or a value greater than zero to represent the size
+     * of all cells in this control.
+     *
+     * @return A double representing the fixed cell size of this control, or -1
+     *      if fixed cell size mode is disabled.
+     */
+    public final double getFixedCellSize() {
+        return fixedCellSize == null ? Region.USE_COMPUTED_SIZE : fixedCellSize.get();
+    }
+    /**
+     * Specifies whether this control has cells that are a fixed height (of the
+     * specified value). If this value is -1 (i.e. {@link Region#USE_COMPUTED_SIZE}),
+     * then all cells are individually sized and positioned. This is a slow
+     * operation. Therefore, when performance matters and developers are not
+     * dependent on variable cell sizes it is a good idea to set the fixed cell
+     * size value. Generally cells are around 24px, so setting a fixed cell size
+     * of 24 is likely to result in very little difference in visuals, but a
+     * improvement to performance.
+     *
+     * <p>To set this property via CSS, use the -fx-fixed-cell-size property.
+     * This should not be confused with the -fx-cell-size property. The difference
+     * between these two CSS properties is that -fx-cell-size will size all
+     * cells to the specified size, but it will not enforce that this is the
+     * only size (thus allowing for variable cell sizes, and preventing the
+     * performance gains from being possible). Therefore, when performance matters
+     * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
+     * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
+     */
+    public final DoubleProperty fixedCellSizeProperty() {
+        if (fixedCellSize == null) {
+            fixedCellSize = new StyleableDoubleProperty(Region.USE_COMPUTED_SIZE) {
+                @Override public CssMetaData<TreeTableView<?>,Number> getCssMetaData() {
+                    return StyleableProperties.FIXED_CELL_SIZE;
+                }
+
+                @Override public Object getBean() {
+                    return TreeTableView.this;
+                }
+
+                @Override public String getName() {
+                    return "fixedCellSize";
+                }
+            };
+        }
+        return fixedCellSize;
+    }
+
     
     // --- Editing Cell
     private ReadOnlyObjectWrapper<TreeTablePosition<S,?>> editingCell;
@@ -1764,14 +1838,57 @@ public class TreeTableView<S> extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "tree-table-view";
-    private static final String CELL_SPAN_TABLE_VIEW_STYLE_CLASS = "cell-span-tree-table-view";
-    
-    private static final PseudoClass PSEUDO_CLASS_CELL_SELECTION = 
+
+    private static final PseudoClass PSEUDO_CLASS_CELL_SELECTION =
             PseudoClass.getPseudoClass("cell-selection");
-    private static final PseudoClass PSEUDO_CLASS_ROW_SELECTION = 
+    private static final PseudoClass PSEUDO_CLASS_ROW_SELECTION =
             PseudoClass.getPseudoClass("row-selection");
 
+    /** @treatAsPrivate */
+    private static class StyleableProperties {
+        private static final CssMetaData<TreeTableView<?>,Number> FIXED_CELL_SIZE =
+                new CssMetaData<TreeTableView<?>,Number>("-fx-fixed-cell-size",
+                                                     SizeConverter.getInstance(),
+                                                     Region.USE_COMPUTED_SIZE) {
 
+                    @Override public Double getInitialValue(TreeTableView node) {
+                        return node.getFixedCellSize();
+                    }
+
+                    @Override public boolean isSettable(TreeTableView n) {
+                        return n.fixedCellSize == null || !n.fixedCellSize.isBound();
+                    }
+
+                    @Override public StyleableProperty<Number> getStyleableProperty(TreeTableView n) {
+                        return (StyleableProperty<Number>) n.fixedCellSizeProperty();
+                    }
+                };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+        static {
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                    new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(FIXED_CELL_SIZE);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
+        return getClassCssMetaData();
+    }
+    
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new TreeTableViewSkin<S>(this);
@@ -1900,7 +2017,21 @@ public class TreeTableView<S> extends Control {
     public static abstract class TreeTableViewSelectionModel<S> extends 
             TableSelectionModel<TreeItem<S>, TreeTableColumn<S, ?>> {
 
+        /***********************************************************************
+         *                                                                     *
+         * Private fields                                                      *
+         *                                                                     *
+         **********************************************************************/
+
         private final TreeTableView<S> treeTableView;
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Constructors                                                        *
+         *                                                                     *
+         **********************************************************************/
 
         /**
          * Builds a default TableViewSelectionModel instance with the provided
@@ -1924,20 +2055,81 @@ public class TreeTableView<S> extends Control {
             });
         }
 
-        /**
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Abstract API                                                        *
+         *                                                                     *
+         **********************************************************************/
+
+         /**
          * A read-only ObservableList representing the currently selected cells 
          * in this TableView. Rather than directly modify this list, please
          * use the other methods provided in the TableViewSelectionModel.
          */
         public abstract ObservableList<TreeTablePosition<S,?>> getSelectedCells();
 
-        /**
-         * Returns the TableView instance that this selection model is installed in.
-         */
-        public TreeTableView<S> getTreeTableView() {
-            return treeTableView;
-        }
-    }
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Public API                                                          *
+         *                                                                     *
+         **********************************************************************/
+
+         /**
+          * Returns the TableView instance that this selection model is installed in.
+          */
+         public TreeTableView<S> getTreeTableView() {
+             return treeTableView;
+         }
+
+         /** {@inheritDoc} */
+         @Override public TreeItem<S> getModelItem(int index) {
+             return treeTableView.getTreeItem(index);
+         }
+
+         /** {@inheritDoc} */
+         @Override protected int getItemCount() {
+             return treeTableView.getExpandedItemCount();
+         }
+
+         /** {@inheritDoc} */
+         @Override public void focus(int row) {
+             focus(row, null);
+         }
+
+         /** {@inheritDoc} */
+         @Override public int getFocusedIndex() {
+             return getFocusedCell().getRow();
+         }
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Private implementation                                              *
+         *                                                                     *
+         **********************************************************************/
+
+         private void focus(int row, TreeTableColumn<S,?> column) {
+             focus(new TreeTablePosition(getTreeTableView(), row, column));
+         }
+
+         private void focus(TreeTablePosition pos) {
+             if (getTreeTableView().getFocusModel() == null) return;
+
+             getTreeTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
+         }
+
+         private TreeTablePosition getFocusedCell() {
+             if (treeTableView.getFocusModel() == null) {
+                 return new TreeTablePosition(treeTableView, -1, null);
+             }
+             return treeTableView.getFocusModel().getFocusedCell();
+         }
+     }
     
     
 
@@ -2196,7 +2388,7 @@ public class TreeTableView<S> extends Control {
                         }
                         
                         if (oldTP != null && param.isSelected()) {
-                            TreeTablePosition<S,?> newTP = new TreeTablePosition<>(
+                            TreeTablePosition<S,?> newTP = new TreeTablePosition<S,Object>(
                                     treeTableView, param.getSetIndex(), oldTP.getTableColumn());
                             
                             selectedCells.add(newTP);
@@ -2364,21 +2556,39 @@ public class TreeTableView<S> extends Control {
                 if (row >= 0 && row < rowCount) {
                     TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), row, null);
                     
-                    if (! selectedCells.contains(pos)) {
+                    // refer to the multi-line comment below for the justification for the following
+                    // code.
+                    boolean match = false;
+                    for (int j = 0; j < selectedCells.size(); j++) {
+                        TreeTablePosition<S,?> selectedCell = selectedCells.get(j);
+                        if (selectedCell.getRow() == row) {
+                            match = true;
+                            break;
+                        }
+                    }
+                    if (! match) {
                         positions.add(pos);
                         lastIndex = row;
                     }
                 }
 
-                for (int i = 0; i < rows.length; i++) {
+                outer: for (int i = 0; i < rows.length; i++) {
                     int index = rows[i];
                     if (index < 0 || index >= rowCount) continue;
                     lastIndex = index;
-                    TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), index, null);
-                    if (! selectedCells.contains(pos)) {
-                        positions.add(pos);
+                    
+                    // we need to manually check all selected cells to see whether this index is already
+                    // selected. This is because selectIndices is inherently row-based, but there may
+                    // be a selected cell where the column is non-null. If we were to simply do a
+                    // selectedCells.contains(pos), then we would not find the match and duplicate the
+                    // row selection. This leads to bugs such as RT-29930.
+                    for (int j = 0; j < selectedCells.size(); j++) {
+                        TreeTablePosition<S,?> selectedCell = selectedCells.get(j);
+                        if (selectedCell.getRow() == index) continue outer;
                     }
-
+                    
+                    // if we are here then we have successfully gotten through the for-loop above
+                    TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), index, null);
                     positions.add(pos);
                 }
 
@@ -2656,14 +2866,6 @@ public class TreeTableView<S> extends Control {
         }
 
         private int getRowCount() {
-            return treeTableView.getExpandedItemCount();
-        }
-
-        @Override public TreeItem<S> getModelItem(int index) {
-            return treeTableView.getTreeItem(index);
-        }
-
-        @Override protected int getItemCount() {
             return treeTableView.getExpandedItemCount();
         }
     }

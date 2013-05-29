@@ -33,8 +33,24 @@ import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 
 public class ListCellSkin extends CellSkinBase<ListCell, ListCellBehavior> {
 
+    private double fixedCellSize;
+    private boolean fixedCellSizeEnabled;
+
     public ListCellSkin(ListCell control) {
         super(control, new ListCellBehavior(control));
+
+        this.fixedCellSize = control.getListView().getFixedCellSize();
+        this.fixedCellSizeEnabled = fixedCellSize > 0;
+
+        registerChangeListener(control.getListView().fixedCellSizeProperty(), "FIXED_CELL_SIZE");
+    }
+
+    @Override protected void handleControlPropertyChanged(String p) {
+        super.handleControlPropertyChanged(p);
+        if ("FIXED_CELL_SIZE".equals(p)) {
+            this.fixedCellSize = getSkinnable().getListView().getFixedCellSize();
+            this.fixedCellSizeEnabled = fixedCellSize > 0;
+        }
     }
     
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -45,6 +61,10 @@ public class ListCellSkin extends CellSkinBase<ListCell, ListCellBehavior> {
     }
  
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
+        }
+
         // Added the comparison between the default cell size and the requested
         // cell size to prevent the issue identified in RT-19873.
         final double cellSize = getCellSize();
@@ -53,5 +73,21 @@ public class ListCellSkin extends CellSkinBase<ListCell, ListCellBehavior> {
         // RT-30212: ListCell does not honor minSize of cells
         final ListCell cell = getSkinnable();
         return Math.max(cell.getMinHeight(), prefHeight);
+    }
+
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
+        }
+
+        return super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (fixedCellSizeEnabled) {
+            return fixedCellSize;
+        }
+
+        return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
     }
 }

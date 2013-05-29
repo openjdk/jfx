@@ -74,7 +74,9 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
 
     protected static final List<KeyBinding> DATE_PICKER_BINDINGS = new ArrayList<KeyBinding>();
     static {
-//        DATE_PICKER_BINDINGS.addAll(COMBO_BOX_BASE_BINDINGS);
+        DATE_PICKER_BINDINGS.add(new KeyBinding(F4, KEY_RELEASED, "togglePopup"));
+        DATE_PICKER_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
+        DATE_PICKER_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
         DATE_PICKER_BINDINGS.add(new KeyBinding(ESCAPE, KEY_PRESSED, CLOSE_ACTION));
         DATE_PICKER_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, OPEN_ACTION));
         DATE_PICKER_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, OPEN_ACTION));
@@ -85,11 +87,22 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
     }
 
     @Override protected void callAction(String name) {
-        if (OPEN_ACTION.equals(name)) {
-            show();
-        } else if (CLOSE_ACTION.equals(name)) {
-            hide();
-        } else {
+        switch (name) {
+          case OPEN_ACTION:
+              show(); break;
+
+          case CLOSE_ACTION:
+              hide(); break;
+
+          case "togglePopup":
+              if (getControl().isShowing()) {
+                  hide();
+              } else {
+                  show();
+              }
+              break;
+
+          default:
             super.callAction(name);
         }
     }
