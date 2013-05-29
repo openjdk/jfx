@@ -8,6 +8,7 @@ import java.lang.reflect.Field;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.sun.javafx.Utils;
 import javafx.beans.Observable;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -27,7 +28,7 @@ import com.sun.javafx.webkit.theme.RenderThemeImpl.WidgetType;
 public final class ScrollBarThemeImpl extends ScrollBarTheme {
 
     private final static Logger log = Logger.getLogger(ScrollBarThemeImpl.class.getName());
-       
+
     private WeakReference<ScrollBar> testSBRef = // used for hit testing
             new WeakReference<ScrollBar>(null);
 
@@ -215,12 +216,12 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         if (orientation == VERTICAL_SCROLLBAR) {
             trackX = incBtnX = thumbX = x;
             trackY = y - (int)decButton.getLayoutBounds().getHeight();
-            thumbY = trackY - (int)thumb.getTranslateY();
+            thumbY = trackY - thumbPosition();
             incBtnY = trackY - (int)track.getLayoutBounds().getHeight();
         } else {
             trackY = incBtnY = thumbY = y;
             trackX = x - (int)decButton.getLayoutBounds().getWidth();
-            thumbX = trackX - (int)thumb.getTranslateX();
+            thumbX = trackX - thumbPosition();
             incBtnX = trackX - (int)track.getLayoutBounds().getWidth();
         }
 
@@ -230,14 +231,14 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
 
         } else if (track.contains(trackX, trackY)) {
 
-            if ((orientation == VERTICAL_SCROLLBAR && thumb.getTranslateY() >= trackY) ||
-                (orientation == HORIZONTAL_SCROLLBAR && thumb.getTranslateX() >= trackX))
+            if ((orientation == VERTICAL_SCROLLBAR && thumbPosition() >= trackY) ||
+                (orientation == HORIZONTAL_SCROLLBAR && thumbPosition() >= trackX))
             {
                 log.finer("back track");
                 return BACK_TRACK_PART;
 
-            } else if ((orientation == VERTICAL_SCROLLBAR && thumb.getTranslateY() < trackY) ||
-                       (orientation == HORIZONTAL_SCROLLBAR && thumb.getTranslateX() < trackX))
+            } else if ((orientation == VERTICAL_SCROLLBAR && thumbPosition() < trackY) ||
+                       (orientation == HORIZONTAL_SCROLLBAR && thumbPosition() < trackX))
             {
                 log.finer("forward track");
                 return FORWARD_TRACK_PART;
@@ -253,6 +254,29 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
 
         log.finer("no part");
         return NO_PART;
+    }
+
+    private int thumbPosition() {
+        ScrollBar testSB = testSBRef.get();
+        if (testSB == null) {
+            return 0;
+        }
+        // position calculated after ScrollBarSkin.positionThumb()
+        Node thumb = getThumb(testSB);
+        double thumbLength = testSB.getOrientation() == Orientation.VERTICAL
+                             ? thumb.getLayoutBounds().getHeight()
+                             : thumb.getLayoutBounds().getWidth();
+
+        Node track = getTrack(testSB);
+        double trackLength = testSB.getOrientation() == Orientation.VERTICAL
+                             ? track.getLayoutBounds().getHeight()
+                             : track.getLayoutBounds().getWidth();
+
+        double clampedValue = Utils.clamp(testSB.getMin(), testSB.getValue(), testSB.getMax());
+        double range = testSB.getMax() - testSB.getMin();
+        return (int) Math.round((range > 0)
+                               ? ((trackLength - thumbLength) * (clampedValue - testSB.getMin()) / range)
+                               : 0);
     }
 
     @Override protected int getThumbLength(int w, int h, int orientation,
@@ -323,18 +347,11 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         if (testSB == null) {
             return 0;
         }
-        Node thumb = getThumb(testSB);
-
         adjustScrollBar(testSB, w, h, orientation, value, visibleSize, totalSize);
 
-        double pos = 0;
-        if (orientation == VERTICAL_SCROLLBAR) {
-            pos = thumb.getTranslateY();
-        } else {
-            pos = thumb.getTranslateX();
-        }
+        int pos = thumbPosition();
         log.log(Level.FINEST, "thumb position: {0}", pos);
-        return (int)pos;
+        return pos;
     }
 
     private void initializeThickness() {
