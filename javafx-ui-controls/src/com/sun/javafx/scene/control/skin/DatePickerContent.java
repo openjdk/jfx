@@ -215,19 +215,32 @@ public class DatePickerContent extends VBox {
                     switch (e.getCode()) {
                       case TAB:
                           node.impl_traverse(e.isShiftDown() ? Direction.PREVIOUS : Direction.NEXT);
-                          e.consume(); break;
+                          e.consume();
+                          break;
+
                       case UP:
-                          node.impl_traverse(Direction.UP);
-                          e.consume(); break;
+                          if (!e.isAltDown()) {
+                              node.impl_traverse(Direction.UP);
+                              e.consume();
+                          }
+                          break;
+
                       case DOWN:
-                          node.impl_traverse(Direction.DOWN);
-                          e.consume(); break;
+                          if (!e.isAltDown()) {
+                              node.impl_traverse(Direction.DOWN);
+                              e.consume();
+                          }
+                          break;
+
                       case LEFT:
                           node.impl_traverse(Direction.LEFT);
-                          e.consume(); break;
+                          e.consume();
+                          break;
+
                       case RIGHT:
                           node.impl_traverse(Direction.RIGHT);
-                          e.consume(); break;
+                          e.consume();
+                          break;
                     }
                     if (e.isConsumed() && node instanceof DateCell) {
                         lastFocusedDayCell = (DateCell)node;
@@ -253,6 +266,8 @@ public class DatePickerContent extends VBox {
                   case ESCAPE:
                   case F4:
                   case F10:
+                  case UP:
+                  case DOWN:
                       break;
 
                   default:
