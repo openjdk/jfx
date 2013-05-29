@@ -28,7 +28,6 @@ package com.sun.javafx.tk.quantum;
 import com.sun.javafx.sg.NodePath;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.prism.Graphics;
-import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
@@ -70,24 +69,7 @@ abstract class ViewPainter extends AbstractPainter {
 
         setPaintBounds(viewWidth, viewHeight);
 
-        if (factory == null) {
-            // the factory really should not be null as
-            // we really want all that factory work on the event thread
-            try {
-                sceneState.lock();
-                factory = GraphicsPipeline.getDefaultResourceFactory();
-            } finally {
-                /*
-                 * Don't flush to the screen if there was a failure
-                 * creating the graphics factory
-                 */
-                sceneState.unlock();
-            }
-            return ((factory != null) && factory.isDeviceReady());
-        }
-        return sceneState.isWindowVisible() &&
-               !sceneState.isWindowMinimized() &&
-               factory.isDeviceReady();
+        return sceneState.isWindowVisible() && !sceneState.isWindowMinimized();
     }
     
     @Override protected void doPaint(Graphics g, NodePath<NGNode> renderRootPath) {
