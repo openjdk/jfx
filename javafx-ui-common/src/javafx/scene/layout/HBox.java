@@ -202,6 +202,12 @@ public class HBox extends Pane {
     public static Insets getMargin(Node child) {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
+    
+        private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
+        public Insets call(Node n) {
+            return getMargin(n);
+        }
+    };
 
     /**
      * Removes all hbox constraints from the child node.
@@ -529,6 +535,15 @@ public class HBox extends Pane {
     private double computeContentWidth(List<Node> managedChildren, double height, boolean minimum) {
         return sum(getAreaWidths(managedChildren, height, minimum)[0], managedChildren.size())
                 + (managedChildren.size()-1)*snapSpace(getSpacing());
+    }
+
+    private static double sum(double[] array, int size) {
+        int i = 0;
+        double res = 0;
+        while (i != size) {
+            res += array[i++];
+        }
+        return res;
     }
 
     @Override public void requestLayout() {
