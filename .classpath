@@ -54,7 +54,7 @@
     <classpathentry kind="src" path="javafx-builders/test/unit"/>
     <classpathentry kind="src" path="javafx-builders/src"/>
     -->
-    <classpathentry kind="lib" exported="true" path="javafx-builders/dist/javafx-builders.jar">
+    <classpathentry kind="lib" exported="true" path="javafx-builders/dist/javafx-builders.jar" sourcepath="javafx-builders/src">
         <attributes>
             <attribute name="optional" value="true"/>
         </attributes>
