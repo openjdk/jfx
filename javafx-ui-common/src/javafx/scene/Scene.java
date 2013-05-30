@@ -2392,6 +2392,7 @@ public class Scene implements EventTarget {
                 if (impl_peer != null) {
                     try {
                         long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+                        impl_peer.waitForRenderingToComplete();
                         impl_peer.waitForSynchronization();
                         if (PULSE_LOGGING_ENABLED) {
                             PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Waiting for previous rendering");

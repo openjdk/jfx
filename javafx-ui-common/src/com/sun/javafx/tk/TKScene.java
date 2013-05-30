@@ -45,6 +45,8 @@ public interface TKScene {
      */
     public void setSecurityContext(AccessControlContext ctx);
 
+    public void waitForRenderingToComplete();
+    
     /**
      * Waits until the render thread is available for synchronization
      * from the scene graph. Once this method returns, the caller has
