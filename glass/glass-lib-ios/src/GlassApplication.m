@@ -109,6 +109,16 @@ jclass mat_jCursorClass = NULL;
 static int postEventPipe[2];
 static int haveIDs = 0;
 
+//Library entrypoint
+jint JNI_OnLoad_glass(JavaVM *vm, void *reserved)
+{
+#ifdef JNI_VERSION_1_8
+    //min. returned JNI_VERSION required by JDK8 for builtin libraries
+    return JNI_VERSION_1_8;
+#else
+    return JNI_VERSION_1_4;
+#endif
+}
 
 /*
  * Function to set the context class loader for the main glass event thread.

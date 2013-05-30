@@ -101,7 +101,12 @@ JavaVM *jvm;
 JNIEXPORT jint JNICALL
 JNI_OnLoad_javafx_iio(JavaVM *vm, void *reserved) {
     jvm = vm;
+#ifdef JNI_VERSION_1_8
+    //min. returned JNI_VERSION required by JDK8 for builtin libraries
+    return JNI_VERSION_1_8;
+#else
     return JNI_VERSION_1_2;
+#endif
 }
 
 #else

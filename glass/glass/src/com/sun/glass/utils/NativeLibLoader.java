@@ -128,6 +128,20 @@ public class NativeLibLoader {
                             + libraryName + ") as a fallback");
                 }
             } catch (UnsatisfiedLinkError ex2) {
+                //On iOS we link all libraries staticaly. Presence of library 
+                //is recognized by existence of JNI_OnLoad_libraryname() C function.
+                //If libraryname contains hyphen, it needs to be translated 
+                //to underscore to form valid C function indentifier.
+                if ("iOS".equals(System.getProperty("os.name"))
+                        && libraryName.contains("-")) {
+                    libraryName = libraryName.replace("-", "_");
+                    try {
+                        System.loadLibrary(libraryName);
+                        return;
+                    } catch (UnsatisfiedLinkError ex3) {
+                        throw ex3;
+                    }
+                }
                 // Rethrow original exception
                 throw ex;
             }

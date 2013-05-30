@@ -29,6 +29,24 @@
 #include "Helpers.h"
 #include "PathConsumer.h"
 
+#ifdef __APPLE__
+
+#include <TargetConditionals.h>
+
+#if TARGET_OS_IPHONE /* iOS */
+
+JNIEXPORT jint JNICALL
+ JNI_OnLoad_prism_common(JavaVM* vm, void* reserved) {
+#ifdef JNI_VERSION_1_8
+    return JNI_VERSION_1_8;
+#else
+    return JNI_VERSION_1_4;
+#endif
+}
+
+#endif
+#endif
+
 void PathConsumer_init(PathConsumer *pConsumer,
                        MoveToFunc       *moveTo,
                        LineToFunc       *lineTo,

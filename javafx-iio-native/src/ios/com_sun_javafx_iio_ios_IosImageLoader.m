@@ -50,6 +50,17 @@ extern "C" {
     static jmethodID IosImageLoader_setInputParametersID;
     static jmethodID IosImageLoader_updateImageProgressID;
 
+    JNIEXPORT jint JNICALL
+    JNI_OnLoad_nativeiio(JavaVM *vm, void *reserved) {
+#ifdef JNI_VERSION_1_8
+        //min. returned JNI_VERSION required by JDK8 for builtin libraries
+        return JNI_VERSION_1_8;
+#else
+        return JNI_VERSION_1_2;
+#endif
+    }
+
+
     /*
      * Class:     com_sun_javafx_iio_ios_IosImageLoader
      * Method:    initNativeLoading
