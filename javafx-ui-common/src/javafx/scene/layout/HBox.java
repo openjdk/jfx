@@ -498,18 +498,18 @@ public class HBox extends Pane {
             }
         } else {
             for (int i = 0, size = managed.size(); i < size; i++) {
-            final Node child = managed.get(i);
-            if (getHgrow(child) == priority) {
-                temp[i] = computeChildMaxAreaWidth(child, getMargin(child), height);
-                adjustingNumber++;
-            } else {
-                temp[i] = -1;
+                final Node child = managed.get(i);
+                if (getHgrow(child) == priority) {
+                    temp[i] = computeChildMaxAreaWidth(child, getMargin(child), height);
+                    adjustingNumber++;
+                } else {
+                    temp[i] = -1;
+                }
             }
-        }
         }
 
         double available = extraWidth; // will be negative in shrinking case
-        while (Math.abs(available) > 1 && adjustingNumber > 0) {
+        outer:while (Math.abs(available) > 1 && adjustingNumber > 0) {
             final double portion = snapPortion(available / adjustingNumber); // negative in shrinking case
             for (int i = 0, size = managed.size(); i < size; i++) {
                 if (temp[i] == -1) {
@@ -519,8 +519,8 @@ public class HBox extends Pane {
                 final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
                 usedWidths[i] += change;
                 available -= change;
-                if (available == 0) {
-                    break;
+                if (Math.abs(available) < 1) {
+                    break outer;
                 }
                 if (Math.abs(change) < Math.abs(portion)) {
                     temp[i] = -1;
