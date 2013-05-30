@@ -423,7 +423,7 @@ public class Arc extends Shape {
         return shape;
     }
 
-    public final ArcType getTypeInternal() {
+    private final ArcType getTypeInternal() {
         ArcType t = getType();
         return t == null ? ArcType.OPEN : t;
     }
