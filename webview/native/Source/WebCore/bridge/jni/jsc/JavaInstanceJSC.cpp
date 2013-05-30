@@ -261,8 +261,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
           JSValue exceptionDescription
             = (JavaInstance::create(ex, rootObject, accessControlContext())
                ->createRuntimeObject(exec));
-          throwError(exec, createError(exec,
-                                       exceptionDescription.toString(exec)->value(exec)));
+          throwError(exec, exceptionDescription);
           return jsUndefined();
         }
     }
