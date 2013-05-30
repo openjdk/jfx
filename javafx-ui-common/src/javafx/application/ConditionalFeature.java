@@ -68,14 +68,16 @@ public enum ConditionalFeature {
      */
     SWT,
 
-    /* Indicates that the Swing library is present in the Java Runtime
+    /**
+     * Indicates that the Swing library is present in the Java Runtime
      * Environment and that Swing integration with JavaFX is available on the
      * platform.
      */
     SWING,
 
 
-    /* Indicates that XML libraries are present in the JRE and that the FXML
+    /**
+     * Indicates that XML libraries are present in the JRE and that the FXML
      * API is available on the platform. Note that it is possible for FXML APIs
      * to be present but unusable if the underlying Java Runtime Environment
      * does not have XML support. In this case
