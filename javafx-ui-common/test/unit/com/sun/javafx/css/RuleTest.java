@@ -53,6 +53,27 @@ public class RuleTest {
     }
 
     @Test
+    public void testGetUnobservedSelectorList() {
+        List<Selector> expResult = new ArrayList<Selector>();
+        expResult.add(Selector.createSelector("One.two#three"));
+        expResult.add(Selector.createSelector("Four.five#six"));
+        Rule instance = new Rule(expResult, Collections.EMPTY_LIST);
+        List result = instance.getUnobservedSelectorList();
+        assertEquals(expResult, result);
+    }
+
+    @Test
+    public void testGetUnobservedDeclarationList() {
+        List<Declaration> expResult = new ArrayList<Declaration>();
+        expResult.add(new Declaration("one", new ParsedValueImpl<String,String>("one", null), false));
+        expResult.add(new Declaration("two", new ParsedValueImpl<String,String>("two", null), false));
+        expResult.add(new Declaration("three", new ParsedValueImpl<String,String>("three", null), false));
+        Rule instance = new Rule(Collections.EMPTY_LIST, expResult);
+        List result = instance.getUnobservedDeclarationList();
+        assertEquals(expResult, result);
+    }
+
+    @Test
     public void testGetSelectors() {
         List<Selector> expResult = new ArrayList<Selector>();
         expResult.add(Selector.createSelector("One.two#three"));

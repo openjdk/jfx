@@ -259,7 +259,7 @@ final public class StyleManager {
                 for (int r=0; r<rMax; r++) {
 
                     final Rule rule = rules.get(r);
-                    final List<Selector> selectors = rule.getSelectors();
+                    final List<Selector> selectors = rule.getUnobservedSelectorList();
                     final int sMax = selectors == null || selectors.isEmpty() ? 0 : selectors.size();
                     for (int s=0; s < sMax; s++) {
 
@@ -1709,8 +1709,10 @@ final public class StyleManager {
 
                     Rule rule = selector.getRule();
 
-                    for (int d = 0, dmax = rule.getDeclarations().size(); d < dmax; d++) {
-                        final Declaration decl = rule.getDeclarations().get(d);
+                    List<Declaration> declarations = rule.getUnobservedDeclarationList();
+                    int dMax = declarations != null ? declarations.size() : 0;
+                    for (int d = 0; d < dMax; d++) {
+                        final Declaration decl = declarations.get(d);
 
                         final CascadingStyle s = new CascadingStyle(
                                 new Style(match.selector, decl),

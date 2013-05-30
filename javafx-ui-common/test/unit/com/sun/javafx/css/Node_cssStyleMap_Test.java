@@ -69,7 +69,7 @@ public class Node_cssStyleMap_Test {
         for (Declaration decl : decls) {
             styles.add(
                 new CascadingStyle(
-                    new Style(decl.rule.getSelectors().get(0), decl),
+                    new Style(decl.rule.getUnobservedSelectorList().get(0), decl),
                     new PseudoClassState(),
                     0, 
                     0

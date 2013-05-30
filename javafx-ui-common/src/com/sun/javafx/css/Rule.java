@@ -35,111 +35,114 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
 
 import javafx.scene.Node;
-import javafx.scene.Scene;
 
 /*
  * A selector is a collection of selectors and declarations.
  */
 final public class Rule {
 
-    private final List<Selector> _selectors;
-    private ObservableList<Selector> selectors;
+    private List<Selector> selectors = null;
 
-    public final List<Selector> getSelectors() {
+    /**
+     * The list returned from this method should be treated as unmodifiable.
+     * Tools should use {@link #getSelectors()} which tracks adds and removes.
+     */
+    public List<Selector>  getUnobservedSelectorList() {
         if (selectors == null) {
-            selectors = new TrackableObservableList<Selector>() {
-                @Override protected void onChanged(Change<Selector> c) {
-                    while (c.next()) {
-                        if (c.wasAdded()) {
-                            List<Selector> added = c.getAddedSubList();
-                            for(int i = 0, max = added.size(); i < max; i++) {
-                                Selector sel = added.get(i);
-                                sel.setRule(Rule.this);
-                            }
-                        }
-
-                        if (c.wasRemoved()) {
-                            List<Selector> removed = c.getAddedSubList();
-                            for(int i = 0, max = removed.size(); i < max; i++) {
-                                Selector sel = removed.get(i);
-                                if (sel.getRule() == Rule.this) sel.setRule(null);
-                            }
-                        }
-                    }
-                }
-            };
-
-            if (_selectors != null) {
-                selectors.setAll(_selectors);
-            }
+            selectors = new ArrayList<Selector>();
         }
         return selectors;
     }
 
-    private final List<Declaration> _declarations;
-    private ObservableList<Declaration> declarations;
-    
-    public final List<Declaration> getDeclarations() {
-        if (declarations == null) {
-            declarations = new TrackableObservableList<Declaration>() {
-                @Override protected void onChanged(Change<Declaration> c) {
-                    while (c.next()) {
-                        if (c.wasAdded()) {
-                            List<Declaration> added = c.getAddedSubList();
-                            for(int i = 0, max = added.size(); i < max; i++) {
-                                Declaration decl = added.get(i);
-                                decl.rule = Rule.this;
+    private List<Declaration> declarations = null;
+    /**
+     * The list returned from this method should be treated as unmodifiable.
+     * Tools should use {@link #getDeclarations()} which tracks adds and removes.
+     */
+    public List<Declaration> getUnobservedDeclarationList() {
 
-                                if (stylesheet != null && stylesheet.getUrl() != null) {
-                                    final URL stylesheetUrl = stylesheet.getUrl();
-                                    decl.fixUrl(stylesheetUrl);
-                                }
-                            }
-                        }
+        if (declarations == null && serializedDecls != null) {
 
-                        if (c.wasRemoved()) {
-                            List<Declaration> removed = c.getRemoved();
-                            for(int i = 0, max = removed.size(); i < max; i++) {
-                                Declaration decl = removed.get(i);
-                                if (decl.rule == Rule.this) decl.rule = null;
-                            }
-                        }
-                    }
-                }
-            };
+            assert(Rule.strings != null);
 
-            if (_declarations != null) {
-                declarations.setAll(_declarations);
-            }
-        }
-
-        if (serializedDecls != null && Rule.strings != null) {
             try {
                 ByteArrayInputStream bis = new ByteArrayInputStream(serializedDecls);
                 DataInputStream dis = new DataInputStream(bis);
+
                 short nDeclarations = dis.readShort();
-                List<Declaration> decls = new ArrayList<Declaration>(nDeclarations);
+                declarations = new ArrayList<Declaration>(nDeclarations);
+
                 for (int i = 0; i < nDeclarations; i++) {
-                    Declaration d = Declaration.readBinary(dis, Rule.strings);
-                    decls.add(d);
+
+                    Declaration decl = Declaration.readBinary(dis, Rule.strings);
+                    decl.rule = Rule.this;
+
+                    if (stylesheet != null && stylesheet.getUrl() != null) {
+                        final URL stylesheetUrl = stylesheet.getUrl();
+                        decl.fixUrl(stylesheetUrl);
+                    }
+
+                    declarations.add(decl);
                 }
 
-                this.declarations.addAll(decls);
-
             } catch (IOException ioe) {
-               assert false; ioe.getMessage();
+                declarations = new ArrayList<>();
+                assert false; ioe.getMessage();
+
             } finally {
                 serializedDecls = null;
             }
 
         }
+
         return declarations;
+    }
+
+    private Observables observables = null;
+
+    /**
+     * This method is to support tooling that may want to add declarations to
+     * or remove declarations from a Rule. Changes to the list are tracked
+     * so that added declarations are tagged as belonging to this rule, and
+     * the rule for removed declarations is nulled out.
+     * If the list is not going to be modified, then it is more efficient to
+     * call {@link #getUnobservedDeclarationList()}, but the returned list
+     * must be treated as unmodifiable.
+     * @return
+     */
+    public final ObservableList<Declaration> getDeclarations() {
+
+        if (observables == null) {
+            observables = new Observables(this);
+        }
+
+        return observables.getDeclarations();
+    }
+
+    /**
+     * This method is to support tooling that may want to add selectors to
+     * or remove selectors from a Rule. Changes to the list are tracked
+     * so that added selectors are tagged as belonging to this rule, and
+     * the rule for removed selectors is nulled out.
+     * If the list is not going to be modified, then it is more efficient to
+     * call {@link #getUnobservedSelectorList()}, but the returned list
+     * must be treated as unmodifiable.
+     * @return
+     */
+    public final ObservableList<Selector> getSelectors() {
+
+        if (observables == null) {
+            observables = new Observables(this);
+        }
+
+        return observables.getSelectors();
     }
 
     /** The stylesheet this selector belongs to */
@@ -150,13 +153,14 @@ final public class Rule {
 
     /* package */
     void setStylesheet(Stylesheet stylesheet) {
+
         this.stylesheet = stylesheet;
         
         if (stylesheet != null && stylesheet.getUrl() != null) {
             final URL stylesheetUrl = stylesheet.getUrl();
 
-            List<Declaration> declarations = getDeclarations();
-            for (int d=0, dMax=declarations.size(); d<dMax; d++) {
+            int nDeclarations = declarations != null ? declarations.size() : 0;
+            for (int d=0; d<nDeclarations; d++) {
                 declarations.get(d).fixUrl(stylesheetUrl);
             }
         }
@@ -168,19 +172,40 @@ final public class Rule {
 
 
     public Rule(List<Selector> selectors, List<Declaration> declarations) {
-        this._selectors = selectors;
-        this._declarations = declarations;
+
+        this.selectors = selectors;
+        this.declarations = declarations;
         serializedDecls = null;
+
+        int sMax = selectors != null ? selectors.size() : 0;
+        for(int i = 0; i < sMax; i++) {
+            Selector sel = selectors.get(i);
+            sel.setRule(Rule.this);
+        }
+
+        int dMax = declarations != null ? declarations.size() : 0;
+        for (int d=0; d<dMax; d++) {
+            Declaration decl = declarations.get(d);
+            decl.rule = this;
+        }
     }
 
     private static String[] strings = null;  // TBD: blech!
     private byte[] serializedDecls;
 
     private Rule(List<Selector> selectors, byte[] buf, String[] stringStoreStrings) {
-        this._selectors = selectors;
-        this._declarations = null;
+
+        this.selectors = selectors;
+        this.declarations = null;
         this.serializedDecls = buf;
         if (Rule.strings == null) Rule.strings = stringStoreStrings;
+
+        int sMax = selectors != null ? selectors.size() : 0;
+        for(int i = 0; i < sMax; i++) {
+            Selector sel = selectors.get(i);
+            sel.setRule(Rule.this);
+        }
+
     }
 
     // Return mask of selectors that match
@@ -207,33 +232,125 @@ final public class Rule {
             sb.append(selectors.get(n));
         }
         sb.append("{\n");
-        for (Declaration decl : getDeclarations()) {
+        int nDeclarations = declarations != null ? declarations.size() : 0;
+        for (int n=0; n<nDeclarations; n++) {
             sb.append("\t");
-            sb.append(decl);
+            sb.append(declarations.get(n));
             sb.append("\n");
         }
         sb .append("}");
         return sb.toString();
     }
 
+    /*
+     * If an authoring tool adds or removes a selector or declaration,
+     * then the selector or declaration needs to be tweaked to know that
+     * this is the Rule to which it belongs.
+     */
+    private final static class Observables {
+
+        private Observables(Rule rule) {
+
+            this.rule = rule;
+
+            selectorObservableList = new TrackableObservableList<Selector>(rule.getUnobservedSelectorList()) {
+                @Override protected void onChanged(Change<Selector> c) {
+                    while (c.next()) {
+                        if (c.wasAdded()) {
+                            List<Selector> added = c.getAddedSubList();
+                            for(int i = 0, max = added.size(); i < max; i++) {
+                                Selector sel = added.get(i);
+                                sel.setRule(Observables.this.rule);
+                            }
+                        }
+
+                        if (c.wasRemoved()) {
+                            List<Selector> removed = c.getAddedSubList();
+                            for(int i = 0, max = removed.size(); i < max; i++) {
+                                Selector sel = removed.get(i);
+                                if (sel.getRule() == Observables.this.rule) {
+                                    sel.setRule(null);
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            declarationObservableList = new TrackableObservableList<Declaration>(rule.getUnobservedDeclarationList()) {
+                @Override protected void onChanged(Change<Declaration> c) {
+                    while (c.next()) {
+                        if (c.wasAdded()) {
+                            List<Declaration> added = c.getAddedSubList();
+                            for(int i = 0, max = added.size(); i < max; i++) {
+                                Declaration decl = added.get(i);
+                                decl.rule = Observables.this.rule;
+
+                                Stylesheet stylesheet = Observables.this.rule.stylesheet;
+                                if (stylesheet != null && stylesheet.getUrl() != null) {
+                                    final URL stylesheetUrl = stylesheet.getUrl();
+                                    decl.fixUrl(stylesheetUrl);
+                                }
+                            }
+                        }
+
+                        if (c.wasRemoved()) {
+                            List<Declaration> removed = c.getRemoved();
+                            for(int i = 0, max = removed.size(); i < max; i++) {
+                                Declaration decl = removed.get(i);
+                                if (decl.rule == Observables.this.rule) {
+                                    decl.rule = null;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+        }
+
+        private ObservableList<Selector> getSelectors() {
+            return selectorObservableList;
+        }
+
+        private ObservableList<Declaration> getDeclarations() {
+            return declarationObservableList;
+        }
+
+        private final Rule rule;
+        private final ObservableList<Selector> selectorObservableList;
+        private final ObservableList<Declaration> declarationObservableList;
+
+    }
+
     void writeBinary(DataOutputStream os, StringStore stringStore)
             throws IOException {
-        os.writeShort(selectors.size());
-        for (int i = 0; i < selectors.size(); i++) {
-            Selector sel = selectors.get(i);
+
+        final int nSelectors = this.selectors != null ? this.selectors.size() : 0;
+        os.writeShort(nSelectors);
+        for (int i = 0; i < nSelectors; i++) {
+            Selector sel = this.selectors.get(i);
             sel.writeBinary(os, stringStore);
         }
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream(5192);
         DataOutputStream dos = new DataOutputStream(bos);
 
-        List<Declaration> declarations = getDeclarations();
+        if (declarations != null) {
+            int nDeclarations =  declarations.size();
 
-        dos.writeShort(declarations.size());
+            dos.writeShort(nDeclarations);
 
-        for (int i = 0; i < declarations.size(); i++) {
-            Declaration decl = declarations.get(i);
-            decl.writeBinary(dos, stringStore);
+            for (int i = 0; i < nDeclarations; i++) {
+                Declaration decl = declarations.get(i);
+                decl.writeBinary(dos, stringStore);
+            }
+        } else if (serializedDecls != null) {
+            dos.write(serializedDecls);
+
+        } else {
+            // no declarations!
+            dos.writeShort(0);
         }
 
         os.writeInt(bos.size());

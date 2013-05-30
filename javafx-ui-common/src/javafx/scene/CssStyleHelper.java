@@ -424,7 +424,7 @@ final class CssStyleHelper {
             final List<Rule> stylesheetRules = inlineStylesheet.getRules();
             for (int i = 0, imax = stylesheetRules.size(); i < imax; i++) {
                 final Rule rule = stylesheetRules.get(i);
-                final List<Declaration> declarations = rule.getDeclarations();
+                final List<Declaration> declarations = rule.getUnobservedDeclarationList();
                 for (int k = 0, kmax = declarations.size(); k < kmax; k++) {
                     Declaration decl = declarations.get(k);
 

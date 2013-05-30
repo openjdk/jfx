@@ -186,7 +186,7 @@ public class SelectorPartitioningTest {
                 CSSParser.getInstance().parse(data.stylesheetText);
                 
         for (Rule rule : stylesheet.getRules()) {
-            for (Selector selector : rule.getSelectors()) {
+            for (Selector selector : rule.getUnobservedSelectorList()) {
                 instance.partition(selector);
             }
         }
@@ -209,8 +209,8 @@ public class SelectorPartitioningTest {
 
         Rule rule = selectorDatum.selector.getRule();
 
-        assertEquals(1,rule.getDeclarations().size());
-        Declaration decl = rule.getDeclarations().get(0);
+        assertEquals(1,rule.getUnobservedDeclarationList().size());
+        Declaration decl = rule.getUnobservedDeclarationList().get(0);
         
         assertEquals("-fx-fill", decl.property);
         
