@@ -91,7 +91,7 @@ public abstract class BaseNode<G> implements PGNode {
      * an image or some other such operation.
      */
     private static boolean CLEAR_DIRTY = true;
-    
+
     /**
      * The transform for this node. Although we are handed all the bounds
      * during synchronization (including the transformed bounds), we still
@@ -147,14 +147,14 @@ public abstract class BaseNode<G> implements PGNode {
      * see if it is valid. If so, then bounds must be dirty.
      */
     protected DirtyFlag dirty = DirtyFlag.DIRTY;
-    
+
     /**
      * The parent of the node. In the case of a normal render graph node,
      * this will be an PGGroup. However, if this node is being used as
      * a clip node, then the parent is the node it is the clip for.
      */
     private BaseNode parent;
-    
+
     /**
      * True is this node is a clip. This means the parent is clipped by this node.
      */
@@ -214,7 +214,7 @@ public abstract class BaseNode<G> implements PGNode {
 
      /**
       * Do not iterate over all children in group. Mark group as dirty
-      * when threshold was reached. 
+      * when threshold was reached.
       */
      protected final static int DIRTY_CHILDREN_ACCUMULATED_THRESHOLD = 12;
 
@@ -295,11 +295,11 @@ public abstract class BaseNode<G> implements PGNode {
     }
 
     private DirtyHint hint;
-    
+
     /**
      * Called by the FX scene graph to tell us what our transform matrix is.
      * @param tx must not be null
-     * @param transformed new transformed bounds, base on 
+     * @param transformed new transformed bounds, base on
      */
     public void setTransformMatrix(BaseTransform tx) {
         // If the transform matrix has changed, then we need to update it,
@@ -312,7 +312,7 @@ public abstract class BaseNode<G> implements PGNode {
         // are changing. The scene will still be marked dirty and cached
         // images of any ancestors will be invalidated.
         boolean useHint = false;
-        
+
         // If the parent is cached, try to check if the transformation is only a translation
         if (parent != null && parent.cacheFilter != null) {
             if (hint == null) {
@@ -335,7 +335,7 @@ public abstract class BaseNode<G> implements PGNode {
                     hint.translateYDelta = tx.getMyt() - transform.getMyt();
                 }
             }
-        } 
+        }
 
         transform = transform.deriveWithNewTransform(tx);
         if (useHint) {
@@ -414,7 +414,7 @@ public abstract class BaseNode<G> implements PGNode {
             visualsChanged();
         }
     }
-    
+
     /**
      * Called by the FX scene graph whenever "cached" or "cacheHint" changes.
      * These hints provide a way for the developer to indicate whether they
@@ -428,7 +428,7 @@ public abstract class BaseNode<G> implements PGNode {
         if (cacheHint == null) {
             throw new IllegalArgumentException("Internal Error: cacheHint must not be null");
         }
-        
+
         if (cached) {
             if (cacheFilter == null) {
                 cacheFilter = createCacheFilter(cacheHint);
@@ -534,7 +534,7 @@ public abstract class BaseNode<G> implements PGNode {
     public void setParent(BaseNode parent) {
         setParent(parent, false);
     }
-    
+
     private void setParent(BaseNode parent, boolean isClip) {
         this.parent = parent;
         this.isClip = isClip;
@@ -686,7 +686,7 @@ public abstract class BaseNode<G> implements PGNode {
             markDirty();
         }
     }
-    
+
     /**
      * Makes this node dirty, meaning that it needs to be included in the
      * next repaint to the back buffer, and its bounds should be included
@@ -703,10 +703,10 @@ public abstract class BaseNode<G> implements PGNode {
             markTreeDirty();
         }
     }
-    
+
     /**
      * Mark the node as DIRTY_BY_TRANSLATION. This will call special cache invalidation
-     * @param hint 
+     * @param hint
      */
     public void markDirtyByTranslation(DirtyHint hint) {
         if (dirty == DirtyFlag.CLEAN) {
@@ -721,7 +721,7 @@ public abstract class BaseNode<G> implements PGNode {
             }
         }
     }
-    
+
     //Mark tree dirty, but make sure this node's
     // dirtyChildrenAccumulated has not been incremented.
     // Useful when a markTree is called on a node that's not
@@ -732,7 +732,7 @@ public abstract class BaseNode<G> implements PGNode {
             markTreeDirty();
         }
     }
-    
+
     /**
      * Notifies the parent (whether a PGGroup or just a BaseNode) that
      * a child has become dirty. This walk will continue all the way up
@@ -777,7 +777,7 @@ public abstract class BaseNode<G> implements PGNode {
         // will make sure it is invalidated in that case
         if (p != null) p.invalidateCache();
     }
-    
+
     /**
      * Gets whether this SGNode is clean. This will return true only if
      * this node and any / all child nodes are clean.
@@ -802,7 +802,7 @@ public abstract class BaseNode<G> implements PGNode {
         dirtyBounds.makeEmpty();
         dirtyChildrenAccumulated = 0;
     }
-    
+
     public void clearDirtyTree() {
         clearDirty();
         if (getClipNode() != null) {
@@ -818,7 +818,7 @@ public abstract class BaseNode<G> implements PGNode {
             }
         }
     }
-    
+
     /**
      * Invalidates the cache, if it is in use. There are several operations
      * which need to cause the cached raster to become invalid so that a
@@ -830,11 +830,11 @@ public abstract class BaseNode<G> implements PGNode {
             cacheFilter.invalidate();
         }
     }
-    
+
     /**
      * Mark the cache as invalid due to a translation of a child. The cache filter
      * might use this information for optimizations.
-     * @param hint 
+     * @param hint
      */
     protected final void invalidateCacheByTranslation(DirtyHint hint) {
         if (cacheFilter != null) {
@@ -901,7 +901,7 @@ public abstract class BaseNode<G> implements PGNode {
          if (dirty == DirtyFlag.CLEAN && !childDirty) {
              return DirtyRegionContainer.DTR_OK;
          }
-         
+
         // We simply collect this nodes dirty region if it has its dirty flag
         // set, regardless of whether it is a group or not. However, if this
         // node is not dirty, then we can ask the accumulateGroupDirtyRegion
@@ -914,7 +914,7 @@ public abstract class BaseNode<G> implements PGNode {
                                               dirtyRegionContainer, tx, pvTx);
         }
     }
-    
+
     /**
      * Accumulates the dirty region of a node.
      * TODO: Only made protected for the sake of testing (see javafx-sg-prism tests) (RT-23957)
@@ -935,7 +935,7 @@ public abstract class BaseNode<G> implements PGNode {
         dirtyRegionTemp.setMinY(bb.getMinY());
         dirtyRegionTemp.setMaxX(bb.getMaxX());
         dirtyRegionTemp.setMaxY(bb.getMaxY());
-        
+
         // If my dirty region is empty, or if it doesn't intersect with the
         // clip, then we can simply return the passed in dirty region since
         // this node's dirty region is not helpful
@@ -956,10 +956,10 @@ public abstract class BaseNode<G> implements PGNode {
         dirtyRegionTemp.setMaxY(Math.min(dirtyRegionTemp.getMaxY(), clip.getMaxY()));
 
         dirtyRegionContainer.addDirtyRegion(dirtyRegionTemp);
-        
+
         return DirtyRegionContainer.DTR_OK;
     }
-    
+
     /**
      * Accumulates the dirty region of a PGGroup. This is implemented here as opposed to
      * using polymorphism because we wanted to centralize all of the dirty region
@@ -997,12 +997,12 @@ public abstract class BaseNode<G> implements PGNode {
         double mxy = tx.getMxy();
         double mxz = tx.getMxz();
         double mxt = tx.getMxt();
-        
+
         double myx = tx.getMyx();
         double myy = tx.getMyy();
         double myz = tx.getMyz();
         double myt = tx.getMyt();
-        
+
         double mzx = tx.getMzx();
         double mzy = tx.getMzy();
         double mzz = tx.getMzz();
@@ -1026,8 +1026,8 @@ public abstract class BaseNode<G> implements PGNode {
         // already have in place for getting the normal dirty region.
         RectBounds myClip = clip;
         //Save current dirty region so we can fast-reset to (something like) the last state
-        //and possibly save a few intersects() calls        
-        
+        //and possibly save a few intersects() calls
+
         DirtyRegionContainer originalDirtyRegion = null;
         BaseTransform originalRenderTx = null;
         if (effectFilter != null) {
@@ -1041,7 +1041,7 @@ public abstract class BaseNode<G> implements PGNode {
             } catch (NoninvertibleTransformException ex) {
                 return DirtyRegionContainer.DTR_OK;
             }
-            
+
             originalRenderTx = renderTx;
             renderTx = BaseTransform.IDENTITY_TRANSFORM;
             originalDirtyRegion = dirtyRegionContainer;
@@ -1056,7 +1056,7 @@ public abstract class BaseNode<G> implements PGNode {
             myClip.intersectWith(clip);
             dirtyRegionContainer = regionPool.checkOut();
         }
-        
+
 
         //Accumulate also removed children to dirty region.
         List<PGNode> removed = ((PGGroup) this).getRemovedChildren();
@@ -1072,7 +1072,7 @@ public abstract class BaseNode<G> implements PGNode {
                     }
             }
         }
-  
+
         List<PGNode> children = ((PGGroup) this).getChildren();
         int num = children.size();
             for (int i=0; i<num && status == DirtyRegionContainer.DTR_OK; i++) {
@@ -1080,7 +1080,7 @@ public abstract class BaseNode<G> implements PGNode {
             // The child will check the dirty bits itself. If we tested it here
             // (as we used to), we are just doing the check twice. True, it might
             // mean fewer method calls, but hotspot will probably inline this all
-            // anyway, and doing the check in one place is less error prone.            
+            // anyway, and doing the check in one place is less error prone.
                 status = child.accumulateDirtyRegions(myClip, dirtyRegionTemp, regionPool,
                                                       dirtyRegionContainer, renderTx, pvTx);
                 if (status == DirtyRegionContainer.DTR_CONTAINS_CLIP) {
@@ -1091,7 +1091,7 @@ public abstract class BaseNode<G> implements PGNode {
         if (effectFilter != null && status == DirtyRegionContainer.DTR_OK) {
             //apply effect on effect dirty regions
             applyEffect(effectFilter, dirtyRegionContainer, regionPool);
-            
+
             if (clipNode != null) {
                 myClip = new RectBounds();
                 BaseBounds clipBounds = clipNode.getCompleteBounds(myClip, renderTx);
@@ -1101,11 +1101,11 @@ public abstract class BaseNode<G> implements PGNode {
             //apply transform on effect dirty regions
             applyTransform(originalRenderTx, dirtyRegionContainer);
             renderTx = originalRenderTx;
-            
+
             originalDirtyRegion.merge(dirtyRegionContainer);
             regionPool.checkIn(dirtyRegionContainer);
         }
-            
+
         // If the process of applying the transform caused renderTx to not equal
         // tx, then there is no point restoring it since it will be a different
         // reference and will therefore be gc'd.
@@ -1126,7 +1126,7 @@ public abstract class BaseNode<G> implements PGNode {
                 originalDirtyRegion.merge(dirtyRegionContainer);
             }
             regionPool.checkIn(dirtyRegionContainer);
-        }        
+        }
         return status;
     }
 
@@ -1156,26 +1156,29 @@ public abstract class BaseNode<G> implements PGNode {
             // the group exceeds the bounds of the clip on the group. Just trust me.
             region = region.deriveWithNewBounds(transformedBounds);
         }
-        
+
         // We shouldn't do anything with empty region, as we may accidentally make
         // it non empty or turn it into some nonsense (like (-1,-1,0,0) )
         if (!region.isEmpty()) {
             // Now that we have the dirty region, we will simply apply the tx
             // to it (after slightly padding it for good luck) to get the scene
-            // coordinates for this. Note that for SGText this implementation should not
-            // be used (as this shortcut doesn't seem to work well with text).
-            region = region.deriveWithNewBounds(region.getMinX() - 1.0f,
-                    region.getMinY() - 1.0f,
-                    region.getMinZ(),
-                    region.getMaxX() + 1.0f,
-                    region.getMaxY() + 1.0f,
-                    region.getMaxZ());
+            // coordinates for this.
+            region = computePadding(region);
             region = tx.transform(region, region);
             region = pvTx.transform(region, region);
         }
         return region;
     }
-    
+
+    /**
+     * LCD Text creates some painful situations where, due to the LCD text
+     * algorithm, we end up with some pixels touched that are normally outside
+     * the bounds. To compensate, we need a hook for NGText to add padding.
+     */
+    protected BaseBounds computePadding(BaseBounds region) {
+        return region;
+    }
+
     /**
      * Marks if the node has some visuals and that the bounds change
      * should be taken into account when using the dirty region.
@@ -1298,7 +1301,7 @@ public abstract class BaseNode<G> implements PGNode {
 
     public void release() {
     }
-    
+
     public void applyTransform(final BaseTransform tx, DirtyRegionContainer drc) {
         for (int i = 0; i < drc.size(); i++) {
             drc.setDirtyRegion(i, (RectBounds) tx.transform(drc.getDirtyRegion(i), drc.getDirtyRegion(i)));
@@ -1307,7 +1310,7 @@ public abstract class BaseNode<G> implements PGNode {
             }
         }
     }
-    
+
     public void applyClip(final BaseBounds clipBounds, DirtyRegionContainer drc) {
         for (int i = 0; i < drc.size(); i++) {
             drc.getDirtyRegion(i).intersectWith(clipBounds);
@@ -1326,7 +1329,7 @@ public abstract class BaseNode<G> implements PGNode {
         drc.deriveWithNewContainer(effectDrc);
         regionPool.checkIn(effectDrc);
     }
-    
+
     private static class EffectDirtyBoundsHelper extends Effect {
         private BaseBounds bounds;
         private static EffectDirtyBoundsHelper instance = null;
@@ -1337,7 +1340,7 @@ public abstract class BaseNode<G> implements PGNode {
         }
 
         @Override
-        public ImageData filter(FilterContext fctx, 
+        public ImageData filter(FilterContext fctx,
                 BaseTransform transform,
                 Rectangle outputClip,
                 Object renderHelper,
