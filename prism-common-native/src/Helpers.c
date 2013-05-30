@@ -36,8 +36,13 @@
 #if TARGET_OS_IPHONE /* iOS */
 
 JNIEXPORT jint JNICALL
- JNI_OnLoad_prism_common(JavaVM* vm, void* reserved) {
+JNI_OnLoad_prism_common(JavaVM* vm, void* reserved) {
 #ifdef JNI_VERSION_1_8
+    //min. returned JNI_VERSION required by JDK8 for builtin libraries
+    JNIEnv *env;
+    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_8) != JNI_OK) {
+        return JNI_VERSION_1_4;
+    }
     return JNI_VERSION_1_8;
 #else
     return JNI_VERSION_1_4;
