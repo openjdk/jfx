@@ -784,6 +784,17 @@ public class MouseEvent extends InputEvent {
      */
     private final boolean popupTrigger;
 
+    /**
+     * Returns {@code true} if this mouse event is the popup menu
+     * trigger event for the platform.
+     * <p><b>Note</b>: Popup menus are triggered differently
+     * on different systems. Therefore, {@code popupTrigger}
+     * should be checked in both {@code onMousePressed}
+     * and {@code mouseReleased} for proper cross-platform functionality.
+     *
+     * @return {@code true} if this mouse event is the popup menu
+     * trigger event for the platform
+     */
     public final boolean isPopupTrigger() {
         return popupTrigger;
     }
