@@ -130,7 +130,7 @@ public class GlyphCache {
         Color currentColor = null;
         Point2D pt = new Point2D();
 
-        boolean subPixel = strike.isSubPixelGlyph() && xform.isTranslateOrIdentity();
+        boolean subPixel = strike.isSubPixelGlyph();
         boolean useGlyphListForAdvances = gl.isComplex() || subPixel;
 
         /* For complex text the advances from GlyphList must be used.

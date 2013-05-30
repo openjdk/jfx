@@ -2019,7 +2019,9 @@ public abstract class BaseShaderGraphics
             if (isSimpleTranslate) {
                 // Applying this rounding allows for smoother text animation,
                 // when animating simple translated text.
-                p2d.x = (float)Math.round(3.0 * p2d.x)/ 3.0f;
+                if (!strike.isSubPixelGlyph()) {
+                    p2d.x = (float)Math.round(3.0 * p2d.x)/ 3.0f;
+                }
                 p2d.y = (float)Math.round(p2d.y);
             }
         } else {
@@ -2028,7 +2030,9 @@ public abstract class BaseShaderGraphics
                 // locations produces very poor text. This doesn't solve
                 // the problem for scaled (etc) cases, but addresses a
                 // common case.
-                p2d.x = (float)Math.round(p2d.x);
+                if (!strike.isSubPixelGlyph()) {
+                    p2d.x = (float)Math.round(p2d.x);
+                }
                 p2d.y = (float)Math.round(p2d.y);
             }
             context.validatePaintOp(this, IDENT, cacheTex, bx, by, bw, bh);
