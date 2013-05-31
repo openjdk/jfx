@@ -225,11 +225,11 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
             incBtnX = trackX - (int)track.getLayoutBounds().getWidth();
         }
 
-        if (thumb.contains(thumbX, thumbY)) {
+        if (thumb.isVisible() && thumb.contains(thumbX, thumbY)) {
             log.finer("thumb");
             return THUMB_PART;
 
-        } else if (track.contains(trackX, trackY)) {
+        } else if (track.isVisible() && track.contains(trackX, trackY)) {
 
             if ((orientation == VERTICAL_SCROLLBAR && thumbPosition() >= trackY) ||
                 (orientation == HORIZONTAL_SCROLLBAR && thumbPosition() >= trackX))
