@@ -1000,11 +1000,30 @@ public abstract class Window {
     public void toFront() {
         Application.checkEventThread();
         checkNotClosed();
+        toFrontImpl(this, null);
+    }
+
+    private void toFrontImpl(Window w, List<Window> list) {
         // for z-order stacking, pop the window
         // and push it on the end (closest Z)
-        visibleWindows.remove(this);
-        visibleWindows.add(this);
-        _toFront(this.ptr);
+        visibleWindows.remove(w);
+        visibleWindows.add(w);
+        _toFront(w.ptr);
+        raiseOurOwnedWindows(w, list);
+    }
+
+    private void raiseOurOwnedWindows(Window window, List<Window> list) {
+        // owned windows should be maintained in front of the owner.
+        if (list == null) {
+            // get a single copy of the window list
+            // copy is needed to avoid concurence issues with the iterator
+            list = (List<Window>) Window.visibleWindows.clone();
+        }
+        for(Window w: list) {
+            if (window.equals(w.getOwner())) {
+                toFrontImpl(w, list);
+            }
+        }
     }
 
     protected abstract void _toBack(long ptr);
