@@ -202,12 +202,12 @@ public class SelectorPartitioningTest {
                 
         SimpleSelector simple = simpleData.selector;
         
-        List<SelectorPartitioning.SelectorData> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
         
         assertEquals(1,matched.size());
-        SelectorPartitioning.SelectorData selectorDatum = matched.get(0);
+        Selector selector = matched.get(0);
 
-        Rule rule = selectorDatum.selector.getRule();
+        Rule rule = selector.getRule();
 
         assertEquals(1,rule.getUnobservedDeclarationList().size());
         Declaration decl = rule.getUnobservedDeclarationList().get(0);
@@ -226,11 +226,10 @@ public class SelectorPartitioningTest {
                 
         SimpleSelector simple = complexData.selector;
         
-        List<SelectorPartitioning.SelectorData> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
         assertEquals(complexData.matches, matched.size());
         
-        for(SelectorPartitioning.SelectorData selectorDatum : matched) {
-            Selector s1 = selectorDatum.selector;
+        for(Selector s1 : matched) {
             for (SimpleData datum : complexData.data) {
                 Selector s2 = (SimpleSelector)datum.selector;
                 if (s1.equals(s2)) {

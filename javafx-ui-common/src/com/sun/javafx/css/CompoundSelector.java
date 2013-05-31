@@ -231,19 +231,17 @@ final public class CompoundSelector extends Selector {
             final Styleable parent = styleable.getStyleableParent();
             if (parent == null) return false;
             if (selectors.get(index-1).applies(parent)) {
-                PseudoClassState parentStates = new PseudoClassState();
-                parentStates.addAll(parent.getPseudoClassStates());
                 // If this call succeeds, then all preceding selectors will have
                 // matched due to the recursive nature of the call
+                Set<PseudoClass> parentStates = parent.getPseudoClassStates();
                 return stateMatches(parent, parentStates, index - 1);
             }
         } else {
             Styleable parent = styleable.getStyleableParent();
             while (parent != null) {
                 if (selectors.get(index-1).applies(parent)) { 
-                    PseudoClassState parentStates = new PseudoClassState();
-                    parentStates.addAll(parent.getPseudoClassStates());
-                    return stateMatches(parent, parentStates, index - 1);
+                    Set<PseudoClass> parentStates = parent.getPseudoClassStates();
+                    return stateMatches(parent, states, index - 1);
                 }
                 // Otherwise we need to get the next parent and try again
                 parent = parent.getStyleableParent();

@@ -67,6 +67,7 @@ import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
 import javafx.scene.image.Image;
 import javafx.stage.PopupWindow;
+import javafx.util.Pair;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -85,16 +86,16 @@ import sun.util.logging.PlatformLogger;
  * is a two level cache. The first level cache simply maps the
  * classname/id/styleclass combination of the request node to a 2nd level cache.
  * If the node has "styles" specified then we still use this 2nd level cache,
- * but must combine its selectorData with the selectorData specified in "styles" and perform
+ * but must combine its selectors with the selectors specified in "styles" and perform
  * more work to cascade properly. <p> The 2nd level cache contains a data
  * structure called the Cache. The Cache contains an ordered sequence of Rules,
- * a Long, and a Map. The ordered sequence of selectorData are the selectorData that *may*
+ * a Long, and a Map. The ordered sequence of selectors are the selectors that *may*
  * match a node with the given classname, id, and style class. For example,
- * selectorData which may apply are any selector where the simple selector of the selector
+ * selectors which may apply are any selector where the simple selector of the selector
  * contains a reference to the id, style class, or classname of the Node, or a
  * compound selector who's "descendant" part is a simple selector which contains
  * a reference to the id, style class, or classname of the Node. <p> During
- * lookup, we will iterate over all the potential selectorData and discover if they
+ * lookup, we will iterate over all the potential selectors and discover if they
  * apply to this particular node. If so, then we toggle a bit position in the
  * Long corresponding to the position of the selector that matched. This long then
  * becomes our key into the final map. <p> Once we have established our key, we
@@ -1362,7 +1363,7 @@ final public class StyleManager {
             // add it to the cache map
             
             // Construct the list of Selectors that could possibly apply
-            final List<SelectorPartitioning.SelectorData> selectorData = new ArrayList<>();
+            final List<Selector> selectorData = new ArrayList<>();
 
             // User agent stylesheets have lowest precedence and go first
             if (userAgentStylesheets.isEmpty() == false) {
@@ -1370,7 +1371,7 @@ final public class StyleManager {
                     final StylesheetContainer container = userAgentStylesheets.get(n);
                     
                     if (container != null && container.selectorPartitioning != null) {
-                        final List<SelectorPartitioning.SelectorData> matchingRules =
+                        final List<Selector> matchingRules =
                                 container.selectorPartitioning.match(id, cname, key.styleClasses);
                         selectorData.addAll(matchingRules);
                     }
@@ -1384,7 +1385,7 @@ final public class StyleManager {
                     final StylesheetContainer container = sceneStylesheets.get(n);
                     if (container != null && container.selectorPartitioning != null) {
                         container.keys.add(key); // remember that this stylesheet was used in this cache
-                        final List<SelectorPartitioning.SelectorData> matchingRules =
+                        final List<Selector> matchingRules =
                                 container.selectorPartitioning.match(id, cname, key.styleClasses);
                         selectorData.addAll(matchingRules);
                     }
@@ -1398,14 +1399,14 @@ final public class StyleManager {
                     final StylesheetContainer container = parentStylesheets.get(n);
                     container.keys.add(key); // remember that this stylesheet was used in this cache
                     if (container.selectorPartitioning != null) {
-                        final List<SelectorPartitioning.SelectorData> matchingRules =
+                        final List<Selector> matchingRules =
                                 container.selectorPartitioning.match(id, cname, key.styleClasses);
                         selectorData.addAll(matchingRules);
                     }
                 }
             }
             
-            // create a new Cache from these selectorData.
+            // create a new Cache from these selectors.
             cache = new Cache(selectorData);
             cacheMap.put(key, cache);
             
@@ -1605,29 +1606,33 @@ final public class StyleManager {
             }
             
         }
-        // this must be initialized to the appropriate possible selectorData when
-        // the helper cache is created by the StylesheetContainer
-        private final List<SelectorPartitioning.SelectorData> selectorData;
+
+        // this must be initialized to the appropriate possible selectors when
+        // the helper cache is created by the StylesheetContainer. Note that
+        // SelectorPartioning sorts the matched selectors by ordinal, so this
+        // list of selectors will be in the same order in which the selectors
+        // appear in the stylesheets.
+        private final List<Selector> selectors;
         private final Map<Key, Integer> cache;
 
-        Cache(List<SelectorPartitioning.SelectorData> selectorData) {
-            this.selectorData = selectorData;
+        Cache(List<Selector> selectors) {
+            this.selectors = selectors;
             this.cache = new HashMap<Key, Integer>();
         }
 
         private StyleMap getStyleMap(CacheContainer cacheContainer, Node node, Set<PseudoClass>[] triggerStates) {
             
-            if (selectorData == null || selectorData.isEmpty()) {
+            if (selectors == null || selectors.isEmpty()) {
                 return StyleMap.EMPTY_MAP;
             }
 
-            final int selectorDataSize = selectorData.size();
+            final int selectorDataSize = selectors.size();
 
             //
-            // Since the list of selectorData is found by matching only the
-            // rightmost selector, the set of selectorData may larger than those
-            // selectorData that actually match the node. The following loop
-            // whittles the list down to those selectorData that apply.
+            // Since the list of selectors is found by matching only the
+            // rightmost selector, the set of selectors may larger than those
+            // selectors that actually match the node. The following loop
+            // whittles the list down to those selectors that apply.
             //
             //
             // To lookup from the cache, we construct a key from a Long
@@ -1638,14 +1643,16 @@ final public class StyleManager {
             boolean nothingMatched = true;
 
             for (int s = 0; s < selectorDataSize; s++) {
-                
+
+                final Selector sel = selectors.get(s);
+
                 //
                 // This particular flavor of applies takes a PseudoClassState[]
                 // fills in the pseudo-class states from the selectors where
                 // they apply to a node. This is an expedient to looking the
-                // applies loopa second time on the matching selectorData. This has to
+                // applies loopa second time on the matching selectors. This has to
                 // be done ahead of the cache lookup since not all nodes that
-                // have the same set of selectorData will have the same node hierarchy.
+                // have the same set of selectors will have the same node hierarchy.
                 //
                 // For example, if I have .foo:hover:focused .bar:selected {...}
                 // and the "bar" node is 4 away from the root and the foo
@@ -1656,8 +1663,6 @@ final public class StyleManager {
                 // Note also that, if the selector does not apply, the triggerStates
                 // is unchanged.
                 //
-                final SelectorPartitioning.SelectorData selectorDatum = selectorData.get(s);
-                final Selector sel = selectorDatum.selector;
 
                 if (sel.applies(node, triggerStates, 0)) {
                     final int index = s / Long.SIZE;
@@ -1679,15 +1684,7 @@ final public class StyleManager {
                 return styleMap;
             }
 
-            // if there isn't a map in cache already, create one. 
-            // 
-            // We know the selectorData apply, so they should also match. A selector
-            // might have more than one selector and match will return the
-            // selector that matches. Matches is more expensive than applies, 
-            // so we pay for it here, but only for the first time the 
-            // cache is created.
-            //
-            final List<CascadingStyle> styles = new ArrayList<CascadingStyle>();
+            final List<Selector> selectors = new ArrayList<>();
 
             for (int k = 0; k<key.length; k++) {
 
@@ -1701,65 +1698,56 @@ final public class StyleManager {
                     final long mask = 1l << b;
                     if ((mask & key[k]) != mask) continue;
 
-                    final SelectorPartitioning.SelectorData selectorDatum = selectorData.get(offset+b);
-                    int ordinal = selectorDatum.ordinal;
-                    final Selector selector = selectorDatum.selector;
-
-                    Match match = selector.createMatch();
-
-                    Rule rule = selector.getRule();
-
-                    List<Declaration> declarations = rule.getUnobservedDeclarationList();
-                    int dMax = declarations != null ? declarations.size() : 0;
-                    for (int d = 0; d < dMax; d++) {
-                        final Declaration decl = declarations.get(d);
-
-                        final CascadingStyle s = new CascadingStyle(
-                                new Style(match.selector, decl),
-                                match.pseudoClasses,
-                                match.specificity,
-                                // ordinal increments at declaration level since
-                                // there may be more than one declaration for the
-                                // same attribute within a selector or within a stylesheet
-                                ordinal++
-                        );
-
-                        styles.add(s);
-                    }
+                    final Selector pair = this.selectors.get(offset + b);
+                    selectors.add(pair);
                 }
-            }
-
-                // return sorted styles
-            Collections.sort(styles);
-
-            
-            // We need to create a new style map, add it to the cache,
-            // and then return it.
-            final Map<String, List<CascadingStyle>> smap =
-                new HashMap<String, List<CascadingStyle>>();
-            
-            for (int i=0, max=styles.size(); i<max; i++) {
-                
-                final CascadingStyle style = styles.get(i);
-                final String property = style.getProperty();
-                
-                // This is carefully written to use the minimal amount of hashing.
-                List<CascadingStyle> list = smap.get(property);
-                if (list == null) {
-                    list = new ArrayList<CascadingStyle>(5);
-                    smap.put(property, list);
-                }
-                list.add(style);
             }
 
             final int id = cacheContainer.nextSmapId();
-            final StyleMap styleMap = new StyleMap(id, smap);
+            final StyleMap styleMap = new StyleMap(id, selectors);
             cacheContainer.addStyleMap(styleMap);
             cache.put(keyObj, Integer.valueOf(id));
             return styleMap;
         }
 
     }
+
+    /**
+     * Get the map of property to style from the rules and declarations
+     * in the stylesheet. There is no need to do selector matching here since
+     * the stylesheet is from parsing Node.style.
+     */
+    public StyleMap createInlineStyleMap(Styleable styleable) {
+
+        Stylesheet inlineStylesheet =
+                CSSParser.getInstance().parseInlineStyle(styleable);
+        if (inlineStylesheet == null)  return StyleMap.EMPTY_MAP;
+
+        inlineStylesheet.setOrigin(StyleOrigin.INLINE);
+
+        List<Selector> pairs = new ArrayList<>(1);
+
+        int ordinal = 0;
+            
+        final List<Rule> stylesheetRules = inlineStylesheet.getRules();
+
+        List<Selector> selectorList =  null;
+
+        for (int i = 0, imax = stylesheetRules.size(); i < imax; i++) {
+            
+            final Rule rule = stylesheetRules.get(i);
+            if (rule == null) continue;
+
+            List<Selector> selectors = rule.getUnobservedSelectorList();
+            if (selectorList == null || selectors.isEmpty()) continue;
+
+            selectorList.addAll(selectors);
+        }
+
+        // TODO: should have a cacheContainer for inline styles?
+        return new StyleMap(-1, selectorList);
+    }
+
     
     /**
      * The key used in the cacheMap of the StylesheetContainer

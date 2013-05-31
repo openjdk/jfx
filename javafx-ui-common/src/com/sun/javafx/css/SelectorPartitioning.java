@@ -25,7 +25,14 @@
 
 package com.sun.javafx.css;
 
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Code to partition selectors into a tree-like structure for faster matching.
@@ -72,29 +79,6 @@ public final class SelectorPartitioning {
     }   
     
     /** 
-     * Since matched selectors are retrieved from the tree in an indeterminate manner,
-     * we need to keep track of the order in which the selector was added. This
-     * can't be kept in Selector itself since the order depends on both the
-     * order of the stylesheets and the order of the selectors in the stylesheets.
-     * Also, selectors can be added and removed from the stylesheet which would
-     * invalidate the order.
-     */
-    static final class SelectorData implements Comparable {
-        final Selector selector;
-        final int ordinal;
-        
-        private SelectorData(Selector selector, int ordinal) {
-            this.selector = selector;
-            this.ordinal = ordinal;
-        }
-
-        @Override
-        public int compareTo(Object t) {
-            return ordinal - ((SelectorData)t).ordinal;
-        }
-    }
-    
-    /**
      * A Partition corresponds to a selector type, id or styleclass. For any
      * given id (for example) there will be one Partition held in the
      * corresponding map (idMap, for example). Each Partition has Slots which
@@ -117,18 +101,18 @@ public final class SelectorPartitioning {
         
         private final PartitionKey key;
         private final Map<PartitionKey, Slot> slots;
-        private List<SelectorData> selectors;
+        private List<Selector> selectors;
         
         private Partition(PartitionKey key) {
            this.key = key;
             slots = new HashMap<PartitionKey,Slot>();
         }
 
-        private void addSelectorData(SelectorData selectorData) {
+        private void addSelector(Selector pair) {
             if (selectors == null) {
-                selectors = new ArrayList<SelectorData>();
+                selectors = new ArrayList<Selector>();
             }
-            selectors.add(selectorData);
+            selectors.add(pair);
         }
 
         /**
@@ -161,18 +145,18 @@ public final class SelectorPartitioning {
         private final Map<PartitionKey, Slot> referents;
 
         // Selectors that match the path to this slot
-        private List<SelectorData> selectors;
+        private List<Selector> selectors;
         
         private Slot(Partition partition) {
             this.partition = partition;
             this.referents = new HashMap<PartitionKey, Slot>();            
         }
         
-        private void addSelectorData(SelectorData selectorData) {
+        private void addSelector(Selector pair) {
             if (selectors == null) {
-                selectors = new ArrayList<SelectorData>();
+                selectors = new ArrayList<Selector>();
             }
-            selectors.add(selectorData);
+            selectors.add(pair);
         }
 
         /**
@@ -279,7 +263,7 @@ public final class SelectorPartitioning {
         Partition partition = null;
         Slot slot = null;
 
-        final SelectorData selectorData = new SelectorData(selector,ordinal++);
+        selector.setOrdinal(ordinal++);
 
         switch(c) {
             case ID_BIT | TYPE_BIT | STYLECLASS_BIT: 
@@ -290,7 +274,7 @@ public final class SelectorPartitioning {
                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                     slot = slot.partition(styleClassKey, styleClassMap);
                 }                
-                slot.addSelectorData(selectorData);
+                slot.addSelector(selector);
                 break;
                 
             case TYPE_BIT | STYLECLASS_BIT:
@@ -299,9 +283,9 @@ public final class SelectorPartitioning {
                 partition = getPartition(typeKey, typeMap);
                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                     slot = partition.partition(styleClassKey, styleClassMap);
-                    slot.addSelectorData(selectorData);
+                    slot.addSelector(selector);
                 } else {
-                    partition.addSelectorData(selectorData);
+                    partition.addSelector(selector);
                 }
                 break;
                 
@@ -316,7 +300,7 @@ public final class SelectorPartitioning {
     }
     
     /** Get the list of selectors that match this selector. Package accessible */
-    List<SelectorData> match(String selectorId, String selectorType, Set<StyleClass> selectorStyleClass) {
+    List<Selector> match(String selectorId, String selectorType, Set<StyleClass> selectorStyleClass) {
         
         final boolean hasId = 
             (selectorId != null && selectorId.isEmpty() == false);
@@ -341,7 +325,7 @@ public final class SelectorPartitioning {
 
         Partition partition = null;
         Slot slot = null;
-        List<SelectorData> selectorData = new ArrayList<SelectorData>();
+        List<Selector> selectors = new ArrayList<Selector>();
         
         while (c != 0) {
             
@@ -353,7 +337,7 @@ public final class SelectorPartitioning {
                     partition = idMap.get(idKey);
                     if (partition != null) {
                         if (partition.selectors != null) {
-                            selectorData.addAll(partition.selectors);
+                            selectors.addAll(partition.selectors);
                         }
                         // do-while handles A.b#c also matches A#c by first
                         // doing A.b#c then doing *.b#c
@@ -363,7 +347,7 @@ public final class SelectorPartitioning {
                             if (slot != null) {
 
                                 if (slot.selectors != null) {
-                                    selectorData.addAll(slot.selectors);
+                                    selectors.addAll(slot.selectors);
                                 }
                                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                                     Set<StyleClass> key = (Set<StyleClass>)styleClassKey.key;
@@ -371,7 +355,7 @@ public final class SelectorPartitioning {
                                         if (s.selectors == null || s.selectors.isEmpty()) continue;;
                                         Set<StyleClass> other = (Set<StyleClass>)s.partition.key.key;
                                         if (key.containsAll(other)) {
-                                            selectorData.addAll(s.selectors);
+                                            selectors.addAll(s.selectors);
                                         }
                                     }
                                 }
@@ -405,7 +389,7 @@ public final class SelectorPartitioning {
                         partition = typeMap.get(typePK);
                         if (partition != null) {
                             if (partition.selectors != null) {
-                                selectorData.addAll(partition.selectors);
+                                selectors.addAll(partition.selectors);
                             }
                             if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                                 Set<StyleClass> key = (Set<StyleClass>)styleClassKey.key;
@@ -413,7 +397,7 @@ public final class SelectorPartitioning {
                                     if (s.selectors == null || s.selectors.isEmpty()) continue;
                                     Set<StyleClass> other = (Set<StyleClass>)s.partition.key.key;
                                     if (key.containsAll(other)) {
-                                        selectorData.addAll(s.selectors);
+                                        selectors.addAll(s.selectors);
                                     }
                                 }
                             }
@@ -436,7 +420,18 @@ public final class SelectorPartitioning {
                     assert(false);
             }
         }
-        return selectorData;
+
+        Collections.sort(selectors, COMPARATOR);
+        return selectors;
     }
+
+    private static final Comparator<Selector> COMPARATOR =
+            new Comparator<Selector>() {
+                @Override
+                public int compare(Selector o1, Selector o2) {
+                    return o1.getOrdinal() - o2.getOrdinal();
+                }
+            };
+
 
 }

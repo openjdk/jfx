@@ -60,6 +60,14 @@ abstract public class Selector {
         return rule;
     }
 
+    private int ordinal = -1;
+    void setOrdinal(int ordinal) {
+        this.ordinal = ordinal;
+    }
+    int getOrdinal() {
+        return ordinal;
+    }
+
     abstract Match createMatch();
 
     // same as the matches method expect return true/false rather than a match

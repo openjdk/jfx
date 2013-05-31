@@ -119,10 +119,7 @@ final class CssStyleHelper {
                 StyleManager.getInstance().findMatchingStyles(node, triggerStates);
 
         
-        final Map<String, List<CascadingStyle>> smap 
-                = styleMap != null ? styleMap.getMap() : null;
-        
-        if (smap == null || smap.isEmpty()) {
+        if (styleMap == null || styleMap.isEmpty()) {
             
             // If there are no styles at all, and no styles that inherit, then return
             final String inlineStyle = node.getStyle();
@@ -337,7 +334,7 @@ final class CssStyleHelper {
             final String inlineStyle = node.getStyle();
             if(inlineStyle == null || inlineStyle.isEmpty()) {
 
-                final Map<String, List<CascadingStyle>> smap = getStyleMap(node);            
+                StyleMap smap = getStyleMap(node);
                 if (smap == null || smap.isEmpty()) {
                     // We have no styles! Reset this StyleHelper to its
                     // initial state so that calls to transitionToState 
@@ -395,11 +392,16 @@ final class CssStyleHelper {
         }
     }
     
-        
-    private Map<String, List<CascadingStyle>> getStyleMap(Styleable styleable) {
+
+    private StyleMap getStyleMap(Styleable styleable) {
         if (cacheContainer == null || styleable == null) return null;
-        StyleMap styleMap = cacheContainer.getStyleMap(styleable);
-        return (styleMap != null) ? styleMap.getMap() : null;
+        return cacheContainer.getStyleMap(styleable);
+    }
+
+    private Map<String, List<CascadingStyle>> getCascadingStyles(Styleable styleable) {
+        StyleMap styleMap = getStyleMap(styleable);
+        // code looks for null return to indicate that the cache was blown away
+        return (styleMap != null) ? styleMap.getCascadingStyles() : null;
     }
     
     /** 
@@ -855,10 +857,13 @@ final class CssStyleHelper {
         final CascadingStyle inlineStyle = (inlineStyles != null) ? inlineStyles.get(property) : null;
 
         // Get all of the Styles which may apply to this particular property
-        final Map<String, List<CascadingStyle>> smap = getStyleMap(styleable);
-        if (smap == null) return inlineStyle;
+        final StyleMap smap = getStyleMap(styleable);
+        if (smap == null || smap.isEmpty()) return inlineStyle;
 
-        final List<CascadingStyle> styles = smap.get(property);
+        final Map<String, List<CascadingStyle>> cascadingStyleMap = smap.getCascadingStyles();
+        if (cascadingStyleMap == null || cascadingStyleMap.isEmpty()) return inlineStyle;
+
+        List<CascadingStyle> styles = cascadingStyleMap.get(property);
 
         // If there are no styles for this property then we can just bail
         if ((styles == null) || styles.isEmpty()) return inlineStyle;
@@ -2128,7 +2133,7 @@ final class CssStyleHelper {
                     
             String property = styleableProperty.getProperty();
             Node _node = node instanceof Node ? (Node)node : null;
-            final Map<String, List<CascadingStyle>> smap = getStyleMap(_node);
+            final Map<String, List<CascadingStyle>> smap = getCascadingStyles(_node);
             if (smap == null) return;
             
              List<CascadingStyle> styles = smap.get(property);            
@@ -2188,7 +2193,7 @@ final class CssStyleHelper {
                                              
                         final int start = styleList.size();
                         
-                        final Map<String, List<CascadingStyle>> smap = helper.getStyleMap(_parent);
+                        final Map<String, List<CascadingStyle>> smap = helper.getCascadingStyles(_parent);
                         if (smap != null) {
 
                             List<CascadingStyle> styles = smap.get(property);
