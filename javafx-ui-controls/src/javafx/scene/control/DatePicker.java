@@ -33,6 +33,7 @@ import java.time.chrono.Chronology;
 import java.time.chrono.ChronoLocalDate;
 import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.format.DecimalStyle;
 import java.time.format.FormatStyle;
@@ -358,13 +359,16 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                                      .withChronology(chrono)
                                      .withDecimalStyle(DecimalStyle.of(locale));
 
-                String pattern = getPattern();
-                //System.err.println("pattern = "+pattern);
+                String pattern =
+                    DateTimeFormatterBuilder.getLocalizedDateTimePattern(FormatStyle.SHORT,
+                                                                         null, chrono, locale);
+
                 if (pattern.contains("yy") && !pattern.contains("yyy")) {
                     // Modify pattern to show four-digit year, including leading zeros.
                     String newPattern = pattern.replace("yy", "yyyy");
                     //System.err.println("Fixing pattern ("+forParsing+"): "+pattern+" -> "+newPattern);
-                    dateFormatter = DateTimeFormatter.ofPattern(newPattern);
+                    dateFormatter = DateTimeFormatter.ofPattern(newPattern)
+                                                     .withDecimalStyle(DecimalStyle.of(locale));
                 }
 
                 return dateFormatter.format(cDate);
@@ -378,30 +382,14 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                 Locale locale = Locale.getDefault(Locale.Category.FORMAT);
                 Chronology chrono = getChronology();
 
-                String pattern = getPattern();
-                if (pattern.contains("yy") && !pattern.contains("yyy")) {
-                    // First try a pattern using four-digit year
-                    pattern = pattern.replace("yy", "yyyy");
-                    DateTimeFormatter df = DateTimeFormatter.ofPattern(pattern);
-                    try {
-                        TemporalAccessor temporal = df.parse(text);
-                        try {
-                            ChronoLocalDate cDate = chrono.date(temporal);
-                            return LocalDate.from(cDate);
-                        } catch (DateTimeException ex) {
-                            System.err.println(ex);
-                            return null;
-                        }
-                    } catch (DateTimeParseException ex) {
-                        // Didn't work, so continue with original two-digit pattern
-                    }
-                }
-
+                String pattern =
+                    DateTimeFormatterBuilder.getLocalizedDateTimePattern(FormatStyle.SHORT,
+                                                                         null, chrono, locale);
                 DateTimeFormatter df =
-                    DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
-                                     .withLocale(locale)
-                                     .withChronology(chrono)
-                                     .withDecimalStyle(DecimalStyle.of(locale));
+                    new DateTimeFormatterBuilder().parseLenient()
+                                                  .appendPattern(pattern)
+                                                  .toFormatter()
+                                                  .withDecimalStyle(DecimalStyle.of(locale));
                 TemporalAccessor temporal = df.parse(text);
                 ChronoLocalDate cDate = chrono.date(temporal);
                 return LocalDate.from(cDate);
@@ -409,18 +397,6 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             return null;
         }
     };
-
-    private String getPattern() {
-        Locale locale = Locale.getDefault(Locale.Category.FORMAT);
-        Chronology chrono = getChronology();
-
-        return LocaleProviderAdapter.getResourceBundleBased()
-                                    .getLocaleResources(locale)
-                                    .getJavaTimeDateTimePattern(-1,
-                                                                FormatStyle.SHORT.ordinal(),
-                                                                chrono.getCalendarType());
-    }
-
 
 
     // --- Editor
