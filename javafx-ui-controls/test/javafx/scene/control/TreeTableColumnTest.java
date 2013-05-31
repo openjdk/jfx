@@ -720,6 +720,39 @@ public class TreeTableColumnTest {
     }
 
     /*********************************************************************
+     * Tests for the reorderable property                                *
+     ********************************************************************/
+
+    @Test public void reorderableIsTrueByDefault() {
+        assertTrue(column.impl_isReorderable());
+        assertTrue(column.impl_reorderableProperty().get());
+    }
+
+    @Test public void reorderableCanBeSpecified() {
+        column.impl_setReorderable(false);
+        assertFalse(column.impl_isReorderable());
+        assertFalse(column.impl_reorderableProperty().get());
+    }
+
+    @Test public void reorderablePropertyBeanIsCorrect() {
+        assertSame(column, column.impl_reorderableProperty().getBean());
+    }
+
+    @Test public void reorderablePropertyNameIsCorrect() {
+        assertEquals("reorderable", column.impl_reorderableProperty().getName());
+    }
+
+    @Test public void reorderableCanBeBound() {
+        BooleanProperty other = new SimpleBooleanProperty(false);
+        column.impl_reorderableProperty().bind(other);
+        assertFalse(column.impl_isReorderable());
+        assertFalse(column.impl_reorderableProperty().get());
+        other.set(true);
+        assertTrue(column.impl_isReorderable());
+        assertTrue(column.impl_reorderableProperty().get());
+    }
+
+    /*********************************************************************
      * Tests for the comparator property                                 *
      ********************************************************************/
 

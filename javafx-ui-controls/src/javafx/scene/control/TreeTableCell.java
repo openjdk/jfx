@@ -503,9 +503,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                 !tableColumn.isVisible() ||
                 tableView.getRoot() == null) {
             
-            if (! isEmpty()) {
-                updateItem(null, true);
-            }
+            updateItem(null, true);
             return;
         } else {
             currentObservableValue = tableColumn.getCellObservableValue(index);

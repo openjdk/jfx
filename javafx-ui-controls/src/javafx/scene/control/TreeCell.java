@@ -470,10 +470,8 @@ public class TreeCell<T> extends IndexedCell<T> {
                 updateItem(newValue, false);
             }
         } else {
-            if (! isEmpty()) {
-                updateTreeItem(null);
-                updateItem(null, true);
-            }
+            updateTreeItem(null);
+            updateItem(null, true);
         }
     }
 
