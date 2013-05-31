@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.InvalidationListener;
 
 import static org.junit.Assert.*;
 import org.junit.Ignore;
@@ -78,7 +79,10 @@ public class ObservableArrayTest  {
         abstract A toArray(A dest);
         abstract A toArray(int srcIndex, A dest, int length);
 
-        abstract A createPrimitiveArray(int size);
+        A createPrimitiveArray(int size) {
+            return createPrimitiveArray(size, true);
+        }
+        abstract A createPrimitiveArray(int size, boolean fillWithData);
         abstract A clonePrimitiveArray(A array);
         abstract int arrayLength(A array);
         abstract P get(A array, int index);
@@ -110,10 +114,12 @@ public class ObservableArrayTest  {
             array.set(index, value);
         }
 
-        @Override int[] createPrimitiveArray(int size) {
+        @Override int[] createPrimitiveArray(int size, boolean fillWithData) {
             int[] res = new int[size];
-            for (int i = 0; i < size; i++) {
-                res[i] = nextValue++;
+            if (fillWithData) {
+                for (int i = 0; i < size; i++) {
+                    res[i] = nextValue++;
+                }
             }
             return res;
         }
@@ -229,10 +235,12 @@ public class ObservableArrayTest  {
             array.set(index, value);
         }
 
-        @Override float[] createPrimitiveArray(int size) {
+        @Override float[] createPrimitiveArray(int size, boolean fillWithData) {
             float[] res = new float[size];
-            for (int i = 0; i < size; i++) {
-                res[i] = nextValue++;
+            if (fillWithData) {
+                for (int i = 0; i < size; i++) {
+                    res[i] = nextValue++;
+                }
             }
             return res;
         }
@@ -462,6 +470,50 @@ public class ObservableArrayTest  {
         mao.check0();
     }
 
+    @Test (expected = NullPointerException.class)
+    public void testAddNullArrayChangeListener() {
+        try {
+            array.addListener((ArrayChangeListener) null);
+        } finally {
+            mao.check0();
+            array.resize(1);
+            mao.check1();
+        }
+    }
+
+    @Test (expected = NullPointerException.class)
+    public void testAddNullInvalidationListener() {
+        try {
+            array.addListener((InvalidationListener) null);
+        } finally {
+            mao.check0();
+            array.resize(1);
+            mao.check1();
+        }
+    }
+
+    @Test (expected = NullPointerException.class)
+    public void testRemoveNullArrayChangeListener() {
+        try {
+            array.removeListener((ArrayChangeListener) null);
+        } finally {
+            mao.check0();
+            array.resize(1);
+            mao.check1();
+        }
+    }
+
+    @Test (expected = NullPointerException.class)
+    public void testRemoveNullInvalidationListener() {
+        try {
+            array.removeListener((InvalidationListener) null);
+        } finally {
+            mao.check0();
+            array.resize(1);
+            mao.check1();
+        }
+    }
+
     // ========== resize tests ==========
 
     private void testResize(boolean noChange, int newSize, int matchingElements) {
@@ -476,6 +528,8 @@ public class ObservableArrayTest  {
         assertEquals(newSize, array.size());
         assertEquals(newSize, wrapper.arrayLength(actual));
         wrapper.assertElementsEqual(actual, 0, matchingElements, expected, 0);
+        wrapper.assertElementsEqual(actual, matchingElements, newSize,
+                wrapper.createPrimitiveArray(Math.max(0, newSize - matchingElements)), 0);
     }
 
     @Test public void testResizeTo0() {
@@ -2189,7 +2243,7 @@ public class ObservableArrayTest  {
             assertUnchanged();
         }
     }
-    
+
     @Test (expected = ArrayIndexOutOfBoundsException.class)
     public void testCopyToANegativeAfterEnsureCapacity() {
         array.ensureCapacity(INITIAL_SIZE * 2);
@@ -2524,7 +2578,7 @@ public class ObservableArrayTest  {
         mao.reset();
 
         array.trimToSize();
-        
+
         assertUnchanged();
     }
 
