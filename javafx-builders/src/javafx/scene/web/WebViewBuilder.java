@@ -36,6 +36,7 @@ import javafx.geometry.Rectangle2D;
  *
  * @author Sergey Malenkov
  * @deprecated This class is deprecated and will be removed in the next version
+ * @since JavaFX 2.0
  */
 @Deprecated
 public final class WebViewBuilder
@@ -213,6 +214,7 @@ public final class WebViewBuilder
      *
      * @param value  new value of the {@code confirmHandler} property
      * @return this builder
+     * @since JavaFX 2.1
      */
     public WebViewBuilder confirmHandler(Callback<String, Boolean> value) {
         engineBuilder().confirmHandler(value);
@@ -226,6 +228,7 @@ public final class WebViewBuilder
      *
      * @param value  new value of the {@code createPopupHandler} property
      * @return this builder
+     * @since JavaFX 2.1
      */
     public WebViewBuilder createPopupHandler(Callback<PopupFeatures, WebEngine> value) {
         engineBuilder().createPopupHandler(value);
@@ -239,6 +242,7 @@ public final class WebViewBuilder
      *
      * @param value  new value of the {@code onAlert} property
      * @return this builder
+     * @since JavaFX 2.1
      */
     public WebViewBuilder onAlert(EventHandler<WebEvent<String>> value) {
         engineBuilder().onAlert(value);
@@ -252,6 +256,7 @@ public final class WebViewBuilder
      *
      * @param value  new value of the {@code onResized} property
      * @return this builder
+     * @since JavaFX 2.1
      */
     public WebViewBuilder onResized(EventHandler<WebEvent<Rectangle2D>> value) {
         engineBuilder().onResized(value);
@@ -265,6 +270,7 @@ public final class WebViewBuilder
      *
      * @param value  new value of the {@code onStatusChanged} property
      * @return this builder
+     * @since JavaFX 2.1
      */
     public WebViewBuilder onStatusChanged(EventHandler<WebEvent<String>> value) {
         engineBuilder().onStatusChanged(value);
@@ -278,6 +284,7 @@ public final class WebViewBuilder
      *
      * @param value  new value of the {@code onVisibilityChanged} property
      * @return this builder
+     * @since JavaFX 2.1
      */
     public WebViewBuilder onVisibilityChanged(EventHandler<WebEvent<Boolean>> value) {
         engineBuilder().onVisibilityChanged(value);
@@ -291,6 +298,7 @@ public final class WebViewBuilder
      *
      * @param value  new value of the {@code promptHandler} property
      * @return this builder
+     * @since JavaFX 2.1
      */
     public WebViewBuilder promptHandler(Callback<PromptData, String> value) {
         engineBuilder().promptHandler(value);
@@ -304,6 +312,7 @@ public final class WebViewBuilder
      *
      * @param value  new value of the {@code location} property
      * @return this builder
+     * @since JavaFX 2.1
      */
     public WebViewBuilder location(String value) {
         engineBuilder().location(value);

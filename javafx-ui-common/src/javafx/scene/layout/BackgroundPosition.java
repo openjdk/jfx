@@ -46,6 +46,7 @@ import javafx.geometry.Side;
  * {@code horizontalAsPercentage} of {@code true}. In this case, the right
  * side of the BackgroundImage will be 5% of the width of the Region from
  * the Region's right edge.
+ * @since JavaFX 8.0
  */
 public class BackgroundPosition {
     /**

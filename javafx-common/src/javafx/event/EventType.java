@@ -55,6 +55,7 @@ import java.util.WeakHashMap;
  * objects.
  * 
  * @param <T> the event class to which this type applies
+ * @since JavaFX 2.0
  */
 public final class EventType<T extends Event> implements Serializable{
     

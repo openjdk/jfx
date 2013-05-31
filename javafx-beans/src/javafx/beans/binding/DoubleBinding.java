@@ -107,6 +107,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @see javafx.beans.binding.DoubleExpression
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class DoubleBinding extends DoubleExpression implements
         NumberBinding {

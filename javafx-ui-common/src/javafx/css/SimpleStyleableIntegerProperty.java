@@ -39,6 +39,7 @@ import javafx.beans.property.SimpleIntegerProperty;
  * @see CssMetaData
  * @see StyleableProperty
  * @see StyleableIntegerProperty
+ * @since JavaFX 8.0
  */
 public class SimpleStyleableIntegerProperty extends StyleableIntegerProperty {
 

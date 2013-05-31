@@ -30,6 +30,7 @@ import javafx.util.StringConverter;
 /**
  * <p>{@link StringConverter} implementation for {@link Float}
  * (and float primitive) values.</p>
+ * @since JavaFX 2.1
  */
 public class FloatStringConverter extends StringConverter<Float> {
     /** {@inheritDoc} */

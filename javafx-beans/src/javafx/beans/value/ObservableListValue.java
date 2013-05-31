@@ -35,6 +35,7 @@ import javafx.collections.ObservableList;
  * @see ObservableValue
  *
  * @param <E> the type of the {@code List} elements
+ * @since JavaFX 2.1
  */
 public interface ObservableListValue<E> extends ObservableObjectValue<ObservableList<E>>, ObservableList<E> {
 }

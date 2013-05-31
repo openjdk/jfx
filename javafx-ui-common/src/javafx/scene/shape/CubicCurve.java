@@ -58,6 +58,7 @@ cubic.setEndX(100.0f);
 cubic.setEndY(50.0f);
 }
 </PRE>
+ * @since JavaFX 2.0
  */
 public class CubicCurve extends Shape {
 
@@ -85,6 +86,7 @@ public class CubicCurve extends Shape {
      * @param controlY2 the Y coordinate of the second control point
      * @param endX the X coordinate of the end point
      * @param endY the Y coordinate of the end point
+     * @since JavaFX 2.1
      */
     public CubicCurve(double startX, double startY, double controlX1,
             double controlY1, double controlX2, double controlY2,

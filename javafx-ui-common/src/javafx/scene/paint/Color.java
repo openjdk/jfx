@@ -103,6 +103,7 @@ import com.sun.javafx.tk.Toolkit;
  * rec2.setStrokeWidth(3);
  * </code></pre>
  * </p>
+ * @since JavaFX 2.0
  */
 public class Color extends Paint implements Interpolatable<Color> { // final
 
@@ -647,6 +648,7 @@ public class Color extends Paint implements Interpolatable<Color> { // final
      * @return a {@code Color} object holding the value represented 
      * by the string argument
      * @see #web(String)
+     * @since JavaFX 2.1
      */
     public static Color valueOf(String value) {
         if (value == null) {
@@ -1710,6 +1712,7 @@ public class Color extends Paint implements Interpolatable<Color> { // final
 
     /**
      * @inheritDoc
+     * @since JavaFX 8.0
      */
     @Override public final boolean isOpaque() {
         return opacity >= 1f;

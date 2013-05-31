@@ -61,6 +61,7 @@ line.setEndX(100.0f);
 line.setEndY(100.0f);
 }
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Line extends Shape {
 

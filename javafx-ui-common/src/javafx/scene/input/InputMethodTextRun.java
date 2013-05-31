@@ -34,6 +34,7 @@ import java.io.Serializable;
  * Note: this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#INPUT_METHOD ConditionalFeature.INPUT_METHOD}
  * for more information.
+ * @since JavaFX 2.0
  */
 public class InputMethodTextRun implements Serializable {
 
@@ -41,6 +42,7 @@ public class InputMethodTextRun implements Serializable {
      * Constructs a single text run of an input method.
      * @param text the text in the text run
      * @param highlight the highlighting of the text
+     * @since JavaFX 8.0
      */
     public InputMethodTextRun(String text,
             InputMethodHighlight highlight) {

@@ -74,6 +74,7 @@ import javafx.util.Duration;
  * @see Transition
  * @see Animation
  * 
+ * @since JavaFX 2.0
  */
 public final class StrokeTransition extends Transition {
 

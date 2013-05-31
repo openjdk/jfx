@@ -34,30 +34,35 @@ package javafx.application;
  * on a platform that does not support it will not cause an exception. In
  * general, the conditional feature will just be ignored. See the documentation
  * for each feature for more detail.
+ * @since JavaFX 2.0
  */
 public enum ConditionalFeature {
 
     /**
      * Indicates that JavaFX classes providing graphics capabilities are
      * available on this platform.
+     * @since JavaFX 8.0
      */
     GRAPHICS,
 
     /**
      * Indicates that JavaFX classes providing UI controls are available on
      * this platform.
+     * @since JavaFX 8.0
      */
     CONTROLS,
 
     /**
      * Indicates that the javafx.scene.media package is available on this
      * platform.
+     * @since JavaFX 8.0
      */
     MEDIA,
 
     /**
      * Indicates that the javafx.scene.web packages is available on this
      * platform.
+     * @since JavaFX 8.0
      */
     WEB,
 
@@ -65,6 +70,7 @@ public enum ConditionalFeature {
      * Indicates that SWT integration is available on the platform. This tests
      * for SWT integration with JavaFX, but does not test for the presence of
      * the full SWT library.
+     * @since JavaFX 8.0
      */
     SWT,
 
@@ -72,6 +78,7 @@ public enum ConditionalFeature {
      * Indicates that the Swing library is present in the Java Runtime
      * Environment and that Swing integration with JavaFX is available on the
      * platform.
+     * @since JavaFX 8.0
      */
     SWING,
 
@@ -82,6 +89,7 @@ public enum ConditionalFeature {
      * to be present but unusable if the underlying Java Runtime Environment
      * does not have XML support. In this case
      * Platform.isSupported(ConditionalFeature.FXML) wll return false.
+     * @since JavaFX 8.0
      */
     FXML,
 
@@ -124,6 +132,7 @@ public enum ConditionalFeature {
      * NOTE: Currently, this support is available on all platforms
      * except Linux systems without the XComposite extension. The
      * XShape extension is used in that case, so the window edges are aliased.
+     * @since JavaFX 2.2
      */
     TRANSPARENT_WINDOW,
 
@@ -135,6 +144,7 @@ public enum ConditionalFeature {
      *      <li>Windows Vista+: a window is completely filled with the frozen glass effect</li>
      *      <li>Mac OS X: a window has the brushed-metal textured background</li>
      *  </ul>
+     * @since JavaFX 8.0
      */
     UNIFIED_WINDOW,
 
@@ -153,6 +163,7 @@ public enum ConditionalFeature {
      * ConditionalFeature based on what input peripherals are attached. On
      * desktop platforms this ConditionalFeature will typically default to
      * false.
+     * @since JavaFX 8.0
      */
      TWO_LEVEL_FOCUS,
 
@@ -163,6 +174,7 @@ public enum ConditionalFeature {
      * ConditionalFeature based on what input peripherals are attached. On
      * desktop platforms this ConditionalFeature will typically default to
      * false.
+     * @since JavaFX 8.0
      */
      VIRTUAL_KEYBOARD,
 
@@ -174,6 +186,7 @@ public enum ConditionalFeature {
      * ConditionalFeature based on what input peripherals are attached. On
      * desktop platforms this ConditionalFeature will typically default to
      * false.
+     * @since JavaFX 8.0
      */
      INPUT_TOUCH,
 
@@ -187,6 +200,7 @@ public enum ConditionalFeature {
      * false.
      * <p>
      * If INPUT_MULTITOUCH is available then INPUT_TOUCH is also available.
+     * @since JavaFX 8.0
      */
      INPUT_MULTITOUCH,
 
@@ -198,6 +212,7 @@ public enum ConditionalFeature {
      * ConditionalFeature based on what input peripherals are attached. On
      * desktop platforms this ConditionalFeature will typically default to
      * true.
+     * @since JavaFX 8.0
      */
     INPUT_POINTER
 

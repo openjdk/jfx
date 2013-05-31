@@ -40,6 +40,7 @@ import javafx.beans.Observable;
  * 
  * @see ArrayChangeListener
  * @param <T> actual array instance type
+ * @since JavaFX 8.0
  */
 public interface ObservableArray<T extends ObservableArray<T>> extends Observable {
 

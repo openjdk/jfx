@@ -38,6 +38,7 @@ import com.sun.scenario.animation.SplineInterpolator;
  * <p>
  * A custom {@code Interpolator} has to be defined in terms of a "
  * {@link #curve(double) curve()}".
+ * @since JavaFX 2.0
  */
 public abstract class Interpolator {
 

@@ -40,6 +40,7 @@ import javafx.beans.value.ObservableValue;
  * @see javafx.beans.property.FloatPropertyBase
  * @see CssMetaData
  * @see StyleableProperty
+ * @since JavaFX 8.0
  */
 public abstract class StyleableFloatProperty 
     extends FloatPropertyBase implements StyleableProperty<Number> {

@@ -63,6 +63,7 @@ import static javafx.scene.chart.XYChart.DEFAULT_COLOR;
 /**
  * A chart that plots bars indicating data values for a category. The bars can be vertical or horizontal depending on
  * which axis is a category axis.
+ * @since JavaFX 2.0
  */
 public class BarChart<X,Y> extends XYChart<X,Y> {
 
@@ -576,6 +577,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -583,6 +585,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

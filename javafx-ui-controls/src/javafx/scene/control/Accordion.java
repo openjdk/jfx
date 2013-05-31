@@ -57,6 +57,7 @@ import javafx.css.StyleableProperty;
  * TitledPane t3 = new TitledPane("T3", new Button("B3"));
  * Accordion accordion = new Accordion();
  * accordion.getPanes().addAll(t1, t2, t3);</code></pre>
+ * @since JavaFX 2.0
  */
 public class Accordion extends Control {
 

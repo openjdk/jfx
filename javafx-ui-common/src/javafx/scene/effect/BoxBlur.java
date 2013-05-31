@@ -67,6 +67,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <p>
  * <img src="doc-files/boxblur.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class BoxBlur extends Effect {
 

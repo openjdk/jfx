@@ -65,6 +65,7 @@ import javafx.css.StyleableProperty;
  * Line Chart plots a line connecting the data points in a series. The data points
  * themselves can be represented by symbols optionally. Line charts are usually used
  * to view data trends over time or category. 
+ * @since JavaFX 2.0
  */
 public class LineChart<X,Y> extends XYChart<X,Y> {
 
@@ -527,6 +528,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -534,6 +536,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

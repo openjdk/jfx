@@ -105,6 +105,7 @@ import javafx.scene.Node;
  * bounds may extend outside its own bounds if the anchor pane is resized smaller
  * than its preferred size.</p>
  *
+ * @since JavaFX 2.0
  */
 public class AnchorPane extends Pane {
 
@@ -230,6 +231,7 @@ public class AnchorPane extends Pane {
     /**
      * Creates an AnchorPane layout with the given children.
      * @param children    The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public AnchorPane(Node... children) {
         super();

@@ -32,6 +32,7 @@ import java.util.EventListener;
  * Handler for events of a specific class / type.
  *
  * @param <T> the event class this handler can handle
+ * @since JavaFX 2.0
  */
 public interface EventHandler<T extends Event> extends EventListener {
     /**

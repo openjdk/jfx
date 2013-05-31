@@ -81,6 +81,7 @@ import javafx.util.Duration;
  * @see Transition
  * @see Animation
  * 
+ * @since JavaFX 2.0
  */
 public final class TranslateTransition extends Transition {
 
@@ -346,7 +347,6 @@ public final class TranslateTransition extends Transition {
      * started again to pick up the new value.
      * 
      * @defaultValue {@code Double.NaN}
-     * @since JavaFX 1.3
      */
     private DoubleProperty toZ;
     private static final double DEFAULT_TO_Z = Double.NaN;

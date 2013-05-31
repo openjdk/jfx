@@ -154,6 +154,7 @@ import javafx.scene.Node;
  *          the ListViews {@link #itemsProperty() items} ObservableList. It is
  *          also used in the {@link #selectionModelProperty() selection model}
  *          and {@link #focusModelProperty() focus model}.
+ * @since JavaFX 2.0
  */
 // TODO add code examples
 @DefaultProperty("items")
@@ -348,6 +349,7 @@ public class ListView<T> extends Control {
      * This may be the case because the table model has no data in the first
      * place or that a filter has been applied to the list model, resulting
      * in there being nothing to show the user..
+     * @since JavaFX 8.0
      */
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
@@ -526,6 +528,7 @@ public class ListView<T> extends Control {
      *
      * @param value The new fixed cell size value, or -1 (or Region.USE_COMPUTED_SIZE)
      *                  to disable.
+     * @since JavaFX 8.0
      */
     public final void setFixedCellSize(double value) {
         fixedCellSizeProperty().set(value);
@@ -538,6 +541,7 @@ public class ListView<T> extends Control {
      *
      * @return A double representing the fixed cell size of this control, or -1
      *      if fixed cell size mode is disabled.
+     * @since JavaFX 8.0
      */
     public final double getFixedCellSize() {
         return fixedCellSize == null ? Region.USE_COMPUTED_SIZE : fixedCellSize.get();
@@ -560,6 +564,7 @@ public class ListView<T> extends Control {
      * performance gains from being possible). Therefore, when performance matters
      * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
      * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
+     * @since JavaFX 8.0
      */
     public final DoubleProperty fixedCellSizeProperty() {
         if (fixedCellSize == null) {
@@ -822,6 +827,7 @@ public class ListView<T> extends Control {
     /**
      * Scrolls the TableView so that the given object is visible within the viewport.
      * @param object The object that should be visible to the user.
+     * @since JavaFX 8.0
      */
     public void scrollTo(T object) {
         if( getItems() != null ) {
@@ -835,6 +841,7 @@ public class ListView<T> extends Control {
     /**
      * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
      * or {@link #scrollTo(S)}
+     * @since JavaFX 8.0
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
     
@@ -956,6 +963,7 @@ public class ListView<T> extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -963,6 +971,7 @@ public class ListView<T> extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
@@ -996,6 +1005,7 @@ public class ListView<T> extends Control {
      * 
      * @param <T> The type of the input, which is the same type as the ListView 
      *      itself.
+     * @since JavaFX 2.0
      */
     public static class EditEvent<T> extends Event {
         private final T newValue;
@@ -1003,6 +1013,7 @@ public class ListView<T> extends Control {
 
         /**
          * Common supertype for all edit event types.
+         * @since JavaFX 8.0
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 

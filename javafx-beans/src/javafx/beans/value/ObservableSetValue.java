@@ -35,6 +35,7 @@ import javafx.collections.ObservableSet;
  * @see ObservableValue
  *
  * @param <E> the type of the {@code Set} elements
+ * @since JavaFX 2.1
  */
 public interface ObservableSetValue<E> extends ObservableObjectValue<ObservableSet<E>>, ObservableSet<E> {
 }

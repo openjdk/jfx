@@ -71,6 +71,7 @@ public Event dispatchEvent(Event event, EventDispatchChain tail) {
 </PRE>
 }
 
+ * @since JavaFX 2.0
  */
 public interface EventDispatcher {
     /**

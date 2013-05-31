@@ -37,6 +37,7 @@ import com.sun.javafx.application.HostServicesDelegate;
  * show a web page in a browser, and communicate with the enclosing web page
  * using JavaScript if the Application is running in
  * a browser.
+ * @since JavaFX 2.0
  */
 public final class HostServices {
 

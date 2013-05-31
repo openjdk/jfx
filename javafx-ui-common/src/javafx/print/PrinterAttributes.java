@@ -46,7 +46,7 @@ import com.sun.javafx.print.PrinterImpl;
  * the application as changing settings of a printer is outside the
  * scope of this API.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 
 public final class PrinterAttributes {

@@ -43,7 +43,7 @@ import javafx.util.converter.DefaultStringConverter;
  * default, stretch to fill the entire table cell.
  * 
  * @param <T> The type of the elements contained within the TreeTableColumn.
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
     

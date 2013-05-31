@@ -40,6 +40,7 @@ import sun.awt.image.IntegerComponentRaster;
 /**
  * This class provides utility methods for converting data types between
  * Swing/AWT and JavaFX formats.
+ * @since JavaFX 2.2
  */
 public class SwingFXUtils {
     private SwingFXUtils() {} // no instances
@@ -64,7 +65,7 @@ public class SwingFXUtils {
      *        used to store the returned pixel data
      * @return an {@code Image} object representing a snapshot of the
      *         current pixels in the {@code BufferedImage}.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public static WritableImage toFXImage(BufferedImage bimg, WritableImage wimg) {
         int bw = bimg.getWidth();
@@ -142,7 +143,7 @@ public class SwingFXUtils {
      *        used to store the returned pixel data
      * @return a {@code BufferedImage} containing a snapshot of the JavaFX
      *         {@code Image}, or null if the {@code Image} is not readable.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public static BufferedImage fromFXImage(Image img, BufferedImage bimg) {
         PixelReader pr = img.getPixelReader();

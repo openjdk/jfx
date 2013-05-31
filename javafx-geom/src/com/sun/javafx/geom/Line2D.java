@@ -105,7 +105,6 @@ public class Line2D extends Shape {
      * the specified <code>Point2D</code> coordinates.
      * @param p1 the start <code>Point2D</code> of the line segment
      * @param p2 the end <code>Point2D</code> of the line segment
-     * @since 1.2
      */
     public void setLine(Point2D p1, Point2D p2) {
         setLine(p1.x, p1.y, p2.x, p2.y);
@@ -115,7 +114,6 @@ public class Line2D extends Shape {
      * Sets the location of the end points of this <code>Line2D</code> to
      * the same as those end points of the specified <code>Line2D</code>.
      * @param l the specified <code>Line2D</code>
-     * @since 1.2
      */
     public void setLine(Line2D l) {
         setLine(l.x1, l.y1, l.x2, l.y2);
@@ -270,7 +268,6 @@ public class Line2D extends Shape {
      * @return an integer that indicates the position of the specified
      *         coordinates with respect to this <code>Line2D</code>
      * @see #relativeCCW(double, double, double, double, double, double)
-     * @since 1.2
      */
     public int relativeCCW(float px, float py) {
         return relativeCCW(x1, y1, x2, y2, px, py);
@@ -316,7 +313,6 @@ public class Line2D extends Shape {
      * @return <code>true</code> if the first specified line segment 
      *          and the second specified line segment intersect  
      *          each other; <code>false</code> otherwise.  
-     * @since 1.2
      */
     public static boolean linesIntersect(float x1, float y1,
                      float x2, float y2,
@@ -343,7 +339,6 @@ public class Line2D extends Shape {
      *           specified line segment
      * @return <true> if this line segment and the specified line segment
      *          intersect each other; <code>false</code> otherwise.
-     * @since 1.2
      */
     public boolean intersectsLine(float x1, float y1, float x2, float y2) {
         return linesIntersect(x1, y1, x2, y2, this.x1, this.y1, this.x2, this.y2);
@@ -355,7 +350,6 @@ public class Line2D extends Shape {
      * @return <code>true</code> if this line segment and the specified line
      *          segment intersect each other; 
      *          <code>false</code> otherwise.
-     * @since 1.2
      */
     public boolean intersectsLine(Line2D l) {
         return linesIntersect(l.x1, l.y1, l.x2, l.y2, this.x1, this.y1, this.x2, this.y2);
@@ -497,7 +491,6 @@ public class Line2D extends Shape {
      *          specified <code>Point2D</code> to the current 
      *          line segment.
      * @see #ptLineDistSq(Point2D)
-     * @since 1.2
      */
     public float ptSegDistSq(Point2D pt) {
         return ptSegDistSq(x1, y1, x2, y2, pt.x, pt.y);
@@ -517,7 +510,6 @@ public class Line2D extends Shape {
      * @return a double value that is the distance from the specified 
      *          point to the current line segment.
      * @see #ptLineDist(double, double)
-     * @since 1.2
      */
     public double ptSegDist(float px, float py) {
         return ptSegDist(x1, y1, x2, y2, px, py);
@@ -625,7 +617,6 @@ public class Line2D extends Shape {
      * @return a double value that is the square of the distance from a 
      *          specified point to the current line.
      * @see #ptSegDistSq(double, double)
-     * @since 1.2
      */
     public float ptLineDistSq(float px, float py) {
         return ptLineDistSq(x1, y1, x2, y2, px, py);
@@ -663,7 +654,6 @@ public class Line2D extends Shape {
      * @return a double value that is the distance from a specified point
      *          to the current line.
      * @see #ptSegDist(double, double)
-     * @since 1.2
      */
     public float ptLineDist(float px, float py) {
         return ptLineDist(x1, y1, x2, y2, px, py);
@@ -679,7 +669,6 @@ public class Line2D extends Shape {
      * @return a double value that is the distance from a specified 
      *          <code>Point2D</code> to the current line.
      * @see #ptSegDist(Point2D)
-     * @since 1.2
      */
     public float ptLineDist(Point2D pt) {
         return ptLineDist(x1, y1, x2, y2, pt.x, pt.y);

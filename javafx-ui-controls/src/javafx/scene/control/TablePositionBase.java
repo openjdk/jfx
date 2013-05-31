@@ -41,6 +41,7 @@ import java.lang.ref.WeakReference;
  *
  * @see TablePosition
  * @see TreeTablePosition
+ * @since JavaFX 8.0
  */
 public abstract class TablePositionBase<TC extends TableColumnBase> {
     

@@ -32,6 +32,7 @@ package javafx.beans.value;
  * @see WritableNumberValue
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface WritableFloatValue extends WritableNumberValue {
 

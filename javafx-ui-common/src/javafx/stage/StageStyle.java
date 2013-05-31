@@ -27,6 +27,7 @@ package javafx.stage;
 
 /**
  * This enum defines the possible styles for a {@code Stage}.
+ * @since JavaFX 2.0
  */
 public enum StageStyle {
 
@@ -59,6 +60,7 @@ public enum StageStyle {
      * If the feature is not supported by the platform, this style downgrades to {@code StageStyle.DECORATED}
      * <p>                                                   `
      * NOTE: To see the effect the {@code Scene} covering the {@code Stage} should have {@code Color.TRANSPARENT}
+     * @since JavaFX 8.0
      */
     UNIFIED
 }

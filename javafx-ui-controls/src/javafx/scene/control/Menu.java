@@ -78,6 +78,7 @@ import javafx.event.EventDispatchChain;
  *
  * @see MenuBar
  * @see MenuItem
+ * @since JavaFX 2.0
  */
 @DefaultProperty("items")
 public class Menu extends MenuItem {
@@ -122,7 +123,7 @@ public class Menu extends MenuItem {
 
     /**
      * Constructs a Menu with an empty string for its display text.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public Menu() {
         this("");

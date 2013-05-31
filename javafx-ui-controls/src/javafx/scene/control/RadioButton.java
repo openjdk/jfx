@@ -58,6 +58,7 @@ import javafx.css.StyleableProperty;
  *    button2.setToggleGroup(group);
  * </code>
  * </pre>
+ * @since JavaFX 2.0
  */
  public class RadioButton extends ToggleButton {
 

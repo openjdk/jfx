@@ -118,6 +118,7 @@ import sun.awt.SunToolkit;
  *     }
  * </pre>
  *
+ * @since JavaFX 2.0
  */
 public class JFXPanel extends JComponent {
 

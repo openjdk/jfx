@@ -43,7 +43,7 @@ import sun.util.logging.PlatformLogger;
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
  * 
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public abstract class Mesh {
 

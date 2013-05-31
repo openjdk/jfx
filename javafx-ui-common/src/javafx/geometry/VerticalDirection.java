@@ -27,6 +27,7 @@ package javafx.geometry;
 
 /**
  * Enumeration representing a vertical direction.
+ * @since JavaFX 2.0
  */
 public enum VerticalDirection {
     /**

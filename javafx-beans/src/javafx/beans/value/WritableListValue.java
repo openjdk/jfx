@@ -35,6 +35,7 @@ import javafx.collections.ObservableList;
  * @see javafx.beans.value.WritableListValue
  *
  * @param <E> the type of the {@code List} elements
+ * @since JavaFX 2.1
  */
 public interface WritableListValue<E> extends WritableObjectValue<ObservableList<E>>, ObservableList<E> {
 }

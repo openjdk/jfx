@@ -144,6 +144,7 @@ import javafx.util.Callback;
  * bounds may extend outside its own bounds if a child's pref size is larger than
  * the space flowpane has to allocate for it.</p>
  *
+ * @since JavaFX 2.0
  */
 public class FlowPane extends Pane {
 
@@ -233,6 +234,7 @@ public class FlowPane extends Pane {
     /**
      * Creates a horizontal FlowPane layout with hgap/vgap = 0.
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public FlowPane(Node... children) {
         super();
@@ -243,6 +245,7 @@ public class FlowPane extends Pane {
      * Creates a FlowPane layout with the specified orientation and hgap/vgap = 0.
      * @param orientation the direction the tiles should flow & wrap
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public FlowPane(Orientation orientation, Node... children) {
         this();
@@ -255,6 +258,7 @@ public class FlowPane extends Pane {
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public FlowPane(double hgap, double vgap, Node... children) {
         this();
@@ -269,6 +273,7 @@ public class FlowPane extends Pane {
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public FlowPane(Orientation orientation, double hgap, double vgap, Node... children) {
         this();
@@ -925,6 +930,7 @@ public class FlowPane extends Pane {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -933,6 +939,7 @@ public class FlowPane extends Pane {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
 
 

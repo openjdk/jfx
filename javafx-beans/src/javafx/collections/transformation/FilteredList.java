@@ -44,6 +44,7 @@ import javafx.collections.ObservableList;
  * to the FilteredList.
  *
  * @see TransformationList
+ * @since JavaFX 8.0
  */
 public final class FilteredList<E> extends TransformationList<E, E>{
 

@@ -37,6 +37,7 @@ import javafx.beans.binding.FloatExpression;
  * @see javafx.beans.binding.FloatExpression
  * @see ReadOnlyProperty
  * 
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyFloatProperty extends FloatExpression implements
         ReadOnlyProperty<Number> {
@@ -83,6 +84,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
      *         {@code ReadOnlyProperty} if necessary
      * @throws NullPointerException
      *             if {@code value} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <T extends Number> ReadOnlyFloatProperty readOnlyFloatProperty(final ReadOnlyProperty<T> property) {
         if (property == null) {
@@ -132,6 +134,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
      * {@code ReadOnlyObjectProperty} will be updated automatically.
      * 
      * @return the new {@code ReadOnlyObjectProperty}
+     * @since JavaFX 8.0
      */
     @Override
     public ReadOnlyObjectProperty<Float> asObject() {

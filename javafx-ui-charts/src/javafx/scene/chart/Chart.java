@@ -59,6 +59,7 @@ import javafx.css.StyleableProperty;
  * Base class for all charts. It has 3 parts the title, legend and chartContent. The chart content is populated by the
  * specific subclass of Chart.
  *
+ * @since JavaFX 2.0
  */
 public abstract class Chart extends Region {
 
@@ -481,6 +482,7 @@ public abstract class Chart extends Region {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -488,6 +490,7 @@ public abstract class Chart extends Region {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

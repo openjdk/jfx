@@ -64,6 +64,7 @@ import javafx.geometry.Point3D;
  *      [ z']   [  mzx  mzy  mzz  tz  ] [ z ]   [ mzx * x + mzy * y + mzz * z + tz ]
  *                                      [ 1 ]
  * </pre>
+ * @since JavaFX 2.0
  */
 public class Affine extends Transform {
 

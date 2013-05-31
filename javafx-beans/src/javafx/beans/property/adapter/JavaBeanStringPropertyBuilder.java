@@ -55,6 +55,7 @@ import java.lang.reflect.Method;
  * calling {@link #build()}.
  * 
  * @see JavaBeanStringProperty
+ * @since JavaFX 2.1
  */
 public final class JavaBeanStringPropertyBuilder {
 

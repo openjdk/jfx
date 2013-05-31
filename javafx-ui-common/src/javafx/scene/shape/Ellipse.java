@@ -52,6 +52,7 @@ ellipse.setCenterY(50.0f);
 ellipse.setRadiusX(50.0f);
 ellipse.setRadiusY(25.0f);
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Ellipse extends Shape {
 

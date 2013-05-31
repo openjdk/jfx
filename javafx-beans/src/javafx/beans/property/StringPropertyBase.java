@@ -43,6 +43,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @see StringProperty
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class StringPropertyBase extends StringProperty {
 

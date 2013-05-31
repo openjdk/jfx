@@ -53,6 +53,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.ReadOnlyStringProperty
  * @see ReadOnlyJavaBeanStringPropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringPropertyBase implements ReadOnlyJavaBeanProperty<String> {
 

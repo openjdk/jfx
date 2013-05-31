@@ -34,7 +34,7 @@ import javafx.scene.Node;
  * The popup has no decorations, and essentially acts as a specialized
  * scene/window which has no decorations, is transparent, and with a null fill.
  *
- * @since JavaFX 1.3
+ * @since JavaFX 2.0
  */
 public class Popup extends PopupWindow {
 

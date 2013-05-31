@@ -39,7 +39,6 @@ public class NoninvertibleTransformException extends java.lang.Exception {
      * <code>NoninvertibleTransformException</code>
      * with the specified detail message.
      * @param   s     the detail message
-     * @since   1.2
      */
     public NoninvertibleTransformException(String s) {
         super (s);

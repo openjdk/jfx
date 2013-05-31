@@ -31,6 +31,7 @@ package javafx.scene;
  * Note that this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
+ * @since JavaFX 2.0
  */
 public enum DepthTest {
     /**

@@ -267,6 +267,7 @@ window.setMember("app", new JavaApplication());
  * <p>{@code WebEngine} objects must be created and accessed solely from the
  * JavaFX Application thread. This rule also applies to any DOM and JavaScript
  * objects obtained from the {@code WebEngine} object.
+ * @since JavaFX 2.0
  */
 final public class WebEngine {
     static {
@@ -394,7 +395,7 @@ final public class WebEngine {
      * Specifies whether JavaScript execution is enabled.
      * 
      * @defaultValue true
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private BooleanProperty javaScriptEnabled;
 
@@ -434,7 +435,7 @@ final public class WebEngine {
      * for security reasons.
      * 
      * @defaultValue null
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private StringProperty userStyleSheetLocation;
 
@@ -498,7 +499,7 @@ final public class WebEngine {
      * {@code User-Agent} HTTP header.
      * 
      * @defaultValue system dependent
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     private StringProperty userAgent;
 
@@ -822,7 +823,7 @@ final public class WebEngine {
      * Returns the session history object.
      * 
      * @return history object
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public WebHistory getHistory() {
         return history;

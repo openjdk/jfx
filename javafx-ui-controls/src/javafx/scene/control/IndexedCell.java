@@ -47,6 +47,7 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
  * provided by {@code IndexedCell}: "even" and "odd".
  * 
  * @param <T> The type of the item contained within the Cell.
+ * @since JavaFX 2.0
  */
 public class IndexedCell<T> extends Cell<T> {
     

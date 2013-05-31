@@ -49,7 +49,6 @@ public class Arc2D extends RectangularShape {
     /**
      * The closure type for an open arc with no path segments
      * connecting the two ends of the arc segment.
-     * @since 1.2
      */
     public final static int OPEN = 0;
 
@@ -57,7 +56,6 @@ public class Arc2D extends RectangularShape {
      * The closure type for an arc closed by drawing a straight
      * line segment from the start of the arc segment to the end of the 
      * arc segment.
-     * @since 1.2
      */
     public final static int CHORD = 1;
 
@@ -65,7 +63,6 @@ public class Arc2D extends RectangularShape {
      * The closure type for an arc closed by drawing straight line
      * segments from the start of the arc segment to the center
      * of the full ellipse and from that point to the end of the arc segment.
-     * @since 1.2
      */
     public final static int PIE = 2;
 
@@ -74,7 +71,6 @@ public class Arc2D extends RectangularShape {
     /**
      * The X coordinate of the upper-left corner of the framing
      * rectangle of the arc.
-     * @since 1.2
      * @serial
      */
     public float x;
@@ -82,7 +78,6 @@ public class Arc2D extends RectangularShape {
     /**
      * The Y coordinate of the upper-left corner of the framing
      * rectangle of the arc.
-     * @since 1.2
      * @serial
      */
     public float y;
@@ -91,7 +86,6 @@ public class Arc2D extends RectangularShape {
      * The overall width of the full ellipse of which this arc is 
      * a partial section (not considering the
      * angular extents).
-     * @since 1.2
      * @serial
      */
     public float width;
@@ -100,21 +94,18 @@ public class Arc2D extends RectangularShape {
      * The overall height of the full ellipse of which this arc is 
      * a partial section (not considering the
      * angular extents).
-     * @since 1.2
      * @serial
      */
     public float height;
 
     /**
      * The starting angle of the arc in degrees.
-     * @since 1.2
      * @serial
      */
     public float start;
 
     /**
      * The angular extent of the arc in degrees.
-     * @since 1.2
      * @serial
      */
     public float extent;
@@ -122,7 +113,6 @@ public class Arc2D extends RectangularShape {
     /**
      * Constructs a new OPEN arc, initialized to location (0, 0),
      * size (0, 0), angular extents (start = 0, extent = 0).
-     * @since 1.2
      */
     public Arc2D() {
         this(OPEN);
@@ -135,7 +125,6 @@ public class Arc2D extends RectangularShape {
      *
      * @param type The closure type for the arc: 
      * {@link #OPEN}, {@link #CHORD}, or {@link #PIE}.
-     * @since 1.2
      */
     public Arc2D(int type) {
         setArcType(type);
@@ -157,7 +146,6 @@ public class Arc2D extends RectangularShape {
      * @param extent The angular extent of the arc in degrees.
      * @param type The closure type for the arc: 
      * {@link #OPEN}, {@link #CHORD}, or {@link #PIE}.
-     * @since 1.2
      */
     public Arc2D(float x, float y, float w, float h,
              float start, float extent, int type) {
@@ -204,7 +192,6 @@ public class Arc2D extends RectangularShape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean isEmpty() {
         return (width <= 0f || height <= 0f);
@@ -212,7 +199,6 @@ public class Arc2D extends RectangularShape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public void setArc(float x, float y, float w, float h,
                float angSt, float angExt, int closure) {
@@ -231,7 +217,6 @@ public class Arc2D extends RectangularShape {
      * @return One of the integer constant closure types defined 
      * in this class.
      * @see #setArcType
-     * @since 1.2
      */
     public int getArcType() {
         return type;
@@ -244,7 +229,6 @@ public class Arc2D extends RectangularShape {
      * 
      * @return A <CODE>Point2D</CODE> object representing the 
      * x,y coordinates of the starting point of the arc.
-     * @since 1.2
      */
     public Point2D getStartPoint() {
         double angle = Math.toRadians(-start);
@@ -261,7 +245,6 @@ public class Arc2D extends RectangularShape {
      *
      * @return A <CODE>Point2D</CODE> object representing the 
      * x,y coordinates  of the ending point of the arc.
-     * @since 1.2
      */
     public Point2D getEndPoint() {
         double angle = Math.toRadians(-start - extent);
@@ -283,7 +266,6 @@ public class Arc2D extends RectangularShape {
      * @param angExt The angular extent of the arc in degrees. 
      * @param closure The closure type for the arc:
      * {@link #OPEN}, {@link #CHORD}, or {@link #PIE}.
-     * @since 1.2
      */ 
     public void setArc(Point2D loc, Dimension2D size,
                float angSt, float angExt, int closure) {
@@ -294,7 +276,6 @@ public class Arc2D extends RectangularShape {
      * Sets this arc to be the same as the specified arc.
      *
      * @param a The <CODE>Arc2D</CODE> to use to set the arc's values.
-     * @since 1.2
      */
     public void setArc(Arc2D a) {
         setArc(a.x, a.y, a.width, a.height, a.start, a.extent, a.type);
@@ -312,7 +293,6 @@ public class Arc2D extends RectangularShape {
      * @param angExt The angular extent of the arc in degrees. 
      * @param closure The closure type for the arc:
      * {@link #OPEN}, {@link #CHORD}, or {@link #PIE}.     
-     * @since 1.2
      */
     public void setArcByCenter(float x, float y, float radius,
                    float angSt, float angExt, int closure) {
@@ -336,7 +316,6 @@ public class Arc2D extends RectangularShape {
      * @param p3 The third point that defines the arc. The ending angle 
      * of the arc is tangent to the line specified by points (p2, p3).
      * @param radius The radius of the arc.
-     * @since 1.2
      */
     public void setArcByTangent(Point2D p1, Point2D p2, Point2D p3, float radius) {
         double ang1 = Math.atan2(p1.y - p2.y,
@@ -380,7 +359,6 @@ public class Arc2D extends RectangularShape {
      *
      * @param p The <CODE>Point2D</CODE> that defines the starting angle.
      * @see #start
-     * @since 1.2
      */
     public void setAngleStart(Point2D p) {
         // Bias the dx and dy by the height and width of the oval.
@@ -402,7 +380,6 @@ public class Arc2D extends RectangularShape {
      * @param y1 The Y coordinate of the arc's starting point.
      * @param x2 The X coordinate of the arc's ending point.
      * @param y2 The Y coordinate of the arc's ending point.
-     * @since 1.2
      */
     public void setAngles(float x1, float y1, float x2, float y2) {
         double x = getCenterX();
@@ -435,7 +412,6 @@ public class Arc2D extends RectangularShape {
      * starting point. 
      * @param p2 The <CODE>Point2D</CODE> that defines the arc's 
      * ending point.
-     * @since 1.2
      */
     public void setAngles(Point2D p1, Point2D p2) {
         setAngles(p1.x, p1.y, p2.x, p2.y);
@@ -452,7 +428,6 @@ public class Arc2D extends RectangularShape {
      * @throws IllegalArgumentException if <code>type</code> is not
      * 0, 1, or 2.+
      * @see #getArcType
-     * @since 1.2
      */
     public void setArcType(int type) {
         if (type < OPEN || type > PIE) {
@@ -485,7 +460,6 @@ public class Arc2D extends RectangularShape {
      * 
      * @return the <CODE>RectBounds</CODE> that represents the arc's
      * framing rectangle.
-     * @since 1.2
      */
     public RectBounds getBounds() {
         if (isEmpty()) {
@@ -566,7 +540,6 @@ public class Arc2D extends RectangularShape {
      *
      * @return <CODE>true</CODE> if the arc contains the angle, 
      * <CODE>false</CODE> if the arc doesn't contain the angle.
-     * @since 1.2
      */
     public boolean containsAngle(float angle) {
         double angExt = extent;
@@ -598,7 +571,6 @@ public class Arc2D extends RectangularShape {
      * @return <CODE>true</CODE> if the point lies within the bound of 
      * the arc, <CODE>false</CODE> if the point lies outside of the 
      * arc's bounds.
-     * @since 1.2
      */
     public boolean contains(float x, float y) {
         // Normalize the coordinates compared to the ellipse
@@ -662,7 +634,6 @@ public class Arc2D extends RectangularShape {
      *
      * @return <CODE>true</CODE> if the arc intersects the rectangle, 
      * <CODE>false</CODE> if the arc doesn't intersect the rectangle.
-     * @since 1.2
      */
     public boolean intersects(float x, float y, float w, float h) {
         float aw = this.width;
@@ -770,7 +741,6 @@ public class Arc2D extends RectangularShape {
      *
      * @return <CODE>true</CODE> if the arc contains the rectangle, 
      * <CODE>false</CODE> if the arc doesn't contain the rectangle.
-     * @since 1.2
      */
     public boolean contains(float x, float y, float w, float h) {
         if (!(contains(x, y) &&
@@ -821,7 +791,6 @@ public class Arc2D extends RectangularShape {
      * if the untransformed coordinates are desired.
      *
      * @return A <CODE>PathIterator</CODE> that defines the arc's boundary.
-     * @since 1.2
      */
     public PathIterator getPathIterator(BaseTransform tx) {
         return new ArcIterator(this, tx);
@@ -835,7 +804,6 @@ public class Arc2D extends RectangularShape {
     /**
      * Returns the hashcode for this <code>Arc2D</code>.
      * @return the hashcode for this <code>Arc2D</code>.
-     * @since 1.6
      */
     @Override
     public int hashCode() {
@@ -861,7 +829,6 @@ public class Arc2D extends RectangularShape {
      * @return  <code>true</code> if <code>obj</code> is an instance
      *          of <code>Arc2D</code> and has the same values;
      *          <code>false</code> otherwise.
-     * @since 1.6
      */
     @Override
     public boolean equals(Object obj) {

@@ -51,7 +51,7 @@ import sun.util.logging.PlatformLogger;
 /**
  * Base class for a camera used to render a scene.
  *
- * @since JavaFX 1.3
+ * @since JavaFX 2.0
  */
 public abstract class Camera extends Node {
    
@@ -137,7 +137,7 @@ public abstract class Camera extends Node {
      * {@code nearClip} plane are not drawn.
      *
      * @defaultValue 0.1
-     * @since JavaFX 8
+     * @since JavaFX 8.0
      */
     private DoubleProperty nearClip;
 
@@ -169,7 +169,7 @@ public abstract class Camera extends Node {
      * <p>
      *
      * @defaultValue 100.0
-     * @since JavaFX 8
+     * @since JavaFX 8.0
      */
     private DoubleProperty farClip;
 

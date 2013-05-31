@@ -198,6 +198,7 @@ import static javafx.scene.control.TreeSortMode.*;
  * rather than {@link TreeItem#treeNotificationEvent() TreeItem.treeNotificationEvent()}. 
  *
  * @param <T> The type of the {@link #getValue() value} property within TreeItem.
+ * @since JavaFX 2.0
  */
 public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     
@@ -236,6 +237,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * for the three sub-types).
      * 
      * @param <T> The type of the value contained within the TreeItem.
+     * @since JavaFX 8.0
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<TreeModificationEvent<T>> expandedItemCountChangeEvent() {
@@ -935,12 +937,14 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     /**
      * An {@link Event} that contains relevant information for all forms of
      * TreeItem modifications.
+     * @since JavaFX 2.0
      */
     public static class TreeModificationEvent<T> extends Event {
         private static final long serialVersionUID = 4741889985221719579L;
 
         /**
          * Common supertype for all tree modification event types.
+         * @since JavaFX 8.0
          */
         public static final EventType<?> ANY = TREE_NOTIFICATION_EVENT;
 
@@ -1032,6 +1036,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
         /**
          * Returns the TreeItem upon which this event occurred.
+         * @since JavaFX 2.1
          */
         @Override public TreeItem<T> getSource() {
             return this.treeItem;

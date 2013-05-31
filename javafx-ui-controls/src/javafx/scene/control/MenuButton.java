@@ -70,6 +70,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * @see MenuItem
  * @see Menu
  * @see SplitMenuButton
+ * @since JavaFX 2.0
  */
 public class MenuButton extends ButtonBase {
 

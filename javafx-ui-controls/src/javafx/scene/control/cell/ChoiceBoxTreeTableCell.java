@@ -51,7 +51,7 @@ import javafx.util.StringConverter;
  * showing. These items must be of the same type as the TreeTableColumn.
  * 
  * @param <T> The type of the elements contained within the TreeTableColumn.
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     

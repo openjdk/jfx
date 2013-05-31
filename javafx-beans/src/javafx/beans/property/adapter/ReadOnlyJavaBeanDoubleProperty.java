@@ -53,6 +53,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.ReadOnlyDoubleProperty
  * @see ReadOnlyJavaBeanDoublePropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanDoubleProperty extends ReadOnlyDoublePropertyBase implements ReadOnlyJavaBeanProperty<Number> {
 

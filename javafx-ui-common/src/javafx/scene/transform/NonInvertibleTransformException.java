@@ -29,6 +29,7 @@ package javafx.scene.transform;
  * The <code>NonInvertibleTransformException</code> class represents
  * an exception that is thrown if an operation is performed requiring
  * the inverse of a {@code Transform} object which is in a non-invertible state.
+ * @since JavaFX 8.0
  */
 public class NonInvertibleTransformException extends java.lang.Exception {
 

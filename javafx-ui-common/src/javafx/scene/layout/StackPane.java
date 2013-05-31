@@ -125,6 +125,7 @@ import javafx.util.Callback;
  *     stackpane.getChildren().add(list);
  * </code></pre>
  *
+ * @since JavaFX 2.0
  */
 
 public class StackPane extends Pane {
@@ -208,6 +209,7 @@ public class StackPane extends Pane {
     /**
      * Creates a StackPane layout with default CENTER alignment.
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public StackPane(Node... children) {
         super();
@@ -410,6 +412,7 @@ public class StackPane extends Pane {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -418,6 +421,7 @@ public class StackPane extends Pane {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
 
 

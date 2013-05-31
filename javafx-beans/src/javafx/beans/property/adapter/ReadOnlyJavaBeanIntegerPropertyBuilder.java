@@ -54,6 +54,7 @@ import java.lang.reflect.Method;
  * calling {@link #build()}.
  * 
  * @see ReadOnlyJavaBeanIntegerProperty
+ * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
 

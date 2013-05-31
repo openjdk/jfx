@@ -159,6 +159,7 @@ import javafx.util.StringConverter;
  * @see Cell
  * @see ListCell
  * @see StringConverter
+ * @since JavaFX 2.1
  */
 public class ComboBox<T> extends ComboBoxBase<T> {
     
@@ -306,7 +307,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * area. If a cell is set here, it does not change the rendering of the
      * ComboBox popup list - that rendering is controlled via the 
      * {@link #cellFactoryProperty() cell factory} API.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
     private ObjectProperty<ListCell<T>> buttonCell = 
@@ -356,7 +357,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /**
      * The editor for the ComboBox. The editor is null if the ComboBox is not
      * {@link #editableProperty() editable}.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ReadOnlyObjectWrapper<TextField> editor;
     public final TextField getEditor() { 
@@ -380,6 +381,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * when the items list is null or empty. This is different than the 
      * {@link #emptyTextProperty() emptyText} property, which is shown in the
      * ComboBox Button / TextField area when there is no user-input value.
+     * @since JavaFX 8.0
      */
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {

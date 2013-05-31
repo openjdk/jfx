@@ -29,6 +29,7 @@ package javafx.geometry;
 /**
  * A 2D geometric point that usually represents the x, y coordinates.
  * It can also represent a relative magnitude vector's x, y magnitudes.
+ * @since JavaFX 2.0
  */
 public class Point2D {
     /**
@@ -145,6 +146,7 @@ public class Point2D {
      * by the specified factor
      * @param factor the factor multiplying the coordinates
      * @return the point with multiplied coordinates
+     * @since JavaFX 8.0
      */
     public Point2D multiply(double factor) {
         return new Point2D(getX() * factor, getY() * factor);

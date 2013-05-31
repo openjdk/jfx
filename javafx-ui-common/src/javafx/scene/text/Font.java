@@ -53,6 +53,7 @@ import com.sun.javafx.tk.Toolkit;
  * <p>
  * For more information see {@link javafx.scene.Node} for more information
  * on the default coordinate system 
+ * @since JavaFX 2.0
  */
 public final class Font {
 

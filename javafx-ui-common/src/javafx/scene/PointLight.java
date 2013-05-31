@@ -34,7 +34,7 @@ import javafx.scene.paint.Color;
  * fixed point in space and radiates light equally in all directions
  * away from itself.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public class PointLight extends LightBase {
     /**

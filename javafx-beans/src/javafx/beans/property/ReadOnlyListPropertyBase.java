@@ -36,6 +36,7 @@ import javafx.collections.ObservableList;
  * This class provides a default implementation to attach listener.
  *
  * @see ReadOnlyListProperty
+ * @since JavaFX 2.1
  */
 public abstract class ReadOnlyListPropertyBase<E> extends ReadOnlyListProperty<E> {
 

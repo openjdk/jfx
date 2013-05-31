@@ -39,6 +39,7 @@ import javafx.beans.property.SimpleDoubleProperty;
  * @see CssMetaData
  * @see StyleableProperty
  * @see StyleableDoubleProperty
+ * @since JavaFX 8.0
  */
 public class SimpleStyleableDoubleProperty extends StyleableDoubleProperty {
 

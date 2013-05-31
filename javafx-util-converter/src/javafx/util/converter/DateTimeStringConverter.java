@@ -38,6 +38,7 @@ import javafx.util.StringConverter;
  * 
  * @see DateStringConverter
  * @see TimeStringConverter
+ * @since JavaFX 2.1
  */
 public class DateTimeStringConverter extends StringConverter<Date> {
     

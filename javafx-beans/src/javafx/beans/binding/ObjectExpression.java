@@ -41,6 +41,7 @@ import java.util.Locale;
  * A concrete sub-class of {@code ObjectExpression} has to implement the method
  * {@link javafx.beans.value.ObservableObjectValue#get()}, which provides the
  * actual value of this expression.
+ * @since JavaFX 2.0
  */
 public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
 
@@ -172,7 +173,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
      * {@code StringBinding} will be updated automatically.
      *
      * @return the new {@code StringBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public StringBinding asString() {
         return (StringBinding) StringFormatter.convert(this);
@@ -190,7 +191,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
      * @param format
      *            the formatting {@code String}
      * @return the new {@code StringBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public StringBinding asString(String format) {
         return (StringBinding) Bindings.format(format, this);
@@ -210,7 +211,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
      * @param format
      *            the formatting {@code String}
      * @return the new {@code StringBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public StringBinding asString(Locale locale, String format) {
         return (StringBinding) Bindings.format(locale, format, this);

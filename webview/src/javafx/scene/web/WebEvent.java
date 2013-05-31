@@ -16,6 +16,7 @@ import javafx.event.EventType;
  * @see WebEngine#setOnResized
  * @see WebEngine#setOnStatusChanged
  * @see WebEngine#setOnVisibilityChanged
+ * @since JavaFX 2.0
  */
 final public class WebEvent<T> extends Event {
 

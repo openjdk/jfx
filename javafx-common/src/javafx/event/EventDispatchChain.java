@@ -34,6 +34,7 @@ package javafx.event;
  * path and the event itself. The chain is usually formed by following some
  * parent - child hierarchy from the root to the event target and appending
  * all {@code EventDispatcher} objects encountered to the chain.
+ * @since JavaFX 2.0
  */
 public interface EventDispatchChain {
     /**

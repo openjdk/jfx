@@ -33,6 +33,7 @@ import javafx.scene.paint.Color;
 /**
  * This interface defines methods for writing the pixel data of a
  * {@link WritableImage} or other surface containing writable pixels.
+ * @since JavaFX 2.2
  */
 public interface PixelWriter {
     /**

@@ -56,6 +56,7 @@ circle.setCenterY(100.0f);
 circle.setRadius(50.0f);
 }
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Circle extends Shape {
 

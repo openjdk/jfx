@@ -81,6 +81,7 @@ import com.sun.scenario.effect.Blend.Mode;
  *
  * <p> The code above produces the following: </p> 
  * <p> <img src="doc-files/blend.png"/> </p>
+ * @since JavaFX 2.0
  */
 public class Blend extends Effect {
 
@@ -144,6 +145,7 @@ public class Blend extends Effect {
     /**
      * Creates a new instance of Blend with the specified mode.
      * @param mode the {@code BlendMode} used to blend the two inputs together
+     * @since JavaFX 2.1
      */
     public Blend(BlendMode mode) {
         setMode(mode);
@@ -155,6 +157,7 @@ public class Blend extends Effect {
      * @param mode the {@code BlendMode} used to blend the two inputs together
      * @param bottomInput the bottom input for this {@code Blend} operation
      * @param topInput the top input for this {@code Blend} operation
+     * @since JavaFX 2.1
      */
     public Blend(BlendMode mode, Effect bottomInput, Effect topInput) {
         setMode(mode);

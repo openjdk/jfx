@@ -56,6 +56,7 @@ import com.sun.javafx.tk.Toolkit;
  * stage.show();
  * </code></pre>
  * </p>
+ * @since JavaFX 2.0
  */
 public final class Screen {
 

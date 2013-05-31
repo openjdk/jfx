@@ -39,6 +39,7 @@ import javafx.beans.value.ObservableValue;
  * A concrete sub-class of {@code FloatExpression} has to implement the method
  * {@link javafx.beans.value.ObservableFloatValue#get()}, which provides the
  * actual value of this expression.
+ * @since JavaFX 2.0
  */
 public abstract class FloatExpression extends NumberExpressionBase implements
         ObservableFloatValue {
@@ -139,6 +140,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
      *         {@code ObservableValue} if necessary
      * @throws NullPointerException
      *             if {@code value} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <T extends Number> FloatExpression floatExpression(final ObservableValue<T> value) {
         if (value == null) {
@@ -262,6 +264,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
      * {@code ObjectExpression} will be updated automatically.
      * 
      * @return the new {@code ObjectExpression}
+     * @since JavaFX 8.0
      */
     public ObjectExpression<Float> asObject() {
         return new ObjectBinding<Float>() {

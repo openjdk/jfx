@@ -63,6 +63,7 @@ import sun.reflect.misc.MethodUtil;
  * @see JavaBeanObjectPropertyBuilder
  * 
  * @param T type of the wrapped {@code Object}
+ * @since JavaFX 2.1
  */
 public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implements JavaBeanProperty<T> {
 

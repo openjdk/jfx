@@ -70,6 +70,7 @@ r.setHeight(100);
 r.setArcWidth(20);
 r.setArcHeight(20);
 </PRE>
+ * @since JavaFX 2.0
  */
 public  class Rectangle extends Shape {
 
@@ -442,6 +443,7 @@ public  class Rectangle extends Shape {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -450,6 +452,7 @@ public  class Rectangle extends Shape {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
     
     

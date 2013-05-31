@@ -40,6 +40,7 @@ import javafx.scene.Node;
  * Mnemonics will not be displayed on all platforms, but the api
  * will still be present.
  * </p>
+ * @since JavaFX 2.0
  */
 
 public class Mnemonic {
@@ -78,6 +79,7 @@ public class Mnemonic {
 
     /**
      * Sets the {@link javafx.scene.Node Node}
+     * @since JavaFX 2.2
      */
     public void setNode(Node node) {
         this.node = node;

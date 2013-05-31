@@ -87,7 +87,7 @@ import com.sun.javafx.tk.PrintPipeline;
  * and let the implementation internally schedule any tasks that
  * need to be performed on the FX thread to be run on that thread.
  * <p>
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 
 public final class PrinterJob {
@@ -410,7 +410,7 @@ public final class PrinterJob {
      * For example a job may not begin printing again if it has previously
      * passed that state and entered any of the termination states.
      *
-     * @since JavaFX 8
+     * @since JavaFX 8.0
      */
     public static enum JobStatus {
 

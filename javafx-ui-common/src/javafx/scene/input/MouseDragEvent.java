@@ -52,6 +52,7 @@ import javafx.event.EventType;
  * <p>
  * The entered/exited events behave similarly to mouse entered/exited
  * events, please see {@link MouseEvent} overview.
+ * @since JavaFX 2.1
  */
 public final class MouseDragEvent extends MouseEvent{
 
@@ -150,6 +151,7 @@ public final class MouseDragEvent extends MouseEvent{
      *                   without any further values is constructed
      *                   based on the scene coordinates and target
      * @param gestureSource source object of the ongoing gesture.
+     * @since JavaFX 8.0
      */
     public MouseDragEvent(Object source, EventTarget target, EventType<MouseDragEvent> eventType,
             double x, double y, double screenX, double screenY,
@@ -188,6 +190,7 @@ public final class MouseDragEvent extends MouseEvent{
      *                   without any further values is constructed
      *                   based on the scene coordinates
      * @param gestureSource source object of the ongoing gesture.
+     * @since JavaFX 8.0
      */
     public MouseDragEvent(EventType<MouseDragEvent> eventType,
             double x, double y, double screenX, double screenY,

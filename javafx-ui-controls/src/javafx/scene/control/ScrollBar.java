@@ -63,6 +63,7 @@ import javafx.css.StyleableProperty;
  * </code></pre>
  *
  * Implementation of ScrollBar According to JavaFX UI Control API Specification
+ * @since JavaFX 2.0
  */
 
 public class ScrollBar extends Control {
@@ -268,8 +269,6 @@ public class ScrollBar extends Control {
     /**
      * Visible amount of the scrollbar's range, typically represented by
      * the size of the scroll bar's thumb.
-     *
-     * @since JavaFX 1.3
      */
     private DoubleProperty visibleAmount;
 
@@ -432,6 +431,7 @@ public class ScrollBar extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -439,6 +439,7 @@ public class ScrollBar extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

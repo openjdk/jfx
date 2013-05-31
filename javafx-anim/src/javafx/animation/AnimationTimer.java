@@ -39,6 +39,7 @@ import com.sun.scenario.animation.AbstractMasterTimer;
  * and stop the timer.
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class AnimationTimer {
     

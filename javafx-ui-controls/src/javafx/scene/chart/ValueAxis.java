@@ -48,6 +48,7 @@ import javafx.util.StringConverter;
 /**
  * A axis who's data is defined as Numbers. It can also draw minor
  * tick-marks between the major ones.
+ * @since JavaFX 2.0
  */
 public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
@@ -580,6 +581,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -587,6 +589,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

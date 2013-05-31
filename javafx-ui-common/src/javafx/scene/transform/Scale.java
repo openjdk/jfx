@@ -42,6 +42,7 @@ import javafx.geometry.Point3D;
  *              [ 0   y   0   (1-y)*pivotY ]
  *              [ 0   0   z   (1-z)*pivotZ ]
  * </pre>
+ * @since JavaFX 2.0
  */
 public class Scale extends Transform {
     /**

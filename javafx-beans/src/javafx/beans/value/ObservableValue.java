@@ -78,6 +78,7 @@ import javafx.beans.Observable;
  * @see ObservableStringValue
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface ObservableValue<T> extends Observable {
 

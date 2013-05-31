@@ -28,6 +28,7 @@ package javafx.event;
 // PENDING_DOC_REVIEW
 /**
  * Represents an event target.
+ * @since JavaFX 2.0
  */
 public interface EventTarget {
     /**

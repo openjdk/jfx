@@ -31,6 +31,7 @@ package javafx.beans.property;
  * 
  * @see StringPropertyBase
  * 
+ * @since JavaFX 2.0
  */
 public class SimpleStringProperty extends StringPropertyBase {
 

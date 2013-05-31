@@ -38,7 +38,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * for the subclasses to define their geometry.
  *
  * @version     1.26, 05/05/07
- * @since 1.2
  */
 public abstract class RectangularShape extends Shape {
 
@@ -49,7 +48,6 @@ public abstract class RectangularShape extends Shape {
      * @see Ellipse2D
      * @see Rectangle2D
      * @see RoundRectangle2D
-     * @since 1.2
      */
     protected RectangularShape() { }
 
@@ -58,7 +56,6 @@ public abstract class RectangularShape extends Shape {
      * the framing rectangle in <code>double</code> precision.
      * @return the X coordinate of the upper-left corner of
      * the framing rectangle.
-     * @since 1.2
      */
     public abstract float getX();
 
@@ -67,7 +64,6 @@ public abstract class RectangularShape extends Shape {
      * the framing rectangle in <code>double</code> precision.
      * @return the Y coordinate of the upper-left corner of
      * the framing rectangle.
-     * @since 1.2
      */
     public abstract float getY();
 
@@ -75,7 +71,6 @@ public abstract class RectangularShape extends Shape {
      * Returns the width of the framing rectangle in 
      * <code>double</code> precision.
      * @return the width of the framing rectangle.
-     * @since 1.2
      */
     public abstract float getWidth();
 
@@ -83,7 +78,6 @@ public abstract class RectangularShape extends Shape {
      * Returns the height of the framing rectangle
      * in <code>double</code> precision.
      * @return the height of the framing rectangle.
-     * @since 1.2
      */
     public abstract float getHeight();
 
@@ -93,7 +87,6 @@ public abstract class RectangularShape extends Shape {
      * precision.
      * @return the smallest X coordinate of the framing 
      *      rectangle of the <code>Shape</code>.
-     * @since 1.2
      */
     public float getMinX() {
         return getX();
@@ -105,7 +98,6 @@ public abstract class RectangularShape extends Shape {
      * precision.
      * @return the smallest Y coordinate of the framing 
      *      rectangle of the <code>Shape</code>.
-     * @since 1.2
      */
     public float getMinY() {
         return getY();
@@ -117,7 +109,6 @@ public abstract class RectangularShape extends Shape {
      * precision.
      * @return the largest X coordinate of the framing
      *      rectangle of the <code>Shape</code>.
-     * @since 1.2
      */
     public float getMaxX() {
         return getX() + getWidth();
@@ -129,7 +120,6 @@ public abstract class RectangularShape extends Shape {
      * precision.
      * @return the largest Y coordinate of the framing 
      *      rectangle of the <code>Shape</code>.
-     * @since 1.2
      */
     public float getMaxY() {
         return getY() + getHeight();
@@ -141,7 +131,6 @@ public abstract class RectangularShape extends Shape {
      * precision.
      * @return the X coordinate of the center of the framing rectangle 
      *      of the <code>Shape</code>.
-     * @since 1.2
      */
     public float getCenterX() {
         return getX() + getWidth() / 2f;
@@ -153,7 +142,6 @@ public abstract class RectangularShape extends Shape {
      * precision.
      * @return the Y coordinate of the center of the framing rectangle 
      *      of the <code>Shape</code>.
-     * @since 1.2
      */
     public float getCenterY() {
         return getY() + getHeight() / 2f;
@@ -165,7 +153,6 @@ public abstract class RectangularShape extends Shape {
      * area.
      * @return <code>true</code> if the <code>RectangularShape</code> is empty; 
      *      <code>false</code> otherwise.
-     * @since 1.2
      */
     public abstract boolean isEmpty();
 
@@ -180,7 +167,6 @@ public abstract class RectangularShape extends Shape {
      * @param w the width of the specified rectangular shape
      * @param h the height of the specified rectangular shape
      * @see #getFrame
-     * @since 1.2
      */
     public abstract void setFrame(float x, float y, float w, float h);
 
@@ -193,7 +179,6 @@ public abstract class RectangularShape extends Shape {
      * @param loc the specified <code>Point2D</code>
      * @param size the specified <code>Dimension2D</code>
      * @see #getFrame
-     * @since 1.2
      */
     public void setFrame(Point2D loc, Dimension2D size) {
         setFrame(loc.x, loc.y, size.width, size.height);
@@ -209,7 +194,6 @@ public abstract class RectangularShape extends Shape {
      * @param y1 the Y coordinate of the start point of the specified diagonal
      * @param x2 the X coordinate of the end point of the specified diagonal
      * @param y2 the Y coordinate of the end point of the specified diagonal
-     * @since 1.2
      */
     public void setFrameFromDiagonal(float x1, float y1, float x2, float y2) {
         if (x2 < x1) {
@@ -233,7 +217,6 @@ public abstract class RectangularShape extends Shape {
      *
      * @param p1 the start <code>Point2D</code> of the specified diagonal
      * @param p2 the end <code>Point2D</code> of the specified diagonal
-     * @since 1.2
      */
     public void setFrameFromDiagonal(Point2D p1, Point2D p2) {
         setFrameFromDiagonal(p1.x, p1.y, p2.x, p2.y);
@@ -249,7 +232,6 @@ public abstract class RectangularShape extends Shape {
      * @param centerY the Y coordinate of the specified center point
      * @param cornerX the X coordinate of the specified corner point
      * @param cornerY the Y coordinate of the specified corner point
-     * @since 1.2
      */
     public void setFrameFromCenter(float centerX, float centerY,
                    float cornerX, float cornerY)
@@ -266,7 +248,6 @@ public abstract class RectangularShape extends Shape {
      * of <code>RectangularShape</code> to define their geometry.
      * @param center the specified center <code>Point2D</code>
      * @param corner the specified corner <code>Point2D</code>
-     * @since 1.2
      */
     public void setFrameFromCenter(Point2D center, Point2D corner) {
         setFrameFromCenter(center.x, center.y, corner.x, corner.y);
@@ -274,7 +255,6 @@ public abstract class RectangularShape extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(Point2D p) {
         return contains(p.x, p.y);
@@ -282,7 +262,6 @@ public abstract class RectangularShape extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public RectBounds getBounds() {
         float width = getWidth();
@@ -323,7 +302,6 @@ public abstract class RectangularShape extends Shape {
      *          from any point on the original curve
      * @return a <code>PathIterator</code> object that provides access to 
      *      the <code>Shape</code> object's flattened geometry.
-     * @since 1.2
      */
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new FlatteningPathIterator(getPathIterator(tx), flatness);

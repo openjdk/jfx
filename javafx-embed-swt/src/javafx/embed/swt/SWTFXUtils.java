@@ -48,6 +48,7 @@ import javafx.scene.image.WritablePixelFormat;
 /**
  * This class provides utility methods for converting data types between
  * SWT and JavaFX formats.
+ * @since JavaFX 2.2
  */
 public class SWTFXUtils {
     private SWTFXUtils() {} // no instances

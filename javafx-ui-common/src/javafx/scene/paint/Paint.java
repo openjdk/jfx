@@ -31,6 +31,7 @@ import com.sun.javafx.tk.Toolkit;
 /**
  * Base class for a color or gradients used to fill shapes and backgrounds when
  * rendering the scene graph.
+ * @since JavaFX 2.0
  */
 public abstract class Paint {
     /**
@@ -87,6 +88,7 @@ public abstract class Paint {
      *
      * @return true if the Paint is opaque, false if it is not opaque or if
      *         it cannot be determined.
+     * @since JavaFX 8.0
      */
     public abstract boolean isOpaque();
       
@@ -105,6 +107,7 @@ public abstract class Paint {
      * @see Color#valueOf(String)
      * @see LinearGradient#valueOf(String)
      * @see RadialGradient#valueOf(String)
+     * @since JavaFX 2.1
      */
     public static Paint valueOf(String value) {
         if (value == null) {

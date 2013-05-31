@@ -63,6 +63,7 @@ import com.sun.javafx.scene.control.skin.SplitMenuButtonSkin;
  *
  * @see MenuItem
  * @see Menu
+ * @since JavaFX 2.0
  */
 
 public class SplitMenuButton extends MenuButton {

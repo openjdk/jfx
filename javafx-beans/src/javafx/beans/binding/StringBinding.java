@@ -56,6 +56,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @see javafx.beans.binding.StringExpression
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class StringBinding extends StringExpression implements
         Binding<String> {

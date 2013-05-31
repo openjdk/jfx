@@ -68,6 +68,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <p>
  * <img src="doc-files/bloom.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class Bloom extends Effect {
     /**
@@ -78,6 +79,7 @@ public class Bloom extends Effect {
     /**
      * Creates a new instance of Bloom with the specified threshold.
      * @param threshold the threshold value for the bloom effect
+     * @since JavaFX 2.1
      */
     public Bloom(double threshold) {
         setThreshold(threshold);

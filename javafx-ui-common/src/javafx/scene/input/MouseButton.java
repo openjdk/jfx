@@ -27,6 +27,7 @@ package javafx.scene.input;
 
 /**
  * Mapping for Button Names
+ * @since JavaFX 2.0
  */          
 public enum MouseButton {
 

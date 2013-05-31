@@ -29,6 +29,7 @@ package javafx.animation;
  * A value that can be interpolated. It defines single
  * {@link #interpolate(Object, double)} method, which returns interpolated value
  * of given fraction.
+ * @since JavaFX 2.0
  */
 public interface Interpolatable<T> {
 

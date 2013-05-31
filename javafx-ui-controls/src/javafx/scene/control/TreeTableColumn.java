@@ -127,6 +127,7 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  * @see TableView
  * @see TableCell
  * @see TablePosition
+ * @since JavaFX 8.0
  */
 public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> implements EventTarget {
     
@@ -669,6 +670,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * 
      * @param <S> The TableView type
      * @param <T> The TreeTableColumn type
+     * @since JavaFX 8.0
      */
     public static class CellDataFeatures<S,T> {
         private final TreeTableView<S> treeTableView;
@@ -716,6 +718,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     
     /**
      * An event that is fired when a user performs an edit on a table cell.
+     * @since JavaFX 8.0
      */
     public static class CellEditEvent<S,T> extends Event {
         private static final long serialVersionUID = -609964441682677579L;
@@ -832,6 +835,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     /**
      * Enumeration that specifies the type of sorting being applied to a specific
      * column.
+     * @since JavaFX 8.0
      */
     public static enum SortType {
         /**

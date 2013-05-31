@@ -46,6 +46,7 @@ import javafx.beans.value.ObservableNumberValue;
  * @see LongProperty
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class LongPropertyBase extends LongProperty {
 

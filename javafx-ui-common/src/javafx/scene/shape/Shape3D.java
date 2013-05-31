@@ -60,7 +60,7 @@ import sun.util.logging.PlatformLogger;
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
  * 
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public abstract class Shape3D extends Node {
     // NOTE: Need a way to specify shape tessellation resolution, may use metric relate to window resolution

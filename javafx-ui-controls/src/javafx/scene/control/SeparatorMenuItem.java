@@ -48,6 +48,7 @@ SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
  * @see CustomMenuItem
  * @see MenuItem
  * @see Menu
+ * @since JavaFX 2.0
  */
 public class SeparatorMenuItem extends CustomMenuItem {
     

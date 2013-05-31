@@ -32,6 +32,7 @@ import javafx.beans.property.Property;
  * writable Java Bean properties and JavaFX properties.
  * 
  * @param T The type of the wrapped property
+ * @since JavaFX 2.1
  */
 public interface JavaBeanProperty<T> extends ReadOnlyJavaBeanProperty<T>, Property<T> {
 }

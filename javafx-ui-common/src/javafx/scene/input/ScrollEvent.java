@@ -95,7 +95,7 @@ import javafx.event.EventType;
     }
  </pre></code>
  *
- * @since 2.2
+ * @since JavaFX 2.0
  */
 public final class ScrollEvent extends GestureEvent {
 
@@ -117,6 +117,7 @@ public final class ScrollEvent extends GestureEvent {
     /**
      * This event occurs when a scrolling gesture is detected. It doesn't
      * occur for mouse wheel scrolling.
+     * @since JavaFX 2.2
      */
     public static final EventType<ScrollEvent> SCROLL_STARTED =
             new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL_STARTED");
@@ -124,6 +125,7 @@ public final class ScrollEvent extends GestureEvent {
     /**
      * This event occurs when a scrolling gesture ends. It doesn't
      * occur for mouse wheel scrolling.
+     * @since JavaFX 2.2
      */
     public static final EventType<ScrollEvent> SCROLL_FINISHED =
             new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL_FINISHED");
@@ -155,6 +157,7 @@ public final class ScrollEvent extends GestureEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and the target
+     * @since JavaFX 8.0
      */
     public ScrollEvent(Object source, EventTarget target,
             final EventType<ScrollEvent> eventType,
@@ -211,6 +214,7 @@ public final class ScrollEvent extends GestureEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates
+     * @since JavaFX 8.0
      */
     public ScrollEvent(final EventType<ScrollEvent> eventType,
             double x, double y,
@@ -286,6 +290,7 @@ public final class ScrollEvent extends GestureEvent {
      * coordinate.
      *
      * @return Number of pixels scrolled horizontally during the gesture
+     * @since JavaFX 2.2
      */
     public double getTotalDeltaX() {
         return totalDeltaX;
@@ -305,6 +310,7 @@ public final class ScrollEvent extends GestureEvent {
      * coordinate.
      *
      * @return Number of pixels to scrolled vertically during the gesture
+     * @since JavaFX 2.2
      */
     public double getTotalDeltaY() {
         return totalDeltaY;
@@ -375,6 +381,7 @@ public final class ScrollEvent extends GestureEvent {
      * devices as mouse wheel and for inertia events after gesture finish
      * it returns zero.
      * @return Number of touch points that caused this event
+     * @since JavaFX 2.2
      */
     public int getTouchCount() {
         return touchCount;
@@ -440,6 +447,7 @@ public final class ScrollEvent extends GestureEvent {
      * @param target the new target of the copied event
      * @param eventType the new eventType
      * @return the event copy with the fields substituted
+     * @since JavaFX 8.0
      */
     public ScrollEvent copyFor(Object newSource, EventTarget newTarget, EventType<ScrollEvent> type) {
         ScrollEvent e = copyFor(newSource, newTarget);
@@ -454,6 +462,7 @@ public final class ScrollEvent extends GestureEvent {
     
     /**
      * Horizontal text-based scrolling units.
+     * @since JavaFX 2.0
      */
     public static enum HorizontalTextScrollUnits {
         /**
@@ -471,6 +480,7 @@ public final class ScrollEvent extends GestureEvent {
 
     /**
      * Vertical text-based scrolling units.
+     * @since JavaFX 2.0
      */
     public static enum VerticalTextScrollUnits {
         /**

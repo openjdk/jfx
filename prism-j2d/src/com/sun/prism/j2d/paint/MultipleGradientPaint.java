@@ -36,12 +36,10 @@ import java.lang.ref.SoftReference;
  * gradient to fill in their raster.  It provides storage for variables and
  * enumerated values common to
  * {@code LinearGradientPaint} and {@code RadialGradientPaint}.
- * @since 1.6
  */
 public abstract class MultipleGradientPaint implements Paint {
 
     /** The method to use when painting outside the gradient bounds.
-     * @since 1.6
      */
     public static enum CycleMethod {
         /**
@@ -63,7 +61,6 @@ public abstract class MultipleGradientPaint implements Paint {
     }
 
     /** The color space in which to perform the gradient interpolation.
-     * @since 1.6
      */
     public static enum ColorSpaceType {
         /**

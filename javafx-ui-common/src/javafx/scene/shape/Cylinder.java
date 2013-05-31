@@ -46,7 +46,7 @@ import javafx.scene.transform.Rotate;
  * A {@code Cylinder} is a 3D geometry primitive created with a given radius and height.
  * It is centered at the origin.
  *
- * @since JavaFX 8    
+ * @since JavaFX 8.0
  */
 public class Cylinder extends Shape3D {
 

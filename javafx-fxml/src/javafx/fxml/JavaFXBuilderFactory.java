@@ -65,6 +65,7 @@ import sun.reflect.misc.MethodUtil;
 
 /**
  * JavaFX builder factory.
+ * @since JavaFX 2.0
  */
 public final class JavaFXBuilderFactory implements BuilderFactory {
     private final JavaFXBuilder NO_BUILDER = new JavaFXBuilder();
@@ -98,6 +99,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
      * Constructor that takes a class loader.
      *
      * @param classLoader
+     * @since JavaFX 2.1
      */
     public JavaFXBuilderFactory(ClassLoader classLoader) {
         this(classLoader, false);
@@ -108,6 +110,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
      * This constructor is for internal use only.
      *
      * @deprecated
+     * @since JavaFX 2.1
      */
     public JavaFXBuilderFactory(ClassLoader classLoader, boolean alwaysUseBuilders) {
         // SB-dependency: RT-21230 has been filed to track this

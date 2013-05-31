@@ -39,6 +39,7 @@ import javafx.beans.property.SimpleObjectProperty;
  * @see CssMetaData
  * @see StyleableProperty
  * @see StyleableObjectProperty
+ * @since JavaFX 8.0
  */
 public class SimpleStyleableObjectProperty<T> extends StyleableObjectProperty<T> {
 

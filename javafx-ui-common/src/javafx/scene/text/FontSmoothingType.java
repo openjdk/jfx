@@ -28,6 +28,7 @@ package javafx.scene.text;
 /**
  * The {@code FontSmoothingType} enum is used to specify the preferred
  * mechanism used to smooth the edges of fonts for on-screen text.
+ * @since JavaFX 2.1
  */
 
 public enum FontSmoothingType {

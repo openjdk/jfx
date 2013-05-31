@@ -28,6 +28,7 @@ package javafx.scene.input;
 /**
  * Describes the mode of data transfer with respect
  * to a drag and drop gesture.
+ * @since JavaFX 2.0
  */
 public enum
         TransferMode {

@@ -144,6 +144,7 @@ import javafx.util.Callback;
  *     button2.setMaxWidth(Double.MAX_VALUE);</b>
  *     hbox.getChildren().addAll(button1, button2);
  * </code></pre>
+ * @since JavaFX 2.0
  */
 public class HBox extends Pane {
 
@@ -241,6 +242,7 @@ public class HBox extends Pane {
     /**
      * Creates an HBox layout with spacing = 0.
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public HBox(Node... children) {
         super();
@@ -251,6 +253,7 @@ public class HBox extends Pane {
      * Creates an HBox layout with the specified spacing between children.
      * @param spacing the amount of horizontal space between each child
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public HBox(double spacing, Node... children) {
         this();
@@ -677,6 +680,7 @@ public class HBox extends Pane {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -685,6 +689,7 @@ public class HBox extends Pane {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
 
 

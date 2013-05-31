@@ -76,6 +76,7 @@ import static com.sun.javafx.logging.PulseLogger.*;
  * <li>{@link javafx.scene.layout.Region} class for nodes that can be styled with CSS and layout children. </li>
  * </ul>
  *
+ * @since JavaFX 2.0
  */
 public abstract class Parent extends Node {
     // package private for testing
@@ -223,7 +224,6 @@ public abstract class Parent extends Node {
      * appears in two different bound ObservableList.
      *
      * @defaultValue empty
-     * @since JavaFX 1.3
      */
 
     // set to true if either childRemoved or childAdded returns
@@ -968,6 +968,7 @@ public abstract class Parent extends Node {
      * @param height the height that should be used if min width depends
      *      on it
      * @return the calculated min width
+     * @since JavaFX 2.1
      */
     protected double computeMinWidth(double height) {
         return prefWidth(height);
@@ -981,6 +982,7 @@ public abstract class Parent extends Node {
      * @param width the width that should be used if min height depends
      *      on it
      * @return the calculated min height
+     * @since JavaFX 2.1
      */
     protected double computeMinHeight(double width) {
         return prefHeight(width);
@@ -1112,6 +1114,7 @@ public abstract class Parent extends Node {
      * Guide</a>.
      *
      * @return the list of stylesheets to use with this Parent
+     * @since JavaFX 2.1
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
     

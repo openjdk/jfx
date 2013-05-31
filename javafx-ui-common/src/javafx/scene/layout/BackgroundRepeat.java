@@ -27,6 +27,7 @@ package javafx.scene.layout;
 
 /**
  * Enumeration of options for repeating images in backgrounds
+ * @since JavaFX 8.0
  */
 public enum BackgroundRepeat {
     /**

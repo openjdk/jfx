@@ -65,6 +65,7 @@ import javafx.geometry.HPos;
  * any constraints, leaving the GridPane to compute the column's layout based
  * solely on its content's size preferences and constraints.
  *
+ * @since JavaFX 2.0
  */
 public class ColumnConstraints extends ConstraintsBase {
 

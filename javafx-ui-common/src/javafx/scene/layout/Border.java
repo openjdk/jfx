@@ -80,7 +80,7 @@ import javafx.css.Styleable;
  * also specify a stroked border which is only used when the image fails to load for some
  * reason.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 @SuppressWarnings("unchecked")
 public final class Border {

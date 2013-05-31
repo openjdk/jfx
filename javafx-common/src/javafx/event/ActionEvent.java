@@ -30,6 +30,7 @@ package javafx.event;
  * used to represent a variety of things, such as when a {@link javafx.scene.control.Button}
  * has been fired, when a {@link javafx.animation.KeyFrame} has finished, and other
  * such usages.
+ * @since JavaFX 2.0
  */
 public class ActionEvent extends Event {
 
@@ -42,6 +43,7 @@ public class ActionEvent extends Event {
 
     /**
      * Common supertype for all action event types.
+     * @since JavaFX 8.0
      */
     public static final EventType<ActionEvent> ANY = ACTION;
 

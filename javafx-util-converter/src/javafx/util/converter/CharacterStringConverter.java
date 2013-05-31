@@ -30,6 +30,7 @@ import javafx.util.StringConverter;
 /**
  * <p>{@link StringConverter} implementation for {@link Character}
  * (and char primitive) values.</p>
+ * @since JavaFX 2.1
  */
 public class CharacterStringConverter extends StringConverter<Character> {
     /** {@inheritDoc} */

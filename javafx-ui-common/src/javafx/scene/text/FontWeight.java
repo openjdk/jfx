@@ -32,6 +32,7 @@ package javafx.scene.text;
  * <A HREF=http://www.microsoft.com/typography/otspec/os2.htm#wtc>
  * OpenType font specification</A>.
  * The CSS 3 specification references the same as a sequence of values.
+ * @since JavaFX 2.0
  */
 public enum FontWeight {
 

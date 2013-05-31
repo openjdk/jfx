@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 /**
  * Specifies how the tree items in tree-like UI controls should be sorted.
+ * @since JavaFX 8.0
  */
 public enum TreeSortMode {
     /** 

@@ -46,7 +46,7 @@ import javafx.scene.transform.Rotate;
  * A {@code Sphere} is a 3D geometry primitive created with a given radius.
  * It is centered at the origin.
  *
- * @since JavaFX 8    
+ * @since JavaFX 8.0
  */
 public class Sphere extends Shape3D {
 

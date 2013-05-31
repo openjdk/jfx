@@ -69,6 +69,7 @@ import javafx.collections.ObservableMap;
  * of nodes added to a layout container.</p>
  * <p>When the user clicks
  * on a Tab in the TabPane the Tab content becomes visible to the user.</p>
+ * @since JavaFX 2.0
  */
 @DefaultProperty("content")
 public class Tab implements EventTarget, Styleable {
@@ -537,7 +538,7 @@ public class Tab implements EventTarget, Styleable {
      * @param value the state to set this tab
      * 
      * @defaultValue false
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final void setDisable(boolean value) { 
         disableProperty().set(value);
@@ -545,7 +546,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * Returns {@code true} if this tab is disable.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isDisable() { return disable == null ? false : disable.get(); }
 
@@ -555,7 +556,7 @@ public class Tab implements EventTarget, Styleable {
      * can be selected using {@link TabPane#getSelectionModel()}.
      * 
      * @defaultValue false
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final BooleanProperty disableProperty() {
         if (disable == null) {
@@ -588,7 +589,7 @@ public class Tab implements EventTarget, Styleable {
     /**
      * Returns true when the {@code Tab} {@link #disableProperty disable} is set to
      * {@code true} or if the {@code TabPane} is disabled.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isDisabled() {
         return disabled == null ? false : disabled.get();
@@ -600,7 +601,7 @@ public class Tab implements EventTarget, Styleable {
      * itself or if the {@code TabPane} is disabled.
      * 
      * @defaultValue false
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ReadOnlyBooleanProperty disabledProperty() {
         return disabledPropertyImpl().getReadOnlyProperty();
@@ -631,6 +632,7 @@ public class Tab implements EventTarget, Styleable {
      * Called when there is an external request to close this {@code Tab}.
      * The installed event handler can prevent tab closing by consuming the
      * received event.
+     * @since JavaFX 8.0
      */
     public static final EventType<Event> TAB_CLOSE_REQUEST_EVENT = new EventType<Event> (Event.ANY, "TAB_CLOSE_REQUEST_EVENT");
    
@@ -638,6 +640,7 @@ public class Tab implements EventTarget, Styleable {
      * Called when there is an external request to close this {@code Tab}.
      * The installed event handler can prevent tab closing by consuming the
      * received event.
+     * @since JavaFX 8.0
      */
     private ObjectProperty<EventHandler<Event>> onCloseRequest;
     public final ObjectProperty<EventHandler<Event>> onCloseRequestProperty() {
@@ -683,7 +686,7 @@ public class Tab implements EventTarget, Styleable {
       *
       * @return an observable map of properties on this Tab for use primarily
       * by application developers
-     * @since 2.2
+     * @since JavaFX 2.2
      */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
@@ -695,7 +698,7 @@ public class Tab implements EventTarget, Styleable {
     /**
      * Tests if this Tab has properties.
      * @return true if this tab has properties.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
      public boolean hasProperties() {
         return properties != null && !properties.isEmpty();
@@ -711,7 +714,7 @@ public class Tab implements EventTarget, Styleable {
      *
      * @param value The value to be stored - this can later be retrieved by calling
      *          {@link Tab#getUserData()}.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public void setUserData(Object value) {
         getProperties().put(USER_DATA_KEY, value);
@@ -723,7 +726,7 @@ public class Tab implements EventTarget, Styleable {
      *
      * @return The Object that was previously set, or null if no property
      *          has been set or if null was set.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public Object getUserData() {
         return getProperties().get(USER_DATA_KEY);
@@ -773,6 +776,7 @@ public class Tab implements EventTarget, Styleable {
     /**
      * {@inheritDoc}
      * @return "Tab"
+     * @since JavaFX 8.0
      */
    @Override
     public String getTypeSelector() {
@@ -782,6 +786,7 @@ public class Tab implements EventTarget, Styleable {
     /**
      * {@inheritDoc}
      * @return {@code getTabPane()}
+     * @since JavaFX 8.0
      */
     @Override
     public Styleable getStyleableParent() {
@@ -790,6 +795,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     public final ObservableSet<PseudoClass> getPseudoClassStates() {
         return FXCollections.emptyObservableSet();
@@ -797,6 +803,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

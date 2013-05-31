@@ -119,6 +119,7 @@ text.setWrappingWidth(200);
 text.setTextAlignment(TextAlignment.JUSTIFY)
 text.setText("The quick brown fox jumps over the lazy dog");
 </PRE>
+ * @since JavaFX 2.0
  */
 @DefaultProperty("text")
 public class Text extends Shape {
@@ -563,7 +564,6 @@ public class Text extends Shape {
      * the visual bounds. See {@code TextBoundsType} for more information.
      *
      * @defaultValue TextBoundsType.LOGICAL
-     * @since JavaFX 1.3
      */
     private ObjectProperty<TextBoundsType> boundsType;
 
@@ -722,7 +722,7 @@ public class Text extends Shape {
      *
      * @defaultValue 0
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public final DoubleProperty lineSpacingProperty() {
         return getTextAttribute().lineSpacingProperty();
@@ -737,8 +737,6 @@ public class Text extends Shape {
      * The 'alphabetic' (or roman) baseline offset from the Text node's
      * layoutBounds.minY location.
      * The value typically corresponds to the max ascent of the font.
-     *
-     * @since JavaFX 1.3
      */
     public final ReadOnlyDoubleProperty baselineOffsetProperty() {
         return getTextAttribute().baselineOffsetProperty();
@@ -753,6 +751,7 @@ public class Text extends Shape {
      * compositing modes, where effects are applied and very large glyphs.
      *
      * @defaultValue FontSmoothingType.GRAY
+     * @since JavaFX 2.1
      */
     private ObjectProperty<FontSmoothingType> fontSmoothingType;
 
@@ -797,7 +796,6 @@ public class Text extends Shape {
      * and between characters to be picked.
      *
      * @defaultValue true
-     * @since JavaFX 1.3
      */
     //@GenerateProperty private boolean pickOnBounds = true;
 
@@ -1450,6 +1448,7 @@ public class Text extends Shape {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -1458,6 +1457,7 @@ public class Text extends Shape {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
     
     

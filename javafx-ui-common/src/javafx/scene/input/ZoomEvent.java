@@ -54,7 +54,7 @@ import javafx.event.EventType;
  * given platform, some {@code ZOOM} events with {@code isInertia()} returning
  * {@code true} can come after {@code ZOOM_FINISHED}.
  *
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public final class ZoomEvent extends GestureEvent {
 
@@ -106,6 +106,7 @@ public final class ZoomEvent extends GestureEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and the target
+     * @since JavaFX 8.0
      */
     public ZoomEvent(Object source, EventTarget target, final EventType<ZoomEvent> eventType,
             double x, double y,
@@ -145,6 +146,7 @@ public final class ZoomEvent extends GestureEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates
+     * @since JavaFX 8.0
      */
     public ZoomEvent(final EventType<ZoomEvent> eventType,
             double x, double y,
@@ -242,6 +244,7 @@ public final class ZoomEvent extends GestureEvent {
      * @param target the new target of the copied event
      * @param eventType the new eventType
      * @return the event copy with the fields substituted
+     * @since JavaFX 8.0
      */
     public ZoomEvent copyFor(Object newSource, EventTarget newTarget, EventType<ZoomEvent> type) {
         ZoomEvent e = copyFor(newSource, newTarget);

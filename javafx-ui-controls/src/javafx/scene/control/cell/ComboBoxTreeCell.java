@@ -53,7 +53,7 @@ import javafx.util.StringConverter;
  * {@link TreeItem#valueProperty()}.
  * 
  * @param <T> The type of the TreeItems contained within the TreeView.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class ComboBoxTreeCell<T> extends TreeCell<T> {
     

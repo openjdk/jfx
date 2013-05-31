@@ -30,6 +30,7 @@ package javafx.scene.layout;
  * layout area when its region has more (or less) space available and
  * multiple nodes are competing for that space.
  *
+ * @since JavaFX 2.0
  */
 public enum Priority {
     /**

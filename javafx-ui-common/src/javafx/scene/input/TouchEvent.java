@@ -54,7 +54,7 @@ import javafx.event.EventType;
  * possible to change this behavior by using a grabbing mechanism described
  * in {@link TouchPoint} documentation.
  *
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public final class TouchEvent extends InputEvent {
 
@@ -104,6 +104,7 @@ public final class TouchEvent extends InputEvent {
      * @param controlDown true if control modifier was pressed.
      * @param altDown true if alt modifier was pressed.
      * @param metaDown true if meta modifier was pressed.
+     * @since JavaFX 8.0
      */
     public TouchEvent(Object source, EventTarget target, EventType<TouchEvent> eventType,
             TouchPoint touchPoint, List<TouchPoint> touchPoints, int eventSetId,
@@ -130,6 +131,7 @@ public final class TouchEvent extends InputEvent {
      * @param altDown true if alt modifier was pressed.
      * @param metaDown true if meta modifier was pressed.
      * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @since JavaFX 8.0
      */
     public TouchEvent(EventType<TouchEvent> eventType,
             TouchPoint touchPoint, List<TouchPoint> touchPoints, int eventSetId,
@@ -179,6 +181,7 @@ public final class TouchEvent extends InputEvent {
      * @param target the new target of the copied event
      * @param eventType the new eventType
      * @return the event copy with the fields substituted
+     * @since JavaFX 8.0
      */
     public TouchEvent copyFor(Object newSource, EventTarget newTarget, EventType<TouchEvent> type) {
         TouchEvent e = copyFor(newSource, newTarget);

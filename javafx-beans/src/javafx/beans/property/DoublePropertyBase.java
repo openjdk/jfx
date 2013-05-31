@@ -46,6 +46,7 @@ import javafx.beans.value.ObservableNumberValue;
  * @see DoubleProperty
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class DoublePropertyBase extends DoubleProperty {
 

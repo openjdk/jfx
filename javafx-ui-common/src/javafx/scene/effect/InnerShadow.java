@@ -65,6 +65,7 @@ import com.sun.javafx.tk.Toolkit;
  * <p>
  * <img * src="doc-files/innershadow.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class InnerShadow extends Effect {
     private boolean changeIsLocal;
@@ -109,6 +110,7 @@ public class InnerShadow extends Effect {
      * the source material will be 100%
      * @param offsetX the shadow offset in the x direction
      * @param offsetY the shadow offset in the y direction
+     * @since JavaFX 2.1
      */
     public InnerShadow(BlurType blurType, Color color, double radius, double choke,
             double offsetX, double offsetY) {
@@ -131,7 +133,6 @@ public class InnerShadow extends Effect {
      * the {@code Node} to which the {@code Effect} is attached will be
      * used as the input.
      * @defaultValue null
-     * @since JavaFX 1.3
      */
     private ObjectProperty<Effect> input;
 

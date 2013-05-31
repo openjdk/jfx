@@ -68,7 +68,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * @see #TYPE_GENERAL_ROTATION
      * @see #TYPE_GENERAL_TRANSFORM
      * @see #getType
-     * @since 1.2
      */
     public static final int TYPE_IDENTITY = 0;
 
@@ -86,7 +85,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * @see #TYPE_GENERAL_ROTATION
      * @see #TYPE_GENERAL_TRANSFORM
      * @see #getType
-     * @since 1.2
      */
     public static final int TYPE_TRANSLATION = 1;
 
@@ -106,7 +104,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * @see #TYPE_GENERAL_ROTATION
      * @see #TYPE_GENERAL_TRANSFORM
      * @see #getType
-     * @since 1.2
      */
     public static final int TYPE_UNIFORM_SCALE = 2;
 
@@ -126,7 +123,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * @see #TYPE_GENERAL_ROTATION
      * @see #TYPE_GENERAL_TRANSFORM
      * @see #getType
-     * @since 1.2
      */
     public static final int TYPE_GENERAL_SCALE = 4;
 
@@ -134,7 +130,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * This constant is a bit mask for any of the scale flag bits.
      * @see #TYPE_UNIFORM_SCALE
      * @see #TYPE_GENERAL_SCALE
-     * @since 1.2
      */
     public static final int TYPE_MASK_SCALE = (TYPE_UNIFORM_SCALE |
                            TYPE_GENERAL_SCALE);
@@ -162,7 +157,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * @see #TYPE_GENERAL_ROTATION
      * @see #TYPE_GENERAL_TRANSFORM
      * @see #getType
-     * @since 1.2
      */
     public static final int TYPE_FLIP = 64;
     /* NOTE: TYPE_FLIP was added after GENERAL_TRANSFORM was in public
@@ -187,7 +181,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * @see #TYPE_GENERAL_ROTATION
      * @see #TYPE_GENERAL_TRANSFORM
      * @see #getType
-     * @since 1.2
      */
     public static final int TYPE_QUADRANT_ROTATION = 8;
 
@@ -208,7 +201,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * @see #TYPE_QUADRANT_ROTATION
      * @see #TYPE_GENERAL_TRANSFORM
      * @see #getType
-     * @since 1.2
      */
     public static final int TYPE_GENERAL_ROTATION = 16;
 
@@ -216,7 +208,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * This constant is a bit mask for any of the rotation flag bits.
      * @see #TYPE_QUADRANT_ROTATION
      * @see #TYPE_GENERAL_ROTATION
-     * @since 1.2
      */
     public static final int TYPE_MASK_ROTATION = (TYPE_QUADRANT_ROTATION |
                           TYPE_GENERAL_ROTATION);
@@ -236,7 +227,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * @see #TYPE_QUADRANT_ROTATION
      * @see #TYPE_GENERAL_ROTATION
      * @see #getType
-     * @since 1.2
      */
     public static final int TYPE_GENERAL_TRANSFORM = 32;
 
@@ -339,7 +329,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * @see #TYPE_QUADRANT_ROTATION
      * @see #TYPE_GENERAL_ROTATION
      * @see #TYPE_GENERAL_TRANSFORM
-     * @since 1.2
      */
     public abstract int getType();
 
@@ -470,7 +459,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
     /**
      * Returns the hashcode for this transform.
      * @return      a hash code for this transform.
-     * @since 1.2
      */
     @Override
     public int hashCode() {
@@ -499,7 +487,6 @@ public abstract class BaseTransform implements CanTransformVec3d{
      * <code>BaseTransform</code>
      * @return <code>true</code> if <code>obj</code> equals this
      * <code>BaseTransform</code> object; <code>false</code> otherwise.
-     * @since 1.2
      */
     @Override
     public boolean equals(Object obj) {

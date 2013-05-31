@@ -45,6 +45,7 @@ import javafx.collections.ObservableList;
  * @see ListProperty
  *
  * @param <E> the type of the {@code List} elements
+ * @since JavaFX 2.1
  */
 public abstract class ListPropertyBase<E> extends ListProperty<E> {
 

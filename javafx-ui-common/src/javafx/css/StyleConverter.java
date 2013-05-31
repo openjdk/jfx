@@ -49,6 +49,7 @@ import javafx.scene.text.Font;
  * methods of this class.
  * @see ParsedValue
  * @see StyleableProperty
+ * @since JavaFX 8.0
  */
 public class StyleConverter<F, T> {
 

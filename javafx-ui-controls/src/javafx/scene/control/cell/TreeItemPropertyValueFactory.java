@@ -88,6 +88,7 @@ import sun.util.logging.PlatformLogger;
  * @see TreeTableCell
  * @see PropertyValueFactory
  * @see MapValueFactory
+ * @since JavaFX 8.0
  */
 public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>> {
 

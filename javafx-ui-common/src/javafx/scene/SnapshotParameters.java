@@ -34,7 +34,7 @@ import sun.util.logging.PlatformLogger;
 
 /**
  * Parameters used to specify the rendering attributes for Node snapshot.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class SnapshotParameters {
 

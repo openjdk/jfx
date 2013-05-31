@@ -35,6 +35,7 @@ import javafx.collections.ObservableMap;
  * <code>{@link ToggleGroup}</code>, which manages all assigned Toggles such
  * that only a single Toggle within the <code>{@link ToggleGroup}</code> may be
  * selected at any one time.
+ * @since JavaFX 2.0
  */
 public interface Toggle {
 

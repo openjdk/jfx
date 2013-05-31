@@ -71,6 +71,7 @@ LinearGradient lg2 = new LinearGradient(125, 0, 225, 0, false, CycleMethod.NO_CY
 Rectangle r2 = new Rectangle(125, 0, 100, 100);
 r2.setFill(lg2);
 </PRE>
+ * @since JavaFX 2.0
  */
 public final class LinearGradient extends Paint {
     private double startX;
@@ -181,6 +182,7 @@ public final class LinearGradient extends Paint {
 
     /**
      * @inheritDoc
+     * @since JavaFX 8.0
      */
     @Override public final boolean isOpaque() {
         return opaque;
@@ -394,6 +396,7 @@ public final class LinearGradient extends Paint {
      * @throws IllegalArgumentException if the {@code value} cannot be parsed
      * @return a {@code LinearGradient} object holding the value represented 
      * by the string argument.
+     * @since JavaFX 2.1
      */
     public static LinearGradient valueOf(String value) {
         if (value == null) {

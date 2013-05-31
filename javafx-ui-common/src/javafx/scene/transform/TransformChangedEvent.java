@@ -32,6 +32,7 @@ import javafx.event.EventType;
 
 /**
  * This event is fired on a transform when any of its properties changes.
+ * @since JavaFX 8.0
  */
 public final class TransformChangedEvent extends Event {
 

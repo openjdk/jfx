@@ -32,7 +32,7 @@ package javafx.print;
  * tray names which may be in use. So queries of the supported paper
  * sources may include other values.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public final class PaperSource {
 

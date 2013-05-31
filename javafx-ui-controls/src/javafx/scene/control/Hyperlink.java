@@ -45,6 +45,7 @@ import javafx.css.StyleableProperty;
  *
  * <p>Example:</p>
  * {@code Hyperlink link = new Hyperlink("www.oracle.com"); }
+ * @since JavaFX 2.0
  */
 public class Hyperlink extends ButtonBase {
 

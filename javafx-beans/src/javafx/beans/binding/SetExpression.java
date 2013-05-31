@@ -54,6 +54,7 @@ import java.util.NoSuchElementException;
  * interface will behave as if they were applied to an immutable empty set.
  *
  * @param <E> the type of the {@code Set} elements
+ * @since JavaFX 2.1
  */
 public abstract class SetExpression<E> implements ObservableSetValue<E> {
 

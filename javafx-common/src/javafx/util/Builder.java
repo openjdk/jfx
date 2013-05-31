@@ -29,6 +29,7 @@ package javafx.util;
  * Interface representing a builder. Builders are objects that are used to
  * construct other objects.
  *
+ * @since JavaFX 2.0
  */
 public interface Builder<T> {
     /**

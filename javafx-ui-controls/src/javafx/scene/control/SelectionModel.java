@@ -36,6 +36,7 @@ import javafx.collections.ListChangeListener;
  * consistent API for maintaining selection.
  * 
  * @param <T> The type of the item contained in the control that can be selected.
+ * @since JavaFX 2.0
  */
 public abstract class SelectionModel<T> { 
 

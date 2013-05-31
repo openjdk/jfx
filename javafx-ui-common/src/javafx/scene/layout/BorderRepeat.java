@@ -27,6 +27,7 @@ package javafx.scene.layout;
 
 /**
  * Enum indicating the repetition rules for border images.
+ * @since JavaFX 8.0
  */
 public enum BorderRepeat {
     /**

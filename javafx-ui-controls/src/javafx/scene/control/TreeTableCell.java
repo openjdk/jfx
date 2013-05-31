@@ -55,6 +55,7 @@ import javafx.scene.control.TreeTableColumn.CellEditEvent;
  * @see IndexedCell
  * @see TreeTableRow
  * @param <T> The type of the item contained within the Cell.
+ * @since JavaFX 8.0
  */
 public class TreeTableCell<S,T> extends IndexedCell<T> {
     

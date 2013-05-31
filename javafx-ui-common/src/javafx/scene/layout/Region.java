@@ -133,6 +133,7 @@ import sun.util.logging.PlatformLogger;
  * {@link #setLayoutX(double) layoutX}/{@link #setLayoutY(double) layoutY} and do not alter
  * {@link #setTranslateX(double) translateX}/{@link #setTranslateY(double) translateY}, which are reserved for
  * adjustments and animation.
+ * @since JavaFX 2.0
  */
 public class Region extends Parent {
 
@@ -440,6 +441,7 @@ public class Region extends Parent {
      * The background of the Region, which is made up of zero or more BackgroundFills, and
      * zero or more BackgroundImages. It is possible for a Background to be empty, where it
      * has neither fills nor images, and is semantically equivalent to null.
+     * @since JavaFX 8.0
      */
     private final ObjectProperty<Background> background = new StyleableObjectProperty<Background>(null) {
         private Background old = null;
@@ -473,6 +475,7 @@ public class Region extends Parent {
      * The border of the Region, which is made up of zero or more BorderStrokes, and
      * zero or more BorderImages. It is possible for a Border to be empty, where it
      * has neither strokes nor images, and is semantically equivalent to null.
+     * @since JavaFX 8.0
      */
     private final ObjectProperty<Border> border = new StyleableObjectProperty<Border>(null) {
         private Border old = null;
@@ -510,6 +513,7 @@ public class Region extends Parent {
      * a Region based on the backgrounds and borders of that region. The values
      * for each of the insets must be real numbers, not NaN or Infinity. If
      * no known insets exist, then the opaqueInsets should be set to null.
+     * @since JavaFX 8.0
      */
     public final ObjectProperty<Insets> opaqueInsetsProperty() {
         if (opaqueInsets == null) {
@@ -539,6 +543,7 @@ public class Region extends Parent {
      * or (0, 0, width, height)) to the edge of the content area. All child nodes should be laid out
      * within the content area. The insets are computed based on the Border which has been specified,
      * if any, and also the padding.
+     * @since JavaFX 8.0
      */
     private final InsetsProperty insets = new InsetsProperty();
     public final Insets getInsets() { return insets.get(); }
@@ -1010,6 +1015,7 @@ public class Region extends Parent {
      *
      * @default null
      * @css shape SVG shape string
+     * @since JavaFX 8.0
      */
     private ObjectProperty<Shape> shape = null;
     private Shape _shape;
@@ -1065,6 +1071,7 @@ public class Region extends Parent {
      *
      * @default true
      * @css shape-size      true | false
+     * @since JavaFX 8.0
      */
     private BooleanProperty scaleShape = null;
     public final void setScaleShape(boolean value) { scaleShapeProperty().set(value); }
@@ -1094,6 +1101,7 @@ public class Region extends Parent {
      *
      * @default true
      * @css position-shape      true | false
+     * @since JavaFX 8.0
      */
     private BooleanProperty centerShape = null;
     public final void setCenterShape(boolean value) { centerShapeProperty().set(value); }
@@ -1122,6 +1130,7 @@ public class Region extends Parent {
      *
      * @default true
      * @css -fx-cache-shape      true | false
+     * @since JavaFX 8.0
      */
     private BooleanProperty cacheShape = null;
     public final void setCacheShape(boolean value) { cacheShapeProperty().set(value); }
@@ -1400,7 +1409,7 @@ public class Region extends Parent {
      * Utility method to get the top inset which includes padding and border
      * inset. Then snapped to whole pixels if isSnapToPixel() is true.
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      * @return Rounded up insets top
      */
     public final double snappedTopInset() {
@@ -1411,7 +1420,7 @@ public class Region extends Parent {
      * Utility method to get the bottom inset which includes padding and border
      * inset. Then snapped to whole pixels if isSnapToPixel() is true.
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      * @return Rounded up insets bottom
      */
     public final double snappedBottomInset() {
@@ -1422,7 +1431,7 @@ public class Region extends Parent {
      * Utility method to get the left inset which includes padding and border
      * inset. Then snapped to whole pixels if isSnapToPixel() is true.
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      * @return Rounded up insets left
      */
     public final double snappedLeftInset() {
@@ -1433,7 +1442,7 @@ public class Region extends Parent {
      * Utility method to get the right inset which includes padding and border
      * inset. Then snapped to whole pixels if isSnapToPixel() is true.
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      * @return Rounded up insets right
      */
     public final double snappedRightInset() {
@@ -1769,6 +1778,7 @@ public class Region extends Parent {
      * @param halignment the horizontal alignment for the child within the area
      * @param valignment the vertical alignment for the child within the area
      *
+     * @since JavaFX 8.0
      */
     public static void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
                                double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment, boolean isSnapToPixel) {
@@ -2665,6 +2675,7 @@ public class Region extends Parent {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -2673,6 +2684,7 @@ public class Region extends Parent {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
 
 

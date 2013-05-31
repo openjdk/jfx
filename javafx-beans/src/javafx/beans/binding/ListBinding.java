@@ -61,6 +61,7 @@ import javafx.collections.ObservableList;
  *
  * @param <E>
  *            the type of the {@code List} element
+ * @since JavaFX 2.1
  */
 public abstract class ListBinding<E> extends ListExpression<E> implements Binding<ObservableList<E>> {
 

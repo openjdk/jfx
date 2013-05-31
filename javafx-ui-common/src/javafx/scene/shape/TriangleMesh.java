@@ -90,7 +90,7 @@ import javafx.scene.transform.Rotate;
  * (and will have an empty bounds) if any of the array lengths are invalid
  * or if any of the values in the faces array are out of range.
  * 
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public class TriangleMesh extends Mesh {
 

@@ -62,6 +62,7 @@ import javafx.css.Styleable;
  * having to resort to {@link Tooltip tooltips} or on-screen {@link Label labels}.
  * 
  * @see TextArea
+ * @since JavaFX 2.0
  */
 public class TextField extends TextInputControl {
     // Text field content
@@ -220,6 +221,7 @@ public class TextField extends TextInputControl {
     /**
      * Specifies how the text should be aligned when there is empty
      * space within the TextField.
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
@@ -306,6 +308,7 @@ public class TextField extends TextInputControl {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -313,6 +316,7 @@ public class TextField extends TextInputControl {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

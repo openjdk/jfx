@@ -66,6 +66,7 @@ import static javafx.scene.chart.LineChart.getClassCssMetaData;
 /**
  * AreaChart - Plots the area between the line that connects the data points and
  * the 0 line on the Y axis.
+ * @since JavaFX 2.0
  */
 public class AreaChart<X,Y> extends XYChart<X,Y> {
 
@@ -77,7 +78,10 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
-    /** When true, CSS styleable symbols are created for any data items that don't have a symbol node specified. */
+    /** 
+     * When true, CSS styleable symbols are created for any data items that don't have a symbol node specified. 
+     * @since JavaFX 8.0
+     */
     private BooleanProperty createSymbols = new StyleableBooleanProperty(true) {
         @Override protected void invalidated() {
             for (int seriesIndex=0; seriesIndex < getData().size(); seriesIndex ++) {
@@ -117,6 +121,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
      * Indicates whether symbols for data points will be created or not.
      *
      * @return true if symbols for data points will be created and false otherwise.
+     * @since JavaFX 8.0
      */
     public final boolean getCreateSymbols() { return createSymbols.getValue(); }
     public final void setCreateSymbols(boolean value) { createSymbols.setValue(value); }
@@ -498,7 +503,6 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     /**
      * This is called whenever a series is added or removed and the legend needs to be updated
-     * @since 2.2
      */
     @Override protected void updateLegend() {
         legend.getItems().clear();
@@ -550,6 +554,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -557,6 +562,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

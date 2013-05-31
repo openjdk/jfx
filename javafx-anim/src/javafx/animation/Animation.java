@@ -83,6 +83,7 @@ import static com.sun.javafx.animation.TickCalculation.*;
  * @see Timeline
  * @see Transition
  * 
+ * @since JavaFX 2.0
  */
 public abstract class Animation {
 
@@ -98,6 +99,7 @@ public abstract class Animation {
 
     /**
      * The possible states for {@link Animation#statusProperty status}.
+     * @since JavaFX 2.0
      */
     public static enum Status {
         /**

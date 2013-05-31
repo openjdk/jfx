@@ -35,6 +35,7 @@ import javafx.util.Callback;
  *
  * @author Sergey Malenkov
  * @deprecated This class is deprecated and will be removed in the next version
+ * @since JavaFX 2.0
  */
 @Deprecated
 public final class WebEngineBuilder
@@ -209,6 +210,7 @@ public final class WebEngineBuilder
      *
      * @param value  new value of the {@code location} property
      * @return this builder
+     * @since JavaFX 2.1
      */
     public WebEngineBuilder location(String value) {
         location = value;

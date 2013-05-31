@@ -83,6 +83,7 @@ widgetShowing.bind(checkMenuItem.selected);
  * @see MenuItem
  * @see RadioMenuItem
  *
+ * @since JavaFX 2.0
  */
 public class CheckMenuItem extends MenuItem {
 

@@ -42,7 +42,7 @@ import javafx.beans.value.ObservableValue;
  * The {@code MeshView} class defines a surface with the specified 3D
  * mesh data.
  *
- * @since JavaFX 8    
+ * @since JavaFX 8.0
  */
 public class MeshView extends Shape3D {
 

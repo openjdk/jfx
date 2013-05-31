@@ -38,6 +38,7 @@ import javafx.scene.paint.Paint;
  * All BackgroundFills are drawn in order.
  * <p/>
  * When applied to a Region with a defined shape, the corner radii are ignored.
+ * @since JavaFX 8.0
  */
 public final class BackgroundFill {
     /**

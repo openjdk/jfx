@@ -52,6 +52,7 @@ import javafx.css.StyleableProperty;
     * data values for a category. The bars can be vertical or horizontal depending 
     * on which axis is a category axis. 
     * The bar for each series is stacked on top of the previous series.
+    * @since JavaFX 2.1
     */
 public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         
@@ -614,6 +615,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -621,6 +623,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

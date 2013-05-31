@@ -100,6 +100,7 @@ import sun.reflect.misc.ReflectUtil;
 
 /**
  * Loads an object hierarchy from an XML document.
+ * @since JavaFX 2.0
  */
 public class FXMLLoader {
     // Abstract base class for elements
@@ -1631,12 +1632,24 @@ public class FXMLLoader {
         }
     }
 
+    /**
+     * @since JavaFX 8.0
+     */
     protected URL location;
+    /**
+     * @since JavaFX 8.0
+     */
     protected ResourceBundle resources;
 
     private ObservableMap<String, Object> namespace = FXCollections.observableHashMap();
 
+    /**
+     * @since JavaFX 8.0
+     */
     protected Object root = null;
+    /**
+     * @since JavaFX 8.0
+     */
     protected Object controller = null;
 
     private BuilderFactory builderFactory;
@@ -1679,6 +1692,9 @@ public class FXMLLoader {
     public static final String FX_CONTROLLER_ATTRIBUTE = "controller";
     public static final String FX_ID_ATTRIBUTE = "id";
     public static final String FX_VALUE_ATTRIBUTE = "value";
+    /**
+     * @since JavaFX 2.2
+     */
     public static final String FX_CONSTANT_ATTRIBUTE = "constant";
     public static final String FX_FACTORY_ATTRIBUTE = "factory";
 
@@ -1696,7 +1712,13 @@ public class FXMLLoader {
     public static final String REFERENCE_TAG = "reference";
     public static final String REFERENCE_SOURCE_ATTRIBUTE = "source";
 
+    /**
+     * @since JavaFX 2.2
+     */
     public static final String ROOT_TAG = "root";
+    /**
+     * @since JavaFX 2.2
+     */
     public static final String ROOT_TYPE_ATTRIBUTE = "type";
 
     public static final String COPY_TAG = "copy";
@@ -1708,6 +1730,9 @@ public class FXMLLoader {
 
     public static final String NULL_KEYWORD = "null";
 
+    /**
+     * @since JavaFX 2.1
+     */
     public static final String ESCAPE_PREFIX = "\\";
     public static final String RELATIVE_PATH_PREFIX = "@";
     public static final String RESOURCE_KEY_PREFIX = "%";
@@ -1715,22 +1740,52 @@ public class FXMLLoader {
     public static final String BINDING_EXPRESSION_PREFIX = "${";
     public static final String BINDING_EXPRESSION_SUFFIX = "}";
 
+    /**
+     * @since JavaFX 2.1
+     */
     public static final String BI_DIRECTIONAL_BINDING_PREFIX = "#{";
+    /**
+     * @since JavaFX 2.1
+     */
     public static final String BI_DIRECTIONAL_BINDING_SUFFIX = "}";
 
+    /**
+     * @since JavaFX 2.1
+     */
     public static final String ARRAY_COMPONENT_DELIMITER = ",";
 
+    /**
+     * @since JavaFX 2.2
+     */
     public static final String LOCATION_KEY = "location";
+    /**
+     * @since JavaFX 2.2
+     */
     public static final String RESOURCES_KEY = "resources";
 
     public static final String CONTROLLER_METHOD_PREFIX = "#";
+    /**
+     * @since JavaFX 2.1
+     */
     public static final String CONTROLLER_KEYWORD = "controller";
+    /**
+     * @since JavaFX 2.2
+     */
     public static final String CONTROLLER_SUFFIX = "Controller";
 
+    /**
+     * @since JavaFX 2.2
+     */
     public static final String INITIALIZE_METHOD_NAME = "initialize";
 
+    /**
+     * @since JavaFX 8.0
+     */
     public static final String JAVAFX_VERSION;
 
+    /**
+     * @since JavaFX 8.0
+     */
     public static final String FX_NAMESPACE_VERSION = "1";
 
     static {
@@ -1759,6 +1814,7 @@ public class FXMLLoader {
      * Creates a new FXMLLoader instance.
      *
      * @param location
+     * @since JavaFX 2.1
      */
     public FXMLLoader(URL location) {
         this(location, null);
@@ -1769,6 +1825,7 @@ public class FXMLLoader {
      *
      * @param location
      * @param resources
+     * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources) {
         this(location, resources, new JavaFXBuilderFactory());
@@ -1780,6 +1837,7 @@ public class FXMLLoader {
      * @param location
      * @param resources
      * @param builderFactory
+     * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources, BuilderFactory builderFactory) {
         this(location, resources, builderFactory, null);
@@ -1792,6 +1850,7 @@ public class FXMLLoader {
      * @param resources
      * @param builderFactory
      * @param controllerFactory
+     * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources, BuilderFactory builderFactory,
         Callback<Class<?>, Object> controllerFactory) {
@@ -1815,6 +1874,7 @@ public class FXMLLoader {
      * @param builderFactory
      * @param controllerFactory
      * @param charset
+     * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources, BuilderFactory builderFactory,
         Callback<Class<?>, Object> controllerFactory, Charset charset) {
@@ -1831,6 +1891,7 @@ public class FXMLLoader {
      * @param controllerFactory
      * @param charset
      * @param loaders
+     * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources, BuilderFactory builderFactory,
         Callback<Class<?>, Object> controllerFactory, Charset charset,
@@ -1899,6 +1960,7 @@ public class FXMLLoader {
      *
      * @param root
      * The root of the object hierarchy.
+     * @since JavaFX 2.2
      */
     public void setRoot(Object root) {
         this.root = root;
@@ -1943,6 +2005,7 @@ public class FXMLLoader {
      *
      * @param controller
      * The controller to associate with the root object.
+     * @since JavaFX 2.2
      */
     public void setController(Object controller) {
         this.controller = controller;
@@ -1959,6 +2022,7 @@ public class FXMLLoader {
 
     /**
      * Returns the template flag.
+     * @since JavaFX 8.0
      */
     public boolean isTemplate() {
         return template;
@@ -1972,6 +2036,7 @@ public class FXMLLoader {
      *
      * @param template
      * The template flag.
+     * @since JavaFX 8.0
      */
     public void setTemplate(boolean template) {
         this.template = template;
@@ -1995,6 +2060,7 @@ public class FXMLLoader {
 
     /**
      * Returns the controller factory used by this serializer.
+     * @since JavaFX 2.1
      */
     public Callback<Class<?>, Object> getControllerFactory() {
         return controllerFactory;
@@ -2004,6 +2070,7 @@ public class FXMLLoader {
      * Sets the controller factory used by this serializer.
      *
      * @param controllerFactory
+     * @since JavaFX 2.1
      */
     public void setControllerFactory(Callback<Class<?>, Object> controllerFactory) {
         this.controllerFactory = controllerFactory;
@@ -2020,6 +2087,7 @@ public class FXMLLoader {
      * Sets the charset used by this loader.
      *
      * @param charset
+     * @since JavaFX 2.1
      */
     public void setCharset(Charset charset) {
         if (charset == null) {
@@ -2031,6 +2099,7 @@ public class FXMLLoader {
 
     /**
      * Returns the classloader used by this serializer.
+     * @since JavaFX 2.1
      */
     public ClassLoader getClassLoader() {
         return classLoader;
@@ -2041,6 +2110,7 @@ public class FXMLLoader {
      * imports (see {@link #setTemplate(boolean)}).
      *
      * @param classLoader
+     * @since JavaFX 2.1
      */
     public void setClassLoader(ClassLoader classLoader) {
         if (classLoader == null) {
@@ -2115,6 +2185,7 @@ public class FXMLLoader {
      *
      * @return
      * The loaded object hierarchy.
+     * @since JavaFX 2.1
      */
     public Object load() throws IOException {
         if (location == null) {
@@ -2339,6 +2410,7 @@ public class FXMLLoader {
      *
      * @treatAsPrivate
      * @deprecated
+     * @since JavaFX 2.2
      */
     public int getLineNumber() {
         return xmlStreamReader.getLocation().getLineNumber();
@@ -2349,6 +2421,7 @@ public class FXMLLoader {
      *
      * @treatAsPrivate
      * @deprecated
+     * @since JavaFX 2.1
      */
     public ParseTraceElement[] getParseTrace() {
         ParseTraceElement[] parseTrace = new ParseTraceElement[loaders.size()];
@@ -2756,6 +2829,7 @@ public class FXMLLoader {
 
     /**
      * Returns the default class loader.
+     * @since JavaFX 2.1
      */
     public static ClassLoader getDefaultClassLoader() {
         return defaultClassLoader;
@@ -2766,6 +2840,7 @@ public class FXMLLoader {
      *
      * @param defaultClassLoader
      * The default class loader to use when loading classes.
+     * @since JavaFX 2.1
      */
     public static void setDefaultClassLoader(ClassLoader defaultClassLoader) {
         if (defaultClassLoader == null) {
@@ -2816,6 +2891,7 @@ public class FXMLLoader {
      * @param resources
      * @param builderFactory
      * @param controllerFactory
+     * @since JavaFX 2.1
      */
     @SuppressWarnings("unchecked")
     public static <T> T load(URL location, ResourceBundle resources, BuilderFactory builderFactory,
@@ -2831,6 +2907,7 @@ public class FXMLLoader {
      * @param builderFactory
      * @param controllerFactory
      * @param charset
+     * @since JavaFX 2.1
      */
     @SuppressWarnings("unchecked")
     public static <T> T load(URL location, ResourceBundle resources, BuilderFactory builderFactory,

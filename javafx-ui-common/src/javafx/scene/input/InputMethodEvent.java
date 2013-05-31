@@ -51,6 +51,7 @@ import javafx.scene.Node;
  * Note: this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#INPUT_METHOD ConditionalFeature.INPUT_METHOD}
  * for more information.
+ * @since JavaFX 2.0
  */
 public final class InputMethodEvent extends InputEvent{
 
@@ -64,6 +65,7 @@ public final class InputMethodEvent extends InputEvent{
 
     /**
      * Common supertype for all input method event types.
+     * @since JavaFX 8.0
      */
     public static final EventType<InputMethodEvent> ANY = INPUT_METHOD_TEXT_CHANGED;
 
@@ -75,6 +77,7 @@ public final class InputMethodEvent extends InputEvent{
      * @param composed the text under composition
      * @param committed the text that is committed as a result of composition
      * @param caretPosition the current position of the caret.
+     * @since JavaFX 8.0
      */
     public InputMethodEvent(Object source, EventTarget target, EventType<InputMethodEvent> eventType,
             List<InputMethodTextRun> composed, String committed,
@@ -91,6 +94,7 @@ public final class InputMethodEvent extends InputEvent{
      * @param composed the text under composition
      * @param committed the text that is committed as a result of composition
      * @param caretPosition the current position of the caret.
+     * @since JavaFX 8.0
      */
     public InputMethodEvent(EventType<InputMethodEvent> eventType,
             List<InputMethodTextRun> composed, String committed,

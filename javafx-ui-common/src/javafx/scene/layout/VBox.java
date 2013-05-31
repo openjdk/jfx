@@ -133,6 +133,7 @@ import javafx.util.Callback;
  * allocate equal amounts of space to each.  VBox will only grow a child up to
  * its maximum height, so if the child has a max height other than Double.MAX_VALUE,
  * the application may need to override the max to allow it to grow.
+ * @since JavaFX 2.0
  */
 public class VBox extends Pane {
 
@@ -229,6 +230,7 @@ public class VBox extends Pane {
     /**
      * Creates an VBox layout with spacing = 0.
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public VBox(Node... children) {
         super();
@@ -239,6 +241,7 @@ public class VBox extends Pane {
      * Creates an VBox layout with the specified spacing between children.
      * @param spacing the amount of horizontal space between each child
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public VBox(double spacing, Node... children) {
         this();
@@ -621,6 +624,7 @@ public class VBox extends Pane {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -629,6 +633,7 @@ public class VBox extends Pane {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
 
 

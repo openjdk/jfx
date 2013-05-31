@@ -70,6 +70,7 @@ import com.sun.javafx.scene.control.skin.CheckBoxSkin;
  * MnemonicParsing is enabled by default for CheckBox.
  * </p>
  *
+ * @since JavaFX 2.0
  */
 
 public class CheckBox extends ButtonBase {

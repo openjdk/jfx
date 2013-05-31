@@ -42,6 +42,7 @@ import javafx.scene.control.Skin;
  * A control that allows for users to edit text, and apply styling to this text.
  * The underlying data model is HTML, although this is not shown visually to the
  * end-user.
+ * @since JavaFX 2.0
  */
 public class HTMLEditor extends Control {
     

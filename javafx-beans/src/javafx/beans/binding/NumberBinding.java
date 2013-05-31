@@ -32,6 +32,7 @@ package javafx.beans.binding;
  * @see javafx.beans.binding.NumberExpression
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface NumberBinding extends Binding<Number>, NumberExpression {
 }

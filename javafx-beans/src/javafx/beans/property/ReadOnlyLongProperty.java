@@ -37,6 +37,7 @@ import javafx.beans.binding.LongExpression;
  * @see javafx.beans.binding.LongExpression
  * @see ReadOnlyProperty
  * 
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyLongProperty extends LongExpression implements
         ReadOnlyProperty<Number> {
@@ -82,6 +83,7 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
      *         {@code ReadOnlyProperty} if necessary
      * @throws NullPointerException
      *             if {@code value} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <T extends Number> ReadOnlyLongProperty readOnlyLongProperty(final ReadOnlyProperty<T> property) {
         if (property == null) {
@@ -131,6 +133,7 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
      * {@code ReadOnlyObjectProperty} will be updated automatically.
      * 
      * @return the new {@code ReadOnlyObjectProperty}
+     * @since JavaFX 8.0
      */
     @Override
     public ReadOnlyObjectProperty<Long> asObject() {

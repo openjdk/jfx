@@ -60,6 +60,7 @@ arc.setStartAngle(45.0f);
 arc.setLength(270.0f);
 arc.setType(ArcType.ROUND);
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Arc extends Shape {
 

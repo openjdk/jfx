@@ -267,6 +267,7 @@ import javafx.util.Callback;
  * @see TreeTableColumn
  * @see TreeTablePosition
  * @param <S> The type of the TreeItem instances used in this TreeTableView.
+ * @since JavaFX 8.0
  */
 @DefaultProperty("root")
 public class TreeTableView<S> extends Control {
@@ -1905,6 +1906,7 @@ public class TreeTableView<S> extends Control {
      /**
       * An immutable wrapper class for use in the TableView 
      * {@link TreeTableView#columnResizePolicyProperty() column resize} functionality.
+      * @since JavaFX 8.0
       */
      public static class ResizeFeatures<S> extends ResizeFeaturesBase<TreeItem<S>> {
         private TreeTableView<S> treeTable;
@@ -1951,6 +1953,7 @@ public class TreeTableView<S> extends Control {
      * 
      * @param <S> The type of the input, which is the same type as the TreeTableView 
      *      itself.
+     * @since JavaFX 8.0
      */
     public static class EditEvent<S> extends Event {
         private static final long serialVersionUID = -4437033058917528976L;
@@ -2013,6 +2016,7 @@ public class TreeTableView<S> extends Control {
      /**
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TableView controls.
+     * @since JavaFX 8.0
      */
     public static abstract class TreeTableViewSelectionModel<S> extends 
             TableSelectionModel<TreeItem<S>, TreeTableColumn<S, ?>> {
@@ -2878,6 +2882,7 @@ public class TreeTableView<S> extends Control {
      * of a TableView control.
      * 
      * @see TableView
+     * @since JavaFX 8.0
      */
     public static class TreeTableViewFocusModel<S> extends TableFocusModel<TreeItem<S>, TreeTableColumn<S,?>> {
 

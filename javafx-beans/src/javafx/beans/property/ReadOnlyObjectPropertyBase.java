@@ -37,6 +37,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @see ReadOnlyObjectProperty
  *
  * @param <T> the type of the wrapped {@code Object}
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProperty<T> {
     

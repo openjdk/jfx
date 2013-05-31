@@ -174,6 +174,7 @@ import javafx.util.Callback;
  *        tilepane.getChildren().addAll(title, imageview);
  *     }
  * </code></pre>
+ * @since JavaFX 2.0
  */
 public class TilePane extends Pane {
 
@@ -293,6 +294,7 @@ public class TilePane extends Pane {
     /**
      * Creates a horizontal TilePane layout with prefColumn = 5 and hgap/vgap = 0.
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public TilePane(Node... children) {
         super();
@@ -304,6 +306,7 @@ public class TilePane extends Pane {
      * prefColumn/prefRows = 5 and hgap/vgap = 0.
      * @param orientation the direction the tiles should flow & wrap
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public TilePane(Orientation orientation, Node... children) {
         super();
@@ -317,6 +320,7 @@ public class TilePane extends Pane {
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public TilePane(double hgap, double vgap, Node... children) {
         super();
@@ -332,6 +336,7 @@ public class TilePane extends Pane {
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public TilePane(Orientation orientation, double hgap, double vgap, Node... children) {
         this();
@@ -1132,6 +1137,7 @@ public class TilePane extends Pane {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -1140,6 +1146,7 @@ public class TilePane extends Pane {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
 
 

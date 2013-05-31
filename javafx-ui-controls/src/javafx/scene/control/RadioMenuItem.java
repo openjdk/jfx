@@ -91,6 +91,7 @@ radioItem2.setToggleGroup(toggleGroup);
  *
  * @see MenuItem
  * @see Menu
+ * @since JavaFX 2.0
  */
 public class RadioMenuItem extends MenuItem implements Toggle {
 

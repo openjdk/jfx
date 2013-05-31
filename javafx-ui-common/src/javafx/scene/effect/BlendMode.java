@@ -54,6 +54,7 @@ Group g = new Group();
 g.getChildren().add(r);
 g.getChildren().add(c);
 </PRE>
+ * @since JavaFX 2.0
  */
 public enum BlendMode {
 

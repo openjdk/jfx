@@ -114,6 +114,7 @@ import com.sun.javafx.tk.Toolkit;
  * returned by Clipboard.getSystemClipboard() can be used for exchange of data
  * between different parts of one JavaFX application but cannot be used to
  * exchange data between multiple applications.
+ * @since JavaFX 2.0
  */
 public class Clipboard {
 

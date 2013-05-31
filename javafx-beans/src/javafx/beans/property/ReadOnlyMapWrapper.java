@@ -39,6 +39,7 @@ import static javafx.collections.MapChangeListener.Change;
  * and can be passed to external users. The other property is read- and
  * writable and should be used internally only.
  *
+ * @since JavaFX 2.1
  */
 public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
 

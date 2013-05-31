@@ -31,6 +31,7 @@ package javafx.collections;
  * data range.
  * 
  * @see ArrayChangeListener
+ * @since JavaFX 8.0
  */
 public interface ObservableFloatArray extends ObservableArray<ObservableFloatArray> {
 

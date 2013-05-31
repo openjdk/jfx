@@ -86,6 +86,7 @@ import javafx.scene.input.MouseEvent;
  * such as the ability to close when the "esc" key is pressed, or the ability to
  * hide all child popup windows whenever this window is hidden. These abilities can
  * be enabled or disabled via properties.
+ * @since JavaFX 2.0
  */
 public abstract class PopupWindow extends Window {
     /**
@@ -273,7 +274,7 @@ public abstract class PopupWindow extends Window {
      * consumed. Having the event consumed prevents it from triggering some
      * additional UI response in the Popup's owner window.
      * @defaultValue true
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private BooleanProperty consumeAutoHidingEvents =
             new SimpleBooleanProperty(this, "consumeAutoHidingEvents",
@@ -510,7 +511,7 @@ public abstract class PopupWindow extends Window {
      * for such windows makes their position independent of their borders.
      *
      * @defaultValue {@code true}
-     * @since JavaFX 8
+     * @since JavaFX 8.0
      */
     private BooleanProperty alignWithContentOrigin =
             new BooleanPropertyBase(true) {

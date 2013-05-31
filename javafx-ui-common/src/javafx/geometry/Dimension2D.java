@@ -28,7 +28,7 @@ package javafx.geometry;
 /**
  * A 2D dimension object that contains a width and a height.
  *
- * @since JavaFX 1.3
+ * @since JavaFX 2.0
  */
 public class Dimension2D {
     /**

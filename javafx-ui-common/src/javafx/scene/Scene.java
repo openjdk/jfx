@@ -183,6 +183,7 @@ r.setFill(Color.BLUE);
 root.getChildren().add(r);
  * </pre>
  * </p>
+ * @since JavaFX 2.0
  */
 @DefaultProperty("root")
 public class Scene implements EventTarget {
@@ -325,6 +326,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
+     * @since JavaFX 8.0
      */
     public Scene(Parent root, @Default("-1") double width, @Default("-1") double height,
             boolean depthBuffer, boolean antiAliasing) {
@@ -656,6 +658,7 @@ public class Scene implements EventTarget {
 
     /**
      * Return true if this {@code Scene} is anti-aliased otherwise false.
+     * @since JavaFX 8.0
      */
     public boolean isAntiAliasing() {
         //TODO: 3D - Implement this method.
@@ -970,7 +973,6 @@ public class Scene implements EventTarget {
      * for more information.
      *
      * @defaultValue null
-     * @since JavaFX 1.3
      */
     private ObjectProperty<Camera> camera;
 
@@ -1372,7 +1374,7 @@ public class Scene implements EventTarget {
      *     other than the JavaFX Application Thread.
      *
      * @return the rendered image
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public WritableImage snapshot(WritableImage image) {
         if (!paused) {
@@ -1425,7 +1427,7 @@ public class Scene implements EventTarget {
      *     other than the JavaFX Application Thread.
      *
      * @throws NullPointerException if the callback parameter is null.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public void snapshot(Callback<SnapshotResult, Void> callback, WritableImage image) {
         Toolkit.getToolkit().checkFxUserThread();
@@ -2060,7 +2062,7 @@ public class Scene implements EventTarget {
       * The scene's current focus owner node. This node's "focused"
       * variable might be false if this scene has no window, or if the
       * window is inactive (window.focused == false).
-      * @since 2.2
+      * @since JavaFX 2.2
       */
     private ReadOnlyObjectWrapper<Node> focusOwner = new ReadOnlyObjectWrapper<Node>(this, "focusOwner") {
 
@@ -4095,6 +4097,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a mouse button has been clicked
      * (pressed and released) on this {@code Scene}.
+     * @since JavaFX 2.1
      */
 
     private ObjectProperty<EventHandler<? super ContextMenuEvent>> onContextMenuRequested;
@@ -4433,6 +4436,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * progresses within this {@code Scene}.
+     * @since JavaFX 2.1
      */
     private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragOver;
 
@@ -4470,6 +4474,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * ends within this {@code Scene}.
+     * @since JavaFX 2.1
      */
     private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragReleased;
 
@@ -4507,6 +4512,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * enters this {@code Scene}.
+     * @since JavaFX 2.1
      */
     private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragEntered;
 
@@ -4544,6 +4550,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * exits this {@code Scene}.
+     * @since JavaFX 2.1
      */
     private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragExited;
 
@@ -4587,7 +4594,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a scrolling gesture is detected.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super ScrollEvent>> onScrollStarted;
 
@@ -4660,7 +4667,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a scrolling gesture ends.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super ScrollEvent>> onScrollFinished;
 
@@ -4697,7 +4704,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a rotating gesture is detected.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super RotateEvent>> onRotationStarted;
 
@@ -4734,7 +4741,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a rotating action.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super RotateEvent>> onRotate;
 
@@ -4771,7 +4778,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a rotating gesture ends.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super RotateEvent>> onRotationFinished;
 
@@ -4808,7 +4815,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a zooming gesture is detected.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super ZoomEvent>> onZoomStarted;
 
@@ -4845,7 +4852,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when user performs a zooming action.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super ZoomEvent>> onZoom;
 
@@ -4882,7 +4889,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a zooming gesture ends.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super ZoomEvent>> onZoomFinished;
 
@@ -4920,7 +4927,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an upward swipe gesture
      * happens in this scene.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeUp;
 
@@ -4958,7 +4965,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an downward swipe gesture
      * happens in this scene.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeDown;
 
@@ -4996,7 +5003,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an leftward swipe gesture
      * happens in this scene.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeLeft;
 
@@ -5034,7 +5041,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when an rightward swipe gesture
      * happens in this scene.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeRight;
 
@@ -5077,7 +5084,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a new touch point is pressed.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchPressed;
 
@@ -5114,7 +5121,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a touch point is moved.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchMoved;
 
@@ -5151,7 +5158,7 @@ public class Scene implements EventTarget {
 
     /**
      * Defines a function to be called when a new touch point is pressed.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchReleased;
 
@@ -5189,7 +5196,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when a touch point stays pressed and
      * still.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<? super TouchEvent>> onTouchStationary;
 
@@ -5570,6 +5577,7 @@ public class Scene implements EventTarget {
      * @throws IllegalStateException if the full press-drag-release gesture
      * cannot be started at this moment (it's called outside of
      * {@code DRAG_DETECTED} event handling).
+     * @since JavaFX 2.1
      */
     public void startFullDrag() {
         startFullDrag(this);
@@ -5912,6 +5920,7 @@ public class Scene implements EventTarget {
      * </p>
      *
      * @return NodeOrientation
+     * @since JavaFX 8.0
      */
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
@@ -5953,6 +5962,7 @@ public class Scene implements EventTarget {
     /**
      * The effective node orientation of a scene resolves the inheritance of
      * node orientation, returning either left-to-right or right-to-left.
+     * @since JavaFX 8.0
      */
     public final ReadOnlyObjectProperty<NodeOrientation>
             effectiveNodeOrientationProperty() {

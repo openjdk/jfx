@@ -29,6 +29,7 @@ package javafx.util;
  * Interface representing a builder factory. Builder factories are used to
  * produce builders.
  *
+ * @since JavaFX 2.0
  */
 public interface BuilderFactory {
     /**

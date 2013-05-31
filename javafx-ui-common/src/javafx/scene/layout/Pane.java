@@ -91,6 +91,7 @@ import javafx.scene.Node;
  * bounds may extend outside its own bounds, either if children are positioned
  * at negative coordinates or the pane is resized smaller than its preferred size.</p>
  * 
+ * @since JavaFX 2.0
  */
 @DefaultProperty("children")
 public class Pane extends Region {
@@ -126,6 +127,7 @@ public class Pane extends Region {
     /**
      * Creates a Pane layout.
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public Pane(Node... children) {
         super();

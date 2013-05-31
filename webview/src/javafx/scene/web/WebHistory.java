@@ -43,14 +43,14 @@ import javafx.collections.ObservableList;
  * The {@link #maxSizeProperty()} sets the maximum history size, which is the size of the
  * history list.
  *
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public final class WebHistory {
     /**
      * The {@code Entry} class represents a single entry in the session history.
      * An entry instance is associated with the visited page.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final class Entry {
         private final URL url;

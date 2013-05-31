@@ -140,7 +140,7 @@ import javafx.util.Duration;
  * override these methods must take care to invoke the super implementation.
  *
  * @param <V> The computed value of the ScheduledService
- * @since 8
+ * @since JavaFX 8.0
  */
 public abstract class ScheduledService<V> extends Service<V> {
     /**

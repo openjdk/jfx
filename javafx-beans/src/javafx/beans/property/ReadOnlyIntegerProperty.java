@@ -37,6 +37,7 @@ import javafx.beans.binding.IntegerExpression;
  * @see javafx.beans.binding.IntegerExpression
  * @see ReadOnlyProperty
  * 
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyIntegerProperty extends IntegerExpression
         implements ReadOnlyProperty<Number> {
@@ -84,6 +85,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
      *         {@code ReadOnlyProperty} if necessary
      * @throws NullPointerException
      *             if {@code value} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <T extends Number> ReadOnlyIntegerProperty readOnlyIntegerProperty(final ReadOnlyProperty<T> property) {
         if (property == null) {
@@ -133,6 +135,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
      * {@code ReadOnlyObjectProperty} will be updated automatically.
      * 
      * @return the new {@code ReadOnlyObjectProperty}
+     * @since JavaFX 8.0
      */
     @Override
     public ReadOnlyObjectProperty<Integer> asObject() {

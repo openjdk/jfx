@@ -30,7 +30,7 @@ package javafx.geometry;
  * A 3D geometric point that usually represents the x, y, z coordinates.
  * It can also represent a relative magnitude vector's x, y, z magnitudes.
  *
- * @since JavaFX 1.3
+ * @since JavaFX 2.0
  */
 public class Point3D {
     /**
@@ -182,6 +182,7 @@ public class Point3D {
      * by the specified factor
      * @param factor the factor multiplying the coordinates
      * @return the point with multiplied coordinates
+     * @since JavaFX 8.0
      */
     public Point3D multiply(double factor) {
         return new Point3D(getX() * factor, getY() * factor, getZ() * factor);

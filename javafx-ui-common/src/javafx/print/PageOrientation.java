@@ -27,7 +27,7 @@ package javafx.print;
 
 /**
  * Specifies the orientation of the media sheet for printed pages.
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public enum PageOrientation {
 

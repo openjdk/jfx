@@ -29,7 +29,7 @@ package javafx.scene.shape;
  * Defines where to draw the stroke around the boundary of a Shape node.
  *
  * @see Shape
- * @since JavaFX 1.3
+ * @since JavaFX 2.0
  */
 public enum StrokeType {
 

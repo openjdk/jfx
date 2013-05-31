@@ -37,6 +37,7 @@ import javafx.beans.binding.DoubleExpression;
  * @see javafx.beans.binding.DoubleExpression
  * @see ReadOnlyProperty
  * 
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
         ReadOnlyProperty<Number> {
@@ -83,6 +84,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
      *         {@code ReadOnlyProperty} if necessary
      * @throws NullPointerException
      *             if {@code value} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <T extends Number> ReadOnlyDoubleProperty readOnlyDoubleProperty(final ReadOnlyProperty<T> property) {
         if (property == null) {
@@ -132,6 +134,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
      * {@code ReadOnlyObjectProperty} will be updated automatically.
      * 
      * @return the new {@code ReadOnlyObjectProperty}
+     * @since JavaFX 8.0
      */
     @Override
     public ReadOnlyObjectProperty<Double> asObject() {

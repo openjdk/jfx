@@ -253,6 +253,7 @@ import javafx.util.Callback;
  * it will override the value computed from content.
  *
  *
+ * @since JavaFX 2.0
  */
 public class GridPane extends Pane {
 
@@ -497,7 +498,7 @@ public class GridPane extends Pane {
      * If not value is specified for the node nor for the column, the default value is true.
      * @param child the child node of a gridpane
      * @param value the horizontal fill policy or null for unset
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static void setFillWidth(Node child, Boolean value) {
         setConstraint(child, FILL_WIDTH_CONSTRAINT, value);
@@ -507,7 +508,7 @@ public class GridPane extends Pane {
      * Returns the child's horizontal fill policy if set
      * @param child the child node of a gridpane
      * @return the horizontal fill policy for the child or null if no policy was set
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static Boolean isFillWidth(Node child) {
         return (Boolean) getConstraint(child, FILL_WIDTH_CONSTRAINT);
@@ -521,7 +522,7 @@ public class GridPane extends Pane {
      * If not value is specified for the node nor for the row, the default value is true.
      * @param child the child node of a gridpane
      * @param value the vertical fill policy or null for unset
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static void setFillHeight(Node child, Boolean value) {
         setConstraint(child, FILL_HEIGHT_CONSTRAINT, value);
@@ -531,7 +532,7 @@ public class GridPane extends Pane {
      * Returns the child's vertical fill policy if set
      * @param child the child node of a gridpane
      * @return the vertical fill policy for the child or null if no policy was set
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static Boolean isFillHeight(Node child) {
         return (Boolean) getConstraint(child, FILL_HEIGHT_CONSTRAINT);
@@ -2387,6 +2388,7 @@ public class GridPane extends Pane {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -2395,6 +2397,7 @@ public class GridPane extends Pane {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
 
 

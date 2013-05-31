@@ -46,6 +46,7 @@ import javafx.scene.Node;
  *
  * <p>Example:
  * <pre><code>Label label = new Label("a label");</code></pre>
+ * @since JavaFX 2.0
  */
 public class Label extends Labeled {
 

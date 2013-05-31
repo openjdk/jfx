@@ -86,7 +86,7 @@ import javafx.beans.InvalidationListener;
  * @see ObservableList
  * @see ListChangeListener.Change
  * @see ModifiableObservableListBase
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public abstract class ObservableListBase<E> extends AbstractList<E>  implements ObservableList<E> {
 

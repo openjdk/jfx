@@ -28,6 +28,7 @@ package javafx.scene.control;
 /**
  * Defines the behavior of a labeled Control when the space for rendering the
  * text is smaller than the space needed to render the entire string.
+ * @since JavaFX 2.0
  */
 public enum OverrunStyle {
     /**

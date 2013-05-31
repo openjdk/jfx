@@ -33,6 +33,7 @@ import javafx.scene.Node;
 /**
  * Event related to {@link ScrollPane} and virtualised controls such as 
  * {@link ListView}, {@link TableView}, {@link TreeView} and {@link TreeTableView}.
+ * @since JavaFX 8.0
  */
 public class ScrollToEvent<T> extends Event {
 //    /**

@@ -33,6 +33,7 @@ package javafx.scene.layout;
  * in turn define the curvature of the corners of the BorderStroke.
  *
  * TODO insert picture
+ * @since JavaFX 8.0
  */
 public class CornerRadii {
     /**

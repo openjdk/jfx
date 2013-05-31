@@ -75,6 +75,7 @@ import javafx.util.Duration;
  * Some examples of concrete subclasses include {@link NumberAxis} whose axis plots data
  * in numbers and {@link CategoryAxis} whose values / ticks represent string
  * categories along its axis.
+ * @since JavaFX 2.0
  */
 public abstract class Axis<T> extends Region {
 
@@ -960,6 +961,7 @@ public abstract class Axis<T> extends Region {
     /**
      * TickMark represents the label text, its associated properties for each tick
      * along the Axis.
+     * @since JavaFX 2.0
      */
     public static final class TickMark<T> {
         /**
@@ -1173,6 +1175,7 @@ public abstract class Axis<T> extends Region {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -1180,6 +1183,7 @@ public abstract class Axis<T> extends Region {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
