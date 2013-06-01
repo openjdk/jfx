@@ -544,10 +544,12 @@ public class ObservableArrayTest  {
         testResize(true, array.size(), array.size());
     }
 
+    @Ignore("RT-30865")
     @Test public void testResizeToBigger() {
         testResize(false, 10, array.size());
     }
 
+    @Ignore("RT-30865")
     @Test public void testResizeOnEmpty() {
         makeEmpty();
         testResize(false, 10, 0);
