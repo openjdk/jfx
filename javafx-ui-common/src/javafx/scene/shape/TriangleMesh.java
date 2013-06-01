@@ -487,12 +487,12 @@ public class TriangleMesh extends Mesh {
     private class Listener<T extends ObservableArray<T>> implements ArrayChangeListener<T>, FloatArraySyncer, IntegerArraySyncer {
         
         protected final T array;
-        protected boolean dirty;
+        protected boolean dirty = true;
         /**
          * Array was replaced
          * @return true if array was replaced; false otherwise
          */
-        protected boolean dirtyInFull;
+        protected boolean dirtyInFull = true;
         protected int dirtyRangeFrom;
         protected int dirtyRangeLength;
 
