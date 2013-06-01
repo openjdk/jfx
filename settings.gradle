@@ -23,7 +23,7 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "swing", "swt", "fxml", "designTime", "fxpackager"
+include "base", "graphics", "controls", "swing", "swt", "fxml", "builders", "designTime", "fxpackager"
 
 project(":base").projectDir = file("modules/base")
 project(":graphics").projectDir = file("modules/graphics")
@@ -31,13 +31,16 @@ project(":controls").projectDir = file("modules/controls")
 project(":swing").projectDir = file("modules/swing")
 project(":swt").projectDir = file("modules/swt")
 project(":fxml").projectDir = file("modules/fxml")
+project(":builders").projectDir = file("modules/builders")
 project(":designTime").projectDir = file("modules/designTime")
 project(":fxpackager").projectDir = file("modules/fxpackager")
 
-// TODO: this needs to be updated to also recognize -PBUILD_CLOSED=true (ideally
-// without duplicating the logic)
-if (hasProperty("SUPPLEMENTAL_BUILD_FILE")) {
-    File supplementalBuildFile = file(SUPPLEMENTAL_BUILD_FILE)
-    File supplementalSettingsFile = new File(supplementalBuildFile.getParentFile(), "closed-settings.gradle");
+def buildClosed = false;
+if (hasProperty("BUILD_CLOSED")) {
+    buildClosed = Boolean.parseBoolean(BUILD_CLOSED);
+}
+
+if (buildClosed) {
+    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
     apply from: supplementalSettingsFile
 }

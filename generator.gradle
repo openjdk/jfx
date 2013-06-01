@@ -376,8 +376,6 @@ task generate << {
         exclude excludeFromResources
     }
 
-    // Create the web module
-
     // Create the swing module
     copy {
         from "${RTDir}/javafx-embed-swing/src"
@@ -541,7 +539,19 @@ task generate << {
         from "${RTDir}/webview/native"
         into "${FXDir}/modules/web/src/main/native"
     }
-    
+
+    // Create the builders module
+    copy {
+        from "${RTDir}/javafx-builders/src"
+        into "${FXDir}/modules/builders/src/main/java"
+        exclude excludeFromSource
+    }
+    copy {
+        from "${RTDir}/javafx-builders/test/unit"
+        into "${FXDir}/modules/builders/src/test/java"
+        exclude excludeFromSource
+    }
+
     // Find every empty directory and nuke it
     def empty = []
     fileTree("$FXDir").visit {
