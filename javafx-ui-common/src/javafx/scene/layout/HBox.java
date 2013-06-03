@@ -578,8 +578,8 @@ public class HBox extends Pane {
         double contentWidth = adjustAreaWidths(managed, actualAreaWidths, width, height);
         double contentHeight = height - top - bottom;
 
-        double x = snapSpace(insets.getLeft()) + computeXOffset(width - left - right, contentWidth, align.getHpos());
-        double y = snapSpace(insets.getTop());
+        double x = left + computeXOffset(width - left - right, contentWidth, align.getHpos());
+        double y = top;
         double baselineOffset = alignVpos == VPos.BASELINE ? getMaxBaselineOffset(managed)
                                     : height/2;
 

@@ -140,6 +140,7 @@ public class VBox extends Pane {
     private boolean biasDirty = true;
     private boolean performingLayout = false;
     private Orientation bias;
+    private double[][] tempArray;
 
 /********************************************************************
      *  BEGIN static methods
@@ -372,7 +373,7 @@ public class VBox extends Pane {
                 }
             }
             biasDirty = false;
-        }        
+        }
         return bias;
     }
 
@@ -380,10 +381,10 @@ public class VBox extends Pane {
         Insets insets = getInsets();
         List<Node>managed = getManagedChildren();
         double contentWidth = 0;
-        if (getContentBias() == Orientation.VERTICAL) {
-            double prefHeights[] = getAreaHeights(managed, -1, false);
+        if (height != -1 && getContentBias() != null) {
+            double prefHeights[][] = getAreaHeights(managed, -1, false);
             adjustAreaHeights(managed, prefHeights, height, -1);
-            contentWidth = computeMaxMinAreaWidth(managed, marginAccessor, prefHeights, getAlignmentInternal().getHpos());
+            contentWidth = computeMaxMinAreaWidth(managed, marginAccessor, prefHeights[0], getAlignmentInternal().getHpos());
         } else {
             contentWidth = computeMaxMinAreaWidth(managed, marginAccessor, getAlignmentInternal().getHpos());
         }
@@ -393,7 +394,7 @@ public class VBox extends Pane {
     @Override protected double computeMinHeight(double width) {
         Insets insets = getInsets();
         return snapSpace(insets.getTop()) +
-               computeContentHeight(getAreaHeights(getManagedChildren(), width, true)) +
+               computeContentHeight(getManagedChildren(), width, true) +
                snapSpace(insets.getBottom());
     }
 
@@ -401,10 +402,10 @@ public class VBox extends Pane {
         Insets insets = getInsets();
         List<Node>managed = getManagedChildren();
         double contentWidth = 0;
-        if (getContentBias() == Orientation.VERTICAL) {
-            double prefHeights[] = getAreaHeights(managed, -1, false);
+        if (height != -1 && getContentBias() != null) {
+            double prefHeights[][] = getAreaHeights(managed, -1, false);
             adjustAreaHeights(managed, prefHeights, height, -1);
-            contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor, prefHeights, getAlignmentInternal().getHpos());
+            contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor, prefHeights[0], getAlignmentInternal().getHpos());
         } else {
             contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor, getAlignmentInternal().getHpos());
         }
@@ -414,103 +415,119 @@ public class VBox extends Pane {
     @Override protected double computePrefHeight(double width) {
         Insets insets = getInsets();
         double d = snapSpace(insets.getTop()) +
-               computeContentHeight(getAreaHeights(getManagedChildren(), width, false)) +
+               computeContentHeight(getManagedChildren(), width, false) +
                snapSpace(insets.getBottom());
         return d;
     }
 
 
-    private double[] getAreaHeights(List<Node>managed, double width, boolean minimum) {
-        double[] prefAreaHeights = new double [managed.size()];
+    private double[][] getAreaHeights(List<Node>managed, double width, boolean minimum) {
+        // width could be -1
+        double[][] temp = getTempArray(managed.size());
         final double insideWidth = width == -1? -1 : width -
-                snapSpace(getInsets().getLeft()) - snapSpace(getInsets().getRight());
+                                     snapSpace(getInsets().getLeft()) - snapSpace(getInsets().getRight());
+        final boolean isFillWidth = isFillWidth();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Insets margin = getMargin(child);
-            prefAreaHeights[i] = minimum?
-                               computeChildMinAreaHeight(child, margin,
-                                   isFillWidth()? insideWidth : child.minWidth(-1)) :
-                                   computeChildPrefAreaHeight(child, margin,
-                                       isFillWidth()? insideWidth : child.prefWidth(-1));
+            if (minimum) {
+                if (insideWidth != -1 && isFillWidth) {
+                    temp[0][i] = computeChildMinAreaHeight(child, margin, insideWidth);
+                } else {
+                    temp[0][i] = computeChildMinAreaHeight(child, margin, -1);
+                }
+            } else {
+                if (insideWidth != -1 && isFillWidth) {
+                    temp[0][i] = computeChildPrefAreaHeight(child, margin, insideWidth);
+                } else {
+                    temp[0][i] = computeChildPrefAreaHeight(child, margin, -1);
+                }
+            }
         }
-        return prefAreaHeights;
+        return temp;
     }
 
-    private double adjustAreaHeights(List<Node>managed, double areaHeights[], double height, double width) {
+    private double adjustAreaHeights(List<Node>managed, double areaHeights[][], double height, double width) {
         Insets insets = getInsets();
         double left = snapSpace(insets.getLeft());
         double right = snapSpace(insets.getRight());
 
-        double contentHeight = computeContentHeight(areaHeights);
-        double extraHeight = (height == -1 ? prefHeight(-1) : height) -
+        double contentHeight = sum(areaHeights[0], managed.size()) + (managed.size()-1)*snapSpace(getSpacing());
+        double extraHeight = height -
                 snapSpace(insets.getTop()) - snapSpace(insets.getBottom()) - contentHeight;
 
         if (extraHeight != 0) {
-            double remaining = growOrShrinkAreaHeights(managed, areaHeights,
-                    Priority.ALWAYS, extraHeight, isFillWidth() && width != -1? width - left - right: -1);
-            remaining = growOrShrinkAreaHeights(managed, areaHeights,
-                    Priority.SOMETIMES, remaining, isFillWidth() && width != -1? width - left - right: -1);
+            final double refWidth = isFillWidth()&& width != -1? width - left - right : -1;
+            double remaining = growOrShrinkAreaHeights(managed, areaHeights, Priority.ALWAYS, extraHeight, refWidth);
+            remaining = growOrShrinkAreaHeights(managed, areaHeights, Priority.SOMETIMES, remaining, refWidth);
             contentHeight += (extraHeight - remaining);
         }
 
         return contentHeight;
     }
 
-    private double growOrShrinkAreaHeights(List<Node>managed, double areaHeights[], Priority priority, double extraHeight, double width) {
+    private double growOrShrinkAreaHeights(List<Node>managed, double areaHeights[][], Priority priority, double extraHeight, double width) {
         final boolean shrinking = extraHeight < 0;
-        List<Node> adjustList = new ArrayList<Node>();
-        List<Node> adjusting = new ArrayList<Node>();
+        int adjustingNumber = 0;
 
-        for (int i = 0, size = managed.size(); i < size; i++) {
-            Node child = managed.get(i);
-            if (shrinking || getVgrow(child) == priority) {
-                adjustList.add(child);
-                adjusting.add(child);
+        double[] usedHeights = areaHeights[0];
+        double[] temp = areaHeights[1];
+
+        if (shrinking) {
+            adjustingNumber = managed.size();
+            for (int i = 0, size = managed.size(); i < size; i++) {
+                final Node child = managed.get(i);
+                temp[i] = computeChildMinAreaHeight(child, getMargin(child), width);
+            }
+        } else {
+            for (int i = 0, size = managed.size(); i < size; i++) {
+            final Node child = managed.get(i);
+            if (getVgrow(child) == priority) {
+                temp[i] = computeChildMaxAreaHeight(child, getMargin(child), width);
+                adjustingNumber++;
+            } else {
+                temp[i] = -1;
             }
         }
-
-        double[] areaLimitHeights = new double[adjustList.size()];
-        for (int i = 0, size = adjustList.size(); i < size; i++) {
-            Node child = adjustList.get(i);
-            Insets margin  = getMargin(child);
-            areaLimitHeights[i] = shrinking?
-                computeChildMinAreaHeight(child, margin, width) : computeChildMaxAreaHeight(child, margin, width);
         }
 
         double available = extraHeight; // will be negative in shrinking case
-        while (Math.abs(available) > 1.0 && adjusting.size() > 0) {
-            Node[] adjusted = new Node[adjustList.size()];
-            final double portion = available / adjusting.size(); // negative in shrinking case
-            for (int i = 0, size = adjusting.size(); i < size; i++) {
-                final Node child = adjusting.get(i);
-                final int childIndex = managed.indexOf(child);
-                final double limit = areaLimitHeights[adjustList.indexOf(child)] - areaHeights[childIndex]; // negative in shrinking case
-                final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
-                areaHeights[childIndex] += change;
-                //if (node.id.startsWith("debug.")) println("{if (shrinking) "shrink" else "grow"}: {node.id} portion({portion})=available({available})/({sizeof adjusting}) change={change}");
-                available -= change;
-                if (Math.abs(change) < Math.abs(portion)) {
-                    adjusted[i] = child;
+        outer: while (Math.abs(available) > 1 && adjustingNumber > 0) {
+            final double portion = snapPortion(available / adjustingNumber); // negative in shrinking case
+            for (int i = 0, size = managed.size(); i < size; i++) {
+                if (temp[i] == -1) {
+                    continue;
                 }
-            }
-            for (Node node : adjusted) {
-                if (node != null) {
-                    adjusting.remove(node);
+                final double limit = temp[i] - usedHeights[i]; // negative in shrinking case
+                final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
+                usedHeights[i] += change;
+                available -= change;
+                if (Math.abs(available) < 1) {
+                    break outer;
+                }
+                if (Math.abs(change) < Math.abs(portion)) {
+                    temp[i] = -1;
+                    adjustingNumber--;
                 }
             }
         }
+
         return available; // might be negative in shrinking case
     }
 
-    private double computeContentHeight(double[] heights) {
-        double total = 0;
-        for (double h : heights) {
-            total += h;
-        }
-        return total + (heights.length-1)*snapSpace(getSpacing());
+    private double computeContentHeight(List<Node> managedChildren, double width, boolean minimum) {
+        return sum(getAreaHeights(managedChildren, width, minimum)[0], managedChildren.size())
+                + (managedChildren.size()-1)*snapSpace(getSpacing());
     }
 
-    private double[] actualAreaHeights;
+    private static double sum(double[] array, int size) {
+        int i = 0;
+        double res = 0;
+        while (i != size) {
+            res += array[i++];
+        }
+        return res;
+    }
 
     @Override public void requestLayout() {
         if (performingLayout) {
@@ -536,7 +553,7 @@ public class VBox extends Pane {
         VPos vpos = getAlignmentInternal().getVpos();
         boolean isFillWidth = isFillWidth();
 
-        actualAreaHeights = getAreaHeights(managed, width, false);
+        double[][] actualAreaHeights = getAreaHeights(managed, width, false);
         double contentWidth = width - left - right;
         double contentHeight = adjustAreaHeights(managed, actualAreaHeights, height, width);
 
@@ -545,13 +562,23 @@ public class VBox extends Pane {
 
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
-            layoutInArea(child, x, y, contentWidth, actualAreaHeights[i],
-                       /* baseline shouldn't matter */actualAreaHeights[i],
+            layoutInArea(child, x, y, contentWidth, actualAreaHeights[0][i],
+                       /* baseline shouldn't matter */actualAreaHeights[0][i],
                        getMargin(child), isFillWidth, true,
                        hpos, vpos);
-            y += actualAreaHeights[i] + space;
+            y += actualAreaHeights[0][i] + space;
         }
         performingLayout = false;
+    }
+
+    private double[][] getTempArray(int size) {
+        if (tempArray == null) {
+            tempArray = new double[2][size]; // First array for the result, second for temporary computations
+        } else if (tempArray[0].length < size) {
+            tempArray = new double[2][Math.max(tempArray.length * 3, size)];
+        }
+        return tempArray;
+
     }
 
     /***************************************************************************
