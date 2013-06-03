@@ -136,8 +136,10 @@ void initState(ContextInfo *ctxInfo) {
     glDisable(GL_ALPHA_TEST);
 #endif
 
-    ctxInfo->state.scissorEnabled = JNI_FALSE;
-    glDisable(GL_SCISSOR_TEST);
+    if (ctxInfo->state.scissorEnabled) {
+        ctxInfo->state.scissorEnabled = JNI_FALSE;
+        glDisable(GL_SCISSOR_TEST);
+    }
 
     ctxInfo->state.clearColor[0] = 0.0;
     ctxInfo->state.clearColor[1] = 0.0;
@@ -955,10 +957,12 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nScissorTest
     }
 
     if (enable) {
-        glEnable(GL_SCISSOR_TEST);
+        if (!ctxInfo->state.scissorEnabled) {
+            glEnable(GL_SCISSOR_TEST);
+            ctxInfo->state.scissorEnabled = JNI_TRUE;
+        }
         glScissor(x, y, w, h);
-        ctxInfo->state.scissorEnabled = JNI_TRUE;
-    } else {
+    } else if (ctxInfo->state.scissorEnabled) {
         glDisable(GL_SCISSOR_TEST);
         ctxInfo->state.scissorEnabled = JNI_FALSE;
     }
@@ -1588,8 +1592,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDeviceParametersFor2
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-    ctxInfo->state.scissorEnabled = JNI_FALSE;
-    glDisable(GL_SCISSOR_TEST);
+    if (ctxInfo->state.scissorEnabled) {
+        ctxInfo->state.scissorEnabled = JNI_FALSE;
+        glDisable(GL_SCISSOR_TEST);
+    }
 
     glCullFace(GL_BACK);
     ctxInfo->state.cullMode = GL_BACK;
@@ -1618,8 +1624,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDeviceParametersFor3
     glDisable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ZERO);
 
-    ctxInfo->state.scissorEnabled = JNI_FALSE;
-    glDisable(GL_SCISSOR_TEST);
+    if (ctxInfo->state.scissorEnabled) {
+        ctxInfo->state.scissorEnabled = JNI_FALSE;
+        glDisable(GL_SCISSOR_TEST);
+    }
 
     glEnable(GL_CULL_FACE);
     ctxInfo->state.cullEnable = GL_TRUE;
