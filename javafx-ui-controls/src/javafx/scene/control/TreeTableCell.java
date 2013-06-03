@@ -258,6 +258,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
+
         final TreeTableView<S> table = getTreeTableView();
         final TreeTableColumn<S,T> column = getTableColumn();
         if (! isEditable() ||
@@ -265,7 +267,9 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                 (column != null && ! getTableColumn().isEditable())) {
             return;
         }
-        
+
+        updateItem();
+
         // it makes sense to get the cell into its editing state before firing
         // the event to listeners below, so that's what we're doing here
         // by calling super.startEdit().

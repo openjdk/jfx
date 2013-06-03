@@ -226,6 +226,20 @@ public class VirtualFlowTestUtils {
         return getVirtualFlow(control).getCell(index);
     }
 
+    public static IndexedCell getCell(final Control control, final int row, final int column) {
+        IndexedCell rowCell = getVirtualFlow(control).getCell(row);
+        int count = 0;
+        for (Node n : rowCell.getChildrenUnmodifiable()) {
+            if (! (n instanceof IndexedCell)) {
+                continue;
+            }
+            count++;
+            if (count < column) continue;
+            return (IndexedCell) n;
+        }
+        return null;
+    }
+
     public static void assertCallback(final Control control, final int startRow, final int endRow, final Callback<IndexedCell<?>, Void> callback) {
         VirtualFlow<?> flow = getVirtualFlow(control);
 

@@ -333,6 +333,8 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
+
         final TreeView<T> tree = getTreeView();
         if (! isEditable() || (tree != null && ! tree.isEditable())) {
 //            if (Logging.getControlsLogger().isLoggable(PlatformLogger.SEVERE)) {
@@ -343,6 +345,8 @@ public class TreeCell<T> extends IndexedCell<T> {
 //            }
             return;
         }
+
+        updateItem();
         
         // it makes sense to get the cell into its editing state before firing
         // the event to the TreeView below, so that's what we're doing here
@@ -509,7 +513,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         // the edit mode, then I need to enter the edit mode
         if (match && !editing) {
             startEdit();
-        } else if (match && editing) {
+        } else if (! match && editing) {
             // If my tree item is not the one being edited then I need to cancel
             // the edit. The tricky thing here is that as part of this call
             // I cannot end up calling tree.edit(null) the way that the standard
