@@ -174,3 +174,16 @@ void glass_pixel_attachIntBuffer(JNIEnv *env,
     GLASS_LOG_SEVERE("attachIntBuffer not implemented for X11 Container");
 }
 
+LensResult lens_platform_windowMinimize(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean toMinimize) {
+    //noop for X11 container
+    return LENS_OK;
+}
+
+LensResult lens_platform_windowSetVisible(JNIEnv *env,
+                                          NativeWindow window,
+                                          jboolean visible) {
+    //noop for X11 container
+    return LENS_OK;
+}
