@@ -116,6 +116,22 @@ public class SplineInterpolator extends Interpolator {
         }
     }
 
+    public double getX1() {
+        return x1;
+    }
+
+    public double getY1() {
+        return y1;
+    }
+
+    public double getX2() {
+        return x2;
+    }
+
+    public double getY2() {
+        return y2;
+    }
+
     /**
      * Returns the y-value of the cubic bezier curve that corresponds to the x
      * input.
