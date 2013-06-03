@@ -1,27 +1,27 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
- */
+* Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+*
+* This code is free software; you can redistribute it and/or modify it
+* under the terms of the GNU General Public License version 2 only, as
+* published by the Free Software Foundation.  Oracle designates this
+* particular file as subject to the "Classpath" exception as provided
+* by Oracle in the LICENSE file that accompanied this code.
+*
+* This code is distributed in the hope that it will be useful, but WITHOUT
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+* version 2 for more details (a copy is included in the LICENSE file that
+* accompanied this code).
+*
+* You should have received a copy of the GNU General Public License version
+* 2 along with this work; if not, write to the Free Software Foundation,
+* Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+*
+* Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+* or visit www.oracle.com if you need additional information or have any
+* questions.
+*/
 
 package javafx.collections;
 
@@ -40,8 +40,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
- * Tests for ObservableArray.
- */
+* Tests for ObservableArray.
+*/
 @RunWith(Parameterized.class)
 public class ObservableArrayTest  {
     public static final int INITIAL_SIZE = 6;
@@ -285,9 +285,9 @@ public class ObservableArrayTest  {
         @Override
         void assertElementsEqual(float[] actual, int from, int to, float[] expected, int expFrom) {
             for(int i = from, j = expFrom; i < to; i++, j++) {
-                assertEquals("expected = " + expected[j] + ", actual = " + actual[i],
-                        Float.floatToRawIntBits(actual[i]),
-                        Float.floatToRawIntBits(expected[j]));
+                assertEquals("expected float = " + expected[j] + ", actual float = " + actual[i],
+                        Float.floatToRawIntBits(expected[j]),
+                        Float.floatToRawIntBits(actual[i]));
             }
         }
 
@@ -529,7 +529,7 @@ public class ObservableArrayTest  {
         assertEquals(newSize, wrapper.arrayLength(actual));
         wrapper.assertElementsEqual(actual, 0, matchingElements, expected, 0);
         wrapper.assertElementsEqual(actual, matchingElements, newSize,
-                wrapper.createPrimitiveArray(Math.max(0, newSize - matchingElements)), 0);
+                wrapper.createPrimitiveArray(Math.max(0, newSize - matchingElements), false), 0);
     }
 
     @Test public void testResizeTo0() {
@@ -544,12 +544,10 @@ public class ObservableArrayTest  {
         testResize(true, array.size(), array.size());
     }
 
-    @Ignore("RT-30865")
     @Test public void testResizeToBigger() {
         testResize(false, 10, array.size());
     }
 
-    @Ignore("RT-30865")
     @Test public void testResizeOnEmpty() {
         makeEmpty();
         testResize(false, 10, 0);
