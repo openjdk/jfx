@@ -94,7 +94,7 @@ static jmethodID JPEGImageLoader_emitWarningID;
 
 /* Initialize the Java VM instance variable when the library is
    first loaded */
-JavaVM *jvm;
+static JavaVM *jvm;
 
 #if USING_BUILTIN_LIBRARY_ENTRYPOINT
 
