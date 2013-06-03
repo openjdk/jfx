@@ -26,9 +26,12 @@ package com.javafx.experiments.importers;
 
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -36,6 +39,7 @@ import javafx.animation.Timeline;
 import javafx.beans.property.Property;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -124,7 +128,17 @@ public class Optimizer {
         if (timeline == null) {
             return;
         }
-        for (KeyFrame keyFrame : timeline.getKeyFrames()) {
+        SortedList<KeyFrame> sortedKeyFrames = timeline.getKeyFrames().sorted(new Comparator<KeyFrame>() {
+            @Override public int compare(KeyFrame o1, KeyFrame o2) {
+                return o1.getTime().compareTo(o2.getTime());
+            }
+        });
+        List<KeyValue> newKeyValues = new ArrayList<>();
+        Map<WritableValue, KeyValue> prevValues = new HashMap<>();
+        Map<KeyFrame, KeyFrame> replacements = new HashMap<>();
+        int kvRemoved = 0, kvTotal = 0;
+        for (KeyFrame keyFrame : sortedKeyFrames) {
+            newKeyValues.clear();
             for (KeyValue keyValue : keyFrame.getValues()) {
                 WritableValue<?> target = keyValue.getTarget();
                 if (target instanceof Property) {
@@ -145,10 +159,39 @@ public class Optimizer {
                 } else {
                     throw new UnsupportedOperationException("WritableValue is not property, can't identify what it changes, target = " + target);
                 }
+                KeyValue prevValue = prevValues.get(target);
+                kvTotal++;
+                if (prevValue != null) {
+                    if (prevValue.getEndValue().equals(keyValue.getEndValue())
+                        /*&& prevValue.getInterpolator().equals(keyValue.getInterpolator())*/) {
+                        // we can remove this KeyValue
+                        kvRemoved ++;
+                    } else {
+                        if (prevValue.getEndValue().equals(keyValue.getEndValue())) {
+                            System.err.println("prevValue = " + prevValue + " != keyValue = " + keyValue);
+                        }
+                        newKeyValues.add(keyValue);
+                    }
+                } else {
+                    newKeyValues.add(keyValue);
+                }
+                prevValues.put(target, keyValue);
 //                bound.add(keyValue.getTarget());
             }
+            if (newKeyValues.size() < keyFrame.getValues().size()) {
+                replacements.put(keyFrame, new KeyFrame(keyFrame.getTime(), keyFrame.getName(), keyFrame.getOnFinished(), newKeyValues));
+            }
+        }
+        for (KeyFrame key : replacements.keySet()) {
+            timeline.getKeyFrames().set(timeline.getKeyFrames().indexOf(key), replacements.get(key));
         }
         System.out.println("bound.size() = " + bound.size());
+        System.out.printf("We've removed %d (%.2f%%) repeating KeyValues out of total %d.\n", kvRemoved, 100d * kvRemoved / kvTotal, kvTotal);
+        int check = 0;
+        for (KeyFrame keyFrame : timeline.getKeyFrames()) {
+            check += keyFrame.getValues().size();
+        }
+        System.out.printf("Now we have %d KeyValues.\n", check);
     }
 
     private void removeEmptyGroups() {
