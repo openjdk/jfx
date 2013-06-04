@@ -2371,12 +2371,27 @@ public class GridPaneTest {
     @Test public void testBaselineRowAlignment() {
         MockResizable child1 = new MockResizable(50,50, 200,200, 300,300); //baseline = 190
         MockResizable child2 = new MockResizable(100,100, 300,300, 500,500); //baseline = 290
+        MockResizable child3 = new MockResizable(100,100, 300,300, 500,500) {
+
+            @Override
+            public double getBaselineOffset() {
+                return 10;
+            }
+
+        };
         gridpane.add(child1, 0, 0);
         gridpane.add(child2, 1, 0);
+        gridpane.add(child3, 2, 0);
 
         RowConstraints rc = new RowConstraints();
         rc.setValignment(VPos.BASELINE);
         gridpane.getRowConstraints().addAll(rc);
+
+
+        assertEquals(800, gridpane.prefWidth(-1), 1e-100);
+        assertEquals(580, gridpane.prefHeight(-1), 1e-100); //from the baseline, the childs have
+                                                            // max(10, 190, 290)px to top +
+                                                            // max(290, 10, 10)px to bottom = 580
 
         gridpane.autosize();
         gridpane.layout();

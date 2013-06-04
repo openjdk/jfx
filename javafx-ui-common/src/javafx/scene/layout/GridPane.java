@@ -402,6 +402,21 @@ public class GridPane extends Pane {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
 
+    private Insets getEffectiveMargin(Node child) {
+        final Insets margin = getMargin(child);
+        if (isNodePositionedByBaseline(child)) {
+            if (margin != null) {
+                return new Insets(rowBaseline[getRowIndex(child)] - child.getBaselineOffset(),
+                        margin.getRight(), margin.getBottom(), margin.getLeft());
+            } else {
+                return new Insets(rowBaseline[getRowIndex(child)] - child.getBaselineOffset(),
+                        0, 0, 0);
+            }
+        } else {
+            return margin;
+        }
+    }
+
     private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
         public Insets call(Node n) {
             return getMargin(n);
@@ -993,10 +1008,10 @@ public class GridPane extends Pane {
      */
     public void addRow(int rowIndex, Node... children) {
         int columnIndex = 0;
-        final List<Node> list = getChildren();
-        for (int i = 0, size = list.size(); i < size; i++) {
-            Node child = list.get(i);
-            if (child.isManaged() && rowIndex == getNodeRowIndex(child)) {
+        final List<Node> managed = getManagedChildren();
+        for (int i = 0, size = managed.size(); i < size; i++) {
+            Node child = managed.get(i);
+            if (rowIndex == getNodeRowIndex(child)) {
                 int index = getNodeColumnIndex(child);
                 int end = getNodeColumnEnd(child);
                 columnIndex = Math.max(columnIndex, (end != REMAINING? end : index) + 1);
@@ -1019,10 +1034,10 @@ public class GridPane extends Pane {
      */
     public void addColumn(int columnIndex, Node... children)  {
         int rowIndex = 0;
-        final List<Node> list = getChildren();
-        for (int i = 0, size = list.size(); i < size; i++) {
-            Node child = list.get(i);
-            if (child.isManaged() && columnIndex == getNodeColumnIndex(child)) {
+        final List<Node> managed = getManagedChildren();
+        for (int i = 0, size = managed.size(); i < size; i++) {
+            Node child = managed.get(i);
+            if (columnIndex == getNodeColumnIndex(child)) {
                 int index = getNodeRowIndex(child);
                 int end = getNodeRowEnd(child);
                 rowIndex = Math.max(rowIndex, (end != REMAINING? end : index) + 1);
@@ -1071,21 +1086,24 @@ public class GridPane extends Pane {
         return numColumns;
     }
 
+    private boolean isNodePositionedByBaseline(Node n){
+        return (getRowValignment(getNodeRowIndex(n)) == VPos.BASELINE && getValignment(n) == null)
+                || getValignment(n) == VPos.BASELINE;
+    }
+
     private void computeGridMetrics() {
         if (metricsDirty) {
             numRows = rowConstraints.size();
             numColumns = columnConstraints.size();
-            final List<Node> children = getChildren();
-            for (int i = 0, size = children.size(); i < size; i++) {
-                Node child = children.get(i);
-                if (child.isManaged()) {
-                    int rowIndex = getNodeRowIndex(child);
-                    int columnIndex = getNodeColumnIndex(child);
-                    int rowEnd = getNodeRowEnd(child);
-                    int columnEnd = getNodeColumnEnd(child);
-                    numRows = Math.max(numRows, (rowEnd != REMAINING ? rowEnd : rowIndex) + 1);
-                    numColumns = Math.max(numColumns, (columnEnd != REMAINING ? columnEnd : columnIndex) + 1);
-                }
+            final List<Node> managed = getManagedChildren();
+            for (int i = 0, size = managed.size(); i < size; i++) {
+                Node child = managed.get(i);
+                int rowIndex = getNodeRowIndex(child);
+                int columnIndex = getNodeColumnIndex(child);
+                int rowEnd = getNodeRowEnd(child);
+                int columnEnd = getNodeColumnEnd(child);
+                numRows = Math.max(numRows, (rowEnd != REMAINING ? rowEnd : rowIndex) + 1);
+                numColumns = Math.max(numColumns, (columnEnd != REMAINING ? columnEnd : columnIndex) + 1);
             }
             rowPercentHeight = createDoubleArray(numRows, -1);
             rowPercentTotal = 0;
@@ -1094,6 +1112,7 @@ public class GridPane extends Pane {
             columnGrow = createPriorityArray(numColumns, Priority.NEVER);
             rowGrow = createPriorityArray(numRows, Priority.NEVER);
             rowBaseline = createDoubleArray(numRows, -1);
+            List<Node> baselineNodes = new ArrayList<>(numColumns);
             for (int i = 0, sz = Math.min(numRows, rowConstraints.size()); i < sz; ++i) {
                 final RowConstraints rc = rowConstraints.get(i);
                 double percentHeight = rc.getPercentHeight();
@@ -1103,11 +1122,9 @@ public class GridPane extends Pane {
                 if (vGrow != null)
                     rowGrow[i] = vGrow;
 
-                VPos rowVPos = getRowValignment(i);
-                List<Node> baselineNodes = new ArrayList<>(numColumns);
-                for (int j = 0, size = children.size(); j < size; j++) {
-                    Node n = children.get(j);
-                    if (getNodeRowIndex(n) == i && (rowVPos == VPos.BASELINE || getValignment(n) == VPos.BASELINE)) {
+                for (int j = 0, size = managed.size(); j < size; j++) {
+                    Node n = managed.get(j);
+                    if (getNodeRowIndex(n) == i && isNodePositionedByBaseline(n)) {
                         baselineNodes.add(n);
                     }
                 }
@@ -1125,19 +1142,17 @@ public class GridPane extends Pane {
                     columnGrow[i] = hGrow;
             }
 
-            for (int i = 0, size = children.size(); i < size; i++) {
-                Node child = children.get(i);
-                if (child.isManaged()) {
-                    if (getNodeColumnSpan(child) == 1) {
-                        Priority hg = getNodeHgrow(child);
-                        int idx = getNodeColumnIndex(child);
-                        columnGrow[idx] = Priority.max(columnGrow[idx], hg);
-                    }
-                    if (getNodeRowSpan(child) == 1) {
-                        Priority vg = getNodeVgrow(child);
-                        int idx = getNodeRowIndex(child);
-                        rowGrow[idx] = Priority.max(rowGrow[idx], vg);
-                    }
+            for (int i = 0, size = managed.size(); i < size; i++) {
+                Node child = managed.get(i);
+                if (getNodeColumnSpan(child) == 1) {
+                    Priority hg = getNodeHgrow(child);
+                    int idx = getNodeColumnIndex(child);
+                    columnGrow[idx] = Priority.max(columnGrow[idx], hg);
+                }
+                if (getNodeRowSpan(child) == 1) {
+                    Priority vg = getNodeVgrow(child);
+                    int idx = getNodeRowIndex(child);
+                    rowGrow[idx] = Priority.max(rowGrow[idx], vg);
                 }
             }
 
@@ -1170,8 +1185,8 @@ public class GridPane extends Pane {
                 columnPercentTotal = 100;
             }
 
-            for (int i = 0; i < children.size(); ++i) {
-                final Orientation b = children.get(i).getContentBias();
+            for (int i = 0; i < managed.size(); ++i) {
+                final Orientation b = managed.get(i).getContentBias();
                 if (b != null) {
                     bias = b;
                     break;
@@ -1339,17 +1354,16 @@ public class GridPane extends Pane {
                     }
                 }
             }
-            List<Node> children = getChildren();
-            for (int i = 0, size = children.size(); i < size; i++) {
-                Node child = children.get(i);
-                if (child.isManaged()) {
-                    int start = getNodeRowIndex(child);
-                    int end = getNodeRowEndConvertRemaining(child);
-                    if (start == end && !rowMaxHeight.isPreset(start)) {
-                        rowMaxHeight.setMaxSize(start, computeChildMaxAreaHeight(child, getMargin(child), -1));
-                    } else if (start != end){
-                        rowMaxHeight.setMaxMultiSize(start, end + 1, computeChildMaxAreaHeight(child, getMargin(child), -1));
-                    }
+            List<Node> managed = getManagedChildren();
+            for (int i = 0, size = managed.size(); i < size; i++) {
+                Node child = managed.get(i);
+                int start = getNodeRowIndex(child);
+                int end = getNodeRowEndConvertRemaining(child);
+                double childMaxAreaHeight = computeChildMaxAreaHeight(child, getEffectiveMargin(child), -1);
+                if (start == end && !rowMaxHeight.isPreset(start)) {
+                    rowMaxHeight.setMaxSize(start, childMaxAreaHeight);
+                } else if (start != end){
+                    rowMaxHeight.setMaxMultiSize(start, end + 1, childMaxAreaHeight);
                 }
             }
         }
@@ -1384,21 +1398,19 @@ public class GridPane extends Pane {
                 }
             }
         }
-        List<Node> children = getChildren();
-        for (int i = 0, size = children.size(); i < size; i++) {
-            Node child = children.get(i);
-            if (child.isManaged()) {
-                int start = getNodeRowIndex(child);
-                int end = getNodeRowEndConvertRemaining(child);
-                if (start == end && !result.isPreset(start)) {
-                    double min = getRowMinHeight(start);
-                    double max = getRowMaxHeight(start);
-                    result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, computeChildPrefAreaHeight(child, getMargin(child),
-                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)), max < 0 ? Double.MAX_VALUE : max ));
-                } else if (start != end){
-                    result.setMaxMultiSize(start, end + 1, computeChildPrefAreaHeight(child, getMargin(child),
-                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)));
-                }
+        List<Node> managed = getManagedChildren();
+        for (int i = 0, size = managed.size(); i < size; i++) {
+            Node child = managed.get(i);
+            int start = getNodeRowIndex(child);
+            int end = getNodeRowEndConvertRemaining(child);
+            double childPrefAreaHeight = computeChildPrefAreaHeight(child, getEffectiveMargin(child),
+                    widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths));
+            if (start == end && !result.isPreset(start)) {
+                double min = getRowMinHeight(start);
+                double max = getRowMaxHeight(start);
+                result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, childPrefAreaHeight, max < 0 ? Double.MAX_VALUE : max));
+            } else if (start != end){
+                result.setMaxMultiSize(start, end + 1, childPrefAreaHeight);
             }
         }
         return result;
@@ -1429,24 +1441,19 @@ public class GridPane extends Pane {
                 result.setPresetSize(i, minRowHeight);
             }
         }
-        List<Node> children = getChildren();
-        for (int i = 0, size = children.size(); i < size; i++) {
-            Node child = children.get(i);
-            if (child.isManaged()) {
-                int start = getNodeRowIndex(child);
-                int end = getNodeRowEndConvertRemaining(child);
-                if (start == end && !result.isPreset(start)) {
-                    result.setMaxSize(start, computeChildMinAreaHeight(child, getMargin(child),
-                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)));
-                } else if (start != end){
-                    result.setMaxMultiSize(start, end + 1, computeChildMinAreaHeight(child, getMargin(child),
-                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)));
-                }
+        List<Node> managed = getManagedChildren();
+        for (int i = 0, size = managed.size(); i < size; i++) {
+            Node child = managed.get(i);
+            int start = getNodeRowIndex(child);
+            int end = getNodeRowEndConvertRemaining(child);
+            double childMinAreaHeight = computeChildMinAreaHeight(child, getEffectiveMargin(child),
+                             widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths));
+            if (start == end && !result.isPreset(start)) {
+                result.setMaxSize(start, childMinAreaHeight);
+            } else if (start != end){
+                result.setMaxMultiSize(start, end + 1, childMinAreaHeight);
             }
         }
-
-
-
         return result;
     }
 
@@ -1484,17 +1491,15 @@ public class GridPane extends Pane {
                     }
                 }
             }
-            List<Node> children = getChildren();
-            for (int i = 0, size = children.size(); i < size; i++) {
-                Node child = children.get(i);
-                if (child.isManaged()) {
-                    int start = getNodeColumnIndex(child);
-                    int end = getNodeColumnEndConvertRemaining(child);
-                    if (start == end && !columnMaxWidth.isPreset(start)) {
-                        columnMaxWidth.setMaxSize(start, computeChildMaxAreaWidth(child, getMargin(child), -1));
-                    } else if (start != end){
-                        columnMaxWidth.setMaxMultiSize(start, end + 1, computeChildMaxAreaWidth(child, getMargin(child), -1));
-                    }
+            List<Node> managed = getManagedChildren();
+            for (int i = 0, size = managed.size(); i < size; i++) {
+                Node child = managed.get(i);
+                int start = getNodeColumnIndex(child);
+                int end = getNodeColumnEndConvertRemaining(child);
+                if (start == end && !columnMaxWidth.isPreset(start)) {
+                    columnMaxWidth.setMaxSize(start, computeChildMaxAreaWidth(child, getEffectiveMargin(child), -1));
+                } else if (start != end){
+                    columnMaxWidth.setMaxMultiSize(start, end + 1, computeChildMaxAreaWidth(child, getEffectiveMargin(child), -1));
                 }
             }
         }
@@ -1529,21 +1534,19 @@ public class GridPane extends Pane {
                 }
             }
         }
-        List<Node> children = getChildren();
-        for (int i = 0, size = children.size(); i < size; i++) {
-            Node child = children.get(i);
-            if (child.isManaged()) {
-                int start = getNodeColumnIndex(child);
-                int end = getNodeColumnEndConvertRemaining(child);
-                if (start == end && !result.isPreset(start)) {
-                    double min = getColumnMinWidth(start);
-                    double max = getColumnMaxWidth(start);
-                    result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, computeChildPrefAreaWidth(child, getMargin(child),
-                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)), max < 0 ? Double.MAX_VALUE : max));
-                } else if (start != end) {
-                    result.setMaxMultiSize(start, end + 1, computeChildPrefAreaWidth(child, getMargin(child),
-                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
-                }
+        List<Node> managed = getManagedChildren();
+        for (int i = 0, size = managed.size(); i < size; i++) {
+            Node child = managed.get(i);
+            int start = getNodeColumnIndex(child);
+            int end = getNodeColumnEndConvertRemaining(child);
+            if (start == end && !result.isPreset(start)) {
+                double min = getColumnMinWidth(start);
+                double max = getColumnMaxWidth(start);
+                result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, computeChildPrefAreaWidth(child, getEffectiveMargin(child),
+                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)), max < 0 ? Double.MAX_VALUE : max));
+            } else if (start != end) {
+                result.setMaxMultiSize(start, end + 1, computeChildPrefAreaWidth(child, getEffectiveMargin(child),
+                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
             }
         }
         return result;
@@ -1574,19 +1577,17 @@ public class GridPane extends Pane {
                 result.setPresetSize(i, minColumnWidth);
             }
         }
-        List<Node> children = getChildren();
-        for (int i = 0, size = children.size(); i < size; i++) {
-            Node child = children.get(i);
-            if (child.isManaged()) {
-                int start = getNodeColumnIndex(child);
-                int end = getNodeColumnEndConvertRemaining(child);
-                if (start == end && !result.isPreset(start)) {
-                    result.setMaxSize(start, computeChildMinAreaWidth(child, getMargin(child),
-                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
-                } else if (start != end){
-                    result.setMaxMultiSize(start, end + 1, computeChildMinAreaWidth(child, getMargin(child),
-                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
-                }
+        List<Node> managed = getManagedChildren();
+        for (int i = 0, size = managed.size(); i < size; i++) {
+            Node child = managed.get(i);
+            int start = getNodeColumnIndex(child);
+            int end = getNodeColumnEndConvertRemaining(child);
+            if (start == end && !result.isPreset(start)) {
+                result.setMaxSize(start, computeChildMinAreaWidth(child, getEffectiveMargin(child),
+                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
+            } else if (start != end){
+                result.setMaxMultiSize(start, end + 1, computeChildMinAreaWidth(child, getEffectiveMargin(child),
+                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
             }
         }
         return result;
@@ -1683,67 +1684,65 @@ public class GridPane extends Pane {
 
         final double x = left + computeXOffset(contentWidth, columnTotal, getAlignmentInternal().getHpos());
         final double y = top + computeYOffset(contentHeight, rowTotal, getAlignmentInternal().getVpos());
-        final List<Node> children = getChildren();
-        for (int i = 0, size = children.size(); i < size; i++) {
-            Node child = children.get(i);
-            if (child.isManaged()) {
-                int rowIndex = getNodeRowIndex(child);
-                int columnIndex = getNodeColumnIndex(child);
-                int colspan = getNodeColumnSpan(child);
-                if (colspan == REMAINING) {
-                    colspan = widths.getLength() - columnIndex;
-                }
-                int rowspan = getNodeRowSpan(child);
-                if (rowspan == REMAINING) {
-                    rowspan = heights.getLength() - rowIndex;
-                }
-                double areaX = x;
-                for (int j = 0; j < columnIndex; j++) {
-                    areaX += widths.getSize(j) + snaphgap;
-                }
-                double areaY = y;
-                for (int j = 0; j < rowIndex; j++) {
-                    areaY += heights.getSize(j) + snapvgap;
-                }
-                double areaW = widths.getSize(columnIndex);
-                for (int j = 2; j <= colspan; j++) {
-                    areaW += widths.getSize(columnIndex+j-1) + snaphgap;
-                }
-                double areaH = heights.getSize(rowIndex);
-                for (int j = 2; j <= rowspan; j++) {
-                    areaH += heights.getSize(rowIndex+j-1) + snapvgap;
-                }
-
-                HPos halign = getHalignment(child);
-                VPos valign = getValignment(child);
-                Boolean fillWidth = isFillWidth(child);
-                Boolean fillHeight = isFillHeight(child);
-
-                if (halign == null) {
-                    halign = getColumnHalignment(columnIndex);
-                }
-                if (valign == null) {
-                    valign = getRowValignment(rowIndex);
-                }
-                if (fillWidth == null) {
-                    fillWidth = shouldColumnFillWidth(columnIndex);
-                }
-                if (fillHeight == null) {
-                    fillHeight = shouldRowFillHeight(rowIndex);
-                }
-
-                Insets margin = getMargin(child);
-                if (margin != null && valign == VPos.BASELINE) {
-                    // The top margin has already added to rowBaseline[] in computeRowMetric()
-                    // we do not need to add it again in layoutInArea.
-                    margin = new Insets(0, margin.getRight(), margin.getBottom(), margin.getLeft());
-                }
-                //System.out.println("layoutNode("+child.toString()+" row/span="+rowIndex+"/"+rowspan+" col/span="+columnIndex+"/"+colspan+" area="+areaX+","+areaY+" "+areaW+"x"+areaH+""+" rowBaseline="+rowBaseline[rowIndex]);
-                layoutInArea(child, areaX, areaY, areaW, areaH, rowBaseline[rowIndex],
-                        margin,
-                        fillWidth, fillHeight && valign != VPos.BASELINE,
-                        halign, valign);
+        final List<Node> managed = getManagedChildren();
+        for (int i = 0, size = managed.size(); i < size; i++) {
+            Node child = managed.get(i);
+            int rowIndex = getNodeRowIndex(child);
+            int columnIndex = getNodeColumnIndex(child);
+            int colspan = getNodeColumnSpan(child);
+            if (colspan == REMAINING) {
+                colspan = widths.getLength() - columnIndex;
             }
+            int rowspan = getNodeRowSpan(child);
+            if (rowspan == REMAINING) {
+                rowspan = heights.getLength() - rowIndex;
+            }
+            double areaX = x;
+            for (int j = 0; j < columnIndex; j++) {
+                areaX += widths.getSize(j) + snaphgap;
+            }
+            double areaY = y;
+            for (int j = 0; j < rowIndex; j++) {
+                areaY += heights.getSize(j) + snapvgap;
+            }
+            double areaW = widths.getSize(columnIndex);
+            for (int j = 2; j <= colspan; j++) {
+                areaW += widths.getSize(columnIndex+j-1) + snaphgap;
+            }
+            double areaH = heights.getSize(rowIndex);
+            for (int j = 2; j <= rowspan; j++) {
+                areaH += heights.getSize(rowIndex+j-1) + snapvgap;
+            }
+
+            HPos halign = getHalignment(child);
+            VPos valign = getValignment(child);
+            Boolean fillWidth = isFillWidth(child);
+            Boolean fillHeight = isFillHeight(child);
+
+            if (halign == null) {
+                halign = getColumnHalignment(columnIndex);
+            }
+            if (valign == null) {
+                valign = getRowValignment(rowIndex);
+            }
+            if (fillWidth == null) {
+                fillWidth = shouldColumnFillWidth(columnIndex);
+            }
+            if (fillHeight == null) {
+                fillHeight = shouldRowFillHeight(rowIndex);
+            }
+
+            Insets margin = getMargin(child);
+            if (margin != null && valign == VPos.BASELINE) {
+                // The top margin has already added to rowBaseline[] in computeRowMetric()
+                // we do not need to add it again in layoutInArea.
+                margin = new Insets(0, margin.getRight(), margin.getBottom(), margin.getLeft());
+            }
+            //System.out.println("layoutNode("+child.toString()+" row/span="+rowIndex+"/"+rowspan+" col/span="+columnIndex+"/"+colspan+" area="+areaX+","+areaY+" "+areaW+"x"+areaH+""+" rowBaseline="+rowBaseline[rowIndex]);
+            layoutInArea(child, areaX, areaY, areaW, areaH, rowBaseline[rowIndex],
+                    margin,
+                    fillWidth, fillHeight && valign != VPos.BASELINE,
+                    halign, valign);
         }
         layoutGridLines(widths, heights, x, y, rowTotal, columnTotal);
         currentHeights = heights;
