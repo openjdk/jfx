@@ -55,6 +55,7 @@ import javafx.css.StyleableProperty;
 /**
  * A axis class that plots a range of numbers with major tick marks every "tickUnit". You can use any Number type with
  * this axis, Long, Double, BigDecimal etc.
+ * @since JavaFX 2.0
  */
 public final class NumberAxis extends ValueAxis<Number> {
 
@@ -443,6 +444,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -450,6 +452,7 @@ public final class NumberAxis extends ValueAxis<Number> {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
@@ -461,6 +464,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     /**
      * Default number formatter for NumberAxis, this stays in sync with auto-ranging and formats values appropriately.
      * You can wrap this formatter to add prefixes or suffixes;
+     * @since JavaFX 2.0
      */
     public static class DefaultFormatter extends StringConverter<Number> {
         private DecimalFormat formatter;

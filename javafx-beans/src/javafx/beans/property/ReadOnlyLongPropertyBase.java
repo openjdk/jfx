@@ -35,6 +35,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * implementation to attach listener.
  *
  * @see ReadOnlyLongProperty
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyLongPropertyBase extends ReadOnlyLongProperty {
     

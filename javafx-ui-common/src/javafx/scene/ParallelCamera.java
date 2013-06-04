@@ -45,7 +45,7 @@ import com.sun.javafx.tk.Toolkit;
  * down and the Z axis pointing away from the viewer (into the screen). The
  * units are in pixel coordinates.
  *
- * @since JavaFX 1.3
+ * @since JavaFX 2.0
  */
 public class ParallelCamera extends Camera {
 
@@ -88,7 +88,7 @@ public class ParallelCamera extends Camera {
     }
 
     @Override
-    protected void computeViewTransform(Affine3D view) {
+    void computeViewTransform(Affine3D view) {
         view.setToIdentity();
     }
 

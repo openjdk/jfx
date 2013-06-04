@@ -133,6 +133,7 @@ import org.eclipse.swt.events.MouseWheelListener;
  * </pre>
  *
  * 
+ * @since JavaFX 2.0
  */
 public class FXCanvas extends Canvas {
 

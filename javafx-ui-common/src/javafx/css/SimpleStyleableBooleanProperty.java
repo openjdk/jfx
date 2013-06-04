@@ -39,6 +39,7 @@ import javafx.beans.property.SimpleBooleanProperty;
  * @see CssMetaData
  * @see StyleableProperty
  * @see StyleableBooleanProperty
+ * @since JavaFX 8.0
  */
 public class SimpleStyleableBooleanProperty extends StyleableBooleanProperty {
 

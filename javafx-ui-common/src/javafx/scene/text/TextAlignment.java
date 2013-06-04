@@ -27,6 +27,7 @@ package javafx.scene.text;
 
 /**
  * The {@code TextAlignment} enum represents the horizontal text alignment. 
+ * @since JavaFX 2.0
  */
 public enum TextAlignment {
 

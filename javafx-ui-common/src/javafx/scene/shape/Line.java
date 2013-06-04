@@ -61,6 +61,7 @@ line.setEndX(100.0f);
 line.setEndY(100.0f);
 }
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Line extends Shape {
 
@@ -99,22 +100,7 @@ public class Line extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty startX;
-
-
-    public final void setStartX(double value) {
-        if (startX != null || value != 0.0) {
-            startXProperty().set(value);
-        }
-    }
-
-    public final double getStartX() {
-        return startX == null ? 0.0 : startX.get();
-    }
-
-    public final DoubleProperty startXProperty() {
-        if (startX == null) {
-            startX = new DoublePropertyBase() {
+    private final DoubleProperty startX = new DoublePropertyBase() {
 
                 @Override
                 public void invalidated() {
@@ -132,7 +118,17 @@ public class Line extends Shape {
                     return "startX";
                 }
             };
-        }
+
+
+    public final void setStartX(double value) {
+        startX.set(value);
+    }
+
+    public final double getStartX() {
+        return startX.get();
+    }
+
+    public final DoubleProperty startXProperty() {
         return startX;
     }
 
@@ -141,23 +137,7 @@ public class Line extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty startY;
-
-
-
-    public final void setStartY(double value) {
-        if (startY != null || value != 0.0) {
-            startYProperty().set(value);
-        }
-    }
-
-    public final double getStartY() {
-        return startY == null ? 0.0 : startY.get();
-    }
-
-    public final DoubleProperty startYProperty() {
-        if (startY == null) {
-            startY = new DoublePropertyBase() {
+    private final DoubleProperty startY = new DoublePropertyBase() {
 
                 @Override
                 public void invalidated() {
@@ -175,7 +155,17 @@ public class Line extends Shape {
                     return "startY";
                 }
             };
-        }
+
+
+    public final void setStartY(double value) {
+        startY.set(value);
+    }
+
+    public final double getStartY() {
+        return startY.get();
+    }
+
+    public final DoubleProperty startYProperty() {
         return startY;
     }
 
@@ -184,23 +174,7 @@ public class Line extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty endX;
-
-
-
-    public final void setEndX(double value) {
-        if (endX != null || value != 0.0) {
-            endXProperty().set(value);
-        }
-    }
-
-    public final double getEndX() {
-        return endX == null ? 0.0 : endX.get();
-    }
-
-    public final DoubleProperty endXProperty() {
-        if (endX == null) {
-            endX = new DoublePropertyBase() {
+    private final DoubleProperty endX = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
@@ -218,7 +192,18 @@ public class Line extends Shape {
             return "endX";
         }
     };
+
+
+
+    public final void setEndX(double value) {
+        endX.set(value);
     }
+
+    public final double getEndX() {
+        return endX.get();
+    }
+
+    public final DoubleProperty endXProperty() {
         return endX;
     }
 
@@ -227,21 +212,7 @@ public class Line extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty endY;
-
-    public final void setEndY(double value) {
-        if (endY != null || value != 0.0) {
-            endYProperty().set(value);
-        }
-    }
-
-    public final double getEndY() {
-        return endY == null ? 0.0 : endY.get();
-    }
-
-    public final DoubleProperty endYProperty() {
-        if (endY == null) {
-            endY = new DoublePropertyBase() {
+    private final DoubleProperty endY = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
@@ -259,7 +230,16 @@ public class Line extends Shape {
             return "endY";
         }
     };
+
+    public final void setEndY(double value) {
+        endY.set(value);
     }
+
+    public final double getEndY() {
+        return endY.get();
+    }
+
+    public final DoubleProperty endYProperty() {
         return endY;
     }
 

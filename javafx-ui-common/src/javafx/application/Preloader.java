@@ -107,6 +107,7 @@ import java.security.PrivilegedAction;
  * <p>
  * Shutdown (including when stop() is called) is TBD.
  * </p>
+ * @since JavaFX 2.0
  */
 public abstract class Preloader extends Application {
 
@@ -201,6 +202,7 @@ public abstract class Preloader extends Application {
 
     /**
      * Marker interface for all Preloader notification.
+     * @since JavaFX 2.0
      */
     public static interface PreloaderNotification {
     }
@@ -208,6 +210,7 @@ public abstract class Preloader extends Application {
     /**
      * Preloader notification that reports an error.
      * This is delivered to preloader in case of problem with applet startup.
+     * @since JavaFX 2.0
      */
     public static class ErrorNotification implements PreloaderNotification {
         private String location;
@@ -281,6 +284,7 @@ public abstract class Preloader extends Application {
     /**
      * Preloader notification that reports progress. This is typically used to
      * report progress while downloading and initializing the application.
+     * @since JavaFX 2.0
      */
     public static class ProgressNotification implements PreloaderNotification {
         private final double progress;
@@ -341,11 +345,13 @@ public abstract class Preloader extends Application {
      * to loading
      * the application class (and constructing an instance), calling the
      * application init method, or calling the application start method.
+     * @since JavaFX 2.0
      */
     public static class StateChangeNotification implements PreloaderNotification {
 
         /**
          * Enum that defines the type of change associated with this notification
+         * @since JavaFX 2.0
          */
         public enum Type {
             /**

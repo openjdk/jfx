@@ -59,6 +59,7 @@ import javafx.scene.control.TableColumn.CellEditEvent;
  * @see IndexedCell
  * @see TableRow
  * @param <T> The type of the item contained within the Cell.
+ * @since JavaFX 2.0
  */
 public class TableCell<S,T> extends IndexedCell<T> {
     

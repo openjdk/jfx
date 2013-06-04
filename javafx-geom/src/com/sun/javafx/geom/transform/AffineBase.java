@@ -405,7 +405,6 @@ public abstract class AffineBase extends BaseTransform {
      * @return a double value that is the X coordinate of the scaling
      *  element of the affine transformation matrix.
      * @see #getMatrix
-     * @since 1.2
      */
     @Override
     public double getMxx() {
@@ -418,7 +417,6 @@ public abstract class AffineBase extends BaseTransform {
      * @return a double value that is the Y coordinate of the scaling
      *  element of the affine transformation matrix.
      * @see #getMatrix
-     * @since 1.2
      */
     @Override
     public double getMyy() {
@@ -431,7 +429,6 @@ public abstract class AffineBase extends BaseTransform {
      * @return a double value that is the X coordinate of the shearing
      *  element of the affine transformation matrix.
      * @see #getMatrix
-     * @since 1.2
      */
     @Override
     public double getMxy() {
@@ -444,7 +441,6 @@ public abstract class AffineBase extends BaseTransform {
      * @return a double value that is the Y coordinate of the shearing
      *  element of the affine transformation matrix.
      * @see #getMatrix
-     * @since 1.2
      */
     @Override
     public double getMyx() {
@@ -457,7 +453,6 @@ public abstract class AffineBase extends BaseTransform {
      * @return a double value that is the X coordinate of the translation
      *  element of the affine transformation matrix.
      * @see #getMatrix
-     * @since 1.2
      */
     @Override
     public double getMxt() {
@@ -470,7 +465,6 @@ public abstract class AffineBase extends BaseTransform {
      * @return a double value that is the Y coordinate of the translation
      *  element of the affine transformation matrix.
      * @see #getMatrix
-     * @since 1.2
      */
     @Override
     public double getMyt() {
@@ -482,7 +476,6 @@ public abstract class AffineBase extends BaseTransform {
      * an identity transform.
      * @return <code>true</code> if this <code>Affine2D</code> is
      * an identity transform; <code>false</code> otherwise.
-     * @since 1.2
      */
     public boolean isIdentity() {
         return (state == APPLY_IDENTITY || (getType() == TYPE_IDENTITY));
@@ -537,7 +530,6 @@ public abstract class AffineBase extends BaseTransform {
      * @see #createInverse
      * @see #inverseTransform
      * @see #TYPE_UNIFORM_SCALE
-     * @since 1.2
      */
     public double getDeterminant() {
         // assert(APPLY_3D was dealt with at a higher level)
@@ -570,7 +562,6 @@ public abstract class AffineBase extends BaseTransform {
 
     /**
      * Resets this transform to the Identity transform.
-     * @since 1.2
      */
     public void setToIdentity() {
         mxx = myy = 1.0;
@@ -590,7 +581,6 @@ public abstract class AffineBase extends BaseTransform {
      * @param myy the Y coordinate scaling element of the 3x3 matrix
      * @param mxt the X coordinate translation element of the 3x3 matrix
      * @param myt the Y coordinate translation element of the 3x3 matrix
-     * @since 1.2
      */
     public void setTransform(double mxx, double myx,
                              double mxy, double myy,
@@ -617,7 +607,6 @@ public abstract class AffineBase extends BaseTransform {
      * direction of the positive X axis as a factor of their Y coordinate
      * @param shy the multiplier by which coordinates are shifted in the
      * direction of the positive Y axis as a factor of their X coordinate
-     * @since 1.2
      */
     public void setToShear(double shx, double shy) {
         mxx = 1.0;
@@ -656,7 +645,6 @@ public abstract class AffineBase extends BaseTransform {
      * result of transforming <code>ptSrc</code>
      * @return the <code>ptDst</code> after transforming
      * <code>ptSrc</code> and stroring the result in <code>ptDst</code>.
-     * @since 1.2
      */
     public Point2D transform(Point2D ptSrc, Point2D ptDst) {
         if (ptDst == null) {
@@ -780,7 +768,7 @@ public abstract class AffineBase extends BaseTransform {
      * result of transforming <code>src</code>
      * @return the <code>dst</code> vector after transforming
      * <code>src</code> and storing the result in <code>dst</code>.
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public Vec3d deltaTransform(Vec3d src, Vec3d dst) {
         if (dst == null) {
@@ -1025,7 +1013,6 @@ public abstract class AffineBase extends BaseTransform {
      * @param dstOff the offset to the location of the first
      * transformed point that is stored in the destination array
      * @param numPts the number of points to be transformed
-     * @since 1.2
      */
     public void transform(float[] srcPts, int srcOff,
                           float[] dstPts, int dstOff,
@@ -1064,7 +1051,6 @@ public abstract class AffineBase extends BaseTransform {
      * transformed vector that is stored in the destination array
      * @param numPts the number of vector coordinate pairs to be
      * transformed
-     * @since 1.2
      */
     public void deltaTransform(float[] srcPts, int srcOff,
                                float[] dstPts, int dstOff,
@@ -1191,7 +1177,6 @@ public abstract class AffineBase extends BaseTransform {
      * @param dstOff the offset to the location of the first
      * transformed point that is stored in the destination array
      * @param numPts the number of point objects to be transformed
-     * @since 1.2
      */
     public void transform(double[] srcPts, int srcOff,
                           double[] dstPts, int dstOff,
@@ -1230,7 +1215,6 @@ public abstract class AffineBase extends BaseTransform {
      * transformed vector that is stored in the destination array
      * @param numPts the number of vector coordinate pairs to be
      * transformed
-     * @since 1.2
      */
     public void deltaTransform(double[] srcPts, int srcOff,
                                double[] dstPts, int dstOff,
@@ -1353,7 +1337,6 @@ public abstract class AffineBase extends BaseTransform {
      * @param dstOff the offset to the location of the first
      * transformed point that is stored in the destination array
      * @param numPts the number of points to be transformed
-     * @since 1.2
      */
     public void transform(float[] srcPts, int srcOff,
                           double[] dstPts, int dstOff,
@@ -1452,7 +1435,6 @@ public abstract class AffineBase extends BaseTransform {
      * @param dstOff the offset to the location of the first
      * transformed point that is stored in the destination array
      * @param numPts the number of point objects to be transformed
-     * @since 1.2
      */
     public void transform(double[] srcPts, int srcOff,
                           float[] dstPts, int dstOff,
@@ -1553,7 +1535,6 @@ public abstract class AffineBase extends BaseTransform {
      * inverse transform.
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
-     * @since 1.2
      */
     public Point2D inverseTransform(Point2D ptSrc, Point2D ptDst)
         throws NoninvertibleTransformException
@@ -1708,7 +1689,7 @@ public abstract class AffineBase extends BaseTransform {
      * inverse transform.
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     @Override
     public Vec3d inverseDeltaTransform(Vec3d src, Vec3d dst)
@@ -1976,7 +1957,6 @@ public abstract class AffineBase extends BaseTransform {
      * @param numPts the number of point objects to be transformed
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
-     * @since 1.2
      */
     public void inverseTransform(float[] srcPts, int srcOff,
                                  float[] dstPts, int dstOff,
@@ -2008,7 +1988,6 @@ public abstract class AffineBase extends BaseTransform {
      * @param numPts the number of point objects to be transformed
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
-     * @since 1.2
      */
     public void inverseDeltaTransform(float[] srcPts, int srcOff,
                                       float[] dstPts, int dstOff,
@@ -2022,7 +2001,6 @@ public abstract class AffineBase extends BaseTransform {
     /**
      * Inverse transforms an array of single precision coordinates by
      * this transform using the specified state type.
-     * @since 1.2
      */
     private void doInverseTransform(float[] srcPts, int srcOff,
                                     float[] dstPts, int dstOff,
@@ -2165,7 +2143,6 @@ public abstract class AffineBase extends BaseTransform {
      * @param numPts the number of point objects to be transformed
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
-     * @since 1.2
      */
     public void inverseTransform(double[] srcPts, int srcOff,
                                  double[] dstPts, int dstOff,
@@ -2294,7 +2271,6 @@ public abstract class AffineBase extends BaseTransform {
      * transformed by this transform.
      * @return a new <code>Shape</code> object that defines the geometry
      * of the transformed <code>Shape</code>, or null if {@code pSrc} is null.
-     * @since 1.2
      */
     public Shape createTransformedShape(Shape s) {
         if (s == null) {
@@ -2316,7 +2292,6 @@ public abstract class AffineBase extends BaseTransform {
      * X axis direction
      * @param ty the distance by which coordinates are translated in the
      * Y axis direction
-     * @since 1.2
      */
     public void translate(double tx, double ty) {
         // assert(APPLY_3D was dealt with at a higher level)
@@ -2478,7 +2453,6 @@ public abstract class AffineBase extends BaseTransform {
      * <a href="#quadrantapproximation">Handling 90-Degree Rotations</a>
      * above.
      * @param theta the angle of rotation measured in radians
-     * @since 1.2
      */
     public void rotate(double theta) {
         // assert(APPLY_3D was dealt with at a higher level)
@@ -2519,7 +2493,6 @@ public abstract class AffineBase extends BaseTransform {
      * X axis direction
      * @param sy the factor by which coordinates are scaled along the
      * Y axis direction
-     * @since 1.2
      */
     public void scale(double sx, double sy) {
         int mystate = this.state;
@@ -2588,7 +2561,6 @@ public abstract class AffineBase extends BaseTransform {
      * direction of the positive X axis as a factor of their Y coordinate
      * @param shy the multiplier by which coordinates are shifted in the
      * direction of the positive Y axis as a factor of their X coordinate
-     * @since 1.2
      */
     public void shear(double shx, double shy) {
         int mystate = this.state;
@@ -2660,7 +2632,6 @@ public abstract class AffineBase extends BaseTransform {
      * @param Tx the <code>BaseTransform</code> object to be
      * concatenated with this <code>Affine2D</code> object.
      * @see #preConcatenate
-     * @since 1.2
      */
     public void concatenate(BaseTransform Tx) {
         switch (Tx.getDegree()) {
@@ -2886,7 +2857,6 @@ public abstract class AffineBase extends BaseTransform {
      * @see #getDeterminant
      * @exception NoninvertibleTransformException
      * if the matrix cannot be inverted.
-     * @since 1.6
      */
     public void invert()
         throws NoninvertibleTransformException

@@ -160,6 +160,7 @@ static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *even
             (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
             (jint)event->x_root, (jint)event->y_root,
             translate_gdk_action_to_glass(suggested)));
+    CHECK_JNI_EXCEPTION(mainEnv)
     if (result != suggested && result != GDK_ACTION_COPY) {
         result = static_cast<GdkDragAction>(0);
     }
@@ -172,6 +173,7 @@ static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *even
 static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event)
 {
     mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event)
@@ -187,6 +189,7 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
             (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
             (jint)event->x_root, (jint)event->y_root,
             translate_gdk_action_to_glass(selected));
+    LOG_EXCEPTION(mainEnv)
 
     gdk_drop_finish(event->context, TRUE, GDK_CURRENT_TIME);
     gdk_drop_reply(event->context, TRUE, GDK_CURRENT_TIME);
@@ -466,7 +469,7 @@ jobject dnd_target_get_data(JNIEnv *env, jstring mime)
     } else {
         ret = dnd_target_get_raw(env, gdk_atom_intern(cmime, FALSE), FALSE);
     }
-
+    LOG_EXCEPTION(env)
     env->ReleaseStringUTFChars(mime, cmime);
 
     return ret;
@@ -573,9 +576,9 @@ static jobject dnd_source_get_data(const char *key)
 {
     jobject data = (jobject)g_object_get_data(G_OBJECT(dnd_window), SOURCE_DND_DATA);
     jstring string = mainEnv->NewStringUTF(key);
-    
-    return mainEnv->CallObjectMethod(data, jMapGet, string, NULL);
-    
+    jobject result = mainEnv->CallObjectMethod(data, jMapGet, string, NULL);
+
+    return (EXCEPTION_OCCURED(mainEnv)) ? NULL : result;
 }
 
 static gboolean dnd_source_set_utf8_string(GdkWindow *requestor, GdkAtom property)
@@ -627,7 +630,8 @@ static gboolean dnd_source_set_image(GdkWindow *requestor, GdkAtom property, Gdk
     gchar *buffer;
     gsize size;
     const char * type;
-    GdkPixbuf *pixbuf;
+    GdkPixbuf *pixbuf = NULL;
+    gboolean result = FALSE;
 
     if (target == TARGET_MIME_PNG_ATOM) {
         type = "png";
@@ -642,14 +646,15 @@ static gboolean dnd_source_set_image(GdkWindow *requestor, GdkAtom property, Gdk
     }
 
     mainEnv->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
-    
-    if (gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &size, type, NULL, NULL)) {
+
+    if (!EXCEPTION_OCCURED(mainEnv)
+            && gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &size, type, NULL, NULL)) {
         gdk_property_change(requestor, property, target,
                 8, GDK_PROP_MODE_REPLACE, (guchar *)buffer, size);
-    } else {
-        return FALSE;
+        result = TRUE;
     }
-    return TRUE;
+    g_object_unref(pixbuf);
+    return result;
 }
 
 #define FILE_PREFIX "file://"
@@ -727,14 +732,16 @@ static gboolean dnd_source_set_raw(GdkWindow *requestor, GdkAtom property, GdkAt
             is_data_set = TRUE;
         } else if (mainEnv->IsInstanceOf(data, jByteBufferCls)) {
             jbyteArray byteArray = (jbyteArray)mainEnv->CallObjectMethod(data, jByteBufferArray);
-            jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
-            jsize nraw = mainEnv->GetArrayLength(byteArray);
-    
-            gdk_property_change(requestor, property, target,
-                    8, GDK_PROP_MODE_REPLACE, (guchar *) raw, nraw);
-            
-            mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
-            is_data_set = TRUE;
+            if (!EXCEPTION_OCCURED(mainEnv)) {
+                jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
+                jsize nraw = mainEnv->GetArrayLength(byteArray);
+
+                gdk_property_change(requestor, property, target,
+                        8, GDK_PROP_MODE_REPLACE, (guchar *) raw, nraw);
+
+                mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
+                is_data_set = TRUE;
+            }
         }
     }
     

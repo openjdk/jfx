@@ -38,6 +38,7 @@ import java.io.IOException;
  * the event to it. The event target defines the path through which the event
  * will travel when posted. The event type provides additional classification
  * to events of the same {@code Event} class.
+ * @since JavaFX 2.0
  */
 public class Event extends EventObject implements Cloneable {
 

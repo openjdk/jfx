@@ -52,6 +52,7 @@ import java.util.ListIterator;
  * interface will behave as if they were applied to an immutable empty list.
  *
  * @param <E> the type of the {@code List} elements.
+ * @since JavaFX 2.1
  */
 public abstract class ListExpression<E> implements ObservableListValue<E> {
 

@@ -64,6 +64,7 @@ import javafx.collections.ObservableMap;
  *            the type of the key elements
  * @param <V>
  *            the type of the value elements
+ * @since JavaFX 2.1
  */
 public abstract class MapBinding<K, V> extends MapExpression<K, V> implements Binding<ObservableMap<K, V>> {
 

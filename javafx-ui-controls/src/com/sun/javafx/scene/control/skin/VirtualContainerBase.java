@@ -38,7 +38,6 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
  * This class handles the interaction with the VirtualFlow class, which is the
  * main class handling the virtualization of the contents of this container.
  *
- * @since JavaFX 1.3
  * @profile common
  */
 public abstract class VirtualContainerBase<C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends BehaviorSkinBase<C, B> {

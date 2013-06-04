@@ -40,6 +40,7 @@ import javafx.collections.ObservableList;
  * @see ReadOnlyProperty
  *
  * @param <E> the type of the {@code List} elements
+ * @since JavaFX 2.1
  */
 public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
         implements ReadOnlyProperty<ObservableList<E>>  {

@@ -31,6 +31,7 @@ import javafx.event.EventType;
 
 /**
  * An event indicating a user input.
+ * @since JavaFX 2.0
  */
 public class InputEvent extends Event {
 

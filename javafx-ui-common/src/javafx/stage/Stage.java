@@ -158,6 +158,7 @@ public class HelloWorld extends Application {
  *
  * <p>produces the following on Linux:</p>
  * <p><img src="doc-files/Stage-linux.png"/></p>
+ * @since JavaFX 2.0
  */
 public class Stage extends Window {
 
@@ -386,7 +387,7 @@ public class Stage extends Window {
      * @throws IllegalStateException if this method is called on the
      *     primary stage.
      * @throws IllegalStateException if this stage is already showing.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public void showAndWait() {
 
@@ -749,6 +750,7 @@ public class Stage extends Window {
      * </p>
      *
      * @defaultValue false
+     * @since JavaFX 8.0
      */
     private ReadOnlyBooleanWrapper maximized;
 
@@ -844,6 +846,7 @@ public class Stage extends Window {
      * Defines the minimum width of this {@code Stage}.
      *
      * @defaultValue 0
+     * @since JavaFX 2.1
      */
     private DoubleProperty minWidth;
 
@@ -888,6 +891,7 @@ public class Stage extends Window {
      * Defines the minimum height of this {@code Stage}.
      *
      * @defaultValue 0
+     * @since JavaFX 2.1
      */
     private DoubleProperty minHeight;
 
@@ -933,6 +937,7 @@ public class Stage extends Window {
      * Defines the maximum width of this {@code Stage}.
      *
      * @defaultValue Double.MAX_VALUE
+     * @since JavaFX 2.1
      */
     private DoubleProperty maxWidth;
 
@@ -977,6 +982,7 @@ public class Stage extends Window {
      * Defines the maximum height of this {@code Stage}.
      *
      * @defaultValue Double.MAX_VALUE
+     * @since JavaFX 2.1
      */
     private DoubleProperty maxHeight;
 

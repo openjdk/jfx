@@ -69,6 +69,7 @@ import com.sun.scenario.effect.PhongLighting;
  * <p>
  * <img * src="doc-files/lighting.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class Lighting extends Effect {
     @Override
@@ -88,6 +89,7 @@ public class Lighting extends Effect {
     /**
      * Creates a new instance of Lighting with the specified light.
      * @param light the light source for this {@code Lighting} effect
+     * @since JavaFX 2.1
      */
     public Lighting(Light light) {
         Shadow shadow = new Shadow();

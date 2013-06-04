@@ -53,6 +53,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.ReadOnlyBooleanProperty
  * @see ReadOnlyJavaBeanBooleanPropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanBooleanProperty extends ReadOnlyBooleanPropertyBase implements ReadOnlyJavaBeanProperty<Boolean> {
 

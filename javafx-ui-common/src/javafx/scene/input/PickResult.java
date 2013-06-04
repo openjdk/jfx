@@ -32,6 +32,7 @@ import javafx.scene.Node;
 
 /**
  * A container object that contains the result of a pick event
+ * @since JavaFX 8.0
  */
 public class PickResult {
 

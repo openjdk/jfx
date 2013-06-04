@@ -33,6 +33,7 @@ import com.sun.javafx.sg.PGPath;
  *
  * <p>For more information on path elements see the {@link Path} and 
  * {@link PathElement} classes.
+ * @since JavaFX 2.0
  */    
 public class ClosePath extends PathElement {
     

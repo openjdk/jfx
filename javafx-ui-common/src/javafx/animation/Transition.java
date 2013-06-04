@@ -76,6 +76,7 @@ import javafx.scene.Node;
  * 
  * @see Animation
  * 
+ * @since JavaFX 2.0
  */
 public abstract class Transition extends Animation {
 

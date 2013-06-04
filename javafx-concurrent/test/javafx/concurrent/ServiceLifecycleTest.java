@@ -35,6 +35,7 @@ import javafx.concurrent.mocks.SimpleTask;
 import javafx.event.EventHandler;
 import org.junit.After;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import static org.junit.Assert.*;
 
@@ -1292,6 +1293,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertNull(service.onCancelledProperty().get());
     }
 
+    @Ignore("RT-30173")
     @Test public void onCancelledFilterCalledBefore_onCancelled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);

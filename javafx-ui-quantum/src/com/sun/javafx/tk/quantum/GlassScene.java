@@ -103,6 +103,10 @@ abstract class GlassScene implements TKScene {
         accessCtrlCtx = ctx;
     }
 
+    public void waitForRenderingToComplete() {
+        PaintCollector.getInstance().waitForRenderingToComplete();
+    }
+
     @Override
     public void waitForSynchronization() {
         AbstractPainter.renderLock.lock();

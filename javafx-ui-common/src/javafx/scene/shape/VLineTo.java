@@ -47,6 +47,7 @@ Path path = new Path();
 path.getElements().add(new MoveTo(50.0f, 0.0f));
 path.getElements().add(new VLineTo(50.0f));
 </PRE>
+ * @since JavaFX 2.0
  */
 public  class VLineTo extends PathElement {
 

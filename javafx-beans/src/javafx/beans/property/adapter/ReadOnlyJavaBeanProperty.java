@@ -32,6 +32,7 @@ import javafx.beans.property.ReadOnlyProperty;
  * readonly Java Bean properties and JavaFX properties.
  * 
  * @param T The type of the wrapped property
+ * @since JavaFX 2.1
  */
 public interface ReadOnlyJavaBeanProperty<T> extends ReadOnlyProperty<T> {
     /**

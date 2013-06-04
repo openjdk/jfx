@@ -29,6 +29,7 @@ import java.io.IOException;
 
 /**
  * Thrown when an error is encountered during a load operation.
+ * @since JavaFX 2.0
  */
 public class LoadException extends IOException {
     private static final long serialVersionUID = 0;

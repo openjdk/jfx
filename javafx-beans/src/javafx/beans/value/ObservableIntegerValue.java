@@ -32,6 +32,7 @@ package javafx.beans.value;
  * @see ObservableNumberValue
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface ObservableIntegerValue extends ObservableNumberValue {
 

@@ -34,6 +34,7 @@ import java.io.Serializable;
  *     Duration's can be created using the constructor, or one of the static construction
  *     methods such as {@link #seconds} or {@link #minutes}.
  * </p>
+ * @since JavaFX 2.0
  */
 public class Duration implements Comparable<Duration>, Serializable {
     /**

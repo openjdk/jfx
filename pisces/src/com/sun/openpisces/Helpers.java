@@ -263,7 +263,6 @@ final class Helpers {
      * half of the subdivided curve
      * @param rightoff the offset into the array of the beginning of the
      * the 6 right coordinates
-     * @since 1.7
      */
     static void subdivideCubic(float src[], int srcoff,
                                float left[], int leftoff,

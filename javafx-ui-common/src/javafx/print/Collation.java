@@ -30,7 +30,7 @@ package javafx.print;
  * of a printed document in a job are to be in sequence.
  * It has no effect or relevance unless multiple job copies are printed.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public enum Collation {
 

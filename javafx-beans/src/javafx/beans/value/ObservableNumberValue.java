@@ -39,6 +39,7 @@ package javafx.beans.value;
  * @see ObservableLongValue
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface ObservableNumberValue extends ObservableValue<Number> {
 

@@ -119,4 +119,15 @@ class JSObject extends netscape.javascript.JSObject {
     public int hashCode() {
         return (int) (peer ^ (peer >> 17));
     }
+
+    private static JSException fwkMakeException(Object value) {
+        String msg = value == null ? null : value.toString();
+        // Would like to set wrappedException, but can't do that while
+        // also setting the message.  Perhaps we should create a subclass.
+        JSException ex
+            = new JSException(value == null ? null : value.toString());
+        if (value instanceof Throwable)
+            ex.initCause((Throwable) value);
+        return ex;
+    }
 }

@@ -27,6 +27,7 @@ package javafx.stage;
 
 /**
  * This enum defines the possible modality types for a {@code Stage}.
+ * @since JavaFX 2.0
  */
 public enum Modality {
 

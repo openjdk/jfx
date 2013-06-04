@@ -74,6 +74,7 @@ import javafx.css.StyleableProperty;
  * <p>
  * MnemonicParsing is enabled by default for ToggleButton.
  * </p>
+ * @since JavaFX 2.0
  */
 
 // TODO Mention the semantics when binding "selected" on multiple toggle buttons

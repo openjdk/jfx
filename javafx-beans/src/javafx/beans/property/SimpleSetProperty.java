@@ -34,6 +34,7 @@ import javafx.collections.ObservableSet;
  * @see SetPropertyBase
  *
  * @param <E> the type of the {@code Set} elements
+ * @since JavaFX 2.1
  */
 public class SimpleSetProperty<E> extends SetPropertyBase<E> {
 

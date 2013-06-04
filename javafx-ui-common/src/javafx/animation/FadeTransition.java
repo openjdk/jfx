@@ -79,6 +79,7 @@ import javafx.util.Duration;
  * @see Transition
  * @see Animation
  * 
+ * @since JavaFX 2.0
  */
 public final class FadeTransition extends Transition {
     private static final double EPSILON = 1e-12;

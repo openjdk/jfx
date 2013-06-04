@@ -43,6 +43,7 @@ import javafx.scene.Node;
  * or {@link javafx.scene.Parent#getStylesheets()}</li>
  * <li>a style from {@link javafx.scene.Node#setStyle(java.lang.String)}</li>
  * </ol>
+ * @since JavaFX 8.0
  */
 public interface StyleableProperty<T> extends WritableValue<T> {
     

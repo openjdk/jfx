@@ -45,6 +45,7 @@ import com.sun.javafx.binding.StringFormatter;
  * @see LongExpression
  * @see FloatExpression
  * @see DoubleExpression
+ * @since JavaFX 2.0
  */
 public abstract class NumberExpressionBase implements NumberExpression {
 

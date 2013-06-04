@@ -80,11 +80,13 @@ import com.sun.javafx.tk.Toolkit;
  * }
  * </code></pre>
  * </p>
+ * @since JavaFX 2.0
  */
 public final class FileChooser {
     /**
      * Defines an extension filter, used for filtering which files can be chosen
      * in a FileDialog based on the file name extensions.
+     * @since JavaFX 2.0
      */
     public static final class ExtensionFilter {
         private final String description;

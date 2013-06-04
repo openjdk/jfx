@@ -132,6 +132,7 @@ import javafx.beans.value.WritableValue;
  * @see TableView
  * @see TableCell
  * @see TablePosition
+ * @since JavaFX 2.0
  */
 public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
     
@@ -597,6 +598,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     /**
      * {@inheritDoc}
      * @return "TableColumn"
+     * @since JavaFX 8.0
      */
     @Override
     public String getTypeSelector() {
@@ -606,6 +608,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     /**
      * {@inheritDoc}
      * @return {@code getTableView()}
+     * @since JavaFX 8.0
      */
     @Override
     public Styleable getStyleableParent() {
@@ -614,6 +617,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
     /**
      * {@inheritDoc}
+    * @since JavaFX 8.0
     */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
@@ -675,6 +679,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * 
      * @param <S> The TableView type
      * @param <T> The TableColumn type
+     * @since JavaFX 2.0
      */
     public static class CellDataFeatures<S,T> {
         private final TableView<S> tableView;
@@ -722,12 +727,14 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     
     /**
      * An event that is fired when a user performs an edit on a table cell.
+     * @since JavaFX 2.0
      */
     public static class CellEditEvent<S,T> extends Event {
         private static final long serialVersionUID = -609964441682677579L;
 
         /**
          * Common supertype for all cell edit event types.
+         * @since JavaFX 8.0
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
@@ -837,6 +844,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     /**
      * Enumeration that specifies the type of sorting being applied to a specific
      * column.
+     * @since JavaFX 2.0
      */
     public static enum SortType {
         /**

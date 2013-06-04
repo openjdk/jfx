@@ -59,6 +59,7 @@ import javafx.css.StyleableProperty;
  * </code></pre>
  *
  * Implementation of ProgressIndicator According to JavaFX UI Control API Specification
+ * @since JavaFX 2.0
  */
 
 public class ProgressIndicator extends Control {

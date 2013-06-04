@@ -80,6 +80,7 @@ import javafx.scene.input.ScrollEvent.VerticalTextScrollUnits;
  *
  * <p>
  * For triggering context menus see the {@link ContextMenuEvent}.
+ * @since JavaFX 2.0
  */
 public final class KeyEvent extends InputEvent {
 
@@ -185,6 +186,7 @@ public final class KeyEvent extends InputEvent {
      * @param controlDown true if control modifier was pressed.
      * @param altDown true if alt modifier was pressed.
      * @param metaDown true if meta modifier was pressed.
+     * @since JavaFX 8.0
      */
     public KeyEvent(Object source, EventTarget target, EventType<KeyEvent> eventType, String character,
             String text, KeyCode code, boolean shiftDown, boolean controlDown,
@@ -211,6 +213,7 @@ public final class KeyEvent extends InputEvent {
      * @param controlDown true if control modifier was pressed.
      * @param altDown true if alt modifier was pressed.
      * @param metaDown true if meta modifier was pressed.
+     * @since JavaFX 8.0
      */
     public KeyEvent(EventType<KeyEvent> eventType, String character,
             String text, KeyCode code, boolean shiftDown, boolean controlDown,
@@ -428,6 +431,7 @@ public final class KeyEvent extends InputEvent {
      * @param target the new target of the copied event
      * @param type the new event type.
      * @return the event copy with the fields substituted
+     * @since JavaFX 8.0
      */
     public KeyEvent copyFor(Object source, EventTarget target, EventType<KeyEvent> type) {
         KeyEvent e = copyFor(source, target);

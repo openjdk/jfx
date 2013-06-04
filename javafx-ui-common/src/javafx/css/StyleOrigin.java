@@ -27,6 +27,7 @@ package javafx.css;
 
 /**
  * Enumeration of the possible source or origin of a stylesheet and styles. 
+ * @since JavaFX 8.0
  */
 public enum StyleOrigin {
     /** The stylesheet is a user-agent stylesheet */

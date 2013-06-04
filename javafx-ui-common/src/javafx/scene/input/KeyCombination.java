@@ -44,6 +44,7 @@ import java.util.List;
  * By using {@code shortcut} key modifier developers can create platform
  * independent shortcuts. So the "Shortcut+C" key combination is handled
  * internally as "Ctrl+C" on Windows and "Meta+C" on Mac.
+ * @since JavaFX 2.0
  */
 public abstract class KeyCombination {
 
@@ -323,6 +324,7 @@ public abstract class KeyCombination {
      *
      * @param value the string which represents the requested key combination
      * @return the constructed {@code KeyCombination}
+     * @since JavaFX 2.1
      */
     public static KeyCombination valueOf(String value) {
         final List<Modifier> modifiers = new ArrayList<Modifier>(4);
@@ -392,6 +394,7 @@ public abstract class KeyCombination {
 
     /**
      * This class represents a pair of modifier key and its value.
+     * @since JavaFX 2.0
      */
     public static final class Modifier {
         private final KeyCode key;
@@ -435,6 +438,7 @@ public abstract class KeyCombination {
 
     /**
      * {@code ModifierValue} specifies state of modifier keys.
+     * @since JavaFX 2.0
      */
     public static enum ModifierValue {
         /** Constant which indicates that the modifier key must be down. */

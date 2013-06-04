@@ -63,6 +63,7 @@ customMenuItem.setHideOnClick(false);
  *
  * @see MenuItem
  * @see Menu
+ * @since JavaFX 2.0
  */
 public class CustomMenuItem extends MenuItem {
     

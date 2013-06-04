@@ -44,6 +44,7 @@ import com.sun.javafx.collections.TrackableObservableList;
  * some situations it is desirable to explicitly manage which
  * {@code ToggleGroup} is used by <code>{@link Toggle Toggles}</code>.
  * </p>
+ * @since JavaFX 2.0
  */
 public class ToggleGroup {
     /**

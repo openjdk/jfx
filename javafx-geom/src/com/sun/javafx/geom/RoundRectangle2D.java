@@ -34,7 +34,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * with which to round the corners.
  *
  * @version 1.29, 05/05/07
- * @since 1.2
  */
 public class RoundRectangle2D extends RectangularShape {
     /**
@@ -132,7 +131,6 @@ public class RoundRectangle2D extends RectangularShape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     @Override
     public boolean isEmpty() {
@@ -156,7 +154,6 @@ public class RoundRectangle2D extends RectangularShape {
      *             <code>RoundRectangle2D</code>
      * @param arch the height to which to set the arc of this
      *             <code>RoundRectangle2D</code>
-     * @since 1.2
      */
     public void setRoundRect(float x, float y, float w, float h,
                                  float arcw, float arch)
@@ -196,7 +193,6 @@ public class RoundRectangle2D extends RectangularShape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     @Override
     public boolean contains(float x, float y) {
@@ -323,7 +319,6 @@ public class RoundRectangle2D extends RectangularShape {
     /**
      * Returns the hashcode for this <code>RoundRectangle2D</code>.
      * @return the hashcode for this <code>RoundRectangle2D</code>.
-     * @since 1.6
      */
     @Override
     public int hashCode() {
@@ -348,7 +343,6 @@ public class RoundRectangle2D extends RectangularShape {
      * @return  <code>true</code> if <code>obj</code> is an instance
      *          of <code>RoundRectangle2D</code> and has the same values;
      *          <code>false</code> otherwise.
-     * @since 1.6
      */
     @Override
     public boolean equals(Object obj) {

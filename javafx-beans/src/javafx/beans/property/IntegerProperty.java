@@ -52,6 +52,7 @@ import com.sun.javafx.binding.Logging;
  * @see ReadOnlyIntegerProperty
  * @see Property
  *
+ * @since JavaFX 2.0
  */
 public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
         Property<Number>, WritableIntegerValue {
@@ -139,6 +140,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      * @throws NullPointerException
      *             if {@code value} is {@code null}
      * @see #asObject()
+     * @since JavaFX 8.0
      */
      public static IntegerProperty integerProperty(final Property<Integer> property) {
         if (property == null) {
@@ -187,6 +189,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      * </pre></blockquote>
      *
      * @return the new {@code ObjectProperty}
+     * @since JavaFX 8.0
      */
     @Override
     public ObjectProperty<Integer> asObject() {

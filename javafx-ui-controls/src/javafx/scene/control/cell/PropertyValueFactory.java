@@ -91,6 +91,7 @@ import com.sun.javafx.scene.control.Logging;
  * @see MapValueFactory
  * @param <S> The type of the class contained within the TableView.items list.
  * @param <T> The type of the class contained within the TableColumn cells.
+ * @since JavaFX 2.0
  */
 public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>, ObservableValue<T>> {
 

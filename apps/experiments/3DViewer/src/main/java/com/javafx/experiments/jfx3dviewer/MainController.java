@@ -49,6 +49,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.ToggleButton;
@@ -72,6 +73,7 @@ public class MainController implements Initializable {
     public Label status;
     public SplitPane splitPane;
     public ToggleButton settingsBtn;
+    public CheckBox loadAsPolygonsCheckBox;
     private Accordion settingsPanel;
     private double settingsLastWidth = -1;
     private int nodeCount = 0;
@@ -169,7 +171,7 @@ public class MainController implements Initializable {
     private void load(File file) {
         loadedPath = file;
         try {
-            Node content = Importer3D.load(file.toURI().toURL().toString());
+            Node content = Importer3D.load(file.toURI().toURL().toString(),loadAsPolygonsCheckBox.isSelected());
             contentModel.set3dContent(content);
         } catch (IOException e) {
             e.printStackTrace();

@@ -29,6 +29,7 @@ package javafx.collections;
  * Interface that receives notifications of changes to an ObservableMap.
  * @param <K> the key element type
  * @param <V> the value element type
+ * @since JavaFX 2.0
  */
 public interface MapChangeListener<K, V> {
 
@@ -41,6 +42,7 @@ public interface MapChangeListener<K, V> {
      *
      * @param <K> key type
      * @param <V> value type
+     * @since JavaFX 2.0
      */
     public static abstract class Change<K, V> {
 

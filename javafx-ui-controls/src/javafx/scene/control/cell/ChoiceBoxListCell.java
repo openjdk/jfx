@@ -52,7 +52,7 @@ import javafx.util.StringConverter;
  * {@link ListView#itemsProperty() items} list.
  * 
  * @param <T> The type of the elements contained within the ListView.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class ChoiceBoxListCell<T> extends ListCell<T> {
     

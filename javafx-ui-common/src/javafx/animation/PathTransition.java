@@ -84,6 +84,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * @see Transition
  * @see Animation
  * 
+ * @since JavaFX 2.0
  */
 public final class PathTransition extends Transition {
 
@@ -211,6 +212,7 @@ public final class PathTransition extends Transition {
 
     /**
      * Specifies the upright orientation of {@code node} along the {@code path}.
+     * @since JavaFX 2.0
      */
     public static enum OrientationType {
 

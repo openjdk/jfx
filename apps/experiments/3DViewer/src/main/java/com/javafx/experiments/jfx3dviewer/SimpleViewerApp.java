@@ -48,6 +48,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.Duration;
 import com.javafx.experiments.importers.Importer3D;
 import com.sun.javafx.perf.PerformanceTracker;
@@ -67,8 +68,9 @@ public class SimpleViewerApp extends Application {
 
     @Override public void start(Stage stage) throws Exception {
         List<String> args = getParameters().getRaw();
-        Scene scene = new Scene(root3D,1920,1080,true,false);
-        scene.setFill(Color.ALICEBLUE);
+        final Scene scene = new Scene(root3D,1920,1080,true,false);
+        scene.setFill(Color.TRANSPARENT);
+        stage.initStyle(StageStyle.TRANSPARENT);
 
         // CAMERA
         camera.getTransforms().addAll(

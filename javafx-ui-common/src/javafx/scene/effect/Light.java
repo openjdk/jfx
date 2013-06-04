@@ -38,6 +38,7 @@ import com.sun.javafx.tk.Toolkit;
 
 /**
  * The abstract base class for all light implementations.
+ * @since JavaFX 2.0
  */
 public abstract class Light {
 
@@ -171,6 +172,7 @@ public abstract class Light {
      *
      * <p> The code above produces the following: </p> 
      * <p> <img src="doc-files/lightdistant.png"/> </p>
+     * @since JavaFX 2.0
      */
     public static class Distant extends Light {
        /**
@@ -184,6 +186,7 @@ public abstract class Light {
         * @param azimuth the azimuth of the light
         * @param elevation the elevation of the light
         * @param color the color of the light
+        * @since JavaFX 2.1
         */
         public Distant(double azimuth, double elevation, Color color) {
            setAzimuth(azimuth);
@@ -323,6 +326,7 @@ public abstract class Light {
      *
      * <p> The code above produces the following: </p> 
      * <p> <img src="doc-files/lightpoint.png"/> </p>
+     * @since JavaFX 2.0
      */
     public static class Point extends Light {
        /**
@@ -337,6 +341,7 @@ public abstract class Light {
         * @param y the y coordinate of the light position
         * @param z the z coordinate of the light position
         * @param color the color of the light
+        * @since JavaFX 2.1
         */
         public Point(double x, double y, double z, Color color) {
            setX(x);
@@ -529,6 +534,7 @@ public abstract class Light {
      * <p> The code above produces the following: </p> 
      * <p> <img src="doc-files/lightspot.png"/> </p>
      *
+     * @since JavaFX 2.0
      */
     public static class Spot extends Light.Point {
        /**
@@ -545,6 +551,7 @@ public abstract class Light {
         * @param specularExponent the specular exponent, which controls the 
         * focus of the light source
         * @param color the color of the light
+        * @since JavaFX 2.1
         */
         public Spot(double x, double y, double z, double specularExponent, Color color) {
            setX(x);

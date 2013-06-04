@@ -55,6 +55,7 @@ quad.setEndY(50.0f);
 quad.setControlX(25.0f);
 quad.setControlY(0.0f);
 </PRE>
+ * @since JavaFX 2.0
  */
 public  class QuadCurve extends Shape {
 

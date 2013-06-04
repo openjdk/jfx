@@ -57,6 +57,7 @@ import javafx.css.StyleableProperty;
 /**
  * A axis implementation that will works on string categories where each 
  * value as a unique category(tick mark) along the axis.
+ * @since JavaFX 2.0
  */
 public final class CategoryAxis extends Axis<String> {
 
@@ -597,6 +598,7 @@ public final class CategoryAxis extends Axis<String> {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -604,6 +606,7 @@ public final class CategoryAxis extends Axis<String> {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

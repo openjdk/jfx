@@ -56,6 +56,7 @@ import com.sun.javafx.scene.control.skin.TableRowSkin;
  * @see IndexedCell
  * @see Cell
  * @param <T> The type of the item contained within the Cell.
+ * @since JavaFX 2.0
  */
 public class TableRow<T> extends IndexedCell<T> {
 

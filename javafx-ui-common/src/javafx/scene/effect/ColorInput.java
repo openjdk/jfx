@@ -47,6 +47,7 @@ import com.sun.javafx.tk.Toolkit;
  * with the given {@code Paint}.  This is equivalent to rendering a
  * filled rectangle into an image and using an {@code ImageInput} effect,
  * except that it is more convenient and potentially much more efficient.
+ * @since JavaFX 2.0
  */
 public class ColorInput extends Effect {
     /**
@@ -62,6 +63,7 @@ public class ColorInput extends Effect {
      * @param width the width of the region to be flooded
      * @param height the height of the region to be flooded
      * @param paint the {@code Paint} used to flood the region
+     * @since JavaFX 2.1
      */
     public ColorInput(double x, 
                       double y,

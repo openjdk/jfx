@@ -40,6 +40,7 @@ import javafx.collections.transformation.SortedList;
  * @see ListChangeListener
  * @see ListChangeListener.Change
  * @param <E> the list element type
+ * @since JavaFX 2.0
  */
 public interface ObservableList<E> extends List<E>, Observable {
     /**
@@ -106,6 +107,7 @@ public interface ObservableList<E> extends List<E>, Observable {
      * the specified predicate.
      * @param predicate the predicate to use
      * @return new {@code FilteredList}
+     * @since JavaFX 8.0
      */
     public default FilteredList<E> filtered(Predicate<E> predicate) {
         return new FilteredList<>(this, predicate);
@@ -116,6 +118,7 @@ public interface ObservableList<E> extends List<E>, Observable {
      * the specified comparator.
      * @param comparator the comparator to use or null for the natural order
      * @return new {@code SortedList}
+     * @since JavaFX 8.0
      */
     public default SortedList<E> sorted(Comparator<E> comparator) {
         return new SortedList<>(this, comparator);
@@ -125,6 +128,7 @@ public interface ObservableList<E> extends List<E>, Observable {
      * Creates a {@link SortedList} wrapper of this list with the natural
      * ordering.
      * @return new {@code SortedList}
+     * @since JavaFX 8.0
      */
     public default SortedList<E> sorted() {
         return sorted(null);

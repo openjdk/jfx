@@ -29,6 +29,7 @@ import com.sun.javafx.scene.control.skin.PasswordFieldSkin;
 
 /**
  * Text field that masks entered characters.
+ * @since JavaFX 2.0
  */
 public class PasswordField extends TextField {
     public PasswordField() {

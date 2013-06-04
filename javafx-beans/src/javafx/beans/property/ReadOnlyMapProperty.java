@@ -42,6 +42,7 @@ import javafx.collections.ObservableMap;
  *
  * @param <K> the type of the key elements of the map
  * @param <V> the type of the value elements of the map
+ * @since JavaFX 2.1
  */
 public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> implements ReadOnlyProperty<ObservableMap<K, V>>  {
 

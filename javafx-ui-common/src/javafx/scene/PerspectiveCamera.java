@@ -80,7 +80,7 @@ import sun.util.logging.PlatformLogger;
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
  * 
- * @since JavaFX 1.3
+ * @since JavaFX 2.0
  */
 public  class PerspectiveCamera extends Camera {   
 
@@ -138,7 +138,7 @@ public  class PerspectiveCamera extends Camera {
      * apply to the horizontal dimension of the projection plane.
      *
      * @defaultValue true
-     * @since JavaFX 8
+     * @since JavaFX 8.0
      */
     private BooleanProperty verticalFieldOfView;
 
@@ -191,7 +191,7 @@ public  class PerspectiveCamera extends Camera {
      * transform (move) the camera. Transforming the camera when fixedEyeAtCameraZero
      * is set to false may lead to results that are not intuitive.
      * 
-     * @since JavaFX 8
+     * @since JavaFX 8.0
      */ 
     public PerspectiveCamera(boolean fixedEyeAtCameraZero) {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
@@ -263,7 +263,7 @@ public  class PerspectiveCamera extends Camera {
     }
 
     @Override
-    protected void computeViewTransform(Affine3D view) {
+    void computeViewTransform(Affine3D view) {
 
         // In the case of fixedEyeAtCameraZero the camera position is (0,0,0) in
         // local coord. of the camera node. In non-fixed eye case, the camera

@@ -153,6 +153,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
     
     jobject result =
             env->CallStaticObjectMethod(jCommonDialogs, jCreateFileChooserResult, jFileNames, jFilters, index);
+    LOG_EXCEPTION(env)
     
     g_slist_free(filters);
     gtk_widget_destroy(chooser);

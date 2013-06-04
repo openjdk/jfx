@@ -202,20 +202,19 @@ jobject JSValue_to_Java_Object(
 static void throwJavaException(
     JNIEnv* env,
     JSContextRef ctx,
-    JSValueRef exception)
+    JSValueRef exception,
+    JSC::Bindings::RootObject* rootObject)
 {
-    jclass clJSException = getJSExceptionClass(env);
-    static jmethodID constructorID =
-        env->GetMethodID(clJSException, "<init>",
-                        "(Ljava/lang/String;)V");
+    jclass clJSObject = getJSObjectClass(env);
+    jobject jex = JSValue_to_Java_Object(exception, env, ctx, rootObject);
+    static jmethodID makeID =
+        env->GetStaticMethodID(clJSObject, "fwkMakeException",
+                        "(Ljava/lang/Object;)Lnetscape/javascript/JSException;");
 
-    env->Throw(JLocalRef<jthrowable>((jthrowable)env->NewObject(
-            clJSException,
-            constructorID,
-            (jstring)JLString(WebCore::JSValue_to_Java_String(
-                exception,
-                env,
-                ctx)))));
+    env->Throw(JLocalRef<jthrowable>((jthrowable)env->CallStaticObjectMethod(
+            clJSObject,
+            makeID,
+            jex)));
 }
 
 jobject executeScript(
@@ -234,7 +233,7 @@ jobject executeScript(
     JSValueRef value = JSEvaluateScript(ctx, script, object, NULL, 1, &exception);
     JSStringRelease(script);
     if (exception) {
-        throwJavaException(env, ctx, exception);
+        throwJavaException(env, ctx, exception, rootObject);
         return NULL;
     }
     return WebCore::JSValue_to_Java_Object(value, env, ctx, rootObject);
@@ -340,7 +339,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_JSObject_setMemberImpl
     JSObjectSetProperty(ctx, object, name, jsvalue, attributes, &exception);
     JSStringRelease(name);
     if (exception)
-        WebCore::throwJavaException(env, ctx, exception);
+        WebCore::throwJavaException(env, ctx, exception, rootObject.get());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_JSObject_removeMemberImpl
@@ -427,7 +426,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_dom_JSObject_callImpl
                                                &exception);
     delete[] arguments;
     if (exception) {
-        WebCore::throwJavaException(env, ctx, exception);
+        WebCore::throwJavaException(env, ctx, exception, rootObject.get());
         return NULL;
     }
     return WebCore::JSValue_to_Java_Object(result, env, ctx, rootObject.get());

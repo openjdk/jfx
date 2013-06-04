@@ -85,6 +85,7 @@ import javafx.css.Styleable;
  * </code></pre>
  *
  * Implementation of ScrollPane According to JavaFX UI Control API Specification
+ * @since JavaFX 2.0
  */
 @DefaultProperty("content")
 public class ScrollPane extends Control {
@@ -110,6 +111,7 @@ public class ScrollPane extends Control {
     /**
      * Creates a new ScrollPane.
      * @param content the initial content for the ScrollPane
+     * @since JavaFX 8.0
      */
     public ScrollPane(Node content) {
         this();
@@ -702,6 +704,7 @@ public class ScrollPane extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -709,6 +712,7 @@ public class ScrollPane extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
@@ -737,6 +741,7 @@ public class ScrollPane extends Control {
     /**
      * An enumeration denoting the policy to be used by a scrollable
      * Control in deciding whether to show a scroll bar.
+     * @since JavaFX 2.0
      */
     public static enum ScrollBarPolicy {
         /**

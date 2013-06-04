@@ -61,6 +61,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.IntegerProperty
  * @see JavaBeanIntegerPropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class JavaBeanIntegerProperty extends IntegerProperty implements JavaBeanProperty<Number> {
 

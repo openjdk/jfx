@@ -29,6 +29,7 @@ import com.sun.javafx.application.PlatformImpl;
 
 /**
  * Application platform support class.
+ * @since JavaFX 2.0
  */
 public final class Platform {
 
@@ -97,7 +98,7 @@ public final class Platform {
      *
      * @param implicitExit a flag indicating whether or not to implicitly exit
      * when the last window is closed.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public static void setImplicitExit(boolean implicitExit) {
         PlatformImpl.setImplicitExit(implicitExit);
@@ -107,7 +108,7 @@ public final class Platform {
      * Gets the value of the implicitExit attribute.
      *
      * @return the implicitExit attribute
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public static boolean isImplicitExit() {
         return PlatformImpl.isImplicitExit();

@@ -217,30 +217,24 @@ void setupTools(String name, Closure loader, Closure processor) {
  *                                                                            *
  *****************************************************************************/
 
-// BUILD_CLOSED is a short-hand to specify that a "closed" build should be done.
+// BUILD_CLOSED is used to specify that a "closed" build should be done.
 // It is false by default and is set by a command line property. If true then
-// SUPPLEMENTAL_BUILD_FILE and SUPPLEMENTAL_PROPERTY_FILE will be set to
+// the closed build and property files will be read from
 // ../rt-closed/closed-build.gradle and ../rt-closed/closed-properties.gradle
 // respectively
 
-defineProperty("BUILD_CLOSED", "false");
 def buildClosed = false;
-if (BUILD_CLOSED instanceof String) buildClosed = Boolean.parseBoolean(BUILD_CLOSED);
-
-if (buildClosed) {
-    def closedDir = file("../rt-closed");
-    defineProperty("SUPPLEMENTAL_BUILD_FILE", "$closedDir/closed-build.gradle");
+if (hasProperty("BUILD_CLOSED")) {
+    buildClosed = Boolean.parseBoolean(BUILD_CLOSED);
 }
+ext.BUILD_CLOSED = buildClosed
 
-// The IS_CLOSED property should be used for logic that needs to do something
-// conditionally based on whether or not we are doing a closed build.
-ext.IS_CLOSED = hasProperty("SUPPLEMENTAL_BUILD_FILE");
+def closedDir = file("../rt-closed");
+def supplementalPropertyFile = file("$closedDir/closed-properties.gradle");
+def supplementalBuildFile = file("$closedDir/closed-build.gradle");
 
-if (IS_CLOSED) {
-    def closedDir = file("$SUPPLEMENTAL_BUILD_FILE").getParentFile();
-    defineProperty("SUPPLEMENTAL_PROPERTY_FILE", "$closedDir/closed-properties.gradle");
-
-    apply from: SUPPLEMENTAL_PROPERTY_FILE
+if (BUILD_CLOSED) {
+    apply from: supplementalPropertyFile
 }
 
 // These variables indicate what platform is running the build. Is
@@ -1047,6 +1041,22 @@ project(":fxml") {
     }
 }
 
+project(":builders") {
+    sourceCompatibility = 1.7
+
+    dependencies {
+        compile BUILD_SRC, project(":base"), project(":graphics"),
+                project(":controls"), project(":swt"), project(":swing")
+        testCompile project(":graphics").sourceSets.stub.output
+    }
+    test {
+        // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
+        // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
+        // we have to use the stub toolkit for now.
+        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
+    }
+}
+
 project(":designTime") {
     tasks.all {
         if (!COMPILE_DESIGN_TIME) it.enabled = false
@@ -1357,7 +1367,7 @@ task findbugs() {
 
     // TODO: implement this
     doLast {
-        if (!IS_CLOSED) {
+        if (!BUILD_CLOSED) {
             println "findbugs task is not implemented"
         }
     }
@@ -1369,7 +1379,7 @@ task findbugs() {
 task publicExports() {
     dependsOn(sdk)
     doLast {
-        if (!IS_CLOSED) {
+        if (!BUILD_CLOSED) {
             println "publicExports task is only run for a closed build"
         }
     }
@@ -1378,7 +1388,7 @@ task publicExports() {
 task perf() {
     dependsOn(sdk,apps)
     doLast {
-        if (!IS_CLOSED) {
+        if (!BUILD_CLOSED) {
             println "perf task is only run for a closed build"
         }
     }
@@ -1387,7 +1397,7 @@ task perf() {
 task zips() {
     dependsOn(sdk,publicExports,apps,perf)
     doLast {
-        if (!IS_CLOSED) {
+        if (!BUILD_CLOSED) {
             println "zips task is only run for a closed build"
         }
     }
@@ -1417,6 +1427,7 @@ compileTargets { t ->
         includeEmptyDirs = false
         from("modules/base/build/classes/main",
              "modules/base/build/resources/main",
+             "modules/builders/build/classes/main",
              "modules/graphics/build/classes/main",
              "modules/graphics/build/resources/main",
              "modules/controls/build/classes/main",
@@ -1560,7 +1571,7 @@ compileTargets { t ->
         <name must-exist="no">build</name>
       </task-names>
       <task-args>
-        <arg>-PSUPPLEMENTAL_BUILD_FILE=../rt-closed/closed-build.gradle</arg>
+        <arg>-PBUILD_CLOSED=true</arg>
       </task-args>
       <task-jvm-args/>
     </task>
@@ -1573,7 +1584,7 @@ compileTargets { t ->
         <name must-exist="yes">tasks</name>
       </task-names>
       <task-args>
-        <arg>-PSUPPLEMENTAL_BUILD_FILE=../rt-closed/closed-build.gradle</arg>
+        <arg>-PBUILD_CLOSED=true</arg>
       </task-args>
       <task-jvm-args/>
     </task>
@@ -1868,7 +1879,7 @@ cleanIdeaWorkspace.description = "Deletes the javafx.ipw file"
 
 /******************************************************************************
  *                                                                            *
- *                         SUPPLEMENTAL_BUILD_FILE                            *
+ *                              BUILD_CLOSED                                  *
  *                                                                            *
  * This next section should remain at the end of the build script. It allows  *
  * for a "supplemental" gradle file to be used to extend the normal build     *
@@ -1877,6 +1888,6 @@ cleanIdeaWorkspace.description = "Deletes the javafx.ipw file"
  *                                                                            *
  *****************************************************************************/
 
-if (IS_CLOSED) {
-    apply from: SUPPLEMENTAL_BUILD_FILE
+if (BUILD_CLOSED) {
+    apply from: supplementalBuildFile
 }

@@ -72,6 +72,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
+import javafx.util.Callback;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -132,6 +133,7 @@ import sun.util.logging.PlatformLogger;
  * {@link #setLayoutX(double) layoutX}/{@link #setLayoutY(double) layoutY} and do not alter
  * {@link #setTranslateX(double) translateX}/{@link #setTranslateY(double) translateY}, which are reserved for
  * adjustments and animation.
+ * @since JavaFX 2.0
  */
 public class Region extends Parent {
 
@@ -251,11 +253,19 @@ public class Region extends Parent {
         return snapToPixel ? Math.round(value) : value;
     }
 
-    static double getMaxAreaBaselineOffset(List<Node> content, Insets margins[]) {
+    private static double snapPortion(double value, boolean snapToPixel) {
+        if (snapToPixel) {
+            return (value > 0 ? Math.max(1, Math.floor(value)) : Math.min(-1, Math.ceil(value)));
+        }
+        return value;
+    }
+
+    static double getMaxAreaBaselineOffset(List<Node> content, Callback<Node, Insets> margins) {
         double max = 0;
         for (int i = 0, maxPos = content.size(); i < maxPos; i++) {
             final Node node = content.get(i);
-            final double topMargin = margins[i] != null ? margins[i].getTop() : 0;
+            final Insets margin = margins.call(node);
+            final double topMargin = margin != null ? margin.getTop() : 0;
             final double position = topMargin + node.getBaselineOffset();
             max = max >= position ? max : position; // Math.max
         }
@@ -418,9 +428,10 @@ public class Region extends Parent {
                 }
                 set(lastValidValue);
                 throw new NullPointerException("cannot set padding to null");
+            } else if (!newValue.equals(lastValidValue)) {
+                lastValidValue = newValue;
+                insets.fireValueChanged();
             }
-            lastValidValue = newValue;
-            insets.fireValueChanged();
         }
     };
     public final void setPadding(Insets value) { padding.set(value); }
@@ -431,6 +442,7 @@ public class Region extends Parent {
      * The background of the Region, which is made up of zero or more BackgroundFills, and
      * zero or more BackgroundImages. It is possible for a Background to be empty, where it
      * has neither fills nor images, and is semantically equivalent to null.
+     * @since JavaFX 8.0
      */
     private final ObjectProperty<Background> background = new StyleableObjectProperty<Background>(null) {
         private Background old = null;
@@ -464,6 +476,7 @@ public class Region extends Parent {
      * The border of the Region, which is made up of zero or more BorderStrokes, and
      * zero or more BorderImages. It is possible for a Border to be empty, where it
      * has neither strokes nor images, and is semantically equivalent to null.
+     * @since JavaFX 8.0
      */
     private final ObjectProperty<Border> border = new StyleableObjectProperty<Border>(null) {
         private Border old = null;
@@ -501,6 +514,7 @@ public class Region extends Parent {
      * a Region based on the backgrounds and borders of that region. The values
      * for each of the insets must be real numbers, not NaN or Infinity. If
      * no known insets exist, then the opaqueInsets should be set to null.
+     * @since JavaFX 8.0
      */
     public final ObjectProperty<Insets> opaqueInsetsProperty() {
         if (opaqueInsets == null) {
@@ -530,8 +544,9 @@ public class Region extends Parent {
      * or (0, 0, width, height)) to the edge of the content area. All child nodes should be laid out
      * within the content area. The insets are computed based on the Border which has been specified,
      * if any, and also the padding.
+     * @since JavaFX 8.0
      */
-    private InsetsProperty insets = new InsetsProperty();
+    private final InsetsProperty insets = new InsetsProperty();
     public final Insets getInsets() { return insets.get(); }
     public final ReadOnlyObjectProperty<Insets> insetsProperty() { return insets; }
     private final class InsetsProperty extends ReadOnlyObjectProperty<Insets> {
@@ -662,7 +677,8 @@ public class Region extends Parent {
             impl_layoutBoundsChanged();
             impl_geomChanged();
             impl_markDirty(DirtyBits.NODE_GEOMETRY);
-            requestLayout();
+            setNeedsLayout(true);
+            requestParentLayout();
         }
     }
 
@@ -724,14 +740,13 @@ public class Region extends Parent {
             // We use "NODE_GEOMETRY" to mean that the bounds have changed and
             // need to be sync'd with the render tree
             impl_markDirty(DirtyBits.NODE_GEOMETRY);
-            // TODO why do we do this? If the height can only be changed during
-            // layout, and if calls to requestLayout are ignored during layout,
-            // then why do we call requestLayout? It does protect against the case
-            // that a developer called resize() or whatnot outside of layout, in
-            // which case on the next pulse we'll "correct" the size according
-            // to layout. But I am not sure this case, which produces a visual "bug"
-            // anyway, is worth the cost? The same would go for the widthChanged.
-            requestLayout();
+            // Change of the height (or width) won't change the preferred size.
+            // So we don't need to flush the cache. We should however mark this node
+            // as needs layout to be internally layouted.
+            setNeedsLayout(true);
+            // This call is only needed when this was not called from the parent during the layout.
+            // Otherwise it would flush the cache of the parent, which is not necessary
+            requestParentLayout();
         }
     }
 
@@ -746,13 +761,6 @@ public class Region extends Parent {
             };
         }
         return height.getReadOnlyProperty();
-    }
-
-    private void requestParentLayout() {
-        Parent parent = getParent();
-        if (parent != null) {
-            parent.requestLayout();
-        }
     }
 
     /**
@@ -1001,6 +1009,7 @@ public class Region extends Parent {
      *
      * @default null
      * @css shape SVG shape string
+     * @since JavaFX 8.0
      */
     private ObjectProperty<Shape> shape = null;
     private Shape _shape;
@@ -1043,7 +1052,6 @@ public class Region extends Parent {
 
         @Override public void run() {
             impl_geomChanged();
-            requestLayout();
             impl_markDirty(DirtyBits.REGION_SHAPE);
         }
     };
@@ -1056,6 +1064,7 @@ public class Region extends Parent {
      *
      * @default true
      * @css shape-size      true | false
+     * @since JavaFX 8.0
      */
     private BooleanProperty scaleShape = null;
     public final void setScaleShape(boolean value) { scaleShapeProperty().set(value); }
@@ -1069,8 +1078,7 @@ public class Region extends Parent {
                     return StyleableProperties.SCALE_SHAPE;
                 }
                 @Override public void invalidated() {
-                    // TODO should be requestParentLayout?
-                    requestLayout();
+                    impl_geomChanged();
                     impl_markDirty(DirtyBits.REGION_SHAPE);
                 }
             };
@@ -1085,6 +1093,7 @@ public class Region extends Parent {
      *
      * @default true
      * @css position-shape      true | false
+     * @since JavaFX 8.0
      */
     private BooleanProperty centerShape = null;
     public final void setCenterShape(boolean value) { centerShapeProperty().set(value); }
@@ -1098,8 +1107,7 @@ public class Region extends Parent {
                     return StyleableProperties.POSITION_SHAPE;
                 }
                 @Override public void invalidated() {
-                    // TODO should be requestParentLayout?
-                    requestLayout();
+                    impl_geomChanged();
                     impl_markDirty(DirtyBits.REGION_SHAPE);
                 }
             };
@@ -1113,6 +1121,7 @@ public class Region extends Parent {
      *
      * @default true
      * @css -fx-cache-shape      true | false
+     * @since JavaFX 8.0
      */
     private BooleanProperty cacheShape = null;
     public final void setCacheShape(boolean value) { cacheShapeProperty().set(value); }
@@ -1382,12 +1391,16 @@ public class Region extends Parent {
         return snapPosition(value, isSnapToPixel());
     }
 
+    double snapPortion(double value) {
+        return snapPortion(value, isSnapToPixel());
+    }
+
 
     /**
      * Utility method to get the top inset which includes padding and border
      * inset. Then snapped to whole pixels if isSnapToPixel() is true.
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      * @return Rounded up insets top
      */
     public final double snappedTopInset() {
@@ -1398,7 +1411,7 @@ public class Region extends Parent {
      * Utility method to get the bottom inset which includes padding and border
      * inset. Then snapped to whole pixels if isSnapToPixel() is true.
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      * @return Rounded up insets bottom
      */
     public final double snappedBottomInset() {
@@ -1409,7 +1422,7 @@ public class Region extends Parent {
      * Utility method to get the left inset which includes padding and border
      * inset. Then snapped to whole pixels if isSnapToPixel() is true.
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      * @return Rounded up insets left
      */
     public final double snappedLeftInset() {
@@ -1420,7 +1433,7 @@ public class Region extends Parent {
      * Utility method to get the right inset which includes padding and border
      * inset. Then snapped to whole pixels if isSnapToPixel() is true.
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      * @return Rounded up insets right
      */
     public final double snappedRightInset() {
@@ -1537,57 +1550,57 @@ public class Region extends Parent {
 
     /* Max of children's minimum area widths */
 
-    double computeMaxMinAreaWidth(List<Node> children, Insets margins[], HPos halignment /* ignored for now */) {
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> margins, HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, margins, new double[] { -1 }, true);
     }
 
-    double computeMaxMinAreaWidth(List<Node> children, Insets margins[], HPos halignment /* ignored for now */, double height) {
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> margins, HPos halignment /* ignored for now */, double height) {
         return getMaxAreaWidth(children, margins, new double[] { height }, true);
     }
 
-    double computeMaxMinAreaWidth(List<Node> children, Insets childMargins[], double childHeights[], HPos halignment /* ignored for now */) {
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> childMargins, double childHeights[], HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, childMargins, childHeights, true);
     }
 
     /* Max of children's minimum area heights */
 
-    double computeMaxMinAreaHeight(List<Node>children, Insets margins[], VPos valignment) {
-        return getMaxAreaHeight(children, margins, new double[] { -1 }, valignment, true);
+    double computeMaxMinAreaHeight(List<Node>children, Callback<Node, Insets> margins, VPos valignment) {
+        return getMaxAreaHeight(children, margins, null, valignment, true);
     }
 
-    double computeMaxMinAreaHeight(List<Node>children, Insets margins[], VPos valignment, double width) {
+    double computeMaxMinAreaHeight(List<Node>children, Callback<Node, Insets> margins, VPos valignment, double width) {
         return getMaxAreaHeight(children, margins, new double[] { width }, valignment, true);
     }
 
-    double computeMaxMinAreaHeight(List<Node>children, Insets childMargins[], double childWidths[], VPos valignment) {
+    double computeMaxMinAreaHeight(List<Node>children, Callback<Node, Insets> childMargins, double childWidths[], VPos valignment) {
         return getMaxAreaHeight(children, childMargins, childWidths, valignment, true);
     }
 
     /* Max of children's pref area widths */
 
-    double computeMaxPrefAreaWidth(List<Node>children, Insets margins[], HPos halignment /* ignored for now */) {
+    double computeMaxPrefAreaWidth(List<Node>children, Callback<Node, Insets> margins, HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, margins, new double[] { -1 }, false);
     }
 
-    double computeMaxPrefAreaWidth(List<Node>children, Insets margins[], double height, HPos halignment /* ignored for now */) {
+    double computeMaxPrefAreaWidth(List<Node>children, Callback<Node, Insets> margins, double height, HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, margins, new double[] { height }, false);
     }
 
-    double computeMaxPrefAreaWidth(List<Node>children, Insets childMargins[], double childHeights[], HPos halignment /* ignored for now */) {
+    double computeMaxPrefAreaWidth(List<Node>children, Callback<Node, Insets> childMargins, double childHeights[], HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, childMargins, childHeights, false);
     }
 
     /* Max of children's pref area heights */
 
-    double computeMaxPrefAreaHeight(List<Node>children, Insets margins[], VPos valignment) {
-        return getMaxAreaHeight(children, margins, createDoubleArray(children.size(), -1), valignment, false);
+    double computeMaxPrefAreaHeight(List<Node>children, Callback<Node, Insets> margins, VPos valignment) {
+        return getMaxAreaHeight(children, margins, null, valignment, false);
     }
 
-    double computeMaxPrefAreaHeight(List<Node>children, Insets margins[], double width, VPos valignment) {
-        return getMaxAreaHeight(children, margins, createDoubleArray(children.size(), width), valignment, false);
+    double computeMaxPrefAreaHeight(List<Node>children, Callback<Node, Insets> margins, double width, VPos valignment) {
+        return getMaxAreaHeight(children, margins, new double[] { width }, valignment, false);
     }
 
-    double computeMaxPrefAreaHeight(List<Node>children, Insets childMargins[], double childWidths[], VPos valignment) {
+    double computeMaxPrefAreaHeight(List<Node>children, Callback<Node, Insets> childMargins, double childWidths[], VPos valignment) {
         return getMaxAreaHeight(children, childMargins, childWidths, valignment, false);
     }
 
@@ -1650,17 +1663,18 @@ public class Region extends Parent {
     }
 
     /* utility method for computing the max of children's min or pref heights, taking into account baseline alignment */
-    private double getMaxAreaHeight(List<Node> children, Insets childMargins[],  double childWidths[], VPos valignment, boolean minimum) {
-        final double lastChildWidth = childWidths.length > 0 ? childWidths[childWidths.length - 1] : 0;
+    private double getMaxAreaHeight(List<Node> children, Callback<Node,Insets> childMargins,  double childWidths[], VPos valignment, boolean minimum) {
+        final double singleChildWidth = childWidths == null ? -1 : childWidths.length == 1 ? childWidths[0] : Double.NaN;
         if (valignment == VPos.BASELINE) {
             double maxAbove = 0;
             double maxBelow = 0;
             for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
                 final Node child = children.get(i);
                 final double baseline = child.getBaselineOffset();
-                final double top = childMargins[i] != null? snapSpace(childMargins[i].getTop()) : 0;
-                final double bottom = childMargins[i] != null? snapSpace(childMargins[i].getBottom()) : 0;
-                final double childWidth = i < childWidths.length ? childWidths[i] : lastChildWidth;
+                Insets margin = childMargins.call(child);
+                final double top = margin != null? snapSpace(margin.getTop()) : 0;
+                final double bottom = margin != null? snapSpace(margin.getBottom()) : 0;
+                final double childWidth = Double.isNaN(singleChildWidth) ? childWidths[i] : singleChildWidth;
                 maxAbove = Math.max(maxAbove, baseline + top);
                 maxBelow = Math.max(maxBelow,
                         snapSpace(minimum?snapSize(child.minHeight(childWidth)) : snapSize(child.prefHeight(childWidth))) -
@@ -1671,25 +1685,27 @@ public class Region extends Parent {
             double max = 0;
             for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
                 final Node child = children.get(i);
-                final double childWidth = i < childWidths.length ? childWidths[i] : lastChildWidth;
+                Insets margin = childMargins.call(child);
+                final double childWidth = Double.isNaN(singleChildWidth) ? childWidths[i] : singleChildWidth;
                 max = Math.max(max, minimum?
-                    computeChildMinAreaHeight(child, childMargins[i], childWidth) :
-                        computeChildPrefAreaHeight(child, childMargins[i], childWidth));
+                    computeChildMinAreaHeight(child, margin, childWidth) :
+                        computeChildPrefAreaHeight(child, margin, childWidth));
             }
             return max;
         }
     }
 
     /* utility method for computing the max of children's min or pref width, horizontal alignment is ignored for now */
-    private double getMaxAreaWidth(List<javafx.scene.Node> children, Insets childMargins[], double childHeights[], boolean minimum) {
+    private double getMaxAreaWidth(List<javafx.scene.Node> children, Callback<Node, Insets> childMargins, double childHeights[], boolean minimum) {
         final double lastChildHeight = childHeights.length > 0 ? childHeights[childHeights.length - 1] : 0;
         double max = 0;
         for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
             final Node child = children.get(i);
+            final Insets margin = childMargins.call(child);
             final double childHeight = i < childHeights.length ? childHeights[i] : lastChildHeight;
             max = Math.max(max, minimum?
-                computeChildMinAreaWidth(children.get(i), childMargins[i], childHeight) :
-                    computeChildPrefAreaWidth(child, childMargins[i], childHeight));
+                computeChildMinAreaWidth(children.get(i), margin, childHeight) :
+                    computeChildPrefAreaWidth(child, margin, childHeight));
         }
         return max;
     }
@@ -1753,6 +1769,7 @@ public class Region extends Parent {
      * @param halignment the horizontal alignment for the child within the area
      * @param valignment the vertical alignment for the child within the area
      *
+     * @since JavaFX 8.0
      */
     public static void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
                                double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment, boolean isSnapToPixel) {
@@ -2649,6 +2666,7 @@ public class Region extends Parent {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -2657,6 +2675,7 @@ public class Region extends Parent {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
 
 

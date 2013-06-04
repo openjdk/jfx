@@ -35,6 +35,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * implementation to attach listener.
  *
  * @see ReadOnlyBooleanProperty
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyBooleanPropertyBase extends ReadOnlyBooleanProperty {
     

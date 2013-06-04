@@ -30,6 +30,7 @@ import javafx.util.StringConverter;
 /**
  * <p>{@link StringConverter} implementation for {@link Long}
  * (and long primitive) values.</p>
+ * @since JavaFX 2.1
  */
 public class LongStringConverter extends StringConverter<Long> {
     /** {@inheritDoc} */

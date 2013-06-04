@@ -40,6 +40,7 @@ import javafx.beans.value.ObservableValue;
  * A concrete sub-class of {@code DoubleExpression} has to implement the method
  * {@link javafx.beans.value.ObservableDoubleValue#get()}, which provides the
  * actual value of this expression.
+ * @since JavaFX 2.0
  */
 public abstract class DoubleExpression extends NumberExpressionBase implements
         ObservableDoubleValue {
@@ -140,6 +141,7 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
      *         {@code ObservableValue} if necessary
      * @throws NullPointerException
      *             if {@code value} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <T extends Number> DoubleExpression doubleExpression(final ObservableValue<T> value) {
         if (value == null) {
@@ -282,6 +284,7 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
      * {@code ObjectExpression} will be updated automatically.
      * 
      * @return the new {@code ObjectExpression}
+     * @since JavaFX 8.0
      */
     public ObjectExpression<Double> asObject() {
         return new ObjectBinding<Double>() {

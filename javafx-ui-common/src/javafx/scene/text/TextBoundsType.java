@@ -44,7 +44,7 @@ package javafx.scene.text;
  * spaces are part of the logical advance width of the text.
  * <p>
  *
- * @since JavaFX 1.3
+ * @since JavaFX 2.0
  */
 public enum TextBoundsType {
 
@@ -71,6 +71,7 @@ public enum TextBoundsType {
      * <p>
      * This bounds type is typically used to center {@code Text} nodes vertically
      * within the bounds of its parent.
+     * @since JavaFX 8.0
      */
     LOGICAL_VERTICAL_CENTER
 

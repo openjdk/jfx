@@ -83,6 +83,7 @@ import com.sun.javafx.tk.Toolkit;
  * <p>
  * <img src="doc-files/dropshadow.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class DropShadow extends Effect {
     private boolean changeIsLocal;
@@ -96,6 +97,7 @@ public class DropShadow extends Effect {
      * Creates a new instance of DropShadow with specified radius and color.
      * @param radius the radius of the shadow blur kernel
      * @param color the shadow {@code Color}
+     * @since JavaFX 2.1
      */
     public DropShadow(double radius, Color color) {
         setRadius(radius);
@@ -109,6 +111,7 @@ public class DropShadow extends Effect {
      * @param offsetX the shadow offset in the x direction
      * @param offsetY the shadow offset in the y direction
      * @param color the shadow {@code Color}
+     * @since JavaFX 2.1
      */
     public DropShadow(double radius, double offsetX, double offsetY, Color color) {
         setRadius(radius);
@@ -127,6 +130,7 @@ public class DropShadow extends Effect {
      * the source material will be 100%
      * @param offsetX the shadow offset in the x direction
      * @param offsetY the shadow offset in the y direction
+     * @since JavaFX 2.1
      */
     public DropShadow(BlurType blurType, Color color, double radius, double spread, 
             double offsetX, double offsetY) {
@@ -148,7 +152,6 @@ public class DropShadow extends Effect {
      * the {@code Node} to which the {@code Effect} is attached will be
      * used as the input.
      * @defaultValue null
-     * @since JavaFX 1.3
      */
     private ObjectProperty<Effect> input;
 

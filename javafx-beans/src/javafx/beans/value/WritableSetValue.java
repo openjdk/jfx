@@ -35,6 +35,7 @@ import javafx.collections.ObservableSet;
  * @see javafx.beans.value.WritableSetValue
  *
  * @param <E> the type of the {@code Set} elements
+ * @since JavaFX 2.1
  */
 public interface WritableSetValue<E> extends WritableObjectValue<ObservableSet<E>>, ObservableSet<E> {
 }

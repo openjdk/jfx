@@ -81,6 +81,7 @@ import javafx.css.StyleableProperty;
  *  Tooltip.install(item.getNode(), new Tooltip("Symbol-0"));
  * </code></pre>
  *
+ * @since JavaFX 2.0
  */
 public abstract class XYChart<X,Y> extends Chart {
 
@@ -1189,6 +1190,7 @@ public abstract class XYChart<X,Y> extends Chart {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -1196,6 +1198,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
@@ -1206,6 +1209,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * A single data item with data for 2 axis charts
+     * @since JavaFX 2.0
      */
     public final static class Data<X,Y> {
         // -------------- PUBLIC PROPERTIES ----------------------------------------
@@ -1439,6 +1443,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * A named series of data items
+     * @since JavaFX 2.0
      */
     public static final class Series<X,Y> {
 

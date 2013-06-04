@@ -42,7 +42,7 @@ import javafx.geometry.Point3D;
  * platform and connected input devices. For instance on a PC with mouse
  * and keyboard there is no way of producing a rotating gesture.
  * </p>
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class GestureEvent extends InputEvent {
 
@@ -97,6 +97,7 @@ public class GestureEvent extends InputEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and the target
+     * @since JavaFX 8.0
      */
     protected GestureEvent(Object source, EventTarget target, final EventType<? extends GestureEvent> eventType,
             double x, double y, double screenX, double screenY,
@@ -138,6 +139,7 @@ public class GestureEvent extends InputEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates
+     * @since JavaFX 8.0
      */
     protected GestureEvent(final EventType<? extends GestureEvent> eventType,
             double x, double y, double screenX, double screenY,
@@ -216,6 +218,7 @@ public class GestureEvent extends InputEvent {
      *
      * @return depth position of the event relative to the
      * origin of the MouseEvent's source.
+     * @since JavaFX 8.0
      */
     public final double getZ() {
         return z;
@@ -359,6 +362,7 @@ public class GestureEvent extends InputEvent {
      * Returns information about the pick.
      *
      * @return new PickResult object that contains information about the pick
+     * @since JavaFX 8.0
      */
     public final PickResult getPickResult() {
         return pickResult;

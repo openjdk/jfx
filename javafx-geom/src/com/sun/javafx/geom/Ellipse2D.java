@@ -32,7 +32,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * by a framing rectangle.
  *
  * @version 1.26, 05/05/07
- * @since 1.2
  */
 public class Ellipse2D extends RectangularShape {
     /**
@@ -129,7 +128,6 @@ public class Ellipse2D extends RectangularShape {
      *          specified rectangular shape
      * @param w the width of the specified rectangular shape
      * @param h the height of the specified rectangular shape
-     * @since 1.2
      */
     public void setFrame(float x, float y, float w, float h) {
         this.x = x;
@@ -212,7 +210,6 @@ public class Ellipse2D extends RectangularShape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(float x, float y, float w, float h) {
         return (contains(x, y) &&
@@ -235,7 +232,6 @@ public class Ellipse2D extends RectangularShape {
      * @return    the <code>PathIterator</code> object that returns the
      *          geometry of the outline of this <code>Ellipse2D</code>,
      *      one segment at a time.
-     * @since 1.2
      */
     public PathIterator getPathIterator(BaseTransform tx) {
         return new EllipseIterator(this, tx);
@@ -249,7 +245,6 @@ public class Ellipse2D extends RectangularShape {
     /**
      * Returns the hashcode for this <code>Ellipse2D</code>.
      * @return the hashcode for this <code>Ellipse2D</code>.
-     * @since 1.6
      */
     @Override
     public int hashCode() {
@@ -271,7 +266,6 @@ public class Ellipse2D extends RectangularShape {
      * @return  <code>true</code> if <code>obj</code> is an instance
      *          of <code>Ellipse2D</code> and has the same values;
      *          <code>false</code> otherwise.
-     * @since 1.6
      */
     @Override
     public boolean equals(Object obj) {

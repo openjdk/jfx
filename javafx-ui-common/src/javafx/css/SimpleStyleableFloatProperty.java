@@ -39,6 +39,7 @@ import javafx.beans.property.SimpleFloatProperty;
  * @see CssMetaData
  * @see StyleableProperty
  * @see StyleableFloatProperty
+ * @since JavaFX 8.0
  */
 public class SimpleStyleableFloatProperty extends StyleableFloatProperty {
 

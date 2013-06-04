@@ -31,6 +31,7 @@ import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.prism.Graphics;
+import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.BufferUtil;
@@ -84,6 +85,13 @@ final class UploadingPainter extends ViewPainter implements Runnable {
              */
             sceneState.lock();
             locked = true;
+            
+            if (factory == null) {
+                factory = GraphicsPipeline.getDefaultResourceFactory();
+                if (factory == null || !factory.isDeviceReady()) {
+                    return;
+                }
+            }
 
             boolean needsReset = (rttexture == null) || (viewWidth != penWidth) || (viewHeight != penHeight);
 

@@ -40,6 +40,7 @@ import javafx.beans.value.ObservableValue;
  * @see javafx.beans.property.StringPropertyBase
  * @see CssMetaData
  * @see StyleableProperty
+ * @since JavaFX 8.0
  */
 public abstract class StyleableStringProperty 
     extends StringPropertyBase implements StyleableProperty<String> {

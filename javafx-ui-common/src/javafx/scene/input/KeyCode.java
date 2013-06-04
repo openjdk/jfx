@@ -30,6 +30,7 @@ import java.util.Map;
 
 /**
  * Set of key codes for {@link KeyEvent} objects.
+ * @since JavaFX 2.0
  */
 public enum KeyCode {
 
@@ -1066,12 +1067,6 @@ public enum KeyCode {
     POUND(0x100F, "Pound"),
 
     /**
-     * Set of TV Specific Key Codes
-     *
-     * @since JavaFX 1.3
-     */
-
-    /**
      * Constant for the {@code Power} key.
      */
     POWER(0x199, "Power"),
@@ -1163,6 +1158,7 @@ public enum KeyCode {
 
     /**
      * Constant for the Apple {@code Command} key. 
+     * @since JavaFX 2.1
      */
     COMMAND(0x300, "Command", KeyCodeClass.MODIFIER),
     
@@ -1206,7 +1202,7 @@ public enum KeyCode {
     /**
      * Function keys like F1, F2, etc...
      * @return true if this key code corresponds to a functional key
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isFunctionKey() {
         return (mask & KeyCodeClass.FUNCTION) != 0;
@@ -1216,7 +1212,7 @@ public enum KeyCode {
      * Navigation keys are arrow keys and Page Down, Page Up, Home, End
      * (including keypad keys)
      * @return true if this key code corresponds to a navigation key
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isNavigationKey() {
         return (mask & KeyCodeClass.NAVIGATION) != 0;
@@ -1225,7 +1221,7 @@ public enum KeyCode {
     /**
      * Left, right, up, down keys (including the keypad arrows)
      * @return true if this key code corresponds to an arrow key
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isArrowKey() {
         return (mask & KeyCodeClass.ARROW) != 0;
@@ -1234,7 +1230,7 @@ public enum KeyCode {
     /**
      * Keys that could act as a modifier
      * @return true if this key code corresponds to a modifier key
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isModifierKey() {
         return (mask & KeyCodeClass.MODIFIER) != 0;
@@ -1243,7 +1239,7 @@ public enum KeyCode {
     /**
      * All keys with letters
      * @return true if this key code corresponds to a letter key
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isLetterKey() {
         return (mask & KeyCodeClass.LETTER) != 0;
@@ -1252,7 +1248,7 @@ public enum KeyCode {
     /**
      * All Digit keys (including the keypad digits)
      * @return true if this key code corresponds to a digit key
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isDigitKey() {
         return (mask & KeyCodeClass.DIGIT) != 0;
@@ -1261,7 +1257,7 @@ public enum KeyCode {
     /**
      * All keys on the keypad
      * @return true if this key code corresponds to a keypad key
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isKeypadKey() {
         return (mask & KeyCodeClass.KEYPAD) != 0;
@@ -1270,7 +1266,7 @@ public enum KeyCode {
     /**
      * Space, tab and enter
      * @return true if this key code corresponds to a whitespace key
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isWhitespaceKey() {
         return (mask & KeyCodeClass.WHITESPACE) != 0;
@@ -1279,7 +1275,7 @@ public enum KeyCode {
     /**
      * All multimedia keys (channel up/down, volume control, etc...)
      * @return true if this key code corresponds to a media key
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final boolean isMediaKey() {
         return (mask & KeyCodeClass.MEDIA) != 0;

@@ -60,6 +60,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <p>
  * <img src="doc-files/gaussianblur.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class GaussianBlur extends Effect {
     /**
@@ -70,6 +71,7 @@ public class GaussianBlur extends Effect {
     /**
      * Creates a new instance of GaussianBlur with the specified radius.
      * @param radius the radius of the blur kernel
+     * @since JavaFX 2.1
      */
     public GaussianBlur(double radius) {
         setRadius(radius);

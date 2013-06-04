@@ -44,6 +44,7 @@ import javafx.collections.ObservableSet;
  *
  * @param <T>
  *            the type of the wrapped {@code Object}
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyObjectProperty<T> extends ObjectExpression<T>
         implements ReadOnlyProperty<T> {

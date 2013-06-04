@@ -40,6 +40,7 @@ import com.sun.javafx.charts.Legend.LegendItem;
 
 /**
  * Chart type that plots symbols for the data points in a series.
+ * @since JavaFX 2.0
  */
 public class ScatterChart<X,Y> extends XYChart<X,Y> {
 

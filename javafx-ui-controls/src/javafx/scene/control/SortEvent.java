@@ -6,6 +6,7 @@ import javafx.event.EventType;
 
 /**
  * Event related to {@link TableView} and {@link TreeTableView} sorting.
+ * @since JavaFX 8.0
  */
 public class SortEvent<C> extends Event {
 

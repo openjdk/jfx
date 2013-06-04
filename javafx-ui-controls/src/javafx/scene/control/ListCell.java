@@ -64,6 +64,7 @@ import java.util.List;
  * Node to request, and acquire focus as would normally be expected.
  * 
  * @param <T> The type of the item contained within the ListCell.
+ * @since JavaFX 2.0
  */
 // TODO add code examples
 public class ListCell<T> extends IndexedCell<T> {

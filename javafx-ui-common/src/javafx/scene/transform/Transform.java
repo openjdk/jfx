@@ -63,6 +63,7 @@ import javafx.geometry.Point3D;
  *  Rectangle rect = new Rectangle(50,50, Color.RED);
  *  rect.getTransforms().add(new Rotate(45,0,0)); //rotate by 45 degrees
  * </code></pre>
+ * @since JavaFX 2.0
  */
 public abstract class Transform implements Cloneable, EventTarget {
 
@@ -116,8 +117,6 @@ public abstract class Transform implements Cloneable, EventTarget {
      * @param mzz the Z coordinate scaling element of the 3x4 matrix
      * @param tz the Z coordinate translation element of the 3x4 matrix
      * @return a new {@code Affine} object derived from specified parameters
-     *
-     * @since JavaFX 1.3
      */
     public static Affine affine(
         double mxx, double mxy, double mxz, double tx,
@@ -258,7 +257,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the X coordinate scaling element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getMxx() {
         return 1.0;
@@ -267,7 +266,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the XY coordinate element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getMxy() {
         return 0.0;
@@ -276,7 +275,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the XZ coordinate element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getMxz() {
         return 0.0;
@@ -285,7 +284,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the X coordinate translation element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getTx() {
         return 0.0;
@@ -294,7 +293,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the YX coordinate element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getMyx() {
         return 0.0;
@@ -303,7 +302,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the Y coordinate scaling element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getMyy() {
         return 1.0;
@@ -312,7 +311,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the YZ coordinate element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getMyz() {
         return 0.0;
@@ -321,7 +320,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the Y coordinate translation element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getTy() {
         return 0.0;
@@ -330,7 +329,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the ZX coordinate element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getMzx() {
         return 0.0;
@@ -339,7 +338,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the ZY coordinate element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getMzy() {
         return 0.0;
@@ -348,7 +347,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the Z coordinate scaling element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getMzz() {
         return 1.0;
@@ -357,7 +356,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the Z coordinate translation element of the 3x4 matrix.
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public  double getTz() {
         return 0.0;
@@ -2001,6 +2000,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      * parameters changes. It is typically called when any of the transform's
      * properties is invalidated (it is OK to skip the call if an invalid
      * property is set).
+     * @since JavaFX 8.0
      */
     protected void transformChanged() {
         inverseCache = null;

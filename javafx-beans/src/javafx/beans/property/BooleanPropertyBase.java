@@ -43,6 +43,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * by extending classes.
  * 
  * @see BooleanProperty
+ * @since JavaFX 2.0
  */
 public abstract class BooleanPropertyBase extends BooleanProperty {
 

@@ -37,6 +37,7 @@ import javafx.beans.binding.BooleanExpression;
  * @see javafx.beans.binding.BooleanExpression
  * @see ReadOnlyProperty
  * 
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyBooleanProperty extends BooleanExpression
         implements ReadOnlyProperty<Boolean> {
@@ -83,6 +84,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
      *         {@code ReadOnlyProperty} if necessary
      * @throws NullPointerException
      *             if {@code value} is {@code null}
+     * @since JavaFX 8.0
      */
     public static ReadOnlyBooleanProperty readOnlyBooleanProperty(final ReadOnlyProperty<Boolean> property) {
         if (property == null) {
@@ -132,6 +134,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
      * {@code ReadOnlyObjectProperty} will be updated automatically.
      * 
      * @return the new {@code ReadOnlyObjectProperty}
+     * @since JavaFX 8.0
      */
     @Override
     public ReadOnlyObjectProperty<Boolean> asObject() {

@@ -64,7 +64,7 @@ import javafx.css.Styleable;
  * all BackgroundImages are clipped to the drawing area, and do not define it. The
  * outsets values are strictly non-negative.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 @SuppressWarnings("unchecked") 
 public final class Background {

@@ -60,14 +60,6 @@ final class EmbeddedPainter extends AbstractPainter {
         if (escene.host == null) {
             return false;
         }
-
-        Screen mainScreen = Screen.getMainScreen();
-        GraphicsPipeline pipeline = GraphicsPipeline.getPipeline();
-        factory = pipeline.getResourceFactory(mainScreen);
-        
-        if (!factory.isDeviceReady()) {
-            return false;
-        }
         
         if ((escene.width <= 0) || (escene.height <= 0)) {
             return false;
@@ -82,6 +74,15 @@ final class EmbeddedPainter extends AbstractPainter {
     public void run() {
         if (!validateStageGraphics()) {
             return;
+        }
+
+        if (factory == null) {
+            Screen mainScreen = Screen.getMainScreen();
+            GraphicsPipeline pipeline = GraphicsPipeline.getPipeline();
+            factory = pipeline.getResourceFactory(mainScreen);
+            if (!factory.isDeviceReady()) {
+                return;
+            }
         }
 
         escene.sizeLock.lock();

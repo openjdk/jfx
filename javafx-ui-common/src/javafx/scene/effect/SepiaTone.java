@@ -61,6 +61,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <p>
  * <img src="doc-files/sepiatone.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class SepiaTone extends Effect {
     /**
@@ -71,6 +72,7 @@ public class SepiaTone extends Effect {
     /**
      * Creates a new instance of SepiaTone with the specified level.
      * @param level the level value, which controls the intensity of the effect
+     * @since JavaFX 2.1
      */
     public SepiaTone(double level) {
         setLevel(level);

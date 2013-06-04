@@ -31,6 +31,7 @@ package javafx.scene.control;
  * 
  * @see SelectionModel
  * @see MultipleSelectionModel
+ * @since JavaFX 2.0
  */
 public enum SelectionMode {
     /**

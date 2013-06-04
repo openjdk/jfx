@@ -90,7 +90,7 @@ import javafx.scene.transform.Rotate;
  * (and will have an empty bounds) if any of the array lengths are invalid
  * or if any of the values in the faces array are out of range.
  * 
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public class TriangleMesh extends Mesh {
 
@@ -487,12 +487,12 @@ public class TriangleMesh extends Mesh {
     private class Listener<T extends ObservableArray<T>> implements ArrayChangeListener<T>, FloatArraySyncer, IntegerArraySyncer {
         
         protected final T array;
-        protected boolean dirty;
+        protected boolean dirty = true;
         /**
          * Array was replaced
          * @return true if array was replaced; false otherwise
          */
-        protected boolean dirtyInFull;
+        protected boolean dirtyInFull = true;
         protected int dirtyRangeFrom;
         protected int dirtyRangeLength;
 

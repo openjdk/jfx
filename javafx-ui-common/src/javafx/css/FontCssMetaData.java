@@ -40,6 +40,7 @@ import javafx.scene.text.FontWeight;
  * An partial implementation of CssMetaData for Font properties which
  * includes the font sub-properties: weight, style, family and size.
  * @param N The type of Node
+ * @since JavaFX 8.0
  */
 public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S, Font> {
 

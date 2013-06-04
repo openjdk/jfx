@@ -32,6 +32,7 @@ import java.net.URL;
  * {@link FXMLLoader#getParseTrace()}.
  *
  * @treatAsPrivate
+ * @since JavaFX 2.1
  */
 public class ParseTraceElement {
     private URL location;

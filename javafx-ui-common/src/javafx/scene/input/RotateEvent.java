@@ -54,7 +54,7 @@ import javafx.event.EventType;
  * given platform, some {@code ROTATE} events with {@code isInertia()} returning
  * {@code true} can come after {@code ROTATION_FINISHED}.
  *
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public final class RotateEvent extends GestureEvent {
 
@@ -105,6 +105,7 @@ public final class RotateEvent extends GestureEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and the target
+     * @since JavaFX 8.0
      */
     public RotateEvent(Object source, EventTarget target,
             final EventType<RotateEvent> eventType,
@@ -143,6 +144,7 @@ public final class RotateEvent extends GestureEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates
+     * @since JavaFX 8.0
      */
     public RotateEvent(final EventType<RotateEvent> eventType,
             double x, double y,
@@ -235,6 +237,7 @@ public final class RotateEvent extends GestureEvent {
      * @param target the new target of the copied event
      * @param eventType the new eventType
      * @return the event copy with the fields substituted
+     * @since JavaFX 8.0
      */
     public RotateEvent copyFor(Object newSource, EventTarget newTarget, EventType<RotateEvent> type) {
         RotateEvent e = copyFor(newSource, newTarget);

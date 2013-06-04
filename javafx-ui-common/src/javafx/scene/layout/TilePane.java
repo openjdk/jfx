@@ -34,7 +34,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.css.CssMetaData;
-import javafx.css.StyleOrigin;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
@@ -50,6 +49,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import javafx.css.Styleable;
 
 import static javafx.geometry.Orientation.*;
+import javafx.util.Callback;
 
 
 /**
@@ -57,7 +57,7 @@ import static javafx.geometry.Orientation.*;
  * <p>
  * A horizontal tilepane (the default) will tile nodes in rows, wrapping at the
  * tilepane's width.  A vertical tilepane will tile nodes in columns,
- * wrapping at the tilepane's height.  
+ * wrapping at the tilepane's height.
  * <p>
  * The size of each "tile" defaults to the size needed to encompass the largest
  * preferred width and height of the tilepane's children and the tilepane
@@ -169,11 +169,12 @@ import static javafx.geometry.Orientation.*;
  *     TilePane tilepane = new TilePane();
  *     for (int i = 0; i < 20; i++) {
  *        Label title = new Label(imageTitle[i]):
- *        Imageview imageview = new ImageView(new Image(imageName[i])); 
+ *        Imageview imageview = new ImageView(new Image(imageName[i]));
  *        TilePane.setAlignment(label, Pos.BOTTOM_RIGHT);
  *        tilepane.getChildren().addAll(title, imageview);
  *     }
  * </code></pre>
+ * @since JavaFX 2.0
  */
 public class TilePane extends Pane {
 
@@ -224,6 +225,12 @@ public class TilePane extends Pane {
     public static Insets getMargin(Node node) {
         return (Insets)getConstraint(node, MARGIN_CONSTRAINT);
     }
+
+    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
+        public Insets call(Node n) {
+            return getMargin(n);
+        }
+    };
 
     /**
      * Removes all tilepane constraints from the child node.
@@ -287,6 +294,7 @@ public class TilePane extends Pane {
     /**
      * Creates a horizontal TilePane layout with prefColumn = 5 and hgap/vgap = 0.
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public TilePane(Node... children) {
         super();
@@ -298,6 +306,7 @@ public class TilePane extends Pane {
      * prefColumn/prefRows = 5 and hgap/vgap = 0.
      * @param orientation the direction the tiles should flow & wrap
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public TilePane(Orientation orientation, Node... children) {
         super();
@@ -311,6 +320,7 @@ public class TilePane extends Pane {
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public TilePane(double hgap, double vgap, Node... children) {
         super();
@@ -326,6 +336,7 @@ public class TilePane extends Pane {
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      * @param children The initial set of children for this pane.
+     * @since JavaFX 8.0
      */
     public TilePane(Orientation orientation, double hgap, double vgap, Node... children) {
         this();
@@ -349,8 +360,8 @@ public class TilePane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData<TilePane, Orientation> getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
@@ -368,7 +379,7 @@ public class TilePane extends Pane {
         }
         return orientation;
     }
-    
+
     private ObjectProperty<Orientation> orientation;
     public final void setOrientation(Orientation value) { orientationProperty().set(value); }
     public final Orientation getOrientation() { return orientation == null ? HORIZONTAL : orientation.get();  }
@@ -391,7 +402,7 @@ public class TilePane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
+
                 @Override
                 public CssMetaData<TilePane, Number> getCssMetaData() {
                     return StyleableProperties.PREF_ROWS;
@@ -410,7 +421,7 @@ public class TilePane extends Pane {
         }
         return prefRows;
     }
-    
+
     private IntegerProperty prefRows;
     public final void setPrefRows(int value) { prefRowsProperty().set(value); }
     public final int getPrefRows() { return prefRows == null ? 5 : prefRows.get(); }
@@ -432,7 +443,7 @@ public class TilePane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
+
                 @Override
                 public CssMetaData<TilePane, Number> getCssMetaData() {
                     return StyleableProperties.PREF_COLUMNS;
@@ -451,7 +462,7 @@ public class TilePane extends Pane {
         }
         return prefColumns;
     }
-    
+
     private IntegerProperty prefColumns;
     public final void setPrefColumns(int value) { prefColumnsProperty().set(value); }
     public final int getPrefColumns() { return prefColumns == null ? 5 : prefColumns.get(); }
@@ -472,7 +483,7 @@ public class TilePane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
+
                 @Override
                 public CssMetaData<TilePane, Number> getCssMetaData() {
                     return StyleableProperties.PREF_TILE_WIDTH;
@@ -513,8 +524,8 @@ public class TilePane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData<TilePane, Number> getCssMetaData() {
                     return StyleableProperties.PREF_TILE_HEIGHT;
                 }
@@ -580,8 +591,8 @@ public class TilePane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData<TilePane, Number> getCssMetaData() {
                     return StyleableProperties.HGAP;
                 }
@@ -599,11 +610,11 @@ public class TilePane extends Pane {
         }
         return hgap;
     }
-    
+
     private DoubleProperty hgap;
     public final void setHgap(double value) { hgapProperty().set(value); }
     public final double getHgap() { return hgap == null ? 0 : hgap.get(); }
-    
+
     /**
      * The amount of vertical space between each tile in a column.
      */
@@ -614,8 +625,8 @@ public class TilePane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData<TilePane, Number> getCssMetaData() {
                     return StyleableProperties.VGAP;
                 }
@@ -633,7 +644,7 @@ public class TilePane extends Pane {
         }
         return vgap;
     }
-    
+
     private DoubleProperty vgap;
     public final void setVgap(double value) { vgapProperty().set(value); }
     public final double getVgap() { return vgap == null ? 0 : vgap.get(); }
@@ -646,7 +657,7 @@ public class TilePane extends Pane {
      * <p>For a vertical tilepane, each column will be aligned within the tilepane's height
      * using the alignment's vpos value, and the columns will be aligned within the
      * tilepane's width using the alignment's hpos value.
-     * 
+     *
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
@@ -655,8 +666,8 @@ public class TilePane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData<TilePane, Pos> getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
@@ -695,7 +706,7 @@ public class TilePane extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
+
                 @Override
                 public CssMetaData<TilePane, Pos> getCssMetaData() {
                     return StyleableProperties.TILE_ALIGNMENT;
@@ -714,7 +725,7 @@ public class TilePane extends Pane {
         }
         return tileAlignment;
     }
-    
+
     private ObjectProperty<Pos> tileAlignment;
     public final void setTileAlignment(Pos value) { tileAlignmentProperty().set(value); }
     public final Pos getTileAlignment() { return tileAlignment == null ? Pos.CENTER : tileAlignment.get(); }
@@ -785,19 +796,11 @@ public class TilePane extends Pane {
                snapSpace(insets.getBottom());
     }
 
-    private Insets[] getMargins(List<Node>managed) {
-        Insets margins[] = new Insets[managed.size()];
-        for(int i = 0; i < margins.length; i++) {
-            margins[i] = getMargin(managed.get(i));
-        }
-        return margins;
-    }
 
     private double computeTileWidth(List<Node>managed) {
         double preftilewidth = getPrefTileWidth();
         if (preftilewidth == USE_COMPUTED_SIZE) {
             if (computedTileWidth == -1) {
-                Insets[] margins = getMargins(managed);
                 double h = -1;
                 boolean vertBias = false;
                 for (int i = 0, size = managed.size(); i < size; i++) {
@@ -809,9 +812,9 @@ public class TilePane extends Pane {
                 }
                 if (vertBias) {
                     // widest may depend on height of tile
-                    h = computeMaxPrefAreaHeight(managed, margins, -1, getTileAlignmentInternal().getVpos());
+                    h = computeMaxPrefAreaHeight(managed, marginAccessor, -1, getTileAlignmentInternal().getVpos());
                 }
-                computedTileWidth = computeMaxPrefAreaWidth(managed, margins, h, getTileAlignmentInternal().getHpos());
+                computedTileWidth = computeMaxPrefAreaWidth(managed, marginAccessor, h, getTileAlignmentInternal().getHpos());
             }
             return snapSize(computedTileWidth);
         }
@@ -822,7 +825,6 @@ public class TilePane extends Pane {
         double preftileheight = getPrefTileHeight();
         if (preftileheight == USE_COMPUTED_SIZE) {
             if (computedTileHeight == -1) {
-                Insets[] margins = getMargins(managed);
                 double w = -1;
                 boolean horizBias = false;
                 for (int i = 0, size = managed.size(); i < size; i++) {
@@ -834,9 +836,9 @@ public class TilePane extends Pane {
                 }
                 if (horizBias) {
                     // tallest may depend on width of tile
-                    w = computeMaxPrefAreaWidth(managed, margins, -1, getTileAlignmentInternal().getHpos());
+                    w = computeMaxPrefAreaWidth(managed, marginAccessor, -1, getTileAlignmentInternal().getHpos());
                 }
-                computedTileHeight = computeMaxPrefAreaHeight(managed, getMargins(managed), w, getTileAlignmentInternal().getVpos());
+                computedTileHeight = computeMaxPrefAreaHeight(managed, marginAccessor, w, getTileAlignmentInternal().getVpos());
             }
             return snapSize(computedTileHeight);
         }
@@ -926,7 +928,7 @@ public class TilePane extends Pane {
             double tileY = yoffset + (r * (getTileHeight() + vgap));
 
             Pos childAlignment = getAlignment(child);
-            
+
             layoutInArea(child, tileX, tileY, getTileWidth(), getTileHeight(), baselineOffset,
                     getMargin(child),
                     childAlignment != null? childAlignment.getHpos() : getTileAlignmentInternal().getHpos(),
@@ -963,9 +965,9 @@ public class TilePane extends Pane {
       */
      private static class StyleableProperties {
 
-         private static final CssMetaData<TilePane,Pos> ALIGNMENT = 
+         private static final CssMetaData<TilePane,Pos> ALIGNMENT =
              new CssMetaData<TilePane,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class), 
+                 new EnumConverter<Pos>(Pos.class),
                  Pos.TOP_LEFT) {
 
             @Override
@@ -978,8 +980,8 @@ public class TilePane extends Pane {
                 return (StyleableProperty<Pos>)node.alignmentProperty();
             }
         };
-         
-         private static final CssMetaData<TilePane,Number> PREF_COLUMNS = 
+
+         private static final CssMetaData<TilePane,Number> PREF_COLUMNS =
              new CssMetaData<TilePane,Number>("-fx-pref-columns",
                  SizeConverter.getInstance(), 5.0) {
 
@@ -994,8 +996,8 @@ public class TilePane extends Pane {
                 return (StyleableProperty<Number>)node.prefColumnsProperty();
             }
         };
-                 
-         private static final CssMetaData<TilePane,Number> HGAP = 
+
+         private static final CssMetaData<TilePane,Number> HGAP =
              new CssMetaData<TilePane,Number>("-fx-hgap",
                  SizeConverter.getInstance(), 0.0) {
 
@@ -1010,8 +1012,8 @@ public class TilePane extends Pane {
                 return (StyleableProperty<Number>)node.hgapProperty();
             }
         };
-         
-         private static final CssMetaData<TilePane,Number> PREF_ROWS = 
+
+         private static final CssMetaData<TilePane,Number> PREF_ROWS =
              new CssMetaData<TilePane,Number>("-fx-pref-rows",
                  SizeConverter.getInstance(), 5.0) {
 
@@ -1027,9 +1029,9 @@ public class TilePane extends Pane {
             }
         };
 
-         private static final CssMetaData<TilePane,Pos> TILE_ALIGNMENT = 
+         private static final CssMetaData<TilePane,Pos> TILE_ALIGNMENT =
              new CssMetaData<TilePane,Pos>("-fx-tile-alignment",
-                 new EnumConverter<Pos>(Pos.class), 
+                 new EnumConverter<Pos>(Pos.class),
                  Pos.CENTER) {
 
             @Override
@@ -1043,8 +1045,8 @@ public class TilePane extends Pane {
                 return (StyleableProperty<Pos>)node.tileAlignmentProperty();
             }
          };
-         
-         private static final CssMetaData<TilePane,Number> PREF_TILE_WIDTH = 
+
+         private static final CssMetaData<TilePane,Number> PREF_TILE_WIDTH =
              new CssMetaData<TilePane,Number>("-fx-pref-tile-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE) {
 
@@ -1060,7 +1062,7 @@ public class TilePane extends Pane {
             }
         };
 
-         private static final CssMetaData<TilePane,Number> PREF_TILE_HEIGHT = 
+         private static final CssMetaData<TilePane,Number> PREF_TILE_HEIGHT =
              new CssMetaData<TilePane,Number>("-fx-pref-tile-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE) {
 
@@ -1076,17 +1078,17 @@ public class TilePane extends Pane {
             }
          };
 
-         private static final CssMetaData<TilePane,Orientation> ORIENTATION = 
+         private static final CssMetaData<TilePane,Orientation> ORIENTATION =
              new CssMetaData<TilePane,Orientation>("-fx-orientation",
-                 new EnumConverter<Orientation>(Orientation.class), 
+                 new EnumConverter<Orientation>(Orientation.class),
                  Orientation.HORIZONTAL) {
 
                 @Override
                 public Orientation getInitialValue(TilePane node) {
-                    // A vertical TilePane should remain vertical 
+                    // A vertical TilePane should remain vertical
                     return node.getOrientation();
                 }
-                                          
+
                 @Override
                 public boolean isSettable(TilePane node) {
                     return node.orientation == null ||
@@ -1098,8 +1100,8 @@ public class TilePane extends Pane {
                     return (StyleableProperty<Orientation>)node.orientationProperty();
                 }
          };
-         
-         private static final CssMetaData<TilePane,Number> VGAP = 
+
+         private static final CssMetaData<TilePane,Number> VGAP =
              new CssMetaData<TilePane,Number>("-fx-vgap",
                  SizeConverter.getInstance(), 0.0) {
 
@@ -1117,7 +1119,7 @@ public class TilePane extends Pane {
 
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             styleables.add(HGAP);
@@ -1135,6 +1137,7 @@ public class TilePane extends Pane {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -1143,9 +1146,10 @@ public class TilePane extends Pane {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();

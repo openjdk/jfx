@@ -40,6 +40,7 @@ import javafx.collections.WeakListChangeListener;
  * 
  * @param <E> the type parameter of this list
  * @param <F> the upper bound of the type of the source list
+ * @since JavaFX 8.0
  */
 public abstract class TransformationList<E, F> extends ObservableListBase<E> implements ObservableList<E> {
 
@@ -101,8 +102,12 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
 
     private ListChangeListener<F> getListener() {
         if (sourceListener == null) {
-            sourceListener = (Change<? extends F> c) -> {
-                TransformationList.this.sourceChanged(c);
+            sourceListener = new ListChangeListener<F>() {
+
+                @Override
+                public void onChanged(Change<? extends F> c) {
+                    TransformationList.this.sourceChanged(c);
+                }
             };
         }
         return sourceListener;

@@ -44,6 +44,7 @@ import com.sun.javafx.tk.Toolkit;
 /**
  * A type of source effect that simply passes the given {@code Image}
  * through, unmodified, as an input to another {@code Effect}.
+ * @since JavaFX 2.0
  */
 public class ImageInput extends Effect {
     /**
@@ -54,6 +55,7 @@ public class ImageInput extends Effect {
     /**
      * Creates a new instance of ImageInput with the specified source.
      * @param source the source {@code Image}.
+     * @since JavaFX 2.1
      */
     public ImageInput(Image source) {
         setSource(source);
@@ -64,6 +66,7 @@ public class ImageInput extends Effect {
      * @param source the source {@code Image}.
      * @param x the x location of the source image
      * @param y the y location of the source image
+     * @since JavaFX 2.1
      */
     public ImageInput(Image source, double x, double y) {
         setSource(source);

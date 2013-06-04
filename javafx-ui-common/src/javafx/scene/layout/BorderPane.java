@@ -136,6 +136,7 @@ import static javafx.scene.layout.Region.positionInArea;
  *     borderPane.setCenter(list);
  * </code></pre>
  *
+ * @since JavaFX 2.0
  */
 public class BorderPane extends Pane {
     /********************************************************************
@@ -214,6 +215,7 @@ public class BorderPane extends Pane {
     /**
      * Creates an BorderPane layout with the given Node as the center of the BorderPane.
      * @param center The node to set as the center of the BorderPane.
+     * @since JavaFX 8.0
      */
     public BorderPane(Node center) {
         super();
@@ -229,6 +231,7 @@ public class BorderPane extends Pane {
      * @param right The node to set as the right of the BorderPane.
      * @param bottom The node to set as the bottom of the BorderPane.
      * @param left The node to set as the left of the BorderPane.
+     * @since JavaFX 8.0
      */
     public BorderPane(Node center, Node top, Node right, Node bottom, Node left) {
         super();

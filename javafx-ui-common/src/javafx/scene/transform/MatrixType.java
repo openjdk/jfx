@@ -27,6 +27,7 @@ package javafx.scene.transform;
 
 /**
  * Specifies type of transformation matrix.
+ * @since JavaFX 8.0
  */
 public enum MatrixType {
     /**

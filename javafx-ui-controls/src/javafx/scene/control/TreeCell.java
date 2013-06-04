@@ -66,6 +66,7 @@ import javafx.beans.value.WeakChangeListener;
  * @see TreeItem
  * @param <T> The type of the value contained within the 
  *      {@link #treeItemProperty() TreeItem} property.
+ * @since JavaFX 2.0
  */
 public class TreeCell<T> extends IndexedCell<T> {
 

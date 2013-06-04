@@ -47,6 +47,7 @@ Path path = new Path();
 path.getElements().add(new MoveTo(0.0f, 0.0f));
 path.getElements().add(new HLineTo(80.0f));
 </PRE>
+ * @since JavaFX 2.0
  */
 public class HLineTo extends PathElement {
 

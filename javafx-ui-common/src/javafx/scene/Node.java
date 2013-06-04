@@ -358,6 +358,7 @@ import javafx.stage.Window;
  * For further information about CSS and how to apply CSS styles
  * to nodes, see the <a href="doc-files/cssref.html">CSS Reference
  * Guide</a>.
+ * @since JavaFX 2.0
  */
 @IDProperty("id")
 public abstract class Node implements EventTarget, Styleable {
@@ -1367,7 +1368,6 @@ public abstract class Node implements EventTarget, Styleable {
      * any of its ancestors, or any of its descendants.
      *
      * @see #cacheProperty
-     * @since JavaFX 1.3
      * @defaultValue CacheHint.DEFAULT
      */
     public final ObjectProperty<CacheHint> cacheHintProperty() {
@@ -1523,7 +1523,6 @@ public abstract class Node implements EventTarget, Styleable {
      * by intersecting with the geometric shape of this node.
      *
      * @defaultValue false
-     * @since JavaFX 1.3
      */
     private BooleanProperty pickOnBounds;
 
@@ -1847,7 +1846,7 @@ public abstract class Node implements EventTarget, Styleable {
      *     other than the JavaFX Application Thread.
      *
      * @return the rendered image
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public WritableImage snapshot(SnapshotParameters params, WritableImage image) {
         Toolkit.getToolkit().checkFxUserThread();
@@ -1936,7 +1935,7 @@ public abstract class Node implements EventTarget, Styleable {
      *     other than the JavaFX Application Thread.
      *
      * @throws NullPointerException if the callback parameter is null.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public void snapshot(Callback<SnapshotResult, Void> callback,
             SnapshotParameters params, WritableImage image) {
@@ -2154,6 +2153,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @throws IllegalStateException if the full press-drag-release gesture
      * cannot be started at this moment (it's called outside of
      * {@code DRAG_DETECTED} event handling or this node is not in scene).
+     * @since JavaFX 2.1
      */
     public void startFullDrag() {
         if (getScene() != null) {
@@ -2858,6 +2858,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Returns the area of this {@code Node} projected onto the
      * physical screen in pixel units.
+     * @since JavaFX 8.0
      */
     public double computeAreaInScreen() {
         return impl_computeAreaInScreen();
@@ -3286,13 +3287,6 @@ public abstract class Node implements EventTarget, Styleable {
             // affects the pivot we need to invalidate the transform
             impl_transformsChanged();
         }
-        // notify the parent
-        // Group instanceof check a little hoaky, but it allows us to disable
-        // unnecessary layout for the case of a non-resizable within a group
-        Parent p = getParent();
-        if (isManaged() && (p != null) && !(p instanceof Group && !isResizable())) {
-            p.requestLayout();
-        }
     }
 
     /**
@@ -3687,6 +3681,14 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated
     protected void impl_notifyLayoutBoundsChanged() {
         impl_layoutBoundsChanged();
+        // notify the parent
+        // Group instanceof check a little hoaky, but it allows us to disable
+        // unnecessary layout for the case of a non-resizable within a group
+        Parent p = getParent();
+        if (isManaged() && (p != null) && !(p instanceof Group && !isResizable())
+                && !p.performingLayout) {
+            p.requestLayout();
+        }
     }
 
     /**
@@ -3830,6 +3832,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param screenY y coordinate of a point on a Screen
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
+     * @since JavaFX 8.0
      */
     public Point2D screenToLocal(double screenX, double screenY) {
         Scene scene = getScene();
@@ -3871,6 +3874,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param screenPoint a point on a Screen
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
+     * @since JavaFX 8.0
      */
     public Point2D screenToLocal(Point2D screenPoint) {
         return screenToLocal(screenPoint.getX(), screenPoint.getY());
@@ -3883,6 +3887,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param screenBounds bounds on a Screen
      * @return bounds in the local Node'space or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
+     * @since JavaFX 8.0
      */
     public Bounds screenToLocal(Bounds screenBounds) {
         final Point2D p1 = screenToLocal(screenBounds.getMinX(), screenBounds.getMinY());
@@ -3939,6 +3944,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param scenePoint a point on a Scene
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
+     * @since JavaFX 8.0
      */
     public Point3D sceneToLocal(Point3D scenePoint) {
         return sceneToLocal(scenePoint.getX(), scenePoint.getY(), scenePoint.getZ());
@@ -3952,6 +3958,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param sceneZ z coordinate of a point on a Scene
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
+     * @since JavaFX 8.0
      */
     public Point3D sceneToLocal(double sceneX, double sceneY, double sceneZ) {
         try {
@@ -4013,6 +4020,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param localX x coordinate of a point in Node's space
      * @param localY y coordinate of a point in Node's space
      * @return screen coordinates of the point or null if Node is not in a {@link Window}
+     * @since JavaFX 8.0
      */
     public Point2D localToScreen(double localX, double localY) {
         return localToScreen(localX, localY, 0.0);
@@ -4023,6 +4031,7 @@ public abstract class Node implements EventTarget, Styleable {
      * into the coordinate space of its {@link javafx.stage.Screen}.
      * @param localPoint a point in Node's space
      * @return screen coordinates of the point or null if Node is not in a {@link Window}
+     * @since JavaFX 8.0
      */
     public Point2D localToScreen(Point2D localPoint) {
         return localToScreen(localPoint.getX(), localPoint.getY());
@@ -4035,6 +4044,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param localY y coordinate of a point in Node's space
      * @param localZ z coordinate of a point in Node's space
      * @return screen coordinates of the point or null if Node is not in a {@link Window}
+     * @since JavaFX 8.0
      */
     public Point2D localToScreen(double localX, double localY, double localZ) {
         Scene scene = getScene();
@@ -4060,6 +4070,7 @@ public abstract class Node implements EventTarget, Styleable {
      * into the coordinate space of its {@link javafx.stage.Screen}.
      * @param localPoint a point in Node's space
      * @return screen coordinates of the point or null if Node is not in a {@link Window}
+     * @since JavaFX 8.0
      */
     public Point2D localToScreen(Point3D localPoint) {
         return localToScreen(localPoint.getX(), localPoint.getY(), localPoint.getZ());
@@ -4070,6 +4081,7 @@ public abstract class Node implements EventTarget, Styleable {
      * {@code Node} into the coordinate space of its {@link javafx.stage.Screen}.
      * @param localBounds bounds in Node's space
      * @return the bounds in screen coordinates or null if Node is not in a {@link Window}
+     * @since JavaFX 8.0
      */
     public Bounds localToScreen(Bounds localBounds) {
         final Point2D p1 = localToScreen(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMinZ());
@@ -4126,6 +4138,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its {@link javafx.scene.Scene}.
+     * @since JavaFX 8.0
      */
     public Point3D localToScene(Point3D localPoint) {
         return localToScene(localPoint.getX(), localPoint.getY(), localPoint.getZ());
@@ -4134,6 +4147,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its {@link javafx.scene.Scene}.
+     * @since JavaFX 8.0
      */
     public Point3D localToScene(double x, double y, double z) {
         final com.sun.javafx.geom.Vec3d tempV3D =
@@ -4200,6 +4214,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the coordinate space of the parent into the
      * local coordinate space of this {@code Node}.
+     * @since JavaFX 8.0
      */
     public Point3D parentToLocal(Point3D parentPoint) {
         return parentToLocal(parentPoint.getX(), parentPoint.getY(), parentPoint.getZ());
@@ -4208,6 +4223,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the coordinate space of the parent into the
      * local coordinate space of this {@code Node}.
+     * @since JavaFX 8.0
      */
     public Point3D parentToLocal(double parentX, double parentY, double parentZ) {
         final com.sun.javafx.geom.Vec3d tempV3D =
@@ -4271,6 +4287,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its parent.
+     * @since JavaFX 8.0
      */
     public Point3D localToParent(Point3D localPoint) {
         return localToParent(localPoint.getX(), localPoint.getY(), localPoint.getZ());
@@ -4279,6 +4296,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its parent.
+     * @since JavaFX 8.0
      */
     public Point3D localToParent(double x, double y, double z) {
         final com.sun.javafx.geom.Vec3d tempV3D =
@@ -4906,7 +4924,6 @@ public abstract class Node implements EventTarget, Styleable {
      * for more information.
      *
      * @defaultValue 0
-     * @since JavaFX 1.3
      */
     public final DoubleProperty translateZProperty() {
         return getNodeTransformation().translateZProperty();
@@ -4993,7 +5010,6 @@ public abstract class Node implements EventTarget, Styleable {
      * for more information.
      *
      * @defaultValue 1.0
-     * @since JavaFX 1.3
      */
     public final DoubleProperty scaleZProperty() {
         return getNodeTransformation().scaleZProperty();
@@ -5055,7 +5071,6 @@ public abstract class Node implements EventTarget, Styleable {
      * for more information.
      *
      * @defaultValue Rotate.Z_AXIS
-     * @since JavaFX 1.3
      */
     public final ObjectProperty<Point3D> rotationAxisProperty() {
         return getNodeTransformation().rotationAxisProperty();
@@ -5065,7 +5080,7 @@ public abstract class Node implements EventTarget, Styleable {
      * An affine transform that holds the computed local-to-parent transform.
      * This is the concatenation of all transforms in this node, including all
      * of the convenience transforms.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ReadOnlyObjectProperty<Transform> localToParentTransformProperty() {
         return getNodeTransformation().localToParentTransformProperty();
@@ -5093,7 +5108,7 @@ public abstract class Node implements EventTarget, Styleable {
      * property on many nodes may negatively affect performance of
      * transformation changes in their common parents.
      * </p>
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ReadOnlyObjectProperty<Transform> localToSceneTransformProperty() {
         return getNodeTransformation().localToSceneTransformProperty();
@@ -5752,6 +5767,7 @@ public abstract class Node implements EventTarget, Styleable {
      * </p>
      *
      * @return NodeOrientation
+     * @since JavaFX 8.0
      */
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
@@ -5792,6 +5808,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * The effective orientation of a node resolves the inheritance of
      * node orientation, returning either left-to-right or right-to-left.
+     * @since JavaFX 8.0
      */
     public final ReadOnlyObjectProperty<NodeOrientation>
             effectiveNodeOrientationProperty() {
@@ -5814,6 +5831,7 @@ public abstract class Node implements EventTarget, Styleable {
      * nodes will will answer {@code false} and implement right-to-left
      * orientation without using the automatic transformation.
      * </p>
+     * @since JavaFX 8.0
      */
     public boolean usesMirroring() {
         return true;
@@ -6576,6 +6594,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when a context menu
      * has been requested on this {@code Node}.
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<? super ContextMenuEvent>>
             onContextMenuRequestedProperty() {
@@ -6745,6 +6764,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * progresses within this {@code Node}.
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragOverProperty() {
@@ -6764,6 +6784,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * ends (by releasing mouse button) within this {@code Node}.
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragReleasedProperty() {
@@ -6783,6 +6804,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * enters this {@code Node}.
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragEnteredProperty() {
@@ -6802,6 +6824,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when a full press-drag-release gesture
      * leaves this {@code Node}.
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragExitedProperty() {
@@ -6827,7 +6850,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a scrolling gesture is detected.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollStartedProperty() {
@@ -6864,7 +6887,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a scrolling gesture ends.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollFinishedProperty() {
@@ -6883,7 +6906,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a rotation gesture is detected.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super RotateEvent>>
             onRotationStartedProperty() {
@@ -6902,7 +6925,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when user performs a rotation action.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super RotateEvent>>
             onRotateProperty() {
@@ -6921,7 +6944,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a rotation gesture ends.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super RotateEvent>>
             onRotationFinishedProperty() {
@@ -6940,7 +6963,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a zooming gesture is detected.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomStartedProperty() {
@@ -6959,7 +6982,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when user performs a zooming action.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomProperty() {
@@ -6978,7 +7001,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a zooming gesture ends.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomFinishedProperty() {
@@ -6998,7 +7021,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when an upward swipe gesture
      * centered over this node happens.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeUpProperty() {
@@ -7018,7 +7041,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when a downward swipe gesture
      * centered over this node happens.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeDownProperty() {
@@ -7038,7 +7061,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when a leftward swipe gesture
      * centered over this node happens.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeLeftProperty() {
@@ -7058,7 +7081,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when an rightward swipe gesture
      * centered over this node happens.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeRightProperty() {
@@ -7084,7 +7107,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a new touch point is pressed.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchPressedProperty() {
@@ -7103,7 +7126,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a touch point is moved.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchMovedProperty() {
@@ -7122,7 +7145,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a touch point is released.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchReleasedProperty() {
@@ -7142,7 +7165,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when a touch point stays pressed and
      * still.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchStationaryProperty() {
@@ -7982,6 +8005,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * {@inheritDoc}
      * @return {@code getClass().getName()} without the package name
+     * @since JavaFX 8.0
      */
     @Override
     public String getTypeSelector() {
@@ -8004,6 +8028,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * {@inheritDoc}
      * @return {@code getParent()}
+     * @since JavaFX 8.0
      */
     @Override
     public Styleable getStyleableParent() {
@@ -8284,6 +8309,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         //
@@ -8302,6 +8328,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @return The CssMetaData associated with this node, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
 
     @Override
@@ -8407,6 +8434,7 @@ public abstract class Node implements EventTarget, Styleable {
      * </pre><code>
      * @param pseudoClass the pseudo-class that has changed state
      * @param active whether or not the state is active
+     * @since JavaFX 8.0
      */
     public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
 
@@ -8426,6 +8454,7 @@ public abstract class Node implements EventTarget, Styleable {
     final ObservableSet<PseudoClass> pseudoClassStates = new PseudoClassState();
     /**
      * @return The active pseudo-class states of this Node, wrapped in an unmodifiable ObservableSet
+     * @since JavaFX 8.0
      */
     public final ObservableSet<PseudoClass> getPseudoClassStates() {
 

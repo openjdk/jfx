@@ -71,6 +71,7 @@ import sun.util.logging.PlatformLogger;
  * read-only controls such as {@link Label} and {@link ProgressIndicator}, and some
  * controls that are containers {@link ScrollPane} and {@link ToolBar} do not.
  * Consult individual control documentation for details.
+ * @since JavaFX 2.0
  */
 public abstract class Control extends Region implements Skinnable {
 
@@ -580,6 +581,7 @@ public abstract class Control extends Region implements Skinnable {
      *
      * @return  new instance of default skin for this control. If null then the control will have no skin unless one
      *          is provided by css.
+     * @since JavaFX 8.0
      */
     protected Skin<?> createDefaultSkin() {
         return null;
@@ -625,6 +627,7 @@ public abstract class Control extends Region implements Skinnable {
 
     /**
      * @treatAsPrivate
+     * @since JavaFX 2.1
      */
     @Deprecated protected StringProperty skinClassNameProperty() {
         if (skinClassName == null) {
@@ -780,6 +783,7 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -795,6 +799,7 @@ public abstract class Control extends Region implements Skinnable {
      * encouraged to override {@link Control#getControlCssMetaData()} or 
      * {@link SkinBase#getCssMetaData()}, depending on where the CssMetaData 
      * resides.
+     * @since JavaFX 8.0
      */
     @Override
     public final List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
@@ -838,6 +843,7 @@ public abstract class Control extends Region implements Skinnable {
     
     /**
      * @return unmodifiable list of the controls css styleable properties
+     * @since JavaFX 8.0
      */
     protected List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();

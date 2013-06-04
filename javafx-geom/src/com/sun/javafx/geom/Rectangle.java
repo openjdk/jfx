@@ -109,8 +109,6 @@ package com.sun.javafx.geom;
  * If the true result had a location that could be represented within
  * the range of 32-bit integers, but zero dimension along one or both
  * axes, then the stored dimensions will be zero in those axes.
- *
- * @since 1.0
  */
 public class Rectangle {
 
@@ -148,7 +146,6 @@ public class Rectangle {
      * the values of the specified <code>Rectangle</code>.
      * @param r  the <code>Rectangle</code> from which to copy initial values
      *           to a newly constructed <code>Rectangle</code>
-     * @since 1.1
      */
     public Rectangle(BaseBounds b) {
         setBounds(b);
@@ -162,7 +159,6 @@ public class Rectangle {
      * specified by this Rectangle.
      * @param r  the <code>BaseBounds</code> from which to copy initial values
      *           to a newly constructed <code>Rectangle</code>
-     * @since 1.1
      */
     public Rectangle(Rectangle r) {
         this(r.x, r.y, r.width, r.height);
@@ -177,7 +173,6 @@ public class Rectangle {
      * @param     y the specified Y coordinate
      * @param     width    the width of the <code>Rectangle</code>
      * @param     height   the height of the <code>Rectangle</code>
-     * @since 1.0
      */
     public Rectangle(int x, int y, int width, int height) {
         this.x = x;
@@ -206,7 +201,6 @@ public class Rectangle {
      * @param r the specified <code>Rectangle</code>
      * @see       #getBounds
      * @see       java.awt.Component#setBounds(java.awt.Rectangle)
-     * @since     1.1
      */
     public void setBounds(Rectangle r) {
         setBounds(r.x, r.y, r.width, r.height);
@@ -228,7 +222,6 @@ public class Rectangle {
      * @param height the new height for this <code>Rectangle</code>
      * @see       #getBounds
      * @see       java.awt.Component#setBounds(int, int, int, int)
-     * @since     1.1
      */
     public void setBounds(int x, int y, int width, int height) {
         reshape(x, y, width, height);
@@ -644,7 +637,6 @@ public class Rectangle {
     
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean isEmpty() {
         return (width <= 0) || (height <= 0);

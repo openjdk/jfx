@@ -35,6 +35,7 @@ import javafx.scene.image.Image;
 /**
  * Data container for {@link Clipboard} data. It can hold multiple data in 
  * several data formats.
+ * @since JavaFX 2.0
  */
 public class ClipboardContent extends HashMap<DataFormat, Object> {
     /**

@@ -56,6 +56,7 @@ import javafx.beans.value.WritableObjectValue;
  *
  * @param <T>
  *            the type of the wrapped {@code Object}
+ * @since JavaFX 2.0
  */
 public abstract class ObjectProperty<T> extends ReadOnlyObjectProperty<T>
         implements Property<T>, WritableObjectValue<T> {

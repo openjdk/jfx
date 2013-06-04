@@ -115,6 +115,7 @@ root.getChildren().add(textField);
  *
  * @see MenuItem
  * @see Menu
+ * @since JavaFX 2.0
  */
 public class ContextMenu extends PopupControl {
 

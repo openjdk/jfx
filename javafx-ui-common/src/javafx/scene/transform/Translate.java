@@ -42,6 +42,7 @@ import javafx.geometry.Point3D;
  *              [   0    1    0    y  ]
  *              [   0    0    1    z  ]
  * </pre>
+ * @since JavaFX 2.0
  */
 
 public class Translate extends Transform {

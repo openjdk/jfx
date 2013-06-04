@@ -63,6 +63,7 @@ import javafx.css.StyleableProperty;
  * <p>
  * Separator sets focusTraversable to false.
  * </p>
+ * @since JavaFX 2.0
  */
 public class Separator extends Control {
 
@@ -300,6 +301,7 @@ public class Separator extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return Separator.StyleableProperties.STYLEABLES;
@@ -309,6 +311,7 @@ public class Separator extends Control {
      * RT-19263
      * @treatAsPrivate implementation detail
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * @since JavaFX 8.0
      */
     @Deprecated
     @Override protected List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

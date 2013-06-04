@@ -53,6 +53,7 @@ import javafx.collections.ObservableSet;
  * @see Property
  *
  * @param <E> the type of the {@code Set} elements
+ * @since JavaFX 2.1
  */
 public abstract class SetProperty<E> extends ReadOnlySetProperty<E> implements
         Property<ObservableSet<E>>, WritableSetValue<E> {

@@ -97,6 +97,7 @@ menu.getItems().add(menuItem);
 </code></pre>
  *
  * @see Menu
+ * @since JavaFX 2.0
  */
 @IDProperty("id")
 public class MenuItem implements EventTarget, Styleable {
@@ -332,6 +333,7 @@ public class MenuItem implements EventTarget, Styleable {
     
     /**
      * <p>Called when a accelerator for the Menuitem is invoked</p>
+     * @since JavaFX 2.2
      */
     public static final EventType<Event> MENU_VALIDATION_EVENT = new EventType<Event>
             (Event.ANY, "MENU_VALIDATION_EVENT");
@@ -340,7 +342,7 @@ public class MenuItem implements EventTarget, Styleable {
      * The event handler that is associated with invocation of an accelerator for a MenuItem. This 
      * can happen when a key sequence for an accelerator is pressed. The event handler is also  
      * invoked when onShowing event handler is called. 
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<Event>> onMenuValidation;
     
@@ -552,6 +554,7 @@ public class MenuItem implements EventTarget, Styleable {
     /**
      * {@inheritDoc}
      * @return "MenuItem"
+     * @since JavaFX 8.0
      */
     @Override
     public String getTypeSelector() {
@@ -562,6 +565,7 @@ public class MenuItem implements EventTarget, Styleable {
      * {@inheritDoc}
      * @return {@code getParentMenu()}, or {@code getParentPopup()} 
      * if {@code parentMenu} is null
+     * @since JavaFX 8.0
      */
     @Override
     public Styleable getStyleableParent() {
@@ -575,6 +579,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     public final ObservableSet<PseudoClass> getPseudoClassStates() {
         return FXCollections.emptyObservableSet();

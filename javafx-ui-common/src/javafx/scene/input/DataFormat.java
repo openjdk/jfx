@@ -36,6 +36,7 @@ import com.sun.javafx.WeakReferenceQueue;
 /**
  * Data format identifier used as means
  * of identifying the data stored on a clipboard/dragboard.
+ * @since JavaFX 2.0
  */
 public class DataFormat {
 

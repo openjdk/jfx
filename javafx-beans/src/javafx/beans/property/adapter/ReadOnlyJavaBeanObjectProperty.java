@@ -55,6 +55,7 @@ import sun.reflect.misc.MethodUtil;
  * @see ReadOnlyJavaBeanObjectPropertyBuilder
  * 
  * @param T the type of the wrapped {@code Object}
+ * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPropertyBase<T> implements ReadOnlyJavaBeanProperty<T> {
 

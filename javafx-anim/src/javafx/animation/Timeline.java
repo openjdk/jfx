@@ -65,6 +65,7 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * @see KeyFrame
  * @see KeyValue
  * 
+ * @since JavaFX 2.0
  */
 public final class Timeline extends Animation {
     /* Package-private for testing purposes */

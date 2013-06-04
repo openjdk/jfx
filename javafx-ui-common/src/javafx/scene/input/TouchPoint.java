@@ -50,7 +50,7 @@ import javafx.scene.Scene;
  * node, it will next time be targeted to it; when ungrabbed, it will be
  * always targeted to the top-most node on the current location.
  *
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public final class TouchPoint implements Serializable{
 
@@ -68,6 +68,7 @@ public final class TouchPoint implements Serializable{
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and target
+     * @since JavaFX 8.0
      */
     public TouchPoint(int id, State state, double x, double y, double screenX,
             double screenY, EventTarget target, PickResult pickResult) {
@@ -250,6 +251,7 @@ public final class TouchPoint implements Serializable{
      *
      * @return depth position of the event relative to the
      * origin of the MouseEvent's source.
+     * @since JavaFX 8.0
      */
     public final double getZ() {
         return z;
@@ -319,6 +321,7 @@ public final class TouchPoint implements Serializable{
      * Returns information about the pick.
      *
      * @return new PickResult object that contains information about the pick
+     * @since JavaFX 8.0
      */
     public final PickResult getPickResult() {
         return pickResult;
@@ -360,7 +363,7 @@ public final class TouchPoint implements Serializable{
     /**
      * Represents current state of the touch point
      *
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public enum State {
         /**

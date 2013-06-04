@@ -46,6 +46,7 @@ import javafx.scene.image.Image;
  * <p/>
  * When applied to a Region with a defined shape, a BorderImage is not drawn.
  * TODO Should the insets still be applied?
+ * @since JavaFX 8.0
  */
 public class BorderImage {
     /**

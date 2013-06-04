@@ -33,6 +33,7 @@ import javafx.scene.paint.Color;
 /**
  * This interface defines methods for retrieving the pixel data from an
  * {@link Image} or other surface containing pixels.
+ * @since JavaFX 2.2
  */
 public interface PixelReader {
     /**

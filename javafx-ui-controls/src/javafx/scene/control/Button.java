@@ -56,6 +56,7 @@ import com.sun.javafx.scene.control.skin.ButtonSkin;
  *
  * <p>Example:
  * <pre><code>Button button = new Button("Click Me");</code></pre>
+ * @since JavaFX 2.0
  */
 public class Button extends ButtonBase {
 

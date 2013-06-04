@@ -35,6 +35,7 @@ import javafx.scene.Node;
  * @param <C> A subtype of Skinnable that the Skin represents. This allows for
  *      Skin implementation to access the {@link Skinnable} implementation, 
  *      which is usually a {@link Control} implementation.
+ * @since JavaFX 2.0
  */
 public interface Skin<C extends Skinnable> {
     /**

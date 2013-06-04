@@ -29,7 +29,7 @@ package javafx.scene.shape;
  * Defines how the polygon is drawn when use with {@code Shape3D.drawMode}
  *
  * @see Shape3D#drawModeProperty
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public enum DrawMode {
 

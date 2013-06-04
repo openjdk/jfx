@@ -138,7 +138,7 @@ import javafx.css.StyleableProperty;
  * bounds may extend outside its own bounds if a child's pref size is larger than
  * the space textflow has to allocate for it.</p>
  *
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public class TextFlow extends Pane {
 
@@ -374,7 +374,7 @@ public class TextFlow extends Pane {
      *
      * @defaultValue 0
      *
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     private DoubleProperty lineSpacing;
 

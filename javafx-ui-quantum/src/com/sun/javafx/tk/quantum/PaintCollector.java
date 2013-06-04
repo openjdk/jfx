@@ -161,7 +161,7 @@ final class PaintCollector implements CompletionListener {
      * Called by renderAll to wait for rendering to complete before
      * continuing.
      */
-    private void waitForRenderingToComplete() {
+    void waitForRenderingToComplete() {
         while (true) {
             try {
                 // We need to keep waiting until things are done!
@@ -379,9 +379,6 @@ final class PaintCollector implements CompletionListener {
         // synchronous or not. If they are not synchronous,
         // then we want to process them first.
         Collections.sort(dirtyScenes, DIRTY_SCENE_SORTER);
-
-        // Here we will block and wait for all
-        waitForRenderingToComplete();
 
         // Reset the fields
         hasDirty = false;

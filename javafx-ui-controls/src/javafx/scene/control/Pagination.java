@@ -94,7 +94,7 @@ import com.sun.javafx.scene.control.skin.PaginationSkin;
  *       }
  *   });
  * }</pre>
- * @since 2.2
+ * @since JavaFX 2.2
  */
 @DefaultProperty("pages")
 public class Pagination extends Control {
@@ -347,6 +347,7 @@ public class Pagination extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -354,6 +355,7 @@ public class Pagination extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

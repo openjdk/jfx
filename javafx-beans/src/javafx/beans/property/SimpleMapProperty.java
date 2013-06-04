@@ -36,6 +36,7 @@ import javafx.collections.ObservableSet;
  *
  * @param <K> the type of the key elements of the {@code Map}
  * @param <V> the type of the value elements of the {@code Map}
+ * @since JavaFX 2.1
  */
 public class SimpleMapProperty<K, V> extends MapPropertyBase<K, V> {
 

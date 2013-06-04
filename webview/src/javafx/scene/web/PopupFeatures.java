@@ -11,6 +11,7 @@ package javafx.scene.web;
  * 
  * @see WebEngine
  * @see WebEngine#setCreatePopupHandler
+ * @since JavaFX 2.0
  */
 public final class PopupFeatures {
 

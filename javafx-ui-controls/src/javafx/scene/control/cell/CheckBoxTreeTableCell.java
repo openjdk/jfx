@@ -57,7 +57,7 @@ import javafx.util.StringConverter;
  * if it changes externally).
  * 
  * @param <T> The type of the elements contained within the TreeTableColumn.
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     

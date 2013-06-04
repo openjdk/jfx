@@ -38,6 +38,7 @@ import javafx.scene.shape.StrokeType;
  * not match the settings used to ultimately draw them. Or you may create a new
  * BorderStrokeStyle and define each of the stroke settings manually, similar
  * to any {@link javafx.scene.shape.Shape}.
+ * @since JavaFX 8.0
  */
 public final class BorderStrokeStyle {
     private static final List<Double> DOTTED_LIST = Collections.unmodifiableList(asList(0, 2));

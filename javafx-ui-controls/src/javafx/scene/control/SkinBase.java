@@ -43,6 +43,7 @@ import javafx.scene.layout.Region;
 
 /**
  *
+ * @since JavaFX 8.0
  */
 public abstract class SkinBase<C extends Control> implements Skin<C> {
     

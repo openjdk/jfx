@@ -87,6 +87,7 @@ path.getElements().add(lineTo);
 path.getElements().add(arcTo);
 
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Path extends Shape {
 
@@ -101,6 +102,7 @@ public class Path extends Shape {
     /**
      * Creates a new instance of Path
      * @param elements Elements of the Path
+     * @since JavaFX 2.1
      */
     public Path(PathElement... elements) {
         if (elements != null) {
@@ -111,7 +113,7 @@ public class Path extends Shape {
     /**
      * Creates new instance of Path
      * @param elements The collection of the elements of the Path
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public Path(Collection<? extends PathElement> elements) {
         if (elements != null) {

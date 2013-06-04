@@ -980,7 +980,6 @@ public abstract class Shape {
     
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     static int outcode(float rx, float ry, float rwidth, float rheight, float x, float y) {
         /*
@@ -1013,28 +1012,24 @@ public abstract class Shape {
     /**
      * The bitmask that indicates that a point lies to the left of
      * this <code>Rectangle2D</code>.
-     * @since 1.2
      */
     public static final int OUT_LEFT = 1;
 
     /**
      * The bitmask that indicates that a point lies above
      * this <code>Rectangle2D</code>.
-     * @since 1.2
      */
     public static final int OUT_TOP = 2;
 
     /**
      * The bitmask that indicates that a point lies to the right of
      * this <code>Rectangle2D</code>.
-     * @since 1.2
      */
     public static final int OUT_RIGHT = 4;
 
     /**
      * The bitmask that indicates that a point lies below
      * this <code>Rectangle2D</code>.
-     * @since 1.2
      */
     public static final int OUT_BOTTOM = 8;
 

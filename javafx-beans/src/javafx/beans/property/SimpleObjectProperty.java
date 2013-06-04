@@ -34,6 +34,7 @@ package javafx.beans.property;
  * 
  * @param <T>
  *            the type of the wrapped {@code Object}
+ * @since JavaFX 2.0
  */
 public class SimpleObjectProperty<T> extends ObjectPropertyBase<T> {
 

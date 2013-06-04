@@ -27,6 +27,7 @@ package javafx.geometry;
 
 /**
  * Enum for which side of a rectangle something should be. This is used for chart titles, axis etc.
+ * @since JavaFX 2.0
  */
 public enum Side {
     /**

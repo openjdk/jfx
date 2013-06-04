@@ -28,6 +28,7 @@ package javafx.collections;
 /**
  * Interface that receives notifications of changes to an ObservableSet.
  * @param <E> the element type
+ * @since JavaFX 2.1
  */
 public interface SetChangeListener<E> {
 
@@ -38,6 +39,7 @@ public interface SetChangeListener<E> {
      * modify the set and hence no change will be generated.
      *
      * @param <E> element type
+     * @since JavaFX 2.1
      */
     public static abstract class Change<E> {
 

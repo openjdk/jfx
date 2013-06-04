@@ -259,7 +259,7 @@ public class JavaScriptBridgeTest extends TestBase {
             }
         }});
     }
-                
+
     public static class Carry {
         public float a;
         public double b;
@@ -351,6 +351,34 @@ public class JavaScriptBridgeTest extends TestBase {
     private void executeShouldFail(WebEngine web, String expression) {
         executeShouldFail(web, expression, "'undefined' is not a function");
     }
+
+    public @Test void testThrowJava() throws InterruptedException {
+        final WebEngine web = getEngine();
+
+        submit(new Runnable() { public void run() {
+            MyExceptionHelper test = new MyExceptionHelper();
+            bind("test", test);
+            try {
+                web.executeScript("test.throwException()");
+                fail("JSException expected but not thrown");
+            } catch (JSException e) {
+                assertEquals("netscape.javascript.JSException",
+                             e.getClass().getName());
+                assertTrue(e.getCause() != null);
+                assertTrue(e.getCause() instanceof MyException);
+            }
+        }});
+    }
+
+    public static class MyException extends Throwable {
+    }
+
+    public static class MyExceptionHelper {
+        public void throwException() throws MyException {
+            throw new MyException();
+        }
+    }
+
 
     public @Test void testBridgeArray1() throws InterruptedException {
         final WebEngine web = getEngine();

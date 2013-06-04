@@ -60,6 +60,7 @@ import javafx.beans.value.ObservableNumberValue;
  * of the developer to call the correct getter ({@link #intValue()} etc.). If
  * the internal representation does not match the type of the getter, a standard
  * cast is done.
+ * @since JavaFX 2.0
  */
 public interface NumberExpression extends ObservableNumberValue {
 

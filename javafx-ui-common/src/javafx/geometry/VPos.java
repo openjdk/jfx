@@ -27,6 +27,7 @@ package javafx.geometry;
 
 /**
  * A set of values for describing vertical positioning and alignment.
+ * @since JavaFX 2.0
  */
 public enum VPos {
     /**

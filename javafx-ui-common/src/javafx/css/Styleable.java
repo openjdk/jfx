@@ -33,6 +33,7 @@ import javafx.collections.ObservableSet;
 /** 
  * Styleable comprises the minimal interface required for an object to be 
  * styled by CSS.
+ * @since JavaFX 8.0
  */
 public interface Styleable { 
 

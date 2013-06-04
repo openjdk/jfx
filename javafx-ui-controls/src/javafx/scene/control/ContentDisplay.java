@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 /**
  * <p>The position to place the content within a Label.</p>
+ * @since JavaFX 2.0
  */
 public enum ContentDisplay {
     /**

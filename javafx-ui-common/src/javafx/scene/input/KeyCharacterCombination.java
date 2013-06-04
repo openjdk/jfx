@@ -33,6 +33,7 @@ import com.sun.javafx.tk.Toolkit;
  * by its character. Such key combination is dependent on the keyboard
  * functional layout configured by the user at the time of key combination
  * matching.
+ * @since JavaFX 2.0
  */
 public final class KeyCharacterCombination extends KeyCombination {
     /** The key character associated with this key combination. */

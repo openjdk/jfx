@@ -107,7 +107,7 @@ import sun.util.locale.provider.LocaleProviderAdapter;
  * </code></pre>
  *
  *
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public class DatePicker extends ComboBoxBase<LocalDate> {
 

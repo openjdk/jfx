@@ -56,6 +56,7 @@ circle.setCenterY(100.0f);
 circle.setRadius(50.0f);
 }
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Circle extends Shape {
 
@@ -202,7 +203,7 @@ public class Circle extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radius = new DoublePropertyBase() {
+    private final DoubleProperty radius = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {

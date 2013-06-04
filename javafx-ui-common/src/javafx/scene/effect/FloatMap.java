@@ -36,6 +36,7 @@ import com.sun.javafx.Utils;
 /**
  * A buffer that contains floating point data, intended for use as a parameter
  * to effects such as {@link DisplacementMap}.
+ * @since JavaFX 2.0
  */
 public class FloatMap {
     private com.sun.scenario.effect.FloatMap map;
@@ -115,6 +116,7 @@ public class FloatMap {
      * Creates a new instance of FloatMap with the specified width and height.
      * @param width the width of the map, in pixels
      * @param height the height of the map, in pixels
+     * @since JavaFX 2.1
      */
     public FloatMap(int width, int height) {
         setWidth(width);

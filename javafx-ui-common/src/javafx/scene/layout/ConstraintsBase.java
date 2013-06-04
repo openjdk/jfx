@@ -37,6 +37,7 @@ import com.sun.javafx.WeakReferenceQueue;
  * classes may create extensions of this class if they need to define their own
  * set of layout constraints.
  *
+ * @since JavaFX 2.0
  */
 public abstract class ConstraintsBase {
 

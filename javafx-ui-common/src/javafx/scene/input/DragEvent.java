@@ -199,6 +199,7 @@ rect.setOnDragDropped(new EventHandler<DragEvent>() {
  * pressing the ESC key to cancel the drag and drop gesture, or by
  * the gesture target reporting an unsuccessful data transfer.
  * </p>
+ * @since JavaFX 2.0
  */
 public final class DragEvent extends InputEvent {
 
@@ -306,6 +307,7 @@ public final class DragEvent extends InputEvent {
      * @param gestureTarget the new gesture target.
      * @param eventType the new eventType
      * @return the event copy with the fields
+     * @since JavaFX 8.0
      */
     public DragEvent copyFor(Object source, EventTarget target,
             Object gestureSource, Object gestureTarget,
@@ -337,6 +339,7 @@ public final class DragEvent extends InputEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and the target
+     * @since JavaFX 8.0
      */
     public DragEvent(Object source, EventTarget target, EventType<DragEvent> eventType, Dragboard dragboard,
             double x, double y,
@@ -382,6 +385,7 @@ public final class DragEvent extends InputEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates
+     * @since JavaFX 8.0
      */
     public DragEvent(EventType<DragEvent> eventType, Dragboard dragboard,
             double x, double y,
@@ -425,6 +429,7 @@ public final class DragEvent extends InputEvent {
      * @param target the new target of the copied event
      * @param eventType the new eventType
      * @return the event copy with the fields
+     * @since JavaFX 8.0
      */
     public DragEvent copyFor(Object source, EventTarget target, EventType<DragEvent> type) {
         DragEvent e = (DragEvent) copyFor(source, target);
@@ -483,6 +488,7 @@ public final class DragEvent extends InputEvent {
      *
      * @return depth position of the event relative to the
      * origin of the MouseEvent's source.
+     * @since JavaFX 8.0
      */
     public final double getZ() {
         return z;
@@ -570,6 +576,7 @@ public final class DragEvent extends InputEvent {
      * Returns information about the pick.
      *
      * @return new PickResult object that contains information about the pick
+     * @since JavaFX 8.0
      */
     public final PickResult getPickResult() {
         return pickResult;
@@ -626,6 +633,7 @@ public final class DragEvent extends InputEvent {
     /**
      * The object that accepted the drag.
      * @return the object that accepted the drag.
+     * @since JavaFX 8.0
      */
     public final Object getAcceptingObject() {
         return state.acceptingObject;

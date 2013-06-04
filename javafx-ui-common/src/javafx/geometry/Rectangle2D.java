@@ -28,6 +28,7 @@ package javafx.geometry;
 /**
  * A 2D rectangle used to describe the bounds of an object. It is defined by a
  * location (minX, minY) and dimension (width x height).
+ * @since JavaFX 2.0
  */
 public class Rectangle2D {
     /**

@@ -37,12 +37,14 @@ class GLPixelFormat {
     final private long nativeScreen;
     private long nativePFInfo;
     private static int defaultDepthSize;
+    private static int defaultBufferSize;
 
     static {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
 
             public Void run() {
                defaultDepthSize = Integer.getInteger("egl.depthSize", 24);
+               defaultBufferSize = Integer.getInteger("prism.glBufferSize", 32);
                 return null;
             }
         });
@@ -93,7 +95,23 @@ class GLPixelFormat {
             onScreen = true;
             doubleBuffer = true;
             depthSize = defaultDepthSize;
-            redSize = greenSize = blueSize = alphaSize = 8;
+            switch (defaultBufferSize) {
+                case 32:
+                    redSize = greenSize = blueSize = alphaSize = 8;
+                    break;
+                case 24:
+                    redSize = greenSize = blueSize = 8;
+                    alphaSize = 0;
+                    break;
+                case 16:
+                    redSize = blueSize = 5;
+                    greenSize = 6;
+                    alphaSize = 0;
+                    break;
+                default:
+                    throw new IllegalArgumentException("color buffer size "
+                            + defaultBufferSize + " not supported");
+            }
         }
 
         boolean isOnScreen() {

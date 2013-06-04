@@ -29,7 +29,7 @@ package javafx.scene.shape;
  * Face culling setting for use with {@code Shape3D.cullFace}
  *
  * @see Shape3D#cullFaceProperty
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public enum CullFace {
 

@@ -36,7 +36,7 @@ import javafx.beans.InvalidationListener;
  * @param <T> actual array instance type
  * @see ObservableArray
  * @see ArrayChangeListener
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public abstract class ObservableArrayBase<T extends ObservableArray<T>> implements ObservableArray<T> {
     

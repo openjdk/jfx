@@ -45,6 +45,7 @@ import javafx.collections.SetChangeListener;
  * @see SetProperty
  *
  * @param <E> the type of the {@code Set} elements
+ * @since JavaFX 2.1
  */
 public abstract class SetPropertyBase<E> extends SetProperty<E> {
 

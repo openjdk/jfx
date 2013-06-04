@@ -49,6 +49,7 @@ package javafx.scene.layout;
  * <p>
  * The width and height may also be set to {@code AUTO}, indicating that the area should be sized
  * so as to use the image's intrinsic size, or if it cannot be determined, 100%.
+ * @since JavaFX 8.0
  */
 public final class BackgroundSize {
     /**

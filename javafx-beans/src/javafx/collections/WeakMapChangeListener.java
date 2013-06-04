@@ -50,6 +50,7 @@ import java.lang.ref.WeakReference;
  * @param <K> the key element type
  * @param <V> the value element type
  *
+ * @since JavaFX 2.1
  */
 public final class WeakMapChangeListener<K, V> implements MapChangeListener<K, V>, WeakListener {
 

@@ -46,6 +46,7 @@ import javafx.beans.value.ObservableNumberValue;
  * @see FloatProperty
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class FloatPropertyBase extends FloatProperty {
 

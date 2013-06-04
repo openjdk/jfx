@@ -79,7 +79,7 @@ import javafx.scene.Node;
  * @see CheckBoxTreeCell
  * @see TreeItem
  * @see CheckBox
- * @since 2.2
+ * @since JavaFX 2.2
  */
 // TODO the TreeModificationEvent doesn't actually bubble in the same way as
 // TreeItem - it just looks that way as the 'bubbling' is done via changing the
@@ -326,6 +326,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      * 
      * @param <T> The type of the value contained within the
      *      {@link CheckBoxTreeItem#valueProperty() value} property.
+     * @since JavaFX 2.2
      */
     public static class TreeModificationEvent<T> extends Event {
         private static final long serialVersionUID = -8445355590698862999L;

@@ -76,6 +76,7 @@ import javafx.util.Callback;
  * they yield only limited number of notifications. On the other hand, java.util.Collections methods
  * might call "modification methods" on an ObservableList multiple times, resulting in a number of notifications.
  *
+ * @since JavaFX 2.0
  */
 public class FXCollections {
     /** Not to be instantiated. */
@@ -114,7 +115,7 @@ public class FXCollections {
      *
      * @param list a concrete List that backs this ObservableList
      * @param extractor element to Observable[] convertor
-     * @since 2.1
+     * @since JavaFX 2.1
      * @return a newly created ObservableList
      */
     public static <E> ObservableList<E> observableList(List<E> list, Callback<E, Observable[]> extractor) {
@@ -149,6 +150,7 @@ public class FXCollections {
      * reported to observers of any ObservableSet that wraps it.
      * @param set a Set that backs this ObservableSet
      * @return a newly created ObservableSet
+     * @since JavaFX 2.1
      */
     public static <E> ObservableSet<E> observableSet(Set<E> set) {
         if (set == null) {
@@ -161,6 +163,7 @@ public class FXCollections {
      * Constructs an ObservableSet that contains all the specified elements.
      * @param elements elements that will be added into returned ObservableSet
      * @return a newly created ObservableSet
+     * @since JavaFX 2.1
      */
     public static <E> ObservableSet<E> observableSet(E... elements) {
         if (elements == null) {
@@ -194,6 +197,7 @@ public class FXCollections {
      * @param valueType the type of value that {@code map} is permitted to hold
      * @return a dynamically typesafe view of the specified map
      * @see Collections#checkedMap(java.util.Map, java.lang.Class)
+     * @since JavaFX 8.0
      */
     public static <K, V> ObservableMap<K, V> checkedObservableMap(ObservableMap<K, V> map, Class<K> keyType, Class<V> valueType) {
         if (map == null || keyType == null || valueType == null) {
@@ -207,6 +211,7 @@ public class FXCollections {
      * @param  map the map to be "wrapped" in a synchronized map.
      * @return A synchronized version of the observable map
      * @see Collections#synchronizedMap(java.util.Map)
+     * @since JavaFX 8.0
      */
     public static <K, V> ObservableMap<K, V> synchronizedObservableMap(ObservableMap<K, V> map) {
         if (map == null) {
@@ -221,6 +226,7 @@ public class FXCollections {
      * Creates and empty unmodifiable observable map.
      * @return An empty unmodifiable observable map
      * @see Collections#emptyMap()
+     * @since JavaFX 8.0
      */
     @SuppressWarnings("unchecked")
     @ReturnsUnmodifiableCollection
@@ -231,6 +237,7 @@ public class FXCollections {
     /**
      * Creates a new empty observable integer array.
      * @return a newly created ObservableIntegerArray
+     * @since JavaFX 8.0
      */
     public static ObservableIntegerArray observableIntegerArray() {
         return new ObservableIntegerArrayImpl();
@@ -240,6 +247,7 @@ public class FXCollections {
      * Creates a new observable integer array with {@code values} set to it.
      * @param values the values that will be in the new observable integer array
      * @return a newly created ObservableIntegerArray
+     * @since JavaFX 8.0
      */
     public static ObservableIntegerArray observableIntegerArray(int... values) {
         return new ObservableIntegerArrayImpl(values);
@@ -250,6 +258,7 @@ public class FXCollections {
      * {@code array}.
      * @param array observable integer array to copy
      * @return a newly created ObservableIntegerArray
+     * @since JavaFX 8.0
      */
     public static ObservableIntegerArray observableIntegerArray(ObservableIntegerArray array) {
         return new ObservableIntegerArrayImpl(array);
@@ -258,6 +267,7 @@ public class FXCollections {
     /**
      * Creates a new empty observable float array.
      * @return a newly created ObservableFloatArray
+     * @since JavaFX 8.0
      */
     public static ObservableFloatArray observableFloatArray() {
         return new ObservableFloatArrayImpl();
@@ -267,6 +277,7 @@ public class FXCollections {
      * Creates a new observable float array with {@code values} set to it.
      * @param values the values that will be in the new observable float array
      * @return a newly created ObservableFloatArray
+     * @since JavaFX 8.0
      */
     public static ObservableFloatArray observableFloatArray(float... values) {
         return new ObservableFloatArrayImpl(values);
@@ -277,6 +288,7 @@ public class FXCollections {
      * {@code array}.
      * @param array observable float array to copy
      * @return a newly created ObservableFloatArray
+     * @since JavaFX 8.0
      */
     public static ObservableFloatArray observableFloatArray(ObservableFloatArray array) {
         return new ObservableFloatArrayImpl(array);
@@ -298,7 +310,7 @@ public class FXCollections {
      * This list reports element updates.
      * @param extractor element to Observable[] convertor. Observable objects are listened for changes on the element.
      * @see #observableList(java.util.List, javafx.util.Callback) 
-     * @since 2.1
+     * @since JavaFX 2.1
      * @return a newly created ObservableList
      */
     public static <E> ObservableList<E> observableArrayList(Callback<E, Observable[]> extractor) {
@@ -431,6 +443,7 @@ public class FXCollections {
      * @param set an ObservableSet that is to be wrapped
      * @return an ObserableSet wrapper that is unmodifiable
      * @see Collections#unmodifiableSet(java.util.Set)
+     * @since JavaFX 8.0
      */
     @ReturnsUnmodifiableCollection
     public static<E> ObservableSet<E> unmodifiableObservableSet(ObservableSet<E> set) {
@@ -446,6 +459,7 @@ public class FXCollections {
      * @param type  the type of element that <tt>set</tt> is permitted to hold
      * @return a dynamically typesafe view of the specified set
      * @see Collections#checkedSet(java.util.Set, java.lang.Class)
+     * @since JavaFX 8.0
      */
     public static<E> ObservableSet<E> checkedObservableSet(ObservableSet<E> set, Class<E> type) {
         if (set == null) {
@@ -459,6 +473,7 @@ public class FXCollections {
      * @param  set the set to be "wrapped" in a synchronized set.
      * @return A synchronized version of the observable set
      * @see Collections#synchronizedSet(java.util.Set)
+     * @since JavaFX 8.0
      */
     public static<E> ObservableSet<E> synchronizedObservableSet(ObservableSet<E> set) {
         if (set == null) {
@@ -473,6 +488,7 @@ public class FXCollections {
      * Creates and empty unmodifiable observable set.
      * @return An empty unmodifiable observable set
      * @see Collections#emptySet()
+     * @since JavaFX 8.0
      */
     @SuppressWarnings("unchecked")
     @ReturnsUnmodifiableCollection

@@ -131,7 +131,6 @@ import java.awt.image.ColorModel;
  *
  * @see java.awt.Paint
  * @see java.awt.Graphics2D#setPaint
- * @since 1.6
  */
 public final class RadialGradientPaint extends MultipleGradientPaint {
 

@@ -40,6 +40,7 @@ import javafx.scene.image.Image;
  * <p/>
  * Because the BackgroundImage is immutable, it can safely be used in any
  * cache, and can safely be reused among multiple Regions.
+ * @since JavaFX 8.0
  */
 public final class BackgroundImage {
 

@@ -57,7 +57,7 @@ import sun.util.logging.PlatformLogger;
 /**
  * The {@code SubScene} class is the container for content in a scene graph.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public class SubScene extends Node {
 

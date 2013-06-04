@@ -60,6 +60,7 @@ arc.setStartAngle(45.0f);
 arc.setLength(270.0f);
 arc.setType(ArcType.ROUND);
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Arc extends Shape {
 
@@ -190,7 +191,7 @@ public class Arc extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusX = new DoublePropertyBase() {
+    private final DoubleProperty radiusX = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
@@ -227,7 +228,7 @@ public class Arc extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusY = new DoublePropertyBase() {
+    private final DoubleProperty radiusY = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
@@ -304,7 +305,7 @@ public class Arc extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty length = new DoublePropertyBase() {
+    private final DoubleProperty length = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
@@ -423,7 +424,7 @@ public class Arc extends Shape {
         return shape;
     }
 
-    public final ArcType getTypeInternal() {
+    private final ArcType getTypeInternal() {
         ArcType t = getType();
         return t == null ? ArcType.OPEN : t;
     }

@@ -72,6 +72,7 @@ import com.sun.javafx.css.PseudoClassState;
  *       MAGIC_PSEUDO_CLASS = PseudoClass.getPseudoClassName("xyzzy");
  * </pre>
  * </code>
+ * @since JavaFX 8.0
  */
 public abstract class PseudoClass {
 

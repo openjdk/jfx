@@ -79,6 +79,7 @@ import javafx.beans.DefaultProperty;
  * ChoiceBox cb = new ChoiceBox();
  * cb.getItems().addAll("item1", "item2", "item3");
  * </pre>
+ * @since JavaFX 2.0
  */
 @DefaultProperty("items")
 public class ChoiceBox<T> extends Control {
@@ -262,6 +263,7 @@ public class ChoiceBox<T> extends Control {
      * This is useful when using domain objects in a ChoiceBox as this property 
      * allows for customization of the representation. Also, any of the pre-built
      * Converters available in the {@link javafx.util.converter} package can be set. 
+     * @since JavaFX 2.1
      */
     public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
     private ObjectProperty<StringConverter<T>> converter = 
@@ -274,6 +276,7 @@ public class ChoiceBox<T> extends Control {
      * selection model. The valueProperty is synchronized with the selectedItem. 
      * This property allows for bi-directional binding of external properties to the 
      * ChoiceBox and updates the selection model accordingly. 
+     * @since JavaFX 2.1
      */
     public ObjectProperty<T> valueProperty() { return value; }
     private ObjectProperty<T> value = new SimpleObjectProperty<T>(this, "value") {

@@ -81,6 +81,7 @@ import javafx.css.StyleableProperty;
  * placed in the clockwise order. The labelsVisible property is used to either display
  * pie slice labels or not.
  *
+ * @since JavaFX 2.0
  */
 public class PieChart extends Chart {
 
@@ -787,6 +788,7 @@ public class PieChart extends Chart {
     }
     /**
      * PieChart Data Item, represents one slice in the PieChart
+     * @since JavaFX 2.0
      */
     public final static class Data {
 
@@ -974,6 +976,7 @@ public class PieChart extends Chart {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -981,6 +984,7 @@ public class PieChart extends Chart {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

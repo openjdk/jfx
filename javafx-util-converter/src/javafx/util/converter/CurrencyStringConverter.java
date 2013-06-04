@@ -38,6 +38,7 @@ import javafx.util.StringConverter;
  * @see PercentageStringConverter
  * @see NumberStringConverter
  * @see StringConverter
+ * @since JavaFX 2.1
  */
 public class CurrencyStringConverter extends NumberStringConverter {
     

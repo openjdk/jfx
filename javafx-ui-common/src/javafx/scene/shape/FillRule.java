@@ -27,6 +27,7 @@ package javafx.scene.shape;
 
 /**
  * The fill rule for determining the interior of the path.
+ * @since JavaFX 2.0
  */
 public enum FillRule {
 

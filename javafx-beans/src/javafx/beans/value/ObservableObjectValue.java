@@ -31,6 +31,7 @@ package javafx.beans.value;
  * @see ObservableValue
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface ObservableObjectValue<T> extends ObservableValue<T> {
 

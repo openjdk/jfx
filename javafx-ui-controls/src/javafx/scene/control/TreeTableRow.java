@@ -60,6 +60,7 @@ import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
  * @see IndexedCell
  * @see Cell
  * @param <T> The type of the item contained within the Cell.
+ * @since JavaFX 8.0
  */
 public class TreeTableRow<T> extends IndexedCell<T> {
     

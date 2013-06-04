@@ -104,6 +104,7 @@ Image image3 = new Image("http://sample.com/res/flower.png", 100, 0, false, fals
 Image image4 = new Image("file:flower.png", 0, 100, false, false);
 
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Image {
 
@@ -464,7 +465,7 @@ public class Image {
      * The exception which caused image loading to fail. Contains a non-null
      * value only if the {@code error} property is set to {@code true}.
      *
-     * @since JavaFX 8
+     * @since JavaFX 8.0
      */
     private ReadOnlyObjectWrapper<Exception> exception;
 
@@ -1127,7 +1128,7 @@ public class Image {
      * is not supported for reading and writing pixels to.
      * 
      * @return the {@code PixelReader} for reading the pixel data of the image
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final PixelReader getPixelReader() {
         if (!pixelsReadable()) {

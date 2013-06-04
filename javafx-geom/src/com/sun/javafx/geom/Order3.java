@@ -136,7 +136,6 @@ final class Order3 extends Curve {
      *        resulting from the solution of the quadratic equation
      * @return the number of roots, or <code>-1</code> if the equation is
      *  a constant.
-     * @since 1.3
      */
     public static int solveQuadratic(double eqn[], double res[]) {
         double a = eqn[2];
