@@ -11,10 +11,12 @@
 
     <target name="jar-apps" depends="init">
         <ant dir="samples" target="jar-apps" inheritAll="false"/>
+        <ant dir="experiments" target="jar-apps" inheritAll="false"/>
     </target>
 
     <target name="clean" depends="init">
         <ant dir="samples" target="clean" inheritAll="false"/>
+        <ant dir="experiments" target="clean" inheritAll="false"/>
     </target>
 
     <target name="jfx-apps" depends="jar-apps,dist-apps,copy-public-apps">
