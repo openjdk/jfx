@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import javafx.animation.Timeline;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
@@ -72,13 +73,16 @@ public class ContentModel {
     private final Translate cameraPosition = new Translate(0,0,-7);
     private double dragStartX, dragStartY, dragStartRotateX, dragStartRotateY;
     private Node content;
-    private Timeline timeline;
     private AutoScalingGroup autoScalingGroup = new AutoScalingGroup(2);
     private Box xAxis,yAxis,zAxis;
     private AmbientLight ambientLight = new AmbientLight(Color.DARKGREY);
     private PointLight light1 = new PointLight(Color.WHITE);
     private PointLight light2 = new PointLight(Color.ANTIQUEWHITE);
     private PointLight light3 = new PointLight(Color.ALICEBLUE);
+    private final SimpleObjectProperty<Timeline> timeline = new SimpleObjectProperty<>();
+    public Timeline getTimeline() { return timeline.get(); }
+    public SimpleObjectProperty<Timeline> timelineProperty() { return timeline; }
+    public void setTimeline(Timeline timeline) { this.timeline.set(timeline); }
     private SimpleBooleanProperty ambientLightEnabled = new SimpleBooleanProperty(false){
         @Override protected void invalidated() {
             if (get()) {
@@ -315,14 +319,6 @@ public class ContentModel {
         autoScalingGroup.getChildren().add(this.content);
         setWireFrame(content,wireframe);
         setSubdivision(content,subdivision);
-    }
-
-    public Timeline getTimeline() {
-        return timeline;
-    }
-
-    public void setTimeline(Timeline timeline) {
-        this.timeline = timeline;
     }
 
     public SubScene getSubScene() {

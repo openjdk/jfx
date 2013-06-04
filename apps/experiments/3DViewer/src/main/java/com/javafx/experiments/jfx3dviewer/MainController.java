@@ -83,6 +83,13 @@ public class MainController implements Initializable {
     public ToggleButton settingsBtn;
     public CheckMenuItem loadAsPolygonsCheckBox;
     public CheckMenuItem optimizeCheckBox;
+    public Button startBtn;
+    public Button rwBtn;
+    public ToggleButton playBtn;
+    public Button ffBtn;
+    public Button endBtn;
+    public ToggleButton loopBtn;
+    public TimelineDisplay timelineDisplay;
     private Accordion settingsPanel;
     private double settingsLastWidth = -1;
     private int nodeCount = 0;
@@ -91,6 +98,7 @@ public class MainController implements Initializable {
     private final ContentModel contentModel = Jfx3dViewerApp.getContentModel();
     private File loadedPath = null;
     private String[] supportedFormatRegex;
+    private TimelineController timelineController;
 
     @Override public void initialize(URL location, ResourceBundle resources) {
         try {
@@ -104,6 +112,10 @@ public class MainController implements Initializable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        // create timelineController;
+        timelineController = new TimelineController(startBtn,rwBtn,playBtn,ffBtn,endBtn,loopBtn);
+        timelineController.timelineProperty().bind(contentModel.timelineProperty());
+        timelineDisplay.timelineProperty().bind(contentModel.timelineProperty());
         // listen for drops
         supportedFormatRegex = Importer3D.getSupportedFormatExtensionFilters();
         for (int i=0; i< supportedFormatRegex.length; i++) {
