@@ -44,8 +44,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <ToolBar>
     <items>
       <Button fx:id="openBtn" mnemonicParsing="false" onAction="#open" text="Open..." />
-      <Button mnemonicParsing="false" text="Export..."  onAction="#export" />
-      <Pane maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS" prefHeight="-1.0" prefWidth="-1.0" />
+      <Button mnemonicParsing="false" onAction="#export" text="Export..." />
+      <Separator orientation="VERTICAL" prefHeight="-1.0" />
+      <CheckBox fx:id="loadAsPolygonsCheckBox" mnemonicParsing="false" text="Load as Polygons" />
+      <Pane maxWidth="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS"/>
       <ToggleButton fx:id="settingsBtn" mnemonicParsing="false" onAction="#toggleSettings" text="Settings" />
     </items>
   </ToolBar>

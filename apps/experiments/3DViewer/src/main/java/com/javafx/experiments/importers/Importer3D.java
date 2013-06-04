@@ -30,13 +30,25 @@ public final class Importer3D {
     }
 
     /**
-     * Load a 3D file.
+     * Load a 3D file, always loaded as TriangleMesh.
      *
      * @param fileUrl The url of the 3D file to load
      * @return The loaded Node which could be a MeshView or a Group
      * @throws IOException if issue loading file
      */
     public static Node load(String fileUrl) throws IOException {
+        return load(fileUrl,false);
+    }
+
+    /**
+     * Load a 3D file.
+     *
+     * @param fileUrl The url of the 3D file to load
+     * @param asPolygonMesh When true load as a PolygonMesh if the loader supports
+     * @return The loaded Node which could be a MeshView or a Group
+     * @throws IOException if issue loading file
+     */
+    public static Node load(String fileUrl, boolean asPolygonMesh) throws IOException {
         // get extension
         final int dot = fileUrl.lastIndexOf('.');
         if (dot <= 0) {
@@ -49,7 +61,7 @@ public final class Importer3D {
             case "ase":
                 return loadMaxFile(fileUrl);
             case "obj":
-                return loadObjFile(fileUrl);
+                return loadObjFile(fileUrl, asPolygonMesh);
             case "fxml":
                 Object fxmlRoot = FXMLLoader.load(new URL(fileUrl));
                 if (fxmlRoot instanceof Node) {
@@ -78,12 +90,18 @@ public final class Importer3D {
         return new MaxLoader().loadMaxUrl(fileUrl);
     }
 
-    private static Node loadObjFile(String fileUrl) throws IOException {
-//        ObjImporter reader = new ObjImporter(fileUrl);
-        PolyObjImporter reader = new PolyObjImporter(fileUrl);
+    private static Node loadObjFile(String fileUrl, boolean asPolygonMesh) throws IOException {
         Group res = new Group();
-        for (String key : reader.getMeshes()) {
-            res.getChildren().add(reader.buildPolygonMeshView(key));
+        if (asPolygonMesh) {
+            PolyObjImporter reader = new PolyObjImporter(fileUrl);
+            for (String key : reader.getMeshes()) {
+                res.getChildren().add(reader.buildPolygonMeshView(key));
+            }
+        } else {
+            ObjImporter reader = new ObjImporter(fileUrl);
+            for (String key : reader.getMeshes()) {
+                res.getChildren().add(reader.buildMeshView(key));
+            }
         }
         return res;
     }
