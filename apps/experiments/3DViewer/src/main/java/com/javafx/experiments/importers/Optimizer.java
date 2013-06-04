@@ -160,9 +160,10 @@ public class Optimizer {
                 WritableValue<?> target = keyValue.getTarget();
                 KeyInfo prev = prevValues.get(target);
                 kvTotal++;
-                if (prev != null && (prev.keyValue.equals(keyValue) || (prev.first && prev.keyValue.getEndValue().equals(keyValue.getEndValue())))) {
+                if (prev != null && prev.keyValue.getEndValue().equals(keyValue.getEndValue())) {
+//                if (prev != null && (prev.keyValue.equals(keyValue) || (prev.first && prev.keyValue.getEndValue().equals(keyValue.getEndValue())))) {
                     KeyInfo prevPrev = prevPrevValues.get(target);
-                    if ((prevPrev != null && prevPrev.keyValue.equals(keyValue))
+                    if ((prevPrev != null && prevPrev.keyValue.getEndValue().equals(keyValue.getEndValue()))
                             || (prev.first && target.getValue().equals(prev.keyValue.getEndValue()))) {
                         // All prevPrev, prev and current match, so prev can be removed
                         // or prev is first and its value equals to the property existing value, so prev can be removed
