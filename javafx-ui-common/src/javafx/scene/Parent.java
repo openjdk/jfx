@@ -96,7 +96,7 @@ public abstract class Parent extends Node {
      * but mark whole parent dirty.
      */
     private boolean removedChildrenExceedsThreshold = false;
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -805,8 +805,8 @@ public abstract class Parent extends Node {
      * "pulse", or frame of animation.
      * <p>
      * If this parent is either a layout root or unmanaged, then it will be
-     * added directly to the scene's dirty layout list, otherwise requestLayout
-     * will be invoked on its parent.
+     * added directly to the scene's dirty layout list, otherwise requestParentLayout
+     * will be invoked.
      */
     public void requestLayout() {
         if (!isNeedsLayout()) {
@@ -825,24 +825,37 @@ public abstract class Parent extends Node {
                 final SubScene subScene = getSubScene();
                 if (subScene != null) {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
-                        logger.finer(this.toString()+" layoutRoot added to SubScene dirty layout list");
+                        logger.finer(this.toString() + " layoutRoot added to SubScene dirty layout list");
                     }
                     subScene.setDirtyLayout(this);
                 }
                 if (scene != null) {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
-                        logger.finer(this.toString()+" layoutRoot added to scene dirty layout list");
+                        logger.finer(this.toString() + " layoutRoot added to scene dirty layout list");
                     }
                     scene.addToDirtyLayoutList(this);
                 }
             } else {
-                final Parent parent = getParent();
-                if (parent != null) {
-                    parent.requestLayout();
-                }
+                requestParentLayout();
             }
         } else {
             clearSizeCache();
+        }
+    }
+
+    /**
+     * Requests a layout pass of the parent to be performed before the next scene is
+     * rendered. This is batched up asynchronously to happen once per
+     * "pulse", or frame of animation.
+     * <p>
+     * This may be used when the current parent have changed it's min/max/preferred width/height,
+     * but doesn't know yet if the change will lead to it's actual size change. This will be determined
+     * when it's parent recomputes the layout with the new hints.
+     */
+    protected final void requestParentLayout() {
+        final Parent parent = getParent();
+        if (parent != null && !parent.performingLayout) {
+            parent.requestLayout();
         }
     }
 
@@ -1075,7 +1088,7 @@ public abstract class Parent extends Node {
      *                                                                     *
      **********************************************************************/
 
-    
+
     /**
      * A ObservableList of string URLs linking to the stylesheets to use with this scene's
      * contents. For additional information about using CSS with the
@@ -1091,8 +1104,8 @@ public abstract class Parent extends Node {
                 // Notify the StyleManager if stylesheets change. This Parent's
                 // styleManager will get recreated in impl_processCSS.
                 StyleManager.getInstance().stylesheetsChanged(Parent.this, c);
-                
-                // RT-9784 - if stylesheet is removed, reset styled properties to 
+
+                // RT-9784 - if stylesheet is removed, reset styled properties to
                 // their initial value.
                 c.reset();
                 while(c.next()) {
@@ -1101,15 +1114,15 @@ public abstract class Parent extends Node {
                     }
                     break; // no point in resetting more than once...
                 }
-                
+
                 impl_reapplyCSS();
             }
         }
     };
 
     /**
-     * Gets an observable list of string URLs linking to the stylesheets to use 
-     * with this Parent's contents. For additional information about using CSS 
+     * Gets an observable list of string URLs linking to the stylesheets to use
+     * with this Parent's contents. For additional information about using CSS
      * with the scene graph, see the <a href="doc-files/cssref.html">CSS Reference
      * Guide</a>.
      *
@@ -1117,34 +1130,34 @@ public abstract class Parent extends Node {
      * @since JavaFX 2.1
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
-    
+
     /**
      * This method recurses up the parent chain until parent is null. As the
      * stack unwinds, if the Parent has stylesheets, they are added to the
      * list.
-     * 
+     *
      * It is possible to override this method to stop the recursion. This allows
-     * a Parent to have a set of stylesheets distinct from its Parent. 
-     * 
+     * a Parent to have a set of stylesheets distinct from its Parent.
+     *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21247 has been filed to track this
     public /* Do not make this final! */ List<String> impl_getAllParentStylesheets() {
-        
+
         List<String> list = null;
         final Parent myParent = getParent();
         if (myParent != null) {
 
             //
-            // recurse so that stylesheets of Parents closest to the root are 
-            // added to the list first. The ensures that declarations for 
+            // recurse so that stylesheets of Parents closest to the root are
+            // added to the list first. The ensures that declarations for
             // stylesheets further down the tree (closer to the leaf) have
             // a higer ordinal in the cascade.
             //
             list = myParent.impl_getAllParentStylesheets();
         }
-        
+
         if (stylesheets != null && stylesheets.isEmpty() == false) {
             if (list == null) {
                 list = new ArrayList<String>(stylesheets.size());
@@ -1153,11 +1166,11 @@ public abstract class Parent extends Node {
                 list.add(stylesheets.get(n));
             }
         }
-        
+
         return list;
-        
+
     }
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -1180,12 +1193,12 @@ public abstract class Parent extends Node {
 
         // Let the super implementation handle CSS for this node
         super.impl_processCSS();
-        
+
         // For each child, process CSS
         for (int i=0, max=children.size(); i<max; i++) {
             final Node child = children.get(i);
-            
-            // If the parent styles are being updated, recalculated or 
+
+            // If the parent styles are being updated, recalculated or
             // reapplied, then make sure the children get the same treatment.
             // Unless the child is already more dirty than this parent (RT-29074).
             if(flag.compareTo(child.cssFlag) > 0) {
@@ -1206,7 +1219,7 @@ public abstract class Parent extends Node {
     /**
      * Constructs a new {@code Parent}.
      */
-    protected Parent() { 
+    protected Parent() {
     }
 
     /**
@@ -1520,7 +1533,7 @@ public abstract class Parent extends Node {
                     float tmpx2 = tmp.getMaxX();
                     float tmpy2 = tmp.getMaxY();
                     float tmpz2 = tmp.getMaxZ();
-                    
+
                     // If this node forms an edge, then we will set it to be the
                     // node for this edge and update the min/max values
                     if (tmpx <= minX) {

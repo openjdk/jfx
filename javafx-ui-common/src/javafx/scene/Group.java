@@ -152,13 +152,25 @@ public  class Group extends Parent {
         return super.getChildren();
     }
 
-    // don't need to cache values, because layoutBounds already handles that
-    // Note that these values return the "current" layout bounds; if this group
-    // contains any resizable descendents, layout may in fact result in the
-    // group's layout bounds changing, necessitating another layout pass to
-    // adjust.  Scene handles this in doLayoutPass().  If this becomes a
-    // performance issue, we can revisit doing the proper computation/predicting here.
-
+    @Override
+    protected double computePrefWidth(double height) {
+        if (isAutoSizeChildren()) {
+            return super.computePrefWidth(height);
+        } else {
+            return getLayoutBounds().getWidth();
+        }
+    }
+    
+    
+    @Override
+    protected double computePrefHeight(double width) {
+        if (isAutoSizeChildren()) {
+            return super.computePrefHeight(width);
+        } else {
+            return getLayoutBounds().getHeight();
+        }
+    }
+    
     /**
      * Group defines the preferred width as simply being the width of its layout bounds, which
      * in turn is simply the sum of the positions & widths of all of its children. That is,
