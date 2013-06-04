@@ -97,6 +97,7 @@ bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
                     slen,
                     slen,
                     0);
+            LOG_EXCEPTION(mainEnv)
 
             break;
     }
@@ -144,12 +145,14 @@ static void im_preedit_draw(XIM im_xim, XPointer client, XPointer call) {
 
     mainEnv->CallVoidMethod((jobject)client, jViewNotifyInputMethodDraw,
             text, data->chg_first, data->chg_length, data->caret);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 static void im_preedit_caret(XIM im_xim, XPointer client, XPointer call) {
     XIMPreeditCaretCallbackStruct *data = (XIMPreeditCaretCallbackStruct*) call;
     mainEnv->CallVoidMethod((jobject)client, jViewNotifyInputMethodCaret,
             data->position, data->direction, data->style);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 static XIMStyle get_best_supported_style(XIM im_xim)

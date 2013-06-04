@@ -57,7 +57,6 @@ static gboolean call_runnable (gpointer data)
 
     mainEnv->CallVoidMethod(context->runnable, jRunnableRun, NULL);
     LOG_EXCEPTION(mainEnv);
-    mainEnv->ExceptionClear();
     mainEnv->DeleteGlobalRef(context->runnable);
     free(context);
     return FALSE;
@@ -188,7 +187,6 @@ static jobjectArray rebuild_screens(JNIEnv* env) {
 static void screen_settings_changed(GdkScreen* screen, gpointer user_data) {
     mainEnv->CallStaticVoidMethod(jScreenCls, jScreenNotifySettingsChanged);
     LOG_EXCEPTION(mainEnv);
-    mainEnv->ExceptionClear(); //This is callback, so clear
 }
 
 extern "C" {
@@ -530,8 +528,6 @@ static void process_events(GdkEvent* event, gpointer data)
                     break;
             }
         } catch (jni_exception&) {
-            LOG_EXCEPTION(mainEnv);
-            mainEnv->ExceptionClear();
         }
     } else {
 
