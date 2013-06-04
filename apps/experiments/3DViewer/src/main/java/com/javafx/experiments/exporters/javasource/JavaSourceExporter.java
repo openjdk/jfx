@@ -47,6 +47,7 @@ import javafx.animation.Timeline;
 import javafx.beans.value.WritableValue;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.MeshView;
@@ -78,16 +79,25 @@ public class JavaSourceExporter {
     private StringBuilder nodeCode = new StringBuilder();
     private StringBuilder timelineCode = new StringBuilder();
     private final boolean hasTimeline;
+    private final String baseUrl;
+    private final String className;
+    private final String packageName;
+    private final File outputFile;
 
-    public JavaSourceExporter(Node rootNode, Timeline timeline) {
+    public JavaSourceExporter(String baseUrl, Node rootNode, Timeline timeline, String packageName, File outputFile) {
+        this.baseUrl =
+                (baseUrl.charAt(baseUrl.length()-1) == '/') ?
+                        baseUrl.replaceAll("/+","/") :
+                        baseUrl.replaceAll("/+","/") + '/';
         this.hasTimeline = timeline != null;
+        this.className = outputFile.getName().substring(0,outputFile.getName().lastIndexOf('.'));
+        this.packageName = packageName;
+        this.outputFile = outputFile;
         process("        ",rootNode);
         if (hasTimeline) process("        ",timeline);
     }
 
-    public void export(String packageName, File outputFile) {
-        final String className = outputFile.getName().substring(0,outputFile.getName().lastIndexOf('.'));
-
+    public void export() {
         try {
             BufferedWriter out = new BufferedWriter(new FileWriter(outputFile));
 //            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(System.out));
@@ -144,6 +154,7 @@ public class JavaSourceExporter {
                     "import javafx.animation.*;\n" +
                     "import javafx.scene.*;\n" +
                     "import javafx.scene.paint.*;\n" +
+                    "import javafx.scene.image.*;\n" +
                     "import javafx.scene.shape.*;\n" +
                     "import javafx.scene.transform.*;\n\n" +
                     "public class "+className+" {\n" +
@@ -332,13 +343,35 @@ public class JavaSourceExporter {
         nodeCode.append(indent + "PhongMaterial " + materialName + " = new PhongMaterial();\n");
         nodeCode.append(indent + materialName + ".setDiffuseColor(" + toCode(material.getDiffuseColor()) + ");\n");
         nodeCode.append(indent + materialName + ".setSpecularColor(" + toCode(material.getSpecularColor()) + ");\n");
-        nodeCode.append(indent+materialName+".setSpecularPower("+material.getSpecularPower()+");\n");
+        nodeCode.append(indent + materialName + ".setSpecularPower("+material.getSpecularPower()+");\n");
+        if (material.getDiffuseMap() != null) {
+            nodeCode.append(indent + materialName + ".setDiffuseMap("+toString(material.getDiffuseMap())+");\n");
+        }
+        if (material.getBumpMap() != null) {
+            nodeCode.append(indent + materialName + ".setBumpMap("+toString(material.getBumpMap())+");\n");
+        }
+        if (material.getSpecularMap() != null) {
+            nodeCode.append(indent + materialName + ".setSpecularMap()("+toString(material.getSpecularMap())+");\n");
+        }
+        if (material.getSelfIlluminationMap() != null) {
+            nodeCode.append(indent + materialName + ".setSelfIlluminationMap()("+toString(material.getSelfIlluminationMap())+");\n");
+        }
         nodeCode.append(indent+varName+".setMaterial("+materialName+");\n");
+    }
+
+    private String toString(Image image) {
+        String url = image.impl_getUrl();
+        if (url.startsWith(baseUrl)) {
+            return  "new Image("+className+".class.getResource(\""+url.substring(baseUrl.length())+"\").toExternalForm())";
+        } else {
+            return "new Image(\""+url+"\")";
+        }
     }
 
     private void process(String indent, Timeline timeline) {
         int count = 0;
         for (KeyFrame keyFrame: timeline.getKeyFrames()) {
+            if (keyFrame.getValues().isEmpty()) continue;
             nodeCode.append(indent+"TIMELINE.getKeyFrames().add(new KeyFrame(Duration.millis("+keyFrame.getTime().toMillis()+"d),\n");
             boolean firstKeyValue = true;
             for (KeyValue keyValue: keyFrame.getValues()) {
@@ -361,6 +394,7 @@ public class JavaSourceExporter {
     }
 
     private String toString(Interpolator interpolator) {
+//        if (interpolator == Interpolator.DISCRETE || true) {
         if (interpolator == Interpolator.DISCRETE) {
             return "Interpolator.DISCRETE";
         } else if (interpolator == Interpolator.EASE_BOTH) {
@@ -385,16 +419,5 @@ public class JavaSourceExporter {
 
     private String toCode(Color color) {
         return "new Color("+color.getRed()+","+color.getGreen()+","+color.getBlue()+","+color.getOpacity()+")";
-    }
-
-    public static void main(String[] args) {
-        MayaImporter importer = new MayaImporter();
-        importer.load("file:///Users/jpotts/Downloads/dukeBot_w0193b_bakedAnim_euler.ma");
-        Optimizer optimizer = new Optimizer(importer.getTimeline(),importer.getRoot());
-        optimizer.optimize();
-
-        JavaSourceExporter javaSourceExporter = new JavaSourceExporter(importer.getRoot(), importer.getTimeline());
-        File out = new File("/Users/jpotts/Projects/jfx-graphics-8.0/rt/apps/experiments/3DViewer/src/main/java/com/javafx/experiments/jfx3dviewer/Duke.java");
-        javaSourceExporter.export("com.javafx.experiments.jfx3dviewer",out);
     }
 }
