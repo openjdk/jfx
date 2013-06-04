@@ -24,7 +24,6 @@
  */
 package com.javafx.experiments.importers;
 
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -45,10 +44,9 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.transform.Transform;
 
-
 /**
- *
- * @author akouznet
+ * Optimizer to take 3D model and timeline loaded by one of the importers and do as much optimization on
+ * the scene graph that was create as we can while still being able to play the given animation.
  */
 public class Optimizer {
 
