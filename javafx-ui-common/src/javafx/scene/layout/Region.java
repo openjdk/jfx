@@ -428,9 +428,10 @@ public class Region extends Parent {
                 }
                 set(lastValidValue);
                 throw new NullPointerException("cannot set padding to null");
+            } else if (!newValue.equals(lastValidValue)) {
+                lastValidValue = newValue;
+                insets.fireValueChanged();
             }
-            lastValidValue = newValue;
-            insets.fireValueChanged();
         }
     };
     public final void setPadding(Insets value) { padding.set(value); }
@@ -676,7 +677,8 @@ public class Region extends Parent {
             impl_layoutBoundsChanged();
             impl_geomChanged();
             impl_markDirty(DirtyBits.NODE_GEOMETRY);
-            requestLayout();
+            setNeedsLayout(true);
+            requestParentLayout();
         }
     }
 
@@ -738,14 +740,13 @@ public class Region extends Parent {
             // We use "NODE_GEOMETRY" to mean that the bounds have changed and
             // need to be sync'd with the render tree
             impl_markDirty(DirtyBits.NODE_GEOMETRY);
-            // TODO why do we do this? If the height can only be changed during
-            // layout, and if calls to requestLayout are ignored during layout,
-            // then why do we call requestLayout? It does protect against the case
-            // that a developer called resize() or whatnot outside of layout, in
-            // which case on the next pulse we'll "correct" the size according
-            // to layout. But I am not sure this case, which produces a visual "bug"
-            // anyway, is worth the cost? The same would go for the widthChanged.
-            requestLayout();
+            // Change of the height (or width) won't change the preferred size.
+            // So we don't need to flush the cache. We should however mark this node
+            // as needs layout to be internally layouted.
+            setNeedsLayout(true);
+            // This call is only needed when this was not called from the parent during the layout.
+            // Otherwise it would flush the cache of the parent, which is not necessary
+            requestParentLayout();
         }
     }
 
@@ -760,13 +761,6 @@ public class Region extends Parent {
             };
         }
         return height.getReadOnlyProperty();
-    }
-
-    private void requestParentLayout() {
-        Parent parent = getParent();
-        if (parent != null) {
-            parent.requestLayout();
-        }
     }
 
     /**
@@ -1058,7 +1052,6 @@ public class Region extends Parent {
 
         @Override public void run() {
             impl_geomChanged();
-            requestLayout();
             impl_markDirty(DirtyBits.REGION_SHAPE);
         }
     };
@@ -1085,8 +1078,7 @@ public class Region extends Parent {
                     return StyleableProperties.SCALE_SHAPE;
                 }
                 @Override public void invalidated() {
-                    // TODO should be requestParentLayout?
-                    requestLayout();
+                    impl_geomChanged();
                     impl_markDirty(DirtyBits.REGION_SHAPE);
                 }
             };
@@ -1115,8 +1107,7 @@ public class Region extends Parent {
                     return StyleableProperties.POSITION_SHAPE;
                 }
                 @Override public void invalidated() {
-                    // TODO should be requestParentLayout?
-                    requestLayout();
+                    impl_geomChanged();
                     impl_markDirty(DirtyBits.REGION_SHAPE);
                 }
             };

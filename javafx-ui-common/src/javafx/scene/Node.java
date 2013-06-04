@@ -3287,13 +3287,6 @@ public abstract class Node implements EventTarget, Styleable {
             // affects the pivot we need to invalidate the transform
             impl_transformsChanged();
         }
-        // notify the parent
-        // Group instanceof check a little hoaky, but it allows us to disable
-        // unnecessary layout for the case of a non-resizable within a group
-        Parent p = getParent();
-        if (isManaged() && (p != null) && !(p instanceof Group && !isResizable())) {
-            p.requestLayout();
-        }
     }
 
     /**
@@ -3688,6 +3681,14 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated
     protected void impl_notifyLayoutBoundsChanged() {
         impl_layoutBoundsChanged();
+        // notify the parent
+        // Group instanceof check a little hoaky, but it allows us to disable
+        // unnecessary layout for the case of a non-resizable within a group
+        Parent p = getParent();
+        if (isManaged() && (p != null) && !(p instanceof Group && !isResizable())
+                && !p.performingLayout) {
+            p.requestLayout();
+        }
     }
 
     /**
