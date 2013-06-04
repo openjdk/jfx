@@ -227,7 +227,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
         // If load-selected-tab property is set - then load only the contents of selected tab.
         if (!LOAD_ALL_TABS) {
-            addTabContent(selectedTab);
+            if (selectedTab != null) addTabContent(selectedTab);
         }
         isSelectingTab = false;
 
@@ -1520,7 +1520,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
 
         private void updateContent() {
-            if (getTab().getContent() != null) {
+            if (getTab() != null && getTab().getContent() != null) {
                 getChildren().add(getTab().getContent());
             }
         }
