@@ -33,13 +33,16 @@ package com.javafx.experiments.jfx3dviewer;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.Arrays;
 import java.util.ResourceBundle;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
@@ -50,7 +53,9 @@ import javafx.scene.Parent;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
+import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.input.DragEvent;
@@ -62,18 +67,22 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
+import javafx.util.Pair;
 import com.javafx.experiments.exporters.fxml.FXMLExporter;
+import com.javafx.experiments.exporters.javasource.JavaSourceExporter;
 import com.javafx.experiments.importers.Importer3D;
+import com.javafx.experiments.importers.Optimizer;
 
 /**
  * Controller class for main fxml file.
  */
 public class MainController implements Initializable {
-    public Button openBtn;
+    public SplitMenuButton openMenuBtn;
     public Label status;
     public SplitPane splitPane;
     public ToggleButton settingsBtn;
-    public CheckBox loadAsPolygonsCheckBox;
+    public CheckMenuItem loadAsPolygonsCheckBox;
+    public CheckMenuItem optimizeCheckBox;
     private Accordion settingsPanel;
     private double settingsLastWidth = -1;
     private int nodeCount = 0;
@@ -157,12 +166,11 @@ public class MainController implements Initializable {
     public void open(ActionEvent actionEvent) {
         FileChooser chooser = new FileChooser();
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Supported files", Importer3D.getSupportedFormatExtensionFilters()));
-//        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All files", "*.*"));
         if (loadedPath != null) {
             chooser.setInitialDirectory(loadedPath.getAbsoluteFile().getParentFile());
         }
         chooser.setTitle("Select file to load");
-        File newFile = chooser.showOpenDialog(openBtn.getScene().getWindow());
+        File newFile = chooser.showOpenDialog(openMenuBtn.getScene().getWindow());
         if (newFile != null) {
             load(newFile);
         }
@@ -171,8 +179,14 @@ public class MainController implements Initializable {
     private void load(File file) {
         loadedPath = file;
         try {
-            Node content = Importer3D.load(file.toURI().toURL().toString(),loadAsPolygonsCheckBox.isSelected());
-            contentModel.set3dContent(content);
+            Pair<Node,Timeline> content = Importer3D.loadIncludingAnimation(
+                    file.toURI().toURL().toString(),
+                    loadAsPolygonsCheckBox.isSelected());
+            if (optimizeCheckBox.isSelected()) {
+                new Optimizer(content.getValue(),content.getKey()).optimize();
+            }
+            contentModel.set3dContent(content.getKey());
+            contentModel.setTimeline(content.getValue());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -239,10 +253,58 @@ public class MainController implements Initializable {
         if (loadedPath != null) {
             chooser.setInitialDirectory(loadedPath.getAbsoluteFile().getParentFile());
         }
-        chooser.setTitle("Save fxml file");
-        File newFile = chooser.showSaveDialog(openBtn.getScene().getWindow());
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("FXML","*.fxml"),
+                new FileChooser.ExtensionFilter("Java Source","*.java")
+        );
+        chooser.setTitle("Export 3D Model");
+        File newFile = chooser.showSaveDialog(openMenuBtn.getScene().getWindow());
         if (newFile != null) {
-            new FXMLExporter(newFile.getAbsolutePath()).export(contentModel.get3dContent());
+            String extension = newFile.getName().substring(newFile.getName().lastIndexOf('.')+1,newFile.getName().length()).toLowerCase();
+            System.out.println("extension = " + extension);
+            if ("java".equals(extension)) {
+                final String url = contentModel.getLoadedUrl();
+                final String baseUrl = url.substring(0, url.lastIndexOf('/'));
+                // try and work out package name from file
+                StringBuilder packageName = new StringBuilder();
+                String[] pathSegments = newFile.getAbsolutePath().split(File.separatorChar == '\\'?"\\\\":"/");
+                System.out.println("pathSegments = " + Arrays.toString(pathSegments));
+                loop: for (int i = pathSegments.length-2; i >= 0; i -- ) {
+                    switch (pathSegments[i]){
+                        case "com":
+                        case "org":
+                        case "net":
+                            packageName.insert(0,pathSegments[i]);
+                            break loop;
+                        case "src":
+                            packageName.deleteCharAt(0);
+                            break loop;
+                        case "main":
+                            if ("src".equals(pathSegments[i-1])) {
+                                packageName.deleteCharAt(0);
+                                break loop;
+                            }
+                        default:
+                            packageName.insert(0,'.'+pathSegments[i]);
+                            break;
+                    }
+                    // if we get all way to root of file system then we have failed
+                    if (i==0) packageName = null;
+                }
+                System.out.println(" packageName = " + packageName);
+
+                JavaSourceExporter javaSourceExporter = new JavaSourceExporter(
+                        baseUrl,
+                        contentModel.get3dContent(),
+                        contentModel.getTimeline(),
+                        packageName==null?null:packageName.toString(),
+                        newFile);
+                javaSourceExporter.export();
+            } else if ("fxml".equals(extension)) {
+                new FXMLExporter(newFile.getAbsolutePath()).export(contentModel.get3dContent());
+            } else {
+                System.err.println("Can not export a file of type [."+extension+"]");
+            }
         }
     }
 }

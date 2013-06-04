@@ -43,10 +43,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 <VBox id="root" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns:fx="http://javafx.com/fxml" fx:controller="com.javafx.experiments.jfx3dviewer.MainController">
   <ToolBar>
     <items>
-      <Button fx:id="openBtn" mnemonicParsing="false" onAction="#open" text="Open..." />
+      <SplitMenuButton fx:id="openMenuBtn" mnemonicParsing="false" onAction="#open" text="Open...">
+        <items>
+          <CheckMenuItem mnemonicParsing="false" text="Load as Polygons" fx:id="loadAsPolygonsCheckBox" />
+          <CheckMenuItem mnemonicParsing="false" text="Optimize" fx:id="optimizeCheckBox" />
+        </items>
+      </SplitMenuButton>
       <Button mnemonicParsing="false" onAction="#export" text="Export..." />
-      <Separator orientation="VERTICAL" prefHeight="-1.0" />
-      <CheckBox fx:id="loadAsPolygonsCheckBox" mnemonicParsing="false" text="Load as Polygons" />
+      <!--HBox.hgrow="ALWAYS"-->
       <Pane maxWidth="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS"/>
       <ToggleButton fx:id="settingsBtn" mnemonicParsing="false" onAction="#toggleSettings" text="Settings" />
     </items>

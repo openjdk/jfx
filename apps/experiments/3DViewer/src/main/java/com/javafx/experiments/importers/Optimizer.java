@@ -51,11 +51,11 @@ import javafx.scene.transform.Transform;
 public class Optimizer {
 
     private Timeline timeline;
-    private Parent root;
+    private Node root;
     private Set<Transform> bound = new HashSet<>();
     private List<Parent> emptyParents = new ArrayList<>();
 
-    public Optimizer(Timeline timeline, Parent root) {
+    public Optimizer(Timeline timeline, Node root) {
         this.timeline = timeline;
         this.root = root;
     }

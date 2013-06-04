@@ -33,6 +33,7 @@ package com.javafx.experiments.jfx3dviewer;
 
 import java.io.File;
 import java.io.IOException;
+import javafx.animation.Timeline;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -71,6 +72,7 @@ public class ContentModel {
     private final Translate cameraPosition = new Translate(0,0,-7);
     private double dragStartX, dragStartY, dragStartRotateX, dragStartRotateY;
     private Node content;
+    private Timeline timeline;
     private AutoScalingGroup autoScalingGroup = new AutoScalingGroup(2);
     private Box xAxis,yAxis,zAxis;
     private AmbientLight ambientLight = new AmbientLight(Color.DARKGREY);
@@ -135,6 +137,7 @@ public class ContentModel {
     };
     private boolean wireframe = false;
     private int subdivision = 0;
+    private String loadedUrl = null;
 
     public ContentModel(String fileToLoad) {
         subScene = new SubScene(root3D,400,400,true,false);
@@ -170,10 +173,11 @@ public class ContentModel {
         // LOAD DROP HERE MODEL
         try {
             if (fileToLoad != null) {
-                content = Importer3D.load(new File(fileToLoad).toURI().toURL().toExternalForm());
+                loadedUrl = new File(fileToLoad).toURI().toURL().toExternalForm();
             } else {
-                content = Importer3D.load(ContentModel.class.getResource("drop-here.obj").toExternalForm());
+                loadedUrl = ContentModel.class.getResource("drop-here.obj").toExternalForm();
             }
+            content = Importer3D.load(loadedUrl);
             autoScalingGroup.getChildren().add(content);
         } catch (IOException e) {
             e.printStackTrace();
@@ -203,6 +207,10 @@ public class ContentModel {
                 cameraPosition.setZ(z);
             }
         });
+    }
+
+    public String getLoadedUrl() {
+        return loadedUrl;
     }
 
     public boolean getAmbientLightEnabled() {
@@ -307,6 +315,14 @@ public class ContentModel {
         autoScalingGroup.getChildren().add(this.content);
         setWireFrame(content,wireframe);
         setSubdivision(content,subdivision);
+    }
+
+    public Timeline getTimeline() {
+        return timeline;
+    }
+
+    public void setTimeline(Timeline timeline) {
+        this.timeline = timeline;
     }
 
     public SubScene getSubScene() {
