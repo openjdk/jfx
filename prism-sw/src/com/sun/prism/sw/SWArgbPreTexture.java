@@ -38,10 +38,6 @@ import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 
-/**
- * Created with IntelliJ IDEA. User: msoch Date: 3/21/13 Time: 6:55 PM To change this template use File | Settings |
- * File Templates.
- */
 class SWArgbPreTexture extends SWTexture {
 
     private int data[];
