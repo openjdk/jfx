@@ -27,7 +27,6 @@ package com.sun.prism.sw;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
@@ -56,16 +55,13 @@ public class SWMaskTexture extends SWTexture {
     }
 
     @Override
-    public void update(Image img, int dstx, int dsty, int srcw, int srch, boolean skipFlush) {
-        throw new UnsupportedOperationException("update4:unimp");
-    }
-
-    @Override
-    public void update(Buffer buffer, PixelFormat format, int dstx, int dsty, int srcx, int srcy, int srcw, int srch, int srcscan, boolean skipFlush) {
+    public void update(Buffer buffer, PixelFormat format, int dstx, int dsty,
+                       int srcx, int srcy, int srcw, int srch, int srcscan, boolean skipFlush)
+    {
         if (PrismSettings.debug) {
-            System.out.println("+ SWMaskTexture.update pixelFormat: " + format);
-            System.out.println("dstx:" + dstx + " dsty:" + dsty + " srcx:" + srcx + " srcy:" + srcy +
-                               " srcw:" + srcw + " srch:" + srch);
+            System.out.println("MASK TEXTURE, Pixel format: " + format + ", buffer: " + buffer);
+            System.out.println("dstx:" + dstx + " dsty:" + dsty);
+            System.out.println("srcx:" + srcx + " srcy:" + srcy + " srcw:" + srcw + " srch:" + srch + " srcscan: " + srcscan);
         }
 
         if (format != PixelFormat.BYTE_ALPHA) {
@@ -76,8 +72,11 @@ public class SWMaskTexture extends SWTexture {
         this.height = srch;
         this.allocate();
 
-        ByteBuffer bb = (ByteBuffer)buffer.position(0);
-        bb.get(this.data, 0, this.width * this.height);
+        ByteBuffer bb = (ByteBuffer)buffer;
+        for (int i = 0; i < srch; i++) {
+            bb.position((srcy + i)*srcscan + srcx);
+            bb.get(this.data, i*this.width, srcw);
+        }
     }
 
     @Override
@@ -85,8 +84,13 @@ public class SWMaskTexture extends SWTexture {
         throw new UnsupportedOperationException("update6:unimp");
     }
 
-    int getBufferLength() {
-        return (data == null) ? 0 : data.length;
+    void checkAllocation(int srcw, int srch) {
+        if (allocated) {
+            final int nlen = srcw * srch;
+            if (nlen > this.data.length) {
+                throw new IllegalArgumentException("SRCW * SRCH exceeds buffer length");
+            }
+        }
     }
 
     void allocateBuffer() {

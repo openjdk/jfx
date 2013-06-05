@@ -218,6 +218,48 @@ int getSystemJvmPath(char *jvmPath, int buffer_size) {
     return TRUE;
 }
 
+/*
+ * Replace a pattern in a string (not regex, straight replace) with another
+ * string.
+ *
+ * All strings returned can be passed to free, i.e a new string is always created
+ * even if there is an error and the pattern can't be replaced
+ *
+ * @param str          - original string
+ * @param pattern      - pattern to replace (not regex)
+ * @param replaceWith  - string to replace pattern
+ * @return if pattern not found strdup(str) is returned
+ *         or a new str with the pattern replaced (strdup as well)
+ */
+char *dupAndReplacePattern(char *str, char *pattern, char *replaceWith) {
+    static char buffer[MAX_PATH*2] = {0};
+    char *p;
+
+    //Return orig if str is not in orig.
+    if(!(p = strstr(str, pattern))) {
+      return strdup(str);
+    }
+
+    int loc = p-str;
+    if (loc >= sizeof(buffer)) {
+        printf("Failed to replace pattern \"%s\" in string \"%s\" with \"%s\" because buffer not big enough\n",
+                pattern, str, replaceWith);
+        return strdup(str);
+    }
+
+    strncpy(buffer, str, loc); // Copy characters from 'str' start to 'orig' st$
+    buffer[loc] = '\0';
+
+    int remaingBufferSize = sizeof(buffer) - loc;
+    int len = snprintf(buffer+(loc), remaingBufferSize, "%s%s", replaceWith, p+strlen(pattern));
+    if(len > remaingBufferSize ) {
+        printf("Failed to replace pattern \"%s\" in string \"%s\" with \"%s\" because buffer not big enough\n",
+                pattern, str, replaceWith);
+        return strdup(str);
+    }
+    return strdup(buffer);
+}
+
 
 #define MAX_OPTIONS 100
 
@@ -310,7 +352,9 @@ int startJVM(char* basedir, char *appFolder, char* jar, int argc, const char**ar
        sprintf(argname, "jvmarg.%d", idx);
        found = getConfigValue(basedir, argname, argvalue, sizeof(argvalue));
        if (found) {
-          options[cnt].optionString = strdup(argvalue);
+          //jvmOption is always a new string via strdup
+          char* jvmOption = dupAndReplacePattern(argvalue, "$APPDIR", basedir);
+          options[cnt].optionString = jvmOption;
           idx++;
           cnt++;
        }

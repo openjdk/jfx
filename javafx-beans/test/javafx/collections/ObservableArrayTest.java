@@ -285,9 +285,9 @@ public class ObservableArrayTest  {
         @Override
         void assertElementsEqual(float[] actual, int from, int to, float[] expected, int expFrom) {
             for(int i = from, j = expFrom; i < to; i++, j++) {
-                assertEquals("expected = " + expected[j] + ", actual = " + actual[i],
-                        Float.floatToRawIntBits(actual[i]),
-                        Float.floatToRawIntBits(expected[j]));
+                assertEquals("expected float = " + expected[j] + ", actual float = " + actual[i],
+                        Float.floatToRawIntBits(expected[j]),
+                        Float.floatToRawIntBits(actual[i]));
             }
         }
 
@@ -529,7 +529,7 @@ public class ObservableArrayTest  {
         assertEquals(newSize, wrapper.arrayLength(actual));
         wrapper.assertElementsEqual(actual, 0, matchingElements, expected, 0);
         wrapper.assertElementsEqual(actual, matchingElements, newSize,
-                wrapper.createPrimitiveArray(Math.max(0, newSize - matchingElements)), 0);
+                wrapper.createPrimitiveArray(Math.max(0, newSize - matchingElements), false), 0);
     }
 
     @Test public void testResizeTo0() {
@@ -544,12 +544,10 @@ public class ObservableArrayTest  {
         testResize(true, array.size(), array.size());
     }
 
-    @Ignore("RT-30865")
     @Test public void testResizeToBigger() {
         testResize(false, 10, array.size());
     }
 
-    @Ignore("RT-30865")
     @Test public void testResizeOnEmpty() {
         makeEmpty();
         testResize(false, 10, 0);

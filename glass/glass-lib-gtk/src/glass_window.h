@@ -151,7 +151,7 @@ public:
 
     virtual void add_child(WindowContextTop* child) = 0;
     virtual void remove_child(WindowContextTop* child) = 0;
-    virtual void set_view(jobject) = 0;
+    virtual bool set_view(jobject) = 0;
 
     virtual GdkWindow *get_gdk_window() = 0;
     virtual GtkWindow *get_gtk_window() = 0;
@@ -197,7 +197,7 @@ public:
     void reparent_children(WindowContext* parent);
     void set_visible(bool);
     bool is_visible();
-    void set_view(jobject);
+    bool set_view(jobject);
     bool grab_focus();
     void ungrab_focus();
     void set_cursor(GdkCursor*);
@@ -228,7 +228,7 @@ private:
 class WindowContextPlug: public WindowContextBase {
     WindowContext* parent;
 public:
-    void set_view(jobject);
+    bool set_view(jobject);
     void set_bounds(int, int, bool, bool, int, int, int, int);
     //WindowFrameExtents get_frame_extents() { return WindowFrameExtents{0, 0, 0, 0}; };
     WindowFrameExtents get_frame_extents() { WindowFrameExtents ext = {0, 0, 0, 0}; return ext;}
@@ -273,7 +273,7 @@ class WindowContextChild: public WindowContextBase {
     GlassView* view; // not null while in Full Screen
 public:
     void process_mouse_button(GdkEventButton*);
-    void set_view(jobject);
+    bool set_view(jobject);
     void set_bounds(int, int, bool, bool, int, int, int, int);
     //WindowFrameExtents get_frame_extents() { return WindowFrameExtents{0, 0, 0, 0}; };
     WindowFrameExtents get_frame_extents() { WindowFrameExtents ext = {0, 0, 0, 0}; return ext;}

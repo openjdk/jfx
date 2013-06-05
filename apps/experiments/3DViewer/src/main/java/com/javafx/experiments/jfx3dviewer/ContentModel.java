@@ -33,7 +33,9 @@ package com.javafx.experiments.jfx3dviewer;
 
 import java.io.File;
 import java.io.IOException;
+import javafx.animation.Timeline;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
@@ -77,6 +79,10 @@ public class ContentModel {
     private PointLight light1 = new PointLight(Color.WHITE);
     private PointLight light2 = new PointLight(Color.ANTIQUEWHITE);
     private PointLight light3 = new PointLight(Color.ALICEBLUE);
+    private final SimpleObjectProperty<Timeline> timeline = new SimpleObjectProperty<>();
+    public Timeline getTimeline() { return timeline.get(); }
+    public SimpleObjectProperty<Timeline> timelineProperty() { return timeline; }
+    public void setTimeline(Timeline timeline) { this.timeline.set(timeline); }
     private SimpleBooleanProperty ambientLightEnabled = new SimpleBooleanProperty(false){
         @Override protected void invalidated() {
             if (get()) {
@@ -135,6 +141,7 @@ public class ContentModel {
     };
     private boolean wireframe = false;
     private int subdivision = 0;
+    private String loadedUrl = null;
 
     public ContentModel(String fileToLoad) {
         subScene = new SubScene(root3D,400,400,true,false);
@@ -170,10 +177,11 @@ public class ContentModel {
         // LOAD DROP HERE MODEL
         try {
             if (fileToLoad != null) {
-                content = Importer3D.load(new File(fileToLoad).toURI().toURL().toExternalForm());
+                loadedUrl = new File(fileToLoad).toURI().toURL().toExternalForm();
             } else {
-                content = Importer3D.load(ContentModel.class.getResource("drop-here.obj").toExternalForm());
+                loadedUrl = ContentModel.class.getResource("drop-here.obj").toExternalForm();
             }
+            content = Importer3D.load(loadedUrl);
             autoScalingGroup.getChildren().add(content);
         } catch (IOException e) {
             e.printStackTrace();
@@ -203,6 +211,10 @@ public class ContentModel {
                 cameraPosition.setZ(z);
             }
         });
+    }
+
+    public String getLoadedUrl() {
+        return loadedUrl;
     }
 
     public boolean getAmbientLightEnabled() {

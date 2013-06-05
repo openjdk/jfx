@@ -61,7 +61,9 @@ jobject WindowContextBase::get_jwindow() {
 
 bool WindowContextBase::isEnabled() {
     if (jwindow) {
-        return (JNI_TRUE == mainEnv->CallBooleanMethod(jwindow, jWindowIsEnabled));
+        bool result = (JNI_TRUE == mainEnv->CallBooleanMethod(jwindow, jWindowIsEnabled));
+        LOG_EXCEPTION(mainEnv)
+        return result;
     } else {
         return false;
     }
@@ -75,8 +77,10 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
         if (!event->in || isEnabled()) {
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
                     event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED : com_sun_glass_events_WindowEvent_FOCUS_LOST);
+            CHECK_JNI_EXCEPTION(mainEnv)
         } else {
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
+            CHECK_JNI_EXCEPTION(mainEnv)
         }
     }
 }
@@ -102,18 +106,21 @@ void WindowContextBase::process_destroy() {
 
     if (jwindow) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyDestroy);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
 void WindowContextBase::process_delete() {
     if (jwindow && isEnabled()) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyClose);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
 void WindowContextBase::process_expose(GdkEventExpose* event) {
     if (jview) {
         mainEnv->CallVoidMethod(jview, jViewNotifyRepaint, event->area.x, event->area.y, event->area.width, event->area.height);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
@@ -179,12 +186,14 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
                 gdk_modifier_mask_to_glass(state),
                 (event->button == 3 && press) ? JNI_TRUE : JNI_FALSE,
                 JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
 
-        if (event->button == 3 && press) {
+        if (jview && event->button == 3 && press) {
             mainEnv->CallVoidMethod(jview, jViewNotifyMenu,
                     (jint)event->x, (jint)event->y,
                     (jint)event->x_root, (jint)event->y_root,
                     JNI_FALSE);
+            CHECK_JNI_EXCEPTION(mainEnv)
         }
     }
 
@@ -215,6 +224,7 @@ void WindowContextBase::process_mouse_motion(GdkEventMotion* event) {
                 glass_modifier,
                 JNI_FALSE,
                 JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
@@ -247,6 +257,7 @@ void WindowContextBase::process_mouse_scroll(GdkEventScroll* event) {
                 (jint) 0, (jint) 0,
                 (jint) 0, (jint) 0,
                 (jdouble) 40.0, (jdouble) 40.0);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 
 }
@@ -267,6 +278,7 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
                 gdk_modifier_mask_to_glass(state),
                 JNI_FALSE,
                 JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
@@ -396,7 +408,7 @@ bool WindowContextBase::is_visible() {
     return gtk_widget_get_visible(gtk_widget);
 }
 
-void WindowContextBase::set_view(jobject view) {
+bool WindowContextBase::set_view(jobject view) {
 
     if (jview) {
         mainEnv->DeleteGlobalRef(jview);
@@ -407,10 +419,11 @@ void WindowContextBase::set_view(jobject view) {
         jview = mainEnv->NewGlobalRef(view);
         gtk_window_get_size(GTK_WINDOW(gtk_widget), &width, &height);
         mainEnv->CallVoidMethod(view, jViewNotifyResize, width, height);
+        CHECK_JNI_EXCEPTION_RET(mainEnv, FALSE)
     } else {
         jview = NULL;
     }
-
+    return TRUE;
 }
 
 bool WindowContextBase::grab_focus() {
@@ -428,6 +441,7 @@ void WindowContextBase::ungrab_focus() {
 
     if (jwindow) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
@@ -715,6 +729,7 @@ void WindowContextTop::process_property_notify(GdkEventProperty* event) {
 
             if (jview) {
                 mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_MOVE);
+                CHECK_JNI_EXCEPTION(mainEnv)
             }
         }
     }
@@ -1233,20 +1248,19 @@ void WindowContextPlug::process_gtk_configure(GdkEventConfigure* event) {
         mainEnv->CallVoidMethod(jview, jViewNotifyResize,
                 event->width,
                 event->height);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 
     mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
             com_sun_glass_events_WindowEvent_RESIZE,
             event->width,
             event->height);
+    CHECK_JNI_EXCEPTION(mainEnv)
 
     if (!embedded_children.empty()) {
         WindowContextChild* child = embedded_children.back();
         child->process_configure(event);
     }
-
-    mainEnv->ExceptionClear();
-
 }
 
 void WindowContextPlug::process_state(GdkEventWindowState *event) {
@@ -1267,8 +1281,8 @@ void WindowContextPlug::process_state(GdkEventWindowState *event) {
                 mainEnv->CallVoidMethod(jview,
                         jViewNotifyRepaint,
                         0, 0, w, h);
+                CHECK_JNI_EXCEPTION(mainEnv)
             }
-            CHECK_JNI_EXCEPTION(mainEnv);
         }
 
         mainEnv->CallVoidMethod(jwindow,
@@ -1278,7 +1292,7 @@ void WindowContextPlug::process_state(GdkEventWindowState *event) {
     }
 }
 
-void WindowContextPlug::set_view(jobject view) {
+bool WindowContextPlug::set_view(jobject view) {
     // probably never called for applet window
     if (jview) {
         mainEnv->DeleteGlobalRef(jview);
@@ -1289,9 +1303,11 @@ void WindowContextPlug::set_view(jobject view) {
         jview = mainEnv->NewGlobalRef(view);
         gtk_window_get_size(GTK_WINDOW(gtk_widget), &width, &height);
         mainEnv->CallVoidMethod(view, jViewNotifyResize, width, height);
+        CHECK_JNI_EXCEPTION_RET(mainEnv, FALSE)
     } else {
         jview = NULL;
     }
+    return TRUE;
 }
 
 void WindowContextPlug::window_configure(XWindowChanges *windowChanges,
@@ -1429,6 +1445,7 @@ void WindowContextChild::process_configure(GdkEventConfigure* event) {
         mainEnv->CallVoidMethod(jview, jViewNotifyResize,
                 event->width,
                 event->height);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 
     gtk_widget_set_size_request(gtk_widget, event->width, event->height);
@@ -1437,7 +1454,7 @@ void WindowContextChild::process_configure(GdkEventConfigure* event) {
             com_sun_glass_events_WindowEvent_RESIZE,
             event->width,
             event->height);
-
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContextChild::process_state(GdkEventWindowState *event) {
@@ -1469,7 +1486,7 @@ void WindowContextChild::process_state(GdkEventWindowState *event) {
     }
 }
 
-void WindowContextChild::set_view(jobject view) {
+bool WindowContextChild::set_view(jobject view) {
     if (jview) {
         mainEnv->DeleteGlobalRef(jview);
     }
@@ -1480,10 +1497,11 @@ void WindowContextChild::set_view(jobject view) {
         width = gtk_widget->allocation.width;
         height = gtk_widget->allocation.height;
         mainEnv->CallVoidMethod(view, jViewNotifyResize, width, height);
-        JNI_EXCEPTION_TO_CPP(mainEnv);
+        CHECK_JNI_EXCEPTION_RET(mainEnv, FALSE)
     } else {
         jview = NULL;
     }
+    return TRUE;
 }
 
 void WindowContextChild::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
@@ -1494,6 +1512,7 @@ void WindowContextChild::set_bounds(int x, int y, bool xSet, bool ySet, int w, i
         mainEnv->CallVoidMethod(jwindow,
                 jWindowNotifyMove,
                 newX, newY);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 
     // As we have no frames, there's no difference between the calls
@@ -1518,6 +1537,7 @@ void WindowContextChild::set_bounds(int x, int y, bool xSet, bool ySet, int w, i
             mainEnv->CallVoidMethod(jview,
                     jViewNotifyResize,
                     newWidth, newHeight);
+            CHECK_JNI_EXCEPTION(mainEnv)
         }
     }
 }
@@ -1573,6 +1593,7 @@ void WindowContextChild::enter_fullscreen() {
     full_screen_window->enter_fullscreen();
 
     mainEnv->CallVoidMethod(jwindow, jWindowNotifyDelegatePtr, (jlong)full_screen_window);
+    CHECK_JNI_EXCEPTION(mainEnv)
 
     if (jview) {
         this->view = (GlassView*)mainEnv->GetLongField(jview, jViewPtr);
@@ -1596,6 +1617,7 @@ void WindowContextChild::exit_fullscreen() {
     full_screen_window->reparent_children(this);
 
     mainEnv->CallVoidMethod(jwindow, jWindowNotifyDelegatePtr, (jlong)NULL);
+    CHECK_JNI_EXCEPTION(mainEnv)
 
     if (this->view) {
         this->view->current_window = this;

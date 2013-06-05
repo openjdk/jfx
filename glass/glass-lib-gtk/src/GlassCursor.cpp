@@ -181,10 +181,12 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkCursor__1createCursor
   (JNIEnv * env, jobject obj, jint x, jint y, jobject pixels)
 {
-    GdkPixbuf *pixbuf;
+    GdkPixbuf *pixbuf = NULL;
+    GdkCursor *cursor = NULL;
     env->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
-    
-    GdkCursor *cursor = gdk_cursor_new_from_pixbuf(gdk_display_get_default(), pixbuf, x, y);
+    if (!EXCEPTION_OCCURED(env)) {
+        cursor = gdk_cursor_new_from_pixbuf(gdk_display_get_default(), pixbuf, x, y);
+    }
     g_object_unref(pixbuf);
 
     return PTR_TO_JLONG(cursor);

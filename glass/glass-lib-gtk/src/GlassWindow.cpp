@@ -136,12 +136,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setView
   (JNIEnv * env, jobject obj, jlong ptr, jobject view)
 {
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    try {
-        ctx->set_view(view);
-    } catch (jni_exception&) {
-        return JNI_FALSE;
-    }
-    return JNI_TRUE;
+    return (ctx->set_view(view)) ? JNI_TRUE : JNI_FALSE;
 }
 /*
  * Class:     com_sun_glass_ui_gtk_GtkWindow
@@ -370,11 +365,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setIcon
   (JNIEnv * env, jobject obj, jlong ptr, jobject pixels)
 {
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    GdkPixbuf *pixbuf;
+    GdkPixbuf *pixbuf = NULL;
     env->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
-    CHECK_JNI_EXCEPTION(env)
-
-    ctx->set_icon(pixbuf);
+    if (!EXCEPTION_OCCURED(env)) {
+        ctx->set_icon(pixbuf);
+    }
     g_object_unref(pixbuf);
 }
 
