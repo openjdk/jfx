@@ -90,7 +90,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.css.Styleable;
 import javafx.scene.input.*;
@@ -101,16 +100,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         GROW
         // In future we could add FADE, ...
     }
-    private static final double DEFAULT_PREF_SIZE = 200.0;
-
-    private static boolean LOAD_TABS_LAZILY = Boolean.getBoolean("javafx.tabpane.loadtabslazily");
-    private static boolean LOAD_ALL_TABS = Boolean.getBoolean("javafx.tabpane.maintainfullscenegraph");
     
     private ObjectProperty<TabAnimation> openTabAnimation = new StyleableObjectProperty<TabAnimation>(TabAnimation.GROW) {
         @Override public CssMetaData<TabPane,TabAnimation> getCssMetaData() {
             return StyleableProperties.OPEN_TAB_ANIMATION;
         }
-
+        
         @Override public Object getBean() {
             return TabPaneSkin.this;
         }
@@ -119,7 +114,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             return "openTabAnimation";
         }
     };
-
+    
     private ObjectProperty<TabAnimation> closeTabAnimation = new StyleableObjectProperty<TabAnimation>(TabAnimation.GROW) {
         @Override public CssMetaData<TabPane,TabAnimation> getCssMetaData() {
             return StyleableProperties.CLOSE_TAB_ANIMATION;
@@ -181,8 +176,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private Tab selectedTab;
     private Tab previousSelectedTab;
     private boolean isSelectingTab;
-    private boolean tabSwitchAction = false;
-    
+
     public TabPaneSkin(TabPane tabPane) {
         super(tabPane, new TabPaneBehavior(tabPane));
 
@@ -191,11 +185,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         tabContentRegions = FXCollections.<TabContentRegion>observableArrayList();
 
-        // If load all tabs is true - then load contents of all tabs
-        if (LOAD_ALL_TABS) {
-            for (Tab tab : getSkinnable().getTabs()) {
-                addTabContent(tab);
-            }
+        for (Tab tab : getSkinnable().getTabs()) {
+            addTabContent(tab);
         }
 
         tabHeaderAreaClipRect = new Rectangle();
@@ -224,11 +215,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             // getSelectedItem and getSelectedIndex failed select the first.
             getSkinnable().getSelectionModel().selectFirst();
         } 
-        selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
-        // If load-selected-tab property is set - then load only the contents of selected tab.
-        if (!LOAD_ALL_TABS) {
-            addTabContent(selectedTab);
-        }
+        selectedTab = getSkinnable().getSelectionModel().getSelectedItem();        
         isSelectingTab = false;
 
         initializeSwipeHandlers();
@@ -242,19 +229,13 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
         return null;
     }
-    
+
     @Override protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
-        if ("SELECTED_TAB".equals(property)) {
+        if ("SELECTED_TAB".equals(property)) {            
             isSelectingTab = true;
             previousSelectedTab = selectedTab;
             selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
-            if (!LOAD_ALL_TABS && !LOAD_TABS_LAZILY) {
-                // remove content from previous selected tab and add content to currently selected tab
-                removeTabContent(previousSelectedTab);
-                addTabContent(selectedTab);
-            }
-            tabSwitchAction = true;
             getSkinnable().requestLayout();
         } else if ("SIDE".equals(property)) {
             updateTabPosition();
@@ -466,14 +447,26 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     private double maxw = 0.0d;
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        //RT-24105 optimization : hard coded value instead of the content of the tab 
-        return DEFAULT_PREF_SIZE;
+        // The TabPane can only be as wide as it widest content width.
+        for (TabContentRegion contentRegion: tabContentRegions) {
+             maxw = Math.max(maxw, snapSize(contentRegion.prefWidth(-1)));
+        }
+        double prefwidth = isHorizontal() ?
+            Math.max(maxw, snapSize(tabHeaderArea.prefWidth(-1))) : 
+                maxw + snapSize(tabHeaderArea.prefWidth(-1));
+        return snapSize(prefwidth) + rightInset + leftInset;
     }
 
     private double maxh = 0.0d;
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        // RT-24105 optimization : hard coded value instead of the content of the tab
-        return DEFAULT_PREF_SIZE;
+        // The TabPane can only be as high as it highest content height.
+        for (TabContentRegion contentRegion: tabContentRegions) {
+             maxh = Math.max(maxh, snapSize(contentRegion.prefHeight(-1)));
+        }
+        double prefheight = isHorizontal()?
+             maxh + snapSize(tabHeaderArea.prefHeight(-1)) : 
+                Math.max(maxh, snapSize(tabHeaderArea.prefHeight(-1)));
+        return snapSize(prefheight) + topInset + bottomInset;
     }
 
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -559,7 +552,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         double contentWidth = w - (isHorizontal() ? 0 : headerHeight);
         double contentHeight = h - (isHorizontal() ? headerHeight: 0);
-
+        
         for (int i = 0, max = tabContentRegions.size(); i < max; i++) {
             TabContentRegion tabContent = tabContentRegions.get(i);
             
@@ -568,7 +561,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 ((Rectangle)tabContent.getClip()).setWidth(contentWidth);
                 ((Rectangle)tabContent.getClip()).setHeight(contentHeight);
             }
-
+            
             // we need to size all tabs, even if they aren't visible. For example,
             // see RT-29167
             tabContent.resize(contentWidth, contentHeight);
@@ -579,24 +572,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 content.setVisible(tabContent.getTab().equals(selectedTab));
             }
         }
-        // check for load lazy
-        if (LOAD_TABS_LAZILY && firstLayout && !LOAD_ALL_TABS) {
-            firstLayout = false;
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    for (Tab tab : getSkinnable().getTabs()) {
-                        if (tab != selectedTab) {
-                            addTabContent(tab);
-                        }
-                    }
-                    tabPane.requestLayout();
-                }                        
-            });                    
-        }
     }
     
-    private boolean firstLayout = true;
     
    /**
     * Super-lazy instantiation pattern from Bill Pugh.
@@ -1504,6 +1481,17 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     }
                 }
             };
+            tab.selectedProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable valueModel) {
+                    setVisible(getTab().isSelected());
+                }
+            });
+            tab.contentProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable valueModel) {
+                    getChildren().clear();
+                    updateContent();
+                }
+            });
 
             tab.selectedProperty().addListener(tabListener);
             tab.contentProperty().addListener(tabListener);
