@@ -173,6 +173,7 @@ task generate << {
              "${RTDir}/decora-prism-sw/src",
              "${RTDir}/decora-runtime/src",
              "${RTDir}/decora-sse/src",
+             "${RTDir}/javafx-accessible/src",
              "${RTDir}/javafx-ui-common/src",
              "${RTDir}/javafx-concurrent/src",
              "${RTDir}/javafx-geom/src",
