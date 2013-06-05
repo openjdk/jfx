@@ -783,15 +783,6 @@ public abstract class Toolkit {
     public abstract Object renderToImage(ImageRenderingContext context);
 
     /**
-     * Runs a runnable that is synchronized with the graphics system.
-     * When the runnable is executing, any threads that are accessing
-     * shared graphics state for the scene are locked.
-     */
-    public void runSynchronized(TKScene scene, Runnable runnable) {
-        if (runnable != null) runnable.run();
-    }
-    
-    /**
      * Returns the key code for the key which is commonly used on the
      * corresponding platform as a modifier key in shortcuts. For example
      * it is {@code KeyCode.CONTROL} on Windows (Ctrl + C, Ctrl + V ...) and
