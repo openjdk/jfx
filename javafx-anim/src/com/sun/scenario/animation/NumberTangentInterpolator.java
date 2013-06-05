@@ -29,86 +29,70 @@ import com.sun.javafx.animation.TickCalculation;
 import javafx.animation.Interpolator;
 import javafx.util.Duration;
 
-public abstract class NumberTangentInterpolator extends Interpolator {
+public class NumberTangentInterpolator extends Interpolator {
 
-    public abstract double getInValue();
+    private final double inValue, outValue;
+    private final long inTicks, outTicks;
 
-    public abstract double getOutValue();
+    public double getInValue() { return inValue; }
 
-    public abstract double getInTicks();
+    public double getOutValue() { return outValue; }
 
-    public abstract double getOutTicks();
+    public double getInTicks() { return inTicks; }
 
-    public static NumberTangentInterpolator create(final double inValue,
-            final Duration inDuration, final double outValue,
-            final Duration outDuration) {
-        return new NumberTangentInterpolator() {
+    public double getOutTicks() { return outTicks; }
 
-            private final long inTicks = TickCalculation.fromDuration(inDuration);
-            private final long outTicks = TickCalculation.fromDuration(outDuration);
-
-            @Override
-            public double getInValue() {
-                return inValue;
-            }
-
-            @Override
-            public double getOutValue() {
-                return outValue;
-            }
-
-            @Override
-            public double getInTicks() {
-                return inTicks;
-            }
-
-            @Override
-            public double getOutTicks() {
-                return outTicks;
-            }
-
-            @Override
-            public String toString() {
-                return "NumberTangentInterpolator [inValue=" + inValue
-                        + ", inDuration=" + inDuration + ", outValue="
-                        + outValue + ", outDuration=" + outDuration + "]";
-            }
-        };
+    public NumberTangentInterpolator(Duration inDuration, double inValue, Duration outDuration, double outValue) {
+        this.inTicks = TickCalculation.fromDuration(inDuration);
+        this.inValue = inValue;
+        this.outTicks = TickCalculation.fromDuration(outDuration);
+        this.outValue = outValue;
     }
 
-    public static NumberTangentInterpolator create(final double value,
-            final Duration duration) {
-        return new NumberTangentInterpolator() {
+    public NumberTangentInterpolator(Duration duration, double value) {
+        this.outTicks = this.inTicks = TickCalculation.fromDuration(duration);
+        this.inValue = this.outValue = value;
+    }
 
-        private final long ticks = TickCalculation.fromDuration(duration);
+    @Override
+    public String toString() {
+        return "NumberTangentInterpolator [inValue=" + inValue
+                + ", inDuration=" + TickCalculation.toDuration(inTicks) + ", outValue="
+                + outValue + ", outDuration=" + TickCalculation.toDuration(outTicks) + "]";
+    }
 
-            @Override
-            public double getInValue() {
-                return value;
-            }
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 59 * hash + (int) (Double.doubleToLongBits(this.inValue) ^ (Double.doubleToLongBits(this.inValue) >>> 32));
+        hash = 59 * hash + (int) (Double.doubleToLongBits(this.outValue) ^ (Double.doubleToLongBits(this.outValue) >>> 32));
+        hash = 59 * hash + (int) (this.inTicks ^ (this.inTicks >>> 32));
+        hash = 59 * hash + (int) (this.outTicks ^ (this.outTicks >>> 32));
+        return hash;
+    }
 
-            @Override
-            public double getOutValue() {
-                return value;
-            }
-
-            @Override
-            public double getInTicks() {
-                return ticks;
-            }
-
-            @Override
-            public double getOutTicks() {
-                return ticks;
-            }
-
-            @Override
-            public String toString() {
-                return "NumberTangentInterpolator [inValue=" + value
-                        + ", inDuration=" + duration + ", outValue=" + value
-                        + ", outDuration=" + duration + "]";
-            }
-        };
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final NumberTangentInterpolator other = (NumberTangentInterpolator) obj;
+        if (Double.doubleToLongBits(this.inValue) != Double.doubleToLongBits(other.inValue)) {
+            return false;
+        }
+        if (Double.doubleToLongBits(this.outValue) != Double.doubleToLongBits(other.outValue)) {
+            return false;
+        }
+        if (this.inTicks != other.inTicks) {
+            return false;
+        }
+        if (this.outTicks != other.outTicks) {
+            return false;
+        }
+        return true;
     }
 
     @Override
