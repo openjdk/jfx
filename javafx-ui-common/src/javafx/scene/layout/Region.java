@@ -1949,6 +1949,58 @@ public class Region extends Parent {
         layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment, isSnapToPixel());
     }
 
+    /**
+     * Utility method which lays out the child within an area of it's
+     * parent defined by {@code areaX}, {@code areaY}, {@code areaWidth} x {@code areaHeight},
+     * with a baseline offset relative to that area.
+     * <p>
+     * If the child is resizable, this method will use {@code fillWidth} and {@code fillHeight}
+     * to determine whether to resize it to fill the area or keep the child at its
+     * preferred dimension.  If fillWidth/fillHeight are true, then this method
+     * will only resize the child up to its max size limits.  If the node's maximum
+     * size preference is less than the area size, the maximum size will be used.
+     * If node's maximum is greater than the area size, then the node will be
+     * resized to fit within the area, unless its minimum size prevents it.
+     * <p>
+     * If the child has a non-null contentBias, then this method will use it when
+     * resizing the child.  If the contentBias is horizontal, it will set its width
+     * first and then pass that value to compute the child's height.  If child's
+     * contentBias is vertical, then it will set its height first
+     * and pass that value to compute the child's width.  If the child's contentBias
+     * is null, then it's width and height have no dependencies on each other.
+     * <p>
+     * If the child is not resizable (Shape, Group, etc) then it will only be
+     * positioned and not resized.
+     * <p>
+     * If the child's resulting size differs from the area's size (either
+     * because it was not resizable or it's sizing preferences prevented it), then
+     * this function will align the node relative to the area using horizontal and
+     * vertical alignment values.
+     * If valignment is {@code VPos.BASELINE} then the node's baseline will be aligned
+     * with the area baseline offset parameter, otherwise the baseline parameter
+     * is ignored.
+     * <p>
+     * If {@code margin} is non-null, then that space will be allocated around the
+     * child within the layout area.  margin may be null.
+     * <p>
+     * If {@code snapToPixel} is {@code true} for this region, then the resulting x,y
+     * values will be rounded to their nearest pixel boundaries and the
+     * width/height values will be ceiled to the next pixel boundary.
+     *
+     * @param child the child being positioned within this region
+     * @param areaX the horizontal offset of the layout area relative to this region
+     * @param areaY the vertical offset of the layout area relative to this region
+     * @param areaWidth  the width of the layout area
+     * @param areaHeight the height of the layout area
+     * @param areaBaselineOffset the baseline offset to be used if VPos is BASELINE
+     * @param margin the margin of space to be allocated around the child
+     * @param fillWidth whether or not the child should be resized to fill the area width or kept to its preferred width
+     * @param fillHeight whether or not the child should e resized to fill the area height or kept to its preferred height
+     * @param halignment the horizontal alignment for the child within the area
+     * @param valignment the vertical alignment for the child within the area
+     * @param isSnapToPixel whether to snap size and position to pixels
+     * @since JavaFX 8.0
+     */
     public static void layoutInArea(Node child, double areaX, double areaY,
                                double areaWidth, double areaHeight,
                                double areaBaselineOffset,
