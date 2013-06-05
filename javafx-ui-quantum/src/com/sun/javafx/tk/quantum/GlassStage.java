@@ -89,6 +89,10 @@ abstract class GlassStage implements TKStage {
         }
     }
 
+    OverlayWarning getOverlayWarning() {
+        return null;
+    }
+    
     // To be used by subclasses to enforce context check
     final AccessControlContext getAccessControlContext() {
         if (accessCtrlCtx == null) {

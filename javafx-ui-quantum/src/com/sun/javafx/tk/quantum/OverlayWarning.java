@@ -67,19 +67,12 @@ public class OverlayWarning {
     private ViewScene               view;
     private Group                   sceneRoot;
     private SequentialTransition    overlayTransition;
-    private AbstractPainter         painter;
     private boolean                 warningTransition;
     
     public OverlayWarning(final ViewScene vs) {
         view = vs;
         
         sceneRoot = createOverlayGroup();
-        painter = view.getPainter();
-
-        // TODO - needs to be thread-safe - see RT-13813
-        Scene.impl_setAllowPGAccess(true);
-        painter.setOverlayRoot((NGNode)sceneRoot.impl_getPGNode());
-        Scene.impl_setAllowPGAccess(false);
         
         PauseTransition pause = new PauseTransition(Duration.millis(4000));
         FadeTransition fade = new FadeTransition(Duration.millis(1000), sceneRoot);
@@ -92,7 +85,6 @@ public class OverlayWarning {
         
         overlayTransition.setOnFinished(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent event) {
-                painter.setRenderOverlay(false);
                 view.entireSceneNeedsRepaint();
                 warningTransition = false;
             }
@@ -104,25 +96,11 @@ public class OverlayWarning {
     }
 
     protected final void setView(ViewScene vs) {
-        if (painter != null) {
-            painter.setRenderOverlay(false);
-            view.entireSceneNeedsRepaint();
-        }
-
         view = vs;
-        painter = vs.getPainter();
-
-        // TODO - needs to be thread-safe - see RT-13813
-        Scene.impl_setAllowPGAccess(true);
-        painter.setOverlayRoot((NGNode)sceneRoot.impl_getPGNode());
-        Scene.impl_setAllowPGAccess(false);
-
-        painter.setRenderOverlay(true);
         view.entireSceneNeedsRepaint();
 
         overlayTransition.setOnFinished(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent event) {
-                painter.setRenderOverlay(false);
                 view.entireSceneNeedsRepaint();
                 warningTransition = false;
             }
@@ -131,7 +109,6 @@ public class OverlayWarning {
     
     protected void warn() {
         warningTransition = true;
-        painter.setRenderOverlay(true);
         overlayTransition.play();
     }
 
@@ -141,7 +118,6 @@ public class OverlayWarning {
 
             overlayTransition.stop();
             
-            painter.setRenderOverlay(false);
             view.entireSceneNeedsRepaint();
             warningTransition = false;
         }
@@ -178,12 +154,11 @@ public class OverlayWarning {
         Group root = (Group)scene.getRoot();
         root.getChildren().add(background);
         root.getChildren().add(text);
+        
+        this.text = text;
+        this.background = background;
+        this.root = root;
 
-        Scene.impl_setAllowPGAccess(true);
-        text.impl_updatePG();
-        background.impl_updatePG();
-        root.impl_updatePG();
-        Scene.impl_setAllowPGAccess(false);
         return root;
     }
     
@@ -207,5 +182,15 @@ public class OverlayWarning {
         text.setY(rectY - (RECTH  / 2.0) + ((textH - text.getBaselineOffset()) / 2.0));
 
         return rectangle;
+    }
+
+    public void updatePGNodes () {
+        text.impl_updatePG();
+        background.impl_updatePG();
+        root.impl_updatePG();
+    }
+    
+    public NGNode getPGRoot() {
+        return (NGNode)sceneRoot.impl_getPGNode();
     }
 }

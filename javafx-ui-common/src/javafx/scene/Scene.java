@@ -2392,27 +2392,28 @@ public class Scene implements EventTarget {
             if (dirty) {
                 getRoot().updateBounds();
                 if (impl_peer != null) {
-                    try {
-                        long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
-                        impl_peer.waitForRenderingToComplete();
-                        impl_peer.waitForSynchronization();
-                        if (PULSE_LOGGING_ENABLED) {
-                            PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Waiting for previous rendering");
-                        }
-                        start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
-                        // synchronize scene properties
-                        syncLights();
-                        synchronizeSceneProperties();
-                        // Run the synchronizer
-                        synchronizeSceneNodes();
-                        Scene.this.mouseHandler.pulse();
-                        // Tell the scene peer that it needs to repaint
-                        impl_peer.markDirty();
-                        if (PULSE_LOGGING_ENABLED) {
-                            PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Copy state to render graph");
-                        }
-                    } finally {
-                        impl_peer.releaseSynchronization();
+                    long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+                    if (PULSE_LOGGING_ENABLED) {
+                        PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Waiting for previous rendering");
+                    }
+                    start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+                    Toolkit.getToolkit().runSynchronized(
+                            impl_peer,
+                            new Runnable () {
+                                public void run () {
+                                    // synchronize scene properties
+                                    syncLights();
+                                    synchronizeSceneProperties();
+                                    // Run the synchronizer
+                                    synchronizeSceneNodes();
+                                    mouseHandler.pulse();
+                                    // Tell the scene peer that it needs to repaint
+                                    impl_peer.markDirty();
+                                }
+                            }
+                            );
+                    if (PULSE_LOGGING_ENABLED) {
+                        PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Copy state to render graph");
                     }
                 } else {
                     long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;

@@ -154,6 +154,10 @@ class WindowStage extends GlassStage {
         platformWindows.put(platformWindow, this);
     }
 
+    OverlayWarning getOverlayWarning() {
+        return warning;
+    }
+
     final Window getPlatformWindow() {
         return platformWindow;
     }

@@ -72,8 +72,6 @@ abstract class AbstractPainter implements Runnable {
     protected int               width;
     protected int               height;
     
-    private boolean             renderOverlay = false;
-    
     Rectangle                   dirtyRect;
     RectBounds                  clip;
     RectBounds                  dirtyRegionTemp;
@@ -124,10 +122,6 @@ abstract class AbstractPainter implements Runnable {
         return (overlayRoot);
     }
     
-    protected void setRenderOverlay(boolean val) {
-        renderOverlay = val;
-    }
-    
     protected abstract void doPaint(Graphics g, NodePath<NGNode> renderRoot);
     
     private void adjustPerspective(PrismCameraImpl camera) {
@@ -160,7 +154,7 @@ abstract class AbstractPainter implements Runnable {
         int status = DirtyRegionContainer.DTR_CONTAINS_CLIP;
         if (PrismSettings.dirtyOptsEnabled) {
             long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
-            if (!sceneState.getScene().isEntireSceneDirty() && !renderOverlay) {
+            if (!sceneState.getScene().isEntireSceneDirty()) {
                 status = setDirtyRect(g);
                 if (status == DirtyRegionContainer.DTR_OK) {
                     root.doPreCulling(dirtyRegionContainer,
@@ -252,7 +246,7 @@ abstract class AbstractPainter implements Runnable {
                 }
             }
         }
-        if (renderOverlay) {
+        if (overlayRoot != null) {
             overlayRoot.render(g);
         }
     }
