@@ -92,6 +92,8 @@ task generateGrammarSource(type: JavaExec) {
     main = "org.antlr.Tool"
     classpath = configurations.antlr3
     args = ["-o", dest, grammars.files].flatten()
+    // See RT-30955. This should be removed when JDK-8015656 is fixed
+    ignoreExitValue = true
 }
 
 // Configure the compileJava task so that it relies on the task for generating
