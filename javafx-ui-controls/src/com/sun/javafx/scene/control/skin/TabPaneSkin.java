@@ -466,14 +466,26 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     private double maxw = 0.0d;
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        //RT-24105 optimization : hard coded value instead of the content of the tab 
-        return DEFAULT_PREF_SIZE;
+        // The TabPane can only be as wide as it widest content width.  
+        for (TabContentRegion contentRegion: tabContentRegions) {
+            maxw = Math.max(maxw, snapSize(contentRegion.prefWidth(-1)));
+        }
+        double prefwidth = isHorizontal() ?
+        Math.max(maxw, snapSize(tabHeaderArea.prefWidth(-1))) :
+        maxw + snapSize(tabHeaderArea.prefWidth(-1));
+        return snapSize(prefwidth) + rightInset + leftInset; 
     }
 
     private double maxh = 0.0d;
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        // RT-24105 optimization : hard coded value instead of the content of the tab
-        return DEFAULT_PREF_SIZE;
+         // The TabPane can only be as high as it highest content height.
+        for (TabContentRegion contentRegion: tabContentRegions) {
+        maxh = Math.max(maxh, snapSize(contentRegion.prefHeight(-1)));
+        }
+        double prefheight = isHorizontal()?
+        maxh + snapSize(tabHeaderArea.prefHeight(-1)) :
+        Math.max(maxh, snapSize(tabHeaderArea.prefHeight(-1)));
+        return snapSize(prefheight) + topInset + bottomInset; 
     }
 
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
