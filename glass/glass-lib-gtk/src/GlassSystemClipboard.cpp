@@ -128,6 +128,7 @@ static void set_jstring_data(GtkSelectionData *selection_data, GdkAtom target, j
 static void set_bytebuffer_data(GtkSelectionData *selection_data, GdkAtom target, jobject data)
 {
     jbyteArray byteArray = (jbyteArray) mainEnv->CallObjectMethod(data, jByteBufferArray);
+    CHECK_JNI_EXCEPTION(mainEnv)
     jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
     jsize nraw = mainEnv->GetArrayLength(byteArray);
 
@@ -182,11 +183,12 @@ static void set_file_uri_data(GtkSelectionData *selection_data, jobjectArray dat
 
 static void set_image_data(GtkSelectionData *selection_data, jobject pixels)
 {
-    GdkPixbuf *pixbuf;
+    GdkPixbuf *pixbuf = NULL;
 
     mainEnv->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
-    CHECK_JNI_EXCEPTION(mainEnv);
-    gtk_selection_data_set_pixbuf(selection_data, pixbuf);
+    if (!EXCEPTION_OCCURED(mainEnv)) {
+        gtk_selection_data_set_pixbuf(selection_data, pixbuf);
+    }
 
     g_object_unref(pixbuf);
 }
@@ -200,31 +202,33 @@ static void set_data(GdkAtom target, GtkSelectionData *selection_data, jobject d
     if (gtk_targets_include_text(&target, 1)) {
         typeString = mainEnv->NewStringUTF("text/plain");
         result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
-        if (result != NULL)
+        if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
             set_text_data(selection_data, (jstring)result);
+        }
     } else if (gtk_targets_include_image(&target, 1, TRUE)) {
         typeString = mainEnv->NewStringUTF("application/x-java-rawimage");
         result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
-        if (result != NULL) {
+        if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
             set_image_data(selection_data, result);
-            CHECK_JNI_EXCEPTION(mainEnv);
         }
     } else if (target == MIME_TEXT_URI_LIST_TARGET) {
         typeString = mainEnv->NewStringUTF(name);
         if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
             result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
-            if (result != NULL)
+            if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
                 set_jstring_data(selection_data, target, (jstring)result);
+            }
         } else {
             typeString = mainEnv->NewStringUTF("application/x-java-file-list");
             result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
-            if (result != NULL)
+            if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
                 set_file_uri_data(selection_data, (jobjectArray) result);
+            }
         }
     } else {
         typeString = mainEnv->NewStringUTF(name);
         result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
-        if (result != NULL) {
+        if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
             if (mainEnv->IsInstanceOf(result, jStringCls)) {
                 set_jstring_data(selection_data, target, (jstring)result);
             } else if (mainEnv->IsInstanceOf(result, jByteBufferCls)) {
@@ -244,8 +248,7 @@ static void set_data_func(GtkClipboard *clipboard, GtkSelectionData *selection_d
     target = gtk_selection_data_get_target(selection_data);
 
     set_data(target, selection_data, data);
-    LOG_EXCEPTION(mainEnv);
-    mainEnv->ExceptionClear();
+    CHECK_JNI_EXCEPTION(mainEnv);
 }
 
 static void clear_data_func(GtkClipboard *clipboard, gpointer user_data)
@@ -360,6 +363,7 @@ static gulong owner_change_handler_id = 0;
 static void clipboard_owner_changed_callback(GtkClipboard *clipboard, GdkEventOwnerChange *event, jobject obj)
 {
     mainEnv->CallVoidMethod(obj, jClipboardContentChanged);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 extern "C" {
@@ -470,7 +474,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_popFromSy
     } else {
         result = get_data_raw(env, cmime, FALSE);
     }
-
+    LOG_EXCEPTION(env)
     env->ReleaseStringUTFChars(mime, cmime);
 
     return result;
@@ -511,7 +515,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_mime
 
     convertible = (GdkAtom*) glass_try_malloc_n(ntargets * 2, sizeof(GdkAtom)); //theoretically, the number can double
     if (!convertible) {
-        if (ntargets) {
+        if (ntargets > 0) {
             glass_throw_oom(env, "Failed to allocate mimes");
         }
         g_free(targets);

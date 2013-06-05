@@ -51,16 +51,16 @@ typedef long jint;
 #define LIBJLI_DYLIB "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/lib/jli/libjli.dylib"
 
 typedef int (JNICALL *JLI_Launch_t)(int argc, char ** argv,
-                                    int jargc, const char** jargv,
-                                    int appclassc, const char** appclassv,
-                                    const char* fullversion,
-                                    const char* dotversion,
-                                    const char* pname,
-                                    const char* lname,
-                                    jboolean javaargs,
-                                    jboolean cpwildcard,
-                                    jboolean javaw,
-                                    jint ergo);
+        int jargc, const char** jargv,
+        int appclassc, const char** appclassv,
+        const char* fullversion,
+        const char* dotversion,
+        const char* pname,
+        const char* lname,
+        jboolean javaargs,
+        jboolean cpwildcard,
+        jboolean javaw,
+        jint ergo);
 
 int launch(int appArgc, char *appArgv[]);
 
@@ -106,7 +106,7 @@ int launch(int appArgc, char *appArgv[]) {
             void *libJLI = dlopen(jliPath, RTLD_LAZY);
             if (libJLI != NULL) {
                 jli_LaunchFxnPtr = dlsym(libJLI, "JLI_Launch");
-        }
+            }
         }
     } else {
         void *libJLI = dlopen(LIBJLI_DYLIB, RTLD_LAZY);
@@ -137,16 +137,16 @@ int launch(int appArgc, char *appArgv[]) {
     NSString *mainBundlePath = [mainBundle bundlePath];
     NSString *javaPath = [mainBundlePath stringByAppendingString:@"/Contents/Java"];
     NSMutableString *classPath = [NSMutableString stringWithFormat:@"-Djava.class.path=%@/%@",
-         javaPath, mainJarName];
+                                                                   javaPath, mainJarName];
 
     NSString *extraClasspath = [infoDictionary objectForKey:@JVM_CLASSPATH_KEY];
     if ([extraClasspath length] > 0) { //unless key missing or has empty value
-       NSArray *elements = [extraClasspath componentsSeparatedByString:@" "];
-       for (NSString *file in elements) {
-          if ([file length] > 0) {
-             [classPath appendFormat:@":%@/%@", javaPath, file];
-          }
-       }
+        NSArray *elements = [extraClasspath componentsSeparatedByString:@" "];
+        for (NSString *file in elements) {
+            if ([file length] > 0) {
+                [classPath appendFormat:@":%@/%@", javaPath, file];
+            }
+        }
     }
     // Set the library path
     NSString *libraryPath = [NSString stringWithFormat:@"-Djava.library.path=%@/Contents/Java", mainBundlePath];
@@ -155,6 +155,19 @@ int launch(int appArgc, char *appArgv[]) {
     NSArray *options = [infoDictionary objectForKey:@JVM_OPTIONS_KEY];
     if (options == nil) {
         options = [NSArray array];
+    }
+    else {
+        //Do string substitutions - for now only one is $APPDIR
+        NSString *contentsPath = [mainBundlePath stringByAppendingString:@"/Contents"];
+        NSMutableArray *expandedOptions = [options mutableCopy];
+        NSUInteger index = 0;
+        for (id option in options) {
+            NSString *expandedOption =
+                    [option stringByReplacingOccurrencesOfString:@"$APPDIR" withString:contentsPath];
+            [expandedOptions replaceObjectAtIndex:index withObject:expandedOption];
+            index++;
+        }
+        options = expandedOptions;
     }
 
     // Get the application arguments
@@ -174,7 +187,7 @@ int launch(int appArgc, char *appArgv[]) {
     int argc;
     if (!mainThread) {
         argc = 1 + [options count] + 2 + 1 +
-               (appArgc > 1 ? (appArgc - 1) : [arguments count]);
+                (appArgc > 1 ? (appArgc - 1) : [arguments count]);
     } else {
         argc = 1 + (appArgc > 1 ? (appArgc - 1) : 0);
     }
@@ -199,16 +212,16 @@ int launch(int appArgc, char *appArgv[]) {
         //command line arguments override plist
         if (appArgc > 1) {
             for (int j=1; j<appArgc; j++) {
-               argv[i++] = strdup(appArgv[j]);
+                argv[i++] = strdup(appArgv[j]);
             }
         } else {
             for (NSString *argument in arguments) {
-               argv[i++] = strdup([argument UTF8String]);
+                argv[i++] = strdup([argument UTF8String]);
             }
         }
     } else {
         for (int j=1; j<appArgc; j++) {
-           argv[i++] = strdup(appArgv[j]);
+            argv[i++] = strdup(appArgv[j]);
         }
     }
 
@@ -216,14 +229,14 @@ int launch(int appArgc, char *appArgv[]) {
 
     // Invoke JLI_Launch()
     return jli_LaunchFxnPtr(argc, argv,
-                            0, NULL,
-                            0, NULL,
-                            "",
-                            "",
-                            "java",
-                            "java",
-                            FALSE,
-                            FALSE,
-                            FALSE,
-                            0);
+            0, NULL,
+            0, NULL,
+            "",
+            "",
+            "java",
+            "java",
+            FALSE,
+            FALSE,
+            FALSE,
+            0);
 }

@@ -148,8 +148,9 @@ public class JavaSourceExporter {
                 methodCode.append("        method"+m+"();\n");
             }
 
+            if (packageName != null) out.write(
+                    "package "+packageName+";\n\n");
             out.write(
-                    "package "+packageName+";\n\n" +
                     "import javafx.util.Duration;\n" +
                     "import javafx.animation.*;\n" +
                     "import javafx.scene.*;\n" +

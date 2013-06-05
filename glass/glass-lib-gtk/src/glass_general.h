@@ -60,18 +60,23 @@ private:
     jstring jmessage;
 };
 
+#define EXCEPTION_OCCURED(env) (check_and_clear_exception(env))
+
 #define CHECK_JNI_EXCEPTION(env) \
         if (env->ExceptionCheck()) {\
+            check_and_clear_exception(env);\
             return;\
         }
 
 #define CHECK_JNI_EXCEPTION_RET(env, ret) \
         if (env->ExceptionCheck()) {\
-                return ret;\
+            check_and_clear_exception(env);\
+            return ret;\
         }
 
 #define JNI_EXCEPTION_TO_CPP(env) \
         if (env->ExceptionCheck()) {\
+            check_and_clear_exception(env);\
             throw jni_exception(env->ExceptionOccurred());\
         }
 
@@ -204,7 +209,7 @@ private:
 #define ERROR4(msg, param1, param2, param3, param4)
 #endif
 
-#define LOG_EXCEPTION(env) log_exception(env);
+#define LOG_EXCEPTION(env) check_and_clear_exception(env);
 
     void glass_throw_exception(JNIEnv * env,
             const char * exceptionClass,
@@ -214,7 +219,7 @@ private:
 
     guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height);
 
-    void log_exception(JNIEnv *env);
+    gboolean check_and_clear_exception(JNIEnv *env);
 
 #endif        /* GLASS_GENERAL_H */
 

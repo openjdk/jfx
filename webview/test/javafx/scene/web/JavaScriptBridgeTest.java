@@ -52,7 +52,7 @@ public class JavaScriptBridgeTest extends TestBase {
             assertEquals("[object HTMLHeadElement]", htmlChildren.getSlot(0).toString());
             JSObject bodyNode = (JSObject) htmlChildren.getSlot(2);
             assertEquals("[object HTMLBodyElement]", bodyNode.toString());
-            assertEquals(Boolean.TRUE, bodyNode.call("hasChildNodes",null));
+            assertEquals(Boolean.TRUE, bodyNode.call("hasChildNodes"));
 //                    JSObject p2Node = (JSObject) doc2.call("getElementById", "p2");
 //                    assertEquals("p", p2Node.getMember("localName"));
 
@@ -76,7 +76,7 @@ public class JavaScriptBridgeTest extends TestBase {
             }
             try {
                 ((JSObject) web.executeScript("new String('test me')"))
-                    .call(null,null);
+                    .call(null);
                 fail("NullPointerException expected but not thrown");
             }
             catch (Throwable ex) {
@@ -244,7 +244,7 @@ public class JavaScriptBridgeTest extends TestBase {
             
             // test call(null)
             try {
-                parent.call(null,null);
+                parent.call(null);
                 fail("JSObject.call(null) didn't throw NPE");
             } catch (NullPointerException e) {
                 // expected

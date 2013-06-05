@@ -29,7 +29,6 @@
 #define _WIN32_WINNT 0x0501
 
 #include <Windows.h>
-#include <shellapi.h>
 #include <tchar.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,6 +38,8 @@
 #include <process.h>
 
 #include "jni.h"
+
+#define snprintf _snprintf
 
 /*
    This is launcher program for application package on Windows.
@@ -296,6 +297,41 @@ static int countNumberOfSystemArguments(int argCount, LPTSTR *szArgList) {
     return 1;
 }
 
+/*
+ * Replace a pattern in a string (not regex, straight replace) with another
+ * string.
+ *
+ * @param str
+ * @param pattern
+ * @param replaceWith
+ * @return either original str or a new str (via strdup) that replaces the
+ *         pattern with the replaceWith string
+ */
+char *replaceStr(char *str, char *pattern, char *replaceWith) {
+	static char buffer[MAX_PATH*2] = {0};
+    char *p;
+
+    //Return orig if str is not in orig.
+    if(!(p = strstr(str, pattern))) {
+      return str;
+    }
+
+    int loc = p-str;
+    if (loc >= sizeof(buffer)) {
+        return str;
+    }
+
+    strncpy(buffer, str, loc); // Copy characters from 'str' start to 'orig' st$
+    buffer[loc] = '\0';
+
+    int remaingBufferSize = sizeof(buffer) - loc;
+    int len = snprintf(buffer+(loc), remaingBufferSize, "%s%s", replaceWith, p+strlen(pattern));
+    if(len > remaingBufferSize ) {
+        return str;
+    }
+    return strdup(buffer);
+}
+
 #define MAX_OPTIONS 100
 #define MAX_OPTION_NAME 50
 
@@ -417,8 +453,22 @@ bool startJVM(TCHAR* basedir, TCHAR* appFolder, TCHAR* jar, int argCount, LPTSTR
        if (found) {
            size_t inLen = (size_t) wcslen(argvalue);
            //convert argument to ASCII string as this is what CreateJVM needs
-           wcstombs_s(&outlen, argvalueASCII, sizeof(argvalueASCII), argvalue, inLen + 1);
-           options[cnt].optionString = _strdup(argvalueASCII);
+           if (wcstombs_s(&outlen, argvalueASCII, sizeof(argvalueASCII), argvalue, inLen + 1) != 0) {
+ 	       showError(_T("Failed converting JVM Argument to ASCII"), argname);
+	       return false;
+	   }
+	   char* jvmOption = _strdup(argvalueASCII);
+
+	   //convert basedir to ASCII string - reuse argvalueASCII
+	   if (wcstombs_s(&outlen, argvalueASCII, sizeof(argvalueASCII), basedir, (size_t)wcslen(basedir) + 1)) {
+               showError(_T("Failed converting directory %s to ASCII", basedir), basedir);
+               return false;
+	   }
+	   //If jvmOption contains $APPDIR it will be replaced with basedir (argvalueASCII)
+	   //otherwise the orginal jvmOption is returned (from strdup above). If string is replaced
+	   //the new version is also from a strdup (i.e. can be passed to free)
+	   jvmOption = replaceStr(jvmOption, "$APPDIR", argvalueASCII);
+	   options[cnt].optionString = jvmOption;
            idx++;
            cnt++;
        }

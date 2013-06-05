@@ -77,7 +77,6 @@ static gboolean call_runnable_in_timer
     else if (context->runnable) {
         mainEnv->CallVoidMethod(context->runnable, jRunnableRun, NULL);
         LOG_EXCEPTION(mainEnv);
-        mainEnv->ExceptionClear();
     }
     return TRUE;
 }
