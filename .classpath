@@ -6,8 +6,8 @@
 	<!--
 	<classpathentry kind="src" path="apps/experiments/ConferenceScheduleApp/src"/>
 	<classpathentry kind="src" path="apps/experiments/ModenaTest/test"/>
-	<classpathentry kind="src" path="apps/experiments/Modena/src"/>
 	-->
+	<classpathentry kind="src" path="apps/experiments/Modena/src"/>
 	<classpathentry kind="src" path="apps/samples/Ensemble8/src/app"/>
 	<classpathentry kind="src" path="apps/samples/Ensemble8/src/compiletime"/>
 	<classpathentry kind="src" path="apps/samples/Ensemble8/src/generated"/>
@@ -40,6 +40,7 @@
 
 	<classpathentry kind="src" path="glass/glass/src"/>
 
+	<classpathentry kind="src" path="javafx-accessible/src"/>
 	<classpathentry kind="src" path="javafx-anim/src"/>
 	<classpathentry kind="src" path="javafx-anim/test/unit"/>
 	<!--
