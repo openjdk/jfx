@@ -807,6 +807,7 @@ public abstract class Parent extends Node {
      * If this parent is either a layout root or unmanaged, then it will be
      * added directly to the scene's dirty layout list, otherwise requestParentLayout
      * will be invoked.
+     * @since JavaFX 8.0
      */
     public void requestLayout() {
         if (!isNeedsLayout()) {
