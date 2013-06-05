@@ -24,26 +24,6 @@
  */
 package javafx.scene;
 
-import com.sun.javafx.Logging;
-import com.sun.javafx.Utils;
-import com.sun.javafx.css.CalculatedValue;
-import static com.sun.javafx.css.CalculatedValue.SKIP;
-import com.sun.javafx.css.CascadingStyle;
-import com.sun.javafx.css.CssError;
-import com.sun.javafx.css.Declaration;
-import com.sun.javafx.css.ParsedValueImpl;
-import com.sun.javafx.css.PseudoClassState;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.Style;
-import com.sun.javafx.css.StyleCache;
-import com.sun.javafx.css.StyleCacheEntry;
-import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleMap;
-import com.sun.javafx.css.Stylesheet;
-import com.sun.javafx.css.converters.FontConverter;
-import com.sun.javafx.css.parser.CSSParser;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -68,7 +48,28 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Window;
+import com.sun.javafx.Logging;
+import com.sun.javafx.Utils;
+import com.sun.javafx.css.CalculatedValue;
+import com.sun.javafx.css.CascadingStyle;
+import com.sun.javafx.css.CssError;
+import com.sun.javafx.css.Declaration;
+import com.sun.javafx.css.ParsedValueImpl;
+import com.sun.javafx.css.PseudoClassState;
+import com.sun.javafx.css.Rule;
+import com.sun.javafx.css.Selector;
+import com.sun.javafx.css.Style;
+import com.sun.javafx.css.StyleCache;
+import com.sun.javafx.css.StyleCacheEntry;
+import com.sun.javafx.css.StyleConverterImpl;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleMap;
+import com.sun.javafx.css.Stylesheet;
+import com.sun.javafx.css.converters.FontConverter;
+import com.sun.javafx.css.parser.CSSParser;
 import sun.util.logging.PlatformLogger;
+
+import static com.sun.javafx.css.CalculatedValue.*;
 
 /**
  * The StyleHelper is a helper class used for applying CSS information to Nodes.
@@ -118,10 +119,7 @@ final class CssStyleHelper {
                 StyleManager.getInstance().findMatchingStyles(node, triggerStates);
 
         
-        final Map<String, List<CascadingStyle>> smap 
-                = styleMap != null ? styleMap.getMap() : null;
-        
-        if (smap == null || smap.isEmpty()) {
+        if (styleMap == null || styleMap.isEmpty()) {
             
             // If there are no styles at all, and no styles that inherit, then return
             final String inlineStyle = node.getStyle();
@@ -336,7 +334,7 @@ final class CssStyleHelper {
             final String inlineStyle = node.getStyle();
             if(inlineStyle == null || inlineStyle.isEmpty()) {
 
-                final Map<String, List<CascadingStyle>> smap = getStyleMap(node);            
+                StyleMap smap = getStyleMap(node);
                 if (smap == null || smap.isEmpty()) {
                     // We have no styles! Reset this StyleHelper to its
                     // initial state so that calls to transitionToState 
@@ -380,32 +378,30 @@ final class CssStyleHelper {
     }
     
     private void resetToInitialValues(Styleable styleable) {
-        
-        final List<CssMetaData<? extends Styleable, ?>> metaDataList = styleable.getCssMetaData();
-        final int nStyleables = metaDataList != null ? metaDataList.size() : 0;
-        for (int n=0; n<nStyleables; n++) {
-            final CssMetaData metaData = metaDataList.get(n);
-            if (metaData.isSettable(styleable) == false) continue;
-            final StyleableProperty styleableProperty = metaData.getStyleableProperty(styleable);
-            if (styleableProperty != null) {
-                final StyleOrigin origin = styleableProperty.getStyleOrigin();
-                if (origin != null && origin != StyleOrigin.USER) {
-                    // If a property is never set by the user or by CSS, then 
-                    // the StyleOrigin of the property is null. So, passing null 
-                    // here makes the property look (to CSS) like it was
-                    // initialized but never used.
-                    Object value = metaData.getInitialValue(styleable);
-                    styleableProperty.applyStyle(null, value);
-                }
+        for (StyleableProperty styleableProperty : cacheContainer.cssSetProperties.values()) {
+            final StyleOrigin origin = styleableProperty.getStyleOrigin();
+            if (origin != null && origin != StyleOrigin.USER) {
+                // If a property is never set by the user or by CSS, then
+                // the StyleOrigin of the property is null. So, passing null
+                // here makes the property look (to CSS) like it was
+                // initialized but never used.
+                CssMetaData metaData = styleableProperty.getCssMetaData();
+                Object value = metaData.getInitialValue(styleable);
+                styleableProperty.applyStyle(null, value);
             }
-        }        
+        }
     }
     
-        
-    private Map<String, List<CascadingStyle>> getStyleMap(Styleable styleable) {
+
+    private StyleMap getStyleMap(Styleable styleable) {
         if (cacheContainer == null || styleable == null) return null;
-        StyleMap styleMap = cacheContainer.getStyleMap(styleable);
-        return (styleMap != null) ? styleMap.getMap() : null;
+        return cacheContainer.getStyleMap(styleable);
+    }
+
+    private Map<String, List<CascadingStyle>> getCascadingStyles(Styleable styleable) {
+        StyleMap styleMap = getStyleMap(styleable);
+        // code looks for null return to indicate that the cache was blown away
+        return (styleMap != null) ? styleMap.getCascadingStyles() : null;
     }
     
     /** 
@@ -430,7 +426,7 @@ final class CssStyleHelper {
             final List<Rule> stylesheetRules = inlineStylesheet.getRules();
             for (int i = 0, imax = stylesheetRules.size(); i < imax; i++) {
                 final Rule rule = stylesheetRules.get(i);
-                final List<Declaration> declarations = rule.getDeclarations();
+                final List<Declaration> declarations = rule.getUnobservedDeclarationList();
                 for (int k = 0, kmax = declarations.size(); k < kmax; k++) {
                     Declaration decl = declarations.get(k);
 
@@ -861,10 +857,13 @@ final class CssStyleHelper {
         final CascadingStyle inlineStyle = (inlineStyles != null) ? inlineStyles.get(property) : null;
 
         // Get all of the Styles which may apply to this particular property
-        final Map<String, List<CascadingStyle>> smap = getStyleMap(styleable);
-        if (smap == null) return inlineStyle;
+        final StyleMap smap = getStyleMap(styleable);
+        if (smap == null || smap.isEmpty()) return inlineStyle;
 
-        final List<CascadingStyle> styles = smap.get(property);
+        final Map<String, List<CascadingStyle>> cascadingStyleMap = smap.getCascadingStyles();
+        if (cascadingStyleMap == null || cascadingStyleMap.isEmpty()) return inlineStyle;
+
+        List<CascadingStyle> styles = cascadingStyleMap.get(property);
 
         // If there are no styles for this property then we can just bail
         if ((styles == null) || styles.isEmpty()) return inlineStyle;
@@ -2134,7 +2133,7 @@ final class CssStyleHelper {
                     
             String property = styleableProperty.getProperty();
             Node _node = node instanceof Node ? (Node)node : null;
-            final Map<String, List<CascadingStyle>> smap = getStyleMap(_node);
+            final Map<String, List<CascadingStyle>> smap = getCascadingStyles(_node);
             if (smap == null) return;
             
              List<CascadingStyle> styles = smap.get(property);            
@@ -2194,7 +2193,7 @@ final class CssStyleHelper {
                                              
                         final int start = styleList.size();
                         
-                        final Map<String, List<CascadingStyle>> smap = helper.getStyleMap(_parent);
+                        final Map<String, List<CascadingStyle>> smap = helper.getCascadingStyles(_parent);
                         if (smap != null) {
 
                             List<CascadingStyle> styles = smap.get(property);

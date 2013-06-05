@@ -50,7 +50,7 @@ public class TypeTest {
     // ParsedValue value = TypeTest.getValueFor(stylesheet, "-fx-cursor")
     public static ParsedValue getValueFor(Stylesheet stylesheet, String property ) {
         for (Rule rule : stylesheet.getRules()) {
-            for (Declaration decl : rule.getDeclarations()) {
+            for (Declaration decl : rule.getUnobservedDeclarationList()) {
                 if (property.equals(decl.getProperty())) {
                     return decl.getParsedValue();
                 }

@@ -240,35 +240,6 @@ public class CssMetaDataTest {
         assertTrue(testNodeOpacity.equals(nodeOpacity));
     }
 
-    /**
-     * Helper for testGetMatchingStyles
-     */
-    List<CascadingStyle> match(Node node, Stylesheet stylesheet) {
-
-        List<CascadingStyle> styles = new ArrayList<CascadingStyle>();
-
-        int ord = 0;
-        for (Rule rule : stylesheet.getRules()) {
-            final List<Match> matches = rule.matches(node);
-            if (matches == null || matches.isEmpty()) continue;
-            for (Match match : matches) {
-                if (match == null) continue;
-                for (Declaration declaration : rule.getDeclarations()) {
-                    styles.add(
-                            new CascadingStyle(
-                                    new Style(match.selector, declaration),
-                                    match.pseudoClasses,
-                                    match.specificity,
-                                    ord++
-                            )
-                    );
-                }
-            }
-        }
-
-        return styles;
-    }
-
     static int ord = 0;
     static CascadingStyle createCascadingStyle(Selector selector, Declaration declaration) {
 

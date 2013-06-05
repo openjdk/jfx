@@ -88,6 +88,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         contentContainer.getChildren().setAll(contentRegion);
 
         if (titledPane.isExpanded()) {
+            setTransition(1.0f);
             setExpanded(titledPane.isExpanded());
         } else {
             setTransition(0.0f);
@@ -267,6 +268,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     private void doAnimationTransition() {
         Duration duration;
 
+        
         if (contentRegion.getContent() == null) {
             return;
         }

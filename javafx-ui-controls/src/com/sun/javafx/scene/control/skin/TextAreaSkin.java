@@ -418,6 +418,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         caretPosition.addListener(new ChangeListener<Number>() {
             @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                 targetCaretX = -1;
+                if (newValue.intValue() > oldValue.intValue()) {
+                    setForwardBias(true);
+                }
             }
         });
 

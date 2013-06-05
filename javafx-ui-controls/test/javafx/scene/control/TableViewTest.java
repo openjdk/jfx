@@ -40,12 +40,14 @@ import java.util.Comparator;
 import java.util.Random;
 
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.util.Callback;
 
@@ -1295,5 +1297,32 @@ public class TableViewTest {
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
         assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+    }
+
+    @Test public void test_rt30400() {
+        // create a listview that'll render cells using the check box cell factory
+        final TableView<Person> tableView = new TableView<Person>();
+        tableView.setMinHeight(100);
+        tableView.setPrefHeight(100);
+        tableView.setItems(FXCollections.observableArrayList(
+                new Person("Jacob", "Smith", "jacob.smith@example.com")
+        ));
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellFactory(CheckBoxTableCell.forTableColumn(new Callback<Integer, ObservableValue<Boolean>>() {
+            public javafx.beans.value.ObservableValue<Boolean> call(Integer param) {
+                return new ReadOnlyBooleanWrapper(true);
+            }
+        }));
+        tableView.getColumns().add(firstNameCol);
+
+        // because only the first row has data, all other rows should be
+        // empty (and not contain check boxes - we just check the first four here)
+        VirtualFlowTestUtils.assertRowsNotEmpty(tableView, 0, 1);
+        VirtualFlowTestUtils.assertCellNotEmpty(VirtualFlowTestUtils.getCell(tableView, 0));
+        VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 1));
+        VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 2));
+        VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 3));
     }
 }

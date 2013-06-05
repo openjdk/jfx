@@ -41,13 +41,17 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
+import com.sun.javafx.tk.Toolkit;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -1819,5 +1823,51 @@ public class TableViewKeyInputTest {
         assertEquals(2, sm.getSelectedCells().size());
         assertEquals(3, fm.getFocusedIndex());
         assertEquals(2, getAnchor().getRow());
+    }
+
+    private int rt29849_start_count = 0;
+    private int rt29849_cancel_count = 0;
+    @Test public void test_rt29849() {
+        tableView.setEditable(true);
+        col0.setEditable(true);
+
+        col0.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper("DUMMY TEXT");
+            }
+        });
+
+        col0.setOnEditStart(new EventHandler<TableColumn.CellEditEvent<String, String>>() {
+            @Override public void handle(TableColumn.CellEditEvent<String, String> t) {
+                rt29849_start_count++;
+            }
+        });
+        col0.setOnEditCancel(new EventHandler<TableColumn.CellEditEvent<String, String>>() {
+            @Override public void handle(TableColumn.CellEditEvent<String, String> t) {
+                rt29849_cancel_count++;
+            }
+        });
+
+        // initially the counts should be zero
+        assertEquals(0, rt29849_start_count);
+        assertEquals(0, rt29849_cancel_count);
+
+        TableCell cell = (TableCell)VirtualFlowTestUtils.getCell(tableView, 0, 0);
+        cell.lockItemOnEdit = false;
+        assertTrue(cell.isEditable());
+        assertFalse(cell.isEditing());
+        assertEquals(0, cell.getIndex());
+
+        // do an edit, start count should be one, cancel still zero
+        tableView.edit(0, col0);
+        assertTrue(cell.isEditing());
+        assertEquals(1, rt29849_start_count);
+        assertEquals(0, rt29849_cancel_count);
+
+        // cancel edit, now both counts should be 1
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+        assertFalse(cell.isEditing());
+        assertEquals(1, rt29849_start_count);
+        assertEquals(1, rt29849_cancel_count);
     }
 }

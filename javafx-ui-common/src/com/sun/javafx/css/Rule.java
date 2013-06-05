@@ -26,6 +26,8 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -33,77 +35,134 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
 
 import javafx.scene.Node;
-import javafx.scene.Scene;
 
 /*
- * A rule is a collection of selectors and declarations.
+ * A selector is a collection of selectors and declarations.
  */
 final public class Rule {
 
-    final List<Selector> selectors;
-    public List<Selector> getSelectors() {
+    private List<Selector> selectors = null;
+
+    /**
+     * The list returned from this method should be treated as unmodifiable.
+     * Tools should use {@link #getSelectors()} which tracks adds and removes.
+     */
+    public List<Selector>  getUnobservedSelectorList() {
+        if (selectors == null) {
+            selectors = new ArrayList<Selector>();
+        }
         return selectors;
     }
 
-    final ObservableList<Declaration> declarations = 
-        new TrackableObservableList<Declaration>() {
+    private List<Declaration> declarations = null;
+    /**
+     * The list returned from this method should be treated as unmodifiable.
+     * Tools should use {@link #getDeclarations()} which tracks adds and removes.
+     */
+    public List<Declaration> getUnobservedDeclarationList() {
 
-        @Override
-        protected void onChanged(Change<Declaration> c) {
-            while (c.next()) {
-                if (c.wasAdded()) {
-                    List<Declaration> added = c.getAddedSubList();
-                    for(int i = 0, max = added.size(); i < max; i++) {
-                        Declaration decl = added.get(i);
-                        decl.rule = Rule.this;
-                        
-                        if (stylesheet != null && stylesheet.getUrl() != null) {
+        if (declarations == null && serializedDecls != null) {
 
-                            final URL stylesheetUrl = stylesheet.getUrl();
-                            decl.fixUrl(stylesheetUrl);
+            assert(Rule.strings != null);
 
-                        }
-                        
+            try {
+                ByteArrayInputStream bis = new ByteArrayInputStream(serializedDecls);
+                DataInputStream dis = new DataInputStream(bis);
+
+                short nDeclarations = dis.readShort();
+                declarations = new ArrayList<Declaration>(nDeclarations);
+
+                for (int i = 0; i < nDeclarations; i++) {
+
+                    Declaration decl = Declaration.readBinary(dis, Rule.strings);
+                    decl.rule = Rule.this;
+
+                    if (stylesheet != null && stylesheet.getUrl() != null) {
+                        final URL stylesheetUrl = stylesheet.getUrl();
+                        decl.fixUrl(stylesheetUrl);
                     }
+
+                    declarations.add(decl);
                 }
-                
-                if (c.wasRemoved()) {
-                    List<Declaration> removed = c.getRemoved();
-                    for(int i = 0, max = removed.size(); i < max; i++) {
-                        Declaration decl = removed.get(i);
-                        if (decl.rule == Rule.this) decl.rule = null;
-                    }
-                }
+
+            } catch (IOException ioe) {
+                declarations = new ArrayList<>();
+                assert false; ioe.getMessage();
+
+            } finally {
+                serializedDecls = null;
             }
+
         }
-    };
-    
-    public List<Declaration> getDeclarations() {
+
         return declarations;
     }
 
-    /** The stylesheet this rule belongs to */
+    private Observables observables = null;
+
+    /**
+     * This method is to support tooling that may want to add declarations to
+     * or remove declarations from a Rule. Changes to the list are tracked
+     * so that added declarations are tagged as belonging to this rule, and
+     * the rule for removed declarations is nulled out.
+     * If the list is not going to be modified, then it is more efficient to
+     * call {@link #getUnobservedDeclarationList()}, but the returned list
+     * must be treated as unmodifiable.
+     * @return
+     */
+    public final ObservableList<Declaration> getDeclarations() {
+
+        if (observables == null) {
+            observables = new Observables(this);
+        }
+
+        return observables.getDeclarations();
+    }
+
+    /**
+     * This method is to support tooling that may want to add selectors to
+     * or remove selectors from a Rule. Changes to the list are tracked
+     * so that added selectors are tagged as belonging to this rule, and
+     * the rule for removed selectors is nulled out.
+     * If the list is not going to be modified, then it is more efficient to
+     * call {@link #getUnobservedSelectorList()}, but the returned list
+     * must be treated as unmodifiable.
+     * @return
+     */
+    public final ObservableList<Selector> getSelectors() {
+
+        if (observables == null) {
+            observables = new Observables(this);
+        }
+
+        return observables.getSelectors();
+    }
+
+    /** The stylesheet this selector belongs to */
     private Stylesheet stylesheet;
     public Stylesheet getStylesheet() {
         return stylesheet;
     }
+
     /* package */
     void setStylesheet(Stylesheet stylesheet) {
+
         this.stylesheet = stylesheet;
         
         if (stylesheet != null && stylesheet.getUrl() != null) {
-            
             final URL stylesheetUrl = stylesheet.getUrl();
-            for (int d=0, dMax=declarations.size(); d<dMax; d++) {
+
+            int nDeclarations = declarations != null ? declarations.size() : 0;
+            for (int d=0; d<nDeclarations; d++) {
                 declarations.get(d).fixUrl(stylesheetUrl);
             }
-            
         }
     }
 
@@ -113,35 +172,40 @@ final public class Rule {
 
 
     public Rule(List<Selector> selectors, List<Declaration> declarations) {
+
         this.selectors = selectors;
-        this.declarations.addAll(declarations);
-    }
+        this.declarations = declarations;
+        serializedDecls = null;
 
-    private Rule() {
-        this(null, null);
-    }
-
-    /**
-     * Checks all selectors for a match, returning an array of all relevant
-     * matches.  A match is considered irrelevant if its presence or absence
-     * cannot affect whether or not the rule applies;  this means that among
-     * static (non-pseudoclass) matches, only the highest priority one is
-     * relevant, and among pseudoclass matches, only ones with higher priority
-     * than the most specific static match are relevant.
-     *
-     *@param node the object to test against
-     *@return an array of all relevant matches, or <code>null</code> if none
-     */
-    List<Match> matches(Node node) {
-        List<Match> matches = new ArrayList<Match>();
-        for (int i = 0; i < selectors.size(); i++) {
+        int sMax = selectors != null ? selectors.size() : 0;
+        for(int i = 0; i < sMax; i++) {
             Selector sel = selectors.get(i);
-            Match match = sel.matches(node);
-            if (match != null) {
-                matches.add(match);
-            }
+            sel.setRule(Rule.this);
         }
-        return matches;
+
+        int dMax = declarations != null ? declarations.size() : 0;
+        for (int d=0; d<dMax; d++) {
+            Declaration decl = declarations.get(d);
+            decl.rule = this;
+        }
+    }
+
+    private static String[] strings = null;  // TBD: blech!
+    private byte[] serializedDecls;
+
+    private Rule(List<Selector> selectors, byte[] buf, String[] stringStoreStrings) {
+
+        this.selectors = selectors;
+        this.declarations = null;
+        this.serializedDecls = buf;
+        if (Rule.strings == null) Rule.strings = stringStoreStrings;
+
+        int sMax = selectors != null ? selectors.size() : 0;
+        for(int i = 0; i < sMax; i++) {
+            Selector sel = selectors.get(i);
+            sel.setRule(Rule.this);
+        }
+
     }
 
     // Return mask of selectors that match
@@ -168,27 +232,129 @@ final public class Rule {
             sb.append(selectors.get(n));
         }
         sb.append("{\n");
-        for (Declaration decl : declarations) {
+        int nDeclarations = declarations != null ? declarations.size() : 0;
+        for (int n=0; n<nDeclarations; n++) {
             sb.append("\t");
-            sb.append(decl);
+            sb.append(declarations.get(n));
             sb.append("\n");
         }
         sb .append("}");
         return sb.toString();
     }
 
+    /*
+     * If an authoring tool adds or removes a selector or declaration,
+     * then the selector or declaration needs to be tweaked to know that
+     * this is the Rule to which it belongs.
+     */
+    private final static class Observables {
+
+        private Observables(Rule rule) {
+
+            this.rule = rule;
+
+            selectorObservableList = new TrackableObservableList<Selector>(rule.getUnobservedSelectorList()) {
+                @Override protected void onChanged(Change<Selector> c) {
+                    while (c.next()) {
+                        if (c.wasAdded()) {
+                            List<Selector> added = c.getAddedSubList();
+                            for(int i = 0, max = added.size(); i < max; i++) {
+                                Selector sel = added.get(i);
+                                sel.setRule(Observables.this.rule);
+                            }
+                        }
+
+                        if (c.wasRemoved()) {
+                            List<Selector> removed = c.getAddedSubList();
+                            for(int i = 0, max = removed.size(); i < max; i++) {
+                                Selector sel = removed.get(i);
+                                if (sel.getRule() == Observables.this.rule) {
+                                    sel.setRule(null);
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            declarationObservableList = new TrackableObservableList<Declaration>(rule.getUnobservedDeclarationList()) {
+                @Override protected void onChanged(Change<Declaration> c) {
+                    while (c.next()) {
+                        if (c.wasAdded()) {
+                            List<Declaration> added = c.getAddedSubList();
+                            for(int i = 0, max = added.size(); i < max; i++) {
+                                Declaration decl = added.get(i);
+                                decl.rule = Observables.this.rule;
+
+                                Stylesheet stylesheet = Observables.this.rule.stylesheet;
+                                if (stylesheet != null && stylesheet.getUrl() != null) {
+                                    final URL stylesheetUrl = stylesheet.getUrl();
+                                    decl.fixUrl(stylesheetUrl);
+                                }
+                            }
+                        }
+
+                        if (c.wasRemoved()) {
+                            List<Declaration> removed = c.getRemoved();
+                            for(int i = 0, max = removed.size(); i < max; i++) {
+                                Declaration decl = removed.get(i);
+                                if (decl.rule == Observables.this.rule) {
+                                    decl.rule = null;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+        }
+
+        private ObservableList<Selector> getSelectors() {
+            return selectorObservableList;
+        }
+
+        private ObservableList<Declaration> getDeclarations() {
+            return declarationObservableList;
+        }
+
+        private final Rule rule;
+        private final ObservableList<Selector> selectorObservableList;
+        private final ObservableList<Declaration> declarationObservableList;
+
+    }
+
     void writeBinary(DataOutputStream os, StringStore stringStore)
             throws IOException {
-        os.writeShort(selectors.size());
-        for (int i = 0; i < selectors.size(); i++) {
-            Selector sel = selectors.get(i);
+
+        final int nSelectors = this.selectors != null ? this.selectors.size() : 0;
+        os.writeShort(nSelectors);
+        for (int i = 0; i < nSelectors; i++) {
+            Selector sel = this.selectors.get(i);
             sel.writeBinary(os, stringStore);
         }
-        os.writeShort(declarations.size());
-        for (int i = 0; i < declarations.size(); i++) {
-            Declaration decl = declarations.get(i);
-            decl.writeBinary(os, stringStore);
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(5192);
+        DataOutputStream dos = new DataOutputStream(bos);
+
+        if (declarations != null) {
+            int nDeclarations =  declarations.size();
+
+            dos.writeShort(nDeclarations);
+
+            for (int i = 0; i < nDeclarations; i++) {
+                Declaration decl = declarations.get(i);
+                decl.writeBinary(dos, stringStore);
+            }
+        } else if (serializedDecls != null) {
+            dos.write(serializedDecls);
+
+        } else {
+            // no declarations!
+            dos.writeShort(0);
         }
+
+        os.writeInt(bos.size());
+        os.write(bos.toByteArray());
     }
 
     static Rule readBinary(DataInputStream is, String[] strings)
@@ -201,13 +367,13 @@ final public class Rule {
             selectors.add(s);
         }
 
-        short nDeclarations = is.readShort();
-        List<Declaration> declarations = new ArrayList<Declaration>(nDeclarations);
-        for (int i = 0; i < nDeclarations; i++) {
-            Declaration d = Declaration.readBinary(is, strings);
-            declarations.add(d);
-        }
 
-        return new Rule(selectors, declarations);
+        // de-serialize decls into byte array
+        int nBytes = is.readInt();
+        byte[] buf = new byte[nBytes];
+
+        is.readFully(buf);
+
+        return new Rule(selectors, buf, strings);
     }
 }

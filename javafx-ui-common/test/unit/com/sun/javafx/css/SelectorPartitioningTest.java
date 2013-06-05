@@ -186,8 +186,8 @@ public class SelectorPartitioningTest {
                 CSSParser.getInstance().parse(data.stylesheetText);
                 
         for (Rule rule : stylesheet.getRules()) {
-            for (Selector selector : rule.selectors) {
-                instance.partition(selector, rule);                
+            for (Selector selector : rule.getUnobservedSelectorList()) {
+                instance.partition(selector);
             }
         }
         
@@ -202,13 +202,15 @@ public class SelectorPartitioningTest {
                 
         SimpleSelector simple = simpleData.selector;
         
-        List<Rule> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
         
         assertEquals(1,matched.size());
-        Rule rule = matched.get(0);
-        
-        assertEquals(1,rule.declarations.size());
-        Declaration decl = rule.declarations.get(0);
+        Selector selector = matched.get(0);
+
+        Rule rule = selector.getRule();
+
+        assertEquals(1,rule.getUnobservedDeclarationList().size());
+        Declaration decl = rule.getUnobservedDeclarationList().get(0);
         
         assertEquals("-fx-fill", decl.property);
         
@@ -224,11 +226,10 @@ public class SelectorPartitioningTest {
                 
         SimpleSelector simple = complexData.selector;
         
-        List<Rule> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
         assertEquals(complexData.matches, matched.size());
         
-        for(Rule rule : matched) {
-            Selector s1 = rule.selectors.get(0);
+        for(Selector s1 : matched) {
             for (SimpleData datum : complexData.data) {
                 Selector s2 = (SimpleSelector)datum.selector;
                 if (s1.equals(s2)) {

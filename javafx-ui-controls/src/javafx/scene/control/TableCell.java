@@ -82,6 +82,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /***************************************************************************
      *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/
+
+    // package for testing
+    boolean lockItemOnEdit = false;
+
+
+    /***************************************************************************
+     *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
      **************************************************************************/
@@ -268,18 +278,17 @@ public class TableCell<S,T> extends IndexedCell<T> {
         final TableColumn column = getTableColumn();
         if (! isEditable() ||
                 (table != null && ! table.isEditable()) ||
-                (column != null && ! getTableColumn().isEditable()))
-        {
-//            if (Logging.getControlsLogger().isLoggable(PlatformLogger.WARNING)) {
-//                Logging.getControlsLogger().warning(
-//                    "Can not call TableCell.startEdit() on this TableCell, as it "
-//                        + "is not allowed to enter its editing state (TableCell: "
-//                        + this + ", TableView: " + table + ").");
-//            }
-            
+                (column != null && ! getTableColumn().isEditable())) {
             return;
         }
-        
+
+        // We check the boolean lockItemOnEdit field here, as whilst we want to
+        // updateItem normally, when it comes to unit tests we can't have the
+        // item change in all circumstances.
+        if (! lockItemOnEdit) {
+            updateItem();
+        }
+
         // it makes sense to get the cell into its editing state before firing
         // the event to listeners below, so that's what we're doing here
         // by calling super.startEdit().
@@ -534,9 +543,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
                 tableColumn == null || 
                 !tableColumn.isVisible()) {
             
-            if (! isEmpty()) {
-                updateItem(null, true);
-            }
+            updateItem(null, true);
             return;
         } else {
             currentObservableValue = tableColumn.getCellObservableValue(index);

@@ -421,9 +421,7 @@ public class ListCell<T> extends IndexedCell<T> {
                 updateItem(newValue, false);
             }
         } else {
-            if (! isEmpty()) {
-                updateItem(null, true);
-            }
+            updateItem(null, true);
         }
     }
     

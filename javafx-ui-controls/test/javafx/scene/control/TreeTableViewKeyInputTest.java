@@ -29,7 +29,9 @@ import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TreeTableViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.test.Person;
 
@@ -37,14 +39,19 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
+import com.sun.javafx.tk.Toolkit;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -2332,5 +2339,50 @@ public class TreeTableViewKeyInputTest {
         assertTrue(debug(), isNotSelected(0,1));
         assertEquals(3, fm.getFocusedIndex());
         assertEquals(2, getAnchor().getRow());
+    }
+
+    private int rt29849_start_count = 0;
+    private int rt29849_cancel_count = 0;
+    @Test public void test_rt29849() {
+        tableView.setEditable(true);
+        col0.setEditable(true);
+
+        col0.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper("DUMMY TEXT");
+            }
+        });
+
+        col0.setOnEditStart(new EventHandler<TreeTableColumn.CellEditEvent<String, String>>() {
+            @Override public void handle(TreeTableColumn.CellEditEvent<String, String> t) {
+                rt29849_start_count++;
+            }
+        });
+        col0.setOnEditCancel(new EventHandler<TreeTableColumn.CellEditEvent<String, String>>() {
+            @Override public void handle(TreeTableColumn.CellEditEvent<String, String> t) {
+                rt29849_cancel_count++;
+            }
+        });
+
+        // initially the counts should be zero
+        assertEquals(0, rt29849_start_count);
+        assertEquals(0, rt29849_cancel_count);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0, 0);
+        assertTrue(cell.isEditable());
+        assertFalse(cell.isEditing());
+        assertEquals(0, cell.getIndex());
+
+        // do an edit, start count should be one, cancel still zero
+        tableView.edit(0, col0);
+        assertTrue(cell.isEditing());
+        assertEquals(1, rt29849_start_count);
+        assertEquals(0, rt29849_cancel_count);
+
+        // cancel edit, now both counts should be 1
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+        assertFalse(cell.isEditing());
+        assertEquals(1, rt29849_start_count);
+        assertEquals(1, rt29849_cancel_count);
     }
 }

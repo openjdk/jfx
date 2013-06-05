@@ -507,7 +507,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      */
     @Deprecated
     public final boolean impl_isReorderable() {
-        return reorderable == null ? false : reorderable.get();
+        return reorderable == null ? true : reorderable.get();
     }
     
     
