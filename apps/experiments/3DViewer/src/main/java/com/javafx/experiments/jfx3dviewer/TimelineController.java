@@ -49,7 +49,7 @@ public class TimelineController {
     private final ChangeListener<Number> rateListener = new ChangeListener<Number>() {
         @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newRate) {
             System.out.println("newRate = " + newRate);
-            if (newRate == 0 && playBtn.isSelected()) {
+            if (newRate.intValue() == 0 && playBtn.isSelected()) {
                 playBtn.setSelected(false);
             }
         }
