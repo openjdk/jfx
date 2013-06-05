@@ -415,35 +415,6 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
     private void assertToolkitRunning() {
         // not implemented
     }
-    
-    /**
-     * Runs a runnable that is synchronized with the graphics system.
-     * When the runnable is executing, any threads that are accessing
-     * shared graphics state for the scene are locked.
-     */
-    public void runSynchronized(TKScene scene, Runnable runnable) {
-        scene.waitForRenderingToComplete();
-        scene.waitForSynchronization();
-        try {
-            if (scene instanceof ViewScene) {
-                ViewScene  view = (ViewScene) scene;
-                NGNode root = null;
-                AbstractPainter painter = view.getPainter();
-                GlassStage stage = view.getStage();
-                if (stage != null) {
-                    OverlayWarning warning = stage.getOverlayWarning();
-                    if (warning != null) {
-                        warning.updatePGNodes();
-                        root = warning.getPGRoot();
-                    }
-                }
-                painter.setOverlayRoot(root);
-            }
-            if (runnable != null) runnable.run();
-        } finally {
-            scene.releaseSynchronization();
-        }
-    }
 
     // Called by Glass from Application.run()
     void runToolkit() {
