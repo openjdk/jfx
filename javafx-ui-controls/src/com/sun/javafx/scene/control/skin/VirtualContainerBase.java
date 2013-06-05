@@ -101,6 +101,10 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
     }
 
     @Override protected void layoutChildren(double x, double y, double w, double h) {
+        checkState();
+    }
+
+    protected void checkState() {
         if (rowCountDirty) {
             updateRowCount();
             rowCountDirty = false;
