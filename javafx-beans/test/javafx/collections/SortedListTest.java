@@ -156,7 +156,9 @@ public class SortedListTest {
 
     @Test
     public void testChangeComparator() {
-        ObjectProperty<Comparator<String>> op = new SimpleObjectProperty<>(new NaturalElementComparator<>());
+        //ObjectProperty<Comparator<String>> op = new SimpleObjectProperty<>(new NaturalElementComparator<>());
+        SimpleObjectProperty<Comparator<String>> op = new SimpleObjectProperty<Comparator<String>>();
+        op.set(new NaturalElementComparator<String>());
 
         sortedList = new SortedList<>(list);
         sortedList.comparatorProperty().bind(op);
