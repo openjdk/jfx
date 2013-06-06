@@ -1195,7 +1195,7 @@ class Loader {
 
             float t = kt - EPSILON;
             if (t < 0.0) {
-                t = 0.0f;
+                continue; // just skipping all the negative frames
             }
 
             /*
