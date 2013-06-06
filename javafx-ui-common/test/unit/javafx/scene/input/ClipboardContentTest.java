@@ -50,10 +50,13 @@ public class ClipboardContentTest {
         assertEquals("Hello", cc.getString());
     }
 
-    @Test(expected=NullPointerException.class)
-    public void nullStringShouldCauseNPE() {
+    @Test
+    public void nullStringShouldRemovePrevious() {
         ClipboardContent cc = new ClipboardContent();
+        cc.putString("Hello");
         cc.putString(null);
+        assertFalse(cc.hasString());
+        assertNull(cc.getString());
     }
 
     @Test
@@ -68,12 +71,15 @@ public class ClipboardContentTest {
         assertEquals("http://hello", cc.getUrl());
     }
 
-    @Test(expected=NullPointerException.class)
-    public void nullUrlShouldCauseNPE() {
+    @Test
+    public void nullUrlShouldRemovePrevious() {
         ClipboardContent cc = new ClipboardContent();
+        cc.putUrl("http://hello");
         cc.putUrl(null);
+        assertFalse(cc.hasUrl());
+        assertNull(cc.getUrl());
     }
-    
+
     @Test
     public void htmlShouldBePut() {
         ClipboardContent cc = new ClipboardContent();
@@ -86,10 +92,13 @@ public class ClipboardContentTest {
         assertEquals("<html><head></head><body>Hello</body></html>", cc.getHtml());
     }
 
-    @Test(expected=NullPointerException.class)
-    public void nullHtmlShouldCauseNPE() {
+    @Test
+    public void nullHtmlShouldRemovePrevious() {
         ClipboardContent cc = new ClipboardContent();
+        cc.putHtml("<html><head></head><body>Hello</body></html>");
         cc.putHtml(null);
+        assertFalse(cc.hasHtml());
+        assertNull(cc.getHtml());
     }
     
     @Test
@@ -105,12 +114,15 @@ public class ClipboardContentTest {
                 cc.getRtf());
     }
 
-    @Test(expected=NullPointerException.class)
-    public void nullRtfShouldCauseNPE() {
+    @Test
+    public void nullRtfShouldRemovePrevious() {
         ClipboardContent cc = new ClipboardContent();
+        cc.putRtf("{\\rtf1\\ansi\\uc1{\\colortbl;\\red255\\green0\\blue0;}\\uc1\\b\\i FRED\\par rtf\\par text}");
         cc.putRtf(null);
+        assertFalse(cc.hasRtf());
+        assertNull(cc.getRtf());
     }
-    
+
     @Test
     public void imageShouldBePut() {
         StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
@@ -130,12 +142,22 @@ public class ClipboardContentTest {
         assertSame(i, cc.getImage());
     }
 
-    @Test(expected=NullPointerException.class)
-    public void nullImageShouldCauseNPE() {
+    @Test
+    public void nullImageShouldRemovePrevious() {
+        StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+        toolkit.getImageLoaderFactory().reset();
+        toolkit.getImageLoaderFactory().registerImage("file:test.png",
+                new StubPlatformImageInfo(100, 200));
+
         ClipboardContent cc = new ClipboardContent();
+        Image i = new Image("file:test.png");
+
+        cc.putImage(i);
         cc.putImage(null);
+        assertFalse(cc.hasImage());
+        assertNull(cc.getImage());
     }
-    
+
     @Test
     public void filesShouldBePut() {
         
@@ -163,10 +185,15 @@ public class ClipboardContentTest {
         assertEquals(0, cc.getFiles().size());
     }
 
-    @Test(expected=NullPointerException.class)
-    public void nullFilesShouldCauseNPE() {
+    @Test
+    public void nullFilesShouldRemovePrevious() {
         ClipboardContent cc = new ClipboardContent();
+        List<File> files = Arrays.asList(new File("."), new File("/"));
+
+        cc.putFiles(files);
         cc.putFiles(null);
+        assertFalse(cc.hasFiles());
+        assertNull(cc.getFiles());
     }
     
     @Test
@@ -197,12 +224,12 @@ public class ClipboardContentTest {
     }
 
     @Test(expected=NullPointerException.class)
-    public void nullFilesByPathShouldCauseNPE() {
+    public void nullFilesByPathShouldRemoveFiles() {
         ClipboardContent cc = new ClipboardContent();
+        cc.putFilesByPath(new ArrayList<String>(0));
         cc.putFilesByPath(null);
+
+        assertFalse(cc.hasFiles());
+        assertNull(cc.getFiles());
     }
-    
-    
-    
-    
 }
