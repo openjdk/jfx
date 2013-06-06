@@ -416,10 +416,7 @@ public class ListCell<T> extends IndexedCell<T> {
             T oldValue = getItem();
             T newValue = items.get(index);
             
-            if ((newValue != null && ! newValue.equals(oldValue)) || 
-                    oldValue != null && ! oldValue.equals(newValue)) {
-                updateItem(newValue, false);
-            }
+            updateItem(newValue, false);
         } else {
             updateItem(null, true);
         }

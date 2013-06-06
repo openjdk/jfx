@@ -128,8 +128,6 @@ public abstract class TableRowSkinBase<T,
     
     protected abstract void updateCell(R cell, C row);  // cell.updateTableRow(skinnable); (i.e cell.updateTableRow(row))
     
-    protected abstract ObjectProperty<ObservableList<T>> itemsProperty();
-
     protected abstract DoubleProperty fixedCellSizeProperty();
     
     protected abstract boolean isColumnPartiallyOrFullyVisible(TableColumnBase tc); // tableViewSkin.isColumnPartiallyOrFullyVisible(tc)
