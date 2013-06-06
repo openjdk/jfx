@@ -35,11 +35,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +46,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.collections.ObservableArray;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -147,11 +146,10 @@ public class FXMLExporter {
                 res.add(new Property(aClass.getMethod("getMesh"), "mesh"));
             }
             if (TriangleMesh.class.isAssignableFrom(aClass)) {
-                TriangleMesh tm;
-                res.add(new Property(aClass.getMethod("getPoints", float[].class), "points"));
-                res.add(new Property(aClass.getMethod("getTexCoords", float[].class), "texCoords"));
-                res.add(new Property(aClass.getMethod("getFaces", int[].class), "faces"));
-                res.add(new Property(aClass.getMethod("getFaceSmoothingGroups", int[].class), "faceSmoothingGroups"));
+                res.add(new Property(aClass.getMethod("getPoints"), "points"));
+                res.add(new Property(aClass.getMethod("getTexCoords"), "texCoords"));
+                res.add(new Property(aClass.getMethod("getFaces"), "faces"));
+                res.add(new Property(aClass.getMethod("getFaceSmoothingGroups"), "faceSmoothingGroups"));
             }
         } catch (NoSuchMethodException | SecurityException ex) {
             Logger.getLogger(FXMLExporter.class.getName()).log(Level.SEVERE, null, ex);
@@ -201,8 +199,8 @@ public class FXMLExporter {
                                 container.addChild(exportToFXML(item));
                             }
                         }
-                    } else if (value instanceof int[] || value instanceof float[]) {
-                        int length = Array.getLength(value);
+                    } else if (value instanceof ObservableArray) {
+                        int length = ((ObservableArray) value).size();
                         if (length > 0) {
                             FXML container = fxml.addContainer(property.name);
                             container.setValue(value);
@@ -222,12 +220,6 @@ public class FXMLExporter {
             }
         }
 
-        if (object instanceof Parent && ((Parent) object).getChildrenUnmodifiable().size() > 0) {
-            FXML container = fxml.addContainer("children");
-            for (Node child : ((Parent) object).getChildrenUnmodifiable()) {
-                container.addChild(exportToFXML(child));
-            }
-        }
         return fxml;
     }
 
@@ -315,12 +307,10 @@ public class FXMLExporter {
                 }
                 if (value != null) {
                     String toString;
-                    if (value instanceof float[]) {
-                        toString = Arrays.toString((float[]) value);
-                    } else if (value instanceof int[]) {
-                        toString = Arrays.toString((int[]) value);
+                    if (value instanceof ObservableArray) {
+                        toString = value.toString();
                     } else {
-                        throw new UnsupportedOperationException("Only float[] and int[] arrays are currently supported");
+                        throw new UnsupportedOperationException("Only ObservableArrays are currently supported");
                     }
                     printWriter.append(indent1).append(toString.substring(1, toString.length() - 1)).append("\n");
                 }
