@@ -28,8 +28,6 @@ package com.sun.javafx.tk.quantum;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import com.sun.javafx.tk.TKClipboard;
 import javafx.application.Platform;
@@ -50,30 +48,25 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     // TODO: synchronize access to embedder from ET and RT
     HostInterface host;
 
-    private EmbeddedPainter         painter;
+    private UploadingPainter        painter;
     private PaintRenderJob          paintRenderJob;
 
     IntBuffer textureBits;
-    boolean needsReset = true;
 
-    Lock sizeLock = new ReentrantLock();
     int width;
     int height;
 
     private final EmbeddedSceneDnD dndDelegate;
 
-    public EmbeddedScene(HostInterface host) {
-        this(host, false);
-    }
-
     public EmbeddedScene(HostInterface host, boolean depthBuffer) {
         super(depthBuffer);
+        sceneState = new EmbeddedState(this);
 
         this.host = host;
         this.dndDelegate = new EmbeddedSceneDnD(this);
 
         PaintCollector collector = PaintCollector.getInstance();
-        painter = new EmbeddedPainter(this);
+        painter = new UploadingPainter(this);
         paintRenderJob = new PaintRenderJob(this, collector.getRendered(), painter);
     }
 
@@ -148,13 +141,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public void setSize(final int width, final int height) {
-        sizeLock.lock();
+        AbstractPainter.renderLock.lock();
         try {
             this.width = width;
             this.height = height;
-            needsReset = true;
+            updateSceneState();
         } finally {
-            sizeLock.unlock();
+            AbstractPainter.renderLock.unlock();
         }
 
         Platform.runLater(new Runnable() {
@@ -177,19 +170,18 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public boolean getPixels(IntBuffer dest, int width, int height) {
-        sizeLock.lock();
+        AbstractPainter.renderLock.lock();
         try {
-            if ((textureBits == null) || needsReset ||
-                (this.width != width) || (this.height != height))
-            {
-                return false;
-            }
+            if (textureBits == null) return false;
             dest.rewind();
             textureBits.rewind();
+            if (dest.capacity() != textureBits.capacity()) {
+                return false;
+            }
             dest.put(textureBits);
             return true;
         } finally {
-            sizeLock.unlock();
+            AbstractPainter.renderLock.unlock();
         }
     }
 

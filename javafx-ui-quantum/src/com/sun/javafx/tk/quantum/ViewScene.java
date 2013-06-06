@@ -47,7 +47,6 @@ class ViewScene extends GlassScene {
     private View platformView;
     private ViewPainter painter;
 
-    private final AtomicBoolean painting = new AtomicBoolean(false);
     private PaintRenderJob paintRenderJob;
 
     public ViewScene(boolean depthBuffer) {
@@ -67,10 +66,6 @@ class ViewScene extends GlassScene {
     
     ViewPainter getPainter() {
         return painter;
-    }
-
-    boolean setPainting(boolean value) {
-        return painting.getAndSet(value);
     }
 
     @Override
@@ -145,7 +140,7 @@ class ViewScene extends GlassScene {
             return;
         }
 
-        if (!painting.getAndSet(true)) {
+        if (!setPainting(true)) {
             Toolkit tk = Toolkit.getToolkit();
             ToolkitInterface toolkit = (ToolkitInterface)tk;
             toolkit.addRenderJob(paintRenderJob);
