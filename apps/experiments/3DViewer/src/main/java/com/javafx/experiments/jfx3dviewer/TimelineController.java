@@ -59,7 +59,7 @@ public class TimelineController {
         @Override protected void invalidated() {
             Timeline t = get();
             if (old != null) {
-                t.currentRateProperty().removeListener(rateListener);
+                old.currentRateProperty().removeListener(rateListener);
             }
             if (t == null) {
                 startBtn.setDisable(true);
