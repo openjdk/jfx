@@ -51,6 +51,7 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import static javafx.scene.shape.TriangleMesh.*;
 import javafx.scene.transform.Transform;
+import javafx.util.Duration;
 
 /**
  * Optimizer to take 3D model and timeline loaded by one of the importers and do as much optimization on
@@ -303,6 +304,52 @@ public class Optimizer {
         System.out.printf("Now we have %d texcoords.\n", check);
     }
 
+    private void cleanUpRepeatingFramesAndValues() {
+        ObservableList<KeyFrame> timelineKeyFrames = timeline.getKeyFrames().sorted(new KeyFrameComparator());
+//        Timeline timeline;
+        int kfTotal = timelineKeyFrames.size(), kfRemoved = 0;
+        int kvTotal = 0, kvRemoved = 0;
+        Map<Duration, KeyFrame> kfUnique = new HashMap<>();
+        Map<WritableValue, KeyValue> kvUnique = new HashMap<>();
+        MapOfLists<KeyFrame, KeyFrame> duplicates = new MapOfLists<>();
+        Iterator<KeyFrame> iterator = timelineKeyFrames.iterator();
+        while (iterator.hasNext()) {
+            KeyFrame duplicate = iterator.next();
+            KeyFrame original = kfUnique.put(duplicate.getTime(), duplicate);
+            if (original != null) {
+                kfRemoved++;
+                iterator.remove(); // removing duplicate keyFrame
+                duplicates.add(original, duplicate);
+
+                kfUnique.put(duplicate.getTime(), original);
+            }
+            kvUnique.clear();
+            for (KeyValue kvDup : duplicate.getValues()) {
+                kvTotal++;
+                KeyValue kvOrig = kvUnique.put(kvDup.getTarget(), kvDup);
+                if (kvOrig != null) {
+                    kvRemoved++;
+                    if (!kvOrig.getEndValue().equals(kvDup.getEndValue()) && kvOrig.getTarget() == kvDup.getTarget()) {
+                        System.err.println("KeyValues set different values for KeyFrame " + duplicate.getTime() + ":"
+                                + "\n kvOrig = " + kvOrig + ", \nkvDup = " + kvDup);
+                    }
+                }
+            }
+        }
+        for (KeyFrame orig : duplicates.keySet()) {
+            List<KeyValue> keyValues = new ArrayList<>();
+            for (KeyFrame dup : duplicates.get(orig)) {
+                keyValues.addAll(dup.getValues());
+            }
+            timelineKeyFrames.set(timelineKeyFrames.indexOf(orig),
+                    new KeyFrame(orig.getTime(), keyValues.toArray(new KeyValue[keyValues.size()])));
+        }
+        System.out.printf("Removed %d (%.2f%%) duplicate KeyFrames out of total %d.\n",
+                kfRemoved, 100d * kfRemoved / kfTotal, kfTotal);
+        System.out.printf("Identified %d (%.2f%%) duplicate KeyValues out of total %d.\n",
+                kvRemoved, 100d * kvRemoved / kvTotal, kvTotal);
+    }
+
     private static class KeyInfo {
         KeyFrame keyFrame;
         KeyValue keyValue;
@@ -338,11 +385,8 @@ public class Optimizer {
         if (timeline == null) {
             return;
         }
-        SortedList<KeyFrame> sortedKeyFrames = timeline.getKeyFrames().sorted(new Comparator<KeyFrame>() {
-            @Override public int compare(KeyFrame o1, KeyFrame o2) {
-                return o1.getTime().compareTo(o2.getTime());
-            }
-        });
+//        cleanUpRepeatingFramesAndValues(); // we don't need it usually as timeline is initially correct
+        SortedList<KeyFrame> sortedKeyFrames = timeline.getKeyFrames().sorted(new KeyFrameComparator());
         MapOfLists<KeyFrame, KeyValue> toRemove = new MapOfLists<>();
         Map<WritableValue, KeyInfo> prevValues = new HashMap<>();
         Map<WritableValue, KeyInfo> prevPrevValues = new HashMap<>();
@@ -362,6 +406,13 @@ public class Optimizer {
                         toRemove.add(prev.keyFrame, prev.keyValue);
                     } else {
                         prevPrevValues.put(target, prev);
+//                        KeyInfo oldKeyInfo = prevPrevValues.put(target, prev);
+//                        if (oldKeyInfo != null && oldKeyInfo.keyFrame.getTime().equals(prev.keyFrame.getTime())) {
+//                            System.err.println("prevPrev replaced more than once per keyFrame on " + target + "\n"
+//                                    + "old = " + oldKeyInfo.keyFrame.getTime() + ", " + oldKeyInfo.keyValue + "\n"
+//                                    + "new = " + prev.keyFrame.getTime() + ", " + prev.keyValue
+//                                    );
+//                        }
                     }
                 }
                 prevValues.put(target, new KeyInfo(keyFrame, keyValue, prev == null));
@@ -444,6 +495,20 @@ public class Optimizer {
             Group g = (Group) parent;
             g.getChildren().addAll(p.getChildrenUnmodifiable());
             g.getChildren().remove(p);
+        }
+    }
+
+    private static class KeyFrameComparator implements Comparator<KeyFrame> {
+
+        public KeyFrameComparator() {
+        }
+
+        @Override public int compare(KeyFrame o1, KeyFrame o2) {
+//            int compareTo = o1.getTime().compareTo(o2.getTime());
+//            if (compareTo == 0 && o1 != o2) {
+//                System.err.println("those two KeyFrames are equal: o1 = " + o1.getTime() + " and o2 = " + o2.getTime());
+//            }
+            return o1.getTime().compareTo(o2.getTime());
         }
     }
 
