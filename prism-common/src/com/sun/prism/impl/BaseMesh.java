@@ -115,18 +115,6 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         }
     }
 
-    void copyIndices(short pi[]) {
-        int nf = meshNormal.getNumFaces();
-        int face[] = new int[3];
-        int index = 0;
-        for (int i = 0; i != nf; ++i) {
-            face = meshNormal.getFace(i, face);
-            pi[index++] = (short) face[0];
-            pi[index++] = (short) face[1];
-            pi[index++] = (short) face[2];
-        }
-    }
-
     private int getNVertsGM() {
         return meshNormal.getNumVerts();
     }
@@ -142,10 +130,33 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         return vertexBuffer;
     }
 
-    final protected short[] getIndexGM() {
+    final protected short[] getIndexGMShort() {
         int numIndices = getNIndicesGM();
         short indexBuffer[] = new short[numIndices];
-        copyIndices(indexBuffer);
+        int nf = meshNormal.getNumFaces();
+        int face[] = new int[3];
+        int index = 0;
+        for (int i = 0; i != nf; ++i) {
+            face = meshNormal.getFace(i, face);
+            indexBuffer[index++] = (short) face[0];
+            indexBuffer[index++] = (short) face[1];
+            indexBuffer[index++] = (short) face[2];
+        }
+        return indexBuffer;
+    }
+
+    final protected int[] getIndexGMInt() {
+        int numIndices = getNIndicesGM();
+        int indexBuffer[] = new int[numIndices];
+        int nf = meshNormal.getNumFaces();
+        int face[] = new int[3];
+        int index = 0;
+        for (int i = 0; i != nf; ++i) {
+            face = meshNormal.getFace(i, face);
+            indexBuffer[index++] = face[0];
+            indexBuffer[index++] = face[1];
+            indexBuffer[index++] = face[2];
+        }
         return indexBuffer;
     }
 
