@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project name="rt-closed-tests-glass" default="test" basedir=".">
+<project name="rt-tests-glass" default="test" basedir=".">
 
-    <description>Functional tests for rt-closed</description>
+    <description>Functional tests for JavaFX runtime, Glass</description>
 
     <import file="../../../build-defs.xml"/>
 

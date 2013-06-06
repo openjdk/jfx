@@ -422,17 +422,8 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
 
         if (!toolkitRunning.getAndSet(true)) {
             user.setName("JavaFX Application Thread");
-
             // Set context class loader to the same as the thread that called startup
             user.setContextClassLoader(ccl);
-
-            /* set uncaught handler for Glass native thread */
-            user.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override public void uncaughtException(Thread t, Throwable th) {
-                    System.out.println(t.getName() + " uncaught: " + th.getClass().getName());
-                    th.printStackTrace();
-                }
-            });
             setFxUserThread(user);
 
             /*
