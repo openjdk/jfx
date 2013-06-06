@@ -320,6 +320,18 @@ public class Optimizer {
             this.first = first;
         }
     }
+
+    private static class MapOfLists<K, V> extends HashMap<K, List<V>> {
+
+        public void add(K key, V value) {
+            List<V> p = get(key);
+            if (p == null) {
+                p = new ArrayList<>();
+                put(key, p);
+            }
+            p.add(value);
+        }
+    }
     
     private void parseTimeline() {
         bound.clear();
@@ -331,7 +343,7 @@ public class Optimizer {
                 return o1.getTime().compareTo(o2.getTime());
             }
         });
-        Map<KeyFrame, List<KeyValue>> toRemove = new HashMap<>();
+        MapOfLists<KeyFrame, KeyValue> toRemove = new MapOfLists<>();
         Map<WritableValue, KeyInfo> prevValues = new HashMap<>();
         Map<WritableValue, KeyInfo> prevPrevValues = new HashMap<>();
         int kvTotal = 0;
@@ -347,12 +359,7 @@ public class Optimizer {
                             || (prev.first && target.getValue().equals(prev.keyValue.getEndValue()))) {
                         // All prevPrev, prev and current match, so prev can be removed
                         // or prev is first and its value equals to the property existing value, so prev can be removed
-                        List<KeyValue> p = toRemove.get(prev.keyFrame);
-                        if (p == null) {
-                            p = new ArrayList<>();
-                            toRemove.put(prev.keyFrame, p);
-                        }
-                        p.add(prev.keyValue);
+                        toRemove.add(prev.keyFrame, prev.keyValue);
                     } else {
                         prevPrevValues.put(target, prev);
                     }
@@ -366,12 +373,7 @@ public class Optimizer {
             KeyInfo prevPrev = prevPrevValues.get(target);
             if (prevPrev != null && prevPrev.keyValue.getEndValue().equals(prev.keyValue.getEndValue())) {
                 // prevPrev and prev match, so prev can be removed
-                List<KeyValue> p = toRemove.get(prev.keyFrame);
-                if (p == null) {
-                    p = new ArrayList<>();
-                    toRemove.put(prev.keyFrame, p);
-                }
-                p.add(prev.keyValue);
+                toRemove.add(prev.keyFrame, prev.keyValue);
             }
         }
         int kvRemoved = 0;
@@ -380,10 +382,11 @@ public class Optimizer {
         List<KeyValue> newKeyValues = new ArrayList<>();
         for (int i = 0; i < timeline.getKeyFrames().size(); i++) {
             KeyFrame keyFrame = timeline.getKeyFrames().get(i);
-            if (toRemove.containsKey(keyFrame)) {
+            List<KeyValue> keyValuesToRemove = toRemove.get(keyFrame);
+            if (keyValuesToRemove != null) {
                 newKeyValues.clear();
                 for (KeyValue keyValue : keyFrame.getValues()) {
-                    if (toRemove.get(keyFrame).remove(keyValue)) {
+                    if (keyValuesToRemove.remove(keyValue)) {
                         kvRemoved++;
                     } else {
                         newKeyValues.add(keyValue);
