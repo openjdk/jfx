@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -64,10 +65,16 @@ public class Optimizer {
     private Set<Transform> bound = new HashSet<>();
     private List<Parent> emptyParents = new ArrayList<>();
     private List<MeshView> meshViews = new ArrayList<>();
+    private boolean convertToDiscrete = true;
 
     public Optimizer(Timeline timeline, Node root) {
+        this(timeline, root, false);
+    }
+
+    public Optimizer(Timeline timeline, Node root, boolean convertToDiscrete) {
         this.timeline = timeline;
         this.root = root;
+        this.convertToDiscrete = convertToDiscrete;
     }
 
     private int trRemoved, trTotal, groupsTotal, trCandidate, trEmpty;
@@ -432,7 +439,8 @@ public class Optimizer {
 //                        }
                     }
                 }
-                prevValues.put(target, new KeyInfo(keyFrame, keyValue, prev == null));
+                KeyInfo oldPrev = prevValues.put(target, new KeyInfo(keyFrame, keyValue, prev == null));
+                if (oldPrev != null) prevPrevValues.put(target, oldPrev);
             }
         }
         // Deal with ending keyValues
@@ -457,15 +465,26 @@ public class Optimizer {
                     if (keyValuesToRemove.remove(keyValue)) {
                         kvRemoved++;
                     } else {
-                        newKeyValues.add(keyValue);
+                        if (convertToDiscrete) {
+                            newKeyValues.add(new KeyValue((WritableValue)keyValue.getTarget(), keyValue.getEndValue(), Interpolator.DISCRETE));
+                        } else {
+                            newKeyValues.add(keyValue);
+                        }
                     }
                 }
+            } else if (convertToDiscrete) {
+                newKeyValues.clear();
+                for (KeyValue keyValue : keyFrame.getValues()) {
+                    newKeyValues.add(new KeyValue((WritableValue)keyValue.getTarget(), keyValue.getEndValue(), Interpolator.DISCRETE));
+                }
+            }
+            if (keyValuesToRemove != null || convertToDiscrete) {
                 if (newKeyValues.isEmpty()) {
                     if (keyFrame.getOnFinished() == null) {
                         if (keyFrame.getName() != null) {
                             System.err.println("Removed KeyFrame with name = " + keyFrame.getName());
                         }
-                        timeline.getKeyFrames().remove(keyFrame);
+                        timeline.getKeyFrames().remove(i);
                         i--;
                         kfRemoved++;
                         continue; // for i
@@ -502,6 +521,11 @@ public class Optimizer {
         int check = 0;
         for (KeyFrame keyFrame : timeline.getKeyFrames()) {
             check += keyFrame.getValues().size();
+//            for (KeyValue keyValue : keyFrame.getValues()) {
+//                if (keyValue.getInterpolator() != Interpolator.DISCRETE) {
+//                    throw new IllegalStateException();
+//                }
+//            }
         }
         System.out.printf("Now there are %d KeyValues and %d KeyFrames.\n", check, timeline.getKeyFrames().size());
     }
