@@ -70,18 +70,15 @@ final public class Rule {
 
         if (declarations == null && serializedDecls != null) {
 
-            assert(Rule.strings != null);
-
             try {
                 ByteArrayInputStream bis = new ByteArrayInputStream(serializedDecls);
                 DataInputStream dis = new DataInputStream(bis);
 
                 short nDeclarations = dis.readShort();
                 declarations = new ArrayList<Declaration>(nDeclarations);
-
                 for (int i = 0; i < nDeclarations; i++) {
 
-                    Declaration decl = Declaration.readBinary(dis, Rule.strings);
+                    Declaration decl = Declaration.readBinary(dis, stylesheet.getStringStore());
                     decl.rule = Rule.this;
 
                     if (stylesheet != null && stylesheet.getUrl() != null) {
@@ -190,7 +187,6 @@ final public class Rule {
         }
     }
 
-    private static String[] strings = null;  // TBD: blech!
     private byte[] serializedDecls;
 
     private Rule(List<Selector> selectors, byte[] buf, String[] stringStoreStrings) {
@@ -198,7 +194,6 @@ final public class Rule {
         this.selectors = selectors;
         this.declarations = null;
         this.serializedDecls = buf;
-        if (Rule.strings == null) Rule.strings = stringStoreStrings;
 
         int sMax = selectors != null ? selectors.size() : 0;
         for(int i = 0; i < sMax; i++) {
@@ -333,28 +328,27 @@ final public class Rule {
             sel.writeBinary(os, stringStore);
         }
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(5192);
-        DataOutputStream dos = new DataOutputStream(bos);
+        List<Declaration> decls = getUnobservedDeclarationList();
+        if (decls != null) {
 
-        if (declarations != null) {
-            int nDeclarations =  declarations.size();
+            ByteArrayOutputStream bos = new ByteArrayOutputStream(5192);
+            DataOutputStream dos = new DataOutputStream(bos);
 
+            int nDeclarations =  decls.size();
             dos.writeShort(nDeclarations);
 
             for (int i = 0; i < nDeclarations; i++) {
                 Declaration decl = declarations.get(i);
                 decl.writeBinary(dos, stringStore);
             }
-        } else if (serializedDecls != null) {
-            dos.write(serializedDecls);
+
+            os.writeInt(bos.size());
+            os.write(bos.toByteArray());
 
         } else {
             // no declarations!
-            dos.writeShort(0);
+            os.writeShort(0);
         }
-
-        os.writeInt(bos.size());
-        os.write(bos.toByteArray());
     }
 
     static Rule readBinary(DataInputStream is, String[] strings)
@@ -372,7 +366,9 @@ final public class Rule {
         int nBytes = is.readInt();
         byte[] buf = new byte[nBytes];
 
-        is.readFully(buf);
+        if (nBytes > 0) {
+            is.readFully(buf);
+        }
 
         return new Rule(selectors, buf, strings);
     }
