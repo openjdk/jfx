@@ -143,10 +143,17 @@ public class Optimizer {
 
     private void optimizeFaces() {
         int total = 0, sameIndexes = 0, samePoints = 0, smallArea = 0;
+        ObservableIntegerArray newFaces = FXCollections.observableIntegerArray();
+        ObservableIntegerArray newFaceSmoothingGroups = FXCollections.observableIntegerArray();
         for (MeshView meshView : meshViews) {
             TriangleMesh mesh = (TriangleMesh) meshView.getMesh();
             ObservableIntegerArray faces = mesh.getFaces();
+            ObservableIntegerArray faceSmoothingGroups = mesh.getFaceSmoothingGroups();
             ObservableFloatArray points = mesh.getPoints();
+            newFaces.clear();
+            newFaces.ensureCapacity(faces.size());
+            newFaceSmoothingGroups.clear();
+            newFaceSmoothingGroups.ensureCapacity(faceSmoothingGroups.size());
             for (int i = 0; i < faces.size(); i += NUM_COMPONENTS_PER_FACE) {
                 total++;
                 int i1 = faces.get(i) * NUM_COMPONENTS_PER_POINT;
@@ -167,19 +174,29 @@ public class Optimizer {
                 double b = p2.distance(p3);
                 double c = p3.distance(p1);
                 double p = (a + b + c) / 2;
-                double area = p * (p - a) * (p - b) * (p - c);
+                double sqarea = p * (p - a) * (p - b) * (p - c);
 
-                final float DEAD_FACE = 1.f/1024/1024/1024/1024;
+                final float DEAD_FACE = 1.f/1024/1024/1024/1024; // taken from MeshNormal code
 
-                if (area < DEAD_FACE) {
+                if (sqarea < DEAD_FACE) {
                     smallArea++;
-                    System.out.printf("a = %e, b = %e, c = %e, area = %e\n"
-                            + "p1 = %s\np2 = %s\np3 = %s\n", a, b, c, area, p1.toString(), p2.toString(), p3.toString());
+//                    System.out.printf("a = %e, b = %e, c = %e, sqarea = %e\n"
+//                            + "p1 = %s\np2 = %s\np3 = %s\n", a, b, c, sqarea, p1.toString(), p2.toString(), p3.toString());
+                    continue;
+                }
+                newFaces.addAll(faces, i, NUM_COMPONENTS_PER_FACE);
+                int fIndex = i / NUM_COMPONENTS_PER_FACE;
+                if (fIndex < faceSmoothingGroups.size()) {
+                    newFaceSmoothingGroups.addAll(faceSmoothingGroups.get(fIndex));
                 }
             }
+            faces.setAll(newFaces);
+            faceSmoothingGroups.setAll(newFaceSmoothingGroups);
+            faces.trimToSize();
+            faceSmoothingGroups.trimToSize();
         }
         int badTotal = sameIndexes + samePoints + smallArea;
-        System.out.printf("There are %d (%.2f%%) faces with same point indexes, "
+        System.out.printf("Removed %d (%.2f%%) faces with same point indexes, "
                 + "%d (%.2f%%) faces with same points, "
                 + "%d (%.2f%%) faces with small area. "
                 + "Total %d (%.2f%%) bad faces out of %d total.\n",
