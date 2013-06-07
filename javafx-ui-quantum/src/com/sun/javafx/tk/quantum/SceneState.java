@@ -94,7 +94,7 @@ class SceneState extends PresentableState {
      * @param pixels - the pixels to draw
      * @param uploadCount - the number of uploads (can be null)
      */
-    public void uploadPixels(final Pixels pixels, AtomicInteger uploadCount) {
+    public void uploadPixels(final Pixels pixels, final AtomicInteger uploadCount) {
         Application.invokeLater(new Runnable() {
             @Override public void run() {
                 if (isValid()) {
