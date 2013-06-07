@@ -277,39 +277,11 @@ public class MainController implements Initializable {
             if ("java".equals(extension)) {
                 final String url = contentModel.getLoadedUrl();
                 final String baseUrl = url.substring(0, url.lastIndexOf('/'));
-                // try and work out package name from file
-                StringBuilder packageName = new StringBuilder();
-                String[] pathSegments = newFile.getAbsolutePath().split(File.separatorChar == '\\'?"\\\\":"/");
-                System.out.println("pathSegments = " + Arrays.toString(pathSegments));
-                loop: for (int i = pathSegments.length-2; i >= 0; i -- ) {
-                    switch (pathSegments[i]){
-                        case "com":
-                        case "org":
-                        case "net":
-                            packageName.insert(0,pathSegments[i]);
-                            break loop;
-                        case "src":
-                            packageName.deleteCharAt(0);
-                            break loop;
-                        case "main":
-                            if ("src".equals(pathSegments[i-1])) {
-                                packageName.deleteCharAt(0);
-                                break loop;
-                            }
-                        default:
-                            packageName.insert(0,'.'+pathSegments[i]);
-                            break;
-                    }
-                    // if we get all way to root of file system then we have failed
-                    if (i==0) packageName = null;
-                }
-                System.out.println(" packageName = " + packageName);
 
                 JavaSourceExporter javaSourceExporter = new JavaSourceExporter(
                         baseUrl,
                         contentModel.get3dContent(),
                         contentModel.getTimeline(),
-                        packageName==null?null:packageName.toString(),
                         newFile);
                 javaSourceExporter.export();
             } else if ("fxml".equals(extension)) {
