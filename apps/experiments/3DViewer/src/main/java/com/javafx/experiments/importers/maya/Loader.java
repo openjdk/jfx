@@ -477,16 +477,18 @@ class Loader {
 
         Mesh mesh = convertToFXMesh(n);
 
-        MeshView mv = new MeshView();
-        mv.setId(n.getName());
-        mv.setMaterial(material);
-        //            mv.setWireframe(true);
-        //            mv.setAmbient(Color.GRAY); // TODO???
-        mv.setMesh(mesh);
+        if (((TriangleMesh)mesh).getPoints().size() > 0) {
+            MeshView mv = new MeshView();
+            mv.setId(n.getName());
+            mv.setMaterial(material);
+//            mv.setWireframe(true);
+//            mv.setAmbient(Color.GRAY); // TODO???
+            mv.setMesh(mesh);
 
-        loaded.put(n, mv);
-        if (node != null) {
-            ((Group) node).getChildren().add(mv);
+            loaded.put(n, mv);
+            if (node != null) {
+                ((Group) node).getChildren().add(mv);
+            }
         }
     }
 
