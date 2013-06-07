@@ -25,8 +25,8 @@
 
 package com.sun.javafx.tk.quantum;
 
-import com.sun.prism.render.CompletionListener;
-import com.sun.prism.render.RenderJob;
+import com.sun.javafx.tk.CompletionListener;
+import com.sun.javafx.tk.RenderJob;
 
 class PaintRenderJob extends RenderJob {
     

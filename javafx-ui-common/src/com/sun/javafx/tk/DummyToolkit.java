@@ -30,6 +30,8 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Future;
+
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import javafx.scene.input.Dragboard;
@@ -176,6 +178,11 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public void defer(Runnable runnable) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Future addRenderJob(RenderJob rj) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

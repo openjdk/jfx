@@ -37,7 +37,6 @@ import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.prism.render.ToolkitInterface;
 
 class ViewScene extends GlassScene {
 
@@ -142,8 +141,7 @@ class ViewScene extends GlassScene {
 
         if (!setPainting(true)) {
             Toolkit tk = Toolkit.getToolkit();
-            ToolkitInterface toolkit = (ToolkitInterface)tk;
-            toolkit.addRenderJob(paintRenderJob);
+            tk.addRenderJob(paintRenderJob);
         }
     }
     

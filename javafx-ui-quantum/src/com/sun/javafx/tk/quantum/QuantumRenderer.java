@@ -40,13 +40,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Screen;
+import com.sun.javafx.tk.CompletionListener;
+import com.sun.javafx.tk.RenderJob;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.GraphicsResource;
 import com.sun.prism.Presentable;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.render.CompletionListener;
-import com.sun.prism.render.RenderJob;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import java.util.HashMap;

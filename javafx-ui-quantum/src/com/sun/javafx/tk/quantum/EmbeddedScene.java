@@ -41,7 +41,6 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.prism.render.ToolkitInterface;
 
 final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
@@ -125,8 +124,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     @Override
     public void repaint() {
         Toolkit tk = Toolkit.getToolkit();
-        ToolkitInterface renderer = (ToolkitInterface)tk;
-        renderer.addRenderJob(paintRenderJob);
+        tk.addRenderJob(paintRenderJob);
     }
 
     @Override

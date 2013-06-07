@@ -38,6 +38,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
+
 import javafx.application.ConditionalFeature;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.geometry.Dimension2D;
@@ -441,6 +443,8 @@ public abstract class Toolkit {
     // notify the pulse timer code that we need the next pulse to happen
     // this flag is cleared each cycle so subsequent pulses must be requested
     public abstract void requestNextPulse();
+
+    public abstract Future addRenderJob(RenderJob rj);
 
     public InputStream getInputStream(String url, Class base)
             throws IOException {

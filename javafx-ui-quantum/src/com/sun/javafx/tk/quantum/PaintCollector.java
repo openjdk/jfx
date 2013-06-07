@@ -33,10 +33,9 @@ import java.util.concurrent.CountDownLatch;
 import com.sun.javafx.PlatformUtil;
 
 import com.sun.glass.ui.Application;
-import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.prism.render.CompletionListener;
-import com.sun.prism.render.RenderJob;
+import com.sun.javafx.tk.CompletionListener;
+import com.sun.javafx.tk.RenderJob;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
@@ -70,7 +69,7 @@ final class PaintCollector implements CompletionListener {
     private static volatile PaintCollector collector;
 
     static PaintCollector createInstance(QuantumToolkit toolkit) {
-        return collector = new PaintCollector(toolkit, QuantumRenderer.getInstance());
+        return collector = new PaintCollector(toolkit);
     }
 
     static PaintCollector getInstance() {
@@ -127,12 +126,6 @@ final class PaintCollector implements CompletionListener {
     private final QuantumToolkit toolkit;
 
     /**
-     * A reference to the QuantumRenderer. This is supplied in
-     * the constructor.
-     */
-    private final QuantumRenderer renderer;
-
-    /**
      * Indicates whether we should attempt to wait for vsync at
      * the conclusion of rendering all scenes. This is set in the
      * renderAll method if there are any synchronous scenes. If true,
@@ -150,11 +143,9 @@ final class PaintCollector implements CompletionListener {
      * Singleton constructor.
      *
      * @param qt The QuantumToolkit instance.
-     * @param qr The QuantumRenderer instance.
      */
-    private PaintCollector(QuantumToolkit qt, QuantumRenderer qr) {
+    private PaintCollector(QuantumToolkit qt) {
         toolkit  = qt;
-        renderer = qr;
     }
 
     /**
