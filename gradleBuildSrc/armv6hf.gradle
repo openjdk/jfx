@@ -23,14 +23,27 @@
  * questions.
  */
 
-// Define the location of the sdk file
-def sdk=file("/opt/armhf-raspberry-pi-05")
-def compilerHome=file("/opt/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
 ext.ARMV6HF = [:]
+
+fetchExternalTools('ARMV6HF', 
+  ["armhf-raspberry-pi-05.tgz", 
+   "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ], 
+  rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
+
+// Define the location of the sdk and toolchain
+def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-05")
+def compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
 
 // Declare whether this particular target file applies to the current system
 ARMV6HF.canBuild = IS_LINUX && compilerHome.exists() && sdk.exists()
-if (!ARMV6HF.canBuild) return;
+if (!ARMV6HF.canBuild) {
+    if (!compilerHome.exists()) println "ERROR: Mising compiler $compilerHome"
+    if (!sdk.exists()) println "ERROR: Mising sdk $sdk"
+    return;
+}
+
+// alias for this platform in legacy artifacts
+ARMV6HF.artifactsName = "armv6hf-vfp"
 
 ARMV6HF.compileSwing = false;
 ARMV6HF.compileSWT = false;

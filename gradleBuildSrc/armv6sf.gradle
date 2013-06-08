@@ -23,19 +23,31 @@
  * questions.
  */
 
-// Declare some local variables which define the cross tools locations
-def sdk=file("/opt/armv6-vfp-03")
-def compilerHome=file("/opt/arm-2009q1")
 ext.ARMV6SF = [:]
+
+fetchExternalTools('ARMV6SF', [ "armv6-vfp-03.tgz" ], 
+  rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
+
+// Define the location of the sdk and toolchain
+def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armv6-vfp-03")
+
+def compilerHome=file("/opt/arm-2009q1")
+
+// Declare whether this particular target file applies to the current system
+ARMV6SF.canBuild = IS_LINUX && compilerHome.exists() && sdk.exists()
+if (!ARMV6SF.canBuild) {
+    if (!compilerHome.exists()) println "ERROR: Mising compiler $compilerHome"
+    if (!sdk.exists()) println "ERROR: Mising sdk $sdk"
+    return;
+}
+
+// alias for this platform in legacy artifacts
+ARMV6SF.artifactsName = "armv6-vfp"
 
 ARMV6SF.compileSwing = false;
 ARMV6SF.compileSWT = false;
 ARMV6SF.compileFXPackager = false;
 ARMV6SF.compileDesignTime = false;
-
-// Declare whether this particular target file applies to the current system
-ARMV6SF.canBuild = IS_LINUX && compilerHome.exists() && sdk.exists()
-if (!ARMV6SF.canBuild) return;
 
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
 ARMV6SF.libDest = "lib/arm"
