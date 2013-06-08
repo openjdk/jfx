@@ -31,8 +31,6 @@
  */
 package com.javafx.experiments.jfx3dviewer;
 
-import java.io.File;
-import java.io.IOException;
 import javafx.animation.Timeline;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -56,8 +54,8 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
-import com.javafx.experiments.importers.Importer3D;
 import com.javafx.experiments.shape3d.PolygonMeshView;
+//import org.scenicview.ScenicView;
 
 /**
  * 3D Content Model for Viewer App. Contains the 3D scene and everything related to it: light, cameras etc.
@@ -143,7 +141,7 @@ public class ContentModel {
     private int subdivision = 0;
     private String loadedUrl = null;
 
-    public ContentModel(String fileToLoad) {
+    public ContentModel() {
         subScene = new SubScene(root3D,400,400,true,false);
         subScene.setFill(Color.ALICEBLUE);
 
@@ -164,28 +162,8 @@ public class ContentModel {
                 System.out.println("z = " + newValue);
             }
         });
-        //LIGHTS
-//        root3D.getChildren().addAll(light1, light2, light3);
-        // BOX
-//        Box testBox = new Box(5,5,5);
-//        testBox.setMaterial(new PhongMaterial(Color.RED));
-//        testBox.setDrawMode(DrawMode.LINE);
-//        root3D.getChildren().add(testBox);
 
         root3D.getChildren().add(autoScalingGroup);
-
-        // LOAD DROP HERE MODEL
-        try {
-            if (fileToLoad != null) {
-                loadedUrl = new File(fileToLoad).toURI().toURL().toExternalForm();
-            } else {
-                loadedUrl = ContentModel.class.getResource("drop-here.obj").toExternalForm();
-            }
-            content = Importer3D.load(loadedUrl);
-            autoScalingGroup.getChildren().add(content);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         // SCENE EVENT HANDLING FOR CAMERA NAV
         subScene.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
@@ -211,6 +189,15 @@ public class ContentModel {
                 cameraPosition.setZ(z);
             }
         });
+
+        SessionManager sessionManager = SessionManager.getSessionManager();
+        sessionManager.bind(cameraLookXRotate.angleProperty(), "cameraLookXRotate");
+        sessionManager.bind(cameraLookZRotate.angleProperty(), "cameraLookZRotate");
+        sessionManager.bind(cameraPosition.xProperty(), "cameraPosition.x");
+        sessionManager.bind(cameraPosition.yProperty(), "cameraPosition.y");
+        sessionManager.bind(cameraPosition.zProperty(), "cameraPosition.z");
+        sessionManager.bind(cameraXRotate.angleProperty(), "cameraXRotate");
+        sessionManager.bind(cameraYRotate.angleProperty(), "cameraYRotate");
     }
 
     public String getLoadedUrl() {

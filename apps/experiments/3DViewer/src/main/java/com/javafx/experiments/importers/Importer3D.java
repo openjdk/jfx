@@ -73,8 +73,6 @@ public final class Importer3D {
                 final MayaImporter mayaImporter = new MayaImporter();
                 mayaImporter.load(fileUrl);
                 final Timeline timeline = mayaImporter.getTimeline();
-                timeline.setCycleCount(Timeline.INDEFINITE);
-                timeline.play();
                 return new Pair<Node, Timeline>(mayaImporter.getRoot(),timeline);
             case "ase":
                 return new Pair<Node, Timeline>(new MaxLoader().loadMaxUrl(fileUrl),null);

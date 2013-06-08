@@ -38,8 +38,6 @@ import javafx.beans.binding.DoubleBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.fxml.Initializable;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
@@ -48,10 +46,6 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.DrawMode;
-import javafx.scene.shape.MeshView;
-import com.javafx.experiments.shape3d.PolygonMesh;
-import com.javafx.experiments.shape3d.PolygonMeshView;
 
 /**
  * Controller class for settings panel
@@ -176,6 +170,35 @@ public class SettingsController implements Initializable {
         // wire up settings in CAMERA
         fovSlider.setValue(contentModel.getCamera().getFieldOfView());
         contentModel.getCamera().fieldOfViewProperty().bind(fovSlider.valueProperty());
+
+        SessionManager sessionManager = SessionManager.getSessionManager();
+
+        sessionManager.bind(showAxisCheckBox.selectedProperty(), "showAxis");
+        sessionManager.bind(yUpCheckBox.selectedProperty(), "yUp");
+        sessionManager.bind(scaleToFitCheckBox.selectedProperty(), "scaleToFit");
+        sessionManager.bind(wireFrameCheckbox.selectedProperty(), "wireFrame");
+        sessionManager.bind(backgroundColorPicker.valueProperty(), "backgroundColor");
+        sessionManager.bind(fovSlider.valueProperty(), "fieldOfView");
+        sessionManager.bind(subdivideGroup, "subdivide");
+        sessionManager.bind(light1ColorPicker.valueProperty(), "light1Color");
+        sessionManager.bind(light1EnabledCheckBox.selectedProperty(), "light1Enabled");
+        sessionManager.bind(light1followCameraCheckBox.selectedProperty(), "light1FollowCamera");
+        sessionManager.bind(light1x.valueProperty(), "light1X");
+        sessionManager.bind(light1y.valueProperty(), "light1Y");
+        sessionManager.bind(light1z.valueProperty(), "light1Z");
+        sessionManager.bind(light2ColorPicker.valueProperty(), "light2Color");
+        sessionManager.bind(light2EnabledCheckBox.selectedProperty(), "light2Enabled");
+        sessionManager.bind(light2x.valueProperty(), "light2X");
+        sessionManager.bind(light2y.valueProperty(), "light2Y");
+        sessionManager.bind(light2z.valueProperty(), "light2Z");
+        sessionManager.bind(light3ColorPicker.valueProperty(), "light3Color");
+        sessionManager.bind(light3EnabledCheckBox.selectedProperty(), "light3Enabled");
+        sessionManager.bind(light3x.valueProperty(), "light3X");
+        sessionManager.bind(light3y.valueProperty(), "light3Y");
+        sessionManager.bind(light3z.valueProperty(), "light3Z");
+        sessionManager.bind(ambientColorPicker.valueProperty(), "ambient");
+        sessionManager.bind(ambientEnableCheckbox.selectedProperty(), "ambientEnable");
+        sessionManager.bind(settings, "settingsPane");
     }
 
 

@@ -36,13 +36,11 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.util.Arrays;
 import java.util.ResourceBundle;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
@@ -52,7 +50,6 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitMenuButton;
@@ -72,6 +69,10 @@ import com.javafx.experiments.exporters.fxml.FXMLExporter;
 import com.javafx.experiments.exporters.javasource.JavaSourceExporter;
 import com.javafx.experiments.importers.Importer3D;
 import com.javafx.experiments.importers.Optimizer;
+import java.net.URISyntaxException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javafx.geometry.BoundingBox;
 
 /**
  * Controller class for main fxml file.
@@ -99,6 +100,7 @@ public class MainController implements Initializable {
     private File loadedPath = null;
     private String[] supportedFormatRegex;
     private TimelineController timelineController;
+    private SessionManager sessionManager = SessionManager.getSessionManager();
 
     @Override public void initialize(URL location, ResourceBundle resources) {
         try {
@@ -144,11 +146,9 @@ public class MainController implements Initializable {
         contentModel.getSubScene().setOnDragDropped(
                 new EventHandler<DragEvent>() {
                     @Override public void handle(DragEvent event) {
-                        System.out.println("DROP event = " + event);
                         Dragboard db = event.getDragboard();
                         boolean success = false;
                         if (db.hasFiles()) {
-                            System.out.println("Dropped: " + db.getFiles());
                             File supportedFile = null;
                             fileLoop: for (File file : db.getFiles()) {
                                 for (String format : supportedFormatRegex) {
@@ -171,6 +171,15 @@ public class MainController implements Initializable {
                         event.consume();
                     }
                 });
+
+        sessionManager.bind(optimizeCheckBox.selectedProperty(), "optimize");
+        sessionManager.bind(loadAsPolygonsCheckBox.selectedProperty(), "loadAsPolygons");
+        sessionManager.bind(loopBtn.selectedProperty(), "loop");
+
+        String url = sessionManager.getProperties().getProperty(Jfx3dViewerApp.FILE_URL_PROPERTY);
+        if (url == null) url = ContentModel.class.getResource("drop-here.obj").toExternalForm();
+        load(url);
+
         // do initial status update
         updateStatus();
     }
@@ -191,16 +200,39 @@ public class MainController implements Initializable {
     private void load(File file) {
         loadedPath = file;
         try {
+            doLoad(file.toURI().toURL().toString());
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(MainController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private void load(String fileUrl) {
+        try {
+            loadedPath = new File(new URL(fileUrl).toURI()).getAbsoluteFile();
+            doLoad(fileUrl);
+        } catch (MalformedURLException | URISyntaxException ex) {
+            Logger.getLogger(MainController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private void doLoad(String fileUrl) {
+        sessionManager.getProperties().setProperty(Jfx3dViewerApp.FILE_URL_PROPERTY, fileUrl);
+        try {
             Pair<Node,Timeline> content = Importer3D.loadIncludingAnimation(
-                    file.toURI().toURL().toString(),
-                    loadAsPolygonsCheckBox.isSelected());
+                    fileUrl, loadAsPolygonsCheckBox.isSelected());
+            Timeline timeline = content.getValue();
             if (optimizeCheckBox.isSelected()) {
-                new Optimizer(content.getValue(),content.getKey()).optimize();
+                new Optimizer(timeline,content.getKey()).optimize();
             }
             contentModel.set3dContent(content.getKey());
-            contentModel.setTimeline(content.getValue());
-        } catch (IOException e) {
-            e.printStackTrace();
+            contentModel.setTimeline(timeline);
+
+            if (timeline != null) {
+                timeline.setCycleCount(Timeline.INDEFINITE);
+                timeline.play();
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(MainController.class.getName()).log(Level.SEVERE, null, ex);
         }
         updateStatus();
     }
@@ -210,7 +242,8 @@ public class MainController implements Initializable {
         meshCount = 0;
         triangleCount = 0;
         updateCount(contentModel.getRoot3D());
-        final Bounds bounds = contentModel.get3dContent().getBoundsInLocal();
+        Node content = contentModel.get3dContent();
+        final Bounds bounds = content == null ? new BoundingBox(0, 0, 0, 0) : content.getBoundsInLocal();
         status.setText(
                 String.format("Nodes [%d] :: Meshes [%d] :: Triangles [%d] :: " +
                                "Bounds [w=%.2f,h=%.2f,d=%.2f]",
