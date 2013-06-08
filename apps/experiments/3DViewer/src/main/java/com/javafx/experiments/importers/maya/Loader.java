@@ -483,8 +483,8 @@ class Loader {
             mv.setId(n.getName());
             mv.setMaterial(material);
 
-            // TODO HACK for [JIRA] (RT-30449) FX 8 3D: Need to handle mirror transformation (flip culling);
-            mv.setCullFace(CullFace.FRONT);
+//            // TODO HACK for [JIRA] (RT-30449) FX 8 3D: Need to handle mirror transformation (flip culling);
+//            mv.setCullFace(CullFace.FRONT);
 
 //            mv.setWireframe(true);
 //            mv.setAmbient(Color.GRAY); // TODO???
