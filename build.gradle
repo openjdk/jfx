@@ -1135,9 +1135,11 @@ project(":controls") {
 }
 
 project(":swing") {
+    /* should not be built, but needed in builders and JMX
     tasks.all {
         if (!COMPILE_SWING) it.enabled = false
     }
+    */
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics")
     }
@@ -1169,6 +1171,9 @@ project(":fxml") {
 
 project(":builders") {
     sourceCompatibility = 1.7
+
+    if (!COMPILE_SWING) sourceSets.main.java.exclude ("**/swing/**")
+    if (!COMPILE_SWT)   sourceSets.main.java.exclude ("**/swt/**")
 
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
