@@ -429,6 +429,7 @@ public class TableColumnHeader extends Region {
         label.setAlignment(Pos.CENTER);
         label.setText(column.getText());
         label.setGraphic(column.getGraphic());
+        label.setVisible(column.isVisible());
 
         // ---- container for the sort arrow (which is not supported on embedded
         // platforms)
