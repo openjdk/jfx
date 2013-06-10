@@ -131,17 +131,6 @@ public class GlyphCache {
         Point2D pt = new Point2D();
 
         boolean subPixel = strike.isSubPixelGlyph();
-        boolean useGlyphListForAdvances = gl.isComplex() || subPixel;
-
-        /* For complex text the advances from GlyphList must be used.
-         * As advances in the GlyphList are cached without transform
-         * the final location has to transform.
-         */
-        if (!useGlyphListForAdvances) {
-            pt.setLocation(x, y);
-            xform.transform(pt, pt);
-        }
-
         float subPixelX = 0;
         for (int gi = 0; gi < len; gi++) {
             int gc = gl.getGlyphCode(gi);
@@ -152,13 +141,11 @@ public class GlyphCache {
             if (gc == CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
                 continue;
             }
-            if (useGlyphListForAdvances) {
-                pt.setLocation(x + gl.getPosX(gi), y + gl.getPosY(gi));
-                if (subPixel) {
-                    subPixelX = pt.x;
-                    pt.x = (int)pt.x;
-                    subPixelX -= pt.x;
-                }
+            pt.setLocation(x + gl.getPosX(gi), y + gl.getPosY(gi));
+            if (subPixel) {
+                subPixelX = pt.x;
+                pt.x = (int)pt.x;
+                subPixelX -= pt.x;
             }
             GlyphData data = getCachedGlyph(gc, subPixelX, 0);
             if (data != null) {
@@ -188,14 +175,8 @@ public class GlyphCache {
                         }
                     }
                 }
-                if (useGlyphListForAdvances) {
-                    xform.transform(pt, pt);
-                    addDataToQuad(data, vb, tex, pt.x, pt.y, dstw, dsth);
-                } else {
-                    addDataToQuad(data, vb, tex, pt.x, pt.y, dstw, dsth);
-                    pt.x += data.getXAdvance();
-                    pt.y += data.getYAdvance();
-                }
+                xform.transform(pt, pt);
+                addDataToQuad(data, vb, tex, pt.x, pt.y, dstw, dsth);
             }
         }
     }

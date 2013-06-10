@@ -22,6 +22,7 @@ import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.CullFace;
 import javafx.scene.shape.Mesh;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
@@ -477,16 +478,22 @@ class Loader {
 
         Mesh mesh = convertToFXMesh(n);
 
-        MeshView mv = new MeshView();
-        mv.setId(n.getName());
-        mv.setMaterial(material);
-        //            mv.setWireframe(true);
-        //            mv.setAmbient(Color.GRAY); // TODO???
-        mv.setMesh(mesh);
+        if (((TriangleMesh)mesh).getPoints().size() > 0) {
+            MeshView mv = new MeshView();
+            mv.setId(n.getName());
+            mv.setMaterial(material);
 
-        loaded.put(n, mv);
-        if (node != null) {
-            ((Group) node).getChildren().add(mv);
+//            // TODO HACK for [JIRA] (RT-30449) FX 8 3D: Need to handle mirror transformation (flip culling);
+//            mv.setCullFace(CullFace.FRONT);
+
+//            mv.setWireframe(true);
+//            mv.setAmbient(Color.GRAY); // TODO???
+            mv.setMesh(mesh);
+
+            loaded.put(n, mv);
+            if (node != null) {
+                ((Group) node).getChildren().add(mv);
+            }
         }
     }
 
@@ -1195,7 +1202,7 @@ class Loader {
 
             float t = kt - EPSILON;
             if (t < 0.0) {
-                t = 0.0f;
+                continue; // just skipping all the negative frames
             }
 
             /*

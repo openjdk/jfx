@@ -31,9 +31,9 @@
  */
 package com.javafx.experiments.jfx3dviewer;
 
-import java.io.File;
-import java.io.IOException;
+import javafx.animation.Timeline;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
@@ -54,8 +54,8 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
-import com.javafx.experiments.importers.Importer3D;
 import com.javafx.experiments.shape3d.PolygonMeshView;
+//import org.scenicview.ScenicView;
 
 /**
  * 3D Content Model for Viewer App. Contains the 3D scene and everything related to it: light, cameras etc.
@@ -77,6 +77,10 @@ public class ContentModel {
     private PointLight light1 = new PointLight(Color.WHITE);
     private PointLight light2 = new PointLight(Color.ANTIQUEWHITE);
     private PointLight light3 = new PointLight(Color.ALICEBLUE);
+    private final SimpleObjectProperty<Timeline> timeline = new SimpleObjectProperty<>();
+    public Timeline getTimeline() { return timeline.get(); }
+    public SimpleObjectProperty<Timeline> timelineProperty() { return timeline; }
+    public void setTimeline(Timeline timeline) { this.timeline.set(timeline); }
     private SimpleBooleanProperty ambientLightEnabled = new SimpleBooleanProperty(false){
         @Override protected void invalidated() {
             if (get()) {
@@ -135,8 +139,9 @@ public class ContentModel {
     };
     private boolean wireframe = false;
     private int subdivision = 0;
+    private String loadedUrl = null;
 
-    public ContentModel(String fileToLoad) {
+    public ContentModel() {
         subScene = new SubScene(root3D,400,400,true,false);
         subScene.setFill(Color.ALICEBLUE);
 
@@ -157,27 +162,8 @@ public class ContentModel {
                 System.out.println("z = " + newValue);
             }
         });
-        //LIGHTS
-//        root3D.getChildren().addAll(light1, light2, light3);
-        // BOX
-//        Box testBox = new Box(5,5,5);
-//        testBox.setMaterial(new PhongMaterial(Color.RED));
-//        testBox.setDrawMode(DrawMode.LINE);
-//        root3D.getChildren().add(testBox);
 
         root3D.getChildren().add(autoScalingGroup);
-
-        // LOAD DROP HERE MODEL
-        try {
-            if (fileToLoad != null) {
-                content = Importer3D.load(new File(fileToLoad).toURI().toURL().toExternalForm());
-            } else {
-                content = Importer3D.load(ContentModel.class.getResource("drop-here.obj").toExternalForm());
-            }
-            autoScalingGroup.getChildren().add(content);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         // SCENE EVENT HANDLING FOR CAMERA NAV
         subScene.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
@@ -203,6 +189,19 @@ public class ContentModel {
                 cameraPosition.setZ(z);
             }
         });
+
+        SessionManager sessionManager = SessionManager.getSessionManager();
+        sessionManager.bind(cameraLookXRotate.angleProperty(), "cameraLookXRotate");
+        sessionManager.bind(cameraLookZRotate.angleProperty(), "cameraLookZRotate");
+        sessionManager.bind(cameraPosition.xProperty(), "cameraPosition.x");
+        sessionManager.bind(cameraPosition.yProperty(), "cameraPosition.y");
+        sessionManager.bind(cameraPosition.zProperty(), "cameraPosition.z");
+        sessionManager.bind(cameraXRotate.angleProperty(), "cameraXRotate");
+        sessionManager.bind(cameraYRotate.angleProperty(), "cameraYRotate");
+    }
+
+    public String getLoadedUrl() {
+        return loadedUrl;
     }
 
     public boolean getAmbientLightEnabled() {

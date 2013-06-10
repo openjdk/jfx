@@ -327,6 +327,132 @@ defineProperty("RELEASE_MILESTONE", "ea")
 project.ext.set("defaultHostTarget", IS_MAC ? "mac" : IS_WINDOWS ? "win" : IS_LINUX ? "linux" : "");
 defineProperty("COMPILE_TARGETS", "$defaultHostTarget")
 
+// Location of the cross compile tools
+def importCrossTools = BUILD_CLOSED ? true : false;
+if (!importCrossTools && hasProperty("IMPORT_CROSS_TOOLS")) {
+    importCrossTools = Boolean.parseBoolean(BUILD_CLOSED);
+}
+ext.IMPORT_CROSS_TOOLS = importCrossTools
+
+def crossToolsDir = "../crosslibs" 
+if (hasProperty("CROSS_TOOLS_DIR")) {
+    crossToolsDir = CROSS_TOOLS_DIR
+}
+ext.CROSS_TOOLS_DIR = file(crossToolsDir)
+
+/**
+ * Fetch/Check that external tools are present for the build. This method
+ * will conditionaly download the packages from project defined ivy repositories
+ * and unpack them into the specified destdir
+ *
+ * @param configName A unique name to distiguish the configuration (ie "ARMSFV6")
+ * @param packages A list of required packages (with extentions .tgz, .zip)
+ * @param destdir where the packages should be unpacked
+ * @param doFetch if true, the named packages will be download
+ */
+void fetchExternalTools(String configName, List packages, File destdir, boolean doFetch) {
+
+
+    if (doFetch) {
+        // create a uniuqe configuration for this fetch
+        def String thisconfig = "fetchTools$configName"
+        rootProject.configurations.create(thisconfig)
+
+        def List<String> fetchedPackages = []
+        def int fetchCount = 0
+
+        packages.each { pkgname->
+            def int dotdex = pkgname.lastIndexOf('.')
+            def int dashdex = pkgname.lastIndexOf('-')
+            def String basename = pkgname.substring(0,dashdex)
+            def String ver = pkgname.substring(dashdex+1,dotdex)
+            def String ext = pkgname.substring(dotdex+1)
+            def File pkgdir = file("$destdir/$basename-$ver")
+
+            if (!pkgdir.isDirectory()) {
+                rootProject.dependencies.add(thisconfig, "javafx:$basename:$ver", {
+                    artifact {
+                        name = basename
+                        version = ver
+                        type = ext
+                    }
+                })
+                println "adding $pkgname as a downloadable item did not find $pkgdir"
+                fetchedPackages.add(pkgname)
+                fetchCount++
+            }
+        }
+
+
+        //fetch all the missing packages
+        if (fetchedPackages.size > 0) {
+            destdir.mkdirs()
+
+            logger.quiet "fetching missing packages $fetchedPackages"
+            copy {
+                from rootProject.configurations[thisconfig]
+                into destdir
+            }
+
+            // unpack the fetched packages
+
+            fetchedPackages.each { pkgname->
+                logger.quiet "expanding the package $pkgname"
+                def srcball = file("${destdir}/${pkgname}")
+
+                if (!srcball.exists()) {
+                    throw new GradleException("Failed to fetch $pkgname");
+                }
+
+                def String basename = pkgname.substring(0,pkgname.lastIndexOf("."))
+                def File pkgdir = file("$destdir/$basename")
+
+                if (pkgname.endsWith(".tgz")) {
+                    if (IS_LINUX || IS_MAC) {
+                        // use native tar to support symlinks
+                        pkgdir.mkdirs()
+                        exec {
+                            workingDir pkgdir
+                            commandLine "tar", "zxf", "${srcball}"
+                         }
+                     } else {
+                         copy {
+                             from tarTree(resources.gzip("${srcball}"))
+                             into pkgdir
+                         }
+                     }
+                } else if (pkgname.endsWith(".zip")) {
+                     copy {
+                         from zipTree("${srcball}")
+                         into pkgdir
+                     }
+                } else {
+                    throw new GradleException("Unhandled pacakge type for compile package ${pkgname}")
+                }
+                srcball.deleteOnExit();
+            }
+        } else {
+            logger.quiet "all tool packages are present $packages"
+        }
+    } else { // !doFetch - so just check they are present
+        // check that all the dirs are really there
+        def List<String> errors = []
+        packages.each { pkgname->
+            def String basename = pkgname.substring(0,pkgname.indexOf("."))
+            def File pkgdir = file("$destdir/$basename")
+
+            if (!pkgdir.isDirectory()) {
+                errors.add(pkgname)
+            }
+        }
+        if (errors.size > 0) {
+            throw new GradleException("Error: missing tool packages: $errors")
+        } else {
+            logger.quiet "all tool packages are present $packages"
+        }
+    }
+}
+
 // Now we need to define the native compilation tasks. The set of parameters to
 // native compiliation depends on the target platform (and also to some extent what platform
 // you are compiling on). These settings are contained in various gradle files
@@ -1009,9 +1135,11 @@ project(":controls") {
 }
 
 project(":swing") {
+    /* should not be built, but needed in builders and JMX
     tasks.all {
         if (!COMPILE_SWING) it.enabled = false
     }
+    */
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics")
     }
@@ -1043,6 +1171,9 @@ project(":fxml") {
 
 project(":builders") {
     sourceCompatibility = 1.7
+
+    if (!COMPILE_SWING) sourceSets.main.java.exclude ("**/swing/**")
+    if (!COMPILE_SWT)   sourceSets.main.java.exclude ("**/swt/**")
 
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),

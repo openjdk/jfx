@@ -24,7 +24,7 @@
 	  ${rt.dist.root.dir}/javafx-beans/dist/javafx-beans.jar:
 	  ${rt.dist.root.dir}/javafx-ui-charts/dist/javafx-ui-charts.jar:
 	  ${runtime.dist.root.dir}/javafx-ui-desktop/dist/javafx-ui-desktop.jar:
-	  ${runtime.dist.root.dir}/../artifacts/sdk/build/lib/desktop/webview.jar:
+	  ${jfx.sdk.desktop.dir}/webview.jar:
 	  ${runtime.dist.root.dir}/javafx-ui-webnode/dist/javafx-ui-webnode.jar:
 	  ${runtime.dist.root.dir}/javafx-ui-desktop/dist/javafx-ui-desktop.jar:
 	  ${rt.dist.root.dir}/javafx-embed-swing/dist/javafx-embed-swing.jar:

@@ -41,6 +41,8 @@ public:
     virtual ~D3DMesh();
     boolean buildBuffers(float *vertexBuffer, UINT vertexBufferSize,
             USHORT *indexBuffer, UINT indexBufferSize);
+    boolean buildBuffers(float *vertexBuffer, UINT vertexBufferSize,
+            UINT *indexBuffer, UINT indexBufferSize);
     DWORD getVertexFVF();
     IDirect3DIndexBuffer9 *getIndexBuffer();
     IDirect3DVertexBuffer9 *getVertexBuffer();

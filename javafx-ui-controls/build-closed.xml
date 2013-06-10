@@ -11,7 +11,7 @@
         ${rt.dist.root.dir}/javafx-anim/dist/javafx-anim.jar:
         ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
         ${rt.dist.root.dir}/javafx-util-converter/dist/javafx-util-converter.jar:
-        ${runtime.dist.root.dir}/javafx-accessible/dist/javafx-accessible.jar:
+        ${rt.dist.root.dir}/javafx-accessible/dist/javafx-accessible.jar:
         ${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     

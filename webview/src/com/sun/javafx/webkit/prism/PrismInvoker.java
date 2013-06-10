@@ -3,9 +3,8 @@
  */
 package com.sun.javafx.webkit.prism;
 
+import com.sun.javafx.tk.RenderJob;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.prism.render.RenderJob;
-import com.sun.prism.render.ToolkitInterface;
 import com.sun.webkit.Invoker;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -63,17 +62,15 @@ public final class PrismInvoker extends Invoker {
     }
 
     static void invokeOnRenderThread(final Runnable r) {
-        ToolkitInterface renderer = (ToolkitInterface) Toolkit.getToolkit();
-        renderer.addRenderJob(new RenderJob(r));
+        Toolkit.getToolkit().addRenderJob(new RenderJob(r));
     }
 
     static void runOnRenderThread(final Runnable r) {
         if (Thread.currentThread().getName().startsWith("QuantumRenderer")) {
             r.run();
         } else {
-            ToolkitInterface renderer = (ToolkitInterface) Toolkit.getToolkit();
             FutureTask<Void> f = new FutureTask<Void>(r, null);
-            renderer.addRenderJob(new RenderJob(f));
+            Toolkit.getToolkit().addRenderJob(new RenderJob(f));
             try {
                 // block until job is complete
                 f.get();

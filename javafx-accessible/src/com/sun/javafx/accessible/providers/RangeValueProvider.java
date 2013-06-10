@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,13 +23,23 @@
  * questions.
  */
 
-package com.sun.prism.render;
-
-import java.util.concurrent.Future;
+package com.sun.javafx.accessible.providers;
 
 /**
- * Common APIs for java toolkit implementations
+ *
  */
-public interface ToolkitInterface {
-    public Future addRenderJob(RenderJob rj);
+public interface RangeValueProvider {
+    
+    public double getValue();
+    
+    public boolean isReadOnly();
+    
+    public double getLargeValue();
+    
+    public double getMinimum();
+    
+    public double getMaximum();
+    
+    public double getSmallChange();
+    
 }

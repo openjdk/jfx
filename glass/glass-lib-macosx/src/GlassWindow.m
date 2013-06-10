@@ -462,13 +462,14 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             {
                 styleMask = styleMask|NSUtilityWindowMask;
             }
-            else if ((jStyleMask&com_sun_glass_ui_Window_POPUP) != 0)
-            {
-                // can receive keyboard input without activating the owning application
-                styleMask = styleMask|NSNonactivatingPanelMask;
-            }
         }
-                
+
+        if ((jStyleMask&com_sun_glass_ui_Window_POPUP) != 0)
+        {
+            // can receive keyboard input without activating the owning application
+            styleMask = styleMask|NSNonactivatingPanelMask;
+        }
+
         // initial size must be 0x0 otherwise we don't get resize update if the initial size happens to be the exact same size as the later programatical one!
         CGFloat x = 0.0f;
         CGFloat y = 0.0f;

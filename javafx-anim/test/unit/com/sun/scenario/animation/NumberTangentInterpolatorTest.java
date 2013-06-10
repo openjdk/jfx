@@ -26,8 +26,9 @@
 package com.sun.scenario.animation;
 
 
-import static org.junit.Assert.assertEquals;
-import javafx.util.Duration;
+import javafx.animation.Interpolator;
+import static org.junit.Assert.*;
+import static javafx.util.Duration.*;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -41,18 +42,18 @@ public class NumberTangentInterpolatorTest {
 	
 	@Before
 	public void setUp() throws Exception {
-		interpolator = NumberTangentInterpolator.create(0, Duration.ZERO);
+		interpolator = new NumberTangentInterpolator(ZERO, 0);
 	}
 	
 	@Test
 	public void testCreate() {
-		final NumberTangentInterpolator interpolator1 = NumberTangentInterpolator.create(Math.PI, Duration.millis(2000));
+		final NumberTangentInterpolator interpolator1 = new NumberTangentInterpolator(millis(2000), Math.PI);
 		assertEquals(Math.PI, interpolator1.getInValue(), EPSILON_DOUBLE);
 		assertEquals(12000.0, interpolator1.getInTicks(), EPSILON_DOUBLE);
 		assertEquals(Math.PI, interpolator1.getOutValue(), EPSILON_DOUBLE);
 		assertEquals(12000.0, interpolator1.getOutTicks(), EPSILON_DOUBLE);
 
-		final NumberTangentInterpolator interpolator2 = NumberTangentInterpolator.create(Math.E, Duration.millis(500), -Math.PI, Duration.millis(1000));
+		final NumberTangentInterpolator interpolator2 = new NumberTangentInterpolator(millis(500), Math.E, millis(1000), -Math.PI);
 		assertEquals(Math.E, interpolator2.getInValue(), EPSILON_DOUBLE);
 		assertEquals(3000.0, interpolator2.getInTicks(), EPSILON_DOUBLE);
 		assertEquals(-Math.PI, interpolator2.getOutValue(), EPSILON_DOUBLE);
@@ -108,4 +109,72 @@ public class NumberTangentInterpolatorTest {
 		assertEquals(Integer.valueOf(10), interpolator.interpolate(Integer.valueOf(0), Integer.valueOf(10), 1.0));
 	}
 
+        private static void testEqualsAndHashCode(Interpolator one, Interpolator another) {
+                assertTrue(one.equals(another));
+                assertTrue(another.equals(one));
+                assertEquals(one.hashCode(), another.hashCode());
+        }
+
+        private static void testNotEqualsAndHashCode(Interpolator one, Interpolator another) {
+                assertFalse(one.equals(another));
+                assertFalse(another.equals(one));
+                assertFalse(one.hashCode() == another.hashCode());
+        }
+
+        @Test public void testEqualsAndHashCodeShort() {
+                testEqualsAndHashCode(interpolator, new NumberTangentInterpolator(ZERO, 0));
+        }
+
+        @Test public void testNotEqualsAndHashCodeShort() {
+                testNotEqualsAndHashCode(interpolator, new NumberTangentInterpolator(millis(500), 0));
+                testNotEqualsAndHashCode(interpolator, new NumberTangentInterpolator(ZERO, 1));
+        }
+
+        @Test public void testEqualsAndHashCode() {
+                Interpolator one = new NumberTangentInterpolator(millis(500), Math.E, millis(1000), -Math.PI);
+                Interpolator another = new NumberTangentInterpolator(millis(500), Math.E, millis(1000), -Math.PI);
+                testEqualsAndHashCode(one, another);
+        }
+
+        @Test public void testNotEqualsAndHashCode() {
+                Interpolator one = new NumberTangentInterpolator(millis(500), Math.E, millis(1000), -Math.PI);
+                Interpolator another = new NumberTangentInterpolator(millis(500), Math.E, millis(1000), Math.PI);
+                testNotEqualsAndHashCode(one, another);
+
+                another = new NumberTangentInterpolator(millis(500), Math.E, millis(800), -Math.PI);
+                testNotEqualsAndHashCode(one, another);
+
+                another = new NumberTangentInterpolator(millis(500), Math.PI, millis(1000), -Math.PI);
+                testNotEqualsAndHashCode(one, another);
+
+                another = new NumberTangentInterpolator(millis(100), Math.E, millis(1000), -Math.PI);
+                testNotEqualsAndHashCode(one, another);
+        }
+
+        @Test public void testEqualsAndHashCodeFullToShort() {
+                NumberTangentInterpolator sh = new NumberTangentInterpolator(millis(200), 105);
+                NumberTangentInterpolator full = new NumberTangentInterpolator(millis(200), 105, millis(200), 105);
+                testEqualsAndHashCode(sh, full);
+        }
+        
+        @Test public void testNotEqualsAndHashCodeFullToShort() {
+                NumberTangentInterpolator sh = new NumberTangentInterpolator(millis(200), 105);
+                Interpolator full = new NumberTangentInterpolator(millis(500), 105, millis(500), 105);
+                testNotEqualsAndHashCode(sh, full);
+
+                full = new NumberTangentInterpolator(millis(200), 115, millis(200), 115);
+                testNotEqualsAndHashCode(sh, full);
+
+                full = new NumberTangentInterpolator(millis(200), 105, millis(200), 100);
+                testNotEqualsAndHashCode(sh, full);
+
+                full = new NumberTangentInterpolator(millis(200), 105, millis(205), 105);
+                testNotEqualsAndHashCode(sh, full);
+
+                full = new NumberTangentInterpolator(millis(200), 106, millis(200), 105);
+                testNotEqualsAndHashCode(sh, full);
+
+                full = new NumberTangentInterpolator(millis(210), 105, millis(200), 105);
+                testNotEqualsAndHashCode(sh, full);
+        }
 }

@@ -37,7 +37,6 @@ import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.prism.render.ToolkitInterface;
 
 class ViewScene extends GlassScene {
 
@@ -47,7 +46,6 @@ class ViewScene extends GlassScene {
     private View platformView;
     private ViewPainter painter;
 
-    private final AtomicBoolean painting = new AtomicBoolean(false);
     private PaintRenderJob paintRenderJob;
 
     public ViewScene(boolean depthBuffer) {
@@ -67,10 +65,6 @@ class ViewScene extends GlassScene {
     
     ViewPainter getPainter() {
         return painter;
-    }
-
-    boolean setPainting(boolean value) {
-        return painting.getAndSet(value);
     }
 
     @Override
@@ -145,10 +139,9 @@ class ViewScene extends GlassScene {
             return;
         }
 
-        if (!painting.getAndSet(true)) {
+        if (!setPainting(true)) {
             Toolkit tk = Toolkit.getToolkit();
-            ToolkitInterface toolkit = (ToolkitInterface)tk;
-            toolkit.addRenderJob(paintRenderJob);
+            tk.addRenderJob(paintRenderJob);
         }
     }
     

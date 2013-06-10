@@ -807,6 +807,7 @@ public abstract class Parent extends Node {
      * If this parent is either a layout root or unmanaged, then it will be
      * added directly to the scene's dirty layout list, otherwise requestParentLayout
      * will be invoked.
+     * @since JavaFX 8.0
      */
     public void requestLayout() {
         if (!isNeedsLayout()) {
@@ -820,24 +821,7 @@ public abstract class Parent extends Node {
             }
 
             setNeedsLayout(true);
-            if (layoutRoot) {
-                final Scene scene = getScene();
-                final SubScene subScene = getSubScene();
-                if (subScene != null) {
-                    if (logger.isLoggable(PlatformLogger.FINER)) {
-                        logger.finer(this.toString() + " layoutRoot added to SubScene dirty layout list");
-                    }
-                    subScene.setDirtyLayout(this);
-                }
-                if (scene != null) {
-                    if (logger.isLoggable(PlatformLogger.FINER)) {
-                        logger.finer(this.toString() + " layoutRoot added to scene dirty layout list");
-                    }
-                    scene.addToDirtyLayoutList(this);
-                }
-            } else {
-                requestParentLayout();
-            }
+            requestParentLayout();
         } else {
             clearSizeCache();
         }
@@ -853,10 +837,22 @@ public abstract class Parent extends Node {
      * when it's parent recomputes the layout with the new hints.
      */
     protected final void requestParentLayout() {
-        final Parent parent = getParent();
-        if (parent != null && !parent.performingLayout) {
-            parent.requestLayout();
+        if (layoutRoot) {
+            final Scene scene = getScene();
+            final SubScene subScene = getSubScene();
+            if (subScene != null) {
+                subScene.setDirtyLayout(this);
+            }
+            if (scene != null) {
+                scene.addToDirtyLayoutList(this);
+            }
+        } else {
+            final Parent parent = getParent();
+            if (parent != null && !parent.performingLayout) {
+                parent.requestLayout();
+            }
         }
+
     }
 
     void clearSizeCache() {

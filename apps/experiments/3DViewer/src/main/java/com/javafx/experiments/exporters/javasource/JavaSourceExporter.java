@@ -37,6 +37,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +86,10 @@ public class JavaSourceExporter {
     private final String packageName;
     private final File outputFile;
 
+    public JavaSourceExporter(String baseUrl, Node rootNode, Timeline timeline, File outputFile) {
+        this(baseUrl, rootNode, timeline,computePackageName(baseUrl), outputFile);
+    }
+
     public JavaSourceExporter(String baseUrl, Node rootNode, Timeline timeline, String packageName, File outputFile) {
         this.baseUrl =
                 (baseUrl.charAt(baseUrl.length()-1) == '/') ?
@@ -95,6 +101,41 @@ public class JavaSourceExporter {
         this.outputFile = outputFile;
         process("        ",rootNode);
         if (hasTimeline) process("        ",timeline);
+    }
+
+    private static String computePackageName(String baseUrl) {
+        // remove protocol from baseUrl
+        System.out.println("JavaSourceExporter.computePackageName   baseUrl = " + baseUrl);
+        baseUrl = baseUrl.replaceAll("^[a-z]+:/+","/");
+        System.out.println("baseUrl = " + baseUrl);
+        // try and work out package name from file
+        StringBuilder packageName = new StringBuilder();
+        String[] pathSegments = baseUrl.split(File.separatorChar == '\\'?"\\\\":"/");
+        System.out.println("pathSegments = " + Arrays.toString(pathSegments));
+        loop: for (int i = pathSegments.length-1; i >= 0; i -- ) {
+            switch (pathSegments[i]){
+                case "com":
+                case "org":
+                case "net":
+                    packageName.insert(0,pathSegments[i]);
+                    break loop;
+                case "src":
+                    packageName.deleteCharAt(0);
+                    break loop;
+                case "main":
+                    if ("src".equals(pathSegments[i-1])) {
+                        packageName.deleteCharAt(0);
+                        break loop;
+                    }
+                default:
+                    packageName.insert(0,'.'+pathSegments[i]);
+                    break;
+            }
+            // if we get all way to root of file system then we have failed
+            if (i==0) packageName = null;
+        }
+        System.out.println(" packageName = " + packageName);
+        return packageName==null?null:packageName.toString();
     }
 
     public void export() {
@@ -138,8 +179,21 @@ public class JavaSourceExporter {
                 }
                 nodeVars.append(";\n");
             }
+            nodeVars.append("    public static final MeshView[] MESHVIEWS = new MeshView[]{ ");
+            for (int i=0; i<meshViewCount; i++) {
+                if (i!=0) nodeVars.append(',');
+                nodeVars.append("new MeshView()");
+            }
+            nodeVars.append("};\n");
+//            nodeVars.append("    public static final MeshView ");
+//            for (int i=0; i<meshViewCount; i++) {
+//                if (i!=0) nodeVars.append(',');
+//                nodeVars.append("MESHVIEW_"+i+" = new MeshView()");
+//            }
+//            nodeVars.append(";\n");
 
             nodeVars.append("    public static final Node ROOT;\n");
+            nodeVars.append("    public static final Map<String,MeshView> MESHVIEW_MAP;\n");
             if (hasTimeline) {
                 nodeVars.append("    public static final Timeline TIMELINE = new Timeline();\n");
             }
@@ -148,8 +202,10 @@ public class JavaSourceExporter {
                 methodCode.append("        method"+m+"();\n");
             }
 
+            if (packageName != null) out.write(
+                    "package "+packageName+";\n\n");
             out.write(
-                    "package "+packageName+";\n\n" +
+                    "import java.util.*;\n" +
                     "import javafx.util.Duration;\n" +
                     "import javafx.animation.*;\n" +
                     "import javafx.scene.*;\n" +
@@ -168,6 +224,9 @@ public class JavaSourceExporter {
                     "        // ======== TIMELINE CODE ===============\n" +
                     timelineCode +
                     "        // ======== SET PUBLIC VARS ===============\n" +
+                    "        Map<String,MeshView> meshViewMap = new HashMap<String,MeshView>();\n" +
+                    "        for (MeshView meshView: MESHVIEWS) meshViewMap.put(meshView.getId(),meshView);\n" +
+                    "        MESHVIEW_MAP = Collections.unmodifiableMap(meshViewMap);\n" +
                     "        ROOT = NODE_0;\n" +
                     "    }\n" +
                     "}\n");
@@ -193,9 +252,11 @@ public class JavaSourceExporter {
         final int index = nodeCount ++;
         final String varName = "NODE_"+index;
         final int meshViewIndex = meshViewCount ++;
-        final String meshViewVarName = "MESHVIEW_"+meshViewIndex;
-        nodeCode.append(indent+"MeshView "+meshViewVarName+" = new MeshView();\n");
+        final String meshViewVarName = "MESHVIEWS["+meshViewIndex+"]";
+//        nodeCode.append(indent+meshViewVarName+" = new MeshView();\n");
         nodeCode.append(indent+varName+" = "+meshViewVarName+";\n");
+        if (node.getId() != null) nodeCode.append(indent+meshViewVarName+".setId(\""+node.getId()+"\");\n");
+        nodeCode.append(indent+meshViewVarName+".setCullFace(CullFace."+node.getCullFace().name()+");\n");
         processNodeTransforms(indent,meshViewVarName,node);
         process(indent,meshViewVarName,(PhongMaterial)node.getMaterial());
         process(indent,meshViewVarName,(TriangleMesh)node.getMesh());
@@ -342,10 +403,15 @@ public class JavaSourceExporter {
 
         nodeCode.append(indent + "PhongMaterial " + materialName + " = new PhongMaterial();\n");
         nodeCode.append(indent + materialName + ".setDiffuseColor(" + toCode(material.getDiffuseColor()) + ");\n");
-        nodeCode.append(indent + materialName + ".setSpecularColor(" + toCode(material.getSpecularColor()) + ");\n");
+        String specColor = toCode(material.getSpecularColor());
+        if (specColor!=null) nodeCode.append(indent + materialName + ".setSpecularColor(" + specColor + ");\n");
         nodeCode.append(indent + materialName + ".setSpecularPower("+material.getSpecularPower()+");\n");
         if (material.getDiffuseMap() != null) {
-            nodeCode.append(indent + materialName + ".setDiffuseMap("+toString(material.getDiffuseMap())+");\n");
+            nodeCode.append(indent + "try {\n");
+            nodeCode.append(indent + "    " + materialName + ".setDiffuseMap("+toString(material.getDiffuseMap())+");\n");
+            nodeCode.append(indent + "} catch (NullPointerException npe) {\n");
+            nodeCode.append(indent + "    System.err.println(\"Could not load texture resource ["+material.getDiffuseMap().impl_getUrl()+"]\");\n");
+            nodeCode.append(indent + "}\n");
         }
         if (material.getBumpMap() != null) {
             nodeCode.append(indent + materialName + ".setBumpMap("+toString(material.getBumpMap())+");\n");
@@ -418,6 +484,6 @@ public class JavaSourceExporter {
     }
 
     private String toCode(Color color) {
-        return "new Color("+color.getRed()+","+color.getGreen()+","+color.getBlue()+","+color.getOpacity()+")";
+        return color == null ? null : "new Color("+color.getRed()+","+color.getGreen()+","+color.getBlue()+","+color.getOpacity()+")";
     }
 }

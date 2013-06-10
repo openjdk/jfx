@@ -133,12 +133,6 @@ public class MayaImporter {
                         (
                                 new KeyFrame(
                                         javafx.util.Duration.millis(e.getKey() * 1000f),
-                                        new EventHandler<ActionEvent>() {
-                                            @Override
-                                            public void handle(ActionEvent ev) {
-                                                // if (DEBUG) System.out.println("finished key frame at: " + e.getKey());
-                                            }
-                                        },
                                         (KeyValue[]) e.getValue().toArray(new KeyValue[e.getValue().size()])));
                 count++;
             }

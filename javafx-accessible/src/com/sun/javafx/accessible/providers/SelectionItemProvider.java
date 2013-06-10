@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,8 +23,20 @@
  * questions.
  */
 
-package com.sun.prism.render;
+package com.sun.javafx.accessible.providers;
 
-public interface CompletionListener {
-    void done(RenderJob job);
+/**
+ *
+ */
+public interface SelectionItemProvider {
+    
+    public void addToSelection();
+    
+    public void removeFromSelection();
+
+    public void select();
+
+    public boolean isSelected();
+
+    public Object getSelectionContainer();
 }

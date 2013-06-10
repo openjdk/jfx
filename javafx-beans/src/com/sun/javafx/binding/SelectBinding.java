@@ -63,9 +63,9 @@ import javafx.beans.property.adapter.ReadOnlyJavaBeanObjectPropertyBuilder;
 public class SelectBinding {
 
     private SelectBinding() {}
-    
+
     public static class AsObject<T> extends ObjectBinding<T> {
-        
+
         private final SelectBindingHelper helper;
 
         public AsObject(ObservableValue<?> root, String... steps) {
@@ -75,7 +75,7 @@ public class SelectBinding {
         public AsObject(Object root, String... steps) {
             helper = new SelectBindingHelper(this, root, steps);
         }
-        
+
         @Override
         public void dispose() {
             helper.unregisterListener();
@@ -85,7 +85,7 @@ public class SelectBinding {
         protected void onInvalidating() {
             helper.unregisterListener();
         }
-        
+
         @SuppressWarnings("unchecked")
         @Override
         protected T computeValue() {
@@ -109,11 +109,11 @@ public class SelectBinding {
         }
 
     }
-    
+
     public static class AsBoolean extends BooleanBinding {
-        
+
         private static final boolean DEFAULT_VALUE = false;
-        
+
         private final SelectBindingHelper helper;
 
         public AsBoolean(ObservableValue<?> root, String... steps) {
@@ -123,7 +123,7 @@ public class SelectBinding {
         public AsBoolean(Object root, String... steps) {
             helper = new SelectBindingHelper(this, root, steps);
         }
-        
+
         @Override
         public void dispose() {
             helper.unregisterListener();
@@ -133,7 +133,7 @@ public class SelectBinding {
         protected void onInvalidating() {
             helper.unregisterListener();
         }
-        
+
         @Override
         protected boolean computeValue() {
             final ObservableValue<?> observable = helper.getObservableValue();
@@ -160,11 +160,11 @@ public class SelectBinding {
         }
 
     }
-    
+
     public static class AsDouble extends DoubleBinding {
-        
+
         private static final double DEFAULT_VALUE = 0.0;
-        
+
         private final SelectBindingHelper helper;
 
         public AsDouble(ObservableValue<?> root, String... steps) {
@@ -174,7 +174,7 @@ public class SelectBinding {
         public AsDouble(Object root, String... steps) {
             helper = new SelectBindingHelper(this, root, steps);
         }
-        
+
         @Override
         public void dispose() {
             helper.unregisterListener();
@@ -184,7 +184,7 @@ public class SelectBinding {
         protected void onInvalidating() {
             helper.unregisterListener();
         }
-        
+
         @Override
         protected double computeValue() {
             final ObservableValue<?> observable = helper.getObservableValue();
@@ -211,11 +211,11 @@ public class SelectBinding {
         }
 
     }
-    
+
     public static class AsFloat extends FloatBinding {
-        
+
         private static final float DEFAULT_VALUE = 0.0f;
-        
+
         private final SelectBindingHelper helper;
 
         public AsFloat(ObservableValue<?> root, String... steps) {
@@ -225,7 +225,7 @@ public class SelectBinding {
         public AsFloat(Object root, String... steps) {
             helper = new SelectBindingHelper(this, root, steps);
         }
-        
+
         @Override
         public void dispose() {
             helper.unregisterListener();
@@ -235,7 +235,7 @@ public class SelectBinding {
         protected void onInvalidating() {
             helper.unregisterListener();
         }
-        
+
         @Override
         protected float computeValue() {
             final ObservableValue<?> observable = helper.getObservableValue();
@@ -262,11 +262,11 @@ public class SelectBinding {
         }
 
     }
-    
+
     public static class AsInteger extends IntegerBinding {
-        
+
         private static final int DEFAULT_VALUE = 0;
-        
+
         private final SelectBindingHelper helper;
 
         public AsInteger(ObservableValue<?> root, String... steps) {
@@ -276,7 +276,7 @@ public class SelectBinding {
         public AsInteger(Object root, String... steps) {
             helper = new SelectBindingHelper(this, root, steps);
         }
-        
+
         @Override
         public void dispose() {
             helper.unregisterListener();
@@ -286,7 +286,7 @@ public class SelectBinding {
         protected void onInvalidating() {
             helper.unregisterListener();
         }
-        
+
         @Override
         protected int computeValue() {
             final ObservableValue<?> observable = helper.getObservableValue();
@@ -313,11 +313,11 @@ public class SelectBinding {
         }
 
     }
-    
+
     public static class AsLong extends LongBinding {
-        
+
         private static final long DEFAULT_VALUE = 0L;
-        
+
         private final SelectBindingHelper helper;
 
         public AsLong(ObservableValue<?> root, String... steps) {
@@ -327,7 +327,7 @@ public class SelectBinding {
         public AsLong(Object root, String... steps) {
             helper = new SelectBindingHelper(this, root, steps);
         }
-        
+
         @Override
         public void dispose() {
             helper.unregisterListener();
@@ -337,7 +337,7 @@ public class SelectBinding {
         protected void onInvalidating() {
             helper.unregisterListener();
         }
-        
+
         @Override
         protected long computeValue() {
             final ObservableValue<?> observable = helper.getObservableValue();
@@ -364,7 +364,7 @@ public class SelectBinding {
         }
 
     }
-    
+
     public static class AsString extends StringBinding {
 
         private static final String DEFAULT_VALUE = null;
@@ -378,7 +378,7 @@ public class SelectBinding {
         public AsString(Object root, String... steps) {
             helper = new SelectBindingHelper(this, root, steps);
         }
-        
+
         @Override
         public void dispose() {
             helper.unregisterListener();
@@ -388,7 +388,7 @@ public class SelectBinding {
         protected void onInvalidating() {
             helper.unregisterListener();
         }
-        
+
         @Override
         protected String computeValue() {
             final ObservableValue<?> observable = helper.getObservableValue();
@@ -421,7 +421,7 @@ public class SelectBinding {
         private final WeakInvalidationListener observer;
 
         private ObservableList<ObservableValue<?>> dependencies;
-       
+
         private SelectBindingHelper(Binding<?> binding, ObservableValue<?> firstProperty, String... steps) {
             if (firstProperty == null) {
                 throw new NullPointerException("Must specify the root");
@@ -498,7 +498,7 @@ public class SelectBinding {
                         if (ex instanceof  IllegalStateException) {
                             logger.warning("Property '" + propertyNames[i] + "' does not exist in " + obj.getClass(), ex);
                         } else if (ex instanceof NullPointerException) {
-                            logger.warning("Property '" + propertyNames[i] + "' in " + properties[i] + " is null", ex);
+                            logger.info("Property '" + propertyNames[i] + "' in " + properties[i] + " is null", ex);
                         } else {
                             Logging.getLogger().warning("", ex);
                         }
@@ -512,14 +512,14 @@ public class SelectBinding {
             updateDependencies();
             final ObservableValue<?> result = properties[n-1];
             if (result == null) {
-                Logging.getLogger().warning("Property '" + propertyNames[n-1] + "' in " + properties[n-1] + " is null", new NullPointerException());
+                Logging.getLogger().info("Property '" + propertyNames[n-1] + "' in " + properties[n-1] + " is null", new NullPointerException());
             }
             return result;
         }
-        
+
         private String stepsToString() {
             return Arrays.toString(propertyNames);
-        } 
+        }
 
         private void unregisterListener() {
             final int n = properties.length;
@@ -557,5 +557,5 @@ public class SelectBinding {
         }
 
     }
-    
+
 }

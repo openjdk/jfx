@@ -73,19 +73,8 @@ final class SWPresentable extends SWRTTexture implements Presentable {
     }
 
     public boolean present() {
-        final Pixels pixelsFin = pixels;
         uploadCount.incrementAndGet();
-        Application.invokeLater(new Runnable() {
-            @Override public void run() {
-                if (!pState.isViewClosed()) {
-                    if (PrismSettings.debug) {
-                        System.out.println("- uploading pixels to Glass view");
-                    }
-                    pState.getView().uploadPixels(pixelsFin);
-                }
-                uploadCount.decrementAndGet();
-            }
-        });
+        pState.uploadPixels(pixels, uploadCount);
         return true;
     }
 

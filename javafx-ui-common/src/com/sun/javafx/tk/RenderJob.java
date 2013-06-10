@@ -23,13 +23,11 @@
  * questions.
  */
 
-package com.sun.prism.render;
+package com.sun.javafx.tk;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
-
-import com.sun.prism.impl.PrismSettings;
 
 /*
  * RenderJob for the Quantum toolkit.

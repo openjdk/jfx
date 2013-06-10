@@ -25,7 +25,10 @@
 
 package com.sun.prism;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
@@ -39,31 +42,31 @@ import com.sun.glass.ui.Window;
 public class PresentableState {
 
     /** The underlying Window and View */
-    private Window window;
+    protected Window window;
     protected View view;
+    
     // Captured state
-    private int windowX, windowY;
-    private float windowAlpha;
-    private long nativeWindowHandle;
-    private long nativeView;
-    private int viewWidth, viewHeight;
-    private int screenHeight;
-    private boolean isWindowVisible;
-    private boolean isWindowMinimized;
-    private float screenScale;
-    private static boolean hasWindowManager =
+    protected int windowX, windowY;
+    protected float windowAlpha;
+    protected long nativeWindowHandle;
+    protected long nativeView;
+    protected int viewWidth, viewHeight;
+    protected int screenHeight;
+    protected boolean isWindowVisible;
+    protected boolean isWindowMinimized;
+    protected float screenScale;
+    protected static boolean hasWindowManager =
             Application.GetApplication().hasWindowManager();
     // Between PaintCollector and *Painter, there is a window where
     // the associated View can be closed. This variable allows us
     // to shortcut the queued *Painter task.
-    private boolean isClosed;
+    protected boolean isClosed;
 
     /** Create a PresentableState based on a View.
      *
      * Must be called on the event thread.
      */
-    public PresentableState(View view) {
-        this.view = view;
+    public PresentableState() {
     }
 
     /**
@@ -222,7 +225,7 @@ public class PresentableState {
      * May be called on any thread.
      */
     public void lock() {
-        view.lock();
+        if (view != null) view.lock();
     }
 
     /**
@@ -231,7 +234,20 @@ public class PresentableState {
      * May be called on any thread.
      */
     public void unlock() {
-        view.unlock();
+        if (view != null) view.unlock();
+    }
+    
+    /**
+     * Put the pixels on the screen.
+     * 
+     * @param pixels - the pixels to draw
+     * @param uploadCount - the number of uploads (can be null)
+     */
+    public void uploadPixels(Pixels pixels, AtomicInteger uploadCount) {
+        view.uploadPixels(pixels);
+        if (uploadCount != null) {
+            uploadCount.decrementAndGet();
+        }
     }
 
     /** Updates the state of this object based on the current state of its
