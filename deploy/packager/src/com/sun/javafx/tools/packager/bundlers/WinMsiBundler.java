@@ -306,6 +306,14 @@ public class WinMsiBundler extends Bundler {
         }
     }
 
+    private String getGroup() {
+        if (params.applicationCategory != null) {
+            return params.applicationCategory;
+        } else {
+            return getVendor();
+        }
+    }
+
     UUID getUpgradeGUID() {
         UUID uid = null;
         if (params.identifier != null) {
@@ -523,7 +531,7 @@ public class WinMsiBundler extends Bundler {
         }
         if (menuShortcut) {
             out.println("  <Directory Id=\"ProgramMenuFolder\">");
-            out.println("    <Directory Id=\"ProgramMenuDir\" Name=\"" + getVendor() + "\">");
+            out.println("    <Directory Id=\"ProgramMenuDir\" Name=\"" + getGroup() + "\">");
             out.println("      <Component Id=\"comp" + (compId++) + "\""
                     + " Guid=\"" + UUID.randomUUID().toString() + "\">");
             out.println("        <RemoveFolder Id=\"ProgramMenuDir\" On=\"uninstall\" />");
