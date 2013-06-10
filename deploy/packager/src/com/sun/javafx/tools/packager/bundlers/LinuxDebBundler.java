@@ -36,6 +36,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -277,6 +281,30 @@ public class LinuxDebBundler extends Bundler {
             }
         }
     }
+    
+    private long getInstalledSizeKB() {
+        return getInstalledSizeKB(Paths.get(appImageRoot.toURI())) >> 10;
+    }
+
+    private long getInstalledSizeKB(Path dir) {
+        long count = 0;
+        try {
+            DirectoryStream<Path> stream = Files.newDirectoryStream(dir);
+            try {
+                for (Path p : stream) {
+                    if (Files.isRegularFile(p)) {
+                        count += Files.size(p);
+                    } else if (Files.isDirectory(p)) {
+                        count += getInstalledSizeKB(p);
+                    }
+                }
+            } finally {
+                stream.close();
+            }
+        } catch (IOException ignore) {
+        }
+        return count;
+    }    
 
     private boolean prepareProjectConfig() throws IOException {
         Map<String, String> data = new HashMap<String, String>();
@@ -301,7 +329,8 @@ public class LinuxDebBundler extends Bundler {
                 params.licenseType != null ? params.licenseType : "unknown");
         data.put("APPLICATION_LICENSE_TEXT", getLicenseText());
         data.put("APPLICATION_ARCH", getArch());
-
+        data.put("APPLICATION_INSTALLED_SIZE", Long.toString(getInstalledSizeKB()));
+ 
         //prepare control file
         Writer w = new BufferedWriter(new FileWriter(getConfig_ControlFile()));
         String content = preprocessTextResource(
@@ -332,7 +361,7 @@ public class LinuxDebBundler extends Bundler {
                 "DEB copyright file", DEFAULT_COPYRIGHT_TEMPLATE, data);
         w.write(content);
         w.close();
-
+        
         //prepare desktop shortcut
         w = new BufferedWriter(new FileWriter(getConfig_DesktopShortcutFile()));
         content = preprocessTextResource(
