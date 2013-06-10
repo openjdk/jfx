@@ -45,9 +45,9 @@ import javafx.collections.ObservableList;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.property.JavaBeanAccessHelper;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.property.PropertyReference;
 import java.util.Arrays;
-import javafx.beans.property.adapter.ReadOnlyJavaBeanObjectPropertyBuilder;
 
 /**
  * A binding used to get a member, such as <code>a.b.c</code>. The value of the
@@ -493,7 +493,7 @@ public class SelectBinding {
                     return null;
                 } catch (RuntimeException ex) {
                     final PlatformLogger logger = Logging.getLogger();
-                    if (logger.isLoggable(PlatformLogger.WARNING)) {
+                    if (logger.isLoggable(Level.WARNING)) {
                         Logging.getLogger().warning("Exception while evaluating select-binding " + stepsToString());
                         if (ex instanceof  IllegalStateException) {
                             logger.warning("Property '" + propertyNames[i] + "' does not exist in " + obj.getClass(), ex);

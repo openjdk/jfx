@@ -35,6 +35,7 @@ import com.sun.javafx.accessible.utils.EventIds;
 import com.sun.javafx.accessible.utils.PropertyIds;
 import com.sun.javafx.accessible.utils.ToggleState;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 public class AccessibleCheckBox extends AccessibleControl implements ToggleProvider {
     CheckBox checkBox ;
@@ -42,7 +43,7 @@ public class AccessibleCheckBox extends AccessibleControl implements ToggleProvi
     {
         super(checkBox);
         this.checkBox = checkBox ;
-                
+
         // initialize to receive state change event
         checkBox.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -60,7 +61,7 @@ public class AccessibleCheckBox extends AccessibleControl implements ToggleProvi
                     toggleCurrState = ToggleState.ON;
                     toggleOldState = ToggleState.OFF ;
                 }
-                firePropertyChange(EventIds.AUTOMATION_PROPERTY_CHANGED, 
+                firePropertyChange(EventIds.AUTOMATION_PROPERTY_CHANGED,
                         toggleOldState.hashCode(), toggleCurrState.hashCode());
             }
         });
@@ -74,12 +75,12 @@ public class AccessibleCheckBox extends AccessibleControl implements ToggleProvi
             toggleState = ToggleState.INDETERMINATE;
         if( checkBox.isSelected() )
             toggleState = ToggleState.ON;
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer(this.toString()+ "getToggleState" + toggleState.toString());
         }
         return toggleState ;
-       
-   }    
+
+   }
     //
     // Summary:
     //     Retrieves the value of a property supported by the UI Automation provider.
@@ -142,7 +143,7 @@ public class AccessibleCheckBox extends AccessibleControl implements ToggleProvi
     {
         return (Object)super.getAccessibleElement() ;
     }
-    
+
     @Override
     public void toggle()
     {

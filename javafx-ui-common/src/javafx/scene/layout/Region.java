@@ -74,6 +74,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
 import javafx.util.Callback;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
  * Region is the base class for all JavaFX Node-based UI Controls, and all layout containers.
@@ -1168,7 +1169,7 @@ public class Region extends Parent {
         setWidth(width);
         setHeight(height);
         PlatformLogger logger = Logging.getLayoutLogger();
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer(this.toString() + " resized to " + width + " x " + height);
         }
     }

@@ -42,8 +42,7 @@ import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.binding.Variable;
 import javafx.collections.ObservableList;
-import org.junit.Ignore;
-import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -161,7 +160,7 @@ public class SelectBindingTest {
             pojoC.setNext(person2);
             assertEquals(person2, objectBinding.get());
     }
-    
+
     @Test
     public void testPOJOObject_3() {
             final POJOPerson person1 = new POJOPerson("P1");
@@ -221,7 +220,7 @@ public class SelectBindingTest {
     public void testPOJODouble() {
             POJONext pojoA = new POJONext();
             pojoA.setNext(b);
-            
+
 
             final Person person = new Person();
             person.setSomething(-Math.E);
@@ -554,8 +553,8 @@ public class SelectBindingTest {
 	@Test
     public void stressTestRandomOperationsResultInCorrectListenersInstalled() {
 
-            final int logLevel = Logging.getLogger().getLevel();
-            Logging.getLogger().setLevel(PlatformLogger.SEVERE);
+            final Level logLevel = Logging.getLogger().level();
+            Logging.getLogger().setLevel(Level.SEVERE);
             List<String> steps = new ArrayList<String>();
 
             Random rand = new Random(System.currentTimeMillis());

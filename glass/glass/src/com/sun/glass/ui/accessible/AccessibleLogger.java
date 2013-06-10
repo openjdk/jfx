@@ -26,43 +26,31 @@ package com.sun.glass.ui.accessible;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 public class AccessibleLogger {
 
     private static final PlatformLogger logger = initLogger();
-    private static final int logLevel = logger.getLevel();
 
     private static PlatformLogger initLogger() {
         PlatformLogger logger = PlatformLogger.getLogger("accessible");
         String levelString = AccessController.doPrivileged(
         new PrivilegedAction<String>() {
             public String run() {
-                return System.getProperty("log.accessible");
+                return System.getProperty("log.accessible", "SEVERE").toUpperCase();
             }
         });
-        int level = PlatformLogger.SEVERE;
-        if (levelString != null) {
-            try {
-                level = Integer.parseInt(levelString);
-            } catch (NumberFormatException nfe) {
-                try {
-                    level = PlatformLogger.class
-                            .getField(levelString.toUpperCase())
-                            .getInt(null);
-                } catch (Exception e) { }
-            }
+        try {
+            logger.setLevel(Level.valueOf(levelString));
+        } catch (Exception e) {
+            logger.setLevel(Level.SEVERE);
         }
-        logger.setLevel(level);
         return logger;
     }
 
     public static PlatformLogger getLogger() {
         return logger;
     }
-
-    public static boolean isLogging(int level) {
-        return level >= logLevel;
-    }
-
 }

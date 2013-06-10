@@ -31,13 +31,13 @@ import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.SystemClipboard;
 import com.sun.glass.ui.Application;
 
-import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 final class LensDnDClipboard extends SystemClipboard {
 
     public LensDnDClipboard() {
         super(Clipboard.DND);
-        if (LensLogger.isLogging(PlatformLogger.FINE)) {
+        if (LensLogger.getLogger().isLoggable(Level.FINE)) {
             LensLogger.getLogger().fine("constructor called");
         }
     }
@@ -48,7 +48,7 @@ final class LensDnDClipboard extends SystemClipboard {
      * @param action mask of actions from Clipboard
      */
     public void actionPerformed(int action) {
-        if (LensLogger.isLogging(PlatformLogger.FINE)) {
+        if (LensLogger.getLogger().isLoggable(Level.FINE)) {
             LensLogger.getLogger().fine("action =  ["+
                                          Integer.toHexString(action)+"]");
         }
@@ -58,7 +58,7 @@ final class LensDnDClipboard extends SystemClipboard {
     protected  boolean isOwner() {
         //called many time while the hovering over target node
         //So reduced log level to finest in order to reduce log clutter
-        if (LensLogger.isLogging(PlatformLogger.FINEST)) {
+        if (LensLogger.getLogger().isLoggable(Level.FINEST)) {
             LensLogger.getLogger().finest("returns true");
         }
         return true;//For DnD its always true
@@ -70,11 +70,11 @@ final class LensDnDClipboard extends SystemClipboard {
      * events
      */
     protected  void pushToSystem(HashMap<String, Object> cacheData, int supportedActions) {
-        if (LensLogger.isLogging(PlatformLogger.FINE)) {
+        if (LensLogger.getLogger().isLoggable(Level.FINE)) {
             LensLogger.getLogger().fine("handling drag");
         }
 
-        if (LensLogger.isLogging(PlatformLogger.FINER)) {
+        if (LensLogger.getLogger().isLoggable(Level.FINER)) {
             LensLogger.getLogger().finer("data =[cachedData = "+ cacheData+
                 " supportedActions= "+Integer.toHexString(supportedActions));
         }
@@ -82,13 +82,13 @@ final class LensDnDClipboard extends SystemClipboard {
         LensApplication lensApp = (LensApplication)Application.GetApplication();
         lensApp.notifyDragStart();
 
-        if (LensLogger.isLogging(PlatformLogger.FINE)) {
+        if (LensLogger.getLogger().isLoggable(Level.FINE)) {
             LensLogger.getLogger().fine("starting nested event loop");
         }
 
         lensApp.enterDnDEventLoop();
         // The loop is exited in LensApplication.LensDragEvent.dispatch()
-        if (LensLogger.isLogging(PlatformLogger.FINE)) {
+        if (LensLogger.getLogger().isLoggable(Level.FINE)) {
             LensLogger.getLogger().fine("nested event loop finished");
             LensLogger.getLogger().fine("Drag done - notifying actionPreformed");
         }
@@ -105,7 +105,7 @@ final class LensDnDClipboard extends SystemClipboard {
 
     protected  void pushTargetActionToSystem(int actionDone) {
         LensLogger.getLogger().warning("Not supported");
-        if (LensLogger.isLogging(PlatformLogger.FINE)) {
+        if (LensLogger.getLogger().isLoggable(Level.FINE)) {
             LensLogger.getLogger().fine("actionDone = "+
                                          Integer.toHexString(actionDone));
         }
@@ -114,7 +114,7 @@ final class LensDnDClipboard extends SystemClipboard {
 
     protected  Object popFromSystem(String mimeType) {
         LensLogger.getLogger().warning("Not supported");
-        if (LensLogger.isLogging(PlatformLogger.FINE)) {
+        if (LensLogger.getLogger().isLoggable(Level.FINE)) {
             LensLogger.getLogger().fine("mimeType="+mimeType);
         }
         return null;

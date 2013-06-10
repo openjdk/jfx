@@ -34,7 +34,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import sun.util.logging.PlatformLogger;
 
 final class LensWindow extends Window {
 
@@ -173,10 +172,8 @@ final class LensWindow extends Window {
             x = Math.min(screenWidth - width, x);
             y = Math.min(screenHeight - height, y);
 
-            if (LensLogger.isLogging(PlatformLogger.FINE)) {
-                LensLogger.getLogger().fine("Setting bounds to "+ x + "," + y +
-                                            "+" + width + "x" + height);
-            }
+            LensLogger.getLogger().fine("Setting bounds to "+ x + "," + y +
+                                        "+" + width + "x" + height);
         }
 
         setBoundsImpl(nativeWindowPointer, x, y, width, height,
@@ -212,7 +209,7 @@ final class LensWindow extends Window {
         }
         if (view != null && result) {
             // the system assumes a resize notification to set the View
-            // sizes and to get the Scene to layout correctly. 
+            // sizes and to get the Scene to layout correctly.
             ((LensView)view)._notifyResize(getWidth(), getHeight());
         }
         return result;
@@ -340,7 +337,7 @@ final class LensWindow extends Window {
     // wrappers so Application run loop can get where it needs to go
     protected void _notifyClose() {
         //This event is called by LensWindowManager when a window needs to be
-        //closed, so this is a synthetic way to emulate platform window manager 
+        //closed, so this is a synthetic way to emulate platform window manager
         //window close event
         notifyClose();
         close();

@@ -60,6 +60,7 @@ import com.sun.javafx.scene.control.Logging;
 import javafx.css.StyleableProperty;
 import javafx.stage.Window;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
  * An extension of PopupWindow that allows for CSS styling.
@@ -106,7 +107,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * @since JavaFX 2.1
      */
     protected CSSBridge bridge;
-    
+
     /**
      * Create a new empty PopupControl.
      */
@@ -130,43 +131,43 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
     // TODO we should have some interface which has id, styleClass, style, etc
     // which is in common between PopupControl and Node.
-    
+
     // TODO we should have some interface for minWidth, maxWidth, etc which are
     // both here and on Node.
-    
+
     /**
      * The id of this {@code PopupControl}. This simple string identifier is useful for
      * finding a specific Node within the scene graph. While the id of a Node
      * should be unique within the scene graph, this uniqueness is not enforced.
-     * This is analogous to the "id" attribute on an HTML element 
+     * This is analogous to the "id" attribute on an HTML element
      * (<a href="http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier">CSS ID Specification</a>).
      *
      * @defaultValue null
      */
     private final StringProperty id = new SimpleStringProperty(this, "id");
     public final StringProperty idProperty() { return id; }
-    
+
     /**
      * Sets the id of this {@code PopupControl}. This simple string identifier is useful for
      * finding a specific Node within the scene graph. While the id of a Node
      * should be unique within the scene graph, this uniqueness is not enforced.
-     * This is analogous to the "id" attribute on an HTML element 
+     * This is analogous to the "id" attribute on an HTML element
      * (<a href="http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier">CSS ID Specification</a>).
      *
-     * @param value  the id assigned to this {@code PopupControl} using the {@code setId} 
+     * @param value  the id assigned to this {@code PopupControl} using the {@code setId}
      *         method or {@code null}, if no id has been assigned.
      * @defaultValue null
      */
     public final void setId(String value) { id.set(value); }
-    
+
     /**
      * The id of this {@code PopupControl}. This simple string identifier is useful for
      * finding a specific Node within the scene graph. While the id of a Node
      * should be unique within the scene graph, this uniqueness is not enforced.
-     * This is analogous to the "id" attribute on an HTML element 
+     * This is analogous to the "id" attribute on an HTML element
      * (<a href="http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier">CSS ID Specification</a>).
      *
-     * @return the id assigned to this {@code PopupControl} using the {@code setId} 
+     * @return the id assigned to this {@code PopupControl} using the {@code setId}
      *         method or {@code null}, if no id has been assigned.
      * @defaultValue null
      */
@@ -209,7 +210,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
     /**
      * Returns the list of String identifiers that make up the styleClass
-     * for this PopupControl. 
+     * for this PopupControl.
      */
     @Override public final ObservableList<String> getStyleClass() { return styleClass; }
 
@@ -226,7 +227,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * @defaultValue empty string
      */
     private final StringProperty style = new SimpleStringProperty(this, "style");
-    
+
     /**
      * A string representation of the CSS style associated with this
      * specific {@code PopupControl}. This is analogous to the "style" attribute of an
@@ -234,11 +235,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * variable contains style properties and values and not the
      * selector portion of a style rule.
      * @param value The inline CSS style to use for this {@code PopupControl}.
-     *         {@code null} is implicitly converted to an empty String. 
+     *         {@code null} is implicitly converted to an empty String.
      * @defaultValue empty string
      */
     public final void setStyle(String value) { style.set(value); }
-    
+
     // TODO: javadoc copied from property for the sole purpose of providing a return tag
     /**
      * A string representation of the CSS style associated with this
@@ -254,10 +255,10 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     @Override public final String getStyle() { return style.get(); }
     public final StringProperty styleProperty() { return style; }
 
-    @Override public final ObjectProperty<Skin<?>> skinProperty() { 
+    @Override public final ObjectProperty<Skin<?>> skinProperty() {
         return bridge.skin; }
-    @Override public final void setSkin(Skin<?> value) { 
-        skinProperty().set(value); 
+    @Override public final void setSkin(Skin<?> value) {
+        skinProperty().set(value);
     }
     @Override public final Skin<?> getSkin() {
         return skinProperty().getValue();
@@ -289,7 +290,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * enabling applications to easily restrict the resizability of the control.
      */
     private DoubleProperty minWidth;
-    
+
     /**
      * Property for overriding the control's computed minimum width.
      * This should only be set if the control's internally computed minimum width
@@ -304,7 +305,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * enabling applications to easily restrict the resizability of the control.
      */
     public final void setMinWidth(double value) { minWidthProperty().set(value); }
-    
+
     /**
      * Property for overriding the control's computed minimum width.
      * This should only be set if the control's internally computed minimum width
@@ -356,7 +357,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      */
     private DoubleProperty minHeight;
-    
+
     /**
      * Property for overriding the control's computed minimum height.
      * This should only be set if the control's internally computed minimum height
@@ -372,7 +373,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      */
     public final void setMinHeight(double value) { minHeightProperty().set(value); }
-    
+
     /**
      * Property for overriding the control's computed minimum height.
      * This should only be set if the control's internally computed minimum height
@@ -434,7 +435,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * computed preferred width.
      */
     private DoubleProperty prefWidth;
-    
+
     /**
      * Property for overriding the control's computed preferred width.
      * This should only be set if the control's internally computed preferred width
@@ -445,7 +446,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * computed preferred width.
      */
     public final void setPrefWidth(double value) { prefWidthProperty().set(value); }
-    
+
     /**
      * Property for overriding the control's computed preferred width.
      * This should only be set if the control's internally computed preferred width
@@ -488,7 +489,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      */
     private DoubleProperty prefHeight;
-    
+
     /**
      * Property for overriding the control's computed preferred height.
      * This should only be set if the control's internally computed preferred height
@@ -500,7 +501,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      */
     public final void setPrefHeight(double value) { prefHeightProperty().set(value); }
-    
+
     /**
      * Property for overriding the control's computed preferred height.
      * This should only be set if the control's internally computed preferred height
@@ -562,7 +563,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * enabling applications to easily restrict the resizability of the control.
      */
     private DoubleProperty maxWidth;
-    
+
     /**
      * Property for overriding the control's computed maximum width.
      * This should only be set if the control's internally computed maximum width
@@ -577,7 +578,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * enabling applications to easily restrict the resizability of the control.
      */
     public final void setMaxWidth(double value) { maxWidthProperty().set(value); }
-    
+
     /**
      * Property for overriding the control's computed maximum width.
      * This should only be set if the control's internally computed maximum width
@@ -628,7 +629,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      */
     private DoubleProperty maxHeight;
-    
+
     /**
      * Property for overriding the control's computed maximum height.
      * This should only be set if the control's internally computed maximum height
@@ -644,7 +645,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      */
     public final void setMaxHeight(double value) { maxHeightProperty().set(value); }
-    
+
     /**
      * Property for overriding the control's computed maximum height.
      * This should only be set if the control's internally computed maximum height
@@ -709,7 +710,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     private double maxWidthCache = -1;
     private double maxHeightCache = -1;
     private boolean skinSizeComputed = false;
-    
+
     /**
      * Called during layout to determine the minimum width for this node.
      * Returns the value from <code>minWidth(forHeight)</code> unless
@@ -860,7 +861,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         recomputeSkinSize();
         return getSkinNode() == null? 0 : getSkinNode().prefHeight(width);
     }
-    
+
     private void recomputeSkinSize() {
         if (!skinSizeComputed && getOwnerWindow() != null) { //getScene() != null && getScene().getRoot() != null) {
             // RT-14094, RT-16754: We need the skins of the popup
@@ -892,7 +893,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      **************************************************************************/
 
     private static class StyleableProperties {
-        private static final CssMetaData<CSSBridge,String> SKIN = 
+        private static final CssMetaData<CSSBridge,String> SKIN =
             new CssMetaData<CSSBridge,String>("-fx-skin",
                 StringConverter.getInstance()) {
 
@@ -917,7 +918,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
-    
+
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
@@ -939,13 +940,13 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     /**
-     * @see Node#pseudoClassStateChanged(javafx.css.PseudoClass, boolean) 
+     * @see Node#pseudoClassStateChanged(javafx.css.PseudoClass, boolean)
      * @since JavaFX 8.0
      */
     public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
         bridge.pseudoClassStateChanged(pseudoClass, active);
     }
-    
+
     /**
      * {@inheritDoc}
      * @return "PopupControl"
@@ -955,7 +956,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     public String getTypeSelector() {
         return "PopupControl";
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -1007,18 +1008,18 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated    
+    @Deprecated
    // SB-dependency: RT-21094 has been filed to track this
    public Node impl_styleableGetNode() {
         return bridge;
     }
-   
+
     /**
      * @since JavaFX 2.1
      */
     protected class CSSBridge extends Group {
         private String currentSkinClassName = null;
-        
+
         /**
          * {@inheritDoc}
          * @since JavaFX 8.0
@@ -1069,7 +1070,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             @Override
             public void set(Skin<?> v) {
 
-                if (v == null 
+                if (v == null
                     ? oldValue == null
                     : oldValue != null && v.getClass().equals(oldValue.getClass()))
                     return;
@@ -1081,20 +1082,20 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 // result in reinstalling the skin
                 currentSkinClassName = v == null ? null : v.getClass().getName();
 
-                // if someone calls setSkin, we need to make it look like they 
+                // if someone calls setSkin, we need to make it look like they
                 // called set on skinClassName in order to keep CSS from overwriting
-                // the skin. 
+                // the skin.
                 skinClassNameProperty().set(currentSkinClassName);
 
             }
-            
+
             @Override protected void invalidated() {
                 // Let CSS know that this property has been manually changed
                 // Dispose of the old skin
                 if (oldValue != null) oldValue.dispose();
                 // Get the new value, and save it off as the new oldValue
                 oldValue = getValue();
-                
+
                 prefWidthCache = -1;
                 prefHeightCache = -1;
                 minWidthCache = -1;
@@ -1107,15 +1108,15 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 else bridge.getChildren().clear();
 
                 // calling impl_reapplyCSS() as the styleable properties may now
-                // be different, as we will now be able to return styleable properties 
-                // belonging to the skin. If impl_reapplyCSS() is not called, the 
-                // getCssMetaData() method is never called, so the 
+                // be different, as we will now be able to return styleable properties
+                // belonging to the skin. If impl_reapplyCSS() is not called, the
+                // getCssMetaData() method is never called, so the
                 // skin properties are never exposed.
                 impl_reapplyCSS();
-                
+
                 // DEBUG: Log that we've changed the skin
                 final PlatformLogger logger = Logging.getControlsLogger();
-                if (logger.isLoggable(PlatformLogger.FINEST)) {
+                if (logger.isLoggable(Level.FINEST)) {
                     logger.finest("Stored skin[" + getValue() + "] on " + this);
                 }
             }
@@ -1130,7 +1131,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 return "skin";
             }
         };
-        
+
         /**
         * Keeps a reference to the name of the class currently acting as the skin.
         */
@@ -1138,30 +1139,30 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         private StringProperty skinClassNameProperty() {
             if (skinClassName == null) {
                 skinClassName = new StyleableStringProperty() {
-                    
+
                     @Override
                     public void set(String v) {
                         // do not allow the skin to be set to null through CSS
                         if (v == null || v.isEmpty() || v.equals(get())) return;
                         super.set(v);
                     }
-                    
+
                     @Override
                     public void invalidated() {
 
                         //
-                        // if the current skin is not null, then 
+                        // if the current skin is not null, then
                         // see if then check to see if the current skin's class name
                         // is the same as skinClassName. If it is, then there is
-                        // no need to load the skin class. Note that the only time 
+                        // no need to load the skin class. Note that the only time
                         // this would be the case is if someone called setSkin since
-                        // the skin would be set ahead of the skinClassName 
+                        // the skin would be set ahead of the skinClassName
                         // (skinClassName is set from the skinProperty's invalidated
                         // method, so the skin would be set, then the skinClassName).
                         // If the skinClassName is set first (via CSS), then this
                         // invalidated method won't get called unless the value
                         // has changed (thus, we won't reload the same skin).
-                        // 
+                        //
                         if (get() != null) {
                             if (!get().equals(currentSkinClassName)) {
                                 loadSkinClass();
@@ -1190,23 +1191,23 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 };
             }
             return skinClassName;
-        }   
-        
+        }
+
         protected void setSkinClassName(String skinClassName) {
-            skinClassNameProperty().set(skinClassName);        
+            skinClassNameProperty().set(skinClassName);
         }
 
         private void loadSkinClass() {
             if (skinClassName == null
-                || skinClassName.get() == null 
+                || skinClassName.get() == null
                 || skinClassName.get().isEmpty()) {
-                final String msg = 
-                    "Empty -fx-skin property specified for popup control " + this;   
+                final String msg =
+                    "Empty -fx-skin property specified for popup control " + this;
                 final List<CssError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssError error = new CssError(msg);
                     errors.add(error); // RT-19884
-                } 
+                }
                 Logging.getControlsLogger().severe(msg);
                 return;
             }
@@ -1224,16 +1225,16 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 }
 
                 if (skinConstructor == null) {
-                    final String msg = 
-                        "No valid constructor defined in '" + skinClassName 
-                        + "' for popup control " + this 
+                    final String msg =
+                        "No valid constructor defined in '" + skinClassName
+                        + "' for popup control " + this
                         + ".\r\nYou must provide a constructor that accepts a single "
                         + "PopupControl parameter in " + skinClassName + ".";
                     final List<CssError> errors = StyleManager.getErrors();
                     if (errors != null) {
                         CssError error = new CssError(msg);
                         errors.add(error); // RT-19884
-                    } 
+                    }
                     Logging.getControlsLogger().severe(msg);
                     return;
                 } else {
@@ -1244,24 +1245,24 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 }
 
             } catch (InvocationTargetException e) {
-                final String msg = 
-                    "Failed to load skin '" + skinClassName 
+                final String msg =
+                    "Failed to load skin '" + skinClassName
                     + "' for popup control " + this;
                 final List<CssError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
                     errors.add(error); // RT-19884
-                } 
+                }
                 Logging.getControlsLogger().severe(msg, e.getCause());
             } catch (Exception e) {
-                final String msg = 
-                    "Failed to load skin '" + skinClassName 
+                final String msg =
+                    "Failed to load skin '" + skinClassName
                     + "' for popup control " + this;
                 final List<CssError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
                     errors.add(error); // RT-19884
-                } 
+                }
                 Logging.getControlsLogger().severe(msg, e.getCause());
             }
         }
