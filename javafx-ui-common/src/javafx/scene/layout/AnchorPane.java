@@ -306,7 +306,7 @@ public class AnchorPane extends Pane {
             final Insets insets = getInsets();
             return areaWidth - insets.getLeft() - insets.getRight() - leftAnchor - rightAnchor;
         }
-        return computeChildPrefAreaWidth(child, Insets.EMPTY, height);
+        return computeChildPrefAreaWidth(child, -1, Insets.EMPTY, height);
     }
 
     private double computeChildHeight(Node child, Double topAnchor, Double bottomAnchor, double areaHeight, double width) {
@@ -314,7 +314,7 @@ public class AnchorPane extends Pane {
             final Insets insets = getInsets();
             return areaHeight - insets.getTop() - insets.getBottom() - topAnchor - bottomAnchor;
         }
-        return computeChildPrefAreaHeight(child, Insets.EMPTY, width);
+        return computeChildPrefAreaHeight(child, -1, Insets.EMPTY, width);
     }
 
     @Override protected void layoutChildren() {

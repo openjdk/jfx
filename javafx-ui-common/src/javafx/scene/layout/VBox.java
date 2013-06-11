@@ -432,15 +432,15 @@ public class VBox extends Pane {
             Insets margin = getMargin(child);
             if (minimum) {
                 if (insideWidth != -1 && isFillWidth) {
-                    temp[0][i] = computeChildMinAreaHeight(child, margin, insideWidth);
+                    temp[0][i] = computeChildMinAreaHeight(child, -1, margin, insideWidth);
                 } else {
-                    temp[0][i] = computeChildMinAreaHeight(child, margin, -1);
+                    temp[0][i] = computeChildMinAreaHeight(child, -1, margin, -1);
                 }
             } else {
                 if (insideWidth != -1 && isFillWidth) {
-                    temp[0][i] = computeChildPrefAreaHeight(child, margin, insideWidth);
+                    temp[0][i] = computeChildPrefAreaHeight(child, -1, margin, insideWidth);
                 } else {
-                    temp[0][i] = computeChildPrefAreaHeight(child, margin, -1);
+                    temp[0][i] = computeChildPrefAreaHeight(child, -1, margin, -1);
                 }
             }
         }
@@ -477,13 +477,13 @@ public class VBox extends Pane {
             adjustingNumber = managed.size();
             for (int i = 0, size = managed.size(); i < size; i++) {
                 final Node child = managed.get(i);
-                temp[i] = computeChildMinAreaHeight(child, getMargin(child), width);
+                temp[i] = computeChildMinAreaHeight(child, -1, getMargin(child), width);
             }
         } else {
             for (int i = 0, size = managed.size(); i < size; i++) {
             final Node child = managed.get(i);
             if (getVgrow(child) == priority) {
-                temp[i] = computeChildMaxAreaHeight(child, getMargin(child), width);
+                temp[i] = computeChildMaxAreaHeight(child, -1, getMargin(child), width);
                 adjustingNumber++;
             } else {
                 temp[i] = -1;

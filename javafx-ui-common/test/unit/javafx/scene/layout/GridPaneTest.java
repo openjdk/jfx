@@ -2383,26 +2383,29 @@ public class GridPaneTest {
         gridpane.add(child2, 1, 0);
         gridpane.add(child3, 2, 0);
 
+        GridPane.setMargin(child1, new Insets(120, 0, 0, 0));
+        GridPane.setMargin(child2, new Insets(10, 0, 0, 0));
+
         RowConstraints rc = new RowConstraints();
         rc.setValignment(VPos.BASELINE);
         gridpane.getRowConstraints().addAll(rc);
 
 
         assertEquals(800, gridpane.prefWidth(-1), 1e-100);
-        assertEquals(580, gridpane.prefHeight(-1), 1e-100); //from the baseline, the childs have
-                                                            // max(10, 190, 290)px to top +
-                                                            // max(290, 10, 10)px to bottom = 580
+        assertEquals(600, gridpane.prefHeight(-1), 1e-100); //from the baseline, the childs have
+                                                            // max(310, 300, 10)px to top +
+                                                            // max(10, 10, 290)px to bottom = 600
 
         gridpane.autosize();
         gridpane.layout();
 
         assertEquals(0, child1.getLayoutX(), 1e-100);
-        assertEquals(100, child1.getLayoutY(), 1e-100);
+        assertEquals(120, child1.getLayoutY(), 1e-100);
         assertEquals(200, child1.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(200, child1.getLayoutBounds().getHeight(), 1e-100);
 
         assertEquals(200, child2.getLayoutX(), 1e-100);
-        assertEquals(0, child2.getLayoutY(), 1e-100);
+        assertEquals(20, child2.getLayoutY(), 1e-100);
         assertEquals(300, child2.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(300, child2.getLayoutBounds().getHeight(), 1e-100);
     }
