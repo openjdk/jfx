@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.ReentrantLock;
@@ -727,29 +728,6 @@ public final class WebPage {
                     frame.drop();
                 }
             }
-        } finally {
-            unlockPage();
-        }
-    }
-
-    // TODO: rework it
-    public void print(long frameID, WCGraphicsContext gc, WCRectangle toPaint) {
-        lockPage();
-        try {
-            log.log(Level.FINEST, "print: " + toPaint.getIntX() + " " +
-                    toPaint.getIntY() + " " + toPaint.getIntWidth() + " " +
-                    toPaint.getIntHeight());
-            if (isDisposed) {
-                log.log(Level.FINE, "print() request for a disposed web page.");
-                return;
-            }
-            if (!frames.contains(frameID)) {
-                return;
-            }
-
-            twkPrint(frameID, gc,
-                     toPaint.getIntX(), toPaint.getIntY(),
-                     toPaint.getIntWidth(), toPaint.getIntHeight());
         } finally {
             unlockPage();
         }
@@ -1747,37 +1725,59 @@ public final class WebPage {
 
     // ---- PRINTING SUPPORT ---- //
 
-    public int startPrinting(long frameID, float prefWidth, boolean scale) {
+    public int beginPrinting(float width, float height) {
         lockPage();
         try {
-            log.log(Level.FINE, "Start printing: width=" + prefWidth + ", scale=" + scale);
             if (isDisposed) {
-                log.log(Level.FINE, "startPrinting() request for a disposed web page.");
+                log.warning("beginPrinting() called for a disposed web page.");
                 return 0;
             }
-            if (!frames.contains(frameID)) {
-                return 0;
-            }
-            int adjustedPrefWidth = twkStartPrinting(frameID, prefWidth, scale);
-            log.log(Level.FINE, "Preferred width = " + adjustedPrefWidth);
-            return adjustedPrefWidth;
+            return twkBeginPrinting(getPage(), width, height);
         } finally {
             unlockPage();
         }
     }
 
-    public void endPrinting(long frameID) {
+    public void endPrinting() {
         lockPage();
         try {
-            log.log(Level.FINE, "End printing");
             if (isDisposed) {
-                log.log(Level.FINE, "endPrinting() request for a disposed web page.");
+                log.warning("endPrinting() called for a disposed web page.");
                 return;
             }
-            if (!frames.contains(frameID)) {
+            twkEndPrinting(getPage());
+        } finally {
+            unlockPage();
+        }
+    }
+
+    public void print(final WCGraphicsContext gc, final int pageNumber) {
+        lockPage();
+        try {
+            if (isDisposed) {
+                log.warning("print() called for a disposed web page.");
                 return;
             }
-            twkEndPrinting(frameID);
+            final WCRenderQueue rq = WCGraphicsManager.getGraphicsManager().
+                    createRenderQueue(null, true);
+            final CountDownLatch l = new CountDownLatch(1);
+            Invoker.getInvoker().invokeOnEventThread(new Runnable() {
+                public void run() {
+                    try {
+                        twkPrint(getPage(), rq, pageNumber);
+                    } finally {
+                        l.countDown();
+                    }
+                }
+            });
+
+            try {
+                l.await();
+            } catch (InterruptedException e) {
+                rq.dispose();
+                return;
+            }
+            rq.decode(gc);
         } finally {
             unlockPage();
         }
@@ -2458,8 +2458,9 @@ public final class WebPage {
     private native void twkReset(long pFrame);
 
     private native int twkGetFrameHeight(long pFrame);
-    private native int twkStartPrinting(long pFrame, float prefWidth, boolean scale);
-    private native void twkEndPrinting(long pFrame);
+    private native int twkBeginPrinting(long pPage, float width, float height);
+    private native void twkEndPrinting(long pPage);
+    private native void twkPrint(long pPage, WCRenderQueue gc, int pageNumber);
     private native float twkAdjustFrameHeight(long pFrame, float oldTop, float oldBottom, float bottomLimit);
 
     private native int[] twkGetVisibleRect(long pFrame);
@@ -2469,7 +2470,6 @@ public final class WebPage {
     private native void twkSetBackgroundColor(long pFrame, int backgroundColor);
 
     private native void twkSetBounds(long pPage, int x, int y, int w, int h);
-    private native void twkPrint(long pPage, WCGraphicsContext gc, int x, int y, int w, int h);
     private native void twkPrePaint(long pPage);
     private native void twkUpdateContent(long pPage, WCRenderQueue rq, int x, int y, int w, int h);
     private native void twkPostPaint(long pPage, WCRenderQueue rq,

@@ -35,6 +35,7 @@ import javafx.scene.control.Control;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import javafx.print.PrinterJob;
 import javafx.scene.control.Skin;
 
 
@@ -83,5 +84,17 @@ public class HTMLEditor extends Control {
      */
     public void setHtmlText(String htmlText) {
         ((HTMLEditorSkin)getSkin()).setHTMLText(htmlText);
+    }
+    
+    /**
+     * Prints the content of the editor using the given printer job.
+     * <p>This method does not modify the state of the job, nor does it call
+     * {@link PrinterJob#endJob}, so the job may be safely reused afterwards.
+     * 
+     * @param job printer job used for printing
+     * @since JavaFX 8.0
+     */
+    public void print(PrinterJob job) {
+        ((HTMLEditorSkin)getSkin()).print(job);
     }
 }

@@ -691,6 +691,47 @@ static String defaultUserAgent()
     return userAgentString;
 }
 
+int WebPage::beginPrinting(float width, float height)
+{
+    Frame* frame = m_page->mainFrame();
+    if (!frame->document() || !frame->view() || !frame->document()->renderer())
+        return 0;
+    frame->document()->updateLayout();
+
+    ASSERT(!m_printContext);
+    m_printContext = adoptPtr(new PrintContext(frame));
+    m_printContext->begin(width, height);
+    m_printContext->computePageRects(FloatRect(0, 0, width, height), 0, 0, 1, height);
+    return m_printContext->pageCount();
+}
+
+void WebPage::endPrinting()
+{
+    ASSERT(m_printContext);
+    if (!m_printContext)
+        return;
+
+    m_printContext->end();
+    m_printContext.clear();
+}
+
+void WebPage::print(GraphicsContext& gc, int pageIndex)
+{
+    ASSERT(m_printContext);
+    ASSERT(pageIndex >= 0 && pageIndex < m_printContext->pageCount());
+
+    if (!m_printContext || pageIndex < 0 || pageIndex >= m_printContext->pageCount())
+        return;
+
+    float pageWidth = m_printContext->pageRect(pageIndex).width();
+
+    gc.save();
+    gc.translate(0, 0);
+    m_printContext->spoolPage(gc, pageIndex, pageWidth);
+    gc.restore();
+    gc.platformContext()->rq().flushBuffer();
+}
+
 } // namespace WebCore
 
 using namespace WebCore;
@@ -1140,45 +1181,24 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkReset
     frame->tree()->clearName();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkStartPrinting
-    (JNIEnv* env, jobject self, jlong pFrame,
-     jfloat prefWidth, jboolean scale)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkBeginPrinting
+    (JNIEnv* env, jobject self, jlong pPage, jfloat width, jfloat height)
 {
-//look at webnode\Source\WebKit\qt\Api\qwebframe.cpp
-    Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->contentRenderer()) {
-        return 0;
-    }
-
-//utatodo: that is above me. No logic at all.
-    float frameSetWidth = prefWidth;
-/*
-    if (frame->document() && frame->document()->isFrameSet()) {
-        frameSetWidth += frame->contentRenderer()->docRight();//frame->contentRenderer()->rightLayoutOverflow();
-    }
-*/
-    frame->setPrinting(
-        true,
-        FloatSize(frameSetWidth, frameSetWidth),
-        FloatSize(frameSetWidth, frameSetWidth),
-        1.0,
-        DoNotAdjustViewSize);
-    return frameSetWidth;
+    return WebPage::webPageFromJLong(pPage)->beginPrinting(width, height);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkEndPrinting
-    (JNIEnv* env, jobject self, jlong pFrame)
+    (JNIEnv* env, jobject self, jlong pPage)
 {
-    Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame) {
-        return;
-    }
-    frame->setPrinting(
-        false,
-        FloatSize(),
-        FloatSize(),
-        1.0,
-        DoNotAdjustViewSize);
+    return WebPage::webPageFromJLong(pPage)->endPrinting();
+}
+
+JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPrint
+    (JNIEnv* env, jobject self, jlong pPage, jobject rq, jint pageIndex)
+{
+    PlatformContextJava* ppgc = new PlatformContextJava(rq);
+    GraphicsContext gc(ppgc);
+    WebPage::webPageFromJLong(pPage)->print(gc, pageIndex);
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetFrameHeight
@@ -1309,25 +1329,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPostPaint
   (JNIEnv*, jobject, jlong pPage, jobject rq, jint x, jint y, jint w, jint h)
 {
     WebPage::webPageFromJLong(pPage)->postPaint(rq, x, y, w, h);
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPrint
-    (JNIEnv* env, jobject self, jlong pFrame, jobject gContext, jint x, jint y, jint w, jint h)
-{
-    Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    FrameView* frameView = frame->view();
-    if (!frameView) {
-        return;
-    }
-
-    frameView->layout();
-    if (gContext) {
-        PlatformContextJava pgc(gContext);
-        GraphicsContext gc(&pgc);
-        IntRect toPaint = IntRect(x, y, w, h);
-        frameView->paintContents(&gc, toPaint);
-        gc.platformContext()->rq().flushBuffer();
-    }
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetEncoding
