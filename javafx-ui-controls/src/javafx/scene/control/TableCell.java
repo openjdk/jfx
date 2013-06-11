@@ -551,10 +551,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
             
             // update the 'item' property of this cell.
-            if ((newValue != null && ! newValue.equals(oldValue)) || 
-                    oldValue != null && ! oldValue.equals(newValue)) {
-                updateItem(newValue, false);
-            }
+            updateItem(newValue, false);
         }
         
         if (currentObservableValue == null) {

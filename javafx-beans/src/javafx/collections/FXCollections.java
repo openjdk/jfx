@@ -1641,17 +1641,23 @@ public class FXCollections {
 
         private final ObservableSet<E> backingSet;
         private SetListenerHelper<E> listenerHelper;
-        private final SetChangeListener<E> listener;
+        private SetChangeListener<E> listener;
 
         public UnmodifiableObservableSet(ObservableSet<E> backingSet) {
             this.backingSet = backingSet;
-            listener = new SetChangeListener<E>() {
-                @Override
-                public void onChanged(Change<? extends E> c) {
-                    callObservers(new SetAdapterChange<E>(UnmodifiableObservableSet.this, c));
-                }
-            };
-            this.backingSet.addListener(new WeakSetChangeListener<E>(listener));
+            this.listener = null;
+        }
+
+        private void initListener() {
+            if (listener == null) {
+                listener = new SetChangeListener<E>() {
+                    @Override
+                    public void onChanged(Change<? extends E> c) {
+                        callObservers(new SetAdapterChange<E>(UnmodifiableObservableSet.this, c));
+                    }
+                };
+                this.backingSet.addListener(new WeakSetChangeListener<E>(listener));
+            }
         }
 
         private void callObservers(SetChangeListener.Change<? extends E> change) {
@@ -1687,6 +1693,7 @@ public class FXCollections {
 
         @Override
         public void addListener(InvalidationListener listener) {
+            initListener();
             listenerHelper = SetListenerHelper.addListener(listenerHelper, listener);
         }
 
@@ -1697,6 +1704,7 @@ public class FXCollections {
 
         @Override
         public void addListener(SetChangeListener<? super E> listener) {
+            initListener();
             listenerHelper = SetListenerHelper.addListener(listenerHelper, listener);
         }
 

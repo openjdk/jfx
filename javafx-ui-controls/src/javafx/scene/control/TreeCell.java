@@ -164,6 +164,12 @@ public class TreeCell<T> extends IndexedCell<T> {
             pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !isExpanded);
         }
     };
+
+    private final InvalidationListener rootPropertyListener = new InvalidationListener() {
+        @Override public void invalidated(Observable observable) {
+            updateItem();
+        }
+    };
     
     private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
     private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelPropertyListener);
@@ -173,6 +179,8 @@ public class TreeCell<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakLeafListener = new WeakInvalidationListener(leafListener);
     private final WeakInvalidationListener weakTreeItemExpandedInvalidationListener =
             new WeakInvalidationListener(treeItemExpandedInvalidationListener);
+    private final WeakInvalidationListener weakRootPropertyListener = new WeakInvalidationListener(rootPropertyListener);
+
     
     
     
@@ -269,6 +277,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                     oldTreeView.editingItemProperty().removeListener(weakEditingListener);
                     oldTreeView.focusModelProperty().removeListener(weakFocusModelPropertyListener);
                     oldTreeView.selectionModelProperty().removeListener(weakSelectionModelPropertyListener);
+                    oldTreeView.rootProperty().removeListener(weakRootPropertyListener);
                 }
                 
                 weakTreeViewRef = null;
@@ -292,7 +301,8 @@ public class TreeCell<T> extends IndexedCell<T> {
                 treeView.editingItemProperty().addListener(weakEditingListener);
                 treeView.focusModelProperty().addListener(weakFocusModelPropertyListener);
                 treeView.selectionModelProperty().addListener(weakSelectionModelPropertyListener);
-                
+                treeView.rootProperty().addListener(weakRootPropertyListener);
+
                 weakTreeViewRef = new WeakReference<TreeView<T>>(treeView);
             }
 
@@ -465,15 +475,8 @@ public class TreeCell<T> extends IndexedCell<T> {
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
-            if ((newTreeItem != null && ! newTreeItem.equals(oldTreeItem)) || 
-                    oldTreeItem != null && ! oldTreeItem.equals(newTreeItem)) {
-                updateTreeItem(newTreeItem);
-            }
-            
-            if ((newValue != null && ! newValue.equals(oldValue)) || 
-                    oldValue != null && ! oldValue.equals(newValue)) {
-                updateItem(newValue, false);
-            }
+            updateTreeItem(newTreeItem);
+            updateItem(newValue, false);
         } else {
             updateTreeItem(null);
             updateItem(null, true);

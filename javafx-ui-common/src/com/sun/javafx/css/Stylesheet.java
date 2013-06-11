@@ -201,6 +201,9 @@ public class Stylesheet {
         
     }
 
+    private String[] stringStore;
+    String[] getStringStore() { return stringStore; };
+
     /** Load a binary stylesheet file from a input stream */
     public static Stylesheet loadBinary(URL url) {
 
@@ -225,6 +228,7 @@ public class Stylesheet {
             final String[] strings = StringStore.readBinary(dataInputStream);
             // read binary data
             stylesheet = new Stylesheet(url);
+            stylesheet.stringStore = strings;
             stylesheet.readBinary(dataInputStream,strings);
 
         } catch (FileNotFoundException fnfe) {
