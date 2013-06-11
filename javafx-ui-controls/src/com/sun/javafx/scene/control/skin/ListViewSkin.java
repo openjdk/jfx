@@ -305,25 +305,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         };
     }
 
-//    @Override public void configCell(ListCell listCell) {
-//        final int cellIndex = listCell.getIndex();
-//
-//        // Compute whether the index for this cell is for a real item
-//        boolean valid = cellIndex >=0 && cellIndex < getItemCount();
-//
-//        // Cause the cell to update itself
-//        if (valid) {
-//            T newItem = listViewItems.get(cellIndex);
-//            if (newItem == null || ! newItem.equals(listCell.getItem())) {
-//                listCell.updateItem(newItem, false);
-//            }
-//        } else {
-//            listCell.updateItem(null, true);
-//        }
-//    }
-
-    @Override
-    protected void layoutChildren(final double x, final double y,
+    @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
         super.layoutChildren(x, y, w, h);
         
@@ -345,18 +327,22 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     }
     
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        checkState();
+
+        double pw = 0.0;
         if (getItemCount() == 0) {
             if (placeholderRegion == null) {
                 updatePlaceholderRegionVisibility();
             }
-            return placeholderRegion.prefWidth(height) + leftInset + rightInset;
-        } else {
-            return computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset) * 0.618033987;
+            if (placeholderRegion != null) {
+                pw = placeholderRegion.prefWidth(height) + leftInset + rightInset;
+            }
         }
+
+        return Math.max(pw, computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset) * 0.618033987);
     }
 
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-//        return getInsets().getTop() + flow.computePrefHeight(width) + getInsets().getBottom();
         return 400;
     }
     

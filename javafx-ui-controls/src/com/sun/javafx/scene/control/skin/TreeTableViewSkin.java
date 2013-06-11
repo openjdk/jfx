@@ -59,13 +59,6 @@ import javafx.util.Callback;
 
 public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>, TreeTableViewBehavior<S>, TreeTableRow<S>> {
     
-    // basically this is a convenience map that maps from a TreeTableView to a list
-    // that is used to translate list get(int)/size() requests into results from
-    // the TreeItem hierarchy. Not the greatest solution in the world, but it'll
-    // do for now.
-    static final WeakHashMap<TreeTableView, TreeTableViewBackingList> treeItemToListMap =
-            new WeakHashMap<TreeTableView, TreeTableViewBackingList>();
-    
     public TreeTableViewSkin(final TreeTableView<S> treeTableView) {
         super(treeTableView, new TreeTableViewBehavior(treeTableView));
         
@@ -73,8 +66,6 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         this.tableBackingList = new TreeTableViewBackingList(treeTableView);
         this.tableBackingListProperty = new SimpleObjectProperty<TreeTableViewBackingList<S>>(tableBackingList);
         
-        treeItemToListMap.put(treeTableView, tableBackingList);
-
         flow.setFixedCellSize(treeTableView.getFixedCellSize());
         
         super.init(treeTableView);
@@ -139,12 +130,6 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         registerChangeListener(treeTableView.rowFactoryProperty(), "ROW_FACTORY");
         registerChangeListener(treeTableView.expandedItemCountProperty(), "TREE_ITEM_COUNT");
         registerChangeListener(treeTableView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
-    }
-    
-    @Override public void dispose() {
-        treeItemToListMap.remove(getSkinnable());
-        
-        super.dispose();
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
