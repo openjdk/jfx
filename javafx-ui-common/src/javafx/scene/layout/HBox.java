@@ -150,6 +150,7 @@ public class HBox extends Pane {
 
     private boolean biasDirty = true;
     private boolean performingLayout = false;
+    private double baseline = Double.NaN;
     private Orientation bias;
     private double[][] tempArray;
 
@@ -203,8 +204,8 @@ public class HBox extends Pane {
     public static Insets getMargin(Node child) {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
-    
-        private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
+
+    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
         public Insets call(Node n) {
             return getMargin(n);
         }
@@ -392,7 +393,7 @@ public class HBox extends Pane {
                 }
             }
             biasDirty = false;
-        }        
+        }
         return bias;
     }
 
@@ -448,20 +449,21 @@ public class HBox extends Pane {
         final double insideHeight = height == -1? -1 : height -
                                      snapSpace(getInsets().getTop()) - snapSpace(getInsets().getBottom());
         final boolean shouldFillHeight = shouldFillHeight();
+        final double baseline = getBaseline();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Insets margin = getMargin(child);
             if (minimum) {
                 if (insideHeight != -1 && shouldFillHeight) {
-                    temp[0][i] = computeChildMinAreaWidth(child, margin, insideHeight);
+                    temp[0][i] = computeChildMinAreaWidth(child, baseline, margin, insideHeight);
                 } else {
-                    temp[0][i] = computeChildMinAreaWidth(child, margin, -1);
+                    temp[0][i] = computeChildMinAreaWidth(child, baseline, margin, -1);
                 }
             } else {
                 if (insideHeight != -1 && shouldFillHeight) {
-                    temp[0][i] = computeChildPrefAreaWidth(child, margin, insideHeight);
+                    temp[0][i] = computeChildPrefAreaWidth(child, baseline, margin, insideHeight);
                 } else {
-                    temp[0][i] = computeChildPrefAreaWidth(child, margin, -1);
+                    temp[0][i] = computeChildPrefAreaWidth(child, baseline, margin, -1);
                 }
             }
         }
@@ -488,6 +490,7 @@ public class HBox extends Pane {
 
     private double growOrShrinkAreaWidths(List<Node>managed, double areaWidths[][], Priority priority, double extraWidth, double height) {
         final boolean shrinking = extraWidth < 0;
+        final double baseline = getBaseline();
         int adjustingNumber = 0;
 
         double[] usedWidths = areaWidths[0];
@@ -497,13 +500,13 @@ public class HBox extends Pane {
             adjustingNumber = managed.size();
             for (int i = 0, size = managed.size(); i < size; i++) {
                 final Node child = managed.get(i);
-                temp[i] = computeChildMinAreaWidth(child, getMargin(child), height);
+                temp[i] = computeChildMinAreaWidth(child, baseline, getMargin(child), height);
             }
         } else {
             for (int i = 0, size = managed.size(); i < size; i++) {
                 final Node child = managed.get(i);
                 if (getHgrow(child) == priority) {
-                    temp[i] = computeChildMaxAreaWidth(child, getMargin(child), height);
+                    temp[i] = computeChildMaxAreaWidth(child, baseline, getMargin(child), height);
                     adjustingNumber++;
                 } else {
                     temp[i] = -1;
@@ -555,7 +558,17 @@ public class HBox extends Pane {
         }
         biasDirty = true;
         bias = null;
+        baseline = Double.NaN;
         super.requestLayout();
+    }
+
+    private double getBaseline() {
+        if (Double.isNaN(baseline)) {
+            baseline = getAlignmentInternal().getVpos() == VPos.BASELINE
+                    ? getMaxAreaBaselineOffset(getManagedChildren(), marginAccessor)
+                    : -1;
+        }
+        return baseline;
     }
 
     @Override protected void layoutChildren() {
@@ -580,8 +593,7 @@ public class HBox extends Pane {
 
         double x = left + computeXOffset(width - left - right, contentWidth, align.getHpos());
         double y = top;
-        double baselineOffset = alignVpos == VPos.BASELINE ? getMaxBaselineOffset(managed)
-                                    : height/2;
+        double baselineOffset = getBaseline();
 
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
