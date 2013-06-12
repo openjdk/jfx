@@ -28,13 +28,10 @@ package com.sun.javafx.tools.packager.bundlers;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.resource.linux.LinuxResources;
 import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
@@ -278,6 +275,23 @@ public class LinuxDebBundler extends Bundler {
         }
     }
 
+    private long getInstalledSizeKB() {
+        return getInstalledSizeKB(appImageRoot) >> 10;
+    }
+
+    private long getInstalledSizeKB(File dir) {
+        long count = 0;
+        for (File file : dir.listFiles()) {
+            if (file.isFile()) {
+                count += file.length();
+            }
+            else if (file.isDirectory()) {
+                count += getInstalledSizeKB(file);
+            }
+        }
+        return count;
+    }
+
     private boolean prepareProjectConfig() throws IOException {
         Map<String, String> data = new HashMap<String, String>();
 
@@ -301,6 +315,7 @@ public class LinuxDebBundler extends Bundler {
                 params.licenseType != null ? params.licenseType : "unknown");
         data.put("APPLICATION_LICENSE_TEXT", getLicenseText());
         data.put("APPLICATION_ARCH", getArch());
+        data.put("APPLICATION_INSTALLED_SIZE", Long.toString(getInstalledSizeKB()));
 
         //prepare control file
         Writer w = new BufferedWriter(new FileWriter(getConfig_ControlFile()));
