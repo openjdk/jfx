@@ -8528,6 +8528,7 @@ public abstract class Node implements EventTarget, Styleable {
             case CLEAN:
                 break;
             case DIRTY_BRANCH:
+            {
                 Parent me = (Parent)this;
                 // clear the flag first in case the flag is set to something
                 // other than clean by downstream processing.
@@ -8537,8 +8538,10 @@ public abstract class Node implements EventTarget, Styleable {
                     children.get(i).processCSS();
                 }
                 break;
-            case REAPPLY:
+            }
             case RECALCULATE:
+                cssFlag = CssFlags.REAPPLY; // TODO
+            case REAPPLY:
             case UPDATE:
             default:
                 impl_processCSS();
@@ -8618,18 +8621,11 @@ public abstract class Node implements EventTarget, Styleable {
         } else if (cssFlag == CssFlags.RECALCULATE) {
 
             // Recalculate means that the in-line style has changed.
-            if (styleHelper != null) {
-                styleHelper.inlineStyleChanged(this);
-            } else {
-                // If there isn't a styleHelper now, there might need to be.
-                // Note that it is not necessary to REAPPLY css to children
-                // since the stylesheets haven't changed. The children only
-                // need to RECALCULATE their styles. A child that didn't
-                // have a styleHelper before will drop into this block, but if
-                // there are no matching style or inline styles, the child's
-                // styleHelper will still be null.
-                styleHelper = CssStyleHelper.createStyleHelper(this);
-            }
+
+            // Note: recalculate used to do something different than reapply,
+            // but the way calculated values are cached has changed.
+            // TODO: re-evalutate handling of CssFlags.RECALCULATE
+            styleHelper = CssStyleHelper.createStyleHelper(this);
 
         }
 
@@ -8639,7 +8635,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         // Transition to the new state and apply styles
         if (styleHelper != null) {
-            styleHelper.transitionToState(this);
+                styleHelper.transitionToState(this);
         }
     }
 

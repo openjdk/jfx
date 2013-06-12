@@ -169,28 +169,59 @@ final public class StyleManager {
     private static final Map<Scene, CacheContainer> cacheContainerMap
             = new WeakHashMap<Scene, CacheContainer>();
 
-    /** 
-     * StyleHelper uses this cache but it lives here so it can be cleared
-     * when style-sheets change.
-     */
-    public Map<StyleCache.Key,StyleCache> getStyleCache(Scene scene) {   
-        
-        if (scene == null) return null;
-        
+
+    private CacheContainer getCacheContainer(Styleable styleable) {
+
+        if (styleable == null) return null;
+
+        Scene scene = null;
+
+        if (styleable instanceof Node) {
+
+            Node node = (Node)styleable;
+            scene = node.getScene();
+
+        } else if (styleable instanceof Window) {
+            // this catches the PopupWindow case
+            scene = ((Window)styleable).getScene();
+        }
+        // todo: what other Styleables need to be handled here?
+
         CacheContainer container = cacheContainerMap.get(scene);
         if (container == null) {
             container = new CacheContainer();
             cacheContainerMap.put(scene, container);
         }
+
+        return container;
+
+    }
+    /** 
+     * StyleHelper uses this cache but it lives here so it can be cleared
+     * when style-sheets change.
+     */
+    public StyleCache getSharedCache(Styleable styleable, StyleCache.Key key) {
         
-        return container.getStyleCache();
+        CacheContainer container = getCacheContainer(styleable);
+        if (container == null) return null;
+
+        Map<StyleCache.Key,StyleCache> styleCache = container.getStyleCache();
+        if (styleCache == null) return null;
+
+        StyleCache sharedCache = styleCache.get(key);
+        if (sharedCache == null) {
+            sharedCache = new StyleCache();
+            styleCache.put(new StyleCache.Key(key), sharedCache);
+        }
+
+        return sharedCache;
     }
     
-    public StyleMap getStyleMap(Scene scene, int smapId) {
+    public StyleMap getStyleMap(Styleable styleable, int smapId) {
+
+        if (smapId == -1) return StyleMap.EMPTY_MAP;
         
-        if (scene == null || smapId == -1) return StyleMap.EMPTY_MAP;
-        
-        CacheContainer container = cacheContainerMap.get(scene);
+        CacheContainer container = getCacheContainer(styleable);
         if (container == null) return StyleMap.EMPTY_MAP;
         
         return container.getStyleMap(smapId);
@@ -1160,7 +1191,7 @@ final public class StyleManager {
         for (CacheContainer container : cacheContainerMap.values()) {
             container.clearCache();            
         }
-        
+
         final Iterator<Window> windows =
                 AccessController.doPrivileged(
                         new PrivilegedAction<Iterator<Window>>() {
@@ -1285,7 +1316,25 @@ final public class StyleManager {
 
         return list;
     }
-    
+
+    // return true if this node or any of its parents has an inline style.
+    private static Node nodeWithInlineStyles(Node node) {
+
+        Node parent = node;
+
+        while (parent != null) {
+
+            final String inlineStyle = parent.getStyle();
+            if (inlineStyle != null && inlineStyle.isEmpty() == false) {
+                return parent;
+            }
+            parent = parent.getParent();
+
+        }
+
+        return null;
+    }
+
     // reuse key to avoid creation of numerous small objects
     private Key key = null;
 
@@ -1298,11 +1347,11 @@ final public class StyleManager {
         if (scene == null) {
             return StyleMap.EMPTY_MAP;
         }
-        
-        CacheContainer cacheContainer = cacheContainerMap.get(scene);
+
+        CacheContainer cacheContainer = getCacheContainer(node);
         if (cacheContainer == null) {
-            cacheContainer = new CacheContainer();
-            cacheContainerMap.put(scene, cacheContainer);
+            assert false : node.toString();
+            return StyleMap.EMPTY_MAP;
         }
 
         final Parent parent = 
@@ -1317,14 +1366,17 @@ final public class StyleManager {
         final List<StylesheetContainer> sceneStylesheets =
                     gatherSceneStylesheets(scene);
         
-        boolean hasSceneStylesheets = sceneStylesheets.isEmpty() == false;
-        
+        final boolean hasSceneStylesheets = sceneStylesheets.isEmpty() == false;
+
+        final String inlineStyle = node.getStyle();
+        final boolean hasInlineStyles = inlineStyle != null && inlineStyle.trim().isEmpty() == false;
         //
         // Are there any stylesheets at all?
         // If not, then there is nothing to match and the
         // resulting StyleMap is going to end up empty
         // 
-        if (hasParentStylesheets == false 
+        if (hasInlineStyles == false
+                && hasParentStylesheets == false
                 && hasSceneStylesheets == false
                 && userAgentStylesheets.isEmpty()) {
             return StyleMap.EMPTY_MAP;
@@ -1339,7 +1391,7 @@ final public class StyleManager {
         if (key == null) {
             key = new Key();
         }
-        
+
         key.className = cname;
         key.id = id;
         for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
@@ -1351,12 +1403,12 @@ final public class StyleManager {
         }
 
         Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets);
-        
         Cache cache = cacheMap.get(key);
-                
+
         if (cache != null) {
             // key will be reused, so clear the styleClasses for next use
             key.styleClasses.clear();
+
         } else {
 
             // If the cache is null, then we need to create a new Cache and
@@ -1549,12 +1601,65 @@ final public class StyleManager {
                 baseStyleMapId = styleMapId = 0;
             }
         }
-       
+
+        /**
+         * Get the mapping of property to style from Node.style for this node.
+         */
+        private Selector getInlineStyleSelector(String inlineStyle) {
+
+            // If there are no styles for this property then we can just bail
+            if ((inlineStyle == null) || inlineStyle.trim().isEmpty()) return null;
+
+            if (inlineStylesCache != null && inlineStylesCache.containsKey(inlineStyle)) {
+                // Value of Map entry may be null!
+                return inlineStylesCache.get(inlineStyle);
+            }
+
+            //
+            // inlineStyle wasn't in the inlineStylesCache, or inlineStylesCache was null
+            //
+
+            if (inlineStylesCache == null) {
+                inlineStylesCache = new HashMap<>();
+            }
+
+            final Stylesheet inlineStylesheet =
+                    CSSParser.getInstance().parse("*{"+inlineStyle+"}");
+
+            if (inlineStylesheet != null) {
+
+                inlineStylesheet.setOrigin(StyleOrigin.INLINE);
+
+                List<Rule> rules = inlineStylesheet.getRules();
+                Rule rule = rules != null && !rules.isEmpty() ? rules.get(0) : null;
+
+                List<Selector> selectors = rule != null ? rule.getUnobservedSelectorList() : null;
+                Selector selector = selectors != null && !selectors.isEmpty() ? selectors.get(0) : null;
+                selector.setOrdinal(-1);
+
+                inlineStylesCache.put(inlineStyle, selector);
+                return selector;
+
+            } else {
+
+                // even if inlineStylesheet is null, put it in cache so we don't
+                // bother with trying to parse it again.
+                inlineStylesCache.put(inlineStyle, null);
+                return null;
+            }
+        }
+
         private Map<StyleCache.Key,StyleCache> styleCache;
 
         private Map<List<String>, Map<Key,Cache>> cacheMap;
         
         private List<StyleMap> styleMapList;
+
+        /**
+         * Cache of parsed, inline styles. The key is Node.style.
+         * The value is the Selector from the inline stylesheet.
+         */
+        private Map<String,Selector> inlineStylesCache;
 
         /*
          * A simple counter used to generate a unique id for a StyleMap. 
@@ -1578,15 +1683,23 @@ final public class StyleManager {
 
         private static class Key {
             final long[] key;
+            final String inlineStyle;
 
-            Key(long[] key) {
+            Key(long[] key, String inlineStyle) {
                 this.key = key;
+                // let inlineStyle be null if it is empty
+                this.inlineStyle =  (inlineStyle != null && inlineStyle.trim().isEmpty() ? null : inlineStyle);
             }
-            
+
+            @Override public String toString() {
+                return Arrays.toString(key) + (inlineStyle != null ? "* {" + inlineStyle + "}" : "");
+            }
+
             @Override
             public int hashCode() {
                 int hash = 3;
-                hash = 97 * hash + Arrays.hashCode(this.key);
+                hash = 17 * hash + Arrays.hashCode(this.key);
+                if (inlineStyle != null) hash = 17 * hash + inlineStyle.hashCode();
                 return hash;
             }
 
@@ -1599,6 +1712,9 @@ final public class StyleManager {
                     return false;
                 }
                 final Key other = (Key) obj;
+                if (inlineStyle == null ? other.inlineStyle != null : !inlineStyle.equals(other.inlineStyle)) {
+                    return false;
+                }
                 if (!Arrays.equals(this.key, other.key)) {
                     return false;
                 }
@@ -1639,7 +1755,7 @@ final public class StyleManager {
             // where the selectors that match this particular node are
             // represented by bits on the long[].
             //
-            long key[] = new long[Long.SIZE/selectorDataSize + 1];
+            long key[] = new long[selectorDataSize/Long.SIZE + 1];
             boolean nothingMatched = true;
 
             for (int s = 0; s < selectorDataSize; s++) {
@@ -1671,20 +1787,31 @@ final public class StyleManager {
                     nothingMatched = false;
                 }
             }
-            
+
+            String inlineStyle = node.getStyle();
+            boolean hasInlineStyle = inlineStyle != null && inlineStyle.trim().isEmpty() == false;
+
             // nothing matched!
-            if (nothingMatched) {
+            if (nothingMatched && hasInlineStyle == false) {
                 return StyleMap.EMPTY_MAP;
             }
-            
-            final Key keyObj = new Key(key);
+
+            final Key keyObj = new Key(key, inlineStyle);
+
             if (cache.containsKey(keyObj)) {
-                Integer id = cache.get(keyObj);
-                final StyleMap styleMap = id != null ? cacheContainer.getStyleMap(id.intValue()) : null;
+                Integer styleMapId = cache.get(keyObj);
+                final StyleMap styleMap = styleMapId != null
+                        ? cacheContainer.getStyleMap(styleMapId.intValue())
+                        : StyleMap.EMPTY_MAP;
                 return styleMap;
             }
 
             final List<Selector> selectors = new ArrayList<>();
+
+            if (hasInlineStyle) {
+                Selector selector = cacheContainer.getInlineStyleSelector(inlineStyle);
+                if (selector != null) selectors.add(selector);
+            }
 
             for (int k = 0; k<key.length; k++) {
 
@@ -1703,10 +1830,11 @@ final public class StyleManager {
                 }
             }
 
-            final int id = cacheContainer.nextSmapId();
+            int id = cacheContainer.nextSmapId();
+            cache.put(keyObj, Integer.valueOf(id));
+
             final StyleMap styleMap = new StyleMap(id, selectors);
             cacheContainer.addStyleMap(styleMap);
-            cache.put(keyObj, Integer.valueOf(id));
             return styleMap;
         }
 
