@@ -287,6 +287,13 @@ jboolean glass_screen_capture(jint x,
  */
 JavaVM *glass_application_GetVM();
 
+/** 
+ * service function to report and clear any pending exception
+ * @param env the JNI env
+ * @return true if an error was detected/reported
+ */
+jboolean glass_application_checkReportException(JNIEnv *env);
+
 /**
  * This is the first function that been called by the java code
  * before using the native library
