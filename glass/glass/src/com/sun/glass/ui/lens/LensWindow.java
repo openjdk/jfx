@@ -201,12 +201,8 @@ final class LensWindow extends Window {
         boolean result = false;
         LensLogger.getLogger().info(
             "set view " + view + ", visible=" + isVisible());
-        try {
-            long nativeViewPtr = (view == null) ? 0L : view.getNativeView();
-            result = attachViewToWindow(nativeWindowPointer, nativeViewPtr);
-        } catch (java.lang.Exception e) {
-            e.printStackTrace();
-        }
+        long nativeViewPtr = (view == null) ? 0L : view.getNativeView();
+        result = attachViewToWindow(nativeWindowPointer, nativeViewPtr);
         if (view != null && result) {
             // the system assumes a resize notification to set the View
             // sizes and to get the Scene to layout correctly.
