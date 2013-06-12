@@ -1475,6 +1475,7 @@ final class CssStyleHelper {
     {
 
         StyleOrigin origin = null;
+        int distance = 0;
 
         // Each time a sub-property is encountered, cvFont is passed along to
         // calculateValue and the resulting font becomes cvFont. In the end
@@ -1506,7 +1507,35 @@ final class CssStyleHelper {
         //
         CascadingStyle fontShorthand = getStyle(styleable, property, states);
         if (fontShorthand == null && lookupForFontCache == false) {
-            fontShorthand = getInheritedStyle(styleable, property);
+
+            Node parent = styleable != null ? styleable.getParent() : null;
+
+            while (parent != null) {
+
+                CssStyleHelper parentStyleHelper = parent.styleHelper;
+                if (parentStyleHelper != null) {
+
+                    distance += 1;
+
+                    Set<PseudoClass> transitionStates = parent.pseudoClassStates;
+                    CascadingStyle cascadingStyle = parentStyleHelper.getStyle(parent, property, transitionStates);
+
+                    if (cascadingStyle != null) {
+
+                        final ParsedValueImpl cssValue = cascadingStyle.getParsedValueImpl();
+
+                        if ("inherit".equals(cssValue.getValue()) == false) {
+                            fontShorthand = cascadingStyle;
+                            break;
+                        }
+                    }
+
+                }
+
+                parent = parent.getParent();
+
+            }
+
         }
 
         // if user set the font, then fontShorthand must be at zero
@@ -1535,9 +1564,8 @@ final class CssStyleHelper {
         }
 
         CascadingStyle fontSize = getStyle(styleable, property.concat("-size"), states);
-        // only inherit if font-shorthand is null
-        if (fontSize == null && fontShorthand == null && lookupForFontCache == false) {
-            fontSize = getInheritedStyle(styleable, property.concat("-size"));
+        if (fontSize == null && lookupForFontCache == false) {
+            fontSize = lookupInheritedFont(styleable, property.concat("-size"), distance);
         }
 
         // font-size must be closer and more specific than font shorthand
@@ -1570,7 +1598,7 @@ final class CssStyleHelper {
 
             CascadingStyle fontWeight = getStyle(styleable, property.concat("-weight"), states);
             if (fontWeight == null) {
-                fontWeight = getInheritedStyle(styleable,property.concat("-weight"));
+                fontWeight = lookupInheritedFont(styleable,property.concat("-weight"), distance);
             }
 
             if (fontWeight != null) {
@@ -1599,7 +1627,7 @@ final class CssStyleHelper {
 
             CascadingStyle fontStyle = getStyle(styleable, property.concat("-style"), states);
             if (fontStyle == null) {
-                fontStyle = getInheritedStyle(styleable, property.concat("-style"));
+                fontStyle = lookupInheritedFont(styleable, property.concat("-style"), distance);
             }
 
             if (fontStyle != null) {
@@ -1629,7 +1657,7 @@ final class CssStyleHelper {
 
             CascadingStyle fontFamily = getStyle(styleable, property.concat("-family"), states);
             if (fontFamily == null) {
-                fontFamily = getInheritedStyle(styleable,property.concat("-family"));
+                fontFamily = lookupInheritedFont(styleable,property.concat("-family"), distance);
             }
 
             if (fontFamily != null) {
@@ -1664,6 +1692,46 @@ final class CssStyleHelper {
             return SKIP;
         }
     }
+
+    /**
+     * Called when we must getInheritedStyle a value from a parent node in the scenegraph.
+     */
+    private CascadingStyle lookupInheritedFont(
+            Node styleable,
+            String property,
+            int distance) {
+
+        Node parent = styleable != null ? styleable.getParent() : null;
+
+        int nlooks = distance;
+        while (parent != null && nlooks >= 0) {
+
+            CssStyleHelper parentStyleHelper = parent.styleHelper;
+            if (parentStyleHelper != null) {
+
+                nlooks -= 1;
+
+                Set<PseudoClass> transitionStates = parent.pseudoClassStates;
+                CascadingStyle cascadingStyle = parentStyleHelper.getStyle(parent, property, transitionStates);
+
+                if (cascadingStyle != null) {
+
+                    final ParsedValueImpl cssValue = cascadingStyle.getParsedValueImpl();
+
+                    if ("inherit".equals(cssValue.getValue()) == false) {
+                        return cascadingStyle;
+                    }
+                }
+
+            }
+
+            parent = parent.getParent();
+
+        }
+
+        return null;
+    }
+
 
     /**
      * Called from CssMetaData getMatchingStyles

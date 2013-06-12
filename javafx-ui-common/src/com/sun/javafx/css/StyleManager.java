@@ -1470,7 +1470,7 @@ final public class StyleManager {
         //
         // Create a style helper for this node from the styles that match.
         //
-        StyleMap smap = cache.getStyleMap(cacheContainer, node, triggerStates);
+        StyleMap smap = cache.getStyleMap(cacheContainer, node, triggerStates, hasInlineStyles);
 
         return smap;
     }
@@ -1737,9 +1737,9 @@ final public class StyleManager {
             this.cache = new HashMap<Key, Integer>();
         }
 
-        private StyleMap getStyleMap(CacheContainer cacheContainer, Node node, Set<PseudoClass>[] triggerStates) {
+        private StyleMap getStyleMap(CacheContainer cacheContainer, Node node, Set<PseudoClass>[] triggerStates, boolean hasInlineStyle) {
 
-            if (selectors == null || selectors.isEmpty()) {
+            if ((selectors == null || selectors.isEmpty()) && !hasInlineStyle) {
                 return StyleMap.EMPTY_MAP;
             }
 
@@ -1789,14 +1789,12 @@ final public class StyleManager {
                 }
             }
 
-            String inlineStyle = node.getStyle();
-            boolean hasInlineStyle = inlineStyle != null && inlineStyle.trim().isEmpty() == false;
-
             // nothing matched!
             if (nothingMatched && hasInlineStyle == false) {
                 return StyleMap.EMPTY_MAP;
             }
 
+            final String inlineStyle = node.getStyle();
             final Key keyObj = new Key(key, inlineStyle);
 
             if (cache.containsKey(keyObj)) {
