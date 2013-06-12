@@ -734,6 +734,13 @@ public abstract class Labeled extends Control {
     //     * externalization will work as expected
     //     */
 
+    @Override public String toString() {
+        StringBuilder builder =
+            new StringBuilder(super.toString())
+                .append("'").append(getText()).append("'");
+        return builder.toString();
+    }
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

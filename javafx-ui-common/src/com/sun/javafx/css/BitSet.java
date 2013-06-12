@@ -345,8 +345,8 @@ abstract class BitSet<T> implements ObservableSet<T> {
     public boolean retainAll(Collection<?> c) {
 
         if (c == null) {
-            // this not modified!
-            return false;
+            clear();
+            return true;
         }
         
         boolean modified = false;
@@ -361,11 +361,19 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
             final long[] intersection = new long[max];
 
+
+            //
+            // Make sure modified is set if maskOne has more bits than maskTwo.
+            // If max is zero, then the loop that does the intersection is
+            // never entered (since maskTwo is empty). If modified isn't set,
+            // then the if (modified) block isn't entered and this.bits isn't
+            // set to the intersection.
+            //
+            modified |= (maskOne.length > max);
+
             for(int n = 0; n < max; n++) {
                 intersection[n] = maskOne[n] & maskTwo[n];
-                
                 modified |= intersection[n] != maskOne[n];
-                
             }
 
             if (modified) {

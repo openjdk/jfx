@@ -24,13 +24,12 @@
  */
 package com.sun.javafx.css;
 
-import java.lang.ref.Reference;
-import java.lang.ref.WeakReference;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import javafx.css.PseudoClass;
-import javafx.css.StyleOrigin;
+import javafx.scene.text.Font;
 
 /**
  *
@@ -38,90 +37,50 @@ import javafx.css.StyleOrigin;
 public final class StyleCacheEntry {
     
     public StyleCacheEntry() {
-        this(null);
-    }
-    
-    public StyleCacheEntry(StyleCacheEntry sharedCacheEntry) {
-        this.sharedCacheRef = sharedCacheEntry != null ? new WeakReference<StyleCacheEntry>(sharedCacheEntry) : null;
-    }   
-    
-    public CalculatedValue getFont() {
-        return font;
-    }
-    
-    public void setFont(CalculatedValue font) {
-        this.font = font;
     }
     
     public CalculatedValue get(String property) {
-//        if (values == null) return null;
-        
+
         CalculatedValue cv = null;
-        
-        if (values != null && ! values.isEmpty()) {
-            cv = values.get(property);
-        }
-        if (cv == null && sharedCacheRef != null) {
-            final StyleCacheEntry ce = sharedCacheRef.get();
-            if (ce != null && ce.values != null) {
-                cv = ce.values.get(property);
-            }
-            // if referent is null, we should skip the value.
-            // else cv = CalculatedValue.SKIP;
+        if (calculatedValues != null && ! calculatedValues.isEmpty()) {
+            cv = calculatedValues.get(property);
         }
         return cv;
     }
 
-    public void put(String property, CalculatedValue cv) {
+    public void put(String property, CalculatedValue calculatedValue) {
 
-        // If the origin of the calculated value is inline or user,
-        // then use local cache.
-        // If the origin of the calculated value is not inline or user,
-        // then use local cache if the font origin is inline or user and
-        // the value was calculated from a relative size unit.
-        final boolean isLocal =
-            (cv.getOrigin() == StyleOrigin.INLINE || cv.getOrigin() == StyleOrigin.USER)            
-            || (cv.isRelative() &&
-                (font.getOrigin() == StyleOrigin.INLINE || 
-                 font.getOrigin() == StyleOrigin.USER));
-        
-        if (isLocal) {
-            makeValuesMap();
-            values.put(property, cv);
-        } else {
-            // if isLocal is false, then sharedCacheRef cannot be null.
-            final StyleCacheEntry ce = sharedCacheRef.get();
-            ce.makeValuesMap();
-            if (ce != null && ce.values.containsKey(property) == false) {
-                // don't override value already in shared cache.
-                ce.values.put(property, cv);
-            }
+        if (calculatedValues == null) {
+            this.calculatedValues = new HashMap<>(5);
         }
-    }
-    
-    private void makeValuesMap() {
-        if (values == null) {
-            this.values = new HashMap<String, CalculatedValue>();
-        }
+
+        calculatedValues.put(property, calculatedValue);
     }
 
     public final static class Key {
 
         private final Set<PseudoClass>[] pseudoClassStates;
+        private final double fontSize;
     
-        public Key(Set<PseudoClass>[] pseudoClassStates, int count) {
-                        
-            this.pseudoClassStates = new PseudoClassState[count];
-            
-            for (int n=0; n<count; n++) {
+        public Key(Set<PseudoClass>[] pseudoClassStates, Font font) {
+
+            this.pseudoClassStates = new Set[pseudoClassStates.length];
+            for (int n=0; n<pseudoClassStates.length; n++) {
                 this.pseudoClassStates[n] = new PseudoClassState();
                 this.pseudoClassStates[n].addAll(pseudoClassStates[n]);
             }
+            this.fontSize = font != null ? font.getSize() : Font.getDefault().getSize();
+            
         }
-        
+
+        @Override public String toString() {
+            return Arrays.toString(pseudoClassStates) + ", " + fontSize;
+        }
+
         @Override
         public int hashCode() {
-            int hash = 7;
+            int hash = Double.hashCode(fontSize);
+
             final int iMax = pseudoClassStates != null ? pseudoClassStates.length : 0;
             
             for (int i=0; i<iMax; i++) {
@@ -136,45 +95,58 @@ public final class StyleCacheEntry {
 
         @Override
         public boolean equals(Object obj) {
-            
-            if (obj instanceof Key) {
-                
-                final Key other = (Key) obj;
 
-                // either both must be null or both must be not-null
-                if ((pseudoClassStates == null) ^ (other.pseudoClassStates == null)) {
-                    return false;
-                }
+            if (obj == this) return true;
 
-                // if one is null, the other is too. 
-                if (pseudoClassStates == null) {
-                    return true;
-                }
+            if (obj == null || obj.getClass() != this.getClass()) return false;
 
-                if (pseudoClassStates.length != other.pseudoClassStates.length) {
-                    return false;
-                }
+            final Key other = (Key) obj;
 
-                for (int i=0; i<pseudoClassStates.length; i++) {
+            //
+            // double == double is not reliable since a double is kind of
+            // a fuzzy value. And Double.compare is too precise.
+            // For javafx, most sizes are rounded to the nearest tenth
+            // (see SizeUnits.round) so comparing  here to the nearest
+            // millionth is more than adequate.
+            //
+            // We assume that both fsize values are > 0, which is a safe assumption
+            // because Font doesn't allow sizes < 0.
+            final double diff = fontSize - other.fontSize;
+            if (Math.abs(diff) > 0.000001) {
+                return false;
+            }
 
-                    final Set<PseudoClass> this_pcs = pseudoClassStates[i];
-                    final Set<PseudoClass> other_pcs = other.pseudoClassStates[i];
+            // either both must be null or both must be not-null
+            if ((pseudoClassStates == null) ^ (other.pseudoClassStates == null)) {
+                return false;
+            }
 
-                    // if one is null, the other must be too
-                    if (this_pcs == null ? other_pcs != null : !this_pcs.equals(other_pcs)) {
-                        return false;
-                    }
-                }
-
+            // if one is null, the other is too.
+            if (pseudoClassStates == null) {
                 return true;
             }
-            
-            return false;
+
+            if (pseudoClassStates.length != other.pseudoClassStates.length) {
+                return false;
+            }
+
+            for (int i=0; i<pseudoClassStates.length; i++) {
+
+                final Set<PseudoClass> this_pcs = pseudoClassStates[i];
+                final Set<PseudoClass> other_pcs = other.pseudoClassStates[i];
+
+                // if one is null, the other must be too
+                if (this_pcs == null ? other_pcs != null : !this_pcs.equals(other_pcs)) {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
     }
         
-    private final Reference<StyleCacheEntry> sharedCacheRef;
-    private Map<String,CalculatedValue> values;
-    private CalculatedValue  font; // for use in converting font relative sizes
+//    private final Reference<StyleCacheEntry> sharedCacheRef;
+    private Map<String,CalculatedValue> calculatedValues;
+//    private CalculatedValue  font; // for use in converting font relative sizes
 }
