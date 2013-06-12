@@ -193,16 +193,18 @@ public class TextFieldTreeCell<T> extends TreeCell<T> {
             return;
         }
         super.startEdit();
-        
-        StringConverter<T> converter = getConverter();
-        if (textField == null) {
-            textField = CellUtils.createTextField(this, converter);
+
+        if (isEditing()) {
+            StringConverter<T> converter = getConverter();
+            if (textField == null) {
+                textField = CellUtils.createTextField(this, converter);
+            }
+            if (hbox == null) {
+                hbox = new HBox(CellUtils.TREE_VIEW_HBOX_GRAPHIC_PADDING);
+            }
+
+            CellUtils.startEdit(this, converter, hbox, getTreeItemGraphic(), textField);
         }
-        if (hbox == null) {
-            hbox = new HBox(CellUtils.TREE_VIEW_HBOX_GRAPHIC_PADDING);
-        }
-        
-        CellUtils.startEdit(this, converter, hbox, getTreeItemGraphic(), textField);
     }
 
     /** {@inheritDoc} */
