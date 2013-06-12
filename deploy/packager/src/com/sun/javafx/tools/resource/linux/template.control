@@ -6,4 +6,4 @@ Priority: optional
 Architecture: APPLICATION_ARCH
 Provides: APPLICATION_NAME  
 Description: APPLICATION_SUMMARY
-Installed-Size: APPLICATION_INSTALLED_SIZE
+
