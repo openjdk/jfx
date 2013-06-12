@@ -273,8 +273,8 @@ public class LabeledText extends Text {
             //    not override
             //
             if (propOrigin == null ||
-                    newOrigin == null ||
-                    propOrigin.compareTo(newOrigin) <= 0) {
+                   (newOrigin != null &&
+                    propOrigin.compareTo(newOrigin) <= 0)) {
                 super.applyStyle(newOrigin, value);
             }
         }
