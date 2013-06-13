@@ -155,7 +155,6 @@ public class CSSParserTest {
         assertTrue(Double.compare(size, 12) == 0);
     }
     
-    @Ignore("RT-31042")
     @Test public void test_RT_18126() {
         // CSS cannot write binary -fx-background-repeat: repeat, no-repeat;
         String data = "#rt18126 {"
