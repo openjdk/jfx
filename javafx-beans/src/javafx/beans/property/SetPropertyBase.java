@@ -26,6 +26,7 @@
 package javafx.beans.property;
 
 import com.sun.javafx.binding.SetExpressionHelper;
+import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -271,12 +272,12 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
         if (newObservable == null) {
             throw new NullPointerException("Cannot bind to null");
         }
-        
+
         if (!newObservable.equals(this.observable)) {
             unbind();
             observable = newObservable;
             if (listener == null) {
-                listener = new Listener();
+                listener = new Listener<>(this);
             }
             observable.addListener(listener);
             markInvalid(value);
@@ -321,11 +322,24 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
         return result.toString();
     }
 
-    private class Listener implements InvalidationListener {
-        @Override
-        public void invalidated(Observable valueModel) {
-            markInvalid(value);
+    private static class Listener<E> implements InvalidationListener {
+
+        private final WeakReference<SetPropertyBase<E>> wref;
+
+        public Listener(SetPropertyBase<E> ref) {
+            this.wref = new WeakReference<SetPropertyBase<E>>(ref);
         }
+
+        @Override
+        public void invalidated(Observable observable) {
+            SetPropertyBase<E> ref = wref.get();
+            if (ref == null) {
+                observable.removeListener(this);
+            } else {
+                ref.markInvalid(ref.value);
+            }
+        }
+
     }
 
 }
