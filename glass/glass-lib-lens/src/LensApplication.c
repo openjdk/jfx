@@ -162,7 +162,7 @@ static void initIDs(JNIEnv *env) {
         (*env)->GetMethodID(env, jLensApplicationClass, "notifyMenuEvent",
                             "(Lcom/sun/glass/ui/lens/LensView;IIIIZ)V");
 
-    jLensApplication_notifyMenuEvent =
+    jLensApplication_reportException =
         (*env)->GetMethodID(env, jLensApplicationClass, "reportException",
                             "(Ljava/lang/Throwable;)V");
 
