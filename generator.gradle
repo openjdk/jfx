@@ -28,7 +28,7 @@ task createWrapper(type: Wrapper) {
 ext.RTDir = "."
 ext.FXDir = "../javafx"
 task generate << {
-    def excludeFromSource = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert"]
+    def excludeFromSource = ["META-INF/**", "**/doc-files/**/*", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert"]
     def includeInResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.txt", "**/*.fxml", "**/*.js", "**/*.frag", "**/*.vert"]
     def excludeFromResources = ["**/doc-files/**/*"]
 
