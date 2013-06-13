@@ -43,7 +43,13 @@ import com.javafx.experiments.importers.maya.values.MInt3Array;
 import com.javafx.experiments.importers.maya.values.MIntArray;
 import com.javafx.experiments.importers.maya.values.MPolyFace;
 import com.javafx.experiments.importers.maya.values.MString;
+import com.javafx.experiments.shape3d.SkinningTriangleMesh;
 import com.sun.javafx.geom.Vec3f;
+import javafx.animation.AnimationTimer;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.scene.Scene;
+import javafx.scene.transform.Transform;
 
 /** Loader */
 class Loader {
@@ -188,7 +194,7 @@ class Loader {
             } else if (n.isInstanceOf(fileType)) {
                 //                System.out.println("==> Found a node of fileType: " + n);
             } else if (n.isInstanceOf(skinClusterType)) {
-                // processClusterType(n);
+                processClusterType(n);
             } else if (n.isInstanceOf(meshType)) {
                 processMeshType(n, parentNode);
             } else if (n.isInstanceOf(jointType)) {
@@ -204,16 +210,15 @@ class Loader {
     protected void processClusterType(MNode n) {
         loaded.put(n, null);
         MArray ma = (MArray) n.getAttr("ma");
-        // NO_JOINTS
-        //        List<Joint> jointNodes = new ArrayList<Joint>();
-        //        for (int i = 0; i < ma.getSize(); i++) {
-        //            // hack...
-        //            MNode c = n.getIncomingConnectionToType("ma[" + i + "]", "joint");
-        //            Joint jn = (Joint) resolveNode(c);
-        //            jointNodes.add(jn);
-        ////                   //println("JOINT= {c.getName()} => {jn.id}");
-        //        }
 
+        List<Joint> jointNodes = new ArrayList<Joint>();
+        for (int i = 0; i < ma.getSize(); i++) {
+            // hack... ?
+            MNode c = n.getIncomingConnectionToType("ma[" + i + "]", "joint");
+            Joint jn = (Joint) resolveNode(c);
+            jointNodes.add(jn);
+        }
+        
         MNode outputMeshMNode = resolveOutputMesh(n);
         MNode inputMeshMNode = resolveInputMesh(n);
         if (inputMeshMNode == null || outputMeshMNode == null) {
@@ -241,87 +246,50 @@ class Loader {
             bindPreMatrix[i] = convertMatrix((MFloatArray) bindPreMatrixArray.getData(i));
         }
 
-        TriangleMesh sourceMesh = (TriangleMesh) sourceMayaMeshNode.getMesh();
-        TriangleMesh targetMesh = (TriangleMesh) targetMayaMeshNode.getMesh();
-
         MArray mayaWeights = (MArray) n.getAttr("wl");
-        //NO_JOINTS
-        //        int numJoints = jointNodes.size();
-        //
-        //        Map<Vertex, Vertex> source2target = new HashMap<Vertex, Vertex>(sourceMesh.getPointCount());
-        //
-        //        for (int vert = 0; vert < sourceMesh.getPointCount(); vert++) {
-        //
-        //            MFloatArray curWeights = (MFloatArray) mayaWeights.getData(vert).getData("w");
-        //            // NO_JOINTS
-        //            List<Double> influences = new ArrayList<Double>();
-        //           for (int j = 0; j < numJoints; j++) {
-        //               double w = j < curWeights.getSize() ? curWeights.get(j) : 0;
-        //               if (w != 0) {
-        //                   influences.add((double) j);
-        //                   influences.add(w);
-        //               }
-        //           }
-        //           int c = 0;
-        //           if (influences.size() > 0) {
-        //               //println("influences for {vert} = {for (k in influences) " {k} "}");
-        //               c = influences.size() / 2;
-        //           }
-        //
-        //            final int count = c;
-        //
-        //            Vertex v = sourceMesh.getVertices().get(vert);
-        //
-        //            if (DEBUG) {
-        //                System.out.println("vert=" + vert + " count=" + count);
-        //            }
-        //            // We create count of joints but only 4 of them will be used
-        //            int joints[] = new int[4];
-        //            float jointWeights[] = new float[4];
-        //            int jointIndex = 0;
-        //            for (int j = 0; j < count; j++) {
-        //                final int joint = influences.get(2 * j).intValue();
-        //                final double weight = influences.get(2 * j + 1);
-        //
-        //                if (sourceMesh.getJoints().size() == 0) {
-        //                    for (int k = 0; k < jointNodes.size(); k++) {
-        //                        Joint jointNode = jointNodes.get(k);
-        //                        sourceMesh.getJoints().add(new TriangleMesh.Joint(jointNode.getId(),
-        //                                bindPreMatrix[k], jointNode.getTransform()));
-        //                        jointNode.setInvertedInitialWorldTransform(bindPreMatrix[k]);
-        //                    }
-        //                }
-        //                if (Math.abs(weight) >= 1e-5 && jointIndex < 4) {
-        //                    joints[jointIndex] = joint;
-        //                    jointWeights[jointIndex] = (float) weight;
-        //                    jointIndex++;
-        //                }
-        //
-        //                if (DEBUG) {
-        //                    System.out.println("vert=" + vert + " v=" + v + " joint=" + joint + " weight=" + weight);
-        //                }
-        //            }
-        //            Vertex vr = new Vertex(v.x, v.y, v.z,
-        //                        joints[0], jointWeights[0],
-        //                        joints[1], jointWeights[1],
-        //                        joints[2], jointWeights[2],
-        //                        joints[3]);
-        //            source2target.put(v, vr);
-        //        }
-        //
-        //        for (Vertex v : sourceMesh.getVertices()) {
-        //            Vertex tv = source2target.get(v);
-        //            if (tv == null) {
-        //                tv = v;
-        //                source2target.put(v, tv);
-        //            }
-        //            targetMesh.getVertices().add(tv);
-        //        }
-        //        targetMesh.getJoints().addAll(sourceMesh.getJoints());// NO_JOINTS
-        targetMesh.getPoints().setAll(sourceMesh.getPoints());
-        targetMesh.getTexCoords().setAll(sourceMesh.getTexCoords());
-        targetMesh.getFaces().setAll(sourceMesh.getFaces());
-        targetMesh.getFaceSmoothingGroups().setAll(sourceMesh.getFaceSmoothingGroups());
+        float[][] weights = new float [mayaWeights.getSize()][jointNodes.size()];
+        for (int i=0; i<mayaWeights.getSize(); i++) {
+            MFloatArray curWeights = (MFloatArray) mayaWeights.getData(i).getData("w");
+            for (int j = 0; j < jointNodes.size(); j++) {
+                weights[i][j] = j < curWeights.getSize() ? curWeights.get(j) : 0;
+            }
+        }
+
+        TriangleMesh sourceMesh = (TriangleMesh) sourceMayaMeshNode.getMesh();
+        SkinningTriangleMesh targetMesh;
+        if (targetMayaMeshNode.getMesh() instanceof SkinningTriangleMesh) {
+            targetMesh = (SkinningTriangleMesh) targetMayaMeshNode.getMesh();
+        } else {
+            Transform meshTransform = targetMayaMeshNode.getLocalToSceneTransform();
+            targetMesh = new SkinningTriangleMesh(sourceMesh, meshTransform, weights, bindPreMatrix, jointNodes);
+            targetMayaMeshNode.setMesh(targetMesh);
+        }
+        
+        final SkinningMeshTimer skinningMeshTimer = new SkinningMeshTimer(targetMesh);
+        if (targetMayaMeshNode.getScene() != null) {
+            skinningMeshTimer.start();
+        }
+        targetMayaMeshNode.sceneProperty().addListener(new ChangeListener<Scene>() {
+            @Override
+            public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
+                if (newValue == null) {
+                    skinningMeshTimer.stop();
+                } else {
+                    skinningMeshTimer.start();
+                }
+            }
+        });
+    }
+    
+    private class SkinningMeshTimer extends AnimationTimer {
+        private SkinningTriangleMesh mesh;
+        SkinningMeshTimer(SkinningTriangleMesh mesh) {
+            this.mesh = mesh;
+        }
+        @Override
+        public void handle(long l) {
+            mesh.update();
+        }
     }
 
     protected Image loadImageFromFtnAttr(MNode fileNode, String name) {
@@ -478,7 +446,7 @@ class Loader {
 
         Mesh mesh = convertToFXMesh(n);
 
-        if (((TriangleMesh)mesh).getPoints().size() > 0) {
+//        if (((TriangleMesh)mesh).getPoints().size() > 0) {
             MeshView mv = new MeshView();
             mv.setId(n.getName());
             mv.setMaterial(material);
@@ -494,7 +462,7 @@ class Loader {
             if (node != null) {
                 ((Group) node).getChildren().add(mv);
             }
-        }
+//        }
     }
 
     protected void processJointType(MNode n, Group parentNode) {
@@ -1607,7 +1575,7 @@ class Loader {
         if (mPointTweaks != null) {
             tweaks = mPointTweaks.get();
         }
-        float[] points = new float[verts.length * 3];
+        float[] points = new float[verts.length];
         for (int index = 0; index < verts.length; index += 3) {
             if (tweaks != null && tweaks.length > index + 2) {
                 points[index] = verts[index] + tweaks[index];

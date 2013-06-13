@@ -33,6 +33,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.util.Callback;
 
 import com.sun.javafx.stage.EmbeddedWindow;
 import org.junit.Before;
@@ -682,4 +683,27 @@ public class ListCellTest {
         }
     }
 
+    private int rt_29923_count = 0;
+    @Test public void test_rt_29923() {
+        // setup test
+        cell = new ListCell<String>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                rt_29923_count++;
+            }
+        };
+        list.getItems().setAll(null, null, null);
+        cell.updateListView(list);
+
+        rt_29923_count = 0;
+        cell.updateIndex(0);
+        assertNull(cell.getItem());
+        assertFalse(cell.isEmpty());
+        assertEquals(1, rt_29923_count);
+
+        cell.updateIndex(1);
+        assertNull(cell.getItem());
+        assertFalse(cell.isEmpty());
+        assertEquals(2, rt_29923_count);
+    }
 }

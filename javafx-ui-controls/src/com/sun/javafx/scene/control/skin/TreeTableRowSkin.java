@@ -301,22 +301,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         cell.updateTreeTableRow(row);
     }
 
-    @Override protected ObjectProperty<ObservableList<TreeItem<T>>> itemsProperty() {
-        if (itemsProperty != null) {
-            return itemsProperty;
-        }
-        
-        TreeTableView<T> treeTable = getSkinnable().getTreeTableView();
-        if (TreeTableViewSkin.treeItemToListMap.containsKey(treeTable)) {
-            ObservableList<TreeItem<T>> itemsList = TreeTableViewSkin.treeItemToListMap.get(treeTable);
-            if (itemsList == null) return null;
-            
-            this.itemsProperty = new SimpleObjectProperty<ObservableList<TreeItem<T>>>(itemsList);
-        }
-        
-        return this.itemsProperty();
-    }
-
     @Override protected boolean isColumnPartiallyOrFullyVisible(TableColumnBase tc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

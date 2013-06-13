@@ -47,6 +47,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.util.Callback;
 
 import org.junit.Before;
@@ -588,5 +589,30 @@ public class ListViewTest {
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(listView, 1));
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(listView, 2));
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(listView, 3));
+    }
+
+    @Test public void test_rt29420() {
+        final ListView<String> listView = new ListView<String>();
+
+        VBox vbox = new VBox(listView);
+        StageLoader sl = new StageLoader(vbox);
+
+        // the initial width of a ListView should be the golden rectangle where
+        // the height is hardcoded to be 400
+        final double initialWidth = listView.prefWidth(-1);
+        assertEquals(400 * 0.618033987, initialWidth, 0.00);
+
+        // add in some items, and re-measure - seeing as the items are narrow,
+        // the width shouldn't change
+        listView.getItems().addAll("one", "two", "three", "four", "five", "six");
+        Toolkit.getToolkit().firePulse();
+        final double withContentWidth = listView.prefWidth(-1);
+        assertEquals(initialWidth, withContentWidth, 0.00);
+
+        // remove the items - and the width should remain the same
+        listView.getItems().clear();
+        Toolkit.getToolkit().firePulse();
+        final double afterEmptiedWidth = listView.prefWidth(-1);
+        assertEquals(initialWidth, afterEmptiedWidth, 0.00);
     }
 }
