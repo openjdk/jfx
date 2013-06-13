@@ -163,7 +163,7 @@ static void initIDs(JNIEnv *env) {
                             "(Lcom/sun/glass/ui/lens/LensView;IIIIZ)V");
 
     jLensApplication_reportException =
-        (*env)->GetMethodID(env, jLensApplicationClass, "reportException",
+        (*env)->GetStaticMethodID(env, jLensApplicationClass, "reportException",
                             "(Ljava/lang/Throwable;)V");
 
     CHECK_AND_RET_VOID(env);
