@@ -143,11 +143,6 @@ public class TableColumnHeader extends Region {
             // visually adjusts its width as necessary.
             isSizeDirty = true;
             requestLayout();
-        } else if ("TABLE_COLUMN_WIDTH".equals(p)) {
-            // It is this that ensures that when a column is resized that the header
-            // visually adjusts its width as necessary.
-            isSizeDirty = true;
-            requestLayout();
         } else if ("TABLE_COLUMN_ID".equals(p)) {
             setId(column.getId());
         } else if ("TABLE_COLUMN_STYLE".equals(p)) {

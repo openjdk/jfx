@@ -1030,8 +1030,6 @@ public abstract class Parent extends Node {
 
             // layout the children in this parent.
             layoutChildren();
-            // clear flag before recursing down so requestLayout calls arn't swallowed
-            setNeedsLayout(false);
 
             // Perform layout on each child, hoping it has random access performance!
             for (int i=0, max=children.size(); i<max; i++) {
@@ -1040,6 +1038,8 @@ public abstract class Parent extends Node {
                     ((Parent) child).layout();
                 }
             }
+            setNeedsLayout(false);
+
             performingLayout = false;
         } else {
             if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.fxIncrementCounter("Parent#layout() on clean Node");

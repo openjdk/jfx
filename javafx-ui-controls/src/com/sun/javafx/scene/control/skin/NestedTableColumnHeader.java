@@ -75,6 +75,13 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             changeListenerHandler.registerChangeListener(getTableColumn().textProperty(), "TABLE_COLUMN_TEXT");
         }
         
+        // watching for changes to the view columns in either table or tableColumn.
+        if (getTableColumn() == null && getTableViewSkin() != null) {
+            setColumns(getTableViewSkin().getColumns());
+        } else if (getTableColumn() != null) {
+            setColumns(getTableColumn().getColumns());
+        }
+
         changeListenerHandler.registerChangeListener(skin.columnResizePolicyProperty(), "TABLE_VIEW_COLUMN_RESIZE_POLICY");
     }
 
@@ -141,18 +148,11 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (this.columns != null) {
             this.columns.addListener(weakColumnsListener);
         }
+
+        updateTableColumnHeaders();
     }
     
     void updateTableColumnHeaders() {
-        // watching for changes to the view columns in either table or tableColumn.
-        if (getTableColumn() == null && getTableViewSkin() != null) {
-            setColumns(getTableViewSkin().getColumns());
-        } else if (getTableColumn() != null) {
-            setColumns(getTableColumn().getColumns());
-        }
-        
-        // update the column headers....
-        
         // iterate through all current headers, telling them to clean up
         for (int i = 0; i < getColumnHeaders().size(); i++) {
             TableColumnHeader header = getColumnHeaders().get(i);
@@ -399,7 +399,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     /* **************************/
 
     void setHeadersNeedUpdate() {
-        updateColumns = true;
         // go through children columns - they should update too
         for (int i = 0; i < getColumnHeaders().size(); i++) {
             TableColumnHeader header = getColumnHeaders().get(i);
@@ -407,16 +406,12 @@ public class NestedTableColumnHeader extends TableColumnHeader {
                 ((NestedTableColumnHeader)header).setHeadersNeedUpdate();
             }
         }
+        updateTableColumnHeaders();
         requestLayout();
     }
     
-    boolean updateColumns = true;
     @Override protected void layoutChildren() {
-        if (updateColumns) {
-            updateTableColumnHeaders();
-            updateColumns = false;
-            getParent().requestLayout();
-        }
+
         double w = getWidth() - snappedLeftInset() - snappedRightInset();
         double h = getHeight() - snappedTopInset() - snappedBottomInset();
         
