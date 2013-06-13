@@ -169,10 +169,12 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      */
     protected void layoutChildren(final double contentX, final double contentY,
             final double contentWidth, final double contentHeight) {
-        // By default simply sizes all children to fit within the space provided
+        // By default simply sizes all managed children to fit within the space provided
         for (int i=0, max=children.size(); i<max; i++) {
             Node child = children.get(i);
-            layoutInArea(child, contentX, contentY, contentWidth, contentHeight, -1, HPos.CENTER, VPos.CENTER);
+            if (child.isManaged()) {
+                layoutInArea(child, contentX, contentY, contentWidth, contentHeight, -1, HPos.CENTER, VPos.CENTER);
+            }
         }
     }
     
