@@ -180,7 +180,6 @@ void init_functions(JNIEnv *env) {
 JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity__1surfaceChanged__Landroid_view_Surface_2
 (JNIEnv *env, jobject activity, jobject surface) {
 
-    LOGV(TAG, "Surface changed");
     window = GET_WINDOW_FROM_SURFACE(env, surface);
 }
 
@@ -208,7 +207,6 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity__1surfaceChanged__Landr
  */
 JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity__1surfaceRedrawNeeded
 (JNIEnv *env, jobject activity, jobject surface) {
-    LOGV(TAG, "Surface needs redraw!");
     window = GET_WINDOW_FROM_SURFACE(env, surface);
 }
 
@@ -262,7 +260,7 @@ JNIEnv *get_glass_JNIEnv() {
     if (!glass_env) {
         JavaVM *glass_vm = (*_glass_application_getVM)();
         if (glass_vm == NULL) {
-            LOGE(TAG, "Ignoring event!");
+            LOGV(TAG, "Ignoring event!");
             return NULL;
         }
         (*glass_vm)->AttachCurrentThread(glass_vm, (JNIEnv **) &glass_env, NULL);
