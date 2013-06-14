@@ -782,7 +782,7 @@ task generate << {
 }
 
 task generateThenDelete() {
-    description = "Hello";
+    description = "Generate new project layout structure THEN DELETE existing files (i.e., move rather than copy)";
     dependsOn(generate);
     doLast {
         // Delete all copied files
