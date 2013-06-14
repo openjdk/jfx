@@ -9,6 +9,16 @@
      <pathelement location="${android.sdk}/platforms/${android.target}/android.jar"/>
   </path>
 
+  <target name="jheaders" depends="compile">
+    <echo>Generate jheaders for activity</echo>
+    <mkdir dir="build/include"/>
+    <javah destdir="build/include" 
+       classpath="${build.classes.dir}:${android.sdk}/platforms/${android.target}/android.jar" >
+        <class name="com.oracle.dalvik.FXActivity"/>
+        <class name="com.oracle.dalvik.InternalWebView"/>
+    </javah>
+  </target>
+
   <target name="compile">
         <mkdir dir="${build.classes.dir}"/>
         <javac compiler="modern" fork="true"
@@ -34,7 +44,7 @@
        </copy>
   </target>
 
-  <target name="jar" depends="compile">
+  <target name="jar" depends="compile, jheaders">
      <jar basedir="${build.classes.dir}" destfile="${dist.dir}/${activity.dist.jar}" compress="false">
           <include name="com/oracle/**/*" />
      </jar>     

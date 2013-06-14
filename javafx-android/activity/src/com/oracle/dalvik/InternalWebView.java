@@ -1,0 +1,286 @@
+package com.oracle.dalvik;
+
+import android.graphics.Bitmap;
+import android.util.Log;
+import android.view.View;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import java.util.ArrayList;
+import java.util.List;
+
+public class InternalWebView {
+
+    public final static int PAGE_STARTED = 0;
+    public final static int PAGE_FINISHED = 1;
+    public final static int PAGE_REDIRECTED = 2;
+    public final static int LOAD_FAILED = 5;
+    public final static int LOAD_STOPPED = 6;
+    public final static int CONTENT_RECEIVED = 10;
+    public final static int TITLE_RECEIVED = 11;
+    public final static int ICON_RECEIVED = 12;
+    public final static int CONTENTTYPE_RECEIVED = 13;
+    public final static int DOCUMENT_AVAILABLE = 14;
+    public final static int RESOURCE_STARTED = 20;
+    public final static int RESOURCE_REDIRECTED = 21;
+    public final static int RESOURCE_FINISHED = 22;
+    public final static int RESOURCE_FAILED = 23;
+    public final static int PROGRESS_CHANGED = 30;
+    private static final String TAG = "InternalWebView";
+    private static List<InternalWebView> views = new ArrayList<InternalWebView>();
+    private static int idcounter = 0;
+    private boolean isLayedOut = false;
+    private boolean initialized = false;
+    private int internalID;
+    private int x, y, width, height;
+    private WebView nativeWebView;
+    private String url, content;
+    private String contentType = "text/html";
+    private String encoding = "base64";
+    private boolean visible;
+
+    public InternalWebView() {
+        this.internalID = ++idcounter;
+        views.add(0, this);
+    }
+
+    public int getInternalID() {
+        return this.internalID;
+    }
+
+    private void initialize() {
+        nativeWebView = new WebView(FXActivity.getInstance()) {
+            @Override
+            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                setMeasuredDimension(width, height);
+            }
+        };
+        nativeWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                view.loadUrl(url);
+                return true;
+            }
+
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                fireLoadEvent(0, PAGE_STARTED, url, contentType, -1, -1);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                fireLoadEvent(0, PAGE_FINISHED, url, contentType, -1, -1);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                fireLoadEvent(0, LOAD_FAILED, failingUrl, contentType, -1, errorCode);
+            }
+        });
+
+        nativeWebView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                fireLoadEvent(0, PROGRESS_CHANGED, url, contentType, newProgress, -1);
+            }
+        });
+
+        WebSettings settings = nativeWebView.getSettings();
+        settings.setSupportZoom(true);
+        settings.setJavaScriptEnabled(true);
+
+        initialized = true;        
+    }
+
+    private void fireLoadEvent(int frameID, int state, String url,
+            String content_type, int progress, int errorCode) {
+        _fireLoadEvent(this.internalID, frameID, state,
+                url == null ? "" : url,
+                content_type == null ? "" : content_type,
+                progress, errorCode);
+    }
+
+    private static int indexOf(long id) {
+        int i = 0;
+        for (InternalWebView wvp : views) {
+            if (id == wvp.internalID) {
+                return i;
+            }
+            i++;
+        }
+        return -1;
+    }
+
+    private static InternalWebView getViewByID(int id) {
+        for (InternalWebView wvp : views) {
+            if (id == wvp.internalID) {
+                return wvp;
+            }
+        }
+        throw new RuntimeException("No InternalWebView with id: " + id);
+    }
+
+    static void createNew() {
+        FXActivity.getInstance().runOnUiThread(new Runnable() {
+            public void run() {
+                new InternalWebView().getInternalID();
+            }
+        });
+    }
+
+    static void loadUrl(int id, String url) {
+        final InternalWebView iwv = InternalWebView.getViewByID(id);
+        iwv.setContent(null, null);
+        iwv.setUrl(url);
+        if (iwv.initialized && iwv.isLayedOut) {
+            FXActivity.getInstance().runOnUiThread(new Runnable() {
+                public void run() {
+                    int c = FXActivity.getViewGroup().getChildCount();                    
+                    iwv.nativeWebView.loadUrl(iwv.url);
+                }
+            });
+        }
+    }
+
+    static void loadContent(int id, String content, String contentType) {
+        final InternalWebView iwv = InternalWebView.getViewByID(id);
+        iwv.setUrl(null);
+        iwv.setContent(content, contentType);
+        if (iwv.initialized && iwv.isLayedOut) {
+            FXActivity.getInstance().runOnUiThread(new Runnable() {
+                public void run() {                    
+                    iwv.nativeWebView.loadData(iwv.content, iwv.contentType, iwv.encoding);
+                }
+            });
+        }
+    }
+
+    static void setEncoding(int id, String encoding) {
+        final InternalWebView iwv = InternalWebView.getViewByID(id);
+        iwv.setEncoding(encoding);
+    }
+
+    static void moveAndResize(int id, int x, int y, final int w, final int h) {
+        final boolean move;
+        final boolean resize;        
+
+        if (w == 0 || h == 0) {
+            return;
+        }
+
+        final InternalWebView iwv = InternalWebView.getViewByID(id);
+        if (iwv == null) {
+            return;
+        }
+        if (iwv.x == x
+                && iwv.y == y
+                && iwv.width == w
+                && iwv.height == h) {
+            return;
+        }
+
+        move = (iwv.x != x || iwv.y != y);
+        if (move) {
+            iwv.x = x;
+            iwv.y = y;
+        }
+        resize = (iwv.width != w || iwv.height != h);
+        if (resize) {
+            iwv.width = w;
+            iwv.height = h;
+        }
+        if (!iwv.visible) {
+            return;
+        }
+        
+        if (!iwv.isLayedOut) {
+            iwv.isLayedOut = true;
+            FXActivity.getInstance().runOnUiThread(new Runnable() {
+                public void run() {
+                    if (!iwv.initialized) {
+                        iwv.initialize();
+                    }
+                    iwv.nativeWebView.setTranslationX(iwv.x);
+                    iwv.nativeWebView.setTranslationY(iwv.y);
+                    FXActivity.getViewGroup().addView(iwv.nativeWebView);
+                    Log.v(TAG, String.format("WebView added to ViewGroup [x: %d, y: %d , w: %d h: %d]",
+                            iwv.x, iwv.y, iwv.width, iwv.height));
+                    if (iwv.contentType == null || iwv.contentType.length() == 0) {
+                        iwv.contentType = "text/html";
+                    }
+                    if (iwv.url != null && iwv.url.length() > 0) {
+                        Log.v(TAG, "Loading url: " + iwv.url);
+                        iwv.nativeWebView.loadUrl(iwv.url);
+                    } else if (iwv.content != null) {                        
+                        Log.v(TAG, String.format("Loading content: %s\ncontent type: %s\nencoding: %s",
+                                iwv.content, iwv.contentType, iwv.encoding));
+                        iwv.nativeWebView.loadData(iwv.content, iwv.contentType, iwv.encoding);
+                    }
+                }
+            });
+
+        }// end of not initialized
+        else {
+            FXActivity.getInstance().runOnUiThread(new Runnable() {
+                public void run() {
+                    if (move) {                       
+                        iwv.nativeWebView.setTranslationX(iwv.x);
+                        iwv.nativeWebView.setTranslationY(iwv.y);
+                    }
+                    if (move || resize) {
+                        iwv.nativeWebView.invalidate();
+                    }                    
+                }
+            });
+        }        
+    }
+
+    static void setVisible(int id, final boolean visible) {
+        final InternalWebView iwv = InternalWebView.getViewByID(id);
+        if (iwv == null) {
+            return;
+        }
+        if (!iwv.initialized) {
+            iwv.visible = visible;
+            return;
+        }
+        FXActivity.getInstance().runOnUiThread(new Runnable() {
+            public void run() {
+                iwv.nativeWebView.setVisibility(visible ? View.VISIBLE : View.GONE);
+                if (visible) {
+                    iwv.nativeWebView.invalidate();
+                }
+            }
+        });
+    }
+
+    static void dispose(int id) {
+        final InternalWebView iwv = InternalWebView.getViewByID(id);
+        InternalWebView.setVisible(id, false);
+
+        FXActivity.getInstance().runOnUiThread(new Runnable() {
+            public void run() {
+                iwv.nativeWebView.stopLoading();
+                iwv.nativeWebView.destroy();
+            }
+        });
+        views.remove(iwv);
+    }
+
+    private void setUrl(String url) {
+        this.url = url;
+    }
+
+    private void setContent(String content, String contentType) {
+        this.content = content;
+        this.contentType = contentType;
+    }
+
+    private void setEncoding(String encoding) {
+        this.encoding = encoding;
+    }
+
+    private native void _fireLoadEvent(int id, int frameID, int state, String url,
+            String contentType, int progress, int errorCode);
+}
