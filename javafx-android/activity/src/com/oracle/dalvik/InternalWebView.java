@@ -1,12 +1,17 @@
 package com.oracle.dalvik;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -201,9 +206,15 @@ public class InternalWebView {
                     if (!iwv.initialized) {
                         iwv.initialize();
                     }
-                    iwv.nativeWebView.setTranslationX(iwv.x);
-                    iwv.nativeWebView.setTranslationY(iwv.y);
-                    FXActivity.getViewGroup().addView(iwv.nativeWebView);
+                    FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            Gravity.NO_GRAVITY);
+                    layout.leftMargin = iwv.x;
+                    layout.topMargin = iwv.y;
+//                    iwv.nativeWebView.setTranslationX(iwv.x);
+//                    iwv.nativeWebView.setTranslationY(iwv.y);
+                    FXActivity.getViewGroup().addView(iwv.nativeWebView, layout);
                     Log.v(TAG, String.format("WebView added to ViewGroup [x: %d, y: %d , w: %d h: %d]",
                             iwv.x, iwv.y, iwv.width, iwv.height));
                     if (iwv.contentType == null || iwv.contentType.length() == 0) {
@@ -224,9 +235,14 @@ public class InternalWebView {
         else {
             FXActivity.getInstance().runOnUiThread(new Runnable() {
                 public void run() {
-                    if (move) {                       
-                        iwv.nativeWebView.setTranslationX(iwv.x);
-                        iwv.nativeWebView.setTranslationY(iwv.y);
+                    if (move) {
+                        FrameLayout.LayoutParams layout =
+                                (FrameLayout.LayoutParams) iwv.nativeWebView.getLayoutParams();
+                        layout.leftMargin = iwv.x;
+                        layout.topMargin = iwv.y;
+                        FXActivity.getViewGroup().updateViewLayout(iwv.nativeWebView, layout);
+//                        iwv.nativeWebView.setTranslationX(iwv.x);
+//                        iwv.nativeWebView.setTranslationY(iwv.y);
                     }
                     if (move || resize) {
                         iwv.nativeWebView.invalidate();

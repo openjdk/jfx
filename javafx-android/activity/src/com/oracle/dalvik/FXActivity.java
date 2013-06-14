@@ -69,10 +69,7 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         mViewGroup = new FrameLayout(this);
         mViewGroup.addView(mView);
         setContentView(mViewGroup);
-
         instance = this;
-        // initContext(this);
-
         reader = NativePipeReader.getDefaultReader(textListener);
         reader.start();
         initDirInfo();
@@ -97,7 +94,7 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
 
     public static ViewGroup getViewGroup() {
         return mViewGroup;
-    }
+    }    
 	
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
@@ -120,8 +117,6 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
     public void surfaceRedrawNeeded(SurfaceHolder holder) {
             _surfaceRedrawNeeded(holder.getSurface());		
     }
-
-    private native void initGlassSymbols(String libPath);
 
     private native void _surfaceChanged(Surface surface);
 
