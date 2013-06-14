@@ -287,6 +287,13 @@ ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f" 
     IS_LINUX && IS_64 ? "org.eclipse.swt.gtk.linux.x86_64_3.7.2.v3740f" :
     IS_LINUX && !IS_64 ? "org.eclipse.swt.gtk.linux.x86_3.7.2.v3740f" : ""
 
+// Build javadocs unless SKIP_JAVADOC=true
+def buildJavadoc = true;
+if (hasProperty("SKIP_JAVADOC")) {
+    buildJavadoc = !Boolean.parseBoolean(SKIP_JAVADOC);
+}
+ext.BUILD_JAVADOC = buildJavadoc;
+
 // Specify the build configuration (Release or Debug)
 defineProperty("CONF", "Release")
 ext.IS_DEBUG = CONF == "Debug"
@@ -784,6 +791,7 @@ allprojects {
     // when generating JavaDocs for a specific project. When generating the JavaDocs for the
     // entire SDK, a different javadoc command is used (see the javadoc task on the top level)
     javadoc {
+        enabled = BUILD_JAVADOC
         exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
         executable = JAVADOC;
         options.windowTitle("JavaFX Project ${project.name} ${RELEASE_NAME}")
@@ -1435,6 +1443,7 @@ task clean() {
 }
 
 task javadoc(type: Javadoc) {
+    enabled = BUILD_JAVADOC
     group = "Basic"
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
@@ -1635,9 +1644,11 @@ compileTargets { t ->
             // Copy over the javadocs that were generated. This is done rather than just generating
             // the docs into the "right place" because for a cross-compile you only need one set of
             // docs but need to have a copy in each created sdk
-            copy {
-                from "build/javadoc"
-                into "build/${t.name}-sdk/docs/api"
+            if (BUILD_JAVADOC) {
+                copy {
+                    from "build/javadoc"
+                    into "build/${t.name}-sdk/docs/api"
+                }
             }
 
             // Copy over the fxpackager and rename as ant-javafx.jar
