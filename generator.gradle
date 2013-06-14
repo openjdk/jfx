@@ -67,6 +67,17 @@ task generate << {
         }
     }
 
+    ["3DViewer"].each { app ->
+        copy {
+            from "$RTDir/apps/experiments/$app/src"
+            into "$FXDir/apps/experiments/$app/src"
+            exclude "main/java/META-INF/MANIFEST.MF"
+            eachFile { f ->
+                fileList.add(f.file);
+            }
+        }
+    }
+
     // Copy over Ensemble8. Some special care taken for the generated stuff.
     copy {
         from "$RTDir/apps/samples/Ensemble8/src"
