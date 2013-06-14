@@ -141,8 +141,12 @@ public class MeshView extends Shape3D {
     @Deprecated
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        bounds = mesh.get().computeBounds(bounds);
-        bounds = tx.transform(bounds, bounds);
+        if (getMesh() != null) {
+            bounds = getMesh().computeBounds(bounds);
+            bounds = tx.transform(bounds, bounds);
+        } else {
+            bounds.makeEmpty();
+        }
         return bounds;
     }
 
