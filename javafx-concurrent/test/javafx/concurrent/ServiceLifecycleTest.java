@@ -1316,6 +1316,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(filterCalledFirst.get());
     }
 
+    @Ignore("RT-30173")
     @Test public void cancelledCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnCancelled(new EventHandler<WorkerStateEvent>() {
@@ -1332,6 +1333,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
     }
 
+    @Ignore("RT-30173")
     @Test public void cancelledCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnCancelled(new EventHandler<WorkerStateEvent>() {
@@ -1349,6 +1351,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
     }
 
+    @Ignore("RT-30173")
     @Test public void onCancelledHandlerCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
@@ -1365,6 +1368,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get());
     }
 
+    @Ignore("RT-30173")
     @Test public void removed_onCancelledHandlerNotCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
