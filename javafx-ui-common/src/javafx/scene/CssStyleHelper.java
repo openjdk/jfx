@@ -1492,7 +1492,7 @@ final class CssStyleHelper {
         // use the font property's value if it was set by the user and
         // there is not an inline or author style.
 
-        if (cacheContainer.fontProp != null) {
+        if (lookupForFontCache && cacheContainer.fontProp != null) {
             StyleableProperty<Font> styleableProp = cacheContainer.fontProp.getStyleableProperty(styleable);
             StyleOrigin fpOrigin = styleableProp.getStyleOrigin();
             if (fpOrigin == StyleOrigin.USER) {
