@@ -1393,6 +1393,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(handlerCalled.get());
     }
 
+    @Ignore("RT-30173")
     @Test public void removed_onCancelledFilterNotCalled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
