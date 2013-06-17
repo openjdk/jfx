@@ -250,10 +250,17 @@ public class Point3D {
         final double ay = getY();
         final double az = getZ();
 
-        final double dotProduct = ax * x + ay * y + az * z;
+        final double delta = (ax * x + ay * y + az * z) / Math.sqrt(
+                (ax * ax + ay * ay + az * az) * (x * x + y * y + z * z));
 
-        return Math.toDegrees(Math.acos(dotProduct / Math.sqrt(
-                (ax * ax + ay * ay + az * az) * (x * x + y * y + z * z))));
+        if (delta > 1.0) {
+            return 0.0;
+        }
+        if (delta < -1.0) {
+            return 180.0;
+        }
+
+        return Math.toDegrees(Math.acos(delta));
     }
 
     /**
@@ -291,10 +298,17 @@ public class Point3D {
         final double by = p2.getY() - y;
         final double bz = p2.getZ() - z;
 
-        final double dotProduct = ax * bx + ay * by + az * bz;
+        final double delta = (ax * bx + ay * by + az * bz) / Math.sqrt(
+                (ax * ax + ay * ay + az * az) * (bx * bx + by * by + bz * bz));
 
-        return Math.toDegrees(Math.acos(dotProduct / Math.sqrt(
-                (ax * ax + ay * ay + az * az) * (bx * bx + by * by + bz * bz))));
+        if (delta > 1.0) {
+            return 0.0;
+        }
+        if (delta < -1.0) {
+            return 180.0;
+        }
+
+        return Math.toDegrees(Math.acos(delta));
     }
 
     /**

@@ -221,10 +221,17 @@ public class Point2D {
         final double ax = getX();
         final double ay = getY();
 
-        final double dotProduct = ax * x + ay * y;
+        final double delta = (ax * x + ay * y) / Math.sqrt(
+                (ax * ax + ay * ay) * (x * x + y * y));
 
-        return Math.toDegrees(Math.acos(dotProduct / Math.sqrt(
-                (ax * ax + ay * ay) * (x * x + y * y))));
+        if (delta > 1.0) {
+            return 0.0;
+        }
+        if (delta < -1.0) {
+            return 180.0;
+        }
+
+        return Math.toDegrees(Math.acos(delta));
     }
 
     /**
@@ -259,10 +266,17 @@ public class Point2D {
         final double bx = p2.getX() - x;
         final double by = p2.getY() - y;
 
-        final double dotProduct = ax * bx + ay * by;
+        final double delta = (ax * bx + ay * by) / Math.sqrt(
+                (ax * ax + ay * ay) * (bx * bx + by * by));
 
-        return Math.toDegrees(Math.acos(dotProduct / Math.sqrt(
-                (ax * ax + ay * ay) * (bx * bx + by * by))));
+        if (delta > 1.0) {
+            return 0.0;
+        }
+        if (delta < -1.0) {
+            return 180.0;
+        }
+
+        return Math.toDegrees(Math.acos(delta));
     }
 
     /**

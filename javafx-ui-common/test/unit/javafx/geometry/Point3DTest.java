@@ -166,6 +166,22 @@ public class Point3DTest {
     }
 
     @Test
+    public void testVectorAngleTooClose() {
+        Point3D p1 = new Point3D(-0.8944271909999159, 0.0, 0.4472135954999579);
+        Point3D p2 = new Point3D(-0.894427190999924, 4.061090000458082E-14, 0.4472135954999417);
+        assertEquals(0.0, p1.angle(p2), 0.000001);
+        assertEquals(0.0, p2.angle(p1), 0.000001);
+    }
+
+    @Test
+    public void testVectorAngleTooOpposite() {
+        Point3D p1 = new Point3D(-0.8944271909999159, 0.0, 0.4472135954999579);
+        Point3D p2 = new Point3D(0.894427190999924, -4.061090000458082E-14, -0.4472135954999417);
+        assertEquals(180.0, p1.angle(p2), 0.000001);
+        assertEquals(180.0, p2.angle(p1), 0.000001);
+    }
+
+    @Test
     public void testPointAngle() {
         Point3D p1 = new Point3D(2, 2, 2);
         Point3D p2 = new Point3D(0, 2, 0);
@@ -190,6 +206,24 @@ public class Point3DTest {
     public void testPointAngle2Null() {
         Point3D point = new Point3D(1, 2, 3);
         point.angle(new Point3D(8, 5, 3), null);
+    }
+
+    @Test
+    public void testPointAngleTooClose() {
+        Point3D p1 = new Point3D(-0.8944271909999159, 0.0, 0.4472135954999579);
+        Point3D v = new Point3D(0.0, 0.0, 0.0);
+        Point3D p2 = new Point3D(-0.894427190999924, 4.061090000458082E-14, 0.4472135954999417);
+        assertEquals(0.0, v.angle(p1, p2), 0.000001);
+        assertEquals(0.0, v.angle(p2, p1), 0.000001);
+    }
+
+    @Test
+    public void testPointAngleTooOpposite() {
+        Point3D p1 = new Point3D(-0.8944271909999159, 0.0, 0.4472135954999579);
+        Point3D v = new Point3D(0.0, 0.0, 0.0);
+        Point3D p2 = new Point3D(0.894427190999924, -4.061090000458082E-14, -0.4472135954999417);
+        assertEquals(180.0, v.angle(p1, p2), 0.000001);
+        assertEquals(180.0, v.angle(p2, p1), 0.000001);
     }
 
     @Test
