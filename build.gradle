@@ -2074,7 +2074,7 @@ allprojects {
             // Add an optional reference to the closed media repository
             if (project.name == 'media') {
                 //TODO - remove rt when legacy build goes away
-                def list = ['jfxmedia/src', 'test/demos/JavaTestApps/src', 'test/perf/JFXMediaSystemTestApp/src', 'rt', 'rt-closed']
+                def list = ['jfxmedia/src', 'test/demos/JavaTestApps/src', 'test/perf/JFXMediaSystemTestApp/src', '/rt', '/rt-closed']
                 for (string in list) {
                     Node node = classpath.classpathentry.find {it.@path == string}
                     if (!node) {
