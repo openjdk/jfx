@@ -463,7 +463,7 @@ public class OldTestViewer extends Application {
             Logger.getLogger(OldTestViewer.class.getName()).log(Level.SEVERE, null, ex);
             return new MayaGroup();
         }
-        mayaImporter.load(url.toString());
+        mayaImporter.load(url.toString(), false);
         timeline = mayaImporter.getTimeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
         //timeline.setAutoReverse(true);

@@ -43,7 +43,9 @@ import com.javafx.experiments.importers.maya.values.MInt3Array;
 import com.javafx.experiments.importers.maya.values.MIntArray;
 import com.javafx.experiments.importers.maya.values.MPolyFace;
 import com.javafx.experiments.importers.maya.values.MString;
-import com.javafx.experiments.shape3d.SkinningTriangleMesh;
+import com.javafx.experiments.shape3d.PolygonMesh;
+import com.javafx.experiments.shape3d.PolygonMeshView;
+import com.javafx.experiments.shape3d.SkinningMesh;
 import com.sun.javafx.geom.Vec3f;
 import javafx.animation.AnimationTimer;
 import javafx.beans.value.ChangeListener;
@@ -98,14 +100,16 @@ class Loader {
     private int uvChannel;
     private MFloat3Array mPointTweaks;
     private URL url;
+    private boolean asPolygonMesh;
 
     //=========================================================================
     // Loader.load
     //-------------------------------------------------------------------------
     // Called from MayaImporter.load
     //=========================================================================
-    public void load(URL url) {
+    public void load(URL url, boolean asPolygonMesh) {
         this.url = url;
+        this.asPolygonMesh = asPolygonMesh;
         env = new MEnv();
         MParser parser = new MParser(env);
         try {
@@ -224,13 +228,6 @@ class Loader {
         if (inputMeshMNode == null || outputMeshMNode == null) {
             return;
         }
-        //               println("ORIG MESH FOR SKIN={origMesh} TARGET={targetMesh}");
-        //               MayaMeshNodeGroup targetMayaMeshNode = (MayaMeshNodeGroup) resolveNode(targetMesh);
-        MeshView targetMayaMeshNode = (MeshView) resolveNode(outputMeshMNode);
-        boolean nn = loaded.containsKey(outputMeshMNode);
-        //               println("TARGET MESH {targetMesh} {targetMesh.getNodeType().getName()} {targetMayaMeshNode} n={nn}");
-        //               var sourceMayaMeshNode = (resolveNode(origMesh) as MayaMeshNodeGroup);
-        MeshView sourceMayaMeshNode = (MeshView) resolveNode(inputMeshMNode);
         // We must be able to find the original converter in the meshConverters map
         MNode origOrigMesh = resolveOrigInputMesh(n);
         //               println("ORIG ORIG={origOrigMesh}");
@@ -239,7 +236,6 @@ class Loader {
         resolveNode(origOrigMesh).setVisible(false);
 
         MArray bindPreMatrixArray = (MArray) n.getAttr("pm");
-        //println("adding SKIN CONTROLLER to {targetMayaMeshNode}");
 
         Affine[] bindPreMatrix = new Affine[bindPreMatrixArray.getSize()];
         for (int i = 0; i < bindPreMatrixArray.getSize(); i++) {
@@ -254,36 +250,49 @@ class Loader {
                 weights[i][j] = j < curWeights.getSize() ? curWeights.get(j) : 0;
             }
         }
-
-        TriangleMesh sourceMesh = (TriangleMesh) sourceMayaMeshNode.getMesh();
-        SkinningTriangleMesh targetMesh;
-        if (targetMayaMeshNode.getMesh() instanceof SkinningTriangleMesh) {
-            targetMesh = (SkinningTriangleMesh) targetMayaMeshNode.getMesh();
-        } else {
-            Transform meshTransform = targetMayaMeshNode.getLocalToSceneTransform();
-            targetMesh = new SkinningTriangleMesh(sourceMesh, meshTransform, weights, bindPreMatrix, jointNodes);
-            targetMayaMeshNode.setMesh(targetMesh);
-        }
         
-        final SkinningMeshTimer skinningMeshTimer = new SkinningMeshTimer(targetMesh);
-        if (targetMayaMeshNode.getScene() != null) {
-            skinningMeshTimer.start();
-        }
-        targetMayaMeshNode.sceneProperty().addListener(new ChangeListener<Scene>() {
-            @Override
-            public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
-                if (newValue == null) {
-                    skinningMeshTimer.stop();
-                } else {
-                    skinningMeshTimer.start();
-                }
+        Node sourceMayaMeshNode = resolveNode(inputMeshMNode);
+        Node targetMayaMeshNode = resolveNode(outputMeshMNode);
+            
+        if (sourceMayaMeshNode.getClass().equals(new PolygonMeshView().getClass())) {
+            PolygonMeshView sourceMayaMeshView = (PolygonMeshView) sourceMayaMeshNode;
+            PolygonMeshView targetMayaMeshView = (PolygonMeshView) targetMayaMeshNode;
+            
+            PolygonMesh sourceMesh = (PolygonMesh) sourceMayaMeshView.getMesh();
+            Transform meshTransform = targetMayaMeshView.getLocalToSceneTransform();
+            SkinningMesh targetMesh = new SkinningMesh(sourceMesh, meshTransform, weights, bindPreMatrix, jointNodes);
+            targetMayaMeshView.setMesh(targetMesh);
+
+            final SkinningMeshTimer skinningMeshTimer = new SkinningMeshTimer(targetMesh);
+            if (targetMayaMeshNode.getScene() != null) {
+                skinningMeshTimer.start();
             }
-        });
+            targetMayaMeshView.sceneProperty().addListener(new ChangeListener<Scene>() {
+                @Override
+                public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
+                    if (newValue == null) {
+                        skinningMeshTimer.stop();
+                    } else {
+                        skinningMeshTimer.start();
+                    }
+                }
+            });
+        } else {
+            System.err.println("Mesh skinning is not supported for triangle meshes. Select the 'Load as Polygons' option to load the mesh as polygon mesh.");
+            MeshView sourceMayaMeshView = (MeshView) sourceMayaMeshNode;
+            MeshView targetMayaMeshView = (MeshView) targetMayaMeshNode;
+            TriangleMesh sourceMesh = (TriangleMesh) sourceMayaMeshView.getMesh();
+            TriangleMesh targetMesh = (TriangleMesh) targetMayaMeshView.getMesh();
+            targetMesh.getPoints().setAll(sourceMesh.getPoints());
+            targetMesh.getTexCoords().setAll(sourceMesh.getTexCoords());
+            targetMesh.getFaces().setAll(sourceMesh.getFaces());
+            targetMesh.getFaceSmoothingGroups().setAll(sourceMesh.getFaceSmoothingGroups());
+        }
     }
     
     private class SkinningMeshTimer extends AnimationTimer {
-        private SkinningTriangleMesh mesh;
-        SkinningMeshTimer(SkinningTriangleMesh mesh) {
+        private SkinningMesh mesh;
+        SkinningMeshTimer(SkinningMesh mesh) {
             this.mesh = mesh;
         }
         @Override
@@ -444,27 +453,37 @@ class Loader {
             }
         }
 
-        Mesh mesh = convertToFXMesh(n);
+        Object mesh = convertToFXMesh(n);
 
-//        if (((TriangleMesh)mesh).getPoints().size() > 0) {
-            MeshView mv = new MeshView();
+        if (asPolygonMesh) {
+            PolygonMeshView mv = new PolygonMeshView();
             mv.setId(n.getName());
             mv.setMaterial(material);
-
-//            // TODO HACK for [JIRA] (RT-30449) FX 8 3D: Need to handle mirror transformation (flip culling);
-//            mv.setCullFace(CullFace.FRONT);
-
-//            mv.setWireframe(true);
-//            mv.setAmbient(Color.GRAY); // TODO???
-            mv.setMesh(mesh);
-
+            mv.setMesh((PolygonMesh) mesh);
+//            mv.setCullFace(CullFace.NONE); //TODO
             loaded.put(n, mv);
             if (node != null) {
                 ((Group) node).getChildren().add(mv);
             }
-//        }
-    }
+        } else {
+//            if (((TriangleMesh)mesh).getPoints().size() > 0) {
+                MeshView mv = new MeshView();
+                mv.setId(n.getName());
+                mv.setMaterial(material);
 
+    //            // TODO HACK for [JIRA] (RT-30449) FX 8 3D: Need to handle mirror transformation (flip culling);
+    //            mv.setCullFace(CullFace.FRONT);
+
+                mv.setMesh((TriangleMesh) mesh);
+
+                loaded.put(n, mv);
+                if (node != null) {
+                    ((Group) node).getChildren().add(mv);
+                }
+//            }
+        }
+    }
+            
     protected void processJointType(MNode n, Group parentNode) {
         // [Note to Alex]: I've re-enabled joints, but not skinning yet [John]
         Node result;
@@ -717,7 +736,7 @@ class Loader {
         }
     }
 
-    private Mesh convertToFXMesh(MNode n) {
+    private Object convertToFXMesh(MNode n) {
         mVerts = (MFloat3Array) n.getAttr("vt");
         MPolyFace mPolys = (MPolyFace) n.getAttr("fc");
         mPointTweaks = (MFloat3Array) n.getAttr("pt");
@@ -732,7 +751,11 @@ class Loader {
         }
 
         if (mPolys.getFaces() == null) {
-            return new TriangleMesh();
+            if (asPolygonMesh) {
+                return new PolygonMesh();
+            } else {
+                return new TriangleMesh();
+            }
         }
 
         MFloat3Array normals = (MFloat3Array) n.getAttr("n");
@@ -769,25 +792,24 @@ class Loader {
         return edgeVert(edgeNumber, false);
     }
 
-    private boolean addUVs(TriangleMesh mesh, int uvChannel) {
+    private float[] getTexCoords(int uvChannel) {
         if (uvSet == null || uvChannel < 0 || uvChannel >= uvSet.size()) {
-            return false;
+            return new float[] {0,0};
         }
         MCompound compound = (MCompound) uvSet.get(uvChannel);
         MFloat2Array uvs = (MFloat2Array) compound.getFieldData("uvsp");
         if (uvs == null || uvs.get() == null) {
-            return false;
+            return new float[] {0,0};
         }
 
-        float[] res = new float[uvs.getSize() * 2];
+        float[] texCoords = new float[uvs.getSize() * 2];
         float[] uvsData = uvs.get();
         for (int i = 0; i < uvs.getSize(); i++) {
             //note the 1 - v
-            res[i * 2] = uvsData[2 * i];
-            res[i * 2 + 1] = 1 - uvsData[2 * i + 1];
+            texCoords[i * 2] = uvsData[2 * i];
+            texCoords[i * 2 + 1] = 1 - uvsData[2 * i + 1];
         }
-        mesh.getTexCoords().setAll(res);
-        return true;
+        return texCoords;
     }
 
     private void getVert(int index, Vec3f vert) {
@@ -1565,10 +1587,7 @@ class Loader {
         }
     }
 
-    private Mesh buildMeshData(List<MPolyFace.FaceData> faces, MFloat3Array normals) {
-
-        TriangleMesh mesh = new TriangleMesh();
-
+    private Object buildMeshData(List<MPolyFace.FaceData> faces, MFloat3Array normals) {
         // Setup vertexes
         float[] verts = mVerts.get();
         float[] tweaks = null;
@@ -1587,65 +1606,88 @@ class Loader {
                 points[index + 2] = verts[index + 2];
             }
         }
-        mesh.getPoints().setAll(points);
 
-        // copy UV as-is
-        if (!addUVs(mesh, uvChannel)) {
-            mesh.getTexCoords().setAll(0, 0);
-        }
-
-        int startFace = 0;
-        int endFace = faces.size();
+        // copy UV as-is (if any)
+        float[] texCoords = getTexCoords(uvChannel);
 
         int[] smGroups = SmoothGroups.calcSmoothGroups(faces, normals);
 
-        List<Integer> ff = new ArrayList<Integer>();
-        List<Integer> sg = new ArrayList<Integer>();
-
-        for (int f = startFace; f < endFace; f++) {
-            MPolyFace.FaceData faceData = faces.get(f);
-            int[] faceEdges = faceData.getFaceEdges();
-            int[][] uvData = faceData.getUVData();
-            int[] uvIndices = uvData == null ? null : uvData[uvChannel];
-            if (faceEdges != null && faceEdges.length > 0) {
-
-                // Generate triangle fan about the first vertex
-                int vIndex0 = edgeStart(faceEdges[0]);
-                int uvIndex0 = uvIndices == null ? 0 : uvIndices[0];
-
-                int vIndex1 = edgeStart(faceEdges[1]);
-                int uvIndex1 = uvIndices == null ? 0 : uvIndices[1];
-
-                for (int i = 2; i < faceEdges.length; i++) {
-                    int vIndex2 = edgeStart(faceEdges[i]);
-                    int uvIndex2 = uvIndices == null ? 0 : uvIndices[i];
-
-                    ff.add(vIndex0);
-                    ff.add(uvIndex0);
-                    ff.add(vIndex1);
-                    ff.add(uvIndex1);
-                    ff.add(vIndex2);
-                    ff.add(uvIndex2);
-                    sg.add(smGroups[f]);
-
-                    vIndex1 = vIndex2;
-                    uvIndex1 = uvIndex2;
+        if (asPolygonMesh) {
+            List<int[]> ff = new ArrayList<int[]>();
+            for (int f = 0; f < faces.size(); f++) {
+                MPolyFace.FaceData faceData = faces.get(f);
+                int[] faceEdges = faceData.getFaceEdges();
+                int[][] uvData = faceData.getUVData();
+                int[] uvIndices = uvData == null ? null : uvData[uvChannel];
+                if (faceEdges != null && faceEdges.length > 0) {
+                    int[] polyFace = new int[faceEdges.length * 2];
+                    for (int i = 0; i < faceEdges.length; i++) {
+                        int vIndex = edgeStart(faceEdges[i]);
+                        int uvIndex = uvIndices == null ? 0 : uvIndices[i];
+                        polyFace[i*2] = vIndex;
+                        polyFace[i*2+1] = uvIndex;
+                    }
+                    ff.add(polyFace);
                 }
             }
+            int[][] fff = new int[ff.size()][];
+            for (int i = 0; i < fff.length; i++) {
+                fff[i] = ff.get(i);
+            }
+            PolygonMesh mesh = new PolygonMesh(points, texCoords, fff);
+            return mesh;
+        } else {
+            // Split the polygonal faces into triangle faces
+            List<Integer> ff = new ArrayList<Integer>();
+            List<Integer> sg = new ArrayList<Integer>();
+
+            for (int f = 0; f < faces.size(); f++) {
+                MPolyFace.FaceData faceData = faces.get(f);
+                int[] faceEdges = faceData.getFaceEdges();
+                int[][] uvData = faceData.getUVData();
+                int[] uvIndices = uvData == null ? null : uvData[uvChannel];
+                if (faceEdges != null && faceEdges.length > 0) {
+
+                    // Generate triangle fan about the first vertex
+                    int vIndex0 = edgeStart(faceEdges[0]);
+                    int uvIndex0 = uvIndices == null ? 0 : uvIndices[0];
+
+                    int vIndex1 = edgeStart(faceEdges[1]);
+                    int uvIndex1 = uvIndices == null ? 0 : uvIndices[1];
+
+                    for (int i = 2; i < faceEdges.length; i++) {
+                        int vIndex2 = edgeStart(faceEdges[i]);
+                        int uvIndex2 = uvIndices == null ? 0 : uvIndices[i];
+
+                        ff.add(vIndex0);
+                        ff.add(uvIndex0);
+                        ff.add(vIndex1);
+                        ff.add(uvIndex1);
+                        ff.add(vIndex2);
+                        ff.add(uvIndex2);
+                        sg.add(smGroups[f]);
+
+                        vIndex1 = vIndex2;
+                        uvIndex1 = uvIndex2;
+                    }
+                }
+            }
+            int[] fff = new int[ff.size()];
+            for (int i = 0; i < fff.length; i++) {
+                fff[i] = ff.get(i);
+            }
+            int[] sgsg = new int[sg.size()];
+            for (int i = 0; i < sgsg.length; i++) {
+                sgsg[i] = sg.get(i);
+            }
+
+            TriangleMesh mesh = new TriangleMesh();
+            mesh.getPoints().setAll(points);
+            mesh.getTexCoords().setAll(texCoords);
+            mesh.getFaces().setAll(fff);
+            mesh.getFaceSmoothingGroups().setAll(sgsg);
+            return mesh;
         }
-        int[] fff = new int[ff.size()];
-        for (int i = 0; i < fff.length; i++) {
-            fff[i] = ff.get(i);
-        }
-        mesh.getFaces().setAll(fff);
-        fff = null;
-        ff = null;
-        int[] sgsg = new int[sg.size()];
-        for (int i = 0; i < sgsg.length; i++) {
-            sgsg[i] = sg.get(i);
-        }
-        mesh.getFaceSmoothingGroups().setAll(sgsg);
-        return mesh;
     }
 
     MNode resolveOutputMesh(MNode n) {
