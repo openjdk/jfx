@@ -101,6 +101,7 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.scene.CssFlags;
@@ -362,7 +363,7 @@ public class Scene implements EventTarget {
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
         }
-        
+
         Toolkit.getToolkit().checkFxUserThread();
         setRoot(root);
         init(width, height, depthBuffer);
@@ -587,7 +588,7 @@ public class Scene implements EventTarget {
         // roots, we'll leave those for next pulse.
         if (dirtyLayoutRoots.size() > 0) {
             PlatformLogger logger = Logging.getLayoutLogger();
-            if (logger.isLoggable(PlatformLogger.FINER)) {
+            if (logger.isLoggable(Level.FINER)) {
                 logger.finer("after layout pass, "+dirtyLayoutRoots.size()+" layout root nodes still dirty");
             }
             Toolkit.getToolkit().requestNextPulse();
@@ -606,11 +607,11 @@ public class Scene implements EventTarget {
 
             for (Parent parent : temp) {
                 if (parent.getScene() == this && parent.isNeedsLayout()) {
-                    if (logger.isLoggable(PlatformLogger.FINE)) {
+                    if (logger.isLoggable(Level.FINE)) {
                         logger.fine("<<< START >>> root = "+parent.toString());
                     }
                     parent.layout();
-                    if (logger.isLoggable(PlatformLogger.FINE)) {
+                    if (logger.isLoggable(Level.FINE)) {
                         logger.fine("<<<  END  >>> root = "+parent.toString());
                     }
                 }
@@ -1535,7 +1536,7 @@ public class Scene implements EventTarget {
     public final boolean isDepthBuffer() {
         return depthBuffer;
     }
-    
+
     boolean isDepthBufferInteral() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             return false;
@@ -2087,7 +2088,7 @@ public class Scene implements EventTarget {
                 ((Node.FocusedProperty) value.focusedProperty()).notifyListeners();
             }
             PlatformLogger logger = Logging.getFocusLogger();
-            if (logger.isLoggable(PlatformLogger.FINE)) {
+            if (logger.isLoggable(Level.FINE)) {
                 logger.fine("Changed focus from "
                         + oldFocusOwner + " to " + value);
             }

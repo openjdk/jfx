@@ -55,17 +55,17 @@ public class PrismTrace {
 
     private static enum SummaryType { TYPE_TEX, TYPE_RTT, TYPE_ALL };
     private static String summary(long count, long size, String label) {
-        return String.format("%s=%d@%,d", label, count, size);
+        return String.format("%s=%d@%,dKB", label, count, size >> 10);
     }
     private static String summary(SummaryType type) {
         switch (type) {
             case TYPE_TEX:
-                return summary(texData.size(), texBytes>>10, " tex");
+                return summary(texData.size(), texBytes, " tex");
             case TYPE_RTT:
-                return summary(rttData.size(), rttBytes>>10, " rtt");
+                return summary(rttData.size(), rttBytes, " rtt");
             case TYPE_ALL:
                 return summary(texData.size()+rttData.size(),
-                               (texBytes+rttBytes)>>10, " combined");
+                               texBytes+rttBytes, " combined");
         }
         return "ERROR";
     }
@@ -84,7 +84,7 @@ public class PrismTrace {
         texData.put(id, size);
         texBytes += size;
         System.out.println("Created Texture: "+
-            "id=" + id + " w=" + w + " h=" + h + " size=" + size +
+            "id=" + id + ", " + w + "x" + h +" pixels, " + size + " bytes," +
             summary(SummaryType.TYPE_TEX) +
             summary(SummaryType.TYPE_ALL));
         //Thread.dumpStack();
@@ -99,7 +99,7 @@ public class PrismTrace {
         }
         texBytes -= size;
         System.out.println("Disposed Texture: "+
-            "id=" + id + " size=" + size +
+            "id=" + id + ", " + size + " bytes" +
             summary(SummaryType.TYPE_TEX) +
             summary(SummaryType.TYPE_ALL));
     }
@@ -111,7 +111,7 @@ public class PrismTrace {
         rttData.put(id, size);
         rttBytes += size;
         System.out.println("Created RTTexture: "+
-            "id=" + id + " w=" + w + " h=" + h + " size=" + size +
+            "id=" + id + ", " + w + "x" + h +" pixels, " + size + " bytes," +
             summary(SummaryType.TYPE_RTT) +
             summary(SummaryType.TYPE_ALL));
     }
@@ -125,7 +125,7 @@ public class PrismTrace {
         }
         rttBytes -= size;
         System.out.println("Disposed RTTexture: "+
-            "id=" + id + " size=" + size +
+            "id=" + id + ", " + size + " bytes" +
             summary(SummaryType.TYPE_RTT) +
             summary(SummaryType.TYPE_ALL));
     }

@@ -196,7 +196,25 @@ public class Point2DTest {
         Point2D point = new Point2D(2, 3);
         point.angle(new Point2D(5, 3), null);
     }
-    
+
+    @Test
+    public void testPointAngleTooClose() {
+        Point2D p1 = new Point2D(-0.8944271909999159, 0.4472135954999579);
+        Point2D v = new Point2D(0.0, 0.0);
+        Point2D p2 = new Point2D(-0.894427190999924, 0.4472135954999417);
+        assertEquals(0.0, v.angle(p1, p2), 0.000001);
+        assertEquals(0.0, v.angle(p2, p1), 0.000001);
+    }
+
+    @Test
+    public void testPointAngleTooOpposite() {
+        Point2D p1 = new Point2D(-0.8944271909999159, 0.4472135954999579);
+        Point2D v = new Point2D(0.0, 0.0);
+        Point2D p2 = new Point2D(0.894427190999924, -0.4472135954999417);
+        assertEquals(180.0, v.angle(p1, p2), 0.000001);
+        assertEquals(180.0, v.angle(p2, p1), 0.000001);
+    }
+
     @Test
     public void testMagnitude() {
         Point2D p1 = new Point2D(0, 0);
@@ -243,6 +261,22 @@ public class Point2DTest {
     public void testCrossProductNull() {
         Point2D point = new Point2D(1, 2);
         point.crossProduct(null);
+    }
+
+    @Test
+    public void testAngleTooClose() {
+        Point2D p1 = new Point2D(-0.8944271909999159, 0.4472135954999579);
+        Point2D p2 = new Point2D(-0.894427190999924, 0.4472135954999417);
+        assertEquals(0.0, p1.angle(p2), 0.000001);
+        assertEquals(0.0, p2.angle(p1), 0.000001);
+    }
+
+    @Test
+    public void testAngleTooOpposite() {
+        Point2D p1 = new Point2D(-0.8944271909999159, 0.4472135954999579);
+        Point2D p2 = new Point2D(0.894427190999924, -0.4472135954999417);
+        assertEquals(180.0, p1.angle(p2), 0.000001);
+        assertEquals(180.0, p2.angle(p1), 0.000001);
     }
 
     @Test

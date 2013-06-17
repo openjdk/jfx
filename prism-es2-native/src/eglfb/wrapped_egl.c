@@ -107,7 +107,7 @@ EGLDisplay wr_eglGetDisplay(EGLNativeDisplayType display_id) {
     return ret;
 }
 
-static EGLNativeWindowType(* _getAndroidNativeWindow)();
+static EGLNativeWindowType(*_ANDROID_getNativeWindow)();
 
 /***************************** EGL *************************************/
 
@@ -302,15 +302,19 @@ EGLNativeWindowType getNativeWindowType() {
         cached ++;
     }
 #ifdef ANDROID_NDK
-       //don't cache for Android!
-       printf("Using getAndroidNativeWindow() from glass.\n");
-       void *libglass = dlopen("libglass-lens-eglfb.so", RTLD_LAZY | RTLD_GLOBAL);
-       if (!libglass) {
-          fprintf(stderr, "Did not find libglass-lens-eglfb.so %s\n", dlerror());
+    //don't cache for Android!
+    printf("Using getAndroidNativeWindow() from glass.\n");
+    void *libglass_android = dlopen("libglass-lens-android.so", RTLD_LAZY | RTLD_GLOBAL);
+    if (!libglass_android) {
+        fprintf(stderr, "Did not find libglass-lens-android.so %s\n", dlerror());
            return NULL;
-       }
-       _getAndroidNativeWindow = GET_SYMBOL(libglass, "getAndroidNativeWindow");
-       return (*_getAndroidNativeWindow)();
+    }
+    _ANDROID_getNativeWindow = GET_SYMBOL(libglass_android, "ANDROID_getNativeWindow");
+    if (!_ANDROID_getNativeWindow) {
+       fprintf(stderr, "Did not find symbol \"ANDROID_getNativeWindow\" %s\n", dlerror());
+       return NULL;
+    }
+    return (*_ANDROID_getNativeWindow)();
 #endif
 
     return cachedWindowType;

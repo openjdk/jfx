@@ -116,9 +116,7 @@
 	<classpathentry kind="src" path="prism-es2/src"/>
 	<classpathentry kind="src" path="prism-es2-eglfb/src"/>
 	<classpathentry kind="src" path="prism-es2-eglx11/src"/>
-	<!--
 	<classpathentry kind="src" path="prism-es2-ios/src"/>
-	-->
 	<classpathentry kind="src" path="prism-es2-mac/src"/>
 	<classpathentry kind="src" path="prism-es2-win/src"/>
 	<classpathentry kind="src" path="prism-es2-x11/src"/>

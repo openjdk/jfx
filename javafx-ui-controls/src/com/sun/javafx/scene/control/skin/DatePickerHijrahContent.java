@@ -28,7 +28,7 @@ package com.sun.javafx.scene.control.skin;
 import java.time.LocalDate;
 import java.time.DateTimeException;
 import java.time.YearMonth;
-// import java.time.format.DateTimeFormatSymbols;
+import java.time.format.DecimalStyle;
 import java.time.chrono.Chronology;
 import java.time.chrono.HijrahChronology;
 import java.time.chrono.HijrahDate;
@@ -107,11 +107,11 @@ class DatePickerHijrahContent extends DatePickerContent {
                 if (hijrahStr == null || month != firstMonth) {
                     String monthStr = monthFormatter.withLocale(locale)
                                                     .withChronology(chrono)
-//                                                     .withSymbols(DateTimeFormatSymbols.of(locale))
+                                                    .withDecimalStyle(DecimalStyle.of(locale))
                                                     .format(cDate);
                     String yearStr = yearFormatter.withLocale(locale)
                                                     .withChronology(chrono)
-//                                                     .withSymbols(DateTimeFormatSymbols.of(locale))
+                                                    .withDecimalStyle(DecimalStyle.of(locale))
                                                     .format(cDate);
                     if (hijrahStr == null) {
                         firstMonth = month;
@@ -170,7 +170,7 @@ class DatePickerHijrahContent extends DatePickerContent {
                 String hijrahStr =
                     dayCellFormatter.withLocale(locale)
                                     .withChronology(chrono)
-//                                     .withSymbols(DateTimeFormatSymbols.of(locale))
+                                    .withDecimalStyle(DecimalStyle.of(locale))
                                     .format(cDate);
 
                 secondaryText.setText(hijrahStr);

@@ -97,6 +97,7 @@ import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
 import javafx.collections.ListChangeListener;
 
 import static javafx.geometry.NodeOrientation.*;
+import javafx.print.PrinterJob;
 
 /**
  * HTML editor skin.
@@ -1205,4 +1206,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
     private static final int FONT_FAMILY_MENU_WIDTH = 100;
     private static final int FONT_SIZE_MENUBUTTON_WIDTH = 80;
 
+    public void print(PrinterJob job) {
+        webView.getEngine().print(job);
+    }
 }

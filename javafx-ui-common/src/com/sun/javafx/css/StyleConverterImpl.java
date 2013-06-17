@@ -25,20 +25,18 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.converters.EnumConverter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.css.CssMetaData;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
-import javafx.scene.Node;
 
 import com.sun.javafx.Logging;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
  * Converter converts ParsedValueImpl&lt;F,T&gt; from type F to type T.
@@ -59,7 +57,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         return null;
     }
 
-    protected StyleConverterImpl() { 
+    protected StyleConverterImpl() {
         super();
     }
 
@@ -74,7 +72,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
     // map of StyleConverter class name to StyleConverter
     private static Map<String,StyleConverter<?, ?>> tmap;
 
-    @SuppressWarnings("rawtypes") 
+    @SuppressWarnings("rawtypes")
     public static StyleConverter<?,?> readBinary(DataInputStream is, String[] strings)
             throws IOException {
 
@@ -82,17 +80,17 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         String cname = strings[index];
 
         if (cname == null || cname.isEmpty()) return null;
-        
+
         if (cname.startsWith("com.sun.javafx.css.converters.EnumConverter")) {
             return (StyleConverter)com.sun.javafx.css.converters.EnumConverter.readBinary(is, strings);
-        } 
+        }
 
         // Make a new entry in tmap, if necessary
         if (tmap == null || !tmap.containsKey(cname)) {
             StyleConverter<?,?> converter = getInstance(cname);
             if (converter == null) {
                 final PlatformLogger logger = Logging.getCSSLogger();
-                if (logger.isLoggable(PlatformLogger.SEVERE)) {
+                if (logger.isLoggable(Level.SEVERE)) {
                     logger.severe("could not deserialize " + cname);
                 }
             }
@@ -111,7 +109,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
 
         StyleConverter<?,?> styleConverter = null;
 
-        switch(converterClass) { 
+        switch(converterClass) {
         case "com.sun.javafx.css.converters.BooleanConverter" :
             styleConverter = com.sun.javafx.css.converters.BooleanConverter.getInstance();
             break;
@@ -149,7 +147,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         case "com.sun.javafx.css.converters.InsetsConverter$SequenceConverter" :
             styleConverter = com.sun.javafx.css.converters.InsetsConverter.SequenceConverter.getInstance();
             break;
- 
+
         case "com.sun.javafx.css.converters.PaintConverter" :
             styleConverter = com.sun.javafx.css.converters.PaintConverter.getInstance();
             break;
@@ -162,14 +160,14 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         case "com.sun.javafx.css.converters.PaintConverter$RadialGradientConverter" :
             styleConverter = com.sun.javafx.css.converters.PaintConverter.RadialGradientConverter.getInstance();
             break;
- 
+
         case "com.sun.javafx.css.converters.SizeConverter" :
             styleConverter = com.sun.javafx.css.converters.SizeConverter.getInstance();
             break;
         case "com.sun.javafx.css.converters.SizeConverter$SequenceConverter" :
             styleConverter = com.sun.javafx.css.converters.SizeConverter.SequenceConverter.getInstance();
             break;
- 
+
         case "com.sun.javafx.css.converters.StringConverter" :
             styleConverter = com.sun.javafx.css.converters.StringConverter.getInstance();
             break;
@@ -182,7 +180,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         case "com.sun.javafx.css.converters.URLConverter$SequenceConverter" :
             styleConverter = com.sun.javafx.css.converters.URLConverter.SequenceConverter.getInstance();
             break;
- 
+
         // Region stuff
         case "com.sun.javafx.scene.layout.region.BackgroundPositionConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.BackgroundPositionConverter.getInstance();
@@ -232,7 +230,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         case "com.sun.javafx.scene.layout.region.Margins$SequenceConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.Margins.SequenceConverter.getInstance();
             break;
- 
+
         // parser stuff
         case "com.sun.javafx.css.parser.DeriveColorConverter" :
             styleConverter = com.sun.javafx.css.parser.DeriveColorConverter.getInstance();
@@ -249,7 +247,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
 
         default :
             final PlatformLogger logger = Logging.getCSSLogger();
-            if (logger.isLoggable(PlatformLogger.SEVERE)) {
+            if (logger.isLoggable(Level.SEVERE)) {
                 logger.severe("StyleConverterImpl : converter Class is null for : "+converterClass);
             }
             break;

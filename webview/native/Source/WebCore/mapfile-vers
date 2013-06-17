@@ -1780,6 +1780,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WCWidget_initIDs;
                Java_com_sun_webkit_WebPage_twkAddJavaScriptBinding;
                Java_com_sun_webkit_WebPage_twkAdjustFrameHeight;
+               Java_com_sun_webkit_WebPage_twkBeginPrinting;
                Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend;
                Java_com_sun_webkit_WebPage_twkCopy;
                Java_com_sun_webkit_WebPage_twkCreatePage;
@@ -1854,7 +1855,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WebPage_twkSetUserAgent;
                Java_com_sun_webkit_WebPage_twkSetUserStyleSheetLocation;
                Java_com_sun_webkit_WebPage_twkSetZoomFactor;
-               Java_com_sun_webkit_WebPage_twkStartPrinting;
                Java_com_sun_webkit_WebPage_twkStop;
                Java_com_sun_webkit_WebPage_twkStopAll;
                Java_com_sun_webkit_WebPage_twkUpdateContent;

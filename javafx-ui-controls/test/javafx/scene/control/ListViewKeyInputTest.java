@@ -31,11 +31,16 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -1093,5 +1098,43 @@ public class ListViewKeyInputTest {
         assertTrue(isNotSelected(0,1));
         assertEquals(3, fm.getFocusedIndex());
         assertEquals(2, getAnchor());
+    }
+
+    private int rt29849_start_count = 0;
+    private int rt29849_cancel_count = 0;
+    @Test public void test_rt29849() {
+        listView.setEditable(true);
+
+        listView.setOnEditStart(new EventHandler<ListView.EditEvent<String>>() {
+            @Override public void handle(ListView.EditEvent<String> t) {
+                rt29849_start_count++;
+            }
+        });
+        listView.setOnEditCancel(new EventHandler<ListView.EditEvent<String>>() {
+            @Override public void handle(ListView.EditEvent<String> t) {
+                rt29849_cancel_count++;
+            }
+        });
+
+        // initially the counts should be zero
+        assertEquals(0, rt29849_start_count);
+        assertEquals(0, rt29849_cancel_count);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(listView, 0);
+        assertTrue(cell.isEditable());
+        assertFalse(cell.isEditing());
+        assertEquals(0, cell.getIndex());
+
+        // do an edit, start count should be one, cancel still zero
+        listView.edit(0);
+        assertTrue(cell.isEditing());
+        assertEquals(1, rt29849_start_count);
+        assertEquals(0, rt29849_cancel_count);
+
+        // cancel edit, now both counts should be 1
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+        assertFalse(cell.isEditing());
+        assertEquals(1, rt29849_start_count);
+        assertEquals(1, rt29849_cancel_count);
     }
 }

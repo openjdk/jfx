@@ -89,10 +89,10 @@ public class MayaImporter {
     //=========================================================================
     // MayaImporter.load
     //=========================================================================
-    public void load(String url) {
+    public void load(String url, boolean asPolygonMesh) {
         try {
             Loader loader = new Loader();
-            loader.load(new java.net.URL(url));
+            loader.load(new java.net.URL(url), asPolygonMesh);
 
             // This root is not automatically added to the scene.
             // It needs to be added by the user of MayaImporter.

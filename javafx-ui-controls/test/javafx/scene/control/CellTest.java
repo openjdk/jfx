@@ -242,6 +242,9 @@ public class CellTest {
     }
 
     @Test public void startEditWhenEditableIsTrue() {
+        if ((cell instanceof TableCell)) {
+            ((TableCell) cell).lockItemOnEdit = true;
+        }
         cell.updateItem("Apples", false);
         cell.startEdit();
         assertTrue(cell.isEditing());
@@ -255,6 +258,9 @@ public class CellTest {
     }
 
     @Test public void startEditWhileAlreadyEditingIsIgnored() {
+        if (cell instanceof TableCell) {
+            ((TableCell) cell).lockItemOnEdit = true;
+        }
         cell.updateItem("Apples", false);
         cell.startEdit();
         cell.startEdit();

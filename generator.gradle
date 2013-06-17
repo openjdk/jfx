@@ -25,10 +25,12 @@ task createWrapper(type: Wrapper) {
     gradleVersion = '1.4'
 }
 
+def fileList = []
+
 ext.RTDir = "."
 ext.FXDir = "../javafx"
 task generate << {
-    def excludeFromSource = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert"]
+    def excludeFromSource = ["META-INF/**", "**/doc-files/**/*", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert"]
     def includeInResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.txt", "**/*.fxml", "**/*.js", "**/*.frag", "**/*.vert"]
     def excludeFromResources = ["**/doc-files/**/*"]
 
@@ -38,6 +40,9 @@ task generate << {
         into FXDir
         include "*.gradle", "LICENSE", "README", "gradle.properties", "build.properties"
         exclude "generator.gradle"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Copy over the apps
@@ -47,12 +52,29 @@ task generate << {
             into "$FXDir/apps/experiments/$app/src/main/java"
             exclude excludeFromSource
             exclude "build.xml"
+            eachFile { f ->
+                fileList.add(f.file);
+            }
         }
         copy {
             from "$RTDir/apps/experiments/$app/src"
             into "$FXDir/apps/experiments/$app/src/main/resources"
             include includeInResources
             exclude excludeFromResources
+            eachFile { f ->
+                fileList.add(f.file);
+            }
+        }
+    }
+
+    ["3DViewer"].each { app ->
+        copy {
+            from "$RTDir/apps/experiments/$app/src"
+            into "$FXDir/apps/experiments/$app/src"
+            exclude "main/java/META-INF/MANIFEST.MF"
+            eachFile { f ->
+                fileList.add(f.file);
+            }
         }
     }
 
@@ -63,6 +85,9 @@ task generate << {
         exclude excludeFromSource
         exclude "build.xml"
         exclude "generated/ensemble/search/index/"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "$RTDir/apps/samples/Ensemble8/src"
@@ -70,12 +95,18 @@ task generate << {
         include includeInResources
         exclude excludeFromResources
         include "generated/ensemble/search/index/"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the buildSrc project
     copy {
         from "$RTDir/gradleBuildSrc"
         into "$FXDir/buildSrc"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
@@ -83,12 +114,18 @@ task generate << {
         into "${FXDir}/buildSrc/src/main/java"
         include "com/sun/javafx/beans/annotations/**",
                 "com/sun/javafx/collections/annotations/**"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-annotation-processor/src",
              "${RTDir}/decora-compiler/src"
         into "${FXDir}/buildSrc/src/main/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-annotation-processor/src",
@@ -97,21 +134,33 @@ task generate << {
         include includeInResources
         exclude excludeFromResources
         exclude "**/META-INF/**/*"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/decora-compiler/src/com/sun/scenario/effect/compiler/JSL.g"
         into "${FXDir}/buildSrc/src/main/antlr"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/decora-compiler/test"
         into "${FXDir}/buildSrc/src/test/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/decora-compiler/test"
         into "${FXDir}/buildSrc/src/test/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the base module
@@ -125,6 +174,9 @@ task generate << {
         exclude "com/sun/javafx/beans/annotations/**",
                 "com/sun/javafx/collections/annotations/**"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-beans/src",
@@ -135,15 +187,24 @@ task generate << {
         into "${FXDir}/modules/base/src/main/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-anim/src"
         into "${FXDir}/modules/base/src/main/docs"
         include "**/doc-files/**/*"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-common/build-tools"
         into "${FXDir}/modules/base/src/main/version-info"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-beans/test",
@@ -152,6 +213,9 @@ task generate << {
              "${RTDir}/javafx-common/test/unit"
         into "${FXDir}/modules/base/src/test/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-beans/test",
@@ -161,6 +225,9 @@ task generate << {
         into "${FXDir}/modules/base/src/test/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the graphics module
@@ -201,6 +268,9 @@ task generate << {
         into "${FXDir}/modules/graphics/src/main/java"
         exclude "com/sun/scenario/effect/compiler/JSL.g"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/decora-d3d/src",
@@ -238,11 +308,17 @@ task generate << {
         into "${FXDir}/modules/graphics/src/main/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-ui-common/src"
         into "${FXDir}/modules/graphics/src/main/docs"
         include "**/doc-files/**/*"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-concurrent/test",
@@ -252,6 +328,9 @@ task generate << {
              "${RTDir}/javafx-ui-quantum/test"
         into "${FXDir}/modules/graphics/src/test/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-concurrent/test",
@@ -262,6 +341,9 @@ task generate << {
         into "${FXDir}/modules/graphics/src/test/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     // Because we have tests that need to be run with StubToolkit vs. Quantum,
     // and others that need Quantum, we have to split them apart
@@ -270,6 +352,9 @@ task generate << {
              "${RTDir}/test-stub-toolkit/src"
         into "${FXDir}/modules/graphics/src/stub/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-ui-common/test/unit",
@@ -277,16 +362,25 @@ task generate << {
         into "${FXDir}/modules/graphics/src/stub/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/javafx-beans-dt/src"
         into "${FXDir}/modules/designTime/src/main/java"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-designtime/src"
         into "${FXDir}/modules/designTime/src/main/java"
         include "javafx/scene/ParentDesignInfo.java", "javafx/scene/layout/**", "com/**"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
@@ -294,6 +388,9 @@ task generate << {
              "${RTDir}/prism-ps/shadergen"
         into "${FXDir}/modules/graphics/src/main/jsl-prism"
         exclude "nbproject", "*.iml"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     ["glass-lib-gtk", "glass-lib-ios", "glass-lib-lens", "glass-lib-macosx", "glass-lib-windows"].each { dir ->
@@ -303,45 +400,69 @@ task generate << {
         copy {
             from "${RTDir}/glass/${dir}/src"
             into "${FXDir}/modules/graphics/src/main/native-glass/${name}"
+            eachFile { f ->
+                fileList.add(f.file);
+            }
         }
     }
 
     copy {
         from "${RTDir}/javafx-iio-native/src"
         into "${FXDir}/modules/graphics/src/main/native-iio"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/prism-common-native/src"
         into "${FXDir}/modules/graphics/src/main/native-prism"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/prism-d3d-native/src"
         into "${FXDir}/modules/graphics/src/main/native-prism-d3d"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/prism-es2-native/src"
         into "${FXDir}/modules/graphics/src/main/native-prism-es2"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/prism-sw-native/include"
         from "${RTDir}/prism-sw-native/src"
         into "${FXDir}/modules/graphics/src/main/native-prism-sw"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/decora-sse-native"
         into "${FXDir}/modules/graphics/src/main/native-decora"
         include "*.cc", "*.h"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/decora-runtime/jsl",
              "${RTDir}/decora-runtime/generator"
         into "${FXDir}/modules/graphics/src/main/jsl-decora"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the controls module
@@ -350,6 +471,9 @@ task generate << {
              "${RTDir}/javafx-ui-controls/src"
         into "${FXDir}/modules/controls/src/main/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-ui-charts/src",
@@ -357,17 +481,26 @@ task generate << {
         into "${FXDir}/modules/controls/src/main/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-designtime/src"
         into "${FXDir}/modules/controls/src/main/dt"
         include "javafx/scene/control/**"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-ui-charts/test",
              "${RTDir}/javafx-ui-controls/test"
         into "${FXDir}/modules/controls/src/test/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-ui-charts/test",
@@ -375,6 +508,9 @@ task generate << {
         into "${FXDir}/modules/controls/src/test/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the swing module
@@ -382,12 +518,18 @@ task generate << {
         from "${RTDir}/javafx-embed-swing/src"
         into "${FXDir}/modules/swing/src/main/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-embed-swing/src"
         into "${FXDir}/modules/swing/src/main/java"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the swt module
@@ -395,12 +537,18 @@ task generate << {
         from "${RTDir}/javafx-embed-swt/src"
         into "${FXDir}/modules/swt/src/main/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-embed-swt/src"
         into "${FXDir}/modules/swt/src/main/java"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the fxml module
@@ -408,46 +556,70 @@ task generate << {
         from "${RTDir}/javafx-fxml/src"
         into "${FXDir}/modules/fxml/src/main/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-fxml/src"
         into "${FXDir}/modules/fxml/src/main/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-fxml/src"
         into "${FXDir}/modules/fxml/src/main/docs"
         include "**/doc-files/**/*"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/javafx-fxml/test"
         into "${FXDir}/modules/fxml/src/test/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-fxml/test"
         into "${FXDir}/modules/fxml/src/test/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the deployment code
     copy {
         from "$RTDir/deploy/javafx-deploy/src/js"
         into "$FXDir/modules/fxpackager/src/main/resources/resources/web-files"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "$RTDir/deploy/lib"
         into "$FXDir/modules/fxpackager/src/main/resources/resources/web-files"
         exclude "java-coffee-cup-23x20.png", "splash.gif"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "$RTDir/deploy/javafx-launcher/src"
         into "$FXDir/modules/fxpackager/src/main/java"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
@@ -458,6 +630,9 @@ task generate << {
                 "**/*.control", "**/*.copyright", "**/*.desktop", "**/*.postinst", "**/*.postrm", "**/*.spec",
                 "**/*.scpt", "**/*.icns", "**/*.template", "**/*.plist",
                 "**/*.bmp", "**/*.ico", "**/*.iss", "**/*.wxs"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
@@ -469,16 +644,25 @@ task generate << {
                 "**/*.scpt", "**/*.icns", "**/*.template", "**/*.plist",
                 "**/*.bmp", "**/*.ico", "**/*.iss", "**/*.wxs"
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "$RTDir/deploy/packager/native/linux"
         into "$FXDir/modules/fxpackager/src/main/native/launcher/linux"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "$RTDir/deploy/packager/native/macosx"
         into "$FXDir/modules/fxpackager/src/main/native/launcher/mac"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
@@ -486,11 +670,17 @@ task generate << {
         into "$FXDir/modules/fxpackager/src/main/native/launcher/win"
         rename "iconswap.cpp", "IconSwap.cpp"
         include "WinLauncher.cpp", "iconswap.cpp"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "$RTDir/deploy/packager/scripts"
         into "$FXDir/modules/fxpackager/src/main/native/javafxpackager/shell"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
@@ -498,22 +688,34 @@ task generate << {
         into "$FXDir/modules/fxpackager/src/main/native/javafxpackager/win"
         include "javafxpackager.manifest", "javafxpackager.rc", "main.cpp"
         rename "main.cpp", "javafxpackager.cpp"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "$RTDir/deploy/packager/test"
         into "$FXDir/modules/fxpackager/test/main/java"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "$RTDir/deploy/man"
         into "$FXDir/modules/fxpackager/src/main/man"
         exclude "build.xml", "**/ja/**"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "$RTDir/deploy/man/ja"
         into "$FXDir/modules/fxpackager/src/main/man/ja_JP.UTF-8"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the web module
@@ -521,12 +723,18 @@ task generate << {
         from "${RTDir}/webview/src"
         into "${FXDir}/modules/web/src/main/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/webview/test"
         into "${FXDir}/modules/web/src/test/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     
     copy {
@@ -534,11 +742,17 @@ task generate << {
         into "${FXDir}/modules/web/src/test/resources"
         include includeInResources
         exclude excludeFromResources
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     copy {
         from "${RTDir}/webview/native"
         into "${FXDir}/modules/web/src/main/native"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Create the builders module
@@ -546,11 +760,17 @@ task generate << {
         from "${RTDir}/javafx-builders/src"
         into "${FXDir}/modules/builders/src/main/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
     copy {
         from "${RTDir}/javafx-builders/test/unit"
         into "${FXDir}/modules/builders/src/test/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
     }
 
     // Find every empty directory and nuke it
@@ -559,4 +779,21 @@ task generate << {
         if (it.directory && it.file.list().length == 0) empty.add(it.file);
     }
     empty.each { it.delete() }
+}
+
+task generateThenDelete() {
+    description = "Generate new project layout structure THEN DELETE existing files (i.e., move rather than copy)";
+    dependsOn(generate);
+    doLast {
+        // Delete all copied files
+        def nFiles = fileList.size();
+        println "Deleting ${nFiles} files"
+        /*
+        fileList.each { f ->
+            println "rm $f";
+        }
+        */
+        delete(fileList);
+
+    }
 }

@@ -130,6 +130,7 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CameraHelper;
@@ -2494,7 +2495,7 @@ public abstract class Node implements EventTarget, Styleable {
         setLayoutY(y - getLayoutBounds().getMinY());
 
         PlatformLogger logger = Logging.getLayoutLogger();
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer(this.toString()+" moved to ("+x+","+y+")");
         }
     }
@@ -6513,7 +6514,7 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     PlatformLogger logger = Logging.getInputLogger();
-                    if (logger.isLoggable(PlatformLogger.FINER)) {
+                    if (logger.isLoggable(Level.FINER)) {
                         logger.finer(this + " hover=" + get());
                     }
                     pseudoClassStateChanged(HOVER_PSEUDOCLASS_STATE, get());
@@ -6561,7 +6562,7 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     PlatformLogger logger = Logging.getInputLogger();
-                    if (logger.isLoggable(PlatformLogger.FINER)) {
+                    if (logger.isLoggable(Level.FINER)) {
                         logger.finer(this + " pressed=" + get());
                     }
                     pseudoClassStateChanged(PRESSED_PSEUDOCLASS_STATE, get());
@@ -7335,7 +7336,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 pseudoClassStateChanged(FOCUSED_PSEUDOCLASS_STATE, get());
                 PlatformLogger logger = Logging.getFocusLogger();
-                if (logger.isLoggable(PlatformLogger.FINE)) {
+                if (logger.isLoggable(Level.FINE)) {
                     logger.fine(this + " focused=" + get());
                 }
 
@@ -7978,7 +7979,7 @@ public abstract class Node implements EventTarget, Styleable {
          */
         if (event instanceof InputEvent) {
             PlatformLogger logger = Logging.getInputLogger();
-            if (logger.isLoggable(PlatformLogger.FINE)) {
+            if (logger.isLoggable(Level.FINE)) {
                 EventType eventType = event.getEventType();
                 if (eventType == MouseEvent.MOUSE_ENTERED ||
                     eventType == MouseEvent.MOUSE_EXITED) {

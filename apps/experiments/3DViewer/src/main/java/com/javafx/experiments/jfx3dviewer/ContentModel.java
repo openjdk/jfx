@@ -31,8 +31,6 @@
  */
 package com.javafx.experiments.jfx3dviewer;
 
-import java.io.File;
-import java.io.IOException;
 import javafx.animation.Timeline;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -56,8 +54,8 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
-import com.javafx.experiments.importers.Importer3D;
 import com.javafx.experiments.shape3d.PolygonMeshView;
+import com.javafx.experiments.shape3d.SubDivision;
 
 /**
  * 3D Content Model for Viewer App. Contains the 3D scene and everything related to it: light, cameras etc.
@@ -140,10 +138,12 @@ public class ContentModel {
         }
     };
     private boolean wireframe = false;
-    private int subdivision = 0;
+    private int subdivisionLevel = 0;
+    private SubDivision.BoundaryMode boundaryMode = SubDivision.BoundaryMode.CREASE_EDGES;
+    private SubDivision.MapBorderMode mapBorderMode = SubDivision.MapBorderMode.NOT_SMOOTH;
     private String loadedUrl = null;
 
-    public ContentModel(String fileToLoad) {
+    public ContentModel() {
         subScene = new SubScene(root3D,400,400,true,false);
         subScene.setFill(Color.ALICEBLUE);
 
@@ -164,28 +164,8 @@ public class ContentModel {
                 System.out.println("z = " + newValue);
             }
         });
-        //LIGHTS
-//        root3D.getChildren().addAll(light1, light2, light3);
-        // BOX
-//        Box testBox = new Box(5,5,5);
-//        testBox.setMaterial(new PhongMaterial(Color.RED));
-//        testBox.setDrawMode(DrawMode.LINE);
-//        root3D.getChildren().add(testBox);
 
         root3D.getChildren().add(autoScalingGroup);
-
-        // LOAD DROP HERE MODEL
-        try {
-            if (fileToLoad != null) {
-                loadedUrl = new File(fileToLoad).toURI().toURL().toExternalForm();
-            } else {
-                loadedUrl = ContentModel.class.getResource("drop-here.obj").toExternalForm();
-            }
-            content = Importer3D.load(loadedUrl);
-            autoScalingGroup.getChildren().add(content);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         // SCENE EVENT HANDLING FOR CAMERA NAV
         subScene.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
@@ -200,8 +180,8 @@ public class ContentModel {
                     double yDelta = event.getSceneY() -  dragStartY;
                     cameraXRotate.setAngle(dragStartRotateX - (yDelta*0.7));
                     cameraYRotate.setAngle(dragStartRotateY + (xDelta*0.7));
+                    }
                 }
-            }
         });
         subScene.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
@@ -211,6 +191,15 @@ public class ContentModel {
                 cameraPosition.setZ(z);
             }
         });
+
+        SessionManager sessionManager = SessionManager.getSessionManager();
+        sessionManager.bind(cameraLookXRotate.angleProperty(), "cameraLookXRotate");
+        sessionManager.bind(cameraLookZRotate.angleProperty(), "cameraLookZRotate");
+        sessionManager.bind(cameraPosition.xProperty(), "cameraPosition.x");
+        sessionManager.bind(cameraPosition.yProperty(), "cameraPosition.y");
+        sessionManager.bind(cameraPosition.zProperty(), "cameraPosition.z");
+        sessionManager.bind(cameraXRotate.angleProperty(), "cameraXRotate");
+        sessionManager.bind(cameraYRotate.angleProperty(), "cameraYRotate");
     }
 
     public String getLoadedUrl() {
@@ -318,7 +307,10 @@ public class ContentModel {
         this.content = content;
         autoScalingGroup.getChildren().add(this.content);
         setWireFrame(content,wireframe);
-        setSubdivision(content,subdivision);
+        // TODO mesh is updated each time these are called even if no rendering needs to happen
+        setSubdivisionLevel(content, subdivisionLevel);
+        setBoundaryMode(content, boundaryMode);
+        setMapBorderMode(content, mapBorderMode);
     }
 
     public SubScene getSubScene() {
@@ -372,20 +364,48 @@ public class ContentModel {
         }
     }
 
-    public int getSubdivision() {
-        return subdivision;
+    public SubDivision.BoundaryMode getBoundaryMode() {
+        return boundaryMode;
     }
-
-    public void setSubdivision(int subdivision) {
-        this.subdivision = subdivision;
-        setSubdivision(root3D,subdivision);
+    public void setBoundaryMode(SubDivision.BoundaryMode boundaryMode) {
+        this.boundaryMode = boundaryMode;
+        setBoundaryMode(root3D, boundaryMode);
     }
-
-    private void setSubdivision(Node node, int subdivision) {
+    private void setBoundaryMode(Node node, SubDivision.BoundaryMode boundaryMode) {
         if (node instanceof PolygonMeshView) {
-            ((PolygonMeshView)node).setSubdivision(subdivision);
+            ((PolygonMeshView)node).setBoundaryMode(boundaryMode);
         } else if (node instanceof Parent) {
-            for (Node child: ((Parent)node).getChildrenUnmodifiable()) setSubdivision(child,subdivision);
+            for (Node child: ((Parent)node).getChildrenUnmodifiable()) setBoundaryMode(child, boundaryMode);
+        }
+    }
+    
+    public SubDivision.MapBorderMode getMapBorderMode() {
+        return mapBorderMode;
+    }
+    public void setMapBorderMode(SubDivision.MapBorderMode mapBorderMode) {
+        this.mapBorderMode = mapBorderMode;
+        setMapBorderMode(root3D, mapBorderMode);
+    }
+    private void setMapBorderMode(Node node, SubDivision.MapBorderMode mapBorderMode) {
+        if (node instanceof PolygonMeshView) {
+            ((PolygonMeshView)node).setMapBorderMode(mapBorderMode);
+        } else if (node instanceof Parent) {
+            for (Node child: ((Parent)node).getChildrenUnmodifiable()) setMapBorderMode(child, mapBorderMode);
+        }
+    }
+
+    public int getSubdivisionLevel() {
+        return subdivisionLevel;
+    }
+    public void setSubdivisionLevel(int subdivisionLevel) {
+        this.subdivisionLevel = subdivisionLevel;
+        setSubdivisionLevel(root3D, subdivisionLevel);
+    }
+    private void setSubdivisionLevel(Node node, int subdivisionLevel) {
+        if (node instanceof PolygonMeshView) {
+            ((PolygonMeshView)node).setSubdivisionLevel(subdivisionLevel);
+        } else if (node instanceof Parent) {
+            for (Node child: ((Parent)node).getChildrenUnmodifiable()) setSubdivisionLevel(child, subdivisionLevel);
         }
     }
 

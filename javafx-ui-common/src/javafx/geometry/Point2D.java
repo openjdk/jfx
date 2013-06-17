@@ -210,29 +210,36 @@ public class Point2D {
     }
 
     /**
-     * Computes the angle between the vector represented
+     * Computes the angle (in degrees) between the vector represented
      * by this point and the specified vector.
      * @param x the X magnitude of the other vector
      * @param y the Y magnitude of the other vector
-     * @return the angle between the two vectors
+     * @return the angle between the two vectors measured in degrees
      * @since JavaFX 8.0
      */
     public double angle(double x, double y) {
         final double ax = getX();
         final double ay = getY();
 
-        final double dotProduct = ax * x + ay * y;
+        final double delta = (ax * x + ay * y) / Math.sqrt(
+                (ax * ax + ay * ay) * (x * x + y * y));
 
-        return Math.toDegrees(Math.acos(dotProduct / Math.sqrt(
-                (ax * ax + ay * ay) * (x * x + y * y))));
+        if (delta > 1.0) {
+            return 0.0;
+        }
+        if (delta < -1.0) {
+            return 180.0;
+        }
+
+        return Math.toDegrees(Math.acos(delta));
     }
 
     /**
-     * Computes the angle between the vector represented
+     * Computes the angle (in degrees) between the vector represented
      * by this point and the vector represented by the specified point.
      * @param point the other vector
-     * @return the angle between the two vectors, {@code NaN} if any of the two
-     *         vectors is a zero vector
+     * @return the angle between the two vectors measured in degrees,
+     *         {@code NaN} if any of the two vectors is a zero vector
      * @throws NullPointerException if the specified {@code point} is null
      * @since JavaFX 8.0
      */
@@ -241,12 +248,13 @@ public class Point2D {
     }
 
     /**
-     * Computes the angle between the three points with this point as a vertex.
+     * Computes the angle (in degrees) between the three points with this point
+     * as a vertex.
      * @param p1 one point
      * @param p2 other point
-     * @return angle between the vectors (this, p1) and (this, p2),
-     *         {@code NaN} if the three points are not different from
-     *         one another
+     * @return angle between the vectors (this, p1) and (this, p2) measured
+     *         in degrees, {@code NaN} if the three points are not different
+     *         from one another
      * @throws NullPointerException if {@code p1} or {@code p2} is null
      * @since JavaFX 8.0
      */
@@ -259,10 +267,17 @@ public class Point2D {
         final double bx = p2.getX() - x;
         final double by = p2.getY() - y;
 
-        final double dotProduct = ax * bx + ay * by;
+        final double delta = (ax * bx + ay * by) / Math.sqrt(
+                (ax * ax + ay * ay) * (bx * bx + by * by));
 
-        return Math.toDegrees(Math.acos(dotProduct / Math.sqrt(
-                (ax * ax + ay * ay) * (bx * bx + by * by))));
+        if (delta > 1.0) {
+            return 0.0;
+        }
+        if (delta < -1.0) {
+            return 180.0;
+        }
+
+        return Math.toDegrees(Math.acos(delta));
     }
 
     /**

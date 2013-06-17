@@ -1780,6 +1780,7 @@
                _Java_com_sun_webkit_WCWidget_initIDs
                _Java_com_sun_webkit_WebPage_twkAddJavaScriptBinding
                _Java_com_sun_webkit_WebPage_twkAdjustFrameHeight
+               _Java_com_sun_webkit_WebPage_twkBeginPrinting
                _Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
                _Java_com_sun_webkit_WebPage_twkCopy
                _Java_com_sun_webkit_WebPage_twkCreatePage
@@ -1854,7 +1855,6 @@
                _Java_com_sun_webkit_WebPage_twkSetUserAgent
                _Java_com_sun_webkit_WebPage_twkSetUserStyleSheetLocation
                _Java_com_sun_webkit_WebPage_twkSetZoomFactor
-               _Java_com_sun_webkit_WebPage_twkStartPrinting
                _Java_com_sun_webkit_WebPage_twkStop
                _Java_com_sun_webkit_WebPage_twkStopAll
                _Java_com_sun_webkit_WebPage_twkUpdateContent

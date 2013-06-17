@@ -37,7 +37,7 @@ import javafx.css.Styleable;
 import javafx.scene.Node;
 
 /**
- * Used by CSSRule to determine whether or not the rule applies to a 
+ * Used by CSSRule to determine whether or not the selector applies to a
  * given object.
  *
  */
@@ -51,16 +51,24 @@ abstract public class Selector {
     public static Selector getUniversalSelector() {
         return UniversalSelector.INSTANCE;
     }
-    
-    /**
-     * Determines whether this selector applies to the specified object.  
-     * Returns a {@link Match} on success, <code>null</code> otherwise. Note
-     * that pseudoclass states are NOT included in this check.
-     *
-     *@return a <code>Match</code> describing the match, or <code>null</code> 
-     *      for no match
-     */
-    abstract Match matches(Styleable node);
+
+    private Rule rule;
+    void setRule(Rule rule) {
+        this.rule = rule;
+    }
+    Rule getRule() {
+        return rule;
+    }
+
+    private int ordinal = -1;
+    void setOrdinal(int ordinal) {
+        this.ordinal = ordinal;
+    }
+    int getOrdinal() {
+        return ordinal;
+    }
+
+    abstract Match createMatch();
 
     // same as the matches method expect return true/false rather than a match
     public abstract boolean applies(Styleable styleable);

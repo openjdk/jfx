@@ -34,6 +34,7 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -61,7 +62,7 @@ public class CSSParserTest {
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
         assertEquals(1,rules.size(),0);
-        List<Declaration> decls = ss.getRules().get(0).getDeclarations();
+        List<Declaration> decls = ss.getRules().get(0).getUnobservedDeclarationList();
         assertTrue(decls.size()==1);
         Declaration decl = decls.get(0);
         ParsedValue value = decl.getParsedValue();
@@ -104,7 +105,7 @@ public class CSSParserTest {
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
         assertEquals(1,rules.size(),0);
-        List<Declaration> decls = ss.getRules().get(0).getDeclarations();
+        List<Declaration> decls = ss.getRules().get(0).getUnobservedDeclarationList();
         assertTrue(decls.size()==1);
         Declaration decl = decls.get(0);
         ParsedValue value = decl.getParsedValue();
@@ -144,7 +145,7 @@ public class CSSParserTest {
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
         assertEquals(1,rules.size(),0);
-        List<Declaration> decls = ss.getRules().get(0).getDeclarations();
+        List<Declaration> decls = ss.getRules().get(0).getUnobservedDeclarationList();
         assertTrue(decls.size()==1);
         Declaration decl = decls.get(0);
         ParsedValue value = decl.getParsedValue();
@@ -154,6 +155,7 @@ public class CSSParserTest {
         assertTrue(Double.compare(size, 12) == 0);
     }
     
+    @Ignore("RT-31042")
     @Test public void test_RT_18126() {
         // CSS cannot write binary -fx-background-repeat: repeat, no-repeat;
         String data = "#rt18126 {"
@@ -185,7 +187,7 @@ public class CSSParserTest {
             for (int n=0; n<cssRules.size(); n++) {
                 Rule expected = cssRules.get(n);
                 Rule actual = bssRules.get(n);
-                assertEquals(Integer.toString(n), expected.getDeclarations(), actual.getDeclarations());                
+                assertEquals(Integer.toString(n), expected.getUnobservedDeclarationList(), actual.getUnobservedDeclarationList());
             }
             
         } catch (IOException ioe) {
@@ -206,7 +208,7 @@ public class CSSParserTest {
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
         assertEquals(1,rules.size(),0);
-        List<Declaration> decls = ss.getRules().get(0).getDeclarations();
+        List<Declaration> decls = ss.getRules().get(0).getUnobservedDeclarationList();
         assertEquals(2,decls.size(),0);
         
         Declaration decl = decls.get(0);

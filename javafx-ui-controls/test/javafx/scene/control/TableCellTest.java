@@ -25,9 +25,13 @@
 
 package javafx.scene.control;
 
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.util.Callback;
 
+import com.sun.javafx.tk.Toolkit;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -145,5 +149,37 @@ public class TableCellTest {
         TableView table2 = new TableView();
         table2.setItems(null);
         cell.updateTableView(table2);
+    }
+
+    private int rt_29923_count = 0;
+    @Test public void test_rt_29923() {
+        // setup test
+        cell = new TableCell<String,String>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                rt_29923_count++;
+            }
+        };
+        TableColumn col = new TableColumn("TEST");
+        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures, ObservableValue>() {
+            @Override public ObservableValue call(TableColumn.CellDataFeatures param) {
+                return null;
+            }
+        });
+        table.getColumns().add(col);
+        cell.updateTableColumn(col);
+        cell.updateTableView(table);
+
+        // set index to 0, which results in the cell value factory returning
+        // null, but because the number of items is 3, this is a valid value
+        cell.updateIndex(0);
+        assertNull(cell.getItem());
+        assertFalse(cell.isEmpty());
+        assertEquals(1, rt_29923_count);
+
+        cell.updateIndex(1);
+        assertNull(cell.getItem());
+        assertFalse(cell.isEmpty());
+        assertEquals(2, rt_29923_count);
     }
 }

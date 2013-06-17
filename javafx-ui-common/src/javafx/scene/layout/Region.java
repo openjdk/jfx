@@ -74,6 +74,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
 import javafx.util.Callback;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
  * Region is the base class for all JavaFX Node-based UI Controls, and all layout containers.
@@ -1168,7 +1169,7 @@ public class Region extends Parent {
         setWidth(width);
         setHeight(height);
         PlatformLogger logger = Logging.getLayoutLogger();
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer(this.toString() + " resized to " + width + " x " + height);
         }
     }
@@ -1442,49 +1443,56 @@ public class Region extends Parent {
 
 
     double computeChildMinAreaWidth(Node child, Insets margin) {
-        return computeChildMinAreaWidth(child, margin, -1);
+        return computeChildMinAreaWidth(child, -1, margin, -1);
     }
 
-    double computeChildMinAreaWidth(Node child, Insets margin, double height) {
+    double computeChildMinAreaWidth(Node child, double areaBaseline, Insets margin, double height) {
         final boolean snap = isSnapToPixel();
         double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
         double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            alt = snapSize(height != -1? boundedSize(child.minHeight(-1), height, child.maxHeight(-1)) :
+            double top = areaBaseline == -1 ? (margin != null? snapSpace(margin.getTop(), snap) : 0)
+                    : snapSpace(areaBaseline - child.getBaselineOffset());
+            double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
+            alt = snapSize(height != -1? boundedSize(child.minHeight(-1), height - top - bottom, child.maxHeight(-1)) :
                                          child.maxHeight(-1));
         }
         return left + snapSize(child.minWidth(alt)) + right;
     }
 
-    double computeChildMinAreaHeight(Node child, Insets margin) {
-        return computeChildMinAreaHeight(child, margin, -1);
+    double computeChildMinAreaHeight(Node child, double areaBaseline, Insets margin) {
+        return computeChildMinAreaHeight(child, areaBaseline, margin, -1);
     }
 
-    double computeChildMinAreaHeight(Node child, Insets margin, double width) {
+    double computeChildMinAreaHeight(Node child, double areaBaseline, Insets margin, double width) {
         final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
+        double top = areaBaseline == -1 ? (margin != null? snapSpace(margin.getTop(), snap) : 0)
+                    : snapSpace(areaBaseline - child.getBaselineOffset());
         double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            alt = snapSize(width != -1? boundedSize(child.minWidth(-1), width, child.maxWidth(-1)) :
+            double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
+            double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
+            alt = snapSize(width != -1? boundedSize(child.minWidth(-1), width - left - right, child.maxWidth(-1)) :
                                         child.maxWidth(-1));
         }
         return top + snapSize(child.minHeight(alt)) + bottom;
     }
 
     double computeChildPrefAreaWidth(Node child, Insets margin) {
-        return computeChildPrefAreaWidth(child, margin, -1);
+        return computeChildPrefAreaWidth(child, -1, margin, -1);
     }
 
-    double computeChildPrefAreaWidth(Node child, Insets margin, double height) {
+    double computeChildPrefAreaWidth(Node child, double areaBaseline, Insets margin, double height) {
         final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
         double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
         double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.VERTICAL) { // width depends on height
+            double top = areaBaseline == -1 ? (margin != null? snapSpace(margin.getTop(), snap) : 0)
+                    : snapSpace(areaBaseline - child.getBaselineOffset());
+            double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
             alt = snapSize(boundedSize(
                     child.minHeight(-1), height != -1? height - top - bottom :
                            child.prefHeight(-1), child.maxHeight(-1)));
@@ -1492,18 +1500,19 @@ public class Region extends Parent {
         return left + snapSize(boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt))) + right;
     }
 
-    double computeChildPrefAreaHeight(Node child, Insets margin) {
-        return computeChildPrefAreaHeight(child, margin, -1);
+    double computeChildPrefAreaHeight(Node child, double areaBaseline, Insets margin) {
+        return computeChildPrefAreaHeight(child, areaBaseline, margin, -1);
     }
 
-    double computeChildPrefAreaHeight(Node child, Insets margin, double width) {
+    double computeChildPrefAreaHeight(Node child, double areaBaseline, Insets margin, double width) {
         final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
+        double top = areaBaseline == -1 ? (margin != null? snapSpace(margin.getTop(), snap) : 0)
+                    : snapSpace(areaBaseline - child.getBaselineOffset());
         double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
-        double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
+            double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
+            double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
             alt = snapSize(boundedSize(
                     child.minWidth(-1), width != -1? width - left - right :
                            child.prefWidth(-1), child.maxWidth(-1)));
@@ -1511,7 +1520,7 @@ public class Region extends Parent {
         return top + snapSize(boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt))) + bottom;
     }
 
-    double computeChildMaxAreaWidth(Node child, Insets margin, double height) {
+    double computeChildMaxAreaWidth(Node child, double areaBaseline, Insets margin, double height) {
         double max = child.maxWidth(-1);
         if (max == Double.MAX_VALUE) {
             return max;
@@ -1521,7 +1530,10 @@ public class Region extends Parent {
         double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            alt = snapSize(height != -1? boundedSize(child.minHeight(-1), height, child.maxHeight(-1)) :
+            double top = areaBaseline == -1 ? (margin != null? snapSpace(margin.getTop(), snap) : 0)
+                    : snapSpace(areaBaseline - child.getBaselineOffset());
+            double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
+            alt = snapSize(height != -1? boundedSize(child.minHeight(-1), height - top - bottom, child.maxHeight(-1)) :
                 child.minHeight(-1));
             max = child.maxWidth(alt);
         }
@@ -1529,18 +1541,21 @@ public class Region extends Parent {
         return left + snapSize(boundedSize(child.minWidth(alt), max, child.maxWidth(alt))) + right;
     }
 
-    double computeChildMaxAreaHeight(Node child, Insets margin, double width) {
+    double computeChildMaxAreaHeight(Node child, double areaBaseline, Insets margin, double width) {
         double max = child.maxHeight(-1);
         if (max == Double.MAX_VALUE) {
             return max;
         }
 
         final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
+        double top = areaBaseline == -1 ? (margin != null? snapSpace(margin.getTop(), snap) : 0)
+                    : snapSpace(areaBaseline - child.getBaselineOffset());
         double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            alt = snapSize(width != -1? boundedSize(child.minWidth(-1), width, child.maxWidth(-1)) :
+            double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
+            double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
+            alt = snapSize(width != -1? boundedSize(child.minWidth(-1), width - left - right, child.maxWidth(-1)) :
                 child.minWidth(-1));
             max = child.maxHeight(alt);
         }
@@ -1688,8 +1703,8 @@ public class Region extends Parent {
                 Insets margin = childMargins.call(child);
                 final double childWidth = Double.isNaN(singleChildWidth) ? childWidths[i] : singleChildWidth;
                 max = Math.max(max, minimum?
-                    computeChildMinAreaHeight(child, margin, childWidth) :
-                        computeChildPrefAreaHeight(child, margin, childWidth));
+                    computeChildMinAreaHeight(child, -1, margin, childWidth) :
+                        computeChildPrefAreaHeight(child, -1, margin, childWidth));
             }
             return max;
         }
@@ -1704,8 +1719,8 @@ public class Region extends Parent {
             final Insets margin = childMargins.call(child);
             final double childHeight = i < childHeights.length ? childHeights[i] : lastChildHeight;
             max = Math.max(max, minimum?
-                computeChildMinAreaWidth(children.get(i), margin, childHeight) :
-                    computeChildPrefAreaWidth(child, margin, childHeight));
+                computeChildMinAreaWidth(children.get(i), -1, margin, childHeight) :
+                    computeChildPrefAreaWidth(child, -1, margin, childHeight));
         }
         return max;
     }
@@ -2008,7 +2023,10 @@ public class Region extends Parent {
                                HPos halignment, VPos valignment, boolean isSnapToPixel) {
 
         Insets childMargin = margin != null ? margin : Insets.EMPTY;
-        double top = snapSpace(childMargin.getTop(), isSnapToPixel);
+
+        double top = valignment != VPos.BASELINE ? snapSpace(childMargin.getTop(), isSnapToPixel)
+                    : snapSpace(areaBaselineOffset - child.getBaselineOffset(), isSnapToPixel);
+
         double bottom = snapSpace(childMargin.getBottom(), isSnapToPixel);
         double left = snapSpace(childMargin.getLeft(), isSnapToPixel);
         double right = snapSpace(childMargin.getRight(), isSnapToPixel);
@@ -2028,10 +2046,10 @@ public class Region extends Parent {
                           HPos hpos, VPos vpos, boolean isSnapToPixel) {
         final double xoffset = leftMargin + computeXOffset(areaWidth - leftMargin - rightMargin,
                                                      child.getLayoutBounds().getWidth(), hpos);
-        final double yoffset = topMargin +
+        final double yoffset =
                       (vpos == VPos.BASELINE?
                           areaBaselineOffset - child.getBaselineOffset() :
-                          computeYOffset(areaHeight - topMargin - bottomMargin,
+                          topMargin + computeYOffset(areaHeight - topMargin - bottomMargin,
                                          child.getLayoutBounds().getHeight(), vpos));
         final double x = snapPosition(areaX + xoffset, isSnapToPixel);
         final double y = snapPosition(areaY + yoffset, isSnapToPixel);

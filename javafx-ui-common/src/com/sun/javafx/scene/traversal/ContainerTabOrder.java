@@ -32,6 +32,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import com.sun.javafx.Logging;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 import static com.sun.javafx.scene.traversal.Direction.*;
 
@@ -47,7 +48,7 @@ public class ContainerTabOrder implements Algorithm {
         Node newNode = null;
         int newNodeIndex = -1;
 
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             focusLogger.finer("old focus owner : "+node+", bounds : "+engine.getBounds(node));
         }
 
@@ -70,7 +71,7 @@ public class ContainerTabOrder implements Algorithm {
 
         }
 
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             if (newNode != null) {
                 focusLogger.finer("new focus owner : "+newNode+", bounds : "+engine.getBounds(newNode));
             }
@@ -87,7 +88,7 @@ public class ContainerTabOrder implements Algorithm {
         Node newNode = null;
         List<Node> parentNodes = findPeers(startNode);
         if (parentNodes == null) {
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("can't find peers for a node without a parent");
             }
             return null;
@@ -96,12 +97,12 @@ public class ContainerTabOrder implements Algorithm {
         int ourIndex = parentNodes.indexOf(startNode);
 
         if (ourIndex == -1) {
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("index not founds, no focus transfer");
             }
             return null;
         }
-        
+
         newNode = findNextFocusableInList(parentNodes, ourIndex+1);
 
         /*
@@ -122,7 +123,7 @@ public class ContainerTabOrder implements Algorithm {
             }
             startNode = parent;
         }
-        
+
         if (newNode == null) {
             /*
             ** find the top-most parent which is not at it's end-of-list
@@ -136,14 +137,14 @@ public class ContainerTabOrder implements Algorithm {
             parentNodes = parent.getChildrenUnmodifiable();
             newNode = findNextFocusableInList(parentNodes, 0);
         }
-        
+
         return newNode;
     }
 
     private Node findNextParent(Node node) {
         return null;
     }
-    
+
     private Node findNextFocusableInList(List<Node> nodeList, int startIndex) {
         Node newNode = null;
 
@@ -175,12 +176,12 @@ public class ContainerTabOrder implements Algorithm {
         int ourIndex = parentNodes.indexOf(startNode);
 
         if (ourIndex == -1) {
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("index not founds, no focus transfer");
             }
             return null;
         }
-        
+
         newNode = findPreviousFocusableInList(parentNodes, ourIndex-1);
 
         /*
@@ -201,7 +202,7 @@ public class ContainerTabOrder implements Algorithm {
             }
             startNode = parent;
         }
-        
+
         if (newNode == null) {
             /*
             ** find the top-most parent which is not at it's end-of-list
@@ -216,7 +217,7 @@ public class ContainerTabOrder implements Algorithm {
             parentNodes = parent.getChildrenUnmodifiable();
             newNode = findPreviousFocusableInList(parentNodes, parentNodes.size()-1);
         }
-        
+
         return newNode;
     }
 

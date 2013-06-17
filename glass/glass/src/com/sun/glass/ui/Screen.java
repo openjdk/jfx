@@ -241,13 +241,33 @@ public final class Screen {
      * Called from native when the Screen definitions change.
      */
     private static void notifySettingsChanged() {
-        if (screens != null) {
-            for (Screen screen : screens) {
+        // Save the old screens in order to dispose them later
+        List<Screen> oldScreens = screens;
+
+        // Get the new screens
+        initScreens();
+
+        // Update the screen for each window to match the new instance.
+        // Note that if a window has moved to another screen, the window
+        // will be notified separately of that from native code and the
+        // new screen will be updated there
+        List<Window> windows = Window.getWindows();
+        for (Window w : windows) {
+            Screen oldScreen = w.getScreen();
+            for (Screen newScreen : screens) {
+                if (oldScreen.getNativeScreen() == newScreen.getNativeScreen()) {
+                    w.setScreen(newScreen);
+                    break;
+                }
+            }
+        }
+        
+        // Dispose the old screens
+        if (oldScreens != null) {
+            for (Screen screen : oldScreens) {
                 screen.dispose();
             }
         }
-
-        initScreens();
 
         if (eventHandler != null) {
             eventHandler.handleSettingsChanged();

@@ -44,7 +44,7 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
     /** State variables, like &quot;hover&quot; or &quot;pressed&quot; */
     private Set<PseudoClass> pseudoClasses;
 
-    /* specificity of the rule that matched */
+    /* specificity of the selector that matched */
     private final int specificity;
     
     /* order in which this style appeared in the stylesheet */
@@ -93,6 +93,8 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
         return style.getDeclaration().getParsedValueImpl();
     }
     
+    @Override public String toString() { return getProperty(); }
+
     /**
      * When testing equality against another Style, we only care about
      * the property and pseudo-classes. In other words, we only care about
@@ -157,8 +159,9 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
         final boolean otherImportant = otherDecl != null ? otherDecl.isImportant() : false;
         final Rule otherRule = otherDecl != null ? otherDecl.getRule() : null;
         final StyleOrigin otherSource = rule != null ? otherRule.getOrigin() : null;
-        
+
         int c = 0;
+
         if (this.skinProp && !other.skinProp) {
             c = 1;
         } else if (important != otherImportant) {

@@ -49,7 +49,7 @@ import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.tk.Toolkit;
 
 public class VirtualFlowTestUtils {
-    
+
     public static void assertListContainsItemsInOrder(final List items, final Object... expected) {
         assertEquals(expected.length, items.size());
         for (int i = 0; i < expected.length; i++) {
@@ -57,10 +57,10 @@ public class VirtualFlowTestUtils {
             assertEquals(expected[i], item);
         }
     }
-    
+
     public static void clickOnRow(final Control control, int row, KeyModifier... modifiers) {
         IndexedCell cell = VirtualFlowTestUtils.getCell(control, row);
-        
+
         if ((cell instanceof TableRow) || (cell instanceof TreeTableRow)) {
             for (Node n : cell.getChildrenUnmodifiable()) {
                 if (! (n instanceof IndexedCell)) {
@@ -74,27 +74,50 @@ public class VirtualFlowTestUtils {
             MouseEventFirer.fireMousePressAndRelease(cell, modifiers);
         }
     }
-    
+
     public static void assertRowsEmpty(final Control control, final int startRow, final int endRow) {
         assertRows(control, startRow, endRow, true);
     }
-    
+
     public static void assertRowsNotEmpty(final Control control, final int startRow, final int endRow) {
         assertRows(control, startRow, endRow, false);
     }
-    
+
     public static void assertCellEmpty(IndexedCell cell) {
-        final String text = cell.getText();
-//        System.out.println("assertCellEmpty: " + cell.getIndex() + " : " + text);
-        assertTrue("Expected null, found '" + text + "'", text == null || text.isEmpty());
+        if (cell instanceof TableRow || cell instanceof TreeTableRow) {
+            for (Node n : cell.getChildrenUnmodifiable()) {
+                if (! (n instanceof IndexedCell)) {
+                    continue;
+                }
+                IndexedCell<?> childCell = (IndexedCell<?>)n;
+                assertCellEmpty(childCell);
+            }
+        } else {
+            final String text = cell.getText();
+            assertTrue("Expected null, found '" + text + "'", text == null || text.isEmpty());
+
+            final Node graphic = cell.getGraphic();
+            assertTrue("Expected null graphic, found " + graphic, graphic == null);
+        }
     }
-    
+
     public static void assertCellNotEmpty(IndexedCell cell) {
-        final String text = cell.getText();
-//        System.out.println("assertCellNotEmpty: " + cell.getIndex() + " : " + text);
-        assertTrue("Expected a non-null, found '" + text + "'", text != null && ! text.isEmpty());
+        if (cell instanceof TableRow || cell instanceof TreeTableRow) {
+            for (Node n : cell.getChildrenUnmodifiable()) {
+                if (! (n instanceof IndexedCell)) {
+                    continue;
+                }
+                IndexedCell<?> childCell = (IndexedCell<?>)n;
+                assertCellNotEmpty(childCell);
+            }
+        } else {
+            final String text = cell.getText();
+            final Node graphic = cell.getGraphic();
+            assertTrue("Expected a non-null text or graphic property",
+                       (text != null && ! text.isEmpty()) || graphic != null);
+        }
     }
-    
+
     private static void assertRows(final Control control, final int startRow, final int endRow, final boolean expectEmpty) {
         Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
             @Override public Void call(IndexedCell<?> indexedCell) {
@@ -112,7 +135,7 @@ public class VirtualFlowTestUtils {
                         assertCellNotEmpty(childCell);
                     }
                 }
-                
+
                 if (! hasChildrenCell) {
                     if (expectEmpty) {
                         assertCellEmpty(indexedCell);
@@ -123,17 +146,17 @@ public class VirtualFlowTestUtils {
                 return null;
             }
         };
-        
+
         assertCallback(control, startRow, endRow, callback);
     }
-    
+
     public static void assertCellTextEquals(final Control control, final int index, final String... expected) {
         if (expected == null || expected.length == 0) return;
-        
+
         Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
             @Override public Void call(IndexedCell<?> indexedCell) {
                 if (indexedCell.getIndex() != index) return null;
-        
+
                 if (expected.length == 1) {
                     assertEquals(expected[0], indexedCell.getText());
                 } else {
@@ -145,7 +168,7 @@ public class VirtualFlowTestUtils {
                             jump++;
                             continue;
                         }
-                        
+
                         text = ((IndexedCell) childNode).getText();
                         assertEquals(expected[i], text);
                     }
@@ -153,24 +176,24 @@ public class VirtualFlowTestUtils {
                 return null;
             }
         };
-        
+
         assertCallback(control, index, index + 1, callback);
     }
-    
+
     public static void assertTableCellTextEquals(final Control control, final int row, final int column, final String expected) {
         Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
             @Override public Void call(IndexedCell<?> indexedCell) {
                 if (indexedCell.getIndex() != row) return null;
-                
+
                 IndexedCell cell = (IndexedCell) indexedCell.getChildrenUnmodifiable().get(column);
                 assertEquals(expected, cell.getText());
                 return null;
             }
         };
-        
+
         assertCallback(control, row, row + 1, callback);
     }
-    
+
     // used by TreeView / TreeTableView to ensure the correct indentation
     // (although note that it has only been developed so far for TreeView)
     public static void assertLayoutX(final Control control, final int startRow, final int endRow, final double expectedLayoutX) {
@@ -191,42 +214,56 @@ public class VirtualFlowTestUtils {
                 return null;
             }
         };
-        
+
         assertCallback(control, startRow, endRow, callback);
     }
-    
+
     public static int getCellCount(final Control control) {
         return getVirtualFlow(control).getCellCount();
     }
-    
+
     public static IndexedCell getCell(final Control control, final int index) {
         return getVirtualFlow(control).getCell(index);
     }
-    
+
+    public static IndexedCell getCell(final Control control, final int row, final int column) {
+        IndexedCell rowCell = getVirtualFlow(control).getCell(row);
+        int count = 0;
+        for (Node n : rowCell.getChildrenUnmodifiable()) {
+            if (! (n instanceof IndexedCell)) {
+                continue;
+            }
+            count++;
+            if (count < column) continue;
+            return (IndexedCell) n;
+        }
+        return null;
+    }
+
     public static void assertCallback(final Control control, final int startRow, final int endRow, final Callback<IndexedCell<?>, Void> callback) {
         VirtualFlow<?> flow = getVirtualFlow(control);
-        
-//        Region clippedContainer = (Region) flow.getChildrenUnmodifiable().get(0);
-//        Group sheet = (Group) clippedContainer.getChildrenUnmodifiable().get(0);
-        
-//        final int sheetSize = sheet.getChildren().size();
+
+        //        Region clippedContainer = (Region) flow.getChildrenUnmodifiable().get(0);
+        //        Group sheet = (Group) clippedContainer.getChildrenUnmodifiable().get(0);
+
+        //        final int sheetSize = sheet.getChildren().size();
         final int sheetSize = flow.getCellCount();
         final int end = endRow == -1 ? sheetSize : Math.min(endRow, sheetSize);
         for (int row = startRow; row < end; row++) {
             // old approach:
             // callback.call((IndexedCell<?>)sheet.getChildren().get(row));
-            
+
             // new approach:
             IndexedCell cell = flow.getCell(row);
-//            System.out.println("cell index: " + cell.getIndex());
+            //            System.out.println("cell index: " + cell.getIndex());
             callback.call(cell);
         }
     }
-    
+
     public static void assertCellCount(final Control control, final int expected) {
         assertEquals(getVirtualFlow(control).getCellCount(), expected);
     }
-    
+
     public static VirtualFlow<?> getVirtualFlow(Control control) {
         Group group = new Group();
         Scene scene = new Scene(group);
@@ -237,23 +274,23 @@ public class VirtualFlowTestUtils {
         group.getChildren().setAll(control);
         stage.show();
 
-//        Toolkit.getToolkit().firePulse();
-        
+        //        Toolkit.getToolkit().firePulse();
+
         VirtualFlow<?> flow;
         if (control instanceof ComboBox) {
             final ComboBox cb = (ComboBox) control;
             final ComboBoxListViewSkin skin = (ComboBoxListViewSkin) cb.getSkin();
             control = skin.getListView();
         }
-        
+
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
-        
+
         stage.close();
         stage = null;
-        
+
         return flow;
     }
-    
+
     public static VirtualScrollBar getVirtualFlowVerticalScrollbar(final Control control) {
         VirtualFlow<?> flow = getVirtualFlow(control);
         VirtualScrollBar scrollBar = null;
@@ -264,8 +301,8 @@ public class VirtualFlowTestUtils {
                 }
             }
         }
-        
-//        Toolkit.getToolkit().firePulse();
+
+        //        Toolkit.getToolkit().firePulse();
         return scrollBar;
     }
 }

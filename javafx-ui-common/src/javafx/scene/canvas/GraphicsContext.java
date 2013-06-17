@@ -305,7 +305,7 @@ public final class GraphicsContext {
     private void flushPolyBuf(GrowableDataBuffer buf,
                               float polybuf[], int n, byte command)
     {
-        curState.transform.deltaTransform(polybuf, 0, polybuf, 0, n/2);
+        curState.transform.transform(polybuf, 0, polybuf, 0, n/2);
         for (int i = 0; i < n; i += 2) {
             buf.putByte(command);
             buf.putFloat(polybuf[i]);

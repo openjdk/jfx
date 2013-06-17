@@ -35,14 +35,9 @@ package com.javafx.experiments.jfx3dviewer;
 // import testviewer.Frame;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.animation.Timeline;
@@ -96,9 +91,8 @@ import com.sun.javafx.geom.Vec3d;
  *
  */
 public class OldTestViewer extends Application {
-    public static final String SESSION_PROPERTIES_FILENAME = "session.properties";
     public static final String PATH_PROPERTY = "file";
-    
+
     final private PointLight pointLight = new PointLight();
     final private PointLight pointLight2 = new PointLight();
     final private PointLight pointLight3 = new PointLight();
@@ -128,7 +122,7 @@ public class OldTestViewer extends Application {
     double SHIFT_MULTIPLIER = 0.1;
     double ALT_MULTIPLIER = 0.5;
     
-    boolean enableSaveSession = true;
+    private SessionManager sessionManager;
     
     double mousePosX;
     double mousePosY;
@@ -469,7 +463,7 @@ public class OldTestViewer extends Application {
             Logger.getLogger(OldTestViewer.class.getName()).log(Level.SEVERE, null, ex);
             return new MayaGroup();
         }
-        mayaImporter.load(url.toString());
+        mayaImporter.load(url.toString(), false);
         timeline = mayaImporter.getTimeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
         //timeline.setAutoReverse(true);
@@ -1088,6 +1082,7 @@ public class OldTestViewer extends Application {
     //=============================================================================
     @Override
     public void start(Stage primaryStage) {
+        sessionManager = SessionManager.createSessionManager("OldTestViewer");
         System.out.println("new File().getAbsolutePath() = " + new File("").getAbsolutePath());
 
         buildScene();
@@ -1108,11 +1103,21 @@ public class OldTestViewer extends Application {
         primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
             @Override
             public void handle(WindowEvent event) {
-                saveSession();
+                if (loadedPath != null) {
+                    sessionManager.getProperties().setProperty(PATH_PROPERTY, loadedPath.getAbsolutePath());
+                }
+                sessionManager.saveSession();
             }
         });
         
-        loadSession();
+        sessionManager.loadSession();
+
+        String path = sessionManager.getProperties().getProperty(PATH_PROPERTY);
+        if (path != null) {
+            loadNewNode(new File(path));
+        }
+
+
         scene.setCamera(camera);
                 
         // ScenicView.show(scene);
@@ -1379,46 +1384,6 @@ public class OldTestViewer extends Application {
         new FXMLExporter("output.fxml").export(loadedNode);
     }
 
-    private void loadSession() {
-        Reader reader = null;
-        try {
-            Properties props = new Properties();
-            reader = new FileReader(SESSION_PROPERTIES_FILENAME);
-            props.load(reader);
-            String path = props.getProperty(PATH_PROPERTY);
-            if (path != null) {
-                loadNewNode(new File(path));
-            }
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(OldTestViewer.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(OldTestViewer.class.getName()).log(Level.SEVERE, null, ex);
-        } finally {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-            } catch (IOException ex) {
-                Logger.getLogger(OldTestViewer.class.getName()).
-                        log(Level.SEVERE, null, ex);
-            }
-        }
-    }
-    
-    private void saveSession() {
-        if (enableSaveSession) {
-            Properties props = new Properties();
-            if (loadedPath != null) {
-                props.setProperty(PATH_PROPERTY, loadedPath.getAbsolutePath());
-            }
-            try {
-                props.store(new FileWriter(SESSION_PROPERTIES_FILENAME), "Jfx3dViewerApp session properties");
-            } catch (IOException ex) {
-                Logger.getLogger(OldTestViewer.class.getName()).
-                        log(Level.SEVERE, null, ex);
-            }
-        }
-    }
     /**
      * The main() method is ignored in correctly deployed JavaFX application.
      * main() serves only as fallback in case the application can not be

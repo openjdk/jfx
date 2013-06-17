@@ -137,6 +137,12 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             }
         }
     };
+
+    private final InvalidationListener rootPropertyListener = new InvalidationListener() {
+        @Override public void invalidated(Observable observable) {
+            updateItem();
+        }
+    };
     
     private final WeakListChangeListener<TreeTablePosition<S,?>> weakSelectedListener = 
             new WeakListChangeListener<TreeTablePosition<S,?>>(selectedListener);
@@ -150,6 +156,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             new WeakListChangeListener<TreeTableColumn<S,?>>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakColumnStyleClassListener =
             new WeakListChangeListener<String>(columnStyleClassListener);
+    private final WeakInvalidationListener weakRootPropertyListener =
+            new WeakInvalidationListener(rootPropertyListener);
 
     
     /***************************************************************************
@@ -211,6 +219,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
                             oldTableView.editingCellProperty().removeListener(weakEditingListener);
                             oldTableView.getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
+                            oldTableView.rootProperty().removeListener(weakRootPropertyListener);
                         }
                     }
                     
@@ -227,6 +236,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
                         get().editingCellProperty().addListener(weakEditingListener);
                         get().getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+                        get().rootProperty().addListener(weakRootPropertyListener);
                         
                         weakTableViewRef = new WeakReference<TreeTableView<S>>(get());
                     }
@@ -259,6 +269,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
+
         final TreeTableView<S> table = getTreeTableView();
         final TreeTableColumn<S,T> column = getTableColumn();
         if (! isEditable() ||
@@ -266,7 +278,9 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                 (column != null && ! getTableColumn().isEditable())) {
             return;
         }
-        
+
+        updateItem();
+
         // it makes sense to get the cell into its editing state before firing
         // the event to listeners below, so that's what we're doing here
         // by calling super.startEdit().
@@ -504,9 +518,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                 !tableColumn.isVisible() ||
                 tableView.getRoot() == null) {
             
-            if (! isEmpty()) {
-                updateItem(null, true);
-            }
+            updateItem(null, true);
             return;
         } else {
             currentObservableValue = tableColumn.getCellObservableValue(index);
@@ -515,10 +527,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
             
             // update the 'item' property of this cell.
-            if ((newValue != null && ! newValue.equals(oldValue)) || 
-                    oldValue != null && ! oldValue.equals(newValue)) {
-                updateItem(newValue, false);
-            }
+            updateItem(newValue, false);
         }
         
         if (currentObservableValue == null) {

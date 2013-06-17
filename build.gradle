@@ -287,6 +287,13 @@ ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f" 
     IS_LINUX && IS_64 ? "org.eclipse.swt.gtk.linux.x86_64_3.7.2.v3740f" :
     IS_LINUX && !IS_64 ? "org.eclipse.swt.gtk.linux.x86_3.7.2.v3740f" : ""
 
+// Build javadocs unless SKIP_JAVADOC=true
+def buildJavadoc = true;
+if (hasProperty("SKIP_JAVADOC")) {
+    buildJavadoc = !Boolean.parseBoolean(SKIP_JAVADOC);
+}
+ext.BUILD_JAVADOC = buildJavadoc;
+
 // Specify the build configuration (Release or Debug)
 defineProperty("CONF", "Release")
 ext.IS_DEBUG = CONF == "Debug"
@@ -326,6 +333,132 @@ defineProperty("RELEASE_MILESTONE", "ea")
 // to building the normal desktop build for this machine
 project.ext.set("defaultHostTarget", IS_MAC ? "mac" : IS_WINDOWS ? "win" : IS_LINUX ? "linux" : "");
 defineProperty("COMPILE_TARGETS", "$defaultHostTarget")
+
+// Location of the cross compile tools
+def importCrossTools = BUILD_CLOSED ? true : false;
+if (!importCrossTools && hasProperty("IMPORT_CROSS_TOOLS")) {
+    importCrossTools = Boolean.parseBoolean(BUILD_CLOSED);
+}
+ext.IMPORT_CROSS_TOOLS = importCrossTools
+
+def crossToolsDir = "../crosslibs" 
+if (hasProperty("CROSS_TOOLS_DIR")) {
+    crossToolsDir = CROSS_TOOLS_DIR
+}
+ext.CROSS_TOOLS_DIR = file(crossToolsDir)
+
+/**
+ * Fetch/Check that external tools are present for the build. This method
+ * will conditionaly download the packages from project defined ivy repositories
+ * and unpack them into the specified destdir
+ *
+ * @param configName A unique name to distiguish the configuration (ie "ARMSFV6")
+ * @param packages A list of required packages (with extentions .tgz, .zip)
+ * @param destdir where the packages should be unpacked
+ * @param doFetch if true, the named packages will be download
+ */
+void fetchExternalTools(String configName, List packages, File destdir, boolean doFetch) {
+
+
+    if (doFetch) {
+        // create a uniuqe configuration for this fetch
+        def String thisconfig = "fetchTools$configName"
+        rootProject.configurations.create(thisconfig)
+
+        def List<String> fetchedPackages = []
+        def int fetchCount = 0
+
+        packages.each { pkgname->
+            def int dotdex = pkgname.lastIndexOf('.')
+            def int dashdex = pkgname.lastIndexOf('-')
+            def String basename = pkgname.substring(0,dashdex)
+            def String ver = pkgname.substring(dashdex+1,dotdex)
+            def String ext = pkgname.substring(dotdex+1)
+            def File pkgdir = file("$destdir/$basename-$ver")
+
+            if (!pkgdir.isDirectory()) {
+                rootProject.dependencies.add(thisconfig, "javafx:$basename:$ver", {
+                    artifact {
+                        name = basename
+                        version = ver
+                        type = ext
+                    }
+                })
+                println "adding $pkgname as a downloadable item did not find $pkgdir"
+                fetchedPackages.add(pkgname)
+                fetchCount++
+            }
+        }
+
+
+        //fetch all the missing packages
+        if (fetchedPackages.size > 0) {
+            destdir.mkdirs()
+
+            logger.quiet "fetching missing packages $fetchedPackages"
+            copy {
+                from rootProject.configurations[thisconfig]
+                into destdir
+            }
+
+            // unpack the fetched packages
+
+            fetchedPackages.each { pkgname->
+                logger.quiet "expanding the package $pkgname"
+                def srcball = file("${destdir}/${pkgname}")
+
+                if (!srcball.exists()) {
+                    throw new GradleException("Failed to fetch $pkgname");
+                }
+
+                def String basename = pkgname.substring(0,pkgname.lastIndexOf("."))
+                def File pkgdir = file("$destdir/$basename")
+
+                if (pkgname.endsWith(".tgz")) {
+                    if (IS_LINUX || IS_MAC) {
+                        // use native tar to support symlinks
+                        pkgdir.mkdirs()
+                        exec {
+                            workingDir pkgdir
+                            commandLine "tar", "zxf", "${srcball}"
+                         }
+                     } else {
+                         copy {
+                             from tarTree(resources.gzip("${srcball}"))
+                             into pkgdir
+                         }
+                     }
+                } else if (pkgname.endsWith(".zip")) {
+                     copy {
+                         from zipTree("${srcball}")
+                         into pkgdir
+                     }
+                } else {
+                    throw new GradleException("Unhandled pacakge type for compile package ${pkgname}")
+                }
+                srcball.deleteOnExit();
+            }
+        } else {
+            logger.quiet "all tool packages are present $packages"
+        }
+    } else { // !doFetch - so just check they are present
+        // check that all the dirs are really there
+        def List<String> errors = []
+        packages.each { pkgname->
+            def String basename = pkgname.substring(0,pkgname.indexOf("."))
+            def File pkgdir = file("$destdir/$basename")
+
+            if (!pkgdir.isDirectory()) {
+                errors.add(pkgname)
+            }
+        }
+        if (errors.size > 0) {
+            throw new GradleException("Error: missing tool packages: $errors")
+        } else {
+            logger.quiet "all tool packages are present $packages"
+        }
+    }
+}
 
 // Now we need to define the native compilation tasks. The set of parameters to
 // native compiliation depends on the target platform (and also to some extent what platform
@@ -617,16 +750,18 @@ allprojects {
     // "artifact" in the pattern below. Note that the closed builds use different repositories
     // so if you are debugging a closed-build artifact related build issue, check out the
     // closed gradle file instead.
-    repositories {
-        mavenCentral()
-        ivy {
-            url "http://download.eclipse.org/eclipse/updates/3.7/R-3.7.2-201202080800/plugins/"
-            layout "pattern", {
-                artifact "[artifact].[ext]"
+    if (!"true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+        repositories {
+            mavenCentral()
+            ivy {
+                url "http://download.eclipse.org/eclipse/updates/3.7/R-3.7.2-201202080800/plugins/"
+                layout "pattern", {
+                    artifact "[artifact].[ext]"
+                }
             }
-        }
-        flatDir {
-            dir "$JDK_HOME/jre/lib/"
+            flatDir {
+                dir "$JDK_HOME/jre/lib/"
+            }
         }
     }
 
@@ -658,6 +793,7 @@ allprojects {
     // when generating JavaDocs for a specific project. When generating the JavaDocs for the
     // entire SDK, a different javadoc command is used (see the javadoc task on the top level)
     javadoc {
+        enabled = BUILD_JAVADOC
         exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
         executable = JAVADOC;
         options.windowTitle("JavaFX Project ${project.name} ${RELEASE_NAME}")
@@ -1009,9 +1145,11 @@ project(":controls") {
 }
 
 project(":swing") {
+    /* should not be built, but needed in builders and JMX
     tasks.all {
         if (!COMPILE_SWING) it.enabled = false
     }
+    */
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics")
     }
@@ -1044,6 +1182,9 @@ project(":fxml") {
 project(":builders") {
     sourceCompatibility = 1.7
 
+    if (!COMPILE_SWING) sourceSets.main.java.exclude ("**/swing/**")
+    if (!COMPILE_SWT)   sourceSets.main.java.exclude ("**/swt/**")
+
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
                 project(":controls"), project(":swt"), project(":swing")
@@ -1072,9 +1213,11 @@ project(":fxpackager") {
     }
     // fxpackager has a dependency on ant in order to build the ant jar,
     // and as such needs to point to the apache binary repository
-    repositories {
-        maven {
-            url "https://repository.apache.org"
+    if (!"true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+        repositories {
+            maven {
+                url "https://repository.apache.org"
+            }
         }
     }
 
@@ -1304,6 +1447,7 @@ task clean() {
 }
 
 task javadoc(type: Javadoc) {
+    enabled = BUILD_JAVADOC
     group = "Basic"
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
@@ -1504,9 +1648,11 @@ compileTargets { t ->
             // Copy over the javadocs that were generated. This is done rather than just generating
             // the docs into the "right place" because for a cross-compile you only need one set of
             // docs but need to have a copy in each created sdk
-            copy {
-                from "build/javadoc"
-                into "build/${t.name}-sdk/docs/api"
+            if (BUILD_JAVADOC) {
+                copy {
+                    from "build/javadoc"
+                    into "build/${t.name}-sdk/docs/api"
+                }
             }
 
             // Copy over the fxpackager and rename as ant-javafx.jar
@@ -1876,6 +2022,119 @@ project(":controls") {
 
 cleanIdeaWorkspace.group = "IDE"
 cleanIdeaWorkspace.description = "Deletes the javafx.ipw file"
+
+
+/******************************************************************************
+ *                                                                            *
+ *                   Generation of Eclipse Project Files                      *
+ *                                                                            *
+ *  This next section is responsible for setting up the work for generation   *
+ *  of Eclipse project files. The developer needs to get the Gradle IDE from  *
+ *  the SpringSource update site:                                             *
+ *                                                                            *
+ *      http://dist.springsource.com/release/TOOLS/gradle                     *
+ *                                                                            *
+ *  and all project files will be generated when javafx is imported into the  *
+ *  workspace.  Note that 'gradle eclipse' does not generate good results at  *
+ *  this time so the Eclipse plugin is recommended.                           *
+ *                                                                            *
+ *****************************************************************************/
+
+//TODO - default setting for Eclipse IDE (spaces vs. tabs etc.)
+allprojects {
+    apply plugin: "eclipse"
+    task afterEclipseImport {
+        ext.srcFile = file('.classpath')
+        inputs.file srcFile
+        outputs.dir srcFile
+        onlyIf { srcFile.exists() }
+        doLast {
+            def classpath = new XmlParser().parse(srcFile)
+
+            // Temporary code:  Until full support for JDK8 is released for Eclipse, some expressions
+            // involving generics won't compile.  Builders inclues some exmaples of this.  The fix is
+            // to use the jar that was compiled by the JDK rather than source from Eclipse
+            if (project.name == 'builders') {
+                Node source = classpath.classpathentry.find {it.@path == 'src/main/java'}
+                if (source) {
+                    source.@kind="lib"
+                    source.@exported="true"
+                    source.@path="build/libs/builders.jar"
+                    source.@sourcepath="src/main/java"
+                }
+            }
+
+            // Add an optional reference to the closed runtime repository and the generated source to graphics
+            if (project.name == "graphics") {
+                classpath.appendNode('classpathentry', [kind: 'src', exported: 'true', path: '/builders'])
+                classpath.appendNode('classpathentry', [kind: 'src', exported: 'true', path: 'build/generated-src/jsl-decora'])
+                classpath.appendNode('classpathentry', [kind: 'src', exported: 'true', path: 'build/generated-src/jsl-prism'])
+                classpath
+                    .appendNode('classpathentry', [kind: 'src', exported: 'true', path: '/rt-closed'])
+                    .appendNode('attributes')
+                    .appendNode('attribute', [name: 'optional', value: 'true'])
+            }
+
+            // Add an optional reference to the closed media repository
+            if (project.name == 'media') {
+                //TODO - remove rt when legacy build goes away
+                def list = ['jfxmedia/src', 'test/demos/JavaTestApps/src', 'test/perf/JFXMediaSystemTestApp/src', '/rt', '/rt-closed']
+                for (string in list) {
+                    Node node = classpath.classpathentry.find {it.@path == string}
+                    if (!node) {
+                        classpath
+                            .appendNode('classpathentry', [kind: 'src', exported: 'true', path: string])
+                            .appendNode('attributes')
+                            .appendNode('attribute', [name: 'optional', value: 'true'])
+                    }
+                }
+            }
+
+            // Temporary code: The Eclipse gradle plugin fails when BUILD_CLOSED = true.  This means
+            // that projects must be imported into Eclipse in two passes, first with BUILD_CLOSED = false, 
+            // then with BUILD_CLOSED = true.  The classpath to media and web need to be fixed up during
+            // the second pass when these projects are imported 
+            if (project.name == 'builders') {
+                Node node = classpath.classpathentry.find {it.@path == '/web'}
+                if (!node) {
+                    classpath
+                        .appendNode('classpathentry', [kind: 'src', exported: 'true', path: '/web'])
+                        .appendNode('attributes')
+                        .appendNode('attribute', [name: 'optional', value: 'true'])
+                }
+            }
+            if (project.name == 'media') {
+                Node node = classpath.classpathentry.find {it.@path == '/controls'}
+                if (!node) {
+                    classpath
+                        .appendNode('classpathentry', [kind: 'src', exported: 'true', path: '/controls'])
+                        .appendNode('attributes')
+                        .appendNode('attribute', [name: 'optional', value: 'true'])
+                }
+            }
+            if (project.name == 'web') {
+                def list = ['src/main/java', '/controls', '/media']
+                for (string in list) {
+                    Node node = classpath.classpathentry.find {it.@path == string}
+                    if (!node) {
+                        classpath
+                            .appendNode('classpathentry', [kind: 'src', exported: 'true', path: string])
+                            .appendNode('attributes')
+                            .appendNode('attribute', [name: 'optional', value: 'true'])
+                    }
+                }
+            }
+            
+            // Add the standard Eclipse JUnit class path entry
+            Node node = classpath.classpathentry.find {it.@path == 'org.eclipse.jdt.junit.JUNIT_CONTAINER/4'}
+            if (!node) {
+                classpath.appendNode('classpathentry', [kind: 'con', path: 'org.eclipse.jdt.junit.JUNIT_CONTAINER/4'])
+            }
+            def writer = new FileWriter(srcFile)
+            new XmlNodePrinter(new PrintWriter(writer)).print(classpath)
+         }
+    }
+}
 
 /******************************************************************************
  *                                                                            *

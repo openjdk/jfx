@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,52 +22,31 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#ifdef ANDROID_NDK
-
 #include <jni.h>
-#include <android/log.h>
-#include <string.h>
-#include <assert.h>
-#include "LensCommon.h"
-#include "Main.h"
+
+#ifndef _Included_com_oracle_dalvik_FXActivity_InternalSurfaceView
+#define _Included_com_oracle_dalvik_FXActivity_InternalSurfaceView
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
- * This is the activity context we got from NativeActivity.
- * Stored for later use in glass.
+ * Class:     com_oracle_dalvik_FXActivity_InternalSurfaceView
+ * Method:    onTouchEventNative
+ * Signature: (III)V
  */
-DvkContext context;
+JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceView_onTouchEventNative
+  (JNIEnv *, jobject, jint, jint, jint);
 
-ANativeWindow *getAndroidNativeWindow() {
-   assert(context);
-   if (context->app->activityState == APP_CMD_PAUSE ||
-      context->app->activityState == APP_CMD_STOP) {
-      return NULL;
-   }
-   return context->app->window;
+/*
+ * Class:     com_oracle_dalvik_FXActivity_InternalSurfaceView
+ * Method:    onKeyEventNative
+ * Signature: (II)V
+ */
+JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceView_onKeyEventNative
+  (JNIEnv *, jobject, jint, jint);
+
+#ifdef __cplusplus
 }
-
-DvkContext getDvkContext() {
-   return context;
-}
-
-const char *getExternalDataPath() {
-   return context->app->activity->externalDataPath;
-}
-
-void android_main(struct android_app *app) {
-
-   app_dummy();
-
-   context = (DvkContext)malloc(sizeof(struct _DvkContext));
-   assert(context);
-    memset(context, 0, sizeof(struct _DvkContext));
-
-    //save reference to android activity
-    context->app = app;
-
-    dvkEventLoop(context); //block until application ends
-
-    free(context);
-}
-
-#endif /* ANDROID_NDK */
+#endif
+#endif

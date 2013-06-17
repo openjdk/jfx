@@ -37,15 +37,16 @@ import com.sun.javafx.accessible.utils.NavigateDirection;
 import com.sun.javafx.accessible.utils.PropertyIds;
 import com.sun.javafx.accessible.utils.Rect;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 public class AccessibleNode implements AccessibleProvider
 {
     Object accElement ; // the Glass peer
-    Node node ; // scene graph node 
+    Node node ; // scene graph node
     AccessibleNode parent; // parent of this child in accessible graph
     AccessibleStage accController ; // not sure if this can be worked arnd in future
     List<AccessibleNode> children; // if this control has children
-            
+
     public AccessibleNode(Node n)
     {
         this.node = n ;
@@ -58,12 +59,12 @@ public class AccessibleNode implements AccessibleProvider
     {
         return this.accElement ;
     }
-    
+
     public void fireEvent(int EventId) {
         accController.stage.impl_getPeer().accessibleFireEvent(accElement, EventId);
 //        accElement.fireEvent(EventId);
     }
-    
+
     public void firePropertyChange(int propertyId, int oldProperty, int newProperty) {
         accController.stage.impl_getPeer().accessibleFirePropertyChange(accElement, propertyId, oldProperty, newProperty);
     //    accElement.firePropertyChange(propertyId, oldProperty, newProperty);
@@ -73,15 +74,15 @@ public class AccessibleNode implements AccessibleProvider
         accController.stage.impl_getPeer().accessibleFirePropertyChange(accElement, propertyId, oldProperty, newProperty);
     //    accElement.firePropertyChange(propertyId, oldProperty, newProperty);
     }
-   
-     
+
+
     // Summary:
     //     Gets a base provider for this element.
     //
     // Returns:
     //     The base provider, or null.
     @Override
-    public AccessibleProvider hostRawElementProvider() 
+    public AccessibleProvider hostRawElementProvider()
     {
         return this ;
     }
@@ -122,17 +123,17 @@ public class AccessibleNode implements AccessibleProvider
         else
             return null;
     }
-    
+
     //////////////////////////////
     // AccessibleProvider
     //////////////////////////////
-      
+
     /**
      * Get the bounding rectangle of this element.
      *
      * @return the bounding rectangle, in screen coordinates.
      */
-    
+
     @Override
     public Rect boundingRectangle() {
         Scene scene = node.getScene();
@@ -147,24 +148,24 @@ public class AccessibleNode implements AccessibleProvider
             scene.getWindow().getY() +
             scene.getY() +
             bounds.getMinY();
-        
+
         PlatformLogger logger = Logging.getAccessibilityLogger();
-        if (logger.isLoggable(PlatformLogger.FINER)) {
-            logger.finer(this.toString()+ "MinX="+ bounds.getMinX() + "MinY="+bounds.getMinY() + 
+        if (logger.isLoggable(Level.FINER)) {
+            logger.finer(this.toString()+ "MinX="+ bounds.getMinX() + "MinY="+bounds.getMinY() +
              "Width="+ bounds.getWidth() +"Height="+ bounds.getHeight());
         }
         return new Rect(x, y, bounds.getWidth(), bounds.getHeight());
     }
-    
+
     public boolean contains(double x, double y)
     {
         Bounds bounds = node.getBoundsInParent() ;
         return bounds.contains(x, y);
     }
-    
+
     /**
      * Get the root node of the fragment.
-     * 
+     *
      * @return the root node.
      */
     @Override
@@ -175,7 +176,7 @@ public class AccessibleNode implements AccessibleProvider
     /**
      * Get an array of fragment roots that are embedded in the UI Automation
      * element tree rooted at the current element.
-     * 
+     *
      * @return an array of root fragments, or null.
      */
     @Override
@@ -185,7 +186,7 @@ public class AccessibleNode implements AccessibleProvider
 
     /**
      * Get the runtime identifier of an element.
-     * 
+     *
      * @return the unique run-time identifier of the element.
      */
     @Override
@@ -195,16 +196,16 @@ public class AccessibleNode implements AccessibleProvider
 
     /**
      * Get the UI Automation element in a specified direction within the tree.
-     * 
+     *
      * @param direction the direction in which to navigate.
-     * 
+     *
      * @return the element in the specified direction, or null if there is no element
      *         in that direction
      */
     @Override
     public Object navigate(NavigateDirection direction) { // this is not focussed driven
         PlatformLogger logger = Logging.getAccessibilityLogger();
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer("this: " + this.toString());
             logger.finer("navigate direction: " + direction);
         }
@@ -216,7 +217,7 @@ public class AccessibleNode implements AccessibleProvider
                 else // return Controllers FragmentRoot as parent
                     return accController.accRoot ;
                 break;
-            case NextSibling: 
+            case NextSibling:
             case PreviousSibling:
                 if(( parent != null) &&( parent.children.size() > 0 ) )
                 {
@@ -224,7 +225,7 @@ public class AccessibleNode implements AccessibleProvider
                     // This should never happen so should we just remove this
                     // or raise an exception?
                     if (idx == -1) {
-                        if (logger.isLoggable(PlatformLogger.FINER)) {
+                        if (logger.isLoggable(Level.FINER)) {
                             logger.finer(this.toString()+ "  children.indexOf returned -1");
                         }
                     }
@@ -241,7 +242,7 @@ public class AccessibleNode implements AccessibleProvider
                     // This should never happen so should we just remove this
                     // or raise an exception?
                     if (idx == -1) {
-                        if (logger.isLoggable(PlatformLogger.FINER)) {
+                        if (logger.isLoggable(Level.FINER)) {
                             logger.finer(this.toString()+ "  children.indexOf returned -1");
                         }
                     }
@@ -252,18 +253,18 @@ public class AccessibleNode implements AccessibleProvider
                     if( (idx >= 0) && (idx < accController.accChildren.size()) )
                         accTemp = accController.accChildren.get(idx);
                 }
-                    
+
                 break;
            case FirstChild:
-               if( children.size() > 0 ) 
+               if( children.size() > 0 )
                     accTemp = children.get(0) ;
                 break;
             case LastChild:
-               if( children.size() > 0 ) 
+               if( children.size() > 0 )
                     accTemp = children.get(children.size()-1) ;
                 break;
         }
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             if (accTemp != null) {
                 logger.finer("returning: " + accTemp.accElement);
             } else {
@@ -276,7 +277,7 @@ public class AccessibleNode implements AccessibleProvider
             return null;
         }
     }
-    
+
     /**
      * Set the focus to this element.
      */
@@ -284,7 +285,7 @@ public class AccessibleNode implements AccessibleProvider
     public void setFocus() {
 //        node.getScene().setImpl_focusOwner(node);
         PlatformLogger logger = Logging.getAccessibilityLogger();
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer(this.toString()+ "In AccessibleNode.setFocus");
         }
         node.requestFocus();

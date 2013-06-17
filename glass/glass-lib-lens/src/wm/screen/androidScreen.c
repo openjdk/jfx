@@ -26,9 +26,9 @@
 #ifdef ANDROID_NDK
 
 #include "LensCommon.h"
-#include "input/LensInput.h"
 #include "wm/LensWindowManager.h"
-#include "android/Main.h"
+#include "input/android/androidInput.h"
+#include "input/android/androidLens.h"
 
 static struct _NativeScreen localScreen;
 static int windowIndex = 1;
@@ -50,8 +50,6 @@ NativeScreen lens_screen_initialize(JNIEnv *env) {
     // convert pixels/mm to pixels/inch
     localScreen.resolutionX = 100;
     localScreen.resolutionY = 100;
-
-    //localScreen.data = malloc(localScreen.width * localScreen.height * sizeof(int));
 
     return &localScreen;
 }

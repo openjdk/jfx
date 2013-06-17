@@ -30,6 +30,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import com.sun.javafx.Logging;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 import static com.sun.javafx.scene.traversal.Direction.*;
 
@@ -168,19 +169,19 @@ public class WeightedClosestCorner implements Algorithm {
         List<Node> nodes = engine.getAllTargetNodes();
         List<Bounds> bounds = engine.getTargetBounds(nodes);
 
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             focusLogger.finer("old focus owner : "+node+", bounds : "+engine.getBounds(node));
         }
-        
+
         int target = traverse(engine.getBounds(node), dir, bounds);
         if (target != -1) {
             newNode = nodes.get(target);
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("new focus owner : "+newNode+", bounds : "+engine.getBounds(newNode));
             }
         }
         else {
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("no focus transfer");
             }
         }

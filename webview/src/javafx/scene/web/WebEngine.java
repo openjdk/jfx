@@ -3,7 +3,13 @@
  */
 package javafx.scene.web;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.web.Debugger;
+import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.webkit.Accessor;
@@ -19,6 +25,8 @@ import com.sun.javafx.webkit.prism.PrismInvoker;
 import com.sun.javafx.webkit.prism.theme.PrismRenderer;
 import com.sun.javafx.webkit.theme.RenderThemeImpl;
 import com.sun.javafx.webkit.theme.Renderer;
+import com.sun.prism.Graphics;
+import com.sun.prism.paint.Color;
 import com.sun.webkit.CursorManager;
 import com.sun.webkit.Disposer;
 import com.sun.webkit.DisposerRecord;
@@ -30,6 +38,7 @@ import com.sun.webkit.ThemeClient;
 import com.sun.webkit.Timer;
 import com.sun.webkit.Utilities;
 import com.sun.webkit.WebPage;
+import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.network.URLs;
 import com.sun.webkit.network.Util;
@@ -61,6 +70,8 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
+import javafx.print.PageLayout;
+import javafx.print.PrinterJob;
 import javafx.scene.Node;
 import javafx.util.Callback;
 import org.w3c.dom.Document;
@@ -1333,6 +1344,68 @@ final public class WebEngine {
                 }
             }
             return result;
+        }
+    }
+
+    /**
+     * Prints the current Web page using the given printer job.
+     * <p>This method does not modify the state of the job, nor does it call
+     * {@link PrinterJob#endJob}, so the job may be safely reused afterwards.
+     * 
+     * @param job printer job used for printing
+     * @since JavaFX 8.0
+     */
+    public void print(PrinterJob job) {
+        PageLayout pl = job.getJobSettings().getPageLayout();
+        int pageCount = page.beginPrinting(
+                (float) pl.getPrintableWidth(), (float) pl.getPrintableHeight());
+        
+        for (int i = 0; i < pageCount; i++) {
+            Node printable = new Printable(i);
+            job.printPage(printable);
+        }
+        page.endPrinting();
+    }
+    
+    final class Printable extends Node {
+        private final PGNode peer;
+
+        Printable(int pageIndex) {
+            peer = new Peer(pageIndex);
+        }
+        
+        @Override protected PGNode impl_createPGNode() {
+            return peer;
+        }
+
+        @Override public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+            return null;
+        }
+
+        @Override public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+            return bounds;
+        }
+
+        @Override protected boolean impl_computeContains(double d, double d1) {
+            return false;
+        }
+        
+        private final class Peer extends NGNode {
+            private final int pageIndex;
+            
+            Peer(int pageIndex) {
+                this.pageIndex = pageIndex;
+            }
+            
+            @Override protected void renderContent(Graphics g) {
+                WCGraphicsContext gc = WCGraphicsManager.getGraphicsManager().
+                        createGraphicsContext(g);
+                page.print(gc, pageIndex);
+            }
+
+            @Override protected boolean hasOverlappingContents() {
+                return false;
+            }
         }
     }
 }

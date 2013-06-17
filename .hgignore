@@ -6,6 +6,8 @@
 \.conflict\~$
 ^\.ant-targets.*$
 \.idea/workspace.xml$
+^\.gradle/
+^buildSrc/\.gradle/
 build/
 bin/
 dist/

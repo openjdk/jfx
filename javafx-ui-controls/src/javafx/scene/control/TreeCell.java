@@ -164,6 +164,12 @@ public class TreeCell<T> extends IndexedCell<T> {
             pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !isExpanded);
         }
     };
+
+    private final InvalidationListener rootPropertyListener = new InvalidationListener() {
+        @Override public void invalidated(Observable observable) {
+            updateItem();
+        }
+    };
     
     private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
     private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelPropertyListener);
@@ -173,6 +179,8 @@ public class TreeCell<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakLeafListener = new WeakInvalidationListener(leafListener);
     private final WeakInvalidationListener weakTreeItemExpandedInvalidationListener =
             new WeakInvalidationListener(treeItemExpandedInvalidationListener);
+    private final WeakInvalidationListener weakRootPropertyListener = new WeakInvalidationListener(rootPropertyListener);
+
     
     
     
@@ -269,6 +277,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                     oldTreeView.editingItemProperty().removeListener(weakEditingListener);
                     oldTreeView.focusModelProperty().removeListener(weakFocusModelPropertyListener);
                     oldTreeView.selectionModelProperty().removeListener(weakSelectionModelPropertyListener);
+                    oldTreeView.rootProperty().removeListener(weakRootPropertyListener);
                 }
                 
                 weakTreeViewRef = null;
@@ -292,7 +301,8 @@ public class TreeCell<T> extends IndexedCell<T> {
                 treeView.editingItemProperty().addListener(weakEditingListener);
                 treeView.focusModelProperty().addListener(weakFocusModelPropertyListener);
                 treeView.selectionModelProperty().addListener(weakSelectionModelPropertyListener);
-                
+                treeView.rootProperty().addListener(weakRootPropertyListener);
+
                 weakTreeViewRef = new WeakReference<TreeView<T>>(treeView);
             }
 
@@ -334,6 +344,8 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
+
         final TreeView<T> tree = getTreeView();
         if (! isEditable() || (tree != null && ! tree.isEditable())) {
 //            if (Logging.getControlsLogger().isLoggable(PlatformLogger.SEVERE)) {
@@ -344,6 +356,8 @@ public class TreeCell<T> extends IndexedCell<T> {
 //            }
             return;
         }
+
+        updateItem();
         
         // it makes sense to get the cell into its editing state before firing
         // the event to the TreeView below, so that's what we're doing here
@@ -461,20 +475,11 @@ public class TreeCell<T> extends IndexedCell<T> {
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
-            if ((newTreeItem != null && ! newTreeItem.equals(oldTreeItem)) || 
-                    oldTreeItem != null && ! oldTreeItem.equals(newTreeItem)) {
-                updateTreeItem(newTreeItem);
-            }
-            
-            if ((newValue != null && ! newValue.equals(oldValue)) || 
-                    oldValue != null && ! oldValue.equals(newValue)) {
-                updateItem(newValue, false);
-            }
+            updateTreeItem(newTreeItem);
+            updateItem(newValue, false);
         } else {
-            if (! isEmpty()) {
-                updateTreeItem(null);
-                updateItem(null, true);
-            }
+            updateTreeItem(null);
+            updateItem(null, true);
         }
     }
 
@@ -512,7 +517,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         // the edit mode, then I need to enter the edit mode
         if (match && !editing) {
             startEdit();
-        } else if (match && editing) {
+        } else if (! match && editing) {
             // If my tree item is not the one being edited then I need to cancel
             // the edit. The tricky thing here is that as part of this call
             // I cannot end up calling tree.edit(null) the way that the standard

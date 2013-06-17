@@ -38,8 +38,6 @@ import javafx.beans.binding.DoubleBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.fxml.Initializable;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
@@ -48,10 +46,7 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.DrawMode;
-import javafx.scene.shape.MeshView;
-import com.javafx.experiments.shape3d.PolygonMesh;
-import com.javafx.experiments.shape3d.PolygonMeshView;
+import com.javafx.experiments.shape3d.SubDivision;
 
 /**
  * Controller class for settings panel
@@ -84,7 +79,9 @@ public class SettingsController implements Initializable {
     public Slider light3y;
     public Slider light3z;
     public CheckBox wireFrameCheckbox;
-    public ToggleGroup subdivideGroup;
+    public ToggleGroup subdivisionLevelGroup;
+    public ToggleGroup subdivisionBoundaryGroup;
+    public ToggleGroup subdivisionSmoothGroup;
 
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
@@ -110,9 +107,31 @@ public class SettingsController implements Initializable {
                 contentModel.setWireFrame(isWireframe);
             }
         });
-        subdivideGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+        subdivisionLevelGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
             @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
-                contentModel.setSubdivision(Integer.parseInt((String)selectedToggle.getUserData()));
+                if (selectedToggle == null) {
+                    subdivisionLevelGroup.selectToggle(oldValue);
+                    selectedToggle = oldValue;
+                }
+                contentModel.setSubdivisionLevel(Integer.parseInt((String)selectedToggle.getUserData()));
+            }
+        });
+        subdivisionBoundaryGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+            @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
+                if (selectedToggle == null) {
+                    subdivisionBoundaryGroup.selectToggle(oldValue);
+                    selectedToggle = oldValue;
+                }
+                contentModel.setBoundaryMode(SubDivision.BoundaryMode.valueOf((String)selectedToggle.getUserData()));
+            }
+        });
+        subdivisionSmoothGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+            @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
+                if (selectedToggle == null) {
+                    subdivisionSmoothGroup.selectToggle(oldValue);
+                    selectedToggle = oldValue;
+                }
+                contentModel.setMapBorderMode(SubDivision.MapBorderMode.valueOf((String)selectedToggle.getUserData()));
             }
         });
         // wire up settings in LIGHTS
@@ -176,6 +195,37 @@ public class SettingsController implements Initializable {
         // wire up settings in CAMERA
         fovSlider.setValue(contentModel.getCamera().getFieldOfView());
         contentModel.getCamera().fieldOfViewProperty().bind(fovSlider.valueProperty());
+
+        SessionManager sessionManager = SessionManager.getSessionManager();
+
+        sessionManager.bind(showAxisCheckBox.selectedProperty(), "showAxis");
+        sessionManager.bind(yUpCheckBox.selectedProperty(), "yUp");
+        sessionManager.bind(scaleToFitCheckBox.selectedProperty(), "scaleToFit");
+        sessionManager.bind(wireFrameCheckbox.selectedProperty(), "wireFrame");
+        sessionManager.bind(backgroundColorPicker.valueProperty(), "backgroundColor");
+        sessionManager.bind(fovSlider.valueProperty(), "fieldOfView");
+        sessionManager.bind(subdivisionLevelGroup, "subdivisionLevel");
+        sessionManager.bind(subdivisionBoundaryGroup, "subdivisionBoundary");
+        sessionManager.bind(subdivisionSmoothGroup, "subdivisionSmooth");
+        sessionManager.bind(light1ColorPicker.valueProperty(), "light1Color");
+        sessionManager.bind(light1EnabledCheckBox.selectedProperty(), "light1Enabled");
+        sessionManager.bind(light1followCameraCheckBox.selectedProperty(), "light1FollowCamera");
+        sessionManager.bind(light1x.valueProperty(), "light1X");
+        sessionManager.bind(light1y.valueProperty(), "light1Y");
+        sessionManager.bind(light1z.valueProperty(), "light1Z");
+        sessionManager.bind(light2ColorPicker.valueProperty(), "light2Color");
+        sessionManager.bind(light2EnabledCheckBox.selectedProperty(), "light2Enabled");
+        sessionManager.bind(light2x.valueProperty(), "light2X");
+        sessionManager.bind(light2y.valueProperty(), "light2Y");
+        sessionManager.bind(light2z.valueProperty(), "light2Z");
+        sessionManager.bind(light3ColorPicker.valueProperty(), "light3Color");
+        sessionManager.bind(light3EnabledCheckBox.selectedProperty(), "light3Enabled");
+        sessionManager.bind(light3x.valueProperty(), "light3X");
+        sessionManager.bind(light3y.valueProperty(), "light3Y");
+        sessionManager.bind(light3z.valueProperty(), "light3Z");
+        sessionManager.bind(ambientColorPicker.valueProperty(), "ambient");
+        sessionManager.bind(ambientEnableCheckbox.selectedProperty(), "ambientEnable");
+        sessionManager.bind(settings, "settingsPane");
     }
 
 
