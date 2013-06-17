@@ -76,24 +76,57 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <Label text="Creases (Boundary Rules)" GridPane.columnIndex="0" GridPane.rowIndex="6" />
             <HBox prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="6">
               <children>
-                <ToggleButton mnemonicParsing="false" selected="true" styleClass="left-pill" text="Edges" userData="CREASE_EDGES">
+                <ToggleButton mnemonicParsing="false" selected="true" styleClass="left-pill" text="Edges">
                   <toggleGroup>
                     <ToggleGroup fx:id="subdivisionBoundaryGroup" />
                   </toggleGroup>
+                  <userData>
+                    <SubDivision.BoundaryMode fx:value="CREASE_EDGES"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Only edges at the boundary are treated as creases" />
+                  </tooltip>
                 </ToggleButton>
-                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="All" toggleGroup="$subdivisionBoundaryGroup" userData="CREASE_ALL" />
+                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="All" toggleGroup="$subdivisionBoundaryGroup">
+                  <userData>
+                    <SubDivision.BoundaryMode fx:value="CREASE_ALL"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Edges and points at the boundary are treated as creases" />
+                  </tooltip>
+                </ToggleButton>
               </children>
             </HBox>
             <Label text="Smooth Texture Map" GridPane.columnIndex="0" GridPane.rowIndex="7" />
             <HBox prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="7">
               <children>
-                <ToggleButton mnemonicParsing="false" selected="true" styleClass="left-pill" text="None" userData="NOT_SMOOTH">
+                <ToggleButton mnemonicParsing="false" selected="true" styleClass="left-pill" text="None">
                   <toggleGroup>
                     <ToggleGroup fx:id="subdivisionSmoothGroup" />
                   </toggleGroup>
+                  <userData>
+                    <SubDivision.MapBorderMode fx:value="NOT_SMOOTH"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Keeps the same uvs for all control points" />
+                  </tooltip>
                 </ToggleButton>
-                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="Internal" toggleGroup="$subdivisionSmoothGroup" userData="SMOOTH_INTERNAL" />
-                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="All" toggleGroup="$subdivisionSmoothGroup" userData="SMOOTH_ALL" />
+                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="Internal" toggleGroup="$subdivisionSmoothGroup">
+                  <userData>
+                    <SubDivision.MapBorderMode fx:value="SMOOTH_INTERNAL"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Smooths uvs of points at corners" />
+                  </tooltip>
+                </ToggleButton>
+                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="All" toggleGroup="$subdivisionSmoothGroup">
+                  <userData>
+                    <SubDivision.MapBorderMode fx:value="SMOOTH_ALL"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Smooths uvs of points at boundaries" />
+                  </tooltip>
+                </ToggleButton>
               </children>
             </HBox>
             <Region maxHeight="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="8" />

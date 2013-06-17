@@ -254,7 +254,7 @@ class Loader {
         Node sourceMayaMeshNode = resolveNode(inputMeshMNode);
         Node targetMayaMeshNode = resolveNode(outputMeshMNode);
             
-        if (sourceMayaMeshNode.getClass().equals(new PolygonMeshView().getClass())) {
+        if (sourceMayaMeshNode.getClass().equals(PolygonMeshView.class)) {
             PolygonMeshView sourceMayaMeshView = (PolygonMeshView) sourceMayaMeshNode;
             PolygonMeshView targetMayaMeshView = (PolygonMeshView) targetMayaMeshNode;
             
@@ -278,7 +278,7 @@ class Loader {
                 }
             });
         } else {
-            System.err.println("Mesh skinning is not supported for triangle meshes. Select the 'Load as Polygons' option to load the mesh as polygon mesh.");
+            Logger.getLogger(MayaImporter.class.getName()).log(Level.INFO, "Mesh skinning is not supported for triangle meshes. Select the 'Load as Polygons' option to load the mesh as polygon mesh.");
             MeshView sourceMayaMeshView = (MeshView) sourceMayaMeshNode;
             MeshView targetMayaMeshView = (MeshView) targetMayaMeshNode;
             TriangleMesh sourceMesh = (TriangleMesh) sourceMayaMeshView.getMesh();
@@ -1630,11 +1630,7 @@ class Loader {
                     ff.add(polyFace);
                 }
             }
-            int[][] fff = new int[ff.size()][];
-            for (int i = 0; i < fff.length; i++) {
-                fff[i] = ff.get(i);
-            }
-            PolygonMesh mesh = new PolygonMesh(points, texCoords, fff);
+            PolygonMesh mesh = new PolygonMesh(points, texCoords, ff.toArray(new int[ff.size()][]));
             return mesh;
         } else {
             // Split the polygonal faces into triangle faces

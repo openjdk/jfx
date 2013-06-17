@@ -82,7 +82,7 @@ public class SettingsController implements Initializable {
     public ToggleGroup subdivisionLevelGroup;
     public ToggleGroup subdivisionBoundaryGroup;
     public ToggleGroup subdivisionSmoothGroup;
-
+    
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
         settings.expandedPaneProperty().addListener(new ChangeListener<TitledPane>() {
@@ -109,29 +109,32 @@ public class SettingsController implements Initializable {
         });
         subdivisionLevelGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
             @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
-                if (selectedToggle == null) {
+                if (selectedToggle == null && oldValue != null) {
                     subdivisionLevelGroup.selectToggle(oldValue);
                     selectedToggle = oldValue;
+                } else {
+                    contentModel.setSubdivisionLevel(Integer.parseInt((String)selectedToggle.getUserData()));
                 }
-                contentModel.setSubdivisionLevel(Integer.parseInt((String)selectedToggle.getUserData()));
             }
         });
         subdivisionBoundaryGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
             @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
-                if (selectedToggle == null) {
+                if (selectedToggle == null && oldValue != null) {
                     subdivisionBoundaryGroup.selectToggle(oldValue);
                     selectedToggle = oldValue;
+                } else {
+                    contentModel.setBoundaryMode((SubDivision.BoundaryMode) selectedToggle.getUserData());
                 }
-                contentModel.setBoundaryMode(SubDivision.BoundaryMode.valueOf((String)selectedToggle.getUserData()));
             }
         });
         subdivisionSmoothGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
             @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
-                if (selectedToggle == null) {
+                if (selectedToggle == null && oldValue != null) {
                     subdivisionSmoothGroup.selectToggle(oldValue);
                     selectedToggle = oldValue;
+                } else {
+                    contentModel.setMapBorderMode((SubDivision.MapBorderMode) selectedToggle.getUserData());
                 }
-                contentModel.setMapBorderMode(SubDivision.MapBorderMode.valueOf((String)selectedToggle.getUserData()));
             }
         });
         // wire up settings in LIGHTS
