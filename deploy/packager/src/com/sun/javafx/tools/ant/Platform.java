@@ -110,6 +110,7 @@ public class Platform extends DataType {
     String javafx = null;
     List<Property> properties = new LinkedList<Property>();
     List<Jvmarg> jvmargs = new LinkedList<Jvmarg>();
+    List<Property> jvmUserArgs = new LinkedList<Property>();
 
     /**
      * Minimum version of JRE required by application.
@@ -154,6 +155,12 @@ public class Platform extends DataType {
     public Jvmarg createJvmarg() {
         Jvmarg t = new Jvmarg();
         jvmargs.add(t);
+        return t;
+    }
+
+    public Property createJVMUserArg() {
+        Property t = new Property();
+        jvmUserArgs.add(t);
         return t;
     }
 

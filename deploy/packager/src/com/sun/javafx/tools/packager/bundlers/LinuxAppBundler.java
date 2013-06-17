@@ -34,6 +34,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class LinuxAppBundler extends Bundler {
@@ -192,7 +193,19 @@ public class LinuxAppBundler extends Bundler {
             out.println("jvmarg."+idx+"="+a);
             idx++;
         }
-        out.close();
+
+        //app.id required for setting user preferences (Java Preferences API)
+        out.println("app.preferences.id="+ params.getPreferencesID());
+
+        Map<String, String> jvmUserOptions = params.getAllJvmUserOptions();
+        //Only create jvmuserargs, if app.id (params.identifier) is set, otherwise we don't know where
+        //to create the jvm.cfg file - warning logged above
+        idx = 1;
+        for (Map.Entry<String, String> arg: jvmUserOptions.entrySet()) {
+            out.println("jvmuserarg."+idx+"="+arg.getKey()+"##"+arg.getValue());
+            idx++;
+        }
+       out.close();
     }
 
     private void copyRuntime(File runtimeDirectory) throws IOException {

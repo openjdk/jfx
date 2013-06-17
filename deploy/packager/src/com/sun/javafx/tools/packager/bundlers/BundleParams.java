@@ -92,6 +92,9 @@ public class BundleParams {
 
     //list of jvm args (in theory string can contain spaces and need to be escaped
     List<String> jvmargs = new LinkedList<String>();
+    //list of jvm args (in theory string can contain spaces and need to be escaped
+    Map<String, String> jvmUserArgs = new HashMap<String, String>();
+
     //list of jvm properties (can also be passed as VM args
     Map<String, String> jvmProperties = new HashMap<String, String>();
 
@@ -101,6 +104,10 @@ public class BundleParams {
 
     public void setJvmargs(List<String> jvmargs) {
         this.jvmargs = jvmargs;
+    }
+
+    public void setJvmUserArgs(Map<String, String> userArgs) {
+        this.jvmUserArgs = userArgs;
     }
 
     public void setJvmProperties(Map<String, String> jvmProperties) {
@@ -114,6 +121,27 @@ public class BundleParams {
             all.add("-D"+k+"="+jvmProperties.get(k)); //TODO: We are not escaping values here...
         }
         return all;
+    }
+
+    public Map<String, String> getAllJvmUserOptions() {
+        Map<String, String> all = new HashMap<String, String>();
+        all.putAll(jvmUserArgs);
+        return all;
+    }
+
+    public String getApplicationID() {
+        String id = "";
+        if (identifier != null) {
+            id = identifier;
+        }
+        else {
+            id = applicationClass;
+        }
+        return id;
+    }
+
+    public String getPreferencesID() {
+        return getApplicationID().replaceAll("\\.", "/");
     }
 
     public void setTitle(String title) {

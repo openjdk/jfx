@@ -46,7 +46,9 @@ typedef long jint;
 #define JVM_MAIN_JAR_NAME_KEY "JVMMainJarName"
 #define JVM_OPTIONS_KEY "JVMOptions"
 #define JVM_ARGUMENTS_KEY "JVMArguments"
+#define JVM_USER_OPTIONS_KEY "JVMUserOptions"
 #define JVM_CLASSPATH_KEY "JVMAppClasspath"
+#define JVM_PREFERENCES_ID "JVMPreferencesID"
 
 #define LIBJLI_DYLIB "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/lib/jli/libjli.dylib"
 
@@ -63,6 +65,8 @@ typedef int (JNICALL *JLI_Launch_t)(int argc, char ** argv,
         jint ergo);
 
 int launch(int appArgc, char *appArgv[]);
+
+NSArray *getJVMOptions(NSDictionary *infoDictionary, NSString *mainBundlePath);
 
 int main(int argc, char *argv[]) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -151,24 +155,7 @@ int launch(int appArgc, char *appArgv[]) {
     // Set the library path
     NSString *libraryPath = [NSString stringWithFormat:@"-Djava.library.path=%@/Contents/Java", mainBundlePath];
 
-    // Get the VM options
-    NSArray *options = [infoDictionary objectForKey:@JVM_OPTIONS_KEY];
-    if (options == nil) {
-        options = [NSArray array];
-    }
-    else {
-        //Do string substitutions - for now only one is $APPDIR
-        NSString *contentsPath = [mainBundlePath stringByAppendingString:@"/Contents"];
-        NSMutableArray *expandedOptions = [options mutableCopy];
-        NSUInteger index = 0;
-        for (id option in options) {
-            NSString *expandedOption =
-                    [option stringByReplacingOccurrencesOfString:@"$APPDIR" withString:contentsPath];
-            [expandedOptions replaceObjectAtIndex:index withObject:expandedOption];
-            index++;
-        }
-        options = expandedOptions;
-    }
+    NSArray *options= getJVMOptions(infoDictionary, mainBundlePath);
 
     // Get the application arguments
     NSArray *arguments = [infoDictionary objectForKey:@JVM_ARGUMENTS_KEY];
@@ -239,4 +226,108 @@ int launch(int appArgc, char *appArgv[]) {
             FALSE,
             FALSE,
             0);
+}
+
+/**
+* This gets the JVMOptions, both the internal developer only options and set of options the developer
+* wants a user to be able to override.
+*
+* The developer would set the options they required, for instance:
+
+            <fx:platform>
+              <fx:jvmarg value="-verbose:class"/>
+              <fx:jvmarg value="-Djava.policy.file=$APPDIR/app/whatever.policy"/>
+              <fx:jvmuserarg name="-Xmx" value="768m" />
+              <fx:jvmuserarg name="-Djava.util.logging.config.file=" value="~/logging.properties" />
+            </fx:platform>
+
+* this will result in Info.plist having (default)
+
+  <key>JVMOptions</key>
+  <array>
+    <string>-verbose:class</string>
+    <string>-Djava.policy.file=$APPDIR/app/whatever.policy</string>
+  </array>
+  <key>JVMUserOptions</key>
+    <dict>
+      <key>-Djava.util.logging.config.file=</key>
+      <string>~/logging.properties</string>
+      <key>-Xmx</key>
+      <string>768m</string>
+    </dict>
+
+* and initially set up the applications preference file in ~/Library/Preferences/..name based on bundleid..plist,
+* i.e. just the JVMUserOptions
+
+	<key>JVMUserOptions</key>
+	<dict>
+		<key>-Djava.util.logging.config.file=</key>
+		<string>~/logging.properties</string>
+		<key>-Xmx</key>
+		<string>860m</string>
+	</dict>
+
+*/
+NSArray *getJVMOptions(NSDictionary *infoDictionary, NSString *mainBundlePath) {
+    NSArray *options = [infoDictionary objectForKey:@JVM_OPTIONS_KEY];
+    NSDictionary *defaultOverrides = [infoDictionary objectForKey:@JVM_USER_OPTIONS_KEY];
+
+    if (options == nil) {
+        options = [NSArray array];
+    }
+
+
+    //Do string substitutions - for now only one is $APPDIR, if a second one is added this will
+    //be generalized and use a set of options
+    NSString *contentsPath = [mainBundlePath stringByAppendingString:@"/Contents"];
+
+    //Create some extra room for user options and preferences id
+    NSMutableArray *expandedOptions = [[NSMutableArray alloc] initWithCapacity:(
+            [options count] + [defaultOverrides count] + 5)];
+
+    //Add preferences ID
+    NSString *preferencesID = [infoDictionary objectForKey:@JVM_PREFERENCES_ID];
+    if (preferencesID != nil) {
+        [expandedOptions addObject: [@"-Djvm.preferences.id=" stringByAppendingString: preferencesID]];
+    }
+
+    for (id option in options) {
+        NSString *expandedOption =
+                [option stringByReplacingOccurrencesOfString:@"$APPDIR" withString:contentsPath];
+        [expandedOptions addObject:expandedOption];
+    }
+
+
+    //Add user overridable jvm options, from user config if different otherwise from defaults
+    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+    NSArray *userOverrides= [userDefaults objectForKey:@JVM_USER_OPTIONS_KEY];
+
+    //If overrides don't exist add them - the intent is to make it easier for the user to actually modify them
+    if ([userOverrides count] == 0) {
+        [userDefaults setObject: defaultOverrides forKey:@JVM_USER_OPTIONS_KEY];
+    }
+
+    for (id key in defaultOverrides) {
+
+        NSString *newOption;
+        if ([userOverrides valueForKey: key] != nil &&
+            [[userOverrides valueForKey:key] isNotEqualTo:[defaultOverrides valueForKey:key]]) {
+            newOption = [key stringByAppendingString:[userOverrides valueForKey:key]];
+        }
+        else {
+            newOption = [key stringByAppendingString:[defaultOverrides valueForKey:key]];
+        }
+        [expandedOptions addObject: newOption];
+    }
+
+    //Loop through all user override keys again looking for ones we haven't already uses
+    for (id key in userOverrides) {
+        //If the default object for key is nil, this is an option the user added so include
+        if ([defaultOverrides objectForKey: key] == nil) {
+            NSString *newOption = [key stringByAppendingString:[userOverrides valueForKey:key]];
+            [expandedOptions addObject: newOption];
+        }
+    }
+
+    return expandedOptions;
 }

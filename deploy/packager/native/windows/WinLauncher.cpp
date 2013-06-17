@@ -29,6 +29,7 @@
 #define _WIN32_WINNT 0x0501
 
 #include <Windows.h>
+#include <shellapi.h> //DO NOT REMOVE, necessary for Gradle builds
 #include <tchar.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +40,6 @@
 
 #include "jni.h"
 
-#define snprintf _snprintf
 
 /*
    This is launcher program for application package on Windows.
@@ -129,6 +129,7 @@ bool getFileInPackage(TCHAR* basedir, TCHAR *relative_path, TCHAR *fullpath, int
 #define CONFIG_MAINJAR_KEY    _T("app.mainjar")
 #define CONFIG_MAINCLASS_KEY  _T("app.mainclass")
 #define CONFIG_CLASSPATH_KEY  _T("app.classpath")
+#define CONFIG_APP_ID_KEY     _T("app.preferences.id");
 
 //remove trailing end of line character
 //modifies buffer in place
@@ -307,30 +308,156 @@ static int countNumberOfSystemArguments(int argCount, LPTSTR *szArgList) {
  * @return either original str or a new str (via strdup) that replaces the
  *         pattern with the replaceWith string
  */
-char *replaceStr(char *str, char *pattern, char *replaceWith) {
-	static char buffer[MAX_PATH*2] = {0};
-    char *p;
+TCHAR *replaceStr(TCHAR *str, TCHAR *pattern, TCHAR *replaceWith) {
+	TCHAR buffer[MAX_PATH*2] = {0};
+    TCHAR *p;
 
     //Return orig if str is not in orig.
-    if(!(p = strstr(str, pattern))) {
-      return str;
+    if(!(p = wcsstr(str, pattern))) {
+		return wcsdup(str);
     }
 
     int loc = p-str;
     if (loc >= sizeof(buffer)) {
-        return str;
+        return wcsdup(str);
     }
 
-    strncpy(buffer, str, loc); // Copy characters from 'str' start to 'orig' st$
+    wcsncpy(buffer, str, loc); // Copy characters from 'str' start to 'orig' st$
     buffer[loc] = '\0';
 
     int remaingBufferSize = sizeof(buffer) - loc;
-    int len = snprintf(buffer+(loc), remaingBufferSize, "%s%s", replaceWith, p+strlen(pattern));
+    int len = _snwprintf(buffer+(loc), remaingBufferSize, _T("%s%s"), replaceWith, p + wcslen(pattern));
     if(len > remaingBufferSize ) {
-        return str;
+        return wcsdup(str);
     }
-    return strdup(buffer);
+    return wcsdup(buffer);
 }
+
+
+//Assumes are values passed in are big enough
+
+int splitOptionIntoNameValue(TCHAR* argValue, TCHAR* optionName, int nameSize,
+        TCHAR* optionValue, int valueSize) {
+    TCHAR* ptr;
+
+    ptr = wcsstr(argValue, _T("##"));
+    if (ptr != NULL) {
+        int len = wcslen(ptr);
+        if (len > 0 && len < valueSize) {
+            ptr++;
+            ptr++;
+            wcscpy(optionValue, ptr);
+
+            int argLen = wcslen(argValue);
+            if ((argLen - len + 1) < nameSize) {
+                wmemcpy(optionName, argValue, argLen - len); //Does this work correctly for wide chars
+                optionName[argLen - len] = '\0';
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
+#define MAX_KEY_LENGTH  80
+#define MAX_VALUE_LENGTH  8192
+
+TCHAR* convertIdToPath(TCHAR* id) {
+    int len = (wcslen(id) + 1) * sizeof (TCHAR);
+    TCHAR* path = (TCHAR*) calloc(len, sizeof (TCHAR));
+    *path = '\0';
+    TCHAR *returnValue = path;
+
+    TCHAR ch = *id;
+    int index = 0;
+    while (ch != 0) {
+        if (ch == '.') {
+            *path = '\\';
+        } else {
+            *path = ch;
+        }
+        id++;
+        ch = *id;
+        path++;
+    }
+    *path = '\0';
+    return returnValue;
+}
+
+//assume regKey big enough to hold largest key
+
+LONG createRegKey(TCHAR* appid, HKEY *hKey) {
+    TCHAR buf[MAX_PATH] = {0};
+    wcscat(buf, _T("SOFTWARE\\JavaSoft\\Prefs\\"));
+    TCHAR* path = convertIdToPath(appid);
+    wcscat(buf, path);
+    wcscat(buf, _T("\\JVMOptions"));
+    free(path);
+    LONG success = RegOpenKeyEx(HKEY_CURRENT_USER, buf, 0, KEY_READ | KEY_WOW64_64KEY, hKey);
+    return success;
+}
+
+TCHAR* convertKeyToWinReg(TCHAR* key) {
+    TCHAR* windowsName = (TCHAR*) calloc((wcslen(key) + 1)*2, sizeof (TCHAR)); //All caps could double size
+    *windowsName = '\0';
+    TCHAR *returnValue = windowsName;
+
+    TCHAR ch = *key;
+    int index = 0;
+    while (ch != 0) {
+        if (ch == '\\') {
+            *windowsName = '//';
+        } else if (ch == '/') {
+            *windowsName = '\\';
+        } else if ((ch >= 'A') && (ch <= 'Z')) {
+            *windowsName++ = '/';
+            *windowsName = ch;
+        } else {
+            *windowsName = ch;
+        }
+        key++;
+        ch = *key;
+        windowsName++;
+    }
+    *windowsName = '\0';
+    return returnValue;
+}
+
+TCHAR* getJvmUserArg(TCHAR* appid, TCHAR* argvalue) {
+    TCHAR optionName[MAX_PATH] = {0};
+    TCHAR optionValue[MAX_PATH] = {0};
+    HKEY hKey = 0;
+    HKEY vKey = 0;
+    DWORD dwType, dwCount = MAX_VALUE_LENGTH * sizeof (TCHAR);
+    TCHAR userValue[MAX_VALUE_LENGTH] = {0};
+    TCHAR* result = NULL;
+
+    if (splitOptionIntoNameValue(argvalue, optionName, sizeof (optionName), optionValue, sizeof (optionValue))) {
+        LONG success = createRegKey(appid, &hKey);
+        TCHAR* regOptionName = convertKeyToWinReg(optionName);
+        if (success == ERROR_SUCCESS) {
+            success = RegQueryValueEx(hKey, regOptionName, NULL, &dwType, (LPBYTE) userValue, &dwCount);
+            if (success == ERROR_SUCCESS) {
+                wcscat(optionName, userValue);
+                result = wcsdup(optionName);
+            }
+        }
+        free(regOptionName);
+
+        //If not found in registry just combine the two and return it
+        if (result == NULL) {
+            TCHAR* concatenated = (TCHAR*) calloc((wcslen(optionName) + wcslen(optionValue) + 1), sizeof (TCHAR));
+            wcscat(concatenated, optionName);
+            wcscat(concatenated, optionValue);
+            result = concatenated;
+        }
+    }        //This should not occur, but if there is no delimeter just treat as complete option
+    else {
+        result = wcsdup(argvalue);
+    }
+    return result;
+}
+
 
 #define MAX_OPTIONS 100
 #define MAX_OPTION_NAME 50
@@ -349,13 +476,14 @@ bool startJVM(TCHAR* basedir, TCHAR* appFolder, TCHAR* jar, int argCount, LPTSTR
     size_t outlen = 0;
     jclass cls;
     jmethodID mid;
-	TCHAR argname[MAX_OPTION_NAME + 1] = {0};
-	TCHAR argvalue[LAUNCHER_MAXPATH] = {0},
-          mainclass[LAUNCHER_MAXPATH] = {0};
-	CHAR  argvalueASCII[LAUNCHER_MAXPATH] = {0};
+    TCHAR argname[MAX_OPTION_NAME + 1] = {0};
+    TCHAR argvalue[LAUNCHER_MAXPATH] = {0},
+    mainclass[LAUNCHER_MAXPATH] = {0};
+    CHAR  argvalueASCII[LAUNCHER_MAXPATH] = {0};
     HMODULE msvcrtdll;
     bool runtimeBundled;
-	TCHAR tmpPath[LAUNCHER_MAXPATH] = {0};
+    TCHAR tmpPath[LAUNCHER_MAXPATH] = {0};
+    TCHAR appid[LAUNCHER_MAXPATH] = {0};
 
     memset(&options, 0, sizeof(JavaVMOption)*(MAX_OPTIONS + 1));
     memset(&jvmArgs, 0, sizeof(JavaVMInitArgs));
@@ -451,28 +579,51 @@ bool startJVM(TCHAR* basedir, TCHAR* appFolder, TCHAR* jar, int argCount, LPTSTR
        _stprintf_s(argname, MAX_OPTION_NAME, _T("jvmarg.%d"), idx);
        found = getConfigValue(basedir, argname, argvalue, LAUNCHER_MAXPATH);
        if (found) {
-           size_t inLen = (size_t) wcslen(argvalue);
-           //convert argument to ASCII string as this is what CreateJVM needs
-           if (wcstombs_s(&outlen, argvalueASCII, sizeof(argvalueASCII), argvalue, inLen + 1) != 0) {
- 	       showError(_T("Failed converting JVM Argument to ASCII"), argname);
-	       return false;
-	   }
-	   char* jvmOption = _strdup(argvalueASCII);
 
-	   //convert basedir to ASCII string - reuse argvalueASCII
-	   if (wcstombs_s(&outlen, argvalueASCII, sizeof(argvalueASCII), basedir, (size_t)wcslen(basedir) + 1)) {
-               showError(_T("Failed converting directory %s to ASCII", basedir), basedir);
-               return false;
-	   }
-	   //If jvmOption contains $APPDIR it will be replaced with basedir (argvalueASCII)
-	   //otherwise the orginal jvmOption is returned (from strdup above). If string is replaced
-	   //the new version is also from a strdup (i.e. can be passed to free)
-	   jvmOption = replaceStr(jvmOption, "$APPDIR", argvalueASCII);
-	   options[cnt].optionString = jvmOption;
-           idx++;
-           cnt++;
-       }
+            TCHAR* option = replaceStr(argvalue, _T("$APPDIR"), basedir);
+            if (wcstombs_s(&outlen, argvalueASCII, sizeof (argvalueASCII), option, wcslen(option) + 1) != 0) {
+                showError(_T("Failed converting JVM Argument to ASCII"), argname);
+                free(option);
+                return false;
+            }
+            free(option);
+            char* jvmOption = _strdup(argvalueASCII);
+            options[cnt].optionString = jvmOption;
+            idx++;
+            cnt++;
+        }
     } while (found && idx < MAX_OPTIONS);
+
+    found = getConfigValue(basedir, _T("app.id"), appid, LAUNCHER_MAXPATH);
+    if (found) {
+        _stprintf_s(argvalue, _T("-Dapp.id=%s"), appid);
+        wcstombs_s(&outlen, argvalueASCII, sizeof (argvalueASCII),
+                argvalue, wcslen(argvalue) + 1);
+        options[cnt].optionString = _strdup(argvalueASCII);
+        cnt++;
+
+        idx = 1;
+        do {
+            _stprintf_s(argname, MAX_OPTION_NAME, _T("jvmuserarg.%d"), idx);
+            found = getConfigValue(basedir, argname, argvalue, LAUNCHER_MAXPATH);
+            if (found) {
+
+                TCHAR* option = getJvmUserArg(appid, argvalue);
+                if (option != NULL) {
+                    if (wcstombs_s(&outlen, argvalueASCII, sizeof (argvalueASCII), option, wcslen(option) + 1) != 0) {
+                        showError(_T("Failed converting JVM Argument to ASCII"), argname);
+                        free(option);
+                        return false;
+                    }
+                    free(option);
+                    char* jvmOption = _strdup(argvalueASCII);
+                    options[cnt].optionString = jvmOption;
+                    cnt++;
+                }
+                idx++;
+            }
+        } while (found && idx < MAX_OPTIONS);
+    }
 
     jvmArgs.version = 0x00010002;
     jvmArgs.options = options;

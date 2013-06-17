@@ -221,6 +221,9 @@ public class DeployFXTask extends Task {
             for (Jvmarg a: pl.jvmargs) {
                 deployParams.addJvmArg(a.value);
             }
+            for (Property a: pl.jvmUserArgs) {
+                deployParams.addJvmUserArg(a.name, a.value);
+            }
         }
 
         if (callbacks != null) {

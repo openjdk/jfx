@@ -273,11 +273,7 @@ public class MacAppBundler extends Bundler {
 
     private String getBundleIdentifier() {
         //TODO: Check to see what rules/limits are in place for CFBundleIdentifier
-        if (params.identifier != null) {
-            return params.identifier;
-        } else {
-            return "unknown."+params.applicationClass;
-        }
+        return params.getApplicationID();
     }
 
     private void writeInfoPlist(File file) throws IOException {
@@ -288,7 +284,7 @@ public class MacAppBundler extends Bundler {
         Map<String, String> data = new HashMap<String, String>();
         data.put("DEPLOY_ICON_FILE", getConfig_Icon().getName());
         data.put("DEPLOY_BUNDLE_IDENTIFIER",
-                getBundleIdentifier());
+                getBundleIdentifier().toLowerCase());
         data.put("DEPLOY_BUNDLE_NAME",
                 getBundleName());
         data.put("DEPLOY_BUNDLE_COPYRIGHT",
@@ -306,13 +302,29 @@ public class MacAppBundler extends Bundler {
                 params.applicationCategory != null ?
                    params.applicationCategory : "unknown");
         data.put("DEPLOY_MAIN_JAR_NAME", params.getMainApplicationJar());
+        data.put("DEPLOY_PREFERENCES_ID", params.getPreferencesID().toLowerCase());
 
         StringBuilder sb = new StringBuilder();
         List<String> jvmOptions = params.getAllJvmOptions();
+
+        String newline = ""; //So we don't add unneccessary extra line after last append
         for (String o : jvmOptions) {
-            sb.append("    <string>").append(o).append("</string>\n");
+            sb.append(newline).append("    <string>").append(o).append("</string>");
+            newline = "\n";
         }
         data.put("DEPLOY_JVM_OPTIONS", sb.toString());
+
+        newline = "";
+        sb = new StringBuilder();
+        Map<String, String> overridableJVMOptions = params.getAllJvmUserOptions();
+        for (Map.Entry<String, String> arg: overridableJVMOptions.entrySet()) {
+            sb.append(newline);
+            sb.append("      <key>").append(arg.getKey()).append("</key>\n");
+            sb.append("      <string>").append(arg.getValue()).append("</string>");
+            newline = "\n";
+        }
+        data.put("DEPLOY_JVM_USER_OPTIONS", sb.toString());
+
 
         if (params.useJavaFXPackaging()) {
             data.put("DEPLOY_LAUNCHER_CLASS", JAVAFX_LAUNCHER_CLASS);

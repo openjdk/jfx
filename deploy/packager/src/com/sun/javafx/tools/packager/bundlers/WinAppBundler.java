@@ -32,7 +32,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.prefs.Preferences;
 
 public class WinAppBundler extends Bundler {
     private BundleParams params;
@@ -249,6 +251,7 @@ public class WinAppBundler extends Bundler {
         out.println("app.version=" + params.appVersion);
         //for future AU support (to be able to find app in the registry)
         out.println("app.id="+params.identifier);
+        out.println("app.preferences.id="+params.getPreferencesID());
 
         if (params.useJavaFXPackaging()) {
             out.println("app.mainclass=" +
@@ -264,6 +267,13 @@ public class WinAppBundler extends Bundler {
         int idx = 1;
         for (String a : jvmargs) {
             out.println("jvmarg."+idx+"="+a);
+            idx++;
+        }
+
+        Map<String, String> overridableJVMOptions = params.getAllJvmUserOptions();
+        idx = 1;
+        for (Map.Entry<String, String> arg: overridableJVMOptions.entrySet()) {
+            out.println("jvmuserarg."+idx+"="+arg.getKey()+"##"+arg.getValue());
             idx++;
         }
         out.close();

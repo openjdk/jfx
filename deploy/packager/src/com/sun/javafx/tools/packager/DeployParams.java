@@ -107,6 +107,7 @@ public class DeployParams extends CommonParams {
 
     //list of jvm args (in theory string can contain spaces and need to be escaped
     List<String> jvmargs = new LinkedList<String>();
+    Map<String, String> jvmUserArgs = new HashMap<String, String>();
 
     //list of jvm properties (can also be passed as VM args
     // but keeping them separate make it a bit more convinient for JNLP generation)
@@ -196,6 +197,10 @@ public class DeployParams extends CommonParams {
         jvmargs.add(v);
     }
 
+    public void addJvmUserArg(String n, String v) {
+        jvmUserArgs.put(n, v);
+    }
+
     public void addJvmProperty(String n, String v) {
         properties.put(n, v);
     }
@@ -283,7 +288,7 @@ public class DeployParams extends CommonParams {
     public void setJSCallbacks(List<JSCallback> list) {
         callbacks = list;
     }
-    
+
     public void setCallbacks(List<Callback> list) {
         List<JSCallback> jslist = new ArrayList<JSCallback>(list.size());
         for (Callback cb: list) {
@@ -489,6 +494,7 @@ public class DeployParams extends CommonParams {
 
             bundleParams.setJvmProperties(properties);
             bundleParams.setJvmargs(jvmargs);
+            bundleParams.setJvmUserArgs(jvmUserArgs);
 
             File appIcon = null;
             for (Icon ic: icons) {

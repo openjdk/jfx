@@ -38,10 +38,16 @@
   <string>DEPLOY_APP_CLASSPATH</string>
   <key>JVMMainJarName</key>
   <string>DEPLOY_MAIN_JAR_NAME</string>
+  <key>JVMPreferencesID</key>
+  <string>DEPLOY_PREFERENCES_ID</string>
   <key>JVMOptions</key>
   <array>
 DEPLOY_JVM_OPTIONS
   </array>
+  <key>JVMUserOptions</key>
+    <dict>
+DEPLOY_JVM_USER_OPTIONS
+    </dict>
   <key>NSHighResolutionCapable</key>
   <string>true</string>
  </dict>
