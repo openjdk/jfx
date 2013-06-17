@@ -849,7 +849,7 @@ public abstract class Parent extends Node {
             }
         } else {
             final Parent parent = getParent();
-            if (parent != null) {
+            if (parent != null && !parent.performingLayout) {
                 parent.requestLayout();
             }
         }
