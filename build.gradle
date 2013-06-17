@@ -750,16 +750,18 @@ allprojects {
     // "artifact" in the pattern below. Note that the closed builds use different repositories
     // so if you are debugging a closed-build artifact related build issue, check out the
     // closed gradle file instead.
-    repositories {
-        mavenCentral()
-        ivy {
-            url "http://download.eclipse.org/eclipse/updates/3.7/R-3.7.2-201202080800/plugins/"
-            layout "pattern", {
-                artifact "[artifact].[ext]"
+    if (!"true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+        repositories {
+            mavenCentral()
+            ivy {
+                url "http://download.eclipse.org/eclipse/updates/3.7/R-3.7.2-201202080800/plugins/"
+                layout "pattern", {
+                    artifact "[artifact].[ext]"
+                }
             }
-        }
-        flatDir {
-            dir "$JDK_HOME/jre/lib/"
+            flatDir {
+                dir "$JDK_HOME/jre/lib/"
+            }
         }
     }
 
@@ -1211,9 +1213,11 @@ project(":fxpackager") {
     }
     // fxpackager has a dependency on ant in order to build the ant jar,
     // and as such needs to point to the apache binary repository
-    repositories {
-        maven {
-            url "https://repository.apache.org"
+    if (!"true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+        repositories {
+            maven {
+                url "https://repository.apache.org"
+            }
         }
     }
 
