@@ -350,6 +350,7 @@ static jobject dnd_target_get_string(JNIEnv *env)
 static jobject dnd_target_get_list(JNIEnv *env)
 {
     gchar **strv, *path;
+    gchar *file_path = NULL;
     jsize len, i;
     jobjectArray result = NULL;
     jstring str;
@@ -363,10 +364,12 @@ static jobject dnd_target_get_list(JNIEnv *env)
         for (i = 0; i < len; ++i) {
             path = strv[i];
             if (g_str_has_prefix(path, "file://")) {
-                path += 7;
+                file_path = g_filename_from_uri(path, NULL, NULL);
             }
-            str = env->NewStringUTF(path);
+            str = env->NewStringUTF(file_path ? file_path : path);
             env->SetObjectArrayElement(result, i, str);
+            g_free(file_path);
+            file_path = NULL;
         }
         g_strfreev(strv);
     }
