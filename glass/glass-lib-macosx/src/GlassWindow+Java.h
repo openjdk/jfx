@@ -30,7 +30,7 @@
 
 @interface GlassWindow (Java)
 
-- (void)_sendJavaWindowMoveToAnotherScreenEventIfNeeded:(BOOL)force;
+- (void)_sendJavaWindowMoveToAnotherScreenEventIfNeeded;
 - (void)_sendJavaWindowMoveEventForFrame:(NSRect)frame;
 - (void)_sendJavaWindowResizeEvent:(int)type forFrame:(NSRect)frame;
 
