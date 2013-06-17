@@ -140,15 +140,21 @@ public class SessionManager {
         String selectedToggle = props.getProperty(propertyName);
         for (Toggle t : toggleGroup.getToggles()) {
             if (t.getUserData().equals(selectedToggle)) {
-                toggleGroup.selectToggle(t);
+                if (toggleGroup.getSelectedToggle() != t) {
+                    toggleGroup.selectToggle(t);
+                }
                 break;
             }
         }
         toggleGroup.selectedToggleProperty().addListener(new InvalidationListener() {
-
+        
             @Override
             public void invalidated(Observable o) {
-                props.setProperty(propertyName, toggleGroup.getSelectedToggle().getUserData().toString());
+                if (toggleGroup.getSelectedToggle() == null) {
+                    props.remove(propertyName);
+                } else {
+                    props.setProperty(propertyName, toggleGroup.getSelectedToggle().getUserData().toString());
+                }
             }
         });
     }
