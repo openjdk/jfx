@@ -29,8 +29,6 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -138,28 +136,6 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         }
     }
 
-
-    /**
-     * If true, places the virtual keyboard(s) in a new root wrapper
-     * on the scene instead of in a popup. The children of the wrapper
-     * are the original root container and a Group of one or more
-     * keyboards.
-     *
-     * This is suitable for a fullscreen application that does not use
-     * dialogs with text input controls.
-     *
-     * The root wrapper pans up/down automatically as needed to keep
-     * the focused input control visible, and allows the user to drag
-     * up/down with mouse or touch.
-     */
-    private final static boolean inScene =
-        AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                String value = System.getProperty("com.sun.javafx.fxvkContainerType");
-                return ("inscene".equalsIgnoreCase(value));
-            }
-    });
-
     private final static boolean USE_SECONDARY_POPUP = false;
 
     private static Region oldRoot;
@@ -203,13 +179,6 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             }
         });
     }
-
-    private static Boolean enableCaching = AccessController.doPrivileged(
-    new PrivilegedAction<Boolean>() {
-        @Override public Boolean run() {
-            return Boolean.getBoolean("com.sun.javafx.scene.control.skin.FXVK.cache");
-        }
-    });
 
     private static void startSlideIn() {
         slideOutTimeline.stop();
