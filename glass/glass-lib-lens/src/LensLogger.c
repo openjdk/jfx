@@ -57,9 +57,12 @@ static char **backtraceTags = NULL;
 void glass_logger_init(JavaVM *vm, JNIEnv *env) {
     jclass c_LensLogger;
     jclass c_PlatformLogger;
+    jclass c_Level;
     jmethodID m_getLogger;
-    jmethodID m_getLevel;
+    jmethodID m_level;
+    jmethodID m_intValue;
     jobject logger;
+    jobject level;
     const char *lensBacktrace = getenv("LENS_BACKTRACE");
     glass_vm = vm;
     glass_log_level = 0x7fffffff; // Integer.MAX_VALUE, meaning no logging
@@ -76,6 +79,13 @@ void glass_logger_init(JavaVM *vm, JNIEnv *env) {
                 "Could not find class sun/util/logging/PlatformLogger\n");
         return;
     }
+
+    c_Level = (*env)->FindClass(env, "sun/util/logging/PlatformLogger$Level");
+    if (c_Level == NULL) {
+        fprintf(stderr,
+                "Could not find class sun/util/logging/PlatformLogger$Level\n");
+        return;
+    }
     m_getLogger = (*env)->GetStaticMethodID(env, c_LensLogger, "getLogger",
                                             "()Lsun/util/logging/PlatformLogger;");
     if (m_getLogger == NULL) {
@@ -83,13 +93,20 @@ void glass_logger_init(JavaVM *vm, JNIEnv *env) {
                 "Could not find method sun.util.logging.LensLogger.getLogger\n");
         return;
     }
-    m_getLevel = (*env)->GetMethodID(env, c_PlatformLogger, "getLevel",
-                                     "()I");
-    if (m_getLevel == NULL) {
+    m_level = (*env)->GetMethodID(env, c_PlatformLogger, "level",
+                                  "()Lsun/util/logging/PlatformLogger$Level;");
+    if (m_level == NULL) {
         fprintf(stderr, "Could not find method "
-                "sun.util.logging.PlatformLogger.getLevel\n");
+                "sun.util.logging.PlatformLogger.level\n");
         return;
     }
+    m_intValue = (*env)->GetMethodID(env, c_Level, "intValue", "()I");
+    if (m_intValue == NULL) {
+        fprintf(stderr, "Could not find method "
+                "sun.util.logging.PlatformLogger$Level.intValue\n");
+        return;
+    }
+
     glass_log_severe = (*env)->GetMethodID(env, c_PlatformLogger,
                                            "severe", "(Ljava/lang/String;)V");
     glass_log_warning = (*env)->GetMethodID(env, c_PlatformLogger,
@@ -116,7 +133,10 @@ void glass_logger_init(JavaVM *vm, JNIEnv *env) {
     logger = (*env)->CallStaticObjectMethod(env, c_LensLogger, m_getLogger);
     glass_logger = (*env)->NewGlobalRef(env, logger);
     if (glass_logger != NULL) {
-        glass_log_level = (*env)->CallIntMethod(env, glass_logger, m_getLevel);
+        level = (*env)->CallObjectMethod(env, glass_logger, m_level);
+        if (level) {
+            glass_log_level = (*env)->CallIntMethod(env, level, m_intValue);
+        }
     }
     GLASS_LOG_INFO("Log level %i", glass_log_level);
     // Check LENS_BACKTRACE for backtrace tags

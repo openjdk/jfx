@@ -1,18 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="activity-ui" default="jar" basedir=".">
-  <description>Builds javafx-android activity.</description>
+    <description>Builds javafx-android activity.</description>
 
-  <property file="project.properties"/>
+    <property file="project.properties"/>
 
-  <!--  Build with android bootclasspath -->
-  <path id="id.android.bootclasspath">
-     <pathelement location="${android.sdk}/platforms/${android.target}/android.jar"/>
-  </path>
+    <!--  Build with android bootclasspath -->
+    <path id="id.android.bootclasspath">
+        <pathelement location="${android.sdk}/platforms/${android.target}/android.jar"/>
+    </path>
 
-  <target name="compile">
+    <target name="jheaders" depends="compile">
+        <echo>Generate jheaders for activity</echo>
+        <mkdir dir="build/include"/>
+        <javah destdir="build/include"
+           classpath="${build.classes.dir}:${android.sdk}/platforms/${android.target}/android.jar" >
+            <class name="com.oracle.dalvik.FXActivity"/>
+            <class name="com.oracle.dalvik.InternalWebView"/>
+        </javah>
+    </target>
+
+    <target name="compile">
         <mkdir dir="${build.classes.dir}"/>
         <javac compiler="modern" fork="true"
-               srcdir="${src.dir}" 
+               srcdir="${src.dir}"
                destdir="${build.classes.dir}"
                target="1.6"
                source="1.6"
@@ -20,32 +30,32 @@
                bootclasspathref="id.android.bootclasspath"
                includeantruntime="false">
             <classpath>
-           <path path="${javac.activity.classpath}"/>
+                <path path="${javac.activity.classpath}"/>
             </classpath>
         </javac>
-  </target>
+    </target>
 
-  <target name="compile-native">
+    <target name="compile-native">
         <exec executable="${android.ndk}/${ndk.build.cmd}" dir="${basedir}" failonerror="true">
             <arg line="NDK_PROJECT_PATH=. TARGET_PLATFORM=${android.ndk.target}"/>
         </exec>
         <copy todir="${dist.dir}" flatten="true">
             <fileset dir="libs" includes="**/*.*"/>
-       </copy>
-  </target>
+        </copy>
+    </target>
 
-  <target name="jar" depends="compile">
-     <jar basedir="${build.classes.dir}" destfile="${dist.dir}/${activity.dist.jar}" compress="false">
-          <include name="com/oracle/**/*" />
-     </jar>     
-  </target>
+    <target name="jar" depends="compile, jheaders">
+        <jar basedir="${build.classes.dir}" destfile="${dist.dir}/${activity.dist.jar}" compress="false">
+            <include name="com/oracle/**/*" />
+        </jar>
+    </target>
 
-  <target name="clean">
-    <delete dir="build" />
-    <delete dir="dist" />
-    <delete dir="bin" />
-    <delete dir="obj" />
-    <delete dir="libs" />
-  </target>
+    <target name="clean">
+        <delete dir="build" />
+        <delete dir="dist" />
+        <delete dir="bin" />
+        <delete dir="obj" />
+        <delete dir="libs" />
+    </target>
 
 </project>

@@ -26,6 +26,7 @@
 package javafx.beans.property;
 
 import com.sun.javafx.binding.MapExpressionHelper;
+import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -275,7 +276,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
             unbind();
             observable = newObservable;
             if (listener == null) {
-                listener = new Listener();
+                listener = new Listener<>(this);
             }
             observable.addListener(listener);
             markInvalid(value);
@@ -320,10 +321,22 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
         return result.toString();
     }
 
-    private class Listener implements InvalidationListener {
+    private static class Listener<K,V> implements InvalidationListener {
+
+        private final WeakReference<MapPropertyBase<K,V>> wref;
+
+        public Listener(MapPropertyBase<K,V> ref) {
+            this.wref = new WeakReference<>(ref);
+        }
+
         @Override
-        public void invalidated(Observable valueModel) {
-            markInvalid(value);
+        public void invalidated(Observable observable) {
+            MapPropertyBase<K,V> ref = wref.get();
+            if (ref == null) {
+                observable.removeListener(this);
+            } else {
+                ref.markInvalid(ref.value);
+            }
         }
     }
 

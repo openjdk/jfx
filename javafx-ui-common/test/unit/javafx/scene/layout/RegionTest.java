@@ -735,6 +735,23 @@ public class RegionTest {
         assertEquals(10, child.getLayoutY(), 1e-100);
     }
 
+    @Test public void testLayoutInAreaWithBaselineOffset() {
+        Pane pane = new Pane(); // Region extension which makes children sequence public
+
+        Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        Region c2 = new MockBiased(Orientation.VERTICAL, 100, 100);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+        pane.layoutInArea(c1, 10, 10, 300, 100, 20, Insets.EMPTY, false, false, HPos.CENTER, VPos.BASELINE);
+        pane.layoutInArea(c2, 10, 10, 300, 100, 20, Insets.EMPTY, false, false, HPos.CENTER, VPos.BASELINE);
+        pane.layoutInArea(c3, 10, 10, 300, 100, 20, Insets.EMPTY, false, false, HPos.CENTER, VPos.BASELINE);
+
+        assertEquals(100, c1.getHeight(), 1e-100); // min height == pref height
+        assertEquals(80, c2.getHeight(), 1e-100);
+        assertEquals(80, c3.getHeight(), 1e-100);
+    }
+
     @Test public void testComputeChildPrefAreaWidthHonorsMaxWidthOverPref() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
 

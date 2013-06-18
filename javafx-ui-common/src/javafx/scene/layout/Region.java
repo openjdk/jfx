@@ -2023,7 +2023,10 @@ public class Region extends Parent {
                                HPos halignment, VPos valignment, boolean isSnapToPixel) {
 
         Insets childMargin = margin != null ? margin : Insets.EMPTY;
-        double top = snapSpace(childMargin.getTop(), isSnapToPixel);
+
+        double top = valignment != VPos.BASELINE ? snapSpace(childMargin.getTop(), isSnapToPixel)
+                    : snapSpace(areaBaselineOffset - child.getBaselineOffset(), isSnapToPixel);
+
         double bottom = snapSpace(childMargin.getBottom(), isSnapToPixel);
         double left = snapSpace(childMargin.getLeft(), isSnapToPixel);
         double right = snapSpace(childMargin.getRight(), isSnapToPixel);

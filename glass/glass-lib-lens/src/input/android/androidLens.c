@@ -22,42 +22,22 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+#ifdef ANDROID_NDK
 
-#ifndef MAIN_H_
-#define MAIN_H_
+#include "wm/LensWindowManager.h"
+#include "com_sun_glass_ui_lens_LensApplication.h"
+#include "androidLens.h"
 
-#include <android_native_app_glue.h>
+jboolean lens_input_initialize(JNIEnv *env) {
+    uint32_t flags = 0;
+    flags |= 1 << com_sun_glass_ui_lens_LensApplication_DEVICE_MULTITOUCH;
+    glass_application_notifyDeviceEvent(env, flags, 1);
+    return JNI_TRUE;
+}
 
-#define TRUE  1
-#define FALSE 0;
+void lens_input_shutdown() {    
+    JavaVM *glass_vm = glass_application_GetVM();
+    (*glass_vm)->DetachCurrentThread(glass_vm);    
+}
 
-#define CHECK_JNI_EXCEPTION(env) \
-        if ((*env)->ExceptionCheck(env)) {\
-            return;\
-        }
-
-#define CHECK_JNI_EXCEPTION_RET(env, ret) \
-        if ((*env)->ExceptionCheck(env)) {\
-                return ret;\
-        }
-
-typedef uint8_t boolean;
-
-struct _DvkContext {
-   struct android_app *app;
-};
-
-typedef struct _DvkContext *DvkContext;
-
-ANativeWindow *getAndroidNativeWindow();
-
-DvkContext getDvkContext();
-
-const char *getExternalDataPath();
-
-void dvkEventLoop(DvkContext context);
-
-//jni references
-extern jmethodID jRunnableRun;
-
-#endif /* MAIN_H_ */
+#endif

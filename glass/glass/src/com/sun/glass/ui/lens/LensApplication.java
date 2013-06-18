@@ -641,7 +641,7 @@ final class LensApplication extends Application {
             try {
                 e.dispatch();
             } catch (Exception ex) {
-                ex.printStackTrace();
+                reportException(ex);
             }
         } else {
             synchronized (eventList) {
@@ -744,7 +744,7 @@ final class LensApplication extends Application {
             try {
                 event.dispatch();
             } catch (Exception e) {
-                e.printStackTrace();
+                reportException(e);
             }
         }
 
@@ -1019,7 +1019,7 @@ final class LensApplication extends Application {
             postEvent(new LensKeyEvent(view, type, keyCode,
                                        modifiers , chars));
         } catch (Exception e) {
-            e.printStackTrace();
+            reportException(e);
         }
     }
 
@@ -1060,7 +1060,7 @@ final class LensApplication extends Application {
                                              isSynthesized));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            reportException(e);
         }
     }
 
@@ -1279,7 +1279,7 @@ final class LensApplication extends Application {
                                           defaultChars, xMultiplier,
                                           yMultiplier));
         } catch (Exception e) {
-            e.printStackTrace();
+            reportException(e);
         }
     }
 
@@ -1310,7 +1310,7 @@ final class LensApplication extends Application {
                                          x, y, absX, absY));
 
         } catch (Exception e) {
-            e.printStackTrace();
+            reportException(e);
         }
     }
 

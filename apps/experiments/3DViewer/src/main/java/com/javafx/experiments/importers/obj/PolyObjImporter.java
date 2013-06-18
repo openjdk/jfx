@@ -284,7 +284,7 @@ public class PolyObjImporter {
                 faceArrays
         );
         if (debug) {
-            System.out.println("mesh.points = " + Arrays.toString(mesh.points));
+            System.out.println("mesh.points = " + mesh.getPoints());
             System.out.println("mesh.texCoords = " + Arrays.toString(mesh.texCoords));
             System.out.println("mesh.faces: ");
             for (int[] face: mesh.faces) {
@@ -300,7 +300,7 @@ public class PolyObjImporter {
         meshes.put(key, mesh);
         materials.put(key, material);
         
-        log("Added mesh '" + key + "' of " + (mesh.points.length/3) + " vertexes, "
+        log("Added mesh '" + key + "' of " + (mesh.getPoints().size()/3) + " vertexes, "
                 + (mesh.texCoords.length/2) + " uvs, "
                 + mesh.faces.length + " faces, "
                 + 0 + " smoothing groups.");

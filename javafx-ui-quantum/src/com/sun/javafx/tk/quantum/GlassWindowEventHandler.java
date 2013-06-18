@@ -27,6 +27,7 @@ package com.sun.javafx.tk.quantum;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.Window;
 
 import com.sun.javafx.tk.FocusCause;
@@ -127,5 +128,19 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
 
         AccessControlContext acc = stage.getAccessControlContext();
         AccessController.doPrivileged(this, acc);
+    }
+    
+    @Override
+    public void handleScreenChangedEvent(Window window, long time, Screen oldScreen, Screen newScreen) {
+        GlassScene scene = stage.getScene();
+        if (scene != null) {
+            AbstractPainter.renderLock.lock();
+            try { 
+                scene.entireSceneNeedsRepaint();
+                scene.updateSceneState();
+            } finally { 
+                AbstractPainter.renderLock.unlock(); 
+            }
+        }
     }
 }

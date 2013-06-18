@@ -367,6 +367,20 @@ public abstract class Window {
         return this.screen;
     }
 
+    void setScreen(Screen screen) {
+        Application.checkEventThread();
+
+        final Screen old = this.screen;
+        this.screen = screen;
+
+        if (this.eventHandler != null) {
+            //TODO: RT-31098
+            if (old != this.screen) {
+                this.eventHandler.handleScreenChangedEvent(this, System.nanoTime(), old, this.screen);
+            }
+        }
+    }
+
     public int getStyleMask() {
         Application.checkEventThread();
         return this.styleMask;
@@ -1136,16 +1150,8 @@ public abstract class Window {
         handleWindowEvent(System.nanoTime(), WindowEvent.MOVE);
     }
 
-    // TODO: consider introducing public notification
     protected void notifyMoveToAnotherScreen(long fromScreenPtr, long toScreenPtr) {
-        //NOTE: fromScreenPtr MAY be == toScreenPtr,
-        //      e.g. if only the scale factor is changed for the screen.
-        Screen old = this.screen;
-        this.screen = Screen.getScreenForPtr(toScreenPtr);
-
-        if (this.eventHandler != null) {
-            this.eventHandler.handleScreenChangedEvent(this, System.nanoTime(), old, this.screen);
-        }
+        setScreen(Screen.getScreenForPtr(toScreenPtr));
     }
 
     /**
