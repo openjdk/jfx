@@ -140,11 +140,17 @@ public class ComboBoxTableCellTest {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
         assertNull(cell.getGraphic());
     }
+
+    @Test public void testConstructor_noArgs_itemsListIsNotNull() {
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
+        assertNotNull(cell.getItems());
+        assertTrue(cell.getItems().isEmpty());
+    }
     
     
     /**************************************************************************
      * 
-     * Constructor tests for one-arg constructor
+     * Constructor tests for one-arg (converter, no varargs items) constructor
      * 
      **************************************************************************/
     
@@ -161,6 +167,65 @@ public class ComboBoxTableCellTest {
     @Test public void testConstructor_converter_defaultGraphicIsACheckBox() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(converter);
         assertNull(cell.getGraphic());
+    }
+
+    @Test public void testConstructor_converter_itemsListIsNotNull() {
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(converter);
+        assertNotNull(cell.getItems());
+        assertTrue(cell.getItems().isEmpty());
+    }
+
+    /**************************************************************************
+     *
+     * Constructor tests for one-arg (varargs items) constructor
+     *
+     **************************************************************************/
+
+    @Test public void testConstructor_varargs_defaultStringConverterIsNotNull() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(items);
+        assertNotNull(cell.getConverter());
+    }
+
+    @Test public void testConstructor_varargs_defaultStyleClass() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(items);
+        assertTrue(cell.getStyleClass().contains("combo-box-table-cell"));
+    }
+
+    @Test public void testConstructor_varargs_defaultGraphicIsACheckBox() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(items);
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void testConstructor_varargs_itemsListIsNotNullOrEmpty() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(items);
+        assertNotNull(cell.getItems());
+        assertEquals(3, cell.getItems().size());
+    }
+
+
+    /**************************************************************************
+     *
+     * Property tests
+     *
+     **************************************************************************/
+
+    @Test public void testComboBoxEditable_falseByDefault() {
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
+        assertFalse(cell.isComboBoxEditable());
+    }
+
+    @Test public void testComboBoxEditable_setter() {
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
+
+        cell.setComboBoxEditable(true);
+        assertTrue(cell.isComboBoxEditable());
+
+        cell.setComboBoxEditable(false);
+        assertFalse(cell.isComboBoxEditable());
     }
     
     
@@ -215,131 +280,174 @@ public class ComboBoxTableCellTest {
     }
 
 
-//    /**************************************************************************
-//     *
-//     * editing tests
-//     *
-//     **************************************************************************/
-//
-//    // --- is Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsFalse_isEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(false);
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.updateTableView(listView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_listViewIsNull_isEmpty() {
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_isEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.updateTableView(listView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_cellEditableIsTrue_isEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.setEditable(true);
-//        cell.updateTableView(listView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    // --- is Not Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsFalse_isNotEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(false);
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_listViewIsNull_isNotEmpty() {
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_isNotEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.setEditable(true);
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    // --- cancel edit
-//    @Test public void test_cancelEdit() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTableCell<Object> cell = new ComboBoxTableCell<>();
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//
-//        cell.cancelEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
+    /**************************************************************************
+     *
+     * editing tests
+     *
+     **************************************************************************/
+
+    // --- is Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsFalse_isEmpty() {
+        TableView tableView = new TableView();
+        tableView.setEditable(false);
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.updateTableView(tableView);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isEmpty() {
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_tableViewEditableIsTrue_tableColumnIsNull() {
+        TableView tableView = new TableView();
+        tableView.setEditable(true);
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView();
+        tableView.setEditable(true);
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_cellEditableIsTrue_isEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView();
+        tableView.setEditable(true);
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.setEditable(true);
+        cell.updateTableView(tableView);
+        cell.updateTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    // --- is Not Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsFalse_isNotEmpty() {
+        TableView tableView = new TableView();
+        tableView.setEditable(false);
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateItem("TEST", false);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isNotEmpty() {
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    // --- cancel edit
+    @Test public void test_cancelEdit_usingCellCancelEdit() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        cell.cancelEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_cancelEdit_usingTableCancelEdit() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ComboBoxTableCell<Object,Object> cell = new ComboBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        tableView.edit(-1, null);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
 }

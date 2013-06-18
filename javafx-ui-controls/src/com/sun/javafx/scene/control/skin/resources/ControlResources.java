@@ -38,6 +38,10 @@ public final class ControlResources {
     // Do not cache the bundle here. It is cached by the ResourceBundle
     // class and may be updated if the default locale changes.
 
+    private ControlResources() {
+        // no-op
+    }
+
     /*
      * Look up a string in the properties file corresponding to the
      * default locale (i.e. the application's locale). If not found, the
