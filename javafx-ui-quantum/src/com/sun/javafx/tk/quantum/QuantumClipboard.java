@@ -575,13 +575,15 @@ final class QuantumClipboard implements TKClipboard {
             } else if (dataFormat == DataFormat.FILES) {
                 // Have to convert from List<File> to String[]
                 List<File> list = (List<File>)data;
-                String[] paths = new String[list.size()];
-                int i = 0;
-                for (File f : list) {
-                    paths[i++] = f.getAbsolutePath();
+                if (list.size() != 0) {
+                    String[] paths = new String[list.size()];
+                    int i = 0;
+                    for (File f : list) {
+                        paths[i++] = f.getAbsolutePath();
+                    }
+                    systemAssistant.setData(Clipboard.FILE_LIST_TYPE, paths);
+                    dataSet = true;
                 }
-                systemAssistant.setData(Clipboard.FILE_LIST_TYPE, paths);
-                dataSet = true;
             } else {
                 if (data instanceof Serializable) {
                     if ((dataFormat != DataFormat.PLAIN_TEXT &&

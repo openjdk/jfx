@@ -158,12 +158,9 @@ final class MacPasteboard {
     }
     public long putItems(HashMap<String,Object>[] items, int supportedActions) {
         assertValid();
-        Object array[] = null;
-        if (items.length > 0) {
-            array = new Object[items.length];
-            for (int i=0; i<items.length; i++) {
-                array[i] = hashMapToArray(items[i]);
-            }
+        Object array[] = new Object[items.length];
+        for (int i = 0; i < items.length; i++) {
+            array[i] = hashMapToArray(items[i]);
         }
         return putItemsFromArray(array, supportedActions);
     }
