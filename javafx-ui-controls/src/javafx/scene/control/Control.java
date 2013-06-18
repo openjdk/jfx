@@ -648,7 +648,7 @@ public abstract class Control extends Region implements Skinnable {
 
                     if (get() != null) {
                         if (!get().equals(currentSkinClassName)) {
-                            loadSkinClass();
+                            loadSkinClass(Control.this, skinClassName.get());
                         }
                         // Note: CSS should not set skin to null
                     }
@@ -674,12 +674,10 @@ public abstract class Control extends Region implements Skinnable {
         return skinClassName;
     }
 
-    private void loadSkinClass() {
-        if (skinClassName == null
-                || skinClassName.get() == null
-                || skinClassName.get().isEmpty()) {
+    static void loadSkinClass(final Skinnable control, final String skinClassName) {
+        if (skinClassName == null || skinClassName.isEmpty()) {
             final String msg =
-                "Empty -fx-skin property specified for control " + this;
+                "Empty -fx-skin property specified for control " + control;
             final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg);
@@ -690,7 +688,7 @@ public abstract class Control extends Region implements Skinnable {
         }
 
         try {
-            final Class<?> skinClass = Control.loadClass(skinClassName.get(), this);
+            final Class<?> skinClass = Control.loadClass(skinClassName, control);
             Constructor<?>[] constructors = skinClass.getConstructors();
             Constructor<?> skinConstructor = null;
             for (Constructor<?> c : constructors) {
@@ -703,7 +701,7 @@ public abstract class Control extends Region implements Skinnable {
 
             if (skinConstructor == null) {
                 final String msg =
-                    "No valid constructor defined in '" + skinClassName + "' for control " + this +
+                    "No valid constructor defined in '" + skinClassName + "' for control " + control +
                         ".\r\nYou must provide a constructor that accepts a single "
                         + "Control parameter in " + skinClassName + ".";
                 final List<CssError> errors = StyleManager.getErrors();
@@ -713,14 +711,14 @@ public abstract class Control extends Region implements Skinnable {
                 }
                 Logging.getControlsLogger().severe(msg);
             } else {
-                Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(this);
+                Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(control);
                 // Do not call setSkin here since it has the side effect of
                 // also setting the skinClassName!
-                skinProperty().set(skinInstance);
+                control.skinProperty().set(skinInstance);
             }
         } catch (InvocationTargetException e) {
             final String msg =
-                "Failed to load skin '" + skinClassName + "' for control " + this;
+                "Failed to load skin '" + skinClassName + "' for control " + control;
             final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
@@ -729,7 +727,7 @@ public abstract class Control extends Region implements Skinnable {
             Logging.getControlsLogger().severe(msg, e.getCause());
         } catch (Exception e) {
             final String msg =
-                "Failed to load skin '" + skinClassName + "' for control " + this;
+                "Failed to load skin '" + skinClassName + "' for control " + control;
             final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
