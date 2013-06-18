@@ -122,32 +122,6 @@ public class AccessibleList extends AccessibleControl
      */
     @Override
     public Object[] getSelection() {
-        /**
-         * For now the following code is being commented out due to the use of getMethod
-         * as flagged by findbugs and reported in RT-28367.  When this code is finally
-         * implemented the issue raised by RT-28367 should be resolved in some manner
-         * other than throwing UnsupportedOperationException.
-         * 
-         * 
-        // Fix this later to allocate and fill the correctly sized array.
-        //      For now it will work for single selection lists.
-        Object[] selection = new Object[1];  // it'll be a Glass AccessibleBaseProvider
-        //  selection[1] = null;  // Is this needed?  Probably already null.
-        Object selected = listView.getSelectionModel().getSelectedItem();
-        try {
-            java.lang.reflect.Method method = selected.getClass().getMethod("impl_getAccessible");
-            AccessibleProvider provider = (AccessibleProvider)method.invoke(selected);
-        // if (selected instanceof Accessible) {
-           // AccessibleProvider provider = ((Accessible)selected).impl_getAccessible();
-            if (provider instanceof AccessibleNode) {
-                selection[1] = ((AccessibleNode)provider).getAccessibleElement();
-            }
-        } catch (Exception ex) {
-        }
-        return selection;
-         * 
-         *
-         */
         throw new UnsupportedOperationException();
     }
 
@@ -187,32 +161,6 @@ public class AccessibleList extends AccessibleControl
      */
     @Override   
     public Object getItem(int row, int col) {
-        Object item = null;
-        // get the cell and then its associated provider
-        /**
-         * For now the following code is being commented out due to the use of getMethod
-         * as flagged by findbugs and reported in RT-28367.  When this code is finally
-         * implemented the issue raised by RT-28367 should be resolved in some manner
-         * other than throwing UnsupportedOperationException.
-         * 
-         * 
-        // TODO fix this to return the appropriate item
-        listView.getItems().get(row);
-        for (Node cell : listView.lookupAll(".cell")) {
-            if (cell instanceof Cell) {
-                try {
-                    java.lang.reflect.Method method = cell.getClass().getMethod("impl_getAccessible");
-                    AccessibleProvider provider = (AccessibleProvider)method.invoke(cell);
-                    if (provider instanceof AccessibleNode) {
-                        item = ((AccessibleNode)provider).getAccessibleElement();
-                    }
-                } catch (Exception ex) {}
-            }
-        }
-        return item;
-         *
-         * 
-         */
         throw new UnsupportedOperationException();
     }
 
