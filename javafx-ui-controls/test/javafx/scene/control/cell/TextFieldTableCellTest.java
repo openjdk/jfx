@@ -25,6 +25,7 @@
 
 package javafx.scene.control.cell;
 
+import javafx.collections.FXCollections;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -214,131 +215,164 @@ public class TextFieldTableCellTest {
      *
      **************************************************************************/
 
-//    // --- is Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_tableColumnEditableIsFalse_isEmpty() {
-//        TableColumn<Object,Object> tableColumn = new TableColumn<>();
-//        tableColumn.setEditable(false);
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.updateTableColumn(tableColumn);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isEmpty() {
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_tableColumnEditableIsTrue_isEmpty() {
-//        TableColumn<Object,Object> tableColumn = new TableColumn<>();
-//        tableColumn.setEditable(true);
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.updateTableColumn(tableColumn);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
+    // --- is Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsFalse_isEmpty() {
+        TableView tableView = new TableView();
+        tableView.setEditable(false);
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateTableView(tableView);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isEmpty() {
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView();
+        tableView.setEditable(true);
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
 //    @Test public void test_startEdit_tableColumnEditableIsTrue_cellEditableIsTrue_isEmpty() {
-//        TableColumn<Object,Object> tableColumn = new TableColumn<>();
-//        tableColumn.setEditable(true);
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.setEditable(true);
-//        cell.updateTableColumn(tableColumn);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    // --- is Not Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_tableColumnEditableIsFalse_isNotEmpty() {
-//        TableColumn<Object,Object> tableColumn = new TableColumn<>();
-//        tableColumn.setEditable(false);
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.updateTableColumn(tableColumn);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isNotEmpty() {
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_tableColumnEditableIsTrue_isNotEmpty() {
-//        TableColumn<Object,Object> tableColumn = new TableColumn<>();
-//        tableColumn.setEditable(true);
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.updateTableColumn(tableColumn);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_tableColumnEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
-//        TableColumn<Object,Object> tableColumn = new TableColumn<>();
-//        tableColumn.setEditable(true);
-//        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-//        cell.setEditable(true);
-//        cell.updateTableColumn(tableColumn);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    // --- cancel edit
-//    @Test public void test_cancelEdit() {
-//        TableView tableView = new TableView<>();
+//        TableColumn tc = new TableColumn();
+//        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+//        tableView.getColumns().add(tc);
 //        tableView.setEditable(true);
-//        tableView.getItems().add("TEST");
-//        TableColumn<Object,Object> tableColumn = new TableColumn<>();
-//        tableColumn.setEditable(true);
 //        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
 //        cell.updateTableView(tableView);
-//        cell.updateTableColumn(tableColumn);
-////        cell.updateItem("TEST", false);
 //        cell.updateIndex(0);
+//        cell.updateTableColumn(tc);
+//        cell.setEditable(true);
 //
-////        cell.startEdit();
-//        tableView.edit(0, tableColumn);
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//
-//        cell.cancelEdit();
+//        tableView.edit(0, tc);
 //        assertFalse(cell.isEditing());
 //        assertNull(cell.getGraphic());
 //    }
+
+    // --- is Not Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableColumnEditableIsFalse_isNotEmpty() {
+        TableColumn<Object,Object> tableColumn = new TableColumn<>();
+        tableColumn.setEditable(false);
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tableColumn);
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateTableColumn(tableColumn);
+        cell.updateTableView(tableView);
+        cell.updateItem("TEST", false);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isNotEmpty() {
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableColumnEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    // --- cancel edit
+    @Test public void test_cancelEdit_usingCellCancelEdit() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        cell.cancelEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_cancelEdit_usingTableCancelEdit() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        tableView.edit(-1, null);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
 }

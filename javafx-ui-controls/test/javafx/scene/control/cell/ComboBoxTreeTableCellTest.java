@@ -27,8 +27,10 @@ package javafx.scene.control.cell;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableView;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 import org.junit.Before;
@@ -161,6 +163,60 @@ public class ComboBoxTreeTableCellTest {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>(converter);
         assertNull(cell.getGraphic());
     }
+
+
+    /**************************************************************************
+     *
+     * Constructor tests for one-arg (varargs items) constructor
+     *
+     **************************************************************************/
+
+    @Test public void testConstructor_varargs_defaultStringConverterIsNotNull() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(items);
+        assertNotNull(cell.getConverter());
+    }
+
+    @Test public void testConstructor_varargs_defaultStyleClass() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(items);
+        assertTrue(cell.getStyleClass().contains("combo-box-table-cell"));
+    }
+
+    @Test public void testConstructor_varargs_defaultGraphicIsACheckBox() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(items);
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void testConstructor_varargs_itemsListIsNotNullOrEmpty() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(items);
+        assertNotNull(cell.getItems());
+        assertEquals(3, cell.getItems().size());
+    }
+
+
+    /**************************************************************************
+     *
+     * Property tests
+     *
+     **************************************************************************/
+
+    @Test public void testComboBoxEditable_falseByDefault() {
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
+        assertFalse(cell.isComboBoxEditable());
+    }
+
+    @Test public void testComboBoxEditable_setter() {
+        ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
+
+        cell.setComboBoxEditable(true);
+        assertTrue(cell.isComboBoxEditable());
+
+        cell.setComboBoxEditable(false);
+        assertFalse(cell.isComboBoxEditable());
+    }
     
     
     /**************************************************************************
@@ -214,131 +270,174 @@ public class ComboBoxTreeTableCellTest {
     }
 
 
-//    /**************************************************************************
-//     *
-//     * editing tests
-//     *
-//     **************************************************************************/
-//
-//    // --- is Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsFalse_isEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(false);
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.updateTableView(listView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_listViewIsNull_isEmpty() {
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_isEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.updateTableView(listView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_cellEditableIsTrue_isEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.setEditable(true);
-//        cell.updateTableView(listView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    // --- is Not Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsFalse_isNotEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(false);
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_listViewIsNull_isNotEmpty() {
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_isNotEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.setEditable(true);
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    // --- cancel edit
-//    @Test public void test_cancelEdit() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ComboBoxTreeTableCell<Object> cell = new ComboBoxTreeTableCell<>();
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//
-//        cell.cancelEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
+    /**************************************************************************
+     *
+     * editing tests
+     *
+     **************************************************************************/
+
+    // --- is Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsFalse_isEmpty() {
+        TreeTableView tableView = new TreeTableView();
+        tableView.setEditable(false);
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isEmpty() {
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_tableViewEditableIsTrue_tableColumnIsNull() {
+        TreeTableView tableView = new TreeTableView();
+        tableView.setEditable(true);
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView();
+        tableView.setEditable(true);
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateTreeTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_cellEditableIsTrue_isEmpty() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView();
+        tableView.setEditable(true);
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.setEditable(true);
+        cell.updateTreeTableView(tableView);
+        cell.updateTreeTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    // --- is Not Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
+        ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsFalse_isNotEmpty() {
+        TreeTableView tableView = new TreeTableView();
+        tableView.setEditable(false);
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateItem("TEST", false);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isNotEmpty() {
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTreeTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTreeTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    // --- cancel edit
+    @Test public void test_cancelEdit_usingCellCancelEdit() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTreeTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        cell.cancelEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_cancelEdit_usingTableCancelEdit() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ComboBoxTreeTableCell<Object,Object> cell = new ComboBoxTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTreeTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        tableView.edit(-1, null);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
 }

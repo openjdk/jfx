@@ -29,6 +29,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 import org.junit.Before;
@@ -161,6 +162,38 @@ public class ChoiceBoxTableCellTest {
         ChoiceBoxTableCell<Object, Object> cell = new ChoiceBoxTableCell<>(converter);
         assertNull(cell.getGraphic());
     }
+
+
+    /**************************************************************************
+     *
+     * Constructor tests for one-arg (varargs items) constructor
+     *
+     **************************************************************************/
+
+    @Test public void testConstructor_varargs_defaultStringConverterIsNotNull() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ChoiceBoxTableCell<Object, Object> cell = new ChoiceBoxTableCell<>(items);
+        assertNotNull(cell.getConverter());
+    }
+
+    @Test public void testConstructor_varargs_defaultStyleClass() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ChoiceBoxTableCell<Object, Object> cell = new ChoiceBoxTableCell<>(items);
+        assertTrue(cell.getStyleClass().contains("choice-box-table-cell"));
+    }
+
+    @Test public void testConstructor_varargs_defaultGraphicIsACheckBox() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ChoiceBoxTableCell<Object, Object> cell = new ChoiceBoxTableCell<>(items);
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void testConstructor_varargs_itemsListIsNotNullOrEmpty() {
+        Object[] items = new Object[] { "Item 1", "Item 2", "Item 3" };
+        ChoiceBoxTableCell<Object, Object> cell = new ChoiceBoxTableCell<>(items);
+        assertNotNull(cell.getItems());
+        assertEquals(3, cell.getItems().size());
+    }
     
     
     /**************************************************************************
@@ -214,131 +247,174 @@ public class ChoiceBoxTableCellTest {
     }
 
 
-//    /**************************************************************************
-//     *
-//     * editing tests
-//     *
-//     **************************************************************************/
-//
-//    // --- is Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsFalse_isEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(false);
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.updateTableView(listView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_listViewIsNull_isEmpty() {
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_isEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.updateTableView(listView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_cellEditableIsTrue_isEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.setEditable(true);
-//        cell.updateTableView(listView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    // --- is Not Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsFalse_isNotEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(false);
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_listViewIsNull_isNotEmpty() {
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_isNotEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_listViewEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.setEditable(true);
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    // --- cancel edit
-//    @Test public void test_cancelEdit() {
-//        TableView listView = new TableView();
-//        listView.setEditable(true);
-//        ChoiceBoxTableCell<Object> cell = new ChoiceBoxTableCell<>();
-//        cell.updateTableView(listView);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//
-//        cell.cancelEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
+    /**************************************************************************
+     *
+     * editing tests
+     *
+     **************************************************************************/
+
+    // --- is Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsFalse_isEmpty() {
+        TableView tableView = new TableView();
+        tableView.setEditable(false);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateTableView(tableView);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isEmpty() {
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_tableViewEditableIsTrue_tableColumnIsNull() {
+        TableView tableView = new TableView();
+        tableView.setEditable(true);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView();
+        tableView.setEditable(true);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_cellEditableIsTrue_isEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView();
+        tableView.setEditable(true);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.setEditable(true);
+        cell.updateTableView(tableView);
+        cell.updateTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    // --- is Not Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
+        ChoiceBoxTableCell<Object, Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsFalse_isNotEmpty() {
+        TableView tableView = new TableView();
+        tableView.setEditable(false);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateItem("TEST", false);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isNotEmpty() {
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    // --- cancel edit
+    @Test public void test_cancelEdit_usingCellCancelEdit() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        cell.cancelEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_cancelEdit_usingTableCancelEdit() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        tableView.edit(-1, null);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
 }

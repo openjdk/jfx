@@ -25,6 +25,7 @@
 
 package javafx.scene.control.cell;
 
+import javafx.collections.FXCollections;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
@@ -209,144 +210,170 @@ public class TextFieldTreeTableCellTest {
     }
 
 
-//    /**************************************************************************
-//     *
-//     * editing tests
-//     *
-//     **************************************************************************/
-//
-//    // --- is Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_tableColumnEditableIsFalse_isEmpty() {
-//        TreeItem root = new TreeItem("Root");
-//        TreeTableView treeView = new TreeTableView(root);
-//
-//        TreeTableColumn<Object,Object> tableColumn = new TreeTableColumn<>();
-//        tableColumn.setEditable(false);
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.updateTreeTableColumn(tableColumn);
-//        cell.updateTreeTableView(treeView);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isEmpty() {
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_tableColumnEditableIsTrue_isEmpty() {
-//        TreeTableColumn<Object,Object> tableColumn = new TreeTableColumn<>();
-//        tableColumn.setEditable(true);
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.updateTreeTableColumn(tableColumn);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_tableColumnEditableIsTrue_cellEditableIsTrue_isEmpty() {
-//        TreeTableColumn<Object,Object> tableColumn = new TreeTableColumn<>();
-//        tableColumn.setEditable(true);
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.setEditable(true);
-//        cell.updateTreeTableColumn(tableColumn);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    // --- is Not Empty
-//    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(false);
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_tableColumnEditableIsFalse_isNotEmpty() {
-//        TreeItem root = new TreeItem("Root");
-//        TreeTableView treeView = new TreeTableView(root);
-//
-//        TreeTableColumn<Object,Object> tableColumn = new TreeTableColumn<>();
-//        tableColumn.setEditable(false);
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.updateTreeTableView(treeView);
-//        cell.updateTreeTableColumn(tableColumn);
-//        cell.updateItem("TEST", false);
-//
-//        cell.startEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
-//
-//    @Test(expected = NullPointerException.class)
-//    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isNotEmpty() {
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.updateItem("TEST", false);
-//        cell.setEditable(true);
-//        cell.startEdit();
-//    }
-//
-//    @Test public void test_startEdit_treeViewEditableIsTrue_isNotEmpty() {
-//        TreeItem root = new TreeItem("Root");
-//        TreeTableView treeView = new TreeTableView(root);
-//        treeView.setEditable(true);
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.updateTreeTableView(treeView);
-//        cell.updateIndex(0);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    @Test public void test_startEdit_treeViewEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
-//        TreeItem root = new TreeItem("Root");
-//        TreeTableView treeView = new TreeTableView(root);
-//        treeView.setEditable(true);
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.updateTreeTableView(treeView);
-//        cell.setEditable(true);
-//        cell.updateIndex(0);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//    }
-//
-//    // --- cancel edit
-//    @Test public void test_cancelEdit() {
-//        TreeItem root = new TreeItem("Root");
-//        TreeTableView treeView = new TreeTableView(root);
-//        treeView.setEditable(true);
-//        TreeTableColumn col = new TreeTableColumn();
-//        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
-//        cell.updateTreeTableView(treeView);
-//        cell.updateTreeTableColumn(col);
-//        cell.updateIndex(0);
-//
-//        cell.startEdit();
-//        assertTrue(cell.isEditing());
-//        assertNotNull(cell.getGraphic());
-//
-//        cell.cancelEdit();
-//        assertFalse(cell.isEditing());
-//        assertNull(cell.getGraphic());
-//    }
+    /**************************************************************************
+     *
+     * editing tests
+     *
+     **************************************************************************/
+
+    // --- is Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isEmpty() {
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsFalse_isEmpty() {
+        TreeTableView tableView = new TreeTableView();
+        tableView.setEditable(false);
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isEmpty() {
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView();
+        tableView.setEditable(true);
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateTreeTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    //    @Test public void test_startEdit_tableColumnEditableIsTrue_cellEditableIsTrue_isEmpty() {
+    //        TreeTableColumn tc = new TreeTableColumn();
+    //        TreeTableView tableView = new TreeTableView(FXCollections.observableArrayList("TEST"));
+    //        tableView.getColumns().add(tc);
+    //        tableView.setEditable(true);
+    //        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+    //        cell.updateTreeTableView(tableView);
+    //        cell.updateIndex(0);
+    //        cell.updateTreeTableColumn(tc);
+    //        cell.setEditable(true);
+    //
+    //        tableView.edit(0, tc);
+    //        assertFalse(cell.isEditing());
+    //        assertNull(cell.getGraphic());
+    //    }
+
+    // --- is Not Empty
+    @Test public void test_startEdit_cellEditableIsFalse_isNotEmpty() {
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(false);
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableColumnEditableIsFalse_isNotEmpty() {
+        TreeTableColumn<Object,Object> tableColumn = new TreeTableColumn<>();
+        tableColumn.setEditable(false);
+        TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
+        tableView.getColumns().add(tableColumn);
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.updateTreeTableColumn(tableColumn);
+        cell.updateTreeTableView(tableView);
+        cell.updateItem("TEST", false);
+
+        cell.startEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isNotEmpty() {
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.updateItem("TEST", false);
+        cell.setEditable(true);
+        cell.startEdit();
+    }
+
+    @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTreeTableColumn(tc);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    @Test public void test_startEdit_tableColumnEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTreeTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+    }
+
+    // --- cancel edit
+    @Test public void test_cancelEdit_usingCellCancelEdit() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTreeTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        cell.cancelEdit();
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_cancelEdit_usingTableCancelEdit() {
+        TreeTableColumn tc = new TreeTableColumn();
+        TreeTableView tableView = new TreeTableView(new TreeItem("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        TextFieldTreeTableCell<Object,Object> cell = new TextFieldTreeTableCell<>();
+        cell.updateTreeTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTreeTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        tableView.edit(-1, null);
+        assertFalse(cell.isEditing());
+        assertNull(cell.getGraphic());
+    }
 }
