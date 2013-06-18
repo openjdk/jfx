@@ -447,6 +447,7 @@
             <arg value="${linuxLauncherDir}/JavaAppLauncher"/>
             <arg value="-I${platform.home}/include"/>
             <arg value="-I${platform.home}/include/linux"/>
+            <arg value="native/linux/xmlparser.c"/>
             <arg value="native/linux/launcher.c"/>
             <arg value="-ldl"/>
         </exec>
