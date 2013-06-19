@@ -601,29 +601,6 @@ public class ContextMenuContent extends Region {
                 // on the Menu whose submenu is open.
                 if (submenu != null && submenu.isShowing()) return;
                   
-                // RT-15339 : if this context menu has another context menu part 
-                // of its content, then do nothing similar to the submenu case.
-                // walk thru all windows open to see if if this context menu is
-                // the owner window for another context menu, if so return.
-                final Iterator<Window> iter =
-                        AccessController.doPrivileged(
-                                new PrivilegedAction<Iterator<Window>>() {
-                                    @Override
-                                    public Iterator<Window> run() {
-                                        return Window.impl_getWindows();
-                                    }
-                                });
-                while(iter.hasNext()) {
-                    Window w = iter.next();
-                    if (w instanceof ContextMenu && !(contextMenu == w)) {
-                        Window ownerWin = ((ContextMenu)w).getOwnerWindow();
-                        if (contextMenu == ownerWin && ownerWin.isShowing()) {
-                            return;
-                        }
-                        
-                    }
-                    
-                }
                 requestFocus();
             }
         });

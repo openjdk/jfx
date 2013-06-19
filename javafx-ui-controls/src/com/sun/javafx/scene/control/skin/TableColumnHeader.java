@@ -143,11 +143,6 @@ public class TableColumnHeader extends Region {
             // visually adjusts its width as necessary.
             isSizeDirty = true;
             requestLayout();
-        } else if ("TABLE_COLUMN_WIDTH".equals(p)) {
-            // It is this that ensures that when a column is resized that the header
-            // visually adjusts its width as necessary.
-            isSizeDirty = true;
-            requestLayout();
         } else if ("TABLE_COLUMN_ID".equals(p)) {
             setId(column.getId());
         } else if ("TABLE_COLUMN_STYLE".equals(p)) {
@@ -429,6 +424,7 @@ public class TableColumnHeader extends Region {
         label.setAlignment(Pos.CENTER);
         label.setText(column.getText());
         label.setGraphic(column.getGraphic());
+        label.setVisible(column.isVisible());
 
         // ---- container for the sort arrow (which is not supported on embedded
         // platforms)

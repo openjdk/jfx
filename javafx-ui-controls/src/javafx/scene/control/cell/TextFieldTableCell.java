@@ -186,12 +186,14 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
             return;
         }
         super.startEdit();
-        
-        if (textField == null) {
-            textField = CellUtils.createTextField(this, getConverter());
+
+        if (isEditing()) {
+            if (textField == null) {
+                textField = CellUtils.createTextField(this, getConverter());
+            }
+
+            CellUtils.startEdit(this, getConverter(), null, null, textField);
         }
-        
-        CellUtils.startEdit(this, getConverter(), null, null, textField);
     }
 
     /** {@inheritDoc} */

@@ -140,23 +140,6 @@ public final class AccessibleListItem extends AccessibleControl implements
      */
     @Override
     public Object getSelectionContainer() {
-        /**
-         * For now the following code is being commented out due to the use of getMethod
-         * as flagged by findbugs and reported in RT-28367.  When this code is finally
-         * implemented the issue raised by RT-28367 should be resolved in some manner
-         * other than throwing UnsupportedOperationException.
-         *
-         * 
-        Object item = null;
-        try {
-            java.lang.reflect.Method method = listView.getClass().getMethod("impl_getAccessible");
-            AccessibleProvider provider = (AccessibleProvider)method.invoke(listView);
-            item = ((AccessibleNode)provider).getAccessibleElement();
-            } catch (Exception ex) {}
-        return item;
-         *
-         * 
-         */
         throw new UnsupportedOperationException();
     }
 
@@ -209,26 +192,6 @@ public final class AccessibleListItem extends AccessibleControl implements
      */
     @Override
     public Object getContainingGrid() {
-        /**
-         * For now the following code is being commented out due to the use of getMethod
-         * as flagged by findbugs and reported in RT-28367.  When this code is finally
-         * implemented the issue raised by RT-28367 should be resolved in some manner
-         * other than throwing UnsupportedOperationException.
-         *
-         *
-        Object container = null;
-        try {
-            java.lang.reflect.Method method =
-                listView.getClass().getMethod("impl_getAccessible");
-            AccessibleProvider provider = (AccessibleProvider)method.invoke(listView);
-            if (provider instanceof AccessibleNode) {
-                container = ((AccessibleNode)provider).getAccessibleElement();
-            }                   
-        } catch (Exception ex) {}
-        return container;
-         *
-         * 
-         */
         throw new UnsupportedOperationException();
     }
     

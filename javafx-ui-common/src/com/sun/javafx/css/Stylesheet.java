@@ -190,6 +190,7 @@ public class Stylesheet {
     public void readBinary(DataInputStream is, String[] strings)
         throws IOException 
     {
+        this.stringStore = strings;
         final int index = is.readShort();
         this.setOrigin(StyleOrigin.valueOf(strings[index]));
         final int nRules = is.readShort();
@@ -228,7 +229,6 @@ public class Stylesheet {
             final String[] strings = StringStore.readBinary(dataInputStream);
             // read binary data
             stylesheet = new Stylesheet(url);
-            stylesheet.stringStore = strings;
             stylesheet.readBinary(dataInputStream,strings);
 
         } catch (FileNotFoundException fnfe) {

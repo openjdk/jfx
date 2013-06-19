@@ -241,7 +241,7 @@ final public class CompoundSelector extends Selector {
             while (parent != null) {
                 if (selectors.get(index-1).applies(parent)) { 
                     Set<PseudoClass> parentStates = parent.getPseudoClassStates();
-                    return stateMatches(parent, states, index - 1);
+                    return stateMatches(parent, parentStates, index - 1);
                 }
                 // Otherwise we need to get the next parent and try again
                 parent = parent.getStyleableParent();

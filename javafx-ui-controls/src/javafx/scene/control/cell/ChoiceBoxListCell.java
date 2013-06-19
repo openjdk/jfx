@@ -295,8 +295,11 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
         choiceBox.getSelectionModel().select(getItem());
         
         super.startEdit();
-        setText(null);
-        setGraphic(choiceBox);
+
+        if (isEditing()) {
+            setText(null);
+            setGraphic(choiceBox);
+        }
     }
 
     /** {@inheritDoc} */

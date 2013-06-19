@@ -31,6 +31,10 @@ public final class EmbeddedResources {
 
     private static ResourceBundle embeddedResourceBundle;
 
+    private EmbeddedResources() {
+        // no-op
+    }
+
     public static ResourceBundle getBundle() {
         if (embeddedResourceBundle == null) {
             embeddedResourceBundle = ResourceBundle.getBundle("com/sun/javafx/scene/control/skin/resources/embedded");

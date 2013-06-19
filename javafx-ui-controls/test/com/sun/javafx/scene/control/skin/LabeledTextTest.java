@@ -73,7 +73,7 @@ public class LabeledTextTest {
     public void testLabeledTextAlignmentStyleAffectsLabeledText() {
         
         label.setStyle("-fx-text-alignment: right;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(TextAlignment.RIGHT, label.getTextAlignment());
         assertEquals(TextAlignment.RIGHT, labeledText.getTextAlignment());
     
@@ -93,7 +93,7 @@ public class LabeledTextTest {
     public void testLabeledFontStyleAffectsLabeledText() {
         
         label.setStyle("-fx-font: 10px Amble;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         Font expected = Font.font("Amble", 10);
         assertEquals(expected, label.getFont());
         assertEquals(expected, labeledText.getFont());
@@ -114,7 +114,7 @@ public class LabeledTextTest {
     public void testLabeledTextFillStyleAffectsLabeledText() {
         
         label.setStyle("-fx-text-fill: rgb(255,0,0);");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         Color expected = Color.rgb(255, 0, 0);
         assertEquals(expected, label.getTextFill());
         assertEquals(expected, labeledText.getFill());
@@ -135,7 +135,7 @@ public class LabeledTextTest {
     public void testLabeledUnderlineStyleAffectsLabeledText() {
         
         label.setStyle("-fx-underline: true;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assert(label.isUnderline() == true);
         assert(labeledText.isUnderline() == true);
     
@@ -144,7 +144,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledBlendModeStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-blend-mode: color-burn;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(BlendMode.COLOR_BURN,label.getBlendMode());
         assertFalse(BlendMode.COLOR_BURN.equals(labeledText.getBlendMode())); 
     }
@@ -152,7 +152,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledCursorStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-cursor: crosshair;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(Cursor.CROSSHAIR,label.getCursor());
         assertFalse(Cursor.CROSSHAIR.equals(labeledText.getCursor()));
     }
@@ -160,7 +160,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledEffectStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-effect: dropshadow(one-pass-box, red, 64, .5, 2, 3);");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertNotNull(label.getEffect());
         assertNull(labeledText.getEffect()); 
     }
@@ -168,7 +168,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledFocusTraversableStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-focus-traversable: true;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assert(label.focusTraversableProperty().get() == true);   
         assert(labeledText.focusTraversableProperty().get() == false);   
     }
@@ -176,7 +176,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledOpacityStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-opacity: .5;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(label.getOpacity(), .5, .0000001);   
         assertEquals(labeledText.getOpacity(), 1, .0000001);   
     }
@@ -184,7 +184,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledRotateStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-rotate: 180;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(label.getRotate(), 180, .0000001);
         assertEquals(labeledText.getRotate(), 0, .0000001);   
     }
@@ -192,7 +192,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledScaleXStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-scale-x: .5;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(label.getScaleX(), .5, .0000001);
         assertEquals(labeledText.getScaleX(), 1, .0000001);   
     }
@@ -200,7 +200,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledScaleYStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-scale-y: .5;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(label.getScaleY(), .5, .0000001);
         assertEquals(labeledText.getScaleY(), 1, .0000001);   
     }
@@ -208,7 +208,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledScaleZStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-scale-z: .5;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(label.getScaleZ(), .5, .0000001);
         assertEquals(labeledText.getScaleZ(), 1, .0000001);   
     }
@@ -216,7 +216,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTranslateXStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-translate-x: .5;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(label.getTranslateX(), .5, .0000001);
         assertEquals(labeledText.getTranslateX(), 0, .0000001);   
     }
@@ -224,7 +224,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTranslateYStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-translate-y: .5;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(label.getTranslateY(), .5, .0000001);
         assertEquals(labeledText.getTranslateY(), 0, .0000001);   
     }
@@ -232,7 +232,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTranslateZStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-translate-z: .5;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assertEquals(label.getTranslateZ(), .5, .0000001);
         assertEquals(labeledText.getTranslateZ(), 0, .0000001);   
     }
@@ -240,7 +240,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledVisibilityStyleDoesNotAffectLabeledText() {
         label.setStyle("visibility: false;");
-        label.impl_processCSS(false);
+        label.impl_processCSS(true);
         assert(label.visibleProperty().get() == false);   
         assert(labeledText.visibleProperty().get() == true);   
     }

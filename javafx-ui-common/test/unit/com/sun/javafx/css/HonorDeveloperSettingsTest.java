@@ -26,6 +26,9 @@
 package com.sun.javafx.css;
 
 import static org.junit.Assert.*;
+
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -36,8 +39,10 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
+import com.sun.javafx.Logging;
 import org.junit.Before;
 import org.junit.Test;
+import sun.util.logging.PlatformLogger;
 
 /**
  * AKA: RT-7401. Tests that the pattern used works by testing opacity
@@ -116,7 +121,7 @@ public class HonorDeveloperSettingsTest {
         assertEquals(.873, rect.getOpacity(), 0.01);
     }
 
-    @Test @org.junit.Ignore("fails, but works from an application")
+    @Test
     public void testOpacityWithManuallyChangedValueAndInlineStyleIsSetToInlineStyle() {
         rect.impl_processCSS(true);
         assertEquals(.76, rect.getOpacity(), 0.01);
@@ -257,7 +262,7 @@ public class HonorDeveloperSettingsTest {
         
     }
     
-    @Test @org.junit.Ignore("fails, but works from an application")
+    @Test
     public void testInlineStyleInheritedFromParentApplies() {
 
         // Must remove the id so we don't match on the ua style.
@@ -354,7 +359,7 @@ public class HonorDeveloperSettingsTest {
 
         // want text to get font style from .root
         // assuming here that test_FontInheritsFromDotRootStyle passed
-        text.setId(null);        
+        text.setId(null);
         text.setStyle("-fx-font-size: 24;");
 
         scene.getRoot().impl_processCSS(true);

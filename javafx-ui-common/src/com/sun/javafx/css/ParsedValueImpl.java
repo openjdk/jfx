@@ -113,36 +113,34 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         return containsLookupsFlag;
     }
 
-    private final boolean needsFont;
-    public boolean isNeedsFont() {
-        if (resolved != null && resolved != this) {
-            return resolved.needsFont;
-        }
-        return needsFont;
-    }
-
-    private static boolean getNeedsFontFlag(Object obj) {
+    public static boolean containsFontRelativeSize(ParsedValue parsedValue, boolean percentUnitsAreRelative) {
 
         // Assume the value does not need a font for conversion
         boolean needsFont = false;
 
+        Object obj = parsedValue.getValue();
+
         if (obj instanceof Size) {
-            needsFont = ((Size)obj).isAbsolute() == false;
+            Size size = (Size)obj;
+            // percent is only relative for font and font-size properties
+            needsFont = size.getUnits() == SizeUnits.PERCENT
+                    ? percentUnitsAreRelative
+                    : size.isAbsolute() == false;
         }
 
-        else if(obj instanceof ParsedValueImpl) {
-            ParsedValueImpl value = (ParsedValueImpl)obj;
-            needsFont = value.needsFont;
+        else if(obj instanceof ParsedValue) {
+            ParsedValue value = (ParsedValueImpl)obj;
+            needsFont = containsFontRelativeSize(value, percentUnitsAreRelative);
         }
 
-        else if(obj instanceof ParsedValueImpl[]) {
-            ParsedValueImpl[] values = (ParsedValueImpl[])obj;
+        else if(obj instanceof ParsedValue[]) {
+            ParsedValue[] values = (ParsedValue[])obj;
             for(int v=0;
                 v<values.length && !needsFont;
                 v++)
             {
                 if (values[v] == null) continue;
-                needsFont = values[v].needsFont;
+                needsFont = containsFontRelativeSize(values[v], percentUnitsAreRelative);
             }
 
         } else if(obj instanceof ParsedValueImpl[][]) {
@@ -157,7 +155,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                     v++)
                 {
                     if (values[l][v] == null) continue;
-                    needsFont = values[l][v].needsFont;
+                    needsFont = containsFontRelativeSize(values[l][v], percentUnitsAreRelative);
                 }
             }
         }
@@ -176,7 +174,6 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         super(value, converter);
         this.lookup = lookup;
         this.containsLookups = lookup || getContainsLookupsFlag(value);
-        this.needsFont = getNeedsFontFlag(value);
     }
 
     /**

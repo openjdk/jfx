@@ -323,8 +323,11 @@ public class ComboBoxListCell<T> extends ListCell<T> {
         comboBox.getSelectionModel().select(getItem());
         
         super.startEdit();
-        setText(null);
-        setGraphic(comboBox);
+
+        if (isEditing()) {
+            setText(null);
+            setGraphic(comboBox);
+        }
     }
 
     /** {@inheritDoc} */

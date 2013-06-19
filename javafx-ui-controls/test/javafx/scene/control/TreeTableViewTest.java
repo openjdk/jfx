@@ -1843,7 +1843,7 @@ public class TreeTableViewTest {
         
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
-        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        assertEquals(0.0625, scrollBar.getVisibleAmount(), 0.0);
     }
     
     @Test public void test_rt29676_withText() {

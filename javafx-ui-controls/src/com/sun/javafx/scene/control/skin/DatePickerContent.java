@@ -247,19 +247,6 @@ public class DatePickerContent extends VBox {
                     }
                 }
 
-                // our little secret... borrowed from Scene.java
-                if (!e.isConsumed() && e.getCode() == KeyCode.DIGIT8 &&
-                     e.getEventType() == KeyEvent.KEY_PRESSED && e.isControlDown() && e.isShiftDown()) {
-                    try {
-                        Class scenicview = Class.forName("com.javafx.experiments.scenicview.ScenicView");
-                        Class params[] = new Class[] { getScene().getClass() };
-                        java.lang.reflect.Method method = scenicview.getDeclaredMethod("show", params);
-                        method.invoke(null, getScene());
-                    } catch (Exception ex) {
-                        //System.out.println("exception instantiating ScenicView:"+ex);
-                    }
-                }
-
                 // Consume all key events except those that control
                 // showing the popup.
                 switch (e.getCode()) {

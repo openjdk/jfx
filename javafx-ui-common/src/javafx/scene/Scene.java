@@ -2034,23 +2034,6 @@ public class Scene implements EventTarget {
         }
 
         getKeyHandler().process(e);
-
-        // our little secret...
-        if (!e.isConsumed() && e.getCode() == KeyCode.DIGIT8 &&
-             e.getEventType() == KeyEvent.KEY_PRESSED && e.isControlDown() && e.isShiftDown()) {
-            try {
-                Class scenicview = Class.forName("com.javafx.experiments.scenicview.ScenicView");
-                Class params[] = new Class[1];
-                params[0] = Scene.class;
-                java.lang.reflect.Method method = scenicview.getDeclaredMethod("show", params);
-                method.invoke(null, this);
-
-            } catch (Exception ex) {
-                // oh well
-                //System.out.println("exception instantiating ScenicView:"+ex);
-
-            }
-        }
     }
 
     void requestFocus(Node node) {
