@@ -29,7 +29,9 @@
 #define _WIN32_WINNT 0x0501
 
 #include <Windows.h>
+
 #include <shellapi.h> //DO NOT REMOVE, necessary for Gradle builds
+
 #include <tchar.h>
 #include <stdio.h>
 #include <stdlib.h>

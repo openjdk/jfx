@@ -31,6 +31,7 @@ package javafx.beans.property;
  * 
  * @see BooleanPropertyBase
  * 
+ * @since JavaFX 2.0
  */
 public class SimpleBooleanProperty extends BooleanPropertyBase {
 

@@ -101,6 +101,21 @@ public class NGText extends NGShape implements PGText {
         geometryChanged();
     }
 
+    /**
+     * Provide some lucky padding in the case that we are rendering LCD
+     * text since there might be some pixels that lie outside the normally
+     * computed content bounds.
+     */
+    @Override protected BaseBounds computePadding(BaseBounds region) {
+        float pad = fontSmoothingType == FontResource.AA_LCD ? 2f : 1f;
+        return region.deriveWithNewBounds(region.getMinX() - pad,
+                                          region.getMinY() - pad,
+                                          region.getMinZ(),
+                                          region.getMaxX() + pad,
+                                          region.getMaxY() + pad,
+                                          region.getMaxZ());
+    }
+
     private static double EPSILON = 0.01;
     private FontStrike fontStrike = null;
     private FontStrike identityStrike = null;
@@ -247,7 +262,7 @@ public class NGText extends NGShape implements PGText {
         if (selectionStart != selectionEnd && selectionPaint instanceof Color) {
             selectionColor = (Color)selectionPaint;
         }
-        
+
         BaseBounds clipBds = null;
         if (getClipNode() != null) {
             // Note: this clip does not including any clip in the ancestors.
@@ -260,7 +275,7 @@ public class NGText extends NGShape implements PGText {
             int op = TEXT;
             op |= strike.drawAsShapes() || drawingEffect ? SHAPE_FILL : FILL;
             renderText(g, strike, clipBds, selectionColor, op);
-            
+
             // Splitting decoration from text rendering is important in order
             // to group common render states together, for fast performance.
             if (underline || strikethrough) {
@@ -334,7 +349,7 @@ public class NGText extends NGShape implements PGText {
                     } else {
                         g.drawRect(x, y + offset, run.getWidth(), thickness);
                     }
-                }                
+                }
             }
         }
     }

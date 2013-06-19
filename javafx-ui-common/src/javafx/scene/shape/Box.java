@@ -45,7 +45,7 @@ import javafx.scene.input.PickResult;
  * A {@code Box} is a 3D geometry primitive created with a given depth, width,
  * and height. It is centered at the origin.
  *
- * @since JavaFX 8    
+ * @since JavaFX 8.0
  */
 public class Box extends Shape3D {
 

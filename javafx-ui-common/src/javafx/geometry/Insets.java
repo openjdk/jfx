@@ -27,6 +27,7 @@
 
 /**
  * A set of inside offsets for the 4 side of a rectangular area
+ * @since JavaFX 2.0
  */
 public class Insets {
     /**

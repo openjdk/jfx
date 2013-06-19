@@ -36,7 +36,7 @@ import javafx.util.Callback;
  * {@link ProgressBar} node inside the cell.
  * 
  * @param <S> The type of the elements contained within the TableView.
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
     

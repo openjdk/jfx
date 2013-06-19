@@ -57,7 +57,7 @@ import javafx.util.StringConverter;
  * if it changes externally).
  * 
  * @param <T> The type of the elements contained within the TableColumn.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
     

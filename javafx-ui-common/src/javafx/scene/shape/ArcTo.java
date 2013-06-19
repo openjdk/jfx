@@ -89,6 +89,7 @@ path.getElements().add(arcTo);
  * <p>
  * <img src="doc-files/arcto-flags.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class ArcTo extends PathElement {
 

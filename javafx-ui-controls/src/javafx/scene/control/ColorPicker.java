@@ -75,7 +75,7 @@ import com.sun.javafx.scene.control.skin.ColorPickerSkin;
  * <pre><code>
  * colorPicker.getStyleClass().add("split-button");
  * </pre><code>
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class ColorPicker extends ComboBoxBase<Color> {
 

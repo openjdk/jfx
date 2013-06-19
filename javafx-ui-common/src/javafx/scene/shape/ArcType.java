@@ -27,6 +27,7 @@ package javafx.scene.shape;
 
 /**
  * {@code ArcType} specifies the closure type for {@link Arc} objects.
+ * @since JavaFX 2.0
  */ 
 public enum ArcType {
 

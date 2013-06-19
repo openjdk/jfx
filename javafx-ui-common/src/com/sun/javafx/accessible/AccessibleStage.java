@@ -28,6 +28,7 @@ package com.sun.javafx.accessible;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
@@ -35,6 +36,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+
 import com.sun.javafx.Logging;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.AccessibleStageProvider;
@@ -42,10 +44,11 @@ import com.sun.javafx.accessible.utils.NavigateDirection;
 import com.sun.javafx.accessible.utils.PropertyIds;
 import com.sun.javafx.accessible.utils.Rect;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
  *
- * Maintains the correspondence of native object to node 
+ * Maintains the correspondence of native object to node
  * Walks through the scene graph and initializes the accessible hierarchy
  */
 
@@ -55,10 +58,10 @@ public class AccessibleStage implements AccessibleProvider,
     Scene scene ;
     Object accRoot ; // corresponding glass object
     List<AccessibleNode> accChildren ;
-    
+
     /**
      * Constructor
-     * 
+     *
      * @param stage The FX stage.
      */
     public AccessibleStage(Stage stage)
@@ -67,26 +70,26 @@ public class AccessibleStage implements AccessibleProvider,
         this.stage = stage;
         this.scene = stage.getScene();
         initialize();
-    }   
+    }
 
     /** AccessibleStage : Initialize ()
-      * On instantiation it initializes the Accessible Hierarchy for all Nodes in the Scene 
+      * On instantiation it initializes the Accessible Hierarchy for all Nodes in the Scene
       * graphs associated with the Window->Stage->Scene.
-      * For native object handle it makes a down call to bridge to create its 
+      * For native object handle it makes a down call to bridge to create its
       * associated native accessible component and enters its value in the AccessibleMap.
-      * Based upon the type of control it instantiates its accessible behavior 
-      * class and enters it into AccessibleMap. The behavior classes are singleton 
+      * Based upon the type of control it instantiates its accessible behavior
+      * class and enters it into AccessibleMap. The behavior classes are singleton
       * objects for a type of control.
       * Attaches a listener for any new nodes being added to the scene graph.
-      * Attaches a listener for any new Stage, Scene added to the window, which 
+      * Attaches a listener for any new Stage, Scene added to the window, which
       * in return will add a listener to Scene for new node additions.
       * Attaches a Focus listener for tracking change of Focus.
-      */    
+      */
     private void initialize()
     {
-        Parent pRoot = scene.getRoot() ; 
+        Parent pRoot = scene.getRoot() ;
         accRoot = stage.impl_getPeer().accessibleCreateStageProvider(this);
-        
+
         // Note move it to a func later or redo the logic for first , the same is being used when scene graph is modified too
         // Rethink this logic in future
         AccessibleNode dummyRoot = new AccessibleNode(pRoot.getChildrenUnmodifiable().get(0));
@@ -99,21 +102,21 @@ public class AccessibleStage implements AccessibleProvider,
         // Hence assign it here
         for( int idx=0;idx<accChildren.size();idx++)
             accChildren.get(idx).parent = null ;
-        
+
         //printAccHierarchy(accChildren);
         // Notes: Attach listener when scene graph changes
-                
+
         scene.getRoot().getChildrenUnmodifiable().addListener(new ListChangeListener<Node>() {
 
             @Override
             public void onChanged(Change<? extends Node> c) {
-                // Destroy first ? or only add and modify the new ones ?    
+                // Destroy first ? or only add and modify the new ones ?
                 // Worth creating dynamic updatable tree if we plan to stick to this model
-                // If the ally implementation will be added on the controls directly 
+                // If the ally implementation will be added on the controls directly
                 // Leave this as is for now : based upon above decision
                 // Destroy and recreate for now
                /* destroyHierarchy(accChildren);
-                
+
                 Parent pRoot = scene.getRoot() ;
                 // Note move it to a func later or redo the logic for first
                 AccessibleNode dummyRoot = new AccessibleNode(pRoot.getChildrenUnmodifiable().get(0));
@@ -122,42 +125,42 @@ public class AccessibleStage implements AccessibleProvider,
                 } catch (Exception ex) {}
                 accChildren = dummyRoot.children;
                 setParent(accChildren);
-                * 
+                *
                 */
             }
         });
     }
- 
+
     // TODO: This method is not currently in use.  When it is in use should its
     //       access be package-private like it currently is?
     void destroyHierarchy(List<AccessibleNode> currChildren)
     {
         PlatformLogger logger = Logging.getAccessibilityLogger();
         for (int idx=0; idx<currChildren.size(); idx++) {
-            if (logger.isLoggable(PlatformLogger.FINER)) {
+            if (logger.isLoggable(Level.FINER)) {
                 logger.finer(this.toString() + "destroyHierarchy: idx=" + idx + currChildren.get(idx));
             }
             if ( currChildren.get(idx).children.size() > 0 ) {
-                if (logger.isLoggable(PlatformLogger.FINER)) {
+                if (logger.isLoggable(Level.FINER)) {
                     logger.finer(this.toString() + "destroyHierarchy: Has Children" + currChildren.get(idx).children);
                 }
                 destroyHierarchy(currChildren.get(idx).children) ;
             }
             // destroy native
             stage.impl_getPeer().accessibleDestroyBasicProvider(currChildren.get(idx).accElement);
-           // currChildren.get(idx).accElement.destroyAccessible(); 
+           // currChildren.get(idx).accElement.destroyAccessible();
         }
     }
-    
+
     void printAccHierarchy(List<AccessibleNode> currChildren)
     {
-        PlatformLogger logger = Logging.getAccessibilityLogger();        
+        PlatformLogger logger = Logging.getAccessibilityLogger();
         for (int idx=0; idx<currChildren.size(); idx++) {
-            if (logger.isLoggable(PlatformLogger.FINER)) {
+            if (logger.isLoggable(Level.FINER)) {
                 logger.finer(this.toString() + "printAccHierarchy: idx=" + idx + currChildren.get(idx));
             }
             if ( currChildren.get(idx).children.size() > 0 ) {
-                if (logger.isLoggable(PlatformLogger.FINER)) {
+                if (logger.isLoggable(Level.FINER)) {
                     logger.finer(this.toString() + "printAccHierarchy: Has Children" + currChildren.get(idx).children);
                 }
                 printAccHierarchy(currChildren.get(idx).children) ;
@@ -173,22 +176,22 @@ public class AccessibleStage implements AccessibleProvider,
         List<AccessibleNode> currChildren  = new ArrayList<AccessibleNode>();
         AccessibleNode curaccNode = null;
         ObservableList<Node> nodes = pRoot.getChildrenUnmodifiable();
-        PlatformLogger logger = Logging.getAccessibilityLogger();        
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        PlatformLogger logger = Logging.getAccessibilityLogger();
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer(this.toString()+ "initAccessibleHierarchy1: pRoot=" + pRoot + " parent=" + parent);
         }
         if (nodes.isEmpty()) {
-            if (logger.isLoggable(PlatformLogger.FINEST)) {
+            if (logger.isLoggable(Level.FINEST)) {
                 logger.finer(this.toString()+ "initAccessibleHierarchy: no child, pRoot=" + pRoot);
             }
             return;
         }
         for (int idx = 0; idx < nodes.size(); idx++) {
             n = nodes.get(idx);
-            if (logger.isLoggable(PlatformLogger.FINER)) {
+            if (logger.isLoggable(Level.FINER)) {
                 logger.finer(this.toString()+ "initAccessibleHierarchy: idx=" + idx + " node= " + n);
             }
-            // use the logic for instanceof later when public API is reviewed. For now use reflection 
+            // use the logic for instanceof later when public API is reviewed. For now use reflection
             try {
                 Method method = n.getClass().getMethod("impl_getAccessible");
                 if( method != null)
@@ -197,7 +200,7 @@ public class AccessibleStage implements AccessibleProvider,
                 * Accessible aN = (Accessible)n;
                 curaccNode = (AccessibleNode)aN.impl_getAccessible() ; */
                 if ( curaccNode != null ) { // Control has an accessible implementation
-                    if (logger.isLoggable(PlatformLogger.FINER)) {
+                    if (logger.isLoggable(Level.FINER)) {
                         logger.finer(this.toString()+ "initAccessibleHierarchy: Found Accessible.");
                         logger.finer(this.toString()+ "  node= " + n + " curaccNode=" + curaccNode);
                         logger.finer(this.toString()+ "  control type=" + curaccNode.getPropertyValue(PropertyIds.CONTROL_TYPE));
@@ -213,17 +216,17 @@ public class AccessibleStage implements AccessibleProvider,
                 if (curaccNode == null) {
                     curaccNode = parent;
                 }
-                if (logger.isLoggable(PlatformLogger.FINER)) {
+                if (logger.isLoggable(Level.FINER)) {
                     logger.finer(this.toString()+ "initAccessibleHierarchy: idx=" + idx + " accNode.children= " + curaccNode);
                 }
                 try {
-                initAccessibleHierarchy((Parent)n, curaccNode);    
+                initAccessibleHierarchy((Parent)n, curaccNode);
                 } catch (Exception ex) {}
             }
         }
         if (!currChildren.isEmpty()) {
             if (!parent.children.isEmpty()) {
-                parent.children.addAll(currChildren);    
+                parent.children.addAll(currChildren);
             } else {
                 parent.children = currChildren;
             }
@@ -231,11 +234,11 @@ public class AccessibleStage implements AccessibleProvider,
                 currChildren.get(idx).parent = parent ;
             }
         }
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer(this.toString()+ "initAccessibleHierarchy: parent.children= " + parent.children );
         }
     }
-    
+
     private void setParent(List<AccessibleNode> accTempChild)
     {
         if( accTempChild.size() <=0 ) return ;
@@ -248,14 +251,14 @@ public class AccessibleStage implements AccessibleProvider,
             }
         }
     }
-        
+
     /**
      * Gets a base provider for this element.
      *
      * @return the base provider, or null.
      */
     @Override
-    public AccessibleProvider hostRawElementProvider() 
+    public AccessibleProvider hostRawElementProvider()
     {
         return this ;
     }
@@ -265,7 +268,7 @@ public class AccessibleStage implements AccessibleProvider,
      *      element.
      *
      * @param patternId identifier of the pattern.
-     * 
+     *
      * @return Object that implements the pattern interface, or null if the pattern is not
      *      supported.
      */
@@ -277,9 +280,9 @@ public class AccessibleStage implements AccessibleProvider,
 
     /**
      * Retrieves the value of a property supported by the UI Automation provider.
-     * 
+     *
      * @param propertyId    The property identifier.
-     * 
+     *
      * @return The property value, or a null if the property is not supported by this
      *      provider, or System.Windows.Automation.AutomationElementIdentifiers.NotSupported
      *      if it is not supported at all.
@@ -296,18 +299,18 @@ public class AccessibleStage implements AccessibleProvider,
     //////////////////////////////
     // AccessibleProvider
     //////////////////////////////
-      
+
     /**
      * Get the bounding rectangle of this element.
      *
      * @return the bounding rectangle, in screen coordinates.
      */
-    
+
     @Override
     public Rect boundingRectangle() {
         // The scene's x/y is window relative so need to get the window and ask for
         // its x/y and then calculate the scene's screen coordinates.  These are
-        // relative to the upper left corner.  Some platforms, like OS X, use an 
+        // relative to the upper left corner.  Some platforms, like OS X, use an
         // origin of the lower left corner so adjustments may be required depeding
         // on the plaform.
         // Should the y value include the scene offset (the offset below the title bar).
@@ -317,22 +320,22 @@ public class AccessibleStage implements AccessibleProvider,
             Screen.getPrimary().getBounds().getMinY() + stage.getY() + scene.getY();
         return new Rect(x, y, scene.getWidth(), scene.getHeight());
     }
-    
+
     /**
      * Get the root node of the fragment.
-     * 
+     *
      * @return the root node.
      */
     @Override
    // public AccessibleStageProvider fragmentRoot() {
     public Object fragmentRoot() {
-        return accRoot; 
+        return accRoot;
     }
 
     /**
      * Get an array of fragment roots that are embedded in the UI Automation
      * element tree rooted at the current element.
-     * 
+     *
      * @return an array of root fragments, or null.
      */
     @Override
@@ -342,26 +345,26 @@ public class AccessibleStage implements AccessibleProvider,
 
     /**
      * Get the runtime identifier of an element.
-     * 
+     *
      * @return the unique run-time identifier of the element.
      */
     @Override
     public int[] getRuntimeId() {
         return null; // add code
     }
-    
+
     /**
      * Get the UI Automation element in a specified direction within the tree.
-     * 
+     *
      * @param direction the direction in which to navigate.
-     * 
+     *
      * @return the element in the specified direction, or null if there is no element
      *         in that direction
      */
     @Override
     public Object navigate(NavigateDirection direction) {
         PlatformLogger logger = Logging.getAccessibilityLogger();
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer("this: " + this.toString());
             logger.finer("navigate direction: " + direction);
         }
@@ -380,12 +383,12 @@ public class AccessibleStage implements AccessibleProvider,
                 accTemp = accChildren.get(accChildren.size()-1) ;
                 break;
         }
-        if (logger.isLoggable(PlatformLogger.FINER)) {
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer("returning: " + accTemp.accElement);
         }
         return accTemp.accElement;
     }
-    
+
     /**
      * Set the focus to this element.
      */
@@ -394,7 +397,7 @@ public class AccessibleStage implements AccessibleProvider,
 //        stage.getScene().setImpl_focusOwner(stage.getScene().getRoot());
         stage.getScene().getRoot().requestFocus();
     }
-    
+
     //////////////////////////////////
     // AccessibleStageProvider
     //////////////////////////////////
@@ -405,14 +408,14 @@ public class AccessibleStage implements AccessibleProvider,
         if(accTempChild.get(0).children.size() == 0 ) // no children
         {
              tmpY = y - accTempChild.get(0).boundingRectangle().getMaxY() ;
-             if(accTempChild.get(0).contains(x, tmpY)) 
-           // if(accTempChild.get(0).contains(x, y)) 
+             if(accTempChild.get(0).contains(x, tmpY))
+           // if(accTempChild.get(0).contains(x, y))
                 return accTempChild.get(0) ;
         }
         for (int idx=0; idx<accTempChild.size(); idx++)
         {
              tmpY = y - accTempChild.get(idx).boundingRectangle().getMaxY() ;
-             if(accTempChild.get(idx).contains(x, tmpY)) 
+             if(accTempChild.get(idx).contains(x, tmpY))
                 return accTempChild.get(idx) ;
             if(accTempChild.get(idx).children.size() > 0 ) // has children
             {
@@ -422,7 +425,7 @@ public class AccessibleStage implements AccessibleProvider,
         return null ;
     }
 
-    
+
     @Override
     public Object elementProviderFromPoint(double x, double y) {
         // hit testing
@@ -430,16 +433,16 @@ public class AccessibleStage implements AccessibleProvider,
         PlatformLogger logger = Logging.getAccessibilityLogger();
         AccessibleNode aNode = getProviderFromPoint( accChildren, x, y ) ;
         if( aNode !=null)
-        {  
-            if (logger.isLoggable(PlatformLogger.FINER)) {
+        {
+            if (logger.isLoggable(Level.FINER)) {
                 logger.finer(this.toString()+ "Accessible Stage: elementProviderFromPoint x=" + x + " y=" + y +"Node"+ aNode.accElement);
             }
-            Object aBase = aNode.getAccessibleElement(); 
+            Object aBase = aNode.getAccessibleElement();
             return aBase ;
         }
         return null;
     }
-    
+
     /* return the glass object that has focus */
     @Override
     public Object getFocus() {
@@ -453,9 +456,9 @@ public class AccessibleStage implements AccessibleProvider,
             AccessibleProvider accNode = (AccessibleProvider)method.invoke(node);
             if( accNode instanceof AccessibleNode) return ((AccessibleNode)accNode).accElement ;
         } catch (Exception ex) {}
-        return null ;  
+        return null ;
     }
-    
+
     public Object getStageAccessible() {
         return accRoot ;
     }

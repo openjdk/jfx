@@ -61,6 +61,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.BooleanProperty
  * @see JavaBeanBooleanPropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class JavaBeanBooleanProperty extends BooleanProperty implements JavaBeanProperty<Boolean> {
 

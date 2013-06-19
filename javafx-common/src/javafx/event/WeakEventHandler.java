@@ -38,6 +38,7 @@ import java.lang.ref.WeakReference;
  * handler.
  *
  * @param <T> the event class this handler can handle
+ * @since JavaFX 8.0
  */
 public final class WeakEventHandler<T extends Event>
         implements EventHandler<T> {

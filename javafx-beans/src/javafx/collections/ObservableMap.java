@@ -34,6 +34,7 @@ import javafx.beans.Observable;
  *
  * @see MapChangeListener
  * @see MapChangeListener.Change
+ * @since JavaFX 2.0
  */
 public interface ObservableMap<K, V> extends Map<K, V>, Observable {
     /**

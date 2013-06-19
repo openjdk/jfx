@@ -28,6 +28,7 @@ package javafx.geometry;
 /**
  * The base class for objects that are used to describe the bounds of a node or
  * other scene graph object.
+ * @since JavaFX 2.0
  */
 public abstract class Bounds {
     /**
@@ -49,7 +50,6 @@ public abstract class Bounds {
      * The minimum z coordinate of this {@code Bounds}.
      *
      * @defaultValue 0.0
-     * @since JavaFX 1.3
      */
     public final double getMinZ() { return minZ; }
     private double minZ;
@@ -71,7 +71,6 @@ public abstract class Bounds {
      * The depth of this {@code Bounds}.
      *
      * @defaultValue 0.0
-     * @since JavaFX 1.3
      */
     public final double getDepth() { return depth; }
     private double depth;
@@ -93,7 +92,6 @@ public abstract class Bounds {
      * The maximum z coordinate of this {@code Bounds}.
      *
      * @defaultValue {@code minZ + depth}
-     * @since JavaFX 1.3
      */
     public final double getMaxZ() { return maxZ; }
     private double maxZ;

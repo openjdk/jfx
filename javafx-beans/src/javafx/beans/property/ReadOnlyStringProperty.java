@@ -34,6 +34,7 @@ import javafx.beans.binding.StringExpression;
  * @see javafx.beans.binding.StringExpression
  * @see ReadOnlyProperty
  * 
+ * @since JavaFX 2.0
  */
 public abstract class ReadOnlyStringProperty extends StringExpression implements
         ReadOnlyProperty<String> {

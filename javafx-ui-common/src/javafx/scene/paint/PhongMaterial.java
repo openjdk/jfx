@@ -37,7 +37,7 @@ import javafx.scene.image.Image;
  * The {@code PhongMaterial} class provides definitions of properties that 
  * represent a form of Phong shaded material.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public class PhongMaterial extends Material {
 

@@ -50,7 +50,7 @@ import com.sun.javafx.print.PrinterImpl;
  * has since been taken off-line, may create a job using that
  * instance, but printing will fail.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public final class Printer {
 
@@ -166,7 +166,7 @@ public final class Printer {
 
     /**
      * The MarginType is used to determine the printable area of a PageLayout.
-     * @since JavaFX 8
+     * @since JavaFX 8.0
      */
     public static enum MarginType {
         /**

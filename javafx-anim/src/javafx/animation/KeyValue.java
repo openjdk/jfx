@@ -57,6 +57,7 @@ import javafx.beans.value.WritableValue;
  * @see KeyFrame
  * @see Interpolator
  * 
+ * @since JavaFX 2.0
  */
 public final class KeyValue {
 
@@ -65,6 +66,7 @@ public final class KeyValue {
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @since JavaFX 2.0
      */
     @Deprecated
     public static enum Type {

@@ -27,6 +27,7 @@ package javafx.scene.text;
 
 /**
  * Specifies whether the font is italicized
+ * @since JavaFX 2.0
  */
 public enum FontPosture {
     /** 

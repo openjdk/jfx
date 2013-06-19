@@ -44,6 +44,7 @@ import com.sun.javafx.scene.control.test.Data;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -56,6 +57,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
+import javafx.scene.control.cell.CheckBoxTreeTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.layout.HBox;
@@ -1841,7 +1843,7 @@ public class TreeTableViewTest {
         
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
-        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        assertEquals(0.0625, scrollBar.getVisibleAmount(), 0.0);
     }
     
     @Test public void test_rt29676_withText() {
@@ -2033,5 +2035,30 @@ public class TreeTableViewTest {
         assertTrue(sm.isSelected(10));   // judyMayer
         assertTrue(treeTableView.getFocusModel().isFocused(10));
         assertEquals(3, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt30400() {
+        // create a treetableview that'll render cells using the check box cell factory
+        TreeItem<String> rootItem = new TreeItem<>("root");
+        final TreeTableView<String> tableView = new TreeTableView<String>(rootItem);
+        tableView.setMinHeight(100);
+        tableView.setPrefHeight(100);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(new Callback<Integer, ObservableValue<Boolean>>() {
+            public javafx.beans.value.ObservableValue<Boolean> call(Integer param) {
+                return new ReadOnlyBooleanWrapper(true);
+            }
+        }));
+        tableView.getColumns().add(firstNameCol);
+
+        // because only the first row has data, all other rows should be
+        // empty (and not contain check boxes - we just check the first four here)
+        VirtualFlowTestUtils.assertRowsNotEmpty(tableView, 0, 1);
+        VirtualFlowTestUtils.assertCellNotEmpty(VirtualFlowTestUtils.getCell(tableView, 0));
+        VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 1));
+        VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 2));
+        VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 3));
     }
 }

@@ -53,6 +53,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.ReadOnlyFloatProperty
  * @see ReadOnlyJavaBeanFloatPropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanFloatProperty extends ReadOnlyFloatPropertyBase implements ReadOnlyJavaBeanProperty<Number> {
 

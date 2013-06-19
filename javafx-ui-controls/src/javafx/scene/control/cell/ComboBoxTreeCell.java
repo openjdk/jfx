@@ -53,7 +53,7 @@ import javafx.util.StringConverter;
  * {@link TreeItem#valueProperty()}.
  * 
  * @param <T> The type of the TreeItems contained within the TreeView.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class ComboBoxTreeCell<T> extends TreeCell<T> {
     
@@ -320,6 +320,12 @@ public class ComboBoxTreeCell<T> extends TreeCell<T> {
         if (! isEditable() || ! getTreeView().isEditable()) {
             return;
         }
+
+        TreeItem<T> treeItem = getTreeItem();
+        if (treeItem == null) {
+            return;
+        }
+
         if (comboBox == null) {
             comboBox = createComboBox(this, items, getConverter());
             comboBox.editableProperty().bind(comboBoxEditableProperty());
@@ -328,17 +334,20 @@ public class ComboBoxTreeCell<T> extends TreeCell<T> {
             hbox = new HBox(CellUtils.TREE_VIEW_HBOX_GRAPHIC_PADDING);
         }
         
-        comboBox.getSelectionModel().select(getTreeItem().getValue());
+        comboBox.getSelectionModel().select(treeItem.getValue());
         
         super.startEdit();
-        setText(null);
-        
-        Node graphic = CellUtils.getGraphic(getTreeItem());
-        if (graphic != null) {
-            hbox.getChildren().setAll(graphic, comboBox);
-            setGraphic(hbox);
-        } else {
-            setGraphic(comboBox);
+
+        if (isEditing()) {
+            setText(null);
+
+            Node graphic = CellUtils.getGraphic(treeItem);
+            if (graphic != null) {
+                hbox.getChildren().setAll(graphic, comboBox);
+                setGraphic(hbox);
+            } else {
+                setGraphic(comboBox);
+            }
         }
     }
 

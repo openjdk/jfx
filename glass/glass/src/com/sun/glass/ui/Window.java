@@ -367,6 +367,20 @@ public abstract class Window {
         return this.screen;
     }
 
+    void setScreen(Screen screen) {
+        Application.checkEventThread();
+
+        final Screen old = this.screen;
+        this.screen = screen;
+
+        if (this.eventHandler != null) {
+            //TODO: RT-31098
+            if (old != this.screen) {
+                this.eventHandler.handleScreenChangedEvent(this, System.nanoTime(), old, this.screen);
+            }
+        }
+    }
+
     public int getStyleMask() {
         Application.checkEventThread();
         return this.styleMask;
@@ -1000,11 +1014,30 @@ public abstract class Window {
     public void toFront() {
         Application.checkEventThread();
         checkNotClosed();
+        toFrontImpl(this, null);
+    }
+
+    private void toFrontImpl(Window w, List<Window> list) {
         // for z-order stacking, pop the window
         // and push it on the end (closest Z)
-        visibleWindows.remove(this);
-        visibleWindows.add(this);
-        _toFront(this.ptr);
+        visibleWindows.remove(w);
+        visibleWindows.add(w);
+        _toFront(w.ptr);
+        raiseOurOwnedWindows(w, list);
+    }
+
+    private void raiseOurOwnedWindows(Window window, List<Window> list) {
+        // owned windows should be maintained in front of the owner.
+        if (list == null) {
+            // get a single copy of the window list
+            // copy is needed to avoid concurence issues with the iterator
+            list = (List<Window>) Window.visibleWindows.clone();
+        }
+        for(Window w: list) {
+            if (window.equals(w.getOwner())) {
+                toFrontImpl(w, list);
+            }
+        }
     }
 
     protected abstract void _toBack(long ptr);
@@ -1117,16 +1150,8 @@ public abstract class Window {
         handleWindowEvent(System.nanoTime(), WindowEvent.MOVE);
     }
 
-    // TODO: consider introducing public notification
     protected void notifyMoveToAnotherScreen(long fromScreenPtr, long toScreenPtr) {
-        //NOTE: fromScreenPtr MAY be == toScreenPtr,
-        //      e.g. if only the scale factor is changed for the screen.
-        Screen old = this.screen;
-        this.screen = Screen.getScreenForPtr(toScreenPtr);
-
-        if (this.eventHandler != null) {
-            this.eventHandler.handleScreenChangedEvent(this, System.nanoTime(), old, this.screen);
-        }
+        setScreen(Screen.getScreenForPtr(toScreenPtr));
     }
 
     /**

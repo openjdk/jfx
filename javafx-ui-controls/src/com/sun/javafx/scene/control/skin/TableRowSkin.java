@@ -101,10 +101,6 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
         cell.updateTableRow(row);
     }
 
-    @Override protected ObjectProperty<ObservableList<T>> itemsProperty() {
-        return tableView.itemsProperty();
-    }
-
     @Override protected DoubleProperty fixedCellSizeProperty() {
         return tableView.fixedCellSizeProperty();
     }

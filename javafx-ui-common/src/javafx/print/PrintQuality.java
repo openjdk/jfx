@@ -27,7 +27,7 @@ package javafx.print;
 
 /**
  * Class to decribe printing quality setting.
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 
 public enum PrintQuality {

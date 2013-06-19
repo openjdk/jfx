@@ -36,6 +36,7 @@ package javafx.scene.layout;
  * <p/>
  * Because the BorderWidths is immutable, it can safely be used in any
  * cache, and can safely be reused among multiple Regions.
+ * @since JavaFX 8.0
  */
 public final class BorderWidths {
     /**

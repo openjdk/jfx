@@ -46,6 +46,7 @@ package javafx.beans;
  * @see javafx.collections.ObservableMap
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface Observable {
 

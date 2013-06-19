@@ -64,6 +64,7 @@ import javafx.geometry.Point2D;
  * text.getTransforms().add(new Rotate(30, 50, 30));
  * </code></pre>
  * </p>
+ * @since JavaFX 2.0
  */
 
 public class Rotate extends Transform {

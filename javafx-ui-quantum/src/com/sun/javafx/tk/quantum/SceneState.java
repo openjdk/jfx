@@ -25,6 +25,10 @@
 
 package com.sun.javafx.tk.quantum;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Pixels;
 import com.sun.prism.PresentableState;
 
 /**
@@ -32,9 +36,9 @@ import com.sun.prism.PresentableState;
  * similar to the shadow Graph, providing a static snapshot until the Scene 
  * is rendered.
  */
-final class SceneState extends PresentableState {
+class SceneState extends PresentableState {
 
-    private GlassScene scene;
+    GlassScene scene;
 
     /**
      * Create the View State
@@ -42,7 +46,7 @@ final class SceneState extends PresentableState {
      * May only be called from the event thread.
      */
     public SceneState(GlassScene vs) {
-        super(vs.getPlatformView());
+        super();
         scene = vs;
     }
 
@@ -82,5 +86,25 @@ final class SceneState extends PresentableState {
         // for the updated state.
         view = scene.getPlatformView();
         super.update();
+    }
+    
+    /**
+     * Put the pixels on the screen.
+     * 
+     * @param pixels - the pixels to draw
+     * @param uploadCount - the number of uploads (can be null)
+     */
+    public void uploadPixels(final Pixels pixels, final AtomicInteger uploadCount) {
+        Application.invokeLater(new Runnable() {
+            @Override public void run() {
+                if (isValid()) {
+                    SceneState.super.uploadPixels(pixels, uploadCount);
+                } else {
+                    if (uploadCount != null) {
+                        uploadCount.decrementAndGet();
+                    }
+                }
+           }
+        });
     }
 }

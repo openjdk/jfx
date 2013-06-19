@@ -51,6 +51,7 @@ import javafx.collections.ObservableList;
  * @see Property
  *
  * @param <E> the type of the {@code List} elements
+ * @since JavaFX 2.1
  */
 public abstract class ListProperty<E> extends ReadOnlyListProperty<E> implements
         Property<ObservableList<E>>, WritableListValue<E> {

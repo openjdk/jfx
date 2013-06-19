@@ -51,6 +51,7 @@ import com.sun.javafx.binding.Logging;
  * @see ReadOnlyLongProperty
  * @see Property
  *
+ * @since JavaFX 2.0
  */
 public abstract class LongProperty extends ReadOnlyLongProperty implements
         Property<Number>, WritableLongValue {
@@ -137,6 +138,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      * @throws NullPointerException
      *             if {@code value} is {@code null}
      * @see #asObject()
+     * @since JavaFX 8.0
      */
      public static LongProperty longProperty(final Property<Long> property) {
         if (property == null) {
@@ -185,6 +187,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      * </pre></blockquote>
      *
      * @return the new {@code ObjectProperty}
+     * @since JavaFX 8.0
      */
     @Override
     public ObjectProperty<Long> asObject() {

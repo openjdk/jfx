@@ -44,6 +44,7 @@ import javafx.scene.Node;
  * For mouse-triggered events it is the position of the
  * mouse cursor, for keyboard-triggered events it is a point
  * inside of bounds of current focus owner (which is the event's target).
+ * @since JavaFX 2.1
  */
 public class ContextMenuEvent extends InputEvent {
 
@@ -57,6 +58,7 @@ public class ContextMenuEvent extends InputEvent {
 
     /**
      * Common supertype for all context menu event types.
+     * @since JavaFX 8.0
      */
     public static final EventType<ContextMenuEvent> ANY = CONTEXT_MENU_REQUESTED;
 
@@ -73,6 +75,7 @@ public class ContextMenuEvent extends InputEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and the target
+     * @since JavaFX 8.0
      */
     public ContextMenuEvent(Object source, EventTarget target, EventType<ContextMenuEvent> eventType, double x, double y,
             double screenX, double screenY, boolean keyboardTrigger,
@@ -103,6 +106,7 @@ public class ContextMenuEvent extends InputEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates
+     * @since JavaFX 8.0
      */
     public ContextMenuEvent(EventType<ContextMenuEvent> eventType, double x, double y,
             double screenX, double screenY, boolean keyboardTrigger,
@@ -203,6 +207,7 @@ public class ContextMenuEvent extends InputEvent {
      *
      * @return depth position of the event relative to the
      * origin of the MouseEvent's source.
+     * @since JavaFX 8.0
      */
     public final double getZ() {
         return z;
@@ -298,6 +303,7 @@ public class ContextMenuEvent extends InputEvent {
      * Returns information about the pick.
      *
      * @return new PickResult object that contains information about the pick
+     * @since JavaFX 8.0
      */
     public final PickResult getPickResult() {
         return pickResult;

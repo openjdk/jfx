@@ -35,6 +35,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import com.sun.javafx.Logging;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 import static com.sun.javafx.scene.traversal.Direction.*;
 
@@ -53,7 +54,7 @@ public class Hueristic2D implements Algorithm {
 
         cacheTraversal(node, dir, engine);
 
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             focusLogger.finer("old focus owner : "+node+", bounds : "+engine.getBounds(node));
         }
 
@@ -100,7 +101,7 @@ public class Hueristic2D implements Algorithm {
             }
         }
 
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             if (newNode != null) {
                 focusLogger.finer("new focus owner : "+newNode+", bounds : "+engine.getBounds(newNode));
             }
@@ -128,7 +129,7 @@ public class Hueristic2D implements Algorithm {
         Node newNode = null;
         List<Node> parentNodes = findPeers(startNode);
         if (parentNodes == null) {
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("can't find peers for a node without a parent");
             }
             return null;
@@ -137,12 +138,12 @@ public class Hueristic2D implements Algorithm {
         int ourIndex = parentNodes.indexOf(startNode);
 
         if (ourIndex == -1) {
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("index not founds, no focus transfer");
             }
             return null;
         }
-        
+
         newNode = findNextFocusableInList(parentNodes, ourIndex+1);
 
         /*
@@ -163,7 +164,7 @@ public class Hueristic2D implements Algorithm {
             }
             startNode = parent;
         }
-        
+
         if (newNode == null) {
             /*
             ** find the top-most parent which is not at it's end-of-list
@@ -177,14 +178,14 @@ public class Hueristic2D implements Algorithm {
             parentNodes = parent.getChildrenUnmodifiable();
             newNode = findNextFocusableInList(parentNodes, 0);
         }
-        
+
         return newNode;
     }
 
     private Node findNextParent(Node node) {
         return null;
     }
-    
+
     private Node findNextFocusableInList(List<Node> nodeList, int startIndex) {
         Node newNode = null;
 
@@ -216,12 +217,12 @@ public class Hueristic2D implements Algorithm {
         int ourIndex = parentNodes.indexOf(startNode);
 
         if (ourIndex == -1) {
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("index not founds, no focus transfer");
             }
             return null;
         }
-        
+
         newNode = findPreviousFocusableInList(parentNodes, ourIndex-1);
 
         /*
@@ -242,7 +243,7 @@ public class Hueristic2D implements Algorithm {
             }
             startNode = parent;
         }
-        
+
         if (newNode == null) {
             /*
             ** find the top-most parent which is not at it's end-of-list
@@ -256,7 +257,7 @@ public class Hueristic2D implements Algorithm {
             parentNodes = parent.getChildrenUnmodifiable();
             newNode = findPreviousFocusableInList(parentNodes, parentNodes.size()-1);
         }
-        
+
         return newNode;
     }
 
@@ -488,7 +489,7 @@ public class Hueristic2D implements Algorithm {
                     final double cosd = cornerSideDistance(Direction.UP, biasedB, targetBounds);
                     reversingTargetNode.biased2DMetric = 100000 + outdB*outdB + 9*cosd*cosd;
                 }
-                    
+
                 /*
                 ** closest current : simple 2d
                 */
@@ -521,16 +522,16 @@ public class Hueristic2D implements Algorithm {
                 double biasTopRightToTargetMidDistance = currentTopRight2D.distance(targetBounds.getMinX()+(originB.getWidth()/2), targetBounds.getMaxY());
                 double biasMidToTargetBottomRightDistance = currentMid2D.distance(originB.getMaxX(), targetBounds.getMaxY());
 
-                reversingTargetNode.averageDistance = 
-                    (reversingTargetNode.bottomLeftDistance+biasTopLeftToTargetMidDistance+biasTopLeftToTargetBottomRightDistance+ 
+                reversingTargetNode.averageDistance =
+                    (reversingTargetNode.bottomLeftDistance+biasTopLeftToTargetMidDistance+biasTopLeftToTargetBottomRightDistance+
                      currentTopRightToTargetBottomLeftDistance+reversingTargetNode.bottomRightDistance+biasTopRightToTargetMidDistance+reversingTargetNode.midDistance)/7;
-                
+
                 reversingTargetNode.biasShortestDistance =
                     findMin9(reversingTargetNode.bottomLeftDistance, biasTopLeftToTargetMidDistance, biasTopLeftToTargetBottomRightDistance,
                              currentTopRightToTargetBottomLeftDistance, biasTopRightToTargetMidDistance, reversingTargetNode.bottomRightDistance,
                              currentMidToTargetBottomLeftDistance, reversingTargetNode.midDistance, biasMidToTargetBottomRightDistance);
 
-                reversingTargetNode.shortestDistance = 
+                reversingTargetNode.shortestDistance =
                     findMin9(reversingTargetNode.bottomLeftDistance, currentTopLeftToTargetMidDistance, currentTopLeftToTargetBottomRightDistance,
                              currentTopRightToTargetBottomLeftDistance, currentTopRightToTargetMidDistance, currentTopRightToTargetBottomRightDistance,
                              currentMidToTargetBottomLeftDistance, currentMidToTargetMidDistance, currentMidToTargetBottomRightDistance);
@@ -541,9 +542,9 @@ public class Hueristic2D implements Algorithm {
 
                 Bounds targetBounds = nodes.get(nodeIndex).localToScene(nodes.get(nodeIndex).getLayoutBounds());
                 /*
-                ** check that the target node starts after we start target.minX > origin.minX  
+                ** check that the target node starts after we start target.minX > origin.minX
                 ** and the target node ends after we end target.maxX > origin.maxX
-                */  
+                */
                 if ((currentB.getMinY() > targetBounds.getMaxY())) {
 
                     targetNode.node = nodes.get(nodeIndex);
@@ -592,9 +593,9 @@ public class Hueristic2D implements Algorithm {
                     double biasTopLeftToTargetBottomRightDistance = currentTopLeft2D.distance(originB.getMaxX(), targetBounds.getMaxY());
                     double biasTopRightToTargetMidDistance = currentTopRight2D.distance(targetBounds.getMinX()+(originB.getWidth()/2), targetBounds.getMaxY());
                     double biasMidToTargetBottomRightDistance = currentMid2D.distance(originB.getMaxX(), targetBounds.getMaxY());
-                    
+
                     targetNode.averageDistance =
-                        (targetNode.bottomLeftDistance+biasTopLeftToTargetMidDistance+biasTopLeftToTargetBottomRightDistance+ 
+                        (targetNode.bottomLeftDistance+biasTopLeftToTargetMidDistance+biasTopLeftToTargetBottomRightDistance+
                          currentTopRightToTargetBottomLeftDistance+targetNode.bottomRightDistance+biasTopRightToTargetMidDistance+targetNode.midDistance)/7;
 
                     targetNode.biasShortestDistance =
@@ -602,11 +603,11 @@ public class Hueristic2D implements Algorithm {
                                  currentTopRightToTargetBottomLeftDistance, biasTopRightToTargetMidDistance, targetNode.bottomRightDistance,
                                  currentMidToTargetBottomLeftDistance, targetNode.midDistance, biasMidToTargetBottomRightDistance);
 
-                    targetNode.shortestDistance = 
+                    targetNode.shortestDistance =
                         findMin9(targetNode.bottomLeftDistance, currentTopLeftToTargetMidDistance, currentTopLeftToTargetBottomRightDistance,
                                  currentTopRightToTargetBottomLeftDistance, currentTopRightToTargetMidDistance, currentTopRightToTargetBottomRightDistance,
                                  currentMidToTargetBottomLeftDistance, currentMidToTargetMidDistance, currentMidToTargetBottomRightDistance);
-                    
+
                     /*
                     ** closest biased : simple 2d
                     */
@@ -672,7 +673,7 @@ public class Hueristic2D implements Algorithm {
                     if (nearestNodeAverageUp == null || nearestNodeAverageUp.averageDistance > targetNode.averageDistance) {
                         if (((originB.getMinX() >= currentB.getMinX()) && (targetBounds.getMinX() >= currentB.getMinX()))  ||
                             ((originB.getMinX() <= currentB.getMinX()) && (targetBounds.getMinX() <= currentB.getMinX()))) {
-                            
+
                             if (nearestNodeAverageUp == null) {
                                 nearestNodeAverageUp = new TargetNode();
                             }
@@ -724,7 +725,7 @@ public class Hueristic2D implements Algorithm {
             nearestNodeAnythingAnywhereUp.originTopLeftDistance = originTopLeft2D.distance(nearestNodeAnythingAnywhereUp.bounds.getMinX(), nearestNodeAnythingAnywhereUp.bounds.getMaxY());
         }
 
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             if (reversingTargetNode != null) {
                 focusLogger.finer("reversingTargetNode.node : "+reversingTargetNode.node);
             }
@@ -797,7 +798,7 @@ public class Hueristic2D implements Algorithm {
                     }
                 }
             }
-            
+
         }
         else {
             if (nearestNodeOnOriginX == null && nearestNodeOnCurrentX == null && nearestNodeCurrentSimple2D != null) {
@@ -858,7 +859,7 @@ public class Hueristic2D implements Algorithm {
         }
         /*
         ** There isn't a clear winner, just go to the one nearest the current
-        ** focus owner, or if invalid then try the other contenders. 
+        ** focus owner, or if invalid then try the other contenders.
         */
         if (nearestNodeOnOriginX != null) {
             return nearestNodeOnOriginX.node;
@@ -883,7 +884,7 @@ public class Hueristic2D implements Algorithm {
 
 
     protected Node getNearestNodeDown(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Node reversingNode) {
-        
+
         List<Node> nodes = engine.getAllTargetNodes();
 
         Bounds biasedB = new BoundingBox(originB.getMinX(), currentB.getMinY(), originB.getWidth(), currentB.getHeight());
@@ -958,17 +959,17 @@ public class Hueristic2D implements Algorithm {
                 double biasBottomRightToTargetMidDistance = currentBottomRight2D.distance(targetBounds.getMinX()+(originB.getWidth()/2), targetBounds.getMinY());
                 double biasMidToTargetTopRightDistance = currentMid2D.distance(originB.getMaxX(), targetBounds.getMinY());
 
-                reversingTargetNode.averageDistance = 
-                    (reversingTargetNode.topLeftDistance+biasBottomLeftToTargetMidDistance+biasBottomLeftToTargetTopRightDistance+ 
+                reversingTargetNode.averageDistance =
+                    (reversingTargetNode.topLeftDistance+biasBottomLeftToTargetMidDistance+biasBottomLeftToTargetTopRightDistance+
                      currentBottomRightToTargetTopLeftDistance+reversingTargetNode.topRightDistance+biasBottomRightToTargetMidDistance+reversingTargetNode.midDistance)/7;
 
-                reversingTargetNode.biasShortestDistance = 
-                    findMin9(reversingTargetNode.topLeftDistance, biasBottomLeftToTargetMidDistance, biasBottomLeftToTargetTopRightDistance, 
+                reversingTargetNode.biasShortestDistance =
+                    findMin9(reversingTargetNode.topLeftDistance, biasBottomLeftToTargetMidDistance, biasBottomLeftToTargetTopRightDistance,
                              currentBottomRightToTargetTopLeftDistance, biasBottomRightToTargetMidDistance, reversingTargetNode.topRightDistance,
                              currentMidToTargetTopLeftDistance, reversingTargetNode.midDistance, biasMidToTargetTopRightDistance);
 
-                reversingTargetNode.shortestDistance = 
-                    findMin9(reversingTargetNode.topLeftDistance, currentBottomLeftToTargetMidDistance, currentBottomLeftToTargetTopRightDistance, 
+                reversingTargetNode.shortestDistance =
+                    findMin9(reversingTargetNode.topLeftDistance, currentBottomLeftToTargetMidDistance, currentBottomLeftToTargetTopRightDistance,
                              currentBottomRightToTargetTopLeftDistance, currentBottomRightToTargetMidDistance, currentBottomRightToTargetTopRightDistance,
                              currentMidToTargetTopLeftDistance, currentMidToTargetMidDistance, currentMidToTargetTopRightDistance);
 
@@ -978,9 +979,9 @@ public class Hueristic2D implements Algorithm {
 
                 Bounds targetBounds = nodes.get(nodeIndex).localToScene(nodes.get(nodeIndex).getLayoutBounds());
                 /*
-                ** check that the target node starts after we start target.minX > origin.minX  
+                ** check that the target node starts after we start target.minX > origin.minX
                 ** and the target node ends after we end target.maxX > origin.maxX
-                */  
+                */
                 if ((currentB.getMaxY() < targetBounds.getMinY())) {
 
                     targetNode.node = nodes.get(nodeIndex);
@@ -1030,16 +1031,16 @@ public class Hueristic2D implements Algorithm {
                     double biasMidToTargetTopRightDistance = currentMid2D.distance(originB.getMaxX(), targetBounds.getMinY());
 
                     targetNode.averageDistance =
-                        (targetNode.topLeftDistance+biasBottomLeftToTargetMidDistance+biasBottomLeftToTargetTopRightDistance+ 
+                        (targetNode.topLeftDistance+biasBottomLeftToTargetMidDistance+biasBottomLeftToTargetTopRightDistance+
                          currentBottomRightToTargetTopLeftDistance+targetNode.topRightDistance+biasBottomRightToTargetMidDistance+targetNode.midDistance)/7;
 
-                    targetNode.biasShortestDistance = 
-                        findMin9(targetNode.topLeftDistance, biasBottomLeftToTargetMidDistance, biasBottomLeftToTargetTopRightDistance, 
+                    targetNode.biasShortestDistance =
+                        findMin9(targetNode.topLeftDistance, biasBottomLeftToTargetMidDistance, biasBottomLeftToTargetTopRightDistance,
                                  currentBottomRightToTargetTopLeftDistance, biasBottomRightToTargetMidDistance, targetNode.topRightDistance,
                                  currentMidToTargetTopLeftDistance, targetNode.midDistance, biasMidToTargetTopRightDistance);
 
-                    targetNode.shortestDistance = 
-                        findMin9(targetNode.topLeftDistance, currentBottomLeftToTargetMidDistance, currentBottomLeftToTargetTopRightDistance, 
+                    targetNode.shortestDistance =
+                        findMin9(targetNode.topLeftDistance, currentBottomLeftToTargetMidDistance, currentBottomLeftToTargetTopRightDistance,
                                  currentBottomRightToTargetTopLeftDistance, currentBottomRightToTargetMidDistance, currentBottomRightToTargetTopRightDistance,
                                  currentMidToTargetTopLeftDistance, currentMidToTargetMidDistance, currentMidToTargetTopRightDistance);
 
@@ -1073,7 +1074,7 @@ public class Hueristic2D implements Algorithm {
                     */
                     if ((originB.getMaxX() > targetBounds.getMinX()) && (targetBounds.getMaxX() > originB.getMinX())) {
                         if (nearestNodeOnOriginX == null || nearestNodeOnOriginX.biasShortestDistance > targetNode.biasShortestDistance) {
-                            
+
                             if (nearestNodeOnOriginX == null) {
                                 nearestNodeOnOriginX = new TargetNode();
                             }
@@ -1153,7 +1154,7 @@ public class Hueristic2D implements Algorithm {
             nearestNodeAnythingAnywhereDown.originBottomLeftDistance = originBottomLeft2D.distance(nearestNodeAnythingAnywhereDown.bounds.getMinX(), nearestNodeAnythingAnywhereDown.bounds.getMinY());
         }
 
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             if (reversingTargetNode != null) {
                 focusLogger.finer("reversingTargetNode.node : "+reversingTargetNode.node);
             }
@@ -1277,13 +1278,13 @@ public class Hueristic2D implements Algorithm {
             (nearestNodeCurrentSimple2D.node == nearestNodeAnythingAnywhereDown.node)) {
             return nearestNodeCurrentSimple2D.node;
         }
-    
+
         if (nearestNodeOnOriginX != null && (nearestNodeOnCurrentX == null || (nearestNodeOnOriginX.topRightDistance < nearestNodeOnCurrentX.topRightDistance))) {
             return nearestNodeOnOriginX.node;
         }
         /*
         ** There isn't a clear winner, just go to the one nearest the current
-        ** focus owner, or if invalid then try the other contenders. 
+        ** focus owner, or if invalid then try the other contenders.
         */
         if (nearestNodeOnOriginX != null) {
             return nearestNodeOnOriginX.node;
@@ -1307,7 +1308,7 @@ public class Hueristic2D implements Algorithm {
     }
 
     protected Node getNearestNodeLeft(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Node reversingNode) {
-        
+
         List<Node> nodes = engine.getAllTargetNodes();
 
         Bounds biasedB = new BoundingBox(currentB.getMinX(), originB.getMinY(), currentB.getWidth(), originB.getHeight());
@@ -1381,7 +1382,7 @@ public class Hueristic2D implements Algorithm {
                 double biasBottomLeftToTargetMidDistance = currentBottomLeft2D.distance(targetBounds.getMaxX(), targetBounds.getMinY()+(originB.getHeight()/2));
                 double biasMidToTargetBottomRightDistance = currentMid2D.distance(originB.getMaxX(), targetBounds.getMaxY());
 
-                reversingTargetNode.averageDistance = 
+                reversingTargetNode.averageDistance =
                     (reversingTargetNode.topRightDistance+biasTopLeftToTargetBottomRightDistance+biasTopLeftToTargetMidDistance+
                      currentBottomLeftToTargetTopRightDistance+reversingTargetNode.bottomRightDistance+biasBottomLeftToTargetMidDistance)/7;
 
@@ -1399,9 +1400,9 @@ public class Hueristic2D implements Algorithm {
 
                 Bounds targetBounds = nodes.get(nodeIndex).localToScene(nodes.get(nodeIndex).getLayoutBounds());
                 /*
-                ** check that the target node starts after we start target.minX > origin.minX  
+                ** check that the target node starts after we start target.minX > origin.minX
                 ** and the target node ends after we end target.maxX > origin.maxX
-                */  
+                */
                 if (currentB.getMinX() >  targetBounds.getMinX()) {
 
                     targetNode.node = nodes.get(nodeIndex);
@@ -1454,17 +1455,17 @@ public class Hueristic2D implements Algorithm {
                         (targetNode.topRightDistance+biasTopLeftToTargetBottomRightDistance+biasTopLeftToTargetMidDistance+
                          currentBottomLeftToTargetTopRightDistance+targetNode.bottomRightDistance+biasBottomLeftToTargetMidDistance)/7;
 
-                    targetNode.biasShortestDistance = 
+                    targetNode.biasShortestDistance =
                         findMin9(targetNode.topRightDistance, biasTopLeftToTargetBottomRightDistance, biasTopLeftToTargetMidDistance,
                                  currentBottomLeftToTargetTopRightDistance, targetNode.bottomRightDistance, biasBottomLeftToTargetMidDistance,
                                  currentMidToTargetTopRightDistance, biasMidToTargetBottomRightDistance, targetNode.midDistance);
 
-                    targetNode.shortestDistance = 
+                    targetNode.shortestDistance =
                         findMin9(targetNode.topRightDistance, currentTopLeftToTargetBottomRightDistance, currentTopLeftToTargetMidDistance,
                                  currentBottomLeftToTargetTopRightDistance, currentBottomLeftToTargetBottomRightDistance, currentBottomLeftToTargetMidDistance,
                                  currentMidToTargetTopRightDistance, currentMidToTargetBottomRightDistance, currentMidToTargetMidDistance);
 
-                    
+
                     /*
                     ** closest biased : simple 2d
                     */
@@ -1523,9 +1524,9 @@ public class Hueristic2D implements Algorithm {
                         }
                         nearestNodeTopLeft.copy(targetNode);
                     }
-                    
+
                     if (nearestNodeAverageLeft == null || nearestNodeAverageLeft.averageDistance > targetNode.averageDistance) {
-                        
+
                         if (nearestNodeAverageLeft == null) {
                             nearestNodeAverageLeft = new TargetNode();
                         }
@@ -1576,7 +1577,7 @@ public class Hueristic2D implements Algorithm {
             traversalNodeStack.clear();
         }
 
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             if (reversingTargetNode != null) {
                 focusLogger.finer("reversingTargetNode.node : "+reversingTargetNode.node);
             }
@@ -1638,7 +1639,7 @@ public class Hueristic2D implements Algorithm {
             }
 
             if (nearestNodeOnCurrentY != null && nearestNodeOnCurrentY.biasShortestDistance < Double.MAX_VALUE) {
-                if (nearestNodeOnOriginY == null || 
+                if (nearestNodeOnOriginY == null ||
                     (nearestNodeOnCurrentY.bottomRightDistance < nearestNodeOnOriginY.bottomRightDistance) &&
                     (nearestNodeOnCurrentY.originTopRightDistance < nearestNodeOnOriginY.originTopRightDistance) &&
                     (nearestNodeOnCurrentY.bounds.getMinY() - currentTopLeft2D.getY()) < (nearestNodeOnOriginY.bounds.getMinY() - currentTopLeft2D.getY())  )  {
@@ -1664,7 +1665,7 @@ public class Hueristic2D implements Algorithm {
                      nearestNodeAverageLeft.biasShortestDistance == nearestNodeTopLeft.biasShortestDistance &&
                      nearestNodeAverageLeft.biasShortestDistance == nearestNodeAnythingAnywhereLeft.biasShortestDistance &&
                      nearestNodeAverageLeft.biasShortestDistance < Double.MAX_VALUE) {
-                
+
                 if (nearestNodeOnOriginY != null && nearestNodeOnOriginY.originTopRightDistance < nearestNodeAverageLeft.originTopRightDistance) {
                     return nearestNodeOnOriginY.node;
                 }
@@ -1714,7 +1715,7 @@ public class Hueristic2D implements Algorithm {
         }
         /*
         ** There isn't a clear winner, just go to the one nearest the current
-        ** focus owner, or if invalid then try the other contenders. 
+        ** focus owner, or if invalid then try the other contenders.
         */
         if (nearestNodeOnOriginY != null) {
             return nearestNodeOnOriginY.node;
@@ -1738,7 +1739,7 @@ public class Hueristic2D implements Algorithm {
     }
 
     protected Node getNearestNodeRight(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Node reversingNode) {
-        
+
         List<Node> nodes = engine.getAllTargetNodes();
 
         Bounds biasedB = new BoundingBox(currentB.getMinX(), originB.getMinY(), currentB.getWidth(), originB.getHeight());
@@ -1797,7 +1798,7 @@ public class Hueristic2D implements Algorithm {
                 reversingTargetNode.topLeftDistance = currentTopRight2D.distance(targetBounds.getMinX(), targetBounds.getMinY());
                 reversingTargetNode.midDistance  = currentMid2D.distance(targetBounds.getMinX(), targetBounds.getMinY()+(originB.getHeight()/2));
                 reversingTargetNode.bottomLeftDistance = currentBottomRight2D.distance(originB.getMinX(), targetBounds.getMaxY());
-                    
+
                 double currentTopRightToTargetBottomLeftDistance = currentTopRight2D.distance(targetBounds.getMinX(), targetBounds.getMaxY());
                 double currentTopRightToTargetMidDistance = currentTopRight2D.distance(targetBounds.getMinX(), targetBounds.getMinY()+(targetBounds.getHeight()/2));
                 double currentBottomRightToTargetTopLeftDistance = currentBottomRight2D.distance(targetBounds.getMinX(), targetBounds.getMinY());
@@ -1812,12 +1813,12 @@ public class Hueristic2D implements Algorithm {
                 double biasBottomRightToTargetMidDistance = currentBottomRight2D.distance(targetBounds.getMinX(), targetBounds.getMinY()+(originB.getHeight()/2));
                 double biasMidToTargetBottomLeftDistance = currentMid2D.distance(originB.getMinX(), targetBounds.getMaxY());
 
-                reversingTargetNode.averageDistance = 
+                reversingTargetNode.averageDistance =
                     (reversingTargetNode.topLeftDistance+biasTopRightToTargetBottomLeftDistance+biasTopRightToTargetMidDistance+
                      currentBottomRightToTargetTopLeftDistance+reversingTargetNode.bottomLeftDistance+biasBottomRightToTargetMidDistance)/7;
-                
-                
-                reversingTargetNode.biasShortestDistance = 
+
+
+                reversingTargetNode.biasShortestDistance =
                     findMin9(reversingTargetNode.topLeftDistance, biasTopRightToTargetBottomLeftDistance, biasTopRightToTargetMidDistance,
                              currentBottomRightToTargetTopLeftDistance, reversingTargetNode.bottomLeftDistance, biasBottomRightToTargetMidDistance,
                              currentMidToTargetTopLeftDistance, biasMidToTargetBottomLeftDistance, reversingTargetNode.midDistance);
@@ -1833,9 +1834,9 @@ public class Hueristic2D implements Algorithm {
 
                 Bounds targetBounds = nodes.get(nodeIndex).localToScene(nodes.get(nodeIndex).getLayoutBounds());
                 /*
-                ** check that the target node starts after we start target.minX > origin.minX  
+                ** check that the target node starts after we start target.minX > origin.minX
                 ** and the target node ends after we end target.maxX > origin.maxX
-                */  
+                */
                 if (currentB.getMaxX() <  targetBounds.getMaxX()) {
 
                     targetNode.node = nodes.get(nodeIndex);
@@ -1884,20 +1885,20 @@ public class Hueristic2D implements Algorithm {
                     double biasBottomRightToTargetMidDistance = currentBottomRight2D.distance(targetBounds.getMinX(), targetBounds.getMinY()+(originB.getHeight()/2));
                     double biasMidToTargetBottomLeftDistance = currentMid2D.distance(originB.getMinX(), targetBounds.getMaxY());
 
-                    targetNode.averageDistance = 
+                    targetNode.averageDistance =
                         (targetNode.topLeftDistance+biasTopRightToTargetBottomLeftDistance+biasTopRightToTargetMidDistance+
                          currentBottomRightToTargetTopLeftDistance+targetNode.bottomLeftDistance+biasBottomRightToTargetMidDistance)/7;
 
-                    targetNode.biasShortestDistance = 
+                    targetNode.biasShortestDistance =
                         findMin9(targetNode.topLeftDistance, biasTopRightToTargetBottomLeftDistance, biasTopRightToTargetMidDistance,
                                  currentBottomRightToTargetTopLeftDistance, targetNode.bottomLeftDistance, biasBottomRightToTargetMidDistance,
                                  currentMidToTargetTopLeftDistance, biasMidToTargetBottomLeftDistance, targetNode.midDistance);
 
-                    targetNode.shortestDistance = 
+                    targetNode.shortestDistance =
                         findMin9(targetNode.topLeftDistance, currentTopRightToTargetBottomLeftDistance, currentTopRightToTargetMidDistance,
                                  currentBottomRightToTargetTopLeftDistance, currentBottomRightToTargetBottomLeftDistance, currentBottomRightToTargetMidDistance,
                                  currentMidToTargetTopLeftDistance, currentMidToTargetBottomLeftDistance, currentMidToTargetMidDistance);
-                    
+
 
                     /*
                     ** closest biased : simple 2d
@@ -1928,7 +1929,7 @@ public class Hueristic2D implements Algorithm {
                     */
                     if ((originB.getMaxY() > targetBounds.getMinY()) && (targetBounds.getMaxY() > originB.getMinY())) {
                         if (nearestNodeOnOriginY == null || nearestNodeOnOriginY.topLeftDistance > targetNode.topLeftDistance) {
-                            
+
                             if (nearestNodeOnOriginY == null) {
                                 nearestNodeOnOriginY = new TargetNode();
                             }
@@ -2008,7 +2009,7 @@ public class Hueristic2D implements Algorithm {
             traversalNodeStack.clear();
         }
 
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             if (reversingTargetNode != null) {
                 focusLogger.finer("reversingTargetNode.node : "+reversingTargetNode.node);
             }
@@ -2069,7 +2070,7 @@ public class Hueristic2D implements Algorithm {
             }
 
             if (nearestNodeOnCurrentY != null && nearestNodeOnCurrentY.biasShortestDistance < Double.MAX_VALUE) {
-                if (nearestNodeOnOriginY == null || 
+                if (nearestNodeOnOriginY == null ||
                     (nearestNodeOnCurrentY.topLeftDistance < nearestNodeOnOriginY.topLeftDistance) &&
                     (nearestNodeOnCurrentY.originTopLeftDistance < nearestNodeOnOriginY.originTopLeftDistance) &&
                     (nearestNodeOnCurrentY.bounds.getMinY() - currentTopRight2D.getY()) < (nearestNodeOnOriginY.bounds.getMinY() - currentTopRight2D.getY())  )  {
@@ -2103,7 +2104,7 @@ public class Hueristic2D implements Algorithm {
                     return nearestNodeAverageRight.node;
                 }
             }
-        }   
+        }
         /*
         ** is the average closer?
         */
@@ -2142,7 +2143,7 @@ public class Hueristic2D implements Algorithm {
         }
         /*
         ** There isn't a clear winner, just go to the one nearest the current
-        ** focus owner, or if invalid then try the other contenders. 
+        ** focus owner, or if invalid then try the other contenders.
         */
         if (nearestNodeOnOriginY != null) {
             return nearestNodeOnOriginY.node;
@@ -2186,7 +2187,7 @@ public class Hueristic2D implements Algorithm {
         double originTopRightDistance = Double.MAX_VALUE;
         double originBottomLeftDistance = Double.MAX_VALUE;
         double originBottomRightDistance = Double.MAX_VALUE;
-        
+
         void copy(TargetNode source) {
             node = source.node;
             bounds = source.bounds;

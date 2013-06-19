@@ -55,6 +55,7 @@ import java.lang.reflect.Method;
  * calling {@link #build()}.
  * 
  * @see JavaBeanLongProperty
+ * @since JavaFX 2.1
  */
 public final class JavaBeanLongPropertyBuilder {
 

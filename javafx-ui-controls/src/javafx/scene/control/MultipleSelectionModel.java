@@ -37,6 +37,7 @@ import javafx.collections.ObservableList;
  * @see SelectionModel
  * @see SelectionMode
  * @param <T> The type of the item contained in the control that can be selected.
+ * @since JavaFX 2.0
  */
 public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
     

@@ -60,6 +60,7 @@ import javafx.css.StyleableProperty;
  *  t1.setMode(TitledPaneMode.FADE);
  * </code></pre>
  *
+ * @since JavaFX 2.0
  */
 @DefaultProperty("content")
 public class TitledPane extends Labeled {
@@ -320,6 +321,7 @@ public class TitledPane extends Labeled {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -327,6 +329,7 @@ public class TitledPane extends Labeled {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

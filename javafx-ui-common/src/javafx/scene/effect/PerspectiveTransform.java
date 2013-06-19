@@ -90,6 +90,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <p>
  * <img src="doc-files/perspectivetransform.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class PerspectiveTransform extends Effect {
     /**
@@ -108,6 +109,7 @@ public class PerspectiveTransform extends Effect {
      * @param lry the y coordinate of lower right corner
      * @param llx the x coordinate of lower left corner
      * @param lly the y coordinate of lower left corner
+     * @since JavaFX 2.1
      */
     public PerspectiveTransform(double ulx, double uly,
                                 double urx, double ury,

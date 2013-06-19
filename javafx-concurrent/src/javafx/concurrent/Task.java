@@ -588,6 +588,7 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *         }
  *     };
  * </code></pre>
+ * @since JavaFX 2.0
  */
 public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventTarget {
     /**
@@ -702,6 +703,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the SCHEDULED state.
      *
      * @return the onScheduled event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onScheduledProperty() {
         return getEventHelper().onScheduledProperty();
@@ -712,6 +714,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the SCHEDULED state.
      *
      * @return the onScheduled event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnScheduled() {
         return eventHelper == null ? null : eventHelper.getOnScheduled();
@@ -722,6 +725,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the SCHEDULED state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnScheduled(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnScheduled(value);
@@ -733,6 +737,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * This method is invoked on the FX Application Thread after any listeners
      * of the state property and after the Task has been fully transitioned to
      * the new state.
+     * @since JavaFX 2.1
      */
     protected void scheduled() { }
 
@@ -741,6 +746,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the RUNNING state.
      *
      * @return the onRunning event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onRunningProperty() {
         return getEventHelper().onRunningProperty();
@@ -751,6 +757,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the RUNNING state.
      *
      * @return the onRunning event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnRunning() {
         return eventHelper == null ? null : eventHelper.getOnRunning();
@@ -761,6 +768,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the RUNNING state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnRunning(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnRunning(value);
@@ -772,6 +780,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * This method is invoked on the FX Application Thread after any listeners
      * of the state property and after the Task has been fully transitioned to
      * the new state.
+     * @since JavaFX 2.1
      */
     protected void running() { }
 
@@ -780,6 +789,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the SUCCEEDED state.
      *
      * @return the onSucceeded event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onSucceededProperty() {
         return getEventHelper().onSucceededProperty();
@@ -790,6 +800,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the SUCCEEDED state.
      *
      * @return the onSucceeded event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnSucceeded() {
         return eventHelper == null ? null : eventHelper.getOnSucceeded();
@@ -800,6 +811,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the SUCCEEDED state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnSucceeded(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnSucceeded(value);
@@ -811,6 +823,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * This method is invoked on the FX Application Thread after any listeners
      * of the state property and after the Task has been fully transitioned to
      * the new state.
+     * @since JavaFX 2.1
      */
     protected void succeeded() { }
 
@@ -819,6 +832,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the CANCELLED state.
      *
      * @return the onCancelled event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onCancelledProperty() {
         return getEventHelper().onCancelledProperty();
@@ -829,6 +843,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the CANCELLED state.
      *
      * @return the onCancelled event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnCancelled() {
         return eventHelper == null ? null : eventHelper.getOnCancelled();
@@ -839,6 +854,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the CANCELLED state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnCancelled(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnCancelled(value);
@@ -850,6 +866,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * This method is invoked on the FX Application Thread after any listeners
      * of the state property and after the Task has been fully transitioned to
      * the new state.
+     * @since JavaFX 2.1
      */
     protected void cancelled() { }
 
@@ -858,6 +875,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the FAILED state.
      *
      * @return the onFailed event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onFailedProperty() {
         return getEventHelper().onFailedProperty();
@@ -868,6 +886,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the FAILED state.
      *
      * @return the onFailed event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnFailed() {
         return eventHelper == null ? null : eventHelper.getOnFailed();
@@ -878,6 +897,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * transitions to the FAILED state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnFailed(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnFailed(value);
@@ -889,6 +909,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * This method is invoked on the FX Application Thread after any listeners
      * of the state property and after the Task has been fully transitioned to
      * the new state.
+     * @since JavaFX 2.1
      */
     protected void failed() { }
 
@@ -1003,7 +1024,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      *                 If the value passed is negative, or Infinity, or NaN,
      *                 then the resulting percentDone will be -1 (thus, indeterminate).
      * @param max A value from Double.MIN_VALUE to Double.MAX_VALUE. Infinity and NaN are treated as -1.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     protected void updateProgress(double workDone, double max) {
         // Adjust Infinity / NaN to be -1 for both workDone and max.
@@ -1126,7 +1147,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * </p>
      *
      * @param value the new value
-     * @since 8
+     * @since JavaFX 8.0
      */
     protected void updateValue(V value) {
         if (isFxApplicationThread()) {
@@ -1193,6 +1214,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param eventType the type of the events to receive by the handler
      * @param eventHandler the handler to register
      * @throws NullPointerException if the event type or handler is null
+     * @since JavaFX 2.1
      */
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
@@ -1210,6 +1232,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param eventType the event type from which to unregister
      * @param eventHandler the handler to unregister
      * @throws NullPointerException if the event type or handler is null
+     * @since JavaFX 2.1
      */
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -1225,6 +1248,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param eventType the type of the events to receive by the filter
      * @param eventFilter the filter to register
      * @throws NullPointerException if the event type or filter is null
+     * @since JavaFX 2.1
      */
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
@@ -1242,6 +1266,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param eventType the event type from which to unregister
      * @param eventFilter the filter to unregister
      * @throws NullPointerException if the event type or filter is null
+     * @since JavaFX 2.1
      */
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
@@ -1259,6 +1284,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @param eventType the event type to associate with the given eventHandler
      * @param eventHandler the handler to register, or null to unregister
      * @throws NullPointerException if the event type is null
+     * @since JavaFX 2.1
      */
     protected final <T extends Event> void setEventHandler(
             final EventType<T> eventType,
@@ -1276,6 +1302,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * This method must be called on the FX user thread.
      *
      * @param event the event to fire
+     * @since JavaFX 2.1
      */
     public final void fireEvent(Event event) {
         checkThread();

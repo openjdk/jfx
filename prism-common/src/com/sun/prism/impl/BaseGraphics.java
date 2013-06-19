@@ -106,7 +106,6 @@ public abstract class BaseGraphics implements RectShadowGraphics {
             // So for the time being this blanket call to setRenderTarget()
             // is better than nothing...
             context.setRenderTarget(this);
-            context.setDeviceParametersFor2D();
         }
     }
 

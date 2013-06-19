@@ -26,6 +26,7 @@
 package javafx.beans.property;
 
 import com.sun.javafx.binding.ListExpressionHelper;
+import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -45,6 +46,7 @@ import javafx.collections.ObservableList;
  * @see ListProperty
  *
  * @param <E> the type of the {@code List} elements
+ * @since JavaFX 2.1
  */
 public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
@@ -273,7 +275,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             unbind();
             observable = newObservable;
             if (listener == null) {
-                listener = new Listener();
+                listener = new Listener<>(this);
             }
             observable.addListener(listener);
             markInvalid(value);
@@ -318,10 +320,22 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         return result.toString();
     }
 
-    private class Listener implements InvalidationListener {
+    private static class Listener<E> implements InvalidationListener {
+
+        private final WeakReference<ListPropertyBase<E>> wref;
+
+        public Listener(ListPropertyBase<E> ref) {
+            this.wref = new WeakReference<ListPropertyBase<E>>(ref);
+        }
+
         @Override
-        public void invalidated(Observable valueModel) {
-            markInvalid(value);
+        public void invalidated(Observable observable) {
+            ListPropertyBase<E> ref = wref.get();
+            if (ref == null) {
+                observable.removeListener(this);
+            } else {
+                ref.markInvalid(ref.value);
+            }
         }
     }
 

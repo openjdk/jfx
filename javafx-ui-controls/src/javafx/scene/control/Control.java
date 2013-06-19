@@ -37,7 +37,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
@@ -53,6 +52,7 @@ import com.sun.javafx.scene.control.Logging;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 
 /**
@@ -71,6 +71,7 @@ import sun.util.logging.PlatformLogger;
  * read-only controls such as {@link Label} and {@link ProgressIndicator}, and some
  * controls that are containers {@link ScrollPane} and {@link ToolBar} do not.
  * Consult individual control documentation for details.
+ * @since JavaFX 2.0
  */
 public abstract class Control extends Region implements Skinnable {
 
@@ -133,13 +134,13 @@ public abstract class Control extends Region implements Skinnable {
             throw ex;
         }
     }
-    
+
     /***************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
-     **************************************************************************/  
-    
+     **************************************************************************/
+
     private List<CssMetaData<? extends Styleable, ?>> styleableProperties;
 
     /**
@@ -160,7 +161,7 @@ public abstract class Control extends Region implements Skinnable {
     * Event Handlers / Listeners                                              *
     *                                                                         *
     **************************************************************************/
-    
+
     /**
      * Handles context menu requests by popping up the menu.
      * Note that we use this pattern to remove some of the anonymous inner
@@ -176,17 +177,17 @@ public abstract class Control extends Region implements Skinnable {
             }
         }
     };
-    
 
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
-     **************************************************************************/    
-    
-    
-    
+     **************************************************************************/
+
+
+
     // --- skin
     /**
      * Skin is responsible for rendering this {@code Control}. From the
@@ -200,8 +201,8 @@ public abstract class Control extends Region implements Skinnable {
      * A skin may be null.
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
-    @Override public final void setSkin(Skin<?> value) { 
-        skinProperty().set(value); 
+    @Override public final void setSkin(Skin<?> value) {
+        skinProperty().set(value);
     }
     @Override public final Skin<?> getSkin() { return skinProperty().getValue(); }
     private ObjectProperty<Skin<?>> skin = new StyleableObjectProperty<Skin<?>>() {
@@ -213,44 +214,44 @@ public abstract class Control extends Region implements Skinnable {
 
         @Override
         public void set(Skin<?> v) {
-            if (v == null 
+            if (v == null
                 ? oldValue == null
                 : oldValue != null && v.getClass().equals(oldValue.getClass()))
                 return;
 
             super.set(v);
-            
+
             // Collect the name of the currently installed skin class. We do this
             // so that subsequent updates from CSS to the same skin class will not
             // result in reinstalling the skin
             currentSkinClassName = v == null ? null : v.getClass().getName();
-            
+
             // If skinClassName is null, then someone called setSkin directly
-            // rather than the skin being set via css. We know this is because 
+            // rather than the skin being set via css. We know this is because
             // impl_processCSS ensures the skin is set, and impl_processCSS
-            // expands the skin property to see if the skin has been set. 
+            // expands the skin property to see if the skin has been set.
             // If skinClassName is null, then we need to see if there is
             // a UA stylesheet at this point since the logic in impl_processCSS
-            // depends on skinClassName being null. 
+            // depends on skinClassName being null.
             if (skinClassName == null) {
                 final String url = Control.this.getUserAgentStylesheet();
                 if (url != null) {
                     StyleManager.getInstance().addUserAgentStylesheet(url);
                 }
             }
-            // if someone calls setSkin, we need to make it look like they 
+            // if someone calls setSkin, we need to make it look like they
             // called set on skinClassName in order to keep CSS from overwriting
-            // the skin. 
+            // the skin.
             skinClassNameProperty().set(currentSkinClassName);
         }
 
         @Override protected void invalidated() {
             // Dispose of the old skin
             if (oldValue != null) oldValue.dispose();
-            
+
             // Get the new value, and save it off as the new oldValue
             final Skin<?> skin = oldValue = getValue();
-            
+
             // Reset skinBase to null - it will be set to the new Skin if it
             // is a SkinBase, otherwise it will remain null, as expected
             skinBase = null;
@@ -282,34 +283,34 @@ public abstract class Control extends Region implements Skinnable {
                     getChildren().clear();
                 }
             }
-            
+
             // clear out the styleable properties so that the list is rebuilt
             // next time they are requested.
             styleableProperties = null;
-            
+
             // calling impl_reapplyCSS() as the styleable properties may now
-            // be different, as we will now be able to return styleable properties 
-            // belonging to the skin. If impl_reapplyCSS() is not called, the 
-            // getCssMetaData() method is never called, so the 
+            // be different, as we will now be able to return styleable properties
+            // belonging to the skin. If impl_reapplyCSS() is not called, the
+            // getCssMetaData() method is never called, so the
             // skin properties are never exposed.
             impl_reapplyCSS();
 
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();
-            if (logger.isLoggable(PlatformLogger.FINEST)) {
+            if (logger.isLoggable(Level.FINEST)) {
                 logger.finest("Stored skin[" + getValue() + "] on " + this);
             }
         }
 
         // This method should be CssMetaData<Control,Skin> getCssMetaData(),
-        // but SKIN is CssMetaData<Control,String>. This does not matter to 
+        // but SKIN is CssMetaData<Control,String>. This does not matter to
         // the CSS code which doesn't care about the actual type. Hence,
         // we'll suppress the warnings
         @Override @SuppressWarnings({"unchecked", "rawtype"})
         public CssMetaData getCssMetaData() {
             return StyleableProperties.SKIN;
         }
-        
+
         @Override
         public Object getBean() {
             return Control.this;
@@ -321,7 +322,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     };
 
-    
+
     // --- tooltip
     /**
      * The ToolTip for this control.
@@ -361,7 +362,7 @@ public abstract class Control extends Region implements Skinnable {
     public final void setTooltip(Tooltip value) { tooltipProperty().setValue(value); }
     public final Tooltip getTooltip() { return tooltip == null ? null : tooltip.getValue(); }
 
-    
+
     // --- context menu
     /**
      * The ContextMenu to show for this control.
@@ -385,40 +386,40 @@ public abstract class Control extends Region implements Skinnable {
     public final void setContextMenu(ContextMenu value) { contextMenu.setValue(value); }
     public final ContextMenu getContextMenu() { return contextMenu == null ? null : contextMenu.getValue(); }
 
-    
+
 
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      *  Create a new Control.
      */
     protected Control() {
         // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
+        // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle
         // with null for StyleOrigin ensures that css will be able to override
-        // the value.        
+        // the value.
         final StyleableProperty<Boolean> prop = (StyleableProperty<Boolean>)focusTraversableProperty();
         prop.applyStyle(null, Boolean.TRUE);
-        
+
         // we add a listener for menu request events to show the context menu
         // that may be set on the Control
         this.addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
-    // Proposed dispose() API. 
+
+    // Proposed dispose() API.
     // Note that there is impl code for a dispose method in TableRowSkinBase
     // and TableCell (just search for dispose())
 //    public void dispose() {
@@ -427,7 +428,7 @@ public abstract class Control extends Region implements Skinnable {
 //            skin.dispose();
 //        }
 //    }
-    
+
     /**
      * Returns <code>true</code> since all Controls are resizable.
      * @return whether this node can be resized by its parent during layout
@@ -444,15 +445,15 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * Computes the minimum allowable width of the Control, based on the provided
      * height. The minimum width is not calculated within the Control, instead
-     * the calculation is delegated to the {@link Node#minWidth(double)} method 
+     * the calculation is delegated to the {@link Node#minWidth(double)} method
      * of the {@link Skin}. If the Skin is null, the returned value is 0.
-     * 
+     *
      * @param height The height of the Control, in case this value might dictate
      *      the minimum width.
      * @return A double representing the minimum width of this control.
      */
     @Override protected double computeMinWidth(final double height) {
-        if (skinBase != null) {    
+        if (skinBase != null) {
             return skinBase.computeMinWidth(height, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
@@ -463,15 +464,15 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * Computes the minimum allowable height of the Control, based on the provided
      * width. The minimum height is not calculated within the Control, instead
-     * the calculation is delegated to the {@link Node#minHeight(double)} method 
+     * the calculation is delegated to the {@link Node#minHeight(double)} method
      * of the {@link Skin}. If the Skin is null, the returned value is 0.
-     * 
+     *
      * @param width The width of the Control, in case this value might dictate
      *      the minimum height.
      * @return A double representing the minimum height of this control.
      */
     @Override protected double computeMinHeight(final double width) {
-        if (skinBase != null) {    
+        if (skinBase != null) {
             return skinBase.computeMinHeight(width, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
@@ -482,15 +483,15 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * Computes the maximum allowable width of the Control, based on the provided
      * height. The maximum width is not calculated within the Control, instead
-     * the calculation is delegated to the {@link Node#maxWidth(double)} method 
+     * the calculation is delegated to the {@link Node#maxWidth(double)} method
      * of the {@link Skin}. If the Skin is null, the returned value is 0.
-     * 
+     *
      * @param height The height of the Control, in case this value might dictate
      *      the maximum width.
      * @return A double representing the maximum width of this control.
      */
     @Override protected double computeMaxWidth(double height) {
-        if (skinBase != null) {  
+        if (skinBase != null) {
             return skinBase.computeMaxWidth(height, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
@@ -501,15 +502,15 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * Computes the maximum allowable height of the Control, based on the provided
      * width. The maximum height is not calculated within the Control, instead
-     * the calculation is delegated to the {@link Node#maxHeight(double)} method 
+     * the calculation is delegated to the {@link Node#maxHeight(double)} method
      * of the {@link Skin}. If the Skin is null, the returned value is 0.
-     * 
+     *
      * @param width The width of the Control, in case this value might dictate
      *      the maximum height.
      * @return A double representing the maximum height of this control.
      */
     @Override protected double computeMaxHeight(double width) {
-        if (skinBase != null) {  
+        if (skinBase != null) {
             return skinBase.computeMaxHeight(width, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
@@ -519,7 +520,7 @@ public abstract class Control extends Region implements Skinnable {
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height) {
-        if (skinBase != null) {  
+        if (skinBase != null) {
             return skinBase.computePrefWidth(height, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
@@ -536,10 +537,10 @@ public abstract class Control extends Region implements Skinnable {
             return skinNode == null ? 0 : skinNode.prefHeight(width);
         }
     }
-    
+
     /** {@inheritDoc} */
-    @Override public double getBaselineOffset() { 
-        if (skinBase != null) {  
+    @Override public double getBaselineOffset() {
+        if (skinBase != null) {
             return skinBase.computeBaselineOffset(snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
@@ -580,6 +581,7 @@ public abstract class Control extends Region implements Skinnable {
      *
      * @return  new instance of default skin for this control. If null then the control will have no skin unless one
      *          is provided by css.
+     * @since JavaFX 8.0
      */
     protected Skin<?> createDefaultSkin() {
         return null;
@@ -625,6 +627,7 @@ public abstract class Control extends Region implements Skinnable {
 
     /**
      * @treatAsPrivate
+     * @since JavaFX 2.1
      */
     @Deprecated protected StringProperty skinClassNameProperty() {
         if (skinClassName == null) {
@@ -636,7 +639,7 @@ public abstract class Control extends Region implements Skinnable {
                     if (v == null || v.isEmpty() || v.equals(get())) return;
                     super.set(v);
                 }
-                
+
                 @Override
                 public void invalidated() {
                     // reset the styleable properties so we get the new ones from
@@ -650,7 +653,7 @@ public abstract class Control extends Region implements Skinnable {
                         // Note: CSS should not set skin to null
                     }
                 }
-                
+
                 @Override
                 public Object getBean() {
                     return Control.this;
@@ -665,23 +668,23 @@ public abstract class Control extends Region implements Skinnable {
                 public CssMetaData<Control,String> getCssMetaData() {
                     return StyleableProperties.SKIN;
                 }
-                
+
             };
         }
         return skinClassName;
     }
-    
+
     private void loadSkinClass() {
-        if (skinClassName == null 
-                || skinClassName.get() == null 
+        if (skinClassName == null
+                || skinClassName.get() == null
                 || skinClassName.get().isEmpty()) {
-            final String msg = 
-                "Empty -fx-skin property specified for control " + this;   
+            final String msg =
+                "Empty -fx-skin property specified for control " + this;
             final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg);
                 errors.add(error); // RT-19884
-            } 
+            }
             Logging.getControlsLogger().severe(msg);
             return;
         }
@@ -699,7 +702,7 @@ public abstract class Control extends Region implements Skinnable {
             }
 
             if (skinConstructor == null) {
-                final String msg = 
+                final String msg =
                     "No valid constructor defined in '" + skinClassName + "' for control " + this +
                         ".\r\nYou must provide a constructor that accepts a single "
                         + "Control parameter in " + skinClassName + ".";
@@ -707,7 +710,7 @@ public abstract class Control extends Region implements Skinnable {
                 if (errors != null) {
                     CssError error = new CssError(msg);
                     errors.add(error); // RT-19884
-                } 
+                }
                 Logging.getControlsLogger().severe(msg);
             } else {
                 Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(this);
@@ -716,23 +719,23 @@ public abstract class Control extends Region implements Skinnable {
                 skinProperty().set(skinInstance);
             }
         } catch (InvocationTargetException e) {
-            final String msg = 
+            final String msg =
                 "Failed to load skin '" + skinClassName + "' for control " + this;
             final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
                 errors.add(error); // RT-19884
-            } 
+            }
             Logging.getControlsLogger().severe(msg, e.getCause());
         } catch (Exception e) {
-            final String msg = 
+            final String msg =
                 "Failed to load skin '" + skinClassName + "' for control " + this;
             final List<CssError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
                 errors.add(error); // RT-19884
-            } 
-            Logging.getControlsLogger().severe(msg, e);            
+            }
+            Logging.getControlsLogger().severe(msg, e);
         }
     }
 
@@ -741,7 +744,7 @@ public abstract class Control extends Region implements Skinnable {
      * StyleSheet Handling                                                     *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * Implementors may specify their own user-agent stylesheet. The return
      * value is a string URL. A relative URL is resolved using the class
@@ -753,7 +756,7 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     private static class StyleableProperties {
-        private static final CssMetaData<Control,String> SKIN = 
+        private static final CssMetaData<Control,String> SKIN =
             new CssMetaData<Control,String>("-fx-skin",
                 StringConverter.getInstance()) {
 
@@ -780,53 +783,55 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
-     * This method returns a {@link List} containing all {@link CssMetaData} for 
-     * both this Control (returned from {@link #getControlCssMetaData()} and its 
-     * {@link Skin}, assuming the {@link #skinProperty() skin property} is a 
-     * {@link SkinBase}. 
-     * 
-     * <p>Developers who wish to provide custom CssMetaData are therefore 
-     * encouraged to override {@link Control#getControlCssMetaData()} or 
-     * {@link SkinBase#getCssMetaData()}, depending on where the CssMetaData 
+     * This method returns a {@link List} containing all {@link CssMetaData} for
+     * both this Control (returned from {@link #getControlCssMetaData()} and its
+     * {@link Skin}, assuming the {@link #skinProperty() skin property} is a
+     * {@link SkinBase}.
+     *
+     * <p>Developers who wish to provide custom CssMetaData are therefore
+     * encouraged to override {@link Control#getControlCssMetaData()} or
+     * {@link SkinBase#getCssMetaData()}, depending on where the CssMetaData
      * resides.
+     * @since JavaFX 8.0
      */
     @Override
     public final List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         if (styleableProperties == null) {
-            
+
             // RT-29162: make sure properties only show up once in the list
-            java.util.Map<String, CssMetaData<? extends Styleable, ?>> map = 
+            java.util.Map<String, CssMetaData<? extends Styleable, ?>> map =
                 new java.util.HashMap<String, CssMetaData<? extends Styleable, ?>>();
-            
+
             List<CssMetaData<? extends Styleable, ?>> list =  getControlCssMetaData();
-            
+
             for (int n=0, nMax = list != null ? list.size() : 0; n<nMax; n++) {
-                
+
                 CssMetaData<? extends Styleable, ?> metaData = list.get(n);
                 if (metaData == null) continue;
-                
+
                 map.put(metaData.getProperty(), metaData);
             }
 
             //
             // if both control and skin base have the same property, use the
-            // one from skin base since it may be a specialization of the 
-            // property in the control. For instance, Label has -fx-font and  
+            // one from skin base since it may be a specialization of the
+            // property in the control. For instance, Label has -fx-font and
             // so does LabeledText which is Label's skin.
             //
             list =  skinBase != null ? skinBase.getCssMetaData() : null;
-            
+
             for (int n=0, nMax = list != null ? list.size() : 0; n<nMax; n++) {
-                
+
                 CssMetaData<? extends Styleable, ?> metaData = list.get(n);
                 if (metaData == null) continue;
-                
+
                 map.put(metaData.getProperty(), metaData);
             }
 
@@ -835,9 +840,10 @@ public abstract class Control extends Region implements Skinnable {
         }
         return styleableProperties;
     }
-    
+
     /**
      * @return unmodifiable list of the controls css styleable properties
+     * @since JavaFX 8.0
      */
     protected List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
@@ -877,9 +883,9 @@ public abstract class Control extends Region implements Skinnable {
             }
         }
     }
-    
+
     /**
-      * Most Controls return true for focusTraversable initial value. 
+      * Most Controls return true for focusTraversable initial value.
       * This method is called from CSS code to get the correct initial value.
       * @treatAsPrivate implementation detail
       */
@@ -887,7 +893,7 @@ public abstract class Control extends Region implements Skinnable {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.TRUE;
     }
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version

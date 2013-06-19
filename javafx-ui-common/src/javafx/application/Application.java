@@ -122,16 +122,19 @@ public class MyApp extends Application {
  *
  * <p>The above example will produce the following:</p>
  * <p><img src="doc-files/Application.png"/></p>
+ * @since JavaFX 2.0
  */
 public abstract class Application {
     /**
      * Constant for user agent stylesheet for the "Caspian" theme. Caspian
      * is the theme that shipped as default in JavaFX 2.x.
+     * @since JavaFX 8.0
      */
     public static final String STYLESHEET_CASPIAN = "CASPIAN";
     /**
      * Constant for user agent stylesheet for the "Modena" theme. Modena
      * is the default theme for JavaFX 8.x.
+     * @since JavaFX 8.0
      */
     public static final String STYLESHEET_MODENA = "MODENA";
 
@@ -351,6 +354,7 @@ public abstract class Application {
      * Note that the application and the preloader both get the same set
      * of parameters for a given run of an application.
      * </p>
+     * @since JavaFX 2.0
      */
     public static abstract class Parameters {
 
@@ -401,6 +405,7 @@ public abstract class Application {
      * </p>
      *
      * @return The URL to the stylesheet as a String.
+     * @since JavaFX 8.0
      */
     public static String getUserAgentStylesheet() {
         return userAgentStylesheet;
@@ -422,6 +427,7 @@ public abstract class Application {
      *
      *
      * @param url The URL to the stylesheet as a String.
+     * @since JavaFX 8.0
      */
     public static void setUserAgentStylesheet(String url) {
         userAgentStylesheet = url;

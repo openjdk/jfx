@@ -40,6 +40,7 @@ package javafx.scene.control;
  * @see MultipleSelectionModel
  * @see SelectionMode
  * @param <T> The type of the item contained in the control that can be selected.
+ * @since JavaFX 2.0
  */
 public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
     

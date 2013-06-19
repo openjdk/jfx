@@ -45,6 +45,7 @@ import java.util.List;
  * Rectangle r = new Rectangle();
  * r.setFill(lg);
  *</code></pre>
+ * @since JavaFX 2.0
  */
 public final class Stop {
 

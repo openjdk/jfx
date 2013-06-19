@@ -32,20 +32,22 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
+import java.lang.ref.WeakReference;
 import javafx.beans.value.ObservableIntegerValue;
 import javafx.beans.value.ObservableNumberValue;
 
 /**
  * The class {@code IntegerPropertyBase} is the base class for a property
  * wrapping a {@code int} value.
- * 
+ *
  * It provides all the functionality required for a property except for the
  * {@link #getBean()} and {@link #getName()} methods, which must be implemented
  * by extending classes.
- * 
+ *
  * @see IntegerProperty
- * 
- * 
+ *
+ *
+ * @since JavaFX 2.0
  */
 public abstract class IntegerPropertyBase extends IntegerProperty {
 
@@ -63,7 +65,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
 
     /**
      * The constructor of the {@code IntegerPropertyBase}.
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -71,31 +73,31 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
         this.value = initialValue;
     }
 
-    @Override 
+    @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(InvalidationListener listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(ChangeListener<? super Number> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     /**
      * Sends notifications to all attached
      * {@link javafx.beans.InvalidationListener InvalidationListeners} and
      * {@link javafx.beans.value.ChangeListener ChangeListeners}.
-     * 
+     *
      * This method is called when the value is changed, either manually by
      * calling {@link #set(int)} or in case of a bound property, if the
      * binding becomes invalid.
@@ -103,7 +105,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
     protected void fireValueChangedEvent() {
         ExpressionHelper.fireValueChangedEvent(helper);
     }
-    
+
     private void markInvalid() {
         if (valid) {
             valid = false;
@@ -116,7 +118,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
      * The method {@code invalidated()} can be overridden to receive
      * invalidation notifications. This is the preferred option in
      * {@code Objects} defining the property, because it requires less memory.
-     * 
+     *
      * The default implementation is empty.
      */
     protected void invalidated() {
@@ -195,7 +197,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
             unbind();
             observable = newObservable;
             if (listener == null) {
-                listener = new Listener();
+                listener = new Listener(this);
             }
             observable.addListener(listener);
             markInvalid();
@@ -217,7 +219,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
     /**
      * Returns a string representation of this {@code IntegerPropertyBase} object.
      * @return a string representation of this {@code IntegerPropertyBase} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -243,10 +245,22 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
         return result.toString();
     }
 
-    private class Listener implements InvalidationListener {
+    private static class Listener implements InvalidationListener {
+
+        private final WeakReference<IntegerPropertyBase> wref;
+
+        public Listener(IntegerPropertyBase ref) {
+            this.wref = new WeakReference<>(ref);
+        }
+
         @Override
-        public void invalidated(Observable valueModel) {
-            markInvalid();
+        public void invalidated(Observable observable) {
+            IntegerPropertyBase ref = wref.get();
+            if (ref == null) {
+                observable.removeListener(this);
+            } else {
+                ref.markInvalid();
+            }
         }
     }
 }

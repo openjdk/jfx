@@ -72,7 +72,7 @@ import javafx.beans.value.ObservableValue;
  * See the {@link javafx.print.Printer Printer} class for how to
  * to determine supported settings.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  *
  *
  */

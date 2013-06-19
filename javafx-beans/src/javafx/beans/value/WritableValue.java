@@ -43,6 +43,7 @@ package javafx.beans.value;
  *            The type of the wrapped value
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface WritableValue<T> {
 

@@ -35,44 +35,45 @@ import javafx.scene.control.TableView;
 import javafx.util.Callback;
 
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.Logging;
 
 
 /**
  * A convenience implementation of the Callback interface, designed specifically
- * for use within the {@link TableColumn} 
+ * for use within the {@link TableColumn}
  * {@link TableColumn#cellValueFactoryProperty() cell value factory}. An example
  * of how to use this class is:
- * 
+ *
  * <pre><code>
  * TableColumn&lt;Person,String&gt; firstNameCol = new TableColumn&lt;Person,String&gt;("First Name");
  * firstNameCol.setCellValueFactory(new PropertyValueFactory&lt;Person,String&gt;("firstName"));
  * </code></pre>
- * 
- * In this example, the "firstName" string is used as a reference to an assumed 
+ *
+ * In this example, the "firstName" string is used as a reference to an assumed
  * <code>firstNameProperty()</code> method in the <code>Person</code> class type
- * (which is the class type of the TableView 
+ * (which is the class type of the TableView
  * {@link TableView#itemsProperty() items} list). Additionally, this method must
  * return a {@link Property} instance. If a method meeting these requirements
  * is found, then the {@link TableCell} is populated with this ObservableValue<T>.
- * In addition, the TableView will automatically add an observer to the 
+ * In addition, the TableView will automatically add an observer to the
  * returned value, such that any changes fired will be observed by the TableView,
  * resulting in the cell immediately updating.
- * 
+ *
  * <p>If no method matching this pattern exists, there is fall-through support
  * for attempting to call get&lt;property&gt;() or is&lt;property&gt;() (that is,
  * <code>getFirstName()</code> or <code>isFirstName()</code> in the example
  * above). If a  method matching this pattern exists, the value returned from this method
  * is wrapped in a {@link ReadOnlyObjectWrapper} and returned to the TableCell.
  * However, in this situation, this means that the TableCell will not be able
- * to observe the ObservableValue for changes (as is the case in the first 
- * approach above). 
- * 
- * <p>For reference (and as noted in the TableColumn 
- * {@link TableColumn#cellValueFactory cell value factory} documentation), the 
+ * to observe the ObservableValue for changes (as is the case in the first
+ * approach above).
+ *
+ * <p>For reference (and as noted in the TableColumn
+ * {@link TableColumn#cellValueFactory cell value factory} documentation), the
  * long form of the code above would be the following:
- * 
+ *
  * <pre><code>
  * TableColumn&lt;Person,String&gt; firstNameCol = new TableColumn&lt;Person,String&gt;("First Name");
  * firstNameCol.setCellValueFactory(new Callback&lt;CellDataFeatures&lt;Person, String&gt;, ObservableValue&lt;String&gt;&gt;() {
@@ -83,7 +84,7 @@ import com.sun.javafx.scene.control.Logging;
  *  });
  * }
  * </code></pre>
- * 
+ *
  * @see TableColumn
  * @see TableView
  * @see TableCell
@@ -91,6 +92,7 @@ import com.sun.javafx.scene.control.Logging;
  * @see MapValueFactory
  * @param <S> The type of the class contained within the TableView.items list.
  * @param <T> The type of the class contained within the TableColumn cells.
+ * @since JavaFX 2.0
  */
 public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>, ObservableValue<T>> {
 
@@ -103,8 +105,8 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
     /**
      * Creates a default PropertyValueFactory to extract the value from a given
      * TableView row item reflectively, using the given property name.
-     * 
-     * @param property The name of the property with which to attempt to 
+     *
+     * @param property The name of the property with which to attempt to
      *      reflectively extract a corresponding value for in a given object.
      */
     public PropertyValueFactory(String property) {
@@ -129,7 +131,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
             // performance suffers when working in large data models. For
             // a bit of reference, refer to RT-13937.
             if (columnClass == null || previousProperty == null ||
-                    ! columnClass.equals(rowData.getClass()) || 
+                    ! columnClass.equals(rowData.getClass()) ||
                     ! previousProperty.equals(getProperty())) {
 
                 // create a new PropertyReference
@@ -147,12 +149,12 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
             } catch (IllegalStateException e2) {
                 // fall through to logged exception below
             }
-            
+
             // log the warning and move on
             final PlatformLogger logger = Logging.getControlsLogger();
-            if (logger.isLoggable(PlatformLogger.WARNING)) {
-               logger.finest("Can not retrieve property '" + getProperty() + 
-                        "' in PropertyValueFactory: " + this + 
+            if (logger.isLoggable(Level.WARNING)) {
+               logger.finest("Can not retrieve property '" + getProperty() +
+                        "' in PropertyValueFactory: " + this +
                         " with provided class type: " + rowData.getClass(), e);
             }
         }

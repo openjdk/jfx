@@ -33,6 +33,7 @@ import java.util.List;
  *
  * @param <E> the list element type
  * @see Change
+ * @since JavaFX 2.0
  */
 public interface ListChangeListener<E> {
 
@@ -101,6 +102,7 @@ public interface ListChangeListener<E> {
      * And on the other hand, update changes must go after add/remove changes because they refer with their indexes to the current
      * state of the list, which means with all add/remove changes applied.
      * @param <E> the list element type
+     * @since JavaFX 2.0
      */
     public abstract static class Change<E> {
         private final ObservableList<E> list;
@@ -210,7 +212,7 @@ public interface ListChangeListener<E> {
          * This is the only optional event type and may not be
          * fired by all ObservableLists.
          * @return true if the current change is an update change.
-         * @since 2.1
+         * @since JavaFX 2.1
          */
         public boolean wasUpdated() {
             return false;

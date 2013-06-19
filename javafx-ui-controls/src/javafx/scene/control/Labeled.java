@@ -96,6 +96,7 @@ import javafx.css.StyleableStringProperty;
  * @see Button
  * @see Label
  * @see ToggleButton
+ * @since JavaFX 2.0
  */
 @DefaultProperty("text")
 public abstract class Labeled extends Control {
@@ -255,7 +256,7 @@ public abstract class Labeled extends Control {
      * <p>Note that not all fonts support all Unicode characters.
      *
      * @see <a href="http://en.wikipedia.org/wiki/Ellipsis#Computer_representations">Wikipedia:ellipsis</a>
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public final StringProperty ellipsisStringProperty() {
         if (ellipsisString == null) {
@@ -523,6 +524,7 @@ public abstract class Labeled extends Control {
 
     /**
      * Specifies the space in pixel between lines.
+     * @since JavaFX 8.0
      */
     public final DoubleProperty lineSpacingProperty() {
         if (lineSpacing == null) {
@@ -731,6 +733,13 @@ public abstract class Labeled extends Control {
     //     * TODO: Have i18n review this part of the API to confirm proper
     //     * externalization will work as expected
     //     */
+
+    @Override public String toString() {
+        StringBuilder builder =
+            new StringBuilder(super.toString())
+                .append("'").append(getText()).append("'");
+        return builder.toString();
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -979,6 +988,7 @@ public abstract class Labeled extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -986,6 +996,7 @@ public abstract class Labeled extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

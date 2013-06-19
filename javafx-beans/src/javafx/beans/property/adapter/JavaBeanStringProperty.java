@@ -61,6 +61,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.StringProperty
  * @see JavaBeanStringPropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class JavaBeanStringProperty extends StringProperty implements JavaBeanProperty<String> {
 

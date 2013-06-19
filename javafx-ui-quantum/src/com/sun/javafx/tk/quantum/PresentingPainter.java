@@ -26,6 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import com.sun.prism.Graphics;
+import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.ManagedResource;
 import com.sun.prism.impl.PrismSettings;
@@ -60,6 +61,13 @@ final class PresentingPainter extends ViewPainter {
              */
             sceneState.lock();
             locked = true;
+            
+            if (factory == null) {
+                factory = GraphicsPipeline.getDefaultResourceFactory();
+                if (factory == null || !factory.isDeviceReady()) {
+                    return;
+                }
+            }
 
             boolean needsReset = (presentable == null) ||
                                  (penWidth != viewWidth) || (penHeight != viewHeight);

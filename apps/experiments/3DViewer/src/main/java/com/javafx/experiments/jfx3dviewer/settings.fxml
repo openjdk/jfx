@@ -40,6 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 <?import javafx.scene.control.ToolBar?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
+<?import com.javafx.experiments.shape3d.*?>
 <?scenebuilder-stylesheet viewer.css?>
 <!--suppress JavaFxUnresolvedStyleClassReference -->
 
@@ -59,20 +60,76 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <ColorPicker fx:id="backgroundColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="3" />
             <Label text="Wireframe" GridPane.columnIndex="0" GridPane.rowIndex="4" />
             <CheckBox fx:id="wireFrameCheckbox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="4" />
-            <Label text="Subdivide" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+            <Label text="Subdivision level" GridPane.columnIndex="0" GridPane.rowIndex="5" />
             <HBox prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="5">
               <children>
                 <ToggleButton mnemonicParsing="false" selected="true" styleClass="left-pill" text="None" userData="0">
                   <toggleGroup>
-                    <ToggleGroup fx:id="subdivideGroup" />
+                    <ToggleGroup fx:id="subdivisionLevelGroup" />
                   </toggleGroup>
                 </ToggleButton>
-                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="1" toggleGroup="$subdivideGroup" userData="1" />
-                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="2" toggleGroup="$subdivideGroup" userData="2" />
-                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="3" toggleGroup="$subdivideGroup" userData="3" />
+                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="1" toggleGroup="$subdivisionLevelGroup" userData="1" />
+                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="2" toggleGroup="$subdivisionLevelGroup" userData="2" />
+                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="3" toggleGroup="$subdivisionLevelGroup" userData="3" />
               </children>
             </HBox>
-            <Region maxHeight="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+            <Label text="Creases (Boundary Rules)" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+            <HBox prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="6">
+              <children>
+                <ToggleButton mnemonicParsing="false" selected="true" styleClass="left-pill" text="Edges">
+                  <toggleGroup>
+                    <ToggleGroup fx:id="subdivisionBoundaryGroup" />
+                  </toggleGroup>
+                  <userData>
+                    <SubDivision.BoundaryMode fx:value="CREASE_EDGES"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Only edges at the boundary are treated as creases" />
+                  </tooltip>
+                </ToggleButton>
+                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="All" toggleGroup="$subdivisionBoundaryGroup">
+                  <userData>
+                    <SubDivision.BoundaryMode fx:value="CREASE_ALL"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Edges and points at the boundary are treated as creases" />
+                  </tooltip>
+                </ToggleButton>
+              </children>
+            </HBox>
+            <Label text="Smooth Texture Map" GridPane.columnIndex="0" GridPane.rowIndex="7" />
+            <HBox prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="7">
+              <children>
+                <ToggleButton mnemonicParsing="false" selected="true" styleClass="left-pill" text="None">
+                  <toggleGroup>
+                    <ToggleGroup fx:id="subdivisionSmoothGroup" />
+                  </toggleGroup>
+                  <userData>
+                    <SubDivision.MapBorderMode fx:value="NOT_SMOOTH"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Keeps the same uvs for all control points" />
+                  </tooltip>
+                </ToggleButton>
+                <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="Internal" toggleGroup="$subdivisionSmoothGroup">
+                  <userData>
+                    <SubDivision.MapBorderMode fx:value="SMOOTH_INTERNAL"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Smooths uvs of points at corners" />
+                  </tooltip>
+                </ToggleButton>
+                <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="All" toggleGroup="$subdivisionSmoothGroup">
+                  <userData>
+                    <SubDivision.MapBorderMode fx:value="SMOOTH_ALL"/>
+                  </userData>
+                  <tooltip>
+                    <Tooltip text="Smooths uvs of points at boundaries" />
+                  </tooltip>
+                </ToggleButton>
+              </children>
+            </HBox>
+            <Region maxHeight="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="8" />
           </children>
           <columnConstraints>
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
@@ -85,6 +142,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />

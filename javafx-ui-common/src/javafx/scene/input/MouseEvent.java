@@ -125,6 +125,7 @@ import java.io.IOException;
  * <ul>
  *   <li>For triggering context menus see the {@link ContextMenuEvent}.</li>
  * </ul>
+ * @since JavaFX 2.0
  */
 public class MouseEvent extends InputEvent {
 
@@ -285,6 +286,7 @@ public class MouseEvent extends InputEvent {
      * @param target the new target of the copied event
      * @param eventType the new eventType
      * @return the event copy with the fields substituted
+     * @since JavaFX 8.0
      */
     public MouseEvent copyFor(Object newSource, EventTarget newTarget, EventType<? extends MouseEvent> eventType) {
         MouseEvent e = copyFor(newSource, newTarget);
@@ -343,6 +345,7 @@ public class MouseEvent extends InputEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates
+     * @since JavaFX 8.0
      */
     public MouseEvent(
             EventType<? extends MouseEvent> eventType,
@@ -391,6 +394,7 @@ public class MouseEvent extends InputEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and target
+     * @since JavaFX 8.0
      */
     public MouseEvent(Object source, EventTarget target,
             EventType<? extends MouseEvent> eventType,
@@ -447,6 +451,7 @@ public class MouseEvent extends InputEvent {
      *                   without any further values is constructed
      *                   based on the scene coordinates
      * @return new MouseDragEvent that was created from MouseEvent
+     * @since JavaFX 8.0
      */
     public static MouseDragEvent copyForMouseDragEvent(
             MouseEvent e,
@@ -532,6 +537,7 @@ public class MouseEvent extends InputEvent {
      *
      * @return depth position of the event relative to the
      * origin of the MouseEvent's source.
+     * @since JavaFX 8.0
      */
     public final double getZ() {
         return z;
@@ -740,7 +746,7 @@ public class MouseEvent extends InputEvent {
      * application, this flag can be used to tell apart the usual mouse dragging
      * from the touch screen dragging already handled as scroll events.
      * @return true if this event is synthesized from using a touch screen
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     public boolean isSynthesized() {
         return synthesized;
@@ -784,6 +790,18 @@ public class MouseEvent extends InputEvent {
      */
     private final boolean popupTrigger;
 
+    /**
+     * Returns {@code true} if this mouse event is the popup menu
+     * trigger event for the platform.
+     * <p><b>Note</b>: Popup menus are triggered differently
+     * on different systems. Therefore, {@code popupTrigger}
+     * should be checked in both {@code onMousePressed}
+     * and {@code mouseReleased} for proper cross-platform functionality.
+     *
+     * @return {@code true} if this mouse event is the popup menu
+     * trigger event for the platform
+     * @since JavaFX 8.0
+     */
     public final boolean isPopupTrigger() {
         return popupTrigger;
     }
@@ -919,6 +937,7 @@ public class MouseEvent extends InputEvent {
      * Returns information about the pick.
      * 
      * @return new PickResult object that contains information about the pick
+     * @since JavaFX 8.0
      */
     public final PickResult getPickResult() {
         return pickResult;

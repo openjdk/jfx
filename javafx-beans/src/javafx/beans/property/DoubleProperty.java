@@ -58,6 +58,7 @@ import javafx.beans.value.ObservableDoubleValue;
  * @see ReadOnlyDoubleProperty
  * @see Property
  *
+ * @since JavaFX 2.0
  */
 public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
         Property<Number>, WritableDoubleValue {
@@ -144,6 +145,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      * @throws NullPointerException
      *             if {@code value} is {@code null}
      * @see #asObject()
+     * @since JavaFX 8.0
      */
     public static DoubleProperty doubleProperty(final Property<Double> property) {
         if (property == null) {
@@ -192,6 +194,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      * </pre></blockquote>
      *
      * @return the new {@code ObjectProperty}
+     * @since JavaFX 8.0
      */
     @Override
     public ObjectProperty<Double> asObject() {

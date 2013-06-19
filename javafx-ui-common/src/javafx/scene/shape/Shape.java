@@ -114,6 +114,7 @@ import javafx.css.StyleableProperty;
  * stroke styles - which will bias the default single unit stroke onto one
  * of the full pixel rows or columns just inside or outside the border of
  * the shape.
+ * @since JavaFX 2.0
  */
 public abstract class Shape extends Node {
 
@@ -189,7 +190,6 @@ public abstract class Shape extends Node {
      *
      * @see StrokeType
      * @defaultValue CENTERED
-     * @since JavaFX 1.3
      */
     public final ObjectProperty<StrokeType> strokeTypeProperty() {
         return getStrokeAttributes().typeProperty();
@@ -859,6 +859,7 @@ public abstract class Shape extends Node {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -867,6 +868,7 @@ public abstract class Shape extends Node {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
     
     

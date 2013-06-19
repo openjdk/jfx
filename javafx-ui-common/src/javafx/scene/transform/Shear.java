@@ -54,6 +54,7 @@ import javafx.geometry.Point3D;
  * text.getTransforms().add(new Shear(-0.35, 0));
  * </code></pre>
  * </p>
+ * @since JavaFX 2.0
  */
 public class Shear extends Transform {
     

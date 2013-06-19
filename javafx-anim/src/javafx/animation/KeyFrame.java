@@ -50,6 +50,7 @@ import javafx.util.Duration;
  * @see KeyValue
  * @see Interpolator
  * 
+ * @since JavaFX 2.0
  */
 public final class KeyFrame {
 

@@ -35,59 +35,61 @@ import javafx.util.Callback;
 import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.Logging;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 
 /**
  * A convenience implementation of the Callback interface, designed specifically
- * for use within the {@link TreeTableColumn} 
+ * for use within the {@link TreeTableColumn}
  * {@link TreeTableColumn#cellValueFactoryProperty() cell value factory}. An example
  * of how to use this class is:
- * 
+ *
  * <pre><code>
  * TreeTableColumn&lt;Person,String&gt; firstNameCol = new TreeTableColumn&lt;Person,String&gt;("First Name");
  * firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory&lt;Person,String&gt;("firstName"));
  * </code></pre>
- * 
- * In this example, the "firstName" string is used as a reference to an assumed 
+ *
+ * In this example, the "firstName" string is used as a reference to an assumed
  * <code>firstNameProperty()</code> method in the <code>Person</code> class type
  * (which is the class type of the TreeTableView). Additionally, this method must
  * return a {@link Property} instance. If a method meeting these requirements
  * is found, then the {@link TreeTableCell} is populated with this ObservableValue<T>.
- * In addition, the TreeTableView will automatically add an observer to the 
+ * In addition, the TreeTableView will automatically add an observer to the
  * returned value, such that any changes fired will be observed by the TreeTableView,
  * resulting in the cell immediately updating.
- * 
+ *
  * <p>If no method matching this pattern exists, there is fall-through support
  * for attempting to call get&lt;property&gt;() or is&lt;property&gt;() (that is,
  * <code>getFirstName()</code> or <code>isFirstName()</code> in the example
  * above). If a  method matching this pattern exists, the value returned from this method
  * is wrapped in a {@link ReadOnlyObjectWrapper} and returned to the TreeTableCell.
  * However, in this situation, this means that the TreeTableCell will not be able
- * to observe the ObservableValue for changes (as is the case in the first 
- * approach above). 
- * 
- * <p>For reference (and as noted in the TreeTableColumn 
- * {@link TreeTableColumn#cellValueFactory cell value factory} documentation), the 
+ * to observe the ObservableValue for changes (as is the case in the first
+ * approach above).
+ *
+ * <p>For reference (and as noted in the TreeTableColumn
+ * {@link TreeTableColumn#cellValueFactory cell value factory} documentation), the
  * long form of the code above would be the following:
- * 
+ *
  * <pre><code>
  * TreeTableColumn&lt;Person,String&gt; firstNameCol = new TreeTableColumn&lt;Person,String&gt;("First Name");
  * firstNameCol.setCellValueFactory(new Callback&lt;CellDataFeatures&lt;Person, String&gt;, ObservableValue&lt;String&gt;&gt;() {
  *     public ObservableValue&lt;String&gt; call(CellDataFeatures&lt;Person, String&gt; p) {
- *         // p.getValue() returns the TreeItem<Person> instance for a particular 
- *         // TreeTableView row, and the second getValue() call returns the 
+ *         // p.getValue() returns the TreeItem<Person> instance for a particular
+ *         // TreeTableView row, and the second getValue() call returns the
  *         // Person instance contained within the TreeItem.
  *         return p.getValue().getValue().firstNameProperty();
  *     }
  *  });
  * }
  * </code></pre>
- * 
+ *
  * @see TreeTableColumn
  * @see TreeTableView
  * @see TreeTableCell
  * @see PropertyValueFactory
  * @see MapValueFactory
+ * @since JavaFX 8.0
  */
 public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>> {
 
@@ -100,8 +102,8 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
     /**
      * Creates a default PropertyValueFactory to extract the value from a given
      * TableView row item reflectively, using the given property name.
-     * 
-     * @param property The name of the property with which to attempt to 
+     *
+     * @param property The name of the property with which to attempt to
      *      reflectively extract a corresponding value for in a given object.
      */
     public TreeItemPropertyValueFactory(String property) {
@@ -113,7 +115,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
         TreeItem<S> treeItem = param.getValue();
         return getCellDataReflectively((T)treeItem.getValue());
     }
-    
+
     /**
      * Returns the property name provided in the constructor.
      */
@@ -127,7 +129,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
             // performance suffers when working in large data models. For
             // a bit of reference, refer to RT-13937.
             if (columnClass == null || previousProperty == null ||
-                    ! columnClass.equals(rowData.getClass()) || 
+                    ! columnClass.equals(rowData.getClass()) ||
                     ! previousProperty.equals(getProperty())) {
 
                 // create a new PropertyReference
@@ -145,12 +147,12 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
             } catch (IllegalStateException e2) {
                 // fall through to logged exception below
             }
-            
+
             // log the warning and move on
             final PlatformLogger logger = Logging.getControlsLogger();
-            if (logger.isLoggable(PlatformLogger.WARNING)) {
-               logger.finest("Can not retrieve property '" + getProperty() + 
-                        "' in TreeItemPropertyValueFactory: " + this + 
+            if (logger.isLoggable(Level.WARNING)) {
+               logger.finest("Can not retrieve property '" + getProperty() +
+                        "' in TreeItemPropertyValueFactory: " + this +
                         " with provided class type: " + rowData.getClass(), e);
             }
         }

@@ -36,6 +36,7 @@ import javafx.collections.ObservableMap;
  * This class provides a default implementation to attach listener.
  *
  * @see ReadOnlyMapProperty
+ * @since JavaFX 2.1
  */
 public abstract class ReadOnlyMapPropertyBase<K, V> extends ReadOnlyMapProperty<K, V> {
 

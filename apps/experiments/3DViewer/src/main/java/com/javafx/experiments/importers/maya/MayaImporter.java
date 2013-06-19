@@ -89,10 +89,10 @@ public class MayaImporter {
     //=========================================================================
     // MayaImporter.load
     //=========================================================================
-    public void load(String url) {
+    public void load(String url, boolean asPolygonMesh) {
         try {
             Loader loader = new Loader();
-            loader.load(new java.net.URL(url));
+            loader.load(new java.net.URL(url), asPolygonMesh);
 
             // This root is not automatically added to the scene.
             // It needs to be added by the user of MayaImporter.
@@ -133,12 +133,6 @@ public class MayaImporter {
                         (
                                 new KeyFrame(
                                         javafx.util.Duration.millis(e.getKey() * 1000f),
-                                        new EventHandler<ActionEvent>() {
-                                            @Override
-                                            public void handle(ActionEvent ev) {
-                                                // if (DEBUG) System.out.println("finished key frame at: " + e.getKey());
-                                            }
-                                        },
                                         (KeyValue[]) e.getValue().toArray(new KeyValue[e.getValue().size()])));
                 count++;
             }

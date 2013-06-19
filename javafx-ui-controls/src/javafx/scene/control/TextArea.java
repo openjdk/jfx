@@ -65,6 +65,7 @@ import javafx.css.Styleable;
  * having to resort to {@link Tooltip tooltips} or on-screen {@link Label labels}.
  *
  * @see TextField
+ * @since JavaFX 2.0
  */
 public class TextArea extends TextInputControl {
     // Text area content model
@@ -657,6 +658,7 @@ public class TextArea extends TextInputControl {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -664,6 +666,7 @@ public class TextArea extends TextInputControl {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

@@ -43,6 +43,7 @@ import javafx.scene.layout.Region;
 
 /**
  *
+ * @since JavaFX 8.0
  */
 public abstract class SkinBase<C extends Control> implements Skin<C> {
     
@@ -112,15 +113,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         
         // Default behavior for controls is to consume all mouse events
         consumeMouseEvents(true);
-        
-        // RT-28337: request layout on prefWidth / prefHeight changes
-        InvalidationListener prefSizeListener = new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                control.requestLayout();
-            }
-        };
-        this.control.prefWidthProperty().addListener(prefSizeListener);
-        this.control.prefHeightProperty().addListener(prefSizeListener);
     }
     
     
@@ -168,10 +160,12 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      */
     protected void layoutChildren(final double contentX, final double contentY,
             final double contentWidth, final double contentHeight) {
-        // By default simply sizes all children to fit within the space provided
+        // By default simply sizes all managed children to fit within the space provided
         for (int i=0, max=children.size(); i<max; i++) {
             Node child = children.get(i);
-            layoutInArea(child, contentX, contentY, contentWidth, contentHeight, -1, HPos.CENTER, VPos.CENTER);
+            if (child.isManaged()) {
+                layoutInArea(child, contentX, contentY, contentWidth, contentHeight, -1, HPos.CENTER, VPos.CENTER);
+            }
         }
     }
     

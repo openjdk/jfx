@@ -33,9 +33,12 @@ import java.util.Arrays;
 /**
  * A {@code PixelFormat} object defines the layout of data for a pixel of
  * a given format.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public abstract class PixelFormat<T extends Buffer> {
+    /**
+     * @since JavaFX 2.2
+     */
     public enum Type {
         /**
          * The pixels are stored in 32-bit integers with the premultiplied

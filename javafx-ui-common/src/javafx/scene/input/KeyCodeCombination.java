@@ -31,6 +31,7 @@ package javafx.scene.input;
  * by its {@code KeyCode}. Such key combination is independent on the keyboard
  * functional layout configured by the user at the time of key combination
  * matching.
+ * @since JavaFX 2.0
  */
 public final class KeyCodeCombination extends KeyCombination {
     /** The key code associated with this key combination. */

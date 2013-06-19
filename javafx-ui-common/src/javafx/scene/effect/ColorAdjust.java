@@ -65,6 +65,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <p>
  * <img src="doc-files/coloradjust.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class ColorAdjust extends Effect {
     /**
@@ -79,6 +80,7 @@ public class ColorAdjust extends Effect {
      * @param saturation the saturation adjustment value
      * @param brightness the brightness adjustment value
      * @param contrast the contrast adjustment value
+     * @since JavaFX 2.1
      */
     public ColorAdjust(double hue,
                        double saturation,

@@ -39,6 +39,7 @@ import javafx.beans.property.SimpleLongProperty;
  * @see CssMetaData
  * @see StyleableProperty
  * @see StyleableLongProperty
+ * @since JavaFX 8.0
  */
 public class SimpleStyleableLongProperty extends StyleableLongProperty {
 

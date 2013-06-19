@@ -63,6 +63,7 @@ import javafx.event.EventType;
  * @see ComboBox
  * @param <T> The type of the value that has been selected or otherwise
  *      entered in to this ComboBox.
+ * @since JavaFX 2.1
  */
 public abstract class ComboBoxBase<T> extends Control {
     
@@ -76,24 +77,28 @@ public abstract class ComboBoxBase<T> extends Control {
     /**
      * <p>Called prior to the ComboBox showing its popup/display after the user
      * has clicked or otherwise interacted with the ComboBox.
+     * @since JavaFX 2.2
      */
     public static final EventType<Event> ON_SHOWING =
             new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_SHOWING");
 
     /**
      * <p>Called after the ComboBox has shown its popup/display.
+     * @since JavaFX 2.2
      */
     public static final EventType<Event> ON_SHOWN =
             new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_SHOWN");
 
     /**
      * <p>Called when the ComboBox popup/display <b>will</b> be hidden. 
+     * @since JavaFX 2.2
      */
     public static final EventType<Event> ON_HIDING =
             new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_HIDING");
 
     /**
      * <p>Called when the ComboBox popup/display has been hidden.
+     * @since JavaFX 2.2
      */
     public static final EventType<Event> ON_HIDDEN =
             new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_HIDDEN");
@@ -279,12 +284,12 @@ public abstract class ComboBoxBase<T> extends Control {
     
     // --- On Showing
     public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
-    /**
-     * Called just prior to the {@code ComboBoxBase} popup/display being shown, 
-     * @since 2.2
-     */
     public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
     public final EventHandler<Event> getOnShowing() { return onShowingProperty().get(); }
+    /**
+     * Called just prior to the {@code ComboBoxBase} popup/display being shown.
+     * @since JavaFX 2.2
+     */
     private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<EventHandler<Event>>() {
         @Override protected void invalidated() {
             setEventHandler(ON_SHOWING, get());
@@ -302,12 +307,12 @@ public abstract class ComboBoxBase<T> extends Control {
 
     // -- On Shown
     public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
-    /**
-     * Called just after the {@link ComboBoxBase} popup/display is shown.
-     * @since 2.2
-     */
     public final void setOnShown(EventHandler<Event> value) { onShownProperty().set(value); }
     public final EventHandler<Event> getOnShown() { return onShownProperty().get(); }
+    /**
+     * Called just after the {@link ComboBoxBase} popup/display is shown.
+     * @since JavaFX 2.2
+     */
     private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<EventHandler<Event>>() {
         @Override protected void invalidated() {
             setEventHandler(ON_SHOWN, get());
@@ -325,12 +330,12 @@ public abstract class ComboBoxBase<T> extends Control {
 
     // --- On Hiding
     public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
-    /**
-     * Called just prior to the {@link ComboBox} popup/display being hidden.
-     * @since 2.2
-     */
     public final void setOnHiding(EventHandler<Event> value) { onHidingProperty().set(value); }
     public final EventHandler<Event> getOnHiding() { return onHidingProperty().get(); }
+    /**
+     * Called just prior to the {@link ComboBox} popup/display being hidden.
+     * @since JavaFX 2.2
+     */
     private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<EventHandler<Event>>() {
         @Override protected void invalidated() {
             setEventHandler(ON_HIDING, get());
@@ -348,12 +353,12 @@ public abstract class ComboBoxBase<T> extends Control {
 
     // --- On Hidden
     public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
-    /**
-     * Called just after the {@link ComboBoxBase} popup/display has been hidden.
-     * @since 2.2
-     */
     public final void setOnHidden(EventHandler<Event> value) { onHiddenProperty().set(value); }
     public final EventHandler<Event> getOnHidden() { return onHiddenProperty().get(); }
+    /**
+     * Called just after the {@link ComboBoxBase} popup/display has been hidden.
+     * @since JavaFX 2.2
+     */
     private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<EventHandler<Event>>() {
         @Override protected void invalidated() {
             setEventHandler(ON_HIDDEN, get());

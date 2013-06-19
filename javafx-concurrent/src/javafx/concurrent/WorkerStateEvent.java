@@ -32,6 +32,7 @@ import javafx.event.EventType;
 /**
  * An event which occurs whenever the state changes on a Worker. Both
  * {@link Task} and {@link Service} support listening to state events.
+ * @since JavaFX 2.1
  */
 public class WorkerStateEvent extends Event {
     /**

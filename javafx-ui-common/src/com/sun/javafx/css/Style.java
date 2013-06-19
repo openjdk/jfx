@@ -32,7 +32,7 @@ package com.sun.javafx.css;
 final public class Style {
     
     /**
-     * A rule might have more than one selector. This is the one that was
+     * A selector might have more than one selector. This is the one that was
      * matched.
      */
     public Selector getSelector() {

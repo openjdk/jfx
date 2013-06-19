@@ -94,6 +94,7 @@ import javafx.beans.property.ReadOnlyStringProperty;
  *     other state, the values for these properties may be any value in their
  *     respective valid ranges.
  * </p>
+ * @since JavaFX 2.0
  */
 public interface Worker<V> {
     /**
@@ -119,6 +120,7 @@ public interface Worker<V> {
      *     A reusable Worker will transition from CANCELLED, SUCCEEDED or FAILED back to
      *     READY. From that point the normal state transitions are again followed.
      * </p>
+     * @since JavaFX 2.0
      */
     public enum State {
         /**

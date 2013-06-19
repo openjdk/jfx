@@ -140,11 +140,8 @@
         [self->view notifyScaleFactorChanged:GetScreenScaleFactor([self->nsWindow screen])];
     }
 
-    // Notify Java code about this change
-    // NOTE: the notifications can be doubled (first for the screen change from DidMove,
-    // the second for the scale factor change.) However, since they are rare anyway,
-    // this seems to be OK.
-    [self _sendJavaWindowMoveToAnotherScreenEventIfNeeded:YES];
+    // Screen.notifySettingsChanged() calls Window.setScreen(), and the latter
+    // generates the Window.EventHandler.handleScreenChangedEvent notification.
 }
 
 - (NSSize)windowWillResize:(NSWindow *)window toSize:(NSSize)proposedFrameSize

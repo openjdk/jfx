@@ -51,7 +51,7 @@ import javafx.util.StringConverter;
  * showing. These items must be of the same type as the TableColumn.
  * 
  * @param <T> The type of the elements contained within the TableColumn.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
     

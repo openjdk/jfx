@@ -127,6 +127,7 @@ import javafx.beans.value.WeakChangeListener;
  * @see TreeCell
  * @param <T> The type of the item contained within the {@link TreeItem} value
  *      property for all tree items in this TreeView.
+ * @since JavaFX 2.0
  */
 @DefaultProperty("root")
 public class TreeView<T> extends Control {
@@ -514,6 +515,7 @@ public class TreeView<T> extends Control {
      * <p>For example, if just the root node is visible, the expandedItemCount will
      * be one. If the root had three children and the root was expanded, the value
      * will be four.
+     * @since JavaFX 8.0
      */
     private ReadOnlyIntegerWrapper expandedItemCount = new ReadOnlyIntegerWrapper(this, "expandedItemCount", 0);
     public final ReadOnlyIntegerProperty expandedItemCountProperty() {
@@ -541,6 +543,7 @@ public class TreeView<T> extends Control {
      *
      * @param value The new fixed cell size value, or -1 (or Region.USE_COMPUTED_SIZE)
      *                  to disable.
+     * @since JavaFX 8.0
      */
     public final void setFixedCellSize(double value) {
         fixedCellSizeProperty().set(value);
@@ -553,6 +556,7 @@ public class TreeView<T> extends Control {
      *
      * @return A double representing the fixed cell size of this control, or -1
      *      if fixed cell size mode is disabled.
+     * @since JavaFX 8.0
      */
     public final double getFixedCellSize() {
         return fixedCellSize == null ? Region.USE_COMPUTED_SIZE : fixedCellSize.get();
@@ -575,6 +579,7 @@ public class TreeView<T> extends Control {
      * performance gains from being possible). Therefore, when performance matters
      * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
      * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
+     * @since JavaFX 8.0
      */
     public final DoubleProperty fixedCellSizeProperty() {
         if (fixedCellSize == null) {
@@ -807,6 +812,7 @@ public class TreeView<T> extends Control {
 
     /**
      * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
+     * @since JavaFX 8.0
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
     
@@ -933,6 +939,7 @@ public class TreeView<T> extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -940,6 +947,7 @@ public class TreeView<T> extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
@@ -971,12 +979,14 @@ public class TreeView<T> extends Control {
      * 
      * @param <T> The type of the input, which is the same type as the TreeView 
      *      itself.
+     * @since JavaFX 2.0
      */
     public static class EditEvent<T> extends Event {
         private static final long serialVersionUID = -4437033058917528976L;
 
         /**
          * Common supertype for all edit event types.
+         * @since JavaFX 8.0
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 

@@ -69,6 +69,7 @@ import com.sun.javafx.tk.Toolkit;
  *     such top level. A Window is used also for browser plug-in based deployments.
  * </p>
  *
+ * @since JavaFX 2.0
  */
 public class Window implements EventTarget {
 

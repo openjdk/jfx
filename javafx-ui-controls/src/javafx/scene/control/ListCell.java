@@ -64,6 +64,7 @@ import java.util.List;
  * Node to request, and acquire focus as would normally be expected.
  * 
  * @param <T> The type of the item contained within the ListCell.
+ * @since JavaFX 2.0
  */
 // TODO add code examples
 public class ListCell<T> extends IndexedCell<T> {
@@ -415,14 +416,9 @@ public class ListCell<T> extends IndexedCell<T> {
             T oldValue = getItem();
             T newValue = items.get(index);
             
-            if ((newValue != null && ! newValue.equals(oldValue)) || 
-                    oldValue != null && ! oldValue.equals(newValue)) {
-                updateItem(newValue, false);
-            }
+            updateItem(newValue, false);
         } else {
-            if (! isEmpty()) {
-                updateItem(null, true);
-            }
+            updateItem(null, true);
         }
     }
     

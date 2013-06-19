@@ -109,7 +109,6 @@ import com.sun.javafx.geom.Point2D;
  * small multiples of <code>Math.PI/2.0</code>.
  *
  * @version 1.83, 05/05/07
- * @since 1.2
  */
 public class Affine2D extends AffineBase {
     private Affine2D(double mxx, double myx,
@@ -130,7 +129,6 @@ public class Affine2D extends AffineBase {
     /**
      * Constructs a new <code>Affine2D</code> representing the
      * Identity transformation.
-     * @since 1.2
      */
     public Affine2D() {
         mxx = myy = 1.0;
@@ -143,7 +141,6 @@ public class Affine2D extends AffineBase {
      * Constructs a new <code>Affine2D</code> that uses the same transform
      * as the specified <code>BaseTransform</code> object.
      * @param Tx the <code>BaseTransform</code> object to copy
-     * @since 1.2
      */
     public Affine2D(BaseTransform Tx) {
         setTransform(Tx);
@@ -160,7 +157,6 @@ public class Affine2D extends AffineBase {
      * @param myy the Y coordinate scaling element of the 3x3 matrix
      * @param mxt the X coordinate translation element of the 3x3 matrix
      * @param myt the Y coordinate translation element of the 3x3 matrix
-     * @since 1.2
      */
     public Affine2D(float mxx, float myx,
                     float mxy, float myy,
@@ -186,7 +182,6 @@ public class Affine2D extends AffineBase {
      * @param myy the Y coordinate scaling element of the 3x3 matrix
      * @param mxt the X coordinate translation element of the 3x3 matrix
      * @param myt the Y coordinate translation element of the 3x3 matrix
-     * @since 1.2
      */
     public Affine2D(double mxx, double myx,
                     double mxy, double myy,
@@ -233,7 +228,6 @@ public class Affine2D extends AffineBase {
      * @param theta the angle of rotation measured in radians
      * @param anchorx the X coordinate of the rotation anchor point
      * @param anchory the Y coordinate of the rotation anchor point
-     * @since 1.2
      */
     public void rotate(double theta, double anchorx, double anchory) {
         // REMIND: Simple for now - optimize later
@@ -258,7 +252,6 @@ public class Affine2D extends AffineBase {
      *
      * @param vecx the X coordinate of the rotation vector
      * @param vecy the Y coordinate of the rotation vector
-     * @since 1.6
      */
     public void rotate(double vecx, double vecy) {
         if (vecy == 0.0) {
@@ -310,7 +303,6 @@ public class Affine2D extends AffineBase {
      * @param vecy the Y coordinate of the rotation vector
      * @param anchorx the X coordinate of the rotation anchor point
      * @param anchory the Y coordinate of the rotation anchor point
-     * @since 1.6
      */
     public void rotate(double vecx, double vecy,
                        double anchorx, double anchory)
@@ -331,7 +323,6 @@ public class Affine2D extends AffineBase {
      * Rotating by a positive number of quadrants rotates points on
      * the positive X axis toward the positive Y axis.
      * @param numquadrants the number of 90 degree arcs to rotate by
-     * @since 1.6
      */
     public void quadrantRotate(int numquadrants) {
         switch (numquadrants & 3) {
@@ -363,7 +354,6 @@ public class Affine2D extends AffineBase {
      * @param numquadrants the number of 90 degree arcs to rotate by
      * @param anchorx the X coordinate of the rotation anchor point
      * @param anchory the Y coordinate of the rotation anchor point
-     * @since 1.6
      */
     public void quadrantRotate(int numquadrants,
                                double anchorx, double anchory)
@@ -410,7 +400,6 @@ public class Affine2D extends AffineBase {
      * X axis direction
      * @param ty the distance by which coordinates are translated in the
      * Y axis direction
-     * @since 1.2
      */
     public void setToTranslation(double tx, double ty) {
         mxx = 1.0;
@@ -442,7 +431,6 @@ public class Affine2D extends AffineBase {
      * <a href="#quadrantapproximation">Handling 90-Degree Rotations</a>
      * above.
      * @param theta the angle of rotation measured in radians
-     * @since 1.2
      */
     public void setToRotation(double theta) {
         double sin = Math.sin(theta);
@@ -503,7 +491,6 @@ public class Affine2D extends AffineBase {
      * @param theta the angle of rotation measured in radians
      * @param anchorx the X coordinate of the rotation anchor point
      * @param anchory the Y coordinate of the rotation anchor point
-     * @since 1.2
      */
     public void setToRotation(double theta, double anchorx, double anchory) {
         setToRotation(theta);
@@ -533,7 +520,6 @@ public class Affine2D extends AffineBase {
      *
      * @param vecx the X coordinate of the rotation vector
      * @param vecy the Y coordinate of the rotation vector
-     * @since 1.6
      */
     public void setToRotation(double vecx, double vecy) {
         double sin, cos;
@@ -588,7 +574,6 @@ public class Affine2D extends AffineBase {
      * @param vecy the Y coordinate of the rotation vector
      * @param anchorx the X coordinate of the rotation anchor point
      * @param anchory the Y coordinate of the rotation anchor point
-     * @since 1.6
      */
     public void setToRotation(double vecx, double vecy,
                               double anchorx, double anchory)
@@ -614,7 +599,6 @@ public class Affine2D extends AffineBase {
      * Rotating by a positive number of quadrants rotates points on
      * the positive X axis toward the positive Y axis.
      * @param numquadrants the number of 90 degree arcs to rotate by
-     * @since 1.6
      */
     public void setToQuadrantRotation(int numquadrants) {
         switch (numquadrants & 3) {
@@ -675,7 +659,6 @@ public class Affine2D extends AffineBase {
      * @param numquadrants the number of 90 degree arcs to rotate by
      * @param anchorx the X coordinate of the rotation anchor point
      * @param anchory the Y coordinate of the rotation anchor point
-     * @since 1.6
      */
     public void setToQuadrantRotation(int numquadrants,
                                       double anchorx, double anchory)
@@ -751,7 +734,6 @@ public class Affine2D extends AffineBase {
      * X axis direction
      * @param sy the factor by which coordinates are scaled along the
      * Y axis direction
-     * @since 1.2
      */
     public void setToScale(double sx, double sy) {
         mxx = sx;
@@ -774,7 +756,6 @@ public class Affine2D extends AffineBase {
      * <code>BaseTransform</code> object.
      * @param Tx the <code>BaseTransform</code> object from which to
      * copy the transform
-     * @since 1.2
      */
     public void setTransform(BaseTransform Tx) {
         switch (Tx.getDegree()) {
@@ -846,7 +827,6 @@ public class Affine2D extends AffineBase {
      * @param Tx the <code>BaseTransform</code> object to be
      * concatenated with this <code>Affine2D</code> object.
      * @see #concatenate
-     * @since 1.2
      */
     public void preConcatenate(BaseTransform Tx) {
         switch (Tx.getDegree()) {
@@ -1073,7 +1053,6 @@ public class Affine2D extends AffineBase {
      * @see #getDeterminant
      * @exception NoninvertibleTransformException
      * if the matrix cannot be inverted.
-     * @since 1.2
      */
     public Affine2D createInverse()
         throws NoninvertibleTransformException
@@ -1179,7 +1158,6 @@ public class Affine2D extends AffineBase {
      * @param dstOff the offset to the location of the first
      * transformed point object that is stored in the destination array
      * @param numPts the number of point objects to be transformed
-     * @since 1.2
      */
     public void transform(Point2D[] ptSrc, int srcOff,
                           Point2D[] ptDst, int dstOff,
@@ -1255,7 +1233,6 @@ public class Affine2D extends AffineBase {
      * @param ptDst the resulting transformed distance vector
      * @return <code>ptDst</code>, which contains the result of the
      * transformation.
-     * @since 1.2
      */
     public Point2D deltaTransform(Point2D ptSrc, Point2D ptDst) {
         if (ptDst == null) {
@@ -1300,7 +1277,6 @@ public class Affine2D extends AffineBase {
      * {@link Object}.
      * @return a <code>String</code> representing the value of this
      * <code>Object</code>.
-     * @since 1.2
      */
     @Override
     public String toString() {
@@ -1431,7 +1407,6 @@ public class Affine2D extends AffineBase {
      * faster way of computing the same value knowing which elements of
      * the transform matrix are populated.
      * @return      a hash code for this transform.
-     * @since 1.2
      */
     @Override
     public int hashCode() {
@@ -1455,7 +1430,6 @@ public class Affine2D extends AffineBase {
      * <code>Affine2D</code>
      * @return <code>true</code> if <code>obj</code> equals this
      * <code>Affine2D</code> object; <code>false</code> otherwise.
-     * @since 1.2
      */
     @Override
     public boolean equals(Object obj) {

@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.behavior;
 
 import java.util.List;
-import java.util.WeakHashMap;
 import javafx.application.ConditionalFeature;
 import javafx.scene.Node;
 import javafx.scene.control.FocusModel;
@@ -37,32 +36,32 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Logging;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
  */
 public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Private static implementation                                           *
      *                                                                         *
      **************************************************************************/
-    
+
     private static final String ANCHOR_PROPERTY_KEY = "list.anchor";
-    
+
     static int getAnchor(TreeView<?> tree) {
         FocusModel<?> fm = tree.getFocusModel();
         if (fm == null) return -1;
-        
-        return hasAnchor(tree) ? 
-                (int)tree.getProperties().get(ANCHOR_PROPERTY_KEY) : 
+
+        return hasAnchor(tree) ?
+                (int)tree.getProperties().get(ANCHOR_PROPERTY_KEY) :
                 fm.getFocusedIndex();
     }
-    
+
     static void setAnchor(TreeView<?> tree, int anchor) {
         if (tree != null && anchor < 0) {
             removeAnchor(tree);
@@ -70,29 +69,29 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
             tree.getProperties().put(ANCHOR_PROPERTY_KEY, anchor);
         }
     }
-    
+
     static boolean hasAnchor(TreeView<?> tree) {
         return tree.getProperties().get(ANCHOR_PROPERTY_KEY) != null;
     }
-    
+
     static void removeAnchor(TreeView<?> tree) {
         tree.getProperties().remove(ANCHOR_PROPERTY_KEY);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/
+
     // For RT-17456: have selection occur as fast as possible with mouse input.
-    // The idea is (consistently with some native applications we've tested) to 
+    // The idea is (consistently with some native applications we've tested) to
     // do the action as soon as you can. It takes a bit more coding but provides
     // the best feel:
     //  - when you click on a not-selected item, you can select immediately on press
-    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first 
+    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first
     // To support touch devices, we have to slightly modify this behavior, such
     // that selection only happens on mouse release, if only minimal dragging
     // has occurred.
@@ -100,57 +99,57 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
     private final boolean isTouch = PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH);
     private boolean wasSelected = false;
 
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    
+
     public TreeCellBehavior(final TreeCell<T> control) {
         super(control);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/    
+     **************************************************************************/
 
     @Override public void mousePressed(MouseEvent event) {
         boolean selectedBefore = getControl().isSelected();
-        
+
         if (getControl().isSelected()) {
             latePress = true;
             return;
         }
 
         doSelect(event);
-        
+
         if (isTouch && selectedBefore) {
             wasSelected = getControl().isSelected();
         }
     }
-    
+
     @Override public void mouseReleased(MouseEvent event) {
         if (latePress) {
             latePress = false;
             doSelect(event);
         }
-        
+
         wasSelected = false;
     }
-    
+
     @Override public void mouseDragged(MouseEvent event) {
         latePress = false;
-        
+
         TreeView<T> treeView = getControl().getTreeView();
         if (treeView == null || treeView.getSelectionModel() == null) return;
-        
+
         // the mouse has now been dragged on a touch device, we should
         // remove the selection if we just added it in the last mouse press
         // event
@@ -158,15 +157,15 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
             treeView.getSelectionModel().clearSelection(getControl().getIndex());
         }
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
-     **************************************************************************/      
-    
+     **************************************************************************/
+
     private void doSelect(MouseEvent event) {
         // we update the cell to point to the new tree node
         TreeCell<T> treeCell = getControl();
@@ -177,7 +176,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
         // we don't want to react to it.
         if (treeCell.isEmpty() || ! treeCell.contains(event.getX(), event.getY())) {
             final PlatformLogger logger = Logging.getControlsLogger();
-            if (treeCell.isEmpty() && logger.isLoggable(PlatformLogger.WARNING)) {
+            if (treeCell.isEmpty() && logger.isLoggable(Level.WARNING)) {
 //                logger.warning("TreeCell is empty, so mouse pressed event is "
 //                        + "ignored. If you've created a custom cell and overridden "
 //                        + "updateItem, be sure to call super.updateItem(item, empty)");
@@ -189,10 +188,10 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
         boolean selected = treeCell.isSelected();
         MultipleSelectionModel<TreeItem<T>> sm = treeView.getSelectionModel();
         if (sm == null) return;
-        
+
         FocusModel<TreeItem<T>> fm = treeView.getFocusModel();
         if (fm == null) return;
-        
+
         // if the user has clicked on the disclosure node, we do nothing other
         // than expand/collapse the tree item (if applicable). We do not do editing!
         Node disclosureNode = treeCell.getDisclosureNode();
@@ -204,7 +203,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
                 return;
             }
         }
-        
+
         // if shift is down, and we don't already have the initial focus index
         // recorded, we record the focus index now so that subsequent shift+clicks
         // result in the correct selection occuring (whilst the focus index moves
@@ -216,9 +215,9 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
         } else {
             removeAnchor(treeView);
         }
-        
+
         MouseButton button = event.getButton();
-        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) { 
+        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) {
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
                 simpleSelect(event);
             } else {

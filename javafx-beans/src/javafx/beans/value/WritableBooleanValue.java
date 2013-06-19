@@ -31,6 +31,7 @@ package javafx.beans.value;
  * @see WritableValue
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface WritableBooleanValue extends WritableValue<Boolean> {
 

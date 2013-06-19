@@ -400,6 +400,10 @@ class ES2Context extends BaseShaderContext {
         return glContext.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
     }
 
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int[] indexBuffer) {
+        return glContext.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
+    }
+
     long createES2PhongMaterial() {
         return glContext.createES2PhongMaterial();
     }

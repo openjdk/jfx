@@ -101,6 +101,7 @@ import javafx.util.Duration;
  * Button button = new Button("Hover Over Me");
  * button.setTooltip(new Tooltip("Tooltip for Button"));
  * </pre>
+ * @since JavaFX 2.0
  */
 public class Tooltip extends PopupControl {
 //    private static TooltipBehavior BEHAVIOR = new TooltipBehavior(
@@ -463,6 +464,7 @@ public class Tooltip extends PopupControl {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -470,6 +472,7 @@ public class Tooltip extends PopupControl {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

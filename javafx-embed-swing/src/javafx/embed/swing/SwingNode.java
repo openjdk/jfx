@@ -108,6 +108,7 @@ import sun.swing.JLightweightFrame;
  *         }
  *     }
  * </pre>
+ * @since JavaFX 8.0
  */
 public class SwingNode extends Node {
 

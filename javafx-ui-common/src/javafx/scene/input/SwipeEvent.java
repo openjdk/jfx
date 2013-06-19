@@ -54,7 +54,7 @@ import javafx.event.EventType;
  * indirectly as on track pad - the mouse cursor location is usually used
  * as the gesture coordinates in this case).
  *
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public final class SwipeEvent extends GestureEvent {
 
@@ -108,6 +108,7 @@ public final class SwipeEvent extends GestureEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and the target
+     * @since JavaFX 8.0
      */
     public SwipeEvent(Object source, EventTarget target,
             final EventType<SwipeEvent> eventType,
@@ -143,6 +144,7 @@ public final class SwipeEvent extends GestureEvent {
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates
+     * @since JavaFX 8.0
      */
     public SwipeEvent(final EventType<SwipeEvent> eventType,
             double x, double y,
@@ -216,6 +218,7 @@ public final class SwipeEvent extends GestureEvent {
      * @param target the new target of the copied event
      * @param eventType the new eventType
      * @return the event copy with the fields substituted
+     * @since JavaFX 8.0
      */
     public SwipeEvent copyFor(Object newSource, EventTarget newTarget, EventType<SwipeEvent> type) {
         SwipeEvent e = copyFor(newSource, newTarget);

@@ -39,7 +39,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * the subclass.
  *
  * @version     1.42, 05/05/07
- * @since 1.2
  */
 public class CubicCurve2D extends Shape {
     /**
@@ -199,7 +198,6 @@ public class CubicCurve2D extends Shape {
      * @param td parameter value at which to evaluate the curve
      * @param result Point2D in to which to store the evaluation of
      * the curve at that parameter value
-     * @since JavaFX 1.0
      */
     public void eval(float td, Point2D result) {
         result.setLocation(calcX(td), calcY(td));
@@ -215,7 +213,6 @@ public class CubicCurve2D extends Shape {
      * the curve
      * @return a newly allocated Point2D containing the derivative of
      * the curve at that parameter value
-     * @since JavaFX 1.0
      */
     public Point2D evalDt(float t) {
         Point2D result = new Point2D();
@@ -233,7 +230,6 @@ public class CubicCurve2D extends Shape {
      * the curve
      * @param result Point2D in to which to store the derivative of
      * the curve at that parameter value
-     * @since JavaFX 1.0
      */
     public void evalDt(float td, Point2D result) {
         float t = td;
@@ -255,7 +251,6 @@ public class CubicCurve2D extends Shape {
      * @param offset the index of <code>coords</code> from which to begin 
      *          setting the end points and control points of this curve
      *      to the coordinates contained in <code>coords</code> 
-     * @since 1.2
      */
     public void setCurve(float[] coords, int offset) {
         setCurve(coords[offset + 0], coords[offset + 1],
@@ -275,7 +270,6 @@ public class CubicCurve2D extends Shape {
      *      second control point of this curve
      * @param p2 the fourth specified <code>Point2D</code> used to set the
      *      end point of this curve
-     * @since 1.2
      */
     public void setCurve(Point2D p1, Point2D cp1, Point2D cp2, Point2D p2) {
         setCurve(p1.x, p1.y, cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
@@ -289,7 +283,6 @@ public class CubicCurve2D extends Shape {
      * @param offset  the index of <code>pts</code> from which to begin setting
      *          the end points and control points of this curve to the 
      *      points contained in <code>pts</code>
-     * @since 1.2
      */
     public void setCurve(Point2D[] pts, int offset) {
         setCurve(pts[offset + 0].x, pts[offset + 0].y,
@@ -302,7 +295,6 @@ public class CubicCurve2D extends Shape {
      * Sets the location of the end points and control points of this curve
      * to the same as those in the specified <code>CubicCurve2D</code>.
      * @param c the specified <code>CubicCurve2D</code>
-     * @since 1.2
      */
     public void setCurve(CubicCurve2D c) {
         setCurve(c.x1, c.y1, c.ctrlx1, c.ctrly1, c.ctrlx2, c.ctrly2, c.x2, c.y2);
@@ -364,7 +356,6 @@ public class CubicCurve2D extends Shape {
      *           of a {@code CubicCurve2D}
      * @return the flatness of the {@code CubicCurve2D}
      *      represented by the specified coordinates.
-     * @since 1.2
      */
     public static float getFlatness(float x1, float y1,
                      float ctrlx1, float ctrly1,
@@ -385,7 +376,6 @@ public class CubicCurve2D extends Shape {
      * @return the square of the flatness of the <code>CubicCurve2D</code>
      *      specified by the coordinates in <code>coords</code> at
      *      the specified offset.
-     * @since 1.2
      */
     public static float getFlatnessSq(float coords[], int offset) {
         return getFlatnessSq(coords[offset + 0], coords[offset + 1],
@@ -428,7 +418,6 @@ public class CubicCurve2D extends Shape {
      * maximum distance of a control point from the line connecting the 
      * end points.
      * @return the flatness of this curve.
-     * @since 1.2
      */
     public float getFlatness() {
         return getFlatness(x1, y1, ctrlx1, ctrly1, ctrlx2, ctrly2, x2, y2);
@@ -445,7 +434,6 @@ public class CubicCurve2D extends Shape {
      * first portion of the subdivided curve
      * @param right the cubic curve object for storing for the right or
      * second portion of the subdivided curve
-     * @since JavaFX 1.0
      */
     public void subdivide(float t, CubicCurve2D left, CubicCurve2D right) {
         if ((left == null) && (right == null)) return;
@@ -505,7 +493,6 @@ public class CubicCurve2D extends Shape {
      * first half of the subdivided curve
      * @param right the cubic curve object for storing for the right or
      * second half of the subdivided curve
-     * @since 1.2
      */
     public void subdivide(CubicCurve2D left, CubicCurve2D right) {
         subdivide(this, left, right);
@@ -522,7 +509,6 @@ public class CubicCurve2D extends Shape {
      * first half of the subdivided curve
      * @param right the cubic curve object for storing the right or
      * second half of the subdivided curve
-     * @since 1.2
      */
     public static void subdivide(CubicCurve2D src,
                  CubicCurve2D left,
@@ -583,7 +569,6 @@ public class CubicCurve2D extends Shape {
      * half of the subdivided curve
      * @param rightoff the offset into the array of the beginning of the
      * the 6 right coordinates
-     * @since 1.2
      */
     public static void subdivide(float src[], int srcoff,
                  float left[], int leftoff,
@@ -648,7 +633,6 @@ public class CubicCurve2D extends Shape {
      * zeroes.
      * @param eqn an array containing coefficients for a cubic
      * @return the number of roots, or -1 if the equation is a constant.
-     * @since 1.2
      */
     public static int solveCubic(float eqn[]) {
         return solveCubic(eqn, eqn);
@@ -669,7 +653,6 @@ public class CubicCurve2D extends Shape {
      * @param res the array that contains the non-complex roots 
      *        resulting from the solution of the cubic equation
      * @return the number of roots, or -1 if the equation is a constant
-     * @since 1.3
      */
     public static int solveCubic(float eqn[], float res[]) {
         // From Numerical Recipes, 5.6, Quadratic and Cubic Equations
@@ -827,7 +810,6 @@ public class CubicCurve2D extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(float x, float y) {
         if (!(x * 0f + y * 0f == 0f)) {
@@ -852,7 +834,6 @@ public class CubicCurve2D extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(Point2D p) {
         return contains(p.x, p.y);
@@ -963,7 +944,6 @@ public class CubicCurve2D extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean intersects(float x, float y, float w, float h) {
         // Trivially reject non-existant rectangles
@@ -1172,7 +1152,6 @@ public class CubicCurve2D extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(float x, float y, float w, float h) {
         if (w <= 0 || h <= 0) {
@@ -1207,7 +1186,6 @@ public class CubicCurve2D extends Shape {
      * @return    the <code>PathIterator</code> object that returns the
      *          geometry of the outline of this <code>CubicCurve2D</code>, one
      *          segment at a time.
-     * @since 1.2
      */
     public PathIterator getPathIterator(BaseTransform tx) {
         return new CubicIterator(this, tx);
@@ -1230,7 +1208,6 @@ public class CubicCurve2D extends Shape {
      * @return    the <code>PathIterator</code> object that returns the
      * geometry of the outline of this <code>CubicCurve2D</code>,
      * one segment at a time.
-     * @since 1.2
      */
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new FlatteningPathIterator(getPathIterator(tx), flatness);

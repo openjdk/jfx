@@ -57,6 +57,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @see javafx.beans.binding.IntegerExpression
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class IntegerBinding extends IntegerExpression implements
         NumberBinding {

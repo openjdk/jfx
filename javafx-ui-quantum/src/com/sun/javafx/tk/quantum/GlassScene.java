@@ -51,6 +51,7 @@ import com.sun.prism.paint.Paint;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 abstract class GlassScene implements TKScene {
 
@@ -71,10 +72,11 @@ abstract class GlassScene implements TKScene {
 
     private boolean entireSceneDirty = true;
     private boolean doPresent = true;
+    private final AtomicBoolean painting = new AtomicBoolean(false);
 
     private boolean depthBuffer = false;
 
-    private final SceneState sceneState;
+    SceneState sceneState;
 
     private AccessControlContext accessCtrlCtx = null;
 
@@ -101,6 +103,10 @@ abstract class GlassScene implements TKScene {
             throw new RuntimeException("Scene security context has been already set!");
         }
         accessCtrlCtx = ctx;
+    }
+
+    public void waitForRenderingToComplete() {
+        PaintCollector.getInstance().waitForRenderingToComplete();
     }
 
     @Override
@@ -266,6 +272,10 @@ abstract class GlassScene implements TKScene {
 
     protected View getPlatformView() {
         return null;
+    }
+
+    boolean setPainting(boolean value) {
+        return painting.getAndSet(value);
     }
 
     void repaint() {

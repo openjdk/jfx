@@ -56,6 +56,7 @@ public class PlatformImpl {
     private static TKListener toolkitListener = null;
     private static volatile boolean implicitExit = true;
     private static boolean taskbarApplication = true;
+    private static boolean contextual2DNavigation;
     private static AtomicInteger pendingRunnables = new AtomicInteger(0);
     private static AtomicInteger numWindows = new AtomicInteger(0);
     private static volatile boolean firstWindowShown = false;
@@ -97,6 +98,16 @@ public class PlatformImpl {
     }
 
     /**
+     * Return whether or not focus navigation between controls is context-
+     * sensitive.
+     * @return true if the context-sensitive algorithm for focus navigation is
+     * used
+     */
+     public static boolean isContextual2DNavigation() {
+         return contextual2DNavigation;
+     }
+
+    /**
      * This method is invoked typically on the main thread. At this point,
      * the JavaFX Application Thread has not been started. Any attempt
      * to call startup twice results in an exception.
@@ -118,6 +129,8 @@ public class PlatformImpl {
         }
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override public Void run() {
+                contextual2DNavigation = Boolean.getBoolean(
+                        "com.sun.javafx.isContextual2DNavigation");
                 String s = System.getProperty("com.sun.javafx.twoLevelFocus");
                 if (s != null) {
                     hasTwoLevelFocus = Boolean.valueOf(s);

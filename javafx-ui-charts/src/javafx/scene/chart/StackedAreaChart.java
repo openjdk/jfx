@@ -62,6 +62,7 @@ import javafx.scene.paint.Color;
  * Since data points across multiple series may not be common, StackedAreaChart
  * interpolates values along the line joining the data points whenever necessary.
  * 
+ * @since JavaFX 2.1
  */
 public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 
@@ -75,6 +76,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     /**
      * When true, CSS styleable symbols are created for any data items that
      * don't have a symbol node specified.
+     * @since JavaFX 8.0
      */
     private BooleanProperty createSymbols = new StyleableBooleanProperty(true) {
         @Override
@@ -116,6 +118,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
      * Indicates whether symbols for data points will be created or not.
      *
      * @return true if symbols for data points will be created and false otherwise.
+     * @since JavaFX 8.0
      */
     public final boolean getCreateSymbols() { return createSymbols.getValue(); }
     public final void setCreateSymbols(boolean value) { createSymbols.setValue(value); }
@@ -840,6 +843,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
      public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
          return StyleableProperties.STYLEABLES;
@@ -847,6 +851,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

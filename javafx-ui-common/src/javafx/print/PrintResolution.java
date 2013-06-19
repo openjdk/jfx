@@ -33,7 +33,7 @@ package javafx.print;
  * feed direction is usually y/horizontal resolution.
  * On most printers these are the same value, but it is possuble
  * for them to be different.
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 
 public final class PrintResolution {

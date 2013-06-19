@@ -57,13 +57,13 @@ static UINT LangToCodePage(LANGID idLang)
 
 namespace {
 
-bool IsPenEvent()
+bool IsTouchEvent()
 {
     // http://msdn.microsoft.com/en-us/library/windows/desktop/ms703320(v=vs.85).aspx
 
     enum {
-        SIGNATURE = 0xFF515700,
-        MASK = 0xFFFFFF00
+        SIGNATURE = 0xFF515780,
+        MASK = 0xFFFFFF80
     };
 
     const LPARAM v = GetMessageExtraInfo();
@@ -517,7 +517,7 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
     jint jModifiers = GetModifiers();
     
-    const jboolean isSynthesized = jboolean(IsPenEvent());
+    const jboolean isSynthesized = jboolean(IsTouchEvent());
 
     JNIEnv *env = GetEnv();
 

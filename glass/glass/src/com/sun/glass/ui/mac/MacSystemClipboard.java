@@ -242,7 +242,7 @@ class MacSystemClipboard extends SystemClipboard {
         }
         
         if (itemFirst != null) {
-            if (itemList == null) {
+            if (itemList == null || itemList.length == 0) {
                 itemList = new HashMap[1];
                 itemList[0] = itemFirst;
             } else {

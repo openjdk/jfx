@@ -358,6 +358,7 @@ struct MeshInfoRec {
     // vboIDArray[MESH_INDEXBUFFER] used to store element indices
     GLuint vboIDArray[MESH_MAX_BUFFERS];
     GLuint indexBufferSize;
+    GLenum indexBufferType;
 };
 
 typedef struct PhongMaterialInfoRec PhongMaterialInfo;

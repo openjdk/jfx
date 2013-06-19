@@ -50,6 +50,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 import static org.junit.Assert.*;
 
@@ -76,12 +77,12 @@ public class ControlTest {
     private static final double PREF_WIDTH = 100;
     private static final double PREF_HEIGHT = 130;
     private static final double BASELINE_OFFSET = 10;
-    
+
     private ControlStub c;
     private SkinStub<ControlStub> s;
     private ResizableRectangle skinNode;
 
-    private int originalLogLevel = -1;
+    private Level originalLogLevel = null;
 
     @Before public void setUp() {
         c = new ControlStub();
@@ -100,14 +101,14 @@ public class ControlTest {
 
     private void disableLogging() {
         final PlatformLogger logger = Logging.getControlsLogger();
-        originalLogLevel = logger.getLevel();
-        logger.setLevel(PlatformLogger.OFF);
+        originalLogLevel = logger.level();
+        logger.setLevel(Level.OFF);
     }
 
     private void enableLogging() {
         final PlatformLogger logger = Logging.getControlsLogger();
 //        logger.setLevel(originalLogLevel);
-        logger.setLevel(PlatformLogger.FINE);
+        logger.setLevel(Level.FINE);
     }
 
     @Test public void focusTraversableIsTrueByDefault() {
@@ -117,12 +118,12 @@ public class ControlTest {
     @Test public void resizableIsTrueByDefault() {
         assertTrue(c.isResizable());
     }
-    
+
     @Test public void modifyingTheControlWidthUpdatesTheLayoutBounds() {
         c.resize(173, c.getHeight());
         assertEquals(173, c.getLayoutBounds().getWidth(), 0);
     }
-    
+
     @Test public void modifyingTheControlWidthLeadsToRequestLayout() {
         // Make sure the Control has it's needsLayout flag cleared
         c.layout();
@@ -152,7 +153,7 @@ public class ControlTest {
         assertEquals(992, c.getLayoutBounds().getWidth(), 0);
         assertEquals(238, c.getLayoutBounds().getHeight(), 0);
     }
-    
+
     @Test public void containsDelegatesToTheSkinWhenSet() {
         c.setSkin(s);
         skinNode.resize(100, 100);
@@ -181,7 +182,7 @@ public class ControlTest {
         assertEquals(67, s.getNode().getLayoutBounds().getWidth(), 0);
         assertEquals(998, s.getNode().getLayoutBounds().getHeight(), 0);
     }
-    
+
     @Test public void skinWithNodeLargerThanControlDoesntAffectLayoutBounds() {
         s.setNode(new Rectangle(0, 0, 1000, 1001));
         c.setSkin(s);
@@ -194,11 +195,11 @@ public class ControlTest {
         assertEquals(50, c.getLayoutBounds().getWidth(), 0);
         assertEquals(40, c.getLayoutBounds().getHeight(), 0);
     }
-    
+
     /****************************************************************************
      * minWidth Tests                                                           *
      ***************************************************************************/
-    
+
     @Test public void callsToSetMinWidthResultInRequestLayoutBeingCalledOnParentNotOnControl() {
         // Setup and sanity check
         Group parent = new Group();
@@ -211,54 +212,54 @@ public class ControlTest {
         assertTrue(parent.isNeedsLayout());
         assertTrue(!c.isNeedsLayout());
     }
-    
+
     @Test public void getMinWidthReturnsTheMinWidthOfTheSkinNode() {
         c.setSkin(s);
         assertEquals(MIN_WIDTH, c.minWidth(-1), 0.0);
     }
-    
+
     @Test public void getMinWidthReturnsTheCustomSetMinWidthWhenSpecified() {
         c.setSkin(s);
         c.setMinWidth(123.45);
         assertEquals(123.45, c.minWidth(-1), 0.0);
     }
-    
+
     @Test public void getMinWidthReturnsTheCustomSetMinWidthWhenSpecifiedEvenWhenThereIsNoSkin() {
         c.setMinWidth(123.45);
         assertEquals(123.45, c.minWidth(-1), 0.0);
     }
-    
+
     @Test public void minWidthWhenNoSkinIsSetIsZeroByDefault() {
         assertEquals(0, c.minWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMinWidthTo_USE_PREF_SIZE_ReturnsThePrefWidthOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setMinWidth(123.45);
         c.setMinWidth(Control.USE_PREF_SIZE);
         assertEquals(PREF_WIDTH, c.minWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMinWidthTo_USE_PREF_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefWidthIsNotSet() {
         c.setMinWidth(123.45);
         c.setMinWidth(Control.USE_PREF_SIZE);
         assertEquals(0, c.minWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMinWidthTo_USE_PREF_SIZE_ReturnsPrefWidthWhenThereIsNoSkinAndPrefWidthIsSet() {
         c.setMinWidth(123.45);
         c.setPrefWidth(98.6);
         c.setMinWidth(Control.USE_PREF_SIZE);
         assertEquals(98.6, c.minWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMinWidthTo_USE_COMPUTED_SIZE_ReturnsTheMinWidthOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setMinWidth(123.45);
         c.setMinWidth(Control.USE_COMPUTED_SIZE);
         assertEquals(MIN_WIDTH, c.minWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMinWidthTo_USE_COMPUTED_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefWidthIsNotSet() {
         c.setMinWidth(123.45);
         c.setMinWidth(Control.USE_COMPUTED_SIZE);
@@ -295,7 +296,7 @@ public class ControlTest {
     /****************************************************************************
      * minHeight Tests                                                          *
      ***************************************************************************/
-    
+
     @Test public void callsToSetMinHeightResultInRequestLayoutBeingCalledOnParentNotOnControl() {
         // Setup and sanity check
         Group parent = new Group();
@@ -308,60 +309,60 @@ public class ControlTest {
         assertTrue(parent.isNeedsLayout());
         assertTrue(!c.isNeedsLayout());
     }
-    
+
     @Test public void getMinHeightReturnsTheMinHeightOfTheSkinNode() {
         c.setSkin(s);
         assertEquals(MIN_HEIGHT, c.minHeight(-1), 0.0);
     }
-    
+
     @Test public void getMinHeightReturnsTheCustomSetMinHeightWhenSpecified() {
         c.setSkin(s);
         c.setMinHeight(98.76);
         assertEquals(98.76, c.minHeight(-1), 0.0);
     }
-    
+
     @Test public void getMinHeightReturnsTheCustomSetMinHeightWhenSpecifiedEvenWhenThereIsNoSkin() {
         c.setMinHeight(98.76);
         assertEquals(98.76, c.minHeight(-1), 0.0);
     }
-    
+
     @Test public void minHeightWhenNoSkinIsSetIsZeroByDefault() {
         assertEquals(0, c.minHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMinHeightTo_USE_PREF_SIZE_ReturnsThePrefHeightOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setMinHeight(98.76);
         c.setMinHeight(Control.USE_PREF_SIZE);
         assertEquals(PREF_HEIGHT, c.minHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMinHeightTo_USE_PREF_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefHeightIsNotSet() {
         c.setMinHeight(98.76);
         c.setMinHeight(Control.USE_PREF_SIZE);
         assertEquals(0, c.minHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMinHeightTo_USE_PREF_SIZE_ReturnsPrefHeightWhenThereIsNoSkinAndPrefHeightIsSet() {
         c.setMinHeight(98.76);
         c.setPrefHeight(105.2);
         c.setMinHeight(Control.USE_PREF_SIZE);
         assertEquals(105.2, c.minHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMinHeightTo_USE_COMPUTED_SIZE_ReturnsTheMinHeightOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setMinHeight(98.76);
         c.setMinHeight(Control.USE_COMPUTED_SIZE);
         assertEquals(MIN_HEIGHT, c.minHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMinHeightTo_USE_COMPUTED_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefHeightIsNotSet() {
         c.setMinHeight(98.76);
         c.setMinHeight(Control.USE_COMPUTED_SIZE);
         assertEquals(0, c.minHeight(-1), 0.0);
     }
-        
+
     @Test public void minHeightIs_USE_COMPUTED_SIZE_ByDefault() {
         assertEquals(Control.USE_COMPUTED_SIZE, c.getMinHeight(), 0);
         assertEquals(Control.USE_COMPUTED_SIZE, c.minHeightProperty().get(), 0);
@@ -392,7 +393,7 @@ public class ControlTest {
     /****************************************************************************
      * maxWidth Tests                                                           *
      ***************************************************************************/
-    
+
     @Test public void callsToSetMaxWidthResultInRequestLayoutBeingCalledOnParentNotOnControl() {
         // Setup and sanity check
         Group parent = new Group();
@@ -405,60 +406,60 @@ public class ControlTest {
         assertTrue(parent.isNeedsLayout());
         assertTrue(!c.isNeedsLayout());
     }
-    
+
     @Test public void getMaxWidthReturnsTheMaxWidthOfTheSkinNode() {
         c.setSkin(s);
         assertEquals(MAX_WIDTH, c.maxWidth(-1), 0.0);
     }
-    
+
     @Test public void getMaxWidthReturnsTheCustomSetMaxWidthWhenSpecified() {
         c.setSkin(s);
         c.setMaxWidth(500);
         assertEquals(500, c.maxWidth(-1), 0.0);
     }
-    
+
     @Test public void getMaxWidthReturnsTheCustomSetMaxWidthWhenSpecifiedEvenWhenThereIsNoSkin() {
         c.setMaxWidth(500);
         assertEquals(500, c.maxWidth(-1), 0.0);
     }
-    
+
     @Test public void maxWidthWhenNoSkinIsSetIsZeroByDefault() {
         assertEquals(0, c.maxWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxWidthTo_USE_PREF_SIZE_ReturnsThePrefWidthOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setMaxWidth(500);
         c.setMaxWidth(Control.USE_PREF_SIZE);
         assertEquals(PREF_WIDTH, c.maxWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxWidthTo_USE_PREF_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefWidthIsNotSet() {
         c.setMaxWidth(500);
         c.setMaxWidth(Control.USE_PREF_SIZE);
         assertEquals(0, c.maxWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxWidthTo_USE_PREF_SIZE_ReturnsPrefWidthWhenThereIsNoSkinAndPrefWidthIsSet() {
         c.setMaxWidth(500);
         c.setPrefWidth(98.6);
         c.setMaxWidth(Control.USE_PREF_SIZE);
         assertEquals(98.6, c.maxWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxWidthTo_USE_COMPUTED_SIZE_ReturnsTheMaxWidthOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setMaxWidth(500);
         c.setMaxWidth(Control.USE_COMPUTED_SIZE);
         assertEquals(MAX_WIDTH, c.maxWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxWidthTo_USE_COMPUTED_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefWidthIsNotSet() {
         c.setMaxWidth(500);
         c.setMaxWidth(Control.USE_COMPUTED_SIZE);
         assertEquals(0, c.maxWidth(-1), 0.0);
     }
-        
+
     @Test public void maxWidthIs_USE_COMPUTED_SIZE_ByDefault() {
         assertEquals(Control.USE_COMPUTED_SIZE, c.getMaxWidth(), 0);
         assertEquals(Control.USE_COMPUTED_SIZE, c.maxWidthProperty().get(), 0);
@@ -489,7 +490,7 @@ public class ControlTest {
     /****************************************************************************
      * maxHeight Tests                                                          *
      ***************************************************************************/
-    
+
     @Test public void callsToSetMaxHeightResultInRequestLayoutBeingCalledOnParentNotOnControl() {
         // Setup and sanity check
         Group parent = new Group();
@@ -502,60 +503,60 @@ public class ControlTest {
         assertTrue(parent.isNeedsLayout());
         assertTrue(!c.isNeedsLayout());
     }
-    
+
     @Test public void getMaxHeightReturnsTheMaxHeightOfTheSkinNode() {
         c.setSkin(s);
         assertEquals(MAX_HEIGHT, c.maxHeight(-1), 0.0);
     }
-    
+
     @Test public void getMaxHeightReturnsTheCustomSetMaxHeightWhenSpecified() {
         c.setSkin(s);
         c.setMaxHeight(450);
         assertEquals(450, c.maxHeight(-1), 0.0);
     }
-    
+
     @Test public void getMaxHeightReturnsTheCustomSetMaxHeightWhenSpecifiedEvenWhenThereIsNoSkin() {
         c.setMaxHeight(500);
         assertEquals(500, c.maxHeight(-1), 0.0);
     }
-    
+
     @Test public void maxHeightWhenNoSkinIsSetIsZeroByDefault() {
         assertEquals(0, c.maxHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxHeightTo_USE_PREF_SIZE_ReturnsThePrefHeightOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setMaxHeight(500);
         c.setMaxHeight(Control.USE_PREF_SIZE);
         assertEquals(PREF_HEIGHT, c.maxHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxHeightTo_USE_PREF_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefHeightIsNotSet() {
         c.setMaxHeight(500);
         c.setMaxHeight(Control.USE_PREF_SIZE);
         assertEquals(0, c.maxHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxHeightTo_USE_PREF_SIZE_ReturnsPrefHeightWhenThereIsNoSkinAndPrefHeightIsSet() {
         c.setMaxHeight(500);
         c.setPrefHeight(105.2);
         c.setMaxHeight(Control.USE_PREF_SIZE);
         assertEquals(105.2, c.maxHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxHeightTo_USE_COMPUTED_SIZE_ReturnsTheMaxHeightOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setMaxHeight(500);
         c.setMaxHeight(Control.USE_COMPUTED_SIZE);
         assertEquals(MAX_HEIGHT, c.maxHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingMaxHeightTo_USE_COMPUTED_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefHeightIsNotSet() {
         c.setMaxHeight(500);
         c.setMaxHeight(Control.USE_COMPUTED_SIZE);
         assertEquals(0, c.maxHeight(-1), 0.0);
     }
-        
+
     @Test public void maxHeightIs_USE_COMPUTED_SIZE_ByDefault() {
         assertEquals(Control.USE_COMPUTED_SIZE, c.getMaxHeight(), 0);
         assertEquals(Control.USE_COMPUTED_SIZE, c.maxHeightProperty().get(), 0);
@@ -586,7 +587,7 @@ public class ControlTest {
     /****************************************************************************
      * prefWidth Tests                                                          *
      ***************************************************************************/
-    
+
     @Test public void callsToSetPrefWidthResultInRequestLayoutBeingCalledOnParentNotOnControl() {
         // Setup and sanity check
         Group parent = new Group();
@@ -599,27 +600,27 @@ public class ControlTest {
         assertTrue(parent.isNeedsLayout());
         assertTrue(!c.isNeedsLayout());
     }
-    
+
     @Test public void getPrefWidthReturnsThePrefWidthOfTheSkinNode() {
         c.setSkin(s);
         assertEquals(PREF_WIDTH, c.prefWidth(-1), 0.0);
     }
-    
+
     @Test public void getPrefWidthReturnsTheCustomSetPrefWidthWhenSpecified() {
         c.setSkin(s);
         c.setPrefWidth(80);
         assertEquals(80, c.prefWidth(-1), 0.0);
     }
-    
+
     @Test public void getPrefWidthReturnsTheCustomSetPrefWidthWhenSpecifiedEvenWhenThereIsNoSkin() {
         c.setPrefWidth(80);
         assertEquals(80, c.prefWidth(-1), 0.0);
     }
-    
+
     @Test public void prefWidthWhenNoSkinIsSetIsZeroByDefault() {
         assertEquals(0, c.prefWidth(-1), 0.0);
     }
-    
+
     @Ignore ("What should happen when the pref width is set to USE_PREF_SIZE? Seems it should be an exception")
     @Test public void resettingPrefWidthTo_USE_PREF_SIZE_ThrowsExceptionWhenThereIsASkin() {
         c.setSkin(s);
@@ -627,20 +628,20 @@ public class ControlTest {
         c.setPrefWidth(Control.USE_PREF_SIZE);
         assertEquals(PREF_WIDTH, c.prefWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingPrefWidthTo_USE_COMPUTED_SIZE_ReturnsThePrefWidthOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setPrefWidth(80);
         c.setPrefWidth(Control.USE_COMPUTED_SIZE);
         assertEquals(PREF_WIDTH, c.prefWidth(-1), 0.0);
     }
-    
+
     @Test public void resettingPrefWidthTo_USE_COMPUTED_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefWidthIsNotSet() {
         c.setPrefWidth(80);
         c.setPrefWidth(Control.USE_COMPUTED_SIZE);
         assertEquals(0, c.prefWidth(-1), 0.0);
     }
-        
+
     @Test public void prefWidthIs_USE_COMPUTED_SIZE_ByDefault() {
         assertEquals(Control.USE_COMPUTED_SIZE, c.getPrefWidth(), 0);
         assertEquals(Control.USE_COMPUTED_SIZE, c.prefWidthProperty().get(), 0);
@@ -671,7 +672,7 @@ public class ControlTest {
     /****************************************************************************
      * prefHeight Tests                                                         *
      ***************************************************************************/
-    
+
     @Test public void callsToSetPrefHeightResultInRequestLayoutBeingCalledOnParentNotOnControl() {
         // Setup and sanity check
         Group parent = new Group();
@@ -684,27 +685,27 @@ public class ControlTest {
         assertTrue(parent.isNeedsLayout());
         assertTrue(!c.isNeedsLayout());
     }
-    
+
     @Test public void getPrefHeightReturnsThePrefHeightOfTheSkinNode() {
         c.setSkin(s);
         assertEquals(PREF_HEIGHT, c.prefHeight(-1), 0.0);
     }
-    
+
     @Test public void getPrefHeightReturnsTheCustomSetPrefHeightWhenSpecified() {
         c.setSkin(s);
         c.setPrefHeight(92);
         assertEquals(92, c.prefHeight(-1), 0.0);
     }
-    
+
     @Test public void getPrefHeightReturnsTheCustomSetPrefHeightWhenSpecifiedEvenWhenThereIsNoSkin() {
         c.setPrefHeight(92);
         assertEquals(92, c.prefHeight(-1), 0.0);
     }
-    
+
     @Test public void prefHeightWhenNoSkinIsSetIsZeroByDefault() {
         assertEquals(0, c.prefHeight(-1), 0.0);
     }
-    
+
     @Ignore ("What should happen when the pref width is set to USE_PREF_SIZE? Seems it should be an exception")
     @Test public void resettingPrefHeightTo_USE_PREF_SIZE_ThrowsExceptionWhenThereIsASkin() {
         c.setSkin(s);
@@ -712,20 +713,20 @@ public class ControlTest {
         c.setPrefHeight(Control.USE_PREF_SIZE);
         assertEquals(PREF_HEIGHT, c.prefHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingPrefHeightTo_USE_COMPUTED_SIZE_ReturnsThePrefHeightOfTheSkinNodeWhenThereIsASkin() {
         c.setSkin(s);
         c.setPrefHeight(92);
         c.setPrefHeight(Control.USE_COMPUTED_SIZE);
         assertEquals(PREF_HEIGHT, c.prefHeight(-1), 0.0);
     }
-    
+
     @Test public void resettingPrefHeightTo_USE_COMPUTED_SIZE_ReturnsZeroWhenThereIsNoSkinAndPrefHeightIsNotSet() {
         c.setPrefHeight(92);
         c.setPrefHeight(Control.USE_COMPUTED_SIZE);
         assertEquals(0, c.prefHeight(-1), 0.0);
     }
-        
+
     @Test public void prefHeightIs_USE_COMPUTED_SIZE_ByDefault() {
         assertEquals(Control.USE_COMPUTED_SIZE, c.getPrefHeight(), 0);
         assertEquals(Control.USE_COMPUTED_SIZE, c.prefHeightProperty().get(), 0);
@@ -986,7 +987,7 @@ public class ControlTest {
         c.setSkin(s);
         assertEquals(BASELINE_OFFSET, c.getBaselineOffset(), 0);
     }
-    
+
     @Test
     public void testRT18097() {
         try {
@@ -1002,10 +1003,10 @@ public class ControlTest {
     }
 
     private static void checkClass(Class someClass) {
-        
+
         // Ignore inner classes
         if (someClass.getEnclosingClass() != null) return;
-        
+
         if (javafx.scene.control.Control.class.isAssignableFrom(someClass) &&
                 Modifier.isAbstract(someClass.getModifiers()) == false) {
             String what = someClass.getName();
@@ -1016,14 +1017,14 @@ public class ControlTest {
 //                Node node = (Node)ctor.newInstance((Object[])null);
                 Node node = (Node)someClass.newInstance();
                 for (CssMetaData styleable : (List<CssMetaData<? extends Styleable, ?>>) m.invoke(null)) {
-                    
+
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getStyleableProperty(node);
                     assertNotNull(what, writable);
-                    
+
                     Object defaultValue = writable.getValue();
                     Object initialValue = styleable.getInitialValue((Node) someClass.newInstance());
-                    
+
                     if (defaultValue instanceof Number) {
                         // 5 and 5.0 are not the same according to equals,
                         // but they should be...
@@ -1031,13 +1032,13 @@ public class ControlTest {
                         double d1 = ((Number)defaultValue).doubleValue();
                         double d2 = ((Number)initialValue).doubleValue();
                         assertEquals(what, d1, d2, .001);
-                        
+
                     } else if (defaultValue != null && defaultValue.getClass().isArray()) {
                         assertTrue(what, Arrays.equals((Object[])defaultValue, (Object[])initialValue));
-                    } else {                        
+                    } else {
                         assertEquals(what, defaultValue, initialValue);
                     }
-                    
+
                 }
 
             } catch (NoSuchMethodException ex) {
@@ -1056,12 +1057,12 @@ public class ControlTest {
 
     private static void checkDirectory(File directory, final int pathLength) {
         if (directory.isDirectory()) {
-            
+
             for (File file : directory.listFiles()) {
                 if (file.isFile() && file.getName().endsWith(".class")) {
                     final String filePath = file.getPath();
                     final int len = file.getPath().length() - ".class".length();
-                    final String clName = 
+                    final String clName =
                         file.getPath().substring(pathLength+1, len).replace(File.separatorChar,'.');
                     if (clName.startsWith("javafx.scene") == false) continue;
                     try {
@@ -1084,8 +1085,8 @@ public class ControlTest {
                 recursiveCheck(subFile, pathLength);
             }
         }
-    }    
-    
+    }
+
 
     // TODO need to test key event dispatch
 
@@ -1165,7 +1166,7 @@ public class ControlTest {
 //        // onMousePressed function handler
 //        mousePress(g, 0, 0);
 //    }
-    
+
     /**
      * Used for representing the "node" of the Skin, such that each of the fields
      * minWidth, minHeight, maxWidth, maxHeight, prefWidth, and prefHeight have
@@ -1190,7 +1191,7 @@ public class ControlTest {
         @Override public double maxWidth(double h) { return maxWidth; }
         @Override public double maxHeight(double w) { return maxHeight; }
         @Override public double getBaselineOffset() { return baselineOffset; }
-        
+
         @Override public void resize(double width, double height) {
             setWidth(width);
             setHeight(height);

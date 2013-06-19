@@ -61,6 +61,7 @@ static jmethodID jLensApplication_notifyWindowEvent;
 static jmethodID jLensApplication_notifyViewEvent;
 static jmethodID jLensApplication_notifyDeviceEvent;
 static jmethodID jLensApplication_notifyMenuEvent;
+static jmethodID jLensApplication_reportException;
 
 static jclass jGlassWindowClass;
 static jmethodID jGlassWindowClass_Add;
@@ -161,6 +162,10 @@ static void initIDs(JNIEnv *env) {
         (*env)->GetMethodID(env, jLensApplicationClass, "notifyMenuEvent",
                             "(Lcom/sun/glass/ui/lens/LensView;IIIIZ)V");
 
+    jLensApplication_reportException =
+        (*env)->GetStaticMethodID(env, jLensApplicationClass, "reportException",
+                            "(Ljava/lang/Throwable;)V");
+
     CHECK_AND_RET_VOID(env);
 
     jGlassWindowClass =
@@ -238,6 +243,7 @@ void glass_application_request_native_event_loop(JNIEnv *env,
     (*env)->CallStaticVoidMethod(env, jLensApplicationClass,
                                  jLensApplication_createNativeEventThread,
                                  ptr_to_jlong(callback), ptr_to_jlong(handle));
+    (void)glass_application_checkReportException(env);
     GLASS_LOG_FINE("Created native event thread");
 }
 
@@ -284,6 +290,17 @@ void glass_util_jcharArrayRelease(JNIEnv *env, jcharArray jcharsobj) {
     if (jcharsobj) {
         (*env)->DeleteLocalRef(env, jcharsobj);
     }
+}
+
+jboolean glass_application_checkReportException(JNIEnv *env) {
+    jthrowable t = (*env)->ExceptionOccurred(env);
+    if (t) {
+        (*env)->ExceptionClear(env);
+        (*env)->CallStaticVoidMethod(env,
+            jLensApplicationClass, jLensApplication_reportException, t);
+        return JNI_TRUE;
+    }
+    return JNI_FALSE;
 }
 
 void glass_application_notifyKeyEvent(JNIEnv *env,
@@ -352,7 +369,7 @@ void glass_application_notifyKeyEvent(JNIEnv *env,
                                jfxKeyCode,
                                glass_inputEvents_getModifiers(),
                                jchars);
-
+        (void)glass_application_checkReportException(env);
     }
 
     int modifiers = glass_inputEvents_getModifiers();
@@ -368,6 +385,7 @@ void glass_application_notifyKeyEvent(JNIEnv *env,
                            jview,
                            eventType, jfxKeyCode,
                            modifiers, jchars);
+    (void)glass_application_checkReportException(env);
 
     glass_util_jcharArrayRelease(env, jchars);
 
@@ -414,6 +432,10 @@ void glass_application_notifyMouseEvent(JNIEnv *env,
                                button,
                                glass_inputEvents_getModifiers(),
                                isPopupTrigger, JNI_FALSE);
+        if (glass_application_checkReportException(env)) {
+            //an exception happened, bail now.
+            return;
+        }
 
         if (isPopupTrigger && window->view) {
             //we need to explictly notify the view for menu event in order 
@@ -461,7 +483,7 @@ void glass_application_notifyScrollEvent(JNIEnv *env,
                            (jint) 0 /*defaultChars*/,
                            (jdouble)13.0 /*X multiplier*/,
                            (jdouble)13.0 /*Y multiplier*/);
-
+    (void)glass_application_checkReportException(env);
 }
 
 void glass_application_notifyTouchEvent(JNIEnv *env,
@@ -508,6 +530,7 @@ void glass_application_notifyTouchEvent(JNIEnv *env,
                                jLensApplication_notifyTouchEvent,
                                jview,
                                state, id, x, y, xabs, yabs);
+        (void)glass_application_checkReportException(env);
     } else {
         GLASS_LOG_FINE("Window %d[%p] is disabled - sending FOCUS_DISABLED event",
                        window->id, window);
@@ -543,8 +566,7 @@ void glass_application_notifyWindowEvent_resize(JNIEnv *env,
                                jLensApplication_notifyWindowResize,
                                window->lensWindow, eventType,
                                width, height);
-        CHECK_AND_RET_VOID(env);
-
+        (void)glass_application_checkReportException(env);
     } else {
         GLASS_LOG_WARNING("glass_application_notifyWindowEvent_resize "
                           "was called with unsupported event - event code %d",
@@ -566,9 +588,7 @@ void glass_application_notifyWindowEvent_move(JNIEnv *env,
                            jLensApplication_notifyWindowMove,
                            window->lensWindow,
                            x, y);
-    CHECK_AND_RET_VOID(env);
-
-
+    (void)glass_application_checkReportException(env);
 }
 
 void glass_application_notifyWindowEvent(JNIEnv *env,
@@ -589,9 +609,7 @@ void glass_application_notifyWindowEvent(JNIEnv *env,
                            jLensApplication_notifyWindowEvent,
                            window->lensWindow,
                            windowEvent);
-    CHECK_AND_RET_VOID(env);
-
-
+    (void)glass_application_checkReportException(env);
 }
 
 void glass_application_notifyViewEvent(JNIEnv *env,
@@ -614,8 +632,7 @@ void glass_application_notifyViewEvent(JNIEnv *env,
                            view->lensView,
                            viewEventType,
                            x, y, width, height);
-    CHECK_AND_RET_VOID(env);
-
+    (void)glass_application_checkReportException(env);
 }
 
 void glass_application_notifyMenuEvent(JNIEnv *env,
@@ -637,8 +654,7 @@ void glass_application_notifyMenuEvent(JNIEnv *env,
                            jLensApplication_notifyMenuEvent,
                            view->lensView,
                            x, y, xAbs, yAbs, isKeyboardTrigger);
-
-    CHECK_AND_RET_VOID(env);
+    (void)glass_application_checkReportException(env);
 
 }
 
@@ -655,7 +671,7 @@ void glass_application_notifyDeviceEvent(JNIEnv *env,
     (*env)->CallVoidMethod(env, pApplication,
                            jLensApplication_notifyDeviceEvent,
                            flags, attach);
-    CHECK_AND_RET_VOID(env);
+    (void)glass_application_checkReportException(env);
 
 }
 
@@ -691,16 +707,14 @@ void glass_application_addWindowToVisibleWindowList (JNIEnv *env,
                                         NativeWindow window) {
     GLASS_LOG_FINE("Adding window %i[%p] to the visible window list", window->id, window);
     (*env)->CallStaticVoidMethod(env, jGlassWindowClass, jGlassWindowClass_Add, window->lensWindow);
-
-    CHECK_AND_RET_VOID(env);
+    (void)glass_application_checkReportException(env);
 }
 
 void glass_application_RemoveWindowFromVisibleWindowList (JNIEnv *env,
                                         NativeWindow window) {
     GLASS_LOG_FINE("Removing window %i[%p] from the visible window list", window->id, window);
     (*env)->CallStaticVoidMethod(env, jGlassWindowClass, jGlassWindowClass_Remove, window->lensWindow);
-
-    CHECK_AND_RET_VOID(env);
+    (void)glass_application_checkReportException(env);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication__1notfyPlatformDnDStarted

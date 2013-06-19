@@ -78,6 +78,7 @@ import javafx.css.StyleableProperty;
  * );
  * </code></pre>
  *
+ * @since JavaFX 2.0
  */
 @DefaultProperty("items")
 public class ToolBar extends Control {
@@ -231,6 +232,7 @@ public class ToolBar extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -238,6 +240,7 @@ public class ToolBar extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

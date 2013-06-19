@@ -253,6 +253,7 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  * @see TableColumn
  * @see TablePosition
  * @param <S> The type of the objects contained within the TableView items list.
+ * @since JavaFX 2.0
  */
 @DefaultProperty("items")
 public class TableView<S> extends Control {
@@ -330,6 +331,7 @@ public class TableView<S> extends Control {
      * a Boolean response representing whether the sort succeeded or not. A Boolean
      * response of true represents success, and a response of false (or null) will
      * be considered to represent failure.
+     * @since JavaFX 8.0
      */
     public static final Callback<TableView, Boolean> DEFAULT_SORT_POLICY = new Callback<TableView, Boolean>() {
         @Override public Boolean call(TableView table) {
@@ -842,6 +844,7 @@ public class TableView<S> extends Control {
      *
      * @param value The new fixed cell size value, or -1 (or Region.USE_COMPUTED_SIZE)
      *                  to disable.
+     * @since JavaFX 8.0
      */
     public final void setFixedCellSize(double value) {
         fixedCellSizeProperty().set(value);
@@ -854,6 +857,7 @@ public class TableView<S> extends Control {
      *
      * @return A double representing the fixed cell size of this control, or -1
      *      if fixed cell size mode is disabled.
+     * @since JavaFX 8.0
      */
     public final double getFixedCellSize() {
         return fixedCellSize == null ? Region.USE_COMPUTED_SIZE : fixedCellSize.get();
@@ -876,6 +880,7 @@ public class TableView<S> extends Control {
      * performance gains from being possible). Therefore, when performance matters
      * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
      * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
+     * @since JavaFX 8.0
      */
     public final DoubleProperty fixedCellSizeProperty() {
         if (fixedCellSize == null) {
@@ -928,6 +933,7 @@ public class TableView<S> extends Control {
      * current state of the {@link #getSortOrder() sort order} list. The sort
      * order list contains the columns that have been added to it either programmatically
      * or via a user clicking on the headers themselves.
+     * @since JavaFX 8.0
      */
     private ReadOnlyObjectWrapper<Comparator<S>> comparator;
     private void setComparator(Comparator<S> value) {
@@ -961,6 +967,7 @@ public class TableView<S> extends Control {
      * 
      * <p>It is recommended that rather than override the {@link TableView#sort() sort}
      * method that a different sort policy be provided instead.
+     * @since JavaFX 8.0
      */
     private ObjectProperty<Callback<TableView<S>, Boolean>> sortPolicy;
     public final void setSortPolicy(Callback<TableView<S>, Boolean> callback) {
@@ -989,6 +996,7 @@ public class TableView<S> extends Control {
     // onSort
     /**
      * Called when there's a request to sort the control.
+     * @since JavaFX 8.0
      */
     private ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSort;
     
@@ -1074,6 +1082,7 @@ public class TableView<S> extends Control {
     /**
      * Scrolls the TableView so that the given object is visible within the viewport.
      * @param object The object that should be visible to the user.
+     * @since JavaFX 8.0
      */
     public void scrollTo(S object) {
         if( getItems() != null ) {
@@ -1087,6 +1096,7 @@ public class TableView<S> extends Control {
     /**
      * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
      * or {@link #scrollTo(Object)}
+     * @since JavaFX 8.0
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
     
@@ -1125,6 +1135,7 @@ public class TableView<S> extends Control {
     /**
      * Scrolls the TableView so that the given column is visible within the viewport.
      * @param column The column that should be visible to the user.
+     * @since JavaFX 8.0
      */
     public void scrollToColumn(TableColumn<S, ?> column) {
         ControlUtils.scrollToColumn(this, column);
@@ -1133,6 +1144,7 @@ public class TableView<S> extends Control {
     /**
      * Scrolls the TableView so that the given index is visible within the viewport.
      * @param columnIndex The index of a column that should be visible to the user.
+     * @since JavaFX 8.0
      */
     public void scrollToColumnIndex(int columnIndex) {
         if( getColumns() != null ) {
@@ -1143,6 +1155,7 @@ public class TableView<S> extends Control {
     /**
      * Called when there's a request to scroll a column into view using {@link #scrollToColumn(TableColumn)} 
      * or {@link #scrollToColumnIndex(int)}
+     * @since JavaFX 8.0
      */
     private ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumn;
     
@@ -1245,6 +1258,7 @@ public class TableView<S> extends Control {
      * TableColumn {@link TableColumn#sortTypeProperty() sort type} properties 
      * change. In other words, this method should only be called directly when
      * something external changes and a sort is required.
+     * @since JavaFX 8.0
      */
     public void sort() {
         final ObservableList<? extends TableColumnBase> sortOrder = getSortOrder();
@@ -1419,6 +1433,7 @@ public class TableView<S> extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -1426,6 +1441,7 @@ public class TableView<S> extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
@@ -1443,6 +1459,7 @@ public class TableView<S> extends Control {
      /**
       * An immutable wrapper class for use in the TableView 
      * {@link TableView#columnResizePolicyProperty() column resize} functionality.
+      * @since JavaFX 2.0
       */
      public static class ResizeFeatures<S> extends ResizeFeaturesBase<S> {
         private TableView<S> table;
@@ -1493,6 +1510,7 @@ public class TableView<S> extends Control {
     /**
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TableView controls.
+     * @since JavaFX 2.0
      */
     public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S, TableColumn<S,?>> {
 
@@ -2421,6 +2439,7 @@ public class TableView<S> extends Control {
      * of a TableView control.
      * 
      * @see TableView
+     * @since JavaFX 2.0
      */
     public static class TableViewFocusModel<S> extends TableFocusModel<S, TableColumn<S, ?>> {
 

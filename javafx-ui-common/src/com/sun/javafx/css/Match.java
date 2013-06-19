@@ -31,7 +31,7 @@ import static javafx.geometry.NodeOrientation.*;
 
 
 /**
- * Used by {@link Rule} to determine whether or not the rule applies to a
+ * Used by {@link Rule} to determine whether or not the selector applies to a
  * given object.
  *
 /**

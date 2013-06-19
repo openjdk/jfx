@@ -51,6 +51,10 @@ public class StubScene implements TKScene {
         // ignore
     }
 
+    public void waitForRenderingToComplete() {
+        // ignore
+    }
+    
     public void waitForSynchronization() {
         //ignore
     }

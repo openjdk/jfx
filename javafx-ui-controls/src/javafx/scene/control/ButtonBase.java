@@ -43,6 +43,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * the mouse is pressed and the Button is enabled and the mouse is over the
  * button. In such a situation, if the mouse is then released, then the Button
  * is "fired", meaning its action takes place.
+ * @since JavaFX 2.0
  */
 
 public abstract class ButtonBase extends Labeled {

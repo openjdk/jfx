@@ -30,6 +30,7 @@ import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link BigInteger} values.</p>
+ * @since JavaFX 2.1
  */
 public class BigIntegerStringConverter extends StringConverter<BigInteger> {
     /** {@inheritDoc} */

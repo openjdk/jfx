@@ -27,6 +27,7 @@ package javafx.scene.shape;
 
 /**
  * Defines the end cap style of a {@code Shape}.
+ * @since JavaFX 2.0
  */
 public enum StrokeLineCap {
 

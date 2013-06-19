@@ -24,22 +24,25 @@
  #
 LOCAL_PATH := $(call my-dir)/src
 include $(CLEAR_VARS)
-LOCAL_MODULE := glass-lens-eglfb
-PREFIX := $(LOCAL_PATH)/
-LENS_SRC_FILES := $(wildcard $(LOCAL_PATH)/*.c)
+LOCAL_MODULE := glass-lens-android
+LOCAL_SRC_FILES := android/android.c
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/android $(LOCAL_PATH)/../build/android/include
+LOCAL_LDLIBS := -ldl -landroid -llog
+LOCAL_CFLAGS := -DANDROID_NDK -DDEBUG -std=c99
+include $(BUILD_SHARED_LIBRARY)
 
+include $(CLEAR_VARS)
+LOCAL_MODULE := glass-lens-eglfb
 LOCAL_SRC_FILES := LensApplication.c LensCursor.c LensCursorImages.c \
 LensInputEvents.c LensLogger.c LensPixels.c LensRobot.c LensScreen.c LensView.c LensWindow.c
-LOCAL_SRC_FILES += android/Main.c
+LOCAL_SRC_FILES += input/android/androidLens.c input/android/androidInput.c
 LOCAL_SRC_FILES += wm/LensWindowManager.c wm/robot.c
 LOCAL_SRC_FILES += wm/screen/androidScreen.c
 LOCAL_SRC_FILES += cursor/nullCursor/nullCursor.c
-LOCAL_SRC_FILES += input/android/androidInput.c
-
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/android $(LOCAL_PATH)/../build/android/include
 LOCAL_STATIC_LIBRARIES := android_native_app_glue
-LOCAL_LDLIBS += -landroid -llog
+LOCAL_LDLIBS := -ldl -landroid -llog
 LOCAL_CFLAGS += -DANDROID_NDK -DDEBUG -std=c99 
 
 include $(BUILD_SHARED_LIBRARY)

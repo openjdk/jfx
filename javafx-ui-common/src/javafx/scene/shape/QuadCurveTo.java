@@ -64,6 +64,7 @@ quadTo.setY(50.0f);
 path.getElements().add(moveTo);
 path.getElements().add(cubicTo);
 </PRE>
+ * @since JavaFX 2.0
  */
 public  class QuadCurveTo extends PathElement {
 

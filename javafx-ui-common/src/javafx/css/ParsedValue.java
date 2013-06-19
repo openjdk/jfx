@@ -37,6 +37,7 @@ import javafx.scene.text.Font;
  * A ParsedValue is meaningful to the code that calculates actual values from
  * parsed CSS values. Elsewhere the value returned by 
  * {@link #getValue()} is likely to be obscure, abstruse and perplexing. 
+ * @since JavaFX 8.0
  */
 public class ParsedValue<V, T> {
 

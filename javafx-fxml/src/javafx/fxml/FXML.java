@@ -32,6 +32,7 @@ import java.lang.annotation.Target;
 
 /**
  * Annotation that tags a class or member as accessible to markup.
+ * @since JavaFX 2.0
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})

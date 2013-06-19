@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 /**
  * Class representing a contiguous range of integral values.
+ * @since JavaFX 2.0
  */
 public final class IndexRange {
     private int start;

@@ -43,7 +43,6 @@ abstract class SWTexture implements Texture {
 
     boolean allocated = false;
     int width, height;
-    int stride, offset;
     private SWResourceFactory factory;
     private int lastImageSerial;
     private final WrapMode wrapMode;
@@ -53,8 +52,6 @@ abstract class SWTexture implements Texture {
         this.wrapMode = wrapMode;
         width = w;
         height = h;
-        stride = w;
-        offset = 0;
         lock();
     }
 
@@ -74,11 +71,11 @@ abstract class SWTexture implements Texture {
     }
 
     int getStride() {
-        return stride;
+        return width;
     }
-    
+
     int getOffset() {
-        return offset;
+        return 0;
     }
 
     private int lockcount;
@@ -170,17 +167,27 @@ abstract class SWTexture implements Texture {
 
     @Override
     public void update(Image img) {
-        throw new UnsupportedOperationException("update1:unimp");
+        this.update(img, 0, 0);
     }
 
     @Override
     public void update(Image img, int dstx, int dsty) {
-        throw new UnsupportedOperationException("update2:unimp");
+        this.update(img, dstx, dsty, img.getWidth(), img.getHeight());
     }
 
     @Override
     public void update(Image img, int dstx, int dsty, int srcw, int srch) {
-        throw new UnsupportedOperationException("update3:unimp");
+        this.update(img, dstx, dsty, srcw, srch, false);
+    }
+
+    @Override
+    public void update(Image img, int dstx, int dsty, int srcw, int srch, boolean skipFlush) {
+        if (PrismSettings.debug) {
+            System.out.println("IMG.Bytes per pixel: " + img.getBytesPerPixelUnit());
+            System.out.println("IMG.scanline: " + img.getScanlineStride());
+        }
+        this.update(img.getPixelBuffer(), img.getPixelFormat(), dstx, dsty,
+                    0, 0, srcw, srch, img.getScanlineStride(), skipFlush);
     }
 
     @Override
@@ -219,15 +226,6 @@ abstract class SWTexture implements Texture {
     @Override
     public void setLinearFiltering(boolean linear) { }
 
-    void checkAllocation(int srcw, int srch) {
-        if (allocated) {
-            final int nlen = srcw * srch;
-            if (nlen > this.getBufferLength()) {
-                throw new IllegalArgumentException("SRCW * SRCH exceeds buffer length");
-            }
-        }
-    }
-
     void allocate() {
         if (allocated) {
             return;
@@ -238,8 +236,6 @@ abstract class SWTexture implements Texture {
         this.allocateBuffer();
         allocated = true;
     }
-
-    abstract int getBufferLength();
 
     abstract void allocateBuffer();
 

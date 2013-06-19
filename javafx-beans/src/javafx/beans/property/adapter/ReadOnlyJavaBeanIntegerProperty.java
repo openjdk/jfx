@@ -53,6 +53,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.ReadOnlyIntegerProperty
  * @see ReadOnlyJavaBeanIntegerPropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanIntegerProperty extends ReadOnlyIntegerPropertyBase implements ReadOnlyJavaBeanProperty<Number> {
 

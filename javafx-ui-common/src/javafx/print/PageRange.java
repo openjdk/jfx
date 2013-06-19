@@ -40,7 +40,7 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
  * If start and end are equal, the range refers to a single page.
  * Values that exceed the number of job pages are harmlessly ignored
  * during printing.
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public final class PageRange {
 

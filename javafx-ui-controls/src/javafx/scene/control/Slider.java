@@ -96,6 +96,7 @@ import javafx.scene.Node;
  * slider.setMajorTickUnit(0.25f);
  * slider.setBlockIncrement(0.1f);
  * </pre>
+ * @since JavaFX 2.0
  */
 public class Slider extends Control {
 
@@ -778,6 +779,7 @@ public class Slider extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -787,6 +789,7 @@ public class Slider extends Control {
      * RT-19263
      * @treatAsPrivate implementation detail
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * @since JavaFX 8.0
      */
     @Deprecated
     @Override protected List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

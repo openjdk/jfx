@@ -76,7 +76,7 @@ import java.util.ListIterator;
  *
  * @param <E> the type of the elements contained in the List
  * @see ObservableListBase
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public abstract class ModifiableObservableListBase<E> extends ObservableListBase<E> {
 

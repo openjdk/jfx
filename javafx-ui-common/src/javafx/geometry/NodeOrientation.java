@@ -28,6 +28,7 @@ package javafx.geometry;
 /**
  * A set of values for describing the flow of visual data for a node.
  * 
+ * @since JavaFX 8.0
  */
 public enum NodeOrientation {
     /**

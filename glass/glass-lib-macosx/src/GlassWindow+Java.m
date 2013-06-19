@@ -46,13 +46,12 @@ static NSWindow *s_grabWindow = nil;
 
 #pragma mark --- Callbacks
 
-- (void)_sendJavaWindowMoveToAnotherScreenEventIfNeeded:(BOOL)force
+- (void)_sendJavaWindowMoveToAnotherScreenEventIfNeeded
 {
     NSScreen *newScreen = [self->nsWindow screen];
     
     // Update only if the newScreen isn't nil
-    // force==YES indicates that the screen's properties might have changed (e.g. scale)
-    if ((self->currentScreen != newScreen || force) && (newScreen != nil))
+    if (self->currentScreen != newScreen && newScreen != nil)
     {
         self->currentScreen = newScreen;
         
@@ -69,7 +68,7 @@ static NSWindow *s_grabWindow = nil;
 
         GET_MAIN_JENV;
         (*env)->CallVoidMethod(env, jWindow, jWindowNotifyMove, (int)frame.origin.x,  (int)frame.origin.y);
-        [self _sendJavaWindowMoveToAnotherScreenEventIfNeeded:NO];
+        [self _sendJavaWindowMoveToAnotherScreenEventIfNeeded];
     }
 }
 
@@ -79,7 +78,7 @@ static NSWindow *s_grabWindow = nil;
     {
         GET_MAIN_JENV;
         (*env)->CallVoidMethod(env, jWindow, jWindowNotifyResize, type, (int)frame.size.width, (int)frame.size.height);
-        [self _sendJavaWindowMoveToAnotherScreenEventIfNeeded:NO];
+        [self _sendJavaWindowMoveToAnotherScreenEventIfNeeded];
     }
 }
 

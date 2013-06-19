@@ -35,6 +35,7 @@ import static javafx.geometry.VPos.TOP;
  * A set of values for describing vertical and horizontal positioning and
  * alignment.
  * 
+ * @since JavaFX 2.0
  */
 public enum Pos {
 

@@ -47,6 +47,7 @@ import javafx.scene.shape.*;
 SVGPath svg = new SVGPath();
 svg.setContent("M40,60 C42,48 44,30 25,32");
 </PRE>
+ * @since JavaFX 2.0
  */
 public  class SVGPath extends Shape {
     /**

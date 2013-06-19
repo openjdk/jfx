@@ -376,7 +376,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     }
 
     private void updateTextNodeCaretPos(int pos) {
-        if (isForwardBias()) {
+        if (pos == 0 || isForwardBias()) {
             textNode.setImpl_caretPosition(pos);
         } else {
             textNode.setImpl_caretPosition(pos - 1);

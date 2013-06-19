@@ -30,6 +30,7 @@ import javafx.util.StringConverter;
 /**
  * <p>{@link StringConverter} implementation for {@link Double}
  * (and double primitive) values.</p>
+ * @since JavaFX 2.1
  */
 public class DoubleStringConverter extends StringConverter<Double> {
     /** {@inheritDoc} */

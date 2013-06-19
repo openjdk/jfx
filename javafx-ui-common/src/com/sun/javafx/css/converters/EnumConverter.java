@@ -39,6 +39,7 @@ import java.util.Map;
 
 import com.sun.javafx.Logging;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<String, E> {
 
@@ -76,21 +77,21 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<S
         os.writeShort(index);
     }
 
-    
+
     public static StyleConverter<?,?> readBinary(DataInputStream is, String[] strings)
             throws IOException {
-    
+
         short index = is.readShort();
         String ename = 0 <= index && index <= strings.length ? strings[index] : null;
-        
+
         if (ename == null || ename.isEmpty()) return null;
-            
+
         if (converters == null || converters.containsKey(ename) == false) {
             StyleConverter<?,?> converter = getInstance(ename);
 
             if (converter == null) {
                 final PlatformLogger logger = Logging.getCSSLogger();
-                if (logger.isLoggable(PlatformLogger.SEVERE)) {
+                if (logger.isLoggable(Level.SEVERE)) {
                     logger.severe("could not deserialize EnumConverter for " + ename);
                 }
             }
@@ -162,9 +163,9 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<S
             converter = new EnumConverter<javafx.scene.text.FontWeight>(javafx.scene.text.FontWeight.class);
             break;
         case "javafx.scene.text.TextAlignment" :
-            converter = new EnumConverter<javafx.scene.text.TextAlignment>(javafx.scene.text.TextAlignment.class);      
+            converter = new EnumConverter<javafx.scene.text.TextAlignment>(javafx.scene.text.TextAlignment.class);
             break;
-        
+
         default :
             //
             // Enum types that are not in the javafx-ui-common source tree.
@@ -173,7 +174,7 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<S
             // outside of the javafx-ui-common package, I don't expect these
             // EnumConverters to have been persisted. For example, the
             // -fx-text-overrun and -fx-content-display properties, will yield
-            // a ParsedValue<String,String> with a null converter. 
+            // a ParsedValue<String,String> with a null converter.
             //
             // If assertions are disabled, then null is returned. The StyleHelper
             // code will use the StyleableProperty's converter in this case.
@@ -181,7 +182,7 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<S
             assert false : "EnumConverter<"+ ename + "> not expected";
 
             final PlatformLogger logger = Logging.getCSSLogger();
-            if (logger.isLoggable(PlatformLogger.SEVERE)) {
+            if (logger.isLoggable(Level.SEVERE)) {
                 logger.severe("EnumConverter : converter Class is null for : "+ename);
             }
             break;
@@ -189,7 +190,7 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<S
 
         return converter;
     }
-            
+
 
     @Override
     public boolean equals(Object other) {

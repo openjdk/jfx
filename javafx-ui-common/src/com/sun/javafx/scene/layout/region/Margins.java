@@ -30,9 +30,9 @@ import javafx.scene.text.Font;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleConverterImpl;
-import java.text.MessageFormat;
 import javafx.css.ParsedValue;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
  * Similar to Insets but with flag denoting values are proportional.
@@ -95,28 +95,28 @@ public class Margins {
             Size rightSz = (sides.length > 1) ? sides[1].convert(font) : topSz;
             Size bottomSz = (sides.length > 2) ? sides[2].convert(font) : topSz;
             Size leftSz = (sides.length > 3) ? sides[3].convert(font) : rightSz;
-            
+
             // assume proportional if any units are percent
-            boolean proportional = 
+            boolean proportional =
                     (topSz.getUnits() == SizeUnits.PERCENT)    ||
                     (rightSz.getUnits() == SizeUnits.PERCENT)  ||
                     (bottomSz.getUnits() == SizeUnits.PERCENT) ||
                     (leftSz.getUnits() == SizeUnits.PERCENT);
-            
-            // if any of the units is percent, then make sure they all are. 
-            boolean unitsMatch = 
+
+            // if any of the units is percent, then make sure they all are.
+            boolean unitsMatch =
                 !proportional ||
                 ((topSz.getUnits() == SizeUnits.PERCENT)    &&
                  (rightSz.getUnits() == SizeUnits.PERCENT)  &&
                  (bottomSz.getUnits() == SizeUnits.PERCENT) &&
                  (leftSz.getUnits() == SizeUnits.PERCENT));
-            
-            // unitsMatch will only be false if proportional is true and 
+
+            // unitsMatch will only be false if proportional is true and
             // not all of the units are percent.
             if (unitsMatch == false) {
                    final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
-                    if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
-                        final String msg = 
+                    if (LOGGER.isLoggable(Level.WARNING)) {
+                        final String msg =
                             new StringBuilder("units do no match: ")
                                 .append(topSz.toString())
                                 .append(" ,").append(rightSz.toString())
@@ -126,8 +126,8 @@ public class Margins {
                         LOGGER.warning(msg);
                     }
             }
-            
-            proportional = proportional && unitsMatch;            
+
+            proportional = proportional && unitsMatch;
 
             double top = topSz.pixels(font);
             double right = rightSz.pixels(font);

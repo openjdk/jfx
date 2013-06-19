@@ -35,6 +35,7 @@ package javafx.util;
  * 
  * @param <P> The type of the argument provided to the <code>call</code> method.
  * @param <R> The type of the return type of the <code>call</code> method.
+ * @since JavaFX 2.0
  */
 public interface Callback<P,R> {
     /**

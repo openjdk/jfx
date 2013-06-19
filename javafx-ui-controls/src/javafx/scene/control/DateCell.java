@@ -41,7 +41,7 @@ import com.sun.javafx.scene.control.skin.DateCellSkin;
  * application can provide an update method to change each cell's
  * properties such as text, background color, etc.
  *
- * @since 8.0
+ * @since JavaFX 8.0
  */
 public class DateCell extends Cell<LocalDate> {
     public DateCell() {

@@ -29,6 +29,7 @@ import javafx.util.StringConverter;
 
 /**
  * <p>{@link StringConverter} implementation for {@link Short} values.</p>
+ * @since JavaFX 2.1
  */
 public class ShortStringConverter extends StringConverter<Short> {
     /** {@inheritDoc} */

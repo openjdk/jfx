@@ -51,7 +51,7 @@ import javafx.util.StringConverter;
  * {@link TreeItem#valueProperty()}.
  * 
  * @param <T> The type of the TreeItems contained within the TreeView.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
     
@@ -293,6 +293,12 @@ public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
         if (! isEditable() || ! getTreeView().isEditable()) {
             return;
         }
+
+        TreeItem<T> treeItem = getTreeItem();
+        if (treeItem == null) {
+            return;
+        }
+
         if (choiceBox == null) {
             choiceBox = createChoiceBox(this, items);
         }
@@ -300,17 +306,20 @@ public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
             hbox = new HBox(CellUtils.TREE_VIEW_HBOX_GRAPHIC_PADDING);
         }
         
-        choiceBox.getSelectionModel().select(getTreeItem().getValue());
+        choiceBox.getSelectionModel().select(treeItem.getValue());
         
         super.startEdit();
-        setText(null);
-        
-        Node graphic = getTreeItemGraphic();
-        if (graphic != null) {
-            hbox.getChildren().setAll(graphic, choiceBox);
-            setGraphic(hbox);
-        } else {
-            setGraphic(choiceBox);
+
+        if (isEditing()) {
+            setText(null);
+
+            Node graphic = getTreeItemGraphic();
+            if (graphic != null) {
+                hbox.getChildren().setAll(graphic, choiceBox);
+                setGraphic(hbox);
+            } else {
+                setGraphic(choiceBox);
+            }
         }
     }
 

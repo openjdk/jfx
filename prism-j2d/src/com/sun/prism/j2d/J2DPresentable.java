@@ -121,16 +121,8 @@ public abstract class J2DPresentable implements Presentable {
         }
 
         public boolean present() {
-            final Pixels pixelsFin = pixels;
             uploadCount.incrementAndGet();
-            Application.invokeLater(new Runnable() {
-                @Override public void run() {
-                   if (!pState.isViewClosed()) {
-                        pState.getView().uploadPixels(pixelsFin);
-                    }
-                    uploadCount.decrementAndGet();
-                }
-            });
+            pState.uploadPixels(pixels, uploadCount);
             return true;
         }
 

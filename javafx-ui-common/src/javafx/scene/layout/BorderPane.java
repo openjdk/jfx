@@ -136,6 +136,7 @@ import static javafx.scene.layout.Region.positionInArea;
  *     borderPane.setCenter(list);
  * </code></pre>
  *
+ * @since JavaFX 2.0
  */
 public class BorderPane extends Pane {
     /********************************************************************
@@ -214,6 +215,7 @@ public class BorderPane extends Pane {
     /**
      * Creates an BorderPane layout with the given Node as the center of the BorderPane.
      * @param center The node to set as the center of the BorderPane.
+     * @since JavaFX 8.0
      */
     public BorderPane(Node center) {
         super();
@@ -229,6 +231,7 @@ public class BorderPane extends Pane {
      * @param right The node to set as the right of the BorderPane.
      * @param bottom The node to set as the bottom of the BorderPane.
      * @param left The node to set as the left of the BorderPane.
+     * @since JavaFX 8.0
      */
     public BorderPane(Node center, Node top, Node right, Node bottom, Node left) {
         super();
@@ -603,8 +606,8 @@ public class BorderPane extends Pane {
     private double getAreaWidth(Node child, double height, boolean minimum) {
         if (child != null && child.isManaged()) {
             Insets margin = getNodeMargin(child);
-            return minimum ? computeChildMinAreaWidth(child, margin, height):
-                                   computeChildPrefAreaWidth(child, margin, height);
+            return minimum ? computeChildMinAreaWidth(child, -1, margin, height):
+                                   computeChildPrefAreaWidth(child, -1, margin, height);
         }
         return 0;
     }
@@ -612,8 +615,8 @@ public class BorderPane extends Pane {
     private double getAreaHeight(Node child, double width, boolean minimum) {
         if (child != null && child.isManaged()) {
             Insets margin = getNodeMargin(child);
-            return minimum ? computeChildMinAreaHeight(child, margin, width):
-                                   computeChildPrefAreaHeight(child, margin, width);
+            return minimum ? computeChildMinAreaHeight(child, -1, margin, width):
+                                   computeChildPrefAreaHeight(child, -1, margin, width);
         }
         return 0;
     }

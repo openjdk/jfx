@@ -52,6 +52,7 @@ import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
  * @see DoubleBinding
  * 
  * 
+ * @since JavaFX 2.0
  */
 public interface Binding<T> extends ObservableValue<T> {
 

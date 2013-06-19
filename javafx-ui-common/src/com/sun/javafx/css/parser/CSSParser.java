@@ -82,6 +82,7 @@ import com.sun.javafx.css.converters.SizeConverter.SequenceConverter;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.css.converters.URLConverter;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.layout.region.BackgroundPositionConverter;
 import com.sun.javafx.scene.layout.region.BackgroundSizeConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSliceConverter;
@@ -119,54 +120,55 @@ final public class CSSParser {
 
     // stylesheet as a string from parse method. This will be null if the
     // stylesheet is being parsed from a file; otherwise, the parser is parsing
-    // a string and this is that string.    
+    // a string and this is that string.
     private String     stylesheetAsText;
-    
+
     // the url of the stylesheet file, or the docbase of an applet. This will
     // be null if the source is not a file or from an applet.
-    private URL        sourceOfStylesheet; 
-    
+    private URL        sourceOfStylesheet;
+
     // the Styleable from the node with an in-line style. This will be null
     // unless the source of the styles is a Node's styleProperty. In this case,
     // the stylesheetString will also be set.
     private Styleable  sourceOfInlineStyle;
-    
+
     // source is a file
     private void setInputSource(URL url) {
         setInputSource(url, null);
     }
-    
+
     // source is a file
     private void setInputSource(URL url, String str) {
         stylesheetAsText = str;
-        sourceOfStylesheet = url;        
+        sourceOfStylesheet = url;
         sourceOfInlineStyle = null;
     }
-    
+
     // source as string only
     private void setInputSource(String str) {
         stylesheetAsText = str;
-        sourceOfStylesheet = null;        
-        sourceOfInlineStyle = null;        
+        sourceOfStylesheet = null;
+        sourceOfInlineStyle = null;
     }
-    
+
     // source is in-line style
     private void setInputSource(Styleable styleable) {
         stylesheetAsText = styleable != null ? styleable.getStyle() : null;
         sourceOfStylesheet = null;
         sourceOfInlineStyle = styleable;
     }
-    
+
     private static final PlatformLogger LOGGER;
     static {
         LOGGER = com.sun.javafx.Logging.getCSSLogger();
-        final int level = LOGGER.getLevel();
-        if (level > PlatformLogger.WARNING &&
-            level != PlatformLogger.OFF) {
-            LOGGER.setLevel(PlatformLogger.WARNING);
+        final Level level = LOGGER.level();
+        if (level == null || (
+            level.compareTo(Level.WARNING) > 0 &&
+            level != Level.OFF)) {
+            LOGGER.setLevel(Level.WARNING);
         }
     }
-    
+
     private static final class ParseException extends Exception {
         ParseException(String message) {
             this(message,null,null);
@@ -209,7 +211,7 @@ final public class CSSParser {
         }
         return stylesheet;
     }
-    
+
     /**
      * Creates a stylesheet from a CSS document string using docbase as
      * the base URL for resolving references within stylesheet.
@@ -237,7 +239,7 @@ final public class CSSParser {
      *@throws IOException
      */
     public Stylesheet parse(final URL url) throws IOException {
-        
+
         final Stylesheet stylesheet = new Stylesheet(url);
         if (url != null) {
             setInputSource(url);
@@ -258,9 +260,9 @@ final public class CSSParser {
             reader.close();
         } catch (IOException ioe) {
         } catch (Exception ex) {
-            // Sometimes bad syntax causes an exception. The code should be 
-            // fixed to handle the bad syntax, but the fallback is 
-            // to handle the exception here. Uncaught, the exception can cause 
+            // Sometimes bad syntax causes an exception. The code should be
+            // fixed to handle the bad syntax, but the fallback is
+            // to handle the exception here. Uncaught, the exception can cause
             // problems like RT-20311
             reportException(ex);
         }
@@ -269,9 +271,9 @@ final public class CSSParser {
 
     /** Parse an in-line style from a Node */
     public Stylesheet parseInlineStyle(final Styleable node) {
-        
+
         Stylesheet stylesheet = new Stylesheet();
-        
+
         final String stylesheetText = (node != null) ? node.getStyle() : null;
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
             setInputSource(node);
@@ -293,9 +295,9 @@ final public class CSSParser {
                 reader.close();
             } catch (IOException ioe) {
             } catch (Exception ex) {
-                // Sometimes bad syntax causes an exception. The code should be 
-                // fixed to handle the bad syntax, but the fallback is 
-                // to handle the exception here. Uncaught, the exception can cause 
+                // Sometimes bad syntax causes an exception. The code should be
+                // fixed to handle the bad syntax, but the fallback is
+                // to handle the exception here. Uncaught, the exception can cause
                 // problems like RT-20311
                 reportException(ex);
             }
@@ -328,13 +330,13 @@ final public class CSSParser {
             reader.close();
         } catch (IOException ioe) {
         } catch (ParseException e) {
-            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+            if (LOGGER.isLoggable(Level.WARNING)) {
                 LOGGER.warning("\"" +property + ": " + expr  + "\" " + e.toString());
             }
         } catch (Exception ex) {
-            // Sometimes bad syntax causes an exception. The code should be 
-            // fixed to handle the bad syntax, but the fallback is 
-            // to handle the exception here. Uncaught, the exception can cause 
+            // Sometimes bad syntax causes an exception. The code should be
+            // fixed to handle the bad syntax, but the fallback is
+            // to handle the exception here. Uncaught, the exception can cause
             // problems like RT-20311
             reportException(ex);
         }
@@ -425,12 +427,12 @@ final public class CSSParser {
 
             return buf.toString();
     	}
-        
+
     }
 
     private CssError createError(String msg) {
-        
-        CssError error = null; 
+
+        CssError error = null;
         if (sourceOfStylesheet != null) {
             error = new CssError.StylesheetParsingError(sourceOfStylesheet, msg);
         } else if (sourceOfInlineStyle != null) {
@@ -440,14 +442,14 @@ final public class CSSParser {
         }
         return error;
     }
-    
+
     private void reportError(CssError error) {
         List<CssError> errors = null;
         if ((errors = StyleManager.getErrors()) != null) {
             errors.add(error);
         }
     }
-    
+
     private void error(final Term root, final String msg) throws ParseException {
 
         final Token token = root != null ? root.token : null;
@@ -457,11 +459,11 @@ final public class CSSParser {
     }
 
     private void reportException(Exception exception) {
-        
-        if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+
+        if (LOGGER.isLoggable(Level.WARNING)) {
             final StackTraceElement[] stea = exception.getStackTrace();
             if (stea.length > 0) {
-                final StringBuilder buf = 
+                final StringBuilder buf =
                     new StringBuilder("Please report ");
                 buf.append(exception.getClass().getName())
                    .append(" at:");
@@ -478,9 +480,9 @@ final public class CSSParser {
             }
         }
     }
-    
+
     private String formatDeprecatedMessage(final Term root, final String syntax) {
-        final StringBuilder buf = 
+        final StringBuilder buf =
             new StringBuilder("Using deprecated syntax for ");
         buf.append(syntax);
         if (sourceOfStylesheet != null){
@@ -495,7 +497,7 @@ final public class CSSParser {
         buf.append(". Refer to the CSS Reference Guide.");
         return buf.toString();
     }
-    
+
     // Assumes string is not a lookup!
     private ParsedValueImpl<Color,Color> colorValueOfString(String str) {
 
@@ -620,7 +622,7 @@ final public class CSSParser {
             trim = 5;
             break;
         default:
-            if (LOGGER.isLoggable(PlatformLogger.FINEST)) {
+            if (LOGGER.isLoggable(Level.FINEST)) {
                 LOGGER.finest("Expected \'<number>\'");
             }
             ParseException re = new ParseException("Expected \'<number>\'",token, this);
@@ -804,7 +806,7 @@ final public class CSSParser {
             String str = null;
             int ttype = -1;
             final Token token = root.token;
-            
+
             if (root.token == null
                     || ((ttype = root.token.getType()) != CSSLexer.STRING
                          && ttype != CSSLexer.IDENT)
@@ -812,7 +814,7 @@ final public class CSSParser {
                     || str.isEmpty()) {
                 error(root,  "Expected STRING or IDENT");
             }
-            return new ParsedValueImpl<String, String>(stripQuotes(str), null, false);            
+            return new ParsedValueImpl<String, String>(stripQuotes(str), null, false);
         }
         return parse(root);
     }
@@ -1083,10 +1085,10 @@ final public class CSSParser {
             error(root, msg);
         }
 
-        if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+        if (LOGGER.isLoggable(Level.WARNING)) {
             LOGGER.warning(formatDeprecatedMessage(root, "ladder"));
         }
-        
+
         Term term = root;
 
         if ((term = term.nextInSeries) == null) error(root, "Expected \'<color>\'");
@@ -1139,8 +1141,8 @@ final public class CSSParser {
 
         return new ParsedValueImpl<ParsedValue[], Color>(values, LadderConverter.getInstance());
     }
-    
-    // <ladder> = ladder(<color>, <color-stop>[, <color-stop>]+ ) 
+
+    // <ladder> = ladder(<color>, <color-stop>[, <color-stop>]+ )
     private ParsedValueImpl<ParsedValue[],Color> parseLadder(final Term root) throws ParseException {
 
         // first term in the chain is the function name...
@@ -1157,7 +1159,7 @@ final public class CSSParser {
 
         Term prev = term;
 
-        if ((term = term.nextArg) == null) 
+        if ((term = term.nextArg) == null)
             error(prev,  "Expected \'<color-stop>[, <color-stop>]+\'");
 
         ParsedValueImpl<ParsedValue[],Stop>[] stops = parseColorStops(term);
@@ -1166,7 +1168,7 @@ final public class CSSParser {
         values[0] = color;
         System.arraycopy(stops, 0, values, 1, stops.length);
         return new ParsedValueImpl<ParsedValue[], Color>(values, LadderConverter.getInstance());
-    }    
+    }
 
     // parse (<number>, <color>)+
     // root.token should be a size
@@ -1311,7 +1313,7 @@ final public class CSSParser {
                 }
             }
         }
-     
+
         ParsedValueImpl<ParsedValue[],Stop>[] stops = new ParsedValueImpl[nArgs];
         for (int n=0; n<nArgs; n++) {
             stops[n] = new ParsedValueImpl<ParsedValue[],Stop>(
@@ -1326,7 +1328,7 @@ final public class CSSParser {
         return stops;
 
     }
-    
+
     // parse (<number>, <number>)
     private ParsedValueImpl[] point(final Term root) throws ParseException {
 
@@ -1549,7 +1551,7 @@ final public class CSSParser {
             error(root, msg);
         }
 
-        if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+        if (LOGGER.isLoggable(Level.WARNING)) {
             LOGGER.warning(formatDeprecatedMessage(root, "linear gradient"));
         }
 
@@ -1642,17 +1644,17 @@ final public class CSSParser {
     // Based off http://dev.w3.org/csswg/css3-images/#linear-gradients
     //
     // <linear-gradient> = linear-gradient(
-    //        [ [from <point> to <point>] | [ to <side-or-corner> ] ] ,]? [ [ repeat | reflect ] ,]? 
-    //        <color-stop>[, <color-stop>]+ 
-    // ) 
+    //        [ [from <point> to <point>] | [ to <side-or-corner> ] ] ,]? [ [ repeat | reflect ] ,]?
+    //        <color-stop>[, <color-stop>]+
+    // )
     //
     //
-    // <point> = <percentage> <percentage> | <length> <length> 
-    // <side-or-corner> = [left | right] || [top | bottom] 
+    // <point> = <percentage> <percentage> | <length> <length>
+    // <side-or-corner> = [left | right] || [top | bottom]
     //
-    // If neither repeat nor reflect are given, then the CycleMethod defaults "NO_CYCLE". 
-    // If neither [from <point> to <point>] nor [ to <side-or-corner> ] are given, 
-    // then the gradient direction defaults to 'to bottom'. 
+    // If neither repeat nor reflect are given, then the CycleMethod defaults "NO_CYCLE".
+    // If neither [from <point> to <point>] nor [ to <side-or-corner> ] are given,
+    // then the gradient direction defaults to 'to bottom'.
     // Stops are per http://dev.w3.org/csswg/css3-images/#color-stop-syntax.
     private ParsedValueImpl parseLinearGradient(final Term root) throws ParseException {
 
@@ -1668,7 +1670,7 @@ final public class CSSParser {
         if ((arg = root.firstArg) == null ||
              arg.token == null ||
              arg.token.getText().isEmpty()) {
-            error(root, 
+            error(root,
                 "Expected \'from <point> to <point>\' or \'to <side-or-corner>\' " +
                 "or \'<cycle-method>\' or \'<color-stop>\'");
         }
@@ -1712,7 +1714,7 @@ final public class CSSParser {
 
             prev = arg;
             arg = arg.nextArg;
-            
+
         } else if("to".equalsIgnoreCase(arg.token.getText())) {
 
             prev = arg;
@@ -1798,7 +1800,7 @@ final public class CSSParser {
                     error (prev, "Expected \'<side-or-corner>\'");
                 }
             }
-                
+
 
             startPt = new ParsedValueImpl[] {
                 new ParsedValueImpl<Size,Size>(new Size(startX, SizeUnits.PERCENT), null),
@@ -1875,10 +1877,10 @@ final public class CSSParser {
             error(root, msg);
         }
 
-        if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+        if (LOGGER.isLoggable(Level.WARNING)) {
             LOGGER.warning(formatDeprecatedMessage(root, "radial gradient"));
         }
-        
+
         Term term = root;
         Term prev = root;
 
@@ -2013,13 +2015,13 @@ final public class CSSParser {
 
     // Based off http://dev.w3.org/csswg/css3-images/#radial-gradients
     //
-    // <radial-gradient> = radial-gradient( 
-    //        [ focus-angle <angle>, ]? 
-    //        [ focus-distance <percentage>, ]? 
-    //        [ center <point>, ]? 
+    // <radial-gradient> = radial-gradient(
+    //        [ focus-angle <angle>, ]?
+    //        [ focus-distance <percentage>, ]?
+    //        [ center <point>, ]?
     //        radius <length>,
-    //        [ [ repeat | reflect ] ,]? 
-    //        <color-stop>[, <color-stop>]+ ) 
+    //        [ [ repeat | reflect ] ,]?
+    //        <color-stop>[, <color-stop>]+ )
     //
     // Stops are per http://dev.w3.org/csswg/css3-images/#color-stop-syntax.
     private ParsedValueImpl parseRadialGradient(final Term root) throws ParseException {
@@ -2036,8 +2038,8 @@ final public class CSSParser {
         if ((arg = root.firstArg) == null ||
              arg.token == null ||
              arg.token.getText().isEmpty()) {
-            error(root, 
-                "Expected \'focus-angle <angle>\' " + 
+            error(root,
+                "Expected \'focus-angle <angle>\' " +
                 "or \'focus-distance <percentage>\' " +
                 "or \'center <point>\' " +
                 "or \'radius [<length> | <percentage>]\'");
@@ -2075,7 +2077,7 @@ final public class CSSParser {
                             "or \'radius [<length> | <percentage>]\'");
 
         }
-        
+
         if ("focus-distance".equalsIgnoreCase(arg.token.getText())) {
 
             prev = arg;
@@ -2100,7 +2102,7 @@ final public class CSSParser {
                             "or \'radius <length>\'");
 
         }
-        
+
         if ("center".equalsIgnoreCase(arg.token.getText())) {
 
             prev = arg;
@@ -2114,12 +2116,12 @@ final public class CSSParser {
             ParsedValueImpl<?,Size> ptY = parseSize(arg);
 
             centerPoint = new ParsedValueImpl[] { ptX, ptY };
-            
+
             prev = arg;
             if ((arg = arg.nextArg) == null)
                 error(prev, "Expected \'radius [<length> | <percentage>]\'");
         }
-        
+
         if ("radius".equalsIgnoreCase(arg.token.getText())) {
 
             prev = arg;
@@ -2127,11 +2129,11 @@ final public class CSSParser {
                 !isSize(arg.token)) error(prev, "Expected \'[<length> | <percentage>]\'");
 
             radius = parseSize(arg);
-            
+
             prev = arg;
             if ((arg = arg.nextArg) == null)
                 error(prev, "Expected \'radius [<length> | <percentage>]\'");
-        }        
+        }
 
         CycleMethod cycleMethod = CycleMethod.NO_CYCLE;
         if ("reflect".equalsIgnoreCase(arg.token.getText())) {
@@ -2162,9 +2164,9 @@ final public class CSSParser {
         values[index++] = new ParsedValueImpl<String,CycleMethod>(cycleMethod.name(), new EnumConverter<CycleMethod>(CycleMethod.class));
         for (int n=0; n<stops.length; n++) values[index++] = stops[n];
         return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
-        
+
     }
-    
+
     // Based off ImagePattern constructor
     //
     // image-pattern(<uri-string>[,<size>,<size>,<size>,<size>[,<boolean>]?]?)
@@ -2398,7 +2400,7 @@ final public class CSSParser {
     private static boolean isPositionKeyWord(String value) {
         return "center".equalsIgnoreCase(value) || "top".equalsIgnoreCase(value) || "bottom".equalsIgnoreCase(value) || "left".equalsIgnoreCase(value) || "right".equalsIgnoreCase(value);
     }
-    
+
     /*
      * http://www.w3.org/TR/css3-background/#the-background-position
      *
@@ -2441,14 +2443,14 @@ final public class CSSParser {
             // 2 values filled
             String v1 = valueOne.getText();
             String v2 = valueTwo.getText();
-            if( ("top".equals(v1) || "bottom".equals(v1)) 
+            if( ("top".equals(v1) || "bottom".equals(v1))
                     && ("left".equals(v2) || "right".equals(v2) || "center".equals(v2)) ) {
                 {
                     Token tmp = valueTwo;
                     valueTwo = valueOne;
                     valueOne = tmp;
                 }
-                
+
                 {
                     Term tmp = termTwo;
                     termTwo = termOne;
@@ -2460,7 +2462,7 @@ final public class CSSParser {
             Token[] tokeArray = null;
             // 4 values filled
             if( valueFour != null ) {
-                if( ("top".equals(valueOne.getText()) || "bottom".equals(valueOne.getText())) 
+                if( ("top".equals(valueOne.getText()) || "bottom".equals(valueOne.getText()))
                         && ("left".equals(valueThree.getText()) || "right".equals(valueThree.getText())) ) {
                     // e.g. top 50 left 20
                     termArray = new Term[] { termThree, termFour, termOne, termTwo };
@@ -2471,29 +2473,29 @@ final public class CSSParser {
                     if( ("left".equals(valueTwo.getText()) || "right".equals(valueTwo.getText())) ) {
                         // e.g. top left 50
                         termArray = new Term[] { termTwo, termThree, termOne, null };
-                        tokeArray = new Token[] { valueTwo, valueThree, valueOne, null };    
+                        tokeArray = new Token[] { valueTwo, valueThree, valueOne, null };
                     } else {
                         // e.g. top 50 left
                         termArray = new Term[] { termThree, termOne, termTwo, null };
                         tokeArray = new Token[] { valueThree, valueOne, valueTwo, null };
                     }
-                } 
+                }
             }
-            
+
             if( termArray != null ) {
                 termOne = termArray[0];
                 termTwo = termArray[1];
                 termThree = termArray[2];
                 termFour = termArray[3];
-                
+
                 valueOne = tokeArray[0];
                 valueTwo = tokeArray[1];
                 valueThree = tokeArray[2];
                 valueFour = tokeArray[3];
             }
         }
-        
-        
+
+
         ParsedValueImpl<?,Size> top, right, bottom, left;
         top = right = bottom = left = ZERO_PERCENT;
         {
@@ -2502,39 +2504,39 @@ final public class CSSParser {
             } else if( valueOne != null && valueTwo == null && valueThree == null && valueFour == null ) {
                 // Only one value
                 String v1 = valueOne.getText();
-                
+
                 if( "center".equals(v1) ) {
                     left = FIFTY_PERCENT;
                     right = ZERO_PERCENT;
-                    
+
                     top = FIFTY_PERCENT;
                     bottom = ZERO_PERCENT;
-                    
+
                 } else if("left".equals(v1)) {
                     left = ZERO_PERCENT;
                     right = ZERO_PERCENT;
-                    
+
                     top = FIFTY_PERCENT;
                     bottom = ZERO_PERCENT;
-                    
+
                 } else if( "right".equals(v1) ) {
                     left = ONE_HUNDRED_PERCENT;
                     right = ZERO_PERCENT;
-                    
+
                     top = FIFTY_PERCENT;
                     bottom = ZERO_PERCENT;
-                    
+
                 } else if( "top".equals(v1) ) {
                     left = FIFTY_PERCENT;
                     right = ZERO_PERCENT;
-                    
+
                     top = ZERO_PERCENT;
                     bottom = ZERO_PERCENT;
-                    
+
                 } else if( "bottom".equals(v1) ) {
                     left = FIFTY_PERCENT;
                     right = ZERO_PERCENT;
-                    
+
                     top = ONE_HUNDRED_PERCENT;
                     bottom = ZERO_PERCENT;
                 } else {
@@ -2547,11 +2549,11 @@ final public class CSSParser {
                 // 2 values
                 String v1 = valueOne.getText().toLowerCase();
                 String v2 = valueTwo.getText().toLowerCase();
-                
+
                 if( ! isPositionKeyWord(v1) ) {
                     left = parseSize(termOne);
                     right = ZERO_PERCENT;
-                    
+
                     if( "top".equals(v2) ) {
                         top = ZERO_PERCENT;
                         bottom = ZERO_PERCENT;
@@ -2570,7 +2572,7 @@ final public class CSSParser {
                 } else if( v1.equals("left") || v1.equals("right") ) {
                     left = v1.equals("right") ? ONE_HUNDRED_PERCENT : ZERO_PERCENT;
                     right = ZERO_PERCENT;
-                    
+
                     if( ! isPositionKeyWord(v2) ) {
                         top = parseSize(termTwo);
                         bottom = ZERO_PERCENT;
@@ -2591,7 +2593,7 @@ final public class CSSParser {
                 } else if( v1.equals("center") ) {
                     left = FIFTY_PERCENT;
                     right = ZERO_PERCENT;
-                    
+
                     if( v2.equals("top") ) {
                         top = ZERO_PERCENT;
                         bottom = ZERO_PERCENT;
@@ -2612,17 +2614,17 @@ final public class CSSParser {
                 String v1 = valueOne.getText().toLowerCase();
                 String v2 = valueTwo.getText().toLowerCase();
                 String v3 = valueThree.getText().toLowerCase();
-                
+
                 if( ! isPositionKeyWord(v1) || "center".equals(v1) ) {
                     // 1 is horizontal
                     // means 2 & 3 are vertical
                     if( "center".equals(v1) ) {
-                        left = FIFTY_PERCENT;        
+                        left = FIFTY_PERCENT;
                     } else {
                         left = parseSize(termOne);
                     }
                     right = ZERO_PERCENT;
-                    
+
                     if( !isPositionKeyWord(v3) ) {
                         if( "top".equals(v2) ) {
                             top = parseSize(termThree);
@@ -2632,7 +2634,7 @@ final public class CSSParser {
                             bottom = parseSize(termThree);
                         } else {
                             error(termTwo,"Expected 'top' or 'bottom'");
-                        }    
+                        }
                     } else {
                         error(termThree,"Expected <size>");
                     }
@@ -2647,7 +2649,7 @@ final public class CSSParser {
                             left = ZERO_PERCENT;
                             right = parseSize(termTwo);
                         }
-                        
+
                         if( "top".equals(v3) ) {
                             top = ZERO_PERCENT;
                             bottom = ZERO_PERCENT;
@@ -2670,7 +2672,7 @@ final public class CSSParser {
                             left = ONE_HUNDRED_PERCENT;
                             right = ZERO_PERCENT;
                         }
-                        
+
                         if( ! isPositionKeyWord(v3) ) {
                             if( "top".equals(v2) ) {
                                 top = parseSize(termThree);
@@ -2691,7 +2693,7 @@ final public class CSSParser {
                 String v2 = valueTwo.getText().toLowerCase();
                 String v3 = valueThree.getText().toLowerCase();
                 String v4 = valueFour.getText().toLowerCase();
-                
+
                 if( (v1.equals("left") || v1.equals("right")) && (v3.equals("top") || v3.equals("bottom") ) && ! isPositionKeyWord(v2) && ! isPositionKeyWord(v4) ) {
                     if( v1.equals("left") ) {
                         left = parseSize(termTwo);
@@ -2700,7 +2702,7 @@ final public class CSSParser {
                         left = ZERO_PERCENT;
                         right = parseSize(termTwo);
                     }
-                    
+
                     if( v3.equals("top") ) {
                         top = parseSize(termFour);
                         bottom = ZERO_PERCENT;
@@ -2708,7 +2710,7 @@ final public class CSSParser {
                         top = ZERO_PERCENT;
                         bottom = parseSize(termFour);
                     }
-                    
+
                 } else {
                     error(term,"Expected 'left' or 'right' followed by <size> followed by 'top' or 'bottom' followed by <size>");
                 }
@@ -3667,7 +3669,7 @@ final public class CSSParser {
                 (token.getType() == CSSLexer.WS) ||
                 (token.getType() == CSSLexer.NL));
 
-        if (LOGGER.isLoggable(PlatformLogger.FINEST)) {
+        if (LOGGER.isLoggable(Level.FINEST)) {
             LOGGER.finest(token.toString());
         }
 
@@ -3697,11 +3699,11 @@ final public class CSSParser {
                 (currentToken.getType() != CSSLexer.LBRACE)) {
                     final int line = currentToken != null ? currentToken.getLine() : -1;
                     final int pos = currentToken != null ? currentToken.getOffset() : -1;
-                    final String msg = 
+                    final String msg =
                         MessageFormat.format("Expected LBRACE at [{0,number,#},{1,number,#}]",
-                        line,pos); 
+                        line,pos);
                     CssError error = createError(msg);
-                    if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                    if (LOGGER.isLoggable(Level.WARNING)) {
                         LOGGER.warning(error.toString());
                     }
                     reportError(error);
@@ -3719,11 +3721,11 @@ final public class CSSParser {
                 (currentToken.getType() != CSSLexer.RBRACE)) {
                     final int line = currentToken.getLine();
                     final int pos = currentToken.getOffset();
-                    final String msg = 
+                    final String msg =
                         MessageFormat.format("Expected RBRACE at [{0,number,#},{1,number,#}]",
                         line,pos);
-                    CssError error = createError(msg);                    
-                    if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                    CssError error = createError(msg);
+                    if (LOGGER.isLoggable(Level.WARNING)) {
                         LOGGER.warning(error.toString());
                     }
                     reportError(error);
@@ -3753,7 +3755,7 @@ final public class CSSParser {
                 // ignore all but "src"
                 if ("src".equalsIgnoreCase(key)) {
                     while(true) {
-                        if((currentToken != null) && 
+                        if((currentToken != null) &&
                                 (currentToken.getType() != CSSLexer.SEMI) &&
                                 (currentToken.getType() != CSSLexer.RBRACE) &&
                                 (currentToken.getType() != Token.EOF)) {
@@ -3781,21 +3783,21 @@ final public class CSSParser {
                                     if (urlSb.charAt(start) == '/' || urlSb.charAt(start) == '\\') start ++;
                                     if (urlSb.charAt(end-1) == '\'' || urlSb.charAt(end-1) == '\"') end --;
                                     final String urlStr = urlSb.substring(start,end);
-                                    
+
                                     URL url = null;
                                     try {
                                         url = new URL(sourceOfStylesheet, urlStr);
                                     } catch (MalformedURLException malf) {
-                                        
+
                                         final int line = currentToken.getLine();
                                         final int pos = currentToken.getOffset();
                                         final String msg = MessageFormat.format("Could not resolve @font-face url [{2}] at [{0,number,#},{1,number,#}]",line,pos,urlStr);
                                         CssError error = createError(msg);
-                                        if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                                        if (LOGGER.isLoggable(Level.WARNING)) {
                                             LOGGER.warning(error.toString());
                                         }
                                         reportError(error);
-                                        
+
                                         // skip the rest.
                                         while(currentToken != null) {
                                             int ttype = currentToken.getType();
@@ -3818,12 +3820,12 @@ final public class CSSParser {
                                             }
                                         } else if (ttype == CSSLexer.IDENT ||
                                                 ttype == CSSLexer.STRING) {
-                                            
+
                                             format = Utils.stripQuotes(currentToken.getText());
                                         } else if (ttype == CSSLexer.RPAREN) {
                                             continue;
                                         } else {
-                                            break;                                               
+                                            break;
                                         }
                                     }
 
@@ -3853,7 +3855,7 @@ final public class CSSParser {
                                     final int pos = currentToken.getOffset();
                                     final String msg = MessageFormat.format("Unknown @font-face src type ["+currentToken.getText()+")] at [{0,number,#},{1,number,#}]",line,pos);
                                     CssError error = createError(msg);
-                                    if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                                    if (LOGGER.isLoggable(Level.WARNING)) {
                                         LOGGER.warning(error.toString());
                                     }
                                     reportError(error);
@@ -3867,7 +3869,7 @@ final public class CSSParser {
                                 final int pos = currentToken.getOffset();
                                 final String msg = MessageFormat.format("Unexpected TOKEN ["+currentToken.getText()+"] at [{0,number,#},{1,number,#}]",line,pos);
                                 CssError error = createError(msg);
-                                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                                if (LOGGER.isLoggable(Level.WARNING)) {
                                     LOGGER.warning(error.toString());
                                 }
                                 reportError(error);
@@ -3996,7 +3998,7 @@ final public class CSSParser {
         String isel = ""; // id selector
         List<String>  csels = null; // class selector
         List<String> pclasses = null; // pseudoclasses
-        
+
         while (true) {
 
             final int ttype =
@@ -4034,7 +4036,7 @@ final public class CSSParser {
                     if (currentToken != null && pclasses == null) {
                         pclasses = new ArrayList<String>();
                     }
-                     
+
                     if (currentToken.getType() == CSSLexer.IDENT) {
                         pclasses.add(currentToken.getText());
                     } else if (currentToken.getType() == CSSLexer.FUNCTION){
@@ -4048,7 +4050,7 @@ final public class CSSParser {
                         return null;
                     }
                     break;
-                    
+
                 case CSSLexer.NL:
                 case CSSLexer.WS:
                 case CSSLexer.COMMA:
@@ -4062,16 +4064,16 @@ final public class CSSParser {
 
 
             }
-            
+
             // get the next token, but don't skip whitespace
             // since it may be a combinator
             currentToken = lexer.nextToken();
-            if (LOGGER.isLoggable(PlatformLogger.FINEST)) {
+            if (LOGGER.isLoggable(Level.FINEST)) {
                 LOGGER.finest(currentToken.toString());
             }
         }
     }
-    
+
     // From http://www.w3.org/TR/selectors/#grammar
     //  functional_pseudo
     //      : FUNCTION S* expression ')'
@@ -4084,34 +4086,34 @@ final public class CSSParser {
     private String functionalPseudo(CSSLexer lexer) {
 
         // TODO: This is not how we should handle functional pseudo-classes in the long-run!
-        
+
         StringBuilder pclass = new StringBuilder(currentToken.getText());
-        
+
         while(true) {
-            
+
             currentToken = nextToken(lexer);
-            
+
             switch(currentToken.getType()) {
-                
+
                 // TODO: lexer doesn't really scan right and isn't CSS3,
                 // so PLUS, '-', NUMBER, etc are all useless at this point.
                 case CSSLexer.STRING:
                 case CSSLexer.IDENT:
                     pclass.append(currentToken.getText());
                     break;
-                    
+
                 case CSSLexer.RPAREN:
                     pclass.append(')');
                     return pclass.toString();
-                    
+
                 default:
                     currentToken = Token.INVALID_TOKEN;
                     return null;
             }
         }
-        
+
     }
-    
+
     private Combinator combinator(CSSLexer lexer) {
 
         Combinator combinator = null;
@@ -4151,7 +4153,7 @@ final public class CSSParser {
 
             // get the next token, but don't skip whitespace
             currentToken = lexer.nextToken();
-            if (LOGGER.isLoggable(PlatformLogger.FINEST)) {
+            if (LOGGER.isLoggable(Level.FINEST)) {
                 LOGGER.finest(currentToken.toString());
             }
         }
@@ -4208,15 +4210,15 @@ final public class CSSParser {
 
         if ((currentToken == null) ||
             (currentToken.getType() != CSSLexer.IDENT)) {
-//            
-//            RT-16547: this warning was misleading because an empty rule 
+//
+//            RT-16547: this warning was misleading because an empty rule
 //            not invalid. Some people put in empty rules just as placeholders.
-//            
+//
 //            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
 //                final int line = currentToken != null ? currentToken.getLine() : -1;
 //                final int pos = currentToken != null ? currentToken.getOffset() : -1;
-//                final String url = 
-//                    (stylesheet != null && stylesheet.getUrl() != null) ? 
+//                final String url =
+//                    (stylesheet != null && stylesheet.getUrl() != null) ?
 //                        stylesheet.getUrl().toExternalForm() : "?";
 //                LOGGER.warning("Expected IDENT at {0}[{1,number,#},{2,number,#}]",
 //                    url,line,pos);
@@ -4232,11 +4234,11 @@ final public class CSSParser {
             (currentToken.getType() != CSSLexer.COLON)) {
                 final int line = currentToken.getLine();
                 final int pos = currentToken.getOffset();
-                final String msg = 
+                final String msg =
                         MessageFormat.format("Expected COLON at [{0,number,#},{1,number,#}]",
                     line,pos);
                 CssError error = createError(msg);
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                if (LOGGER.isLoggable(Level.WARNING)) {
                     LOGGER.warning(error.toString());
                 }
                 reportError(error);
@@ -4253,11 +4255,11 @@ final public class CSSParser {
                 Token badToken = re.tok;
                 final int line = badToken != null ? badToken.getLine() : -1;
                 final int pos = badToken != null ? badToken.getOffset() : -1;
-                final String msg = 
+                final String msg =
                         MessageFormat.format("{2} while parsing ''{3}'' at [{0,number,#},{1,number,#}]",
                     line,pos,re.getMessage(),property);
                 CssError error = createError(msg);
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                if (LOGGER.isLoggable(Level.WARNING)) {
                     LOGGER.warning(error.toString());
                 }
                 reportError(error);
@@ -4281,7 +4283,7 @@ final public class CSSParser {
 
             // if current is null, then term returned null
             final int ttype =
-                (current != null && currentToken != null) 
+                (current != null && currentToken != null)
                     ? currentToken.getType() : Token.INVALID;
 
             if (ttype == Token.INVALID) {
@@ -4304,21 +4306,21 @@ final public class CSSParser {
 
         }
     }
-    
+
     private void skipExpr(CSSLexer lexer) {
-        
+
         while(true) {
-            
+
             currentToken = nextToken(lexer);
 
             final int ttype =
                 (currentToken != null) ? currentToken.getType() : Token.INVALID;
-            
+
             if (ttype == CSSLexer.SEMI ||
                 ttype == CSSLexer.RBRACE ||
                 ttype == Token.EOF) {
                 return;
-            } 
+            }
         }
     }
 
@@ -4387,11 +4389,11 @@ final public class CSSParser {
                 final int line = currentToken != null ? currentToken.getLine() : -1;
                 final int pos = currentToken != null ? currentToken.getOffset() : -1;
                 final String text = currentToken != null ? currentToken.getText() : "";
-                final String msg = 
+                final String msg =
                     MessageFormat.format("Unexpected token {0}{1}{0} at [{2,number,#},{3,number,#}]",
                     "\'",text,line,pos);
                 CssError error = createError(msg);
-                if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                if (LOGGER.isLoggable(Level.WARNING)) {
                     LOGGER.warning(error.toString());
                 }
                 reportError(error);

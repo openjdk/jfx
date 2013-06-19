@@ -28,6 +28,7 @@ package javafx.geometry;
 /**
  * A rectangular bounding box which is used to describe the bounds of a node
  * or other scene graph object.
+ * @since JavaFX 2.0
  */
 public class BoundingBox extends Bounds {
     /**

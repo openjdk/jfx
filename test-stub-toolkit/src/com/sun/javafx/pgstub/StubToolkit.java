@@ -38,6 +38,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+
+import com.sun.javafx.tk.RenderJob;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import javafx.scene.input.DataFormat;
@@ -230,6 +234,11 @@ public class StubToolkit extends Toolkit {
     @Override
     public void exit() {
         System.exit(0);
+    }
+
+    @Override
+    public Future addRenderJob(RenderJob rj) {
+        return rj;
     }
 
     @Override

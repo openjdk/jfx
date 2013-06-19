@@ -39,8 +39,6 @@ public class IllegalPathStateException extends RuntimeException {
     /**
      * Constructs an <code>IllegalPathStateException</code> with no
      * detail message.
-     *
-     * @since   1.2
      */
     public IllegalPathStateException() {
     }
@@ -49,7 +47,6 @@ public class IllegalPathStateException extends RuntimeException {
      * Constructs an <code>IllegalPathStateException</code> with the
      * specified detail message. 
      * @param   s   the detail message
-     * @since   1.2
      */
     public IllegalPathStateException(String s) {
         super (s);

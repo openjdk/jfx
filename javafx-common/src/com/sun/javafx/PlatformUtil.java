@@ -236,7 +236,9 @@ public class PlatformUtil {
         try {
             String theClassFile = "PlatformUtil.class";
             Class theClass = PlatformUtil.class;
-            String classUrlString = theClass.getResource(theClassFile).toString();
+            URL url = theClass.getResource(theClassFile);
+            if (url == null) return null;
+            String classUrlString = url.toString();
             if (!classUrlString.startsWith("jar:file:")
                     || classUrlString.indexOf('!') == -1) {
                 return null;

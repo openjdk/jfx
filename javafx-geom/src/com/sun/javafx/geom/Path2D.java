@@ -59,7 +59,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * the path.
  * 
  * @version 1.10, 05/05/07
- * @since 1.6
  */
  public class Path2D extends Shape implements PathConsumer2D {
 
@@ -76,7 +75,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * a path.  
      *
      * @see PathIterator#WIND_EVEN_ODD
-     * @since 1.6
      */
     public static final int WIND_EVEN_ODD = PathIterator.WIND_EVEN_ODD;
 
@@ -85,7 +83,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * path.  
      *
      * @see PathIterator#WIND_NON_ZERO
-     * @since 1.6
      */
     public static final int WIND_NON_ZERO = PathIterator.WIND_NON_ZERO;
 
@@ -126,7 +123,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * @param rule the winding rule
      * @see #WIND_EVEN_ODD
      * @see #WIND_NON_ZERO
-     * @since 1.6
      */
     public Path2D(int rule) {
         this(rule, INIT_SIZE);
@@ -145,7 +141,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      *                        in the path
      * @see #WIND_EVEN_ODD
      * @see #WIND_NON_ZERO
-     * @since 1.6
      */
     public Path2D(int rule, int initialCapacity) {
         setWindingRule(rule);
@@ -160,7 +155,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * taken from the specified {@code Shape} object.
      *
      * @param s the specified {@code Shape} object
-     * @since 1.6
      */
     public Path2D(Shape s) {
         this(s, null);
@@ -176,7 +170,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      *
      * @param s the specified {@code Shape} object
      * @param tx the specified {@code BaseTransform} object
-     * @since 1.6
      */
     public Path2D(Shape s, BaseTransform tx) {
         if (s instanceof Path2D) {
@@ -1280,7 +1273,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
 
     /**
      * {@inheritDoc}
-     * @since 1.6
      */
     public final void append(PathIterator pi, boolean connect) {
         float coords[] = new float[6];
@@ -1384,8 +1376,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * guarantee that modifications to the geometry of this
      * {@code Path2D} object do not affect any iterations of
      * that geometry that are already in process.
-     *
-     * @since 1.6
      */
     public PathIterator getPathIterator(BaseTransform tx) {
         if (tx == null) {
@@ -1493,7 +1483,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * @param connect a boolean to control whether or not to turn an initial
      *                {@code moveTo} segment into a {@code lineTo} segment
      *                to connect the new geometry to the existing path
-     * @since 1.6
      */
     public final void append(Shape s, boolean connect) {
         append(s.getPathIterator(null), connect);
@@ -1767,7 +1756,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * @see #WIND_EVEN_ODD  
      * @see #WIND_NON_ZERO
      * @see #setWindingRule
-     * @since 1.6
      */
     public final int getWindingRule() {
         return windingRule;
@@ -1783,7 +1771,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      *      {@link #WIND_EVEN_ODD} or
      *      {@link #WIND_NON_ZERO}
      * @see #getWindingRule
-     * @since 1.6
      */
     public final void setWindingRule(int rule) {
         if (rule != WIND_EVEN_ODD && rule != WIND_NON_ZERO) {
@@ -1922,7 +1909,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * @param y the specified Y coordinate
      * @return {@code true} if the specified coordinates are inside the
      *         specified {@code PathIterator}; {@code false} otherwise
-     * @since 1.6
      */
     public static boolean contains(PathIterator pi, float x, float y) {
         if (x * 0f + y * 0f == 0f) {
@@ -1954,7 +1940,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * @param p the specified {@code Point2D}
      * @return {@code true} if the specified coordinates are inside the
      *         specified {@code PathIterator}; {@code false} otherwise
-     * @since 1.6
      */
     public static boolean contains(PathIterator pi, Point2D p) {
         return contains(pi, p.x, p.y);
@@ -1962,7 +1947,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
 
     /**
      * {@inheritDoc}
-     * @since 1.6
      */
     public final boolean contains(float x, float y) {
         if (x * 0f + y * 0f == 0f) {
@@ -1986,7 +1970,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
 
     /**
      * {@inheritDoc}
-     * @since 1.6
      */
     @Override
     public final boolean contains(Point2D p) {
@@ -2022,7 +2005,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * @param h the height of the specified rectangular area
      * @return {@code true} if the specified {@code PathIterator} contains
      *         the specified rectangluar area; {@code false} otherwise.
-     * @since 1.6
      */
     public static boolean contains(PathIterator pi,
                                    float x, float y, float w, float h)
@@ -2063,8 +2045,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * the interior of the path would require extensive calculations
      * involving all of the segments of the path and the winding
      * rule and are thus beyond the scope of this implementation.
-     *
-     * @since 1.6
      */
     public final boolean contains(float x, float y, float w, float h) {
         if (java.lang.Float.isNaN(x+w) || java.lang.Float.isNaN(y+h)) {
@@ -2117,7 +2097,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * @return {@code true} if the specified {@code PathIterator} and
      *         the interior of the specified set of rectangular
      *         coordinates intersect each other; {@code false} otherwise.
-     * @since 1.6
      */
     public static boolean intersects(PathIterator pi,
                                      float x, float y, float w, float h)
@@ -2157,8 +2136,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * the interior of the path would require extensive calculations
      * involving all of the segments of the path and the winding
      * rule and are thus beyond the scope of this implementation.
-     *
-     * @since 1.6
      */
     public final boolean intersects(float x, float y, float w, float h) {
         if (java.lang.Float.isNaN(x+w) || java.lang.Float.isNaN(y+h)) {
@@ -2189,8 +2166,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * guarantee that modifications to the geometry of this
      * {@code Path2D} object do not affect any iterations of
      * that geometry that are already in process. 
-     *
-     * @since 1.6
      */
     public PathIterator getPathIterator(BaseTransform tx,
                                         float flatness)

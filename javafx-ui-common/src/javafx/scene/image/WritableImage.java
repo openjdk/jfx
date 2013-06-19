@@ -39,7 +39,7 @@ import javafx.scene.paint.Color;
  * that is constructed from pixels supplied by the application, and possibly
  * from {@code PixelReader} objects from any number of sources, including
  * images read from a file or URL.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class WritableImage extends Image {
 

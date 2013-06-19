@@ -62,6 +62,7 @@ import javafx.collections.SetChangeListener;
  *
  * @param <E>
  *            the type of the {@code Set} elements
+ * @since JavaFX 2.1
  */
 public abstract class SetBinding<E> extends SetExpression<E> implements Binding<ObservableSet<E>> {
 

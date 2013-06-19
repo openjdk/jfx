@@ -37,7 +37,7 @@ import javafx.css.StyleOrigin;
 /**
  * A stylesheet which can apply properties to a tree of objects.  A stylesheet 
  * is a collection of zero or more {@link Rule Rules}, each of which is applied 
- * to each object in the tree.  Typically the rule will examine the object to 
+ * to each object in the tree.  Typically the selector will examine the object to
  * determine whether or not it is applicable, and if so it will apply certain 
  * property values to the object.
  * <p>
@@ -190,6 +190,7 @@ public class Stylesheet {
     public void readBinary(DataInputStream is, String[] strings)
         throws IOException 
     {
+        this.stringStore = strings;
         final int index = is.readShort();
         this.setOrigin(StyleOrigin.valueOf(strings[index]));
         final int nRules = is.readShort();
@@ -200,6 +201,9 @@ public class Stylesheet {
         this.rules.addAll(persistedRules);
         
     }
+
+    private String[] stringStore;
+    String[] getStringStore() { return stringStore; };
 
     /** Load a binary stylesheet file from a input stream */
     public static Stylesheet loadBinary(URL url) {

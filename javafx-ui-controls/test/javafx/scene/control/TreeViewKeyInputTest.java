@@ -32,11 +32,16 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -1263,5 +1268,44 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(0,1));
         assertEquals(3, fm.getFocusedIndex());
         assertEquals(2, getAnchor());
+    }
+
+    private int rt29849_start_count = 0;
+    private int rt29849_cancel_count = 0;
+    @Test public void test_rt29849() {
+        treeView.setEditable(true);
+
+        treeView.setOnEditStart(new EventHandler<TreeView.EditEvent<String>>() {
+            @Override public void handle(TreeView.EditEvent<String> event) {
+                rt29849_start_count++;
+            }
+        });
+        treeView.setOnEditCancel(new EventHandler<TreeView.EditEvent<String>>() {
+            @Override public void handle(TreeView.EditEvent<String> event) {
+                rt29849_cancel_count++;
+            }
+        });
+
+        // initially the counts should be zero
+        assertEquals(0, rt29849_start_count);
+        assertEquals(0, rt29849_cancel_count);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertTrue(cell.isEditable());
+        assertFalse(cell.isEditing());
+        assertEquals(0, cell.getIndex());
+
+        // do an edit, start count should be one, cancel still zero
+        treeView.edit(root);
+        assertTrue(cell.isEditing());
+        assertEquals(1, rt29849_start_count);
+        assertEquals(0, rt29849_cancel_count);
+
+        // cancel edit, now both counts should be 1
+//        keyboard.doKeyPress(KeyCode.ESCAPE);
+        treeView.edit(null);
+        assertFalse(cell.isEditing());
+        assertEquals(1, rt29849_start_count);
+        assertEquals(1, rt29849_cancel_count);
     }
 }

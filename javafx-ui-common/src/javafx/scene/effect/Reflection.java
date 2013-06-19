@@ -65,6 +65,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <p>
  * <img src="doc-files/reflection.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class Reflection extends Effect {
     /**
@@ -79,6 +80,7 @@ public class Reflection extends Effect {
      * @param fraction the fraction of the input that is visible in the reflection
      * @param topOpacity the opacity of the reflection at its top extreme
      * @param bottomOpacity the opacity of the reflection at its bottom extreme
+     * @since JavaFX 2.1
      */
     public Reflection(double topOffset, double fraction, 
                       double topOpacity, double bottomOpacity) {

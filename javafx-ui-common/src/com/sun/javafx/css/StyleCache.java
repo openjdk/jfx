@@ -24,8 +24,10 @@
  */
 package com.sun.javafx.css;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import javafx.css.CssMetaData;
 
 /**
  * A cache to store values from lookup.
@@ -38,7 +40,7 @@ import java.util.Map;
  * to be unique to the set of StyleHelpers [A B C]. Because StyleHelpers
  * are chosen by the rules they match, and because StyleHelpers are shared,
  * every node that has the set of StyleHelpers [A B C] will match the same
- * rule for opacity (for a given pseudoclass state). Further, the value for
+ * selector for opacity (for a given pseudoclass state). Further, the value for
  * opacity (in the given pseudoclass state) will not change for the given
  * set of StyleHelpers. Therefore, rather than trying to cache a calculated
  * value with an individual StyleHelper, the value can be cached with a key
@@ -84,26 +86,39 @@ public final class StyleCache {
     
     public void clear() {
         if (entries == null) return;
+        Thread.dumpStack();
         entries.clear();
     }
         
-    public void putStyleCacheEntry(StyleCacheEntry.Key entryKey, StyleCacheEntry entry) {
-        if (entries == null) {
-            this.entries = new HashMap<StyleCacheEntry.Key,StyleCacheEntry>();
+    public StyleCacheEntry getStyleCacheEntry(StyleCacheEntry.Key key) {
+
+        StyleCacheEntry entry = null;
+        if (entries != null) {
+            entry = entries.get(key);
         }
-        entries.put(entryKey, entry);
+        return entry;
     }
-    
-    public StyleCacheEntry getStyleCacheEntry(StyleCacheEntry.Key entryKey) {
-        if (entries == null) return null;
-        return entries.get(entryKey);
+
+    public void addStyleCacheEntry(StyleCacheEntry.Key key, StyleCacheEntry entry) {
+        if (entries == null) {
+            entries = new HashMap<>(5);
+        }
+        entries.put(key, entry);
     }
-    
+
     public static final class Key {
         
         public Key(int[] styleMapIds, int count) {
             this.styleMapIds = new int[count];
             System.arraycopy(styleMapIds, 0, this.styleMapIds, 0, count);
+        }
+
+        public Key(Key other) {
+            this(other.styleMapIds, other.styleMapIds.length);
+        }
+
+        @Override public String toString() {
+            return Arrays.toString(styleMapIds);
         }
 
         @Override
@@ -120,37 +135,38 @@ public final class StyleCache {
 
         @Override
         public boolean equals(Object obj) {
-            
-            if (obj instanceof Key) {
 
-                final Key other = (Key) obj;
-            
-                // if one is null, so too must the other
-                if ((this.styleMapIds == null) ^ (other.styleMapIds == null)) {
-                    return false;
-                }
+            if (obj == this) return true;
 
-                // if one is null, so is the other
-                if (this.styleMapIds == null) {
-                    return true;
-                }
+            if (obj == null || obj.getClass() != this.getClass()) {
+                return false;
+            }
 
-                for (int i=0; i<styleMapIds.length; i++) {
-                    if (styleMapIds[i] != other.styleMapIds[i]) {
-                        return false;
-                    }
-                }
-                
+            final Key other = (Key) obj;
+
+            // if one is null, so too must the other
+            if ((this.styleMapIds == null) ^ (other.styleMapIds == null)) {
+                return false;
+            }
+
+            // if one is null, so is the other
+            if (this.styleMapIds == null) {
                 return true;
             }
-            
-            return false;
-            
+
+            for (int i=0; i<styleMapIds.length; i++) {
+                if (styleMapIds[i] != other.styleMapIds[i]) {
+                    return false;
+                }
+            }
+
+            return true;
+
         }
         
         final int[] styleMapIds;
     }
     
     private Map<StyleCacheEntry.Key,StyleCacheEntry> entries;
-    
+
 }

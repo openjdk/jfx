@@ -58,7 +58,7 @@ import javafx.util.StringConverter;
  * @see CheckBox
  * @see ListCell
  * @param <T> The type of the elements contained within the ListView.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class CheckBoxListCell<T> extends ListCell<T> {
     

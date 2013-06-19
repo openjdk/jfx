@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.util.Map;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ListChangeListener;
@@ -132,19 +133,25 @@ public class EmbeddedTextContextMenuContent extends StackPane {
         double pointerX = 0;
 
         // Get the positions of the cursor from the TextArea/TextField and draw the arrow underneath it.
+        Map properties = null;
         if (contextMenu.getOwnerNode() instanceof TextArea) {
-            TextArea ta = (TextArea)contextMenu.getOwnerNode();
-            TextAreaSkin tas = (TextAreaSkin)ta.getSkin();
-            sceneX = Double.valueOf(tas.getSkinnable().getProperties().get("CONTEXT_MENU_SCENE_X").toString());
-            screenX = Double.valueOf(tas.getSkinnable().getProperties().get("CONTEXT_MENU_SCREEN_X").toString());
-            tas.getSkinnable().getProperties().clear();
+            properties = ((TextArea)contextMenu.getOwnerNode()).getProperties();
         } else if (contextMenu.getOwnerNode() instanceof TextField) {
-            TextField tf = (TextField)contextMenu.getOwnerNode();
-            TextFieldSkin tfs = (TextFieldSkin)tf.getSkin();
-            sceneX = Double.valueOf(tfs.getSkinnable().getProperties().get("CONTEXT_MENU_SCENE_X").toString());
-            screenX = Double.valueOf(tfs.getSkinnable().getProperties().get("CONTEXT_MENU_SCREEN_X").toString());
-            tfs.getSkinnable().getProperties().clear();
+            properties = ((TextField)contextMenu.getOwnerNode()).getProperties();
         }
+
+        if (properties != null) {
+            if (properties.containsKey("CONTEXT_MENU_SCENE_X")) {
+                sceneX = Double.valueOf(properties.get("CONTEXT_MENU_SCENE_X").toString());
+                properties.remove("CONTEXT_MENU_SCENE_X");
+            }
+
+            if (properties.containsKey("CONTEXT_MENU_SCREEN_X")) {
+                screenX = Double.valueOf(properties.get("CONTEXT_MENU_SCREEN_X").toString());
+                properties.remove("CONTEXT_MENU_SCREEN_X");
+            }
+        }
+
         if (sceneX == 0) {
             pointerX = width/2;
         } else {

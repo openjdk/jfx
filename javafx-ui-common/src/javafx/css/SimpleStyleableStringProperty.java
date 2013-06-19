@@ -39,6 +39,7 @@ import javafx.beans.property.SimpleStringProperty;
  * @see CssMetaData
  * @see StyleableProperty
  * @see StyleableStringProperty
+ * @since JavaFX 8.0
  */
 public class SimpleStyleableStringProperty extends StyleableStringProperty {
 

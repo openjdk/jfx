@@ -35,226 +35,244 @@ import javafx.scene.image.Image;
 /**
  * Data container for {@link Clipboard} data. It can hold multiple data in 
  * several data formats.
+ * @since JavaFX 2.0
  */
 public class ClipboardContent extends HashMap<DataFormat, Object> {
     /**
-     * Gets whether a plain text String (DataFormat.PLAIN_TEXT) has been registered
-     * on this Clipboard.
-     * @return true if <code>hasContent(DataFormat.PLAIN_TEXT)</code> returns true, false otherwise
+     * Gets whether a plain text String ({@code DataFormat.PLAIN_TEXT})
+     * has been put to this {@code ClipboardContent}.
+     * @return true if {@code containsKey(DataFormat.PLAIN_TEXT)}
+     * returns true, false otherwise
      */
     public final boolean hasString() {
         return containsKey(DataFormat.PLAIN_TEXT);
     }
 
     /**
-     * Puts a plain text String onto the Clipboard. This is equivalent to
-     * invoking <code>setContent(DataFormat.PLAIN_TEXT, s)</code>. Setting this value
-     * to null effectively clears it from the clipboard.
+     * Puts a plain text String into the {@code ClipboardContent}. This is
+     * equivalent to invoking {@code put(DataFormat.PLAIN_TEXT, s)}.
+     * Setting this value to null effectively clears it
+     * from the {@code ClipboardContent}.
      * @param s The string to place. This may be null.
-     * @return True if the string was successfully placed on the clipboard.
-     * @throws NullPointerException if null reference is passed
+     * @return always true (the string is always successfully put)
      */
     public final boolean putString(String s) {
         if (s == null) {
-            throw new NullPointerException("Null string put on ClipboardContent");
+            remove(DataFormat.PLAIN_TEXT);
+        } else {
+            put(DataFormat.PLAIN_TEXT, s);
         }
-        return put(DataFormat.PLAIN_TEXT, s) == s;
+        return true;
     }
 
     /**
-     * Gets the plain text String from the clipboard which had previously
-     * been registered. This is equivalent to invoking
-     * <code>getContent(DataFormat.PLAIN_TEXT)</code>. If no such entry exists,
+     * Gets the plain text String from the {@code ClipboardContent} 
+     * which had previously been put. This is equivalent to invoking
+     * {@code get(DataFormat.PLAIN_TEXT)}. If no such entry exists,
      * null is returned.
-     * @return The String on the clipboard associated with DataFormat.PLAIN_TEXT,
-     * or null if there is not one.
+     * @return The String in the {@code ClipboardContent} associated
+     * with {@code DataFormat.PLAIN_TEXT}, or null if there is not one.
      */
     public final String getString() {
         return (String) get(DataFormat.PLAIN_TEXT);
     }
 
     /**
-     * Gets whether a url String (DataFormat.URL) has been registered
-     * on this Clipboard.
-     * @return true if hasContent(DataFormat.URL) returns true, false otherwise
+     * Gets whether a URL String ({@code DataFormat.URL})
+     * has been put to this {@code ClipboardContent}.
+     * @return true if {@code containsKey(DataFormat.URL)}
+     * returns true, false otherwise
      */
     public final boolean hasUrl() {
         return containsKey(DataFormat.URL);
     }
 
     /**
-     * Puts a URL String onto the Clipboard. This is equivalent to
-     * invoking <code>setContent(DataFormat.URL, s)</code>. Setting this value
-     * to null effectively clears it from the clipboard.
+     * Puts a URL String into the {@code ClipboardContent}. This is
+     * equivalent to invoking {@code put(DataFormat.URL, url)}.
+     * Setting this value to null effectively clears it
+     * from the {@code ClipboardContent}.
      * @param url The string to place. This may be null.
-     * @return True if the string was successfully placed on the clipboard.
-     * @throws NullPointerException if null reference is passed
+     * @return always true (the URL is always successfully put)
      */
     public final boolean putUrl(String url) {
         if (url == null) {
-            throw new NullPointerException("Null URL put on ClipboardContent");
+            remove(DataFormat.URL);
+        } else {
+            put(DataFormat.URL, url);
         }
-        return put(DataFormat.URL, url) == url;
+        return true;
     }
 
     /**
-     * Gets the URL String from the clipboard which had previously
-     * been registered. This is equivalent to invoking
-     * <code>getContent(DataFormat.URL)</code>. If no such entry exists,
+     * Gets the URL String from the {@code ClipboardContent}
+     * which had previously been put. This is equivalent to invoking
+     * {@code get(DataFormat.URL)}. If no such entry exists,
      * null is returned.
-     * @return The String on the clipboard associated with DataFormat.URL,
-     * or null if there is not one.
+     * @return The String in the {@code ClipboardContent} associated
+     * with {@code DataFormat.URL}, or null if there is not one.
      */
     public final String getUrl() {
         return (String) get(DataFormat.URL);
     }
 
     /**
-     * Gets whether an HTML text String (DataFormat.HTML) has been registered
-     * on this Clipboard.
-     * @return true if <code>hasContent(DataFormat.HTML)</code> returns true, false otherwise
+     * Gets whether an HTML String ({@code DataFormat.HTML})
+     * has been put to this {@code ClipboardContent}.
+     * @return true if {@code containsKey(DataFormat.HTML)}
+     * returns true, false otherwise
      */
     public final boolean hasHtml() {
         return containsKey(DataFormat.HTML);
     }
 
     /**
-     * Puts an HTML text String onto the Clipboard. This is equivalent to
-     * invoking <code>setContent(DataFormat.HTML, s)</code>. Setting this value
-     * to null effectively clears it from the clipboard.
-     * @param s The string to place. This may be null.
-     * @return True if the string was successfully placed on the clipboard.
-     * @throws NullPointerException if null reference is passed
+     * Puts an HTML String into the {@code ClipboardContent}. This is
+     * equivalent to invoking {@code put(DataFormat.HTML, html)}.
+     * Setting this value to null effectively clears it
+     * from the {@code ClipboardContent}.
+     * @param html The string to place. This may be null.
+     * @return always true (the HTML is always successfully put)
      */
-    public final boolean putHtml(String s) {
-        if (s == null) {
-            throw new NullPointerException("Null HTML put on ClipboardContent");
+    public final boolean putHtml(String html) {
+        if (html == null) {
+            remove(DataFormat.HTML);
+        } else {
+            put(DataFormat.HTML, html);
         }
-        return put(DataFormat.HTML, s) == s;
+        return true;
     }
 
     /**
-     * Gets the HTML text String from the clipboard which had previously
-     * been registered. This is equivalent to invoking
-     * <code>getContent(DataFormat.HTML)</code>. If no such entry exists,
+     * Gets the HTML String from the {@code ClipboardContent}
+     * which had previously been put. This is equivalent to invoking
+     * {@code get(DataFormat.HTML)}. If no such entry exists,
      * null is returned.
-     * @return The String on the clipboard associated with DataFormat.HTML,
-     * or null if there is not one.
+     * @return The String in the {@code ClipboardContent} associated
+     * with {@code DataFormat.HTML}, or null if there is not one.
      */
     public final String getHtml() {
         return (String) get(DataFormat.HTML);
     }
 
     /**
-     * Gets whether an RTF String (DataFormat.RTF) has been registered
-     * on this Clipboard.
-     * @return true if hasContent(DataFormat.RTF) returns true, false otherwise
+     * Gets whether a RTF String ({@code DataFormat.RTF})
+     * has been put to this {@code ClipboardContent}.
+     * @return true if {@code containsKey(DataFormat.RTF)}
+     * returns true, false otherwise
      */
     public final boolean hasRtf() {
         return containsKey(DataFormat.RTF);
     }
 
     /**
-     * Puts an RTF text String onto the Clipboard. This is equivalent to
-     * invoking <code>setContent(DataFormat.RTF, s)</code>. Setting this value
-     * to null effectively clears it from the clipboard.
+     * Puts a RTF String into the {@code ClipboardContent}. This is
+     * equivalent to invoking {@code put(DataFormat.RTF, rtf)}.
+     * Setting this value to null effectively clears it
+     * from the {@code ClipboardContent}.
      * @param rtf The string to place. This may be null.
-     * @return True if the string was successfully placed on the clipboard.
-     * @throws NullPointerException if null reference is passed
+     * @return always true (the RTF is always successfully put)
      */
     public final boolean putRtf(String rtf) {
         if (rtf == null) {
-            throw new NullPointerException("Null RTF put on ClipboardContent");
+            remove(DataFormat.RTF);
+        } else {
+            put(DataFormat.RTF, rtf);
         }
-        return put(DataFormat.RTF, rtf) == rtf;
+        return true;
     }
 
     /**
-     * Gets the RTF text String from the clipboard which had previously
-     * been registered. This is equivalent to invoking
-     * <code>getContent(DataFormat.RTF)</code>. If no such entry exists,
+     * Gets the RTF String from the {@code ClipboardContent}
+     * which had previously been put. This is equivalent to invoking
+     * {@code get(DataFormat.RTF)}. If no such entry exists,
      * null is returned.
-     * @return The String on the clipboard associated with DataFormat.RTF,
-     * or null if there is not one.
+     * @return The String in the {@code ClipboardContent} associated
+     * with {@code DataFormat.RTF}, or null if there is not one.
      */
     public final String getRtf() {
         return (String) get(DataFormat.RTF);
     }
 
     /**
-     * Gets whether an Image (DataFormat.IMAGE) has been registered
-     * on this Clipboard.
-     * @return true if hasContent(DataFormat.IMAGE) returns true, false otherwise
+     * Gets whether an Image ({@code DataFormat.IMAGE})
+     * has been put to this {@code ClipboardContent}.
+     * @return true if {@code containsKey(DataFormat.IMAGE)}
+     * returns true, false otherwise
      */
     public final boolean hasImage() {
         return containsKey(DataFormat.IMAGE);
     };
 
     /**
-     * Puts an Image onto the Clipboard. This is equivalent to
-     * invoking <code>setContent(DataFormat.IMAGE, image)</code>. Setting this value
-     * to null effectively clears it from the clipboard. When an image is placed
+     * Puts an Image into the {@code ClipboardContent}. This is
+     * equivalent to invoking {@code put(DataFormat.IMAGE, i)}.
+     * Setting this value to null effectively clears it
+     * from the {@code ClipboardContent}. When an image is placed
      * on the clipboard in this manner, an operating system dependent image
-     * is loaded onto the clipboard (such as TIFF on mac or DIB on Windows).
+     * is loaded onto the clipboard (such as TIFF on Mac or DIB on Windows).
      *
      * @param i The image to place. This may be null.
-     * @return True if the image was successfully placed on the clipboard.
-     * @throws NullPointerException if null reference is passed
+     * @return always true (the image is always successfully put)
      */
     public final boolean putImage(Image i) {
         if (i == null) {
-            throw new NullPointerException("Null image put on ClipboardContent");
+            remove(DataFormat.IMAGE);
+        } else {
+            put(DataFormat.IMAGE, i);
         }
-        return put(DataFormat.IMAGE, i) == i;
+        return true;
     }
 
     /**
-     * Gets the Image from the clipboard which had previously
-     * been registered. This is equivalent to invoking
-     * <code>getContent(DataFormat.IMAGE)</code>. If no such entry exists,
+     * Gets the Image from the {@code ClipboardContent}
+     * which had previously been put. This is equivalent to invoking
+     * {@code get(DataFormat.IMAGE)}. If no such entry exists,
      * null is returned.
-     * @return The Image on the clipboard associated with DataFormat.IMAGE,
-     * or null if there is not one.
+     * @return The Image in the {@code ClipboardContent} associated
+     * with {@code DataFormat.IMAGE}, or null if there is not one.
      */
     public final Image getImage() {
         return (Image) get(DataFormat.IMAGE);
     }
 
     /**
-     * Gets whether an List of Files (DataFormat.FILES) has been registered
-     * on this Clipboard.
-     * @return true if hasContent(DataFormat.FILES) returns true, false otherwise
+     * Gets whether a List of Files ({@code DataFormat.FILES})
+     * has been put to this {@code ClipboardContent}.
+     * @return true if {@code containsKey(DataFormat.FILES)}
+     * returns true, false otherwise
      */
     public final boolean hasFiles() {
         return containsKey(DataFormat.FILES);
     }
 
     /**
-     * Puts an List of Files onto the Clipboard. This is equivalent to
-     * invoking <code>setContent(DataFormat.FILES, files)</code>. Setting this value
-     * to null effectively clears it from the clipboard.
+     * Puts a List of Files into the {@code ClipboardContent}. This is
+     * equivalent to invoking {@code put(DataFormat.FILES, files)}.
+     * Setting this value to null effectively clears it
+     * from the {@code ClipboardContent}.
+     *
      * @param files The files to place. This may be null.
-     * @return True if the files were successfully placed on the clipboard.
-     * @throws NullPointerException if null reference is passed
+     * @return always true (the files are always successfully put)
      */
     public final boolean putFiles(List<File> files) {
         if (files == null) {
-            throw new NullPointerException("Null reference to files put "
-                    + "on ClipboardContent");
+            remove(DataFormat.FILES);
+        } else {
+            put(DataFormat.FILES, files);
         }
-        return put(DataFormat.FILES, files) == files;
+        return true;
     }
 
     /**
-     * Puts an List of Files onto the Clipboard, based on the file path. This is
-     * simply a convenience method which constructs a List of Files and invokes
-     * the {@link #putFiles} method.
+     * Puts a List of Files into the {@code ClipboardContent}, based
+     * on the file path. This is simply a convenience method which constructs
+     * a List of Files and invokes the {@link #putFiles} method.
+     *
      * @param filePaths The files to place. This may be null.
-     * @return True if the files were successfully placed on the clipboard.
-     * @throws NullPointerException if null reference is passed
+     * @return always true (the files are always successfully put)
      */
     public final boolean putFilesByPath(List<String> filePaths) {
-        /* No need to throw NPE manually here, the code throws it anyway */
         final List<File> files = new ArrayList<File>(filePaths.size());
         for (String path : filePaths) {
             files.add(new File(path));
@@ -263,12 +281,12 @@ public class ClipboardContent extends HashMap<DataFormat, Object> {
     }
 
     /**
-     * Gets the List of Files from the clipboard which had previously
-     * been registered. This is equivalent to invoking
-     * <code>getContent(DataFormat.FILES)</code>. If no such entry exists,
+     * Gets the List of Files from the {@code ClipboardContent}
+     * which had previously been put. This is equivalent to invoking
+     * {@code get(DataFormat.FILES)}. If no such entry exists,
      * null is returned.
-     * @return The List of Files on the clipboard associated with DataFormat.FILES,
-     * or null if there is not one.
+     * @return The List of Files in the {@code ClipboardContent} associated
+     * with {@code DataFormat.FILES}, or null if there is not one.
      */
     public final List<File> getFiles() {
         return (List<File>) get(DataFormat.FILES);

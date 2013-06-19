@@ -244,7 +244,7 @@ WIN.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
 WIN.font.compiler = compiler
 WIN.font.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
 WIN.font.linker = linker
-WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
+WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib", "dwrite.lib", "d2d1.lib", "windowscodecs.lib", "ole32.lib"].flatten()
 WIN.font.lib = "javafx-font"
 
 WIN.fontT2K = [:]

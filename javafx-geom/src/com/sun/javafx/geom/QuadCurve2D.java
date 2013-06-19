@@ -37,7 +37,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * the subclass.
  *
  * @version     1.40, 05/05/07
- * @since 1.2
  */
 public class QuadCurve2D extends Shape {
     /**
@@ -110,7 +109,6 @@ public class QuadCurve2D extends Shape {
      * @param ctrly the Y coordinate of the control point
      * @param x2 the X coordinate of the end point
      * @param y2 the Y coordinate of the end point
-     * @since 1.2
      */
     public void setCurve(float x1, float y1,
                  float ctrlx, float ctrly,
@@ -137,7 +135,6 @@ public class QuadCurve2D extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since JavaFX 1.0
      */
     public CubicCurve2D toCubic() {
         return new CubicCurve2D(x1, y1,
@@ -154,7 +151,6 @@ public class QuadCurve2D extends Shape {
      * @param offset the index into the array from which to start
      *      getting the coordinate values and assigning them to this
      *      <code>QuadCurve2D</code>
-     * @since 1.2
      */
     public void setCurve(float[] coords, int offset) {
         setCurve(coords[offset + 0], coords[offset + 1],
@@ -169,7 +165,6 @@ public class QuadCurve2D extends Shape {
      * @param p1 the start point
      * @param cp the control point
      * @param p2 the end point
-     * @since 1.2
      */
     public void setCurve(Point2D p1, Point2D cp, Point2D p2) {
         setCurve(p1.x, p1.y, cp.x, cp.y, p2.x, p2.y);
@@ -185,7 +180,6 @@ public class QuadCurve2D extends Shape {
      * @param offset the index into <code>pts</code> from which to start
      *      getting the coordinate values and assigning them to this
      *      <code>QuadCurve2D</code>
-     * @since 1.2
      */
     public void setCurve(Point2D[] pts, int offset) {
         setCurve(pts[offset + 0].x, pts[offset + 0].y,
@@ -198,7 +192,6 @@ public class QuadCurve2D extends Shape {
      * <code>QuadCurve2D</code> to the same as those in the specified
      * <code>QuadCurve2D</code>.
      * @param c the specified <code>QuadCurve2D</code>
-     * @since 1.2
      */
     public void setCurve(QuadCurve2D c) {
         setCurve(c.x1, c.y1, c.ctrlx, c.ctrly, c.x2, c.y2);
@@ -217,7 +210,6 @@ public class QuadCurve2D extends Shape {
      * @param y2 the Y coordinate of the end point
      * @return the square of the flatness of the quadratic curve
      *      defined by the specified coordinates.
-     * @since 1.2
      */
     public static float getFlatnessSq(float x1, float y1,
                        float ctrlx, float ctrly,
@@ -238,7 +230,6 @@ public class QuadCurve2D extends Shape {
      * @param y2 the Y coordinate of the end point
      * @return the flatness of the quadratic curve defined by the 
      *      specified coordinates. 
-     * @since 1.2
      */
     public static float getFlatness(float x1, float y1,
                      float ctrlx, float ctrly,
@@ -256,7 +247,6 @@ public class QuadCurve2D extends Shape {
      *      to start getting the values from the array
      * @return the flatness of the quadratic curve that is defined by the
      *      values in the specified array at the specified index.
-     * @since 1.2
      */
     public static float getFlatnessSq(float coords[], int offset) {
         return Line2D.ptSegDistSq(coords[offset + 0], coords[offset + 1],
@@ -274,7 +264,6 @@ public class QuadCurve2D extends Shape {
      *      start getting the coordinate values
      * @return the flatness of a quadratic curve defined by the 
      *      specified array at the specified offset.
-     * @since 1.2
      */
     public static float getFlatness(float coords[], int offset) {
         return Line2D.ptSegDist(coords[offset + 0], coords[offset + 1],
@@ -288,7 +277,6 @@ public class QuadCurve2D extends Shape {
      * <code>QuadCurve2D</code>.
      * @return the square of the flatness of this
      *      <code>QuadCurve2D</code>.
-     * @since 1.2
      */
     public float getFlatnessSq() {
         return Line2D.ptSegDistSq(x1, y1, x2, y2, ctrlx, ctrly);
@@ -299,7 +287,6 @@ public class QuadCurve2D extends Shape {
      * control point from the line connecting the end points, of this
      * <code>QuadCurve2D</code>.
      * @return the flatness of this <code>QuadCurve2D</code>.
-     * @since 1.2
      */
     public float getFlatness() {
         return Line2D.ptSegDist(x1, y1, x2, y2, ctrlx, ctrly);
@@ -316,7 +303,6 @@ public class QuadCurve2D extends Shape {
      * left or first half of the subdivided curve
      * @param right the <code>QuadCurve2D</code> object for storing the
      * right or second half of the subdivided curve
-     * @since 1.2
      */
     public void subdivide(QuadCurve2D left, QuadCurve2D right) {
         subdivide(this, left, right);
@@ -334,7 +320,6 @@ public class QuadCurve2D extends Shape {
      *      left or first half of the subdivided curve
      * @param right the <code>QuadCurve2D</code> object for storing the
      *      right or second half of the subdivided curve
-     * @since 1.2
      */
     public static void subdivide(QuadCurve2D src,
                  QuadCurve2D left,
@@ -386,7 +371,6 @@ public class QuadCurve2D extends Shape {
      * half of the subdivided curve
      * @param rightoff the offset into the array of the beginning of the
      * the 6 right coordinates
-     * @since 1.2
      */
     public static void subdivide(float src[], int srcoff,
                  float left[], int leftoff,
@@ -441,7 +425,6 @@ public class QuadCurve2D extends Shape {
      * @param eqn the array that contains the quadratic coefficients
      * @return the number of roots, or <code>-1</code> if the equation is
      *      a constant
-     * @since 1.2
      */
     public static int solveQuadratic(float eqn[]) {
         return solveQuadratic(eqn, eqn);
@@ -465,7 +448,6 @@ public class QuadCurve2D extends Shape {
      *        resulting from the solution of the quadratic equation
      * @return the number of roots, or <code>-1</code> if the equation is
      *  a constant.
-     * @since 1.3
      */
     public static int solveQuadratic(float eqn[], float res[]) {
         float a = eqn[2];
@@ -507,7 +489,6 @@ public class QuadCurve2D extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(float x, float y) {
         float x1 = this.x1;
@@ -608,7 +589,6 @@ public class QuadCurve2D extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(Point2D p) {
         return contains(p.x, p.y);
@@ -709,7 +689,6 @@ public class QuadCurve2D extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean intersects(float x, float y, float w, float h) {
         // Trivially reject non-existant rectangles
@@ -893,7 +872,6 @@ public class QuadCurve2D extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(float x, float y, float w, float h) {
         if (w <= 0 || h <= 0) {
@@ -919,7 +897,6 @@ public class QuadCurve2D extends Shape {
      *      shape boundary
      * @return a {@link PathIterator} object that defines the boundary
      *      of the shape.
-     * @since 1.2
      */
     public PathIterator getPathIterator(BaseTransform tx) {
         return new QuadIterator(this, tx);
@@ -941,7 +918,6 @@ public class QuadCurve2D extends Shape {
      *      replaced by a straight line connecting the end points.
      * @return a <code>PathIterator</code> object that defines the 
      *      flattened boundary of the shape.
-     * @since 1.2
      */
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new FlatteningPathIterator(getPathIterator(tx), flatness);

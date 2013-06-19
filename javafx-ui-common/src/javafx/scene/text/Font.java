@@ -31,7 +31,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.List;
 
-import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -52,7 +51,8 @@ import com.sun.javafx.tk.Toolkit;
  * defaulted to screen pixels for most displays.
  * <p>
  * For more information see {@link javafx.scene.Node} for more information
- * on the default coordinate system 
+ * on the default coordinate system
+ * @since JavaFX 2.0
  */
 public final class Font {
 
@@ -78,7 +78,7 @@ public final class Font {
      * and typically the style "Regular", and be of a size consistent
      * with the user's desktop environment, to the extent that can
      * be determined.
-     * @return the default font.
+     * @return The default font.
      */
     public static synchronized Font getDefault() {
         if (DEFAULT == null) {
@@ -92,6 +92,7 @@ public final class Font {
      * application fonts or SDK fonts. This call has performance considerations
      * as looking up all of the fonts may be an expensive operation the
      * first time.
+     * @return The list containing all available font families.
      */
     public static List<String> getFamilies() {
         return Toolkit.getToolkit().getFontLoader().getFamilies();
@@ -102,17 +103,19 @@ public final class Font {
      * including any application fonts and SDK fonts.
      * This call has performance considerations as
      * looking up all of the fonts may be an expensive operation the first time.
+     * @return The list containing all available fonts.
      */
     public static List<String> getFontNames() {
         return Toolkit.getToolkit().getFontLoader().getFontNames();
     }
 
     /**
-     * Gets the names of all fonts in the specified font family that are 
+     * Gets the names of all fonts in the specified font family that are
      * installed on the users system, including any application fonts
      * and SDK fonts.
      * This call has performance considerations as looking up all of the
      * fonts may be an expensive operation the first time.
+     * @return The list containing the fonts for the given family.
      */
     public static List<String> getFontNames(String family) {
         return Toolkit.getToolkit().getFontLoader().getFontNames(family);
@@ -133,6 +136,7 @@ public final class Font {
      * @param size The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
      * used.
+     * @return The font that best fits the specified requirements.
      */
     public static Font font(String family, FontWeight weight,
                             FontPosture posture, double size) {
@@ -155,6 +159,7 @@ public final class Font {
      * @param size The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
      * used.
+     * @return The font that best fits the specified requirements.
      */
     public static Font font(String family, FontWeight weight, double size) {
         return font(family, weight, null, size);
@@ -171,6 +176,7 @@ public final class Font {
      * @param size The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
      * used.
+     * @return The font that best fits the specified requirements.
      */
     public static Font font(String family, FontPosture posture, double size) {
         return font(family, null, posture, size);
@@ -186,9 +192,39 @@ public final class Font {
      * @param size The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
      * used.
+     * @return The font that best fits the specified requirements.
      */
     public static Font font(String family, double size) {
         return font(family, null, null, size);
+    }
+
+    /**
+     * Searches for an appropriate font based on the given font family name and
+     * default font size.
+     * This method is not guaranteed to return a specific font, but does
+     * its best to find one that fits the specified requirements. A null or empty
+     * value for family allows the implementation to select any suitable font.
+     *
+     * @param family The family of the font
+     * @return The font that best fits the specified requirements.
+     */
+    public static Font font(String family) {
+        return font(family, null, null, -1);
+    }
+
+    /**
+     * Searches for an appropriate font based on the default font family name and
+     * given font size.
+     * This method is not guaranteed to return a specific font, but does
+     * its best to find one that fits the specified requirements.
+     *
+     * @param size The point size of the font. This can be a fractional value,
+     * but must not be negative. If the size is < 0 the default size will be
+     * used.
+     * @return The font that best fits the specified requirements.
+     */
+    public static Font font(double size) {
+        return font(null, null, null, size);
     }
 
     /**
@@ -205,7 +241,7 @@ public final class Font {
      * There is a single unified way to load all of application supplied
      * (via <code>Font.loadFont()</code>, JavaFX runtime delivered fonts,
      * and system installed fonts. Simply create the font by specifying
-     * the full name of the font you want to load. 
+     * the full name of the font you want to load.
      * If the specific font cannot be located, then a fallback or default
      * font will be used. The "name" will be updated to reflect the actual name
      * of the font being used. A load failure condition can be discovered by
@@ -261,7 +297,7 @@ public final class Font {
         this(null, size);
     }
 
-    
+
     /**
      * Constructs a font using the specified full face name and size
      * @param name full name of the font.
@@ -284,7 +320,7 @@ public final class Font {
 
     /**
      * Private constructor for internal implementation
-     * 
+     *
      * @param f native font
      * @param family font family name
      * @param name font full name
@@ -324,7 +360,7 @@ public final class Font {
      * and the font file is required to persist for the lifetime of the
      * application. Updating the file in any manner will result
      * in unspecified and likely undesired behaviours.
-     * 
+     *
      * @param urlStr from which to load the font, specified as a String.
      * @param size of the returned font.
      * @return the Font, or null if the font cannot be created.
@@ -411,7 +447,7 @@ public final class Font {
         }
         return Toolkit.getToolkit().getFontLoader().loadFont(in, size);
     }
-    
+
     /**
      * Converts this {@code Font} object to a {@code String} representation.
      * The String representation is for informational use only and will change.
@@ -445,7 +481,7 @@ public final class Font {
     /**
      * Returns a hash code for this {@code Font} object.
      * @return a hash code for this {@code Font} object.
-     */ 
+     */
     @Override public int hashCode() {
         if (hash == 0) {
             long bits = 17L;

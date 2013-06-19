@@ -90,8 +90,6 @@ import java.util.NoSuchElementException;
  *     not reflect the same concepts of "simple and obvious"
  *     as a human being perceives.
  * </ul>
- *
- * @since 1.2
  */
 public class Area extends Shape {
 
@@ -101,7 +99,6 @@ public class Area extends Shape {
 
     /**
      * Default constructor which creates an empty area.
-     * @since 1.2
      */
     public Area() {
         curves = EmptyCurves;
@@ -115,7 +112,6 @@ public class Area extends Shape {
      * <code>Shape</code> is used to determine the resulting enclosed area.
      * @param s  the <code>Shape</code> from which the area is constructed
      * @throws NullPointerException if <code>s</code> is null
-     * @since 1.2
      */
     public Area(Shape s) {
         if (s instanceof Area) {
@@ -231,7 +227,6 @@ public class Area extends Shape {
      * @param   rhs  the <code>Area</code> to be added to the
      *          current shape
      * @throws NullPointerException if <code>rhs</code> is null
-     * @since 1.2
      */
     public void add(Area rhs) {
         curves = new AreaOp.AddOp().calculate(this.curves, rhs.curves);
@@ -264,7 +259,6 @@ public class Area extends Shape {
      * @param   rhs  the <code>Area</code> to be subtracted from the
      *          current shape
      * @throws NullPointerException if <code>rhs</code> is null
-     * @since 1.2
      */
     public void subtract(Area rhs) {
         curves = new AreaOp.SubOp().calculate(this.curves, rhs.curves);
@@ -297,7 +291,6 @@ public class Area extends Shape {
      * @param   rhs  the <code>Area</code> to be intersected with this
      *          <code>Area</code>
      * @throws NullPointerException if <code>rhs</code> is null
-     * @since 1.2
      */
     public void intersect(Area rhs) {
         curves = new AreaOp.IntOp().calculate(this.curves, rhs.curves);
@@ -331,7 +324,6 @@ public class Area extends Shape {
      * @param   rhs  the <code>Area</code> to be exclusive ORed with this
      *          <code>Area</code>.
      * @throws NullPointerException if <code>rhs</code> is null
-     * @since 1.2
      */
     public void exclusiveOr(Area rhs) {
         curves = new AreaOp.XorOp().calculate(this.curves, rhs.curves);
@@ -341,7 +333,6 @@ public class Area extends Shape {
     /**
      * Removes all of the geometry from this <code>Area</code> and
      * restores it to an empty area.
-     * @since 1.2
      */
     public void reset() {
         curves = new Vector();
@@ -352,7 +343,6 @@ public class Area extends Shape {
      * Tests whether this <code>Area</code> object encloses any area.
      * @return    <code>true</code> if this <code>Area</code> object
      * represents an empty area; <code>false</code> otherwise.
-     * @since 1.2
      */
     public boolean isEmpty() {
         return (curves.size() == 0);
@@ -364,7 +354,6 @@ public class Area extends Shape {
      * @return    <code>true</code> if the geometry of this
      * <code>Area</code> consists entirely of line segments;
      * <code>false</code> otherwise.
-     * @since 1.2
      */
     public boolean isPolygonal() {
         Enumeration enum_ = curves.elements();
@@ -381,7 +370,6 @@ public class Area extends Shape {
      * @return    <code>true</code> if the geometry of this
      * <code>Area</code> is rectangular in shape; <code>false</code>
      * otherwise.
-     * @since 1.2
      */
     public boolean isRectangular() {
         int size = curves.size();
@@ -415,7 +403,6 @@ public class Area extends Shape {
      * that appear in the path.
      * @return    <code>true</code> if the <code>Area</code> is comprised
      * of a single basic geometry; <code>false</code> otherwise.
-     * @since 1.2
      */
     public boolean isSingular() {
         if (curves.size() < 3) {
@@ -462,7 +449,6 @@ public class Area extends Shape {
      * the outline itself.
      * @return    the bounding <code>RectBounds</code> for the
      * <code>Area</code>.
-     * @since 1.2
      */
     public RectBounds getBounds() {
         return new RectBounds(getCachedBounds());
@@ -476,7 +462,6 @@ public class Area extends Shape {
      *          <code>Area</code>
      * @return  <code>true</code> if the two geometries are equivalent;
      *          <code>false</code> otherwise.
-     * @since 1.2
      */
     public boolean isEquivalent(Area other) {
         // REMIND: A *much* simpler operation should be possible...
@@ -498,7 +483,6 @@ public class Area extends Shape {
      * permanently changes the enclosed area defined by this object.
      * @param tx the transformation used to transform the area
      * @throws NullPointerException if <code>t</code> is null
-     * @since 1.2
      */
     public void transform(BaseTransform tx) {
         if (tx == null) {
@@ -520,7 +504,6 @@ public class Area extends Shape {
      * @throws NullPointerException if <code>t</code> is null
      * @return   a new <code>Area</code> object representing the transformed
      *           geometry.
-     * @since 1.2
      */
     public Area createTransformedArea(BaseTransform tx) {
         Area a = new Area(this);
@@ -530,7 +513,6 @@ public class Area extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(float x, float y) {
         if (!getCachedBounds().contains(x, y)) {
@@ -547,7 +529,6 @@ public class Area extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     @Override
     public boolean contains(Point2D p) {
@@ -556,7 +537,6 @@ public class Area extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean contains(float x, float y, float w, float h) {
         if (w < 0 || h < 0) {
@@ -571,7 +551,6 @@ public class Area extends Shape {
 
     /**
      * {@inheritDoc}
-     * @since 1.2
      */
     public boolean intersects(float x, float y, float w, float h) {
         if (w < 0 || h < 0) {
@@ -593,7 +572,6 @@ public class Area extends Shape {
      * @return    the <code>PathIterator</code> object that returns the
      *          geometry of the outline of this <code>Area</code>, one
      *          segment at a time.
-     * @since 1.2
      */
     public PathIterator getPathIterator(BaseTransform tx) {
         return new AreaIterator(curves, tx);
@@ -615,7 +593,6 @@ public class Area extends Shape {
      * @return    the <code>PathIterator</code> object that returns the
      * geometry of the outline of this <code>Area</code>, one segment
      * at a time.
-     * @since 1.2
      */
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new FlatteningPathIterator(getPathIterator(tx), flatness);

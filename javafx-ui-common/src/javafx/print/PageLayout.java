@@ -57,7 +57,7 @@ import static javafx.print.PageOrientation.*;
  * <p>
  * A PageLayout is immutable.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 
 public final class PageLayout {

@@ -33,6 +33,7 @@ package com.javafx.experiments.jfx3dviewer;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ResourceBundle;
@@ -49,7 +50,9 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
+import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.input.DragEvent;
@@ -61,17 +64,33 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
+import javafx.util.Pair;
 import com.javafx.experiments.exporters.fxml.FXMLExporter;
+import com.javafx.experiments.exporters.javasource.JavaSourceExporter;
 import com.javafx.experiments.importers.Importer3D;
+import com.javafx.experiments.importers.Optimizer;
+import java.net.URISyntaxException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javafx.geometry.BoundingBox;
 
 /**
  * Controller class for main fxml file.
  */
 public class MainController implements Initializable {
-    public Button openBtn;
+    public SplitMenuButton openMenuBtn;
     public Label status;
     public SplitPane splitPane;
     public ToggleButton settingsBtn;
+    public CheckMenuItem loadAsPolygonsCheckBox;
+    public CheckMenuItem optimizeCheckBox;
+    public Button startBtn;
+    public Button rwBtn;
+    public ToggleButton playBtn;
+    public Button ffBtn;
+    public Button endBtn;
+    public ToggleButton loopBtn;
+    public TimelineDisplay timelineDisplay;
     private Accordion settingsPanel;
     private double settingsLastWidth = -1;
     private int nodeCount = 0;
@@ -80,6 +99,8 @@ public class MainController implements Initializable {
     private final ContentModel contentModel = Jfx3dViewerApp.getContentModel();
     private File loadedPath = null;
     private String[] supportedFormatRegex;
+    private TimelineController timelineController;
+    private SessionManager sessionManager = SessionManager.getSessionManager();
 
     @Override public void initialize(URL location, ResourceBundle resources) {
         try {
@@ -93,6 +114,10 @@ public class MainController implements Initializable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        // create timelineController;
+        timelineController = new TimelineController(startBtn,rwBtn,playBtn,ffBtn,endBtn,loopBtn);
+        timelineController.timelineProperty().bind(contentModel.timelineProperty());
+        timelineDisplay.timelineProperty().bind(contentModel.timelineProperty());
         // listen for drops
         supportedFormatRegex = Importer3D.getSupportedFormatExtensionFilters();
         for (int i=0; i< supportedFormatRegex.length; i++) {
@@ -121,11 +146,9 @@ public class MainController implements Initializable {
         contentModel.getSubScene().setOnDragDropped(
                 new EventHandler<DragEvent>() {
                     @Override public void handle(DragEvent event) {
-                        System.out.println("DROP event = " + event);
                         Dragboard db = event.getDragboard();
                         boolean success = false;
                         if (db.hasFiles()) {
-                            System.out.println("Dropped: " + db.getFiles());
                             File supportedFile = null;
                             fileLoop: for (File file : db.getFiles()) {
                                 for (String format : supportedFormatRegex) {
@@ -148,6 +171,15 @@ public class MainController implements Initializable {
                         event.consume();
                     }
                 });
+
+        sessionManager.bind(optimizeCheckBox.selectedProperty(), "optimize");
+        sessionManager.bind(loadAsPolygonsCheckBox.selectedProperty(), "loadAsPolygons");
+        sessionManager.bind(loopBtn.selectedProperty(), "loop");
+
+        String url = sessionManager.getProperties().getProperty(Jfx3dViewerApp.FILE_URL_PROPERTY);
+        if (url == null) url = ContentModel.class.getResource("drop-here.obj").toExternalForm();
+        load(url);
+
         // do initial status update
         updateStatus();
     }
@@ -155,12 +187,11 @@ public class MainController implements Initializable {
     public void open(ActionEvent actionEvent) {
         FileChooser chooser = new FileChooser();
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Supported files", Importer3D.getSupportedFormatExtensionFilters()));
-//        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All files", "*.*"));
         if (loadedPath != null) {
             chooser.setInitialDirectory(loadedPath.getAbsoluteFile().getParentFile());
         }
         chooser.setTitle("Select file to load");
-        File newFile = chooser.showOpenDialog(openBtn.getScene().getWindow());
+        File newFile = chooser.showOpenDialog(openMenuBtn.getScene().getWindow());
         if (newFile != null) {
             load(newFile);
         }
@@ -169,10 +200,39 @@ public class MainController implements Initializable {
     private void load(File file) {
         loadedPath = file;
         try {
-            Node content = Importer3D.load(file.toURI().toURL().toString());
-            contentModel.set3dContent(content);
-        } catch (IOException e) {
-            e.printStackTrace();
+            doLoad(file.toURI().toURL().toString());
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(MainController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private void load(String fileUrl) {
+        try {
+            loadedPath = new File(new URL(fileUrl).toURI()).getAbsoluteFile();
+            doLoad(fileUrl);
+        } catch (MalformedURLException | URISyntaxException ex) {
+            Logger.getLogger(MainController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private void doLoad(String fileUrl) {
+        sessionManager.getProperties().setProperty(Jfx3dViewerApp.FILE_URL_PROPERTY, fileUrl);
+        try {
+            Pair<Node,Timeline> content = Importer3D.loadIncludingAnimation(
+                    fileUrl, loadAsPolygonsCheckBox.isSelected());
+            Timeline timeline = content.getValue();
+            if (optimizeCheckBox.isSelected()) {
+                new Optimizer(timeline,content.getKey()).optimize();
+            }
+            contentModel.set3dContent(content.getKey());
+            contentModel.setTimeline(timeline);
+
+            if (timeline != null) {
+                timeline.setCycleCount(Timeline.INDEFINITE);
+                timeline.play();
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(MainController.class.getName()).log(Level.SEVERE, null, ex);
         }
         updateStatus();
     }
@@ -182,7 +242,8 @@ public class MainController implements Initializable {
         meshCount = 0;
         triangleCount = 0;
         updateCount(contentModel.getRoot3D());
-        final Bounds bounds = contentModel.get3dContent().getBoundsInLocal();
+        Node content = contentModel.get3dContent();
+        final Bounds bounds = content == null ? new BoundingBox(0, 0, 0, 0) : content.getBoundsInLocal();
         status.setText(
                 String.format("Nodes [%d] :: Meshes [%d] :: Triangles [%d] :: " +
                                "Bounds [w=%.2f,h=%.2f,d=%.2f]",
@@ -237,10 +298,30 @@ public class MainController implements Initializable {
         if (loadedPath != null) {
             chooser.setInitialDirectory(loadedPath.getAbsoluteFile().getParentFile());
         }
-        chooser.setTitle("Save fxml file");
-        File newFile = chooser.showSaveDialog(openBtn.getScene().getWindow());
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("FXML","*.fxml"),
+                new FileChooser.ExtensionFilter("Java Source","*.java")
+        );
+        chooser.setTitle("Export 3D Model");
+        File newFile = chooser.showSaveDialog(openMenuBtn.getScene().getWindow());
         if (newFile != null) {
-            new FXMLExporter(newFile.getAbsolutePath()).export(contentModel.get3dContent());
+            String extension = newFile.getName().substring(newFile.getName().lastIndexOf('.')+1,newFile.getName().length()).toLowerCase();
+            System.out.println("extension = " + extension);
+            if ("java".equals(extension)) {
+                final String url = contentModel.getLoadedUrl();
+                final String baseUrl = url.substring(0, url.lastIndexOf('/'));
+
+                JavaSourceExporter javaSourceExporter = new JavaSourceExporter(
+                        baseUrl,
+                        contentModel.get3dContent(),
+                        contentModel.getTimeline(),
+                        newFile);
+                javaSourceExporter.export();
+            } else if ("fxml".equals(extension)) {
+                new FXMLExporter(newFile.getAbsolutePath()).export(contentModel.get3dContent());
+            } else {
+                System.err.println("Can not export a file of type [."+extension+"]");
+            }
         }
     }
 }

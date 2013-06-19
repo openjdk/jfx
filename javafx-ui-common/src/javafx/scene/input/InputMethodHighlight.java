@@ -27,6 +27,7 @@ package javafx.scene.input;
 
 /**
  * The enum that contains the input method text highlights.
+ * @since JavaFX 2.0
  */
 public enum InputMethodHighlight {
     /**

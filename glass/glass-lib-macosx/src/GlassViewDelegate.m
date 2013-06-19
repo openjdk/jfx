@@ -786,10 +786,12 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     NSPoint draggingLocation = [nsView convertPoint:[info draggingLocation] fromView:nil];
     int x = (int)draggingLocation.x;
     int y = (int)draggingLocation.y;
-    int xAbs = (int)(x + [self->nsView window].frame.origin.x + [self->nsView frame].origin.x);
-    int yAbs = (int)(y + [self->nsView window].frame.origin.y + [self->nsView frame].origin.y);
-    int mask;
     
+    int xAbs = (int)([info draggingLocation].x + [self->nsView window].frame.origin.x);
+    int yAbs = (int)([[self->nsView window] screen].frame.size.height - [self->nsView window].frame.origin.y
+                     - [info draggingLocation].y);
+    
+    int mask;
     NSDragOperation operation = [info draggingSourceOperationMask];
     jint recommendedAction = [GlassDragSource mapNsOperationToJavaMask:operation];
     [GlassDragSource setMask:recommendedAction];

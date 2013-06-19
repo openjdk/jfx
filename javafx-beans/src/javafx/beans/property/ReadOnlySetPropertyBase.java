@@ -38,6 +38,7 @@ import javafx.collections.SetChangeListener;
  * @see ReadOnlySetProperty
  *
  * @param <E> the type of the {@code Set} elements
+ * @since JavaFX 2.1
  */
 public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> {
 

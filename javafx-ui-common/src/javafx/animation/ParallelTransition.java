@@ -96,6 +96,7 @@ import javafx.beans.value.ObservableValue;
  * @see Transition
  * @see Animation
  *
+ * @since JavaFX 2.0
  */
 public final class ParallelTransition extends Transition {
 

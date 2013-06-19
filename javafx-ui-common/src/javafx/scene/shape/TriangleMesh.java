@@ -76,9 +76,7 @@ import javafx.scene.transform.Rotate;
  * where p0, p1, p2 and p3 are indices into the points array, and t0, t1, t2
  * and t3 are indices into the texCoords array.
  * 
- * <p> The maximum number of vertices in the mesh can not exceed 65536.
- * Therefore the maximum array lengths are 65536 * 3 (x, y, z per point) for points,
- * and 65536 * 2 (u, v per texture coordinate) for texCoords. 
+ * <p>
  * The length of {@code points}, {@code texCoords}, and {@code faces} must be
  * divisible by 3, 2, and 6 respectively.
  * The values in the faces array must be within the range of the number of vertices
@@ -90,7 +88,7 @@ import javafx.scene.transform.Rotate;
  * (and will have an empty bounds) if any of the array lengths are invalid
  * or if any of the values in the faces array are out of range.
  * 
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public class TriangleMesh extends Mesh {
 
@@ -101,9 +99,8 @@ public class TriangleMesh extends Mesh {
     // TODO: 3D - Need to validate the size and range of these arrays.
     // A warning will be recorded to the logger and the mesh will have an empty
     // bounds if the validation failed. (RT-30451)
-    // The maximum length for points (65536 * 3), texCoords (65536 * 2)
-    // or faces (65536 * 6) arrays. The values in faces must be within range.
-    // The length of points, texCoords and faces must be divisible by 3, 2 and 6 respectively.
+    // The values in faces must be within range and the length of points,
+    // texCoords and faces must be divisible by 3, 2 and 6 respectively.
     private final ObservableFloatArray points = FXCollections.observableFloatArray();
     private final ObservableFloatArray texCoords = FXCollections.observableFloatArray();
     private final ObservableIntegerArray faces = FXCollections.observableIntegerArray();
@@ -487,12 +484,12 @@ public class TriangleMesh extends Mesh {
     private class Listener<T extends ObservableArray<T>> implements ArrayChangeListener<T>, FloatArraySyncer, IntegerArraySyncer {
         
         protected final T array;
-        protected boolean dirty;
+        protected boolean dirty = true;
         /**
          * Array was replaced
          * @return true if array was replaced; false otherwise
          */
-        protected boolean dirtyInFull;
+        protected boolean dirtyInFull = true;
         protected int dirtyRangeFrom;
         protected int dirtyRangeLength;
 

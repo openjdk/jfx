@@ -117,6 +117,7 @@ import javafx.css.StyleableProperty;
  * sp.setDividerPositions(0.3f, 0.6f, 0.9f);
  * </code></pre>
  *
+ * @since JavaFX 2.0
  */
 @DefaultProperty("items")
 public class SplitPane extends Control {
@@ -132,6 +133,7 @@ public class SplitPane extends Control {
      * prevent the node from being resized.
      * @param node A node in the SplitPane.
      * @param value true if the node is resizable or false if not resizable.
+     * @since JavaFX 2.1
      */
     public static void setResizableWithParent(Node node, Boolean value) {
         if (value == null) {
@@ -146,6 +148,7 @@ public class SplitPane extends Control {
      * @param node A node in the SplitPane.
      * @defaultValue true
      * @return true if the node is resizable false otherwise.
+     * @since JavaFX 2.1
      */
     public static Boolean isResizableWithParent(Node node) {
         if (node.hasProperties()) {
@@ -411,6 +414,7 @@ public class SplitPane extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -418,6 +422,7 @@ public class SplitPane extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
@@ -448,6 +453,7 @@ public class SplitPane extends Control {
 
     /**
      * Represents a single divider in the SplitPane.
+     * @since JavaFX 2.0
      */
     public static class Divider {
         /**

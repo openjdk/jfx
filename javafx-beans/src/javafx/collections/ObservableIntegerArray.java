@@ -25,25 +25,36 @@
 package javafx.collections;
 
 /**
- * An int[] array that allows listeners to track changes when they occur. To achieve
- * that internal array is encapsulated and there is no direct access available
- * from outside. Bulk operations are supported but they always do copy of the 
- * data range.
+ * {@code ObservableIntegerArray} is a {@code int[]} array that allows listeners
+ * to track changes when they occur. In order to track changes, the internal
+ * array is encapsulated and there is no direct access available from the outside.
+ * Bulk operations are supported but they always do a copy of the data range.
  * 
  * @see ArrayChangeListener
+ * @since JavaFX 8.0
  */
 public interface ObservableIntegerArray extends ObservableArray<ObservableIntegerArray> {
 
     /**
      * Copies specified portion of array into {@code dest} array. Throws
      * the same exceptions as {@link System#arraycopy(java.lang.Object,
-     * int, java.lang.Object, int, int) }
+     * int, java.lang.Object, int, int) System.arraycopy()} method.
      * @param srcIndex starting position in the observable array
      * @param dest destination array
      * @param destIndex starting position in destination array
      * @param length length of portion to copy
      */
     public void copyTo(int srcIndex, int[] dest, int destIndex, int length);
+
+    /**
+     * Copies specified portion of array into {@code dest} observable array.
+     * Throws the same exceptions as {@link System#arraycopy(java.lang.Object,
+     * int, java.lang.Object, int, int) System.arraycopy()} method.
+     * @param srcIndex starting position in the observable array
+     * @param dest destination observable array
+     * @param destIndex starting position in destination observable array
+     * @param length length of portion to copy
+     */
     public void copyTo(int srcIndex, ObservableIntegerArray dest, int destIndex, int length);
 
     /**
@@ -57,43 +68,102 @@ public interface ObservableIntegerArray extends ObservableArray<ObservableIntege
     public int get(int index);
 
     /**
-     * Appends given {@code elements} to the end of array. Capacity is increased
+     * Appends given {@code elements} to the end of this array. Capacity is increased
      * if necessary to match the new size of the data.
-     * @param elements
+     * @param elements elements to append
      */
     public void addAll(int... elements);
+
+    /**
+     * Appends content of a given observable array to the end of this array. 
+     * Capacity is increased if necessary to match the new size of the data.
+     * @param src observable array with elements to append
+     */
     public void addAll(ObservableIntegerArray src);
+
+    /**
+     * Appends a portion of given array to the end of this array.
+     * Capacity is increased if necessary to match the new size of the data.
+     * @param src source array
+     * @param srcIndex starting position in source array
+     * @param length length of portion to append
+     */
     public void addAll(int[] src, int srcIndex, int length);
+
+    /**
+     * Appends a portion of given observable array to the end of this array.
+     * Capacity is increased if necessary to match the new size of the data.
+     * @param src source observable array
+     * @param srcIndex starting position in source array
+     * @param length length of portion to append
+     */
     public void addAll(ObservableIntegerArray src, int srcIndex, int length);
 
     /**
-     * Sets observable array to a copy of given array. Capacity is increased
-     * if necessary to match the new size of the data
-     * @param elements source array to copy.
-     * @throws NullPointerException if {@code array} is null
+     * Replaces this observable array content with given elements.
+     * Capacity is increased if necessary to match the new size of the data.
+     * @param elements elements to put into array content
+     * @throws NullPointerException if {@code src} is null
      */
     public void setAll(int... elements);
+
+    /**
+     * Replaces this observable array content with a copy of portion of
+     * a given array.
+     * Capacity is increased if necessary to match the new size of the data.
+     * @param src source array to copy.
+     * @param srcIndex starting position in source observable array
+     * @param length length of a portion to copy
+     * @throws NullPointerException if {@code src} is null
+     */
     public void setAll(int[] src, int srcIndex, int length);
+
+    /**
+     * Replaces this observable array content with a copy of given observable array.
+     * Capacity is increased if necessary to match the new size of the data.
+     * @param src source observable array to copy.
+     * @throws NullPointerException if {@code src} is null
+     */
     public void setAll(ObservableIntegerArray src);
+
+    /**
+     * Replaces this observable array content with a portion of a given
+     * observable array.
+     * Capacity is increased if necessary to match the new size of the data.
+     * @param src source observable array to copy.
+     * @param srcIndex starting position in source observable array
+     * @param length length of a portion to copy
+     * @throws NullPointerException if {@code src} is null
+     */
     public void setAll(ObservableIntegerArray src, int srcIndex, int length);
 
     /**
-     * Sets portion of observable array to a copy of given array. Throws 
+     * Copies a portion of specified array into this observable array. Throws
      * the same exceptions as {@link System#arraycopy(java.lang.Object, 
-     * int, java.lang.Object, int, int) }
-     * @param destIndex the starting destination index in this observable array
+     * int, java.lang.Object, int, int) System.arraycopy()} method.
+     * @param destIndex the starting destination position in this observable array
      * @param src source array to copy
      * @param srcIndex starting position in source array
      * @param length length of portion to copy
      */
     public void set(int destIndex, int[] src, int srcIndex, int length);
+
+    /**
+     * Copies a portion of specified observable array into this observable array.
+     * Throws the same exceptions as {@link System#arraycopy(java.lang.Object,
+     * int, java.lang.Object, int, int) System.arraycopy()} method.
+     * @param destIndex the starting destination position in this observable array
+     * @param src source observable array to copy
+     * @param srcIndex starting position in source array
+     * @param length length of portion to copy
+     */
     public void set(int destIndex, ObservableIntegerArray src, int srcIndex, int length);
 
     /**
      * Sets a single value in the array. Avoid using this method if many values
      * are updated, use {@linkplain #setAll(int, int[], int, int)} update method
      * instead with as minimum number of invocations as possible.
-     * @param index index of the value to setAll
+     * @param index index of the value to set
      * @param value new value for the given index
      * @throws ArrayIndexOutOfBoundsException if {@code index} is outside
      * array bounds

@@ -40,22 +40,22 @@ import javafx.scene.Scene;
 import com.sun.javafx.Logging;
 import com.sun.javafx.application.PlatformImpl;
 import sun.util.logging.PlatformLogger;
-import com.sun.javafx.PlatformUtil;
+import sun.util.logging.PlatformLogger.Level;
 
 public class TraversalEngine {
-    
+
     private final Algorithm algorithm;
-    
+
     private final Parent root;
-    
+
     private final boolean isScene;
-    
+
     private final Bounds initialBounds;
-    
+
     public final List<Node> registeredNodes;
-    
+
     private final List<TraverseListener> listeners;
-    
+
     PlatformLogger focusLogger;
 
     protected boolean isScene() {
@@ -64,7 +64,7 @@ public class TraversalEngine {
     protected Parent getRoot() {
         return root;
     }
-    
+
     public TraversalEngine(Parent root, boolean isScene) {
         this.root = root;
         this.isScene = isScene;
@@ -82,24 +82,24 @@ public class TraversalEngine {
         else {
             algorithm = new ContainerTabOrder();
         }
-        
+
         initialBounds = new BoundingBox(0, 0, 1, 1);
         registeredNodes = new ArrayList<Node>();
-        listeners = new LinkedList<TraverseListener>(); 
+        listeners = new LinkedList<TraverseListener>();
         focusLogger = Logging.getFocusLogger();
-        if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+        if (focusLogger.isLoggable(Level.FINER)) {
             focusLogger.finer("TraversalEngine constructor");
         }
     }
-    
+
     public void addTraverseListener(TraverseListener listener) {
         listeners.add(listener);
     }
-    
+
     public void removeTraverseListener(TraverseListener listener) {
         listeners.remove(listener);
     }
-    
+
     public void reg(Node n) {
         registeredNodes.add(n);
     }
@@ -112,11 +112,11 @@ public class TraversalEngine {
 
         Node newNode = algorithm.traverse(owner, dir, this);
         if (newNode == null) {
-            if (focusLogger.isLoggable(PlatformLogger.FINE)) {
+            if (focusLogger.isLoggable(Level.FINE)) {
                 focusLogger.fine("new node is null, focus not moved");
             }
         } else {
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("new focus owner : "+newNode);
             }
             newNode.requestFocus();
@@ -124,7 +124,7 @@ public class TraversalEngine {
                 listener.onTraverse(newNode, getBounds(newNode));
             }
         }
-    }    
+    }
 
     public int getTopLeftFocusableNode() {
         List<Node> nodes = getAllTargetNodes();
@@ -138,8 +138,8 @@ public class TraversalEngine {
             double distance;
 
             for (nodeIndex = 1; nodeIndex < nodes.size(); nodeIndex++) {
-                
-                if (focusLogger.isLoggable(PlatformLogger.FINEST)) {
+
+                if (focusLogger.isLoggable(Level.FINEST)) {
                     focusLogger.finest("getTopLeftFocusableNode(), distance : "+zeroZero.distance(getBounds(nodes.get(nodeIndex)).getMinX(), getBounds(nodes.get(nodeIndex)).getMinY())+" to  : "+nodes.get(nodeIndex)+". @ : "+getBounds(nodes.get(nodeIndex)).getMinX()+":"+getBounds(nodes.get(nodeIndex)).getMinY());
                 }
                 distance = zeroZero.distance(getBounds(nodes.get(nodeIndex)).getMinX(), getBounds(nodes.get(nodeIndex)).getMinY());
@@ -149,7 +149,7 @@ public class TraversalEngine {
                 }
 
             }
-            if (focusLogger.isLoggable(PlatformLogger.FINER)) {
+            if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("getTopLeftFocusableNode(), nearest  : "+nearestNode+", at : "+nearestDistance);
             }
 
@@ -173,7 +173,7 @@ public class TraversalEngine {
         ** get top level container
         */
         Scene s = root.getScene();
-        
+
         addFocusableChildrenToList(targetNodes, s.getRoot());
         return targetNodes;
     }
@@ -181,7 +181,7 @@ public class TraversalEngine {
         List<Node> parentsNodes = parent.getChildrenUnmodifiable();
         for (Node n : parentsNodes) {
             if (n.isFocusTraversable() && !n.isFocused() && n.impl_isTreeVisible() && !n.isDisabled()) {
-                
+
                 list.add(n);
             }
             if (n instanceof Parent) {
@@ -213,7 +213,7 @@ public class TraversalEngine {
         }
         return targetBounds;
     }
-    
+
     /**
      * Gets the appropriate bounds for the given node, transformed into
      * the scene's or the traversal root's coordinates.
@@ -228,7 +228,7 @@ public class TraversalEngine {
             }
         } else {
             bounds = initialBounds;
-        }        
+        }
         return bounds;
     }
 }

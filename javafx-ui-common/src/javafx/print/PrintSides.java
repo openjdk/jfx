@@ -27,7 +27,7 @@ package javafx.print;
 
 /**
  * Class to enumerate the possible duplex (two-sided) printing modes.
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public enum PrintSides {
 

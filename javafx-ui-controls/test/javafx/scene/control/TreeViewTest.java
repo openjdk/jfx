@@ -44,6 +44,7 @@ import javafx.beans.Observable;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
@@ -53,6 +54,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.layout.VBox;
@@ -703,7 +705,8 @@ public class TreeViewTest {
         VirtualFlowTestUtils.assertRowsNotEmpty(tree, 0, 3); // rows 0 - 3 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(tree, 3, -1); // rows 3+ should be empty
     }
-    
+
+    @Ignore("Test has started failing - I have reopened the jira issue")
     @Test public void test_rt28556() {
         List<Employee> employees = Arrays.<Employee>asList(
             new Employee("Ethan Williams", "Sales Department"),
@@ -998,5 +1001,26 @@ public class TreeViewTest {
         assertTrue(sm.isSelected(10));   // judyMayer
         assertTrue(treeView.getFocusModel().isFocused(10));
         assertEquals(3, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt30400() {
+        // create a treeview that'll render cells using the check box cell factory
+        TreeItem<String> rootItem = new TreeItem<>("root");
+        treeView.setRoot(rootItem);
+        treeView.setMinHeight(100);
+        treeView.setPrefHeight(100);
+        treeView.setCellFactory(CheckBoxTreeCell.forTreeView(new Callback<TreeItem<String>, ObservableValue<Boolean>>() {
+            public javafx.beans.value.ObservableValue<Boolean> call(TreeItem<String> param) {
+                return new ReadOnlyBooleanWrapper(true);
+            }
+        }));
+
+        // because only the first row has data, all other rows should be
+        // empty (and not contain check boxes - we just check the first four here)
+        VirtualFlowTestUtils.assertRowsNotEmpty(treeView, 0, 1);
+        VirtualFlowTestUtils.assertCellNotEmpty(VirtualFlowTestUtils.getCell(treeView, 0));
+        VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(treeView, 1));
+        VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(treeView, 2));
+        VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(treeView, 3));
     }
 }

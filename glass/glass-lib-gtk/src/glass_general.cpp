@@ -268,12 +268,14 @@ void dump_jstring_array(JNIEnv* env, jobjectArray arr) {
     }
 }
 
-void log_exception(JNIEnv *env) {
+gboolean check_and_clear_exception(JNIEnv *env) {
     jthrowable t = env->ExceptionOccurred();
     if (t) {
         env->ExceptionClear();
         env->CallStaticVoidMethod(jApplicationCls, jApplicationReportException, t);
+        return TRUE;
     }
+    return FALSE;
 }
 
 gpointer glass_try_malloc_n(gsize m, gsize n, 

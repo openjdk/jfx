@@ -99,6 +99,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  *
  * <p> The code above produces the following: </p>
  * <p> <img src="doc-files/displacementmap.png"/> </p>
+ * @since JavaFX 2.0
  */
 public class DisplacementMap extends Effect {
     @Override
@@ -118,6 +119,7 @@ public class DisplacementMap extends Effect {
     /**
      * Creates a new instance of DisplacementMap with the specified mapData.
      * @param mapData the map data for this displacement map effect
+     * @since JavaFX 2.1
      */
     public DisplacementMap(FloatMap mapData) {
         setMapData(mapData);
@@ -135,6 +137,7 @@ public class DisplacementMap extends Effect {
      * {@code FloatMap} are multiplied
      * @param scaleY the scale factor by which all y coordinate offset values in the
      * {@code FloatMap} are multiplied
+     * @since JavaFX 2.1
      */
     public DisplacementMap(FloatMap mapData, 
                            double offsetX, double offsetY,

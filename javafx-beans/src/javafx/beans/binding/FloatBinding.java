@@ -57,6 +57,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @see javafx.beans.binding.FloatExpression
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class FloatBinding extends FloatExpression implements
         NumberBinding {

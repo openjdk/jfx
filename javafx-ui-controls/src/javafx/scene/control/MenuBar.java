@@ -67,6 +67,7 @@ import javafx.scene.Node;
  *
  * @see Menu
  * @see MenuItem
+ * @since JavaFX 2.0
  */
 @DefaultProperty("menus")
 public class MenuBar extends Control {
@@ -104,6 +105,7 @@ public class MenuBar extends Control {
 
     /**
      * Use the system menu bar if the current platform supports it.
+     * @since JavaFX 2.1
      */
     public final BooleanProperty useSystemMenuBarProperty() {
         if (useSystemMenuBar == null) {
@@ -190,6 +192,7 @@ public class MenuBar extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -197,6 +200,7 @@ public class MenuBar extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

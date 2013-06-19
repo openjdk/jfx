@@ -33,33 +33,41 @@ import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.image.impl.ByteGray;
 import com.sun.javafx.image.impl.ByteRgb;
 import com.sun.javafx.image.impl.IntArgbPre;
-import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 
-/**
- * Created with IntelliJ IDEA. User: msoch Date: 3/21/13 Time: 6:55 PM To change this template use File | Settings |
- * File Templates.
- */
 class SWArgbPreTexture extends SWTexture {
 
     private int data[];
+    private int stride, offset;
     private boolean hasAlpha = true;
 
     SWArgbPreTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h) {
         super(factory, wrapMode, w, h);
+        stride = w;
+        offset = 0;
     }
 
     SWArgbPreTexture(SWArgbPreTexture sharedTex, WrapMode altMode) {
         super(sharedTex, altMode);
         this.data = sharedTex.data;
+        this.stride = sharedTex.stride;
+        this.offset = sharedTex.offset;
         this.hasAlpha = sharedTex.hasAlpha;
     }
 
     int[] getDataNoClone() {
         return data;
+    }
+
+    int getStride() {
+        return stride;
+    }
+
+    int getOffset() {
+        return offset;
     }
 
     boolean hasAlpha() {
@@ -72,53 +80,47 @@ class SWArgbPreTexture extends SWTexture {
     }
 
     @Override
-    public void update(Image img, int dstx, int dsty, int srcw, int srch, boolean skipFlush) {
+    public void update(Buffer buffer, PixelFormat format, int dstx, int dsty,
+                       int srcx, int srcy, int srcw, int srch, int srcscan, boolean skipFlush)
+    {
         if (PrismSettings.debug) {
-            System.out.println("Image format: " + img.getPixelFormat());
-            System.out.println("Bytes per pixel: " + img.getBytesPerPixelUnit());
-            System.out.println("dstx:" + dstx + " dsty:" + dsty + " srcw:" + srcw + " srch:" + srch);
+            System.out.println("ARGB_PRE TEXTURE, Pixel format: " + format + ", buffer: " + buffer);
+            System.out.println("dstx:" + dstx + " dsty:" + dsty);
+            System.out.println("srcx:" + srcx + " srcy:" + srcy + " srcw:" + srcw + " srch:" + srch + " srcscan: " + srcscan);
         }
 
-        this.checkAllocation(srcw, srch);
-        this.width = srcw;
-        this.height = srch;
+        this.checkDimensions(dstx+srcw, dsty+srch);
         this.allocate();
 
         final PixelGetter getter;
-        final int elementsPerPixel;
-        switch (img.getPixelFormat()) {
+        switch (format) {
             case BYTE_RGB:
                 getter = ByteRgb.getter;
-                elementsPerPixel = img.getBytesPerPixelUnit();
                 this.hasAlpha = false;
                 break;
             case INT_ARGB_PRE:
                 getter = IntArgbPre.getter;
-                elementsPerPixel = 1;
+                // original srcscan parameter is in bytes, but PixelConverter.convert
+                // requires srcscan to be in elements (INTs in this case)
+                srcscan = srcscan >> 2;
                 this.hasAlpha = true;
                 break;
             case BYTE_BGRA_PRE:
                 getter = ByteBgraPre.getter;
-                elementsPerPixel = img.getBytesPerPixelUnit();
                 this.hasAlpha = true;
                 break;
             case BYTE_GRAY:
                 getter = ByteGray.getter;
-                elementsPerPixel = img.getBytesPerPixelUnit();
                 this.hasAlpha = false;
                 break;
             default:
-                throw new UnsupportedOperationException("!!! UNSUPPORTED PIXEL FORMAT: " + img.getPixelFormat());
+                throw new UnsupportedOperationException("!!! UNSUPPORTED PIXEL FORMAT: " + format);
         }
 
         PixelConverter converter = PixelUtils.getConverter(getter, IntArgbPre.setter);
-        converter.convert(img.getPixelBuffer(), 0, srcw * elementsPerPixel,
-                IntBuffer.wrap(this.data), (dsty * width) + dstx, width, srcw, srch);
-    }
-
-    @Override
-    public void update(Buffer buffer, PixelFormat format, int dstx, int dsty, int srcx, int srcy, int srcw, int srch, int srcscan, boolean skipFlush) {
-        throw new UnsupportedOperationException("update5:unimp");
+        buffer.position(0);
+        converter.convert(buffer, (srcy * srcscan) + srcx, srcscan,
+                          IntBuffer.wrap(this.data), (dsty * width) + dstx, width, srcw, srch);
     }
 
     @Override
@@ -149,6 +151,21 @@ class SWArgbPreTexture extends SWTexture {
         frame.releaseFrame();
     }
 
+    void checkDimensions(int srcw, int srch) {
+        if (srcw < 0) {
+            throw new IllegalArgumentException("srcw must be >=0");
+        }
+        if (srch < 0) {
+            throw new IllegalArgumentException("srch must be >=0");
+        }
+        if (srcw > this.width) {
+            throw new IllegalArgumentException("srcw exceeds WIDTH");
+        }
+        if (srch > this.height) {
+            throw new IllegalArgumentException("srch exceeds HEIGHT");
+        }
+    }
+
     void applyCompositeAlpha(float alpha) {
         if (allocated) {
             int finalAlpha;
@@ -160,10 +177,6 @@ class SWArgbPreTexture extends SWTexture {
         } else {
             throw new IllegalStateException("Cannot apply composite alpha to texture with non-allocated data");
         }
-    }
-
-    int getBufferLength() {
-        return (data == null) ? 0 : data.length;
     }
 
     void allocateBuffer() {

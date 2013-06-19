@@ -139,6 +139,7 @@ import javafx.geometry.NodeOrientation;
  * <p>
  * <img src="doc-files/imageview.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 @DefaultProperty("image")
 public class ImageView extends Node {
@@ -817,6 +818,7 @@ public class ImageView extends Node {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -825,6 +827,7 @@ public class ImageView extends Node {
     /**
      * {@inheritDoc}
      *
+     * @since JavaFX 8.0
      */
     
     

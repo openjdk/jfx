@@ -46,7 +46,7 @@ import javafx.scene.transform.Rotate;
  * A {@code Cylinder} is a 3D geometry primitive created with a given radius and height.
  * It is centered at the origin.
  *
- * @since JavaFX 8    
+ * @since JavaFX 8.0
  */
 public class Cylinder extends Shape3D {
 
@@ -378,7 +378,7 @@ public class Cylinder extends Shape3D {
     static TriangleMesh createMesh(int div, float h, float r) {
 
         // NOTE: still create mesh for degenerated cylinder
-        final int nPonits = (div + 1) * 2 + 2;
+        final int nPonits = div * 2 + 2;
         final int tcCount = (div + 1) * 4 + 1; // 2 cap tex
         final int faceCount = div * 4;
 
@@ -394,8 +394,8 @@ public class Cylinder extends Shape3D {
 
         int pPos = 0, tPos = 0;
 
-        for (int i = 0; i <= div; ++i) {
-            double a = (i < div) ? dA * i * 2 * Math.PI : 0;
+        for (int i = 0; i < div; ++i) {
+            double a = dA * i * 2 * Math.PI;
 
             points[pPos + 0] = (float) (Math.sin(a) * r);
             points[pPos + 2] = (float) (Math.cos(a) * r);
@@ -405,8 +405,13 @@ public class Cylinder extends Shape3D {
             pPos += 3; tPos += 2;
         }
 
-        for (int i = 0; i <= div; ++i) {
-            double a = (i < div) ? dA * i * 2 * Math.PI : 0;
+        // top edge
+        tPoints[tPos + 0] = 0;
+        tPoints[tPos + 1] = 1 - textureDelta;
+        tPos += 2;
+
+        for (int i = 0; i < div; ++i) {
+            double a = dA * i * 2 * Math.PI;
             points[pPos + 0] = (float) (Math.sin(a) * r);
             points[pPos + 2] = (float) (Math.cos(a) * r);
             points[pPos + 1] = -h;
@@ -414,6 +419,11 @@ public class Cylinder extends Shape3D {
             tPoints[tPos + 1] = textureDelta;
             pPos += 3; tPos += 2;
         }
+
+        // bottom edge
+        tPoints[tPos + 0] = 0;
+        tPoints[tPos + 1] = textureDelta;
+        tPos += 2;
 
         // add cap central points
         points[pPos + 0] = 0;
@@ -448,61 +458,67 @@ public class Cylinder extends Shape3D {
         int fIndex = 0;
 
         // build body faces
-        for (int p0 = 0; p0 != div; ++p0) {
+        for (int p0 = 0; p0 < div; ++p0) {
             int p1 = p0 + 1;
-            int p2 = p0 + div + 1;
-            int p3 = p1 + div + 1;
+            int p2 = p0 + div;
+            int p3 = p1 + div;
 
             // add p0, p1, p2
             faces[fIndex+0] = p0;
             faces[fIndex+1] = p0;
             faces[fIndex+2] = p2;
-            faces[fIndex+3] = p2;
-            faces[fIndex+4] = p1;
+            faces[fIndex+3] = p2 + 1;
+            faces[fIndex+4] = p1 == div ? 0 : p1;
             faces[fIndex+5] = p1;
             fIndex += 6;
 
             // add p3, p2, p1
             // *faces++ = SmFace(p3,p1,p2, p3,p1,p2, 1);
-            faces[fIndex+0] = p3;
-            faces[fIndex+1] = p3;
-            faces[fIndex+2] = p1;
+            faces[fIndex+0] = p3 % div == 0 ? p3 - div : p3;
+            faces[fIndex+1] = p3 + 1;
+            faces[fIndex+2] = p1 == div ? 0 : p1;
             faces[fIndex+3] = p1;
             faces[fIndex+4] = p2;
-            faces[fIndex+5] = p2;
+            faces[fIndex+5] = p2 + 1;
             fIndex += 6;
 
         }
         // build cap faces
-        int tStart = (div + 1) * 2, t1 = (div + 1) * 4, p1 = (div + 1) * 2;
+        int tStart = (div + 1) * 2;
+        int t1 = (div + 1) * 4;
+        int p1 = div * 2;
 
         // bottom cap
-        for (int p0 = 0; p0 != div; ++p0) {
-            int p2 = p0 + 1, t0 = tStart + p0, t2 = t0 + 1;
-            // add p0, p1, p2
+        for (int p0 = 0; p0 < div; ++p0) {
+            int p2 = p0 + 1;
+            int t0 = tStart + p0;
+            int t2 = t0 + 1;
 
+            // add p0, p1, p2
             faces[fIndex+0] = p0;
             faces[fIndex+1] = t0;
-            faces[fIndex+2] = p2;
+            faces[fIndex+2] = p2 == div ? 0 : p2;
             faces[fIndex+3] = t2;
             faces[fIndex+4] = p1;
             faces[fIndex+5] = t1;
             fIndex += 6;
         }
 
-        p1 = (div + 1) * 2 + 1;
+        p1 = div * 2 + 1;
         tStart = (div + 1) * 3;
 
         // top cap
-        for (int p0 = 0; p0 != div; ++p0) {
-            int p2 = p0 + 1 + div + 1, t0 = tStart + p0, t2 = t0 + 1;
-            //*faces++ = SmFace(p0+div+1,p1,p2, t0,t1,t2, 2);
+        for (int p0 = 0; p0 < div; ++p0) {
+            int p2 = p0 + 1 + div;
+            int t0 = tStart + p0;
+            int t2 = t0 + 1;
 
-            faces[fIndex+0] = p0 + div + 1;
+            //*faces++ = SmFace(p0+div+1,p1,p2, t0,t1,t2, 2);
+            faces[fIndex+0] = p0 + div;
             faces[fIndex+1] = t0;
             faces[fIndex+2] = p1;
             faces[fIndex+3] = t1;
-            faces[fIndex+4] = p2;
+            faces[fIndex+4] = p2 % div == 0 ? p2 - div : p2;
             faces[fIndex+5] = t2;
             fIndex += 6;
         }

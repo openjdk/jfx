@@ -55,6 +55,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @see Binding
  * @see javafx.beans.binding.BooleanExpression
  * 
+ * @since JavaFX 2.0
  */
 public abstract class BooleanBinding extends BooleanExpression implements
         Binding<Boolean> {

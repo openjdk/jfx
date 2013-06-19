@@ -41,14 +41,14 @@ import static javafx.print.Paper.Units.*;
  * a Paper of any size, but in either case, it is up to the application
  * to verify at run time that a particular size is supported by a device.
  * <p>
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 
 public final class Paper {
 
     /**
      * An enumeration used to specify the Units used for Paper measurement
-     * @since JavaFX 8
+     * @since JavaFX 8.0
      */
     public static enum Units {
         /**

@@ -52,6 +52,7 @@ ellipse.setCenterY(50.0f);
 ellipse.setRadiusX(50.0f);
 ellipse.setRadiusY(25.0f);
 </PRE>
+ * @since JavaFX 2.0
  */
 public class Ellipse extends Shape {
 
@@ -180,7 +181,7 @@ public class Ellipse extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusX = new DoublePropertyBase() {
+    private final DoubleProperty radiusX = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {
@@ -216,7 +217,7 @@ public class Ellipse extends Shape {
      *
      * @defaultValue 0.0
      */
-    private DoubleProperty radiusY = new DoublePropertyBase() {
+    private final DoubleProperty radiusY = new DoublePropertyBase() {
 
         @Override
         public void invalidated() {

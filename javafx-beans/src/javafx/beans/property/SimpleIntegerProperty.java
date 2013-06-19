@@ -31,6 +31,7 @@ package javafx.beans.property;
  * 
  * @see IntegerPropertyBase
  * 
+ * @since JavaFX 2.0
  */
 public class SimpleIntegerProperty extends IntegerPropertyBase {
 

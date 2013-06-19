@@ -130,7 +130,7 @@ public class Modena extends Application {
         }
     }
     
-    private final BorderPane outerRoot = new BorderPane();
+    private BorderPane outerRoot;
     private BorderPane root;
     private SamplePageNavigation samplePageNavigation;
     private SamplePage samplePage;
@@ -206,6 +206,7 @@ public class Modena extends Application {
         // set user agent stylesheet
         updateUserAgentStyleSheet(true);
         // build Menu Bar
+        outerRoot = new BorderPane();
         outerRoot.setTop(buildMenuBar());
         outerRoot.setCenter(root);
         // build UI

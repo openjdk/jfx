@@ -31,6 +31,7 @@ import javafx.event.EventType;
 
 /**
  * Event related to window showing/hiding actions.
+ * @since JavaFX 2.0
  */
 public class WindowEvent extends Event {
 
@@ -113,6 +114,7 @@ public class WindowEvent extends Event {
      * @param target the new target of the copied event
      * @param eventType the new eventType
      * @return the event copy with the fields substituted
+     * @since JavaFX 8.0
      */
     public WindowEvent copyFor(Object newSource, EventTarget newTarget, EventType<WindowEvent> type) {
         WindowEvent e = copyFor(newSource, newTarget);

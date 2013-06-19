@@ -33,6 +33,7 @@ import javafx.scene.image.Image;
 
 /**
  * A drag and drop specific {@link Clipboard}.
+ * @since JavaFX 2.0
  */
 public final class Dragboard extends Clipboard {
 
@@ -78,6 +79,7 @@ public final class Dragboard extends Clipboard {
      * @param image image to use for the drag view
      * @param offsetX x position of the cursor over the image
      * @param offsetY y position of the cursor over the image
+     * @since JavaFX 8.0
      */
     public void setDragView(Image image, double offsetX, double offsetY) {
         peer.setDragView(image);
@@ -92,6 +94,7 @@ public final class Dragboard extends Clipboard {
      * in the DRAG_DETECTED handler, calling it at other times
      * doesn't have any effect.
      * @param image image to use for the drag view
+     * @since JavaFX 8.0
      */
     public void setDragView(Image image) {
         peer.setDragView(image);
@@ -103,6 +106,7 @@ public final class Dragboard extends Clipboard {
      * in the DRAG_DETECTED handler, calling it at other times
      * doesn't have any effect.
      * @param offsetX x position of the cursor over the image
+     * @since JavaFX 8.0
      */
     public void setDragViewOffsetX(double offsetX) {
         peer.setDragViewOffsetX(offsetX);
@@ -114,6 +118,7 @@ public final class Dragboard extends Clipboard {
      * in the DRAG_DETECTED handler, calling it at other times
      * doesn't have any effect.
      * @param offsetY y position of the cursor over the image
+     * @since JavaFX 8.0
      */
     public void setDragViewOffsetY(double offsetY) {
         peer.setDragViewOffsetY(offsetY);
@@ -124,6 +129,7 @@ public final class Dragboard extends Clipboard {
      * This method returns meaningful value only when starting drag and drop
      * operation in the DRAG_DETECTED handler, it returns null at other times.
      * @return the image used as a drag view
+     * @since JavaFX 8.0
      */
     public Image getDragView() {
         return peer.getDragView();
@@ -134,6 +140,7 @@ public final class Dragboard extends Clipboard {
      * This method returns meaningful value only when starting drag and drop
      * operation in the DRAG_DETECTED handler, it returns 0 at other times.
      * @return x position of the cursor over the image
+     * @since JavaFX 8.0
      */
     public double getDragViewOffsetX() {
         return peer.getDragViewOffsetX();
@@ -144,6 +151,7 @@ public final class Dragboard extends Clipboard {
      * This method returns meaningful value only when starting drag and drop
      * operation in the DRAG_DETECTED handler, it returns 0 at other times.
      * @return y position of the cursor over the image
+     * @since JavaFX 8.0
      */
     public double getDragViewOffsetY() {
         return peer.getDragViewOffsetY();

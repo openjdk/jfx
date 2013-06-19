@@ -43,6 +43,7 @@ import java.lang.ref.WeakReference;
  * @param <T> The type of the items contained within the TableColumn.
  * @see TableView
  * @see TableColumn
+ * @since JavaFX 2.0
  */
 public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
     

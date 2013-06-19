@@ -53,6 +53,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.ReadOnlyLongProperty
  * @see ReadOnlyJavaBeanLongPropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase implements ReadOnlyJavaBeanProperty<Number> {
 

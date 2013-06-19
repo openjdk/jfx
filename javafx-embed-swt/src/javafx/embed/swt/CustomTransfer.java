@@ -31,6 +31,9 @@ import org.eclipse.swt.dnd.ByteArrayTransfer;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.TransferData;
 
+/**
+ * @since JavaFX 2.2
+ */
 public class CustomTransfer extends ByteArrayTransfer {
     private String name, mime;
     

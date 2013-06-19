@@ -50,6 +50,7 @@ import java.lang.ref.WeakReference;
  * @param <E>
  *            The type of the observed value
  *
+ * @since JavaFX 2.1
  */
 public final class WeakListChangeListener<E> implements ListChangeListener<E>, WeakListener {
 

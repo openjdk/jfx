@@ -36,6 +36,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  * and can be passed to external users. The other property is read- and
  * writable and should be used internally only.
  * 
+ * @since JavaFX 2.0
  */
 public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
 

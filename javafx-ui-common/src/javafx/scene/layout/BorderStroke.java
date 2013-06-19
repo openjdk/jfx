@@ -41,6 +41,7 @@ import javafx.scene.shape.StrokeType;
  * When applied to a Region with a defined shape, the border width
  * and stroking information for the {@code top} is used, while the
  * other attributes are ignored.
+ * @since JavaFX 8.0
  */
 public class BorderStroke {
     /**

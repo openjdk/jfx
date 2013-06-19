@@ -117,6 +117,7 @@ import static javafx.concurrent.WorkerStateEvent.*;
  *     will not completely swamp the system by creating thousands of Threads.
  * </p>
  * @param <V>
+ * @since JavaFX 2.0
  */
 public abstract class Service<V> implements Worker<V>, EventTarget {
     /**
@@ -243,6 +244,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * to the READY state.
      *
      * @return the onReady event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onReadyProperty() {
         return getEventHelper().onReadyProperty();
@@ -253,6 +255,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * to the READY state.
      *
      * @return the onReady event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnReady() {
         return eventHelper == null ? null : eventHelper.getOnReady();
@@ -263,6 +266,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * to the READY state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnReady(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnReady(value);
@@ -273,6 +277,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * state of the Task has transitioned to the READY state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
+     * @since JavaFX 2.1
      */
     protected void ready() { }
 
@@ -281,6 +286,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the SCHEDULED state.
      *
      * @return the onScheduled event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onScheduledProperty() {
         return getEventHelper().onScheduledProperty();
@@ -291,6 +297,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the SCHEDULED state.
      *
      * @return the onScheduled event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnScheduled() {
         return eventHelper == null ? null : eventHelper.getOnScheduled();
@@ -301,6 +308,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the SCHEDULED state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnScheduled(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnScheduled(value);
@@ -311,6 +319,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * state of the Task has transitioned to the SCHEDULED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
+     * @since JavaFX 2.1
      */
     protected void scheduled() { }
 
@@ -319,6 +328,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the RUNNING state.
      *
      * @return the onRunning event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onRunningProperty() {
         return getEventHelper().onRunningProperty();
@@ -329,6 +339,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the RUNNING state.
      *
      * @return the onRunning event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnRunning() {
         return eventHelper == null ? null : eventHelper.getOnRunning();
@@ -339,6 +350,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the RUNNING state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnRunning(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnRunning(value);
@@ -349,6 +361,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * state of the Task has transitioned to the RUNNING state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
+     * @since JavaFX 2.1
      */
     protected void running() { }
 
@@ -357,6 +370,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the SUCCEEDED state.
      *
      * @return the onSucceeded event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onSucceededProperty() {
         return getEventHelper().onSucceededProperty();
@@ -367,6 +381,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the SUCCEEDED state.
      *
      * @return the onSucceeded event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnSucceeded() {
         return eventHelper == null ? null : eventHelper.getOnSucceeded();
@@ -377,6 +392,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the SUCCEEDED state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnSucceeded(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnSucceeded(value);
@@ -387,6 +403,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * state of the Task has transitioned to the SUCCEEDED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
+     * @since JavaFX 2.1
      */
     protected void succeeded() { }
 
@@ -395,6 +412,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the CANCELLED state.
      *
      * @return the onCancelled event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onCancelledProperty() {
         return getEventHelper().onCancelledProperty();
@@ -405,6 +423,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the CANCELLED state.
      *
      * @return the onCancelled event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnCancelled() {
         return eventHelper == null ? null : eventHelper.getOnCancelled();
@@ -415,6 +434,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the CANCELLED state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnCancelled(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnCancelled(value);
@@ -425,6 +445,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * state of the Task has transitioned to the CANCELLED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
+     * @since JavaFX 2.1
      */
     protected void cancelled() { }
 
@@ -433,6 +454,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the FAILED state.
      *
      * @return the onFailed event handler property
+     * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onFailedProperty() {
         return getEventHelper().onFailedProperty();
@@ -443,6 +465,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the FAILED state.
      *
      * @return the onFailed event handler, if any
+     * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnFailed() {
         return eventHelper == null ? null : eventHelper.getOnFailed();
@@ -453,6 +476,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * transitions to the FAILED state.
      *
      * @param value the event handler, can be null to clear it
+     * @since JavaFX 2.1
      */
     public final void setOnFailed(EventHandler<WorkerStateEvent> value) {
         getEventHelper().setOnFailed(value);
@@ -463,6 +487,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * state of the Task has transitioned to the FAILED state.
      * This method is invoked after any listeners of the state property
      * and after the Task has been fully transitioned to the new state.
+     * @since JavaFX 2.1
      */
     protected void failed() { }
 
@@ -638,6 +663,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      *     implementation.
      * </p>
      * @param task a non-null task to execute
+     * @since JavaFX 2.1
      */
     protected void executeTask(Task<V> task) {
         Executor e = getExecutor();
@@ -673,6 +699,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @param eventType the type of the events to receive by the handler
      * @param eventHandler the handler to register
      * @throws NullPointerException if the event type or handler is null
+     * @since JavaFX 2.1
      */
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
@@ -690,6 +717,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @param eventType the event type from which to unregister
      * @param eventHandler the handler to unregister
      * @throws NullPointerException if the event type or handler is null
+     * @since JavaFX 2.1
      */
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -705,6 +733,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @param eventType the type of the events to receive by the filter
      * @param eventFilter the filter to register
      * @throws NullPointerException if the event type or filter is null
+     * @since JavaFX 2.1
      */
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
@@ -722,6 +751,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @param eventType the event type from which to unregister
      * @param eventFilter the filter to unregister
      * @throws NullPointerException if the event type or filter is null
+     * @since JavaFX 2.1
      */
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
@@ -739,6 +769,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @param eventType the event type to associate with the given eventHandler
      * @param eventHandler the handler to register, or null to unregister
      * @throws NullPointerException if the event type is null
+     * @since JavaFX 2.1
      */
     protected final <T extends Event> void setEventHandler(
             final EventType<T> eventType,
@@ -756,6 +787,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * This method must be called on the FX user thread.
      *
      * @param event the event to fire
+     * @since JavaFX 2.1
      */
     protected final void fireEvent(Event event) {
         checkThread();

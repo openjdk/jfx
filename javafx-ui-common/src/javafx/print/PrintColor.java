@@ -28,7 +28,7 @@ package javafx.print;
 /**
  * Class which describes whether printing should be monochrome
  * or color.
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public enum PrintColor {
 

@@ -27,10 +27,9 @@ package javafx.collections.transformation;
 
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 import com.sun.javafx.collections.SortHelper;
-import java.text.Collator;
+import com.sun.javafx.collections.SourceAdapterChange;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -45,6 +44,7 @@ import javafx.collections.ObservableList;
  * valid again.
  *
  * @see TransformationList
+ * @since JavaFX 8.0
  */
 public final class SortedList<E> extends TransformationList<E, E>{
 
@@ -63,7 +63,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
      * ordering of the elements is used if possible. Otherwise, the SortedList tries to sort the elements
      * by their toString().
      * @param source a list to wrap
-     * @param comparator a comparator to use or null if natural ordering is required
+     * @param comparator a comparator to use or null for the unordered List
      */
     @SuppressWarnings("unchecked")
     public SortedList(ObservableList<? extends E> source, Comparator<? super E> comparator) {
@@ -73,17 +73,14 @@ public final class SortedList<E> extends TransformationList<E, E>{
         for (int i = 0; i < size; ++i) {
             sorted[i] = new Element<E>(source.get(i), i);
         }
-        if (comparator == null) {
-            elementComparator = new NaturalElementComparator<>();
-            Arrays.sort(sorted, 0, size, elementComparator);
-        } else {
+        if (comparator != null) {
             setComparator(comparator);
         }
 
     }
 
     /**
-     * Constructs a new SortedList wrapper around the source list.
+     * Constructs a new unordered SortedList wrapper around the source list.
      * @param source the source list
      * @see #SortedList(java.util.List, java.util.Comparator)
      */
@@ -93,23 +90,27 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     @Override
     protected void sourceChanged(Change<? extends E> c) {
-        beginChange();
-        while (c.next()) {
-            if (c.wasPermutated()) {
-                updatePermutationIndexes(c);
-            } else if (c.wasUpdated()) {
-                update(c);
-            } else {
-                addRemove(c);
+        if (elementComparator != null) {
+            beginChange();
+            while (c.next()) {
+                if (c.wasPermutated()) {
+                    updatePermutationIndexes(c);
+                } else if (c.wasUpdated()) {
+                    update(c);
+                } else {
+                    addRemove(c);
+                }
             }
+            endChange();
+        } else {
+            updateUnsorted(c);
+            fireChange(new SourceAdapterChange<>(this, c));
         }
-        endChange();
     };
 
     /**
      * The comparator that denotes the order of this SortedList.
-     * Natural order of elements is used when the comparator is null and the elements
-     * are Comparable.
+     * Null for unordered SortedList.
      */
     private ObjectProperty<Comparator<? super E>> comparator;
 
@@ -120,7 +121,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 @Override
                 protected void invalidated() {
                     Comparator<? super E> current = get();
-                    elementComparator = current != null ? new ElementComparator<>(current) : new NaturalElementComparator<>();
+                    elementComparator = current != null ? new ElementComparator<>(current) : null;
                     doSortWithPermutationChange();
                 }
 
@@ -173,8 +174,34 @@ public final class SortedList<E> extends TransformationList<E, E>{
     }
 
     private void doSortWithPermutationChange() {
-        int[] perm = helper.sort(sorted, 0, size, elementComparator);
-        fireChange(new SimplePermutationChange<>(0, size, perm, this));
+        if (elementComparator != null) {
+            int[] perm = helper.sort(sorted, 0, size, elementComparator);
+            fireChange(new SimplePermutationChange<>(0, size, perm, this));
+        } else {
+            int[] perm = new int[size];
+            int[] rperm = new int[size];
+            boolean changed = false;
+            int idx = 0;
+            while (idx < size) {
+                final int otherIdx = sorted[idx].index;
+                if (otherIdx == idx) {
+                    ++idx;
+                    continue;
+                }
+                Element<E> other = sorted[otherIdx];
+                sorted[otherIdx] = sorted[idx];
+                sorted[idx] = other;
+                perm[rperm[idx]] = otherIdx;
+                perm[rperm[otherIdx]] = idx;
+                int tp = rperm[idx];
+                rperm[idx] = rperm[otherIdx];
+                rperm[otherIdx] = tp;
+                changed = true;
+            }
+            if (changed) {
+                fireChange(new SimplePermutationChange<>(0, size, perm, this));
+            }
+        }
     }
 
     @Override
@@ -185,6 +212,35 @@ public final class SortedList<E> extends TransformationList<E, E>{
     private void updatePermutationIndexes(Change<? extends E> change) {
         for (int i = 0; i < size; ++i) {
             sorted[i].index = change.getPermutation(sorted[i].index);
+        }
+    }
+
+    private void updateUnsorted(Change<? extends E> c) {
+        while (c.next()) {
+            if (c.wasPermutated()) {
+                Element[] sortedTmp = new Element[sorted.length];
+                for (int i = 0; i < size; ++i) {
+                    if (i >= c.getFrom() && i < c.getTo()) {
+                        sortedTmp[c.getPermutation(i)] = sorted[i];
+                    } else {
+                        sortedTmp[i] = sorted[i];
+                    }
+                }
+                sorted = sortedTmp;
+            }
+            if (c.wasRemoved()) {
+                final int removedTo = c.getFrom() + c.getRemovedSize();
+                System.arraycopy(sorted, removedTo, sorted, c.getFrom(), size - removedTo);
+                size -= c.getRemovedSize();
+            }
+            if (c.wasAdded()) {
+                ensureSize(size + c.getAddedSize());
+                System.arraycopy(sorted, c.getFrom(), sorted, c.getTo(), size - c.getFrom());
+                size += c.getAddedSize();
+                for (int i = c.getFrom(); i < c.getTo(); ++i) {
+                    sorted[i] = new Element<E>(c.getList().get(i), i);
+                }
+            }
         }
     }
 
@@ -213,28 +269,6 @@ public final class SortedList<E> extends TransformationList<E, E>{
             return comparator.compare(o1.e, o2.e);
         }
 
-    }
-
-    private static class NaturalElementComparator<E> implements Comparator<Element<E>> {
-
-        @Override
-        public int compare(Element<E> o1, Element<E> o2) {
-            if (o1.e == null && o2.e == null) {
-                return 0;
-            }
-            if (o1.e == null) {
-                return -1;
-            }
-            if (o2.e == null) {
-                return 1;
-            }
-
-            if (o1.e instanceof Comparable) {
-                return ((Comparable) o1.e).compareTo(o2.e);
-            }
-
-            return Collator.getInstance().compare(o1.e.toString(), o2.e.toString());
-        }
     }
 
     @SuppressWarnings("unchecked")

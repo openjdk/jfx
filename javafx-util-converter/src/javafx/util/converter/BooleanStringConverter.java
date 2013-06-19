@@ -30,6 +30,7 @@ import javafx.util.StringConverter;
 /**
  * <p>{@link StringConverter} implementation for {@link Boolean}
  * (and boolean primitive) values.</p>
+ * @since JavaFX 2.1
  */
 public class BooleanStringConverter extends StringConverter<Boolean> {
     /** {@inheritDoc} */

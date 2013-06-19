@@ -57,6 +57,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  *
  * @param <T>
  *            the type of the wrapped {@code Object}
+ * @since JavaFX 2.0
  */
 public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
         Binding<T> {

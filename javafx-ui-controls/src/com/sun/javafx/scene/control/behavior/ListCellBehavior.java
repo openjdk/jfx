@@ -38,28 +38,29 @@ import javafx.scene.input.MouseEvent;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Logging;
 import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
  */
 public class ListCellBehavior extends CellBehaviorBase<ListCell> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Private static implementation                                           *
      *                                                                         *
      **************************************************************************/
-    
+
     private static final String ANCHOR_PROPERTY_KEY = "list.anchor";
-    
+
     static int getAnchor(ListView list) {
         FocusModel fm = list.getFocusModel();
         if (fm == null) return -1;
-        
-        return hasAnchor(list) ? 
-                (int)list.getProperties().get(ANCHOR_PROPERTY_KEY) : 
+
+        return hasAnchor(list) ?
+                (int)list.getProperties().get(ANCHOR_PROPERTY_KEY) :
                 fm.getFocusedIndex();
     }
-    
+
     static void setAnchor(ListView list, int anchor) {
         if (list != null && anchor < 0) {
             removeAnchor(list);
@@ -67,29 +68,29 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
             list.getProperties().put(ANCHOR_PROPERTY_KEY, anchor);
         }
     }
-    
+
     static boolean hasAnchor(ListView list) {
         return list.getProperties().get(ANCHOR_PROPERTY_KEY) != null;
     }
-    
+
     static void removeAnchor(ListView list) {
         list.getProperties().remove(ANCHOR_PROPERTY_KEY);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
-     **************************************************************************/     
-    
+     **************************************************************************/
+
     // For RT-17456: have selection occur as fast as possible with mouse input.
-    // The idea is (consistently with some native applications we've tested) to 
+    // The idea is (consistently with some native applications we've tested) to
     // do the action as soon as you can. It takes a bit more coding but provides
     // the best feel:
     //  - when you click on a not-selected item, you can select immediately on press
-    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first 
+    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first
     //
     // To support touch devices, we have to slightly modify this behavior, such
     // that selection only happens on mouse release, if only minimal dragging
@@ -97,51 +98,51 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
     private boolean latePress = false;
     private final boolean isTouch = PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH);
     private boolean wasSelected = false;
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/   
+     **************************************************************************/
 
     public ListCellBehavior(ListCell control) {
         super(control);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/  
-    
+     **************************************************************************/
+
     @Override public void mousePressed(MouseEvent event) {
         boolean selectedBefore = getControl().isSelected();
-        
+
         if (getControl().isSelected()) {
             latePress = true;
             return;
         }
 
         doSelect(event);
-        
+
         if (isTouch && selectedBefore) {
             wasSelected = getControl().isSelected();
         }
     }
-    
+
     @Override public void mouseReleased(MouseEvent event) {
         if (latePress) {
             latePress = false;
             doSelect(event);
         }
-        
+
         wasSelected = false;
     }
-    
+
     @Override public void mouseDragged(MouseEvent event) {
         latePress = false;
 
@@ -152,15 +153,15 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
             getControl().getListView().getSelectionModel().clearSelection(getControl().getIndex());
         }
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
-     **************************************************************************/ 
-    
+     **************************************************************************/
+
     private void doSelect(MouseEvent e) {
         // Note that list.select will reset selection
         // for out of bounds indexes. So, need to check
@@ -172,7 +173,7 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         // we don't want to react to it.
         if (listCell.isEmpty() || ! listCell.contains(e.getX(), e.getY())) {
             final PlatformLogger logger = Logging.getControlsLogger();
-            if (listCell.isEmpty() && logger.isLoggable(PlatformLogger.WARNING)) {
+            if (listCell.isEmpty() && logger.isLoggable(Level.WARNING)) {
 //                logger.warning("ListCell is empty, so mouse pressed event is "
 //                        + "ignored. If you've created a custom cell and overridden "
 //                        + "updateItem, be sure to call super.updateItem(item, empty)");
@@ -191,7 +192,7 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
 
         FocusModel fm = listView.getFocusModel();
         if (fm == null) return;
-        
+
         // if shift is down, and we don't already have the initial focus index
         // recorded, we record the focus index now so that subsequent shift+clicks
         // result in the correct selection occuring (whilst the focus index moves
@@ -203,9 +204,9 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         } else {
             removeAnchor(listView);
         }
-        
+
         MouseButton button = e.getButton();
-        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) { 
+        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) {
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
                 simpleSelect(e);
             } else {

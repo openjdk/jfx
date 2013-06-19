@@ -33,7 +33,7 @@ import javafx.scene.paint.Color;
  * Defines an ambient light source object. Ambient light is a light source
  * that seems to come from all directions.
  *
- * @since JavaFX 8
+ * @since JavaFX 8.0
  */
 public class AmbientLight extends LightBase {
     /**

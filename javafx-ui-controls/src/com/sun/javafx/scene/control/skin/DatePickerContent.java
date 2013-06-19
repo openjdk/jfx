@@ -26,9 +26,9 @@
 package com.sun.javafx.scene.control.skin;
 
 import java.time.LocalDate;
-// import java.time.format.DateTimeFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DecimalStyle;
 import java.time.chrono.Chronology;
 import java.time.chrono.ChronoLocalDate;
 import java.time.temporal.ChronoUnit;
@@ -247,19 +247,6 @@ public class DatePickerContent extends VBox {
                     }
                 }
 
-                // our little secret... borrowed from Scene.java
-                if (!e.isConsumed() && e.getCode() == KeyCode.DIGIT8 &&
-                     e.getEventType() == KeyEvent.KEY_PRESSED && e.isControlDown() && e.isShiftDown()) {
-                    try {
-                        Class scenicview = Class.forName("com.javafx.experiments.scenicview.ScenicView");
-                        Class params[] = new Class[] { getScene().getClass() };
-                        java.lang.reflect.Method method = scenicview.getDeclaredMethod("show", params);
-                        method.invoke(null, getScene());
-                    } catch (Exception ex) {
-                        //System.out.println("exception instantiating ScenicView:"+ex);
-                    }
-                }
-
                 // Consume all key events except those that control
                 // showing the popup.
                 switch (e.getCode()) {
@@ -443,7 +430,7 @@ yearSpinner.setFillHeight(false);
                 // such as when Thai numerals are required.
                 String cellText =
                     weekNumberFormatter.withLocale(locale)
-//                                        .withSymbols(DateTimeFormatSymbols.of(locale))
+                                       .withDecimalStyle(DecimalStyle.of(locale))
                                        .format(date);
                 weekNumberCells.get(i).setText(cellText);
             }
@@ -496,7 +483,7 @@ yearSpinner.setFillHeight(false);
             String cellText =
                 dayCellFormatter.withLocale(locale)
                                 .withChronology(chrono)
-//                                 .withSymbols(DateTimeFormatSymbols.of(locale))
+                                .withDecimalStyle(DecimalStyle.of(locale))
                                 .format(cDate);
             dayCell.setText(cellText);
 
@@ -576,7 +563,7 @@ yearSpinner.setFillHeight(false);
         // Fixme: Format Japanese era names with Japanese text.
         String str = formatter.withLocale(getLocale())
                               .withChronology(getChronology())
-//                               .withSymbols(DateTimeFormatSymbols.of(getLocale()))
+                              .withDecimalStyle(DecimalStyle.of(getLocale()))
                               .format(cDate);
 
         return str;

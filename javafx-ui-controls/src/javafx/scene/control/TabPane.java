@@ -78,6 +78,7 @@ import javafx.css.StyleableProperty;
  * </code></pre>
  *
  * @see Tab
+ * @since JavaFX 2.0
  */
 @DefaultProperty("tabs")
 public class TabPane extends Control {
@@ -577,6 +578,7 @@ public class TabPane extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -584,6 +586,7 @@ public class TabPane extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
@@ -713,6 +716,7 @@ public class TabPane extends Control {
      *   <li> TabClosingPolicy.ALL_TABS: All tabs will have the option to be
      *          closed.
      * </ul>
+     * @since JavaFX 2.0
      */
     public enum TabClosingPolicy {
 

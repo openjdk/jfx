@@ -125,10 +125,12 @@ import com.sun.javafx.sg.prism.NGRegion;
 import com.sun.javafx.sg.prism.NGSVGPath;
 import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.tk.AppletWindow;
+import com.sun.javafx.tk.CompletionListener;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
+import com.sun.javafx.tk.RenderJob;
 import com.sun.javafx.tk.ScreenConfigurationAccessor;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKDragGestureListener;
@@ -150,9 +152,6 @@ import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.render.CompletionListener;
-import com.sun.prism.render.RenderJob;
-import com.sun.prism.render.ToolkitInterface;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.FilterContext;
@@ -185,7 +184,7 @@ import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.sg.prism.NGTriangleMesh;
 import com.sun.javafx.sg.prism.NGExternalNode;
 
-public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
+public final class QuantumToolkit extends Toolkit {
 
     public static final boolean verbose =
             AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
@@ -422,17 +421,8 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
 
         if (!toolkitRunning.getAndSet(true)) {
             user.setName("JavaFX Application Thread");
-
             // Set context class loader to the same as the thread that called startup
             user.setContextClassLoader(ccl);
-
-            /* set uncaught handler for Glass native thread */
-            user.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override public void uncaughtException(Thread t, Throwable th) {
-                    System.out.println(t.getName() + " uncaught: " + th.getClass().getName());
-                    th.printStackTrace();
-                }
-            });
             setFxUserThread(user);
 
             /*
@@ -516,8 +506,6 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
     protected static Thread getFxUserThread() {
         return Toolkit.getFxUserThread();
     }
-
-    /* com.sun.javafx.tk.ToolkitInterface */
 
     @Override public Future addRenderJob(RenderJob r) {
         // Do not run any render jobs (this is for benchmarking only)

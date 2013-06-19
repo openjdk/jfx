@@ -44,7 +44,7 @@ import javafx.util.converter.DefaultStringConverter;
  * default, stretch to fill the entire list cell.
  * 
  * @param <T> The type of the elements contained within the ListView.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class TextFieldListCell<T> extends ListCell<T> {
     
@@ -183,12 +183,14 @@ public class TextFieldListCell<T> extends ListCell<T> {
             return;
         }
         super.startEdit();
-        
-        if (textField == null) {
-            textField = CellUtils.createTextField(this, getConverter());
+
+        if (isEditing()) {
+            if (textField == null) {
+                textField = CellUtils.createTextField(this, getConverter());
+            }
+
+            CellUtils.startEdit(this, getConverter(), null, null, textField);
         }
-        
-        CellUtils.startEdit(this, getConverter(), null, null, textField);
     }
 
     /** {@inheritDoc} */

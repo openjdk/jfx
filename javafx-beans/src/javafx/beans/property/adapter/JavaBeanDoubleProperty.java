@@ -61,6 +61,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.DoubleProperty
  * @see JavaBeanDoublePropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class JavaBeanDoubleProperty extends DoubleProperty implements JavaBeanProperty<Number> {
 

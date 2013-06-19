@@ -103,6 +103,7 @@ import javafx.collections.ObservableIntegerArray;
  * @see NumberBinding
  * 
  * 
+ * @since JavaFX 2.0
  */
 public final class Bindings {
 
@@ -118,6 +119,7 @@ public final class Bindings {
      * @param func The function that calculates the value of this binding
      * @param dependencies The dependencies of this binding
      * @return The generated binding
+     * @since JavaFX 2.1
      */
     public static BooleanBinding createBooleanBinding(final Callable<Boolean> func, final Observable... dependencies) {
         return new BooleanBinding() {
@@ -158,6 +160,7 @@ public final class Bindings {
      * @param func The function that calculates the value of this binding
      * @param dependencies The dependencies of this binding
      * @return The generated binding
+     * @since JavaFX 2.1
      */
     public static DoubleBinding createDoubleBinding(final Callable<Double> func, final Observable... dependencies) {
         return new DoubleBinding() {
@@ -198,6 +201,7 @@ public final class Bindings {
      * @param func The function that calculates the value of this binding
      * @param dependencies The dependencies of this binding
      * @return The generated binding
+     * @since JavaFX 2.1
      */
     public static FloatBinding createFloatBinding(final Callable<Float> func, final Observable... dependencies) {
         return new FloatBinding() {
@@ -238,6 +242,7 @@ public final class Bindings {
      * @param func The function that calculates the value of this binding
      * @param dependencies The dependencies of this binding
      * @return The generated binding
+     * @since JavaFX 2.1
      */
     public static IntegerBinding createIntegerBinding(final Callable<Integer> func, final Observable... dependencies) {
         return new IntegerBinding() {
@@ -278,6 +283,7 @@ public final class Bindings {
      * @param func The function that calculates the value of this binding
      * @param dependencies The dependencies of this binding
      * @return The generated binding
+     * @since JavaFX 2.1
      */
     public static LongBinding createLongBinding(final Callable<Long> func, final Observable... dependencies) {
         return new LongBinding() {
@@ -318,6 +324,7 @@ public final class Bindings {
      * @param func The function that calculates the value of this binding
      * @param dependencies The dependencies of this binding
      * @return The generated binding
+     * @since JavaFX 2.1
      */
     public static <T> ObjectBinding<T> createObjectBinding(final Callable<T> func, final Observable... dependencies) {
         return new ObjectBinding<T>() {
@@ -358,6 +365,7 @@ public final class Bindings {
      * @param func The function that calculates the value of this binding
      * @param dependencies The dependencies of this binding
      * @return The generated binding
+     * @since JavaFX 2.1
      */
     public static StringBinding createStringBinding(final Callable<String> func, final Observable... dependencies) {
         return new StringBinding() {
@@ -553,7 +561,7 @@ public final class Bindings {
      *            The property names to reach the final property. The first step
      *            must be specified as it marks the property of the root bean.
      * @return the created {@link ObjectBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static <T> ObjectBinding<T> select(Object root, String... steps) {
         return new SelectBinding.AsObject<T>(root, steps);
@@ -576,7 +584,7 @@ public final class Bindings {
      *            The property names to reach the final property. The first step
      *            must be specified as it marks the property of the root bean.
      * @return the created {@link DoubleBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static DoubleBinding selectDouble(Object root, String... steps) {
         return new SelectBinding.AsDouble(root, steps);
@@ -599,7 +607,7 @@ public final class Bindings {
      *            The property names to reach the final property. The first step
      *            must be specified as it marks the property of the root bean.
      * @return the created {@link FloatBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static FloatBinding selectFloat(Object root, String... steps) {
         return new SelectBinding.AsFloat(root, steps);
@@ -622,7 +630,7 @@ public final class Bindings {
      *            The property names to reach the final property. The first step
      *            must be specified as it marks the property of the root bean.
      * @return the created {@link IntegerBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static IntegerBinding selectInteger(Object root, String... steps) {
         return new SelectBinding.AsInteger(root, steps);
@@ -645,7 +653,7 @@ public final class Bindings {
      *            The property names to reach the final property. The first step
      *            must be specified as it marks the property of the root bean.
      * @return the created {@link LongBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static LongBinding selectLong(Object root, String... steps) {
         return new SelectBinding.AsLong(root, steps);
@@ -668,7 +676,7 @@ public final class Bindings {
      *            The property names to reach the final property. The first step
      *            must be specified as it marks the property of the root bean.
      * @return the created {@link ObjectBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static BooleanBinding selectBoolean(Object root, String... steps) {
         return new SelectBinding.AsBoolean(root, steps);
@@ -691,7 +699,7 @@ public final class Bindings {
      *            The property names to reach the final property. The first step
      *            must be specified as it marks the property of the root bean.
      * @return the created {@link ObjectBinding}
-     * @since 8.0
+     * @since JavaFX 8.0
      */
     public static StringBinding selectString(Object root, String... steps) {
         return new SelectBinding.AsString(root, steps);
@@ -781,6 +789,7 @@ public final class Bindings {
      *            if one of the properties is {@code null}
      * @throws IllegalArgumentException
      *            if both properties are equal
+     * @since JavaFX 2.1
      */
     public static void unbindBidirectional(Object property1, Object property2) {
         BidirectionalBinding.unbind(property1, property2);
@@ -817,6 +826,7 @@ public final class Bindings {
      *            if one of the properties or the {@code format} is {@code null}
      * @throws IllegalArgumentException
      *            if both properties are equal
+     * @since JavaFX 2.1
      */
     public  static void bindBidirectional(Property<String> stringProperty, Property<?> otherProperty, Format format) {
         BidirectionalBinding.bind(stringProperty, otherProperty, format);
@@ -853,6 +863,7 @@ public final class Bindings {
      *            if one of the properties or the {@code converter} is {@code null}
      * @throws IllegalArgumentException
      *            if both properties are equal
+     * @since JavaFX 2.1
      */
     public static <T> void bindBidirectional(Property<String> stringProperty, Property<T> otherProperty, StringConverter<T> converter) {
         BidirectionalBinding.bind(stringProperty, otherProperty, converter);
@@ -891,6 +902,7 @@ public final class Bindings {
      *            if one of the lists is {@code null}
      * @throws IllegalArgumentException
      *            if {@code list1} == {@code list2}
+     * @since JavaFX 2.1
      */
     public static <E> void bindContentBidirectional(ObservableList<E> list1, ObservableList<E> list2) {
         BidirectionalContentBinding.bind(list1, list2);
@@ -929,6 +941,7 @@ public final class Bindings {
      *            if one of the sets is {@code null}
      * @throws IllegalArgumentException
      *            if {@code set1} == {@code set2}
+     * @since JavaFX 2.1
      */
     public static <E> void bindContentBidirectional(ObservableSet<E> set1, ObservableSet<E> set2) {
         BidirectionalContentBinding.bind(set1, set2);
@@ -965,6 +978,7 @@ public final class Bindings {
      *            the first {@code ObservableMap<K, V>}
      * @param map2
      *            the second {@code ObservableMap<K, V>}
+     * @since JavaFX 2.1
      */
     public static <K, V> void bindContentBidirectional(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
         BidirectionalContentBinding.bind(map1, map2);
@@ -977,6 +991,7 @@ public final class Bindings {
      *            the first {@code Object}
      * @param obj2
      *            the second {@code Object}
+     * @since JavaFX 2.1
      */
     public static void unbindContentBidirectional(Object obj1, Object obj2) {
         BidirectionalContentBinding.unbind(obj1, obj2);
@@ -999,6 +1014,7 @@ public final class Bindings {
      *            the {@code List}
      * @param list2
      *            the {@code ObservableList}
+     * @since JavaFX 2.1
      */
     public static <E> void bindContent(List<E> list1, ObservableList<? extends E> list2) {
         ContentBinding.bind(list1, list2);
@@ -1025,6 +1041,7 @@ public final class Bindings {
      *            if one of the sets is {@code null}
      * @throws IllegalArgumentException
      *            if {@code set1} == {@code set2}
+     * @since JavaFX 2.1
      */
     public static <E> void bindContent(Set<E> set1, ObservableSet<? extends E> set2) {
         ContentBinding.bind(set1, set2);
@@ -1053,6 +1070,7 @@ public final class Bindings {
      *            if one of the maps is {@code null}
      * @throws IllegalArgumentException
      *            if {@code map1} == {@code map2}
+     * @since JavaFX 2.1
      */
     public static <K, V> void bindContent(Map<K, V> map1, ObservableMap<? extends K, ? extends V> map2) {
         ContentBinding.bind(map1, map2);
@@ -1069,6 +1087,7 @@ public final class Bindings {
      *            if one of the {@code Objects} is {@code null}
      * @throws IllegalArgumentException
      *            if {@code obj1} == {@code obj2}
+     * @since JavaFX 2.1
      */
     public static void unbindContent(Object obj1, Object obj2) {
         ContentBinding.unbind(obj1, obj2);
@@ -5561,6 +5580,7 @@ public final class Bindings {
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException
      *             if the {@code ObservableStringValue} is {@code null}
+     * @since JavaFX 8.0
      */
     public static IntegerBinding length(final ObservableStringValue op) {
         if (op == null) {
@@ -5602,6 +5622,7 @@ public final class Bindings {
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
      *             if the {@code ObservableStringValue} is {@code null}
+     * @since JavaFX 8.0
      */
     public static BooleanBinding isEmpty(final ObservableStringValue op) {
         if (op == null) {
@@ -5643,6 +5664,7 @@ public final class Bindings {
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
      *             if the {@code ObservableStringValue} is {@code null}
+     * @since JavaFX 8.0
      */
     public static BooleanBinding isNotEmpty(final ObservableStringValue op) {
         if (op == null) {
@@ -5934,6 +5956,7 @@ public final class Bindings {
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException
      *             if the {@code ObservableList} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <E> IntegerBinding size(final ObservableList<E> op) {
         if (op == null) {
@@ -5973,6 +5996,7 @@ public final class Bindings {
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
      *             if the {@code ObservableList} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <E> BooleanBinding isEmpty(final ObservableList<E> op) {
         if (op == null) {
@@ -6012,6 +6036,7 @@ public final class Bindings {
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
      *             if the {@code ObservableList} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <E> BooleanBinding isNotEmpty(final ObservableList<E> op)     {
         if (op == null) {
@@ -6052,6 +6077,7 @@ public final class Bindings {
      * @return the new {@code ObjectBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
      * @throws IllegalArgumentException if (@code index < 0}
+     * @since JavaFX 2.1
      */
     public static <E> ObjectBinding<E> valueAt(final ObservableList<E> op, final int index) {
         if (op == null) {
@@ -6099,6 +6125,7 @@ public final class Bindings {
      * @param <E> the type of the {@code List} elements
      * @return the new {@code ObjectBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <E> ObjectBinding<E> valueAt(final ObservableList<E> op, final ObservableIntegerValue index) {
         return valueAt(op, (ObservableNumberValue)index);
@@ -6114,6 +6141,7 @@ public final class Bindings {
      * @param <E> the type of the {@code List} elements
      * @return the new {@code ObjectBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <E> ObjectBinding<E> valueAt(final ObservableList<E> op, final ObservableNumberValue index) {
         if ((op == null) || (index == null)) {
@@ -6158,6 +6186,7 @@ public final class Bindings {
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
      * @throws IllegalArgumentException if (@code index < 0}
+     * @since JavaFX 2.1
      */
     public static BooleanBinding booleanValueAt(final ObservableList<Boolean> op, final int index) {
         if (op == null) {
@@ -6209,6 +6238,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 2.1
      */
     public static BooleanBinding booleanValueAt(final ObservableList<Boolean> op, final ObservableIntegerValue index) {
         return booleanValueAt(op, (ObservableNumberValue)index);
@@ -6223,6 +6253,7 @@ public final class Bindings {
      * @param index the position in the {@code List}, converted to int
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static BooleanBinding booleanValueAt(final ObservableList<Boolean> op, final ObservableNumberValue index) {
         if ((op == null) || (index == null)) {
@@ -6272,6 +6303,7 @@ public final class Bindings {
      * @return the new {@code DoubleBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
      * @throws IllegalArgumentException if (@code index < 0}
+     * @since JavaFX 2.1
      */
     public static DoubleBinding doubleValueAt(final ObservableList<? extends Number> op, final int index) {
         if (op == null) {
@@ -6323,6 +6355,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code DoubleBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 2.1
      */
     public static DoubleBinding doubleValueAt(final ObservableList<? extends Number> op, final ObservableIntegerValue index) {
         return doubleValueAt(op, (ObservableNumberValue)index);
@@ -6337,6 +6370,7 @@ public final class Bindings {
      * @param index the position in the {@code List}, converted to int
      * @return the new {@code DoubleBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static DoubleBinding doubleValueAt(final ObservableList<? extends Number> op, final ObservableNumberValue index) {
         if ((op == null) || (index == null)) {
@@ -6386,6 +6420,7 @@ public final class Bindings {
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
      * @throws IllegalArgumentException if (@code index < 0}
+     * @since JavaFX 2.1
      */
     public static FloatBinding floatValueAt(final ObservableList<? extends Number> op, final int index) {
         if (op == null) {
@@ -6437,6 +6472,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 2.1
      */
     public static FloatBinding floatValueAt(final ObservableList<? extends Number> op, final ObservableIntegerValue index) {
         return floatValueAt(op, (ObservableNumberValue)index);
@@ -6451,6 +6487,7 @@ public final class Bindings {
      * @param index the position in the {@code List}, converted to int
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static FloatBinding floatValueAt(final ObservableList<? extends Number> op, final ObservableNumberValue index) {
         if ((op == null) || (index == null)) {
@@ -6500,6 +6537,7 @@ public final class Bindings {
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
      * @throws IllegalArgumentException if (@code index < 0}
+     * @since JavaFX 2.1
      */
     public static IntegerBinding integerValueAt(final ObservableList<? extends Number> op, final int index) {
         if (op == null) {
@@ -6551,6 +6589,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 2.1
      */
     public static IntegerBinding integerValueAt(final ObservableList<? extends Number> op, final ObservableIntegerValue index) {
         return integerValueAt(op, (ObservableNumberValue)index);
@@ -6565,6 +6604,7 @@ public final class Bindings {
      * @param index the position in the {@code List}, converted to int
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static IntegerBinding integerValueAt(final ObservableList<? extends Number> op, final ObservableNumberValue index) {
         if ((op == null) || (index == null)) {
@@ -6614,6 +6654,7 @@ public final class Bindings {
      * @return the new {@code LongBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
      * @throws IllegalArgumentException if (@code index < 0}
+     * @since JavaFX 2.1
      */
     public static LongBinding longValueAt(final ObservableList<? extends Number> op, final int index) {
         if (op == null) {
@@ -6665,6 +6706,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code LongBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 2.1
      */
     public static LongBinding longValueAt(final ObservableList<? extends Number> op, final ObservableIntegerValue index) {
         return longValueAt(op, (ObservableNumberValue)index);
@@ -6679,6 +6721,7 @@ public final class Bindings {
      * @param index the position in the {@code List}, converted to int
      * @return the new {@code LongBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static LongBinding longValueAt(final ObservableList<? extends Number> op, final ObservableNumberValue index) {
         if ((op == null) || (index == null)) {
@@ -6728,6 +6771,7 @@ public final class Bindings {
      * @return the new {@code StringBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
      * @throws IllegalArgumentException if (@code index < 0}
+     * @since JavaFX 2.1
      */
     public static StringBinding stringValueAt(final ObservableList<String> op, final int index) {
         if (op == null) {
@@ -6774,6 +6818,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code StringBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 2.1
      */
     public static StringBinding stringValueAt(final ObservableList<String> op, final ObservableIntegerValue index) {
         return stringValueAt(op, (ObservableNumberValue)index);
@@ -6788,6 +6833,7 @@ public final class Bindings {
      * @param index the position in the {@code List}, converted to int
      * @return the new {@code StringBinding}
      * @throws NullPointerException if the {@code ObservableList} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static StringBinding stringValueAt(final ObservableList<String> op, final ObservableNumberValue index) {
         if ((op == null) || (index == null)) {
@@ -6835,6 +6881,7 @@ public final class Bindings {
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException
      *             if the {@code ObservableSet} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <E> IntegerBinding size(final ObservableSet<E> op) {
         if (op == null) {
@@ -6874,6 +6921,7 @@ public final class Bindings {
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
      *             if the {@code ObservableSet} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <E> BooleanBinding isEmpty(final ObservableSet<E> op) {
         if (op == null) {
@@ -6913,6 +6961,7 @@ public final class Bindings {
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
      *             if the {@code ObservableSet} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <E> BooleanBinding isNotEmpty(final ObservableSet<E> op)     {
         if (op == null) {
@@ -6953,6 +7002,7 @@ public final class Bindings {
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException
      *             if the {@code ObservableArray} is {@code null}
+     * @since JavaFX 8.0
      */
     public static IntegerBinding size(final ObservableArray op) {
         if (op == null) {
@@ -6992,6 +7042,7 @@ public final class Bindings {
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableArray} is {@code null}
      * @throws IllegalArgumentException if (@code index < 0}
+     * @since JavaFX 8.0
      */
     public static FloatBinding floatValueAt(final ObservableFloatArray op, final int index) {
         if (op == null) {
@@ -7038,6 +7089,7 @@ public final class Bindings {
      * @param index the position in the {@code ObservableArray}
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableArray} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static FloatBinding floatValueAt(final ObservableFloatArray op, final ObservableIntegerValue index) {
         return floatValueAt(op, (ObservableNumberValue)index);
@@ -7052,6 +7104,7 @@ public final class Bindings {
      * @param index the position in the {@code ObservableArray}, converted to int
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableArray} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static FloatBinding floatValueAt(final ObservableFloatArray op, final ObservableNumberValue index) {
         if ((op == null) || (index == null)) {
@@ -7096,6 +7149,7 @@ public final class Bindings {
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableArray} is {@code null}
      * @throws IllegalArgumentException if (@code index < 0}
+     * @since JavaFX 8.0
      */
     public static IntegerBinding integerValueAt(final ObservableIntegerArray op, final int index) {
         if (op == null) {
@@ -7142,6 +7196,7 @@ public final class Bindings {
      * @param index the position in the {@code ObservableArray}
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableArray} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static IntegerBinding integerValueAt(final ObservableIntegerArray op, final ObservableIntegerValue index) {
         return integerValueAt(op, (ObservableNumberValue)index);
@@ -7156,6 +7211,7 @@ public final class Bindings {
      * @param index the position in the {@code ObservableArray}, converted to int
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableArray} or {@code index} is {@code null}
+     * @since JavaFX 8.0
      */
     public static IntegerBinding integerValueAt(final ObservableIntegerArray op, final ObservableNumberValue index) {
         if ((op == null) || (index == null)) {
@@ -7205,6 +7261,7 @@ public final class Bindings {
      * @throws NullPointerException
      *             if the {@code ObservableMap} is {@code null}
      *
+     * @since JavaFX 2.1
      */
     public static <K, V> IntegerBinding size(final ObservableMap<K, V> op) {
         if (op == null) {
@@ -7245,6 +7302,7 @@ public final class Bindings {
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
      *             if the {@code ObservableMap} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K, V> BooleanBinding isEmpty(final ObservableMap<K, V> op) {
         if (op == null) {
@@ -7285,6 +7343,7 @@ public final class Bindings {
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
      *             if the {@code ObservableMap} is {@code null}
+     * @since JavaFX 8.0
      */
     public static <K, V> BooleanBinding isNotEmpty(final ObservableMap<K, V> op)     {
         if (op == null) {
@@ -7324,6 +7383,7 @@ public final class Bindings {
      * @param <V> type of the value elements of the {@code Map}
      * @return the new {@code ObjectBinding}
      * @throws NullPointerException if the {@code ObservableMap} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K, V> ObjectBinding<V> valueAt(final ObservableMap<K, V> op, final K key) {
         if (op == null) {
@@ -7372,6 +7432,7 @@ public final class Bindings {
      * @param <V> type of the value elements of the {@code Map}
      * @return the new {@code ObjectBinding}
      * @throws NullPointerException if the {@code ObservableMap} or {@code key} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K, V> ObjectBinding<V> valueAt(final ObservableMap<K, V> op, final ObservableValue<? extends K> key) {
         if ((op == null) || (key == null)) {
@@ -7420,6 +7481,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException if the {@code ObservableMap} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> BooleanBinding booleanValueAt(final ObservableMap<K, Boolean> op, final K key) {
         if (op == null) {
@@ -7473,6 +7535,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException if the {@code ObservableMap} or {@code key} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> BooleanBinding booleanValueAt(final ObservableMap<K, Boolean> op, final ObservableValue<? extends K> key) {
         if ((op == null) || (key == null)) {
@@ -7526,6 +7589,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code DoubleBinding}
      * @throws NullPointerException if the {@code ObservableMap} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> DoubleBinding doubleValueAt(final ObservableMap<K, ? extends Number> op, final K key) {
         if (op == null) {
@@ -7579,6 +7643,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code DoubleBinding}
      * @throws NullPointerException if the {@code ObservableMap} or {@code key} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> DoubleBinding doubleValueAt(final ObservableMap<K, ? extends Number> op, final ObservableValue<? extends K> key) {
         if ((op == null) || (key == null)) {
@@ -7632,6 +7697,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableMap} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> FloatBinding floatValueAt(final ObservableMap<K, ? extends Number> op, final K key) {
         if (op == null) {
@@ -7685,6 +7751,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableMap} or {@code key} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> FloatBinding floatValueAt(final ObservableMap<K, ? extends Number> op, final ObservableValue<? extends K> key) {
         if ((op == null) || (key == null)) {
@@ -7738,6 +7805,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableMap} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> IntegerBinding integerValueAt(final ObservableMap<K, ? extends Number> op, final K key) {
         if (op == null) {
@@ -7791,6 +7859,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableMap} or {@code key} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> IntegerBinding integerValueAt(final ObservableMap<K, ? extends Number> op, final ObservableValue<? extends K> key) {
         if ((op == null) || (key == null)) {
@@ -7844,6 +7913,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code LongBinding}
      * @throws NullPointerException if the {@code ObservableMap} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> LongBinding longValueAt(final ObservableMap<K, ? extends Number> op, final K key) {
         if (op == null) {
@@ -7897,6 +7967,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code LongBinding}
      * @throws NullPointerException if the {@code ObservableMap} or {@code key} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> LongBinding longValueAt(final ObservableMap<K, ? extends Number> op, final ObservableValue<? extends K> key) {
         if ((op == null) || (key == null)) {
@@ -7950,6 +8021,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code StringBinding}
      * @throws NullPointerException if the {@code ObservableMap} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> StringBinding stringValueAt(final ObservableMap<K, String> op, final K key) {
         if (op == null) {
@@ -7998,6 +8070,7 @@ public final class Bindings {
      * @param <K> type of the key elements of the {@code Map}
      * @return the new {@code StringBinding}
      * @throws NullPointerException if the {@code ObservableMap} or {@code key} is {@code null}
+     * @since JavaFX 2.1
      */
     public static <K> StringBinding stringValueAt(final ObservableMap<K, String> op, final ObservableValue<? extends K> key) {
         if ((op == null) || (key == null)) {

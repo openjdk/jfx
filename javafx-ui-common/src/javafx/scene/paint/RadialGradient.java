@@ -64,6 +64,7 @@ import com.sun.javafx.tk.Toolkit;
  * the colors along the gradient. The {@code Stop#offset} variable must be
  * the range 0.0 to 1.0 and act like keyframes along the gradient.
  * They mark where the gradient should be exactly a particular color.
+ * @since JavaFX 2.0
  */
 public final class RadialGradient extends Paint {
     private double focusAngle;
@@ -185,6 +186,7 @@ public final class RadialGradient extends Paint {
 
     /**
      * @inheritDoc
+     * @since JavaFX 8.0
      */
     @Override public final boolean isOpaque() {
         return opaque;
@@ -415,6 +417,7 @@ public final class RadialGradient extends Paint {
      * @throws IllegalArgumentException if the {@code value} cannot be parsed
      * @return a {@code RadialGradient} object holding the value represented 
      * by the string argument.
+     * @since JavaFX 2.1
      */
     public static RadialGradient valueOf(String value) {
         if (value == null) {

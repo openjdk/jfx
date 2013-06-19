@@ -723,7 +723,7 @@ public class VBoxTest {
 
         assertEquals(200, vbox.prefWidth(-1), 1e-100);
         assertEquals(300, vbox.prefHeight(-1), 1e-100);
-        assertEquals(200, vbox.minWidth(-1), 1e-100); //MockBias minWidth == 10
+        assertEquals(1, vbox.minWidth(-1), 1e-100); // 1 with max height
         assertEquals(20, vbox.minHeight(-1), 1e-100);
         assertEquals(Math.ceil(Math.max(100 * 100 / 50.0, 200 * 200 / 150.0)), vbox.minWidth(200), 1e-100);
 

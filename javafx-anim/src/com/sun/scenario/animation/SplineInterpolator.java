@@ -116,6 +116,56 @@ public class SplineInterpolator extends Interpolator {
         }
     }
 
+    public double getX1() {
+        return x1;
+    }
+
+    public double getY1() {
+        return y1;
+    }
+
+    public double getX2() {
+        return x2;
+    }
+
+    public double getY2() {
+        return y2;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 19 * hash + (int) (Double.doubleToLongBits(this.x1) ^ (Double.doubleToLongBits(this.x1) >>> 32));
+        hash = 19 * hash + (int) (Double.doubleToLongBits(this.y1) ^ (Double.doubleToLongBits(this.y1) >>> 32));
+        hash = 19 * hash + (int) (Double.doubleToLongBits(this.x2) ^ (Double.doubleToLongBits(this.x2) >>> 32));
+        hash = 19 * hash + (int) (Double.doubleToLongBits(this.y2) ^ (Double.doubleToLongBits(this.y2) >>> 32));
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final SplineInterpolator other = (SplineInterpolator) obj;
+        if (Double.doubleToLongBits(this.x1) != Double.doubleToLongBits(other.x1)) {
+            return false;
+        }
+        if (Double.doubleToLongBits(this.y1) != Double.doubleToLongBits(other.y1)) {
+            return false;
+        }
+        if (Double.doubleToLongBits(this.x2) != Double.doubleToLongBits(other.x2)) {
+            return false;
+        }
+        if (Double.doubleToLongBits(this.y2) != Double.doubleToLongBits(other.y2)) {
+            return false;
+        }
+        return true;
+    }
+
     /**
      * Returns the y-value of the cubic bezier curve that corresponds to the x
      * input.

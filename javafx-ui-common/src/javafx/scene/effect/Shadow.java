@@ -52,6 +52,7 @@ import com.sun.javafx.tk.Toolkit;
  * combines this {@code Shadow} effect with an original graphic for ease
  * of adding a shadow to an existing scene graph {@code Node} with a
  * single effect.
+ * @since JavaFX 2.0
  */
 public class Shadow extends Effect {
     private boolean changeIsLocal;
@@ -65,6 +66,7 @@ public class Shadow extends Effect {
      * Creates a new instance of Shadow with specified radius and color.
      * @param radius the radius of the shadow blur kernel
      * @param color the shadow {@code Color}
+     * @since JavaFX 2.1
      */
     public Shadow(double radius, Color color) {
         setRadius(radius);
@@ -77,6 +79,7 @@ public class Shadow extends Effect {
      * @param blurType the algorithm used to blur the shadow
      * @param color the shadow {@code Color}
      * @param radius the radius of the shadow blur kernel
+     * @since JavaFX 2.1
      */
     public Shadow(BlurType blurType, Color color, double radius) {
         setBlurType(blurType);

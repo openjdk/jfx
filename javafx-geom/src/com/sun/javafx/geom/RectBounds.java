@@ -439,7 +439,8 @@ public class RectBounds extends BaseBounds {
     }
 
     public boolean isEmpty() {
-        return maxX < minX || maxY < minY;
+        // NaN values will cause the comparisons to fail and return "empty"
+        return !(maxX >= minX && maxY >= minY);
     }
     
     /**

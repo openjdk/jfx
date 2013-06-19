@@ -63,12 +63,14 @@ import javafx.css.Styleable;
 
 /**
  * Abstract base class for text input controls.
+ * @since JavaFX 2.0
  */
 @DefaultProperty("text")
 public abstract class TextInputControl extends Control {
     /**
      * Interface representing a text input's content. Since it is an ObservableStringValue,
      * you can also bind to, or observe the content.
+     * @since JavaFX 2.0
      */
     protected interface Content extends ObservableStringValue {
         /**
@@ -84,6 +86,7 @@ public abstract class TextInputControl extends Control {
          *
          * @param index
          * @param text
+         * @since JavaFX 2.1
          */
         public void insert(int index, String text, boolean notifyListeners);
 
@@ -92,6 +95,7 @@ public abstract class TextInputControl extends Control {
          *
          * @param start
          * @param end
+         * @since JavaFX 2.1
          */
         public void delete(int start, int end, boolean notifyListeners);
 
@@ -168,6 +172,7 @@ public abstract class TextInputControl extends Control {
      * rich text then this font may or may not be used depending on the font
      * information embedded in the rich text, but in any case where a default
      * font is required, this font will be used.
+     * @since JavaFX 8.0
      */
     public final ObjectProperty<Font> fontProperty() {
         if (font == null) {
@@ -241,7 +246,7 @@ public abstract class TextInputControl extends Control {
     /**
      * The prompt text to display in the {@code TextInputControl}, or
      * <tt>null</tt> if no prompt text is displayed.
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
         @Override protected void invalidated() {
@@ -825,7 +830,6 @@ public abstract class TextInputControl extends Control {
      * @expert This function is intended to be used by experts, primarily
      *         by those implementing new Skins or Behaviors. It is not common
      *         for developers or designers to access this function directly.
-     * @since JavaFX 1.3
      */
     public void backward() {
         // user has moved caret to the left
@@ -1161,6 +1165,7 @@ public abstract class TextInputControl extends Control {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -1168,6 +1173,7 @@ public abstract class TextInputControl extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

@@ -63,6 +63,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <p>
  * <img src="doc-files/motionblur.png"/>
  * </p>
+ * @since JavaFX 2.0
  */
 public class MotionBlur extends Effect {
     /**
@@ -74,6 +75,7 @@ public class MotionBlur extends Effect {
      * Creates a new instance of MotionBlur with the specified angle and radius.
      * @param angle the angle of the motion effect, in degrees
      * @param radius the radius of the blur kernel
+     * @since JavaFX 2.1
      */
     public MotionBlur(double angle, double radius) {
         setAngle(angle);

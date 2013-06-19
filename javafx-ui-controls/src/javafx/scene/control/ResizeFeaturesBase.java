@@ -28,6 +28,7 @@ package javafx.scene.control;
 /**
  * An immutable wrapper class for use by the column resize policies offered by
  * controls such as {@link TableView} and {@link TreeTableView}. 
+ * @since JavaFX 8.0
  */
 public class ResizeFeaturesBase<S> {
   private final TableColumnBase<S,?> column;

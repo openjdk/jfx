@@ -31,6 +31,7 @@ package javafx.beans.property;
  * 
  * @see DoublePropertyBase
  * 
+ * @since JavaFX 2.0
  */
 public class SimpleDoubleProperty extends DoublePropertyBase {
 

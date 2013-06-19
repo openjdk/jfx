@@ -41,7 +41,7 @@ import javafx.util.converter.DefaultStringConverter;
  * default, stretch to fill the entire table cell.
  * 
  * @param <T> The type of the elements contained within the TableColumn.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class TextFieldTableCell<S,T> extends TableCell<S,T> {
     
@@ -186,12 +186,14 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
             return;
         }
         super.startEdit();
-        
-        if (textField == null) {
-            textField = CellUtils.createTextField(this, getConverter());
+
+        if (isEditing()) {
+            if (textField == null) {
+                textField = CellUtils.createTextField(this, getConverter());
+            }
+
+            CellUtils.startEdit(this, getConverter(), null, null, textField);
         }
-        
-        CellUtils.startEdit(this, getConverter(), null, null, textField);
     }
 
     /** {@inheritDoc} */

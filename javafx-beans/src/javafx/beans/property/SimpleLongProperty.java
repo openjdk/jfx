@@ -31,6 +31,7 @@ package javafx.beans.property;
  * 
  * @see LongPropertyBase
  * 
+ * @since JavaFX 2.0
  */
 public class SimpleLongProperty extends LongPropertyBase {
 

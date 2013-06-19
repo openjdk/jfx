@@ -34,6 +34,7 @@ import com.sun.javafx.cursor.StandardCursorFrame;
 
 /**
  * A class to encapsulate the bitmap representation of the mouse cursor.
+ * @since JavaFX 2.0
  */
 public abstract class Cursor {
     /**

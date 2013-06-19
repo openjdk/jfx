@@ -40,6 +40,7 @@ import javafx.beans.value.ObservableValue;
  * @see javafx.beans.property.BooleanPropertyBase
  * @see CssMetaData
  * @see StyleableProperty
+ * @since JavaFX 8.0
  */
 public abstract class StyleableBooleanProperty 
     extends BooleanPropertyBase implements StyleableProperty<Boolean> {

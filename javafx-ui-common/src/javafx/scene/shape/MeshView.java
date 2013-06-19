@@ -42,7 +42,7 @@ import javafx.beans.value.ObservableValue;
  * The {@code MeshView} class defines a surface with the specified 3D
  * mesh data.
  *
- * @since JavaFX 8    
+ * @since JavaFX 8.0
  */
 public class MeshView extends Shape3D {
 
@@ -141,8 +141,12 @@ public class MeshView extends Shape3D {
     @Deprecated
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        bounds = mesh.get().computeBounds(bounds);
-        bounds = tx.transform(bounds, bounds);
+        if (getMesh() != null) {
+            bounds = getMesh().computeBounds(bounds);
+            bounds = tx.transform(bounds, bounds);
+        } else {
+            bounds.makeEmpty();
+        }
         return bounds;
     }
 

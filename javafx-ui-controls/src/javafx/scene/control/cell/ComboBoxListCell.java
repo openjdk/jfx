@@ -51,7 +51,7 @@ import javafx.util.StringConverter;
  * {@link ListView#itemsProperty() items} list.
  * 
  * @param <T> The type of the elements contained within the ListView.
- * @since 2.2
+ * @since JavaFX 2.2
  */
 public class ComboBoxListCell<T> extends ListCell<T> {
     
@@ -323,8 +323,11 @@ public class ComboBoxListCell<T> extends ListCell<T> {
         comboBox.getSelectionModel().select(getItem());
         
         super.startEdit();
-        setText(null);
-        setGraphic(comboBox);
+
+        if (isEditing()) {
+            setText(null);
+            setGraphic(comboBox);
+        }
     }
 
     /** {@inheritDoc} */

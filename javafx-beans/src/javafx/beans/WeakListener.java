@@ -34,6 +34,7 @@ package javafx.beans;
  * @see javafx.beans.value.WeakChangeListener
  *
  *
+ * @since JavaFX 2.1
  */
 public interface WeakListener {
     /**

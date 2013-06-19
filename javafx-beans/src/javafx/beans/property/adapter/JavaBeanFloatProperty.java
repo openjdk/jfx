@@ -61,6 +61,7 @@ import sun.reflect.misc.MethodUtil;
  * 
  * @see javafx.beans.property.FloatProperty
  * @see JavaBeanFloatPropertyBuilder
+ * @since JavaFX 2.1
  */
 public final class JavaBeanFloatProperty extends FloatProperty implements JavaBeanProperty<Number> {
 

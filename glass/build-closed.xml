@@ -7,7 +7,7 @@
     <property name="rt.dist.root.dir" location="${basedir}/../../rt" />
     <property name="runtime.dist.root.dir" location="${basedir}/../../rt-closed" />
 
-    <property name="jfx.accessible.dir" value="${runtime.dist.root.dir}/javafx-accessible"/>
+    <property name="jfx.accessible.dir" value="${rt.dist.root.dir}/javafx-accessible"/>
     <property name="jfx.accessible.jar" value="${jfx.accessible.dir}/dist/javafx-accessible.jar"/>
 
     <import file="build-common.xml"/>

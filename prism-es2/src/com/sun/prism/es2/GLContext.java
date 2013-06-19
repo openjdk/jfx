@@ -206,8 +206,10 @@ abstract class GLContext {
     private static native void nSetDeviceParametersFor3D(long nativeCtxInfo);
     private static native long nCreateES2Mesh(long nativeCtxInfo);
     private static native void nReleaseES2Mesh(long nativeCtxInfo, long nativeHandle);
-    private static native boolean nBuildNativeGeometry(long nativeCtxInfo, long nativeHandle,
+    private static native boolean nBuildNativeGeometryShort(long nativeCtxInfo, long nativeHandle,
             float vertexBuffer[], short indexBuffer[]);
+    private static native boolean nBuildNativeGeometryInt(long nativeCtxInfo, long nativeHandle,
+            float vertexBuffer[], int indexBuffer[]);
     private static native long nCreateES2PhongMaterial(long nativeCtxInfo);
     private static native void nReleaseES2PhongMaterial(long nativeCtxInfo, long nativeHandle);
     private static native void nSetSolidColor(long nativeCtxInfo, long nativePhongMaterial,
@@ -648,8 +650,11 @@ abstract class GLContext {
     }
 
     boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, short[] indexBuffer) {
-        // See MeshVbIb.h : ctor()
-        return nBuildNativeGeometry(nativeCtxInfo, nativeHandle, vertexBuffer, indexBuffer);
+        return nBuildNativeGeometryShort(nativeCtxInfo, nativeHandle, vertexBuffer, indexBuffer);
+    }
+
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int[] indexBuffer) {
+        return nBuildNativeGeometryInt(nativeCtxInfo, nativeHandle, vertexBuffer, indexBuffer);
     }
 
     long createES2PhongMaterial() {

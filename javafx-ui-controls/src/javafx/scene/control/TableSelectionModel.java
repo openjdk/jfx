@@ -35,6 +35,7 @@ import javafx.beans.property.SimpleBooleanProperty;
  * @param <T> The type of the underlying data model for the UI control.
  * @param <TC> The concrete subclass of {@link TableColumnBase} that is used by the
  *      underlying UI control (e.g. {@link TableColumn} or {@link TreeTableColumn}.
+ * @since JavaFX 8.0
  */
 public abstract class TableSelectionModel<T, TC extends TableColumnBase<T,?>> extends MultipleSelectionModelBase<T> {
     

@@ -38,6 +38,7 @@ import com.sun.scenario.animation.SplineInterpolator;
  * <p>
  * A custom {@code Interpolator} has to be defined in terms of a "
  * {@link #curve(double) curve()}".
+ * @since JavaFX 2.0
  */
 public abstract class Interpolator {
 
@@ -232,7 +233,7 @@ public abstract class Interpolator {
      */
     public static Interpolator TANGENT(Duration t1, double v1, Duration t2,
             double v2) {
-        return NumberTangentInterpolator.create(v1, t1, v2, t2);
+        return new NumberTangentInterpolator(t1, v1, t2, v2);
     }
 
     /**
@@ -250,7 +251,7 @@ public abstract class Interpolator {
      * @return the new Tangent interpolator
      */
     public static Interpolator TANGENT(Duration t, double v) {
-        return NumberTangentInterpolator.create(v, t);
+        return new NumberTangentInterpolator(t, v);
     }
 
     /**

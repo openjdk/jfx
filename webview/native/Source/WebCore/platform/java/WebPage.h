@@ -9,6 +9,8 @@
 #if USE(ACCELERATED_COMPOSITING)
 #include "GraphicsLayerClient.h"
 #endif
+#include "IntRect.h"
+#include "PrintContext.h"
 #include "ScrollTypes.h"
 
 namespace WebCore {
@@ -67,6 +69,9 @@ public:
     void scroll(const IntSize& scrollDelta, const IntRect& rectToScroll,
                 const IntRect& clipRect);
     void repaint(const IntRect&);
+    int beginPrinting(float width, float height);
+    void print(GraphicsContext& gc, int pageIndex);
+    void endPrinting();
 #if USE(ACCELERATED_COMPOSITING)
     void setRootChildLayer(GraphicsLayer*);
     void setNeedsOneShotDrawingSynchronization();
@@ -105,6 +110,7 @@ private:
     Node* focusedWebCoreNode();
 
     OwnPtr<Page> m_page;
+    OwnPtr<PrintContext> m_printContext;
 
 #if USE(ACCELERATED_COMPOSITING)
     OwnPtr<GraphicsLayer> m_rootLayer;

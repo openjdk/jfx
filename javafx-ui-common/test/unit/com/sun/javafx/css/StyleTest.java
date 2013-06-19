@@ -63,8 +63,8 @@ public class StyleTest {
         
         Stylesheet stylesheet = CSSParser.getInstance().parse(stylesheetText);
         Rule rule = stylesheet.getRules().get(0);
-        Selector sel = rule.getSelectors().get(0);
-        Declaration decl = rule.getDeclarations().get(0);
+        Selector sel = rule.getUnobservedSelectorList().get(0);
+        Declaration decl = rule.getUnobservedDeclarationList().get(0);
         return new Style(sel, decl);
     }
 

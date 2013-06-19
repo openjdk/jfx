@@ -41,6 +41,7 @@ import javafx.beans.Observable;
  * observers are being notified, but it is not thread-safe.
  * 
  * 
+ * @since JavaFX 2.0
  */
 public abstract class ObservableValueBase<T> implements ObservableValue<T> {
 

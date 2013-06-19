@@ -44,6 +44,7 @@ import javafx.collections.ObservableList;
  * to the FilteredList.
  *
  * @see TransformationList
+ * @since JavaFX 8.0
  */
 public final class FilteredList<E> extends TransformationList<E, E>{
 
@@ -51,6 +52,14 @@ public final class FilteredList<E> extends TransformationList<E, E>{
     private int size;
 
     private SortHelper helper;
+    private static final Predicate ALWAYS_TRUE = new Predicate() {
+
+        @Override
+        public boolean test(Object t) {
+            return true;
+        }
+
+    };
 
     /**
      * Constructs a new FilteredList wrapper around the source list.
@@ -77,7 +86,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
      * @param source the source list
      */
     public FilteredList(ObservableList<E> source) {
-        this(source, e -> true);
+        this(source, ALWAYS_TRUE);
     }
 
     /**
@@ -85,14 +94,14 @@ public final class FilteredList<E> extends TransformationList<E, E>{
      * Elements not matching the predicate will be filtered-out.
      */
     private final ObjectProperty<Predicate<? super E>> predicate =
-            new ObjectPropertyBase<Predicate<? super E>>(e -> true) {
+            new ObjectPropertyBase<Predicate<? super E>>(ALWAYS_TRUE) {
 
         @Override
         protected void invalidated() {
             if (get() == null) {
                 if (isBound()) {
                     unbind();
-                    set(e -> true);
+                    set(ALWAYS_TRUE);
                     throw new IllegalArgumentException("Predicate cannot be null.");
 
                 }

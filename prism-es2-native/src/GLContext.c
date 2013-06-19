@@ -136,8 +136,10 @@ void initState(ContextInfo *ctxInfo) {
     glDisable(GL_ALPHA_TEST);
 #endif
 
-    ctxInfo->state.scissorEnabled = JNI_FALSE;
-    glDisable(GL_SCISSOR_TEST);
+    if (ctxInfo->state.scissorEnabled) {
+        ctxInfo->state.scissorEnabled = JNI_FALSE;
+        glDisable(GL_SCISSOR_TEST);
+    }
 
     ctxInfo->state.clearColor[0] = 0.0;
     ctxInfo->state.clearColor[1] = 0.0;
@@ -955,10 +957,12 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nScissorTest
     }
 
     if (enable) {
-        glEnable(GL_SCISSOR_TEST);
+        if (!ctxInfo->state.scissorEnabled) {
+            glEnable(GL_SCISSOR_TEST);
+            ctxInfo->state.scissorEnabled = JNI_TRUE;
+        }
         glScissor(x, y, w, h);
-        ctxInfo->state.scissorEnabled = JNI_TRUE;
-    } else {
+    } else if (ctxInfo->state.scissorEnabled) {
         glDisable(GL_SCISSOR_TEST);
         ctxInfo->state.scissorEnabled = JNI_FALSE;
     }
@@ -1588,8 +1592,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDeviceParametersFor2
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-    ctxInfo->state.scissorEnabled = JNI_FALSE;
-    glDisable(GL_SCISSOR_TEST);
+    if (ctxInfo->state.scissorEnabled) {
+        ctxInfo->state.scissorEnabled = JNI_FALSE;
+        glDisable(GL_SCISSOR_TEST);
+    }
 
     glCullFace(GL_BACK);
     ctxInfo->state.cullMode = GL_BACK;
@@ -1618,8 +1624,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDeviceParametersFor3
     glDisable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ZERO);
 
-    ctxInfo->state.scissorEnabled = JNI_FALSE;
-    glDisable(GL_SCISSOR_TEST);
+    if (ctxInfo->state.scissorEnabled) {
+        ctxInfo->state.scissorEnabled = JNI_FALSE;
+        glDisable(GL_SCISSOR_TEST);
+    }
 
     glEnable(GL_CULL_FACE);
     ctxInfo->state.cullEnable = GL_TRUE;
@@ -1658,6 +1666,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_GLContext_nCreateES2Mesh
     meshInfo->vboIDArray[MESH_VERTEXBUFFER] = 0;
     meshInfo->vboIDArray[MESH_INDEXBUFFER] = 0;
     meshInfo->indexBufferSize = 0;
+    meshInfo->indexBufferType = 0;
 
     /* create vbo ids */
     ctxInfo->glGenBuffers(MESH_MAX_BUFFERS, (meshInfo->vboIDArray));
@@ -1688,10 +1697,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nReleaseES2Mesh
 
 /*
  * Class:     com_sun_prism_es2_GLContext
- * Method:    nBuildNativeGeometry
- * Signature: (JJ[F[I)Z
+ * Method:    nBuildNativeGeometryShort
+ * Signature: (JJ[F[S)Z
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
+JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometryShort
   (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshInfo,
         jfloatArray vbArray, jshortArray ibArray)
 {
@@ -1734,6 +1743,72 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
         ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize * sizeof (GLushort),
                 indexBuffer, GL_STATIC_DRAW);
         meshInfo->indexBufferSize = indexBufferSize;
+        meshInfo->indexBufferType = GL_UNSIGNED_SHORT;
+
+        // Unbind VBOs
+        ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    if (indexBuffer) {
+        (*env)->ReleasePrimitiveArrayCritical(env, ibArray, indexBuffer, JNI_ABORT);
+    }
+    if (vertexBuffer) {
+        (*env)->ReleasePrimitiveArrayCritical(env, vbArray, vertexBuffer, JNI_ABORT);
+    }
+
+    return status;
+}
+
+/*
+ * Class:     com_sun_prism_es2_GLContext
+ * Method:    nBuildNativeGeometryInt
+ * Signature: (JJ[F[I)Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometryInt
+  (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshInfo,
+        jfloatArray vbArray, jintArray ibArray)
+{
+    GLuint vertexBufferSize;
+    GLuint indexBufferSize;
+    GLushort *indexBuffer;
+    GLfloat *vertexBuffer;
+    jboolean status = JNI_TRUE;
+
+    ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
+    MeshInfo *meshInfo = (MeshInfo *) jlong_to_ptr(nativeMeshInfo);
+    if ((ctxInfo == NULL) || (meshInfo == NULL) ||
+            (vbArray == NULL) || (ibArray == NULL) ||
+            (ctxInfo->glBindBuffer == NULL) ||
+            (ctxInfo->glBufferData == NULL) ||
+            (meshInfo->vboIDArray[MESH_VERTEXBUFFER] == 0)||
+            (meshInfo->vboIDArray[MESH_INDEXBUFFER] == 0)) {
+        return JNI_FALSE;
+    }
+
+    vertexBufferSize = (*env)->GetArrayLength(env, vbArray);
+    vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
+
+    indexBufferSize = (*env)->GetArrayLength(env, ibArray);
+    indexBuffer = (GLuint *) ((*env)->GetPrimitiveArrayCritical(env, ibArray, NULL));
+
+    if ((vertexBuffer == NULL ) || (vertexBufferSize == 0)
+            || (indexBuffer == NULL) || (indexBufferSize == 0)) {
+        status = JNI_FALSE;
+    }
+
+    if (status) {
+        // Initialize vertex buffer
+        ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_VERTEXBUFFER]);
+        ctxInfo->glBufferData(GL_ARRAY_BUFFER, vertexBufferSize * sizeof (GLfloat),
+                vertexBuffer, GL_STATIC_DRAW);
+
+        // Initialize index buffer
+        ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_INDEXBUFFER]);
+        ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize * sizeof (GLuint),
+                indexBuffer, GL_STATIC_DRAW);
+        meshInfo->indexBufferSize = indexBufferSize;
+        meshInfo->indexBufferType = GL_UNSIGNED_INT;
 
         // Unbind VBOs
         ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -2092,7 +2167,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nRenderMeshView
             VERT_3D_STRIDE, (const void*) offset);
 
     glDrawElements(GL_TRIANGLES, mvInfo->meshInfo->indexBufferSize,
-            GL_UNSIGNED_SHORT, 0);
+            mvInfo->meshInfo->indexBufferType, 0);
 
     // Reset states
     ctxInfo->glDisableVertexAttribArray(VC_3D_INDEX);

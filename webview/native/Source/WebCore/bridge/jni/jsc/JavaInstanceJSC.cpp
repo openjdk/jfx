@@ -94,12 +94,25 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
 {
     JSLockHolder lock(exec);
 
-    jstring stringValue = (jstring)callJNIMethod<jobject>(m_instance->instance(), "toString", "()Ljava/lang/String;");
+    jobject obj = m_instance->instance();
+    jobject acc  = accessControlContext();
+    jmethodID methodId = getMethodID(obj, "toString", "()Ljava/lang/String;");
+    jvalue result;
+    jthrowable ex = dispatchJNICall(0, rootObject(), obj, false,
+                                    JavaTypeObject, methodId,
+                                    NULL, result, acc);
+    if (ex != 0) {
+        // FIXME duplicates code in JavaInstance::invokeMethod
+        JSValue exceptionDescription
+            = (JavaInstance::create(ex, rootObject(), accessControlContext())
+               ->createRuntimeObject(exec));
+        throwError(exec, createError(exec,
+                                     (exceptionDescription.toString(exec)
+                                      ->value(exec))));
+        return jsUndefined();
+    }
 
-    // Should throw a JS exception, rather than returning ""? - but better than a null dereference.
-    if (!stringValue)
-        return jsString(exec, UString());
-
+    jstring stringValue = (jstring) result.l;
     JNIEnv* env = getJNIEnv();
     const jchar* c = getUCharactersFromJStringInEnv(env, stringValue);
     UString u((const UChar*)c, (int)env->GetStringLength(stringValue));
@@ -261,8 +274,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
           JSValue exceptionDescription
             = (JavaInstance::create(ex, rootObject, accessControlContext())
                ->createRuntimeObject(exec));
-          throwError(exec, createError(exec,
-                                       exceptionDescription.toString(exec)->value(exec)));
+          throwError(exec, exceptionDescription);
           return jsUndefined();
         }
     }

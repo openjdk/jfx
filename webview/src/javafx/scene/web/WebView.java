@@ -71,6 +71,7 @@ import javafx.scene.text.FontSmoothingType;
  *
  * <p>{@code WebView} objects must be created and accessed solely from the
  * FX thread.
+ * @since JavaFX 2.0
  */
 final public class WebView extends Parent {
 
@@ -150,6 +151,7 @@ final public class WebView extends Parent {
      * @param value zoom factor to be set
      * @see #zoomProperty()
      * @see #getZoom()
+     * @since JavaFX 8.0
      */
     public final void setZoom(double value) {
         WebEngine.checkThread();
@@ -161,6 +163,7 @@ final public class WebView extends Parent {
      * @return current zoom factor
      * @see #zoomProperty()
      * @see #setZoom(double value)
+     * @since JavaFX 8.0
      */
     public final double getZoom() {
         return (this.zoom != null)
@@ -173,6 +176,7 @@ final public class WebView extends Parent {
      * @return zoom property object
      * @see #getZoom()
      * @see #setZoom(double value)
+     * @since JavaFX 8.0
      */
     public final DoubleProperty zoomProperty() {
         if (zoom == null) {
@@ -650,7 +654,7 @@ final public class WebView extends Parent {
      * compositing modes, where effects are applied and very large glyphs.
      *
      * @defaultValue FontSmoothingType.LCD
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private ObjectProperty<FontSmoothingType> fontSmoothingType;
 
@@ -693,7 +697,7 @@ final public class WebView extends Parent {
      * Specifies whether context menu is enabled.
      *
      * @defaultValue true
-     * @since 2.2
+     * @since JavaFX 2.2
      */
     private BooleanProperty contextMenuEnabled;
 
@@ -905,6 +909,7 @@ final public class WebView extends Parent {
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
+     * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -912,6 +917,7 @@ final public class WebView extends Parent {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
