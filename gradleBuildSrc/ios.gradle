@@ -216,7 +216,7 @@ IOS.font.javahInclude = [
 IOS.font.variants = ["arm", "x86"];
 
 IOS.font.arm = [:]
-IOS.font.arm.nativeSource = [file("$closedDir/javafx-font-native/src")]
+IOS.font.arm.nativeSource = [file("modules/graphics/src/main/native-font")]
 IOS.font.arm.compiler = compiler
 IOS.font.arm.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.font.arm.linker = linker

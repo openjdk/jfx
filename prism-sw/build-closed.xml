@@ -7,7 +7,7 @@
     <path id="javac.closed.classpath.path" path="
         ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
         ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
-        ${runtime.dist.root.dir}/javafx-font/dist/javafx-font.jar:
+        ${rt.dist.root.dir}/javafx-font/dist/javafx-font.jar:
         ${rt.dist.root.dir}/prism-common/dist/prism-common.jar:
         ${rt.dist.root.dir}/pisces/dist/pisces.jar:
         ${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar:

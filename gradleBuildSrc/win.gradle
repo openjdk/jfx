@@ -240,7 +240,7 @@ WIN.font = [:]
 WIN.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-WIN.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
+WIN.font.nativeSource = [file("modules/graphics/src/main/native-font")]
 WIN.font.compiler = compiler
 WIN.font.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
 WIN.font.linker = linker

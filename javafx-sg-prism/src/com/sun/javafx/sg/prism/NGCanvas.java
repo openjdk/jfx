@@ -1075,13 +1075,14 @@ public class NGCanvas extends NGNode implements PGCanvas {
                     } else {
                         TEMP_TX.translate(x - xAlign, y - yAlign);
                     }
-                    if (token == FILL_TEXT) {
-                        textLayout.getBounds(null, bounds);
-                        TEMP_TX.transform(bounds, bounds);
-                    } else {
+                    textLayout.getBounds(null, bounds);
+                    TEMP_TX.transform(bounds, bounds);
+                    if (token == STROKE_TEXT) {
                         int flag = PrismTextLayout.TYPE_TEXT;
                         Shape textShape = textLayout.getShape(flag, null);
-                        strokebounds(getStroke(), textShape, bounds, TEMP_TX);
+                        RectBounds shapeBounds = new RectBounds();
+                        strokebounds(getStroke(), textShape, shapeBounds, TEMP_TX);
+                        bounds.unionWith(shapeBounds);
                     }
                 }
                 if (gr != null) {

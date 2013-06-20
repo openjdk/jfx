@@ -246,6 +246,7 @@ task generate << {
              "${RTDir}/javafx-accessible/src",
              "${RTDir}/javafx-ui-common/src",
              "${RTDir}/javafx-concurrent/src",
+             "${RTDir}/javafx-font/src",
              "${RTDir}/javafx-geom/src",
              "${RTDir}/javafx-geom/cagsrc.double",
              "${RTDir}/javafx-iio/src",
@@ -286,6 +287,7 @@ task generate << {
              "${RTDir}/decora-sse/src",
              "${RTDir}/javafx-ui-common/src",
              "${RTDir}/javafx-concurrent/src",
+             "${RTDir}/javafx-font/src",
              "${RTDir}/javafx-geom/src",
              "${RTDir}/javafx-geom/cagsrc.double",
              "${RTDir}/javafx-iio/src",
@@ -406,6 +408,14 @@ task generate << {
             eachFile { f ->
                 fileList.add(f.file);
             }
+        }
+    }
+
+    copy {
+        from "${RTDir}/javafx-font-native/src"
+        into "${FXDir}/modules/graphics/src/main/native-font"
+        eachFile { f ->
+            fileList.add(f.file);
         }
     }
 
