@@ -132,6 +132,7 @@
         <ant antfile="${rt.root.dir}/decora-prism-sw/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism-ps/build.xml" target="jar" inheritAll="false"/>
         <antcall target="jar-decora-sse"/>
+        <ant antfile="${rt.root.dir}/javafx-font/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/prism-util/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/prism-common/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/prism-j2d/build.xml" target="jar" inheritAll="false"/>
@@ -268,6 +269,7 @@
         <ant antfile="${rt.root.dir}/decora-prism-sw/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism-ps/build.xml" target="clean" inheritAll="false"/>
         <antcall target="clean-decora-sse"/>
+        <ant antfile="${rt.root.dir}/javafx-font/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/prism-util/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/prism-common/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/prism-j2d/build.xml" target="clean" inheritAll="false"/>

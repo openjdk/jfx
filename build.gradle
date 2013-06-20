@@ -877,7 +877,7 @@ project(":graphics") {
     addNative(project, "glass");
     addNative(project, "prism")
     addNative(project, "prismSW")
-
+    addNative(project, "font")
     addNative(project, "iio")
     addNative(project, "prismES2")
 
@@ -1608,6 +1608,7 @@ compileTargets { t ->
                 from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}",
                      "modules/graphics/build/libs/prism/${t.name}/${library(targetProperties.prism.lib)}",
                      "modules/graphics/build/libs/prismSW/${t.name}/${library(targetProperties.prismSW.lib)}",
+                     "modules/graphics/build/libs/font/${t.name}/${library(targetProperties.font.lib)}",
                      "modules/graphics/build/libs/iio/${t.name}/${library(targetProperties.iio.lib)}");
                 def es2Variants = targetProperties.prismES2.containsKey("variants") ? targetProperties.prismES2.variants : [""];
                 es2Variants.each { variant ->
@@ -1989,7 +1990,7 @@ project(":base") {
     }
 }
 
-// TODO need to do the iOS stuff (ios package of prism-es2-native, ios package of javafx-iio-native)
+// TODO need to do the iOS stuff (ios package of prism-es2-native, ios package of javafx-iio-native javafx-font-native)
 
 project(":graphics") {
     idea {
