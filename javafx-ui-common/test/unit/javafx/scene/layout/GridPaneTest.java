@@ -2714,4 +2714,43 @@ public class GridPaneTest {
         assertEquals(150, child_double_34.getLayoutBounds().getHeight(), 1e-100);
     }
 
+    @Test
+    public void testGridWithSmallMultiSpanColumns() {
+        Rectangle child1 = new Rectangle(100, 100);
+        Rectangle child2 = new Rectangle(100, 100);
+
+        Rectangle child_double_12 = new Rectangle(50, 50);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+
+        gridpane.add(child_double_12, 0, 1, 2, 1);
+
+        gridpane.resize(300, 300);
+        gridpane.layout();
+
+        assertEquals(0, child1.getLayoutX(), 1e-100);
+        assertEquals(100, child2.getLayoutX(), 1e-100);
+        assertEquals(0, child_double_12.getLayoutX(), 1e-100);
+    }
+
+    @Test
+    public void testGridWithSmallMultiSpanRows() {
+        Rectangle child1 = new Rectangle(100, 100);
+        Rectangle child2 = new Rectangle(100, 100);
+
+        Rectangle child_double_12 = new Rectangle(50, 50);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+
+        gridpane.add(child_double_12, 1, 0, 1, 2);
+
+        gridpane.resize(300, 300);
+        gridpane.layout();
+
+        assertEquals(0, child1.getLayoutY(), 1e-100);
+        assertEquals(100, child2.getLayoutY(), 1e-100);
+        assertEquals(75, child_double_12.getLayoutY(), 1e-100);
+    }
 }
