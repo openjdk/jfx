@@ -106,6 +106,7 @@ public abstract class PrismFontFactory implements FontFactory {
                     subPixelEnabled = s == null || s.equalsIgnoreCase("true");
                     String defaultFactory = "t2k";
                     if (isMacOSX) defaultFactory = "coretext";
+                    if (isWindows) defaultFactory = "directwrite";
                     return System.getProperty("prism.text", defaultFactory).toLowerCase();
                 }
             });
