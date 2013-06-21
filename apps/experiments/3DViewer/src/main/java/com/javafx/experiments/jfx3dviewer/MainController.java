@@ -173,6 +173,8 @@ public class MainController implements Initializable {
                     }
                 });
 
+        sessionManager.bind(settingsBtn.selectedProperty(), "settingsBtn");
+        sessionManager.bind(splitPane.getDividers().get(0).positionProperty(), "settingsSplitPanePosition");
         sessionManager.bind(optimizeCheckBox.selectedProperty(), "optimize");
         sessionManager.bind(loadAsPolygonsCheckBox.selectedProperty(), "loadAsPolygons");
         sessionManager.bind(loopBtn.selectedProperty(), "loop");

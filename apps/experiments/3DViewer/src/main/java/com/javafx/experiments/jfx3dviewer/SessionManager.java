@@ -37,9 +37,10 @@ import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.TitledPane;
-import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
 
@@ -137,23 +138,22 @@ public class SessionManager {
     }
 
     public void bind(final ToggleGroup toggleGroup, final String propertyName) {
-        String selectedToggle = props.getProperty(propertyName);
-        for (Toggle t : toggleGroup.getToggles()) {
-            if (t.getUserData() != null && t.getUserData().equals(selectedToggle)) {
-                if (toggleGroup.getSelectedToggle() != t) {
-                    toggleGroup.selectToggle(t);
-                }
-                break;
+        try {
+            String value = props.getProperty(propertyName);
+            if (value != null) {
+                int selectedToggleIndex = Integer.parseInt(value);
+                toggleGroup.selectToggle(toggleGroup.getToggles().get(selectedToggleIndex));
             }
+        } catch (Exception ignored) {
         }
         toggleGroup.selectedToggleProperty().addListener(new InvalidationListener() {
-        
+
             @Override
             public void invalidated(Observable o) {
                 if (toggleGroup.getSelectedToggle() == null) {
                     props.remove(propertyName);
                 } else {
-                    props.setProperty(propertyName, toggleGroup.getSelectedToggle().getUserData().toString());
+                    props.setProperty(propertyName, Integer.toString(toggleGroup.getToggles().indexOf(toggleGroup.getSelectedToggle())));
                 }
             }
         });
@@ -162,16 +162,18 @@ public class SessionManager {
     public void bind(final Accordion accordion, final String propertyName) {
         Object selectedPane = props.getProperty(propertyName);
         for (TitledPane tp : accordion.getPanes()) {
-            if (tp.getText().equals(selectedPane)) {
+            if (tp.getText() != null && tp.getText().equals(selectedPane)) {
                 accordion.setExpandedPane(tp);
                 break;
             }
         }
-        accordion.expandedPaneProperty().addListener(new InvalidationListener() {
+        accordion.expandedPaneProperty().addListener(new ChangeListener<TitledPane>() {
 
             @Override
-            public void invalidated(Observable o) {
-//                props.setProperty(propertyName, accordion.getExpandedPane().getText());
+            public void changed(ObservableValue<? extends TitledPane> ov, TitledPane t, TitledPane expandedPane) {
+                if (expandedPane != null) {
+                    props.setProperty(propertyName, expandedPane.getText());
+                }
             }
         });
     }
