@@ -47,6 +47,14 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
 import com.javafx.experiments.shape3d.SubDivision;
+import javafx.beans.binding.ObjectBinding;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableView;
+import javafx.scene.control.cell.CheckBoxTreeTableCell;
+import javafx.util.Callback;
 
 /**
  * Controller class for settings panel
@@ -82,6 +90,10 @@ public class SettingsController implements Initializable {
     public ToggleGroup subdivisionLevelGroup;
     public ToggleGroup subdivisionBoundaryGroup;
     public ToggleGroup subdivisionSmoothGroup;
+    public TreeTableView<Node> hierarachyTreeTable;
+    public TreeTableColumn<Node, String> nodeColumn;
+    public TreeTableColumn<Node, String> idColumn;
+    public TreeTableColumn<Node, Boolean> visibilityColumn;
     
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
@@ -199,6 +211,45 @@ public class SettingsController implements Initializable {
         fovSlider.setValue(contentModel.getCamera().getFieldOfView());
         contentModel.getCamera().fieldOfViewProperty().bind(fovSlider.valueProperty());
 
+        hierarachyTreeTable.rootProperty().bind(new ObjectBinding<TreeItem<Node>>() {
+
+            {
+                bind(contentModel.contentProperty());
+            }
+
+            @Override
+            protected TreeItem<Node> computeValue() {
+                Node content3D = contentModel.getContent();
+                if (content3D != null) {
+                    return new TreeItemImpl(content3D);
+                } else {
+                    return null;
+                }
+            }
+        });
+        nodeColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, String>, ObservableValue<String>>() {
+
+            @Override
+            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Node, String> p) {
+                return p.getValue().valueProperty().asString();
+            }
+        });
+        idColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, String>, ObservableValue<String>>() {
+
+            @Override
+            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Node, String> p) {
+                return p.getValue().getValue().idProperty();
+            }
+        });
+        visibilityColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Boolean>, ObservableValue<Boolean>>() {
+
+            @Override
+            public ObservableValue<Boolean> call(TreeTableColumn.CellDataFeatures<Node, Boolean> p) {
+                return p.getValue().getValue().visibleProperty();
+            }
+        });
+        visibilityColumn.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(visibilityColumn));
+
         SessionManager sessionManager = SessionManager.getSessionManager();
 
         sessionManager.bind(showAxisCheckBox.selectedProperty(), "showAxis");
@@ -231,6 +282,15 @@ public class SettingsController implements Initializable {
         sessionManager.bind(settings, "settingsPane");
     }
 
+    private class TreeItemImpl extends TreeItem<Node> {
 
-
+        public TreeItemImpl(Node node) {
+            super(node);
+            if (node instanceof Parent) {
+                for (Node n : ((Parent) node).getChildrenUnmodifiable()) {
+                    getChildren().add(new TreeItemImpl(n));
+                }
+            }
+        }
+    }
 }

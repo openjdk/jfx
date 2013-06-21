@@ -227,7 +227,7 @@ public class MainController implements Initializable {
             if (optimizeCheckBox.isSelected()) {
                 new Optimizer(timeline, root, true).optimize();
             }
-            contentModel.set3dContent(root);
+            contentModel.setContent(root);
             contentModel.setTimeline(timeline);
 
             if (timeline != null) {
@@ -245,7 +245,7 @@ public class MainController implements Initializable {
         meshCount = 0;
         triangleCount = 0;
         updateCount(contentModel.getRoot3D());
-        Node content = contentModel.get3dContent();
+        Node content = contentModel.getContent();
         final Bounds bounds = content == null ? new BoundingBox(0, 0, 0, 0) : content.getBoundsInLocal();
         status.setText(
                 String.format("Nodes [%d] :: Meshes [%d] :: Triangles [%d] :: " +
@@ -317,12 +317,12 @@ public class MainController implements Initializable {
 
                 JavaSourceExporter javaSourceExporter = new JavaSourceExporter(
                         baseUrl,
-                        contentModel.get3dContent(),
+                        contentModel.getContent(),
                         contentModel.getTimeline(),
                         newFile);
                 javaSourceExporter.export();
             } else if ("fxml".equals(extension)) {
-                new FXMLExporter(newFile.getAbsolutePath()).export(contentModel.get3dContent());
+                new FXMLExporter(newFile.getAbsolutePath()).export(contentModel.getContent());
             } else {
                 System.err.println("Can not export a file of type [."+extension+"]");
             }

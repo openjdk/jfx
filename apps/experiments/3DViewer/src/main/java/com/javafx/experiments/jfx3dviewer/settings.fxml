@@ -46,7 +46,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <Accordion fx:id="settings" minWidth="0.0" prefHeight="798.0" prefWidth="279.0" xmlns:fx="http://javafx.com/fxml" fx:controller="com.javafx.experiments.jfx3dviewer.SettingsController">
   <expandedPane>
-    <TitledPane fx:id="x4" animated="false" expanded="true" text="Options">
+    <TitledPane fx:id="x5" animated="false" expanded="true" text="Hierarchy">
+      <content>
+        <TreeTableView fx:id="hierarachyTreeTable" editable="true" prefHeight="200.0" prefWidth="200.0">
+          <columns>
+            <TreeTableColumn fx:id="nodeColumn" editable="false" prefWidth="75.0" sortable="false" text="Node" />
+            <TreeTableColumn fx:id="idColumn" prefWidth="75.0" text="Id" />
+            <TreeTableColumn fx:id="visibilityColumn" editable="true" maxWidth="5000.0" minWidth="10.0" prefWidth="26.0" sortable="false" text="Visibility" />
+          </columns>
+        </TreeTableView>
+      </content>
+    </TitledPane>
+  </expandedPane>
+  <panes>
+    <TitledPane fx:id="x4" animated="false" expanded="false" text="Options">
       <content>
         <GridPane hgap="5.0" styleClass="settings" vgap="5.0">
           <children>
@@ -152,9 +165,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </GridPane>
       </content>
     </TitledPane>
-  </expandedPane>
-  <panes>
-    <fx:reference source="x4" />
     <TitledPane fx:id="x2" animated="false" text="Lights">
       <content>
         <ScrollPane fitToWidth="true" prefHeight="200.0" prefWidth="200.0">
@@ -252,5 +262,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </GridPane>
       </content>
     </TitledPane>
+    <fx:reference source="x5" />
   </panes>
 </Accordion>

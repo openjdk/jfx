@@ -139,7 +139,7 @@ public class SessionManager {
     public void bind(final ToggleGroup toggleGroup, final String propertyName) {
         String selectedToggle = props.getProperty(propertyName);
         for (Toggle t : toggleGroup.getToggles()) {
-            if (t.getUserData().equals(selectedToggle)) {
+            if (t.getUserData() != null && t.getUserData().equals(selectedToggle)) {
                 if (toggleGroup.getSelectedToggle() != t) {
                     toggleGroup.selectToggle(t);
                 }

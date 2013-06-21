@@ -56,6 +56,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import com.javafx.experiments.shape3d.PolygonMeshView;
 import com.javafx.experiments.shape3d.SubDivision;
+import javafx.beans.property.ObjectProperty;
 
 /**
  * 3D Content Model for Viewer App. Contains the 3D scene and everything related to it: light, cameras etc.
@@ -70,7 +71,7 @@ public class ContentModel {
     private final Rotate cameraLookZRotate = new Rotate(0,0,0,0,Rotate.Z_AXIS);
     private final Translate cameraPosition = new Translate(0,0,-7);
     private double dragStartX, dragStartY, dragStartRotateX, dragStartRotateY;
-    private Node content;
+    private ObjectProperty<Node> content = new SimpleObjectProperty<>();
     private AutoScalingGroup autoScalingGroup = new AutoScalingGroup(2);
     private Box xAxis,yAxis,zAxis;
     private AmbientLight ambientLight = new AmbientLight(Color.DARKGREY);
@@ -293,19 +294,24 @@ public class ContentModel {
         return autoScalingGroup;
     }
 
-    public Node get3dContent() {
-        return this.content;
-    }
+    public ObjectProperty<Node> contentProperty() { return content; }
+    public Node getContent() { return content.get(); }
+    public void setContent(Node content) { this.content.set(content); }
 
-    public void set3dContent(Node content) {
-        autoScalingGroup.getChildren().remove(this.content);
-        this.content = content;
-        autoScalingGroup.getChildren().add(this.content);
-        setWireFrame(content,wireframe);
-        // TODO mesh is updated each time these are called even if no rendering needs to happen
-        setSubdivisionLevel(content, subdivisionLevel);
-        setBoundaryMode(content, boundaryMode);
-        setMapBorderMode(content, mapBorderMode);
+    {
+        contentProperty().addListener(new ChangeListener<Node>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Node> ov, Node oldContent, Node newContent) {
+                autoScalingGroup.getChildren().remove(oldContent);
+                autoScalingGroup.getChildren().add(newContent);
+                setWireFrame(newContent,wireframe);
+                // TODO mesh is updated each time these are called even if no rendering needs to happen
+                setSubdivisionLevel(newContent, subdivisionLevel);
+                setBoundaryMode(newContent, boundaryMode);
+                setMapBorderMode(newContent, mapBorderMode);
+            }
+        });
     }
 
     public SubScene getSubScene() {
