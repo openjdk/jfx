@@ -869,7 +869,7 @@ project(":graphics") {
         compile name: "plugin"
         compile name: SWT_FILE_NAME
         stubCompile group: "junit", name: "junit", version: "4.8.2",
-            project(":base").sourceSets.test.output, sourceSets.main.output
+        project(":base").sourceSets.test.output, sourceSets.main.output
         antlr3 group: "org.antlr", name: "antlr", version: "3.1.3"
     }
 
@@ -1102,6 +1102,27 @@ project(":graphics") {
     }
     test.dependsOn testWithoutStub, testWithStub
 
+    // To enable the IDEs to all be happy (no red squiggles) we need to have the libraries
+    // available in some known location. Maybe in the future the Gradle plugins to each
+    // of the IDEs will be good enough that we won't need this hack anymore.
+    classes << {
+        // Copy all of the download libraries to .libs for the sake of the IDEs
+        File libsDir = rootProject.file(".libs");
+        if (!libsDir.exists()) {
+            libsDir.mkdirs();
+            for (File f : [configurations.compile.files, configurations.antlr3.files].flatten()) {
+                copy {
+                    into libsDir
+                    from f.getParentFile()
+                    include "**/*swt*.jar"
+                    include "**/antlr-3.1.3.jar"
+                    include "**/stringtemplate-3.2.jar"
+                    include "**/antlr-runtime-3.1.3.jar"
+                    includeEmptyDirs = false
+                }
+            }
+        }
+    }
 }
 
 project(":controls") {
@@ -1557,7 +1578,6 @@ task zips() {
 task all() {
     dependsOn(sdk,publicExports,apps,perf,zips)
 }
-
 
 compileTargets { t ->
     def targetProperties = project.ext[t.upper]
