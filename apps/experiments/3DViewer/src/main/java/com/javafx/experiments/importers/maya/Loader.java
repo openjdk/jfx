@@ -466,21 +466,21 @@ class Loader {
                 ((Group) node).getChildren().add(mv);
             }
         } else {
-//            if (((TriangleMesh)mesh).getPoints().size() > 0) {
-                MeshView mv = new MeshView();
-                mv.setId(n.getName());
-                mv.setMaterial(material);
+            MeshView mv = new MeshView();
+            mv.setId(n.getName());
+            mv.setMaterial(material);
 
-    //            // TODO HACK for [JIRA] (RT-30449) FX 8 3D: Need to handle mirror transformation (flip culling);
-    //            mv.setCullFace(CullFace.FRONT);
+//            // TODO HACK for [JIRA] (RT-30449) FX 8 3D: Need to handle mirror transformation (flip culling);
+//            mv.setCullFace(CullFace.FRONT);
 
-                mv.setMesh((TriangleMesh) mesh);
+            mv.setMesh((TriangleMesh) mesh);
 
-                loaded.put(n, mv);
+            loaded.put(n, mv);
+            if (((TriangleMesh)mesh).getPoints().size() > 0) {
                 if (node != null) {
                     ((Group) node).getChildren().add(mv);
                 }
-//            }
+            }
         }
     }
             

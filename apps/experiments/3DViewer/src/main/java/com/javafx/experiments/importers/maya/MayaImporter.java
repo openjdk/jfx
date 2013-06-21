@@ -38,10 +38,10 @@ import java.util.Set;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.DepthTest;
 import javafx.scene.Node;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
 
 /**
  * MayaImporter
@@ -108,7 +108,9 @@ public class MayaImporter {
                             System.out.println("Adding top level node " + n.getId() + " to root!");
                         }
                         n.setDepthTest(DepthTest.ENABLE);
-                        root.getChildren().add(n);
+                        if (!(n instanceof MeshView) || ((TriangleMesh)((MeshView)n).getMesh()).getPoints().size() > 0) {
+                            root.getChildren().add(n);
+                        }
                     }
                     nodeCount++;
                 }
