@@ -85,7 +85,7 @@ public abstract class StyleableObjectProperty<T>
     
     /** {@inheritDoc} */
     @Override
-    public final StyleOrigin getStyleOrigin() { return origin; }
+    public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;    
 
