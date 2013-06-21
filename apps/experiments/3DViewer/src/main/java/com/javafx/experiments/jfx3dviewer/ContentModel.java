@@ -141,7 +141,6 @@ public class ContentModel {
     private int subdivisionLevel = 0;
     private SubDivision.BoundaryMode boundaryMode = SubDivision.BoundaryMode.CREASE_EDGES;
     private SubDivision.MapBorderMode mapBorderMode = SubDivision.MapBorderMode.NOT_SMOOTH;
-    private String loadedUrl = null;
 
     public ContentModel() {
         subScene = new SubScene(root3D,400,400,true,false);
@@ -200,10 +199,6 @@ public class ContentModel {
         sessionManager.bind(cameraPosition.zProperty(), "cameraPosition.z");
         sessionManager.bind(cameraXRotate.angleProperty(), "cameraXRotate");
         sessionManager.bind(cameraYRotate.angleProperty(), "cameraYRotate");
-    }
-
-    public String getLoadedUrl() {
-        return loadedUrl;
     }
 
     public boolean getAmbientLightEnabled() {
