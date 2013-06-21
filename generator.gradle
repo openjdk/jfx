@@ -33,8 +33,8 @@ if (!project.hasProperty('FXDir')) {
 }
 
 task generate << {
-    def excludeFromSource = ["META-INF/**", "**/doc-files/**/*", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert"]
-    def includeInResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.txt", "**/*.fxml", "**/*.js", "**/*.frag", "**/*.vert"]
+    def excludeFromSource = ["META-INF/**", "**/doc-files/**/*", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert"]
+    def includeInResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "**/*.txt", "**/*.fxml", "**/*.js", "**/*.frag", "**/*.vert"]
     def excludeFromResources = ["**/doc-files/**/*"]
 
     // Copy over the new gradle build files, LICENSE, and README
@@ -326,11 +326,15 @@ task generate << {
         }
     }
     copy {
-        from "${RTDir}/javafx-concurrent/test",
+        from "${RTDir}/decora-runtime/test",
+             "${RTDir}/javafx-concurrent/test",
              "${RTDir}/javafx-geom/test",
+             "${RTDir}/javafx-iio/test",
              "${RTDir}/javafx-sg-common/test",
              "${RTDir}/javafx-sg-prism/test",
-             "${RTDir}/javafx-ui-quantum/test"
+             "${RTDir}/javafx-ui-quantum/test",
+             "${RTDir}/prism-common/test",
+             "${RTDir}/prism-ps/test"
         into "${FXDir}/modules/graphics/src/test/java"
         exclude excludeFromSource
         eachFile { f ->
@@ -338,11 +342,15 @@ task generate << {
         }
     }
     copy {
-        from "${RTDir}/javafx-concurrent/test",
+        from "${RTDir}/decora-runtime/test",
+             "${RTDir}/javafx-concurrent/test",
              "${RTDir}/javafx-geom/test",
+             "${RTDir}/javafx-iio/test",
              "${RTDir}/javafx-sg-common/test",
              "${RTDir}/javafx-sg-prism/test",
-             "${RTDir}/javafx-ui-quantum/test"
+             "${RTDir}/javafx-ui-quantum/test",
+             "${RTDir}/prism-common/test",
+             "${RTDir}/prism-ps/test"
         into "${FXDir}/modules/graphics/src/test/resources"
         include includeInResources
         exclude excludeFromResources
@@ -383,6 +391,26 @@ task generate << {
         from "${RTDir}/javafx-designtime/src"
         into "${FXDir}/modules/designTime/src/main/java"
         include "javafx/scene/ParentDesignInfo.java", "javafx/scene/layout/**", "com/**"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
+    }
+
+    copy {
+        from "${RTDir}/javafx-beans-dt/test",
+             "${RTDir}/javafx-designtime/test"
+        into "${FXDir}/modules/designTime/src/test/java"
+        exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
+    }
+    copy {
+        from "${RTDir}/javafx-beans-dt/test",
+             "${RTDir}/javafx-designtime/test"
+        into "${FXDir}/modules/designTime/src/test/resources"
+        include includeInResources
+        exclude excludeFromResources
         eachFile { f ->
             fileList.add(f.file);
         }
@@ -736,6 +764,16 @@ task generate << {
         from "${RTDir}/webview/src"
         into "${FXDir}/modules/web/src/main/java"
         exclude excludeFromSource
+        eachFile { f ->
+            fileList.add(f.file);
+        }
+    }
+
+    copy {
+        from "${RTDir}/webview/src"
+        into "${FXDir}/modules/web/src/main/resources"
+        include includeInResources
+        exclude excludeFromResources
         eachFile { f ->
             fileList.add(f.file);
         }
