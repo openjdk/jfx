@@ -1563,25 +1563,29 @@ final class CssStyleHelper {
         // font-size must be closer and more specific than font shorthand
         if (fontSize != null) {
 
-            if (origin == null || origin.compareTo(fontSize.getOrigin()) <= 0) {
+            if (fontShorthand == null || fontShorthand.compareTo(fontSize) > 0) {
 
-                final CalculatedValue cv =
-                        calculateValue(fontSize, styleable, dummyFontProperty,
-                                       states, styleable, cvFont, styleList);
+                if (origin == null || origin.compareTo(fontSize.getOrigin()) <= 0) {
 
-                if (cv.getValue() instanceof Double) {
-                    origin = cv.getOrigin();
+                    final CalculatedValue cv =
+                            calculateValue(fontSize, styleable, dummyFontProperty,
+                                    states, styleable, cvFont, styleList);
 
-                    if (cvFont != null) {
-                        boolean isRelative = cvFont.isRelative() || cv.isRelative();
-                        Font font = deriveFont((Font) cvFont.getValue(), ((Double) cv.getValue()).doubleValue());
-                        cvFont = new CalculatedValue(font, origin, isRelative);
-                    } else {
-                        boolean isRelative = cv.isRelative();
-                        Font font = deriveFont(Font.getDefault(), ((Double) cv.getValue()).doubleValue());
-                        cvFont = new CalculatedValue(font, origin, isRelative);
+                    if (cv.getValue() instanceof Double) {
+                        origin = cv.getOrigin();
+
+                        if (cvFont != null) {
+                            boolean isRelative = cvFont.isRelative() || cv.isRelative();
+                            Font font = deriveFont((Font) cvFont.getValue(), ((Double) cv.getValue()).doubleValue());
+                            cvFont = new CalculatedValue(font, origin, isRelative);
+                        } else {
+                            boolean isRelative = cv.isRelative();
+                            Font font = deriveFont(Font.getDefault(), ((Double) cv.getValue()).doubleValue());
+                            cvFont = new CalculatedValue(font, origin, isRelative);
+                        }
                     }
                 }
+
             }
 
         }
@@ -1595,22 +1599,25 @@ final class CssStyleHelper {
 
             if (fontWeight != null) {
 
-                if (origin == null || origin.compareTo(fontWeight.getOrigin()) <= 0) {
+                if (fontShorthand == null || fontShorthand.compareTo(fontWeight) > 0) {
 
-                    final CalculatedValue cv =
-                            calculateValue(fontWeight, styleable, dummyFontProperty,
-                                           states, styleable, null, null);
+                    if (origin == null || origin.compareTo(fontWeight.getOrigin()) <= 0) {
 
-                    if (cv.getValue() instanceof FontWeight) {
-                        origin = cv.getOrigin();
+                        final CalculatedValue cv =
+                                calculateValue(fontWeight, styleable, dummyFontProperty,
+                                        states, styleable, null, null);
 
-                        if (cvFont != null) {
-                            boolean isRelative = cvFont.isRelative();
-                            Font font = deriveFont((Font) cvFont.getValue(), (FontWeight) cv.getValue());
-                            cvFont = new CalculatedValue(font, origin, isRelative);
-                        } else {
-                            Font font = deriveFont(Font.getDefault(), (FontWeight) cv.getValue());
-                            cvFont = new CalculatedValue(font, origin, false);
+                        if (cv.getValue() instanceof FontWeight) {
+                            origin = cv.getOrigin();
+
+                            if (cvFont != null) {
+                                boolean isRelative = cvFont.isRelative();
+                                Font font = deriveFont((Font) cvFont.getValue(), (FontWeight) cv.getValue());
+                                cvFont = new CalculatedValue(font, origin, isRelative);
+                            } else {
+                                Font font = deriveFont(Font.getDefault(), (FontWeight) cv.getValue());
+                                cvFont = new CalculatedValue(font, origin, false);
+                            }
                         }
                     }
                 }
@@ -1624,27 +1631,30 @@ final class CssStyleHelper {
 
             if (fontStyle != null) {
 
-                if (origin == null || origin.compareTo(fontStyle.getOrigin()) <= 0) {
+                if (fontShorthand == null || fontShorthand.compareTo(fontStyle) > 0) {
 
-                    final CalculatedValue cv =
-                            calculateValue(fontStyle, styleable, dummyFontProperty,
-                                           states, styleable, null, null);
+                    if (origin == null || origin.compareTo(fontStyle.getOrigin()) <= 0) {
 
-                    if (cv.getValue() instanceof FontPosture) {
-                        origin = cv.getOrigin();
+                        final CalculatedValue cv =
+                                calculateValue(fontStyle, styleable, dummyFontProperty,
+                                        states, styleable, null, null);
 
-                        if (cvFont != null) {
-                            boolean isRelative = cvFont.isRelative();
-                            Font font = deriveFont((Font) cvFont.getValue(), (FontPosture) cv.getValue());
-                            cvFont = new CalculatedValue(font, origin, isRelative);
-                        } else {
-                            boolean isRelative = cv.isRelative();
-                            Font font = deriveFont(Font.getDefault(), (FontPosture) cv.getValue());
-                            cvFont = new CalculatedValue(font, origin, false);
+                        if (cv.getValue() instanceof FontPosture) {
+                            origin = cv.getOrigin();
+
+                            if (cvFont != null) {
+                                boolean isRelative = cvFont.isRelative();
+                                Font font = deriveFont((Font) cvFont.getValue(), (FontPosture) cv.getValue());
+                                cvFont = new CalculatedValue(font, origin, isRelative);
+                            } else {
+                                boolean isRelative = cv.isRelative();
+                                Font font = deriveFont(Font.getDefault(), (FontPosture) cv.getValue());
+                                cvFont = new CalculatedValue(font, origin, false);
+                            }
                         }
                     }
-                }
 
+                }
             }
 
             CascadingStyle fontFamily = getStyle(styleable, property.concat("-family"), states);
@@ -1654,22 +1664,25 @@ final class CssStyleHelper {
 
             if (fontFamily != null) {
 
-                if (origin == null || origin.compareTo(fontFamily.getOrigin()) <= 0) {
+                if (fontShorthand == null || fontShorthand.compareTo(fontFamily) > 0) {
 
-                    final CalculatedValue cv =
-                            calculateValue(fontFamily, styleable, dummyFontProperty,
-                                           states, styleable, null, null);
+                    if (origin == null || origin.compareTo(fontFamily.getOrigin()) <= 0) {
 
-                    if (cv.getValue() instanceof String) {
-                        origin = cv.getOrigin();
+                        final CalculatedValue cv =
+                                calculateValue(fontFamily, styleable, dummyFontProperty,
+                                        states, styleable, null, null);
 
-                        if (cvFont != null) {
-                            boolean isRelative = cvFont.isRelative();
-                            Font font = deriveFont((Font) cvFont.getValue(), (String) cv.getValue());
-                            cvFont = new CalculatedValue(font, origin, isRelative);
-                        } else {
-                            Font font = deriveFont(Font.getDefault(), (String) cv.getValue());
-                            cvFont = new CalculatedValue(font, origin, false);
+                        if (cv.getValue() instanceof String) {
+                            origin = cv.getOrigin();
+
+                            if (cvFont != null) {
+                                boolean isRelative = cvFont.isRelative();
+                                Font font = deriveFont((Font) cvFont.getValue(), (String) cv.getValue());
+                                cvFont = new CalculatedValue(font, origin, isRelative);
+                            } else {
+                                Font font = deriveFont(Font.getDefault(), (String) cv.getValue());
+                                cvFont = new CalculatedValue(font, origin, false);
+                            }
                         }
                     }
                 }

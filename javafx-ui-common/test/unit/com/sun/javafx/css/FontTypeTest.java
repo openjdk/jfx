@@ -29,9 +29,13 @@ import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.css.parser.CSSParser;
 import javafx.css.ParsedValue;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
+
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
@@ -142,6 +146,79 @@ public class FontTypeTest {
         assertEquals("Regular", f.getStyle());
         assertEquals("Amble", f.getFamily());
         assertEquals(24, f.getSize(),0);
-    }    
+    }
+
+    @Test public void test_RT_25355_shorthandLast() {
+
+        Text txt = new Text("test_RT_25355");
+        txt.setStyle("-fx-font-weight: bold; -fx-font: 16 Amble;");
+
+        Scene scene  = new Scene(new Group());
+        ((Group)scene.getRoot()).getChildren().add(txt);
+
+        txt.impl_processCSS(true);
+
+        Font f = txt.getFont();
+        assertEquals("Regular", f.getStyle());
+        assertEquals("Amble", f.getFamily());
+        assertEquals(16, f.getSize(),0);
+    }
+
+    @Test public void test_RT_25355_shorthandFirst() {
+
+        Text txt = new Text("test_RT_25355");
+        txt.setStyle("-fx-font: 16 Amble; -fx-font-weight: bold;");
+
+        Scene scene  = new Scene(new Group());
+        ((Group)scene.getRoot()).getChildren().add(txt);
+
+        txt.impl_processCSS(true);
+
+        Font f = txt.getFont();
+        assertEquals("Bold", f.getStyle());
+        assertEquals("Amble", f.getFamily());
+        assertEquals(16, f.getSize(),0);
+
+    }
+
+    @Test public void test_RT_25355_shorthandFirstInheritedWeight() {
+
+        Text txt = new Text("test_RT_25355");
+        txt.setStyle("-fx-font: 16 Amble;");
+
+        Group g = new Group();
+        g.setStyle("-fx-font-weight: bold");
+
+        Scene scene  = new Scene(g);
+        g.getChildren().add(txt);
+
+        g.impl_processCSS(true);
+
+        Font f = txt.getFont();
+        assertEquals("Regular", f.getStyle());
+        assertEquals("Amble", f.getFamily());
+        assertEquals(16, f.getSize(),0);
+
+    }
+
+    @Test public void test_RT_25355_weightFirstInheritedShorthand() {
+
+        Text txt = new Text("test_RT_25355");
+        txt.setStyle("-fx-font-weight: bold;");
+
+        Group g = new Group();
+        g.setStyle("-fx-font: 16 Amble;");
+
+        Scene scene  = new Scene(g);
+        g.getChildren().add(txt);
+
+        g.impl_processCSS(true);
+
+        Font f = txt.getFont();
+        assertEquals("Bold", f.getStyle());
+        assertEquals("Amble", f.getFamily());
+        assertEquals(16, f.getSize(),0);
+
+    }
 
 }
