@@ -1114,11 +1114,17 @@ project(":graphics") {
                 copy {
                     into libsDir
                     from f.getParentFile()
-                    include "**/*swt*.jar"
                     include "**/antlr-3.1.3.jar"
                     include "**/stringtemplate-3.2.jar"
                     include "**/antlr-runtime-3.1.3.jar"
                     includeEmptyDirs = false
+                }
+                copy {
+                    into libsDir
+                    from f.getParentFile()
+                    include "**/*swt*.jar"
+                    includeEmptyDirs = false
+                    rename ".*swt.*jar", "swt\\.jar"
                 }
             }
         }
