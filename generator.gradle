@@ -32,6 +32,11 @@ if (!project.hasProperty('FXDir')) {
     project.ext.FXDir = "../javafx"
 }
 
+def verbose = false
+if (project.hasProperty('VERBOSE')) {
+    verbose = Boolean.parseBoolean(VERBOSE);
+}
+
 task generate << {
     def excludeFromSource = ["META-INF/**", "**/doc-files/**/*", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert"]
     def includeInResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "**/*.txt", "**/*.fxml", "**/*.js", "**/*.frag", "**/*.vert"]
@@ -839,11 +844,11 @@ task generateThenDelete() {
         // Delete all copied files
         def nFiles = fileList.size();
         println "Deleting ${nFiles} files"
-        /*
-        fileList.each { f ->
-            println "rm $f";
+        if (verbose) {
+            fileList.each { f ->
+                println "delete: $f";
+            }
         }
-        */
         delete(fileList);
 
     }
