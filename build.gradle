@@ -1290,9 +1290,9 @@ project(":fxpackager") {
         task compileLauncher(dependsOn: [compileWinLauncher, compileIconSwap])
         jar.dependsOn compileLauncher;
     } else if (COMPILE_FXPACKAGER) {
-        task compileLauncher(type: CCTask, group: "Build") {
-            description = "Compiles native sources for the application co-bundle launcher"
-            if (IS_MAC) {
+        if (IS_MAC) {
+            task compileLauncher(type: CCTask, group: "Build") {
+                description = "Compiles native sources for the application co-bundle launcher"
                 matches = ".*\\.m"
                 output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/mac"))
                 params.addAll(MAC.launcher.ccFlags)
@@ -1301,19 +1301,26 @@ project(":fxpackager") {
                 eachOutputFile = { f ->
                     return new File(f.getParent(), "JavaAppLauncher")
                 }
-            } else {
+            }
+            jar.dependsOn compileLauncher;
+        } else {
+            def ccTask = project.task("compileLauncher", type: CCTask, group: "Build") {
+                description = "Compiles native sources for the application co-bundle launcher"
                 matches = ".*\\.c"
-                output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/linux"))
+                output(file("$buildDir/native/launcher"))
                 params.addAll(LINUX.launcher.ccFlags)
                 compiler = LINUX.launcher.compiler
-                linkerOptions.addAll(LINUX.launcher.linkFlags)
                 source file("src/main/native/launcher/linux")
-                eachOutputFile = { f ->
-                    return new File(f.getParent(), "JavaAppLauncher")
-                }
             }
+            def linkTask = project.task("linkLauncher", type: LinkTask, dependsOn: ccTask, group: "Build") {
+                description = "Creates native dynamic library for the application co-bundle launcher"
+                linker = LINUX.launcher.linker
+                linkParams.addAll(LINUX.launcher.linkFlags)
+                objectDir = file("$buildDir/native/launcher")
+                lib = file("$buildDir/classes/main/com/sun/javafx/tools/resource/linux/JavaAppLauncher")
+            }
+            jar.dependsOn linkTask;
         }
-        jar.dependsOn compileLauncher;
     }
 
     // Builds the javafxpackager executable. For everything other than windows,

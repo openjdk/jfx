@@ -144,7 +144,7 @@ LINUX.prismSW.lib = "prism-sw"
 
 LINUX.launcher = [:]
 LINUX.launcher.compiler = compiler
-LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"];
+LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c"]
 LINUX.launcher.linker = linker
 LINUX.launcher.linkFlags = ["-ldl"]
 
