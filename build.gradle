@@ -1409,6 +1409,23 @@ project(":fxpackager") {
     }
 
     jar.dependsOn buildJavaFXPackager
+
+    classes << {
+        // Copy all of the download libraries to .libs for the sake of the IDEs
+        File libsDir = rootProject.file(".libs");
+        File antLib = new File(libsDir, "ant-1.8.2.jar")
+        if (!antLib.exists()) {
+            libsDir.mkdirs();
+            for (File f : configurations.compile.files) {
+                copy {
+                    into libsDir
+                    from f.getParentFile()
+                    include "**/ant-1.8.2.jar"
+                    includeEmptyDirs = false
+                }
+            }
+        }
+    }
 }
 
 allprojects {
