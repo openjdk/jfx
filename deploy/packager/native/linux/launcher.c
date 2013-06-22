@@ -276,63 +276,102 @@ typedef struct {
     JVMUserArg *args;
     int maxSize;
     int currentSize;
-    int initialElements;
+    int initialElements;           
 } JVMUserArgs;
 
 /**
  * Creates an array of string pointer where each non null entry is malloced and
  * needs to be freed
- *
+ * 
  * @param basedir
  * @param keys
  * @param size
  */
 void JVMUserArgs_initializeDefaults(JVMUserArgs *this, char* basedir) {
-    //void getArray(char* basedir, char** keys, int maxSize, int *actualSize) {
-    char jvmArgID[40];
-    char argvalue[MAX_ARGUMENT_LEN];
-    char name[MAX_ARGUMENT_LEN];
-    char value[MAX_ARGUMENT_LEN];
+    char jvmArgID[40 + 1];
+    char argvalue[MAX_ARGUMENT_LEN + 1] = {0};
     JVMUserArg* keys = this->args;
-
+    
     int index = 0;
     int found = 0;
     do {
-        sprintf(jvmArgID, "jvmuserarg.%d", (index + 1));
-        found = getConfigValue(basedir, jvmArgID, argvalue, sizeof (argvalue));
+        snprintf(jvmArgID, 40, "jvmuserarg.%d.name", (index+1));
+        found = getConfigValue(basedir, jvmArgID, argvalue, MAX_ARGUMENT_LEN);
         if (found) {
-            index++;
-            if (splitOptionIntoNameValue(argvalue, name, sizeof (name), value, sizeof (value))) {
-                keys->name = strdup(name);
-                keys->value = strdup(value);
-                keys++;
-                this->initialElements++;
-                this->currentSize++;
-            } else {
-                printf("Failed to split jvmuserarg \"%s\" into name, value pair\n", argvalue);
-            }
-        }
-    } while (found && index <= this->maxSize);
+          keys->name = strdup(argvalue);
+          snprintf(jvmArgID, 40, "jvmuserarg.%d.value", (index+1));
+          found = getConfigValue(basedir, jvmArgID, argvalue, MAX_ARGUMENT_LEN);
+          if (found) {
+              //allow use to specify everything in name only
+              keys->value = strdup(argvalue);
+          }
+          else {
+              keys->value = strdup("");
+          }
+          index++;
+          keys++;
+          this->initialElements++;
+          this->currentSize++;
+       }
+    } while (found && index < this->maxSize);
 }
 
+int makeDirRecursively(char *path, mode_t mode) {
+    char parent[MAX_PATH], *p;
+
+    if (fileExists(path)) {
+        return 0;
+    }
+    
+    /* make a parent directory path */
+    strncpy(parent, path, sizeof (parent));
+    parent[sizeof (parent) - 1] = '\0';
+
+    for (p = parent + strlen(parent); *p != '/' && p != parent; p--) {
+    }
+    *p = '\0';
+
+    /* try make parent directory */
+    if (p != parent && makeDirRecursively(parent, mode) != 0) {
+        return -1;
+    }
+
+    //If we got here the parent has already been made so make this one
+    //or if it already exists that is ok as well
+    if (mkdir(path, mode) == 0 || errno == EEXIST) {
+        return 0;
+    }
+    return -1;
+}
+
+
 /*
- * Assumes that userPref can hold the size of this path
+ * Assumes that userPref can hold the size of this path 
  */
 int getUserPrefFile(char* userPref, char* appid) {
     userPref[0] = 0;
     struct passwd *pw = getpwuid(getuid());
-    const char *homedir = pw->pw_dir;
-
+    const char *homedir = pw->pw_dir;    
+    
     strcat(userPref, homedir);
     strcat(userPref, "/.java/.userPrefs/");
     strcat(userPref, appid);
-    strcat(userPref, "/JVMOptions");
+    strcat(userPref, "/JVMUserOptions");
+    if (fileExists(userPref) == FALSE) {
+        makeDirRecursively(userPref,  0777);
+    }
+    
     strcat(userPref, "/prefs.xml");
     return fileExists(userPref);
-}
+}       
 
 void addModifyArgs(JVMUserArgs* this, char* name, char* value) {
     int i;
+    
+    if (name == NULL || value == NULL) {
+        return;
+    }
+    
     JVMUserArg* arg = this->args;
     for (i = 0; i < this->initialElements; i++) {
         if (strcmp(arg[i].name, name) == 0) {
@@ -342,8 +381,8 @@ void addModifyArgs(JVMUserArgs* this, char* name, char* value) {
             return; //Replaced
         }
     }
-
-    //Add new jvm arg from name value
+    
+    //Add new jvm arg from name value 
     int newIndex = this->currentSize;
     arg[newIndex].name = malloc((strlen(name) + 1) * sizeof (char));
     strcpy(arg[newIndex].name, name);
@@ -353,17 +392,17 @@ void addModifyArgs(JVMUserArgs* this, char* name, char* value) {
 }
 
 void findAndModifyNode(XMLNode* node, JVMUserArgs* args) {
-    XMLNode* keyNode = NULL;
-    char* key;
-    char* value;
-    keyNode = FindXMLChild(node->_sub, "entry");
-
+        XMLNode* keyNode = NULL;
+        char* key;
+        char* value;
+        keyNode = FindXMLChild(node->_sub, "entry");
+        
     while (keyNode != NULL && args->currentSize < args->maxSize) {
-        key = FindXMLAttribute(keyNode->_attributes, "key");
-        value = FindXMLAttribute(keyNode->_attributes, "value");
-        addModifyArgs(args, key, value);
-        keyNode = keyNode->_next;
-    }
+            key = FindXMLAttribute(keyNode->_attributes, "key");
+            value = FindXMLAttribute(keyNode->_attributes, "value");
+            addModifyArgs(args, key, value);
+            keyNode = keyNode->_next;
+        }
 }
 
 int getJvmUserArgs(JVMUserArgs* args, char* userPrefsPath) {
@@ -373,7 +412,7 @@ int getJvmUserArgs(JVMUserArgs* args, char* userPrefsPath) {
         //scan file for the key
         fp = fopen(userPrefsPath, "r");
         if (fp == NULL) {
-            return;
+             return;
         }
 
         fseek(fp, 0, SEEK_END);
@@ -383,7 +422,7 @@ int getJvmUserArgs(JVMUserArgs* args, char* userPrefsPath) {
         fread(buf, fsize, 1, fp);
         fclose(fp);
         buf[fsize] = 0;
-
+        
         XMLNode* node = NULL;
         XMLNode* doc = ParseXMLDocument(buf);
         if (doc != NULL) {
@@ -394,64 +433,41 @@ int getJvmUserArgs(JVMUserArgs* args, char* userPrefsPath) {
         }
         free(buf);
     }
-    return args->currentSize;
-}
-
-//Assumes are values passed in are big enough
-
-int splitOptionIntoNameValue(char* argValue,
-        char* optionName,
-        int nameSize,
-        char* optionValue,
-        int valueSize) {
-    char* ptr;
-
-    ptr = strstr(argValue, "##");
-    if (ptr != NULL) {
-        int len = strlen(ptr);
-        if (len > 0 && len < valueSize) {
-            ptr++;
-            ptr++;
-            strcpy(optionValue, ptr);
-
-            int argLen = strlen(argValue);
-            if ((argLen - len + 1) < nameSize) {
-                memcpy(optionName, argValue, argLen - len);
-                optionName[argLen - len] = '\0';
-                return TRUE;
-            }
-        }
-    }
-    return FALSE;
+    return args->currentSize; 
 }
 
 /*
  * Converts JVMUserArg to a single jvm argument.
- *
+ * 
  * This is used to convert to the actual string passed into the jvm, so has
- * option to free memory of the sub strings
- *
+ * option to free memory of the sub strings 
+ * 
  * Returned string can be freed
  */
-char* JVMUserArg_toString(JVMUserArg arg, int freeMemory) {
+char* JVMUserArg_toString(char* basedir, JVMUserArg arg, int freeMemory) {
     int len = strlen(arg.name);
     len += strlen(arg.value);
     char* newString = calloc(len + 1, sizeof (char));
-    strcat(newString, arg.name);
-    strcat(newString, arg.value);
-    if (freeMemory == TRUE) {
-        free(arg.name);
-        free(arg.value);
+    if (newString != NULL) {
+        strcat(newString, arg.name);
+        strcat(newString, arg.value);
+        if (freeMemory == TRUE) {
+            free(arg.name);
+            free(arg.value);
+        }
+        char* jvmOption = dupAndReplacePattern(newString, "$APPDIR", basedir);
+        free(newString);
+        return jvmOption;
     }
-    return newString;
+    return NULL;
 }
 
 int addUserOptions(char* basedir, JavaVMOption* options, int cnt) {
     JVMUserArg args[MAX_OPTIONS - cnt];
     JVMUserArgs jvmUserArgs;
-    char appid[MAX_ARGUMENT_LEN] = {0};
-    char userPref[MAX_PATH] = {0};
-    char argvalue[MAX_ARGUMENT_LEN];
+    char appid[MAX_ARGUMENT_LEN + 1] = {0};
+    char userPref[MAX_ARGUMENT_LEN + 1] = {0};
+    char argvalue[MAX_ARGUMENT_LEN + 1] = {0};
 
 
     jvmUserArgs.args = args;
@@ -460,23 +476,46 @@ int addUserOptions(char* basedir, JavaVMOption* options, int cnt) {
     jvmUserArgs.maxSize = MAX_OPTIONS - cnt;
     memset(&args, 0, sizeof (JVMUserArg)*(MAX_OPTIONS - cnt + 1));
 
-    JVMUserArgs_initializeDefaults(&jvmUserArgs, basedir);
-
     //Add property to command line for preferences id
-    if (getConfigValue(basedir, CONFIG_APP_ID_KEY, appid, sizeof (appid))) {
-        sprintf(argvalue, "-D%s=%s", CONFIG_APP_ID_KEY, appid);
+    if (getConfigValue(basedir, CONFIG_APP_ID_KEY, appid, MAX_ARGUMENT_LEN)) {
+        snprintf(argvalue, MAX_ARGUMENT_LEN, "-D%s=%s", CONFIG_APP_ID_KEY, appid);
         options[cnt].optionString = strdup(argvalue);
         cnt++;
 
+        JVMUserArgs_initializeDefaults(&jvmUserArgs, basedir);
         if (getUserPrefFile(userPref, appid)) {
             getJvmUserArgs(&jvmUserArgs, userPref);
-            int i;
-            for (i = 0; i < jvmUserArgs.currentSize; i++) {
-                options[cnt].optionString = JVMUserArg_toString(args[i], TRUE);
+        }
+        else {
+            //If file doesn't exist create it and populate with the default values
+            printf("MESSAGE: Creating user preferences file exist: %s", userPref);
+            FILE *fp = fopen(userPref, "w");
+            if (fp == NULL) {
+                printf("MESSAGE: Can not create user preferences: %s", userPref);
+            }
+            else {
+                fprintf(fp, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
+                fprintf(fp, "<!DOCTYPE map SYSTEM \"http://java.sun.com/dtd/preferences.dtd\">\n");
+                fprintf(fp, "<map MAP_XML_VERSION=\"1.0\">\n");   
+                int i;
+                for (i; i < jvmUserArgs.currentSize; i++) {
+                    fprintf(fp, "    <entry key=\"%s\" value=\"%s\"/>\n", 
+                            jvmUserArgs.args[i].name,
+                            jvmUserArgs.args[i].value);
+                }
+                fprintf(fp, "</map>\n");
+            }
+            fclose(fp);
+        }
+
+        //Copy all user args to options
+        int i;
+        for (i = 0; i < jvmUserArgs.currentSize; i++) {
+            char* jvmOption = JVMUserArg_toString(basedir, args[i], TRUE);
+            if (jvmOption != NULL) {
+                options[cnt].optionString = jvmOption;
                 cnt++;
             }
-        } else {
-            printf("MESSAGE: User preferences file doesn't exist: %s", userPref);
         }
     } else {
         printf("WARNING: %s not defined:", CONFIG_APP_ID_KEY);
@@ -494,13 +533,12 @@ int startJVM(char* basedir, char *appFolder, char* jar, int argc, const char**ar
     JNIEnv* env;
     JavaVM* jvm = NULL;
     char classpath[MAX_PATH*2] = {0};
-    size_t outlen = 0;
     jclass cls;
     jmethodID mid;
     char argname[20];
-    char argvalue[1000];
+    char argvalue[MAX_ARGUMENT_LEN];
     char mainclass[MAX_PATH];
-
+    
     memset(&options, 0, sizeof(JavaVMOption)*(MAX_OPTIONS + 1));
     memset(&jvmArgs, 0, sizeof(JavaVMInitArgs));
 
@@ -554,7 +592,7 @@ int startJVM(char* basedir, char *appFolder, char* jar, int argc, const char**ar
             strcat(classpath, argvalue);
         }
     }
-
+    
     // Set up the VM init args
     jvmArgs.version = JNI_VERSION_1_2;
 
@@ -576,14 +614,16 @@ int startJVM(char* basedir, char *appFolder, char* jar, int argc, const char**ar
        if (found) {
           //jvmOption is always a new string via strdup
           char* jvmOption = dupAndReplacePattern(argvalue, "$APPDIR", basedir);
-          options[cnt].optionString = jvmOption;
+          if (jvmOption != NULL) {
+            options[cnt].optionString = jvmOption;
+            cnt++;
+          }
           idx++;
-          cnt++;
        }
     } while (found && cnt < MAX_OPTIONS);
-
+    
     cnt = addUserOptions(basedir, options, cnt);
-
+    
     jvmArgs.version = 0x00010002;
     jvmArgs.options = options;
     jvmArgs.nOptions = cnt;
@@ -606,7 +646,7 @@ int startJVM(char* basedir, char *appFolder, char* jar, int argc, const char**ar
         printf("Packaging error: no main class specified.\n");
         return FALSE;
     }
-
+    
     cls = (*env)->FindClass(env, mainclass);
     if (cls != NULL) {
         mid = (*env)->GetStaticMethodID(env, cls, "main", "([Ljava/lang/String;)V");
@@ -689,3 +729,4 @@ int main(int argc, const char** argv) {
 
     return 1;
 }
+
