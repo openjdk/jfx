@@ -871,6 +871,8 @@ project(":graphics") {
         stubCompile group: "junit", name: "junit", version: "4.8.2",
         project(":base").sourceSets.test.output, sourceSets.main.output
         antlr3 group: "org.antlr", name: "antlr", version: "3.1.3"
+        antlr3 group: "org.antlr", name: "antlr-runtime",  version: "3.1.3"
+        antlr3 group: "org.antlr", name: "stringtemplate", version: "3.2"
     }
 
     // Add tasks for native compilation
@@ -1120,12 +1122,26 @@ project(":graphics") {
                     include "**/antlr-runtime-3.1.3.jar"
                     includeEmptyDirs = false
                 }
+                // Have to rename the swt jar because it is some platform specific name but
+                // for the sake of the IDEs we need to have a single stable name that works
+                // on every platform
                 copy {
                     into libsDir
                     from f.getParentFile()
                     include "**/*swt*.jar"
                     includeEmptyDirs = false
                     rename ".*swt.*jar", "swt\\.jar"
+                }
+                // For some reason (queue twilight zone) the plugin jar is sometimes
+                // named plugin.jar and sometimes plugin-.jar, but we need to rename
+                // it to plugin.jar in all cases.
+                copy {
+                    into libsDir
+                    from f.getParentFile()
+                    include "**/plugin.jar"
+                    include "**/plugin-.jar"
+                    includeEmptyDirs = false
+                    rename ".*plugin.*jar", "plugin\\.jar"
                 }
             }
         }
