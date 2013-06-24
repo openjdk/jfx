@@ -54,7 +54,9 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.CheckBoxTreeTableCell;
+import javafx.scene.control.cell.TextFieldTreeTableCell;
 import javafx.util.Callback;
+import javafx.util.StringConverter;
 
 /**
  * Controller class for settings panel
@@ -94,6 +96,9 @@ public class SettingsController implements Initializable {
     public TreeTableColumn<Node, String> nodeColumn;
     public TreeTableColumn<Node, String> idColumn;
     public TreeTableColumn<Node, Boolean> visibilityColumn;
+    public TreeTableColumn<Node, Double> widthColumn;
+    public TreeTableColumn<Node, Double> heightColumn;
+    public TreeTableColumn<Node, Double> depthColumn;
     
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
@@ -249,6 +254,53 @@ public class SettingsController implements Initializable {
             }
         });
         visibilityColumn.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(visibilityColumn));
+        widthColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Double>, ObservableValue<Double>>() {
+            @Override
+            public ObservableValue<Double> call(final TreeTableColumn.CellDataFeatures<Node, Double> p) {
+                return new ObjectBinding<Double>() {
+                    {  bind(p.getValue().getValue().boundsInLocalProperty()); }
+                    @Override protected Double computeValue() {
+                        return p.getValue().getValue().getBoundsInLocal().getWidth();
+                    }
+                };
+            }
+        });
+        StringConverter<Double> niceDoubleStringConverter = new StringConverter<Double>() {
+            @Override
+            public String toString(Double t) {
+                return String.format("%.2f", t);
+            }
+
+            @Override
+            public Double fromString(String string) {
+                throw new UnsupportedOperationException("Not supported yet."); //Not needed so far
+            }
+        };
+        widthColumn.setCellFactory(TextFieldTreeTableCell.<Node, Double>forTreeTableColumn(niceDoubleStringConverter));
+        heightColumn.setCellFactory(TextFieldTreeTableCell.<Node, Double>forTreeTableColumn(niceDoubleStringConverter));
+        depthColumn.setCellFactory(TextFieldTreeTableCell.<Node, Double>forTreeTableColumn(niceDoubleStringConverter));
+        heightColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Double>, ObservableValue<Double>>() {
+            @Override
+            public ObservableValue<Double> call(final TreeTableColumn.CellDataFeatures<Node, Double> p) {
+                return new ObjectBinding<Double>() {
+                    {  bind(p.getValue().getValue().boundsInLocalProperty()); }
+                    @Override protected Double computeValue() {
+                        return p.getValue().getValue().getBoundsInLocal().getHeight();
+                    }
+                };
+            }
+        });
+        depthColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Double>, ObservableValue<Double>>() {
+            @Override
+            public ObservableValue<Double> call(final TreeTableColumn.CellDataFeatures<Node, Double> p) {
+                return new ObjectBinding<Double>() {
+                    {  bind(p.getValue().getValue().boundsInLocalProperty()); }
+                    @Override protected Double computeValue() {
+                        return p.getValue().getValue().getBoundsInLocal().getDepth();
+                    }
+                };
+            }
+        });
 
         SessionManager sessionManager = SessionManager.getSessionManager();
 
@@ -291,6 +343,19 @@ public class SettingsController implements Initializable {
                     getChildren().add(new TreeItemImpl(n));
                 }
             }
+//            node.setOnMouseClicked(new EventHandler<MouseEvent>() {
+//
+//                @Override
+//                public void handle(MouseEvent t) {
+//                    System.out.println("node.setOnMouseClicked t = " + t);
+//                    TreeItem<Node> parent = getParent();
+//                    while (parent != null) {
+//                        parent.setExpanded(true);
+//                        parent = parent.getParent();
+//                    }
+//                    hierarachyTreeTable.getSelectionModel().select(TreeItemImpl.this);
+//                }
+//            });
         }
     }
 }

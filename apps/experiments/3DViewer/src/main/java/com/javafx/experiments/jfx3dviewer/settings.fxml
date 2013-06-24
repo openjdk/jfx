@@ -51,8 +51,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <TreeTableView fx:id="hierarachyTreeTable" editable="true" prefHeight="200.0" prefWidth="200.0">
           <columns>
             <TreeTableColumn fx:id="nodeColumn" editable="false" prefWidth="75.0" sortable="false" text="Node" />
-            <TreeTableColumn fx:id="idColumn" prefWidth="75.0" text="Id" />
-            <TreeTableColumn fx:id="visibilityColumn" editable="true" maxWidth="5000.0" minWidth="10.0" prefWidth="26.0" sortable="false" text="Visibility" />
+            <TreeTableColumn fx:id="idColumn" editable="false" prefWidth="75.0" text="Id" />
+            <TreeTableColumn fx:id="visibilityColumn" editable="true" text="Visibility" />
+            <TreeTableColumn fx:id="widthColumn" editable="false" text="W" />
+            <TreeTableColumn fx:id="heightColumn" editable="false" text="H" />
+            <TreeTableColumn fx:id="depthColumn" editable="false" text="D" />
           </columns>
         </TreeTableView>
       </content>
