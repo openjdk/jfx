@@ -229,14 +229,6 @@ if (hasProperty("BUILD_CLOSED")) {
 }
 ext.BUILD_CLOSED = buildClosed
 
-def closedDir = file("../rt-closed");
-def supplementalPropertyFile = file("$closedDir/closed-properties.gradle");
-def supplementalBuildFile = file("$closedDir/closed-build.gradle");
-
-if (BUILD_CLOSED) {
-    apply from: supplementalPropertyFile
-}
-
 // These variables indicate what platform is running the build. Is
 // this build running on a Mac, Windows, or Linux machine? 32 or 64 bit?
 ext.OS_NAME = System.getProperty("os.name").toLowerCase()
@@ -274,6 +266,14 @@ defineProperty("LIBRARY_STUB", IS_MAC ? cygpath("$STUB_RUNTIME/lib") :
                                IS_WINDOWS ? cygpath("$STUB_RUNTIME/bin") :
                                cygpath("$STUB_RUNTIME/lib/$OS_ARCH"))
 ext.BINARY_STUB = "".equals(BINARY_STUB) ? null : files(BINARY_STUB)
+
+def closedDir = file("../rt-closed");
+def supplementalPropertyFile = file("$closedDir/closed-properties.gradle");
+def supplementalBuildFile = file("$closedDir/closed-build.gradle");
+
+if (BUILD_CLOSED) {
+    apply from: supplementalPropertyFile
+}
 
 // COMPILE_WEBKIT specifies whether to build all of webkit. COMPILE_GSTREAMER
 // specifies whether to build GStreamer. Both of these can be set by a
@@ -759,8 +759,9 @@ allprojects {
                     artifact "[artifact].[ext]"
                 }
             }
+            // We have this repo for getting the plugin.jar from the existing JRE
             flatDir {
-                dir "$JDK_HOME/jre/lib/"
+                dir "$STUB_RUNTIME/lib/"
             }
         }
     }
@@ -1131,17 +1132,6 @@ project(":graphics") {
                     include "**/*swt*.jar"
                     includeEmptyDirs = false
                     rename ".*swt.*jar", "swt\\.jar"
-                }
-                // For some reason (queue twilight zone) the plugin jar is sometimes
-                // named plugin.jar and sometimes plugin-.jar, but we need to rename
-                // it to plugin.jar in all cases.
-                copy {
-                    into libsDir
-                    from f.getParentFile()
-                    include "**/plugin.jar"
-                    include "**/plugin-.jar"
-                    includeEmptyDirs = false
-                    rename ".*plugin.*jar", "plugin\\.jar"
                 }
             }
         }
