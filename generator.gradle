@@ -125,6 +125,15 @@ task generate << {
             fileList.add(f.file);
         }
     }
+    
+    // Copy the Eclipse project files
+    copy {
+        from "${RTDir}/gradleEclipse/"
+        into "${FXDir}/"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
+    }
 
     copy {
         from "${RTDir}/javafx-beans/src"
@@ -837,7 +846,6 @@ task generate << {
             fileList.add(f.file);
         }
     }
-
     // Find every empty directory and nuke it
     def empty = []
     fileTree("$FXDir").visit {
