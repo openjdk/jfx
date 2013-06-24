@@ -762,7 +762,7 @@ allprojects {
             // We have this repo for getting the plugin.jar from the existing JRE
             flatDir {
                 dir "$STUB_RUNTIME/lib/"
-                dir "$JDK_HOME/lib/"
+                dir "$JDK_HOME/jre/lib/"
             }
         }
     }
