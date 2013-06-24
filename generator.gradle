@@ -117,6 +117,15 @@ task generate << {
         }
     }
 
+    // Create the NetBeans projects
+    copy {
+        from "$RTDir/gradleNetBeans"
+        into "$FXDir/netbeansProjs"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
+    }
+
     copy {
         from "${RTDir}/javafx-beans/src"
         into "${FXDir}/buildSrc/src/main/java"
