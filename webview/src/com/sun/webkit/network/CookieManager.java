@@ -79,7 +79,8 @@ public final class CookieManager extends CookieHandler {
         host = canonicalize(host);
 
         String scheme = uri.getScheme();
-        boolean secureProtocol = "https".equalsIgnoreCase(scheme);
+        boolean secureProtocol = "https".equalsIgnoreCase(scheme)
+                || "javascripts".equalsIgnoreCase(scheme);
         boolean httpApi = "http".equalsIgnoreCase(scheme)
                 || "https".equalsIgnoreCase(scheme);
 
