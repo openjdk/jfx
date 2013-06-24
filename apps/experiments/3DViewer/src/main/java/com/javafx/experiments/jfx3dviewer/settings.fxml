@@ -266,5 +266,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       </content>
     </TitledPane>
     <fx:reference source="x5" />
+    <TitledPane fx:id="x6" animated="false" expanded="false" text="Transforms">
+      <content>
+        <VBox>
+          <children>
+            <Label fx:id="selectedNodeLabel"/>
+            <ListView fx:id="transformsList" prefHeight="200.0" prefWidth="200.0">
+                <VBox.vgrow>ALWAYS</VBox.vgrow>
+            </ListView>
+          </children>
+        </VBox>
+      </content>
+    </TitledPane>
   </panes>
 </Accordion>

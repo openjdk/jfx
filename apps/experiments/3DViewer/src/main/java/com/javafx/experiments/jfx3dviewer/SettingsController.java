@@ -48,13 +48,20 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
 import com.javafx.experiments.shape3d.SubDivision;
 import javafx.beans.binding.ObjectBinding;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.CheckBoxTreeTableCell;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.transform.Transform;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -99,6 +106,9 @@ public class SettingsController implements Initializable {
     public TreeTableColumn<Node, Double> widthColumn;
     public TreeTableColumn<Node, Double> heightColumn;
     public TreeTableColumn<Node, Double> depthColumn;
+    public ListView<Transform> transformsList;
+    public TitledPane x6;
+    public Label selectedNodeLabel;
     
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
@@ -229,6 +239,47 @@ public class SettingsController implements Initializable {
                     return new TreeItemImpl(content3D);
                 } else {
                     return null;
+                }
+            }
+        });
+        hierarachyTreeTable.setOnMouseClicked(new EventHandler<MouseEvent>() {
+
+            @Override
+            public void handle(MouseEvent t) {
+                if (t.getClickCount() == 2) {
+                    settings.setExpandedPane(x6);
+                    t.consume();
+                }
+            }
+        });
+        hierarachyTreeTable.setOnKeyPressed(new EventHandler<KeyEvent>() {
+
+            @Override
+            public void handle(KeyEvent t) {
+                if (t.getCode() == KeyCode.SPACE) {
+                    TreeItem<Node> selectedItem = hierarachyTreeTable.getSelectionModel().getSelectedItem();
+                    if (selectedItem != null) {
+                        Node node = selectedItem.getValue();
+                        node.setVisible(!node.isVisible());
+                    }
+                    t.consume();
+                }
+            }
+        });
+        x6.expandedProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                if (t1) {
+                    TreeItem<Node> selectedItem = hierarachyTreeTable.getSelectionModel().getSelectedItem();
+                    if (selectedItem == null) {
+                        transformsList.setItems(null);
+                        selectedNodeLabel.setText("");
+                    } else {
+                        Node node = selectedItem.getValue();
+                        transformsList.setItems(node.getTransforms());
+                        selectedNodeLabel.setText(node.toString());
+                    }
                 }
             }
         });
