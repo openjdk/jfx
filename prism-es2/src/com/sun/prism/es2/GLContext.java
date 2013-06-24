@@ -207,9 +207,9 @@ abstract class GLContext {
     private static native long nCreateES2Mesh(long nativeCtxInfo);
     private static native void nReleaseES2Mesh(long nativeCtxInfo, long nativeHandle);
     private static native boolean nBuildNativeGeometryShort(long nativeCtxInfo, long nativeHandle,
-            float vertexBuffer[], short indexBuffer[]);
+            float[] vertexBuffer, int vertexBufferLength, short[] indexBuffer, int indexBufferLength);
     private static native boolean nBuildNativeGeometryInt(long nativeCtxInfo, long nativeHandle,
-            float vertexBuffer[], int indexBuffer[]);
+            float[] vertexBuffer, int vertexBufferLength, int[] indexBuffer, int indexBufferLength);
     private static native long nCreateES2PhongMaterial(long nativeCtxInfo);
     private static native void nReleaseES2PhongMaterial(long nativeCtxInfo, long nativeHandle);
     private static native void nSetSolidColor(long nativeCtxInfo, long nativePhongMaterial,
@@ -649,12 +649,16 @@ abstract class GLContext {
         nReleaseES2Mesh(nativeCtxInfo, nativeHandle);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, short[] indexBuffer) {
-        return nBuildNativeGeometryShort(nativeCtxInfo, nativeHandle, vertexBuffer, indexBuffer);
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer,
+            int vertexBufferLength, short[] indexBuffer, int indexBufferLength) {
+        return nBuildNativeGeometryShort(nativeCtxInfo, nativeHandle,
+                vertexBuffer, vertexBufferLength, indexBuffer, indexBufferLength);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int[] indexBuffer) {
-        return nBuildNativeGeometryInt(nativeCtxInfo, nativeHandle, vertexBuffer, indexBuffer);
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer,
+            int vertexBufferLength, int[] indexBuffer, int indexBufferLength) {
+        return nBuildNativeGeometryInt(nativeCtxInfo, nativeHandle, vertexBuffer,
+                vertexBufferLength, indexBuffer, indexBufferLength);
     }
 
     long createES2PhongMaterial() {

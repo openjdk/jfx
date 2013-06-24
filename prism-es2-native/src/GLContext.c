@@ -1698,11 +1698,11 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nReleaseES2Mesh
 /*
  * Class:     com_sun_prism_es2_GLContext
  * Method:    nBuildNativeGeometryShort
- * Signature: (JJ[F[S)Z
+ * Signature: (JJ[FI[SI)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometryShort
   (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshInfo,
-        jfloatArray vbArray, jshortArray ibArray)
+        jfloatArray vbArray, jint vbSize, jshortArray ibArray, jint ibSize)
 {
     GLuint vertexBufferSize;
     GLuint indexBufferSize;
@@ -1727,22 +1727,23 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
     indexBufferSize = (*env)->GetArrayLength(env, ibArray);
     indexBuffer = (GLushort *) ((*env)->GetPrimitiveArrayCritical(env, ibArray, NULL));
 
-    if ((vertexBuffer == NULL ) || (vertexBufferSize == 0)
-            || (indexBuffer == NULL) || (indexBufferSize == 0)) {
+    if (vertexBuffer == NULL || indexBuffer == NULL
+            || vbSize < 0 || vbSize > vertexBufferSize
+            || ibSize < 0 || ibSize > indexBufferSize) {
         status = JNI_FALSE;
     }
 
     if (status) {
         // Initialize vertex buffer
         ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_VERTEXBUFFER]);
-        ctxInfo->glBufferData(GL_ARRAY_BUFFER, vertexBufferSize * sizeof (GLfloat),
+        ctxInfo->glBufferData(GL_ARRAY_BUFFER, vbSize * sizeof (GLfloat),
                 vertexBuffer, GL_STATIC_DRAW);
 
         // Initialize index buffer
         ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_INDEXBUFFER]);
-        ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize * sizeof (GLushort),
+        ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, ibSize * sizeof (GLushort),
                 indexBuffer, GL_STATIC_DRAW);
-        meshInfo->indexBufferSize = indexBufferSize;
+        meshInfo->indexBufferSize = ibSize;
         meshInfo->indexBufferType = GL_UNSIGNED_SHORT;
 
         // Unbind VBOs
@@ -1763,11 +1764,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
 /*
  * Class:     com_sun_prism_es2_GLContext
  * Method:    nBuildNativeGeometryInt
- * Signature: (JJ[F[I)Z
+ * Signature: (JJ[FI[II)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometryInt
-  (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshInfo,
-        jfloatArray vbArray, jintArray ibArray)
+(JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshInfo,
+        jfloatArray vbArray, jint vbSize, jintArray ibArray, jint ibSize)
 {
     GLuint vertexBufferSize;
     GLuint indexBufferSize;
@@ -1792,22 +1793,23 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
     indexBufferSize = (*env)->GetArrayLength(env, ibArray);
     indexBuffer = (GLuint *) ((*env)->GetPrimitiveArrayCritical(env, ibArray, NULL));
 
-    if ((vertexBuffer == NULL ) || (vertexBufferSize == 0)
-            || (indexBuffer == NULL) || (indexBufferSize == 0)) {
+    if (vertexBuffer == NULL || indexBuffer == NULL
+            || vbSize < 0 || vbSize > vertexBufferSize
+            || ibSize < 0 || ibSize > indexBufferSize) {
         status = JNI_FALSE;
     }
 
     if (status) {
         // Initialize vertex buffer
         ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_VERTEXBUFFER]);
-        ctxInfo->glBufferData(GL_ARRAY_BUFFER, vertexBufferSize * sizeof (GLfloat),
+        ctxInfo->glBufferData(GL_ARRAY_BUFFER, vbSize * sizeof (GLfloat),
                 vertexBuffer, GL_STATIC_DRAW);
 
         // Initialize index buffer
         ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshInfo->vboIDArray[MESH_INDEXBUFFER]);
-        ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize * sizeof (GLuint),
+        ctxInfo->glBufferData(GL_ELEMENT_ARRAY_BUFFER, ibSize * sizeof (GLuint),
                 indexBuffer, GL_STATIC_DRAW);
-        meshInfo->indexBufferSize = indexBufferSize;
+        meshInfo->indexBufferSize = ibSize;
         meshInfo->indexBufferType = GL_UNSIGNED_INT;
 
         // Unbind VBOs

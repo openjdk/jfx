@@ -25,31 +25,28 @@
 
 package com.sun.prism.impl;
 
+import com.sun.javafx.geom.Quat4f;
 import com.sun.javafx.geom.Vec2f;
 import com.sun.javafx.geom.Vec3f;
 import com.sun.prism.Mesh;
+import java.util.Arrays;
+import sun.util.logging.PlatformLogger;
 
 /**
  * TODO: 3D - Need documentation
- *  
- * TODO: 3D - This is a direct port of the 3D Mesh prototype.
- *       Need to rename members and methods.
- *       This code is poorly written and performance badly on Java.
- *       We should replace it with an implementation that is well suit for Java
- *       and is maintainable. 
- * JIRA ID: RT-29542 - FX 8 3D: Mesh computation code needs major clean up or redo
  */
 public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
 
     private int nVerts;
     private int nTVerts;
     private int nFaces;
-    private float pos[];
-    private float uv[];
-    private int faces[];
-    private int smoothing[];
-    private MeshNormal meshNormal;
-
+    private float[] pos;
+    private float[] uv;
+    private int[] faces;
+    private int[] smoothing;
+    private boolean allSameSmoothing;
+    private boolean allHardEdges;
+    
     //pos (3 floats), tex (2 floats) and norm (4 float)
     protected static final int VERTEX_SIZE = 9;
 
@@ -60,13 +57,17 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
     public static enum FaceMembers {
         POINT0, TEXCOORD0, POINT1, TEXCOORD1, POINT2, TEXCOORD2, SMOOTHING_GROUP
     };
-    public static final int MAX_FACE_MEMBERS = 7;
+    public static final int FACE_MEMBERS_SIZE = 7;
 
     protected BaseMesh(Disposer.Record disposerRecord) {
         super(disposerRecord);
     }
 
-    public abstract boolean buildNativeGeometry();
+    public abstract boolean buildNativeGeometry(float[] vertexBuffer, 
+            int vertexBufferLength, int[] indexBufferInt, int indexBufferLength);
+
+     public abstract boolean buildNativeGeometry(float[] vertexBuffer,
+            int vertexBufferLength, short[] indexBufferShort, int indexBufferLength);
 
     @Override
     public boolean buildGeometry(float[] pos, float[] uv, int[] faces, int[] smoothing) {
@@ -79,87 +80,192 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         this.faces = faces;
         this.smoothing = smoothing != null && smoothing.length >= nFaces ? smoothing : null;
 
-        // System.err.println("*********** MeshBase.buildGeometry() .....");
-        // MeshData.cc
-        //(1) MeshNomralsReference tan = computeTangentBNormal(mesh);
-        meshNormal = new MeshNormal(this);
+        MeshTempState instance = MeshTempState.getInstance();
+        // big pool for all possible vertices
+        instance.pool = (instance.pool == null || instance.pool.length < nFaces * 3)
+                ? new MeshVertex[nFaces * 3] : instance.pool;
 
-        //(2) buildGeometry( FacetMeshWrapper<WORD>(mesh, tan.getPtr()) );
-        //    if (ok) setDrawCall();
-        //    return ok;
-        return buildNativeGeometry();
-    }
+        if (instance.indexBuffer == null || instance.indexBuffer.length < nFaces * 3) {
+            instance.indexBuffer = new int[nFaces * 3];
+        }
 
-    private static Vec2f tmp2f = new Vec2f();
-    private static Vec3f tmp3f = new Vec3f();
-    private int fillOVertex(float pv[], int index, MeshNTBVertex ntb) {
-        tmp3f = getVertex(ntb.pVert, tmp3f);
-        pv[index++] = tmp3f.x;
-        pv[index++] = tmp3f.y;
-        pv[index++] = tmp3f.z;
-        tmp2f = getTVertex(ntb.tVert, tmp2f);
-        pv[index++] = tmp2f.x;
-        pv[index++] = tmp2f.y;
-        pv[index++] = ntb.tbn.v.x;
-        pv[index++] = ntb.tbn.v.y;
-        pv[index++] = ntb.tbn.v.z;
-        pv[index++] = ntb.tbn.w;
-        return index;
-    }
+        if (instance.pVertex == null || instance.pVertex.length < nVerts) {
+            instance.pVertex = new MeshVertex[nVerts];
+        } else {
+            Arrays.fill(instance.pVertex, 0, instance.pVertex.length, null);
+        }
 
-    private void copyOVerts(float pv[]) {
-        int nv = meshNormal.getNumVerts();
-        int index = 0;
-        for (int i = 0; i != nv; ++i) {
-            index = fillOVertex(pv, index, meshNormal.getTangent(i));
+        // check if all hard edges or all smooth
+        checkSmoothingGroup();
+
+        // compute [N, T, B] for each face
+        computeTBNormal(instance.pool, instance.pVertex, instance.indexBuffer);
+
+        // process sm and weld points
+        int nNewVerts = MeshVertex.processVertices(instance.pVertex, nVerts,
+                allHardEdges, allSameSmoothing);
+
+        if (instance.vertexBuffer == null
+                || instance.vertexBuffer.length < nNewVerts * VERTEX_SIZE) {
+            instance.vertexBuffer = new float[nNewVerts * VERTEX_SIZE];
+        }
+        buildVertexBuffer(instance.pVertex, instance.vertexBuffer);
+        
+        if (nNewVerts > 0x10000) {
+            buildIndexBuffer(instance.pool, instance.indexBuffer, null);
+            return buildNativeGeometry(instance.vertexBuffer,
+                    nNewVerts * VERTEX_SIZE, instance.indexBuffer, nFaces * 3);
+        } else {
+            if (instance.indexBufferShort == null || instance.indexBufferShort.length < nFaces * 3) {
+                instance.indexBufferShort = new short[nFaces * 3];
+            }
+            buildIndexBuffer(instance.pool, instance.indexBuffer, instance.indexBufferShort);
+            return buildNativeGeometry(instance.vertexBuffer,
+                    nNewVerts * VERTEX_SIZE, instance.indexBufferShort, nFaces * 3);
         }
     }
 
-    private int getNVertsGM() {
-        return meshNormal.getNumVerts();
-    }
+    private void computeTBNormal(MeshVertex[] pool, MeshVertex[] pVertex, int[] indexBuffer) {
+        MeshTempState instance = MeshTempState.getInstance();
+        
+        // tmp variables
+        int[] smFace = instance.smFace;
+        int[] triVerts = instance.triVerts;
+        Vec3f[] triPoints = instance.triPoints;
+        Vec2f[] triTexCoords = instance.triTexCoords;
+        Vec3f[] n = instance.norm;
+        
 
-    private int getNIndicesGM() {
-        return meshNormal.getNumFaces() * 3;
-    }
+        for (int f = 0, nDeadFaces = 0, poolIndex = 0; f < nFaces; f++) {
+            int index = f * 3;
 
-    final protected float[] getVertsGM() {
-        int numVerts = getNVertsGM();
-        float vertexBuffer[] = new float[numVerts * VERTEX_SIZE];
-        copyOVerts(vertexBuffer);
-        return vertexBuffer;
-    }
+            smFace = getFace(f, smFace); // copy from mesh to tmp smFace
 
-    final protected short[] getIndexGMShort() {
-        int numIndices = getNIndicesGM();
-        short indexBuffer[] = new short[numIndices];
-        int nf = meshNormal.getNumFaces();
-        int face[] = new int[3];
-        int index = 0;
-        for (int i = 0; i != nf; ++i) {
-            face = meshNormal.getFace(i, face);
-            indexBuffer[index++] = (short) face[0];
-            indexBuffer[index++] = (short) face[1];
-            indexBuffer[index++] = (short) face[2];
+            // Get tex. point. index
+            triVerts[0] = smFace[BaseMesh.FaceMembers.POINT0.ordinal()];
+            triVerts[1] = smFace[BaseMesh.FaceMembers.POINT1.ordinal()];
+            triVerts[2] = smFace[BaseMesh.FaceMembers.POINT2.ordinal()];
+            
+            if (MeshUtil.isDeadFace(triVerts)) {
+                nDeadFaces++;
+                String logname = BaseMesh.class.getName();
+                PlatformLogger.getLogger(logname).warning("Dead face ["
+                        + triVerts[0] + ", " + triVerts[1] + ", " + triVerts[2]
+                        + "] @ face group " + f + "; nEmptyFaces = " + nDeadFaces);
+                indexBuffer[index] = MeshVertex.IDX_UNDEFINED;
+                continue;
+            }
+
+            for (int i = 0; i < 3; i++) {
+                triPoints[i] = getVertex(triVerts[i], triPoints[i]);
+            }
+
+            // Get tex. coord. index
+            triVerts[0] = smFace[BaseMesh.FaceMembers.TEXCOORD0.ordinal()];
+            triVerts[1] = smFace[BaseMesh.FaceMembers.TEXCOORD1.ordinal()];
+            triVerts[2] = smFace[BaseMesh.FaceMembers.TEXCOORD2.ordinal()];
+
+            for (int i = 0; i < 3; i++) {
+                triTexCoords[i] = getTVertex(triVerts[i], triTexCoords[i]);
+            }
+
+            MeshUtil.computeTBNNormalized(triPoints[0], triPoints[1], triPoints[2],
+                                          triTexCoords[0], triTexCoords[1], triTexCoords[2],
+                                          n);
+
+            for (int j = 0; j < 3; ++j) {
+                pool[poolIndex] = (pool[poolIndex] == null) ? new MeshVertex() : pool[poolIndex];
+
+                for (int i = 0; i < 3; ++i) {
+                    pool[poolIndex].norm[i].set(n[i]);
+                }
+                pool[poolIndex].smGroup = smFace[BaseMesh.FaceMembers.SMOOTHING_GROUP.ordinal()];
+                pool[poolIndex].fIdx = f;
+                pool[poolIndex].tVert = triVerts[j];
+                pool[poolIndex].index = MeshVertex.IDX_UNDEFINED;
+                int ii = j == 0 ? BaseMesh.FaceMembers.POINT0.ordinal()
+                        : j == 1 ? BaseMesh.FaceMembers.POINT1.ordinal()
+                        : BaseMesh.FaceMembers.POINT2.ordinal();
+                int pIdx = smFace[ii];
+                pool[poolIndex].pVert = pIdx;
+                indexBuffer[index + j] = pIdx;
+                pool[poolIndex].next = pVertex[pIdx];
+                pVertex[pIdx] = pool[poolIndex];
+                poolIndex++;
+            }
         }
-        return indexBuffer;
     }
 
-    final protected int[] getIndexGMInt() {
-        int numIndices = getNIndicesGM();
-        int indexBuffer[] = new int[numIndices];
-        int nf = meshNormal.getNumFaces();
-        int face[] = new int[3];
-        int index = 0;
-        for (int i = 0; i != nf; ++i) {
-            face = meshNormal.getFace(i, face);
-            indexBuffer[index++] = face[0];
-            indexBuffer[index++] = face[1];
-            indexBuffer[index++] = face[2];
+    private void buildVSQuat(Vec3f[] tm, Quat4f quat) {
+        Vec3f v = MeshTempState.getInstance().vec3f1;
+        v.cross(tm[1], tm[2]);
+        float d = tm[0].dot(v);
+        if (d < 0) {
+            tm[2].mul(-1);
         }
-        return indexBuffer;
+
+        MeshUtil.buildQuat(tm, quat);
+        assert (quat.w >= 0);
+
+        if (d < 0) {
+            if (quat.w == 0) {
+                quat.w = MeshUtil.MAGIC_SMALL;
+            }
+            quat.scale(-1);
+        }
     }
 
+    private void buildVertexBuffer(MeshVertex[] pVerts, float[] vertexBuffer) {
+        Quat4f quat = MeshTempState.getInstance().quat;
+        int idLast = 0;
+
+        for (int i = 0, index = 0; i < nVerts; ++i) {
+            MeshVertex v = pVerts[i];
+            for (; v != null; v = v.next) {
+                if (v.index == idLast) {
+                    int ind = v.pVert * 3;
+                    vertexBuffer[index++] = pos[ind];
+                    vertexBuffer[index++] = pos[ind + 1];
+                    vertexBuffer[index++] = pos[ind + 2];
+                    ind = v.tVert * 2;
+                    vertexBuffer[index++] = uv[ind];
+                    vertexBuffer[index++] = uv[ind + 1];
+                    buildVSQuat(v.norm, quat);
+                    vertexBuffer[index++] = quat.x;
+                    vertexBuffer[index++] = quat.y;
+                    vertexBuffer[index++] = quat.z;
+                    vertexBuffer[index++] = quat.w;
+                    idLast++;
+                }
+            }
+        }
+    }
+
+    private void buildIndexBuffer(MeshVertex[] pool, int[] indexBuffer, short[] indexBufferShort) {
+        for (int i = 0; i < nFaces; ++i) {
+            int index = i * 3;
+            if (indexBuffer[index] != MeshVertex.IDX_UNDEFINED) {
+                for (int j = 0; j < 3; ++j) {
+                    assert (pool[index].fIdx == i);
+                    if (indexBufferShort != null) {
+                        indexBufferShort[index + j] = (short) pool[index + j].index;
+                    } else {
+                        indexBuffer[index + j] = pool[index + j].index;
+                    }
+                    pool[index + j].next = null; // release reference
+                }
+            } else {
+                for (int j = 0; j < 3; ++j) {
+                    if (indexBufferShort != null) {
+                        indexBufferShort[index + j] = 0;
+                    } else {
+                        indexBuffer[index + j] = 0;
+                    }
+                }
+            }
+        }
+    }
+    
     public int getNumVerts() {
         return nVerts;
     }
@@ -190,10 +296,35 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         return texCoord;
     }
 
-    public int[] getFace(int fIdx, int face[]) {
+    private void checkSmoothingGroup() {
+        if (smoothing == null || smoothing.length == 0) { // all smooth
+            allSameSmoothing = true;
+            allHardEdges = false;
+            return;
+        }
+
+        for (int i = 0; i + 1 < smoothing.length; i++) {
+            if (smoothing[i] != smoothing[i + 1]) {
+                // various SmGroup
+                allSameSmoothing = false;
+                allHardEdges = false;
+                return;
+            }
+        }
+
+        if (smoothing[0] == 0) { // all hard edges
+            allSameSmoothing = false;
+            allHardEdges = true;
+        } else { // all belongs to one group == all smooth
+            allSameSmoothing = true;
+            allHardEdges = false;
+        }
+    }
+
+    public int[] getFace(int fIdx, int[] face) {
         int index = fIdx * 6;
-        if ((face == null) && (face.length < MAX_FACE_MEMBERS)) {
-            face = new int[MAX_FACE_MEMBERS];
+        if ((face == null) || (face.length < FACE_MEMBERS_SIZE)) {
+            face = new int[FACE_MEMBERS_SIZE];
         }
         if (faces[index] < nVerts
                 && faces[index + 2] < nVerts
@@ -219,5 +350,4 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         }
         return face;
     }
-
 }
