@@ -1555,13 +1555,13 @@ task jfxrt()
 
 task sdk()
 
+// this is empty, allowing us to depend on the task, which may have other
+// real intances added later.
+task copyAppsArtifacts() 
+
 task apps() {
     dependsOn(sdk)
-
-    // TODO: implement this
-    doLast {
-        println "rt/apps not yet built"
-    }
+    dependsOn(copyAppsArtifacts)
 }
 
 task fullTest() {
@@ -2201,6 +2201,64 @@ allprojects {
             def writer = new FileWriter(srcFile)
             new XmlNodePrinter(new PrintWriter(writer)).print(classpath)
          }
+    }
+}
+
+/*
+ * This clause changes the way we handle a build.gradle within ./apps
+ * It does a few things:
+ *   modifies the classpath used to include the built runttime classes
+ *   provides for copying the build applications to the artifacts tree
+ *
+ * The applications to be built will be under ./apps, but also must
+ * be listed in the applications listed in the setting variable: JFXApplications 
+ */
+ext.JFXRT_CP = 
+    files(
+	project(":base").sourceSets.main.output.classesDir,
+	project(":graphics").sourceSets.main.output.classesDir,
+	project(":controls").sourceSets.main.output.classesDir,
+	project(":fxml").sourceSets.main.output.classesDir,
+	project(":swing").sourceSets.main.output.classesDir, //NOTE - used by 3Dviewer
+	//project(":swt").sourceSets.main.output.classesDir,
+	project(":builders").sourceSets.main.output.classesDir,
+	//project(":web").sourceSets.main.output.classesDir, 
+	)
+
+if (BINARY_STUB != null) {
+    JFXRT_CP += BINARY_STUB 
+}
+
+// TODO: better place for this ?
+ext.APPS_ARTIFACTS="$jfxArtifactsDir/apps"
+
+childProjects["apps"].subprojects { 
+    afterEvaluate { project ->
+	// this check is to make sure we are using a java or application plugin
+        // in our child projects of ./apps
+        if (project.hasProperty("jar") && project.hasProperty("compileJava")) {
+            // augment the classpath with our build system classpath 
+            // which will include our local jfxrt.jar
+           project.compileJava {
+               // TODO: don't know how to do this correctly
+	       //dependsOn project(":graphics").classes, project(":controls").classes, project(":base").classes
+	       doFirst {
+		   classpath = rootProject.JFXRT_CP + 
+                       sourceSets.main.compileClasspath
+	       }
+            }
+
+            def srcdir = new File ("$project.projectDir/src");
+
+            if (BUILD_CLOSED && srcdir.exists()) {
+                def cptask = project.task('copyAppsArtifacts', type: Copy ) {
+                dependsOn project.getPath() + ":jar"
+		    from project.jar.archivePath
+		    into rootProject.APPS_ARTIFACTS
+		}
+                rootProject.apps.dependsOn(cptask)
+	    }
+	}
     }
 }
 
