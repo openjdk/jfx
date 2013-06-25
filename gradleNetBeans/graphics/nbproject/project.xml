@@ -6,8 +6,9 @@
             <name>graphics</name>
             <explicit-platform explicit-source-supported="true"/>
             <source-roots>
-                <root id="src.jsl-decora.dir"/>
-                <root id="src.jsl-prism.dir"/>
+                <root id="src.jsl-decora2.dir"/>
+                <root id="src.jsl-prism2.dir"/>
+                <root id="src.java.dir"/>
                 <root id="src.dir"/>
             </source-roots>
             <test-roots>
