@@ -97,7 +97,8 @@ public class MainController implements Initializable {
     private int meshCount = 0;
     private int triangleCount = 0;
     private final ContentModel contentModel = Jfx3dViewerApp.getContentModel();
-    private File loadedPath = null;
+    private File loadedPath;
+    private String loadedURL;
     private String[] supportedFormatRegex;
     private TimelineController timelineController;
     private SessionManager sessionManager = SessionManager.getSessionManager();
@@ -122,7 +123,7 @@ public class MainController implements Initializable {
         supportedFormatRegex = Importer3D.getSupportedFormatExtensionFilters();
         for (int i=0; i< supportedFormatRegex.length; i++) {
             supportedFormatRegex[i] = "."+supportedFormatRegex[i].replaceAll("\\.","\\.");
-            System.out.println("supportedFormatRegex[i] = " + supportedFormatRegex[i]);
+//            System.out.println("supportedFormatRegex[i] = " + supportedFormatRegex[i]);
         }
         contentModel.getSubScene().setOnDragOver(
                 new EventHandler<DragEvent>() {
@@ -172,6 +173,8 @@ public class MainController implements Initializable {
                     }
                 });
 
+        sessionManager.bind(settingsBtn.selectedProperty(), "settingsBtn");
+        sessionManager.bind(splitPane.getDividers().get(0).positionProperty(), "settingsSplitPanePosition");
         sessionManager.bind(optimizeCheckBox.selectedProperty(), "optimize");
         sessionManager.bind(loadAsPolygonsCheckBox.selectedProperty(), "loadAsPolygons");
         sessionManager.bind(loopBtn.selectedProperty(), "loop");
@@ -216,15 +219,17 @@ public class MainController implements Initializable {
     }
 
     private void doLoad(String fileUrl) {
+        loadedURL = fileUrl;
         sessionManager.getProperties().setProperty(Jfx3dViewerApp.FILE_URL_PROPERTY, fileUrl);
         try {
             Pair<Node,Timeline> content = Importer3D.loadIncludingAnimation(
                     fileUrl, loadAsPolygonsCheckBox.isSelected());
             Timeline timeline = content.getValue();
+            Node root = content.getKey();
             if (optimizeCheckBox.isSelected()) {
-                new Optimizer(timeline,content.getKey()).optimize();
+                new Optimizer(timeline, root, true).optimize();
             }
-            contentModel.set3dContent(content.getKey());
+            contentModel.setContent(root);
             contentModel.setTimeline(timeline);
 
             if (timeline != null) {
@@ -242,7 +247,7 @@ public class MainController implements Initializable {
         meshCount = 0;
         triangleCount = 0;
         updateCount(contentModel.getRoot3D());
-        Node content = contentModel.get3dContent();
+        Node content = contentModel.getContent();
         final Bounds bounds = content == null ? new BoundingBox(0, 0, 0, 0) : content.getBoundsInLocal();
         status.setText(
                 String.format("Nodes [%d] :: Meshes [%d] :: Triangles [%d] :: " +
@@ -306,19 +311,20 @@ public class MainController implements Initializable {
         File newFile = chooser.showSaveDialog(openMenuBtn.getScene().getWindow());
         if (newFile != null) {
             String extension = newFile.getName().substring(newFile.getName().lastIndexOf('.')+1,newFile.getName().length()).toLowerCase();
-            System.out.println("extension = " + extension);
+//            System.out.println("extension = " + extension);
             if ("java".equals(extension)) {
-                final String url = contentModel.getLoadedUrl();
+                final String url = loadedURL;
+//                System.out.println("url = " + loadedPath);
                 final String baseUrl = url.substring(0, url.lastIndexOf('/'));
 
                 JavaSourceExporter javaSourceExporter = new JavaSourceExporter(
                         baseUrl,
-                        contentModel.get3dContent(),
+                        contentModel.getContent(),
                         contentModel.getTimeline(),
                         newFile);
                 javaSourceExporter.export();
             } else if ("fxml".equals(extension)) {
-                new FXMLExporter(newFile.getAbsolutePath()).export(contentModel.get3dContent());
+                new FXMLExporter(newFile.getAbsolutePath()).export(contentModel.getContent());
             } else {
                 System.err.println("Can not export a file of type [."+extension+"]");
             }

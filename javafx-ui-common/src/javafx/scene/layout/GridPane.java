@@ -1378,8 +1378,8 @@ public class GridPane extends Pane {
         for (int i = 0; i < rowConstr.size(); ++i) {
             final RowConstraints curConstraint = rowConstr.get(i);
             double prefRowHeight = snapSize(curConstraint.getPrefHeight());
+            final double min = snapSize(curConstraint.getMinHeight());
             if (prefRowHeight != USE_COMPUTED_SIZE) {
-                final double min = snapSize(curConstraint.getMinHeight());
                 final double max = snapSize(curConstraint.getMaxHeight());
                 if (min >= 0 || max >= 0) {
                     result.setPresetSize(i, boundedSize(min < 0 ? 0 : min,
@@ -1388,6 +1388,8 @@ public class GridPane extends Pane {
                 } else {
                     result.setPresetSize(i, prefRowHeight);
                 }
+            } else if (min > 0){
+                result.setSize(i, min);
             }
         }
         List<Node> managed = getManagedChildren();
@@ -1516,8 +1518,8 @@ public class GridPane extends Pane {
         for (int i = 0; i < columnConstr.size(); ++i) {
             final ColumnConstraints curConstraint = columnConstr.get(i);
             double prefColumnWidth = snapSize(curConstraint.getPrefWidth());
+            final double min = snapSize(curConstraint.getMinWidth());
             if (prefColumnWidth != USE_COMPUTED_SIZE) {
-                final double min = snapSize(curConstraint.getMinWidth());
                 final double max = snapSize(curConstraint.getMaxWidth());
                 if (min >= 0 || max >= 0) {
                     result.setPresetSize(i, boundedSize(min < 0 ? 0 : min,
@@ -1526,6 +1528,8 @@ public class GridPane extends Pane {
                 } else {
                     result.setPresetSize(i, prefColumnWidth);
                 }
+            } else if (min > 0){
+                result.setSize(i, min);
             }
         }
         List<Node> managed = getManagedChildren();
@@ -1822,7 +1826,7 @@ public class GridPane extends Pane {
                             }
                         }
                         double curLength = heights.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.floor((ms.getValue() - curLength) / intervalRows),
+                        actualPortion = Math.min(Math.floor(Math.max(0, (ms.getValue() - curLength) / intervalRows)),
                                 actualPortion);
                     }
                 }
@@ -1858,7 +1862,7 @@ public class GridPane extends Pane {
                             }
                         }
                         double curLength = heights.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.floor((ms.getValue() - curLength) / intervalRows),
+                        actualPortion = Math.min(Math.floor(Math.max(0, (ms.getValue() - curLength) / intervalRows)),
                                 actualPortion);
                     }
                 }
@@ -1889,7 +1893,7 @@ public class GridPane extends Pane {
                     final Interval interval = ms.getKey();
                     if (interval.end - 1 == i) {
                         double curLength = heights.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(ms.getValue() - curLength,
+                        actualPortion = Math.min(Math.max(0, ms.getValue() - curLength),
                                 actualPortion);
                     }
                 }
@@ -2048,7 +2052,7 @@ public class GridPane extends Pane {
                             }
                         }
                         double curLength = widths.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.floor((ms.getValue() - curLength) / intervalColumns),
+                        actualPortion = Math.min(Math.floor(Math.max(0, (ms.getValue() - curLength) / intervalColumns)),
                                 actualPortion);
                     }
                 }
@@ -2084,7 +2088,7 @@ public class GridPane extends Pane {
                             }
                         }
                         double curLength = widths.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.floor((ms.getValue() - curLength) / intervalColumns),
+                        actualPortion = Math.min(Math.floor(Math.max(0, (ms.getValue() - curLength) / intervalColumns)),
                                 actualPortion);
                     }
                 }
@@ -2115,7 +2119,7 @@ public class GridPane extends Pane {
                     final Interval interval = ms.getKey();
                     if (interval.end - 1 == i) {
                         double curLength = widths.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(ms.getValue() - curLength,
+                        actualPortion = Math.min(Math.max(0, ms.getValue() - curLength),
                                 actualPortion);
                     }
                 }

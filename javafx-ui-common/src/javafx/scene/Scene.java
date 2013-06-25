@@ -502,6 +502,8 @@ public class Scene implements EventTarget {
      * markDirty method in Node or when the Node's scene changes.
      */
     void addToDirtyList(Node n) {
+        Toolkit.getToolkit().checkFxUserThread();
+
         if (dirtyNodes == null || dirtyNodesSize == 0) {
             if (impl_peer != null) {
                 Toolkit.getToolkit().requestNextPulse();

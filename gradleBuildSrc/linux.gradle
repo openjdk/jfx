@@ -144,7 +144,7 @@ LINUX.prismSW.lib = "prism-sw"
 
 LINUX.launcher = [:]
 LINUX.launcher.compiler = compiler
-LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"];
+LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c"]
 LINUX.launcher.linker = linker
 LINUX.launcher.linkFlags = ["-ldl"]
 
@@ -178,7 +178,7 @@ LINUX.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
 LINUX.font.compiler = compiler
-LINUX.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
+LINUX.font.nativeSource = [file("modules/graphics/src/main/native-font")]
 LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 LINUX.font.linker = linker
 LINUX.font.linkFlags = [linkFlags].flatten()

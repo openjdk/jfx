@@ -23,10 +23,7 @@ final class CookieJar {
             URI uri = null;
             try {
                 uri = new URI(url);
-                // RT-12200: Rewrite the scheme to javascript to avoid
-                // modifying HttpOnly cookies
-                uri = new URI("javascript", uri.getRawSchemeSpecificPart(),
-                        uri.getRawFragment());
+                uri = rewriteToFilterOutHttpOnlyCookies(uri);
             } catch (URISyntaxException e) {
                 return;
             }
@@ -49,10 +46,7 @@ final class CookieJar {
             try {
                 uri = new URI(url);
                 if (!includeHttpOnlyCookies) {
-                    // RT-12200: Rewrite the scheme to javascript to avoid
-                    // returning HttpOnly cookies
-                    uri = new URI("javascript", uri.getRawSchemeSpecificPart(),
-                            uri.getRawFragment());
+                    uri = rewriteToFilterOutHttpOnlyCookies(uri);
                 }
             } catch (URISyntaxException e) {
                 return null;
@@ -82,5 +76,20 @@ final class CookieJar {
             }
         }
         return null;
+    }
+
+    private static URI rewriteToFilterOutHttpOnlyCookies(URI uri)
+        throws URISyntaxException
+    {
+        // RT-12200, RT-31072: Rewrite the 'https' scheme to
+        // 'javascripts' to filter out HttpOnly cookies but
+        // keep Secure cookies. Rewrite any other scheme
+        // to 'javascript' to filter out both HttpOnly and
+        // Secure cookies.
+        return new URI(
+                uri.getScheme().equalsIgnoreCase("https")
+                        ? "javascripts" : "javascript",
+                uri.getRawSchemeSpecificPart(),
+                uri.getRawFragment());
     }
 }

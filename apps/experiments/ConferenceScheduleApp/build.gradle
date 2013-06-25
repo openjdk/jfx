@@ -1,0 +1,9 @@
+
+
+apply plugin:'application'
+
+mainClassName = "com.javafx.experiments.scheduleapp.ConferenceScheduleApp"
+
+jar {
+    manifest.attributes("Main-Class": mainClassName)
+}

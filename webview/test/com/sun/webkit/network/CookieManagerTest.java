@@ -141,24 +141,20 @@ public class CookieManagerTest {
     }
 
     /**
-     * Tests the get() method's handling of the secureOnly flag.
+     * Tests the get() method's handling of the secureOnly and httpOnly flags.
      */
     @Test
-    public void testGetSecureOnly() {
-        put("http://example.org/", "foo=bar", "baz=qux; Secure");
-        assertEquals("foo=bar", get("http://example.org/"));
-        assertEquals("foo=bar; baz=qux", get("https://example.org/"));
-    }
-
-    /**
-     * Tests the get() method's handling of the httpOnly flag.
-     */
-    @Test
-    public void testGetHttpOnly() {
-        put("http://example.org/", "foo=bar", "baz=qux; HttpOnly");
+    public void testGetSecureOnlyAndHttpOnly() {
+        put("http://example.org/",
+                "foo=bar",
+                "baz=qux; Secure",
+                "quux=courge; HttpOnly",
+                "grault=garply; Secure; HttpOnly");
+        assertEquals("foo=bar; quux=courge", get("http://example.org/"));
+        assertEquals("foo=bar; baz=qux; quux=courge; grault=garply",
+                get("https://example.org/"));
         assertEquals("foo=bar", get("javascript://example.org/"));
-        assertEquals("foo=bar; baz=qux", get("http://example.org/"));
-        assertEquals("foo=bar; baz=qux", get("https://example.org/"));
+        assertEquals("foo=bar; baz=qux", get("javascripts://example.org/"));
     }
 
     /**

@@ -362,7 +362,7 @@ ARMV6HF.font = [:]
 ARMV6HF.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-ARMV6HF.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
+ARMV6HF.font.nativeSource = [file("modules/graphics/src/main/native-font")]
 ARMV6HF.font.compiler = compiler
 ARMV6HF.font.ccFlags = fontCFlags
 ARMV6HF.font.linker = linker

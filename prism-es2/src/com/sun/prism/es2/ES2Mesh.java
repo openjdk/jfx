@@ -64,20 +64,17 @@ class ES2Mesh extends BaseMesh {
     }
 
     @Override
-    public boolean buildNativeGeometry() {
-        float vertexBuffer[] = getVertsGM();
+    public boolean buildNativeGeometry(float[] vertexBuffer, int vertexBufferLength,
+            int[] indexBufferInt, int indexBufferLength) {
+        return context.buildNativeGeometry(nativeHandle, vertexBuffer,
+                vertexBufferLength, indexBufferInt, indexBufferLength);
+    }
 
-        boolean status;
-        if (vertexBuffer.length > (0x10000 * VERTEX_SIZE)) {
-//            System.err.println("** Use int[] for indexBuffer");
-            int indexBuffer[] = getIndexGMInt();
-            status = context.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
-        } else {
-//            System.err.println("** Use short[] for indexBuffer");
-            short indexBuffer[] = getIndexGMShort();
-            status = context.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
-        }
-        return status;
+    @Override
+    public boolean buildNativeGeometry(float[] vertexBuffer, int vertexBufferLength,
+            short[] indexBufferShort, int indexBufferLength) {
+        return context.buildNativeGeometry(nativeHandle, vertexBuffer,
+                vertexBufferLength, indexBufferShort, indexBufferLength);
     }
 
     static class ES2MeshDisposerRecord implements Disposer.Record {

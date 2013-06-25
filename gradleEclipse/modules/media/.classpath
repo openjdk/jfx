@@ -1,0 +1,35 @@
+<classpath>
+  <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="output" path="bin"/>
+  <classpathentry kind="src" exported="true" path="jfxmedia/src">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="test/demos/JavaTestApps/src">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="test/perf/JFXMediaSystemTestApp/src">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="/rt">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="/rt-closed">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="/controls">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+</classpath>

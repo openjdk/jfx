@@ -176,7 +176,7 @@ MAC.font = [:]
 MAC.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-MAC.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
+MAC.font.nativeSource = [file("modules/graphics/src/main/native-font")]
 MAC.font.compiler = compiler
 MAC.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 MAC.font.linker = linker

@@ -62,6 +62,9 @@ public abstract class Application {
         // currently used only on Mac OS X
         public void handleDidResignActiveAction(Application app, long time) {
         }
+        // currently used only on iOS
+        public void handleDidReceiveMemoryWarning(Application app, long time) {
+        }
         // currently used only on Mac OS X
         public void handleWillHideAction(Application app, long time) {
         }
@@ -211,6 +214,13 @@ public abstract class Application {
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleDidResignActiveAction(this, System.nanoTime());
+        }
+    }
+    
+    private void notifyDidReceiveMemoryWarning() {
+        EventHandler handler = getEventHandler();
+        if (handler != null) {
+            handler.handleDidReceiveMemoryWarning(this, System.nanoTime());
         }
     }
     

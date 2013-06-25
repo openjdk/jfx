@@ -47,6 +47,23 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
 import com.javafx.experiments.shape3d.SubDivision;
+import javafx.beans.binding.ObjectBinding;
+import javafx.event.EventHandler;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableView;
+import javafx.scene.control.cell.CheckBoxTreeTableCell;
+import javafx.scene.control.cell.TextFieldTreeTableCell;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.transform.Transform;
+import javafx.util.Callback;
+import javafx.util.StringConverter;
 
 /**
  * Controller class for settings panel
@@ -82,6 +99,16 @@ public class SettingsController implements Initializable {
     public ToggleGroup subdivisionLevelGroup;
     public ToggleGroup subdivisionBoundaryGroup;
     public ToggleGroup subdivisionSmoothGroup;
+    public TreeTableView<Node> hierarachyTreeTable;
+    public TreeTableColumn<Node, String> nodeColumn;
+    public TreeTableColumn<Node, String> idColumn;
+    public TreeTableColumn<Node, Boolean> visibilityColumn;
+    public TreeTableColumn<Node, Double> widthColumn;
+    public TreeTableColumn<Node, Double> heightColumn;
+    public TreeTableColumn<Node, Double> depthColumn;
+    public ListView<Transform> transformsList;
+    public TitledPane x6;
+    public Label selectedNodeLabel;
     
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
@@ -199,6 +226,133 @@ public class SettingsController implements Initializable {
         fovSlider.setValue(contentModel.getCamera().getFieldOfView());
         contentModel.getCamera().fieldOfViewProperty().bind(fovSlider.valueProperty());
 
+        hierarachyTreeTable.rootProperty().bind(new ObjectBinding<TreeItem<Node>>() {
+
+            {
+                bind(contentModel.contentProperty());
+            }
+
+            @Override
+            protected TreeItem<Node> computeValue() {
+                Node content3D = contentModel.getContent();
+                if (content3D != null) {
+                    return new TreeItemImpl(content3D);
+                } else {
+                    return null;
+                }
+            }
+        });
+        hierarachyTreeTable.setOnMouseClicked(new EventHandler<MouseEvent>() {
+
+            @Override
+            public void handle(MouseEvent t) {
+                if (t.getClickCount() == 2) {
+                    settings.setExpandedPane(x6);
+                    t.consume();
+                }
+            }
+        });
+        hierarachyTreeTable.setOnKeyPressed(new EventHandler<KeyEvent>() {
+
+            @Override
+            public void handle(KeyEvent t) {
+                if (t.getCode() == KeyCode.SPACE) {
+                    TreeItem<Node> selectedItem = hierarachyTreeTable.getSelectionModel().getSelectedItem();
+                    if (selectedItem != null) {
+                        Node node = selectedItem.getValue();
+                        node.setVisible(!node.isVisible());
+                    }
+                    t.consume();
+                }
+            }
+        });
+        x6.expandedProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                if (t1) {
+                    TreeItem<Node> selectedItem = hierarachyTreeTable.getSelectionModel().getSelectedItem();
+                    if (selectedItem == null) {
+                        transformsList.setItems(null);
+                        selectedNodeLabel.setText("");
+                    } else {
+                        Node node = selectedItem.getValue();
+                        transformsList.setItems(node.getTransforms());
+                        selectedNodeLabel.setText(node.toString());
+                    }
+                }
+            }
+        });
+        nodeColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, String>, ObservableValue<String>>() {
+
+            @Override
+            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Node, String> p) {
+                return p.getValue().valueProperty().asString();
+            }
+        });
+        idColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, String>, ObservableValue<String>>() {
+
+            @Override
+            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Node, String> p) {
+                return p.getValue().getValue().idProperty();
+            }
+        });
+        visibilityColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Boolean>, ObservableValue<Boolean>>() {
+
+            @Override
+            public ObservableValue<Boolean> call(TreeTableColumn.CellDataFeatures<Node, Boolean> p) {
+                return p.getValue().getValue().visibleProperty();
+            }
+        });
+        visibilityColumn.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(visibilityColumn));
+        widthColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Double>, ObservableValue<Double>>() {
+            @Override
+            public ObservableValue<Double> call(final TreeTableColumn.CellDataFeatures<Node, Double> p) {
+                return new ObjectBinding<Double>() {
+                    {  bind(p.getValue().getValue().boundsInLocalProperty()); }
+                    @Override protected Double computeValue() {
+                        return p.getValue().getValue().getBoundsInLocal().getWidth();
+                    }
+                };
+            }
+        });
+        StringConverter<Double> niceDoubleStringConverter = new StringConverter<Double>() {
+            @Override
+            public String toString(Double t) {
+                return String.format("%.2f", t);
+            }
+
+            @Override
+            public Double fromString(String string) {
+                throw new UnsupportedOperationException("Not supported yet."); //Not needed so far
+            }
+        };
+        widthColumn.setCellFactory(TextFieldTreeTableCell.<Node, Double>forTreeTableColumn(niceDoubleStringConverter));
+        heightColumn.setCellFactory(TextFieldTreeTableCell.<Node, Double>forTreeTableColumn(niceDoubleStringConverter));
+        depthColumn.setCellFactory(TextFieldTreeTableCell.<Node, Double>forTreeTableColumn(niceDoubleStringConverter));
+        heightColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Double>, ObservableValue<Double>>() {
+            @Override
+            public ObservableValue<Double> call(final TreeTableColumn.CellDataFeatures<Node, Double> p) {
+                return new ObjectBinding<Double>() {
+                    {  bind(p.getValue().getValue().boundsInLocalProperty()); }
+                    @Override protected Double computeValue() {
+                        return p.getValue().getValue().getBoundsInLocal().getHeight();
+                    }
+                };
+            }
+        });
+        depthColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Double>, ObservableValue<Double>>() {
+            @Override
+            public ObservableValue<Double> call(final TreeTableColumn.CellDataFeatures<Node, Double> p) {
+                return new ObjectBinding<Double>() {
+                    {  bind(p.getValue().getValue().boundsInLocalProperty()); }
+                    @Override protected Double computeValue() {
+                        return p.getValue().getValue().getBoundsInLocal().getDepth();
+                    }
+                };
+            }
+        });
+
         SessionManager sessionManager = SessionManager.getSessionManager();
 
         sessionManager.bind(showAxisCheckBox.selectedProperty(), "showAxis");
@@ -231,6 +385,28 @@ public class SettingsController implements Initializable {
         sessionManager.bind(settings, "settingsPane");
     }
 
+    private class TreeItemImpl extends TreeItem<Node> {
 
-
+        public TreeItemImpl(Node node) {
+            super(node);
+            if (node instanceof Parent) {
+                for (Node n : ((Parent) node).getChildrenUnmodifiable()) {
+                    getChildren().add(new TreeItemImpl(n));
+                }
+            }
+//            node.setOnMouseClicked(new EventHandler<MouseEvent>() {
+//
+//                @Override
+//                public void handle(MouseEvent t) {
+//                    System.out.println("node.setOnMouseClicked t = " + t);
+//                    TreeItem<Node> parent = getParent();
+//                    while (parent != null) {
+//                        parent.setExpanded(true);
+//                        parent = parent.getParent();
+//                    }
+//                    hierarachyTreeTable.getSelectionModel().select(TreeItemImpl.this);
+//                }
+//            });
+        }
+    }
 }
