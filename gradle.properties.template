@@ -26,14 +26,10 @@
 #####################################################################################
 #                                                                                   #
 # This properties file allows for a developer to override various properties used   #
-# when building JavaFX. In general you should not edit this file directly, but      #
-# rather, copy it into your ~/.gradle/ directory (into a file also called           #
-# gradle.properties). Any settings you configure there will have precedence over    #
-# any values specified in the build script itself or in the gradle.properties       #
-# file in the project directory.                                                    #
+# when building JavaFX. Any settings you configure in the gradle.properties file    #
+# will have precedence over any values specified in the build script itself.        #
 #                                                                                   #
 #####################################################################################
-
 
 # This property allows developers to build using the closed source repository.
 # For open source developers, this flag is unnecessary and should never be set.
@@ -49,6 +45,12 @@
 #COMPILE_WEBKIT = true
 #COMPILE_GSTREAMER = true
 
+# The building of JavaDoc takes time. By default we disable the building of JavaDoc
+# so as to speed up the time in incremental builds. Uncomment this flag in order to
+# build all the JavaDoc
+
+#SKIP_JAVADOC = false
+
 # Specify the COMPILE_TARGETS when performing cross compiles. A Cross-Compile is
 # when you build for a platform other than the one you are building on. For example,
 # to build for Apple iOS, you would specify ios as one of the COMPILE_TARGETS.
@@ -59,12 +61,15 @@
 #   Mac             mac
 #   Mac             ios
 #   Mac             swt
+#   Mac             android
 #   Linux           linux
 #   Linux           armv6hf
 #   Linux           armv6sf
 #   Linux           swt
+#   Linux           android
 #   Windows         win
 #   Windows         swt
+#   Window          android
 #
 # The compile targets are listed as a comma separated list. Alternatively,
 # you can set COMPILE_TARGETS to "all" and every appropriate compile target
@@ -81,8 +86,9 @@
 #COMPILE_TARGETS = all
 
 # The JDK_HOME must either be specified or will be inferred based on the JDK / JRE used to
-# execute Gradle. From the JDK_HOME are derived the JAVA, JAVAC, JAVAH, JAVADOC, and BINARY_STUB
-# properties, although each of these may be specified individually. Normally the gradle build
+# execute Gradle. From the JDK_HOME are derived the JAVA, JAVAC, JAVAH, JAVADOC, and STUB_RUNTIME
+# properties, although each of these may be specified individually. In addition the LIBRARY_STUB and
+# BINARY_STUB properties are derived from STUB_RUNTIME. Normally the gradle build
 # will work based on whatever "java" is being used to run gradle. It does this by looking for
 # a JDK relative to the bin/java location. However if you want to build with a different JDK than
 # what is used to execute Gradle, or to fix a failed attempt by the build script to locate the
@@ -93,7 +99,9 @@
 #JAVAC = /path/to/the/jdk/bin/javac
 #JAVAH = /path/to/the/jdk/bin/javah
 #JAVADOC = /path/to/the/jdk/bin/javadoc
+#STUB_RUNTIME = /path/to/the/jdk/jre
 #BINARY_STUB = /path/to/the/jdk/jre/lib/ext/jfxrt.jar
+#LIBRARY_STUB = /path/to/the/jdk/jre/lib (different location depending on platform)
 
 # The generated JavaDocs contain many references to core JDK classes such as java.lang.String
 # and java.util.concurrent.Executor. These references are resolved via the JDK_DOCS property,
@@ -117,9 +125,9 @@
 # way. By setting "use depend" to true, the build system will do more extensive analysis to
 # only recompile those classes directly impacted by your change. In some cases this will miss
 # compiling some classes that really do require recompilation and your build will be faulty.
-# This flag is disabled by default for command line builds. Uncomment to make use of "use depend"
+# This flag is enabled by default for command line builds. Uncomment to turn it off "use depend"
 
-#USE_DEPEND = true
+#USE_DEPEND = false
 
 # Specify compiler LINT arguments. These values are defined by the javac compiler. You can
 # study the list of available options here http://docs.oracle.com/javase/7/docs/technotes/tools/solaris/javac.html
@@ -143,7 +151,13 @@
 
 #NUM_COMPILE_THREADS = 12
 
-# The COMPILE_FLAGS_FILE defines the native compilation flags to use. Each native project
+# When you are working from behind a proxy and attempting to access public libraries, you need
+# to set the proxy host and port.
+
+#systemProp.http.proxyHost=proxy.my.com
+#systemProp.http.proxyPort=80
+
+# The COMPILE_FLAGS_FILES defines the native compilation flags to use. Each native project
 # defines a pair of flags, XXX_CC_FLAGS and XXX_LINK_FLAGS as defined below:
 #
 #   Project         Flags
@@ -155,15 +169,15 @@
 #   Launcher        LAUNCHER_CC_FLAGS, LAUNCHER_LINK_FLAGS
 #
 # Other projects may use CC_FLAGS and LINK_FLAGS, or may not be fully abstracted out yet.
-# As such, the set of flags a COMPILE_FLAGS_FILE must support will change as time goes on.
+# As such, the set of flags a COMPILE_FLAGS_FILES must support will change as time goes on.
 # Setting a custom COMPILE_FLAGS_FILE should be something rarely done, usually by
 # somebody who is setting up builds for a new compile target.
 #
-# The COMPILE_FLAGS_FILE is a gradle file and is applied directly by build.gradle.
+# The COMPILE_FLAGS_FILES is a gradle file and is applied directly by build.gradle.
 # This means that the file can implement logic (if / loop / etc) and has access to all of
 # the properties defined for the build.
 #
-# If not specified, the appropriate COMPILE_FLAGS_FILE for the designated COMPILE_TARGET
+# If not specified, the appropriate COMPILE_FLAGS_FILES for the designated COMPILE_TARGETS
 # will be chosen automatically. For example, win.gradle will be used when compiling on
 # windows, and armhf.gradle will be picked up when compiling for armhf (such as for
 # the Raspberry PI).
@@ -171,22 +185,13 @@
 # Paths for those properties that take a path should be absolute or relative paths, or they
 # should be full URLs. For example:
 #
-#       COMPILE_FLAGS = foo.gradle
-#       COMPILE_FLAGS = ../foo.gradle
-#       COMPILE_FLAGS = bar/foo.gradle
-#       COMPILE_FLAGS = file:///path/to/foo.gradle
+#       COMPILE_FLAGS_FILES = foo.gradle
+#       COMPILE_FLAGS_FILES = ../foo.gradle
+#       COMPILE_FLAGS_FILES = bar/foo.gradle
+#       COMPILE_FLAGS_FILES = file:///path/to/foo.gradle
 #
 
-#COMPILE_FLAGS_FILE = path/to/flags/file.gradle
-
-# Define the programs to use for compiling and linking native code. The values specified
-# here will take precedence over those specified in the COMPILE_FLAGS_FILE. This can
-# sometimes lead to errors if the designated compiler cannot handle both C / C++ files,
-# and may also require manipulating the compiler parameters. In general, it is recommended
-# that you supply a custom COMPILE_FLAGS_FILE and set the CC / LINK paths there.
-
-#CC = g++
-#LINK = g++
+#COMPILE_FLAGS_FILES = path/to/flags/file.gradle, path/to/flags/file2.gradle
 
 # Define settings used when creating the VersionInfo. These settings are generally left alone
 # by developers and set only from Hudson. We have to manually rev this version number from

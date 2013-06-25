@@ -46,7 +46,7 @@ task generate << {
     copy {
         from RTDir
         into FXDir
-        include "*.gradle", "LICENSE", "README", "gradle.properties", "build.properties"
+        include "*.gradle", "LICENSE", "README", "gradle.properties.template", "build.properties"
         exclude "generator.gradle"
         eachFile { f ->
             fileList.add(f.file);
