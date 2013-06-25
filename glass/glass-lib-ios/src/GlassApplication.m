@@ -337,6 +337,18 @@ jclass classForName(JNIEnv *env, char *className)
     GLASS_CHECK_EXCEPTION(env);
 }
 
+- (void)callDidReceiveMemoryWarning
+{
+    GET_MAIN_JENV;
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    {
+        (*env)->CallVoidMethod(env, self.jApplication, [GlassHelper ApplicationNotifyDidReceiveMemoryWarningMethod]);
+    }
+    [pool drain];
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+
 - (void)callWillBecomeActive
 {
     GET_MAIN_JENV;
@@ -400,6 +412,10 @@ jclass classForName(JNIEnv *env, char *className)
     [self applicationCallback:@selector(callDidResignActive)];
 }
 
+- (void)applicationDidReceiveMemoryWarning:(UIApplication *)application {
+    GLASS_LOG("GlassApplication:applicationDidReceiveMemoryWarning");
+    [self applicationCallback:@selector(callDidReceiveMemoryWarning)];
+}
 
 - (void)applicationWillEnterForeground:(UIApplication *)application {
     /*
