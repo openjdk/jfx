@@ -6,6 +6,21 @@
       <attribute name="optional" value="true"/>
     </attributes>
   </classpathentry>
+  <classpathentry kind="src" exported="true" path="src/main/native/WebKitBuild/Release/WebCore/generated/java">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="src/test/java">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="src/test/resources">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
   <classpathentry kind="src" exported="true" path="/graphics">
     <attributes>
       <attribute name="optional" value="true"/>
