@@ -1,4 +1,5 @@
 \.orig$
+\.bak$
 \.DS_Store$
 \.orig\..*$
 \.chg\..*$
