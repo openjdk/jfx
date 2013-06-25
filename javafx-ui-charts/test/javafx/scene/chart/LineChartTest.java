@@ -61,7 +61,6 @@ public class LineChartTest extends XYChartTestBase {
         yAxis.setLabel("Y Axis");
         lineChart.setTitle("HelloLineChart");
         // add starting data
-        ObservableList<XYChart.Data> data = FXCollections.observableArrayList();
         series1.getData().add(new XYChart.Data(10d, 10d));
         series1.getData().add(new XYChart.Data(25d, 20d));
         series1.getData().add(new XYChart.Data(30d, 15d));
@@ -113,4 +112,53 @@ public class LineChartTest extends XYChartTestBase {
          lineChart.getData().addAll(series1);
          assertEquals(5, countSymbols(lineChart, "chart-line-symbol"));
      }
+     
+    @Test
+    public void testDataItemAdd() {
+        startApp();
+        lineChart.getData().addAll(series1);
+        pulse();
+        series1.getData().add(new XYChart.Data(60d, 30d));
+        pulse();
+        // 5 stackpane nodes and 1 path node + new stackpane for data added
+        assertEquals(7, lineChart.getPlotChildren().size());
+    }
+    
+     @Test
+    public void testDataItemAddWithAnimation() {
+        startApp();
+        lineChart.setAnimated(true);
+        lineChart.getData().addAll(series1);
+        pulse();
+        series1.getData().add(new XYChart.Data(60d, 30d));
+        pulse();
+        // 5 stackpane nodes and 1 path node + new stackpane for data added
+        assertEquals(7, lineChart.getPlotChildren().size());
+    }
+      
+    @Test
+    public void testDataItemRemove() {
+        startApp();
+        lineChart.getData().addAll(series1);
+        pulse();
+        if (!lineChart.getData().isEmpty()) {
+            series1.getData().remove(0);
+            pulse();
+            // 4 stackpane nodes and one path node
+            assertEquals(5, lineChart.getPlotChildren().size());
+        }
+    }
+     
+     @Test
+    public void testSeriesAddWithAnimation() {
+        startApp();
+        lineChart.setAnimated(true);
+        final XYChart.Series<Number, Number> series2 = new XYChart.Series<Number, Number>();
+        series1.getData().add(new XYChart.Data(15d, 40d));
+        series1.getData().add(new XYChart.Data(25d, 10d));
+        series1.getData().add(new XYChart.Data(40d, 35d));
+        lineChart.getData().addAll(series1);
+        pulse();
+        assertEquals(true, lineChart.getAnimated());
+    }
 }
