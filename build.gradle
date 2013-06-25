@@ -2239,6 +2239,7 @@ childProjects["apps"].subprojects {
                        sourceSets.main.compileClasspath
 	       }
             }
+            test.exclude("**/*");
 
             def srcdir = new File ("$project.projectDir/src");
 
