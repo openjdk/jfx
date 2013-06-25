@@ -56,6 +56,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -1009,11 +1010,13 @@ public class TreeViewTest {
         treeView.setRoot(rootItem);
         treeView.setMinHeight(100);
         treeView.setPrefHeight(100);
-        treeView.setCellFactory(CheckBoxTreeCell.forTreeView(new Callback<TreeItem<String>, ObservableValue<Boolean>>() {
-            public javafx.beans.value.ObservableValue<Boolean> call(TreeItem<String> param) {
-                return new ReadOnlyBooleanWrapper(true);
-            }
-        }));
+        treeView.setCellFactory(
+                CheckBoxTreeCell.forTreeView(
+                        new Callback<TreeItem<String>, ObservableValue<Boolean>>() {
+                            public javafx.beans.value.ObservableValue<Boolean> call(TreeItem<String> param) {
+                                return new ReadOnlyBooleanWrapper(true);
+                            }
+                        }));
 
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
@@ -1022,5 +1025,26 @@ public class TreeViewTest {
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(treeView, 1));
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(treeView, 2));
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(treeView, 3));
+    }
+
+    @Test public void test_rt31165() {
+        installChildren();
+        treeView.setEditable(true);
+        treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 1);
+        assertEquals(child1.getValue(), cell.getText());
+        assertFalse(cell.isEditing());
+
+        treeView.edit(child1);
+
+        assertEquals(child1, treeView.getEditingItem());
+        assertTrue(cell.isEditing());
+
+        VirtualFlowTestUtils.getVirtualFlow(treeView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(child1, treeView.getEditingItem());
+        assertTrue(cell.isEditing());
     }
 }

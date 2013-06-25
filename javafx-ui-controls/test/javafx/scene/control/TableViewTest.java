@@ -48,9 +48,12 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.control.cell.CheckBoxTableCell;
+import javafx.scene.control.cell.ChoiceBoxTableCell;
+import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.util.Callback;
 
+import com.sun.javafx.tk.Toolkit;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -1324,5 +1327,42 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 1));
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 2));
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 3));
+    }
+
+    @Test public void test_rt31165() {
+        final ObservableList names = FXCollections.observableArrayList("Adam", "Alex", "Alfred", "Albert");
+
+        final TableView<Person> tableView = new TableView<Person>();
+        tableView.setEditable(true);
+        tableView.setItems(FXCollections.observableArrayList(
+            new Person("Jacob", "Smith", "jacob.smith@example.com"),
+            new Person("Jim", "Bob", "jim.bob@example.com")
+        ));
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellFactory(ChoiceBoxTableCell.forTableColumn(names));
+        firstNameCol.setEditable(true);
+
+        tableView.getColumns().add(firstNameCol);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 1, 0);
+        assertEquals("Jim", cell.getText());
+        assertFalse(cell.isEditing());
+
+        tableView.edit(1, firstNameCol);
+
+        TablePosition editingCell = tableView.getEditingCell();
+        assertEquals(1, editingCell.getRow());
+        assertEquals(firstNameCol, editingCell.getTableColumn());
+        assertTrue(cell.isEditing());
+
+        VirtualFlowTestUtils.getVirtualFlow(tableView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        editingCell = tableView.getEditingCell();
+        assertEquals(1, editingCell.getRow());
+        assertEquals(firstNameCol, editingCell.getTableColumn());
+        assertTrue(cell.isEditing());
     }
 }
