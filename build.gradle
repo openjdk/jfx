@@ -2213,7 +2213,8 @@ ext.JFXRT_CP =
 	project(":swing").sourceSets.main.output.classesDir, //NOTE - used by 3Dviewer
 	//project(":swt").sourceSets.main.output.classesDir,
 	project(":builders").sourceSets.main.output.classesDir,
-	//project(":web").sourceSets.main.output.classesDir, 
+        "modules/media/build/classes/main", 
+        "modules/web/build/classes/main", 
 	)
 
 if (BINARY_STUB != null) {
