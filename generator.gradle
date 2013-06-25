@@ -56,6 +56,13 @@ task generate << {
     // Copy over the apps
     ["ConferenceScheduleApp", "Modena"].each { app ->
         copy {
+            from "$RTDir/apps/experiments/$app/build.gradle"
+            into "$FXDir/apps/experiments/$app"
+            eachFile { f ->
+                fileList.add(f.file);
+            }
+        }
+        copy {
             from "$RTDir/apps/experiments/$app/src"
             into "$FXDir/apps/experiments/$app/src/main/java"
             exclude excludeFromSource
@@ -77,6 +84,13 @@ task generate << {
 
     ["3DViewer"].each { app ->
         copy {
+            from "$RTDir/apps/experiments/$app/build.gradle"
+            into "$FXDir/apps/experiments/$app"
+            eachFile { f ->
+                fileList.add(f.file);
+            }
+        }
+        copy {
             from "$RTDir/apps/experiments/$app/src"
             into "$FXDir/apps/experiments/$app/src"
             exclude "main/java/META-INF/MANIFEST.MF"
@@ -87,6 +101,13 @@ task generate << {
     }
 
     // Copy over Ensemble8. Some special care taken for the generated stuff.
+    copy {
+        from "$RTDir/apps/samples/Ensemble8/build.gradle"
+        into "$FXDir/apps/samples/Ensemble8"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
+    }
     copy {
         from "$RTDir/apps/samples/Ensemble8/src"
         into "$FXDir/apps/samples/Ensemble8/src/main/java"
@@ -103,6 +124,13 @@ task generate << {
         include includeInResources
         exclude excludeFromResources
         include "generated/ensemble/search/index/"
+        eachFile { f ->
+            fileList.add(f.file);
+        }
+    }
+    copy {
+        from "$RTDir/apps/samples/Ensemble8/lib"
+        into "$FXDir/apps/samples/Ensemble8/lib"
         eachFile { f ->
             fileList.add(f.file);
         }

@@ -1,0 +1,9 @@
+
+
+apply plugin:'application'
+
+mainClassName = "modena.Modena"
+
+jar {
+    manifest.attributes("Main-Class": mainClassName)
+}

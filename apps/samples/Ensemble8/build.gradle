@@ -1,0 +1,19 @@
+
+
+apply plugin:'application'
+
+def mainClassName = "ensemble.EnsembleApp"
+
+def FileCollection apachecp = files(
+   "./lib/lucene-grouping-3.2.0.jar",
+   "./lib/lucene-core-3.2.0.jar") 
+
+sourceSets {
+    main {
+        compileClasspath += apachecp
+    }
+} 
+
+jar {
+    manifest.attributes("Main-Class": mainClassName)
+}
