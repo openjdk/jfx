@@ -44,7 +44,7 @@
 # so as to speed up the time in incremental builds. Uncomment this flag in order to
 # build all the JavaDoc
 
-#SKIP_JAVADOC = false
+#BUILD_JAVADOC = true
 
 # Specify the COMPILE_TARGETS when performing cross compiles. A Cross-Compile is
 # when you build for a platform other than the one you are building on. For example,
