@@ -61,8 +61,6 @@ import javafx.scene.text.Text;
 import javafx.stage.Popup;
 import javafx.util.Duration;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.robot.impl.FXRobotHelper;
-import com.sun.javafx.robot.impl.FXRobotHelper.FXRobotInputAccessor;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 import static javafx.scene.input.MouseEvent.*;
@@ -577,18 +575,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         }
 
         protected KeyEvent event(EventType<KeyEvent> type) {
-            try {
-                Field fld = FXRobotHelper.class.getDeclaredField("inputAccessor");
-                fld.setAccessible(true);
-                FXRobotInputAccessor inputAccessor = (FXRobotInputAccessor)fld.get(null);
-
-                return inputAccessor.createKeyEvent(type, KeyCode.UNDEFINED, chars, "",
-                                      shiftDown, false, false, false);
-            } catch (Exception e) {
-                System.err.println(e);
-            }
-
-            return null;
+            return new KeyEvent(type, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false); 
         }
     }
 
@@ -675,17 +662,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
         protected KeyEvent event(EventType<KeyEvent> type) {
             if (type == KeyEvent.KEY_PRESSED || type == KeyEvent.KEY_RELEASED) {
-                try {
-                    Field fld = FXRobotHelper.class.getDeclaredField("inputAccessor");
-                    fld.setAccessible(true);
-                    FXRobotInputAccessor inputAccessor = (FXRobotInputAccessor)fld.get(null);
-
-                    return inputAccessor.createKeyEvent(type, code, chars, chars,
-                                          shiftDown, false, false, false);
-                } catch (Exception e) {
-                    System.err.println(e);
-                }
-                return null;
+                return new KeyEvent(type, chars, chars, code, shiftDown, false, false, false);                                          
             } else {
                 return super.event(type);
             }

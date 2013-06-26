@@ -541,9 +541,11 @@ public abstract class Axis<T> extends Region {
      */
     @Override protected double computePrefHeight(double width) {
         final Side side = getSide();
-        if (side == null) {
-            return 50;
-        } else if (side.equals(Side.TOP) || side.equals(Side.BOTTOM)) { // HORIZONTAL
+        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL
+            // TODO for now we have no hard and fast answer here, I guess it should work
+            // TODO out the minimum size needed to display min, max and zero tick mark labels.
+            return 100;
+        } else { // HORIZONTAL
             // we need to first auto range as this may/will effect tick marks
             Object range = autoRange(width);
             // calculate max tick label height
@@ -562,11 +564,7 @@ public abstract class Axis<T> extends Region {
                     axisLabel.getText() == null || axisLabel.getText().length() == 0 ?
                     0 : axisLabel.prefHeight(-1);
             return maxLabelHeight + getTickLabelGap() + tickMarkLength + labelHeight;
-        } else { // VERTICAL
-            // TODO for now we have no hard and fast answer here, I guess it should work
-            // TODO out the minimum size needed to display min, max and zero tick mark labels.
-            return 100;
-        }
+        } 
     }
 
     /**
@@ -578,13 +576,7 @@ public abstract class Axis<T> extends Region {
      */
     @Override protected double computePrefWidth(double height) {
         final Side side = getSide();
-        if (side == null) {
-            return 50;
-        } else if (side.equals(Side.TOP) || side.equals(Side.BOTTOM)) { // HORIZONTAL
-            // TODO for now we have no hard and fast answer here, I guess it should work
-            // TODO out the minimum size needed to display min, max and zero tick mark labels.
-            return 100;
-        } else { // VERTICAL
+        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL
             // we need to first auto range as this may/will effect tick marks
             Object range = autoRange(height);
             // calculate max tick label width
@@ -603,7 +595,11 @@ public abstract class Axis<T> extends Region {
                     axisLabel.getText() == null || axisLabel.getText().length() == 0 ?
                     0 : axisLabel.prefHeight(-1);
             return maxLabelWidth + getTickLabelGap() + tickMarkLength + labelHeight;
-        }
+        } else  { // HORIZONTAL
+            // TODO for now we have no hard and fast answer here, I guess it should work
+            // TODO out the minimum size needed to display min, max and zero tick mark labels.
+            return 100;
+        } 
     }
 
     /**
@@ -622,7 +618,7 @@ public abstract class Axis<T> extends Region {
         final boolean isFirstPass = oldLength == 0;
         // auto range if it is not valid
         final Side side = getSide();
-        final double length = (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) ? width : height;
+        final double length = (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) ? height : width;
         int numLabelsToSkip = 1;
         int tickIndex = 0;
         if (oldLength != length || !isRangeValid() || tickPropertyChanged || formatterValid) {
@@ -641,18 +637,15 @@ public abstract class Axis<T> extends Region {
 
              // calculate maxLabelWidth / maxLabelHeight for respective orientations
             maxWidth = 0; maxHeight = 0;
-            if (side != null) {
-                if (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) {
-                    for (T value: newTickValues) {
-                        maxWidth = Math.round(Math.max(maxWidth, measureTickMarkSize(value, range).getWidth()));
-                    }
-                } else {
-                    for (T value: newTickValues) {
-                        maxHeight = Math.round(Math.max(maxHeight, measureTickMarkSize(value, range).getHeight()));
-                    }
+            if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
+                for (T value: newTickValues) {
+                    maxHeight = Math.round(Math.max(maxHeight, measureTickMarkSize(value, range).getHeight()));
+                }
+            } else {
+                for (T value: newTickValues) {
+                    maxWidth = Math.round(Math.max(maxWidth, measureTickMarkSize(value, range).getWidth()));
                 }
             }
-           
             // we have to work out what new or removed tick marks there are, then create new tick marks and their
             // text nodes where needed
             // find everything added or removed
@@ -736,21 +729,18 @@ public abstract class Axis<T> extends Region {
 
         // RT-12272 : tick labels overlapping
         int numLabels = 0;
-        if (side != null) {
-            if (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) {
-                numLabels = (maxWidth > 0) ? (int)(length/maxWidth) : 0;
-            } else {
-                numLabels = (maxHeight > 0) ? (int) (length/maxHeight) : 0;
-            }
+        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
+            numLabels = (maxHeight > 0) ? (int) (length/maxHeight) : 0;
+        } else {
+            numLabels = (maxWidth > 0) ? (int)(length/maxWidth) : 0;
         }
-       
         if (numLabels > 0) {
             numLabelsToSkip = ((int)(tickMarks.size()/numLabels)) + 1;
         }
         // clear tick mark path elements as we will recreate
         tickMarkPath.getElements().clear();
         // do layout of axis label, tick mark lines and text
-        if (getSide().equals(Side.LEFT)) {
+        if (Side.LEFT.equals(side)) {
             // offset path to make strokes snap to pixel
             tickMarkPath.setLayoutX(-0.5);
             tickMarkPath.setLayoutY(0.5);
@@ -782,7 +772,7 @@ public abstract class Axis<T> extends Region {
                     tick.textNode.setVisible(false);
                 }
             }
-        } else if (getSide().equals(Side.RIGHT)) {
+        } else if (Side.RIGHT.equals(side)) {
             // offset path to make strokes snap to pixel
             tickMarkPath.setLayoutX(0.5);
             tickMarkPath.setLayoutY(0.5);
@@ -814,7 +804,7 @@ public abstract class Axis<T> extends Region {
                 //noinspection SuspiciousNameCombination
                 axisLabel.resize(height, axisLabelWidth);
             }
-        } else if (getSide().equals(Side.TOP)) {
+        } else if (Side.TOP.equals(side)) {
             // offset path to make strokes snap to pixel
             tickMarkPath.setLayoutX(0.5);
             tickMarkPath.setLayoutY(-0.5);
@@ -896,13 +886,13 @@ public abstract class Axis<T> extends Region {
         node.setLayoutY(0);
         node.setRotate(angle);
         final Bounds bounds = node.getBoundsInParent();
-        if (side.equals(Side.LEFT)) {
+        if (Side.LEFT.equals(side)) {
             node.setLayoutX(posX-bounds.getWidth()-bounds.getMinX());
             node.setLayoutY(posY - (bounds.getHeight() / 2d) - bounds.getMinY());
-        } else if (side.equals(Side.RIGHT)) {
+        } else if (Side.RIGHT.equals(side)) {
             node.setLayoutX(posX-bounds.getMinX());
             node.setLayoutY(posY-(bounds.getHeight()/2d)-bounds.getMinY());
-        } else if (side.equals(Side.TOP)) {
+        } else if (Side.TOP.equals(side)) {
             node.setLayoutX(posX-(bounds.getWidth()/2d)-bounds.getMinX());
             node.setLayoutY(posY-bounds.getHeight()-bounds.getMinY());
         } else {

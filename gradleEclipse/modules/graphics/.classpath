@@ -1,0 +1,20 @@
+<classpath>
+  <classpathentry kind="src" path="src/main/java"/>
+  <classpathentry kind="src" path="src/main/resources"/>
+  <classpathentry kind="src" path="src/stub/java"/>
+  <classpathentry kind="src" path="src/stub/resources"/>
+  <classpathentry kind="src" path="src/test/java"/>
+  <classpathentry kind="src" path="src/test/resources"/>
+  <classpathentry exported="true" kind="src" path="/base"/>
+  <classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="output" path="bin"/>
+  <classpathentry kind="src" exported="true" path="/builders"/>
+  <classpathentry kind="src" exported="true" path="build/generated-src/jsl-decora"/>
+  <classpathentry kind="src" exported="true" path="build/generated-src/jsl-prism"/>
+  <classpathentry kind="src" exported="true" path="/rt-closed">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+</classpath>

@@ -1,0 +1,14 @@
+<classpath>
+  <classpathentry kind="src" path="src/main/java"/>
+  <classpathentry kind="src" path="src/main/resources"/>
+  <classpathentry kind="src" path="src/test/java"/>
+  <classpathentry kind="src" path="src/test/resources"/>
+  <classpathentry exported="true" kind="src" path="/base"/>
+  <classpathentry exported="true" kind="src" path="/controls"/>
+  <classpathentry exported="true" kind="src" path="/graphics"/>
+  <classpathentry exported="true" kind="src" path="/swing"/>
+  <classpathentry exported="true" kind="src" path="/swt"/>
+  <classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="output" path="bin"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+</classpath>

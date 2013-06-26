@@ -1398,6 +1398,52 @@ public class GridPaneTest {
 
     }
 
+    @Test public void testEmptyRowWithRowConstraint() {
+        MockResizable child1 = new MockResizable(10,10, 10,10, 10,10);
+        MockResizable child2 = new MockResizable(10,10, 10,10, 10,10);
+        MockResizable child3 = new MockResizable(10,10, 10,10, 10,10);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+        gridpane.add(child3, 2, 0);       
+        GridPane.setConstraints(child3, 2, 0, 2, 2);
+
+        RowConstraints row1 = new RowConstraints();
+        row1.setMinHeight(35);
+        RowConstraints row2 = new RowConstraints();
+        row2.setMinHeight(35);
+        RowConstraints row3 = new RowConstraints();
+        row3.setMinHeight(35);
+
+        gridpane.getRowConstraints().addAll(row1, row2, row3);
+
+        assertEquals(105, gridpane.minHeight(-1), 0);
+        assertEquals(105, gridpane.prefHeight(-1), 0);
+        assertEquals(Double.MAX_VALUE, gridpane.maxHeight(-1), 0);
+    }
+
+    @Test public void testEmptyColumnWithColumnConstraint() {
+        MockResizable child1 = new MockResizable(10,10, 10,10, 10,10);
+        MockResizable child2 = new MockResizable(10,10, 10,10, 10,10);
+        MockResizable child3 = new MockResizable(10,10, 10,10, 10,10);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+        gridpane.add(child3, 0, 2);       
+        GridPane.setConstraints(child3, 0, 2, 2, 2);
+
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setMinWidth(35);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setMinWidth(35);
+        ColumnConstraints col3 = new ColumnConstraints();
+        col3.setMinWidth(35);
+
+        gridpane.getColumnConstraints().addAll(col1, col2, col3);
+
+        assertEquals(105, gridpane.minWidth(-1), 0);
+        assertEquals(105, gridpane.prefWidth(-1), 0);
+        assertEquals(Double.MAX_VALUE, gridpane.maxWidth(-1), 0);
+    }
+
     @Test public void testMixedColumnSizeTypes() {
         MockResizable child1 = new MockResizable(100,100, 200,200, 500,500);
         MockResizable child2 = new MockResizable(100,100, 200,200, 500,500);
@@ -2714,4 +2760,43 @@ public class GridPaneTest {
         assertEquals(150, child_double_34.getLayoutBounds().getHeight(), 1e-100);
     }
 
+    @Test
+    public void testGridWithSmallMultiSpanColumns() {
+        Rectangle child1 = new Rectangle(100, 100);
+        Rectangle child2 = new Rectangle(100, 100);
+
+        Rectangle child_double_12 = new Rectangle(50, 50);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+
+        gridpane.add(child_double_12, 0, 1, 2, 1);
+
+        gridpane.resize(300, 300);
+        gridpane.layout();
+
+        assertEquals(0, child1.getLayoutX(), 1e-100);
+        assertEquals(100, child2.getLayoutX(), 1e-100);
+        assertEquals(0, child_double_12.getLayoutX(), 1e-100);
+    }
+
+    @Test
+    public void testGridWithSmallMultiSpanRows() {
+        Rectangle child1 = new Rectangle(100, 100);
+        Rectangle child2 = new Rectangle(100, 100);
+
+        Rectangle child_double_12 = new Rectangle(50, 50);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+
+        gridpane.add(child_double_12, 1, 0, 1, 2);
+
+        gridpane.resize(300, 300);
+        gridpane.layout();
+
+        assertEquals(0, child1.getLayoutY(), 1e-100);
+        assertEquals(100, child2.getLayoutY(), 1e-100);
+        assertEquals(75, child_double_12.getLayoutY(), 1e-100);
+    }
 }

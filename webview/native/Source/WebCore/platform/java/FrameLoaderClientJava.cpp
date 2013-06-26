@@ -665,13 +665,6 @@ void FrameLoaderClientJava::dispatchDidFailLoad(const ResourceError& error)
 // client-side redirection
 void FrameLoaderClientJava::dispatchWillPerformClientRedirect(const KURL& url, double, double)
 {
-    double progress = page()->progress()->estimatedProgress();
-    m_isPageRedirected = true;
-    postLoadEvent(frame(),
-                  com_sun_webkit_LoadListenerClient_PAGE_REDIRECTED,
-                  url.string(),
-                  String(), // content type
-                  progress);
 }
 
 void FrameLoaderClientJava::dispatchDidReceiveTitle(const StringWithDirection& title)

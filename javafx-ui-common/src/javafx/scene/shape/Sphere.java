@@ -303,7 +303,6 @@ public class Sphere extends Shape3D {
         float points[] = new float[nPoints * 3];
         float tPoints[] = new float[nTPoints * 2];
         int faces[] = new int[nFaces * 6];
-        int smoothing[] = new int[nFaces];
 
         int pPos = 0, tPos = 0;
 
@@ -415,15 +414,10 @@ public class Sphere extends Shape3D {
             fIndex += 6;
         }
 
-        for (int i = 0; i < nFaces; ++i) {
-            smoothing[i] = 1;
-        }
-
         TriangleMesh m = new TriangleMesh();
         m.getPoints().setAll(points);
         m.getTexCoords().setAll(tPoints);
         m.getFaces().setAll(faces);
-        m.getFaceSmoothingGroups().setAll(smoothing);
         return m;
     }
 

@@ -15,7 +15,7 @@ public class JavaSourceExporterTestApp extends Application {
         String URL = "file:///Users/jpotts/Projects/jfx-bluray-8.0/apps/bluray/BluRay/src/bluray/botmenu/dukeBot.ma";
 
         MayaImporter importer = new MayaImporter();
-        importer.load(URL);
+        importer.load(URL, true);
 
         Optimizer optimizer = new Optimizer(importer.getTimeline(),importer.getRoot());
         optimizer.optimize();

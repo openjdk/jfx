@@ -74,6 +74,22 @@ public abstract class ChartTestBase {
         toolkit.fireTestPulse();
     }
     
+    protected Scene getTestScene() {
+        return this.scene;
+    }
+    
+    protected void setTestScene(Scene scene) {
+        this.scene = scene;
+    }
+    
+    protected Stage getTestStage() {
+        return this.stage;
+    }
+    
+    protected void setTestStage(Stage stage) {
+        this.stage = stage;
+    }
+    
     protected abstract Chart createChart();
     
     StringBuffer computeSVGPath(Path line) {

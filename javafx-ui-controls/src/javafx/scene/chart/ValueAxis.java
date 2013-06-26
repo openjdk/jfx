@@ -298,14 +298,12 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     protected final double calculateNewScale(double length, double lowerBound, double upperBound) {
         double newScale = 1;
         final Side side = getSide();
-        if(side != null) {
-            if (side.equals(Side.TOP) || side.equals(Side.BOTTOM)) { // HORIZONTAL
-                offset = 0;
-                newScale = ((upperBound-lowerBound) == 0) ? length : length / (upperBound - lowerBound);
-            } else { // VERTICAL
-                offset = length;
-                newScale = ((upperBound-lowerBound) == 0) ? -length : -(length / (upperBound - lowerBound));
-            }
+        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL 
+            offset = length;
+            newScale = ((upperBound-lowerBound) == 0) ? -length : -(length / (upperBound - lowerBound));
+        } else { // HORIZONTAL
+            offset = 0;
+            newScale = ((upperBound-lowerBound) == 0) ? length : length / (upperBound - lowerBound);
         }
         return newScale;
     }
@@ -349,7 +347,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      */
     @Override protected void layoutChildren() {
         final Side side = getSide();
-        final double length = (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) ? getWidth() : getHeight();
+        final double length = (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) ? getHeight() :getWidth() ;
         // if we are not auto ranging we need to calculate the new scale
         if(!isAutoRanging()) {
             // calculate new scale
@@ -376,7 +374,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         // Update minor tickmarks
         minorTickPath.getElements().clear();
         if (getMinorTickLength() > 0) {
-            if (side.equals(Side.LEFT)) {
+            if (Side.LEFT.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(-0.5);
                 minorTickPath.setLayoutY(0.5);
@@ -388,7 +386,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                                 new LineTo(getWidth()-1, y));
                     }
                 }
-            } else if (side.equals(Side.RIGHT)) {
+            } else if (Side.RIGHT.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(0.5);
                 minorTickPath.setLayoutY(0.5);
@@ -400,7 +398,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                                 new LineTo(getMinorTickLength(), y));
                     }
                 }
-            } else if (side.equals(Side.TOP)) {
+            } else if (Side.TOP.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(0.5);
                 minorTickPath.setLayoutY(-0.5);
@@ -412,7 +410,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                                 new LineTo(x, getHeight() - getMinorTickLength()));
                     }
                 }
-            } else if (side.equals(Side.BOTTOM)) {
+            } else { // BOTTOM
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(0.5);
                 minorTickPath.setLayoutY(0.5);

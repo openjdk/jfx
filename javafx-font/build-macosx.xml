@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-font" default="all" basedir=".">
+
+  <target name="compile-native">
+    <exec executable="make" dir="../javafx-font-native" failonerror="true">
+      <arg value="DIST_DIR=${native.dist.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="JFXFONT_CP=${javafx-font.classes.dir}"/>
+      <arg value="JAVAH_CP=${javafx-font.javah.path}"/>
+      <arg value="JNI_FILES=${javafx-font.jni.files}"/>
+      <arg value="JDK_HOME=${platform.home}"/>
+      <arg value="all"/>
+    </exec>
+  </target>
+
+  <target name="clean-native">
+    <exec executable="make" dir="../javafx-font-native" failonerror="true">
+      <arg value="DIST_DIR=${native.dist.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="clean"/>
+    </exec>
+  </target>
+
+</project>

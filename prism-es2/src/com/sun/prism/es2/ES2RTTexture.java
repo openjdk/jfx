@@ -279,8 +279,18 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
     public boolean readPixels(Buffer pixels) {
         context.flushVertexBuffer();
         GLContext glContext = context.getGLContext();
-        return glContext.readPixels(pixels, getContentX(), getContentY(),
-                getContentWidth(), getContentHeight());
+        int id = glContext.getBoundFBO();
+        int fboID = getFboID();
+        boolean changeBoundFBO = id != fboID;
+        if (changeBoundFBO) {
+            glContext.bindFBO(fboID);
+        }
+        boolean result = glContext.readPixels(pixels, getContentX(), getContentY(),
+                 getContentWidth(), getContentHeight());                
+        if (changeBoundFBO) {
+            glContext.bindFBO(id);
+        }
+        return result;
     }
 
     public int getFboID() {

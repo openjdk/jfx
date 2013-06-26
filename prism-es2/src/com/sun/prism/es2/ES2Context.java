@@ -396,12 +396,16 @@ class ES2Context extends BaseShaderContext {
         glContext.releaseES2Mesh(nativeHandle);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, short[] indexBuffer) {
-        return glContext.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer,
+            int vertexBufferLength, short[] indexBuffer, int indexBufferLength) {
+        return glContext.buildNativeGeometry(nativeHandle, vertexBuffer,
+                vertexBufferLength, indexBuffer, indexBufferLength);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int[] indexBuffer) {
-        return glContext.buildNativeGeometry(nativeHandle, vertexBuffer, indexBuffer);
+    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer,
+            int vertexBufferLength, int[] indexBuffer, int indexBufferLength) {
+        return glContext.buildNativeGeometry(nativeHandle, vertexBuffer,
+                vertexBufferLength, indexBuffer, indexBufferLength);
     }
 
     long createES2PhongMaterial() {

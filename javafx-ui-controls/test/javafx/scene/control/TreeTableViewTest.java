@@ -59,6 +59,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.cell.CheckBoxTreeTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTreeTableCell;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
@@ -2060,5 +2061,37 @@ public class TreeTableViewTest {
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 1));
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 2));
         VirtualFlowTestUtils.assertCellEmpty(VirtualFlowTestUtils.getCell(tableView, 3));
+    }
+
+    @Ignore("This bug is not yet fixed")
+    @Test public void test_rt31165() {
+        installChildren();
+        treeTableView.setEditable(true);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
+            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures param) {
+                return new ReadOnlyStringWrapper("TEST");
+            }
+        });
+        firstNameCol.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        firstNameCol.setEditable(true);
+
+        treeTableView.getColumns().add(firstNameCol);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(treeTableView, 1, 0);
+        assertEquals("TEST", cell.getText());
+        assertFalse(cell.isEditing());
+
+        treeTableView.edit(child1);
+
+        assertEquals(child1, treeTableView.getEditingItem());
+        assertTrue(cell.isEditing());
+
+        VirtualFlowTestUtils.getVirtualFlow(treeTableView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(child1, treeTableView.getEditingItem());
+        assertTrue(cell.isEditing());
     }
 }

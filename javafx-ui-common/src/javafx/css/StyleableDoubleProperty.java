@@ -85,7 +85,7 @@ public abstract class StyleableDoubleProperty
     
     /** {@inheritDoc} */
     @Override
-    public final StyleOrigin getStyleOrigin() { return origin; }
+    public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;    
 }

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/build" />
+      <excludeFolder url="file://$MODULE_DIR$/nbproject" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="decora-compiler" />
+    <orderEntry type="module" module-name="decora-d3d" />
+    <orderEntry type="module" module-name="decora-es2" />
+    <orderEntry type="module" module-name="decora-jsw" />
+    <orderEntry type="module" module-name="decora-prism" />
+    <orderEntry type="module" module-name="decora-prism-ps" />
+    <orderEntry type="module" module-name="decora-prism-sw" />
+    <orderEntry type="module" module-name="decora-runtime" />
+    <orderEntry type="module" module-name="decora-sse" />
+    <orderEntry type="module" module-name="glass-mat" />
+    <orderEntry type="module" module-name="javafx-accessible" />
+    <orderEntry type="module" module-name="javafx-anim" />
+    <orderEntry type="module" module-name="javafx-annotation-processor" />
+    <orderEntry type="module" module-name="javafx-beans" />
+    <orderEntry type="module" module-name="javafx-checkstyle" />
+    <orderEntry type="module" module-name="javafx-common" />
+    <orderEntry type="module" module-name="javafx-concurrent" />
+    <orderEntry type="module" module-name="javafx-deploy" />
+    <orderEntry type="module" module-name="javafx-embed-swing" />
+    <orderEntry type="module" module-name="javafx-embed-swt" />
+    <orderEntry type="module" module-name="javafx-font" />
+    <orderEntry type="module" module-name="javafx-fxml" />
+    <orderEntry type="module" module-name="javafx-geom" />
+    <orderEntry type="module" module-name="javafx-iio" />
+    <orderEntry type="module" module-name="javafx-logging" />
+    <orderEntry type="module" module-name="javafx-mx-common" />
+    <orderEntry type="module" module-name="javafx-sg-common" />
+    <orderEntry type="module" module-name="javafx-sg-prism" />
+    <orderEntry type="module" module-name="javafx-ui-charts" />
+    <orderEntry type="module" module-name="javafx-ui-common" />
+    <orderEntry type="module" module-name="javafx-ui-controls" />
+    <orderEntry type="module" module-name="javafx-ui-desktop" />
+    <orderEntry type="module" module-name="javafx-ui-quantum" />
+    <orderEntry type="module" module-name="javafx-util-converter" />
+    <orderEntry type="module" module-name="jfxmedia" />
+    <orderEntry type="module" module-name="pisces" />
+    <orderEntry type="module" module-name="prism-common" />
+    <orderEntry type="module" module-name="prism-d3d" />
+    <orderEntry type="module" module-name="prism-es2" />
+    <orderEntry type="module" module-name="prism-es2-mac" />
+    <orderEntry type="module" module-name="prism-j2d" />
+    <orderEntry type="module" module-name="prism-null" />
+    <orderEntry type="module" module-name="prism-ps" />
+    <orderEntry type="module" module-name="prism-util" />
+    <orderEntry type="module" module-name="test-stub-toolkit" />
+    <orderEntry type="module" module-name="webview" />
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" name="webkit-impl" level="project" />
+    <orderEntry type="module" module-name="javafx-builders" />
+    <orderEntry type="module" module-name="javafx-font-t2k" />
+    <orderEntry type="module" module-name="prism-sw" />
+  </component>
+</module>
+

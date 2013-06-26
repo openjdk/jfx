@@ -86,4 +86,18 @@ public class PieChartTest extends ChartTestBase {
         }
     }
     
+    @Test
+    public void testDataItemRemovedWithAnimation() {
+        startApp();
+        data.add(new PieChart.Data("Sun", 20));
+        data.add(new PieChart.Data("IBM", 12));
+        data.add(new PieChart.Data("HP", 25));
+        data.add(new PieChart.Data("Dell", 22));
+        data.add(new PieChart.Data("Apple", 30));
+        pc.setAnimated(true);
+        pc.getData().addAll(data);
+        pc.getData().remove(0);
+        assertEquals(4, pc.getData().size());
+    }
+    
 }

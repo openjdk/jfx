@@ -47,5 +47,6 @@
 + (jmethodID)ApplicationNotifyWillResignActiveMethod;
 + (jmethodID)ApplicationNotifyDidResignActiveMethod;
 + (jmethodID)ApplicationNotifyQuitMethod;
++ (jmethodID)ApplicationNotifyDidReceiveMemoryWarningMethod;
 
 @end

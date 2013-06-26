@@ -386,7 +386,9 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
-    
+
+    private int index = -1;
+
     @Override void indexChanged() {
         super.indexChanged();
         // Ideally we would just use the following two lines of code, rather
@@ -394,9 +396,24 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // RT-22428 where all the columns are collapsed.
         // itemDirty = true;
         // requestLayout();
-        updateItem();
-        updateSelection();
-        updateFocus();
+
+        final int oldIndex = index;
+        super.indexChanged();
+        index = getIndex();
+
+        if (isEditing() && index == oldIndex) {
+            // no-op
+            // Fix for RT-31165 - if we (needlessly) update the index whilst the
+            // cell is being edited it will no longer be in an editing state.
+            // This means that in certain (common) circumstances that it will
+            // appear that a cell is uneditable as, despite being clicked, it
+            // will not change to the editing state as a layout of VirtualFlow
+            // is immediately invoked, which forces all cells to be updated.
+        } else {
+            updateItem();
+            updateSelection();
+            updateFocus();
+        }
     }
     
     private boolean isLastVisibleColumn = false;

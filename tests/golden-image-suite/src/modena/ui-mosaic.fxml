@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.collections.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.web.*?>
+
+<AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="935.0" prefWidth="927.0" xmlns:fx="http://javafx.com/fxml">
+  <children>
+    <Button layoutX="40.0" layoutY="41.0" mnemonicParsing="false" text="Button" />
+    <Hyperlink layoutX="134.0" layoutY="40.0" text="Hyperlink" />
+    <ComboBox layoutX="234.0" layoutY="41.0" prefWidth="160.0">
+      <items>
+        <FXCollections fx:factory="observableArrayList">
+          <String fx:value="Item 1" />
+          <String fx:value="Item 2" />
+          <String fx:value="Item 3" />
+        </FXCollections>
+      </items>
+    </ComboBox>
+    <SplitMenuButton layoutX="40.0" layoutY="83.0" mnemonicParsing="false" prefWidth="153.0" text="SplitMenuButton">
+      <items>
+        <MenuItem mnemonicParsing="false" text="Action 1" />
+        <MenuItem mnemonicParsing="false" text="Action 2" />
+      </items>
+    </SplitMenuButton>
+    <ChoiceBox layoutX="234.0" layoutY="85.0" prefWidth="160.0">
+      <items>
+        <FXCollections fx:factory="observableArrayList">
+          <String fx:value="Item 1" />
+          <String fx:value="Item 2" />
+          <String fx:value="Item 3" />
+        </FXCollections>
+      </items>
+    </ChoiceBox>
+    <ProgressIndicator layoutX="435.0" layoutY="45.0" prefHeight="59.0" prefWidth="56.0" progress="0.58" />
+    <TextField layoutX="40.0" layoutY="149.0" prefWidth="160.0" promptText="Textfield" text="Textfield" />
+    <TextArea layoutX="40.0" layoutY="180.0" prefHeight="130.0" prefWidth="160.0" promptText="Text Area" text="Text Area with some text spanning over a few lines." wrapText="true" />
+    <Label layoutX="242.0" layoutY="153.0" text="A label" />
+    <Separator layoutX="41.0" layoutY="129.0" prefWidth="490.0" />
+    <Separator layoutX="217.0" layoutY="151.0" orientation="VERTICAL" prefHeight="158.0" />
+    <Slider layoutX="304.0" layoutY="154.0" prefWidth="230.0" />
+    <RadioButton layoutX="240.0" layoutY="199.0" mnemonicParsing="false" text="r1">
+      <toggleGroup>
+        <ToggleGroup fx:id="toggle1" />
+      </toggleGroup>
+    </RadioButton>
+    <RadioButton layoutX="290.0" layoutY="199.0" mnemonicParsing="false" text="r2" toggleGroup="$toggle1" />
+    <ToggleButton layoutX="341.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle" toggleGroup="$toggle1" />
+    <ToggleButton layoutX="441.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="false" text="Toggle" toggleGroup="$toggle1" />
+    <PasswordField layoutX="240.0" layoutY="243.0" prefWidth="138.0" promptText="Password" />
+    <ComboBox editable="true" layoutX="395.0" layoutY="243.0" prefWidth="136.0001220703125" promptText="Choose">
+      <items>
+        <FXCollections fx:factory="observableArrayList">
+          <String fx:value="Item 1" />
+          <String fx:value="Item 2" />
+          <String fx:value="Item 3" />
+        </FXCollections>
+      </items>
+    </ComboBox>
+    <CheckBox layoutX="471.0" layoutY="294.0" mnemonicParsing="false" selected="true" text="Check" />
+    <ProgressBar layoutX="240.0" layoutY="291.0" prefWidth="200.0" progress="0.3" />
+    <ScrollBar layoutX="41.0" layoutY="329.0" prefWidth="493.0" />
+    <TitledPane animated="false" layoutX="656.0" layoutY="287.0" prefHeight="59.0" prefWidth="216.0" text="Hello World">
+      <content>
+        <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+      </content>
+    </TitledPane>
+    <Accordion layoutX="39.0" layoutY="358.0" minWidth="345.0" prefHeight="554.0" prefWidth="857.0">
+      <expandedPane>
+        <TitledPane id="x1" fx:id="x3" animated="true" expanded="true" text="VBox">
+          <content>
+            <VBox prefHeight="200.0" prefWidth="100.0">
+              <children>
+                <Button mnemonicParsing="false" text="Button" />
+                <Button mnemonicParsing="false" text="Button" />
+              </children>
+            </VBox>
+          </content>
+        </TitledPane>
+      </expandedPane>
+      <panes>
+        <TitledPane id="x2" animated="true" expanded="false" text="Split Pane Padded">
+          <content>
+            <StackPane prefHeight="150.0" prefWidth="200.0">
+              <children>
+                <SplitPane dividerPositions="0.5185185185185185" focusTraversable="true" maxHeight="-Infinity" orientation="VERTICAL" prefHeight="191.0" prefWidth="447.0">
+                  <items>
+                    <SplitPane dividerPositions="0.4969097651421508" focusTraversable="true" prefHeight="172.0" prefWidth="490.0">
+                      <items>
+                        <TreeView prefHeight="130.0" prefWidth="179.0" showRoot="false">
+                          <root>
+                            <TreeItem value="Family">
+                              <children>
+                                <TreeItem value="Grandparent A">
+                                  <children>
+                                    <TreeItem value="Parent A">
+                                      <children>
+                                        <TreeItem value="Child A" />
+                                      </children>
+                                    </TreeItem>
+                                  </children>
+                                </TreeItem>
+                                <TreeItem value="Grandparent B">
+                                  <children>
+                                    <TreeItem value="Parent B">
+                                      <children>
+                                        <TreeItem value="Child B" />
+                                      </children>
+                                    </TreeItem>
+                                  </children>
+                                </TreeItem>
+                                <TreeItem value="Grandparent C">
+                                  <children>
+                                    <TreeItem value="Parent C">
+                                      <children>
+                                        <TreeItem value="Child C" />
+                                      </children>
+                                    </TreeItem>
+                                  </children>
+                                </TreeItem>
+                              </children>
+                            </TreeItem>
+                          </root>
+                        </TreeView>
+                        <TableView prefHeight="130.0" prefWidth="241.0">
+                          <columns>
+                            <TableColumn prefWidth="75.0" text="Column X" />
+                            <TableColumn prefWidth="75.0" text="Column X" />
+                          </columns>
+                        </TableView>
+                      </items>
+                    </SplitPane>
+                    <ListView prefHeight="130.0" prefWidth="200.0" />
+                  </items>
+                </SplitPane>
+              </children>
+              <padding>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+              </padding>
+            </StackPane>
+          </content>
+        </TitledPane>
+        <TitledPane fx:id="x2" animated="true" expanded="false" text="Form">
+          <content>
+            <GridPane id="GridPane" hgap="10.0" prefHeight="139.0" prefWidth="288.0" vgap="10.0">
+              <children>
+                <Button mnemonicParsing="false" text="Submit" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                <TextField prefWidth="160.0" promptText="Name" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                <TextArea prefHeight="75.0" prefWidth="160.0" promptText="Address" text="" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                <Label text="Name" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                <AnchorPane id="AnchorPane" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.valignment="TOP">
+                  <children>
+                    <Label layoutX="55.0" layoutY="5.0" text="Address" />
+                  </children>
+                </AnchorPane>
+              </children>
+              <columnConstraints>
+                <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="111.0" minWidth="10.0" prefWidth="65.0" />
+                <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="216.0" minWidth="10.0" prefWidth="213.0" />
+              </columnConstraints>
+              <rowConstraints>
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+              </rowConstraints>
+            </GridPane>
+          </content>
+        </TitledPane>
+        <TitledPane animated="true" expanded="false" text="Chart">
+          <content>
+            <ScrollPane prefHeight="200.0" prefWidth="200.0">
+              <content>
+                <BubbleChart id="BubbleChart" title="My Bubble Chart" titleSide="TOP">
+                  <xAxis>
+                    <NumberAxis side="BOTTOM" />
+                  </xAxis>
+                  <yAxis>
+                    <NumberAxis side="LEFT" />
+                  </yAxis>
+                </BubbleChart>
+              </content>
+            </ScrollPane>
+          </content>
+        </TitledPane>
+        <TitledPane animated="false" expanded="false" text="Table">
+          <content>
+            <TableView prefHeight="200.0" prefWidth="200.0">
+              <columns>
+                <TableColumn prefWidth="75.0" text="Column X" />
+                <TableColumn prefWidth="75.0" text="Column X" />
+              </columns>
+            </TableView>
+          </content>
+        </TitledPane>
+        <TitledPane fx:id="x1" animated="true" expanded="false" text="Tree">
+          <content>
+            <TreeView prefHeight="200.0" prefWidth="200.0" />
+          </content>
+        </TitledPane>
+        <TitledPane id="x1" animated="true" expanded="false" text="List">
+          <content>
+            <ListView prefHeight="200.0" prefWidth="200.0" />
+          </content>
+        </TitledPane>
+        <TitledPane id="x1" animated="true" expanded="false" text="Text Area">
+          <content>
+            <TextArea prefWidth="200.0" text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse semper varius lobortis. Donec porttitor, diam ut adipiscing sollicitudin, massa mi cursus orci, sed faucibus libero lectus id augue. Cras tristique odio tincidunt massa vehicula sed pellentesque orci pretium. Donec placerat ullamcorper magna cursus volutpat. Nulla facilisi. In faucibus ullamcorper tincidunt. Nam ante ante, consequat vitae egestas non, tincidunt eu mauris. Vivamus aliquam nibh justo, tincidunt vehicula metus. Suspendisse ut dui quis ligula aliquet venenatis. Nullam lacinia lectus non ipsum sagittis at eleifend mauris pretium. Vestibulum nisi metus, rhoncus vitae condimentum a, condimentum fermentum urna. Quisque ut nisi massa. Sed auctor euismod urna eu tincidunt. Mauris facilisis tempor molestie. In in quam in mauris placerat malesuada id a magna.&#10;&#10;Donec ligula velit, ornare nec semper a, aliquet at nibh. Morbi pulvinar sollicitudin ultricies. Donec quis eros eu turpis facilisis placerat. Aenean non neque libero. Vestibulum orci magna, auctor et tempus sit amet, dictum et libero. Praesent dapibus justo eget elit ultrices bibendum. In eget nisl augue, id imperdiet magna. Suspendisse at augue vitae dolor consectetur mollis at et orci. Nam sit amet mi in diam pulvinar ornare. Fusce vitae neque eget urna interdum rhoncus rhoncus id lectus. Vestibulum eget leo non nunc porttitor bibendum. Nullam justo nisi, mattis id adipiscing quis, egestas a lorem. Donec mi ligula, dictum id mattis sed, vehicula vitae metus.&#10;&#10;Etiam id felis in velit blandit dignissim vel non libero. Aenean tristique euismod libero, at faucibus purus aliquam ut. Duis placerat lectus sit amet odio ultrices vestibulum. Aliquam erat volutpat. Praesent odio lorem, commodo eget tristique et, placerat at lorem. Curabitur blandit condimentum magna, at pretium nulla interdum a. Sed magna nulla, malesuada quis dignissim sit amet, eleifend at nisl. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec vehicula vehicula molestie. Phasellus ultricies volutpat cursus. Praesent in leo sit amet arcu accumsan tincidunt. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Vestibulum dignissim hendrerit erat, nec bibendum metus sodales eget. Integer congue felis sit amet dolor sollicitudin nec dapibus nisi tempus. Cras malesuada, mi vitae gravida iaculis, mi dui pharetra risus, ac condimentum urna ipsum blandit elit.&#10;&#10;Aenean pharetra aliquam velit in porta. Phasellus leo erat, iaculis et pharetra non, dignissim eu velit. Sed rutrum tortor vel purus adipiscing vitae ultrices erat sollicitudin. Vestibulum tempus consectetur est id porttitor. Proin hendrerit dictum dapibus. Sed viverra, erat at condimentum molestie, orci purus blandit eros, nec scelerisque nulla justo vitae neque. Sed tempor massa venenatis tortor condimentum viverra. Duis a egestas mauris. Curabitur egestas tincidunt sodales. Sed ornare, nulla at adipiscing ullamcorper, quam orci facilisis erat, non hendrerit nisl enim et lacus.&#10;&#10;Phasellus ac lacus gravida mauris malesuada accumsan id eleifend quam. Pellentesque quis mi urna. Mauris a pulvinar enim. Duis molestie lacinia vehicula. Vivamus semper consequat mauris a placerat. Suspendisse felis massa, suscipit vel aliquet at, pellentesque eget tellus. Sed aliquam tortor felis." wrapText="true" />
+          </content>
+        </TitledPane>
+        <TitledPane id="x1" animated="true" expanded="false" text="HTML Editor">
+          <content>
+            <HTMLEditor htmlText="&lt;html&gt;&lt;head&gt;&lt;/head&gt;&lt;body contenteditable=&quot;true&quot;&gt;&lt;/body&gt;&lt;/html&gt;" minWidth="100.0" prefHeight="200.0" prefWidth="-1.0" />
+          </content>
+        </TitledPane>
+        <TitledPane id="x1" animated="true" expanded="false" text="Empty">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+              <padding>
+                <Insets top="10.0" />
+              </padding>
+            </AnchorPane>
+          </content>
+        </TitledPane>
+        <TitledPane id="x2" animated="true" expanded="false" text="Split Pane No Padding">
+          <content>
+            <SplitPane dividerPositions="0.5065359477124183" focusTraversable="true" maxHeight="1.7976931348623157E308" orientation="VERTICAL" prefHeight="-1.0" prefWidth="-1.0">
+              <items>
+                <SplitPane dividerPositions="0.49705535924617195" focusTraversable="true" prefHeight="172.0" prefWidth="490.0">
+                  <items>
+                    <TreeView prefHeight="130.0" prefWidth="179.0" showRoot="false">
+                      <root>
+                        <TreeItem value="Family">
+                          <children>
+                            <TreeItem value="Grandparent A">
+                              <children>
+                                <TreeItem value="Parent A">
+                                  <children>
+                                    <TreeItem value="Child A" />
+                                  </children>
+                                </TreeItem>
+                              </children>
+                            </TreeItem>
+                            <TreeItem value="Grandparent B">
+                              <children>
+                                <TreeItem value="Parent B">
+                                  <children>
+                                    <TreeItem value="Child B" />
+                                  </children>
+                                </TreeItem>
+                              </children>
+                            </TreeItem>
+                            <TreeItem value="Grandparent C">
+                              <children>
+                                <TreeItem value="Parent C">
+                                  <children>
+                                    <TreeItem value="Child C" />
+                                  </children>
+                                </TreeItem>
+                              </children>
+                            </TreeItem>
+                          </children>
+                        </TreeItem>
+                      </root>
+                    </TreeView>
+                    <TableView prefHeight="130.0" prefWidth="241.0">
+                      <columns>
+                        <TableColumn prefWidth="75.0" text="Column X" />
+                        <TableColumn prefWidth="75.0" text="Column X" />
+                      </columns>
+                    </TableView>
+                  </items>
+                </SplitPane>
+                <ListView prefHeight="130.0" prefWidth="200.0" />
+              </items>
+            </SplitPane>
+          </content>
+        </TitledPane>
+        <fx:reference source="x3" />
+      </panes>
+    </Accordion>
+    <Slider layoutX="541.0" layoutY="34.0" orientation="VERTICAL" prefHeight="240.0" showTickMarks="true" />
+    <ProgressIndicator layoutX="582.0" layoutY="287.0" prefHeight="52.0" prefWidth="46.0" progress="-1.0" />
+    <VBox layoutX="582.0" layoutY="39.0" prefHeight="235.0" prefWidth="315.0" style="-fx-border-color: black; -fx-border-width: 3; -fx-border-insets: -3;&#10;">
+      <children>
+        <MenuBar prefWidth="200.0">
+          <menus>
+            <Menu mnemonicParsing="false" text="File">
+              <items>
+                <MenuItem mnemonicParsing="false" text="Close" />
+              </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="Edit">
+              <items>
+                <MenuItem mnemonicParsing="false" text="Delete" />
+              </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="ABCqypgj">
+              <items>
+                <MenuItem mnemonicParsing="false" text="ABCqypgj" />
+              </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="Help">
+              <items>
+                <MenuItem mnemonicParsing="false" text="About" />
+              </items>
+            </Menu>
+          </menus>
+        </MenuBar>
+        <ToolBar prefWidth="200.0">
+          <items>
+            <Button mnemonicParsing="false" text="New" />
+            <Button mnemonicParsing="false" text="Delete" />
+            <Button mnemonicParsing="false" text="Save" />
+            <Button mnemonicParsing="false" text="Exit" />
+          </items>
+        </ToolBar>
+        <TabPane prefHeight="130.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+          <tabs>
+            <Tab text="Tab 1">
+              <content>
+                <VBox prefHeight="200.0" prefWidth="100.0" spacing="6.0">
+                  <children>
+                    <RadioButton mnemonicParsing="false" text="RadioButton 1">
+                      <toggleGroup>
+                        <ToggleGroup fx:id="toggle2" />
+                      </toggleGroup>
+                    </RadioButton>
+                    <RadioButton mnemonicParsing="false" text="RadioButton 2" toggleGroup="$toggle2" />
+                    <CheckBox mnemonicParsing="false" selected="true" text="CheckBox" />
+                    <CheckBox mnemonicParsing="false" text="CheckBox" />
+                  </children>
+                  <padding>
+                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                  </padding>
+                </VBox>
+              </content>
+            </Tab>
+            <Tab text="Tab 2">
+              <content>
+                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+              </content>
+            </Tab>
+            <Tab text="Tab 3">
+              <content>
+                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+              </content>
+            </Tab>
+          </tabs>
+        </TabPane>
+      </children>
+    </VBox>
+  </children>
+</AnchorPane>

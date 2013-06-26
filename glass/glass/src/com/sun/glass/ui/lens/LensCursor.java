@@ -48,6 +48,7 @@ final class LensCursor extends Cursor {
 
     protected LensCursor(int x, int y, Pixels pixels) {
         super(x, y, pixels);
+        ptr = getNativeCursor();
     }
 
 

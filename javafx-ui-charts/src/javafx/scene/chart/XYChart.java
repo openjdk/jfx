@@ -1258,7 +1258,9 @@ public abstract class XYChart<X,Y> extends Chart {
         public final void setXValue(X value) {
             xValue.set(value);
             // handle the case where this is a init because the default constructor was used
-            if (currentX.get() == null) currentX.setValue(value);
+            // and the case when series is not associated to a chart due to a remove series
+            if (currentX.get() == null ||
+                    (series != null && series.getChart() == null)) currentX.setValue(value);
         }
         /** 
          * The generic data value to be plotted on the X axis.
@@ -1303,7 +1305,10 @@ public abstract class XYChart<X,Y> extends Chart {
         public final void setYValue(Y value) {
             yValue.set(value);
             // handle the case where this is a init because the default constructor was used
-            if (currentY.get() == null) currentY.setValue(value);
+            // and the case when series is not associated to a chart due to a remove series
+            if (currentY.get() == null || 
+                    (series != null && series.getChart() == null)) currentY.setValue(value);
+            
         }
         /** 
          * The generic data value to be plotted on the Y axis.

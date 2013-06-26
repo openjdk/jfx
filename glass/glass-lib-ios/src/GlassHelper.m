@@ -206,6 +206,22 @@
     return _ApplicationNotifyDidResignActiveMethod;
 }
 
++ (jmethodID)ApplicationNotifyDidReceiveMemoryWarningMethod
+{
+    static jmethodID _ApplicationNotifyDidReceiveMemoryWarningMethod = NULL;
+    if (_ApplicationNotifyDidReceiveMemoryWarningMethod == NULL)
+    {
+        GET_MAIN_JENV;
+        _ApplicationNotifyDidReceiveMemoryWarningMethod = (*env)->GetMethodID(env, [GlassHelper ApplicationClass], "notifyDidReceiveMemoryWarning", "()V");
+        GLASS_CHECK_EXCEPTION(env);
+    }
+    if (_ApplicationNotifyDidReceiveMemoryWarningMethod == NULL)
+    {
+        NSLog(@"GlassHelper error: _ApplicationNotifyDidReceiveMemoryWarningMethod == NULL");
+    }
+    return _ApplicationNotifyDidReceiveMemoryWarningMethod;
+}
+
 
 + (jmethodID)ApplicationNotifyQuitMethod
 {
