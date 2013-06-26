@@ -369,6 +369,23 @@ task generate << {
         }
     }
     copy {
+        from "${RTDir}/javafx-android/activity/src",
+             "${RTDir}/javafx-android/vmlauncher/src"
+        into "${FXDir}/modules/graphics/src/main/android"
+        eachFile {f ->
+            fileList.add(f.file);
+        }
+    }
+    copy {
+        from "${RTDir}/javafx-android/activity/jni",
+             "${RTDir}/javafx-android/vmlauncher/jni"
+        into "${FXDir}/modules/graphics/src/main/native-android"
+        include "**/*.c", "**/*.h"
+        eachFile {f ->
+            fileList.add(f.file);
+        }
+    }
+    copy {
         from "${RTDir}/javafx-ui-common/src"
         into "${FXDir}/modules/graphics/src/main/docs"
         include "**/doc-files/**/*"
