@@ -30,13 +30,36 @@
  * as for compiling native code. Nothing in buildSrc should *ever* be shipped with the runtime.
  */
 
+/**
+ * If the given named property is not defined, then this method will define
+ * it with the given defaultValue. Any properties defined by this method can
+ * be substituted on the command line by using -P, or by specifying a
+ * gradle.properties file in the user home dir
+ *
+ * @param name The name of the property to define
+ * @param defaultValue The default value to assign the property
+ */
+void defineProperty(String name, String defaultValue) {
+    if (!project.hasProperty(name)) {
+        project.ext.set(name, defaultValue);
+    }
+}
+
+def closedDir = file("../../rt-closed")
+def buildClosed = closedDir.isDirectory()
+
+if (buildClosed) {
+    File supplementalBuildFile = new File("../../rt-closed/closed-properties.gradle");
+    apply from: supplementalBuildFile
+}
+
 apply plugin: "java"
 
+
 repositories {
-    if ("true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+    if (buildClosed) {
         ivy {
-            // TODO: get this from a closed property file or a system property
-            url "http://jfx.us.oracle.com/shared-webrev/rbair/"
+            url jfxRepositoryURL
             layout "pattern", {
                 artifact "[artifact]-[revision].[ext]"
                 artifact "[artifact].[ext]"

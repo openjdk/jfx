@@ -217,16 +217,13 @@ void setupTools(String name, Closure loader, Closure processor) {
  *                                                                            *
  *****************************************************************************/
 
-// BUILD_CLOSED is used to specify that a "closed" build should be done.
-// It is false by default and is set by a command line property. If true then
-// the closed build and property files will be read from
+// If the ../rt-closed directory exists, then we are doing a closed build.
+// In this case, build and property files will be read from
 // ../rt-closed/closed-build.gradle and ../rt-closed/closed-properties.gradle
 // respectively
 
-def buildClosed = false;
-if (hasProperty("BUILD_CLOSED")) {
-    buildClosed = Boolean.parseBoolean(BUILD_CLOSED);
-}
+def closedDir = file("../rt-closed")
+def buildClosed = closedDir.isDirectory()
 ext.BUILD_CLOSED = buildClosed
 
 // These variables indicate what platform is running the build. Is
@@ -267,7 +264,6 @@ defineProperty("LIBRARY_STUB", IS_MAC ? cygpath("$STUB_RUNTIME/lib") :
                                cygpath("$STUB_RUNTIME/lib/$OS_ARCH"))
 ext.BINARY_STUB = "".equals(BINARY_STUB) ? null : files(BINARY_STUB)
 
-def closedDir = file("../rt-closed");
 def supplementalPropertyFile = file("$closedDir/closed-properties.gradle");
 def supplementalBuildFile = file("$closedDir/closed-build.gradle");
 
@@ -750,7 +746,7 @@ allprojects {
     // "artifact" in the pattern below. Note that the closed builds use different repositories
     // so if you are debugging a closed-build artifact related build issue, check out the
     // closed gradle file instead.
-    if (!"true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+    if (!BUILD_CLOSED) {
         repositories {
             mavenCentral()
             ivy {
@@ -1248,7 +1244,7 @@ project(":fxpackager") {
     }
     // fxpackager has a dependency on ant in order to build the ant jar,
     // and as such needs to point to the apache binary repository
-    if (!"true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+    if (!BUILD_CLOSED) {
         repositories {
             maven {
                 url "https://repository.apache.org"
@@ -1775,9 +1771,6 @@ compileTargets { t ->
       <task-names>
         <name must-exist="no">build</name>
       </task-names>
-      <task-args>
-        <arg>-PBUILD_CLOSED=true</arg>
-      </task-args>
       <task-jvm-args/>
     </task>
   </built-in-tasks>
@@ -1788,9 +1781,6 @@ compileTargets { t ->
       <task-names>
         <name must-exist="yes">tasks</name>
       </task-names>
-      <task-args>
-        <arg>-PBUILD_CLOSED=true</arg>
-      </task-args>
       <task-jvm-args/>
     </task>
   </common-tasks>
