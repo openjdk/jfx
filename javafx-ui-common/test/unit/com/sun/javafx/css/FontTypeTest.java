@@ -201,7 +201,7 @@ public class FontTypeTest {
 
     }
 
-    @Test public void test_RT_25355_weightFirstInheritedShorthand() {
+    @org.junit.Ignore("Pending RT-31305") @Test public void test_RT_25355_weightFirstInheritedShorthand() {
 
         Text txt = new Text("test_RT_25355");
         txt.setStyle("-fx-font-weight: bold;");
