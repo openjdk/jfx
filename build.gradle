@@ -2211,8 +2211,6 @@ if (BINARY_STUB != null) {
     JFXRT_CP += BINARY_STUB 
 }
 
-// TODO: better place for this ?
-ext.APPS_ARTIFACTS="$jfxArtifactsDir/apps"
 
 childProjects["apps"].subprojects { 
     afterEvaluate { project ->
@@ -2237,7 +2235,7 @@ childProjects["apps"].subprojects {
                 def cptask = project.task('copyAppsArtifacts', type: Copy ) {
                 dependsOn project.getPath() + ":jar"
 		    from project.jar.archivePath
-		    into rootProject.APPS_ARTIFACTS
+		    into "$rootProject.jfxArtifactsDir/apps/ga-samples"
 		}
                 rootProject.apps.dependsOn(cptask)
 	    }

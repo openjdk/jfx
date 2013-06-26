@@ -1,5 +1,4 @@
 
-
 apply plugin:'application'
 
 def mainClassName = "ensemble.EnsembleApp"
@@ -10,10 +9,26 @@ def FileCollection apachecp = files(
 
 sourceSets {
     main {
+        java {
+            srcDirs 'src/app/java',  
+                    'src/generated/java', 
+                    'src/samples/java'
+        }
+        resources {
+            srcDirs 'src/app/resources', 
+                    'src/generated/resources', 
+                    'src/samples/resources'
+        }
         compileClasspath += apachecp
     }
-} 
+}
 
 jar {
     manifest.attributes("Main-Class": mainClassName)
+    // add back in the sample sources....
+    from fileTree('src/samples/java')
+    // and the Apache lucerne contents
+    apachecp.each { from zipTree(it) } 
+    exclude 'META-INF/*'
 }
+
