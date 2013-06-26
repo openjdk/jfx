@@ -45,11 +45,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxListCell;
+import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Callback;
 
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -614,5 +617,33 @@ public class ListViewTest {
         Toolkit.getToolkit().firePulse();
         final double afterEmptiedWidth = listView.prefWidth(-1);
         assertEquals(initialWidth, afterEmptiedWidth, 0.00);
+    }
+
+    @Test public void test_rt31165() {
+        final ObservableList names = FXCollections.observableArrayList("Adam", "Alex", "Alfred", "Albert");
+        final ObservableList data = FXCollections.observableArrayList();
+        for (int i = 0; i < 18; i++) {
+            data.add(""+i);
+        }
+
+        final ListView listView = new ListView(data);
+        listView.setPrefSize(200, 250);
+        listView.setEditable(true);
+        listView.setCellFactory(ComboBoxListCell.forListView(names));
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(listView, 1);
+        assertEquals("1", cell.getText());
+        assertFalse(cell.isEditing());
+
+        listView.edit(1);
+
+        assertEquals(1, listView.getEditingIndex());
+        assertTrue(cell.isEditing());
+
+        VirtualFlowTestUtils.getVirtualFlow(listView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(1, listView.getEditingIndex());
+        assertTrue(cell.isEditing());
     }
 }

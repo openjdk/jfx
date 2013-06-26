@@ -1,0 +1,90 @@
+/*
+ * Copyright (c) 2008, 2012 Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+ #TestAppToolbar > * > .label {
+     -fx-font-size: 10px;
+ }
+#SamplePageToolBar {
+    -fx-base: #666;
+    -fx-background: #444;
+}
+#SamplePageScrollPane {
+    -fx-background-insets: 0,0;
+    -fx-padding: 0;
+}
+.section-label {
+    -fx-font-weight: normal;
+    -fx-text-fill: derive(-fx-text-background-color,30%);
+}
+.section-border {
+    -fx-border-color: ladder(
+        -fx-background,
+        derive(-fx-background,10%) 20%,
+        derive(-fx-background,-10%)  21%
+     );
+    -fx-padding: 20;
+}
+/*.root {
+    -fx-text-base-color:rgba(255, 255, 255,0.5);
+    -fx-text-inner-color:rgba(255, 255, 255,0.5);
+}*/
+/*.text {
+    visibility:false;
+}*/
+.macWindow {
+    -fx-border-image-source: url("mac-window-frame.png"); 
+    -fx-border-image-slice: 49 49 71 49;
+    -fx-border-image-width: 49 49 71 49;
+    -fx-border-image-repeat: stretch;
+    -fx-font: 13px "Lucida Grande";
+}
+.windows7Window {
+    -fx-border-image-source: url("windows7-window-frame.png"); 
+    -fx-border-image-slice: 49 49 71 49;
+    -fx-border-image-width: 49 49 71 49;
+    -fx-border-image-repeat: stretch;
+    -fx-font: 12px "Segoe UI";
+}
+.windows8Window {
+    -fx-border-image-source: url("windows8-window-frame.png"); 
+    -fx-border-image-slice: 49 49 71 49;
+    -fx-border-image-width: 49 49 71 49;
+    -fx-border-image-repeat: stretch;
+    -fx-font: 12px "Segoe UI";
+}
+.ubuntuWindow {
+    -fx-border-image-source: url("ubuntu-window-frame.png"); 
+    -fx-border-image-slice: 49 49 71 49;
+    -fx-border-image-width: 49 49 71 49;
+    -fx-border-image-repeat: stretch;
+    /*-fx-font: 15px "Ubuntu";*/
+    -fx-font: 13px "Lucida Sans";
+}

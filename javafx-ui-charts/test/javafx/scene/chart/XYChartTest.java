@@ -34,10 +34,13 @@ import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import com.sun.javafx.css.parser.CSSParser;
 import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 
@@ -108,5 +111,20 @@ public class XYChartTest extends ChartTestBase {
                 assertEquals(((Text)n).getFill(), Color.web("#444444"));
             }
         }
+    }
+    
+    @Test public void testAddAxisWithoutSpecifyingSide() {
+        final NumberAxis axis = new NumberAxis(0, 12, 1);
+        axis.setMaxWidth(Double.MAX_VALUE);
+        axis.setPrefWidth(400);
+        pulse();
+        StackPane layout = new StackPane();
+        layout.getChildren().addAll(axis);
+        pulse();
+        setTestScene(new Scene(layout));
+        setTestStage(new Stage());
+        getTestStage().setScene(getTestScene());
+        getTestStage().show();
+        pulse();
     }
 }

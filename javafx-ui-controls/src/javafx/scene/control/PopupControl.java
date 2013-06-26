@@ -25,8 +25,6 @@
 
 package javafx.scene.control;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -1165,7 +1163,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                         //
                         if (get() != null) {
                             if (!get().equals(currentSkinClassName)) {
-                                loadSkinClass();
+                                Control.loadSkinClass(PopupControl.this, skinClassName.get());
                             }
                         // CSS should not set skin to null
     //                    } else {
@@ -1195,76 +1193,6 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
         protected void setSkinClassName(String skinClassName) {
             skinClassNameProperty().set(skinClassName);
-        }
-
-        private void loadSkinClass() {
-            if (skinClassName == null
-                || skinClassName.get() == null
-                || skinClassName.get().isEmpty()) {
-                final String msg =
-                    "Empty -fx-skin property specified for popup control " + this;
-                final List<CssError> errors = StyleManager.getErrors();
-                if (errors != null) {
-                    CssError error = new CssError(msg);
-                    errors.add(error); // RT-19884
-                }
-                Logging.getControlsLogger().severe(msg);
-                return;
-            }
-
-            try {
-                final Class<?> skinClass = Control.loadClass(skinClassName.get(), this);
-                Constructor<?>[] constructors = skinClass.getConstructors();
-                Constructor<?> skinConstructor = null;
-                for (Constructor<?> c : constructors) {
-                    Class<?>[] parameterTypes = c.getParameterTypes();
-                    if (parameterTypes.length == 1 && PopupControl.class.isAssignableFrom(parameterTypes[0])) {
-                        skinConstructor = c;
-                        break;
-                    }
-                }
-
-                if (skinConstructor == null) {
-                    final String msg =
-                        "No valid constructor defined in '" + skinClassName
-                        + "' for popup control " + this
-                        + ".\r\nYou must provide a constructor that accepts a single "
-                        + "PopupControl parameter in " + skinClassName + ".";
-                    final List<CssError> errors = StyleManager.getErrors();
-                    if (errors != null) {
-                        CssError error = new CssError(msg);
-                        errors.add(error); // RT-19884
-                    }
-                    Logging.getControlsLogger().severe(msg);
-                    return;
-                } else {
-                    Skin<?> skinInstance = (Skin<?>) skinConstructor.newInstance(PopupControl.this);
-                    // Do not call setSkin here since it has the side effect of
-                    // also setting the skinClassName!
-                    skinProperty().set(skinInstance);
-                }
-
-            } catch (InvocationTargetException e) {
-                final String msg =
-                    "Failed to load skin '" + skinClassName
-                    + "' for popup control " + this;
-                final List<CssError> errors = StyleManager.getErrors();
-                if (errors != null) {
-                    CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
-                    errors.add(error); // RT-19884
-                }
-                Logging.getControlsLogger().severe(msg, e.getCause());
-            } catch (Exception e) {
-                final String msg =
-                    "Failed to load skin '" + skinClassName
-                    + "' for popup control " + this;
-                final List<CssError> errors = StyleManager.getErrors();
-                if (errors != null) {
-                    CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
-                    errors.add(error); // RT-19884
-                }
-                Logging.getControlsLogger().severe(msg, e.getCause());
-            }
         }
 
         /**

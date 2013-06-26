@@ -321,8 +321,38 @@ public class PseudoClassTest {
         }
                         
         assertTrue(bStates.containsAll(aStates) == false);
-    }        
-        
+    }
+
+    @Test
+    public void testPseudoClassState_containsAll_whenOneSetEmpty() {
+
+        String[] setA = new String[] {
+                "zero", "one", "two", "three"
+        };
+
+        PseudoClassState aStates = new PseudoClassState();
+        for(int n=0; n<setA.length; n++) {
+            aStates.add(PseudoClass.getPseudoClass(setA[n]));
+        }
+
+        PseudoClassState bStates = new PseudoClassState();
+
+        assertTrue(bStates.containsAll(aStates) == false);
+        assertTrue(aStates.containsAll(bStates));
+
+    }
+
+    @Test
+    public void testPseudoClassState_containsAll_whenBothSetsEmpty() {
+
+        PseudoClassState aStates = new PseudoClassState();
+        PseudoClassState bStates = new PseudoClassState();
+
+        assertTrue(bStates.containsAll(aStates));
+        assertTrue(aStates.containsAll(bStates));
+
+    }
+
     @Test
     public void testPseudoClassState_size() {
         

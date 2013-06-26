@@ -20,6 +20,22 @@
         </ant>
     </target>
 
+    <target name="golden-image-create">
+        <ant antfile="golden-image-suite/build.xml" target="golden-image-create" inheritAll="false"/>
+    </target>
+
+    <target name="golden-image-create-clean">
+        <ant antfile="golden-image-suite/build.xml" target="golden-image-create-clean" inheritAll="false"/>
+    </target>
+
+    <target name="golden-image-test">
+        <ant antfile="golden-image-suite/build.xml" target="golden-image-test" inheritAll="false"/>
+    </target>
+
+    <target name="golden-image-test-clean">
+        <ant antfile="golden-image-suite/build.xml" target="golden-image-test-clean" inheritAll="false"/>
+    </target>
+
     <target name="clean">
         <ant antfile="graphics/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="app-lifecycle/build.xml" target="clean" inheritAll="false"/>

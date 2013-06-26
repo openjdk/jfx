@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.collections.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+
+<VBox prefHeight="230.0" prefWidth="300.0" style="" xmlns:fx="http://javafx.com/fxml">
+  <children>
+    <MenuBar id="MenuBar" prefWidth="200.0">
+      <menus>
+        <Menu mnemonicParsing="false" text="File">
+          <items>
+            <MenuItem mnemonicParsing="false" text="Close" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="Edit">
+          <items>
+            <MenuItem mnemonicParsing="false" text="Delete" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="Help">
+          <items>
+            <MenuItem mnemonicParsing="false" text="About" />
+          </items>
+        </Menu>
+      </menus>
+    </MenuBar>
+    <ToolBar prefWidth="200.0">
+      <items>
+        <Button mnemonicParsing="false" text="New" />
+        <Button id="DeleteButton" mnemonicParsing="false" text="Delete" />
+        <Button mnemonicParsing="false" text="Save" />
+        <Button mnemonicParsing="false" text="Exit" />
+      </items>
+    </ToolBar>
+    <TabPane prefHeight="130.0" prefWidth="200.0" style="" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+      <tabs>
+        <Tab text="Example Controls">
+          <content>
+            <GridPane id="GridPane" hgap="10.0" style="" vgap="10.0">
+              <children>
+                <RadioButton mnemonicParsing="false" text="RadioButton 1" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                  <toggleGroup>
+                    <ToggleGroup fx:id="toggle2" />
+                  </toggleGroup>
+                </RadioButton>
+                <RadioButton id="RadioButton2" mnemonicParsing="false" selected="true" text="RadioButton 2" toggleGroup="$toggle2" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                <CheckBox mnemonicParsing="false" selected="true" text="CheckBox" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                <CheckBox mnemonicParsing="false" text="CheckBox" GridPane.columnIndex="0" GridPane.rowIndex="3" GridPane.valignment="TOP" />
+                <HBox id="HBox" alignment="CENTER" spacing="5.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="4">
+                  <children>
+                    <ProgressBar maxWidth="1.7976931348623157E308" prefWidth="-1.0" progress="0.68" HBox.hgrow="ALWAYS">
+                      <HBox.margin>
+                        <Insets right="5.0" />
+                      </HBox.margin>
+                    </ProgressBar>
+                    <Button mnemonicParsing="false" text="Cancel" />
+                    <Button defaultButton="true" mnemonicParsing="false" text="Save..." />
+                  </children>
+                </HBox>
+                <TextArea maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="70.0" prefWidth="120.0" text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent vulputate sem id velit sagittis quis imperdiet nunc imperdiet. Etiam consequat purus nec nibh viverra aliquam. Donec urna odio, posuere quis placerat non, tristique a augue. In hac habitasse platea dictumst. Cras eget turpis dui. Pellentesque vel leo arcu, et blandit quam. Integer congue tempus purus, ac rhoncus neque semper nec. Integer elit mauris, dictum non sodales sed, semper in urna. Mauris rutrum faucibus faucibus. Praesent id dui dignissim massa mollis tempus in ut mi.&#10;&#10;Curabitur augue turpis, lacinia ac vehicula id, porta et nisl. Quisque id porttitor eros. Aenean eget fringilla nisi. Etiam posuere cursus pharetra. Aenean aliquam nisl nec sapien viverra id eleifend velit elementum. In et arcu in ligula vestibulum rhoncus. Integer nec odio odio. Nulla scelerisque faucibus urna, sit amet viverra arcu congue eget. Aliquam ut sapien justo. Mauris eu velit massa. Pellentesque tristique aliquet porttitor. Vestibulum rhoncus tristique arcu, sed consectetur ante molestie nec. Nunc egestas posuere fermentum. Sed est urna, tempus sed tempor ac, pulvinar vel dui. Morbi tortor mi, semper non aliquam at, consectetur eu quam." wrapText="true" GridPane.columnIndex="1" GridPane.columnSpan="1" GridPane.rowIndex="0" GridPane.rowSpan="4" />
+              </children>
+              <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" />
+              </columnConstraints>
+              <padding>
+                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+              </padding>
+              <rowConstraints>
+                <RowConstraints maxHeight="14.0" minHeight="10.0" prefHeight="14.0" vgrow="SOMETIMES" />
+                <RowConstraints maxHeight="15.0" minHeight="10.0" prefHeight="15.0" vgrow="SOMETIMES" />
+                <RowConstraints maxHeight="15.0" minHeight="10.0" prefHeight="15.0" vgrow="SOMETIMES" />
+                <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" prefHeight="15.0" vgrow="ALWAYS" />
+                <RowConstraints maxHeight="20.0" minHeight="10.0" prefHeight="20.0" vgrow="NEVER" />
+              </rowConstraints>
+            </GridPane>
+          </content>
+        </Tab>
+        <Tab text="Tab 2">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </Tab>
+        <Tab text="Tab 3">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </Tab>
+      </tabs>
+    </TabPane>
+  </children>
+</VBox>

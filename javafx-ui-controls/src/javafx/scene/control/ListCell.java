@@ -299,13 +299,28 @@ public class ListCell<T> extends IndexedCell<T> {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
+    private int index = -1;
+
     /** {@inheritDoc} */
     @Override void indexChanged() {
+        final int oldIndex = index;
         super.indexChanged();
-        updateItem();
-        updateSelection();
-        updateFocus();
+        index = getIndex();
+
+        if (isEditing() && index == oldIndex) {
+            // no-op
+            // Fix for RT-31165 - if we (needlessly) update the index whilst the
+            // cell is being edited it will no longer be in an editing state.
+            // This means that in certain (common) circumstances that it will
+            // appear that a cell is uneditable as, despite being clicked, it
+            // will not change to the editing state as a layout of VirtualFlow
+            // is immediately invoked, which forces all cells to be updated.
+        } else {
+            updateItem();
+            updateSelection();
+            updateFocus();
+        }
     }
 
     /** {@inheritDoc} */
