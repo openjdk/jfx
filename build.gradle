@@ -264,11 +264,11 @@ defineProperty("LIBRARY_STUB", IS_MAC ? cygpath("$STUB_RUNTIME/lib") :
                                cygpath("$STUB_RUNTIME/lib/$OS_ARCH"))
 ext.BINARY_STUB = "".equals(BINARY_STUB) ? null : files(BINARY_STUB)
 
-def supplementalPropertyFile = file("$closedDir/closed-properties.gradle");
+def supplementalPreBuildFile = file("$closedDir/closed-pre-build.gradle");
 def supplementalBuildFile = file("$closedDir/closed-build.gradle");
 
 if (BUILD_CLOSED) {
-    apply from: supplementalPropertyFile
+    apply from: supplementalPreBuildFile
 }
 
 // COMPILE_WEBKIT specifies whether to build all of webkit. COMPILE_GSTREAMER
