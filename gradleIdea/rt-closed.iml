@@ -56,7 +56,7 @@
       <src_folder value="file://$MODULE_DIR$/../../../rt-closed/toys/ZBufferTest/src" expected_position="48" />
     </src_description>
   </component>
-  <component name="NewModuleRootManager" inherit-compiler-output="false">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
     <output url="file://$MODULE_DIR$/../../../rt-closed/bin" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../../rt-closed">
@@ -127,15 +127,6 @@
     </orderEntry>
     <orderEntry type="module" module-name="deploy" />
     <orderEntry type="inheritedJdk" />
-    <orderEntry type="module-library">
-      <library name="junit4">
-        <CLASSES>
-          <root url="jar://$APPLICATION_HOME_DIR$/lib/junit-4.10.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
   </component>
 </module>
 

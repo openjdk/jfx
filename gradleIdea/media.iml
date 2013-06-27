@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" inherit-compiler-output="false">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
     <output url="file://$MODULE_DIR$/../../modules/media/bin" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../modules/media">
@@ -8,15 +8,6 @@
       <sourceFolder url="file://$MODULE_DIR$/../../modules/media/test/demos/JavaTestApps/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../../modules/media/test/perf/JFXMediaSystemTestApp/src" isTestSource="false" />
     </content>
-    <orderEntry type="module-library">
-      <library name="junit4">
-        <CLASSES>
-          <root url="jar://$APPLICATION_HOME_DIR$/lib/junit-4.10.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="rt-closed" exported="" />

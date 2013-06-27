@@ -9,7 +9,7 @@
       <src_folder value="file://$MODULE_DIR$/../../../deploy/javafx-launcher-demoapp/src" expected_position="3" />
     </src_description>
   </component>
-  <component name="NewModuleRootManager" inherit-compiler-output="false">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
     <output url="file://$MODULE_DIR$/../../../deploy/bin" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../../deploy">

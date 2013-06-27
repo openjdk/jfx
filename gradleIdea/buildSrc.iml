@@ -12,13 +12,21 @@
       <src_folder value="file://$MODULE_DIR$/../../buildSrc/src/test/java" expected_position="2" />
     </src_description>
   </component>
-  <component name="NewModuleRootManager" inherit-compiler-output="false">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
     <output url="file://$MODULE_DIR$/../../buildSrc/bin" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../buildSrc">
       <sourceFolder url="file://$MODULE_DIR$/../../buildSrc/build/generated-src/antlr" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../../buildSrc/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../../buildSrc/src/test/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../buildSrc/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/../../buildSrc/src/test/resources" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/../../buildSrc/.gradle" />
+      <excludeFolder url="file://$MODULE_DIR$/../../buildSrc/build/classes" />
+      <excludeFolder url="file://$MODULE_DIR$/../../buildSrc/build/dependency-cache" />
+      <excludeFolder url="file://$MODULE_DIR$/../../buildSrc/build/libs" />
+      <excludeFolder url="file://$MODULE_DIR$/../../buildSrc/build/resources" />
+      <excludeFolder url="file://$MODULE_DIR$/../../buildSrc/build/test-results" />
+      <excludeFolder url="file://$MODULE_DIR$/../../buildSrc/build/tmp" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library" exported="">
@@ -67,7 +75,7 @@
       </library>
     </orderEntry>
     <orderEntry type="inheritedJdk" />
-    <orderEntry type="module-library">
+    <orderEntry type="module-library" exported="">
       <library name="junit4">
         <CLASSES>
           <root url="jar://$APPLICATION_HOME_DIR$/lib/junit-4.10.jar!/" />
