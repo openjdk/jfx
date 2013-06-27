@@ -46,8 +46,8 @@ void addToMoveList(FileCopyDetails f, File destinationDir) {
 }
 
 task generate << {
-    def excludeFromSource = ["META-INF/**", "**/doc-files/**/*", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert", "**/*.wav", "**/*.zip"]
-    def includeInResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "**/*.txt", "**/*.fxml", "**/*.js", "**/*.frag", "**/*.vert", "**/*.wav", "**/*.zip"]
+    def excludeFromSource = ["META-INF/**", "**/doc-files/**/*", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert", "**/*.wav", "**/*.zip", "**/*.dat"]
+    def includeInResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "**/*.txt", "**/*.fxml", "**/*.js", "**/*.frag", "**/*.vert", "**/*.wav", "**/*.zip", "**/*.dat"]
     def excludeFromResources = ["**/doc-files/**/*"]
 
     // Copy over the new gradle build files, LICENSE, and README
