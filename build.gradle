@@ -202,6 +202,15 @@ void setupTools(String name, Closure loader, Closure processor) {
     }
 }
 
+/**
+ * Fails the build with the specified error message
+ *
+ * @param msg the reason for the failure
+ */
+void fail(String msg) {
+    throw new GradleException("FAIL: " + msg);
+}
+
 /******************************************************************************
  *                                                                            *
  *                   Definition of project properties                         *
@@ -1576,6 +1585,11 @@ task findbugs() {
 
 // TODO: consider moving the "public-sdk" portion of this task here
 task publicExports() {
+    doFirst {
+        if (!BUILD_JAVADOC) {
+            fail("publicExports task requires: -PBUILD_JAVADOC=true")
+        }
+    }
     dependsOn(sdk)
     doLast {
         if (!BUILD_CLOSED) {
@@ -1594,6 +1608,11 @@ task perf() {
 }
 
 task zips() {
+    doFirst {
+        if (!BUILD_JAVADOC) {
+            fail("zips task requires: -PBUILD_JAVADOC=true")
+        }
+    }
     dependsOn(sdk,publicExports,apps,perf)
     doLast {
         if (!BUILD_CLOSED) {
