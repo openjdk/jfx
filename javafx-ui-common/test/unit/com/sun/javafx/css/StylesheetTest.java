@@ -29,8 +29,11 @@ import javafx.css.StyleOrigin;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
+import javafx.css.StyleableProperty;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.*;
@@ -218,6 +221,39 @@ public class StylesheetTest {
             fail("Exception not expected: " + e.toString());
         }
         
+    }
+
+    @Test public void testRT_31316() {
+
+        try {
+
+            Rectangle rect = new Rectangle(50,50);
+            rect.setStyle("-fx-base: red; -fx-fill: -fx-base;");
+            rect.setFill(Color.GREEN);
+
+            Group root = new Group();
+            root.getChildren().add(rect);
+            Scene scene = new Scene(root, 500, 500);
+
+            root.impl_processCSS(true);
+
+            // Shows inline style works.
+            assertEquals(Color.RED, rect.getFill());
+
+            // loop in style!
+            ((StyleableProperty<Paint>)rect.fillProperty()).applyStyle(null, Color.BLACK);
+            rect.setStyle("-fx-base: -fx-fill; -fx-fill: -fx-base;");
+            root.impl_processCSS(true);
+
+            // Shows value was left alone
+            assertEquals(Color.BLACK, rect.getFill());
+
+
+        } catch (Exception e) {
+            // The code generates an IllegalArgumentException that should never reach here
+            fail("Exception not expected: " + e.toString());
+        }
+
     }
     
 }
