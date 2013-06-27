@@ -156,10 +156,19 @@ task generate << {
         }
     }
 
-    // Create the NetBeans projects
+    // Create the NetBeans projects files
     copy {
         from "$RTDir/gradleNetBeans"
-        into "$FXDir/netbeansProjs"
+        into "$FXDir/ide/netbeans"
+        eachFile { f ->
+            addToMoveList(f, destinationDir)
+        }
+    }
+    
+    // Create the Idea project files
+    copy {
+        from "$RTDir/gradleIdea"
+        into "$FXDir/ide/idea"
         eachFile { f ->
             addToMoveList(f, destinationDir)
         }

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="EclipseModuleManager">
+    <libelement value="jar://$MODULE_DIR$/../../modules/builders/build/libs/builders.jar!/" />
+    <src_description expected_position="1">
+      <src_folder value="file://$MODULE_DIR$/../../modules/builders/src/test/java" expected_position="1" />
+    </src_description>
+  </component>
+  <component name="NewModuleRootManager" inherit-compiler-output="false">
+    <output url="file://$MODULE_DIR$/../../modules/builders/bin" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../modules/builders">
+      <sourceFolder url="file://$MODULE_DIR$/../../modules/builders/src/test/java" isTestSource="false" />
+    </content>
+    <orderEntry type="module-library" exported="">
+      <library name="builders.jar">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../../modules/builders/build/libs/builders.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="file://$MODULE_DIR$/../../modules/builders/src/main/java" />
+        </SOURCES>
+      </library>
+    </orderEntry>
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="base" exported="" />
+    <orderEntry type="module" module-name="controls" exported="" />
+    <orderEntry type="module" module-name="graphics" exported="" />
+    <orderEntry type="module" module-name="swing" exported="" />
+    <orderEntry type="module" module-name="swt" exported="" />
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="module" module-name="web" exported="" />
+    <orderEntry type="module-library">
+      <library name="junit4">
+        <CLASSES>
+          <root url="jar://$APPLICATION_HOME_DIR$/lib/junit-4.10.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+  </component>
+</module>
+
