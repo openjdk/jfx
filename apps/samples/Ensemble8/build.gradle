@@ -25,10 +25,20 @@ sourceSets {
 
 jar {
     manifest.attributes("Main-Class": mainClassName)
-    // add back in the sample sources....
+
+    // add in the sample sources....
     from fileTree('src/samples/java')
-    // and the Apache lucerne contents
-    apachecp.each { from zipTree(it) } 
-    exclude 'META-INF/*'
+
+    // Note: this would be the "gradle" way to add in the Lucene jars
+    // BUT we run into total path length on Windows with the temp file in ./build
+    //apachecp.each { from zipTree(it) } 
+    //exclude 'META-INF/*'
+}
+
+// Merge the Apache Lucene jars into our master jar.
+jar.doLast() {
+    ant.zip(destfile: jar.archivePath, update: true, duplicate: "preserve") {
+        zipgroupfileset(dir: new File("./lib"), includes:"*.jar")
+    }
 }
 

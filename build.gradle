@@ -2217,19 +2217,26 @@ childProjects["apps"].subprojects {
 	// this check is to make sure we are using a java or application plugin
         // in our child projects of ./apps
         if (project.hasProperty("jar") && project.hasProperty("compileJava")) {
-            // augment the classpath with our build system classpath 
-            // which will include our local jfxrt.jar
-           project.compileJava {
-               // TODO: don't know how to do this correctly
-	       //dependsOn project(":graphics").classes, project(":controls").classes, project(":base").classes
-	       doFirst {
-		   classpath = rootProject.JFXRT_CP + 
-                       sourceSets.main.compileClasspath
-	       }
-            }
-            test.exclude("**/*");
+           def srcdir = new File ("$project.projectDir/src");
 
-            def srcdir = new File ("$project.projectDir/src");
+           if (srcdir.exists()) {
+               // augment the classpath with our build system classpath 
+               // which will include our local jfxrt.jar
+               project.compileJava {
+                   // TODO: don't know how to do this correctly
+                   //dependsOn project(":graphics").classes, project(":controls").classes, project(":base").classes
+                   doFirst {
+                       classpath = rootProject.JFXRT_CP + 
+                           sourceSets.main.compileClasspath
+                   }
+                }
+                test.exclude("**/*");
+            } else {
+                // no source, but still a 'java' plugin, so just disable it
+                project.tasks.all {
+                    it.enabled = false
+                }
+            }
 
             if (BUILD_CLOSED && srcdir.exists()) {
                 def cptask = project.task('copyAppsArtifacts', type: Copy ) {
