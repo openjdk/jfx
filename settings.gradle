@@ -35,10 +35,8 @@ project(":builders").projectDir = file("modules/builders")
 project(":designTime").projectDir = file("modules/designTime")
 project(":fxpackager").projectDir = file("modules/fxpackager")
 
-def buildClosed = false;
-if (hasProperty("BUILD_CLOSED")) {
-    buildClosed = Boolean.parseBoolean(BUILD_CLOSED);
-}
+def closedDir = file("../rt-closed")
+def buildClosed = closedDir.isDirectory()
 
 if (buildClosed) {
     File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");

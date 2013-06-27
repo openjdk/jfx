@@ -38,8 +38,8 @@ if (project.hasProperty('VERBOSE')) {
 }
 
 task generate << {
-    def excludeFromSource = ["META-INF/**", "**/doc-files/**/*", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert"]
-    def includeInResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "**/*.txt", "**/*.fxml", "**/*.js", "**/*.frag", "**/*.vert"]
+    def excludeFromSource = ["META-INF/**", "**/doc-files/**/*", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/*.frag", "**/*.vert", "**/*.wav", "**/*.zip"]
+    def includeInResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.gif", "**/*.txt", "**/*.fxml", "**/*.js", "**/*.frag", "**/*.vert", "**/*.wav", "**/*.zip"]
     def excludeFromResources = ["**/doc-files/**/*"]
 
     // Copy over the new gradle build files, LICENSE, and README
@@ -108,24 +108,26 @@ task generate << {
             fileList.add(f.file);
         }
     }
-    copy {
-        from "$RTDir/apps/samples/Ensemble8/src"
-        into "$FXDir/apps/samples/Ensemble8/src/main/java"
-        exclude excludeFromSource
-        exclude "build.xml"
-        exclude "generated/ensemble/search/index/"
-        eachFile { f ->
-            fileList.add(f.file);
+    [ "app", "compiletime",  "generated",  "samples" ].each { group->
+        copy {
+            from "$RTDir/apps/samples/Ensemble8/src/$group"
+            into "$FXDir/apps/samples/Ensemble8/src/$group/java"
+            exclude excludeFromSource
+            exclude "build.xml"
+            exclude "ensemble/search/index/*"
+            eachFile { f ->
+                fileList.add(f.file);
+            }
         }
-    }
-    copy {
-        from "$RTDir/apps/samples/Ensemble8/src"
-        into "$FXDir/apps/samples/Ensemble8/src/main/resources"
-        include includeInResources
-        exclude excludeFromResources
-        include "generated/ensemble/search/index/"
-        eachFile { f ->
-            fileList.add(f.file);
+        copy {
+            from "$RTDir/apps/samples/Ensemble8/src/$group"
+            into "$FXDir/apps/samples/Ensemble8/src/$group/resources"
+            include includeInResources
+            exclude excludeFromResources
+            include "ensemble/search/index/*"
+            eachFile { f ->
+                fileList.add(f.file);
+            }
         }
     }
     copy {
@@ -135,6 +137,7 @@ task generate << {
             fileList.add(f.file);
         }
     }
+    //------------------------------------------------------------
 
     // Create the buildSrc project
     copy {
@@ -365,6 +368,23 @@ task generate << {
         include includeInResources
         exclude excludeFromResources
         eachFile { f ->
+            fileList.add(f.file);
+        }
+    }
+    copy {
+        from "${RTDir}/javafx-android/activity/src",
+             "${RTDir}/javafx-android/vmlauncher/src"
+        into "${FXDir}/modules/graphics/src/main/android"
+        eachFile {f ->
+            fileList.add(f.file);
+        }
+    }
+    copy {
+        from "${RTDir}/javafx-android/activity/jni",
+             "${RTDir}/javafx-android/vmlauncher/jni"
+        into "${FXDir}/modules/graphics/src/main/native-android"
+        include "**/*.c", "**/*.h"
+        eachFile {f ->
             fileList.add(f.file);
         }
     }
