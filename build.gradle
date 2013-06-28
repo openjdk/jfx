@@ -266,12 +266,15 @@ defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"
 defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api")
-defineProperty("STUB_RUNTIME", "$JDK_HOME/jre")
-defineProperty("BINARY_STUB", cygpath("$STUB_RUNTIME/lib/ext/jfxrt.jar"))
-defineProperty("LIBRARY_STUB", IS_MAC ? cygpath("$STUB_RUNTIME/lib") :
-                               IS_WINDOWS ? cygpath("$STUB_RUNTIME/bin") :
-                               cygpath("$STUB_RUNTIME/lib/$OS_ARCH"))
+
+def String closedCacheStubRuntime = cygpath("$projectDir") + "/../caches/sdk/rt"
+defineProperty("STUB_RUNTIME", BUILD_CLOSED ? closedCacheStubRuntime : cygpath("$JDK_HOME/jre"))
+defineProperty("BINARY_STUB", "$STUB_RUNTIME/lib/ext/jfxrt.jar")
+defineProperty("LIBRARY_STUB", IS_MAC ? "$STUB_RUNTIME/lib" :
+                               IS_WINDOWS ? "$STUB_RUNTIME/bin" :
+                               "$STUB_RUNTIME/lib/$OS_ARCH")
 ext.BINARY_STUB = "".equals(BINARY_STUB) ? null : files(BINARY_STUB)
+defineProperty("UPDATE_STUB_CACHE", (STUB_RUNTIME.equals(closedCacheStubRuntime) ? 'true' : 'false'))
 
 def supplementalPreBuildFile = file("$closedDir/closed-pre-build.gradle");
 def supplementalBuildFile = file("$closedDir/closed-build.gradle");
@@ -593,6 +596,10 @@ logger.quiet("RAW_VERSION: $RAW_VERSION")
 logger.quiet("RELEASE_NAME: $RELEASE_NAME")
 logger.quiet("RELEASE_MILESTONE: $RELEASE_MILESTONE")
 
+if (UPDATE_STUB_CACHE) {
+    logger.quiet("UPDATE_STUB_CACHE: $UPDATE_STUB_CACHE")
+}
+
 /******************************************************************************
  *                                                                            *
  *                Definition of Native Code Compilation Tasks                 *
@@ -736,6 +743,10 @@ void addJSL(Project project, String name, String pkg, Closure compile) {
     }
 }
 
+task updateCacheIfNeeded() {
+    // an empty task we can add to as needed for UPDATE_STUB_CACHE
+}
+
 /*****************************************************************************
 *        Project definitions (dependencies, etc)                             *
 *****************************************************************************/
@@ -849,6 +860,8 @@ project(":base") {
             line
         }
     }
+
+    compileJava.dependsOn updateCacheIfNeeded
 
     // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
@@ -1582,6 +1595,10 @@ task findbugs() {
 }
 
 // The following tasks are for the closed build only. They are a no-op for the open build
+
+task checkCache() {
+    dependsOn(updateCacheIfNeeded)
+}
 
 // TODO: consider moving the "public-sdk" portion of this task here
 task publicExports() {
