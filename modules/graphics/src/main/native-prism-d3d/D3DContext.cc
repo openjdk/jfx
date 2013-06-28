@@ -521,7 +521,10 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE)) &&
-        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_CLIPPING, TRUE));
+        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_CLIPPING, TRUE)) &&
+        // Set texture unit 0 to its default texture addressing mode for Prism
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP)) &&
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP));
     }
     return res;
 }
