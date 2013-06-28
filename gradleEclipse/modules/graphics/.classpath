@@ -11,6 +11,8 @@
   <classpathentry kind="src" exported="true" path="/builders"/>
   <classpathentry kind="src" exported="true" path="build/generated-src/jsl-decora"/>
   <classpathentry kind="src" exported="true" path="build/generated-src/jsl-prism"/>
+  <classpathentry kind="src" exported="true" path="build/resources/jsl-decora"/>
+  <classpathentry kind="src" exported="true" path="build/resources/jsl-prism"/>
   <classpathentry kind="src" exported="true" path="/rt-closed">
     <attributes>
       <attribute name="optional" value="true"/>

@@ -133,13 +133,6 @@
   </target>
 
   <target name="test" depends="jar">
-    <mkdir dir="build/test/gensrc"/>
-    <!-- for now we'll output the jsw peers into decora-jsw since we're not
-         concerned with building the generated peers (all we care about is
-         compiling the JSL files) -->
-    <mkdir dir="../decora-jsw/build/test/gensrc"/>
-    <compile-test-jsl filename="Test1"/>
-    <compile-test-jsl filename="Test2"/>
     <test-project/>
   </target>
 </project>

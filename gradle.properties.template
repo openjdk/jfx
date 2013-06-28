@@ -31,11 +31,6 @@
 #                                                                                   #
 #####################################################################################
 
-# This property allows developers to build using the closed source repository.
-# For open source developers, this flag is unnecessary and should never be set.
-
-#BUILD_CLOSED = true
-
 # These properties give developers the chance to skip building WebKit and/or
 # GStreamer. WebKit takes a fair amount of time to build (more than 50% of the
 # overall full build time is taken by WebKit), so allowing a developer to
@@ -49,7 +44,7 @@
 # so as to speed up the time in incremental builds. Uncomment this flag in order to
 # build all the JavaDoc
 
-#SKIP_JAVADOC = false
+#BUILD_JAVADOC = true
 
 # Specify the COMPILE_TARGETS when performing cross compiles. A Cross-Compile is
 # when you build for a platform other than the one you are building on. For example,
