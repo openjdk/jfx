@@ -922,11 +922,10 @@ void pathApplierFunctionFast(void *i, const CGPathElement *e) {
     }
 }
 
-jclass path2DClass = NULL;
-jmethodID path2DCtr = NULL;
 JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
     (JNIEnv *env, jclass that, jlong arg0)
 {
+    jobject path2D = NULL;
     PathData data;
     data.pointTypes = (jbyte*)malloc(sizeof(jbyte) * DEFAULT_LEN_TYPES);
     data.numTypes = 0;
@@ -937,6 +936,8 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
 
     CGPathApply((CGPathRef)arg0, &data, pathApplierFunctionFast);
 
+    static jclass path2DClass = NULL;
+    static jmethodID path2DCtr = NULL;
     if (path2DClass == NULL) {
         jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/geom/Path2D");
         path2DClass = (jclass)(*env)->NewGlobalRef(env, tmpClass);
@@ -948,12 +949,14 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
     if (types && coords) {
         (*env)->SetByteArrayRegion(env, types, 0, data.numTypes, data.pointTypes);
         (*env)->SetFloatArrayRegion(env, coords, 0, data.numCoords, data.pointCoords);
-        return (*env)->NewObject(env, path2DClass, path2DCtr,
-                                 0 /*winding rule*/,
-                                 types, data.numTypes,
-                                 coords, data.numCoords);
-      }
-      return NULL;
+        path2D = (*env)->NewObject(env, path2DClass, path2DCtr,
+                                   0 /*winding rule*/,
+                                   types, data.numTypes,
+                                   coords, data.numCoords);
+    }
+    free(data.pointTypes);
+    free(data.pointCoords);
+    return path2D;
 }
 
 #endif /* TARGET_OS_MAC */
