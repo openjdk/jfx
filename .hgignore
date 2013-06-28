@@ -10,6 +10,7 @@
 ^\.gradle/
 ^\.libs/
 ^buildSrc/\.gradle/
+^idea/out/
 build/
 bin/
 dist/
