@@ -317,7 +317,9 @@ NSArray *getJVMOptions(NSDictionary *infoDictionary, NSString *mainBundlePath) {
         else {
             newOption = [key stringByAppendingString:[defaultOverrides valueForKey:key]];
         }
-        [expandedOptions addObject: newOption];
+        NSString *expandedOption =
+                [newOption stringByReplacingOccurrencesOfString:@"$APPDIR" withString:contentsPath];
+        [expandedOptions addObject: expandedOption];
     }
 
     //Loop through all user override keys again looking for ones we haven't already uses
@@ -325,7 +327,9 @@ NSArray *getJVMOptions(NSDictionary *infoDictionary, NSString *mainBundlePath) {
         //If the default object for key is nil, this is an option the user added so include
         if ([defaultOverrides objectForKey: key] == nil) {
             NSString *newOption = [key stringByAppendingString:[userOverrides valueForKey:key]];
-            [expandedOptions addObject: newOption];
+            NSString *expandedOption =
+                    [newOption stringByReplacingOccurrencesOfString:@"$APPDIR" withString:contentsPath];
+            [expandedOptions addObject: expandedOption];
         }
     }
 

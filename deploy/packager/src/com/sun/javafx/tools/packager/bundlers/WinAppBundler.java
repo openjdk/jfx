@@ -273,7 +273,13 @@ public class WinAppBundler extends Bundler {
         Map<String, String> overridableJVMOptions = params.getAllJvmUserOptions();
         idx = 1;
         for (Map.Entry<String, String> arg: overridableJVMOptions.entrySet()) {
-            out.println("jvmuserarg."+idx+"="+arg.getKey()+"##"+arg.getValue());
+            if (arg.getKey() == null || arg.getValue() == null) {
+                Log.info("WARNING: a jvmuserarg has a null name or value");
+            }
+            else {
+                out.println("jvmuserarg."+idx+".name="+arg.getKey());
+                out.println("jvmuserarg."+idx+".value="+arg.getValue());
+            }
             idx++;
         }
         out.close();

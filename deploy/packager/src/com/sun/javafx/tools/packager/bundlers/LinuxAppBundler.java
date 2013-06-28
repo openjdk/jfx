@@ -150,7 +150,7 @@ public class LinuxAppBundler extends Bundler {
             System.out.println("Exception: "+ex);
             ex.printStackTrace();
             return false;
-        }
+        } 
         return true;
     }
 
@@ -198,11 +198,15 @@ public class LinuxAppBundler extends Bundler {
         out.println("app.preferences.id="+ params.getPreferencesID());
 
         Map<String, String> jvmUserOptions = params.getAllJvmUserOptions();
-        //Only create jvmuserargs, if app.id (params.identifier) is set, otherwise we don't know where
-        //to create the jvm.cfg file - warning logged above
         idx = 1;
         for (Map.Entry<String, String> arg: jvmUserOptions.entrySet()) {
-            out.println("jvmuserarg."+idx+"="+arg.getKey()+"##"+arg.getValue());
+            if (arg.getKey() == null || arg.getValue() == null) {
+                Log.info("WARNING: a jvmuserarg has a null name or value");
+            }
+            else {
+                out.println("jvmuserarg."+idx+".name="+arg.getKey());
+                out.println("jvmuserarg."+idx+".value="+arg.getValue());
+            }
             idx++;
         }
        out.close();
