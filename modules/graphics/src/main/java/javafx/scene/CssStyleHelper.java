@@ -1014,24 +1014,24 @@ final class CssStyleHelper {
 
                 if (resolved != null) {
 
-                    if (resolves != null) {
-
-                        if (resolves.contains(resolved) == false) {
-                            resolves.add(resolved);
-
-                        } else {
-
-                            if (LOGGER.isLoggable(Level.WARNING)) {
-                                LOGGER.warning("Loop detected while resolving: '" + sval + "'");
-                            }
-                            throw new IllegalArgumentException(resolved.getRule().toString());
-
-                        }
-
-                    } else {
-                        resolves = new HashSet<>();
-                        resolves.add(resolved);
-                    }
+//                    if (resolves != null) {
+//
+//                        if (resolves.contains(resolved) == false) {
+//                            resolves.add(resolved);
+//
+//                        } else {
+//
+//                            if (LOGGER.isLoggable(Level.WARNING)) {
+//                                LOGGER.warning("Loop detected while resolving: '" + sval + "'");
+//                            }
+//                            throw new IllegalArgumentException(resolved.getRule().toString());
+//
+//                        }
+//
+//                    } else {
+//                        resolves = new HashSet<>();
+//                        resolves.add(resolved);
+//                    }
 
                     if (styleList != null) {
                         final Style style = resolved.getStyle();
