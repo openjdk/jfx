@@ -1,29 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
   <component name="EclipseModuleManager">
-    <libelement value="jar://$MODULE_DIR$/../../../deploy/cache/plugin_exports.jar!/" />
+    <libelement value="jar://$MODULE_DIR$/../../deploy/cache/plugin_exports.jar!/" />
     <src_description expected_position="0">
-      <src_folder value="file://$MODULE_DIR$/../../../deploy/lib" expected_position="0" />
-      <src_folder value="file://$MODULE_DIR$/../../../deploy/javafx-deploy/src" expected_position="1" />
-      <src_folder value="file://$MODULE_DIR$/../../../deploy/javafx-deploy-samples/src" expected_position="2" />
-      <src_folder value="file://$MODULE_DIR$/../../../deploy/javafx-launcher-demoapp/src" expected_position="3" />
+      <src_folder value="file://$MODULE_DIR$/../../deploy/lib" expected_position="0" />
+      <src_folder value="file://$MODULE_DIR$/../../deploy/javafx-deploy/src" expected_position="1" />
+      <src_folder value="file://$MODULE_DIR$/../../deploy/javafx-deploy-samples/src" expected_position="2" />
+      <src_folder value="file://$MODULE_DIR$/../../deploy/javafx-launcher-demoapp/src" expected_position="3" />
     </src_description>
   </component>
   <component name="NewModuleRootManager" inherit-compiler-output="true">
-    <output url="file://$MODULE_DIR$/../../../deploy/bin" />
     <exclude-output />
-    <content url="file://$MODULE_DIR$/../../../deploy">
-      <sourceFolder url="file://$MODULE_DIR$/../../../deploy/lib" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../../../deploy/javafx-deploy/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../../../deploy/javafx-deploy-samples/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../../../deploy/javafx-launcher-demoapp/src" isTestSource="false" />
-      <excludeFolder url="file://$MODULE_DIR$/../../../deploy/javafx-deploy-samples/src/helloworld" />
+    <content url="file://$MODULE_DIR$/../../deploy">
+      <sourceFolder url="file://$MODULE_DIR$/../../deploy/lib" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../deploy/javafx-deploy/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../deploy/javafx-deploy-samples/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../deploy/javafx-launcher-demoapp/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/../../deploy/javafx-deploy-samples/src/helloworld" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">
       <library name="plugin_exports.jar">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../../deploy/cache/plugin_exports.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../deploy/cache/plugin_exports.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />

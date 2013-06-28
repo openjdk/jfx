@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
-    <output url="file://$MODULE_DIR$/../../modules/swing/bin" />
     <exclude-output />
-    <content url="file://$MODULE_DIR$/../../modules/swing">
-      <sourceFolder url="file://$MODULE_DIR$/../../modules/swing/src/main/java" isTestSource="false" />
-      <excludeFolder url="file://$MODULE_DIR$/../../modules/swing/build" />
+    <content url="file://$MODULE_DIR$/../modules/swing">
+      <sourceFolder url="file://$MODULE_DIR$/../modules/swing/src/main/java" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/../modules/swing/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="base" exported="" />
