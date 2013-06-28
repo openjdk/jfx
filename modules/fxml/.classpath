@@ -1,6 +1,5 @@
 <classpath>
   <classpathentry kind="src" path="src/main/java"/>
-  <classpathentry kind="src" path="src/main/resources"/>
   <classpathentry kind="src" path="src/test/java"/>
   <classpathentry kind="src" path="src/test/resources"/>
   <classpathentry exported="true" kind="src" path="/base"/>
