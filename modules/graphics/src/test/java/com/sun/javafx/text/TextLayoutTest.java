@@ -34,6 +34,7 @@ import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.text.PrismTextLayout;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import sun.font.CharToGlyphMapper;
@@ -94,6 +95,7 @@ public class TextLayoutTest {
     }
     
     @SuppressWarnings("deprecation")
+    @Ignore("RT-31357")
     @Test public void buildRuns() {
 
         PrismTextLayout layout = new PrismTextLayout();
