@@ -97,7 +97,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     <ToggleGroup fx:id="subdivisionBoundaryGroup" />
                   </toggleGroup>
                   <userData>
-                    <SubDivision.BoundaryMode fx:value="CREASE_EDGES"/>
+                    <SubdivisionMesh.BoundaryMode fx:value="CREASE_EDGES"/>
                   </userData>
                   <tooltip>
                     <Tooltip text="Only edges at the boundary are treated as creases" />
@@ -105,7 +105,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 </ToggleButton>
                 <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="All" toggleGroup="$subdivisionBoundaryGroup">
                   <userData>
-                    <SubDivision.BoundaryMode fx:value="CREASE_ALL"/>
+                    <SubdivisionMesh.BoundaryMode fx:value="CREASE_ALL"/>
                   </userData>
                   <tooltip>
                     <Tooltip text="Edges and points at the boundary are treated as creases" />
@@ -121,7 +121,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     <ToggleGroup fx:id="subdivisionSmoothGroup" />
                   </toggleGroup>
                   <userData>
-                    <SubDivision.MapBorderMode fx:value="NOT_SMOOTH"/>
+                    <SubdivisionMesh.MapBorderMode fx:value="NOT_SMOOTH"/>
                   </userData>
                   <tooltip>
                     <Tooltip text="Keeps the same uvs for all control points" />
@@ -129,7 +129,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 </ToggleButton>
                 <ToggleButton mnemonicParsing="false" styleClass="center-pill" text="Internal" toggleGroup="$subdivisionSmoothGroup">
                   <userData>
-                    <SubDivision.MapBorderMode fx:value="SMOOTH_INTERNAL"/>
+                    <SubdivisionMesh.MapBorderMode fx:value="SMOOTH_INTERNAL"/>
                   </userData>
                   <tooltip>
                     <Tooltip text="Smooths uvs of points at corners" />
@@ -137,7 +137,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 </ToggleButton>
                 <ToggleButton mnemonicParsing="false" styleClass="right-pill" text="All" toggleGroup="$subdivisionSmoothGroup">
                   <userData>
-                    <SubDivision.MapBorderMode fx:value="SMOOTH_ALL"/>
+                    <SubdivisionMesh.MapBorderMode fx:value="SMOOTH_ALL"/>
                   </userData>
                   <tooltip>
                     <Tooltip text="Smooths uvs of points at boundaries" />

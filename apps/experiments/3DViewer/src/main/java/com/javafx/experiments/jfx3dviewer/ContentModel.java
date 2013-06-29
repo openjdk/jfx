@@ -55,7 +55,7 @@ import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import com.javafx.experiments.shape3d.PolygonMeshView;
-import com.javafx.experiments.shape3d.SubDivision;
+import com.javafx.experiments.shape3d.SubdivisionMesh;
 import javafx.beans.property.ObjectProperty;
 
 /**
@@ -140,8 +140,8 @@ public class ContentModel {
     };
     private boolean wireframe = false;
     private int subdivisionLevel = 0;
-    private SubDivision.BoundaryMode boundaryMode = SubDivision.BoundaryMode.CREASE_EDGES;
-    private SubDivision.MapBorderMode mapBorderMode = SubDivision.MapBorderMode.NOT_SMOOTH;
+    private SubdivisionMesh.BoundaryMode boundaryMode = SubdivisionMesh.BoundaryMode.CREASE_EDGES;
+    private SubdivisionMesh.MapBorderMode mapBorderMode = SubdivisionMesh.MapBorderMode.NOT_SMOOTH;
 
     public ContentModel() {
         subScene = new SubScene(root3D,400,400,true,false);
@@ -365,14 +365,14 @@ public class ContentModel {
         }
     }
 
-    public SubDivision.BoundaryMode getBoundaryMode() {
+    public SubdivisionMesh.BoundaryMode getBoundaryMode() {
         return boundaryMode;
     }
-    public void setBoundaryMode(SubDivision.BoundaryMode boundaryMode) {
+    public void setBoundaryMode(SubdivisionMesh.BoundaryMode boundaryMode) {
         this.boundaryMode = boundaryMode;
         setBoundaryMode(root3D, boundaryMode);
     }
-    private void setBoundaryMode(Node node, SubDivision.BoundaryMode boundaryMode) {
+    private void setBoundaryMode(Node node, SubdivisionMesh.BoundaryMode boundaryMode) {
         if (node instanceof PolygonMeshView) {
             ((PolygonMeshView)node).setBoundaryMode(boundaryMode);
         } else if (node instanceof Parent) {
@@ -380,14 +380,14 @@ public class ContentModel {
         }
     }
     
-    public SubDivision.MapBorderMode getMapBorderMode() {
+    public SubdivisionMesh.MapBorderMode getMapBorderMode() {
         return mapBorderMode;
     }
-    public void setMapBorderMode(SubDivision.MapBorderMode mapBorderMode) {
+    public void setMapBorderMode(SubdivisionMesh.MapBorderMode mapBorderMode) {
         this.mapBorderMode = mapBorderMode;
         setMapBorderMode(root3D, mapBorderMode);
     }
-    private void setMapBorderMode(Node node, SubDivision.MapBorderMode mapBorderMode) {
+    private void setMapBorderMode(Node node, SubdivisionMesh.MapBorderMode mapBorderMode) {
         if (node instanceof PolygonMeshView) {
             ((PolygonMeshView)node).setMapBorderMode(mapBorderMode);
         } else if (node instanceof Parent) {

@@ -26,7 +26,7 @@ public class SkinningMesh extends PolygonMesh {
 
     public SkinningMesh(PolygonMesh mesh, Transform meshTransform, float[][] weights, Affine[] bindTransforms, List<Joint> joints) {
         this.getPoints().addAll(mesh.getPoints());
-        this.texCoords = mesh.texCoords;
+        this.getTexCoords().addAll(mesh.getTexCoords());
         this.faces = mesh.faces;
         
         this.weights = weights;

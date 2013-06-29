@@ -285,7 +285,7 @@ public class PolyObjImporter {
         );
         if (debug) {
             System.out.println("mesh.points = " + mesh.getPoints());
-            System.out.println("mesh.texCoords = " + Arrays.toString(mesh.texCoords));
+            System.out.println("mesh.texCoords = " + mesh.getTexCoords());
             System.out.println("mesh.faces: ");
             for (int[] face: mesh.faces) {
                 System.out.println("    face:: "+Arrays.toString(face));
@@ -301,7 +301,7 @@ public class PolyObjImporter {
         materials.put(key, material);
         
         log("Added mesh '" + key + "' of " + (mesh.getPoints().size()/3) + " vertexes, "
-                + (mesh.texCoords.length/2) + " uvs, "
+                + (mesh.getTexCoords().size()/2) + " uvs, "
                 + mesh.faces.length + " faces, "
                 + 0 + " smoothing groups.");
         log("material diffuse color = " + ((PhongMaterial) material).getDiffuseColor());

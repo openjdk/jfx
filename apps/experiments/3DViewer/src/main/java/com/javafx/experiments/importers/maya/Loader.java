@@ -253,7 +253,7 @@ class Loader {
         
         Node sourceMayaMeshNode = resolveNode(inputMeshMNode);
         Node targetMayaMeshNode = resolveNode(outputMeshMNode);
-            
+        
         if (sourceMayaMeshNode.getClass().equals(PolygonMeshView.class)) {
             PolygonMeshView sourceMayaMeshView = (PolygonMeshView) sourceMayaMeshNode;
             PolygonMeshView targetMayaMeshView = (PolygonMeshView) targetMayaMeshNode;
@@ -462,8 +462,10 @@ class Loader {
             mv.setMesh((PolygonMesh) mesh);
 //            mv.setCullFace(CullFace.NONE); //TODO
             loaded.put(n, mv);
-            if (node != null) {
-                ((Group) node).getChildren().add(mv);
+            if (((PolygonMesh)mesh).getPoints().size() > 0) {
+                if (node != null) {
+                    ((Group) node).getChildren().add(mv);
+                }
             }
         } else {
             MeshView mv = new MeshView();
@@ -483,7 +485,7 @@ class Loader {
             }
         }
     }
-            
+    
     protected void processJointType(MNode n, Group parentNode) {
         // [Note to Alex]: I've re-enabled joints, but not skinning yet [John]
         Node result;

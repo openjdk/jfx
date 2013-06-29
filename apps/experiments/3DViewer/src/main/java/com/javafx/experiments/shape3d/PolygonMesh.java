@@ -10,20 +10,24 @@ import javafx.collections.ObservableFloatArray;
  */
 public class PolygonMesh {
     private final ObservableFloatArray points = FXCollections.observableFloatArray();
-    public float[] texCoords;
+    private final ObservableFloatArray texCoords = FXCollections.observableFloatArray();
     public int[][] faces;
-    private int numEdgesInFaces = -1;
+    protected int numEdgesInFaces = -1;
 
     public PolygonMesh() {}
 
-    public PolygonMesh(float[] points,float[] texCoords, int[][] faces) {
+    public PolygonMesh(float[] points, float[] texCoords, int[][] faces) {
         this.points.addAll(points);
-        this.texCoords = texCoords;
+        this.texCoords.addAll(texCoords);
         this.faces = faces;
     }
 
     public ObservableFloatArray getPoints() {
         return points;
+    }
+    
+    public ObservableFloatArray getTexCoords() {
+        return texCoords;
     }
     
     public int getNumEdgesInFaces() {
