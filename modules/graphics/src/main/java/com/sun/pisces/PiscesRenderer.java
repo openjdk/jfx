@@ -321,6 +321,9 @@ public final class PiscesRenderer {
         int rowNum);
 
     public void fillAlphaMask(byte[] mask, int x, int y, int width, int height, int offset, int stride) {
+        if (mask == null) {
+            throw new NullPointerException("Mask is NULL");
+        }
         this.inputImageCheck(width, height, offset, stride, mask.length);
         this.fillAlphaMaskImpl(mask, x, y, width, height, offset, stride);
     }
@@ -331,6 +334,9 @@ public final class PiscesRenderer {
 
     public void fillLCDAlphaMask(byte[] mask, int x, int y, int subPosX, int width, int height, int offset, int stride)
     {
+        if (mask == null) {
+            throw new NullPointerException("Mask is NULL");
+        }
         this.inputImageCheck(width, height, offset, stride, mask.length);
         if (subPosX < 0 || subPosX > 2) {
             throw new IllegalArgumentException("subPosX must be 0,1 or 2, curVal: " + subPosX);
