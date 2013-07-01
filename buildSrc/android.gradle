@@ -23,20 +23,173 @@
  * questions.
  */
 
-/******************************************************************************
- *                                                                            *
- *                         Build Setup Sanity Checks                          *
- *                                                                            *
- *****************************************************************************/
-ext.ANDROID_CAN_BUILD = false
-if (!ANDROID_CAN_BUILD) return;
+/**
+ * Gets the most recent android platform installed, relative to the given path.
+ * The path will either be ANDROID_SDK or ANDROID_NDK
+ * TODO Shouldn't we instead just ask people to point to the one they want to use?
+ *
+ * @param path The path to the Android SDK or NDK
+ * @return The name of the most recent platform
+ */
+String getLatestPlatform(String path) {
+    def max = 0
+    file(cygpath(path + "/platforms")).eachFile() {file->
+        def pname = file.getName() - "android-"
+        def ptf = pname?.isInteger() ? pname.toInteger() : 0
+        if (max < ptf) {
+            max = ptf
+        }
+    }
+    if (max == 0) {
+        return null;
+    }
+    return "android-" + max
+}
 
-// NOTE: Android can be built from Mac, Windows, or Linux.
-// TODO Sanity check should include locating the Android SDK / NDK.
+ext.ANDROID = [:]
 
-ext.GLASS_PLATFORM = "android"
-ext.LIB_DEST = "lib/$OS_ARCH" // TODO Not sure about this.
-ext.JFXRT_JAR_EXCLUDES = [
+def closedDir = file("$projectDir/../rt-closed")
+
+defineProperty("ANDROID_CROSS_TOOLS_VER", "arm-linux-androideabi-4.4.3")
+defineProperty("ARM_ARCH", "armeabi")//armeabi-v7
+
+// Look for the the Android SDK & NDK to use, as well as the compiler stuff
+def sdk = project.hasProperty("ANDROID_SDK") ? getLatestPlatform("$ANDROID_SDK") : null;
+def ndk = project.hasProperty("ANDROID_NDK") ? getLatestPlatform("$ANDROID_NDK") : null;
+def toolsPlatform = IS_WINDOWS ? "windows" : IS_MAC ? "macosx" : "linux-x86"
+def compilerHome = sdk == null || ndk == null ? null : file("${ANDROID_NDK}/toolchains/${ANDROID_CROSS_TOOLS_VER}/prebuilt/$toolsPlatform")
+
+// We can build Android if the ANDROID_SDK and ANDROID_NDK are specified, and if
+// the targets exist.
+ANDROID.canBuild = sdk != null && ndk != null && compilerHome != null;
+if (!ANDROID.canBuild) return;
+
+// We now know that we can build Android, so time to define some useful properties
+defineProperty("ANDROID_SDK_TARGET", sdk)
+defineProperty("ANDROID_NDK_TARGET", ndk)
+
+def compiler = file("$compilerHome/bin/arm-linux-androideabi-gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/arm-linux-androideabi-g++").getAbsolutePath()
+
+// Log the settings we're building with
+logger.quiet("ANDROID_SDK: $ANDROID_SDK")
+logger.quiet("ANDROID_SDK_TARGET: $ANDROID_SDK_TARGET")
+logger.quiet("ANDROID_NDK: $ANDROID_NDK")
+logger.quiet("ANDROID_NDK_TARGET: $ANDROID_NDK_TARGET")
+logger.quiet("Android Compiler: $compiler")
+logger.quiet("Android Linker: $linker")
+
+
+project(":graphics") {
+
+    task compileDalvikLibs(type: JavaCompile, group: "Build") {
+        description = "Task compiles dalvik vm based libraries."
+        sourceCompatibility = JavaVersion.VERSION_1_6
+        targetCompatibility = JavaVersion.VERSION_1_6
+        options.bootClasspath = "${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar"
+        classpath = files("build/classes/main")
+        destinationDir = file("build/classes/main")
+        dependencyCacheDir = file("build/dependency-cache")
+        source "src/main/android"
+    }
+
+    task jarDalvikLibs(type: Jar, group: "Build", dependsOn: compileDalvikLibs) {
+        description = "Creates jfxdvk.jar with all dalvik based classes."
+        archiveName = "jfxdvk.jar"
+        includeEmptyDirs = false
+        from("build/classes/main")
+        include("com/oracle/dalvik/**/*")
+        dependsOn(compileDalvikLibs)
+    }
+
+    afterEvaluate {
+        addNative(project, "surface")
+        addNative(project, "vmlauncher")
+        tasks["javahAndroidVmlauncher"].dependsOn(compileDalvikLibs)
+        tasks["native"].dependsOn("nativeSurface", "nativeVmlauncher")
+
+        sdkAndroid  {
+            dependsOn(jarDalvikLibs)
+            doLast {
+                def props = project.ext["ANDROID"]
+                copy {
+                    from(
+                         "modules/graphics/build/libs/vmlauncher/android/${library(props.vmlauncher.lib)}",
+                         "modules/graphics/build/libs/surface/android/${library(props.surface.lib)}",
+                         "modules/graphics/build/libs/${props.jfxdvklib}"
+                    );
+                    def libDest = props.libDest
+                    into ("build/android-sdk/dalvik")
+                }
+            }
+        }
+    }
+}
+
+project(":web") {
+    apply plugin: 'java'
+
+    sourceSets {
+        android {
+            java {
+                //srcDir 'src/android/java'
+                srcDir '${closedDir}/javafx-android/webnode/src'
+            }
+        }
+    }
+
+    compileJava {
+        enabled = false
+    }
+
+    afterEvaluate {
+        configure(compileAndroidJava, { t ->
+                t.classpath = files(
+                    project(":graphics").sourceSets.main.output.classesDir,
+                    project(":base").sourceSets.main.output.classesDir
+                )
+                t.dependsOn(project(":graphics").classes, project(":base").classes)
+            })
+
+        addNative(project, "webview")
+        addNative(project, "dvkwebview")
+        javahAndroidWebview.dependsOn(compileAndroidJava)
+        javahAndroidDvkwebview.dependsOn(compileAndroidJava)
+
+        jfxrtAndroid {
+            from "modules/web/build/classes/android"
+        }
+
+        sdkAndroid << {
+            def props = project.ext["ANDROID"]
+            copy {
+                from(
+                     "modules/web/build/libs/webview/android/${library(props.webview.lib)}"
+                )
+                def libDest = props.libDest
+                into ("build/android-sdk/rt/$libDest")
+            }
+            copy {
+                from(
+                    "modules/web/build/libs/dvkwebview/android/${library(props.dvkwebview.lib)}"
+                )
+                def libDest = props.libDest
+                into ("build/android-sdk/dalvik")
+            }
+        }
+    }
+}
+
+ANDROID.compileSwing = false;
+ANDROID.compileSWT = false;
+ANDROID.compileFXPackager = false;
+ANDROID.compileDesignTime = false;
+ANDROID.glassPlatform = "android"
+ANDROID.armArch = "${ARM_ARCH}"
+ANDROID.libDest = "lib/${ANDROID.armArch}"
+ANDROID.jfxdvklib = "jfxdvk.jar"
+
+ANDROID.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
     "com/sun/glass/ui/accessible/win",
@@ -44,25 +197,214 @@ ext.JFXRT_JAR_EXCLUDES = [
     "com/sun/prism/es2/gl/win",
     "com/sun/prism/null3d",
     "com/sun/scenario/effect/impl/hw/d3d",
-    
     "com/sun/glass/events/mac",
     "com/sun/glass/ui/mac",
     "com/sun/glass/ui/accessible/mac",
     "com/sun/prism/es2/gl/mac",
-    
     "com/sun/glass/ui/gtk",
-    
     "com/sun/glass/ui/ios",
-    
-    // TODO Android build will need one or more of these 4 lines removed
-    "com/sun/glass/ui/lens",
-    "com/sun/prism/es2/gl/eglfb",
     "com/sun/prism/es2/gl/eglx11",
     "com/sun/prism/es2/gl/x11",
-    
     "com/sun/glass/ui/swt", // SWT glass
-    
     "javafx/embed/swing", // Swing Interop
-    
     "javafx/embed/swt", // SWT Interop
+    "com/oracle/dalvik"
 ]
+
+ANDROID.javafxPlatformProperties = """
+javafx.platform=android
+android.glass.platform=Lens
+android.glass.lens=eglfb
+android.egl.depthSize=16
+android.prism.lcdtext=false
+android.embedded=eglfb
+android.prism.maxTextureSize=2048
+android.prism.dirtyopts=true
+android.prism.vsync=false
+android.prism.device=true
+android.use.egl=true
+android.com.sun.javafx.isEmbedded=true
+"""
+
+def ccFlags = ["-std=c99", "-DANDROID", "-c", "-nostdlib", "-DANDROID_NDK"]
+def ccOptFlags = ["-fpic", "-ffunction-sections", "-funwind-tables","-fstack-protector",
+                  "-Os", "-O2", "-fno-strict-aliasing", "-finline-limit=64", "-fomit-frame-pointer"]
+def ccWarnFlags = ["-Wa,--noexecstack", "-Wno-psabi"]
+def ccArchFlags = ["-mthumb", "-msoft-float", "-D__ARM_ARCH_5__", "-D__ARM_ARCH_5T__", "-D__ARM_ARCH_5E__",
+                   "-D__ARM_ARCH_5TE__", "-march=armv5te" , "-mtune=xscale"]
+def ccDebugFlags = [IS_DEBUG ? "-DDEBUG" : "-DNDEBUG"]
+def ccDefaultIncludeFlags = ["-I${ANDROID_NDK}/platforms/${ANDROID_NDK_TARGET}/arch-arm/usr/include"]
+
+def linkFlags = ["--sysroot=${ANDROID_NDK}/platforms/${ANDROID_NDK_TARGET}/arch-arm",
+                 "-Wl,--no-undefined", "-Wl,-z,noexecstack", "-lc", "-lm", "-shared",
+                 "-L${ANDROID_NDK}/platforms/${ANDROID_NDK_TARGET}/arch-arm/usr/lib"]
+
+
+ANDROID.vmlauncher = [:]
+ANDROID.vmlauncher.classpath =
+files("${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar",
+      "modules/graphics/build/classes/main")
+
+ANDROID.vmlauncher.javahClasspath = "${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar"
+ANDROID.vmlauncher.javahInclude = [
+    "com/oracle/dalvik/*"
+]
+ANDROID.vmlauncher.nativeSource = [
+    file("modules/graphics/src/main/native-android/VMLauncher.c"),
+    file("modules/graphics/src/main/native-android/NativePipeReader.c"),
+    file("modules/graphics/src/main/native-android/DalvikProxySelector.c")
+]
+ANDROID.vmlauncher.compiler = compiler
+ANDROID.vmlauncher.linker = linker
+ANDROID.vmlauncher.lib = "vmlauncher"
+ANDROID.vmlauncher.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.vmlauncher.linkFlags = [linkFlags, "-llog"].flatten()
+
+ANDROID.surface = [:]
+ANDROID.surface.javahInclude = [
+    "com/sun/glass/events/*"
+]
+ANDROID.surface.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens/android")
+]
+ANDROID.surface.compiler = compiler
+ANDROID.surface.linker = linker
+ANDROID.surface.lib = "glass-lens-android"
+ANDROID.surface.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags, "-Isrc/main/native-glass/lens"].flatten()
+ANDROID.surface.linkFlags = [linkFlags, "-ldl", "-landroid", "-llog"].flatten()
+
+ANDROID.webview = [:]
+ANDROID.webview.sourceSet = "android"
+ANDROID.webview.javahInclude = [
+    "com/sun/webkit/NativeWebView.class"
+]
+ANDROID.webview.nativeSource = [
+    //file("modules/web/src/android/native/native_webview.c")
+    file("${closedDir}/javafx-android/webnode/jni/native_webview.c")
+]
+ANDROID.webview.compiler = compiler
+ANDROID.webview.linker = linker
+ANDROID.webview.lib = "webview"
+ANDROID.webview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.webview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
+
+ANDROID.dvkwebview = [:]
+ANDROID.dvkwebview.sourceSet = "android"
+ANDROID.dvkwebview.javahInclude = [
+    "com/sun/webkit/NativeWebView.class"
+]
+ANDROID.dvkwebview.nativeSource = [
+    //file("modules/web/src/android/native/android_webview.c")
+    file("${closedDir}/javafx-android/webnode/jni/android_webview.c")
+]
+ANDROID.dvkwebview.compiler = compiler
+ANDROID.dvkwebview.linker = linker
+ANDROID.dvkwebview.lib = "android-webview"
+ANDROID.dvkwebview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.dvkwebview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
+
+ANDROID.glass = [:]
+ANDROID.glass.variants = ["eglfb"]
+ANDROID.glass.javahInclude = [
+    "com/sun/glass/events/**",
+    "com/sun/glass/ui/*",
+    "com/sun/glass/ui/lens/*"]
+
+ANDROID.glass.eglfb = [:]
+ANDROID.glass.eglfb.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/nullCursor"),
+    file("modules/graphics/src/main/native-glass/lens/input/android"),
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c")]
+ANDROID.glass.eglfb.compiler = compiler
+ANDROID.glass.eglfb.linker = linker
+ANDROID.glass.eglfb.lib = "glass-lens-eglfb"
+ANDROID.glass.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.glass.eglfb.linkFlags = [linkFlags, "-ldl", "-landroid", "-llog"].flatten()
+
+ANDROID.prism = [:]
+ANDROID.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+ANDROID.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+ANDROID.prism.compiler = compiler
+ANDROID.prism.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.prism.linker = linker
+ANDROID.prism.linkFlags = [linkFlags].flatten()
+ANDROID.prism.lib = "prism-common"
+
+ANDROID.prismSW = [:]
+ANDROID.prismSW.javahInclude = ["com/sun/pisces/**/*"]
+ANDROID.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+ANDROID.prismSW.compiler = compiler
+ANDROID.prismSW.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.prismSW.linker = linker
+ANDROID.prismSW.linkFlags = [linkFlags].flatten()
+ANDROID.prismSW.lib = "prism-sw"
+
+ANDROID.decora = [:]
+ANDROID.decora.compiler = compiler
+ANDROID.decora.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.decora.linker = linker
+ANDROID.decora.linkFlags = [linkFlags].flatten()
+ANDROID.decora.lib = "decora-sse"
+
+ANDROID.iio = [:]
+ANDROID.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
+ANDROID.iio.nativeSource = [
+    file("modules/graphics/src/main/native-iio"),
+    file("modules/graphics/src/main/native-iio/libjpeg7")]
+ANDROID.iio.compiler = compiler
+ANDROID.iio.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.iio.linker = linker
+ANDROID.iio.linkFlags = [linkFlags].flatten()
+ANDROID.iio.lib = "javafx-iio"
+
+ANDROID.prismES2 = [:]
+ANDROID.prismES2.variants = ["eglfb"]
+ANDROID.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+
+ANDROID.prismES2.eglfb = [:]
+ANDROID.prismES2.eglfb.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/eglfb")]
+ANDROID.prismES2.eglfb.compiler = compiler
+ANDROID.prismES2.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags, "-DIS_EGLFB"].flatten()
+ANDROID.prismES2.eglfb.linker = linker
+ANDROID.prismES2.eglfb.linkFlags = [linkFlags, "-ldl", "-llog", "-lGLESv2", "-lEGL"].flatten()
+ANDROID.prismES2.eglfb.lib = "prism-es2-eglfb"
+
+ANDROID.font = [:]
+ANDROID.font.javahInclude = [
+        "com/sun/javafx/font/**/*",
+        "com/sun/javafx/text/**/*"]
+ANDROID.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
+ANDROID.font.compiler = compiler
+ANDROID.font.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.font.linker = linker
+ANDROID.font.linkFlags = [linkFlags].flatten()
+ANDROID.font.lib = "javafx-font"
+
+ANDROID.fontT2K = [:]
+ANDROID.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
+ANDROID.fontT2K.nativeSource = [
+    file("$closedDir/javafx-font-t2k-native/src"),
+    file("$closedDir/javafx-font-t2k-native/src/layout"),
+    file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+ANDROID.fontT2K.compiler = compiler
+ANDROID.fontT2K.ccFlags = [ccFlags, "-fno-exceptions", "-fno-rtti", ccWarnFlags,
+    ccArchFlags, ccOptFlags, ccDebugFlags, ccDefaultIncludeFlags].flatten()
+ANDROID.fontT2K.linker = linker
+ANDROID.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
+ANDROID.fontT2K.lib = "javafx-font-t2k"
