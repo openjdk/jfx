@@ -1014,24 +1014,24 @@ final class CssStyleHelper {
 
                 if (resolved != null) {
 
-//                    if (resolves != null) {
-//
-//                        if (resolves.contains(resolved) == false) {
-//                            resolves.add(resolved);
-//
-//                        } else {
-//
-//                            if (LOGGER.isLoggable(Level.WARNING)) {
-//                                LOGGER.warning("Loop detected while resolving: '" + sval + "'");
-//                            }
-//                            throw new IllegalArgumentException(resolved.getRule().toString());
-//
-//                        }
-//
-//                    } else {
-//                        resolves = new HashSet<>();
-//                        resolves.add(resolved);
-//                    }
+                    if (resolves != null) {
+
+                        if (resolves.contains(resolved) == false) {
+                            resolves.add(resolved);
+
+                        } else {
+
+                            if (LOGGER.isLoggable(Level.WARNING)) {
+                                LOGGER.warning("Loop detected while resolving: '" + sval + "'");
+                            }
+                            throw new IllegalArgumentException(resolved.getRule().toString());
+
+                        }
+
+                    } else {
+                        resolves = new HashSet<>();
+                        resolves.add(resolved);
+                    }
 
                     if (styleList != null) {
                         final Style style = resolved.getStyle();
@@ -1073,7 +1073,7 @@ final class CssStyleHelper {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
                     layers[l][ll].setResolved(
-                        resolveLookups(styleable, layers[l][ll], states, whence, resolves, styleList)
+                        resolveLookups(styleable, layers[l][ll], states, whence, null, styleList)
                     );
                 }
             }
@@ -1084,7 +1084,7 @@ final class CssStyleHelper {
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 layer[l].setResolved(
-                    resolveLookups(styleable, layer[l], states, whence, resolves, styleList)
+                    resolveLookups(styleable, layer[l], states, whence, null, styleList)
                 );
             }
         }
