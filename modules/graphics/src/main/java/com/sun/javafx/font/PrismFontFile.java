@@ -485,6 +485,10 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             }
 
             indexToLocFormat = headTable.getShort(50);
+            // 0 for short offsets, 1 for long
+            if (indexToLocFormat < 0 || indexToLocFormat > 1) {
+                throw new Exception("Bad indexToLocFormat");
+            }
 
             // In a conventional optimised layout, the
             // hhea table immediately follows the 'head' table.
