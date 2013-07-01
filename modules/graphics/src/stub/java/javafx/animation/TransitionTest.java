@@ -28,13 +28,14 @@ package javafx.animation;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
+import com.sun.javafx.tk.Toolkit;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.scenario.ToolkitAccessor;
 
 public class TransitionTest {
 
@@ -53,7 +54,7 @@ public class TransitionTest {
     	// emtpy ctor
     	Transition t0 = new TransitionImpl(Duration.millis(1000));
         assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
-        assertEquals(6000.0 / ToolkitAccessor.getMasterTimer().getDefaultResolution(), t0.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), t0.getTargetFramerate(), EPSILON);
         
         // setting targetFramerate
     	Transition t1 = new TransitionImpl(Duration.millis(1000), 10);

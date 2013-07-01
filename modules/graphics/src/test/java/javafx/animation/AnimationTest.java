@@ -28,11 +28,12 @@ package javafx.animation;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+
+import com.sun.javafx.tk.Toolkit;
 import javafx.animation.Animation.Status;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
-import com.sun.scenario.ToolkitAccessor;
 import com.sun.scenario.animation.AbstractMasterTimerMock;
 import com.sun.scenario.animation.shared.ClipEnvelopeMock;
 import org.junit.After;
@@ -83,7 +84,7 @@ public class AnimationTest {
         assertEquals(DEFAULT_REPEAT_COUNT, animation0.getCycleCount());
         assertEquals(DEFAULT_AUTO_REVERSE, animation0.isAutoReverse());
         assertEquals(Status.STOPPED, animation0.getStatus());
-        assertEquals(6000.0 / ToolkitAccessor.getMasterTimer().getDefaultResolution(), animation0.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), animation0.getTargetFramerate(), EPSILON);
         assertEquals(null, animation0.getOnFinished());
         assertEquals(0, animation0.getCuePoints().size());
 
@@ -531,7 +532,7 @@ public class AnimationTest {
 
     @Test
     public void testFullSpeedResolution() {
-        final int resolution = ToolkitAccessor.getMasterTimer().getDefaultResolution();
+        final int resolution = Toolkit.getToolkit().getMasterTimer().getDefaultResolution();
 
         // send pulse
         animation.impl_timePulse(4 * resolution);

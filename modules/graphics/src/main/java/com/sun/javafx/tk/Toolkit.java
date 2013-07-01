@@ -239,16 +239,6 @@ public abstract class Toolkit {
     }
 
     protected Toolkit() {
-        com.sun.scenario.ToolkitAccessor.setInstance(
-             new com.sun.scenario.ToolkitAccessor() {
-                 public Map<Object, Object> getContextMapImpl() {
-                     return Toolkit.this.getContextMap();
-                 }
-
-                 public AbstractMasterTimer getMasterTimerImpl() {
-                     return Toolkit.this.getMasterTimer();
-                 }
-             });
     }
 
     public abstract boolean init();

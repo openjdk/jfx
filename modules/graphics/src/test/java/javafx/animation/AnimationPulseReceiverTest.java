@@ -28,20 +28,21 @@ package javafx.animation;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import com.sun.javafx.tk.Toolkit;
 import javafx.animation.Animation;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.scenario.ToolkitAccessor;
 import com.sun.scenario.animation.AbstractMasterTimerMock;
 import javafx.animation.AnimationMock;
 import javafx.util.Duration;
 
 public class AnimationPulseReceiverTest {
 
-    private static final int DEFAULT_RESOLUTION = ToolkitAccessor.getMasterTimer().getDefaultResolution();
+    private static final int DEFAULT_RESOLUTION = Toolkit.getToolkit().getMasterTimer().getDefaultResolution();
     private static final double TICKS_2_NANOS = 1.0 / 6e-6;
     private AbstractMasterTimerMock timer;
     private AnimationMock animation;
@@ -55,7 +56,6 @@ public class AnimationPulseReceiverTest {
     @After
     public void tearDown() {
         animation.impl_stop();
-        ToolkitAccessor.setInstance(null);
     }
 
     @Test
