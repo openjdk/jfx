@@ -202,6 +202,15 @@ void setupTools(String name, Closure loader, Closure processor) {
     }
 }
 
+/**
+ * Fails the build with the specified error message
+ *
+ * @param msg the reason for the failure
+ */
+void fail(String msg) {
+    throw new GradleException("FAIL: " + msg);
+}
+
 /******************************************************************************
  *                                                                            *
  *                   Definition of project properties                         *
@@ -217,16 +226,13 @@ void setupTools(String name, Closure loader, Closure processor) {
  *                                                                            *
  *****************************************************************************/
 
-// BUILD_CLOSED is used to specify that a "closed" build should be done.
-// It is false by default and is set by a command line property. If true then
-// the closed build and property files will be read from
+// If the ../rt-closed directory exists, then we are doing a closed build.
+// In this case, build and property files will be read from
 // ../rt-closed/closed-build.gradle and ../rt-closed/closed-properties.gradle
 // respectively
 
-def buildClosed = false;
-if (hasProperty("BUILD_CLOSED")) {
-    buildClosed = Boolean.parseBoolean(BUILD_CLOSED);
-}
+def closedDir = file("../rt-closed")
+def buildClosed = closedDir.isDirectory()
 ext.BUILD_CLOSED = buildClosed
 
 // These variables indicate what platform is running the build. Is
@@ -260,19 +266,21 @@ defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"
 defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api")
-defineProperty("STUB_RUNTIME", "$JDK_HOME/jre")
-defineProperty("BINARY_STUB", cygpath("$STUB_RUNTIME/lib/ext/jfxrt.jar"))
-defineProperty("LIBRARY_STUB", IS_MAC ? cygpath("$STUB_RUNTIME/lib") :
-                               IS_WINDOWS ? cygpath("$STUB_RUNTIME/bin") :
-                               cygpath("$STUB_RUNTIME/lib/$OS_ARCH"))
-ext.BINARY_STUB = "".equals(BINARY_STUB) ? null : files(BINARY_STUB)
 
-def closedDir = file("../rt-closed");
-def supplementalPropertyFile = file("$closedDir/closed-properties.gradle");
+def String closedCacheStubRuntime = cygpath("$projectDir") + "/../caches/sdk/rt"
+defineProperty("STUB_RUNTIME", BUILD_CLOSED ? closedCacheStubRuntime : cygpath("$JDK_HOME/jre"))
+defineProperty("BINARY_STUB", "$STUB_RUNTIME/lib/ext/jfxrt.jar")
+defineProperty("LIBRARY_STUB", IS_MAC ? "$STUB_RUNTIME/lib" :
+                               IS_WINDOWS ? "$STUB_RUNTIME/bin" :
+                               "$STUB_RUNTIME/lib/$OS_ARCH")
+ext.BINARY_STUB = "".equals(BINARY_STUB) ? null : files(BINARY_STUB)
+defineProperty("UPDATE_STUB_CACHE", (STUB_RUNTIME.equals(closedCacheStubRuntime) ? 'true' : 'false'))
+
+def supplementalPreBuildFile = file("$closedDir/closed-pre-build.gradle");
 def supplementalBuildFile = file("$closedDir/closed-build.gradle");
 
 if (BUILD_CLOSED) {
-    apply from: supplementalPropertyFile
+    apply from: supplementalPreBuildFile
 }
 
 // COMPILE_WEBKIT specifies whether to build all of webkit. COMPILE_GSTREAMER
@@ -291,10 +299,10 @@ ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f" 
     IS_LINUX && IS_64 ? "org.eclipse.swt.gtk.linux.x86_64_3.7.2.v3740f" :
     IS_LINUX && !IS_64 ? "org.eclipse.swt.gtk.linux.x86_3.7.2.v3740f" : ""
 
-// Build javadocs unless SKIP_JAVADOC=true
-def buildJavadoc = true;
-if (hasProperty("SKIP_JAVADOC")) {
-    buildJavadoc = !Boolean.parseBoolean(SKIP_JAVADOC);
+// Build javadocs only if BUILD_JAVADOC=true
+def buildJavadoc = false;
+if (hasProperty("BUILD_JAVADOC")) {
+    buildJavadoc = Boolean.parseBoolean(BUILD_JAVADOC);
 }
 ext.BUILD_JAVADOC = buildJavadoc;
 
@@ -312,7 +320,7 @@ defineProperty("DOC_LINT", "none")
 ext.IS_DOC_LINT = DOC_LINT != "none"
 
 // Specifies whether to use the "useDepend" option when compiling Java sources
-defineProperty("USE_DEPEND", "false")
+defineProperty("USE_DEPEND", "true")
 ext.USE_DEPEND = Boolean.parseBoolean(USE_DEPEND)
 
 // Define the number of threads to use when compiling (specifically for native compilation)
@@ -588,6 +596,10 @@ logger.quiet("RAW_VERSION: $RAW_VERSION")
 logger.quiet("RELEASE_NAME: $RELEASE_NAME")
 logger.quiet("RELEASE_MILESTONE: $RELEASE_MILESTONE")
 
+if (UPDATE_STUB_CACHE) {
+    logger.quiet("UPDATE_STUB_CACHE: $UPDATE_STUB_CACHE")
+}
+
 /******************************************************************************
  *                                                                            *
  *                Definition of Native Code Compilation Tasks                 *
@@ -731,6 +743,10 @@ void addJSL(Project project, String name, String pkg, Closure compile) {
     }
 }
 
+task updateCacheIfNeeded() {
+    // an empty task we can add to as needed for UPDATE_STUB_CACHE
+}
+
 /*****************************************************************************
 *        Project definitions (dependencies, etc)                             *
 *****************************************************************************/
@@ -750,7 +766,7 @@ allprojects {
     // "artifact" in the pattern below. Note that the closed builds use different repositories
     // so if you are debugging a closed-build artifact related build issue, check out the
     // closed gradle file instead.
-    if (!"true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+    if (!BUILD_CLOSED) {
         repositories {
             mavenCentral()
             ivy {
@@ -844,6 +860,8 @@ project(":base") {
             line
         }
     }
+
+    compileJava.dependsOn updateCacheIfNeeded
 
     // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
@@ -1248,7 +1266,7 @@ project(":fxpackager") {
     }
     // fxpackager has a dependency on ant in order to build the ant jar,
     // and as such needs to point to the apache binary repository
-    if (!"true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+    if (!BUILD_CLOSED) {
         repositories {
             maven {
                 url "https://repository.apache.org"
@@ -1578,8 +1596,17 @@ task findbugs() {
 
 // The following tasks are for the closed build only. They are a no-op for the open build
 
+task checkCache() {
+    dependsOn(updateCacheIfNeeded)
+}
+
 // TODO: consider moving the "public-sdk" portion of this task here
 task publicExports() {
+    doFirst {
+        if (!BUILD_JAVADOC) {
+            fail("publicExports task requires: -PBUILD_JAVADOC=true")
+        }
+    }
     dependsOn(sdk)
     doLast {
         if (!BUILD_CLOSED) {
@@ -1598,6 +1625,11 @@ task perf() {
 }
 
 task zips() {
+    doFirst {
+        if (!BUILD_JAVADOC) {
+            fail("zips task requires: -PBUILD_JAVADOC=true")
+        }
+    }
     dependsOn(sdk,publicExports,apps,perf)
     doLast {
         if (!BUILD_CLOSED) {
@@ -1775,9 +1807,6 @@ compileTargets { t ->
       <task-names>
         <name must-exist="no">build</name>
       </task-names>
-      <task-args>
-        <arg>-PBUILD_CLOSED=true</arg>
-      </task-args>
       <task-jvm-args/>
     </task>
   </built-in-tasks>
@@ -1788,9 +1817,6 @@ compileTargets { t ->
       <task-names>
         <name must-exist="yes">tasks</name>
       </task-names>
-      <task-args>
-        <arg>-PBUILD_CLOSED=true</arg>
-      </task-args>
       <task-jvm-args/>
     </task>
   </common-tasks>
@@ -2221,33 +2247,38 @@ if (BINARY_STUB != null) {
     JFXRT_CP += BINARY_STUB 
 }
 
-// TODO: better place for this ?
-ext.APPS_ARTIFACTS="$jfxArtifactsDir/apps"
 
 childProjects["apps"].subprojects { 
     afterEvaluate { project ->
 	// this check is to make sure we are using a java or application plugin
         // in our child projects of ./apps
         if (project.hasProperty("jar") && project.hasProperty("compileJava")) {
-            // augment the classpath with our build system classpath 
-            // which will include our local jfxrt.jar
-           project.compileJava {
-               // TODO: don't know how to do this correctly
-	       //dependsOn project(":graphics").classes, project(":controls").classes, project(":base").classes
-	       doFirst {
-		   classpath = rootProject.JFXRT_CP + 
-                       sourceSets.main.compileClasspath
-	       }
-            }
-            test.exclude("**/*");
+           def srcdir = new File ("$project.projectDir/src");
 
-            def srcdir = new File ("$project.projectDir/src");
+           if (srcdir.exists()) {
+               // augment the classpath with our build system classpath 
+               // which will include our local jfxrt.jar
+               project.compileJava {
+                   // TODO: don't know how to do this correctly
+                   //dependsOn project(":graphics").classes, project(":controls").classes, project(":base").classes
+                   doFirst {
+                       classpath = rootProject.JFXRT_CP + 
+                           sourceSets.main.compileClasspath
+                   }
+                }
+                test.exclude("**/*");
+            } else {
+                // no source, but still a 'java' plugin, so just disable it
+                project.tasks.all {
+                    it.enabled = false
+                }
+            }
 
             if (BUILD_CLOSED && srcdir.exists()) {
                 def cptask = project.task('copyAppsArtifacts', type: Copy ) {
                 dependsOn project.getPath() + ":jar"
 		    from project.jar.archivePath
-		    into rootProject.APPS_ARTIFACTS
+		    into "$rootProject.jfxArtifactsDir/apps/ga-samples"
 		}
                 rootProject.apps.dependsOn(cptask)
 	    }

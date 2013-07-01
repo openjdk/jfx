@@ -8,7 +8,9 @@
 ^\.ant-targets.*$
 \.idea/workspace.xml$
 ^\.gradle/
+^\.libs/
 ^buildSrc/\.gradle/
+^idea/out/
 build/
 bin/
 dist/
