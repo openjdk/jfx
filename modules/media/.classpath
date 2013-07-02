@@ -2,15 +2,4 @@
   <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
   <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
   <classpathentry kind="output" path="bin"/>
-
-  <classpathentry kind="lib" exported="true" path="../../../caches/sdk/build/lib/desktop/jfxmedia.jar">
-    <attributes>
-      <attribute name="optional" value="true"/>
-    </attributes>
-  </classpathentry>
-  <classpathentry kind="lib" exported="true" path="../../../caches/sdk/build/lib/desktop/javafx-ui-desktop.jar">
-      <attributes>
-        <attribute name="optional" value="true"/>
-      </attributes>
-  </classpathentry>
 </classpath>

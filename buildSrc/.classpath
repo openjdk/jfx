@@ -9,6 +9,7 @@
   <classpathentry kind="lib" exported="true" path="../.libs/plugin.jar"/>
   <classpathentry kind="lib" exported="true" path="../.libs/stringtemplate-3.2.jar"/>
   <classpathentry kind="lib" exported="true" path="../.libs/swt.jar"/>
+  <classpathentry kind="lib" exported="true" path="../../caches/sdk/rt/lib/ext/jfxrt.jar"/>
   <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
   <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
   <classpathentry kind="output" path="bin"/>
