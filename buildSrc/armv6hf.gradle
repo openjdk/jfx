@@ -253,7 +253,7 @@ ARMV6HF.glass.directfb.compiler = compiler
 ARMV6HF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb", "-DLINUX", "-DGRADLE_BUILD"].flatten()
 ARMV6HF.glass.directfb.linker = linker
 ARMV6HF.glass.directfb.linkFlags = [lensLFlags].flatten()
-ARMV6HF.glass.directfb.lib = "glass-lens-directfb"
+ARMV6HF.glass.directfb.lib = "glass-lens-dfb"
 
 ARMV6HF.glass.fb = [:]
 ARMV6HF.glass.fb.nativeSource = [
