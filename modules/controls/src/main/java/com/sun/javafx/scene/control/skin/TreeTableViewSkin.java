@@ -145,7 +145,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
                  getRoot().setExpanded(true);
             }
             // update the item count in the flow and behavior instances
-            rowCountDirty = true;
+            updateRowCount();
         } else if ("ROW_FACTORY".equals(p)) {
             flow.recreateCells();
         } else if ("TREE_ITEM_COUNT".equals(p)) {
