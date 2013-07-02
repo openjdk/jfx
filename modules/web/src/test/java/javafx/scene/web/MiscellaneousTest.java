@@ -8,6 +8,7 @@ import static java.lang.String.format;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -29,10 +30,11 @@ public class MiscellaneousTest extends TestBase {
     }
 
     @Test public void testRT22458() throws Exception {
+        final WebEngine webEngine = createWebEngine();
         Platform.runLater(new Runnable() {
             @Override public void run() {
-                getEngine().load(format("file://%d.ajax.googleapis.com/ajax",
-                                        new Random().nextInt()));
+                webEngine.load(format("file://%d.ajax.googleapis.com/ajax",
+                                      new Random().nextInt()));
             }
         });
         Thread.sleep(200);
@@ -72,11 +74,19 @@ public class MiscellaneousTest extends TestBase {
         submit(new Runnable() { public void run() {
             getEngine().getLoadWorker().stateProperty().addListener(listener);
         }});
-        String location = new File("test/html/RT30835.html")
+        String location = new File("src/test/java/html/RT30835.html")
                 .toURI().toASCIIString().replaceAll("^file:/", "file:///");
         load(location);
         assertEquals(1, records.size());
         assertNotNull(records.get(0).document);
         assertEquals(location, records.get(0).location);
+    }
+
+    private WebEngine createWebEngine() {
+        return submit(new Callable<WebEngine>() {
+            public WebEngine call() {
+                return new WebEngine();
+            }
+        });
     }
 }
