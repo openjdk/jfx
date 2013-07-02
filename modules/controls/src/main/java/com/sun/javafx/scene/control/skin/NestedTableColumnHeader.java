@@ -74,13 +74,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (getTableColumn() != null) {
             changeListenerHandler.registerChangeListener(getTableColumn().textProperty(), "TABLE_COLUMN_TEXT");
         }
-        
-        // watching for changes to the view columns in either table or tableColumn.
-        if (getTableColumn() == null && getTableViewSkin() != null) {
-            setColumns(getTableViewSkin().getColumns());
-        } else if (getTableColumn() != null) {
-            setColumns(getTableColumn().getColumns());
-        }
 
         changeListenerHandler.registerChangeListener(skin.columnResizePolicyProperty(), "TABLE_VIEW_COLUMN_RESIZE_POLICY");
     }
@@ -148,11 +141,18 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (this.columns != null) {
             this.columns.addListener(weakColumnsListener);
         }
-
-        updateTableColumnHeaders();
     }
     
     void updateTableColumnHeaders() {
+        // watching for changes to the view columns in either table or tableColumn.
+        if (getTableColumn() == null && getTableViewSkin() != null) {
+            setColumns(getTableViewSkin().getColumns());
+        } else if (getTableColumn() != null) {
+            setColumns(getTableColumn().getColumns());
+        }
+
+        // update the column headers...
+
         // iterate through all current headers, telling them to clean up
         for (int i = 0; i < getColumnHeaders().size(); i++) {
             TableColumnHeader header = getColumnHeaders().get(i);
@@ -398,7 +398,11 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     /* END OF COLUMN RESIZING   */
     /* **************************/
 
+    boolean updateColumns = true;
+
     void setHeadersNeedUpdate() {
+        updateColumns = true;
+
         // go through children columns - they should update too
         for (int i = 0; i < getColumnHeaders().size(); i++) {
             TableColumnHeader header = getColumnHeaders().get(i);
@@ -406,8 +410,15 @@ public class NestedTableColumnHeader extends TableColumnHeader {
                 ((NestedTableColumnHeader)header).setHeadersNeedUpdate();
             }
         }
-        updateTableColumnHeaders();
         requestLayout();
+    }
+
+    private void checkState() {
+        if (updateColumns) {
+            updateTableColumnHeaders();
+            updateColumns = false;
+            getParent().requestLayout();
+        }
     }
     
     @Override protected void layoutChildren() {
@@ -459,6 +470,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
     // sum up all children columns
     @Override protected double computePrefWidth(double height) {
+        checkState();
+
         double width = 0.0F;
 
         if (getColumns() != null) {
@@ -473,6 +486,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     }
 
     @Override protected double computePrefHeight(double width) {
+        checkState();
+
         double height = 0.0F;
 
         if (getColumnHeaders() != null) {
