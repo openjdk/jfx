@@ -25,10 +25,13 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.ObservableSet;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -39,10 +42,6 @@ import org.junit.Test;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import static org.junit.Assert.*;
 
-/**
- *
- * @author srikalyc
- */
 public class TextFieldTest {
     private TextField txtField;//Empty string
     private TextField dummyTxtField;//With string value
@@ -139,6 +138,34 @@ public class TextFieldTest {
         Scene s = new Scene(txtField);
         txtField.impl_processCSS(true);
         assertEquals(100, txtField.getPrefColumnCount(), 0);
+    }
+
+    @Test public void pseudoClassState_isReadOnly() {
+        new StageLoader(txtField);
+        txtField.impl_processCSS(true);
+
+        txtField.setEditable(false);
+        ObservableSet<PseudoClass> pcSet = txtField.getPseudoClassStates();
+        boolean match = false;
+        for (PseudoClass pc : pcSet) {
+            if (match) break;
+            match = "readonly".equals(pc.getPseudoClassName());
+        }
+        assertTrue(match);
+    }
+
+    @Test public void pseudoClassState_isNotReadOnly() {
+        new StageLoader(txtField);
+        txtField.impl_processCSS(true);
+
+        txtField.setEditable(true);
+        ObservableSet<PseudoClass> pcSet = txtField.getPseudoClassStates();
+        boolean match = false;
+        for (PseudoClass pc : pcSet) {
+            if (match) break;
+            match = "readonly".equals(pc.getPseudoClassName());
+        }
+        assertFalse(match);
     }
 
     /*********************************************************************
