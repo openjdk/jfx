@@ -524,6 +524,16 @@ public abstract class Window {
         return this.isVisible;
     }
 
+    /**
+     * Generates a ViewEvent.MOVE aka insets (might have) changed.
+     */
+    private void synthesizeViewMoveEvent() {
+        final View view = getView();
+        if (view != null) {
+            view.notifyView(com.sun.glass.events.ViewEvent.MOVE);
+        }
+    }
+
     protected abstract boolean _setVisible(long ptr, boolean visible);
     public void setVisible(final boolean visible) {
         Application.checkEventThread();
@@ -567,6 +577,8 @@ public abstract class Window {
                            Application.GetApplication().createTimer(timerRunnable);
                     embeddedLocationTimer.start(16);
                 }
+
+                synthesizeViewMoveEvent();
             }
         }
     }
@@ -578,6 +590,7 @@ public abstract class Window {
         if (this.isResizable != resizable) {
             if (_setResizable(this.ptr, resizable)) {
                 this.isResizable = resizable;
+                synthesizeViewMoveEvent();
             }
         }
         return isResizable;
