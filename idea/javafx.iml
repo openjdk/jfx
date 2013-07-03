@@ -8,6 +8,7 @@
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" name="gradle-1.4" level="application" />
   </component>
 </module>
 
