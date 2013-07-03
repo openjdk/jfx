@@ -25,11 +25,11 @@
 
 package com.sun.scenario.animation.shared;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.animation.Animation.Status;
 import javafx.animation.AnimationMock;
 import javafx.animation.AnimationMock.Command;
 import javafx.util.Duration;
-import com.sun.scenario.ToolkitAccessor;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -45,7 +45,7 @@ public class SingleLoopClipEnvelopeTest {
     
     @Before
     public void setUp() {
-        animation = new AnimationMock(ToolkitAccessor.getMasterTimer(), AnimationMock.DEFAULT_DURATION, AnimationMock.DEFAULT_RATE, 1, AnimationMock.DEFAULT_AUTOREVERSE);
+        animation = new AnimationMock(Toolkit.getToolkit().getMasterTimer(), AnimationMock.DEFAULT_DURATION, AnimationMock.DEFAULT_RATE, 1, AnimationMock.DEFAULT_AUTOREVERSE);
         clip = new SingleLoopClipEnvelope(animation);
     }
     

@@ -46,7 +46,7 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
-import com.javafx.experiments.shape3d.SubDivision;
+import com.javafx.experiments.shape3d.SubdivisionMesh;
 import javafx.beans.binding.ObjectBinding;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -150,7 +150,7 @@ public class SettingsController implements Initializable {
                     subdivisionBoundaryGroup.selectToggle(oldValue);
                     selectedToggle = oldValue;
                 } else {
-                    contentModel.setBoundaryMode((SubDivision.BoundaryMode) selectedToggle.getUserData());
+                    contentModel.setBoundaryMode((SubdivisionMesh.BoundaryMode) selectedToggle.getUserData());
                 }
             }
         });
@@ -160,7 +160,7 @@ public class SettingsController implements Initializable {
                     subdivisionSmoothGroup.selectToggle(oldValue);
                     selectedToggle = oldValue;
                 } else {
-                    contentModel.setMapBorderMode((SubDivision.MapBorderMode) selectedToggle.getUserData());
+                    contentModel.setMapBorderMode((SubdivisionMesh.MapBorderMode) selectedToggle.getUserData());
                 }
             }
         });

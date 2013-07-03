@@ -4,9 +4,10 @@ import java.util.Arrays;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ArrayChangeListener;
 import javafx.collections.ObservableFloatArray;
-import javafx.collections.ObservableIntegerArray;
 import javafx.scene.Parent;
 import javafx.scene.paint.Material;
 import javafx.scene.shape.CullFace;
@@ -14,15 +15,41 @@ import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 
+import static javafx.scene.shape.TriangleMesh.*;
+import static com.javafx.experiments.shape3d.SubdivisionMesh.*;
+
 /**
  * A MeshView node for Polygon Meshes
  */
 public class PolygonMeshView extends Parent {
     private static final boolean DEBUG = false;
     private final MeshView meshView = new MeshView();
-    private PolygonMesh subdividedMesh = null;
-    // TODO keep only one TriangleMesh around
 
+    private TriangleMesh triangleMesh = new TriangleMesh();
+    
+    // this is null if no subdivision is happening (i.e. subdivisionLevel = 0);
+    private SubdivisionMesh subdivisionMesh;
+    
+    private final ArrayChangeListener<ObservableFloatArray> meshPointsListener = new ArrayChangeListener<ObservableFloatArray>() {
+        @Override
+        public void onChanged(ObservableFloatArray t, boolean bln, int i, int i1) {
+            pointsDirty = true;
+            updateMesh();
+        }
+    };
+    private final ArrayChangeListener<ObservableFloatArray> meshTexCoordListener = new ArrayChangeListener<ObservableFloatArray>() {
+        @Override
+        public void onChanged(ObservableFloatArray t, boolean bln, int i, int i1) {
+            texCoordsDirty = true;
+            updateMesh();
+        }
+    };
+    
+    private boolean pointsDirty = true;
+    private boolean pointsSizeDirty = true;
+    private boolean texCoordsDirty = true;
+    private boolean facesDirty = true;
+    
     // =========================================================================
     // PROPERTIES
 
@@ -31,24 +58,34 @@ public class PolygonMeshView extends Parent {
      *
      * @defaultValue null
      */
-    private ObjectProperty<PolygonMesh> mesh = new SimpleObjectProperty<PolygonMesh>(){
-        @Override protected void invalidated() {
-            updateSubdivision();
+    private ObjectProperty<PolygonMesh> meshProperty;
+    public PolygonMesh getMesh() { return meshProperty().get(); }
+    public void setMesh(PolygonMesh mesh) { meshProperty().set(mesh);}
+    public ObjectProperty<PolygonMesh> meshProperty() { 
+        if (meshProperty == null) {
+            meshProperty = new SimpleObjectProperty<PolygonMesh>();
+            meshProperty.addListener(new ChangeListener<PolygonMesh>() {
+                @Override
+                public void changed(ObservableValue<? extends PolygonMesh> observable, PolygonMesh oldValue, PolygonMesh newValue) {
+                    if (oldValue != null) {
+                        oldValue.getPoints().removeListener(meshPointsListener);
+                        oldValue.getPoints().removeListener(meshTexCoordListener);
+                    }
+
+                    meshProperty.set(newValue);
+
+                    pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true;
+                    updateMesh();
+                    
+                    if (newValue != null) {
+                        newValue.getPoints().addListener(meshPointsListener);
+                        newValue.getTexCoords().addListener(meshTexCoordListener);
+                    }
+                }
+            });
         }
-    };
-    public PolygonMesh getMesh() { return mesh.get(); }
-    public void setMesh(PolygonMesh mesh) { 
-        this.mesh.set(mesh);
-        mesh.getPoints().addListener(new ArrayChangeListener<ObservableFloatArray>() {
-            @Override
-            public void onChanged(ObservableFloatArray t, boolean bln, int i, int i1) {
-                // TODO don't update the whole mesh, only update the parts affected by points
-                updateMesh();
-            }
-        });
+        return meshProperty;
     }
-    
-    public ObjectProperty<PolygonMesh> meshProperty() { return mesh; }
     
     /**
      * Defines the drawMode this {@code Shape3D}.
@@ -62,8 +99,9 @@ public class PolygonMeshView extends Parent {
         if (drawMode == null) {
             drawMode = new SimpleObjectProperty<DrawMode>(PolygonMeshView.this, "drawMode", DrawMode.FILL) {
                 @Override protected void invalidated() {
-                    updateMesh();
                     meshView.setDrawMode(get());
+                    pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true;
+                    updateMesh();
                 }
             };
         }
@@ -106,42 +144,83 @@ public class PolygonMeshView extends Parent {
      *
      * @defaultValue 0
      */
-    private SimpleIntegerProperty subdivisionLevel = new SimpleIntegerProperty(0) {
-        @Override protected void invalidated() {
-            updateSubdivision();
+    private SimpleIntegerProperty subdivisionLevelProperty;
+    public void setSubdivisionLevel(int subdivisionLevel) { subdivisionLevelProperty().set(subdivisionLevel); }
+    public int getSubdivisionLevel() { return subdivisionLevelProperty == null ? 0 : subdivisionLevelProperty.get(); }
+    public SimpleIntegerProperty subdivisionLevelProperty() { 
+        if (subdivisionLevelProperty == null) {
+            subdivisionLevelProperty = new SimpleIntegerProperty(getSubdivisionLevel()) {
+                @Override protected void invalidated() {
+                    // create SubdivisionMesh if subdivisionLevel is greater than 0
+                    if ((getSubdivisionLevel() > 0) && (subdivisionMesh == null)) {
+                        subdivisionMesh = new SubdivisionMesh(getMesh(), getSubdivisionLevel(), getBoundaryMode(), getMapBorderMode());
+                        subdivisionMesh.getOriginalMesh().getPoints().addListener(new ArrayChangeListener<ObservableFloatArray>() {
+                            @Override
+                            public void onChanged(ObservableFloatArray t, boolean bln, int i, int i1) {
+                                subdivisionMesh.update();
+                            }
+                        });
+                        setMesh(subdivisionMesh);
+                    }
+                    if (subdivisionMesh != null) {
+                        subdivisionMesh.setSubdivisionLevel(getSubdivisionLevel());
+                        subdivisionMesh.update();
+                    }
+                    pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true;
+                    updateMesh();
+                }
+            };
         }
-    };
-    public int getSubdivisionLevel() { return subdivisionLevel.get(); }
-    public SimpleIntegerProperty subdivisionLevelProperty() { return subdivisionLevel; }
-    public void setSubdivisionLevel(int subdivisionLevel) { this.subdivisionLevel.set(subdivisionLevel); }
+        return subdivisionLevelProperty;
+    }
     
     /**
      * Texture mapping boundary rule for Catmull Clark subdivision applied to the mesh
      *
      * @defaultValue BoundaryMode.CREASE_EDGES
      */
-    private SimpleObjectProperty<SubDivision.BoundaryMode> boundaryMode = new SimpleObjectProperty<SubDivision.BoundaryMode>(SubDivision.BoundaryMode.CREASE_EDGES) {
-        @Override protected void invalidated() {
-            updateSubdivision();
+    private SimpleObjectProperty<BoundaryMode> boundaryMode;
+    public void setBoundaryMode(BoundaryMode boundaryMode) { boundaryModeProperty().set(boundaryMode); }
+    public BoundaryMode getBoundaryMode() { return boundaryMode == null ? BoundaryMode.CREASE_EDGES : boundaryMode.get(); }
+    public SimpleObjectProperty<BoundaryMode> boundaryModeProperty() {
+        if (boundaryMode == null) {
+            boundaryMode = new SimpleObjectProperty<BoundaryMode>(getBoundaryMode()) {
+                @Override protected void invalidated() {
+                    if (subdivisionMesh != null) {
+                        subdivisionMesh.setBoundaryMode(getBoundaryMode());
+                        subdivisionMesh.update();
+                    }
+                    pointsDirty = true;
+                    updateMesh();
+                }
+            };
         }
-    };
-    public SubDivision.BoundaryMode getBoundaryMode() { return boundaryMode.get(); }
-    public SimpleObjectProperty<SubDivision.BoundaryMode> boundaryModeProperty() { return boundaryMode; }
-    public void setBoundaryMode(SubDivision.BoundaryMode boundaryMode) { this.boundaryMode.set(boundaryMode); }
+        return boundaryMode;
+    }
     
     /**
      * Texture mapping smoothness option for Catmull Clark subdivision applied to the mesh
      *
      * @defaultValue MapBorderMode.NOT_SMOOTH
      */
-    private SimpleObjectProperty<SubDivision.MapBorderMode> mapBorderMode = new SimpleObjectProperty<SubDivision.MapBorderMode>(SubDivision.MapBorderMode.NOT_SMOOTH) {
-        @Override protected void invalidated() {
-            updateSubdivision();
+    private SimpleObjectProperty<MapBorderMode> mapBorderMode;
+    public void setMapBorderMode(MapBorderMode mapBorderMode) { mapBorderModeProperty().set(mapBorderMode); }
+    public MapBorderMode getMapBorderMode() { return mapBorderMode == null ? MapBorderMode.NOT_SMOOTH : mapBorderMode.get(); }
+    public SimpleObjectProperty<MapBorderMode> mapBorderModeProperty() { 
+        if (mapBorderMode == null) {
+            mapBorderMode = new SimpleObjectProperty<MapBorderMode>(getMapBorderMode()) {
+                @Override protected void invalidated() {
+                    if (subdivisionMesh != null) {
+                        subdivisionMesh.setMapBorderMode(getMapBorderMode());
+                        subdivisionMesh.update();
+                    }
+                    texCoordsDirty = true;
+                    updateMesh();
+                }
+            };
         }
-    };
-    public SubDivision.MapBorderMode getMapBorderMode() { return mapBorderMode.get(); }
-    public SimpleObjectProperty<SubDivision.MapBorderMode> mapBorderModeProperty() { return mapBorderMode; }
-    public void setMapBorderMode(SubDivision.MapBorderMode mapBorderMode) { this.mapBorderMode.set(mapBorderMode); }
+        return mapBorderMode;
+    }
 
     // =========================================================================
     // CONSTRUCTORS
@@ -159,121 +238,143 @@ public class PolygonMeshView extends Parent {
     // =========================================================================
     // PRIVATE METHODS
 
-    private void updateSubdivision() {
-        final int iterations = subdivisionLevel.get();
-        if (iterations == 0) {
-            subdividedMesh = null;
-        } else {
-            subdividedMesh = getMesh();
-            for (int i=0; i<iterations; i++) {
-                subdividedMesh = SubDivision.subdivide(subdividedMesh, boundaryMode.get(), mapBorderMode.get());
-            }
-        }
-        updateMesh();
-    }
-
     private void updateMesh() {
-        PolygonMesh pmesh = subdividedMesh != null ? subdividedMesh : getMesh();
-        if (pmesh == null || pmesh.faces == null || pmesh.texCoords == null) {
-            meshView.setMesh(null);
+        PolygonMesh pmesh = getMesh();
+        if (pmesh == null || pmesh.faces == null) {
+            triangleMesh = new TriangleMesh();
+            meshView.setMesh(triangleMesh);
             return;
         }
+        
         final boolean isWireframe = getDrawMode() == DrawMode.LINE;
         if (DEBUG) System.out.println("UPDATE MESH -- "+(isWireframe?"WIREFRAME":"SOLID"));
-        final TriangleMesh triangleMesh = new TriangleMesh();
-        final int numOfPoints = pmesh.getPoints().size()/TriangleMesh.NUM_COMPONENTS_PER_POINT;
+        final int numOfPoints = pmesh.getPoints().size()/NUM_COMPONENTS_PER_POINT;
         if (DEBUG) System.out.println("numOfPoints = " + numOfPoints);
         
         if(isWireframe) {
-            // create points and copy over points to the first part of the array
-            float [] pointsArray = new float [pmesh.getPoints().size() + pmesh.getNumEdgesInFaces()*3];
-            System.arraycopy(pmesh.getPoints().toArray(null), 0, pointsArray, 0, pmesh.getPoints().size());
-            int pointsInd = pmesh.getPoints().size();
+            // The current triangleMesh implementation gives buggy behavior when the size of faces are shrunken
+            // Create a new TriangleMesh as a work around
+            // [JIRA] (RT-31178)
+            if (texCoordsDirty || facesDirty || pointsSizeDirty) {
+                triangleMesh = new TriangleMesh();
+                pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true; // to fill in the new triangle mesh
+            }
+            if (facesDirty) {
+                facesDirty = false;
+                // create faces for each edge
+                int [] facesArray = new int [pmesh.getNumEdgesInFaces() * NUM_COMPONENTS_PER_FACE];
+                int facesInd = 0;
+                int pointsInd = pmesh.getPoints().size();
+                for(int[] face: pmesh.faces) {
+                    if (DEBUG) System.out.println("face.length = " + (face.length/2)+"  -- "+Arrays.toString(face));
+                    int lastPointIndex = face[face.length-2];
+                    if (DEBUG) System.out.println("    lastPointIndex = " + lastPointIndex);
+                    for (int p=0;p<face.length;p+=2) {
+                        int pointIndex = face[p];
+                        if (DEBUG) System.out.println("        connecting point["+lastPointIndex+"] to point[" + pointIndex+"]");
+                        facesArray[facesInd++] = lastPointIndex;
+                        facesArray[facesInd++] = 0;
+                        facesArray[facesInd++] = pointIndex;
+                        facesArray[facesInd++] = 0;
+                        facesArray[facesInd++] = pointsInd/NUM_COMPONENTS_PER_POINT;
+                        facesArray[facesInd++] = 0;
+                        if (DEBUG) System.out.println("            facesInd = " + facesInd);
+                        pointsInd += NUM_COMPONENTS_PER_POINT;
+                        lastPointIndex = pointIndex;
+                    }
+                }
+                triangleMesh.getFaces().setAll(facesArray);
+            }
+            if (texCoordsDirty) {
+                texCoordsDirty = false;
+                // set simple texCoords for wireframe
+                triangleMesh.getTexCoords().setAll(0,0);
+            }
+            if (pointsDirty) {
+                pointsDirty = false;
+                // create points and copy over points to the first part of the array
+                float [] pointsArray = new float [pmesh.getPoints().size() + pmesh.getNumEdgesInFaces()*3];
+                pmesh.getPoints().copyTo(0, pointsArray, 0, pmesh.getPoints().size());
 
-            // create faces and add point for each edge
-            final int numOfFacesBefore = pmesh.faces.length;
-            final int numOfFacesAfter = pmesh.getNumEdgesInFaces();
-            int [] facesArray = new int [numOfFacesAfter * TriangleMesh.NUM_COMPONENTS_PER_FACE];
-            int facesInd = 0;
-            
-            for(int[] face: pmesh.faces) {
-                if (DEBUG) System.out.println("face.length = " + (face.length/2)+"  -- "+Arrays.toString(face));
-                int lastPointIndex = face[face.length-2];
-                if (DEBUG) System.out.println("    lastPointIndex = " + lastPointIndex);
-                for (int p=0;p<face.length;p+=2) {
-                    int pointIndex = face[p];
-                    if (DEBUG) System.out.println("        connecting point["+lastPointIndex+"] to point[" + pointIndex+"]");
-                    facesArray[facesInd++] = lastPointIndex;
-                    facesArray[facesInd++] = 0;
-                    facesArray[facesInd++] = pointIndex;
-                    facesArray[facesInd++] = 0;
-                    facesArray[facesInd++] = pointsInd/TriangleMesh.NUM_COMPONENTS_PER_POINT;
-                    facesArray[facesInd++] = 0;
-                    final int numOfPoints2 = pointsInd/TriangleMesh.NUM_COMPONENTS_PER_POINT;
-                    if (DEBUG) System.out.println("            numOfPoints = " + numOfPoints2);
-                    // get start and end point
-                    final float x1 = pointsArray[lastPointIndex*TriangleMesh.NUM_COMPONENTS_PER_POINT];
-                    final float y1 = pointsArray[lastPointIndex*TriangleMesh.NUM_COMPONENTS_PER_POINT+1];
-                    final float z1 = pointsArray[lastPointIndex*TriangleMesh.NUM_COMPONENTS_PER_POINT+2];
-                    final float x2 = pointsArray[pointIndex*TriangleMesh.NUM_COMPONENTS_PER_POINT];
-                    final float y2 = pointsArray[pointIndex*TriangleMesh.NUM_COMPONENTS_PER_POINT+1];
-                    final float z2 = pointsArray[pointIndex*TriangleMesh.NUM_COMPONENTS_PER_POINT+2];
-                    final float distance = Math.abs(distanceBetweenPoints(x1,y1,z1,x2,y2,z2));
-                    final float offset = distance/1000;
-                    // add new point
-                    pointsArray[pointsInd++] = x2 + offset;
-                    pointsArray[pointsInd++] = y2 + offset;
-                    pointsArray[pointsInd++] = z2 + offset;
-                    if (DEBUG) System.out.println("            facesInd = " + facesInd);
-                    lastPointIndex = pointIndex;
+                // add point for each edge
+                int pointsInd = pmesh.getPoints().size();
+                for(int[] face: pmesh.faces) {
+                    int lastPointIndex = face[face.length-2];
+                    for (int p=0;p<face.length;p+=2) {
+                        int pointIndex = face[p];
+                        // get start and end point
+                        final float x1 = pointsArray[lastPointIndex*NUM_COMPONENTS_PER_POINT];
+                        final float y1 = pointsArray[lastPointIndex*NUM_COMPONENTS_PER_POINT+1];
+                        final float z1 = pointsArray[lastPointIndex*NUM_COMPONENTS_PER_POINT+2];
+                        final float x2 = pointsArray[pointIndex*NUM_COMPONENTS_PER_POINT];
+                        final float y2 = pointsArray[pointIndex*NUM_COMPONENTS_PER_POINT+1];
+                        final float z2 = pointsArray[pointIndex*NUM_COMPONENTS_PER_POINT+2];
+                        final float distance = Math.abs(distanceBetweenPoints(x1,y1,z1,x2,y2,z2));
+                        final float offset = distance/1000;
+                        // add new point
+                        pointsArray[pointsInd++] = x2 + offset;
+                        pointsArray[pointsInd++] = y2 + offset;
+                        pointsArray[pointsInd++] = z2 + offset;
+                        lastPointIndex = pointIndex;
+                    }
                 }
+                triangleMesh.getPoints().setAll(pointsArray);
             }
-            triangleMesh.getPoints().addAll(pointsArray);
-            triangleMesh.getFaces().addAll(facesArray);
-            if (DEBUG) System.out.println("numOfFacesBefore = " + numOfFacesBefore);
-            if (DEBUG) System.out.println("numOfFacesAfter = " + numOfFacesAfter);
-            // set simple texCoords for wireframe
-            triangleMesh.getTexCoords().addAll(0,0);
         } else {
-            // copy over points
-            triangleMesh.getPoints().addAll(pmesh.getPoints());
-        
-            // create faces and break into triangles
-            final int numOfFacesBefore = pmesh.faces.length;
-            final int numOfFacesAfter = pmesh.getNumEdgesInFaces() - 2*numOfFacesBefore;
-            int [] facesArray = new int [numOfFacesAfter * TriangleMesh.NUM_COMPONENTS_PER_FACE];
-            int facesInd = 0;
-            
-            for(int[] face: pmesh.faces) {
-                if (DEBUG) System.out.println("face.length = " + face.length+"  -- "+Arrays.toString(face));
-                int firstPointIndex = face[0];
-                int firstTexIndex = face[1];
-                int lastPointIndex = face[2];
-                int lastTexIndex = face[3];
-                for (int p=4;p<face.length;p+=2) {
-                    int pointIndex = face[p];
-                    int texIndex = face[p+1];
-                    facesArray[facesInd++] = firstPointIndex;
-                    facesArray[facesInd++] = firstTexIndex;
-                    facesArray[facesInd++] = lastPointIndex;
-                    facesArray[facesInd++] = lastTexIndex;
-                    facesArray[facesInd++] = pointIndex;
-                    facesArray[facesInd++] = texIndex;
-                    lastPointIndex = pointIndex;
-                    lastTexIndex = texIndex;
-                }
+            // The current triangleMesh implementation gives buggy behavior when the size of faces are shrunken
+            // Create a new TriangleMesh as a work around
+            // [JIRA] (RT-31178)
+            if (texCoordsDirty || facesDirty || pointsSizeDirty) {
+                triangleMesh = new TriangleMesh();
+                pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true; // to fill in the new triangle mesh
             }
-            triangleMesh.getFaces().addAll(facesArray);
-            if (DEBUG) System.out.println("numOfFacesBefore = " + numOfFacesBefore);
-            if (DEBUG) System.out.println("numOfFacesAfter = " + numOfFacesAfter);
-            // copy over texCoords
-            triangleMesh.getTexCoords().addAll(pmesh.texCoords);
+            if (facesDirty) {
+                facesDirty = false;
+                // create faces and break into triangles
+                final int numOfFacesBefore = pmesh.faces.length;
+                final int numOfFacesAfter = pmesh.getNumEdgesInFaces() - 2*numOfFacesBefore;
+                int [] facesArray = new int [numOfFacesAfter * NUM_COMPONENTS_PER_FACE];
+                int facesInd = 0;
+                for(int[] face: pmesh.faces) {
+                    if (DEBUG) System.out.println("face.length = " + face.length+"  -- "+Arrays.toString(face));
+                    int firstPointIndex = face[0];
+                    int firstTexIndex = face[1];
+                    int lastPointIndex = face[2];
+                    int lastTexIndex = face[3];
+                    for (int p=4;p<face.length;p+=2) {
+                        int pointIndex = face[p];
+                        int texIndex = face[p+1];
+                        facesArray[facesInd++] = firstPointIndex;
+                        facesArray[facesInd++] = firstTexIndex;
+                        facesArray[facesInd++] = lastPointIndex;
+                        facesArray[facesInd++] = lastTexIndex;
+                        facesArray[facesInd++] = pointIndex;
+                        facesArray[facesInd++] = texIndex;
+                        lastPointIndex = pointIndex;
+                        lastTexIndex = texIndex;
+                    }
+                }
+                triangleMesh.getFaces().setAll(facesArray);
+            }
+            if (texCoordsDirty) {
+                texCoordsDirty = false;
+                triangleMesh.getTexCoords().setAll(pmesh.getTexCoords());
+            }
+            if (pointsDirty) {
+                pointsDirty = false;
+                triangleMesh.getPoints().setAll(pmesh.getPoints());
+            }
         }
+        
         if (DEBUG) System.out.println("CREATING TRIANGLE MESH");
-        if (DEBUG) System.out.println("    points    = "+Arrays.toString(triangleMesh.getPoints().toArray(null)));
-        if (DEBUG) System.out.println("    texCoords = "+Arrays.toString(triangleMesh.getTexCoords().toArray(null)));
-        if (DEBUG) System.out.println("    faces     = "+Arrays.toString(triangleMesh.getFaces().toArray(null)));
-        meshView.setMesh(triangleMesh);
+        if (DEBUG) System.out.println("    points    = "+Arrays.toString(((TriangleMesh) meshView.getMesh()).getPoints().toArray(null)));
+        if (DEBUG) System.out.println("    texCoords = "+Arrays.toString(((TriangleMesh) meshView.getMesh()).getTexCoords().toArray(null)));
+        if (DEBUG) System.out.println("    faces     = "+Arrays.toString(((TriangleMesh) meshView.getMesh()).getFaces().toArray(null)));
+    
+        if (meshView.getMesh() != triangleMesh) {
+            meshView.setMesh(triangleMesh);
+        }
+        pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = false;
     }
 
     private float distanceBetweenPoints(float x1, float y1, float z1, float x2, float y2, float z2) {

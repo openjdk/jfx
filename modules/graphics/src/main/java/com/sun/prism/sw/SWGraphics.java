@@ -767,24 +767,27 @@ final class SWGraphics implements ReadbackGraphics {
 
             for (int i = strFrom; i < strTo; i++) {
                 final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
-                if (doLCDText && g.isLCDGlyph()) {
-                    final double posX = x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f;
-                    int subPosX = ((int)(3*posX)) % 3;
-                    if (subPosX < 0) {
-                        subPosX += 3;
+                final byte pixelData[] = g.getPixelData();
+                if (pixelData != null) {
+                    if (doLCDText && g.isLCDGlyph()) {
+                        final double posX = x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f;
+                        int subPosX = ((int)(3*posX)) % 3;
+                        if (subPosX < 0) {
+                            subPosX += 3;
+                        }
+                        this.pr.fillLCDAlphaMask(pixelData,
+                                (int)posX,
+                                (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
+                                subPosX,
+                                g.getWidth(), g.getHeight(),
+                                0, g.getWidth());
+                    } else {
+                        this.pr.fillAlphaMask(pixelData,
+                                (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f),
+                                (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
+                                g.getWidth(), g.getHeight(),
+                                0, g.getWidth());
                     }
-                    this.pr.fillLCDAlphaMask(g.getPixelData(),
-                            (int)posX,
-                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
-                            subPosX,
-                            g.getWidth(), g.getHeight(),
-                            0, g.getWidth());
-                } else {
-                    this.pr.fillAlphaMask(g.getPixelData(),
-                            (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f),
-                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
-                            g.getWidth(), g.getHeight(),
-                            0, g.getWidth());
                 }
             }
         } else {

@@ -152,6 +152,12 @@
 #systemProp.http.proxyHost=proxy.my.com
 #systemProp.http.proxyPort=80
 
+# In order to enable Android builds, you must specify the paths to the Android SDK and NDK.
+# Uncomment the two lines below and configure them to point to the right location on your system
+
+#ANDROID_SDK = /path/to/android/sdk
+#ANDROID_NDK = /path/to/android/ndk
+
 # The COMPILE_FLAGS_FILES defines the native compilation flags to use. Each native project
 # defines a pair of flags, XXX_CC_FLAGS and XXX_LINK_FLAGS as defined below:
 #

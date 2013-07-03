@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.sun.scenario.ToolkitAccessor;
+import com.sun.javafx.tk.Toolkit;
 
 
 public class AnimationPulse implements AnimationPulseMBean {
@@ -54,7 +54,7 @@ public class AnimationPulse implements AnimationPulseMBean {
         private long endNanos = Long.MIN_VALUE;
         
         PulseData(long shiftNanos) {
-            startNanos = ToolkitAccessor.getMasterTimer().nanos();
+            startNanos = Toolkit.getToolkit().getMasterTimer().nanos();
             scheduledNanos = startNanos + shiftNanos;
         }
         
@@ -64,7 +64,7 @@ public class AnimationPulse implements AnimationPulseMBean {
         }
         
         void recordAnimationEnd() {
-            animationEndNanos = ToolkitAccessor.getMasterTimer().nanos();
+            animationEndNanos = Toolkit.getToolkit().getMasterTimer().nanos();
         }
         
         long getAnimationDuration(TimeUnit unit) {
@@ -92,7 +92,7 @@ public class AnimationPulse implements AnimationPulseMBean {
         }
         
         void recordEnd() {
-            endNanos = ToolkitAccessor.getMasterTimer().nanos();
+            endNanos = Toolkit.getToolkit().getMasterTimer().nanos();
         }
         
         long getPulseDuration(TimeUnit unit) {
@@ -106,7 +106,7 @@ public class AnimationPulse implements AnimationPulseMBean {
         }
         
         long getPulseStartFromNow(TimeUnit unit) {
-            return unit.convert(ToolkitAccessor.getMasterTimer().nanos() - startNanos,
+            return unit.convert(Toolkit.getToolkit().getMasterTimer().nanos() - startNanos,
                     TimeUnit.NANOSECONDS);
         }
         
@@ -212,7 +212,7 @@ public class AnimationPulse implements AnimationPulseMBean {
     
     @Override
     public long getPULSE_DURATION() {
-        return ToolkitAccessor.getMasterTimer().getPulseDuration(1000);
+        return Toolkit.getToolkit().getMasterTimer().getPulseDuration(1000);
     }
     
     

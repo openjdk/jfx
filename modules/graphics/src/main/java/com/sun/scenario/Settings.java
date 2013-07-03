@@ -28,6 +28,8 @@ package com.sun.scenario;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import com.sun.javafx.tk.Toolkit;
 import javafx.util.Callback;
 
 /**
@@ -57,7 +59,7 @@ public class Settings {
     }
 
     private static synchronized Settings getInstance() {
-        Map<Object, Object> contextMap = ToolkitAccessor.getContextMap();
+        Map<Object, Object> contextMap = Toolkit.getToolkit().getContextMap();
         Settings instance = (Settings) contextMap.get(SETTINGS_KEY);
         if (instance == null) {
             instance = new Settings();

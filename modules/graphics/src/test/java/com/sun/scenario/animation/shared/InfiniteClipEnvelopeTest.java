@@ -26,18 +26,18 @@
 package com.sun.scenario.animation.shared;
 
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.animation.Animation;
 import javafx.animation.Animation.Status;
 import javafx.animation.AnimationMock;
 import javafx.animation.AnimationMock.Command;
 import javafx.util.Duration;
-import com.sun.scenario.ToolkitAccessor;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class FiniteClipEnvelopeTest {
+public class InfiniteClipEnvelopeTest {
 
     private final long CYCLE_TICKS = Math.round(6.0 * AnimationMock.DEFAULT_DURATION.toMillis());
 
@@ -46,30 +46,23 @@ public class FiniteClipEnvelopeTest {
     
     @Before
     public void setUp() {
-        animation = new AnimationMock(ToolkitAccessor.getMasterTimer(), AnimationMock.DEFAULT_DURATION, AnimationMock.DEFAULT_RATE, 9, AnimationMock.DEFAULT_AUTOREVERSE);
-        clip = new FiniteClipEnvelope(animation);
+        animation = new AnimationMock(Toolkit.getToolkit().getMasterTimer(), AnimationMock.DEFAULT_DURATION, AnimationMock.DEFAULT_RATE, Animation.INDEFINITE, AnimationMock.DEFAULT_AUTOREVERSE);
+        clip = new InfiniteClipEnvelope(animation);
     }
     
     @Test
     public void testSetValues() {
         ClipEnvelope c;
         
-        // Setting cycleCount to 1
-        animation.setCycleCount(1);
+        // Setting cycleCount to 2
+        animation.setCycleCount(2);
         animation.mockCycleDuration(AnimationMock.DEFAULT_DURATION);
-        c = clip.setCycleCount(1);
+        c = clip.setCycleCount(2);
         assertNotSame(clip, c);
-        assertTrue(c instanceof SingleLoopClipEnvelope);
-        
-        // Setting cycleCount to INDEFINITE
-        animation.setCycleCount(Animation.INDEFINITE);
-        animation.mockCycleDuration(AnimationMock.DEFAULT_DURATION);
-        c = clip.setCycleCount(Animation.INDEFINITE);
-        assertNotSame(clip, c);
-        assertTrue(c instanceof InfiniteClipEnvelope);
+        assertTrue(c instanceof FiniteClipEnvelope);
         
         // Setting cycleDuration to INDEFINITE
-        animation.setCycleCount(9);
+        animation.setCycleCount(Animation.INDEFINITE);
         animation.mockCycleDuration(Duration.INDEFINITE);
         c = clip.setCycleDuration(Duration.INDEFINITE);
         assertNotSame(clip, c);
@@ -93,9 +86,6 @@ public class FiniteClipEnvelopeTest {
         
         clip.jumpTo(6 * 1000 + 1);
         animation.check(Command.JUMP, 1, CYCLE_TICKS);
-        
-        clip.jumpTo(6 * 9000 + 1);
-        animation.check(Command.JUMP, 6 * 1000, CYCLE_TICKS);
     }
         
     @Test
@@ -130,22 +120,11 @@ public class FiniteClipEnvelopeTest {
         clip.timePulse(6 * 4300);
         animation.check(Command.PLAY, 6 * 300, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-
-        // pulse close to the end
-        clip.timePulse(6 * 9000 - 1);
-        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-      
-        // pulse at the end
-        clip.timePulse(6 * 9000);
-        animation.check(Command.PLAY, 6 * 1000, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
     }
     
     @Test
     public void testTimePulseBackward() {
         clip.setRate(-1.0);
-        clip.jumpTo(6 * 9000);
         animation.mockStatus(Status.RUNNING);
         clip.start();
         
@@ -176,16 +155,6 @@ public class FiniteClipEnvelopeTest {
         clip.timePulse(6 * 4300);
         animation.check(Command.PLAY, 6 * 700, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-
-        // pulse close to the end
-        clip.timePulse(6 * 9000 - 1);
-        animation.check(Command.PLAY, 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-      
-        // pulse at the end
-        clip.timePulse(6 * 9000);
-        animation.check(Command.PLAY, 0, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
     }
     
     @Test
@@ -229,73 +198,52 @@ public class FiniteClipEnvelopeTest {
         clip.timePulse(6 * 7100);
         animation.check(Command.PLAY, 6 * 900, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-
-        // pulse close to the end
-        clip.timePulse(6 * 9000 - 1);
-        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-      
-        // pulse at the end
-        clip.timePulse(6 * 9000);
-        animation.check(Command.PLAY, 6 * 1000, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
     }
     
     @Test
     public void testTimePulseBackwardAutoReverse() {
         animation.mockStatus(Status.RUNNING);
-        clip.jumpTo(6 * 9000);
-        clip.start();
         clip.setAutoReverse(true);
         clip.setRate(-1);
+        clip.start();
 
         clip.timePulse(1);
-        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
+        animation.check(Command.PLAY, 1, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
         
         clip.timePulse(6 * 200);
-        animation.check(Command.PLAY, 6 * 800, CYCLE_TICKS);
+        animation.check(Command.PLAY, 6 * 200, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
         clip.timePulse(6 * 1000 - 1);
-        animation.check(Command.PLAY, 1, CYCLE_TICKS);
+        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
         clip.timePulse(6 * 1000 + 1);
-        animation.check(Command.PLAY, 1, CYCLE_TICKS);
+        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
         // pulse one cycle ahead
         clip.timePulse(6 * 2200);
-        animation.check(Command.PLAY, 6 * 800, CYCLE_TICKS);
+        animation.check(Command.PLAY, 6 * 200, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
         // pulse two cycles ahead
         clip.timePulse(6 * 4300);
-        animation.check(Command.PLAY, 6 * 700, CYCLE_TICKS);
+        animation.check(Command.PLAY, 6 * 300, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
         // another pulse one cycle ahead
         clip.timePulse(6 * 5400);
-        animation.check(Command.PLAY, 6 * 400, CYCLE_TICKS);
+        animation.check(Command.PLAY, 6 * 600, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
         // another pulse two cycles ahead
         clip.timePulse(6 * 7100);
-        animation.check(Command.PLAY, 6 * 100, CYCLE_TICKS);
+        animation.check(Command.PLAY, 6 * 900, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-
-        // pulse close to the end
-        clip.timePulse(6 * 9000 - 1);
-        animation.check(Command.PLAY, 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-      
-        // pulse at the end
-        clip.timePulse(6 * 9000);
-        animation.check(Command.PLAY, 0, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
     }
-
+    
     @Test
     public void testJumpAndPulseForward() {
         animation.mockStatus(Status.RUNNING);
@@ -315,7 +263,7 @@ public class FiniteClipEnvelopeTest {
         animation.check(Command.PLAY, 6 * 100, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
         
-        clip.jumpTo(0);
+        clip.jumpTo(6 * 0);
         animation.check(Command.JUMP, 6 * 0, CYCLE_TICKS);
 
         clip.timePulse(6 * 2000);
@@ -328,41 +276,16 @@ public class FiniteClipEnvelopeTest {
         clip.timePulse(6 * 2200);
         animation.check(Command.PLAY, 6 * 200, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-        
-        clip.jumpTo(6 * 3400);
-        animation.check(Command.JUMP, 6 * 400, CYCLE_TICKS);
-
-        clip.timePulse(6 * 2400);
-        animation.check(Command.PLAY, 6 * 600, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-        
-        clip.jumpTo(6 * 1100);
-        animation.check(Command.JUMP, 6 * 100, CYCLE_TICKS);
-
-        clip.timePulse(6 * 2500);
-        animation.check(Command.PLAY, 6 * 200, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-
-        // pulse close to the end
-        clip.timePulse(6 * 10300 - 1);
-        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-      
-        // pulse at the end
-        clip.timePulse(6 * 10300);
-        animation.check(Command.PLAY, 6 * 1000, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
     }
 
     @Test
     public void testJumpAndPulseBackward() {
         animation.mockStatus(Status.RUNNING);
-        clip.jumpTo(6 * 9000);
         clip.setRate(-1);
         clip.start();
         
         // jump forward
-        clip.jumpTo(6 * 8300);
+        clip.jumpTo(6 * 300);
         animation.check(Command.JUMP, 6 * 300, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
@@ -372,7 +295,7 @@ public class FiniteClipEnvelopeTest {
         assertFalse(animation.finishCalled());
 
         // jump backward
-        clip.jumpTo(6 * 7900);
+        clip.jumpTo(6 * 900);
         animation.check(Command.JUMP, 6 * 900, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
@@ -382,7 +305,7 @@ public class FiniteClipEnvelopeTest {
         assertFalse(animation.finishCalled());
 
         // jump to same position at end
-        clip.jumpTo(6 * 7000);
+        clip.jumpTo(6 * 1000);
         animation.check(Command.JUMP, 6 * 1000, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
@@ -392,38 +315,14 @@ public class FiniteClipEnvelopeTest {
         assertFalse(animation.finishCalled());
 
         // jump to start
-        clip.jumpTo(6 * 6000);
-        animation.check(Command.JUMP, 6 * 1000, CYCLE_TICKS);
+        clip.jumpTo(0);
+        animation.check(Command.JUMP, 0, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
 
         // normal pulse
         clip.timePulse(6 * 2200);
         animation.check(Command.PLAY, 6 * 800, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-        
-        clip.jumpTo(6 * 3400);
-        animation.check(Command.JUMP, 6 * 400, CYCLE_TICKS);
-
-        clip.timePulse(6 * 2400);
-        animation.check(Command.PLAY, 6 * 200, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-        
-        clip.jumpTo(6 * 5100);
-        animation.check(Command.JUMP, 6 * 100, CYCLE_TICKS);
-
-        clip.timePulse(6 * 2700);
-        animation.check(Command.PLAY, 6 * 800, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-
-        // pulse close to the end
-        clip.timePulse(6 * 7500 - 1);
-        animation.check(Command.PLAY, 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-      
-        // pulse at the end
-        clip.timePulse(6 * 7500);
-        animation.check(Command.PLAY, 0, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
     }
 
     @Test
@@ -467,30 +366,6 @@ public class FiniteClipEnvelopeTest {
         clip.timePulse(6 * 2200);
         animation.check(Command.PLAY, 6 * 800, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-
-        clip.jumpTo(6 * 3400);
-        animation.check(Command.JUMP, 6 * 600, CYCLE_TICKS);
-
-        clip.timePulse(6 * 2400);
-        animation.check(Command.PLAY, 6 * 400, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-        
-        clip.jumpTo(6 * 1100);
-        animation.check(Command.JUMP, 6 * 900, CYCLE_TICKS);
-
-        clip.timePulse(6 * 2500);
-        animation.check(Command.PLAY, 6 * 800, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-
-        // pulse close to the end
-        clip.timePulse(6 * 10300 - 1);
-        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-      
-        // pulse at the end
-        clip.timePulse(6 * 10300);
-        animation.check(Command.PLAY, 6 * 1000, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
     }
 
     @Test
@@ -501,9 +376,8 @@ public class FiniteClipEnvelopeTest {
         clip.start();
         
         // jump forward
-        clip.jumpTo(6 * 8300);
+        clip.jumpTo(6 * 300);
         animation.check(Command.JUMP, 6 * 300, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
 
         // pulse in next cycle
         clip.timePulse(6 * 700);
@@ -511,140 +385,38 @@ public class FiniteClipEnvelopeTest {
         assertFalse(animation.finishCalled());
 
         // jump backward
-        clip.jumpTo(6 * 7900);
+        clip.jumpTo(6 * 100);
         animation.check(Command.JUMP, 6 * 100, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
 
         // pulse one cycle ahead
-        clip.timePulse(6 * 1750);
-        animation.check(Command.PLAY, 6 * 850, CYCLE_TICKS);
+        clip.timePulse(6 * 1800 - 1);
+        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-
-        // jump to same position at end
-        clip.jumpTo(6 * 7000);
+        clip.timePulse(6 * 1800 + 1);
+        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
+        assertFalse(animation.finishCalled());
+        
+        // jump to end
+        clip.jumpTo(6 * 1000);
         animation.check(Command.JUMP, 6 * 1000, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
 
         // normal pulse
         clip.timePulse(6 * 2000);
-        animation.check(Command.PLAY, 6 * 750, CYCLE_TICKS);
+        animation.check(Command.PLAY, 6 * 800 + 1, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-
+        
         // jump to start
-        clip.jumpTo(6 * 6000);
-        animation.check(Command.JUMP, 6 * 0, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
+        clip.jumpTo(0);
+        animation.check(Command.JUMP, 0, CYCLE_TICKS);
 
         // normal pulse
         clip.timePulse(6 * 2200);
         animation.check(Command.PLAY, 6 * 200, CYCLE_TICKS);
         assertFalse(animation.finishCalled());
-        
-        clip.jumpTo(6 * 3400);
-        animation.check(Command.JUMP, 6 * 600, CYCLE_TICKS);
-
-        clip.timePulse(6 * 2400);
-        animation.check(Command.PLAY, 6 * 800, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-        
-        clip.jumpTo(6 * 5100);
-        animation.check(Command.JUMP, 6 * 900, CYCLE_TICKS);
-
-        clip.timePulse(6 * 2700);
-        animation.check(Command.PLAY, 6 * 800, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-
-        // pulse close to the end
-        clip.timePulse(6 * 7500 - 1);
-        animation.check(Command.PLAY, 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-      
-        // pulse at the end
-        clip.timePulse(6 * 7500);
-        animation.check(Command.PLAY, 0, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
     }
     
     @Test
-    public void testPositiveFastForwardRate() {
-        animation.mockStatus(Status.RUNNING);
-        clip.setRate(2.5);
-        clip.start();
-        
-        clip.timePulse(6 * 300);
-        animation.check(Command.PLAY, 6 * 750, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-        
-        clip.timePulse(6 * 3600 - 2); // 9000 / 2.5
-        animation.check(Command.PLAY, 6 * 1000 - 5, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-
-        clip.timePulse(6 * 3600); // 9000 / 2.5
-        animation.check(Command.PLAY, 6 * 1000, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
-    }
-        
-    @Test
-    public void testPositiveSlowDownRate() {
-        animation.mockStatus(Status.RUNNING);
-        clip.setRate(0.2);
-        clip.start();
-        
-        clip.timePulse(6 * 300);
-        animation.check(Command.PLAY, 6 * 60, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-        
-        clip.timePulse(6 * 45000 - 5); // 9000 / 0.2
-        animation.check(Command.PLAY, 6 * 1000 - 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-
-        clip.timePulse(6 * 45000); // 9000 / 0.2
-        animation.check(Command.PLAY, 6 * 1000, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
-    }
-    
-    @Test
-    public void testNegativeFastForwardRate() {
-        clip.jumpTo(6 * 9000);
-        clip.setRate(-2.5);
-        animation.mockStatus(Status.RUNNING);
-        clip.start();
-        
-        clip.timePulse(6 * 300);
-        animation.check(Command.PLAY, 6 * 250, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-        
-        clip.timePulse(6 * 3600 - 2); // 9000 / 2.5
-        animation.check(Command.PLAY, 5, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-
-        clip.timePulse(6 * 3600); // 9000 / 2.5
-        animation.check(Command.PLAY, 0, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
-    }
-        
-    @Test
-    public void testNegativeSlowDownRate() {
-        clip.jumpTo(6 * 9000);
-        clip.setRate(-0.2);
-        animation.mockStatus(Status.RUNNING);
-        clip.start();
-        
-        clip.timePulse(6 * 300);
-        animation.check(Command.PLAY, 6 * 940, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-        
-        clip.timePulse(6 * 45000 - 5); // 9000 / 0.2
-        animation.check(Command.PLAY, 1, CYCLE_TICKS);
-        assertFalse(animation.finishCalled());
-
-        clip.timePulse(6 * 45000); // 9000 / 0.2
-        animation.check(Command.PLAY, 0, CYCLE_TICKS);
-        assertTrue(animation.finishCalled());
-    }
-  
-    @Test
-    public void testChangeRateWhilePlaying() {
+    public void testRate() {
         animation.mockStatus(Status.RUNNING);
         clip.setRate(0.5);
         clip.start();
@@ -719,5 +491,4 @@ public class FiniteClipEnvelopeTest {
         clip.timePulse(6 * 3000);
         animation.check(Command.PLAY, 6 * 600, CYCLE_TICKS);
     }
-
 }

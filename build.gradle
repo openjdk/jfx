@@ -2228,43 +2228,41 @@ allprojects {
  *   provides for copying the build applications to the artifacts tree
  *
  * The applications to be built will be under ./apps, but also must
- * be listed in the applications listed in the setting variable: JFXApplications 
+ * be listed in the applications listed in the setting variable: JFXApplications
  */
-ext.JFXRT_CP = 
+ext.JFXRT_CP =
     files(
-	project(":base").sourceSets.main.output.classesDir,
-	project(":graphics").sourceSets.main.output.classesDir,
-	project(":controls").sourceSets.main.output.classesDir,
-	project(":fxml").sourceSets.main.output.classesDir,
-	project(":swing").sourceSets.main.output.classesDir, //NOTE - used by 3Dviewer
-	//project(":swt").sourceSets.main.output.classesDir,
-	project(":builders").sourceSets.main.output.classesDir,
-        "modules/media/build/classes/main", 
-        "modules/web/build/classes/main", 
-	)
+        project(":base").sourceSets.main.output.classesDir,
+        project(":graphics").sourceSets.main.output.classesDir,
+        project(":controls").sourceSets.main.output.classesDir,
+        project(":fxml").sourceSets.main.output.classesDir,
+        project(":swing").sourceSets.main.output.classesDir, //NOTE - used by 3Dviewer
+        //project(":swt").sourceSets.main.output.classesDir,
+        project(":builders").sourceSets.main.output.classesDir,
+            "modules/media/build/classes/main",
+            "modules/web/build/classes/main",
+    )
 
 if (BINARY_STUB != null) {
-    JFXRT_CP += BINARY_STUB 
+    JFXRT_CP += BINARY_STUB
 }
 
-
-childProjects["apps"].subprojects { 
+childProjects["apps"].subprojects {
     afterEvaluate { project ->
-	// this check is to make sure we are using a java or application plugin
+        // this check is to make sure we are using a java or application plugin
         // in our child projects of ./apps
         if (project.hasProperty("jar") && project.hasProperty("compileJava")) {
-           def srcdir = new File ("$project.projectDir/src");
+            def srcdir = new File ("$project.projectDir/src");
 
-           if (srcdir.exists()) {
-               // augment the classpath with our build system classpath 
-               // which will include our local jfxrt.jar
-               project.compileJava {
-                   // TODO: don't know how to do this correctly
-                   //dependsOn project(":graphics").classes, project(":controls").classes, project(":base").classes
-                   doFirst {
-                       classpath = rootProject.JFXRT_CP + 
-                           sourceSets.main.compileClasspath
-                   }
+            if (srcdir.exists()) {
+                // augment the classpath with our build system classpath
+                // which will include our local jfxrt.jar
+                project.compileJava {
+                    // TODO: don't know how to do this correctly
+                    //dependsOn project(":graphics").classes, project(":controls").classes, project(":base").classes
+                    doFirst {
+                        classpath = rootProject.JFXRT_CP + sourceSets.main.compileClasspath
+                    }
                 }
                 test.exclude("**/*");
             } else {
@@ -2276,13 +2274,13 @@ childProjects["apps"].subprojects {
 
             if (BUILD_CLOSED && srcdir.exists()) {
                 def cptask = project.task('copyAppsArtifacts', type: Copy ) {
-                dependsOn project.getPath() + ":jar"
-		    from project.jar.archivePath
-		    into "$rootProject.jfxArtifactsDir/apps/ga-samples"
-		}
+                    dependsOn project.getPath() + ":jar"
+                    from project.jar.archivePath
+                    into "$rootProject.jfxArtifactsDir/apps/ga-samples"
+                }
                 rootProject.apps.dependsOn(cptask)
-	    }
-	}
+            }
+        }
     }
 }
 

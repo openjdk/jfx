@@ -26,6 +26,8 @@
 package javafx.animation;
 
 import java.util.HashMap;
+
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -45,7 +47,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
 import com.sun.javafx.animation.TickCalculation;
-import com.sun.scenario.ToolkitAccessor;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.animation.shared.ClipEnvelope;
 import com.sun.scenario.animation.shared.PulseReceiver;
@@ -999,7 +1000,7 @@ public abstract class Animation {
         this.targetFramerate = targetFramerate;
         this.resolution = (int) Math.max(1, Math.round(TickCalculation.TICKS_PER_SECOND / targetFramerate));
         this.clipEnvelope = ClipEnvelope.create(this);
-        this.timer = ToolkitAccessor.getMasterTimer();
+        this.timer = Toolkit.getToolkit().getMasterTimer();
     }
 
     /**
@@ -1007,9 +1008,9 @@ public abstract class Animation {
      */
     protected Animation() {
         this.resolution = 1;
-        this.targetFramerate = TickCalculation.TICKS_PER_SECOND / ToolkitAccessor.getMasterTimer().getDefaultResolution();
+        this.targetFramerate = TickCalculation.TICKS_PER_SECOND / Toolkit.getToolkit().getMasterTimer().getDefaultResolution();
         this.clipEnvelope = ClipEnvelope.create(this);
-        this.timer = ToolkitAccessor.getMasterTimer();
+        this.timer = Toolkit.getToolkit().getMasterTimer();
     }
 
     // These constructors are only for testing purposes

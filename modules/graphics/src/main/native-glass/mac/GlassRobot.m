@@ -27,6 +27,7 @@
 #import "com_sun_glass_ui_mac_MacRobot.h"
 
 #import <CoreServices/CoreServices.h>
+#import <ApplicationServices/ApplicationServices.h>
 
 #import "GlassMacros.h"
 #import "GlassKey.h"
@@ -101,6 +102,18 @@ static inline void PostGlassMouseEvent(CGPoint location, UInt32 buttons, BOOL bu
                 CFRelease(newEvent);
             }
         }
+    }
+}
+
+static inline void PostGlassKeyEvent(jint code, BOOL keyPressed)
+{
+    unsigned short macCode;
+    if (GetMacKey(code, &macCode)) {
+        // Using CGEvent API proved to be problematic - events for some keys were missing sometimes.
+        // So we use the A11Y API instead - just as we do in AWT. It works fine in all cases.
+        AXUIElementRef elem = AXUIElementCreateSystemWide();
+        AXUIElementPostKeyboardEvent(elem, (CGCharCode)0, macCode, keyPressed);
+        CFRelease(elem);
     }
 }
 
@@ -231,12 +244,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1keyPress
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
-        unsigned short macCode;
-        if (GetMacKey(code, &macCode)) {
-            CGEventRef newEvent = CGEventCreateKeyboardEvent(NULL, macCode, true);
-            CGEventPost(kCGHIDEventTap, newEvent);
-            CFRelease(newEvent);
-        }
+        PostGlassKeyEvent(code, YES);
     }
     GLASS_POOL_EXIT;
 }
@@ -254,12 +262,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1keyRelease
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
-        unsigned short macCode;
-        if (GetMacKey(code, &macCode)) {
-            CGEventRef newEvent = CGEventCreateKeyboardEvent(NULL, macCode, false);
-            CGEventPost(kCGHIDEventTap, newEvent);
-            CFRelease(newEvent);
-        }
+        PostGlassKeyEvent(code, NO);
     }
     GLASS_POOL_EXIT;
 }

@@ -552,7 +552,8 @@ public class TriangleMesh extends Mesh {
         public float[] syncTo(float[] array) {
             ObservableFloatArray floatArray = (ObservableFloatArray) this.array;
             if (dirtyInFull || array == null || array.length != floatArray.size()) {
-                return floatArray.toArray(array);
+                // Always allocate a new array when size changes
+                return floatArray.toArray(null);
             }
             floatArray.copyTo(dirtyRangeFrom, array, dirtyRangeFrom, dirtyRangeLength);
             return array;
@@ -562,7 +563,8 @@ public class TriangleMesh extends Mesh {
         public int[] syncTo(int[] array) {
             ObservableIntegerArray intArray = (ObservableIntegerArray) this.array;
             if (dirtyInFull || array == null || array.length != intArray.size()) {
-                return intArray.toArray(array);
+                // Always allocate a new array when size changes
+                return intArray.toArray(null);
             }
             intArray.copyTo(dirtyRangeFrom, array, dirtyRangeFrom, dirtyRangeLength);
             return array;

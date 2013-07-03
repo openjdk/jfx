@@ -25,7 +25,7 @@
 
 package javafx.animation;
 
-import com.sun.scenario.ToolkitAccessor;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.scenario.animation.AbstractMasterTimer;
 
 /**
@@ -47,7 +47,7 @@ public abstract class AnimationTimer {
     private boolean active;
     
     public AnimationTimer() {
-        timer = ToolkitAccessor.getMasterTimer();
+        timer = Toolkit.getToolkit().getMasterTimer();
     }
     
     // For testing only

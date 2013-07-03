@@ -31,13 +31,13 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.Collections;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.scenario.ToolkitAccessor;
 
 /**
  *
@@ -74,7 +74,7 @@ public class TimelineTest {
         assertEquals(DEFAULT_REPEAT_COUNT, timeline0.getCycleCount());
         assertEquals(DEFAULT_AUTO_REVERSE, timeline0.isAutoReverse());
         assertEquals(Status.STOPPED, timeline0.getStatus());
-        assertEquals(6000.0 / ToolkitAccessor.getMasterTimer().getDefaultResolution(), timeline0.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), timeline0.getTargetFramerate(), EPSILON);
         assertEquals(null, timeline0.getOnFinished());
         assertTrue(timeline0.getCuePoints().isEmpty());
 
@@ -104,7 +104,7 @@ public class TimelineTest {
         assertEquals(DEFAULT_REPEAT_COUNT, timeline2.getCycleCount());
         assertEquals(DEFAULT_AUTO_REVERSE, timeline2.isAutoReverse());
         assertEquals(Status.STOPPED, timeline2.getStatus());
-        assertEquals(6000.0 / ToolkitAccessor.getMasterTimer().getDefaultResolution(), timeline2.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), timeline2.getTargetFramerate(), EPSILON);
         assertEquals(null, timeline2.getOnFinished());
         assertEquals(Collections.singletonMap("oneSec", oneSec), timeline2.getCuePoints());
 
