@@ -11,6 +11,7 @@
 ^\.libs/
 ^buildSrc/\.gradle/
 ^idea/out/
+^idea/.idea/misc.xml
 build/
 bin/
 dist/
