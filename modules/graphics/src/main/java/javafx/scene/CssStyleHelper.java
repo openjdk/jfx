@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -984,6 +985,17 @@ final class CssStyleHelper {
             ObjectProperty<StyleOrigin> whence,
             List<Style> styleList) {
 
+        return resolveLookups(styleable, parsedValue, states, whence, null, styleList);
+    }
+
+    // to resolve a lookup, we just need to find the parsed value.
+    private ParsedValueImpl resolveLookups(
+            Styleable styleable,
+            ParsedValueImpl parsedValue,
+            Set<PseudoClass> states,
+            ObjectProperty<StyleOrigin> whence,
+            Set<CascadingStyle> resolves, List<Style> styleList) {
+
 
         //
         // either the value itself is a lookup, or the value contain a lookup
@@ -1001,6 +1013,25 @@ final class CssStyleHelper {
                     resolveRef(styleable, sval, states);
 
                 if (resolved != null) {
+
+                    if (resolves != null) {
+
+                        if (resolves.contains(resolved) == false) {
+                            resolves.add(resolved);
+
+                        } else {
+
+                            if (LOGGER.isLoggable(Level.WARNING)) {
+                                LOGGER.warning("Loop detected while resolving: '" + sval + "'");
+                            }
+                            throw new IllegalArgumentException(resolved.getRule().toString());
+
+                        }
+
+                    } else {
+                        resolves = new HashSet<>();
+                        resolves.add(resolved);
+                    }
 
                     if (styleList != null) {
                         final Style style = resolved.getStyle();
@@ -1024,7 +1055,7 @@ final class CssStyleHelper {
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    return resolveLookups(styleable, resolved.getParsedValueImpl(), states, whence, styleList);
+                    return resolveLookups(styleable, resolved.getParsedValueImpl(), states, whence, resolves, styleList);
                 }
             }
         }
@@ -1042,7 +1073,7 @@ final class CssStyleHelper {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
                     layers[l][ll].setResolved(
-                        resolveLookups(styleable, layers[l][ll], states, whence, styleList)
+                        resolveLookups(styleable, layers[l][ll], states, whence, null, styleList)
                     );
                 }
             }
@@ -1053,7 +1084,7 @@ final class CssStyleHelper {
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 layer[l].setResolved(
-                    resolveLookups(styleable, layer[l], states, whence, styleList)
+                    resolveLookups(styleable, layer[l], states, whence, null, styleList)
                 );
             }
         }
@@ -1160,11 +1191,11 @@ final class CssStyleHelper {
         final ParsedValueImpl cssValue = style.getParsedValueImpl();
         if (cssValue != null && !("null").equals(cssValue.getValue())) {
 
-            ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<StyleOrigin>(style.getOrigin());
-            final ParsedValueImpl resolved =
-                resolveLookups(node, cssValue, states, whence, styleList);
-
+            ParsedValueImpl resolved = null;
             try {
+
+                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<StyleOrigin>(style.getOrigin());
+                resolved = resolveLookups(node, cssValue, states, whence, styleList);
 
                 final String property = cssMetaData.getProperty();
 
@@ -1285,7 +1316,7 @@ final class CssStyleHelper {
                 }
                 return SKIP;
             } finally {
-                resolved.setResolved(null);
+                if (resolved != null) resolved.setResolved(null);
             }
 
         }

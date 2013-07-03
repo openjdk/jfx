@@ -41,7 +41,7 @@ import javafx.scene.shape.*;
 
 import org.junit.Ignore;
 
-
+@Ignore
 public class StackedAreaChartTest extends XYChartTestBase {
     
     private Scene scene;

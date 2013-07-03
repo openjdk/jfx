@@ -1047,4 +1047,14 @@ public class TreeViewTest {
         assertEquals(child1, treeView.getEditingItem());
         assertTrue(cell.isEditing());
     }
+
+    @Test public void test_rt31404() {
+        installChildren();
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertEquals("Root", cell.getText());
+
+        treeView.setShowRoot(false);
+        assertEquals("Child 1", cell.getText());
+    }
 }
