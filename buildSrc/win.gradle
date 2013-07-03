@@ -116,7 +116,6 @@ WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
         "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
         "PATH"                 : WINDOWS_VS_PATH,
-        "Path"                 : WINDOWS_VS_PATH,
         "INCLUDE"              : WINDOWS_VS_INCLUDE,
         "LIB"                  : WINDOWS_VS_LIB,
         "LIBPATH"              : WINDOWS_VS_LIBPATH,
