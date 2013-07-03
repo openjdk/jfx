@@ -132,6 +132,13 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         displayNode = getDisplayNode();
         if (displayNode != null && !children.contains(displayNode)) {
             children.add(displayNode);
+
+            // RT-20575: The display node is being brought into the scenegraph
+            // early so we get the correct prefHeight, but at this point it
+            // may not have had a layout pass run over it itself, so the
+            // displayNode will return a prefHeight of 0. Here we are forcing
+            // a one-off run of the layout over the displayNode.
+            displayNode.impl_processCSS(true);
         }
     }
     
@@ -181,13 +188,6 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (displayNode == null) {
             updateDisplayArea();
-            
-            // RT-20575: The display node is being brought into the scenegraph
-            // early so we get the correct prefHeight, but at this point it
-            // may not have had a layout pass run over it itself, so the 
-            // displayNode will return a prefHeight of 0. Here we are forcing
-            // a one-off run of the layout over the displayNode.
-            displayNode.impl_processCSS(true);
         }
 
         double ph;
