@@ -140,16 +140,13 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
                 this.propertyRef = new PropertyReference<T>(rowData.getClass(), getProperty());
             }
 
-            return propertyRef.getProperty(rowData);
-        } catch (IllegalStateException e) {
-            try {
-                // attempt to just get the value
+            if (propertyRef.hasProperty()) {
+                return propertyRef.getProperty(rowData);
+            } else {
                 T value = propertyRef.get(rowData);
                 return new ReadOnlyObjectWrapper<T>(value);
-            } catch (IllegalStateException e2) {
-                // fall through to logged exception below
             }
-
+        } catch (IllegalStateException e) {
             // log the warning and move on
             final PlatformLogger logger = Logging.getControlsLogger();
             if (logger.isLoggable(Level.WARNING)) {
