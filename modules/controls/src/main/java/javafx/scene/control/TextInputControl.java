@@ -291,7 +291,7 @@ public abstract class TextInputControl extends Control {
      */
     private BooleanProperty editable = new SimpleBooleanProperty(this, "editable", true) {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(PSEUDO_CLASS_READONLY, get());
+            pseudoClassStateChanged(PSEUDO_CLASS_READONLY, ! get());
         }
     };
     public final boolean isEditable() { return editable.getValue(); }

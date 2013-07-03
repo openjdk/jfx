@@ -42,6 +42,7 @@ import javafx.scene.layout.Region;
 
 import org.junit.Ignore;
 
+@Ignore
 public class StackedBarChartTest extends XYChartTestBase {
     
     private Scene scene;

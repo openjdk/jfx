@@ -29,8 +29,14 @@ import javafx.css.StyleOrigin;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
+import javafx.css.StyleableProperty;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Paint;
+import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.*;
@@ -215,9 +221,122 @@ public class StylesheetTest {
         } catch (Exception e) {
             // Something other than an NPE should still raise a red flag,
             // but the exception is not what RT-23140 fixed.
+
             fail("Exception not expected: " + e.toString());
         }
         
     }
+
+    @Test public void testRT_31316() {
+
+        try {
+
+            Rectangle rect = new Rectangle(50,50);
+            rect.setStyle("-fx-base: red; -fx-fill: -fx-base;");
+            rect.setFill(Color.GREEN);
+
+            Group root = new Group();
+            root.getChildren().add(rect);
+            Scene scene = new Scene(root, 500, 500);
+
+            root.impl_processCSS(true);
+
+            // Shows inline style works.
+            assertEquals(Color.RED, rect.getFill());
+
+            // reset fill
+            ((StyleableProperty<Paint>)rect.fillProperty()).applyStyle(null, null);
+
+            // loop in style!
+            rect.setStyle("-fx-base: -fx-fill; -fx-fill: -fx-base;");
+            root.impl_processCSS(true);
+
+            // Shows value was left alone
+            assertNull(rect.getFill());
+
+
+        } catch (Exception e) {
+            // The code generates an IllegalArgumentException that should never reach here
+            fail("Exception not expected: " + e.toString());
+        }
+
+    }
+
+    @Test public void testRT_31316_with_complex_value() {
+
+        try {
+
+            Rectangle rect = new Rectangle(50,50);
+            rect.setStyle("-fx-base: red; -fx-color: -fx-base; -fx-fill: radial-gradient(radius 100%, red, -fx-color);");
+            rect.setFill(Color.GREEN);
+
+            Group root = new Group();
+            root.getChildren().add(rect);
+            Scene scene = new Scene(root, 500, 500);
+
+            root.impl_processCSS(true);
+
+            // Shows inline style works.
+            assertTrue(rect.getFill() instanceof RadialGradient);
+
+            // reset fill
+            ((StyleableProperty<Paint>)rect.fillProperty()).applyStyle(null, null);
+
+            // loop in style!
+            rect.setStyle("-fx-base: -fx-color; -fx-color: -fx-base; -fx-fill: radial-gradient(radius 100%, red, -fx-color);");
+
+            root.impl_processCSS(true);
+
+            // Shows value was left alone
+            assertNull(rect.getFill());
+
+        } catch (Exception e) {
+            // The code generates an IllegalArgumentException that should never reach here
+            fail("Exception not expected: " + e.toString());
+        }
+    }
+
+
+    @Test public void testRT_31316_with_complex_scenegraph() {
+
+        try {
+
+            Rectangle rect = new Rectangle(50,50);
+            rect.setStyle("-fx-fill: radial-gradient(radius 100%, red, -fx-color);");
+            rect.setFill(Color.GREEN);
+
+            StackPane pane = new StackPane();
+            pane.setStyle("-fx-color: -fx-base;");
+            pane.getChildren().add(rect);
+
+            Group root = new Group();
+            // loop in style!
+            root.setStyle("-fx-base: red;");
+            root.getChildren().add(pane);
+            Scene scene = new Scene(root, 500, 500);
+
+            root.impl_processCSS(true);
+
+            // Shows inline style works.
+            assertTrue(rect.getFill() instanceof RadialGradient);
+
+            // reset fill
+            ((StyleableProperty<Paint>)rect.fillProperty()).applyStyle(null, null);
+
+            // loop in style
+            root.setStyle("-fx-base: -fx-color;");
+
+            root.impl_processCSS(true);
+
+            // Shows value was left alone
+            assertNull(rect.getFill());
+
+        } catch (Exception e) {
+            // The code generates an IllegalArgumentException that should never reach here
+            fail("Exception not expected: " + e.toString());
+        }
+
+    }
+
     
 }

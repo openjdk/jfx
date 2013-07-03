@@ -1166,10 +1166,6 @@ project(":controls") {
 
     test {
         jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
-        // TODO fix the Controls tests so that we can run them all in one VM
-        // This is highly unfortunate, test execution time goes from 7 sec to 2 min 8 sec
-        // however there are 8 failing tests when we don't fork. Need to fix those tests.
-        forkEvery = 1
     }
 
     // TODO Css2Bin really should be moved out and put into buildSrc if it can be

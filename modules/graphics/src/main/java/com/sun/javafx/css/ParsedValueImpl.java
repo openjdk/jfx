@@ -30,8 +30,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.paint.Color;
@@ -244,17 +242,6 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         return (T)((converter != null) ? converter.convert(this, font) : value);
     }
 
-    private final static String newline;
-    static {
-        newline = AccessController.doPrivileged(
-            new PrivilegedAction<String>() {
-            @Override
-                public String run() {
-                    return System.getProperty("line.separator");
-            }
-        });
-    }
-
     private static int indent = 0;
 
     private static String spaces() {
@@ -270,6 +257,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
     }
 
     @Override public String toString() {
+        final String newline = System.lineSeparator();
         StringBuilder sbuf = new StringBuilder();
         sbuf.append(spaces())
             .append((lookup? "<Value lookup=\"true\">" : "<Value>"))
@@ -294,6 +282,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
     }
 
     private void appendValue(StringBuilder sbuf, Object value, String tag) {
+        final String newline = System.lineSeparator();
         if (value instanceof ParsedValueImpl[][]) {
             ParsedValueImpl[][] layers = (ParsedValueImpl[][])value;
             sbuf.append(spaces())

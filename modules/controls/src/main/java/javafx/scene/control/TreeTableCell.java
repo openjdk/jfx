@@ -222,23 +222,24 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                             oldTableView.rootProperty().removeListener(weakRootPropertyListener);
                         }
                     }
-                    
-                    if (get() != null) {
-                        sm = get().getSelectionModel();
+
+                    TreeTableView newTreeTableView = get();
+                    if (newTreeTableView != null) {
+                        sm = newTreeTableView.getSelectionModel();
                         if (sm != null) {
                             sm.getSelectedCells().addListener(weakSelectedListener);
                         }
 
-                        fm = get().getFocusModel();
+                        fm = newTreeTableView.getFocusModel();
                         if (fm != null) {
                             fm.focusedCellProperty().addListener(weakFocusedListener);
                         }
 
-                        get().editingCellProperty().addListener(weakEditingListener);
-                        get().getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
-                        get().rootProperty().addListener(weakRootPropertyListener);
+                        newTreeTableView.editingCellProperty().addListener(weakEditingListener);
+                        newTreeTableView.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+                        newTreeTableView.rootProperty().addListener(weakRootPropertyListener);
                         
-                        weakTableViewRef = new WeakReference<TreeTableView<S>>(get());
+                        weakTableViewRef = new WeakReference<TreeTableView<S>>(newTreeTableView);
                     }
                     
                     updateColumnIndex();
