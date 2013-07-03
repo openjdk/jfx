@@ -2279,15 +2279,6 @@ childProjects["apps"].subprojects {
                     it.enabled = false
                 }
             }
-
-            if (BUILD_CLOSED && srcdir.exists()) {
-                def cptask = project.task('copyAppsArtifacts', type: Copy ) {
-                    dependsOn project.getPath() + ":jar"
-                    from project.jar.archivePath
-                    into "$rootProject.jfxArtifactsDir/apps/ga-samples"
-                }
-                rootProject.apps.dependsOn(cptask)
-            }
         }
     }
 }
