@@ -34,6 +34,9 @@ MAC.compileSWT = true;
 MAC.compileFXPackager = true;
 MAC.compileDesignTime = true;
 
+// Lambda for naming the generated libs
+MAC.library = { name -> return "lib${name}.dylib" as String }
+
 MAC.libDest = "lib"
 MAC.jfxrtJarExcludes = [
     "**/*.hlsl",

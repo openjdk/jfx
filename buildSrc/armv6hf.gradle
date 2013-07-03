@@ -42,6 +42,9 @@ if (!ARMV6HF.canBuild) {
     return;
 }
 
+// Lambda for naming the generated libs
+ARMv6HF.library = { name -> return "lib${name}.so" as String }
+
 // alias for this platform in legacy artifacts
 ARMV6HF.artifactsName = "armv6hf-vfp"
 

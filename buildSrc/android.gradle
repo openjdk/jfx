@@ -234,6 +234,8 @@ android.use.egl=true
 android.com.sun.javafx.isEmbedded=true
 """
 
+ANDROID.library = { name -> return "lib${name}.so" as String }
+
 def ccFlags = ["-std=c99", "-DANDROID", "-c", "-nostdlib", "-DANDROID_NDK"]
 def ccOptFlags = ["-fpic", "-ffunction-sections", "-funwind-tables","-fstack-protector",
                   "-Os", "-O2", "-fno-strict-aliasing", "-finline-limit=64", "-fomit-frame-pointer"]
