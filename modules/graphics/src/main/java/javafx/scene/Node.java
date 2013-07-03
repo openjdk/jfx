@@ -8560,7 +8560,6 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
     public final void impl_processCSS(boolean reapply) {
 
-        assert(getScene() != null);
         if (getScene() == null) return;
 
         //
