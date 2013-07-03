@@ -46,12 +46,20 @@ String getLatestPlatform(String path) {
     return "android-" + max
 }
 
-ext.ANDROID = [:]
-
 def closedDir = file("$projectDir/../rt-closed")
 
 defineProperty("ANDROID_CROSS_TOOLS_VER", "arm-linux-androideabi-4.4.3")
 defineProperty("ARM_ARCH", "armeabi")//armeabi-v7
+
+ANDROID = [:]
+ANDROID.compileSwing = false;
+ANDROID.compileSWT = false;
+ANDROID.compileFXPackager = false;
+ANDROID.compileDesignTime = false;
+ANDROID.glassPlatform = "android"
+ANDROID.armArch = "${ARM_ARCH}"
+ANDROID.libDest = "lib/${ANDROID.armArch}"
+ANDROID.jfxdvklib = "jfxdvk.jar"
 
 // Look for the the Android SDK & NDK to use, as well as the compiler stuff
 def sdk = project.hasProperty("ANDROID_SDK") ? getLatestPlatform("$ANDROID_SDK") : null;
@@ -87,17 +95,17 @@ project(":graphics") {
         sourceCompatibility = JavaVersion.VERSION_1_6
         targetCompatibility = JavaVersion.VERSION_1_6
         options.bootClasspath = "${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar"
-        classpath = files("build/classes/main")
-        destinationDir = file("build/classes/main")
+        classpath = files("build/classes/android")
+        destinationDir = file("build/classes/android")
         dependencyCacheDir = file("build/dependency-cache")
-        source "src/main/android"
+        source "src/android/java"
     }
 
     task jarDalvikLibs(type: Jar, group: "Build", dependsOn: compileDalvikLibs) {
         description = "Creates jfxdvk.jar with all dalvik based classes."
         archiveName = "jfxdvk.jar"
         includeEmptyDirs = false
-        from("build/classes/main")
+        from("build/classes/android")
         include("com/oracle/dalvik/**/*")
         dependsOn(compileDalvikLibs)
     }
@@ -115,11 +123,13 @@ project(":graphics") {
                 copy {
                     from(
                          "modules/graphics/build/libs/vmlauncher/android/${library(props.vmlauncher.lib)}",
-                         "modules/graphics/build/libs/surface/android/${library(props.surface.lib)}",
-                         "modules/graphics/build/libs/${props.jfxdvklib}"
-                    );
-                    def libDest = props.libDest
-                    into ("build/android-sdk/dalvik")
+                         "modules/graphics/build/libs/surface/android/${library(props.surface.lib)}"                         
+                    )                    
+                    into ("build/android-sdk/dalvik/${props.libDest}")
+                }
+                copy {
+                    from ("modules/graphics/build/libs/${props.jfxdvklib}")
+                    into ("build/android-sdk/dalvik/lib")
                 }
             }
         }
@@ -129,65 +139,63 @@ project(":graphics") {
 project(":web") {
     apply plugin: 'java'
 
-    sourceSets {
-        android {
-            java {
-                //srcDir 'src/android/java'
-                srcDir '${closedDir}/javafx-android/webnode/src'
-            }
-        }
-    }
-
     compileJava {
         enabled = false
     }
 
     afterEvaluate {
-        configure(compileAndroidJava, { t ->
-                t.classpath = files(
-                    project(":graphics").sourceSets.main.output.classesDir,
-                    project(":base").sourceSets.main.output.classesDir
-                )
-                t.dependsOn(project(":graphics").classes, project(":base").classes)
-            })
+        def compileWebJavaAndroid = task("compileWebJavaAndroid",
+            type: JavaCompile, group: "Build") {
+            
+            dependsOn(project(":graphics").classes, project(":base").classes)
+            description = "Task compiles web component for Android."
+            classpath = files(
+                project(":graphics").sourceSets.main.output.classesDir,
+                project(":base").sourceSets.main.output.classesDir
+            )
+            destinationDir = file("modules/web/build/classes/android")
+            dependencyCacheDir = file("modules/web/build/dependency-cache")
+            source file("${closedDir}/javafx-android/webnode/src")
+        }
+
+        def jarWebJavaAndroid = task("jarWebJavaAndroid",
+            type: Jar, group: "Build") {
+            description = "Creates web.jar for Android."
+            dependsOn(compileWebJavaAndroid)
+            archiveName = "web.jar"
+            includeEmptyDirs = false
+            destinationDir = project.file("build/libs/android")
+            from("build/classes/android")
+        }
 
         addNative(project, "webview")
         addNative(project, "dvkwebview")
-        javahAndroidWebview.dependsOn(compileAndroidJava)
-        javahAndroidDvkwebview.dependsOn(compileAndroidJava)
+        javahAndroidWebview.dependsOn(compileWebJavaAndroid)
+        javahAndroidDvkwebview.dependsOn(compileWebJavaAndroid)
 
         jfxrtAndroid {
             from "modules/web/build/classes/android"
         }
 
-        sdkAndroid << {
-            def props = project.ext["ANDROID"]
-            copy {
-                from(
-                     "modules/web/build/libs/webview/android/${library(props.webview.lib)}"
-                )
-                def libDest = props.libDest
-                into ("build/android-sdk/rt/$libDest")
-            }
-            copy {
-                from(
-                    "modules/web/build/libs/dvkwebview/android/${library(props.dvkwebview.lib)}"
-                )
-                def libDest = props.libDest
-                into ("build/android-sdk/dalvik")
+        sdkAndroid  {
+            dependsOn(jarWebJavaAndroid)
+            doLast {
+                def props = project.ext["ANDROID"]
+                copy {
+                    from(
+                         "modules/web/build/libs/dvkwebview/android/${library(props.dvkwebview.lib)}"
+                    )                    
+                    into ("build/android-sdk/dalvik/${props.libDest}")
+                }
+                copy {
+                    from ("modules/web/build/libs/webview/android/${library(props.webview.lib)}")
+                    into ("build/android-sdk/rt/${props.libDest}")
+                }
             }
         }
     }
 }
 
-ANDROID.compileSwing = false;
-ANDROID.compileSWT = false;
-ANDROID.compileFXPackager = false;
-ANDROID.compileDesignTime = false;
-ANDROID.glassPlatform = "android"
-ANDROID.armArch = "${ARM_ARCH}"
-ANDROID.libDest = "lib/${ANDROID.armArch}"
-ANDROID.jfxdvklib = "jfxdvk.jar"
 
 ANDROID.jfxrtJarExcludes = [
     "**/*.hlsl",
@@ -241,18 +249,19 @@ def linkFlags = ["--sysroot=${ANDROID_NDK}/platforms/${ANDROID_NDK_TARGET}/arch-
 
 
 ANDROID.vmlauncher = [:]
-ANDROID.vmlauncher.classpath =
-files("${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar",
-      "modules/graphics/build/classes/main")
+ANDROID.vmlauncher.classpath = files("${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar",
+                                     "modules/graphics/build/classes/android")
 
-ANDROID.vmlauncher.javahClasspath = "${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar"
+ANDROID.vmlauncher.javahSource = files("modules/graphics/build/classes/android")
+ANDROID.vmlauncher.javahClasspath = files("modules/graphics/build/classes/android",
+                                          "${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar")
 ANDROID.vmlauncher.javahInclude = [
     "com/oracle/dalvik/*"
 ]
 ANDROID.vmlauncher.nativeSource = [
-    file("modules/graphics/src/main/native-android/VMLauncher.c"),
-    file("modules/graphics/src/main/native-android/NativePipeReader.c"),
-    file("modules/graphics/src/main/native-android/DalvikProxySelector.c")
+    file("modules/graphics/src/android/native/VMLauncher.c"),
+    file("modules/graphics/src/android/native/NativePipeReader.c"),
+    file("modules/graphics/src/android/native/DalvikProxySelector.c")
 ]
 ANDROID.vmlauncher.compiler = compiler
 ANDROID.vmlauncher.linker = linker
@@ -276,7 +285,8 @@ ANDROID.surface.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 ANDROID.surface.linkFlags = [linkFlags, "-ldl", "-landroid", "-llog"].flatten()
 
 ANDROID.webview = [:]
-ANDROID.webview.sourceSet = "android"
+ANDROID.webview.javahSource = files("modules/web/build/classes/android")
+ANDROID.webview.javahClasspath = files("modules/web/build/classes/android")
 ANDROID.webview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]
@@ -292,7 +302,8 @@ ANDROID.webview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 ANDROID.webview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
 
 ANDROID.dvkwebview = [:]
-ANDROID.dvkwebview.sourceSet = "android"
+ANDROID.dvkwebview.javahSource = files("modules/web/build/classes/android")
+ANDROID.dvkwebview.javahClasspath = files("modules/web/build/classes/android")
 ANDROID.dvkwebview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]

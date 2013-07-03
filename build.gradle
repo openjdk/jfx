@@ -654,8 +654,16 @@ void addNative(Project project, String name) {
         def headerDir = file("$headerRootDir/${t.name}")
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
             description = "Generates JNI Headers for ${name} for ${t.name}"
-            source(project.sourceSets.main.output.classesDir)
-            classpath = project.files(project.sourceSets.main.output.classesDir)
+            if (properties.javahSource == null) {
+                source(project.sourceSets.main.output.classesDir)
+            } else {
+                source(properties.javahSource)
+            }
+            if (properties.javahClasspath == null) {
+                classpath = project.files(project.sourceSets.main.output.classesDir)
+            } else {
+                classpath = project.files(properties.javahClasspath)
+            }
             if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
             output = headerDir
             include(properties.javahInclude)
