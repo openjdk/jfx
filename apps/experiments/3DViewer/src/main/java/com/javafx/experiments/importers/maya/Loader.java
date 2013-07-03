@@ -47,11 +47,13 @@ import com.javafx.experiments.shape3d.PolygonMesh;
 import com.javafx.experiments.shape3d.PolygonMeshView;
 import com.javafx.experiments.shape3d.SkinningMesh;
 import com.sun.javafx.geom.Vec3f;
+import java.util.HashSet;
+import java.util.Set;
 import javafx.animation.AnimationTimer;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.transform.Transform;
 
 /** Loader */
 class Loader {
@@ -216,11 +218,18 @@ class Loader {
         MArray ma = (MArray) n.getAttr("ma");
 
         List<Joint> jointNodes = new ArrayList<Joint>();
+        Set<Parent> jointForest = new HashSet<Parent>(); // root's children that have joints in their trees
         for (int i = 0; i < ma.getSize(); i++) {
             // hack... ?
             MNode c = n.getIncomingConnectionToType("ma[" + i + "]", "joint");
             Joint jn = (Joint) resolveNode(c);
             jointNodes.add(jn);
+            
+            Parent rootChild = jn; // root's child, which is an ancestor of joint jn
+            while (rootChild.getParent() != null) {
+                rootChild = rootChild.getParent();
+            }
+            jointForest.add(rootChild);
         }
         
         MNode outputMeshMNode = resolveOutputMesh(n);
@@ -231,11 +240,12 @@ class Loader {
         // We must be able to find the original converter in the meshConverters map
         MNode origOrigMesh = resolveOrigInputMesh(n);
         //               println("ORIG ORIG={origOrigMesh}");
-
+        
         // TODO: What is with this? origMesh
         resolveNode(origOrigMesh).setVisible(false);
 
         MArray bindPreMatrixArray = (MArray) n.getAttr("pm");
+        Affine bindGlobalMatrix = convertMatrix((MFloatArray) n.getAttr("gm"));
 
         Affine[] bindPreMatrix = new Affine[bindPreMatrixArray.getSize()];
         for (int i = 0; i < bindPreMatrixArray.getSize(); i++) {
@@ -243,11 +253,11 @@ class Loader {
         }
 
         MArray mayaWeights = (MArray) n.getAttr("wl");
-        float[][] weights = new float [mayaWeights.getSize()][jointNodes.size()];
+        float[][] weights = new float [jointNodes.size()][mayaWeights.getSize()];
         for (int i=0; i<mayaWeights.getSize(); i++) {
             MFloatArray curWeights = (MFloatArray) mayaWeights.getData(i).getData("w");
             for (int j = 0; j < jointNodes.size(); j++) {
-                weights[i][j] = j < curWeights.getSize() ? curWeights.get(j) : 0;
+                weights[j][i] = j < curWeights.getSize() ? curWeights.get(j) : 0;
             }
         }
         
@@ -259,8 +269,7 @@ class Loader {
             PolygonMeshView targetMayaMeshView = (PolygonMeshView) targetMayaMeshNode;
             
             PolygonMesh sourceMesh = (PolygonMesh) sourceMayaMeshView.getMesh();
-            Transform meshTransform = targetMayaMeshView.getLocalToSceneTransform();
-            SkinningMesh targetMesh = new SkinningMesh(sourceMesh, meshTransform, weights, bindPreMatrix, jointNodes);
+            SkinningMesh targetMesh = new SkinningMesh(sourceMesh, weights, bindPreMatrix, bindGlobalMatrix, jointNodes, new ArrayList(jointForest));
             targetMayaMeshView.setMesh(targetMesh);
 
             final SkinningMeshTimer skinningMeshTimer = new SkinningMeshTimer(targetMesh);
@@ -462,10 +471,8 @@ class Loader {
             mv.setMesh((PolygonMesh) mesh);
 //            mv.setCullFace(CullFace.NONE); //TODO
             loaded.put(n, mv);
-            if (((PolygonMesh)mesh).getPoints().size() > 0) {
-                if (node != null) {
-                    ((Group) node).getChildren().add(mv);
-                }
+            if (node != null) {
+                ((Group) node).getChildren().add(mv);
             }
         } else {
             MeshView mv = new MeshView();
@@ -478,10 +485,8 @@ class Loader {
             mv.setMesh((TriangleMesh) mesh);
 
             loaded.put(n, mv);
-            if (((TriangleMesh)mesh).getPoints().size() > 0) {
-                if (node != null) {
-                    ((Group) node).getChildren().add(mv);
-                }
+            if (node != null) {
+                ((Group) node).getChildren().add(mv);
             }
         }
     }
