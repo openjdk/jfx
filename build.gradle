@@ -96,18 +96,6 @@ void defineProperty(String name, Properties props, String defaultValue) {
 }
 
 /**
- * Converts the simple name of a library to the full name. For example, on mac
- * the simple name "glass" becomes "libglass.dylib". On Linux or Solaris, it would
- * be "libglass.so", and on Windows "glass.dll".
- *
- * @param name The simple name of the library
- * @return The name of the shared library file
- */
-String library(String name) {
-    return "${IS_WINDOWS ? '' : 'lib'}$name.${IS_WINDOWS ? 'dll' : IS_MAC ? 'dylib' : 'so'}"
-}
-
-/**
  * Converts cygwin style paths to windows style paths, but with a forward slash.
  * This method is safe to call from any platform, and will only do work if
  * called on Windows (in all other cases it simply returns the supplied path.
@@ -649,13 +637,22 @@ void addNative(Project project, String name) {
     // For each compile target, create a javah / cc / link triplet
     compileTargets { t ->
         def targetProperties = project.rootProject.ext[t.upper]
+        def library = targetProperties.library
         def properties = targetProperties.get(name)
         def nativeDir = file("$nativeRootDir/${t.name}")
         def headerDir = file("$headerRootDir/${t.name}")
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
             description = "Generates JNI Headers for ${name} for ${t.name}"
-            source(project.sourceSets.main.output.classesDir)
-            classpath = project.files(project.sourceSets.main.output.classesDir)
+            if (properties.javahSource == null) {
+                source(project.sourceSets.main.output.classesDir)
+            } else {
+                source(properties.javahSource)
+            }
+            if (properties.javahClasspath == null) {
+                classpath = project.files(project.sourceSets.main.output.classesDir)
+            } else {
+                classpath = project.files(properties.javahClasspath)
+            }
             if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
             output = headerDir
             include(properties.javahInclude)
@@ -1043,6 +1040,7 @@ project(":graphics") {
         def upperTarget = t.upper
         def capitalTarget = t.capital
         def properties = rootProject.ext[upperTarget];
+        def library = properties.library
 
         def ccTask = task("compileDecoraNativeShaders$capitalTarget", type: CCTask, dependsOn: generateDecoraNativeHeaders) {
             description = "Compiles Decora SSE natives"
@@ -1640,6 +1638,7 @@ task all() {
 
 compileTargets { t ->
     def targetProperties = project.ext[t.upper]
+    def library = targetProperties.library
     // The jfxrt task is responsible for creating the jfxrt.jar. A developer may
     // have multiple SDK's on their system at any one time, depending on which
     // cross compiles they have done. For example, I might have:
@@ -1691,20 +1690,14 @@ compileTargets { t ->
             // TODO instead of using copy everywhere, I probably want to use "sync" instead?
             // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
             copy {
-                from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}",
-                     "modules/graphics/build/libs/prism/${t.name}/${library(targetProperties.prism.lib)}",
-                     "modules/graphics/build/libs/prismSW/${t.name}/${library(targetProperties.prismSW.lib)}",
-                     "modules/graphics/build/libs/font/${t.name}/${library(targetProperties.font.lib)}",
-                     "modules/graphics/build/libs/iio/${t.name}/${library(targetProperties.iio.lib)}");
-                def es2Variants = targetProperties.prismES2.containsKey("variants") ? targetProperties.prismES2.variants : [""];
-                es2Variants.each { variant ->
-                    def variantProperties = variant == "" ? targetProperties.prismES2 : targetProperties.prismES2.get(variant)
-                    from ("modules/graphics/build/libs/prismES2/${t.name}/${library(variantProperties.lib)}");
-                }
-                def glassVariants = targetProperties.glass.containsKey("variants") ? targetProperties.glass.variants : [""];
-                glassVariants.each { variant ->
-                    def variantProperties = variant == "" ? targetProperties.glass : targetProperties.glass.get(variant)
-                    from ("modules/graphics/build/libs/glass/${t.name}/${library(variantProperties.lib)}");
+                from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
+                ['font', 'prism', 'prismSW', 'prismES2', 'glass', 'iio'].each { lib ->
+                    def variants = targetProperties[lib].containsKey('variants') ? targetProperties[lib].variants : [null]
+                    variants.each { variant ->
+                        def variantProperties = variant ? targetProperties[lib][variant] : targetProperties[lib]
+                        println "modules/graphics/build/libs/$lib/$t.name/${library(variantProperties.lib)}"
+                        from ("modules/graphics/build/libs/$lib/$t.name/${library(variantProperties.lib)}")
+                    }
                 }
                 if (IS_WINDOWS) {
                     from ("modules/graphics/build/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
@@ -2266,15 +2259,6 @@ childProjects["apps"].subprojects {
                 project.tasks.all {
                     it.enabled = false
                 }
-            }
-
-            if (BUILD_CLOSED && srcdir.exists()) {
-                def cptask = project.task('copyAppsArtifacts', type: Copy ) {
-                    dependsOn project.getPath() + ":jar"
-                    from project.jar.archivePath
-                    into "$rootProject.jfxArtifactsDir/apps/ga-samples"
-                }
-                rootProject.apps.dependsOn(cptask)
             }
         }
     }

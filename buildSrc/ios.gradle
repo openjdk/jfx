@@ -34,6 +34,9 @@ IOS.compileSWT = false;
 IOS.compileFXPackager = false;
 IOS.compileDesignTime = false;
 
+// Lambda for naming the generated libs
+IOS.library = { name -> return "lib${name}.a" as String }
+
 IOS.libDest = "lib"
 
 IOS.jfxrtJarExcludes = [

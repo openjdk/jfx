@@ -5,6 +5,7 @@
     <content url="file://$MODULE_DIR$/../modules/web">
       <sourceFolder url="file://$MODULE_DIR$/../modules/web/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../modules/web/src/main/native/WebKitBuild/Release/WebCore/generated/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../modules/web/src/main/resources" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/../modules/web/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
@@ -12,6 +13,15 @@
     <orderEntry type="module" module-name="controls" exported="" />
     <orderEntry type="module" module-name="media" exported="" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="module-library" exported="">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../../caches/sdk/rt/lib/ext/jfxrt.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
   </component>
 </module>
 
