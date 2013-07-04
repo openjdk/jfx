@@ -26,6 +26,7 @@
 #ifndef _Included_SSEUtils
 #define _Included_SSEUtils
 
+#include <stddef.h>
 #include <jni.h>
 
 #ifdef __cplusplus
