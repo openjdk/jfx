@@ -60,6 +60,7 @@ ANDROID.glassPlatform = "android"
 ANDROID.armArch = "${ARM_ARCH}"
 ANDROID.libDest = "lib/${ANDROID.armArch}"
 ANDROID.jfxdvklib = "jfxdvk.jar"
+ANDROID.library = { name -> return "lib${name}.so" as String }
 
 // Look for the the Android SDK & NDK to use, as well as the compiler stuff
 def sdk = project.hasProperty("ANDROID_SDK") ? getLatestPlatform("$ANDROID_SDK") : null;
@@ -122,8 +123,8 @@ project(":graphics") {
                 def props = project.ext["ANDROID"]
                 copy {
                     from(
-                         "modules/graphics/build/libs/vmlauncher/android/${library(props.vmlauncher.lib)}",
-                         "modules/graphics/build/libs/surface/android/${library(props.surface.lib)}"                         
+                         "modules/graphics/build/libs/vmlauncher/android/${props.library(props.vmlauncher.lib)}",
+                         "modules/graphics/build/libs/surface/android/${props.library(props.surface.lib)}"
                     )                    
                     into ("build/android-sdk/dalvik/${props.libDest}")
                 }
@@ -183,12 +184,12 @@ project(":web") {
                 def props = project.ext["ANDROID"]
                 copy {
                     from(
-                         "modules/web/build/libs/dvkwebview/android/${library(props.dvkwebview.lib)}"
+                         "modules/web/build/libs/dvkwebview/android/${props.library(props.dvkwebview.lib)}"
                     )                    
                     into ("build/android-sdk/dalvik/${props.libDest}")
                 }
                 copy {
-                    from ("modules/web/build/libs/webview/android/${library(props.webview.lib)}")
+                    from ("modules/web/build/libs/webview/android/${props.library(props.webview.lib)}")
                     into ("build/android-sdk/rt/${props.libDest}")
                 }
             }
@@ -234,7 +235,6 @@ android.use.egl=true
 android.com.sun.javafx.isEmbedded=true
 """
 def sysroot = "${ANDROID_NDK}/platforms/${ANDROID_NDK_TARGET}/arch-arm"
-ANDROID.library = { name -> return "lib${name}.so" as String }
 
 def ccFlags = ["--sysroot=$sysroot","-std=c99", "-DANDROID", "-c", "-nostdlib", "-DANDROID_NDK"]
 def ccOptFlags = ["-fpic", "-ffunction-sections", "-funwind-tables","-fstack-protector",
