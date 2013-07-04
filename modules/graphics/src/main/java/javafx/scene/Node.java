@@ -1059,6 +1059,9 @@ public abstract class Node implements EventTarget, Styleable {
                         impl_markDirty(DirtyBits.NODE_VISIBLE);
                         impl_geomChanged();
                         updateTreeVisible();
+                        if (getClip() != null) {
+                            getClip().updateTreeVisible();
+                        }
                         if (getParent() != null) {
                             // notify the parent of the potential change in visibility
                             // of this node, since visibility affects bounds of the
@@ -6226,11 +6229,13 @@ public abstract class Node implements EventTarget, Styleable {
                             if (oldClip != null) {
                                 oldClip.clipParent = null;
                                 oldClip.setScenes(null, null);
+                                oldClip.updateTreeVisible();
                             }
 
                             if (newClip != null) {
                                 newClip.clipParent = Node.this;
                                 newClip.setScenes(getScene(), getSubScene());
+                                newClip.updateTreeVisible();
                             }
 
                             impl_markDirty(DirtyBits.NODE_CLIP);
@@ -7578,9 +7583,10 @@ public abstract class Node implements EventTarget, Styleable {
     private void updateTreeVisible() {
         boolean isTreeVisible = isVisible();
         if (isTreeVisible) {
-            isTreeVisible = (getParent() == null) ?
-                    (getSubScene() == null || getSubScene().impl_isTreeVisible()) :
-                    getParent().impl_isTreeVisible();
+            final Parent p = getParent(); 
+            isTreeVisible = p != null ? getParent().impl_isTreeVisible() :
+                    clipParent != null ? clipParent.impl_isTreeVisible() : 
+                    getSubScene() == null || getSubScene().impl_isTreeVisible();
         }
         setTreeVisible(isTreeVisible);
     }
