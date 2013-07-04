@@ -9,7 +9,6 @@
 \.idea/tasks.xml$
 \.idea/workspace.xml$
 ^\.gradle/
-^\.libs/
 ^buildSrc/\.gradle/
 ^idea/out/
 build/

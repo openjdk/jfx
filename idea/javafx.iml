@@ -4,11 +4,10 @@
     <exclude-output />
     <content url="file://$MODULE_DIR$/..">
       <excludeFolder url="file://$MODULE_DIR$/../.gradle" />
-      <excludeFolder url="file://$MODULE_DIR$/../.libs" />
+      <excludeFolder url="file://$MODULE_DIR$/../build/libs" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="inheritedJdk" />
-    <orderEntry type="library" name="gradle-1.4" level="application" />
   </component>
 </module>
 

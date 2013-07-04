@@ -1126,30 +1126,28 @@ project(":graphics") {
     // available in some known location. Maybe in the future the Gradle plugins to each
     // of the IDEs will be good enough that we won't need this hack anymore.
     classes << {
-        // Copy all of the download libraries to .libs for the sake of the IDEs
-        File libsDir = rootProject.file(".libs");
-        if (!libsDir.exists()) {
-            libsDir.mkdirs();
-            for (File f : [configurations.compile.files, configurations.antlr3.files].flatten()) {
-                copy {
-                    into libsDir
-                    from f.getParentFile()
-                    include "**/plugin.jar"
-                    include "**/antlr-3.1.3.jar"
-                    include "**/stringtemplate-3.2.jar"
-                    include "**/antlr-runtime-3.1.3.jar"
-                    includeEmptyDirs = false
-                }
-                // Have to rename the swt jar because it is some platform specific name but
-                // for the sake of the IDEs we need to have a single stable name that works
-                // on every platform
-                copy {
-                    into libsDir
-                    from f.getParentFile()
-                    include "**/*swt*.jar"
-                    includeEmptyDirs = false
-                    rename ".*swt.*jar", "swt\\.jar"
-                }
+        // Copy all of the download libraries to the libs directory for the sake of the IDEs
+        File libsDir = rootProject.file("build/libs");
+        libsDir.mkdirs();
+        for (File f : [configurations.compile.files, configurations.antlr3.files].flatten()) {
+            copy {
+                into libsDir
+                from f.getParentFile()
+                include "**/plugin.jar"
+                include "**/antlr-3.1.3.jar"
+                include "**/stringtemplate-3.2.jar"
+                include "**/antlr-runtime-3.1.3.jar"
+                includeEmptyDirs = false
+            }
+            // Have to rename the swt jar because it is some platform specific name but
+            // for the sake of the IDEs we need to have a single stable name that works
+            // on every platform
+            copy {
+                into libsDir
+                from f.getParentFile()
+                include "**/*swt*.jar"
+                includeEmptyDirs = false
+                rename ".*swt.*jar", "swt-debug\\.jar"
             }
         }
     }
@@ -1430,18 +1428,16 @@ project(":fxpackager") {
     jar.dependsOn buildJavaFXPackager
 
     classes << {
-        // Copy all of the download libraries to .libs for the sake of the IDEs
-        File libsDir = rootProject.file(".libs");
+        // Copy all of the download libraries to libs directory for the sake of the IDEs
+        File libsDir = rootProject.file("build/libs");
         File antLib = new File(libsDir, "ant-1.8.2.jar")
-        if (!antLib.exists()) {
-            libsDir.mkdirs();
-            for (File f : configurations.compile.files) {
-                copy {
-                    into libsDir
-                    from f.getParentFile()
-                    include "**/ant-1.8.2.jar"
-                    includeEmptyDirs = false
-                }
+        libsDir.mkdirs();
+        for (File f : configurations.compile.files) {
+            copy {
+                into libsDir
+                from f.getParentFile()
+                include "**/ant-1.8.2.jar"
+                includeEmptyDirs = false
             }
         }
     }

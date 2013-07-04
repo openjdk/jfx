@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
   <component name="EclipseModuleManager">
-    <libelement value="jar://$MODULE_DIR$/../.libs/ant-1.8.2.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/../.libs/antlr-3.1.3.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/../.libs/antlr-runtime-3.1.3.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/../.libs/stringtemplate-3.2.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/../.libs/swt.jar!/" />
+    <libelement value="jar://$MODULE_DIR$/../build/libs/ant-1.8.2.jar!/" />
+    <libelement value="jar://$MODULE_DIR$/../build/libs/antlr-3.1.3.jar!/" />
+    <libelement value="jar://$MODULE_DIR$/../build/libs/antlr-runtime-3.1.3.jar!/" />
+    <libelement value="jar://$MODULE_DIR$/../build/libs/stringtemplate-3.2.jar!/" />
+    <libelement value="jar://$MODULE_DIR$/../build/libs/swt-debug.jar!/" />
     <src_description expected_position="0">
       <src_folder value="file://$MODULE_DIR$/../buildSrc/build/generated-src/antlr" expected_position="0" />
       <src_folder value="file://$MODULE_DIR$/../buildSrc/src/main/java" expected_position="1" />
@@ -31,7 +31,7 @@
     <orderEntry type="module-library" exported="">
       <library name="ant-1.8.2.jar">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../.libs/ant-1.8.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../build/libs/ant-1.8.2.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -40,7 +40,7 @@
     <orderEntry type="module-library" exported="">
       <library name="antlr-3.1.3.jar">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../.libs/antlr-3.1.3.jar!/" />
+          <root url="jar://$MODULE_DIR$/../build/libs/antlr-3.1.3.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -49,7 +49,7 @@
     <orderEntry type="module-library" exported="">
       <library name="antlr-runtime-3.1.3.jar">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../.libs/antlr-runtime-3.1.3.jar!/" />
+          <root url="jar://$MODULE_DIR$/../build/libs/antlr-runtime-3.1.3.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -58,16 +58,16 @@
     <orderEntry type="module-library" exported="">
       <library name="stringtemplate-3.2.jar">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../.libs/stringtemplate-3.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../build/libs/stringtemplate-3.2.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
       </library>
     </orderEntry>
     <orderEntry type="module-library" exported="">
-      <library name="swt.jar">
+      <library name="swt-debug.jar">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../.libs/swt.jar!/" />
+          <root url="jar://$MODULE_DIR$/../build/libs/swt-debug.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
