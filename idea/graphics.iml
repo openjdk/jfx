@@ -19,11 +19,10 @@
       <excludeFolder url="file://$MODULE_DIR$/../modules/graphics/build/resources" />
       <excludeFolder url="file://$MODULE_DIR$/../modules/graphics/build/tmp" />
     </content>
-    <orderEntry type="module" module-name="base" exported="" />
-    <orderEntry type="inheritedJdk" />
-    <orderEntry type="module" module-name="builders" exported="" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="rt-closed" exported="" />
+    <orderEntry type="module" module-name="base" exported="" />
+    <orderEntry type="module" module-name="builders" exported="" />
+    <orderEntry type="inheritedJdk" />
   </component>
 </module>
 

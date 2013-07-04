@@ -111,20 +111,8 @@
       <excludeFolder url="file://$MODULE_DIR$/../../rt-closed/javafx-android" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="graphics" />
-    <orderEntry type="module" module-name="web" />
-    <orderEntry type="module" module-name="fxml" />
-    <orderEntry type="module" module-name="media" />
-    <orderEntry type="module-library">
-      <library name="jfxmedia.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../caches/sdk/build/lib/desktop/jfxmedia.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module" module-name="deploy" />
+    <orderEntry type="module" module-name="deploy" exported="" />
+    <orderEntry type="module" module-name="rt" exported="" />
     <orderEntry type="inheritedJdk" />
   </component>
 </module>

@@ -11,8 +11,8 @@
       <module fileurl="file://$PROJECT_DIR$/fxml.iml" filepath="$PROJECT_DIR$/fxml.iml" />
       <module fileurl="file://$PROJECT_DIR$/fxpackager.iml" filepath="$PROJECT_DIR$/fxpackager.iml" />
       <module fileurl="file://$PROJECT_DIR$/graphics.iml" filepath="$PROJECT_DIR$/graphics.iml" />
-      <module fileurl="file://$PROJECT_DIR$/javafx.iml" filepath="$PROJECT_DIR$/javafx.iml" />
       <module fileurl="file://$PROJECT_DIR$/media.iml" filepath="$PROJECT_DIR$/media.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rt.iml" filepath="$PROJECT_DIR$/rt.iml" />
       <module fileurl="file://$PROJECT_DIR$/rt-closed.iml" filepath="$PROJECT_DIR$/rt-closed.iml" />
       <module fileurl="file://$PROJECT_DIR$/swing.iml" filepath="$PROJECT_DIR$/swing.iml" />
       <module fileurl="file://$PROJECT_DIR$/swt.iml" filepath="$PROJECT_DIR$/swt.iml" />

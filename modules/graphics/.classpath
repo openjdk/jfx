@@ -26,9 +26,4 @@
   <classpathentry kind="src" exported="true" path="build/resources/jsl-prism"/>
   <classpathentry kind="src" exported="true" path="/base"/>
   <classpathentry kind="src" exported="true" path="/builders"/>
-  <classpathentry kind="src" exported="true" path="/rt-closed">
-    <attributes>
-      <attribute name="optional" value="true"/>
-    </attributes>
-  </classpathentry>
 </classpath>
