@@ -750,8 +750,8 @@ task updateCacheIfNeeded() {
 
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
-    // etc, except for the root project which we just want to ignore (and for now media and web...)
-    if (project == rootProject || project.name == "media" || project.name == "web") return
+    // etc, except for the root project which we just want to ignore (and for now media)
+    if (project == rootProject || project.name == "media") return
     // All of our projects are java projects
     apply plugin: "java"
     sourceCompatibility = 1.8
@@ -1234,7 +1234,7 @@ project(":builders") {
 
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
-                project(":controls"), project(":swt"), project(":swing")
+                project(":controls"), project(":swt"), project(":swing"), project(":web")
         testCompile project(":graphics").sourceSets.stub.output
     }
     test {
@@ -1524,7 +1524,7 @@ task javadoc(type: Javadoc) {
     executable = JAVADOC
     def projectsToDocument = [
             project(":base"), project(":graphics"), project(":controls"),
-            project(":swing"), project(":swt"), project(":fxml")]
+            project(":swing"), project(":swt"), project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java, "$it.buildDir/generated-src/builders"]
     }));
@@ -1669,6 +1669,12 @@ compileTargets { t ->
              "modules/graphics/build/resources/jsl-prism");
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
         if (COMPILE_SWT) from ("modules/swt/build/classes/main", "modules/swt/build/resources/main")
+        ///if (COMPILE_WEBKIT)
+        if (t.name != 'android') {
+            from ("modules/web/build/classes/main", "modules/web/build/resources/main")
+        } else {
+            from ("modules/web/build/classes/android", "modules/web/build/resources/android")
+        }
         exclude("js/**/*", // er...
                 "PrismLoaderBackend*", // More decora stuff
                 "**/*.stg",    // any glue files for decora must be excluded
@@ -1701,7 +1707,20 @@ compileTargets { t ->
                 }
                 if (IS_WINDOWS) {
                     from ("modules/graphics/build/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
-                    rename("lib(.*).dll", "\$1.dll");
+                }
+                if (COMPILE_WEBKIT) {
+                    from ("modules/web/build/libs/${library('jfxwebkit')}")
+                    if (IS_WINDOWS) {
+                        from ("modules/web/src/main/native/WebKitLibraries/import/runtime")
+                    }
+                } else {
+                    if (IS_MAC) from ("$LIBRARY_STUB/libjfxwebkit.dylib")
+                    else if (IS_WINDOWS) {
+                        from ("$LIBRARY_STUB/jfxwebkit.dll")
+                        from ("$LIBRARY_STUB/libxml2.dll")
+                        from ("$LIBRARY_STUB/libxslt.dll")
+                    }
+                    else from ("$LIBRARY_STUB/libjfxwebkit.so")
                 }
                 def libDest = targetProperties.libDest
                 into ("build/${t.name}-sdk/rt/$libDest")
@@ -1871,7 +1890,7 @@ task cleanNetBeans() {
 
 allprojects {
     apply plugin: 'idea'
-    if (project == rootProject || project.name == "media" || project.name == "web") return
+    if (project == rootProject || project.name == "media") return
 
     // Also need to un-exclude the build-dir since we put stuff in it, and then re-exclude other stuff
     if (rootProject.BINARY_STUB != null) {
@@ -2277,4 +2296,199 @@ childProjects["apps"].subprojects {
 
 if (BUILD_CLOSED) {
     apply from: supplementalBuildFile
+}
+
+// This project has to be defined after [supplementalBuildFile]
+// because it depends on media tasks
+project(":web") {
+    def platform = IS_MAC ? "mac" :
+            IS_WINDOWS ? (IS_64 ? "win-amd64" : "win-i586") :
+                IS_64 ? "linux-amd64" : "linux-i586"
+                
+    if (COMPILE_WEBKIT) {
+        configurations {
+            webkit
+        }
+        dependencies {
+            compile project(":base"), project(":graphics"), project(":controls")
+            webkit group: "com.sun.webkit", name: "webview-deps",
+                   version: "1.0", classifier: "$platform", ext: "zip"
+        }
+    }
+
+    if (BUILD_CLOSED && COMPILE_GSTREAMER) {
+        compileJava.dependsOn compileMediaJava
+        compileJava.classpath += files(
+                "../media/build/classes/main",
+                "$jfxTopDir/media/jfxmedia/dist/jfxmedia.jar")
+    }
+    compileJava.exclude "com/sun/javafx/webkit/drt/**/*"
+
+    test.enabled = false
+    
+    task generateHeaders(dependsOn: compileJava) {
+        doLast {
+            def classpath = files("$buildDir/classes/main",
+                                  project(":graphics").sourceSets.main.output.classesDir)
+            def dest = file("src/main/build/javah");
+            mkdir dest;
+            exec {
+                commandLine("$JAVAH", "-J-Djava.ext.dirs=", "-d", "$dest",
+                            "-classpath", "${classpath.asPath}");
+                args("java.lang.Character",
+                     "java.net.IDN",
+                     "com.sun.webkit.ContextMenu",
+                     "com.sun.webkit.ContextMenuItem",
+                     "com.sun.webkit.CursorManager",
+                     "com.sun.webkit.PageCache",
+                     "com.sun.webkit.PopupMenu",
+                     "com.sun.webkit.SharedBuffer",
+                     "com.sun.webkit.WebPage",
+                     "com.sun.webkit.LoadListenerClient",
+                     "com.sun.webkit.event.WCFocusEvent",
+                     "com.sun.webkit.event.WCKeyEvent",
+                     "com.sun.webkit.event.WCMouseEvent",
+                     "com.sun.webkit.event.WCMouseWheelEvent",
+                     "com.sun.webkit.graphics.GraphicsDecoder",
+                     "com.sun.webkit.graphics.RenderMediaControls",
+                     "com.sun.webkit.graphics.RenderTheme",
+                     "com.sun.webkit.graphics.ScrollBarTheme",
+                     "com.sun.webkit.graphics.WCMediaPlayer",
+                     "com.sun.webkit.graphics.WCGraphicsManager",
+                     "com.sun.webkit.graphics.WCRenderQueue",
+                     "com.sun.webkit.graphics.WCPath",
+                     "com.sun.webkit.graphics.WCPathIterator",
+                     "com.sun.webkit.Timer",
+                     "com.sun.webkit.WCFrameView",
+                     "com.sun.webkit.WCPasteboard",
+                     "com.sun.webkit.WCPluginWidget",
+                     "com.sun.webkit.dom.JSObject",
+                     "com.sun.webkit.network.SocketStreamHandle",
+                     "com.sun.webkit.network.URLLoader",
+                     "com.sun.webkit.text.TextBreakIterator",
+                     "com.sun.webkit.text.TextNormalizer");
+            }
+        }
+    }
+
+    def webkitOutputDir = "src/main/native/WebKitBuild/$CONF"
+
+    task compileNative(dependsOn: generateHeaders) {
+        doLast {
+            ant.unzip(src:  configurations.webkit.files.iterator().next(),
+                      dest: "src/main/native/WebKitLibraries")
+            exec {
+                println "Webkit configuration to use: $CONF"
+                workingDir("src/main/native")
+                commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$CONF")
+            }
+            exec {
+                workingDir("src/main/native")
+                if (IS_WINDOWS) {
+                    String qtDir = cygpath(System.getenv().get("QTSDK_DIR"))
+                    Map environmentSettings = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                    environmentSettings["JAVA_HOME"] = JAVA_HOME
+                    environmentSettings["PATH"] = "$WINDOWS_VS_PATH;$qtDir/bin;$qtDir/qt/bin"
+                    environmentSettings["QMAKESPEC"] = "win32-msvc2008"
+                    environment(environmentSettings)
+                    /* To build with ICU:
+                    1. Download http://javaweb.us.oracle.com/jcg/fx-webrevs/RT-17164/WebKitLibrariesICU.zip
+                    and unzip it to WebKitLibraries folder.
+                    2. Copy DLLs from
+                    WebKitLibrariesICU.zip\WebKitLibraries\import\runtime
+                    to %windir%\system32
+                    3. Uncomment the line below
+                     */
+                    // args("--icu-unicode")
+                } else if (IS_MAC) {
+                    environment([
+                        "QMAKESPEC"      : "macx-g++",
+                        "QMAKE_CFLAGS"   : "-m64",
+                        "QMAKE_LFLAGS"   : "-m64",
+                        "JAVA_HOME"      : JDK_HOME
+                    ])
+                // TODO need to re-enable. It looks like linux doesn't ever build
+                // webkit at all which is also not right.
+                // } else if (IS_LINUX && COMPILE_TARGETS != "linux") {
+                // We need some way to detect cross build here. The CompileTarget
+                // enum from rt/build.gradle is out of scope here, so I cannot write
+                //     COMPILE_TARGET != CompileTarget.LINUX
+                // Once web module is open sourced, this target will be moved into
+                // rt/build.gradle, thus eliminating the problem.
+                // For now, work around it with a name check.
+                //            } else if (IS_LINUX && (! "LINUX".equals(COMPILE_TARGET.name()))) {
+                //                // Linux cross build
+                //                mkdir "$webkitOutputDir"
+                //                File qmakeSpec = new File("$webkitOutputDir/qmake.conf")
+                //                qmakeSpec.append(
+                //"""TARGET_PLATFORM         = unix
+                //include(/usr/share/qt4/mkspecs/common/linux.conf)
+                //include(/usr/share/qt4/mkspecs/common/g++.conf)
+                //include(/usr/share/qt4/mkspecs/common/qws.conf)
+                //QMAKE_CC                = $crosstools.gcc.bin
+                //QMAKE_CXX               = $crosstools.gpp.bin
+                //QMAKE_LINK              = $crosstools.gpp.bin
+                //QMAKE_LINK_SHLIB        = $crosstools.gpp.bin
+                //QMAKE_AR                = $crosstools.ar.bin cqs
+                //QMAKE_OBJCOPY           = $crosstools.objcopy.bin
+                //QMAKE_STRIP             = $crosstools.strip.bin
+                //load(qt_config)""")
+                //                environment([
+                //                    "QMAKESPEC" : webkitOutputDir,
+                //                    "WK_CFLAGS" : crosstools.extra_cflags,
+                //                    "WK_LFLAGS" : crosstools.extra_ldflags,
+                //                    "PATH"      : "$cross.tools/bin:$PATH",
+                //                ])
+                //                args("--nocache")
+                } else {
+                    environment([
+                        "JAVA_HOME"   : JDK_HOME
+                    ])
+                }
+                commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio")
+            }
+            copy {
+                /// Reuse the library lambda here
+                from "$webkitOutputDir/lib/libjfxwebkit.so"
+                from "$webkitOutputDir/lib/libjfxwebkit.dylib"
+                from "$webkitOutputDir/lib/jfxwebkit.dll"
+                into "build/libs"
+            }
+        }
+    }
+    
+    task compileGenerated(type: JavaCompile, dependsOn: compileNative) {
+        def gensrcDir = "$webkitOutputDir/WebCore/generated/java"
+        doFirst {
+            copy {
+                from "src/main/native/Source/WebCore/bindings/java/EventListenerImpl.java"
+                into "$gensrcDir/com/sun/webkit/dom"
+            }
+        }
+        classpath = files("$buildDir",
+                          project(":graphics").sourceSets.main.output.classesDir)
+        source gensrcDir
+        destinationDir = file("$buildDir/classes/main")
+        doLast {
+            copy {
+                from gensrcDir
+                into "build/resources/main"
+                exclude "**/*.java"
+            }
+        }
+    }
+
+    if (COMPILE_WEBKIT) {
+        jar.dependsOn compileGenerated
+    }
+    
+    clean << {
+        project.delete(
+            "src/main/build",
+            "$webkitOutputDir",
+            "src/main/native/WebKitBuild/Tools",
+            "src/main/native/WebKitBuild/classes",
+            "src/main/native/dist",
+            "src/main/native/WebKitLibraries/import")
+    }
 }
