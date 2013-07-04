@@ -1665,7 +1665,6 @@ compileTargets { t ->
              "modules/graphics/build/resources/jsl-prism");
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
         if (COMPILE_SWT) from ("modules/swt/build/classes/main", "modules/swt/build/resources/main")
-        ///if (COMPILE_WEBKIT)
         if (t.name != 'android') {
             from ("modules/web/build/classes/main", "modules/web/build/resources/main")
         } else {
@@ -2312,6 +2311,7 @@ project(":web") {
         }
     }
 
+    compileJava.enabled = COMPILE_WEBKIT
     if (BUILD_CLOSED && COMPILE_GSTREAMER) {
         compileJava.dependsOn compileMediaJava
         compileJava.classpath += files(
@@ -2474,9 +2474,20 @@ project(":web") {
         }
     }
 
-    if (COMPILE_WEBKIT) {
-        jar.dependsOn compileGenerated
+    task copyClassesFromBinaryStub << {
+        copy {
+            from zipTree(BINARY_STUB.getSingleFile())
+            into "build/classes/main"
+            include("javafx/scene/web/**",
+                "com/sun/javafx/scene/web/**",
+                "com/sun/webkit/**",
+                "com/sun/javafx/webkit/**",
+                "netscape/javascript/**",
+                "com/sun/javafx/sg/prism/NGWebView*")
+        }
     }
+
+    jar.dependsOn (COMPILE_WEBKIT ? compileGenerated : copyClassesFromBinaryStub)
     
     clean << {
         project.delete(
