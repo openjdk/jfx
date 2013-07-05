@@ -251,53 +251,20 @@ final class SocketStreamHandle {
     }
 
     private void connect(Proxy proxy) throws IOException {
-        if (proxy.type() == Proxy.Type.HTTP) {
-            synchronized (this) {
-                if (state != State.ACTIVE) {
-                    throw new SocketException("Close requested");
-                }
-                socket = new Socket(Proxy.NO_PROXY);
+        synchronized (this) {
+            if (state != State.ACTIVE) {
+                throw new SocketException("Close requested");
             }
-            if (logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST, format("%s connecting to proxy: [%s]",
-                        this, proxy));
-            }
-            final InetSocketAddress address =
-                    (InetSocketAddress) proxy.address();
-            try {
-                AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<Void>() {
-                        @Override public Void run() throws IOException {
-                            socket.connect(new InetSocketAddress(
-                                    address.getHostName(),
-                                    address.getPort()));
-                            return null;
-                        }
-                    });
-            } catch (PrivilegedActionException ex) {
-                throw (IOException) ex.getException();
-            }
-            if (logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST, format("%s connected to proxy: [%s]",
-                        this, proxy));
-            }
-            setupProxyTunnel();
-        } else { // DIRECT or SOCKS
-            synchronized (this) {
-                if (state != State.ACTIVE) {
-                    throw new SocketException("Close requested");
-                }
-                socket = new Socket(proxy);
-            }
-            if (logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST, format("%s connecting to: [%s:%d]",
-                        this, host, port));
-            }
-            socket.connect(new InetSocketAddress(host, port));
-            if (logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST, format("%s connected to: [%s:%d]",
-                        this, host, port));
-            }
+            socket = new Socket(proxy);
+        }
+        if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, format("%s connecting to: [%s:%d]",
+                    this, host, port));
+        }
+        socket.connect(new InetSocketAddress(host, port));
+        if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, format("%s connected to: [%s:%d]",
+                    this, host, port));
         }
         if (ssl) {
             synchronized (this) {
@@ -310,80 +277,6 @@ final class SocketStreamHandle {
             }
             ((SSLSocket) socket).startHandshake();
         }
-    }
-
-    private void setupProxyTunnel() throws IOException {
-        logger.log(Level.FINEST, "{0} setting up proxy tunnel", this);
-
-        String request =
-                "CONNECT " + host + ":" + port + " HTTP/1.1\r\n"
-                + "Host: " + host + "\r\n"
-                + "Proxy-Connection: keep-alive\r\n"
-                + "\r\n";
-        if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, format("%s sending:%n%s",
-                    this, request.replaceAll("(?m)^", "    ")));
-        }
-        OutputStreamWriter w =
-                new OutputStreamWriter(socket.getOutputStream(), "US-ASCII");
-        w.write(request);
-        w.flush();
-
-        String firstLine = null;
-        StringBuilder line = new StringBuilder();
-        InputStreamReader r =
-                new InputStreamReader(socket.getInputStream(), "UTF-8");
-        while (true) {
-            int c = r.read();
-            if (c < 0) {
-                if (logger.isLoggable(Level.FINEST)) {
-                    logger.log(Level.FINEST, format("%s received: [%s]",
-                            this, line));
-                }
-                throw new SocketException("Connection closed by proxy "
-                        + "during tunnel setup");
-            } else if (c == '\n') {
-                if (line.length() > 0
-                        && line.charAt(line.length() - 1) == '\r')
-                {
-                    line.deleteCharAt(line.length() - 1);
-                }
-                if (logger.isLoggable(Level.FINEST)) {
-                    logger.log(Level.FINEST, format("%s received: [%s]",
-                            this, line));
-                }
-                if (line.length() == 0) {
-                    break; // empty line indicates end of headers
-                } else {
-                    if (firstLine == null) {
-                        firstLine = line.toString();
-                    }
-                    line.setLength(0);
-                }
-            } else {
-                line.append((char) c);
-            }
-        }
-
-        if (firstLine == null) {
-            throw new SocketException("Empty response from proxy "
-                    + "during tunnel setup");
-        }
-
-        Matcher matcher = FIRST_LINE_PATTERN.matcher(firstLine);
-        if (!matcher.matches()) {
-            throw new SocketException("Unexpected response from proxy during "
-                    + "tunnel setup: [" + firstLine + "]");
-        }
-
-        int responseCode = Integer.parseInt(matcher.group(1));
-        if (responseCode != 200) {
-            // TODO: handle proxy authentication RT-25644
-            throw new SocketException("Error setting up proxy tunnel: "
-                    + "[" + firstLine + "]");
-        }
-
-        logger.log(Level.FINEST, "{0} proxy tunnel set up successfully", this);
     }
 
     private int fwkSend(byte[] buffer) {
