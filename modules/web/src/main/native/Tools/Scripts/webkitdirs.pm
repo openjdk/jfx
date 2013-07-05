@@ -311,9 +311,9 @@ sub determineArchitecture
             chomp $architecture;
         } else {
             if (not defined $xcodeSDK or $xcodeSDK =~ /^(\/$|macosx)/) {
-            my $supports64Bit = `sysctl -n hw.optional.x86_64`;
-            chomp $supports64Bit;
-            $architecture = 'x86_64' if $supports64Bit;
+                my $supports64Bit = `sysctl -n hw.optional.x86_64`;
+                chomp $supports64Bit;
+                $architecture = 'x86_64' if $supports64Bit;
             } elsif ($xcodeSDK =~ /^iphonesimulator/) {
                 $architecture = 'i386';
             } elsif ($xcodeSDK =~ /^iphoneos/) {
@@ -927,7 +927,7 @@ sub qtFeatureDefaults
 
     my %qtFeatureDefaults;
     for (@defaults) {
-        if (/ DEFINES: /) {
+        if (/DEFINES: /) {
             while (/(\S+?)=(\S+?)/gi) {
                 $qtFeatureDefaults{$1}=$2;
             }
@@ -1657,8 +1657,8 @@ sub setupCygwinEnv()
     if (-e $vcBuildPath) {
         # Visual Studio is installed; we can use pdevenv to build.
         if (visualStudioVersion() eq "8") {
-        # FIXME: Make pdevenv work with non-Cygwin Perl.
-        $vcBuildPath = File::Spec->catfile(sourceDir(), qw(Tools Scripts pdevenv)) if isCygwin();
+            # FIXME: Make pdevenv work with non-Cygwin Perl.
+            $vcBuildPath = File::Spec->catfile(sourceDir(), qw(Tools Scripts pdevenv)) if isCygwin();
         }
     } else {
         # Visual Studio not found, try VC++ Express
@@ -1719,7 +1719,7 @@ sub dieIfWindowsPlatformSDKNotInstalled
 
     while (@windowsPlatformSDKRegistryEntries) {
         my $windowsPlatformSDKRegistryEntry = shift @windowsPlatformSDKRegistryEntries;
-    return if (-e $registry32Path . $windowsPlatformSDKRegistryEntry) || (-e $registry64Path . $windowsPlatformSDKRegistryEntry);
+        return if (-e $registry32Path . $windowsPlatformSDKRegistryEntry) || (-e $registry64Path . $windowsPlatformSDKRegistryEntry);
     }
 
     print "*************************************************************\n";
@@ -2083,7 +2083,7 @@ sub jhbuildWrapperPrefixIfNeeded()
 {
     if (-e getJhbuildPath()) {
         my @prefix = (File::Spec->catfile(sourceDir(), "Tools", "jhbuild", "jhbuild-wrapper"));
-    if (isEfl()) {
+        if (isEfl()) {
             push(@prefix, "--efl");
         } elsif (isGtk()) {
             push(@prefix, "--gtk");
@@ -2305,12 +2305,12 @@ sub buildQMakeProjects
     # Run qmake, regadless of having a makefile or not, so that qmake can
     # detect changes to the configuration.
 
-        push @buildArgs, "-after OVERRIDE_SUBDIRS=\"@{$projects}\"" if @{$projects};
+    push @buildArgs, "-after OVERRIDE_SUBDIRS=\"@{$projects}\"" if @{$projects};
     unshift @buildArgs, File::Spec->catfile(sourceDir(), "WebKit.pro");
     $command = "$qmakecommand @buildArgs";
-        print "Calling '$command' in " . $dir . "\n\n";
-        print "Installation headers directory: $installHeaders\n" if(defined($installHeaders));
-        print "Installation libraries directory: $installLibs\n" if(defined($installLibs));
+    print "Calling '$command' in " . $dir . "\n\n";
+    print "Installation headers directory: $installHeaders\n" if(defined($installHeaders));
+    print "Installation libraries directory: $installLibs\n" if(defined($installLibs));
 
     my $configChanged = 0;
     open(QMAKE, "$command 2>&1 |") || die "Could not execute qmake";
@@ -2322,7 +2322,7 @@ sub buildQMakeProjects
     close(QMAKE);
     $result = $?;
 
-        if ($result ne 0) {
+    if ($result ne 0) {
        die "\nFailed to set up build environment using $qmakebin!\n";
     }
 
@@ -2525,7 +2525,7 @@ sub printHelpAndExitForRunAndDebugWebKitAppIfNeeded
 
     print STDERR <<EOF;
 Usage: @{[basename($0)]} [options] [args ...]
-  --help                Show this help message
+  --help                            Show this help message
   --no-saved-state                  Launch the application without state restoration (OS X 10.7 and later)
   --guard-malloc                    Enable Guard Malloc (OS X only)
   --use-web-process-xpc-service     Launch the Web Process as an XPC Service (OS X only)
@@ -2533,7 +2533,7 @@ EOF
 
     if ($includeOptionsForDebugging) {
         print STDERR <<EOF;
-  --target-web-process  Debug the web process
+  --target-web-process              Debug the web process
   --use-gdb                         Use GDB (this is the default when using Xcode 4.4 or earlier)
   --use-lldb                        Use LLDB (this is the default when using Xcode 4.5 or later)
 EOF

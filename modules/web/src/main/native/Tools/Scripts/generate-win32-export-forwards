@@ -41,9 +41,9 @@ symbols = set()
 
 for lib in libraries:
     for line in exportForwardsForLibrary(lib).splitlines():
-    match = exportedSymbolRegexp.match(line)
+        match = exportedSymbolRegexp.match(line)
         if match:
-        symbols.add(match.group("symbol"))
+            symbols.add(match.group("symbol"))
 
 print("Forwarding %s symbols from %s" % (len(symbols), " ".join(libraries)))
 
