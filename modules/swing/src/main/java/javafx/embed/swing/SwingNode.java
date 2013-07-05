@@ -618,12 +618,6 @@ public class SwingNode extends Node {
                 // TODO: should we post an "empty" character?
                 return;
             }
-            // Let Ctrl+Tab, Shift+Strl+Tab traverse focus out.
-            if (event.getCode() == KeyCode.TAB && event.isControlDown()) {
-                Direction d = event.isShiftDown() ? Direction.PREVIOUS : Direction.NEXT;
-                getParent().getImpl_traversalEngine().trav(SwingNode.this, d);
-                return;
-            }
             // Don't let Arrows, Tab, Shift+Tab traverse focus out.
             if (event.getCode() == KeyCode.LEFT  ||
                 event.getCode() == KeyCode.RIGHT ||
