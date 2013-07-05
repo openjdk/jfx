@@ -585,6 +585,10 @@ public class SwingNode extends Node {
             {
                 SwingNode.this.requestFocus();
             }
+            JLightweightFrame frame = lwFrame;
+            if (frame == null) {
+                return;
+            }
             int swingID = SwingEvents.fxMouseEventTypeToMouseID(event);
             if (swingID < 0) {
                 return;
@@ -596,7 +600,7 @@ public class SwingNode extends Node {
             long swingWhen = System.currentTimeMillis();
             java.awt.event.MouseEvent mouseEvent =
                     new java.awt.event.MouseEvent(
-                        lwFrame, swingID, swingWhen, swingModifiers,
+                        frame, swingID, swingWhen, swingModifiers,
                         (int)event.getX(), (int)event.getY(), (int)event.getScreenX(), (int)event.getSceneY(),
                         event.getClickCount(), swingPopupTrigger, swingButton);
             AccessController.doPrivileged(new PostEventAction(mouseEvent));
@@ -606,6 +610,10 @@ public class SwingNode extends Node {
     private class SwingKeyEventHandler implements EventHandler<KeyEvent> {
         @Override
         public void handle(KeyEvent event) {
+            JLightweightFrame frame = lwFrame;
+            if (frame == null) {
+                return;
+            }
             if (event.getCharacter().isEmpty()) {
                 // TODO: should we post an "empty" character?
                 return;
@@ -633,7 +641,7 @@ public class SwingNode extends Node {
             char swingChar = event.getCharacter().charAt(0);
             long swingWhen = System.currentTimeMillis();
             java.awt.event.KeyEvent keyEvent = new java.awt.event.KeyEvent(
-                    lwFrame, swingID, swingWhen, swingModifiers,
+                    frame, swingID, swingWhen, swingModifiers,
                     swingKeyCode, swingChar);
             AccessController.doPrivileged(new PostEventAction(keyEvent));
         }
