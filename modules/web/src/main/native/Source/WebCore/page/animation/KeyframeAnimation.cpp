@@ -37,7 +37,6 @@
 #include "RenderBoxModelObject.h"
 #include "RenderStyle.h"
 #include "StyleResolver.h"
-#include <wtf/UnusedParam.h>
 
 using namespace std;
 
@@ -52,7 +51,7 @@ KeyframeAnimation::KeyframeAnimation(const Animation* animation, RenderObject* r
 {
     // Get the keyframe RenderStyles
     if (m_object && m_object->node() && m_object->node()->isElementNode())
-        m_object->document()->styleResolver()->keyframeStylesForAnimation(static_cast<Element*>(m_object->node()), unanimatedStyle, m_keyframes);
+        m_object->document()->ensureStyleResolver()->keyframeStylesForAnimation(toElement(m_object->node()), unanimatedStyle, m_keyframes);
 
     // Update the m_transformFunctionListValid flag based on whether the function lists in the keyframes match.
     validateTransformFunctionList();
@@ -140,13 +139,13 @@ void KeyframeAnimation::fetchIntervalEndpointsForProperty(CSSPropertyID property
     prog = progress(scale, offset, timingFunction);
 }
 
-void KeyframeAnimation::animate(CompositeAnimation*, RenderObject*, const RenderStyle*, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle)
+void KeyframeAnimation::animate(CompositeAnimation* compositeAnimation, RenderObject*, const RenderStyle*, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle)
 {
     // Fire the start timeout if needed
     fireAnimationEventsIfNeeded();
     
     // If we have not yet started, we will not have a valid start time, so just start the animation if needed.
-    if (isNew() && m_animation->playState() == AnimPlayStatePlaying)
+    if (isNew() && m_animation->playState() == AnimPlayStatePlaying && !compositeAnimation->isSuspended())
         updateStateMachine(AnimationStateInputStartAnimation, -1);
 
     // If we get this far and the animation is done, it means we are cleaning up a just finished animation.
@@ -185,12 +184,9 @@ void KeyframeAnimation::animate(CompositeAnimation*, RenderObject*, const Render
         const RenderStyle* toStyle = 0;
         double progress = 0.0;
         fetchIntervalEndpointsForProperty(*it, fromStyle, toStyle, progress);
-    
-        bool needsAnim = CSSPropertyAnimation::blendProperties(this, *it, animatedStyle.get(), fromStyle, toStyle, progress);
-        if (needsAnim)
-            setAnimating();
-        else {
 #if USE(ACCELERATED_COMPOSITING)
+        bool needsAnim = CSSPropertyAnimation::blendProperties(this, *it, animatedStyle.get(), fromStyle, toStyle, progress);
+        if (!needsAnim)
             // If we are running an accelerated animation, set a flag in the style
             // to indicate it. This can be used to make sure we get an updated
             // style for hit testing, etc.
@@ -198,7 +194,6 @@ void KeyframeAnimation::animate(CompositeAnimation*, RenderObject*, const Render
 #endif
         }
     }
-}
 
 void KeyframeAnimation::getAnimatedStyle(RefPtr<RenderStyle>& animatedStyle)
 {
@@ -315,7 +310,7 @@ bool KeyframeAnimation::sendAnimationEvent(const AtomicString& eventType, double
         // Dispatch the event
         RefPtr<Element> element;
         if (m_object->node() && m_object->node()->isElementNode())
-            element = static_cast<Element*>(m_object->node());
+            element = toElement(m_object->node());
 
         ASSERT(!element || (element->document() && !element->document()->inPageCache()));
         if (!element)

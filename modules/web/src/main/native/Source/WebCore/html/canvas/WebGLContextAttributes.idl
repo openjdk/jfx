@@ -24,11 +24,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-    interface [
+[
+    NoInterfaceObject,
         Conditional=WEBGL,
         OmitConstructor
-    ] WebGLContextAttributes {
+] interface WebGLContextAttributes {
         attribute boolean alpha;
         attribute boolean depth;
         attribute boolean stencil;
@@ -36,4 +36,3 @@ module html {
         attribute boolean premultipliedAlpha;
         attribute boolean preserveDrawingBuffer;
     };
-}

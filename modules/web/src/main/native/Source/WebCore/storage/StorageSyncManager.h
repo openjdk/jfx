@@ -26,16 +26,15 @@
 #ifndef StorageSyncManager_h
 #define StorageSyncManager_h
 
-#include "PlatformString.h"
-
+#include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/OwnPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
     class StorageThread;
-    class SecurityOrigin;
     class StorageAreaSync;
 
     class StorageSyncManager : public RefCounted<StorageSyncManager> {
@@ -43,14 +42,11 @@ namespace WebCore {
         static PassRefPtr<StorageSyncManager> create(const String& path);
         ~StorageSyncManager();
 
-        bool scheduleImport(PassRefPtr<StorageAreaSync>);
-        void scheduleSync(PassRefPtr<StorageAreaSync>);
-        void scheduleDeleteEmptyDatabase(PassRefPtr<StorageAreaSync>);
-
+    void dispatch(const Function<void ()>&);
         void close();
 
     private:
-        StorageSyncManager(const String& path);
+    explicit StorageSyncManager(const String& path);
 
         OwnPtr<StorageThread> m_thread;
 

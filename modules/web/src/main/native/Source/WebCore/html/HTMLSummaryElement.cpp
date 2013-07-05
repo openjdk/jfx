@@ -21,10 +21,8 @@
 #include "config.h"
 #include "HTMLSummaryElement.h"
 
-#if ENABLE(DETAILS)
-
+#if ENABLE(DETAILS_ELEMENT)
 #include "DetailsMarkerControl.h"
-#include "ElementShadow.h"
 #include "HTMLContentElement.h"
 #include "HTMLDetailsElement.h"
 #include "HTMLNames.h"
@@ -39,13 +37,13 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-class SummaryContentElement : public HTMLContentElement {
+class SummaryContentElement : public InsertionPoint {
 public:
     static PassRefPtr<SummaryContentElement> create(Document*);
 
 private:
     SummaryContentElement(Document* document)
-        : HTMLContentElement(HTMLNames::webkitShadowContentTag, document)
+        : InsertionPoint(HTMLNames::webkitShadowContentTag, document)
     {
     }
 };
@@ -57,9 +55,9 @@ PassRefPtr<SummaryContentElement> SummaryContentElement::create(Document* docume
 
 PassRefPtr<HTMLSummaryElement> HTMLSummaryElement::create(const QualifiedName& tagName, Document* document)
 {
-    RefPtr<HTMLSummaryElement> result = adoptRef(new HTMLSummaryElement(tagName, document));
-    result->createShadowSubtree();
-    return result;
+    RefPtr<HTMLSummaryElement> summary = adoptRef(new HTMLSummaryElement(tagName, document));
+    summary->ensureUserAgentShadowRoot();
+    return summary.release();
 }
 
 HTMLSummaryElement::HTMLSummaryElement(const QualifiedName& tagName, Document* document)
@@ -78,12 +76,10 @@ bool HTMLSummaryElement::childShouldCreateRenderer(const NodeRenderingContext& c
     return childContext.isOnEncapsulationBoundary() && HTMLElement::childShouldCreateRenderer(childContext);
 }
 
-void HTMLSummaryElement::createShadowSubtree()
+void HTMLSummaryElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 {
-    ASSERT(!shadow());
-    RefPtr<ShadowRoot> root = ShadowRoot::create(this, ShadowRoot::UserAgentShadowRoot);
-    root->appendChild(DetailsMarkerControl::create(document()), ASSERT_NO_EXCEPTION, true);
-    root->appendChild(SummaryContentElement::create(document()), ASSERT_NO_EXCEPTION, true);
+    root->appendChild(DetailsMarkerControl::create(document()), ASSERT_NO_EXCEPTION, AttachLazily);
+    root->appendChild(SummaryContentElement::create(document()), ASSERT_NO_EXCEPTION, AttachLazily);
 }
 
 HTMLDetailsElement* HTMLSummaryElement::detailsElement() const
@@ -109,7 +105,7 @@ static bool isClickableControl(Node* node)
     Element* element = toElement(node);
     if (element->isFormControlElement())
         return true;
-    Element* host = toElement(element->shadowAncestorNode());
+    Element* host = element->shadowHost();
     return host && host->isFormControlElement();
 }
 
@@ -156,6 +152,14 @@ void HTMLSummaryElement::defaultEventHandler(Event* event)
     }
 
     HTMLElement::defaultEventHandler(event);
+}
+
+bool HTMLSummaryElement::willRespondToMouseClickEvents()
+{
+    if (isMainSummary() && renderer())
+        return true;
+
+    return HTMLElement::willRespondToMouseClickEvents();
 }
 
 }

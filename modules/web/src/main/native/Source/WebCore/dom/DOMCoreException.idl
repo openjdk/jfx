@@ -26,13 +26,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module core {
-
-    exception [
+[
         JSNoStaticTables,
         DoNotCheckConstants,
-        InterfaceName=DOMException
-    ] DOMCoreException {
+    InterfaceName=DOMException,
+    ImplementationLacksVTable
+] exception DOMCoreException {
 
         readonly attribute unsigned short   code;
         readonly attribute DOMString        name;
@@ -82,4 +81,3 @@ module core {
         const unsigned short      DATA_CLONE_ERR                 = 25;
     };
 
-}

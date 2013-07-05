@@ -43,6 +43,7 @@ public:
     }
 
     AuthenticationClient* authenticationClient() const { return m_authenticationClient.get(); }
+    void setAuthenticationClient(AuthenticationClient* client) { m_authenticationClient = client; }
 
     RefPtr<AuthenticationClient> m_authenticationClient;
 };

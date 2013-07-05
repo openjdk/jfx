@@ -38,14 +38,13 @@ class IconDatabaseClientQt : public QObject, public IconDatabaseClient {
 public:
     static IconDatabaseClientQt* instance();
 
-    virtual bool performImport();
     virtual void didRemoveAllIcons();
     virtual void didImportIconURLForPageURL(const String&);
     virtual void didImportIconDataForPageURL(const String&);
     virtual void didChangeIconForPageURL(const String&);
     virtual void didFinishURLImport();
 
-signals:
+Q_SIGNALS:
     void iconLoadedForPageURL(const QString&);
 
 private:

@@ -54,15 +54,11 @@ typedef const QMimeData* DragDataRef;
 #elif PLATFORM(WIN)
 typedef struct IDataObject* DragDataRef;
 #include <wtf/text/WTFString.h>
-#elif PLATFORM(WX)
-typedef class wxDataObject* DragDataRef;
 #elif PLATFORM(GTK)
 namespace WebCore {
 class DataObjectGtk;
 }
 typedef WebCore::DataObjectGtk* DragDataRef;
-#elif PLATFORM(CHROMIUM)
-#include "DragDataRef.h"
 #elif PLATFORM(JAVA)
 #include "DataObjectJava.h"
 namespace WebCore {
@@ -125,7 +121,7 @@ public:
     unsigned numberOfFiles() const;
     int modifierKeyState() const;
 #if PLATFORM(MAC)
-    const String& pasteboardName() { return m_pasteboardName; }
+    const String& pasteboardName() const { return m_pasteboardName; }
 #endif
 
 #if ENABLE(FILE_SYSTEM)

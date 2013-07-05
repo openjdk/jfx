@@ -41,6 +41,8 @@ public:
     virtual void determineIfLayoutSizeChanged();
     virtual void setNeedsTransformUpdate() { m_needsTransformUpdate = true; }
 
+    virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE;
+
 private:
     virtual bool isSVGViewportContainer() const { return true; }
     virtual const char* renderName() const { return "RenderSVGViewportContainer"; }
@@ -63,13 +65,13 @@ private:
   
 inline RenderSVGViewportContainer* toRenderSVGViewportContainer(RenderObject* object)
 {
-    ASSERT(!object || !strcmp(object->renderName(), "RenderSVGViewportContainer"));
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGViewportContainer());
     return static_cast<RenderSVGViewportContainer*>(object);
 }
 
 inline const RenderSVGViewportContainer* toRenderSVGViewportContainer(const RenderObject* object)
 {
-    ASSERT(!object || !strcmp(object->renderName(), "RenderSVGViewportContainer"));
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGViewportContainer());
     return static_cast<const RenderSVGViewportContainer*>(object);
 }
 

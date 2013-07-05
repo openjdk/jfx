@@ -30,13 +30,12 @@
 
 #include "config.h"
 
-#if ENABLE(MUTATION_OBSERVERS)
-
 #include "MutationRecord.h"
 
 #include "Node.h"
 #include "NodeList.h"
 #include "QualifiedName.h"
+#include "StaticNodeList.h"
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
 
@@ -70,44 +69,60 @@ private:
     RefPtr<Node> m_nextSibling;
 };
 
-class AttributesRecord : public MutationRecord {
+class RecordWithEmptyNodeLists : public MutationRecord {
 public:
-    AttributesRecord(PassRefPtr<Node> target, const QualifiedName& name, const AtomicString& oldValue)
-        : m_target(target)
-        , m_attributeName(name.localName())
-        , m_attributeNamespace(name.namespaceURI())
-        , m_oldValue(oldValue)
-    {
-    }
-
-private:
-    virtual const AtomicString& type() OVERRIDE;
-    virtual Node* target() OVERRIDE { return m_target.get(); }
-    virtual const AtomicString& attributeName() OVERRIDE { return m_attributeName; }
-    virtual const AtomicString& attributeNamespace() OVERRIDE { return m_attributeNamespace; }
-    virtual String oldValue() OVERRIDE { return m_oldValue; }
-
-    RefPtr<Node> m_target;
-    AtomicString m_attributeName;
-    AtomicString m_attributeNamespace;
-    AtomicString m_oldValue;
-};
-
-class CharacterDataRecord : public MutationRecord {
-public:
-    CharacterDataRecord(PassRefPtr<Node> target, const String& oldValue)
+    RecordWithEmptyNodeLists(PassRefPtr<Node> target, const String& oldValue)
         : m_target(target)
         , m_oldValue(oldValue)
     {
     }
 
 private:
-    virtual const AtomicString& type() OVERRIDE;
     virtual Node* target() OVERRIDE { return m_target.get(); }
     virtual String oldValue() OVERRIDE { return m_oldValue; }
+    virtual NodeList* addedNodes() OVERRIDE { return lazilyInitializeEmptyNodeList(m_addedNodes); }
+    virtual NodeList* removedNodes() OVERRIDE { return lazilyInitializeEmptyNodeList(m_removedNodes); }
+
+    static NodeList* lazilyInitializeEmptyNodeList(RefPtr<NodeList>& nodeList)
+    {
+        if (!nodeList)
+            nodeList = StaticNodeList::createEmpty();
+        return nodeList.get();
+    }
 
     RefPtr<Node> m_target;
     String m_oldValue;
+    RefPtr<NodeList> m_addedNodes;
+    RefPtr<NodeList> m_removedNodes;
+};
+
+class AttributesRecord : public RecordWithEmptyNodeLists {
+public:
+    AttributesRecord(PassRefPtr<Node> target, const QualifiedName& name, const AtomicString& oldValue)
+        : RecordWithEmptyNodeLists(target, oldValue)
+        , m_attributeName(name.localName())
+        , m_attributeNamespace(name.namespaceURI())
+    {
+    }
+
+private:
+    virtual const AtomicString& type() OVERRIDE;
+    virtual const AtomicString& attributeName() OVERRIDE { return m_attributeName; }
+    virtual const AtomicString& attributeNamespace() OVERRIDE { return m_attributeNamespace; }
+
+    AtomicString m_attributeName;
+    AtomicString m_attributeNamespace;
+};
+
+class CharacterDataRecord : public RecordWithEmptyNodeLists {
+public:
+    CharacterDataRecord(PassRefPtr<Node> target, const String& oldValue)
+        : RecordWithEmptyNodeLists(target, oldValue)
+    {
+    }
+
+private:
+    virtual const AtomicString& type() OVERRIDE;
 };
 
 class MutationRecordWithNullOldValue : public MutationRecord {
@@ -134,19 +149,19 @@ private:
 
 const AtomicString& ChildListRecord::type()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, childList, ("childList"));
+    DEFINE_STATIC_LOCAL(AtomicString, childList, ("childList", AtomicString::ConstructFromLiteral));
     return childList;
 }
 
 const AtomicString& AttributesRecord::type()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, attributes, ("attributes"));
+    DEFINE_STATIC_LOCAL(AtomicString, attributes, ("attributes", AtomicString::ConstructFromLiteral));
     return attributes;
 }
 
 const AtomicString& CharacterDataRecord::type()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, characterData, ("characterData"));
+    DEFINE_STATIC_LOCAL(AtomicString, characterData, ("characterData", AtomicString::ConstructFromLiteral));
     return characterData;
 }
 
@@ -177,5 +192,3 @@ MutationRecord::~MutationRecord()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(MUTATION_OBSERVERS)

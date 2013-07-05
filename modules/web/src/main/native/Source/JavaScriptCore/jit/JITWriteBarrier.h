@@ -29,13 +29,14 @@
 #if ENABLE(JIT)
 
 #include "MacroAssembler.h"
-#include "MarkStack.h"
+#include "SlotVisitor.h"
+#include "UnusedPointer.h"
 #include "WriteBarrier.h"
 
 namespace JSC {
 
 class JSCell;
-class JSGlobalData;
+class VM;
 
 // Needs to be even to appease some of the backends.
 #define JITWriteBarrierFlag ((void*)2)
@@ -69,14 +70,14 @@ public:
     }
     
     void clear() { clear(0); }
-    void clearToMaxUnsigned() { clear(reinterpret_cast<void*>(-1)); }
+    void clearToUnusedPointer() { clear(reinterpret_cast<void*>(unusedPointer)); }
 
 protected:
     JITWriteBarrierBase()
     {
     }
 
-    void set(JSGlobalData&, CodeLocationDataLabelPtr location, JSCell* owner, JSCell* value)
+    void set(VM&, CodeLocationDataLabelPtr location, JSCell* owner, JSCell* value)
     {
         Heap::writeBarrier(owner, value);
         m_location = location;
@@ -90,8 +91,7 @@ protected:
         if (!m_location || m_location.executableAddress() == JITWriteBarrierFlag)
             return 0;
         void* result = static_cast<JSCell*>(MacroAssembler::readPointer(m_location));
-        // We use -1 to indicate a "safe" empty value in the instruction stream
-        if (result == (void*)-1)
+        if (result == reinterpret_cast<void*>(unusedPointer))
             return 0;
         return static_cast<JSCell*>(result);
     }
@@ -116,15 +116,15 @@ public:
     {
     }
 
-    void set(JSGlobalData& globalData, CodeLocationDataLabelPtr location, JSCell* owner, T* value)
+    void set(VM& vm, CodeLocationDataLabelPtr location, JSCell* owner, T* value)
     {
         validateCell(owner);
         validateCell(value);
-        JITWriteBarrierBase::set(globalData, location, owner, value);
+        JITWriteBarrierBase::set(vm, location, owner, value);
     }
-    void set(JSGlobalData& globalData, JSCell* owner, T* value)
+    void set(VM& vm, JSCell* owner, T* value)
     {
-        set(globalData, location(), owner, value);
+        set(vm, location(), owner, value);
     }
     T* get() const
     {
@@ -135,7 +135,7 @@ public:
     }
 };
 
-template<typename T> inline void MarkStack::append(JITWriteBarrier<T>* slot)
+template<typename T> inline void SlotVisitor::append(JITWriteBarrier<T>* slot)
 {
     internalAppend(slot->get());
 }

@@ -27,12 +27,12 @@
 #include "config.h"
 #include "ThreadGlobalData.h"
 
+#include "CachedResourceRequestInitiators.h"
 #include "DOMImplementation.h"
 #include "EventNames.h"
 #include "InspectorCounters.h"
 #include "ThreadTimers.h"
 #include <wtf/MainThread.h>
-#include <wtf/UnusedParam.h>
 #include <wtf/WTFThreadData.h>
 #include <wtf/text/StringImpl.h>
 
@@ -59,7 +59,8 @@ ThreadGlobalData* ThreadGlobalData::staticData;
 #endif
 
 ThreadGlobalData::ThreadGlobalData()
-    : m_eventNames(adoptPtr(new EventNames))
+    : m_cachedResourceRequestInitiators(adoptPtr(new CachedResourceRequestInitiators))
+    , m_eventNames(adoptPtr(new EventNames))
     , m_threadTimers(adoptPtr(new ThreadTimers))
     , m_xmlTypeRegExp(adoptPtr(new XMLMIMETypeRegExp))
 #ifndef NDEBUG

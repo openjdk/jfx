@@ -35,7 +35,8 @@ class RenderScrollbar;
 
 class RenderScrollbarPart : public RenderBlock {
 public:
-    RenderScrollbarPart(Node*, RenderScrollbar* = 0, ScrollbarPart = NoPart);
+    static RenderScrollbarPart* createAnonymous(Document*, RenderScrollbar* = 0, ScrollbarPart = NoPart);
+    
     virtual ~RenderScrollbarPart();
 
     virtual const char* renderName() const { return "RenderScrollbarPart"; }
@@ -43,7 +44,6 @@ public:
     virtual bool requiresLayer() const { return false; }
 
     virtual void layout();
-    virtual void computePreferredLogicalWidths();
     
     void paintIntoRect(GraphicsContext*, const LayoutPoint&, const LayoutRect&);
 
@@ -62,6 +62,10 @@ protected:
     virtual void imageChanged(WrappedImagePtr, const IntRect* = 0);
 
 private:
+    RenderScrollbarPart(RenderScrollbar*, ScrollbarPart);
+
+    virtual void computePreferredLogicalWidths();
+
     void layoutHorizontalPart();
     void layoutVerticalPart();
 
@@ -74,13 +78,13 @@ private:
 
 inline RenderScrollbarPart* toRenderScrollbarPart(RenderObject* object)
 {
-    ASSERT(!object || object->isRenderScrollbarPart());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderScrollbarPart());
     return static_cast<RenderScrollbarPart*>(object);
 }
 
 inline const RenderScrollbarPart* toRenderScrollbarPart(const RenderObject* object)
 {
-    ASSERT(!object || object->isRenderScrollbarPart());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderScrollbarPart());
     return static_cast<const RenderScrollbarPart*>(object);
 }
 

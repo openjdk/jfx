@@ -30,14 +30,11 @@
 #define HRTFDatabase_h
 
 #include "HRTFElevation.h"
-#include <wtf/HashMap.h>
+#include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
-#include <wtf/text/CString.h>
-#include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 

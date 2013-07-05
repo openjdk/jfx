@@ -40,6 +40,10 @@ void TestController::platformInitialize()
 {
 }
 
+void TestController::platformDestroy()
+{
+}
+
 void TestController::initializeInjectedBundlePath()
 {
     NSString *nsBundlePath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"WebKitTestRunnerInjectedBundle.bundle"];
@@ -53,12 +57,10 @@ void TestController::initializeTestPluginDirectory()
 
 void TestController::platformRunUntil(bool& done, double timeout)
 {
-    // FIXME: No timeout should occur if timeout is equal to m_noTimeout (necessary when running performance tests).
-    CFAbsoluteTime end = CFAbsoluteTimeGetCurrent() + timeout;
-    CFDateRef endDate = CFDateCreate(0, end);
-    while (!done && CFAbsoluteTimeGetCurrent() < end)
-        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:(NSDate *)endDate];
-    CFRelease(endDate);
+    NSDate *endDate = (timeout > 0) ? [NSDate dateWithTimeIntervalSinceNow:timeout] : [NSDate distantFuture];
+
+    while (!done && [endDate compare:[NSDate date]] == NSOrderedDescending)
+        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:endDate];
 }
 
 void TestController::platformInitializeContext()

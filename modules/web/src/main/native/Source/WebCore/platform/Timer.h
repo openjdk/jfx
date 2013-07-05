@@ -28,6 +28,7 @@
 
 #include <wtf/Noncopyable.h>
 #include <wtf/Threading.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -50,15 +51,20 @@ public:
     bool isActive() const;
 
     double nextFireInterval() const;
+    double nextUnalignedFireInterval() const;
     double repeatInterval() const { return m_repeatInterval; }
 
     void augmentFireInterval(double delta) { setNextFireTime(m_nextFireTime + delta); }
     void augmentRepeatInterval(double delta) { augmentFireInterval(delta); m_repeatInterval += delta; }
 
+    void didChangeAlignmentInterval();
+
     static void fireTimersInNestedEventLoop();
 
 private:
     virtual void fired() = 0;
+
+    virtual double alignedFireTime(double fireTime) const { return fireTime; }
 
     void checkConsistency() const;
     void checkHeapIndex() const;
@@ -66,6 +72,9 @@ private:
     void setNextFireTime(double);
 
     bool inHeap() const { return m_heapIndex != -1; }
+
+    bool hasValidHeapPosition() const;
+    void updateHeapIfNeeded(double oldTime);
 
     void heapDecreaseKey();
     void heapDelete();
@@ -75,10 +84,14 @@ private:
     void heapPop();
     void heapPopMin();
 
+    Vector<TimerBase*>& timerHeap() const { ASSERT(m_cachedThreadGlobalTimerHeap); return *m_cachedThreadGlobalTimerHeap; }
+
     double m_nextFireTime; // 0 if inactive
+    double m_unalignedNextFireTime; // m_nextFireTime not considering alignment interval
     double m_repeatInterval; // 0 if not repeating
     int m_heapIndex; // -1 if not in heap
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
+    Vector<TimerBase*>* m_cachedThreadGlobalTimerHeap;
 
 #ifndef NDEBUG
     ThreadIdentifier m_thread;
@@ -109,7 +122,7 @@ inline bool TimerBase::isActive() const
     return m_nextFireTime;
 }
 
-template <typename TimerFiredClass> class DeferrableOneShotTimer : private TimerBase {
+template <typename TimerFiredClass> class DeferrableOneShotTimer : protected TimerBase {
 public:
     typedef void (TimerFiredClass::*TimerFiredFunction)(DeferrableOneShotTimer*);
 

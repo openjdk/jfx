@@ -28,9 +28,8 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
-#include "IDBAny.h"
-#include "PlatformString.h"
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -46,8 +45,8 @@ void IDBParseKeyPath(const String&, Vector<String>&, IDBKeyPathParseError&);
 class IDBKeyPath {
 public:
     IDBKeyPath() : m_type(NullType) { }
-    IDBKeyPath(const String&);
-    IDBKeyPath(const Vector<String>& array);
+    explicit IDBKeyPath(const String&);
+    explicit IDBKeyPath(const Vector<String>& array);
 
     enum Type {
         NullType = 0,
@@ -71,7 +70,7 @@ public:
 
     bool isNull() const { return m_type == NullType; }
     bool isValid() const;
-    operator PassRefPtr<IDBAny>() const;
+    bool operator==(const IDBKeyPath& other) const;
 
 private:
     Type m_type;

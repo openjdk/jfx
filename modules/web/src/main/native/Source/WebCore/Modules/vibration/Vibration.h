@@ -28,20 +28,18 @@
 
 namespace WebCore {
 
-class Navigator;
-class Page;
 class VibrationClient;
 
 class Vibration : public Supplement<Page> {
 public:
-    typedef Vector<unsigned long> VibrationPattern;
+    typedef Vector<unsigned> VibrationPattern;
 
-    Vibration(VibrationClient*);
+    explicit Vibration(VibrationClient*);
     ~Vibration();
 
     static PassOwnPtr<Vibration> create(VibrationClient*);
 
-    void vibrate(const unsigned long& time);
+    void vibrate(const unsigned& time);
     void vibrate(const VibrationPattern&);
     void cancelVibration();
 
@@ -51,7 +49,7 @@ public:
     void timerStartFired(Timer<Vibration>*);
     void timerStopFired(Timer<Vibration>*);
 
-    static const AtomicString& supplementName();
+    static const char* supplementName();
     static Vibration* from(Page* page) { return static_cast<Vibration*>(Supplement<Page>::from(page, supplementName())); }
     static bool isActive(Page*);
 

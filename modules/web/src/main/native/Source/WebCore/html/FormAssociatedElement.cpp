@@ -25,7 +25,9 @@
 #include "config.h"
 #include "FormAssociatedElement.h"
 
+#include "EditorClient.h"
 #include "FormController.h"
+#include "Frame.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
@@ -38,6 +40,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 class FormAttributeTargetObserver : IdTargetObserver {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static PassOwnPtr<FormAttributeTargetObserver> create(const AtomicString& id, FormAssociatedElement*);
     virtual void idTargetChanged() OVERRIDE;
@@ -156,7 +159,11 @@ void FormAssociatedElement::formWillBeDestroyed()
 
 void FormAssociatedElement::resetFormOwner()
 {
+    HTMLFormElement* originalForm = m_form;
     setForm(findAssociatedForm(toHTMLElement(this), m_form));
+    HTMLElement* element = toHTMLElement(this);     
+    if (m_form && m_form != originalForm && m_form->inDocument())
+        element->document()->didAssociateFormControl(element);
 }
 
 void FormAssociatedElement::formAttributeChanged()
@@ -164,7 +171,11 @@ void FormAssociatedElement::formAttributeChanged()
     HTMLElement* element = toHTMLElement(this);
     if (!element->fastHasAttribute(formAttr)) {
         // The form attribute removed. We need to reset form owner here.
+        HTMLFormElement* originalForm = m_form;
         setForm(element->findFormAncestor());
+        HTMLElement* element = toHTMLElement(this);
+        if (m_form && m_form != originalForm && m_form->inDocument())
+            element->document()->didAssociateFormControl(element);
         m_formAttributeTargetObserver = nullptr;
     } else {
         resetFormOwner();
@@ -176,6 +187,11 @@ bool FormAssociatedElement::customError() const
 {
     const HTMLElement* element = toHTMLElement(this);
     return element->willValidate() && !m_customValidationMessage.isEmpty();
+}
+
+bool FormAssociatedElement::hasBadInput() const
+{
+    return false;
 }
 
 bool FormAssociatedElement::patternMismatch() const
@@ -211,7 +227,7 @@ bool FormAssociatedElement::typeMismatch() const
 bool FormAssociatedElement::valid() const
 {
     bool someError = typeMismatch() || stepMismatch() || rangeUnderflow() || rangeOverflow()
-        || tooLong() || patternMismatch() || valueMissing() || customError();
+        || tooLong() || patternMismatch() || valueMissing() || hasBadInput() || customError();
     return !someError;
 }
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2010 Gabor Rapcsanyi (rgabor@inf.u-szeged.hu), University of Szeged
 #
 # All rights reserved.
@@ -26,7 +25,7 @@
 
 import os
 import tempfile
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.system.file_lock import FileLock
 

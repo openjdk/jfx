@@ -27,10 +27,10 @@
 
 #import "WebSecurityOriginInternal.h"
 #import "WebStorageManagerPrivate.h"
-#import <WebCore/PlatformString.h>
 #import <WebCore/SecurityOrigin.h>
 #import <wtf/MainThread.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/text/WTFString.h>
 
 using namespace WebCore;
 
@@ -58,7 +58,7 @@ void WebStorageTrackerClient::dispatchDidModifyOriginOnMainThread(void* context)
 
 void WebStorageTrackerClient::dispatchDidModifyOrigin(PassRefPtr<SecurityOrigin> origin)
 {
-    RetainPtr<WebSecurityOrigin> webSecurityOrigin(AdoptNS, [[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin.get()]);
+    RetainPtr<WebSecurityOrigin> webSecurityOrigin = adoptNS([[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin.get()]);
 
     [[NSNotificationCenter defaultCenter] postNotificationName:WebStorageDidModifyOriginNotification 
                                                         object:webSecurityOrigin.get()];

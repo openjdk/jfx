@@ -57,10 +57,16 @@ PassRefPtr<AccessibilityTableRow> AccessibilityTableRow::create(RenderObject* re
     return adoptRef(new AccessibilityTableRow(renderer));
 }
 
-AccessibilityRole AccessibilityTableRow::roleValue() const
+AccessibilityRole AccessibilityTableRow::determineAccessibilityRole()
 {
     if (!isTableRow())
-        return AccessibilityRenderObject::roleValue();
+        return AccessibilityRenderObject::determineAccessibilityRole();
+
+    m_ariaRole = determineAriaRoleAttribute();
+
+    AccessibilityRole ariaRole = ariaRoleAttribute();
+    if (ariaRole != UnknownRole)
+        return ariaRole;
     
     return RowRole;
 }
@@ -80,27 +86,32 @@ AccessibilityObject* AccessibilityTableRow::observableObject() const
     return parentTable();
 }
     
-bool AccessibilityTableRow::accessibilityIsIgnored() const
+bool AccessibilityTableRow::computeAccessibilityIsIgnored() const
 {    
-    AccessibilityObjectInclusion decision = accessibilityIsIgnoredBase();
+    AccessibilityObjectInclusion decision = defaultObjectInclusion();
     if (decision == IncludeObject)
         return false;
     if (decision == IgnoreObject)
         return true;
     
     if (!isTableRow())
-        return AccessibilityRenderObject::accessibilityIsIgnored();
+        return AccessibilityRenderObject::computeAccessibilityIsIgnored();
 
     return false;
 }
     
 AccessibilityObject* AccessibilityTableRow::parentTable() const
 {
-    if (!m_renderer || !m_renderer->isTableRow())
-        return 0;
+    // The parent table might not be the direct ancestor of the row unfortunately. ARIA states that role="grid" should
+    // only have "row" elements, but if not, we still should handle it gracefully by finding the right table.
+    for (AccessibilityObject* parent = parentObject(); parent; parent = parent->parentObject()) {
+        // If this is a table object, but not an accessibility table, we should stop because we don't want to
+        // choose another ancestor table as this row's table.
+        if (parent->isTable())
+            return parent->isAccessibilityTable() ? parent : 0;
+    }
     
-    // Do not use getOrCreate. parentTable() can be called while the render tree is being modified.
-    return axObjectCache()->get(toRenderTableRow(m_renderer)->table());
+        return 0;
 }
     
 AccessibilityObject* AccessibilityTableRow::headerObject()

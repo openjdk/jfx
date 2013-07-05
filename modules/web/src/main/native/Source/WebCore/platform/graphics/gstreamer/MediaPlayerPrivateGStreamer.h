@@ -25,38 +25,34 @@
 #if ENABLE(VIDEO) && USE(GSTREAMER)
 
 #include "GRefPtrGStreamer.h"
-#include "MediaPlayerPrivate.h"
+#include "MediaPlayerPrivateGStreamerBase.h"
 #include "Timer.h"
 
 #include <glib.h>
 #include <gst/gst.h>
+#include <gst/pbutils/install-plugins.h>
 #include <wtf/Forward.h>
 
-typedef struct _WebKitVideoSink WebKitVideoSink;
 typedef struct _GstBuffer GstBuffer;
 typedef struct _GstMessage GstMessage;
 typedef struct _GstElement GstElement;
 
 namespace WebCore {
 
-class GraphicsContext;
-class IntSize;
-class IntRect;
-class GStreamerGWorld;
-class MediaPlayerPrivateGStreamer;
-
-class MediaPlayerPrivateGStreamer : public MediaPlayerPrivateInterface {
-
+class MediaPlayerPrivateGStreamer : public MediaPlayerPrivateGStreamerBase {
         public:
             ~MediaPlayerPrivateGStreamer();
             static void registerMediaEngine(MediaEngineRegistrar);
             gboolean handleMessage(GstMessage*);
+    void handlePluginInstallerResult(GstInstallPluginsReturn);
 
-            IntSize naturalSize() const;
             bool hasVideo() const { return m_hasVideo; }
             bool hasAudio() const { return m_hasAudio; }
 
             void load(const String &url);
+#if ENABLE(MEDIA_SOURCE)
+    void load(const String& url, PassRefPtr<MediaSource>);
+#endif
             void commitLoad();
             void cancelLoad();
 
@@ -72,45 +68,22 @@ class MediaPlayerPrivateGStreamer : public MediaPlayerPrivateInterface {
             void seek(float);
 
             void setRate(float);
-
-            void setVolume(float);
-            void volumeChanged();
-            void notifyPlayerOfVolumeChange();
-
-            bool supportsMuting() const;
-            void setMuted(bool);
-            void muteChanged();
-            void notifyPlayerOfMute();
+    void setPreservesPitch(bool);
 
             void setPreload(MediaPlayer::Preload);
             void fillTimerFired(Timer<MediaPlayerPrivateGStreamer>*);
-
-            MediaPlayer::NetworkState networkState() const;
-            MediaPlayer::ReadyState readyState() const;
 
             PassRefPtr<TimeRanges> buffered() const;
             float maxTimeSeekable() const;
             bool didLoadingProgress() const;
             unsigned totalBytes() const;
-
-            void setVisible(bool);
-            void setSize(const IntSize&);
+    float maxTimeLoaded() const;
 
             void loadStateChanged();
-            void sizeChanged();
             void timeChanged();
             void didEnd();
             void durationChanged();
             void loadingFailed(MediaPlayer::NetworkState);
-
-            void triggerRepaint(GstBuffer*);
-            void repaint();
-            void paint(GraphicsContext*, const IntRect&);
-
-            bool hasSingleSecurityOrigin() const;
-
-            bool supportsFullscreen() const;
-            PlatformMedia platformMedia() const;
 
             void videoChanged();
             void audioChanged();
@@ -118,11 +91,11 @@ class MediaPlayerPrivateGStreamer : public MediaPlayerPrivateInterface {
             void notifyPlayerOfAudio();
 
             void sourceChanged();
+    GstElement* audioSink() const;
 
-            unsigned decodedFrameCount() const;
-            unsigned droppedFrameCount() const;
-            unsigned audioDecodedByteCount() const;
-            unsigned videoDecodedByteCount() const;
+    void setAudioStreamProperties(GObject*);
+
+    void simulateAudioInterruption();
 
         private:
             MediaPlayerPrivateGStreamer(MediaPlayer*);
@@ -135,46 +108,46 @@ class MediaPlayerPrivateGStreamer : public MediaPlayerPrivateInterface {
             static bool isAvailable();
 
             void updateAudioSink();
+    void createAudioSink();
 
             float playbackPosition() const;
 
             void cacheDuration();
             void updateStates();
-            float maxTimeLoaded() const;
+    void asyncStateChangeDone();
 
             void createGSTPlayBin();
-            bool changePipelineState(GstState state);
+    bool changePipelineState(GstState);
 
             bool loadNextLocation();
             void mediaLocationChanged(GstMessage*);
 
+    void setDownloadBuffering();
             void processBufferingStats(GstMessage*);
 
+    virtual String engineDescription() const { return "GStreamer"; }
+    virtual bool isLiveStream() const { return m_isStreaming; }
+
         private:
-            MediaPlayer* m_player;
-            GstElement* m_playBin;
-            GstElement* m_webkitVideoSink;
-            GstElement* m_videoSinkBin;
-            GstElement* m_fpsSink;
+    GRefPtr<GstElement> m_playBin;
             GRefPtr<GstElement> m_source;
             float m_seekTime;
             bool m_changingRate;
             float m_endTime;
             bool m_isEndReached;
-            MediaPlayer::NetworkState m_networkState;
-            MediaPlayer::ReadyState m_readyState;
             mutable bool m_isStreaming;
-            IntSize m_size;
-            GstBuffer* m_buffer;
             GstStructure* m_mediaLocations;
             int m_mediaLocationCurrentIndex;
             bool m_resetPipeline;
             bool m_paused;
             bool m_seeking;
+    bool m_seekIsPending;
+    float m_timeOfOverlappingSeek;
+    bool m_canFallBackToLastFinishedSeekPositon;
             bool m_buffering;
             float m_playbackRate;
             bool m_errorOccured;
-            gfloat m_mediaDuration;
+    mutable gfloat m_mediaDuration;
             bool m_startedBuffering;
             Timer<MediaPlayerPrivateGStreamer> m_fillTimer;
             float m_maxTimeLoaded;
@@ -183,18 +156,18 @@ class MediaPlayerPrivateGStreamer : public MediaPlayerPrivateInterface {
             bool m_delayingLoad;
             bool m_mediaDurationKnown;
             mutable float m_maxTimeLoadedAtLastDidLoadingProgress;
-#ifndef GST_API_VERSION_1
-            RefPtr<GStreamerGWorld> m_gstGWorld;
-#endif
-            guint m_volumeTimerHandler;
-            guint m_muteTimerHandler;
+    bool m_volumeAndMuteInitialized;
             bool m_hasVideo;
             bool m_hasAudio;
             guint m_audioTimerHandler;
             guint m_videoTimerHandler;
             GRefPtr<GstElement> m_webkitAudioSink;
-            GRefPtr<GstPad> m_videoSinkPad;
-            mutable IntSize m_videoSize;
+    mutable long m_totalBytes;
+    KURL m_url;
+    bool m_preservesPitch;
+    GstState m_requestedState;
+    GRefPtr<GstElement> m_autoAudioSink;
+    bool m_missingPlugins;
     };
 }
 

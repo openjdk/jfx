@@ -134,7 +134,7 @@ class PatchAnalysisTask(object):
         "Unable to build without patch")
 
     def _test(self):
-        success = self._run_command([
+        return self._run_command([
             "build-and-test",
             "--no-clean",
             "--no-update",
@@ -145,11 +145,8 @@ class PatchAnalysisTask(object):
         "Passed tests",
         "Patch does not pass tests")
 
-        self._expected_failures.shrink_expected_failures(self._delegate.test_results(), success)
-        return success
-
     def _build_and_test_without_patch(self):
-        success = self._run_command([
+        return self._run_command([
             "build-and-test",
             "--force-clean",
             "--no-update",
@@ -159,9 +156,6 @@ class PatchAnalysisTask(object):
         ],
         "Able to pass tests without patch",
         "Unable to pass tests without patch (tree is red?)")
-
-        self._expected_failures.shrink_expected_failures(self._delegate.test_results(), success)
-        return success
 
     def _land(self):
         # Unclear if this should pass --quiet or not.  If --parent-command always does the reporting, then it should.
@@ -192,12 +186,13 @@ class PatchAnalysisTask(object):
         first_results = self._delegate.test_results()
         first_results_archive = self._delegate.archive_last_test_results(self._patch)
         first_script_error = self._script_error
+        first_failure_status_id = self.failure_status_id
 
         if self._expected_failures.failures_were_expected(first_results):
             return True
 
         if self._test():
-            # Only report flaky tests if we were successful at parsing results.html and archiving results.
+            # Only report flaky tests if we were successful at parsing results.json and archiving results.
             if first_results and first_results_archive:
                 self._report_flaky_tests(first_results.failing_test_results(), first_results_archive)
             return True
@@ -220,7 +215,7 @@ class PatchAnalysisTask(object):
             return self.report_failure(first_results_archive, first_results, first_script_error)
 
         clean_tree_results = self._delegate.test_results()
-        self._expected_failures.grow_expected_failures(clean_tree_results)
+        self._expected_failures.update(clean_tree_results)
 
         # Re-check if the original results are now to be expected to avoid a full re-try.
         if self._expected_failures.failures_were_expected(first_results):
@@ -229,6 +224,7 @@ class PatchAnalysisTask(object):
         # Now that we have updated information about failing tests with a clean checkout, we can
         # tell if our original failures were unexpected and fail the patch if necessary.
         if self._expected_failures.unexpected_failures_observed(first_results):
+            self.failure_status_id = first_failure_status_id
             return self.report_failure(first_results_archive, first_results, first_script_error)
 
         # We don't know what's going on.  The tree is likely very red (beyond our layout-test-results

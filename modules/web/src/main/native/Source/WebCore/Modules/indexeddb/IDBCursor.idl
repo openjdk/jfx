@@ -23,29 +23,22 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-
-    interface [
+[
         Conditional=INDEXED_DATABASE,
-    ] IDBCursor {
-        // FIXME: Eventually remove legacy enum constants, see https://bugs.webkit.org/show_bug.cgi?id=85315
-        const unsigned short NEXT = 0;
-        const unsigned short NEXT_NO_DUPLICATE = 1;
-        const unsigned short PREV = 2;
-        const unsigned short PREV_NO_DUPLICATE = 3;
+    JSNoStaticTables
+] interface IDBCursor {
 
         readonly attribute DOMString direction;
-        readonly attribute IDBKey key;
-        readonly attribute IDBKey primaryKey;
+    readonly attribute any key;
+    readonly attribute any primaryKey;
         readonly attribute IDBAny source;
 
-        [CallWith=ScriptExecutionContext] IDBRequest update(in SerializedScriptValue value)
-            raises (IDBDatabaseException);
-        void advance(in unsigned long count)
-            raises (IDBDatabaseException);
-        [ImplementedAs=continueFunction] void continue(in [Optional] IDBKey key)
-            raises (IDBDatabaseException);
+    [CallWith=ScriptState] IDBRequest update(any value)
+        raises (DOMException);
+    void advance([EnforceRange] unsigned long count)
+        raises (DOMException);
+    [CallWith=ScriptExecutionContext, ImplementedAs=continueFunction] void continue(optional any key)
+        raises (DOMException);
         [CallWith=ScriptExecutionContext, ImplementedAs=deleteFunction] IDBRequest delete()
-            raises (IDBDatabaseException);
+        raises (DOMException);
     };
-}

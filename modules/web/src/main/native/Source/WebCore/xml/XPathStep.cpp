@@ -31,6 +31,7 @@
 #include "Attr.h"
 #include "Document.h"
 #include "Element.h"
+#include "NodeTraversal.h"
 #include "XMLNSNames.h"
 #include "XPathParser.h"
 #include "XPathUtil.h"
@@ -194,12 +195,12 @@ static inline bool nodeMatchesBasicTest(Node* node, Step::Axis axis, const Step:
             if (node->document()->isHTMLDocument()) {
                 if (node->isHTMLElement()) {
                     // Paths without namespaces should match HTML elements in HTML documents despite those having an XHTML namespace. Names are compared case-insensitively.
-                    return equalIgnoringCase(static_cast<Element*>(node)->localName(), name) && (namespaceURI.isNull() || namespaceURI == node->namespaceURI());
+                    return equalIgnoringCase(toElement(node)->localName(), name) && (namespaceURI.isNull() || namespaceURI == node->namespaceURI());
                 }
                 // An expression without any prefix shouldn't match no-namespace nodes (because HTML5 says so).
-                return static_cast<Element*>(node)->hasLocalName(name) && namespaceURI == node->namespaceURI() && !namespaceURI.isNull();
+                return toElement(node)->hasLocalName(name) && namespaceURI == node->namespaceURI() && !namespaceURI.isNull();
             }
-            return static_cast<Element*>(node)->hasLocalName(name) && namespaceURI == node->namespaceURI();
+            return toElement(node)->hasLocalName(name) && namespaceURI == node->namespaceURI();
         }
     }
     ASSERT_NOT_REACHED();
@@ -246,7 +247,7 @@ void Step::nodesInAxis(Node* context, NodeSet& nodes) const
             if (context->isAttributeNode()) // In XPath model, attribute nodes do not have children.
                 return;
 
-            for (Node* n = context->firstChild(); n; n = n->traverseNextNode(context))
+            for (Node* n = context->firstChild(); n; n = NodeTraversal::next(n, context))
                 if (nodeMatches(n, DescendantAxis, m_nodeTest))
                     nodes.append(n);
             return;
@@ -297,7 +298,7 @@ void Step::nodesInAxis(Node* context, NodeSet& nodes) const
         case FollowingAxis:
             if (context->isAttributeNode()) {
                 Node* p = static_cast<Attr*>(context)->ownerElement();
-                while ((p = p->traverseNextNode()))
+                while ((p = NodeTraversal::next(p)))
                     if (nodeMatches(p, FollowingAxis, m_nodeTest))
                         nodes.append(p);
             } else {
@@ -305,7 +306,7 @@ void Step::nodesInAxis(Node* context, NodeSet& nodes) const
                     for (Node* n = p->nextSibling(); n; n = n->nextSibling()) {
                         if (nodeMatches(n, FollowingAxis, m_nodeTest))
                             nodes.append(n);
-                        for (Node* c = n->firstChild(); c; c = c->traverseNextNode(n))
+                        for (Node* c = n->firstChild(); c; c = NodeTraversal::next(c, n))
                             if (nodeMatches(c, FollowingAxis, m_nodeTest))
                                 nodes.append(c);
                     }
@@ -318,7 +319,7 @@ void Step::nodesInAxis(Node* context, NodeSet& nodes) const
 
             Node* n = context;
             while (ContainerNode* parent = n->parentNode()) {
-                for (n = n->traversePreviousNode(); n != parent; n = n->traversePreviousNode())
+                for (n = NodeTraversal::previous(n); n != parent; n = NodeTraversal::previous(n))
                     if (nodeMatches(n, PrecedingAxis, m_nodeTest))
                         nodes.append(n);
                 n = parent;
@@ -365,7 +366,7 @@ void Step::nodesInAxis(Node* context, NodeSet& nodes) const
             if (context->isAttributeNode()) // In XPath model, attribute nodes do not have children.
                 return;
 
-            for (Node* n = context->firstChild(); n; n = n->traverseNextNode(context))
+            for (Node* n = context->firstChild(); n; n = NodeTraversal::next(n, context))
             if (nodeMatches(n, DescendantOrSelfAxis, m_nodeTest))
                 nodes.append(n);
             return;

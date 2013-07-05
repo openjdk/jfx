@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,9 @@
 #include "CallFrame.h"
 #include "DFGCommon.h"
 #include "LinkBuffer.h"
+#include "Operations.h"
 #include "RepatchBuffer.h"
+#include <wtf/StringPrintStream.h>
 
 namespace JSC { namespace DFG {
 
@@ -46,9 +48,9 @@ void compileOSRExit(ExecState* exec)
     ASSERT(codeBlock);
     ASSERT(codeBlock->getJITType() == JITCode::DFGJIT);
     
-    JSGlobalData* globalData = &exec->globalData();
+    VM* vm = &exec->vm();
     
-    uint32_t exitIndex = globalData->osrExitIndex;
+    uint32_t exitIndex = vm->osrExitIndex;
     OSRExit& exit = codeBlock->osrExit(exitIndex);
     
     // Make sure all code on our inline stack is JIT compiled. This is necessary since
@@ -81,31 +83,46 @@ void compileOSRExit(ExecState* exec)
         recovery = &codeBlock->speculationRecovery(exit.m_recoveryIndex - 1);
 
 #if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLog("Generating OSR exit #%u (seq#%u, bc#%u, @%u, %s) for code block %p.\n", exitIndex, exit.m_streamIndex, exit.m_codeOrigin.bytecodeIndex, exit.m_nodeIndex, exitKindToString(exit.m_kind), codeBlock);
+    dataLog(
+        "Generating OSR exit #", exitIndex, " (seq#", exit.m_streamIndex,
+        ", bc#", exit.m_codeOrigin.bytecodeIndex, ", ",
+        exit.m_kind, ") for ", *codeBlock, ".\n");
 #endif
 
     {
-        CCallHelpers jit(globalData, codeBlock);
+        CCallHelpers jit(vm, codeBlock);
         OSRExitCompiler exitCompiler(jit);
 
         jit.jitAssertHasValidCallFrame();
+        
+        if (vm->m_perBytecodeProfiler && codeBlock->compilation()) {
+            Profiler::Database& database = *vm->m_perBytecodeProfiler;
+            Profiler::Compilation* compilation = codeBlock->compilation();
+            
+            Profiler::OSRExit* profilerExit = compilation->addOSRExit(
+                exitIndex, Profiler::OriginStack(database, codeBlock, exit.m_codeOrigin),
+                exit.m_kind,
+                exit.m_watchpointIndex != std::numeric_limits<unsigned>::max());
+            jit.add64(CCallHelpers::TrustedImm32(1), CCallHelpers::AbsoluteAddress(profilerExit->counterAddress()));
+        }
+        
         exitCompiler.compileExit(exit, operands, recovery);
         
-        LinkBuffer patchBuffer(*globalData, &jit, codeBlock);
+        LinkBuffer patchBuffer(*vm, &jit, codeBlock);
         exit.m_code = FINALIZE_CODE_IF(
             shouldShowDisassembly(),
             patchBuffer,
-            ("DFG OSR exit #%u (bc#%u, @%u, %s) from CodeBlock %p",
-             exitIndex, exit.m_codeOrigin.bytecodeIndex, exit.m_nodeIndex,
-             exitKindToString(exit.m_kind), codeBlock));
+            ("DFG OSR exit #%u (bc#%u, %s) from %s",
+                exitIndex, exit.m_codeOrigin.bytecodeIndex,
+                exitKindToString(exit.m_kind), toCString(*codeBlock).data()));
     }
     
     {
         RepatchBuffer repatchBuffer(codeBlock);
-        repatchBuffer.relink(exit.m_check.codeLocationForRepatch(codeBlock), CodeLocationLabel(exit.m_code.code()));
+        repatchBuffer.relink(exit.codeLocationForRepatch(codeBlock), CodeLocationLabel(exit.m_code.code()));
     }
     
-    globalData->osrExitJumpDestination = exit.m_code.code().executableAddress();
+    vm->osrExitJumpDestination = exit.m_code.code().executableAddress();
 }
 
 } // extern "C"
@@ -138,14 +155,15 @@ void OSRExitCompiler::handleExitCounts(const OSRExit& exit)
     tooFewFails.link(&m_jit);
     
     // Adjust the execution counter such that the target is to only optimize after a while.
-    int32_t targetValue =
-        ExecutionCounter::applyMemoryUsageHeuristicsAndConvertToInt(
-            m_jit.baselineCodeBlock()->counterValueForOptimizeAfterLongWarmUp(),
-            m_jit.baselineCodeBlock());
-    m_jit.store32(AssemblyHelpers::TrustedImm32(-targetValue), AssemblyHelpers::Address(GPRInfo::regT0, CodeBlock::offsetOfJITExecuteCounter()));
-    targetValue = ExecutionCounter::clippedThreshold(m_jit.codeBlock()->globalObject(), targetValue);
-    m_jit.store32(AssemblyHelpers::TrustedImm32(targetValue), AssemblyHelpers::Address(GPRInfo::regT0, CodeBlock::offsetOfJITExecutionActiveThreshold()));
-    m_jit.store32(AssemblyHelpers::TrustedImm32(ExecutionCounter::formattedTotalCount(targetValue)), AssemblyHelpers::Address(GPRInfo::regT0, CodeBlock::offsetOfJITExecutionTotalCount()));
+    int32_t activeThreshold =
+        m_jit.baselineCodeBlock()->counterValueForOptimizeAfterLongWarmUp();
+    int32_t targetValue = ExecutionCounter::applyMemoryUsageHeuristicsAndConvertToInt(
+        activeThreshold, m_jit.baselineCodeBlock());
+    int32_t clippedValue =
+        ExecutionCounter::clippedThreshold(m_jit.codeBlock()->globalObject(), targetValue);
+    m_jit.store32(AssemblyHelpers::TrustedImm32(-clippedValue), AssemblyHelpers::Address(GPRInfo::regT0, CodeBlock::offsetOfJITExecuteCounter()));
+    m_jit.store32(AssemblyHelpers::TrustedImm32(activeThreshold), AssemblyHelpers::Address(GPRInfo::regT0, CodeBlock::offsetOfJITExecutionActiveThreshold()));
+    m_jit.store32(AssemblyHelpers::TrustedImm32(ExecutionCounter::formattedTotalCount(clippedValue)), AssemblyHelpers::Address(GPRInfo::regT0, CodeBlock::offsetOfJITExecutionTotalCount()));
     
     doneAdjusting.link(&m_jit);
 }

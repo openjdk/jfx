@@ -40,11 +40,6 @@ namespace WebCore {
 // Noah's Ark of Formatting Elements can fit three of each element.
 static const size_t kNoahsArkCapacity = 3;
 
-static inline size_t attributeCountWithoutUpdate(Element* element)
-{
-    return element->hasAttributesWithoutUpdate() ? element->attributeCount() : 0;
-}
-
 HTMLFormattingElementList::HTMLFormattingElementList()
 {
 }
@@ -59,7 +54,7 @@ Element* HTMLFormattingElementList::closestElementInScopeWithName(const AtomicSt
         const Entry& entry = m_entries[m_entries.size() - i];
         if (entry.isMarker())
             return 0;
-        if (entry.element()->hasLocalName(targetName))
+        if (entry.stackItem()->matchesHTMLTag(targetName))
             return entry.element();
     }
     return 0;
@@ -87,25 +82,25 @@ HTMLFormattingElementList::Bookmark HTMLFormattingElementList::bookmarkFor(Eleme
     return Bookmark(&at(index));
 }
 
-void HTMLFormattingElementList::swapTo(Element* oldElement, Element* newElement, const Bookmark& bookmark)
+void HTMLFormattingElementList::swapTo(Element* oldElement, PassRefPtr<HTMLStackItem> newItem, const Bookmark& bookmark)
 {
     ASSERT(contains(oldElement));
-    ASSERT(!contains(newElement));
+    ASSERT(!contains(newItem->element()));
     if (!bookmark.hasBeenMoved()) {
         ASSERT(bookmark.mark()->element() == oldElement);
-        bookmark.mark()->replaceElement(newElement);
+        bookmark.mark()->replaceElement(newItem);
         return;
     }
     size_t index = bookmark.mark() - first();
-    ASSERT(index < size());
-    m_entries.insert(index + 1, newElement);
+    ASSERT_WITH_SECURITY_IMPLICATION(index < size());
+    m_entries.insert(index + 1, newItem);
     remove(oldElement);
 }
 
-void HTMLFormattingElementList::append(Element* element)
+void HTMLFormattingElementList::append(PassRefPtr<HTMLStackItem> item)
 {
-    ensureNoahsArkCondition(element);
-    m_entries.append(element);
+    ensureNoahsArkCondition(item.get());
+    m_entries.append(item);
 }
 
 void HTMLFormattingElementList::remove(Element* element)
@@ -131,7 +126,7 @@ void HTMLFormattingElementList::clearToLastMarker()
     }
 }
 
-void HTMLFormattingElementList::tryToEnsureNoahsArkConditionQuickly(Element* newElement, Vector<Element*>& remainingCandidates)
+void HTMLFormattingElementList::tryToEnsureNoahsArkConditionQuickly(HTMLStackItem* newItem, Vector<HTMLStackItem*>& remainingCandidates)
 {
     ASSERT(remainingCandidates.isEmpty());
 
@@ -140,9 +135,9 @@ void HTMLFormattingElementList::tryToEnsureNoahsArkConditionQuickly(Element* new
 
     // Use a vector with inline capacity to avoid a malloc in the common case
     // of a quickly ensuring the condition.
-    Vector<Element*, 10> candidates;
+    Vector<HTMLStackItem*, 10> candidates;
 
-    size_t newElementAttributeCount = attributeCountWithoutUpdate(newElement);
+    size_t newItemAttributeCount = newItem->attributes().size();
 
     for (size_t i = m_entries.size(); i; ) {
         --i;
@@ -151,10 +146,10 @@ void HTMLFormattingElementList::tryToEnsureNoahsArkConditionQuickly(Element* new
             break;
 
         // Quickly reject obviously non-matching candidates.
-        Element* candidate = entry.element();
-        if (newElement->tagQName() != candidate->tagQName())
+        HTMLStackItem* candidate = entry.stackItem().get();
+        if (newItem->localName() != candidate->localName() || newItem->namespaceURI() != candidate->namespaceURI())
             continue;
-        if (attributeCountWithoutUpdate(candidate) != newElementAttributeCount)
+        if (candidate->attributes().size() != newItemAttributeCount)
             continue;
 
         candidates.append(candidate);
@@ -163,41 +158,34 @@ void HTMLFormattingElementList::tryToEnsureNoahsArkConditionQuickly(Element* new
     if (candidates.size() < kNoahsArkCapacity)
         return; // There's room for the new element in the ark. There's no need to copy out the remainingCandidates.
 
-    remainingCandidates.append(candidates);
+    remainingCandidates.appendVector(candidates);
 }
 
-void HTMLFormattingElementList::ensureNoahsArkCondition(Element* newElement)
+void HTMLFormattingElementList::ensureNoahsArkCondition(HTMLStackItem* newItem)
 {
-    Vector<Element*> candidates;
-    tryToEnsureNoahsArkConditionQuickly(newElement, candidates);
+    Vector<HTMLStackItem*> candidates;
+    tryToEnsureNoahsArkConditionQuickly(newItem, candidates);
     if (candidates.isEmpty())
         return;
 
     // We pre-allocate and re-use this second vector to save one malloc per
     // attribute that we verify.
-    Vector<Element*> remainingCandidates;
+    Vector<HTMLStackItem*> remainingCandidates;
     remainingCandidates.reserveInitialCapacity(candidates.size());
 
-    size_t newElementAttributeCount = attributeCountWithoutUpdate(newElement);
-
-    for (size_t i = 0; i < newElementAttributeCount; ++i) {
-        Attribute* attribute = newElement->attributeItem(i);
+    const Vector<Attribute>& attributes = newItem->attributes();
+    for (size_t i = 0; i < attributes.size(); ++i) {
+        const Attribute& attribute = attributes[i];
 
         for (size_t j = 0; j < candidates.size(); ++j) {
-            Element* candidate = candidates[j];
+            HTMLStackItem* candidate = candidates[j];
 
             // These properties should already have been checked by tryToEnsureNoahsArkConditionQuickly.
-            ASSERT(newElement->attributeCount() == candidate->attributeCount());
-            ASSERT(newElement->tagQName() == candidate->tagQName());
+            ASSERT(newItem->attributes().size() == candidate->attributes().size());
+            ASSERT(newItem->localName() == candidate->localName() && newItem->namespaceURI() == candidate->namespaceURI());
 
-            // FIXME: Technically we shouldn't read this information back from
-            // the DOM. Instead, the parser should keep a copy of the information.
-            // This isn't really much of a problem for our implementation because
-            // we run the parser on the main thread, but the spec is written so
-            // that implementations can run off the main thread. If JavaScript
-            // changes the attributes values, we could get a slightly wrong
-            // output here.
-            if (candidate->fastGetAttribute(attribute->name()) == attribute->value())
+            Attribute* candidateAttribute = candidate->getAttributeItem(attribute.name());
+            if (candidateAttribute && candidateAttribute->value() == attribute.value())
                 remainingCandidates.append(candidate);
         }
 
@@ -212,7 +200,7 @@ void HTMLFormattingElementList::ensureNoahsArkCondition(Element* newElement)
     // however, that we wil spin the loop more than once because of how the
     // formatting element list gets permuted.
     for (size_t i = kNoahsArkCapacity - 1; i < candidates.size(); ++i)
-        remove(candidates[i]);
+        remove(candidates[i]->element());
 }
 
 #ifndef NDEBUG

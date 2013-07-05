@@ -45,6 +45,7 @@
 #include "AccessibilityMenuListPopup.h"
 #include "AccessibilityProgressIndicator.h"
 #include "AccessibilityRenderObject.h"
+#include "AccessibilitySVGRoot.h"
 #include "AccessibilityScrollView.h"
 #include "AccessibilityScrollbar.h"
 #include "AccessibilitySlider.h"
@@ -55,18 +56,19 @@
 #include "AccessibilityTableHeaderContainer.h"
 #include "AccessibilityTableRow.h"
 #include "Document.h"
+#include "Editor.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "HTMLAreaElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLLabelElement.h"
+#include "HTMLMeterElement.h"
 #include "HTMLNames.h"
-#if ENABLE(VIDEO)
-#include "MediaControlElements.h"
-#endif
 #include "Page.h"
 #include "RenderListBox.h"
 #include "RenderMenuList.h"
+#include "RenderMeter.h"
 #include "RenderProgress.h"
 #include "RenderSlider.h"
 #include "RenderTable.h"
@@ -74,12 +76,33 @@
 #include "RenderTableRow.h"
 #include "RenderView.h"
 #include "ScrollView.h"
-
 #include <wtf/PassRefPtr.h>
+
+#if ENABLE(VIDEO)
+#include "MediaControlElements.h"
+#endif
 
 namespace WebCore {
 
 using namespace HTMLNames;
+    
+AccessibilityObjectInclusion AXComputedObjectAttributeCache::getIgnored(AXID id) const
+{
+    HashMap<AXID, CachedAXObjectAttributes>::const_iterator it = m_idMapping.find(id);
+    return it != m_idMapping.end() ? it->value.ignored : DefaultBehavior;
+}
+
+void AXComputedObjectAttributeCache::setIgnored(AXID id, AccessibilityObjectInclusion inclusion)
+{
+    HashMap<AXID, CachedAXObjectAttributes>::iterator it = m_idMapping.find(id);
+    if (it != m_idMapping.end())
+        it->value.ignored = inclusion;
+    else {
+        CachedAXObjectAttributes attributes;
+        attributes.ignored = inclusion;
+        m_idMapping.set(id, attributes);
+    }
+}
     
 bool AXObjectCache::gAccessibilityEnabled = false;
 bool AXObjectCache::gAccessibilityEnhancedUserInterfaceEnabled = false;
@@ -92,9 +115,11 @@ AXObjectCache::AXObjectCache(const Document* doc)
 
 AXObjectCache::~AXObjectCache()
 {
+    m_notificationPostTimer.stop();
+
     HashMap<AXID, RefPtr<AccessibilityObject> >::iterator end = m_objects.end();
     for (HashMap<AXID, RefPtr<AccessibilityObject> >::iterator it = m_objects.begin(); it != end; ++it) {
-        AccessibilityObject* obj = (*it).second.get();
+        AccessibilityObject* obj = (*it).value.get();
         detachWrapper(obj);
         obj->detach();
         removeAXID(obj);
@@ -112,7 +137,7 @@ AccessibilityObject* AXObjectCache::focusedImageMapUIElement(HTMLAreaElement* ar
     if (!imageElement)
         return 0;
     
-    AccessibilityObject* axRenderImage = areaElement->document()->axObjectCache()->getOrCreate(imageElement->renderer());
+    AccessibilityObject* axRenderImage = areaElement->document()->axObjectCache()->getOrCreate(imageElement);
     if (!axRenderImage)
         return 0;
     
@@ -144,11 +169,9 @@ AccessibilityObject* AXObjectCache::focusedUIElementForPage(const Page* page)
     if (focusedNode->hasTagName(areaTag))
         return focusedImageMapUIElement(static_cast<HTMLAreaElement*>(focusedNode));
     
-    RenderObject* focusedNodeRenderer = focusedNode->renderer();
-    if (!focusedNodeRenderer)
+    AccessibilityObject* obj = focusedNode->document()->axObjectCache()->getOrCreate(focusedNode);
+    if (!obj)
         return 0;
-
-    AccessibilityObject* obj = focusedNodeRenderer->document()->axObjectCache()->getOrCreate(focusedNodeRenderer);
 
     if (obj->shouldFocusActiveDescendant()) {
         if (AccessibilityObject* descendant = obj->activeDescendant())
@@ -172,7 +195,7 @@ AccessibilityObject* AXObjectCache::get(Widget* widget)
     if (!axID)
         return 0;
     
-    return m_objects.get(axID).get();    
+    return m_objects.get(axID);    
 }
     
 AccessibilityObject* AXObjectCache::get(RenderObject* renderer)
@@ -185,7 +208,35 @@ AccessibilityObject* AXObjectCache::get(RenderObject* renderer)
     if (!axID)
         return 0;
 
-    return m_objects.get(axID).get();    
+    return m_objects.get(axID);    
+}
+
+AccessibilityObject* AXObjectCache::get(Node* node)
+{
+    if (!node)
+        return 0;
+
+    AXID renderID = node->renderer() ? m_renderObjectMapping.get(node->renderer()) : 0;
+    ASSERT(!HashTraits<AXID>::isDeletedValue(renderID));
+
+    AXID nodeID = m_nodeObjectMapping.get(node);
+    ASSERT(!HashTraits<AXID>::isDeletedValue(nodeID));
+
+    if (node->renderer() && nodeID && !renderID) {
+        // This can happen if an AccessibilityNodeObject is created for a node that's not
+        // rendered, but later something changes and it gets a renderer (like if it's
+        // reparented).
+        remove(nodeID);
+        return 0;
+    }
+
+    if (renderID)
+        return m_objects.get(renderID);
+
+    if (!nodeID)
+        return 0;
+
+    return m_objects.get(nodeID);
 }
 
 // FIXME: This probably belongs on Node.
@@ -195,7 +246,7 @@ bool nodeHasRole(Node* node, const String& role)
     if (!node || !node->isElementNode())
         return false;
 
-    return equalIgnoringCase(static_cast<Element*>(node)->getAttribute(roleAttr), role);
+    return equalIgnoringCase(toElement(node)->getAttribute(roleAttr), role);
 }
 
 static PassRefPtr<AccessibilityObject> createFromRenderer(RenderObject* renderer)
@@ -223,6 +274,11 @@ static PassRefPtr<AccessibilityObject> createFromRenderer(RenderObject* renderer
         return AccessibilityMediaControl::create(renderer);
 #endif
 
+#if ENABLE(SVG)
+    if (renderer->isSVGRoot())
+        return AccessibilitySVGRoot::create(renderer);
+#endif
+    
     if (renderer->isBoxModelObject()) {
         RenderBoxModelObject* cssBox = toRenderBoxModelObject(renderer);
         if (cssBox->isListBox())
@@ -238,10 +294,14 @@ static PassRefPtr<AccessibilityObject> createFromRenderer(RenderObject* renderer
         if (cssBox->isTableCell())
             return AccessibilityTableCell::create(toRenderTableCell(cssBox));
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
         // progress bar
         if (cssBox->isProgress())
             return AccessibilityProgressIndicator::create(toRenderProgress(cssBox));
+#endif
+#if ENABLE(METER_ELEMENT)
+        if (cssBox->isMeter())
+            return AccessibilityProgressIndicator::create(toRenderMeter(cssBox));
 #endif
 
         // input type=range
@@ -250,6 +310,11 @@ static PassRefPtr<AccessibilityObject> createFromRenderer(RenderObject* renderer
     }
 
     return AccessibilityRenderObject::create(renderer);
+}
+
+static PassRefPtr<AccessibilityObject> createFromNode(Node* node)
+{
+    return AccessibilityNodeObject::create(node);
 }
 
 AccessibilityObject* AXObjectCache::getOrCreate(Widget* widget)
@@ -266,14 +331,61 @@ AccessibilityObject* AXObjectCache::getOrCreate(Widget* widget)
     else if (widget->isScrollbar())
         newObj = AccessibilityScrollbar::create(static_cast<Scrollbar*>(widget));
         
+    // Will crash later if we have two objects for the same widget.
+    ASSERT(!get(widget));
+        
     getAXID(newObj.get());
     
     m_widgetObjectMapping.set(widget, newObj->axObjectID());
     m_objects.set(newObj->axObjectID(), newObj);    
+    newObj->init();
     attachWrapper(newObj.get());
     return newObj.get();
 }
     
+AccessibilityObject* AXObjectCache::getOrCreate(Node* node)
+{
+    if (!node)
+        return 0;
+
+    if (AccessibilityObject* obj = get(node))
+        return obj;
+
+    if (node->renderer())
+        return getOrCreate(node->renderer());
+
+    if (!node->parentElement())
+        return 0;
+    
+    // It's only allowed to create an AccessibilityObject from a Node if it's in a canvas subtree.
+    // Or if it's a hidden element, but we still want to expose it because of other ARIA attributes.
+    bool inCanvasSubtree = node->parentElement()->isInCanvasSubtree();
+    bool isHidden = !node->renderer() && isNodeAriaVisible(node);
+
+    bool insideMeterElement = false;
+#if ENABLE(METER_ELEMENT)
+    insideMeterElement = isHTMLMeterElement(node->parentElement());
+#endif
+    
+    if (!inCanvasSubtree && !isHidden && !insideMeterElement)
+        return 0;
+
+    RefPtr<AccessibilityObject> newObj = createFromNode(node);
+
+    // Will crash later if we have two objects for the same node.
+    ASSERT(!get(node));
+
+    getAXID(newObj.get());
+
+    m_nodeObjectMapping.set(node, newObj->axObjectID());
+    m_objects.set(newObj->axObjectID(), newObj);
+    newObj->init();
+    attachWrapper(newObj.get());
+    newObj->setLastKnownIsIgnoredValue(newObj->accessibilityIsIgnored());
+
+    return newObj.get();
+}
+
 AccessibilityObject* AXObjectCache::getOrCreate(RenderObject* renderer)
 {
     if (!renderer)
@@ -284,11 +396,17 @@ AccessibilityObject* AXObjectCache::getOrCreate(RenderObject* renderer)
 
     RefPtr<AccessibilityObject> newObj = createFromRenderer(renderer);
 
+    // Will crash later if we have two objects for the same renderer.
+    ASSERT(!get(renderer));
+
     getAXID(newObj.get());
 
     m_renderObjectMapping.set(renderer, newObj->axObjectID());
     m_objects.set(newObj->axObjectID(), newObj);
+    newObj->init();
     attachWrapper(newObj.get());
+    newObj->setLastKnownIsIgnoredValue(newObj->accessibilityIsIgnored());
+
     return newObj.get();
 }
     
@@ -353,6 +471,7 @@ AccessibilityObject* AXObjectCache::getOrCreate(AccessibilityRole role)
         return 0;
 
     m_objects.set(obj->axObjectID(), obj);    
+    obj->init();
     attachWrapper(obj.get());
     return obj.get();
 }
@@ -363,7 +482,7 @@ void AXObjectCache::remove(AXID axID)
         return;
     
     // first fetch object to operate some cleanup functions on it 
-    AccessibilityObject* obj = m_objects.get(axID).get();
+    AccessibilityObject* obj = m_objects.get(axID);
     if (!obj)
         return;
     
@@ -386,6 +505,24 @@ void AXObjectCache::remove(RenderObject* renderer)
     AXID axID = m_renderObjectMapping.get(renderer);
     remove(axID);
     m_renderObjectMapping.remove(renderer);
+}
+
+void AXObjectCache::remove(Node* node)
+{
+    if (!node)
+        return;
+
+    removeNodeForUse(node);
+
+    // This is all safe even if we didn't have a mapping.
+    AXID axID = m_nodeObjectMapping.get(node);
+    remove(axID);
+    m_nodeObjectMapping.remove(node);
+
+    if (node->renderer()) {
+        remove(node->renderer());
+        return;
+    }
 }
 
 void AXObjectCache::remove(Widget* view)
@@ -447,34 +584,65 @@ void AXObjectCache::removeAXID(AccessibilityObject* object)
     m_idsInUse.remove(objID);
 }
 
-void AXObjectCache::contentChanged(RenderObject* renderer)
+void AXObjectCache::textChanged(Node* node)
 {
-    AccessibilityObject* object = getOrCreate(renderer);
-    if (object)
-        object->contentChanged(); 
+    textChanged(getOrCreate(node));
+}
+
+void AXObjectCache::textChanged(RenderObject* renderer)
+{
+    textChanged(getOrCreate(renderer));
+}
+
+void AXObjectCache::textChanged(AccessibilityObject* obj)
+{
+    if (!obj)
+        return;
+
+    bool parentAlreadyExists = obj->parentObjectIfExists();
+    obj->textChanged();
+    postNotification(obj, obj->document(), AXObjectCache::AXTextChanged, true);
+    if (parentAlreadyExists)
+        obj->notifyIfIgnoredValueChanged();
+}
+
+void AXObjectCache::updateCacheAfterNodeIsAttached(Node* node)
+{
+    // Calling get() will update the AX object if we had an AccessibilityNodeObject but now we need
+    // an AccessibilityRenderObject, because it was reparented to a location outside of a canvas.
+    get(node);
+}
+
+void AXObjectCache::childrenChanged(Node* node)
+{
+    childrenChanged(get(node));
 }
 
 void AXObjectCache::childrenChanged(RenderObject* renderer)
 {
-    if (!renderer)
+    childrenChanged(get(renderer));
+}
+
+void AXObjectCache::childrenChanged(AccessibilityObject* obj)
+{
+    if (!obj)
         return;
  
-    AXID axID = m_renderObjectMapping.get(renderer);
-    if (!axID)
-        return;
-    
-    AccessibilityObject* obj = m_objects.get(axID).get();
-    if (obj)
         obj->childrenChanged();
 }
     
 void AXObjectCache::notificationPostTimerFired(Timer<AXObjectCache>*)
 {
+    RefPtr<Document> protectorForCacheOwner(m_document);
+
     m_notificationPostTimer.stop();
 
     unsigned i = 0, count = m_notificationsToPost.size();
     for (i = 0; i < count; ++i) {
         AccessibilityObject* obj = m_notificationsToPost[i].first.get();
+        if (!obj->axObjectID())
+            continue;
+
 #ifndef NDEBUG
         // Make sure none of the render views are in the process of being layed out.
         // Notifications should only be sent after the renderer has finished
@@ -486,7 +654,11 @@ void AXObjectCache::notificationPostTimerFired(Timer<AXObjectCache>*)
         }
 #endif
         
-        postPlatformNotification(obj, m_notificationsToPost[i].second);
+        AXNotification notification = m_notificationsToPost[i].second;
+        postPlatformNotification(obj, notification);
+
+        if (notification == AXChildrenChanged && obj->parentObjectIfExists() && obj->lastKnownIsIgnoredValue() != obj->accessibilityIsIgnored())
+            childrenChanged(obj->parentObject());
     }
     
     m_notificationsToPost.clear();
@@ -494,11 +666,11 @@ void AXObjectCache::notificationPostTimerFired(Timer<AXObjectCache>*)
     
 void AXObjectCache::postNotification(RenderObject* renderer, AXNotification notification, bool postToElement, PostType postType)
 {
-    // Notifications for text input objects are sent to that object.
-    // All others are sent to the top WebArea.
     if (!renderer)
         return;
     
+    stopCachingComputedObjectAttributes();
+
     // Get an accessibility object that already exists. One should not be created here
     // because a render update may be in progress and creating an AX object can re-trigger a layout
     RefPtr<AccessibilityObject> object = get(renderer);
@@ -513,8 +685,31 @@ void AXObjectCache::postNotification(RenderObject* renderer, AXNotification noti
     postNotification(object.get(), renderer->document(), notification, postToElement, postType);
 }
 
+void AXObjectCache::postNotification(Node* node, AXNotification notification, bool postToElement, PostType postType)
+{
+    if (!node)
+        return;
+    
+    stopCachingComputedObjectAttributes();
+
+    // Get an accessibility object that already exists. One should not be created here
+    // because a render update may be in progress and creating an AX object can re-trigger a layout
+    RefPtr<AccessibilityObject> object = get(node);
+    while (!object && node) {
+        node = node->parentNode();
+        object = get(node);
+    }
+    
+    if (!node)
+        return;
+    
+    postNotification(object.get(), node->document(), notification, postToElement, postType);
+}
+
 void AXObjectCache::postNotification(AccessibilityObject* object, Document* document, AXNotification notification, bool postToElement, PostType postType)
 {
+    stopCachingComputedObjectAttributes();
+
     if (object && !postToElement)
         object = object->observableObject();
 
@@ -532,9 +727,16 @@ void AXObjectCache::postNotification(AccessibilityObject* object, Document* docu
         postPlatformNotification(object, notification);
 }
 
-void AXObjectCache::checkedStateChanged(RenderObject* renderer)
+void AXObjectCache::checkedStateChanged(Node* node)
 {
-    postNotification(renderer, AXObjectCache::AXCheckedStateChanged, true);
+    postNotification(node, AXObjectCache::AXCheckedStateChanged, true);
+}
+
+void AXObjectCache::selectedChildrenChanged(Node* node)
+{
+    // postToElement is false so that you can pass in any child of an element and it will go up the parent tree
+    // to find the container which should send out the notification.
+    postNotification(node, AXSelectedChildrenChanged, false);
 }
 
 void AXObjectCache::selectedChildrenChanged(RenderObject* renderer)
@@ -544,13 +746,15 @@ void AXObjectCache::selectedChildrenChanged(RenderObject* renderer)
     postNotification(renderer, AXSelectedChildrenChanged, false);
 }
 
-void AXObjectCache::nodeTextChangeNotification(RenderObject* renderer, AXTextChange textChange, unsigned offset, const String& text)
+void AXObjectCache::nodeTextChangeNotification(Node* node, AXTextChange textChange, unsigned offset, const String& text)
 {
-    if (!renderer)
+    if (!node)
         return;
 
+    stopCachingComputedObjectAttributes();
+
     // Delegate on the right platform
-    AccessibilityObject* obj = getOrCreate(renderer);
+    AccessibilityObject* obj = getOrCreate(node);
     nodeTextChangePlatformNotification(obj, textChange, offset, text);
 }
 
@@ -574,36 +778,89 @@ void AXObjectCache::handleScrollbarUpdate(ScrollView* view)
         return;
     
     // We don't want to create a scroll view from this method, only update an existing one.
-    AccessibilityObject* scrollViewObject = get(view);
-    if (scrollViewObject)
+    if (AccessibilityObject* scrollViewObject = get(view)) {
+        stopCachingComputedObjectAttributes();
         scrollViewObject->updateChildrenIfNecessary();
 }
+}
     
-void AXObjectCache::handleAriaExpandedChange(RenderObject *renderer)
+void AXObjectCache::handleAriaExpandedChange(Node* node)
 {
-    if (!renderer)
-        return;
-    AccessibilityObject* obj = getOrCreate(renderer);
-    if (obj)
+    if (AccessibilityObject* obj = getOrCreate(node))
         obj->handleAriaExpandedChanged();
 }
     
-void AXObjectCache::handleActiveDescendantChanged(RenderObject* renderer)
+void AXObjectCache::handleActiveDescendantChanged(Node* node)
 {
-    if (!renderer)
-        return;
-    AccessibilityObject* obj = getOrCreate(renderer);
-    if (obj)
+    if (AccessibilityObject* obj = getOrCreate(node))
         obj->handleActiveDescendantChanged();
 }
 
-void AXObjectCache::handleAriaRoleChanged(RenderObject* renderer)
+void AXObjectCache::handleAriaRoleChanged(Node* node)
 {
-    if (!renderer)
+    stopCachingComputedObjectAttributes();
+
+    if (AccessibilityObject* obj = getOrCreate(node)) {
+        obj->updateAccessibilityRole();
+        obj->notifyIfIgnoredValueChanged();
+    }
+}
+
+void AXObjectCache::handleAttributeChanged(const QualifiedName& attrName, Element* element)
+{
+    if (attrName == roleAttr)
+        handleAriaRoleChanged(element);
+    else if (attrName == altAttr || attrName == titleAttr)
+        textChanged(element);
+    else if (attrName == forAttr && element->hasTagName(labelTag))
+        labelChanged(element);
+
+    if (!attrName.localName().string().startsWith("aria-"))
         return;
-    AccessibilityObject* obj = getOrCreate(renderer);
-    if (obj && obj->isAccessibilityRenderObject())
-        static_cast<AccessibilityRenderObject*>(obj)->updateAccessibilityRole();
+
+    if (attrName == aria_activedescendantAttr)
+        handleActiveDescendantChanged(element);
+    else if (attrName == aria_valuenowAttr || attrName == aria_valuetextAttr)
+        postNotification(element, AXObjectCache::AXValueChanged, true);
+    else if (attrName == aria_labelAttr || attrName == aria_labeledbyAttr || attrName == aria_labelledbyAttr)
+        textChanged(element);
+    else if (attrName == aria_checkedAttr)
+        checkedStateChanged(element);
+    else if (attrName == aria_selectedAttr)
+        selectedChildrenChanged(element);
+    else if (attrName == aria_expandedAttr)
+        handleAriaExpandedChange(element);
+    else if (attrName == aria_hiddenAttr)
+        childrenChanged(element->parentNode());
+    else if (attrName == aria_invalidAttr)
+        postNotification(element, AXObjectCache::AXInvalidStatusChanged, true);
+    else
+        postNotification(element, AXObjectCache::AXAriaAttributeChanged, true);
+}
+
+void AXObjectCache::labelChanged(Element* element)
+{
+    ASSERT(element->hasTagName(labelTag));
+    HTMLElement* correspondingControl = static_cast<HTMLLabelElement*>(element)->control();
+    textChanged(correspondingControl);
+}
+
+void AXObjectCache::recomputeIsIgnored(RenderObject* renderer)
+{
+    if (AccessibilityObject* obj = get(renderer))
+        obj->notifyIfIgnoredValueChanged();
+}
+
+void AXObjectCache::startCachingComputedObjectAttributesUntilTreeMutates()
+{
+    if (!m_computedObjectAttributeCache)
+        m_computedObjectAttributeCache = AXComputedObjectAttributeCache::create();
+}
+
+void AXObjectCache::stopCachingComputedObjectAttributes()
+{
+    if (m_computedObjectAttributeCache)
+        m_computedObjectAttributeCache.clear();
 }
 
 VisiblePosition AXObjectCache::visiblePositionForTextMarkerData(TextMarkerData& textMarkerData)
@@ -652,13 +909,9 @@ void AXObjectCache::textMarkerDataForVisiblePosition(TextMarkerData& textMarkerD
             return;
     }
     
-    // locate the renderer, which must exist for a visible dom node
-    RenderObject* renderer = domNode->renderer();
-    ASSERT(renderer);
-    
-    // find or create an accessibility object for this renderer
-    AXObjectCache* cache = renderer->document()->axObjectCache();
-    RefPtr<AccessibilityObject> obj = cache->getOrCreate(renderer);
+    // find or create an accessibility object for this node
+    AXObjectCache* cache = domNode->document()->axObjectCache();
+    RefPtr<AccessibilityObject> obj = cache->getOrCreate(domNode);
     
     textMarkerData.axID = obj.get()->axObjectID();
     textMarkerData.node = domNode;
@@ -686,10 +939,34 @@ bool AXObjectCache::nodeIsTextControl(const Node* node)
     if (!node)
         return false;
 
-    const AccessibilityObject* axObject = getOrCreate(node->renderer());
+    const AccessibilityObject* axObject = getOrCreate(const_cast<Node*>(node));
     return axObject && axObject->isTextControl();
 }
 
+bool isNodeAriaVisible(Node* node)
+{
+    if (!node)
+        return false;
+    
+    if (!node->isElementNode())
+        return false;
+    
+    return equalIgnoringCase(toElement(node)->getAttribute(aria_hiddenAttr), "false");
+}
+
+AXAttributeCacheEnabler::AXAttributeCacheEnabler(AXObjectCache* cache)
+    : m_cache(cache)
+{
+    if (m_cache)
+        m_cache->startCachingComputedObjectAttributesUntilTreeMutates();
+}
+    
+AXAttributeCacheEnabler::~AXAttributeCacheEnabler()
+{
+    if (m_cache)
+        m_cache->stopCachingComputedObjectAttributes();
+}
+    
 } // namespace WebCore
 
 #endif // HAVE(ACCESSIBILITY)

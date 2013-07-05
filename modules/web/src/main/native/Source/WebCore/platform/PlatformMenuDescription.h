@@ -28,16 +28,14 @@
 
 #if PLATFORM(MAC)
 OBJC_CLASS NSMutableArray;
+#elif PLATFORM(WIN)
+#include <windows.h>
 #elif PLATFORM(QT)
 #include <qlist.h>
 #elif PLATFORM(GTK)
 typedef struct _GtkMenu GtkMenu;
-#elif PLATFORM(WX)
-class wxMenu;
 #elif PLATFORM(JAVA)
 #include "JavaRef.h"
-#elif PLATFORM(CHROMIUM) || PLATFORM(EFL)
-#include <wtf/Vector.h>
 #endif
 
 namespace WebCore {
@@ -50,15 +48,20 @@ namespace WebCore {
     typedef const QList<ContextMenuItem>* PlatformMenuDescription;
 #elif PLATFORM(GTK)
     typedef GtkMenu* PlatformMenuDescription;
-#elif PLATFORM(WX)
-    typedef wxMenu* PlatformMenuDescription;
 #elif PLATFORM(JAVA)
     typedef JGObject PlatformMenuDescription;
-#elif PLATFORM(CHROMIUM) || PLATFORM(EFL)
-    class ContextMenuItem;
-    typedef const Vector<ContextMenuItem>* PlatformMenuDescription;
 #else
     typedef void* PlatformMenuDescription;
+#endif
+#else
+// FIXME: When more platforms switch over, and PlatformMenuDescription
+// is not used anymore, we should rename this header to PlatformContextMenu.
+#if PLATFORM(WIN)
+    typedef HMENU PlatformContextMenu;
+    typedef MENUITEMINFO PlatformContextMenuItem;
+#else
+    typedef void* PlatformContextMenu;
+    typedef void* PlatformContextMenuItem;
 #endif
 #endif // !USE(CROSS_PLATFORM_CONTEXT_MENUS)
 

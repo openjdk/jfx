@@ -36,7 +36,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderFieldset::RenderFieldset(Node* element)
+RenderFieldset::RenderFieldset(Element* element)
     : RenderBlock(element)
 {
 }
@@ -123,10 +123,13 @@ RenderObject* RenderFieldset::layoutSpecialExcludedChild(bool relayoutChildren)
     return legend;
 }
 
-RenderBox* RenderFieldset::findLegend() const
+RenderBox* RenderFieldset::findLegend(FindLegendOption option) const
 {
     for (RenderObject* legend = firstChild(); legend; legend = legend->nextSibling()) {
-        if (!legend->isFloatingOrOutOfFlowPositioned() && legend->node() && (legend->node()->hasTagName(legendTag)))
+        if (option == IgnoreFloatingOrOutOfFlow && legend->isFloatingOrOutOfFlowPositioned())
+            continue;
+        
+        if (legend->node() && (legend->node()->hasTagName(legendTag)))
             return toRenderBox(legend);
     }
     return 0;
@@ -146,11 +149,11 @@ void RenderFieldset::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint
     // cases the legend is embedded in the right and bottom borders respectively.
     // https://bugs.webkit.org/show_bug.cgi?id=47236
     if (style()->isHorizontalWritingMode()) {
-        LayoutUnit yOff = (legend->y() > 0) ? ZERO_LAYOUT_UNIT : (legend->height() - borderTop()) / 2;
+        LayoutUnit yOff = (legend->y() > 0) ? LayoutUnit() : (legend->height() - borderTop()) / 2;
         paintRect.setHeight(paintRect.height() - yOff);
         paintRect.setY(paintRect.y() + yOff);
     } else {
-        LayoutUnit xOff = (legend->x() > 0) ? ZERO_LAYOUT_UNIT : (legend->width() - borderLeft()) / 2;
+        LayoutUnit xOff = (legend->x() > 0) ? LayoutUnit() : (legend->width() - borderLeft()) / 2;
         paintRect.setWidth(paintRect.width() - xOff);
         paintRect.setX(paintRect.x() + xOff);
     }
@@ -197,25 +200,16 @@ void RenderFieldset::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOff
     // cases the legend is embedded in the right and bottom borders respectively.
     // https://bugs.webkit.org/show_bug.cgi?id=47236
     if (style()->isHorizontalWritingMode()) {
-        LayoutUnit yOff = (legend->y() > 0) ? ZERO_LAYOUT_UNIT : (legend->height() - borderTop()) / 2;
+        LayoutUnit yOff = (legend->y() > 0) ? LayoutUnit() : (legend->height() - borderTop()) / 2;
         paintRect.expand(0, -yOff);
         paintRect.move(0, yOff);
     } else {
-        LayoutUnit xOff = (legend->x() > 0) ? ZERO_LAYOUT_UNIT : (legend->width() - borderLeft()) / 2;
+        LayoutUnit xOff = (legend->x() > 0) ? LayoutUnit() : (legend->width() - borderLeft()) / 2;
         paintRect.expand(-xOff, 0);
         paintRect.move(xOff, 0);
     }
 
     paintMaskImages(paintInfo, paintRect);
-}
-
-bool RenderFieldset::stretchesToMinIntrinsicLogicalWidth() const
-{
-    // If width is explicitly specified then Fieldsets should not stretch
-    if (style()->width().isPercent())
-        return false;
-
-    return true;
 }
 
 } // namespace WebCore

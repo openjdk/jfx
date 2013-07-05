@@ -35,11 +35,14 @@
 
 #include "SharedWorker.h"
 
+#include "ExceptionCode.h"
+#include "FeatureObserver.h"
 #include "InspectorInstrumentation.h"
 #include "KURL.h"
 #include "MessageChannel.h"
 #include "MessagePort.h"
 #include "ScriptExecutionContext.h"
+#include "SecurityOrigin.h"
 #include "SharedWorkerRepository.h"
 
 namespace WebCore {
@@ -51,11 +54,14 @@ inline SharedWorker::SharedWorker(ScriptExecutionContext* context)
 
 PassRefPtr<SharedWorker> SharedWorker::create(ScriptExecutionContext* context, const String& url, const String& name, ExceptionCode& ec)
 {
+    ASSERT(isMainThread());
+    FeatureObserver::observe(static_cast<Document*>(context)->domWindow(), FeatureObserver::SharedWorkerStart);
+
     RefPtr<SharedWorker> worker = adoptRef(new SharedWorker(context));
 
     RefPtr<MessageChannel> channel = MessageChannel::create(context);
     worker->m_port = channel->port1();
-    OwnPtr<MessagePortChannel> remotePort = channel->port2()->disentangle(ec);
+    OwnPtr<MessagePortChannel> remotePort = channel->port2()->disentangle();
     ASSERT(remotePort);
 
     worker->suspendIfNeeded();
@@ -64,9 +70,15 @@ PassRefPtr<SharedWorker> SharedWorker::create(ScriptExecutionContext* context, c
     if (scriptURL.isEmpty())
         return 0;
 
-    SharedWorkerRepository::connect(worker.get(), remotePort.release(), scriptURL, name, ec);
+    // We don't currently support nested workers, so workers can only be created from documents.
+    ASSERT_WITH_SECURITY_IMPLICATION(context->isDocument());
+    Document* document = static_cast<Document*>(context);
+    if (!document->securityOrigin()->canAccessSharedWorkers(document->topOrigin())) {
+        ec = SECURITY_ERR;
+        return 0;
+    }
 
-    InspectorInstrumentation::didCreateWorker(context, worker->asID(), scriptURL.string(), true);
+    SharedWorkerRepository::connect(worker.get(), remotePort.release(), scriptURL, name, ec);
 
     return worker.release();
 }

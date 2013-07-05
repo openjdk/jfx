@@ -27,12 +27,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import json
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.net import resultsjsonparser_unittest
 from webkitpy.common.host_mock import MockHost
 from webkitpy.layout_tests.layout_package.json_results_generator import strip_json_wrapper
-from webkitpy.layout_tests.port.webkit import WebKitPort
+from webkitpy.port.base import Port
 from webkitpy.tool.commands.rebaselineserver import TestConfig, RebaselineServer
 from webkitpy.tool.servers import rebaselineserver
 
@@ -211,7 +211,7 @@ class RebaselineTestTest(unittest.TestCase):
         server._test_config = get_test_config()
         server._gather_baselines(results_json)
         self.assertEqual(results_json['tests']['svg/dynamic-updates/SVGFEDropShadowElement-dom-stdDeviation-attr.html']['state'], 'needs_rebaseline')
-        self.assertFalse('prototype-chocolate.html' in results_json['tests'])
+        self.assertNotIn('prototype-chocolate.html', results_json['tests'])
 
     def _assertRebaseline(self, test_files, results_files, test_name, baseline_target, baseline_move_to, expected_success, expected_log):
         log = []
@@ -234,7 +234,7 @@ class GetActualResultFilesTest(unittest.TestCase):
             'fast/text2-actual.txt',
             'fast/text-notactual.txt',
         ))
-        self.assertEqual(
+        self.assertItemsEqual(
             ('text-actual.txt',),
             rebaselineserver._get_actual_result_files(
                 'fast/text.html', test_config))
@@ -299,7 +299,7 @@ def get_test_config(test_files=[], result_files=[]):
     for file in result_files:
         host.filesystem.write_binary_file(host.filesystem.join(results_directory, file), '')
 
-    class TestMacPort(WebKitPort):
+    class TestMacPort(Port):
         port_name = "mac"
 
     return TestConfig(

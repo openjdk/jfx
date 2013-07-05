@@ -32,6 +32,7 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
+#include "HistoryController.h"
 #include "HistoryItem.h"
 #include "Page.h"
 #include "SecurityOrigin.h"
@@ -55,13 +56,13 @@ unsigned History::length() const
     return m_frame->page()->backForward()->count();
 }
 
-SerializedScriptValue* History::state()
+PassRefPtr<SerializedScriptValue> History::state()
 {
     m_lastStateObjectRequested = stateInternal();
     return m_lastStateObjectRequested;
 }
 
-SerializedScriptValue* History::stateInternal() const
+PassRefPtr<SerializedScriptValue> History::stateInternal() const
 {
     if (!m_frame)
         return 0;
@@ -79,7 +80,7 @@ bool History::stateChanged() const
 
 bool History::isSameAsCurrentState(SerializedScriptValue* state) const
 {
-    return state == stateInternal();
+    return state == stateInternal().get();
 }
 
 void History::back()
@@ -116,7 +117,7 @@ void History::go(ScriptExecutionContext* context, int distance)
         return;
 
     ASSERT(isMainThread());
-    Document* activeDocument = static_cast<Document*>(context);
+    Document* activeDocument = toDocument(context);
     if (!activeDocument)
         return;
 

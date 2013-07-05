@@ -26,6 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from webkitpy.common.checkout.scm import CommitMessage
 from webkitpy.common.system.filesystem_mock import MockFileSystem
 from webkitpy.common.system.executive_mock import MockExecutive
 
@@ -37,21 +38,28 @@ class MockSCM(object):
         self._filesystem = filesystem or MockFileSystem()
         self._executive = executive or MockExecutive()
 
-    def add(self, destination_path, return_exit_code=False):
-        self.add_list([destination_path], return_exit_code)
+    def add(self, destination_path):
+        self.add_list([destination_path])
 
-    def add_list(self, destination_paths, return_exit_code=False):
+    def add_list(self, destination_paths):
         self.added_paths.update(set(destination_paths))
-        if return_exit_code:
-            return 0
 
-    def ensure_clean_working_directory(self, force_clean):
+    def has_working_directory_changes(self):
+        return False
+
+    def discard_working_directory_changes(self):
         pass
 
     def supports_local_commits(self):
         return True
 
-    def ensure_no_local_commits(self, force_clean):
+    def has_local_commits(self):
+        return False
+
+    def discard_local_commits(self):
+        pass
+
+    def discard_local_changes(self):
         pass
 
     def exists(self, path):
@@ -69,10 +77,13 @@ class MockSCM(object):
         return ["MockFile1"]
 
     def head_svn_revision(self):
-        return 1234
+        return '1234'
 
     def svn_revision(self, path):
-        return 5678
+        return '5678'
+
+    def timestamp_of_revision(self, path, revision):
+        return '2013-02-01 08:48:05 +0000'
 
     def create_patch(self, git_commit, changed_files=None):
         return "Patch1"

@@ -41,6 +41,11 @@ enum JSType {
     ProgramExecutableType,
     FunctionExecutableType,
 
+    UnlinkedFunctionExecutableType,
+    UnlinkedProgramCodeBlockType,
+    UnlinkedEvalCodeBlockType,
+    UnlinkedFunctionCodeBlockType,
+
     // The ObjectType value must come before any JSType that is a subclass of JSObject.
     ObjectType,
     FinalObjectType,
@@ -48,11 +53,12 @@ enum JSType {
     NameInstanceType,
     NumberObjectType,
     ErrorInstanceType,
-    GlobalThisType,
+    ProxyType,
+    WithScopeType,
 
-    StaticScopeObjectType,
+    NameScopeObjectType,
     // VariableObjectType must be less than MOST of the types of its subclasses and only its subclasses.
-    // We use >=VariableObjectType checks to test for Global & Activation objects, but exclude StaticScopes.
+    // We use >=VariableObjectType checks to test for Global & Activation objects, but exclude NameScopes.
     VariableObjectType,
     GlobalObjectType,
     ActivationObjectType,

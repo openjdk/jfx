@@ -28,6 +28,7 @@
 
 #include "Document.h"
 #include "DocumentMarkerController.h"
+#include "Editor.h"
 #include "EditorClient.h"
 #include "Frame.h"
 #include "HTMLInputElement.h"
@@ -45,14 +46,12 @@
 
 namespace WebCore {
 
-static const int unrequestedSequence = -1;
-
 SpellCheckRequest::SpellCheckRequest(PassRefPtr<Range> checkingRange, PassRefPtr<Range> paragraphRange, const String& text, TextCheckingTypeMask mask, TextCheckingProcessType processType)
-    : TextCheckingRequest(unrequestedSequence, text, mask, processType)
-    , m_checker(0)
+    : m_checker(0)
     , m_checkingRange(checkingRange)
     , m_paragraphRange(paragraphRange)
     , m_rootEditableElement(m_checkingRange->startContainer()->rootEditableElement())
+    , m_requestData(unrequestedTextCheckingSequence, text, mask, processType)
 {
 }
 
@@ -73,11 +72,16 @@ PassRefPtr<SpellCheckRequest> SpellCheckRequest::create(TextCheckingTypeMask tex
     return adoptRef(new SpellCheckRequest(checkingRange, paragraphRange, text, textCheckingOptions, processType));
 }
 
+const TextCheckingRequestData& SpellCheckRequest::data() const
+{
+    return m_requestData;
+}
+
 void SpellCheckRequest::didSucceed(const Vector<TextCheckingResult>& results)
 {
     if (!m_checker)
         return;
-    m_checker->didCheckSucceed(m_sequence, results);
+    m_checker->didCheckSucceed(m_requestData.sequence(), results);
     m_checker = 0;
 }
 
@@ -85,16 +89,16 @@ void SpellCheckRequest::didCancel()
 {
     if (!m_checker)
         return;
-    m_checker->didCheckCancel(m_sequence);
+    m_checker->didCheckCancel(m_requestData.sequence());
     m_checker = 0;
 }
 
 void SpellCheckRequest::setCheckerAndSequence(SpellChecker* requester, int sequence)
 {
     ASSERT(!m_checker);
-    ASSERT(m_sequence == unrequestedSequence);
+    ASSERT(m_requestData.sequence() == unrequestedTextCheckingSequence);
     m_checker = requester;
-    m_sequence = sequence;
+    m_requestData.m_sequence = sequence;
 }
 
 void SpellCheckRequest::requesterDestroyed()
@@ -160,9 +164,9 @@ void SpellChecker::requestCheckingFor(PassRefPtr<SpellCheckRequest> request)
     if (!request || !canCheckAsynchronously(request->paragraphRange().get()))
         return;
 
-    ASSERT(request->sequence() == unrequestedSequence);
+    ASSERT(request->data().sequence() == unrequestedTextCheckingSequence);
     int sequence = ++m_lastRequestSequence;
-    if (sequence == unrequestedSequence)
+    if (sequence == unrequestedTextCheckingSequence)
         sequence = ++m_lastRequestSequence;
 
     request->setCheckerAndSequence(this, sequence);
@@ -178,11 +182,8 @@ void SpellChecker::requestCheckingFor(PassRefPtr<SpellCheckRequest> request)
 void SpellChecker::invokeRequest(PassRefPtr<SpellCheckRequest> request)
 {
     ASSERT(!m_processingRequest);
-    if (!client()) {
-        request->didCancel();
+    if (!client())
         return;
-    }
-
     m_processingRequest = request;
     client()->requestCheckingOfString(m_processingRequest);
 }
@@ -205,13 +206,13 @@ void SpellChecker::enqueueRequest(PassRefPtr<SpellCheckRequest> request)
 void SpellChecker::didCheck(int sequence, const Vector<TextCheckingResult>& results)
 {
     ASSERT(m_processingRequest);
-    ASSERT(m_processingRequest->sequence() == sequence);
-    if (m_processingRequest->sequence() != sequence) {
+    ASSERT(m_processingRequest->data().sequence() == sequence);
+    if (m_processingRequest->data().sequence() != sequence) {
         m_requestQueue.clear();
         return;
     }
 
-    m_frame->editor()->markAndReplaceFor(m_processingRequest, results);
+    m_frame->editor().markAndReplaceFor(m_processingRequest, results);
 
     if (m_lastProcessedSequence < sequence)
         m_lastProcessedSequence = sequence;
@@ -223,11 +224,12 @@ void SpellChecker::didCheck(int sequence, const Vector<TextCheckingResult>& resu
 
 void SpellChecker::didCheckSucceed(int sequence, const Vector<TextCheckingResult>& results)
 {
-    if (m_processingRequest->sequence() == sequence) {
+    TextCheckingRequestData requestData = m_processingRequest->data();
+    if (requestData.sequence() == sequence) {
         unsigned markers = 0;
-        if (m_processingRequest->mask() & TextCheckingTypeSpelling)
+        if (requestData.mask() & TextCheckingTypeSpelling)
             markers |= DocumentMarker::Spelling;
-        if (m_processingRequest->mask() & TextCheckingTypeGrammar)
+        if (requestData.mask() & TextCheckingTypeGrammar)
             markers |= DocumentMarker::Grammar;
         if (markers)
             m_frame->document()->markers()->removeMarkers(m_processingRequest->checkingRange().get(), markers);

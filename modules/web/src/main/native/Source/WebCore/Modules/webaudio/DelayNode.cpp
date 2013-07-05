@@ -30,9 +30,15 @@
 
 namespace WebCore {
 
-DelayNode::DelayNode(AudioContext* context, float sampleRate, double maxDelayTime)
+const double maximumAllowedDelayTime = 180;
+
+DelayNode::DelayNode(AudioContext* context, float sampleRate, double maxDelayTime, ExceptionCode& ec)
     : AudioBasicProcessorNode(context, sampleRate)
 {
+    if (maxDelayTime <= 0 || maxDelayTime >= maximumAllowedDelayTime) {
+        ec = NOT_SUPPORTED_ERR;
+        return;
+    }
     m_processor = adoptPtr(new DelayProcessor(context, sampleRate, 1, maxDelayTime));
     setNodeType(NodeTypeDelay);
 }

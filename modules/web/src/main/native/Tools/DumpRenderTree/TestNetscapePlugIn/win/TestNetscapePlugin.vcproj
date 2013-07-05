@@ -390,10 +390,6 @@
 			Name="Tests"
 			>
 			<File
-				RelativePath=".\CallJSThatDestroysPlugin.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\Tests\DocumentOpenInDestroyStream.cpp"
 				>
 			</File>
@@ -426,7 +422,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Tests\NPPNewFails.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\Tests\NPPSetWindowCalledDuringDestruction.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\Tests\NPRuntimeCallsWithNullNPP.cpp"
 				>
 			</File>
 			<File
@@ -450,12 +454,24 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Tests\PluginScriptableObjectOverridesAllProperties.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\Tests\PrivateBrowsing.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\Tests\ToStringAndValueOfObject.cpp"
 				>
 			</File>
 			<Filter
 				Name="win"
 				>
+				<File
+					RelativePath="..\Tests\win\CallJSThatDestroysPlugin.cpp"
+					>
+				</File>
 				<File
 					RelativePath="..\Tests\win\DrawsGradient.cpp"
 					>

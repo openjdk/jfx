@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #import "HTMLConverter.h"
 
 #import "ArchiveResource.h"
+#import "CachedImage.h"
 #import "ColorMac.h"
 #import "Document.h"
 #import "DocumentLoader.h"
@@ -36,7 +37,9 @@
 #import "DOMPrivate.h"
 #import "DOMRangeInternal.h"
 #import "Element.h"
+#import "Font.h"
 #import "Frame.h"
+#import "FrameLoader.h"
 #import "HTMLNames.h"
 #import "HTMLParserIdioms.h"
 #import "LoaderNSURLExtras.h"
@@ -49,8 +52,6 @@ using namespace HTMLNames;
 
 static NSFileWrapper *fileWrapperForURL(DocumentLoader *, NSURL *);
 static NSFileWrapper *fileWrapperForElement(Element*);
-
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 
 // Additional control Unicode characters
 const unichar WebNextLineCharacter = 0x0085;
@@ -96,11 +97,7 @@ static NSFont *WebDefaultFont()
     return defaultFont;
 }
 
-#endif
-
 @implementation WebHTMLConverter
-
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 
 static NSFont *_fontForNameAndSize(NSString *fontName, CGFloat size, NSMutableDictionary *cache)
 {
@@ -797,11 +794,15 @@ static inline NSShadow *_shadowForShadowStyle(NSString *shadowStyle)
     }
     if (!fileWrapper) {
         RefPtr<ArchiveResource> resource = dataSource->subresource(url);
-        if (!resource) resource = dataSource->subresource(url);
-        if (flag && resource && [@"text/html" isEqual:resource->mimeType()]) notFound = YES;
+        if (!resource)
+            resource = dataSource->subresource(url);
+
+        const String& mimeType = resource->mimeType();
+        if (flag && resource && mimeType == "text/html")
+            notFound = YES;
         if (resource && !notFound) {
             fileWrapper = [[[NSFileWrapper alloc] initRegularFileWithContents:[resource->data()->createNSData() autorelease]] autorelease];
-            [fileWrapper setPreferredFilename:suggestedFilenameWithMIMEType(url, resource->mimeType())];
+            [fileWrapper setPreferredFilename:suggestedFilenameWithMIMEType(url, mimeType)];
         }
     }
     if (!fileWrapper && !notFound) {
@@ -1657,27 +1658,25 @@ static NSInteger _colCompare(id block1, id block2, void *)
     return (0 == _errorCode) ? [[_attrStr retain] autorelease] : nil;
 }
 
-#endif // PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
-
 // This function uses TextIterator, which makes offsets in its result compatible with HTML editing.
 + (NSAttributedString *)editingAttributedStringFromRange:(Range*)range
 {
+    NSFontManager *fontManager = [NSFontManager sharedFontManager];
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
     NSUInteger stringLength = 0;
-    RetainPtr<NSMutableDictionary> attrs(AdoptNS, [[NSMutableDictionary alloc] init]);
+    RetainPtr<NSMutableDictionary> attrs = adoptNS([[NSMutableDictionary alloc] init]);
 
     for (TextIterator it(range); !it.atEnd(); it.advance()) {
         RefPtr<Range> currentTextRange = it.range();
-        ExceptionCode ec = 0;
-        Node* startContainer = currentTextRange->startContainer(ec);
-        Node* endContainer = currentTextRange->endContainer(ec);
-        int startOffset = currentTextRange->startOffset(ec);
-        int endOffset = currentTextRange->endOffset(ec);
+        Node* startContainer = currentTextRange->startContainer();
+        Node* endContainer = currentTextRange->endContainer();
+        int startOffset = currentTextRange->startOffset();
+        int endOffset = currentTextRange->endOffset();
         
         if (startContainer == endContainer && (startOffset == endOffset - 1)) {
             Node* node = startContainer->childNode(startOffset);
             if (node && node->hasTagName(imgTag)) {
-                NSFileWrapper *fileWrapper = fileWrapperForElement(static_cast<Element*>(node));
+                NSFileWrapper* fileWrapper = fileWrapperForElement(toElement(node));
                 NSTextAttachment *attachment = [[NSTextAttachment alloc] initWithFileWrapper:fileWrapper];
                 [string appendAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];
                 [attachment release];
@@ -1693,10 +1692,12 @@ static NSInteger _colCompare(id block1, id block2, void *)
         if (!renderer)
             continue;
         RenderStyle* style = renderer->style();
-        if (style->textDecorationsInEffect() & UNDERLINE)
+        if (style->textDecorationsInEffect() & TextDecorationUnderline)
             [attrs.get() setObject:[NSNumber numberWithInteger:NSUnderlineStyleSingle] forKey:NSUnderlineStyleAttributeName];
         if (NSFont *font = style->font().primaryFont()->getNSFont())
             [attrs.get() setObject:font forKey:NSFontAttributeName];
+        else
+            [attrs.get() setObject:[fontManager convertFont:WebDefaultFont() toSize:style->font().primaryFont()->platformData().size()] forKey:NSFontAttributeName];
         if (style->visitedDependentColor(CSSPropertyColor).alpha())
             [attrs.get() setObject:nsColor(style->visitedDependentColor(CSSPropertyColor)) forKey:NSForegroundColorAttributeName];
         else
@@ -1706,7 +1707,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
         else
             [attrs.get() removeObjectForKey:NSBackgroundColorAttributeName];
 
-        RetainPtr<NSString> substring(AdoptNS, [[NSString alloc] initWithCharactersNoCopy:const_cast<UChar*>(it.characters()) length:currentTextLength freeWhenDone:NO]);
+        RetainPtr<NSString> substring = adoptNS([[NSString alloc] initWithCharactersNoCopy:const_cast<UChar*>(it.characters()) length:currentTextLength freeWhenDone:NO]);
         [string replaceCharactersInRange:NSMakeRange(stringLength, 0) withString:substring.get()];
         [string setAttributes:attrs.get() range:NSMakeRange(stringLength, currentTextLength)];
         stringLength += currentTextLength;

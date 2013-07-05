@@ -23,12 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS,
         DoNotCheckConstants
-    ] SVGFEMorphologyElement : SVGElement,
+] interface SVGFEMorphologyElement : SVGStyledElement,
                                SVGFilterPrimitiveStandardAttributes {
         // Morphology Operators
         const unsigned short SVG_MORPHOLOGY_OPERATOR_UNKNOWN  = 0;
@@ -40,8 +38,7 @@ module svg {
         readonly attribute SVGAnimatedNumber      radiusX;
         readonly attribute SVGAnimatedNumber      radiusY;
 
-        void setRadius(in [Optional=DefaultIsUndefined] float radiusX, 
-                       in [Optional=DefaultIsUndefined] float radiusY);
+    void setRadius([Default=Undefined] optional float radiusX, 
+                   [Default=Undefined] optional float radiusY);
     };
 
-}

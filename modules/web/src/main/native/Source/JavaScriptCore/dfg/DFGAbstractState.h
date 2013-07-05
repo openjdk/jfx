@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGAbstractValue.h"
+#include "DFGBranchDirection.h"
 #include "DFGGraph.h"
 #include "DFGNode.h"
 #include <wtf/Vector.h>
@@ -71,8 +72,8 @@ struct BasicBlock;
 // AbstractState state(codeBlock, graph);
 // state.beginBasicBlock(basicBlock);
 // bool endReached = true;
-// for (NodeIndex idx = basicBlock.begin; idx < basicBlock.end; ++idx) {
-//     if (!state.execute(idx))
+// for (unsigned i = 0; i < basicBlock->size(); ++i) {
+//     if (!state.execute(i))
 //         break;
 // }
 // bool result = state.endBasicBlock(<either Merge or DontMerge>);
@@ -92,48 +93,18 @@ public:
         MergeToSuccessors
     };
     
-    enum BranchDirection {
-        // This is not a branch and so there is no branch direction, or
-        // the branch direction has yet to be set.
-        InvalidBranchDirection,
-        
-        // The branch takes the true case.
-        TakeTrue,
-        
-        // The branch takes the false case.
-        TakeFalse,
-        
-        // For all we know, the branch could go either direction, so we
-        // have to assume the worst.
-        TakeBoth
-    };
-    
-    static const char* branchDirectionToString(BranchDirection branchDirection)
-    {
-        switch (branchDirection) {
-        case InvalidBranchDirection:
-            return "Invalid";
-        case TakeTrue:
-            return "TakeTrue";
-        case TakeFalse:
-            return "TakeFalse";
-        case TakeBoth:
-            return "TakeBoth";
-        }
-    }
-
     AbstractState(Graph&);
     
     ~AbstractState();
     
-    AbstractValue& forNode(NodeIndex nodeIndex)
+    AbstractValue& forNode(Node* node)
     {
-        return m_nodes[nodeIndex];
+        return node->value;
     }
     
-    AbstractValue& forNode(Edge nodeUse)
+    AbstractValue& forNode(Edge edge)
     {
-        return forNode(nodeUse.index());
+        return forNode(edge.node());
     }
     
     Operands<AbstractValue>& variables()
@@ -174,24 +145,66 @@ public:
     //    A true return means that you must revisit (at least) the successor
     //    blocks. This also sets cfaShouldRevisit to true for basic blocks
     //    that must be visited next.
-    //
-    // If you'd like to know what direction the branch at the end of the
-    // basic block is thought to have taken, you can pass a non-0 pointer
-    // for BranchDirection.
-    bool endBasicBlock(MergeMode, BranchDirection* = 0);
+    bool endBasicBlock(MergeMode);
     
     // Reset the AbstractState. This throws away any results, and at this point
     // you can safely call beginBasicBlock() on any basic block.
     void reset();
     
     // Abstractly executes the given node. The new abstract state is stored into an
-    // abstract register file stored in *this. Loads of local variables (that span
+    // abstract stack stored in *this. Loads of local variables (that span
     // basic blocks) interrogate the basic block's notion of the state at the head.
     // Stores to local variables are handled in endBasicBlock(). This returns true
     // if execution should continue past this node. Notably, it will return true
     // for block terminals, so long as those terminals are not Return or variants
     // of Throw.
-    bool execute(unsigned);
+    //
+    // This is guaranteed to be equivalent to doing:
+    //
+    // if (state.startExecuting(index)) {
+    //     state.executeEdges(index);
+    //     result = state.executeEffects(index);
+    // } else
+    //     result = true;
+    bool execute(unsigned indexInBlock);
+    
+    // Indicate the start of execution of the node. It resets any state in the node,
+    // that is progressively built up by executeEdges() and executeEffects(). In
+    // particular, this resets canExit(), so if you want to "know" between calls of
+    // startExecuting() and executeEdges()/Effects() whether the last run of the
+    // analysis concluded that the node can exit, you should probably set that
+    // information aside prior to calling startExecuting().
+    bool startExecuting(Node*);
+    bool startExecuting(unsigned indexInBlock);
+    
+    // Abstractly execute the edges of the given node. This runs filterEdgeByUse()
+    // on all edges of the node. You can skip this step, if you have already used
+    // filterEdgeByUse() (or some equivalent) on each edge.
+    void executeEdges(Node*);
+    void executeEdges(unsigned indexInBlock);
+    
+    ALWAYS_INLINE void filterEdgeByUse(Node* node, Edge& edge)
+    {
+#if !ASSERT_DISABLED
+        switch (edge.useKind()) {
+        case KnownInt32Use:
+        case KnownNumberUse:
+        case KnownCellUse:
+        case KnownStringUse:
+            ASSERT(!(forNode(edge).m_type & ~typeFilterFor(edge.useKind())));
+            break;
+        default:
+            break;
+        }
+#endif // !ASSERT_DISABLED
+        
+        filterByType(node, edge, typeFilterFor(edge.useKind()));
+    }
+    
+    // Abstractly execute the effects of the given node. This changes the abstract
+    // state assuming that edges have already been filtered.
+    bool executeEffects(unsigned indexInBlock);
+    bool executeEffects(unsigned indexInBlock, Node*);
     
     // Did the last executed node clobber the world?
     bool didClobber() const { return m_didClobber; }
@@ -211,63 +224,27 @@ public:
     // successors. Returns true if any of the successors' states changed. Note
     // that this is automatically called in endBasicBlock() if MergeMode is
     // MergeToSuccessors.
-    bool mergeToSuccessors(Graph&, BasicBlock*, BranchDirection);
+    bool mergeToSuccessors(Graph&, BasicBlock*);
 
-    void dump(FILE* out);
+    void dump(PrintStream& out);
     
 private:
     void clobberWorld(const CodeOrigin&, unsigned indexInBlock);
+    void clobberCapturedVars(const CodeOrigin&);
     void clobberStructures(unsigned indexInBlock);
     
-    bool mergeStateAtTail(AbstractValue& destination, AbstractValue& inVariable, NodeIndex);
+    bool mergeStateAtTail(AbstractValue& destination, AbstractValue& inVariable, Node*);
     
-    static bool mergeVariableBetweenBlocks(AbstractValue& destination, AbstractValue& source, NodeIndex destinationNodeIndex, NodeIndex sourceNodeIndex);
+    static bool mergeVariableBetweenBlocks(AbstractValue& destination, AbstractValue& source, Node* destinationNode, Node* sourceNode);
     
-    void speculateInt32Unary(Node& node, bool forceCanExit = false)
-    {
-        AbstractValue& childValue = forNode(node.child1());
-        node.setCanExit(forceCanExit || !isInt32Speculation(childValue.m_type));
-        childValue.filter(SpecInt32);
-    }
+    enum BooleanResult {
+        UnknownBooleanResult,
+        DefinitelyFalse,
+        DefinitelyTrue
+    };
+    BooleanResult booleanResult(Node*, AbstractValue&);
     
-    void speculateNumberUnary(Node& node)
-    {
-        AbstractValue& childValue = forNode(node.child1());
-        node.setCanExit(!isNumberSpeculation(childValue.m_type));
-        childValue.filter(SpecNumber);
-    }
-    
-    void speculateBooleanUnary(Node& node)
-    {
-        AbstractValue& childValue = forNode(node.child1());
-        node.setCanExit(!isBooleanSpeculation(childValue.m_type));
-        childValue.filter(SpecBoolean);
-    }
-    
-    void speculateInt32Binary(Node& node, bool forceCanExit = false)
-    {
-        AbstractValue& childValue1 = forNode(node.child1());
-        AbstractValue& childValue2 = forNode(node.child2());
-        node.setCanExit(
-            forceCanExit
-            || !isInt32Speculation(childValue1.m_type)
-            || !isInt32Speculation(childValue2.m_type));
-        childValue1.filter(SpecInt32);
-        childValue2.filter(SpecInt32);
-    }
-    
-    void speculateNumberBinary(Node& node)
-    {
-        AbstractValue& childValue1 = forNode(node.child1());
-        AbstractValue& childValue2 = forNode(node.child2());
-        node.setCanExit(
-            !isNumberSpeculation(childValue1.m_type)
-            || !isNumberSpeculation(childValue2.m_type));
-        childValue1.filter(SpecNumber);
-        childValue2.filter(SpecNumber);
-    }
-    
-    bool trySetConstant(NodeIndex nodeIndex, JSValue value)
+    bool trySetConstant(Node* node, JSValue value)
     {
         // Make sure we don't constant fold something that will produce values that contravene
         // predictions. If that happens then we know that the code will OSR exit, forcing
@@ -276,18 +253,32 @@ private:
         // lot of subtle code that assumes that
         // speculationFromValue(jsConstant) == jsConstant.prediction(). "Hardening" that code
         // is probably less sane than just pulling back on constant folding.
-        SpeculatedType oldType = m_graph[nodeIndex].prediction();
+        SpeculatedType oldType = node->prediction();
         if (mergeSpeculations(speculationFromValue(value), oldType) != oldType)
             return false;
         
-        forNode(nodeIndex).set(value);
+        forNode(node).set(value);
         return true;
     }
+    
+    ALWAYS_INLINE void filterByType(Node* node, Edge& edge, SpeculatedType type)
+    {
+        AbstractValue& value = forNode(edge);
+        if (value.m_type & ~type) {
+            node->setCanExit(true);
+            edge.setProofStatus(NeedsCheck);
+        } else
+            edge.setProofStatus(IsProved);
+        
+        value.filter(type);
+    }
+    
+    void verifyEdge(Node*, Edge);
+    void verifyEdges(Node*);
     
     CodeBlock* m_codeBlock;
     Graph& m_graph;
     
-    Vector<AbstractValue, 64> m_nodes;
     Operands<AbstractValue> m_variables;
     BasicBlock* m_block;
     bool m_haveStructures;

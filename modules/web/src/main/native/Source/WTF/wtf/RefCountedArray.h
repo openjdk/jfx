@@ -58,6 +58,20 @@ public:
             Header::fromPayload(m_data)->refCount++;
     }
     
+    explicit RefCountedArray(size_t size)
+    {
+        if (!size) {
+            m_data = 0;
+            return;
+        }
+
+        m_data = (static_cast<Header*>(fastMalloc(Header::size() + sizeof(T) * size)))->payload();
+        Header::fromPayload(m_data)->refCount = 1;
+        Header::fromPayload(m_data)->length = size;
+        ASSERT(Header::fromPayload(m_data)->length == size);
+        VectorTypeOperations<T>::initialize(begin(), end());
+    }
+
     explicit RefCountedArray(const Vector<T>& other)
     {
         if (other.isEmpty()) {
@@ -69,7 +83,7 @@ public:
         Header::fromPayload(m_data)->refCount = 1;
         Header::fromPayload(m_data)->length = other.size();
         ASSERT(Header::fromPayload(m_data)->length == other.size());
-        memcpy(m_data, other.begin(), sizeof(T) * other.size());
+        VectorTypeOperations<T>::uninitializedCopy(other.begin(), other.end(), m_data);
     }
     
     RefCountedArray& operator=(const RefCountedArray& other)
@@ -83,6 +97,7 @@ public:
             return *this;
         if (--Header::fromPayload(oldData)->refCount)
             return *this;
+        VectorTypeOperations<T>::destruct(oldData, oldData + Header::fromPayload(oldData)->length);
         fastFree(Header::fromPayload(oldData));
         return *this;
     }
@@ -93,6 +108,7 @@ public:
             return;
         if (--Header::fromPayload(m_data)->refCount)
             return;
+        VectorTypeOperations<T>::destruct(begin(), end());
         fastFree(Header::fromPayload(m_data));
     }
     
@@ -118,13 +134,13 @@ public:
     
     T& at(size_t i)
     {
-        ASSERT(i < size());
+        ASSERT_WITH_SECURITY_IMPLICATION(i < size());
         return begin()[i];
     }
     
     const T& at(size_t i) const
     {
-        ASSERT(i < size());
+        ASSERT_WITH_SECURITY_IMPLICATION(i < size());
         return begin()[i];
     }
     

@@ -23,9 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module html {
-    interface [
+[
+    NoInterfaceObject,
         Conditional=WEBGL
-    ] WebGLVertexArrayObjectOES {
+] interface WebGLVertexArrayObjectOES {
     };
-}

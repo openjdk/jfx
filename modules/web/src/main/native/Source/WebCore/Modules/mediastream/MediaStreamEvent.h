@@ -28,9 +28,16 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "Event.h"
+#include "MediaStream.h"
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
+
+struct MediaStreamEventInit : public EventInit {
+    MediaStreamEventInit();
+
+    RefPtr<MediaStream> stream;
+};
 
 class MediaStreamEvent : public Event {
 public:
@@ -38,6 +45,7 @@ public:
 
     static PassRefPtr<MediaStreamEvent> create();
     static PassRefPtr<MediaStreamEvent> create(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<MediaStream>);
+    static PassRefPtr<MediaStreamEvent> create(const AtomicString& type, const MediaStreamEventInit& initializer);
 
     MediaStream* stream() const;
 
@@ -46,6 +54,7 @@ public:
 private:
     MediaStreamEvent();
     MediaStreamEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<MediaStream>);
+    MediaStreamEvent(const AtomicString& type, const MediaStreamEventInit&);
 
     RefPtr<MediaStream> m_stream;
 };

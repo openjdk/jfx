@@ -37,8 +37,8 @@ using namespace std;
 
 namespace WebCore {
 
-RenderRubyText::RenderRubyText(Node* node)
-    : RenderBlock(node)
+RenderRubyText::RenderRubyText(Element* element)
+    : RenderBlock(element)
 {
 }
 
@@ -86,17 +86,6 @@ void RenderRubyText::adjustInlineDirectionLineBounds(int expansionOpportunityCou
 bool RenderRubyText::avoidsFloats() const
 {
     return true;
-}
-
-void RenderRubyText::updateBeforeAfterContent(PseudoId pseudoId)
-{
-    // RenderRubyText manages its own :before and :after content
-    // and is not handled by its anonymous wrappers RenderRubyRun
-    // and RenderRuby. This contrasts with other ruby children, which
-    // are enclosed in RenderRubyBase and hence they are able to
-    // update their :before, :after content (since RenderRubyBase
-    // is not a anonymous wrapper).
-    return children()->updateBeforeAfterContent(this, pseudoId);
 }
 
 } // namespace WebCore

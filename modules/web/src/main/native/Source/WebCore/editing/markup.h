@@ -49,27 +49,28 @@ namespace WebCore {
     enum EAbsoluteURLs { DoNotResolveURLs, ResolveAllURLs, ResolveNonLocalURLs };
 
     PassRefPtr<DocumentFragment> createFragmentFromText(Range* context, const String& text);
-    PassRefPtr<DocumentFragment> createFragmentFromMarkup(Document*, const String& markup, const String& baseURL, FragmentScriptingPermission = AllowScriptingContent);
-    PassRefPtr<DocumentFragment> createFragmentFromMarkupWithContext(Document*, const String& markup, unsigned fragmentStart, unsigned fragmentEnd, const String& baseURL, FragmentScriptingPermission);
+PassRefPtr<DocumentFragment> createFragmentFromMarkup(Document*, const String& markup, const String& baseURL, ParserContentPolicy = AllowScriptingContent);
+PassRefPtr<DocumentFragment> createFragmentFromMarkupWithContext(Document*, const String& markup, unsigned fragmentStart, unsigned fragmentEnd, const String& baseURL, ParserContentPolicy);
     PassRefPtr<DocumentFragment> createFragmentFromNodes(Document*, const Vector<Node*>&);
-    PassRefPtr<DocumentFragment> createFragmentForInnerOuterHTML(const String&, Element*, FragmentScriptingPermission, ExceptionCode&);
+PassRefPtr<DocumentFragment> createFragmentForInnerOuterHTML(const String&, Element*, ParserContentPolicy, ExceptionCode&);
     PassRefPtr<DocumentFragment> createFragmentForTransformToFragment(const String&, const String& sourceMIMEType, Document* outputDoc);
-    PassRefPtr<DocumentFragment> createContextualFragment(const String&, HTMLElement*, FragmentScriptingPermission, ExceptionCode&);
+PassRefPtr<DocumentFragment> createContextualFragment(const String&, HTMLElement*, ParserContentPolicy, ExceptionCode&);
 
-    bool isPlainTextMarkup(Node *node);
+bool isPlainTextMarkup(Node*);
 
-    // These methods are used by HTMLElement & ShadowRoot to replace the children with respected fragment/text.
+// These methods are used by HTMLElement & ShadowRoot to replace the
+// children with respected fragment/text.
     void replaceChildrenWithFragment(ContainerNode*, PassRefPtr<DocumentFragment>, ExceptionCode&);
     void replaceChildrenWithText(ContainerNode*, const String&, ExceptionCode&);
 
-    String createMarkup(const Range*,
-        Vector<Node*>* = 0, EAnnotateForInterchange = DoNotAnnotateForInterchange, bool convertBlocksToInlines = false, EAbsoluteURLs = DoNotResolveURLs);
+String createMarkup(const Range*, Vector<Node*>* = 0, EAnnotateForInterchange = DoNotAnnotateForInterchange, bool convertBlocksToInlines = false, EAbsoluteURLs = DoNotResolveURLs);
     String createMarkup(const Node*, EChildrenOnly = IncludeNode, Vector<Node*>* = 0, EAbsoluteURLs = DoNotResolveURLs, Vector<QualifiedName>* tagNamesToSkip = 0);
     
     String createFullMarkup(const Node*);
     String createFullMarkup(const Range*);
 
     String urlToMarkup(const KURL&, const String& title);
+
 }
 
 #endif // markup_h

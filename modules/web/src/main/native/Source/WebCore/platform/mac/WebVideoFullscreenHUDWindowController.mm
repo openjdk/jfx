@@ -28,11 +28,11 @@
 
 #import "WebVideoFullscreenHUDWindowController.h"
 
+#import "ExceptionCodePlaceholder.h"
 #import "FloatConversion.h"
 #import <WebCoreSystemInterface.h>
 #import <WebCore/HTMLMediaElement.h>
 #import <wtf/RetainPtr.h>
-#import <wtf/UnusedParam.h>
 
 using namespace WebCore;
 using namespace std;
@@ -44,12 +44,7 @@ static inline CGFloat webkit_CGFloor(CGFloat value)
     return floor(value);
 }
 
-#define HAVE_MEDIA_CONTROL (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
-
-@interface WebVideoFullscreenHUDWindowController (Private)
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
-<NSWindowDelegate>
-#endif
+@interface WebVideoFullscreenHUDWindowController (Private) <NSWindowDelegate>
 
 - (void)updateTime;
 - (void)timelinePositionChanged:(id)sender;
@@ -282,33 +277,11 @@ static const NSTimeInterval HUDWindowFadeOutDelay = 3;
     [self setWindow:nil];
 }
 
-#ifndef HAVE_MEDIA_CONTROL
-// FIXME: This code is never compiled, because HAVE_MEDIA_CONTROL is always defined to something, even on Leopard.
-// FIXME: Values in this enum have a different order than ones in WKMediaUIControlType.
-enum {
-    WKMediaUIControlPlayPauseButton,
-    WKMediaUIControlRewindButton,
-    WKMediaUIControlFastForwardButton,
-    WKMediaUIControlExitFullscreenButton,
-    WKMediaUIControlVolumeDownButton,
-    WKMediaUIControlSlider,
-    WKMediaUIControlVolumeUpButton,
-    WKMediaUIControlTimeline
-};
-#endif
-
 static NSControl *createControlWithMediaUIControlType(int controlType, NSRect frame)
 {
-#ifdef HAVE_MEDIA_CONTROL
     NSControl *control = wkCreateMediaUIControl(controlType);
     [control setFrame:frame];
     return control;
-#else
-    // FIXME: This code is never compiled, because HAVE_MEDIA_CONTROL is always defined to something, even on Leopard.
-    if (controlType == wkMediaUIControlSlider)
-        return [[NSSlider alloc] initWithFrame:frame];
-    return [[NSControl alloc] initWithFrame:frame];
-#endif
 }
 
 static NSTextField *createTimeTextField(NSRect frame)
@@ -349,12 +322,8 @@ static NSTextField *createTimeTextField(NSRect frame)
     NSWindow *window = [self window];
     ASSERT(window);
 
-#ifdef HAVE_MEDIA_CONTROL
     NSView *background = wkCreateMediaUIBackgroundView();
-#else
-    // FIXME: This code is never compiled, because HAVE_MEDIA_CONTROL is always defined to something, even on Leopard.
-    NSView *background = [[NSView alloc] init];
-#endif
+
     [window setContentView:background];
     _area = [[NSTrackingArea alloc] initWithRect:[background bounds] options:NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways owner:self userInfo:nil];
     [background addTrackingArea:_area];
@@ -398,12 +367,8 @@ static NSTextField *createTimeTextField(NSRect frame)
     [contentView addSubview:volumeUpButton];
     [volumeUpButton release];
 
-#ifdef HAVE_MEDIA_CONTROL
     _timeline = wkCreateMediaUIControl(wkMediaUIControlTimeline);
-#else
-    // FIXME: This code is never compiled, because HAVE_MEDIA_CONTROL is always defined to something, even on Leopard.
-    _timeline = [[NSSlider alloc] init];
-#endif
+
     [_timeline setTarget:self];
     [_timeline setAction:@selector(timelinePositionChanged:)];
     [_timeline setFrame:NSMakeRect(webkit_CGFloor((windowWidth - timelineWidth) / 2), timelineBottomMargin, timelineWidth, timelineHeight)];
@@ -469,8 +434,7 @@ static NSTextField *createTimeTextField(NSRect frame)
 {
     if (![_delegate mediaElement])
         return;
-    WebCore::ExceptionCode e;
-    [_delegate mediaElement]->setCurrentTime(currentTime, e);
+    [_delegate mediaElement]->setCurrentTime(currentTime, IGNORE_EXCEPTION);
     [self updateTime];
 }
 
@@ -530,10 +494,9 @@ static NSTextField *createTimeTextField(NSRect frame)
 {
     if (![_delegate mediaElement])
         return;
-    WebCore::ExceptionCode e;
     if ([_delegate mediaElement]->muted())
         [_delegate mediaElement]->setMuted(false);
-    [_delegate mediaElement]->setVolume(volume / [self maxVolume], e);
+    [_delegate mediaElement]->setVolume(volume / [self maxVolume], IGNORE_EXCEPTION);
     [self updateVolume];
 }
 
@@ -588,7 +551,7 @@ static NSString *timeToString(double time)
 {
     ASSERT_ARG(time, time >= 0);
 
-    if (!isfinite(time))
+    if (!std::isfinite(time))
         time = 0;
 
     int seconds = narrowPrecisionToFloat(abs(time));

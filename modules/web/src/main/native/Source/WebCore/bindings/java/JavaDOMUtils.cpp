@@ -12,7 +12,7 @@
 #include "HTMLElement.h"
 #include "JavaEnv.h"
 
-#include "BridgeUtils.h"
+//#include "BridgeUtils.h"
 #include "JavaDOMUtils.h"
 #include "runtime_root.h"
 

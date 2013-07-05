@@ -34,7 +34,7 @@
 #include "LocalizedStrings.h"
 
 #include "NotImplemented.h"
-#include "PlatformString.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -175,20 +175,17 @@ String contextMenuItemTagOpenFrameInNewWindow()
 
 String contextMenuItemTagCopy()
 {
-    static String stockLabel = String::fromUTF8("Copy");
-    return stockLabel;
+    return String::fromUTF8("Copy");
 }
 
 String contextMenuItemTagDelete()
 {
-    static String stockLabel = String::fromUTF8("Delete");
-    return stockLabel;
+    return String::fromUTF8("Delete");
 }
 
 String contextMenuItemTagSelectAll()
 {
-    static String stockLabel = String::fromUTF8("Select All");
-    return stockLabel;
+    return String::fromUTF8("Select All");
 }
 
 String contextMenuItemTagUnicode()
@@ -203,20 +200,17 @@ String contextMenuItemTagInputMethods()
 
 String contextMenuItemTagGoBack()
 {
-    static String stockLabel = String::fromUTF8("Go Back");
-    return stockLabel;
+    return String::fromUTF8("Go Back");
 }
 
 String contextMenuItemTagGoForward()
 {
-    static String stockLabel = String::fromUTF8("Go Forward");
-    return stockLabel;
+    return String::fromUTF8("Go Forward");
 }
 
 String contextMenuItemTagStop()
 {
-    static String stockLabel = String::fromUTF8("Stop");
-    return stockLabel;
+    return String::fromUTF8("Stop");
 }
 
 String contextMenuItemTagReload()
@@ -226,14 +220,12 @@ String contextMenuItemTagReload()
 
 String contextMenuItemTagCut()
 {
-    static String stockLabel = String::fromUTF8("Cut");
-    return stockLabel;
+    return String::fromUTF8("Cut");
 }
 
 String contextMenuItemTagPaste()
 {
-    static String stockLabel = String::fromUTF8("Paste");
-    return stockLabel;
+    return String::fromUTF8("Paste");
 }
 
 String contextMenuItemTagNoGuessesFound()
@@ -288,7 +280,7 @@ String contextMenuItemTagCheckSpelling()
 
 String contextMenuItemTagCheckSpellingWhileTyping()
 {
-    return String::fromUTF8("Check Spelling While _Typing");
+    return String::fromUTF8("Check Spelling While Typing");
 }
 
 String contextMenuItemTagCheckGrammarWithSpelling()
@@ -303,20 +295,17 @@ String contextMenuItemTagFontMenu()
 
 String contextMenuItemTagBold()
 {
-    static String stockLabel = String::fromUTF8("Bold");
-    return stockLabel;
+    return String::fromUTF8("Bold");
 }
 
 String contextMenuItemTagItalic()
 {
-    static String stockLabel = String::fromUTF8("Italic");
-    return stockLabel;
+    return String::fromUTF8("Italic");
 }
 
 String contextMenuItemTagUnderline()
 {
-    static String stockLabel = String::fromUTF8("Underline");
-    return stockLabel;
+    return String::fromUTF8("Underline");
 }
 
 String contextMenuItemTagOutline()
@@ -331,27 +320,27 @@ String contextMenuItemTagInspectElement()
 
 String contextMenuItemTagRightToLeft()
 {
-    return String();
+    return String::fromUTF8("Right to Left");
 }
 
 String contextMenuItemTagLeftToRight()
 {
-    return String();
+    return String::fromUTF8("Left to Right");
 }
 
 String contextMenuItemTagWritingDirectionMenu()
 {
-    return String();
+    return String::fromUTF8("Writing Direction");
 }
 
 String contextMenuItemTagTextDirectionMenu()
 {
-    return String();
+    return String::fromUTF8("Text Direction");
 }
 
 String contextMenuItemTagDefaultDirection()
 {
-    return String();
+    return String::fromUTF8("Default");
 }
 
 String searchMenuNoRecentSearchesText()
@@ -369,14 +358,24 @@ String searchMenuClearRecentSearchesText()
     return String::fromUTF8("Clear recent searches");
 }
 
-String AXDefinitionListTermText()
+String AXDefinitionText()
+{
+    return String::fromUTF8("definition");
+}
+
+String AXDescriptionListText()
+{
+    return String::fromUTF8("description list");
+}
+
+String AXDescriptionListTermText()
 {
     return String::fromUTF8("term");
 }
 
-String AXDefinitionListDefinitionText()
+String AXDescriptionListDetailText()
 {
-    return String::fromUTF8("definition");
+    return String::fromUTF8("description");
 }
 
 String AXFooterRoleDescriptionText()
@@ -419,26 +418,26 @@ String unknownFileSizeText()
     return String::fromUTF8("Unknown");
 }
 
-String imageTitle(const String& filename, const IntSize& size)
+String imageTitle(const String&, const IntSize&)
 {
     notImplemented();
     return String();
 }
 
 #if ENABLE(VIDEO)
-String localizedMediaControlElementString(const String& name)
+String localizedMediaControlElementString(const String&)
 {
     notImplemented();
     return String();
 }
 
-String localizedMediaControlElementHelpText(const String& name)
+String localizedMediaControlElementHelpText(const String&)
 {
     notImplemented();
     return String();
 }
 
-String localizedMediaTimeDescription(float time)
+String localizedMediaTimeDescription(float)
 {
     notImplemented();
     return String();
@@ -460,14 +459,14 @@ String validationMessagePatternMismatchText()
     return String::fromUTF8("pattern mismatch");
 }
 
-String validationMessageRangeOverflowText(const String&)
+String validationMessageRangeOverflowText(const String& maximum)
 {
-    return String::fromUTF8("range overflow");
+    return ASCIILiteral("Value must be less than or equal to ") + maximum;
 }
 
-String validationMessageRangeUnderflowText(const String&)
+String validationMessageRangeUnderflowText(const String& minimum)
 {
-    return String::fromUTF8("range underflow");
+    return ASCIILiteral("Value must be greater than or equal to ") + minimum;
 }
 
 String validationMessageStepMismatchText(const String&, const String&)
@@ -487,17 +486,17 @@ String validationMessageTypeMismatchText()
 
 String validationMessageTypeMismatchForEmailText()
 {
-    return String::fromUTF8("type mismatch");
+    return ASCIILiteral("Please enter an email address");
 }
 
 String validationMessageTypeMismatchForMultipleEmailText()
 {
-    return String::fromUTF8("type mismatch");
+    return ASCIILiteral("Please enter an email address");
 }
 
 String validationMessageTypeMismatchForURLText()
 {
-    return String::fromUTF8("type mismatch");
+    return ASCIILiteral("Please enter a URL");
 }
 
 String validationMessageValueMissingText()
@@ -535,6 +534,12 @@ String validationMessageValueMissingForSelectText()
     return validationMessageValueMissingText();
 }
 
+String validationMessageBadInputForNumberText()
+{
+    notImplemented();
+    return validationMessageTypeMismatchText();
+}
+
 String missingPluginText()
 {
     return String::fromUTF8("missing plugin");
@@ -560,15 +565,65 @@ String crashedPluginText()
     return String::fromUTF8("plugin crashed");
 }
 
+String blockedPluginByContentSecurityPolicyText()
+{
+    notImplemented();
+    return String();
+}
+
 String insecurePluginVersionText()
 {
     notImplemented();
     return String();
 }
 
+String inactivePluginText()
+{
+    notImplemented();
+    return String();
+}
+
+String unacceptableTLSCertificate()
+{
+    return String::fromUTF8("Unacceptable TLS certificate");
+}
+
 String localizedString(const char* key)
 {
     return String::fromUTF8(key, strlen(key));
 }
+
+#if ENABLE(VIDEO_TRACK)
+String textTrackClosedCaptionsText()
+{
+    return String::fromUTF8("Closed Captions");
+}
+
+String textTrackSubtitlesText()
+{
+    return String::fromUTF8("Subtitles");
+}
+
+String textTrackOffText()
+{
+    return String::fromUTF8("Off");
+}
+
+String textTrackNoLabelText()
+{
+    return String::fromUTF8("No label");
+}
+#endif
+
+String snapshottedPlugInLabelTitle()
+{
+    return String("Snapshotted Plug-In");
+}
+
+String snapshottedPlugInLabelSubtitle()
+{
+    return String("Click to restart");
+}
+
 
 }

@@ -32,18 +32,13 @@
 
 #include "FloatSize.h"
 #include "Glyph.h"
-#include <wtf/UnusedParam.h>
 #include <wtf/Vector.h>
 
 #if USE(CG)
 #include <CoreGraphics/CGGeometry.h>
 #endif
 
-#if OS(DARWIN) && (PLATFORM(WX) || PLATFORM(CHROMIUM))
-#include <ApplicationServices/ApplicationServices.h>
-#endif
-
-#if USE(CAIRO) || (PLATFORM(WX) && defined(wxUSE_CAIRO) && wxUSE_CAIRO)
+#if USE(CAIRO)
 #include <cairo.h>
 #endif
 
@@ -51,25 +46,48 @@ namespace WebCore {
 
 class SimpleFontData;
 
-#if USE(CAIRO) || (PLATFORM(WX) && defined(wxUSE_CAIRO) && wxUSE_CAIRO)
+#if USE(CAIRO)
 // FIXME: Why does Cairo use such a huge struct instead of just an offset into an array?
 typedef cairo_glyph_t GlyphBufferGlyph;
 #elif PLATFORM(JAVA)
 typedef jint GlyphBufferGlyph;
 #elif OS(WINCE)
 typedef wchar_t GlyphBufferGlyph;
+#elif PLATFORM(QT)
+typedef quint32 GlyphBufferGlyph;
+#elif PLATFORM(BLACKBERRY)
+typedef unsigned GlyphBufferGlyph;
 #else
 typedef Glyph GlyphBufferGlyph;
 #endif
 
 // CG uses CGSize instead of FloatSize so that the result of advances()
 // can be passed directly to CGContextShowGlyphsWithAdvances in FontMac.mm
-#if USE(CG) || (OS(DARWIN) && (PLATFORM(WX) || PLATFORM(CHROMIUM)))
-typedef CGSize GlyphBufferAdvance;
-#elif OS(WINCE)
-// There is no cross-platform code that uses the height of GlyphBufferAdvance,
-// so we can save memory space on embedded devices by storing only the width
-typedef float GlyphBufferAdvance;
+#if USE(CG)
+struct GlyphBufferAdvance : CGSize {
+public:
+    GlyphBufferAdvance() : CGSize(CGSizeZero) { }
+    GlyphBufferAdvance(CGSize size) : CGSize(size)
+    {
+    }
+
+    void setWidth(CGFloat width) { this->CGSize::width = width; }
+    CGFloat width() const { return this->CGSize::width; }
+    CGFloat height() const { return this->CGSize::height; }
+};
+#elif PLATFORM(QT)
+struct GlyphBufferAdvance : public QPointF {
+public:
+    GlyphBufferAdvance() : QPointF() { }
+    GlyphBufferAdvance(const QPointF& advance)
+        : QPointF(advance)
+    {
+    }
+
+    void setWidth(qreal width) { QPointF::setX(width); }
+    qreal width() const { return QPointF::x(); }
+    qreal height() const { return QPointF::y(); }
+};
 #else
 typedef FloatSize GlyphBufferAdvance;
 #endif
@@ -96,6 +114,94 @@ public:
 
     const SimpleFontData* fontDataAt(int index) const { return m_fontData[index]; }
     
+    void setInitialAdvance(GlyphBufferAdvance initialAdvance) { m_initialAdvance = initialAdvance; }
+    const GlyphBufferAdvance& initialAdvance() const { return m_initialAdvance; }
+    
+    Glyph glyphAt(int index) const
+    {
+#if USE(CAIRO)
+        return m_glyphs[index].index;
+#else
+        return m_glyphs[index];
+#endif
+    }
+
+    GlyphBufferAdvance advanceAt(int index) const
+    {
+        return m_advances[index];
+    }
+
+    FloatSize offsetAt(int index) const
+    {
+#if PLATFORM(WIN)
+        return m_offsets[index];
+#else
+        UNUSED_PARAM(index);
+        return FloatSize();
+#endif
+    }
+
+    void add(Glyph glyph, const SimpleFontData* font, float width, const FloatSize* offset = 0)
+    {
+        m_fontData.append(font);
+
+#if USE(CAIRO)
+        cairo_glyph_t cairoGlyph;
+        cairoGlyph.index = glyph;
+        m_glyphs.append(cairoGlyph);
+#else
+        m_glyphs.append(glyph);
+#endif
+
+#if USE(CG)
+        CGSize advance = { width, 0 };
+        m_advances.append(advance);
+#elif PLATFORM(QT)
+        m_advances.append(QPointF(width, 0));
+#else
+        m_advances.append(FloatSize(width, 0));
+#endif
+
+#if PLATFORM(WIN)
+        if (offset)
+            m_offsets.append(*offset);
+        else
+            m_offsets.append(FloatSize());
+#else
+        UNUSED_PARAM(offset);
+#endif
+    }
+    
+#if !OS(WINCE)
+    void add(Glyph glyph, const SimpleFontData* font, GlyphBufferAdvance advance)
+    {
+        m_fontData.append(font);
+#if USE(CAIRO)
+        cairo_glyph_t cairoGlyph;
+        cairoGlyph.index = glyph;
+        m_glyphs.append(cairoGlyph);
+#else
+        m_glyphs.append(glyph);
+#endif
+
+        m_advances.append(advance);
+    }
+#endif
+
+    void reverse(int from, int length)
+    {
+        for (int i = from, end = from + length - 1; i < end; ++i, --end)
+            swap(i, end);
+    }
+
+    void expandLastAdvance(float width)
+    {
+        ASSERT(!isEmpty());
+        GlyphBufferAdvance& lastAdvance = m_advances.last();
+        lastAdvance.setWidth(lastAdvance.width() + width);
+    }
+
+private:
     void swap(int index1, int index2)
     {
         const SimpleFontData* f = m_fontData[index1];
@@ -117,100 +223,10 @@ public:
 #endif
     }
 
-    Glyph glyphAt(int index) const
-    {
-#if USE(CAIRO) || (PLATFORM(WX) && defined(wxUSE_CAIRO) && wxUSE_CAIRO)
-        return m_glyphs[index].index;
-#else
-        return m_glyphs[index];
-#endif
-    }
-
-    float advanceAt(int index) const
-    {
-#if USE(CG) || (OS(DARWIN) && (PLATFORM(WX) || PLATFORM(CHROMIUM)))
-        return m_advances[index].width;
-#elif OS(WINCE)
-        return m_advances[index];
-#else
-        return m_advances[index].width();
-#endif
-    }
-
-    FloatSize offsetAt(int index) const
-    {
-#if PLATFORM(WIN)
-        return m_offsets[index];
-#else
-        UNUSED_PARAM(index);
-        return FloatSize();
-#endif
-    }
-
-    void add(Glyph glyph, const SimpleFontData* font, float width, const FloatSize* offset = 0)
-    {
-        m_fontData.append(font);
-
-#if USE(CAIRO) || (PLATFORM(WX) && defined(wxUSE_CAIRO) && wxUSE_CAIRO)
-        cairo_glyph_t cairoGlyph;
-        cairoGlyph.index = glyph;
-        m_glyphs.append(cairoGlyph);
-#else
-        m_glyphs.append(glyph);
-#endif
-
-#if USE(CG) || (OS(DARWIN) && (PLATFORM(WX) || PLATFORM(CHROMIUM)))
-        CGSize advance = { width, 0 };
-        m_advances.append(advance);
-#elif OS(WINCE)
-        m_advances.append(width);
-#else
-        m_advances.append(FloatSize(width, 0));
-#endif
-
-#if PLATFORM(WIN)
-        if (offset)
-            m_offsets.append(*offset);
-        else
-            m_offsets.append(FloatSize());
-#else
-        UNUSED_PARAM(offset);
-#endif
-    }
-    
-#if !OS(WINCE)
-    void add(Glyph glyph, const SimpleFontData* font, GlyphBufferAdvance advance)
-    {
-        m_fontData.append(font);
-#if USE(CAIRO) || (PLATFORM(WX) && defined(wxUSE_CAIRO) && wxUSE_CAIRO)
-        cairo_glyph_t cairoGlyph;
-        cairoGlyph.index = glyph;
-        m_glyphs.append(cairoGlyph);
-#else
-        m_glyphs.append(glyph);
-#endif
-
-        m_advances.append(advance);
-    }
-#endif
-
-    void expandLastAdvance(float width)
-    {
-        ASSERT(!isEmpty());
-        GlyphBufferAdvance& lastAdvance = m_advances.last();
-#if USE(CG) || (OS(DARWIN) && (PLATFORM(WX) || PLATFORM(CHROMIUM)))
-        lastAdvance.width += width;
-#elif OS(WINCE)
-        lastAdvance += width;
-#else
-        lastAdvance += FloatSize(width, 0);
-#endif
-    }
-
-private:
     Vector<const SimpleFontData*, 2048> m_fontData;
     Vector<GlyphBufferGlyph, 2048> m_glyphs;
     Vector<GlyphBufferAdvance, 2048> m_advances;
+    GlyphBufferAdvance m_initialAdvance;
 #if PLATFORM(WIN)
     Vector<FloatSize, 2048> m_offsets;
 #endif

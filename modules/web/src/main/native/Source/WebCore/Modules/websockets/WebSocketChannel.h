@@ -72,7 +72,7 @@ public:
     virtual String subprotocol() OVERRIDE;
     virtual String extensions() OVERRIDE;
     virtual ThreadableWebSocketChannel::SendResult send(const String& message) OVERRIDE;
-    virtual ThreadableWebSocketChannel::SendResult send(const ArrayBuffer&) OVERRIDE;
+    virtual ThreadableWebSocketChannel::SendResult send(const ArrayBuffer&, unsigned byteOffset, unsigned byteLength) OVERRIDE;
     virtual ThreadableWebSocketChannel::SendResult send(const Blob&) OVERRIDE;
     virtual unsigned long bufferedAmount() const OVERRIDE;
     virtual void close(int code, const String& reason) OVERRIDE; // Start closing handshake.
@@ -195,8 +195,7 @@ private:
     WebSocketChannelClient* m_client;
     OwnPtr<WebSocketHandshake> m_handshake;
     RefPtr<SocketStreamHandle> m_handle;
-    char* m_buffer;
-    size_t m_bufferSize;
+    Vector<char> m_buffer;
 
     Timer<WebSocketChannel> m_resumeTimer;
     bool m_suspended;

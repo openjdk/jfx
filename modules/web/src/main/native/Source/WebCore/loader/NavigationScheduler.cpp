@@ -45,7 +45,9 @@
 #include "HTMLFormElement.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HistoryItem.h"
+#include "InspectorInstrumentation.h"
 #include "Page.h"
+#include "ScriptController.h"
 #include "UserGestureIndicator.h"
 #include <wtf/CurrentTime.h>
 
@@ -105,7 +107,7 @@ protected:
 
     virtual void fire(Frame* frame)
     {
-        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingUserGesture : DefinitelyNotProcessingUserGesture);
+        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingNewUserGesture : DefinitelyNotProcessingUserGesture);
         frame->loader()->changeLocation(m_securityOrigin.get(), KURL(ParsedURLString, m_url), m_referrer, lockHistory(), lockBackForwardList(), false);
     }
 
@@ -115,7 +117,7 @@ protected:
             return;
         m_haveToldClient = true;
 
-        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingUserGesture : DefinitelyNotProcessingUserGesture);
+        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingNewUserGesture : DefinitelyNotProcessingUserGesture);
         frame->loader()->clientRedirected(KURL(ParsedURLString, m_url), delay(), currentTime() + timer->nextFireInterval(), lockBackForwardList());
     }
 
@@ -156,7 +158,7 @@ public:
 
     virtual void fire(Frame* frame)
     {
-        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingUserGesture : DefinitelyNotProcessingUserGesture);
+        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingNewUserGesture : DefinitelyNotProcessingUserGesture);
         bool refresh = equalIgnoringFragmentIdentifier(frame->document()->url(), KURL(ParsedURLString, url()));
         frame->loader()->changeLocation(securityOrigin(), KURL(ParsedURLString, url()), referrer(), lockHistory(), lockBackForwardList(), refresh);
     }
@@ -177,7 +179,7 @@ public:
 
     virtual void fire(Frame* frame)
     {
-        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingUserGesture : DefinitelyNotProcessingUserGesture);
+        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingNewUserGesture : DefinitelyNotProcessingUserGesture);
         frame->loader()->changeLocation(securityOrigin(), KURL(ParsedURLString, url()), referrer(), lockHistory(), lockBackForwardList(), true);
     }
 };
@@ -192,7 +194,7 @@ public:
 
     virtual void fire(Frame* frame)
     {
-        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingUserGesture : DefinitelyNotProcessingUserGesture);
+        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingNewUserGesture : DefinitelyNotProcessingUserGesture);
 
         if (!m_historySteps) {
             // Special case for go(0) from a frame -> reload only the frame
@@ -221,7 +223,7 @@ public:
 
     virtual void fire(Frame* frame)
     {
-        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingUserGesture : DefinitelyNotProcessingUserGesture);
+        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingNewUserGesture : DefinitelyNotProcessingUserGesture);
 
         // The submitForm function will find a target frame before using the redirection timer.
         // Now that the timer has fired, we need to repeat the security check which normally is done when
@@ -241,7 +243,7 @@ public:
             return;
         m_haveToldClient = true;
 
-        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingUserGesture : DefinitelyNotProcessingUserGesture);
+        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingNewUserGesture : DefinitelyNotProcessingUserGesture);
         frame->loader()->clientRedirected(m_submission->requestURL(), delay(), currentTime() + timer->nextFireInterval(), lockBackForwardList());
     }
 
@@ -286,6 +288,8 @@ bool NavigationScheduler::locationChangePending()
 
 void NavigationScheduler::clear()
 {
+    if (m_timer.isActive())
+        InspectorInstrumentation::frameClearedScheduledNavigation(m_frame);
     m_timer.stop();
     m_redirect.clear();
 }
@@ -411,11 +415,16 @@ void NavigationScheduler::timerFired(Timer<NavigationScheduler>*)
 {
     if (!m_frame->page())
         return;
-    if (m_frame->page()->defersLoading())
+    if (m_frame->page()->defersLoading()) {
+        InspectorInstrumentation::frameClearedScheduledNavigation(m_frame);
         return;
+    }
+
+    RefPtr<Frame> protect(m_frame);
 
     OwnPtr<ScheduledNavigation> redirect(m_redirect.release());
     redirect->fire(m_frame);
+    InspectorInstrumentation::frameClearedScheduledNavigation(m_frame);
 }
 
 void NavigationScheduler::schedule(PassOwnPtr<ScheduledNavigation> redirect)
@@ -458,10 +467,13 @@ void NavigationScheduler::startTimer()
 
     m_timer.startOneShot(m_redirect->delay());
     m_redirect->didStartTimer(m_frame, &m_timer);
+    InspectorInstrumentation::frameScheduledNavigation(m_frame, m_redirect->delay());
 }
 
 void NavigationScheduler::cancel(bool newLoadInProgress)
 {
+    if (m_timer.isActive())
+        InspectorInstrumentation::frameClearedScheduledNavigation(m_frame);
     m_timer.stop();
 
     OwnPtr<ScheduledNavigation> redirect(m_redirect.release());

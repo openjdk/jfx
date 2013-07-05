@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-class SVGSwitchElement : public SVGStyledTransformableElement,
+class SVGSwitchElement FINAL : public SVGStyledTransformableElement,
                          public SVGTests,
                          public SVGLangSpace,
                          public SVGExternalResourcesRequired {
@@ -41,7 +41,7 @@ private:
     SVGSwitchElement(const QualifiedName&, Document*);
     
     virtual bool isValid() const { return SVGTests::isValid(); }
-    virtual bool supportsFocus() const { return true; }
+    virtual bool supportsFocus() const OVERRIDE { return true; }
 
     virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const;
 

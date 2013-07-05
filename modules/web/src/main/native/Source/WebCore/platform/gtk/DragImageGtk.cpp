@@ -19,10 +19,10 @@
 #include "config.h"
 #include "DragImage.h"
 
-#include "CachedImage.h"
 #include "Image.h"
 #include "RefPtrCairo.h"
 #include <cairo.h>
+#include <gdk/gdk.h>
 
 namespace WebCore {
 
@@ -66,6 +66,9 @@ DragImageRef dissolveDragImageToFraction(DragImageRef image, float fraction)
     if (!image)
         return 0;
 
+    if (!gdk_screen_is_composited(gdk_screen_get_default()))
+        return image;
+
     RefPtr<cairo_t> context = adoptRef(cairo_create(image));
     cairo_set_operator(context.get(), CAIRO_OPERATOR_DEST_IN);
     cairo_set_source_rgba(context.get(), 0, 0, 0, fraction);
@@ -75,11 +78,10 @@ DragImageRef dissolveDragImageToFraction(DragImageRef image, float fraction)
 
 DragImageRef createDragImageFromImage(Image* image, RespectImageOrientationEnum)
 {
-    NativeImageCairo* nativeImage = image->nativeImageForCurrentFrame();
-    return nativeImage ? cairo_surface_reference(nativeImage->surface()) : 0;
+    return image->nativeImageForCurrentFrame().leakRef();
 }
 
-DragImageRef createDragImageIconForCachedImage(CachedImage*)
+DragImageRef createDragImageIconForCachedImageFilename(const String&)
 {
     return 0;
 }

@@ -24,7 +24,7 @@
 #define HTMLAreaElement_h
 
 #include "HTMLAnchorElement.h"
-#include "LayoutTypes.h"
+#include "LayoutRect.h"
 #include <wtf/OwnArrayPtr.h>
 
 namespace WebCore {
@@ -33,7 +33,7 @@ class HitTestResult;
 class HTMLImageElement;
 class Path;
 
-class HTMLAreaElement : public HTMLAnchorElement {
+class HTMLAreaElement FINAL : public HTMLAnchorElement {
 public:
     static PassRefPtr<HTMLAreaElement> create(const QualifiedName&, Document*);
 
@@ -50,14 +50,14 @@ public:
 private:
     HTMLAreaElement(const QualifiedName&, Document*);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
-    virtual bool supportsFocus() const;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual bool supportsFocus() const OVERRIDE;
     virtual String target() const;
-    virtual bool isKeyboardFocusable(KeyboardEvent*) const;
-    virtual bool isMouseFocusable() const;
-    virtual bool isFocusable() const;
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
+    virtual bool isMouseFocusable() const OVERRIDE;
+    virtual bool isFocusable() const OVERRIDE;
     virtual void updateFocusAppearance(bool /*restorePreviousSelection*/);
-    virtual void setFocus(bool);
+    virtual void setFocus(bool) OVERRIDE;
 
 #if ENABLE(MICRODATA)
     virtual String itemValueText() const OVERRIDE;

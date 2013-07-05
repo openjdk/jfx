@@ -22,35 +22,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module core {
-
-    interface [
+[
         Conditional=MEDIA_STREAM,
         EventTarget,
-        Constructor(in MediaStreamTrackList audioTracks, in MediaStreamTrackList videoTracks),
+    Constructor,
+    Constructor(MediaStream stream),
+    Constructor(MediaStreamTrack[] tracks),
         CallWith=ScriptExecutionContext,
-        ConstructorRaisesException
-   ] MediaStream {
+    SkipVTableValidation,
+    InterfaceName=webkitMediaStream
+] interface MediaStream {
+    // DEPRECATED
         readonly attribute DOMString label;
-        readonly attribute MediaStreamTrackList audioTracks;
-        readonly attribute MediaStreamTrackList videoTracks;
 
-        // FIXME: implement the record method when MediaStreamRecorder is available.
+    readonly attribute DOMString id;
 
-        const unsigned short LIVE = 1;
-        const unsigned short ENDED = 2;
-        readonly attribute unsigned short readyState;
+    sequence<MediaStreamTrack> getAudioTracks();
+    sequence<MediaStreamTrack> getVideoTracks();
+
+    void addTrack(MediaStreamTrack track)
+        raises(DOMException);
+    void removeTrack(MediaStreamTrack track)
+        raises(DOMException);
+    MediaStreamTrack getTrackById(DOMString trackId);
+
+    readonly attribute boolean ended;
+
                  attribute EventListener onended;
+    attribute EventListener onaddtrack;
+    attribute EventListener onremovetrack;
 
         // EventTarget interface
-        void addEventListener(in DOMString type,
-                              in EventListener listener,
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type,
-                                 in EventListener listener,
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event event)
+    void addEventListener(DOMString type,
+                          EventListener listener,
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type,
+                             EventListener listener,
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event event)
             raises(EventException);
     };
 
-}

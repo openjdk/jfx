@@ -31,12 +31,14 @@
 # which are called with the following format:
 # tool-name [global options] command-name [command options]
 
+import logging
 import sys
 
 from optparse import OptionParser, IndentedHelpFormatter, SUPPRESS_USAGE, make_option
 
 from webkitpy.tool.grammar import pluralize
-from webkitpy.common.system.deprecated_logging import log
+
+_log = logging.getLogger(__name__)
 
 
 class TryAgain(Exception):
@@ -46,11 +48,12 @@ class TryAgain(Exception):
 class Command(object):
     name = None
     show_in_main_help = False
-    def __init__(self, help_text, argument_names=None, options=None, long_help=None, requires_local_commits=False):
-        self.help_text = help_text
-        self.long_help = long_help
-        self.argument_names = argument_names
-        self.required_arguments = self._parse_required_arguments(argument_names)
+    help_text = None
+    long_help = None
+    argument_names = None
+
+    def __init__(self, options=None, requires_local_commits=False):
+        self.required_arguments = self._parse_required_arguments(self.argument_names)
         self.options = options
         self.requires_local_commits = requires_local_commits
         self._tool = None
@@ -109,7 +112,7 @@ class Command(object):
 
     def check_arguments_and_execute(self, options, args, tool=None):
         if len(args) < len(self.required_arguments):
-            log("%s required, %s provided.  Provided: %s  Required: %s\nSee '%s help %s' for usage." % (
+            _log.error("%s required, %s provided.  Provided: %s  Required: %s\nSee '%s help %s' for usage." % (
                 pluralize("argument", len(self.required_arguments)),
                 pluralize("argument", len(args)),
                 "'%s'" % " ".join(args),
@@ -137,15 +140,6 @@ class Command(object):
         return self.check_arguments_and_execute(options, args)
 
 
-# FIXME: This should just be rolled into Command.  help_text and argument_names do not need to be instance variables.
-class AbstractDeclarativeCommand(Command):
-    help_text = None
-    argument_names = None
-    long_help = None
-    def __init__(self, options=None, **kwargs):
-        Command.__init__(self, self.help_text, self.argument_names, options=options, long_help=self.long_help, **kwargs)
-
-
 class HelpPrintingOptionParser(OptionParser):
     def __init__(self, epilog_method=None, *args, **kwargs):
         self.epilog_method = epilog_method
@@ -166,7 +160,7 @@ class HelpPrintingOptionParser(OptionParser):
         return ""
 
 
-class HelpCommand(AbstractDeclarativeCommand):
+class HelpCommand(Command):
     name = "help"
     help_text = "Display information about this program or its subcommands"
     argument_names = "[COMMAND]"
@@ -175,7 +169,7 @@ class HelpCommand(AbstractDeclarativeCommand):
         options = [
             make_option("-a", "--all-commands", action="store_true", dest="show_all_commands", help="Print all available commands"),
         ]
-        AbstractDeclarativeCommand.__init__(self, options)
+        Command.__init__(self, options)
         self.show_all_commands = False # A hack used to pass --all-commands to _help_epilog even though it's called by the OptionParser.
 
     def _help_epilog(self):
@@ -303,7 +297,7 @@ class MultiCommandTool(object):
 
         (should_execute, failure_reason) = self.should_execute_command(command)
         if not should_execute:
-            log(failure_reason)
+            _log.error(failure_reason)
             return 0 # FIXME: Should this really be 0?
 
         while True:

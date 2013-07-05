@@ -44,6 +44,10 @@ NetworkInfoController::NetworkInfoController(Page* page, NetworkInfoClient* clie
 
 NetworkInfoController::~NetworkInfoController()
 {
+    for (NetworkInfoListenerList::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
+        (*it)->networkInfoControllerDestroyed();
+
+    m_client->networkInfoControllerDestroyed();
 }
 
 PassOwnPtr<NetworkInfoController> NetworkInfoController::create(Page* page, NetworkInfoClient* client)
@@ -75,10 +79,9 @@ void NetworkInfoController::didChangeNetworkInformation(const AtomicString& even
          (*it)->didChangeNetworkInformation(event, networkInformation);
 }
 
-const AtomicString& NetworkInfoController::supplementName()
+const char* NetworkInfoController::supplementName()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("NetworkInfoController"));
-    return name;
+    return "NetworkInfoController";
 }
 
 void provideNetworkInfoTo(Page* page, NetworkInfoClient* client)

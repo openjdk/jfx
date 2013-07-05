@@ -61,10 +61,11 @@ Node* highestEnclosingNodeOfType(const Position&, bool (*nodeIsOfType)(const Nod
 Node* highestNodeToRemoveInPruning(Node*);
 Node* lowestEditableAncestor(Node*);
 
+Element* deprecatedEnclosingBlockFlowElement(Node*); // Use enclosingBlock instead.
 Element* enclosingBlock(Node*, EditingBoundaryCrossingRule = CannotCrossEditingBoundary);
 Node* enclosingTableCell(const Position&);
 Node* enclosingEmptyListItem(const VisiblePosition&);
-Node* enclosingAnchorElement(const Position&);
+Element* enclosingAnchorElement(const Position&);
 Node* enclosingNodeWithTag(const Position&, const QualifiedName&);
 Node* enclosingNodeOfType(const Position&, bool (*nodeIsOfType)(const Node*), EditingBoundaryCrossingRule = CannotCrossEditingBoundary);
 
@@ -97,6 +98,7 @@ inline bool canHaveChildrenForEditing(const Node* node)
 
 bool isAtomicNode(const Node*);
 bool isBlock(const Node*);
+bool isBlockFlowElement(const Node*);
 bool isInline(const Node*);
 bool isSpecialElement(const Node*);
 bool isTabSpanNode(const Node*);
@@ -107,12 +109,13 @@ bool isTableCell(const Node*);
 bool isEmptyTableCell(const Node*);
 bool isTableStructureNode(const Node*);
 bool isListElement(Node*);
-bool isListItem(Node*);
+bool isListItem(const Node*);
 bool isNodeRendered(const Node*);
 bool isNodeVisiblyContainedWithin(Node*, const Range*);
 bool isRenderedAsNonInlineTableImageOrHR(const Node*);
 bool areIdenticalElements(const Node*, const Node*);
 bool isNonTableCellHTMLBlockElement(const Node*);
+
 TextDirection directionOfEnclosingBlock(const Position&);
 
 // -------------------------------------------------------------------------
@@ -192,7 +195,6 @@ VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope);
 
 PassRefPtr<Range> createRange(PassRefPtr<Document>, const VisiblePosition& start, const VisiblePosition& end, ExceptionCode&);
 PassRefPtr<Range> extendRangeToWrappingNodes(PassRefPtr<Range> rangeToExtend, const Range* maximumRange, const Node* rootNode);
-PassRefPtr<Range> avoidIntersectionWithNode(const Range*, Node*);
 
 // -------------------------------------------------------------------------
 // HTMLElement
@@ -235,7 +237,6 @@ bool canMergeLists(Element* firstList, Element* secondList);
 // -------------------------------------------------------------------------
 
 // Functions returning VisibleSelection
-VisibleSelection avoidIntersectionWithNode(const VisibleSelection&, Node*);
 VisibleSelection selectionForParagraphIteration(const VisibleSelection&);
 
 Position adjustedSelectionStartForStyleComputation(const VisibleSelection&);

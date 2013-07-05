@@ -24,15 +24,11 @@
  *
  */
 
-module threads {
-
-    interface [
+[
         Conditional=NOTIFICATIONS|LEGACY_NOTIFICATIONS,
-        Supplemental=WorkerContext
-    ] WorkerContextNotifications {
+] partial interface WorkerContext {
 #if defined(ENABLE_LEGACY_NOTIFICATIONS) && ENABLE_LEGACY_NOTIFICATIONS
-        readonly attribute [V8EnabledAtRuntime] NotificationCenter webkitNotifications;
+    readonly attribute NotificationCenter webkitNotifications;
 #endif
     };
 
-}

@@ -34,8 +34,8 @@
 #include "Blob.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
-#include "PlatformString.h"
 #include "TextEncoding.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -52,7 +52,7 @@ DOMFormData::DOMFormData(HTMLFormElement* form)
 
     for (unsigned i = 0; i < form->associatedElements().size(); ++i) {
         FormAssociatedElement* element = form->associatedElements()[i];
-        if (!toHTMLElement(element)->disabled())
+        if (!toHTMLElement(element)->isDisabledFormControl())
             element->appendFormData(*this, true);
     }
 }

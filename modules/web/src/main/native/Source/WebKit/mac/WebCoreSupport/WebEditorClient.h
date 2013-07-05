@@ -53,7 +53,6 @@ public:
     virtual bool isSelectTrailingWhitespaceEnabled() OVERRIDE;
 
     virtual bool shouldDeleteRange(WebCore::Range*) OVERRIDE;
-    virtual bool shouldShowDeleteInterface(WebCore::HTMLElement*) OVERRIDE;
 
     virtual bool shouldBeginEditing(WebCore::Range*) OVERRIDE;
     virtual bool shouldEndEditing(WebCore::Range*) OVERRIDE;
@@ -67,7 +66,9 @@ public:
 
     virtual void didBeginEditing() OVERRIDE;
     virtual void didEndEditing() OVERRIDE;
+    virtual void willWriteSelectionToPasteboard(WebCore::Range*) OVERRIDE;
     virtual void didWriteSelectionToPasteboard() OVERRIDE;
+    virtual void getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData) OVERRIDE;
     virtual void didSetSelectionTypesForPasteboard() OVERRIDE;
 
     virtual NSString* userVisibleString(NSURL *) OVERRIDE;
@@ -96,6 +97,10 @@ public:
     virtual void toggleAutomaticTextReplacement() OVERRIDE;
     virtual bool isAutomaticSpellingCorrectionEnabled() OVERRIDE;
     virtual void toggleAutomaticSpellingCorrection() OVERRIDE;
+#endif
+
+#if ENABLE(DELETION_UI)
+    virtual bool shouldShowDeleteInterface(WebCore::HTMLElement*) OVERRIDE;
 #endif
 
     TextCheckerClient* textChecker() OVERRIDE { return this; }

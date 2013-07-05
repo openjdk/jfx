@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-class HTMLParagraphElement : public HTMLElement {
+class HTMLParagraphElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLParagraphElement> create(Document*);
     static PassRefPtr<HTMLParagraphElement> create(const QualifiedName&, Document*);
@@ -36,7 +36,7 @@ private:
     HTMLParagraphElement(const QualifiedName&, Document*);
 
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 };
 
 } // namespace WebCore

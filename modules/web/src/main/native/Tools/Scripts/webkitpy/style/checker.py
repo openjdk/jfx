@@ -39,6 +39,7 @@ from checkers.common import categories as CommonCategories
 from checkers.common import CarriageReturnChecker
 from checkers.changelog import ChangeLogChecker
 from checkers.cpp import CppChecker
+from checkers.cmake import CMakeChecker
 from checkers.jsonchecker import JSONChecker
 from checkers.png import PNGChecker
 from checkers.python import PythonChecker
@@ -96,7 +97,6 @@ _BASE_FILTER_RULES = [
     '-runtime/rtti',
     '-whitespace/blank_line',
     '-whitespace/end_of_line',
-    '-whitespace/labels',
     # List Python pep8 categories last.
     #
     # Because much of WebKit's Python code base does not abide by the
@@ -107,6 +107,9 @@ _BASE_FILTER_RULES = [
     #        with the 79 character limit, or some higher limit that is
     #        agreeable to the WebKit project.
     '-pep8/E501',
+
+    # FIXME: Move the pylint rules from the pylintrc to here. This will
+    # also require us to re-work lint-webkitpy to produce the equivalent output.
     ]
 
 
@@ -147,7 +150,8 @@ _PATH_RULES_SPECIFIER = [
 
     ([# The Qt APIs use Qt declaration style, it puts the * to
       # the variable name, not to the class.
-      "Source/WebKit/qt/Api/"],
+      "Source/WebKit/qt/Api/",
+      "Source/WebKit/qt/WidgetApi/"],
      ["-readability/naming",
       "-whitespace/declaration"]),
 
@@ -161,6 +165,11 @@ _PATH_RULES_SPECIFIER = [
       "Source/WebKit2/UIProcess/API/qt"],
      ["-readability/parameter_name"]),
 
+    ([# The GTK+ port uses the autotoolsconfig.h header in some C sources
+      # to serve the same purpose of config.h.
+      "Tools/GtkLauncher/main.c"],
+     ["-build/include_order"]),
+
     ([# The GTK+ APIs use GTK+ naming style, which includes
       # lower-cased, underscore-separated values, whitespace before
       # parens for function calls, and always having variable names.
@@ -171,15 +180,24 @@ _PATH_RULES_SPECIFIER = [
      ["-readability/naming",
       "-readability/parameter_name",
       "-readability/null",
+      "-readability/enum_casing",
       "-whitespace/parens"]),
+
+    ([# The GTK+ API use upper case, underscore separated, words in
+      # certain types of enums (e.g. signals, properties).
+      "Source/WebKit2/UIProcess/API/gtk",
+      "Source/WebKit2/WebProcess/InjectedBundle/API/gtk"],
+     ["-readability/enum_casing"]),
+
     ([# Header files in ForwardingHeaders have no header guards or
       # exceptional header guards (e.g., WebCore_FWD_Debugger_h).
       "/ForwardingHeaders/"],
      ["-build/header_guard"]),
     ([# assembler has lots of opcodes that use underscores, so
       # we don't check for underscores in that directory.
-      "/Source/JavaScriptCore/assembler/"],
-     ["-readability/naming"]),
+      "Source/JavaScriptCore/assembler/",
+      "Source/JavaScriptCore/jit/JIT"],
+     ["-readability/naming/underscores"]),
     ([# JITStubs has an usual syntax which causes false alarms for a few checks.
       "JavaScriptCore/jit/JITStubs.cpp"],
      ["-readability/parameter_name",
@@ -193,12 +211,13 @@ _PATH_RULES_SPECIFIER = [
      ["-readability/naming",
       "-readability/parameter_name"]),
     ([# EWebLauncher and MiniBrowser are EFL simple application.
-      # They need to use efl coding style.
+      # They need to use efl coding style and they don't have config.h.
       "Tools/EWebLauncher/",
       "Tools/MiniBrowser/efl/"],
      ["-readability/naming",
       "-readability/parameter_name",
-      "-whitespace/declaration"]),
+      "-whitespace/declaration",
+      "-build/include_order"]),
 
     # WebKit2 rules:
     # WebKit2 and certain directories have idiosyncracies.
@@ -208,18 +227,25 @@ _PATH_RULES_SPECIFIER = [
     ([# The WebKit2 C API has names with underscores and whitespace-aligned
       # struct members. Also, we allow unnecessary parameter names in
       # WebKit2 APIs because we're matching CF's header style.
+      # Additionally, we use word which starts with non-capital letter 'k'
+      # for types of enums.
       "Source/WebKit2/UIProcess/API/C/",
       "Source/WebKit2/Shared/API/c/",
       "Source/WebKit2/WebProcess/InjectedBundle/API/c/"],
-     ["-readability/naming",
+     ["-readability/enum_casing",
+      "-readability/naming",
       "-readability/parameter_name",
       "-whitespace/declaration"]),
     ([# These files define GObjects, which implies some definitions of
       # variables and functions containing underscores.
+      "Source/WebCore/platform/graphics/clutter/GraphicsLayerActor.cpp",
+      "Source/WebCore/platform/graphics/clutter/GraphicsLayerActor.h",
       "Source/WebCore/platform/graphics/gstreamer/VideoSinkGStreamer1.cpp",
       "Source/WebCore/platform/graphics/gstreamer/VideoSinkGStreamer.cpp",
       "Source/WebCore/platform/graphics/gstreamer/WebKitWebSourceGStreamer.cpp",
-      "Source/WebCore/platform/audio/gstreamer/WebKitWebAudioSourceGStreamer.cpp"],
+      "Source/WebCore/platform/audio/gstreamer/WebKitWebAudioSourceGStreamer.cpp",
+      "Source/WebCore/platform/network/soup/ProxyResolverSoup.cpp",
+      "Source/WebCore/platform/network/soup/ProxyResolverSoup.h"],
      ["-readability/naming"]),
 
     # For third-party Python code, keep only the following checks--
@@ -299,6 +325,8 @@ _XML_FILE_EXTENSIONS = [
 
 _PNG_FILE_EXTENSION = 'png'
 
+_CMAKE_FILE_EXTENSION = 'cmake'
+
 # Files to skip that are less obvious.
 #
 # Some files should be skipped when checking style. For example,
@@ -310,7 +338,9 @@ _SKIPPED_FILES_WITH_WARNING = [
     # except those ending in ...Private.h are GTK+ API headers,
     # which differ greatly from WebKit coding style.
     re.compile(r'Source/WebKit2/UIProcess/API/gtk/WebKit(?!.*Private\.h).*\.h$'),
-    'Source/WebKit2/UIProcess/API/gtk/webkit2.h']
+    re.compile(r'Source/WebKit2/WebProcess/InjectedBundle/API/gtk/WebKit(?!.*Private\.h).*\.h$'),
+    'Source/WebKit2/UIProcess/API/gtk/webkit2.h',
+    'Source/WebKit2/WebProcess/InjectedBundle/API/gtk/webkit-web-extension.h']
 
 # Files to skip that are more common or obvious.
 #
@@ -318,6 +348,9 @@ _SKIPPED_FILES_WITH_WARNING = [
 # with FileType.NONE are automatically skipped without warning.
 _SKIPPED_FILES_WITHOUT_WARNING = [
     "LayoutTests" + os.path.sep,
+    "Source/ThirdParty/leveldb" + os.path.sep,
+    # Prevents this being recognized as a text file.
+    "Source/WebCore/GNUmakefile.features.am.in",
     ]
 
 # Extensions of files which are allowed to contain carriage returns.
@@ -489,6 +522,7 @@ class FileType:
     WATCHLIST = 7
     XML = 8
     XCODEPROJ = 9
+    CMAKE = 10
 
 
 class CheckerDispatcher(object):
@@ -567,8 +601,10 @@ class CheckerDispatcher(object):
             return FileType.XCODEPROJ
         elif file_extension == _PNG_FILE_EXTENSION:
             return FileType.PNG
+        elif ((file_extension == _CMAKE_FILE_EXTENSION) or os.path.basename(file_path) == 'CMakeLists.txt'):
+            return FileType.CMAKE
         elif ((not file_extension and os.path.join("Tools", "Scripts") in file_path) or
-              file_extension in _TEXT_FILE_EXTENSIONS):
+              file_extension in _TEXT_FILE_EXTENSIONS or os.path.basename(file_path) == 'TestExpectations'):
             return FileType.TEXT
         else:
             return FileType.NONE
@@ -597,6 +633,8 @@ class CheckerDispatcher(object):
             checker = XcodeProjectFileChecker(file_path, handle_style_error)
         elif file_type == FileType.PNG:
             checker = PNGChecker(file_path, handle_style_error)
+        elif file_type == FileType.CMAKE:
+            checker = CMakeChecker(file_path, handle_style_error)
         elif file_type == FileType.TEXT:
             basename = os.path.basename(file_path)
             if basename == 'TestExpectations':

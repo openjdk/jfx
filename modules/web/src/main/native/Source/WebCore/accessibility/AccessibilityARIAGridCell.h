@@ -36,15 +36,15 @@ namespace WebCore {
 class AccessibilityARIAGridCell : public AccessibilityTableCell {
     
 private:
-    AccessibilityARIAGridCell(RenderObject*);
+    explicit AccessibilityARIAGridCell(RenderObject*);
 public:
     static PassRefPtr<AccessibilityARIAGridCell> create(RenderObject*);
     virtual ~AccessibilityARIAGridCell();
     
     // fills in the start location and row span of cell
-    virtual void rowIndexRange(pair<int, int>& rowRange);
+    virtual void rowIndexRange(pair<unsigned, unsigned>& rowRange);
     // fills in the start location and column span of cell
-    virtual void columnIndexRange(pair<int, int>& columnRange);
+    virtual void columnIndexRange(pair<unsigned, unsigned>& columnRange);
     
 protected:
     virtual AccessibilityObject* parentTable() const;

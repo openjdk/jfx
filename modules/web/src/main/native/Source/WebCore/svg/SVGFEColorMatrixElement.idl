@@ -23,12 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS,
         DoNotCheckConstants
-    ] SVGFEColorMatrixElement : SVGElement,
+] interface SVGFEColorMatrixElement : SVGStyledElement,
                                 SVGFilterPrimitiveStandardAttributes {
         // Color Matrix Types
         const unsigned short SVG_FECOLORMATRIX_TYPE_UNKNOWN          = 0;
@@ -42,4 +40,3 @@ module svg {
         readonly attribute SVGAnimatedNumberList  values;
     };
 
-}

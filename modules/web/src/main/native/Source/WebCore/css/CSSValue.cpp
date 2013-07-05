@@ -55,7 +55,10 @@
 #include "ShadowValue.h"
 #include "SVGColor.h"
 #include "SVGPaint.h"
+#include "WebKitCSSArrayFunctionValue.h"
 #include "WebKitCSSFilterValue.h"
+#include "WebKitCSSMatFunctionValue.h"
+#include "WebKitCSSMixFunctionValue.h"
 #include "WebKitCSSShaderValue.h"
 #include "WebKitCSSTransformValue.h"
 
@@ -119,6 +122,132 @@ void CSSValue::addSubresourceStyleURLs(ListHashSet<KURL>& urls, const StyleSheet
         static_cast<const CSSFontFaceSrcValue*>(this)->addSubresourceStyleURLs(urls, styleSheet);
     else if (classType() == ReflectClass)
         static_cast<const CSSReflectValue*>(this)->addSubresourceStyleURLs(urls, styleSheet);
+}
+
+bool CSSValue::hasFailedOrCanceledSubresources() const
+{
+    // This should get called for internal instances only.
+    ASSERT(!isCSSOMSafe());
+
+    if (isValueList())
+        return static_cast<const CSSValueList*>(this)->hasFailedOrCanceledSubresources();
+    if (classType() == FontFaceSrcClass)
+        return static_cast<const CSSFontFaceSrcValue*>(this)->hasFailedOrCanceledSubresources();
+    if (classType() == ImageClass)
+        return static_cast<const CSSImageValue*>(this)->hasFailedOrCanceledSubresources();
+    if (classType() == CrossfadeClass)
+        return static_cast<const CSSCrossfadeValue*>(this)->hasFailedOrCanceledSubresources();
+#if ENABLE(CSS_IMAGE_SET)
+    if (classType() == ImageSetClass)
+        return static_cast<const CSSImageSetValue*>(this)->hasFailedOrCanceledSubresources();
+#endif
+    return false;
+}
+
+template<class ChildClassType>
+inline static bool compareCSSValues(const CSSValue& first, const CSSValue& second)
+{
+    return static_cast<const ChildClassType&>(first).equals(static_cast<const ChildClassType&>(second));
+}
+
+bool CSSValue::equals(const CSSValue& other) const
+{
+    if (m_isTextClone) {
+        ASSERT(isCSSOMSafe());
+        return static_cast<const TextCloneCSSValue*>(this)->cssText() == other.cssText();
+    }
+
+    if (m_classType == other.m_classType) {
+        switch (m_classType) {
+        case AspectRatioClass:
+            return compareCSSValues<CSSAspectRatioValue>(*this, other);
+        case BorderImageSliceClass:
+            return compareCSSValues<CSSBorderImageSliceValue>(*this, other);
+        case CanvasClass:
+            return compareCSSValues<CSSCanvasValue>(*this, other);
+        case CursorImageClass:
+            return compareCSSValues<CSSCursorImageValue>(*this, other);
+        case FontClass:
+            return compareCSSValues<FontValue>(*this, other);
+        case FontFaceSrcClass:
+            return compareCSSValues<CSSFontFaceSrcValue>(*this, other);
+        case FontFeatureClass:
+            return compareCSSValues<FontFeatureValue>(*this, other);
+        case FunctionClass:
+            return compareCSSValues<CSSFunctionValue>(*this, other);
+        case LinearGradientClass:
+            return compareCSSValues<CSSLinearGradientValue>(*this, other);
+        case RadialGradientClass:
+            return compareCSSValues<CSSRadialGradientValue>(*this, other);
+        case CrossfadeClass:
+            return compareCSSValues<CSSCrossfadeValue>(*this, other);
+        case ImageClass:
+            return compareCSSValues<CSSImageValue>(*this, other);
+        case InheritedClass:
+            return compareCSSValues<CSSInheritedValue>(*this, other);
+        case InitialClass:
+            return compareCSSValues<CSSInitialValue>(*this, other);
+        case PrimitiveClass:
+            return compareCSSValues<CSSPrimitiveValue>(*this, other);
+        case ReflectClass:
+            return compareCSSValues<CSSReflectValue>(*this, other);
+        case ShadowClass:
+            return compareCSSValues<ShadowValue>(*this, other);
+        case LinearTimingFunctionClass:
+            return compareCSSValues<CSSLinearTimingFunctionValue>(*this, other);
+        case CubicBezierTimingFunctionClass:
+            return compareCSSValues<CSSCubicBezierTimingFunctionValue>(*this, other);
+        case StepsTimingFunctionClass:
+            return compareCSSValues<CSSStepsTimingFunctionValue>(*this, other);
+        case UnicodeRangeClass:
+            return compareCSSValues<CSSUnicodeRangeValue>(*this, other);
+        case ValueListClass:
+            return compareCSSValues<CSSValueList>(*this, other);
+        case WebKitCSSTransformClass:
+            return compareCSSValues<WebKitCSSTransformValue>(*this, other);
+        case LineBoxContainClass:
+            return compareCSSValues<CSSLineBoxContainValue>(*this, other);
+        case CalculationClass:
+            return compareCSSValues<CSSCalcValue>(*this, other);
+#if ENABLE(CSS_IMAGE_SET)
+        case ImageSetClass:
+            return compareCSSValues<CSSImageSetValue>(*this, other);
+#endif
+#if ENABLE(CSS_FILTERS)
+        case WebKitCSSFilterClass:
+            return compareCSSValues<WebKitCSSFilterValue>(*this, other);
+#if ENABLE(CSS_SHADERS)
+        case WebKitCSSArrayFunctionValueClass:
+            return compareCSSValues<WebKitCSSArrayFunctionValue>(*this, other);
+        case WebKitCSSMatFunctionValueClass:
+            return compareCSSValues<WebKitCSSMatFunctionValue>(*this, other);
+        case WebKitCSSMixFunctionValueClass:
+            return compareCSSValues<WebKitCSSMixFunctionValue>(*this, other);
+        case WebKitCSSShaderClass:
+            return compareCSSValues<WebKitCSSShaderValue>(*this, other);
+#endif
+#endif
+#if ENABLE(CSS_VARIABLES)
+        case VariableClass:
+            return compareCSSValues<CSSVariableValue>(*this, other);
+#endif
+#if ENABLE(SVG)
+        case SVGColorClass:
+            return compareCSSValues<SVGColor>(*this, other);
+        case SVGPaintClass:
+            return compareCSSValues<SVGPaint>(*this, other);
+        case WebKitCSSSVGDocumentClass:
+            return compareCSSValues<WebKitCSSSVGDocumentValue>(*this, other);
+#endif
+        default:
+            ASSERT_NOT_REACHED();
+            return false;
+        }
+    } else if (m_classType == ValueListClass && other.m_classType != ValueListClass)
+        return static_cast<const CSSValueList*>(this)->equals(other);
+    else if (m_classType != ValueListClass && other.m_classType == ValueListClass)
+        return static_cast<const CSSValueList&>(other).equals(*this);
+    return false;
 }
 
 String CSSValue::cssText() const
@@ -188,6 +317,12 @@ String CSSValue::cssText() const
     case WebKitCSSFilterClass:
         return static_cast<const WebKitCSSFilterValue*>(this)->customCssText();
 #if ENABLE(CSS_SHADERS)
+    case WebKitCSSArrayFunctionValueClass:
+        return static_cast<const WebKitCSSArrayFunctionValue*>(this)->customCssText();
+    case WebKitCSSMatFunctionValueClass:
+        return static_cast<const WebKitCSSMatFunctionValue*>(this)->customCssText();
+    case WebKitCSSMixFunctionValueClass:
+        return static_cast<const WebKitCSSMixFunctionValue*>(this)->customCssText();
     case WebKitCSSShaderClass:
         return static_cast<const WebKitCSSShaderValue*>(this)->customCssText();
 #endif
@@ -215,6 +350,8 @@ String CSSValue::serializeResolvingVariables(const HashMap<AtomicString, String>
     switch (classType()) {
     case PrimitiveClass:
         return static_cast<const CSSPrimitiveValue*>(this)->customSerializeResolvingVariables(variables);
+    case ReflectClass:
+        return static_cast<const CSSReflectValue*>(this)->customSerializeResolvingVariables(variables);
     case ValueListClass:
         return static_cast<const CSSValueList*>(this)->customSerializeResolvingVariables(variables);
     case WebKitCSSTransformClass:
@@ -320,6 +457,15 @@ void CSSValue::destroy()
         delete static_cast<WebKitCSSFilterValue*>(this);
         return;
 #if ENABLE(CSS_SHADERS)
+    case WebKitCSSArrayFunctionValueClass:
+        delete static_cast<WebKitCSSArrayFunctionValue*>(this);
+        return;
+    case WebKitCSSMatFunctionValueClass:
+        delete static_cast<WebKitCSSMatFunctionValue*>(this);
+        return;
+    case WebKitCSSMixFunctionValueClass:
+        delete static_cast<WebKitCSSMixFunctionValue*>(this);
+        return;
     case WebKitCSSShaderClass:
         delete static_cast<WebKitCSSShaderValue*>(this);
         return;
@@ -358,6 +504,14 @@ PassRefPtr<CSSValue> CSSValue::cloneForCSSOM() const
 #if ENABLE(CSS_FILTERS)
     case WebKitCSSFilterClass:
         return static_cast<const WebKitCSSFilterValue*>(this)->cloneForCSSOM();
+#if ENABLE(CSS_SHADERS)
+    case WebKitCSSArrayFunctionValueClass:
+        return static_cast<const WebKitCSSArrayFunctionValue*>(this)->cloneForCSSOM();
+    case WebKitCSSMatFunctionValueClass:
+        return static_cast<const WebKitCSSMatFunctionValue*>(this)->cloneForCSSOM();
+    case WebKitCSSMixFunctionValueClass:
+        return static_cast<const WebKitCSSMixFunctionValue*>(this)->cloneForCSSOM();
+#endif
 #endif
     case WebKitCSSTransformClass:
         return static_cast<const WebKitCSSTransformValue*>(this)->cloneForCSSOM();

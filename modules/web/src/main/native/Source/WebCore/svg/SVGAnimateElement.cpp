@@ -32,6 +32,7 @@
 #include "SVGAnimatorFactory.h"
 #include "SVGNames.h"
 #include "SVGStyledElement.h"
+#include "StylePropertySet.h"
 
 namespace WebCore {
 
@@ -57,7 +58,7 @@ bool SVGAnimateElement::hasValidAttributeType()
     if (!targetElement)
         return false;
     
-    return m_animatedPropertyType != AnimatedUnknown;
+    return m_animatedPropertyType != AnimatedUnknown && !hasInvalidCSSAttributeType();
 }
 
 AnimatedPropertyType SVGAnimateElement::determineAnimatedPropertyType(SVGElement* targetElement) const
@@ -238,7 +239,7 @@ static inline void applyCSSPropertyToTarget(SVGElement* targetElement, CSSProper
 {
     ASSERT(!targetElement->m_deletionHasBegun);
 
-    StylePropertySet* propertySet = targetElement->ensureAnimatedSMILStyleProperties();
+    MutableStylePropertySet* propertySet = targetElement->ensureAnimatedSMILStyleProperties();
     if (!propertySet->setProperty(id, value, false, 0))
         return;
 
@@ -396,16 +397,26 @@ float SVGAnimateElement::calculateDistance(const String& fromString, const Strin
     return ensureAnimator()->calculateDistance(fromString, toString);
 }
 
-void SVGAnimateElement::targetElementWillChange(SVGElement* currentTarget, SVGElement* newTarget)
+void SVGAnimateElement::setTargetElement(SVGElement* target)
 {
-    SVGSMILElement::targetElementWillChange(currentTarget, newTarget);
+    SVGAnimationElement::setTargetElement(target);
+    resetAnimatedPropertyType();
+}
 
+void SVGAnimateElement::setAttributeName(const QualifiedName& attributeName)
+{
+    SVGAnimationElement::setAttributeName(attributeName);
+    resetAnimatedPropertyType();
+}
+
+void SVGAnimateElement::resetAnimatedPropertyType()
+{
     ASSERT(!m_animatedType);
     m_fromType.clear();
     m_toType.clear();
     m_toAtEndOfDurationType.clear();
     m_animator.clear();
-    m_animatedPropertyType = newTarget ? determineAnimatedPropertyType(newTarget) : AnimatedString;
+    m_animatedPropertyType = targetElement() ? determineAnimatedPropertyType(targetElement()) : AnimatedString;
 }
 
 SVGAnimatedTypeAnimator* SVGAnimateElement::ensureAnimator()

@@ -42,14 +42,14 @@ public:
     ~NotificationController();
 
     static PassOwnPtr<NotificationController> create(NotificationClient*);
-    static const AtomicString& supplementName();
+    static const char* supplementName();
     static NotificationController* from(Page* page) { return static_cast<NotificationController*>(Supplement<Page>::from(page, supplementName())); }
     static NotificationClient* clientFrom(Page*);
 
     NotificationClient* client() { return m_client; }
     
 private:
-    NotificationController(NotificationClient*);
+    explicit NotificationController(NotificationClient*);
 
     NotificationClient* m_client;
 };

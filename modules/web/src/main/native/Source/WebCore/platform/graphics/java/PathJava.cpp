@@ -7,14 +7,16 @@
 #include "FloatRect.h"
 #include "StrokeStyleApplier.h"
 #include "JavaEnv.h"
-#include "PlatformString.h"
 #include "NotImplemented.h"
 #include "GraphicsContextJava.h"
 #include "RQRef.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 
+#include <wtf/text/WTFString.h>
+
 #include "com_sun_webkit_graphics_WCPathIterator.h"
+
 
 namespace WebCore
 {

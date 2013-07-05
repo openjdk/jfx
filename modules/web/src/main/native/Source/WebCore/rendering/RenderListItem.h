@@ -27,11 +27,12 @@
 
 namespace WebCore {
 
+class HTMLOListElement;
 class RenderListMarker;
 
 class RenderListItem : public RenderBlock {
 public:
-    explicit RenderListItem(Node*);
+    explicit RenderListItem(Element*);
 
     int value() const { if (!m_isValueUpToDate) updateValueNow(); return m_value; }
     void updateValue();
@@ -49,7 +50,8 @@ public:
 
     void updateListMarkerNumbers();
 
-    static RenderListItem* nextListItem(RenderObject* listRenderer, const RenderListItem* = 0);
+    static void updateItemValuesForOrderedList(const HTMLOListElement*);
+    static unsigned itemCountForOrderedList(const HTMLOListElement*);
 
 private:
     virtual const char* renderName() const { return "RenderListItem"; }
@@ -58,11 +60,13 @@ private:
     
     virtual void willBeDestroyed();
 
+    virtual void insertedIntoTree() OVERRIDE;
+    virtual void willBeRemovedFromTree() OVERRIDE;
+
     virtual bool isEmpty() const;
     virtual void paint(PaintInfo&, const LayoutPoint&);
 
     virtual void layout();
-    virtual void computePreferredLogicalWidths();
 
     void positionListMarker();
 
@@ -88,7 +92,7 @@ private:
 
 inline RenderListItem* toRenderListItem(RenderObject* object)
 {
-    ASSERT(!object || object->isListItem());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isListItem());
     return static_cast<RenderListItem*>(object);
 }
 

@@ -28,7 +28,7 @@
 
 namespace WebCore {
 
-class HTMLBRElement : public HTMLElement {
+class HTMLBRElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLBRElement> create(Document*);
     static PassRefPtr<HTMLBRElement> create(const QualifiedName&, Document*);
@@ -39,7 +39,7 @@ private:
     HTMLBRElement(const QualifiedName&, Document*);
 
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
 };

@@ -28,19 +28,19 @@
 #include "WebIconDatabase.h"
 
 #include "CFDictionaryPropertyBag.h"
-#include "WebPreferences.h"
 #include "WebNotificationCenter.h"
-#include <WebCore/BitmapInfo.h>
+#include "WebPreferences.h"
+#include "shlobj.h"
 #include <WebCore/BString.h>
+#include <WebCore/BitmapInfo.h>
 #include <WebCore/COMPtr.h>
 #include <WebCore/FileSystem.h>
 #include <WebCore/HWndDC.h>
 #include <WebCore/IconDatabase.h>
 #include <WebCore/Image.h>
-#include <WebCore/PlatformString.h>
 #include <WebCore/SharedBuffer.h>
 #include <wtf/MainThread.h>
-#include "shlobj.h"
+#include <wtf/text/WTFString.h>
 
 using namespace WebCore;
 using namespace WTF;
@@ -84,12 +84,11 @@ void WebIconDatabase::startUpIconDatabase()
 
     iconDatabase().setClient(this);
 
-    BSTR prefDatabasePath = 0;
+    BString prefDatabasePath;
     if (FAILED(standardPrefs->iconDatabaseLocation(&prefDatabasePath)))
         LOG_ERROR("Unable to get icon database location preference");
 
     String databasePath(prefDatabasePath, SysStringLen(prefDatabasePath));
-    SysFreeString(prefDatabasePath);
 
     if (databasePath.isEmpty()) {
         databasePath = localUserSpecificStorageDirectory();
@@ -308,7 +307,7 @@ HBITMAP WebIconDatabase::getOrCreateDefaultIconBitmap(LPSIZE size)
     result = createDIB(size);
 
     m_defaultIconMap.set(*size, result);
-    if (!iconDatabase().defaultIcon(*size)->getHBITMAPOfSize(result, size)) {
+    if (!iconDatabase().defaultIcon(*size) || !iconDatabase().defaultIcon(*size)->getHBITMAPOfSize(result, size)) {
         LOG_ERROR("Failed to draw Image to HBITMAP");
         return 0;
     }
@@ -316,12 +315,6 @@ HBITMAP WebIconDatabase::getOrCreateDefaultIconBitmap(LPSIZE size)
 }
 
 // IconDatabaseClient
-
-bool WebIconDatabase::performImport()
-{
-    // Windows doesn't do any old-style database importing.
-    return true;
-}
 
 void WebIconDatabase::didRemoveAllIcons()
 {
@@ -373,7 +366,7 @@ BSTR WebIconDatabase::iconDatabaseDidAddIconNotification()
 
 CFStringRef WebIconDatabase::iconDatabaseNotificationUserInfoURLKey()
 {
-    static CFStringRef iconUserInfoURLKey = String(WebIconNotificationUserInfoURLKey).createCFString();
+    static CFStringRef iconUserInfoURLKey = String(WebIconNotificationUserInfoURLKey).createCFString().leakRef();
     return iconUserInfoURLKey;
 }
 
@@ -391,11 +384,10 @@ static void postDidRemoveAllIconsNotification(WebIconDatabase* iconDB)
 
 static void postDidAddIconNotification(const String& pageURL, WebIconDatabase* iconDB)
 {
-    RetainPtr<CFMutableDictionaryRef> dictionary(AdoptCF, 
+    RetainPtr<CFMutableDictionaryRef> dictionary = adoptCF(
     CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
-    RetainPtr<CFStringRef> url(AdoptCF, pageURL.createCFString());
-    CFDictionaryAddValue(dictionary.get(), WebIconDatabase::iconDatabaseNotificationUserInfoURLKey(), url.get());
+    CFDictionaryAddValue(dictionary.get(), WebIconDatabase::iconDatabaseNotificationUserInfoURLKey(), pageURL.createCFString().get());
 
     COMPtr<CFDictionaryPropertyBag> userInfo = CFDictionaryPropertyBag::createInstance();
     userInfo->setDictionary(dictionary.get());

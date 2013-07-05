@@ -25,9 +25,9 @@
 #ifndef PluginWidget_h
 #define PluginWidget_h
 
-#include "Widget.h"
-#include "GraphicsLayer.h"
+#include "PlatformLayer.h"
 #include "ScrollTypes.h"
+#include "Widget.h"
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -49,6 +49,7 @@ public:
 #endif
 
     virtual JSC::JSObject* scriptObject(JSC::JSGlobalObject*) { return 0; }
+    virtual void storageBlockingStateChanged() { }
     virtual void privateBrowsingStateChanged(bool) { }
     virtual bool getFormValue(String&) { return false; }
     virtual bool scroll(ScrollDirection, ScrollGranularity) { return false; }
@@ -59,13 +60,34 @@ public:
 
     // FIXME: This is a hack that works around the fact that the WebKit2 PluginView isn't a ScrollableArea.
     virtual bool wantsWheelEvents() { return false; }
+    virtual bool supportsKeyboardFocus() const { return false; }
+    virtual bool canProcessDrag() const { return false; }
+
+    virtual bool shouldAlwaysAutoStart() const { return false; }
+    virtual void beginSnapshottingRunningPlugin() { }
+
+    virtual bool shouldAllowNavigationFromDrags() const { return false; }
+
+    virtual bool isPluginViewBase() const { return true; }
 
 protected:
-    PluginViewBase(PlatformWidget widget = 0) : Widget(widget) { }
-    
-private:
-    virtual bool isPluginViewBase() const { return true; }
+    explicit PluginViewBase(PlatformWidget widget = 0) : Widget(widget) { }
 };
+    
+inline PluginViewBase* toPluginViewBase(Widget* widget)
+{
+    ASSERT(!widget || widget->isPluginViewBase());
+    return static_cast<PluginViewBase*>(widget);
+}
+
+inline const PluginViewBase* toPluginViewBase(const Widget* widget)
+{
+    ASSERT(!widget || widget->isPluginViewBase());
+    return static_cast<const PluginViewBase*>(widget);
+}
+
+// This will catch anyone doing an unnecessary cast.
+void toPluginViewBase(const PluginViewBase*);
 
 } // namespace WebCore
 

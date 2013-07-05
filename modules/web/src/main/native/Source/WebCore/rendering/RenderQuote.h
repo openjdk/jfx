@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2011 Nokia Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,36 +23,39 @@
 #ifndef RenderQuote_h
 #define RenderQuote_h
 
-#include "RenderStyleConstants.h"
 #include "RenderText.h"
 
 namespace WebCore {
 
-class RenderQuote : public RenderText {
+class RenderQuote FINAL : public RenderText {
 public:
-    RenderQuote(Document*, const QuoteType);
+    RenderQuote(Document*, QuoteType);
     virtual ~RenderQuote();
 
-    static void rendererSubtreeAttached(RenderObject*);
-    static void rendererRemovedFromTree(RenderObject*);
-protected:
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
-    virtual void willBeDestroyed();
+    void attachQuote();
+
 private:
-    virtual const char* renderName() const;
-    virtual bool isQuote() const { return true; };
-    virtual PassRefPtr<StringImpl> originalText() const;
-    virtual void computePreferredLogicalWidths(float leadWidth);
+    void detachQuote();
+
+    virtual void willBeDestroyed() OVERRIDE;
+    virtual const char* renderName() const OVERRIDE { return "RenderQuote"; }
+    virtual bool isQuote() const OVERRIDE { return true; };
+    virtual PassRefPtr<StringImpl> originalText() const OVERRIDE;
+    virtual void styleDidChange(StyleDifference, const RenderStyle*) OVERRIDE;
+    virtual void willBeRemovedFromTree() OVERRIDE;
+
+    void updateDepth();
+
     QuoteType m_type;
     int m_depth;
     RenderQuote* m_next;
     RenderQuote* m_previous;
-    void placeQuote();
+    bool m_isAttached;
 };
 
 inline RenderQuote* toRenderQuote(RenderObject* object)
 {
-    ASSERT(!object || object->isQuote());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isQuote());
     return static_cast<RenderQuote*>(object);
 }
 

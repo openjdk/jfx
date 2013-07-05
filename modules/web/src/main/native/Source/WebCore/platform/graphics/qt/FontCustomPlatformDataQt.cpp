@@ -24,66 +24,60 @@
 
 #include "FontPlatformData.h"
 #include "SharedBuffer.h"
-#if !HAVE(QRAWFONT)
-#include <QFontDatabase>
+#if USE(ZLIB)
+#include "WOFFFileFormat.h"
 #endif
 #include <QStringList>
 
 namespace WebCore {
 
-FontCustomPlatformData::~FontCustomPlatformData()
+FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, bool italic, FontOrientation, FontWidthVariant, FontRenderingMode)
 {
-#if !HAVE(QRAWFONT)
-    QFontDatabase::removeApplicationFont(m_handle);
-#endif
-}
-
-FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, bool italic, FontOrientation, TextOrientation, FontWidthVariant, FontRenderingMode)
-{
-#if !HAVE(QRAWFONT)
-    QFont font;
-    font.setFamily(QFontDatabase::applicationFontFamilies(m_handle)[0]);
-    font.setPixelSize(size);
-    if (bold)
-        font.setWeight(QFont::Bold);
-    font.setItalic(italic);
-    return FontPlatformData(font);
-#else
     Q_ASSERT(m_rawFont.isValid());
     m_rawFont.setPixelSize(qreal(size));
     return FontPlatformData(m_rawFont);
-#endif
 }
 
 FontCustomPlatformData* createFontCustomPlatformData(SharedBuffer* buffer)
 {
     ASSERT_ARG(buffer, buffer);
 
+#if USE(ZLIB)
+    RefPtr<SharedBuffer> sfntBuffer;
+    if (isWOFF(buffer)) {
+        Vector<char> sfnt;
+        if (!convertWOFFToSfnt(buffer, sfnt))
+            return 0;
+
+        sfntBuffer = SharedBuffer::adoptVector(sfnt);
+        buffer = sfntBuffer.get();
+    }
+#endif // USE(ZLIB)
+
     const QByteArray fontData(buffer->data(), buffer->size());
-#if !HAVE(QRAWFONT)
-    int id = QFontDatabase::addApplicationFontFromData(fontData);
-    if (id == -1)
+#if !USE(ZLIB)
+    if (fontData.startsWith("wOFF")) {
+        qWarning("WOFF support requires QtWebKit to be built with zlib support.");
         return 0;
-    Q_ASSERT(QFontDatabase::applicationFontFamilies(id).size() > 0);
-#else
+    }
+#endif // !USE(ZLIB)
     // Pixel size doesn't matter at this point, it is set in FontCustomPlatformData::fontPlatformData.
     QRawFont rawFont(fontData, /*pixelSize = */0, QFont::PreferDefaultHinting);
     if (!rawFont.isValid())
         return 0;
-#endif
 
     FontCustomPlatformData *data = new FontCustomPlatformData;
-#if !HAVE(QRAWFONT)
-    data->m_handle = id;
-#else
     data->m_rawFont = rawFont;
-#endif
     return data;
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)
 {
-    return equalIgnoringCase(format, "truetype") || equalIgnoringCase(format, "opentype");
+    return equalIgnoringCase(format, "truetype") || equalIgnoringCase(format, "opentype")
+#if USE(ZLIB)
+            || equalIgnoringCase(format, "woff")
+#endif
+    ;
 }
 
 }

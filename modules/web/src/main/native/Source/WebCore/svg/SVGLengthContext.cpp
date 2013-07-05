@@ -27,6 +27,7 @@
 
 #include "CSSHelper.h"
 #include "ExceptionCode.h"
+#include "FontMetrics.h"
 #include "Frame.h"
 #include "RenderPart.h"
 #include "RenderSVGRoot.h"
@@ -298,7 +299,7 @@ bool SVGLengthContext::determineViewport(float& width, float& height) const
 
     // Take size from nearest viewport element.
     SVGElement* viewportElement = m_context->viewportElement();
-    if (!viewportElement || !viewportElement->isSVG())
+    if (!viewportElement || !viewportElement->isSVGSVGElement())
         return false;
     
     const SVGSVGElement* svg = static_cast<const SVGSVGElement*>(viewportElement);

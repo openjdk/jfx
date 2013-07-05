@@ -55,6 +55,7 @@ class CommitQueueTask(PatchAnalysisTask):
     def _validate_changelog(self):
         return self._run_command([
             "validate-changelog",
+            "--check-oops",
             "--non-interactive",
             self._patch.id(),
         ],
@@ -88,7 +89,7 @@ class CommitQueueTask(PatchAnalysisTask):
         # no one has set commit-queue- since we started working on the patch.)
         if not self.validate():
             return False
-        # FIXME: We should understand why the land failure occured and retry if possible.
+        # FIXME: We should understand why the land failure occurred and retry if possible.
         if not self._land():
             return self.report_failure()
         return True

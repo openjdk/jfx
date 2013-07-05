@@ -36,7 +36,8 @@ namespace WebCore {
 class RenderMathMLOperator : public RenderMathMLBlock {
 public:
     RenderMathMLOperator(Element*);
-    RenderMathMLOperator(Node*, UChar operatorChar);
+    RenderMathMLOperator(Element*, UChar operatorChar);
+
     virtual bool isRenderMathMLOperator() const { return true; }
     
     virtual bool isChildAllowed(RenderObject*, RenderStyle*) const;
@@ -45,35 +46,39 @@ public:
     virtual RenderMathMLOperator* unembellishedOperator() OVERRIDE { return this; }
     void stretchToHeight(int pixelHeight);
     
-    virtual LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
+    virtual int firstLineBoxBaseline() const OVERRIDE;
+    
+    enum OperatorType { Default, Separator, Fence };
+    void setOperatorType(OperatorType type) { m_operatorType = type; }
+    OperatorType operatorType() const { return m_operatorType; }
         
 protected:
     virtual void computePreferredLogicalWidths() OVERRIDE;
-    PassRefPtr<RenderStyle> createStackableStyle(int lineHeight, int maxHeightForRenderer, int topRelative);
-    RenderBlock* createGlyph(UChar glyph, int lineHeight, int maxHeightForRenderer = 0, int charRelative = 0, int topRelative = 0);
+    PassRefPtr<RenderStyle> createStackableStyle(int maxHeightForRenderer);
+    RenderBlock* createGlyph(UChar glyph, int maxHeightForRenderer, int charRelative);
     
 private:
     virtual const char* renderName() const { return isAnonymous() ? "RenderMathMLOperator (anonymous)" : "RenderMathMLOperator"; }
 
     int glyphHeightForCharacter(UChar);
-    int lineHeightForCharacter(UChar);
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
 
     int m_stretchHeight;
     bool m_isStacked;
     UChar m_operator;
+    OperatorType m_operatorType;
 };
 
 inline RenderMathMLOperator* toRenderMathMLOperator(RenderMathMLBlock* block)
 { 
-    ASSERT(!block || block->isRenderMathMLOperator());
+    ASSERT_WITH_SECURITY_IMPLICATION(!block || block->isRenderMathMLOperator());
     return static_cast<RenderMathMLOperator*>(block);
 }
 
 inline const RenderMathMLOperator* toRenderMathMLOperator(const RenderMathMLBlock* block)
 { 
-    ASSERT(!block || block->isRenderMathMLOperator());
+    ASSERT_WITH_SECURITY_IMPLICATION(!block || block->isRenderMathMLOperator());
     return static_cast<const RenderMathMLOperator*>(block);
 }
 

@@ -44,6 +44,8 @@ public:
 
     String customCssText() const;
 
+    bool equals(const ShadowValue&) const;
+
     RefPtr<CSSPrimitiveValue> x;
     RefPtr<CSSPrimitiveValue> y;
     RefPtr<CSSPrimitiveValue> blur;

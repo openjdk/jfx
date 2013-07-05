@@ -22,13 +22,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module audio {
     // A cached (non-streamed), memory-resident audio source
-    interface [
+[
         Conditional=WEB_AUDIO,
         JSGenerateToJSObject
-    ] AudioBufferSourceNode : AudioSourceNode {
-        attribute [CustomSetter] AudioBuffer buffer
+] interface AudioBufferSourceNode : AudioSourceNode {
+    [CustomSetter] attribute AudioBuffer buffer
             setter raises (DOMException);
 
         const unsigned short UNSCHEDULED_STATE = 0;
@@ -38,14 +37,22 @@ module audio {
 
         readonly attribute unsigned short playbackState;
 
-        readonly attribute AudioGain gain;
+    readonly attribute AudioParam gain;
         readonly attribute AudioParam playbackRate;
 
         attribute boolean loop; // This is the proper attribute name from the specification.
-        attribute boolean looping; // This is an alias for the .loop attribute for backwards compatibility.
 
-        void noteOn(in double when);
-        void noteGrainOn(in double when, in double grainOffset, in double grainDuration);
-        void noteOff(in double when);
+    attribute double loopStart;
+    attribute double loopEnd;
+
+    void start(double when);
+    [ImplementedAs=startGrain] void start(double when, double grainOffset);
+    [ImplementedAs=startGrain] void start(double when, double grainOffset, double grainDuration);
+    void stop(double when);
+
+    [Conditional=LEGACY_WEB_AUDIO] attribute boolean looping; // This is an alias for the .loop attribute for backwards compatibility.
+
+    [Conditional=LEGACY_WEB_AUDIO] void noteOn(double when);
+    [Conditional=LEGACY_WEB_AUDIO] void noteGrainOn(double when, double grainOffset, double grainDuration);
+    [Conditional=LEGACY_WEB_AUDIO] void noteOff(double when);
     };
-}

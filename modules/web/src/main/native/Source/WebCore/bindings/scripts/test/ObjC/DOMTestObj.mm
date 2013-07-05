@@ -35,33 +35,32 @@
 #import "DOMDictionaryInternal.h"
 #import "DOMDocumentInternal.h"
 #import "DOMEventInternal.h"
-#import "DOMIDBKeyInternal.h"
 #import "DOMNodeInternal.h"
 #import "DOMSVGDocumentInternal.h"
 #import "DOMSVGPointInternal.h"
 #import "DOMStyleSheetInternal.h"
+#import "DOMTestEnumTypeInternal.h"
+#import "DOMTestNodeInternal.h"
 #import "DOMTestObjInternal.h"
 #import "DOMTestObjectAConstructorInternal.h"
 #import "DOMTestObjectBConstructorInternal.h"
 #import "DOMTestObjectCConstructorInternal.h"
-#import "DOMaInternal.h"
-#import "DOMbInternal.h"
+#import "DOManyInternal.h"
 #import "DOMboolInternal.h"
-#import "DOMcInternal.h"
-#import "DOMdInternal.h"
-#import "DOMeInternal.h"
 #import "Dictionary.h"
 #import "Document.h"
 #import "EventListener.h"
 #import "ExceptionHandlers.h"
 #import "HTMLNames.h"
-#import "IDBKey.h"
 #import "JSMainThreadExecState.h"
 #import "KURL.h"
+#import "Node.h"
 #import "ObjCEventListener.h"
 #import "SVGDocument.h"
 #import "SVGStaticPropertyTearOff.h"
 #import "SerializedScriptValue.h"
+#import "TestEnumType.h"
+#import "TestNode.h"
 #import "TestObj.h"
 #import "TestObjectAConstructor.h"
 #import "TestObjectBConstructor.h"
@@ -69,12 +68,8 @@
 #import "ThreadCheck.h"
 #import "WebCoreObjCExtras.h"
 #import "WebScriptObjectPrivate.h"
-#import "a.h"
-#import "b.h"
+#import "any.h"
 #import "bool.h"
-#import "c.h"
-#import "d.h"
-#import "e.h"
 #import <wtf/GetPtr.h>
 
 #define IMPL reinterpret_cast<WebCore::TestObj*>(_internal)
@@ -98,10 +93,10 @@
     [super finalize];
 }
 
-- (int)readOnlyIntAttr
+- (int)readOnlyLongAttr
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->readOnlyIntAttr();
+    return IMPL->readOnlyLongAttr();
 }
 
 - (NSString *)readOnlyStringAttr
@@ -140,16 +135,16 @@
     IMPL->setUnsignedShortAttr(newUnsignedShortAttr);
 }
 
-- (int)intAttr
+- (int)longAttr
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->intAttr();
+    return IMPL->longAttr();
 }
 
-- (void)setIntAttr:(int)newIntAttr
+- (void)setLongAttr:(int)newLongAttr
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setIntAttr(newIntAttr);
+    IMPL->setLongAttr(newLongAttr);
 }
 
 - (long long)longLongAttr
@@ -231,7 +226,7 @@
 - (NSString *)reflectedStringAttr
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::reflectedstringattrAttr);
+    return IMPL->fastGetAttribute(WebCore::HTMLNames::reflectedstringattrAttr);
 }
 
 - (void)setReflectedStringAttr:(NSString *)newReflectedStringAttr
@@ -267,7 +262,7 @@
 - (BOOL)reflectedBooleanAttr
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->hasAttribute(WebCore::HTMLNames::reflectedbooleanattrAttr);
+    return IMPL->fastHasAttribute(WebCore::HTMLNames::reflectedbooleanattrAttr);
 }
 
 - (void)setReflectedBooleanAttr:(BOOL)newReflectedBooleanAttr
@@ -291,7 +286,7 @@
 - (NSString *)reflectedStringAttr
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::customContentStringAttrAttr);
+    return IMPL->fastGetAttribute(WebCore::HTMLNames::customContentStringAttrAttr);
 }
 
 - (void)setReflectedStringAttr:(NSString *)newReflectedStringAttr
@@ -315,7 +310,7 @@
 - (BOOL)reflectedCustomBooleanAttr
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->hasAttribute(WebCore::HTMLNames::customContentBooleanAttrAttr);
+    return IMPL->fastHasAttribute(WebCore::HTMLNames::customContentBooleanAttrAttr);
 }
 
 - (void)setReflectedCustomBooleanAttr:(BOOL)newReflectedCustomBooleanAttr
@@ -348,9 +343,7 @@
 - (void)setAttrWithGetterException:(int)newAttrWithGetterException
 {
     WebCore::JSMainThreadNullState state;
-    WebCore::ExceptionCode ec = 0;
-    IMPL->setAttrWithGetterException(newAttrWithGetterException, ec);
-    WebCore::raiseOnDOMError(ec);
+    IMPL->setAttrWithGetterException(newAttrWithGetterException);
 }
 
 - (int)attrWithSetterException
@@ -379,9 +372,7 @@
 - (void)setStringAttrWithGetterException:(NSString *)newStringAttrWithGetterException
 {
     WebCore::JSMainThreadNullState state;
-    WebCore::ExceptionCode ec = 0;
-    IMPL->setStringAttrWithGetterException(newStringAttrWithGetterException, ec);
-    WebCore::raiseOnDOMError(ec);
+    IMPL->setStringAttrWithGetterException(newStringAttrWithGetterException);
 }
 
 - (NSString *)stringAttrWithSetterException
@@ -450,9 +441,7 @@
     WebCore::JSMainThreadNullState state;
     ASSERT(newWithScriptStateAttributeRaises);
 
-    WebCore::ExceptionCode ec = 0;
-    IMPL->setWithScriptStateAttributeRaises(core(newWithScriptStateAttributeRaises), ec);
-    WebCore::raiseOnDOMError(ec);
+    IMPL->setWithScriptStateAttributeRaises(core(newWithScriptStateAttributeRaises));
 }
 
 - (DOMTestObj *)withScriptExecutionContextAttributeRaises
@@ -469,9 +458,7 @@
     WebCore::JSMainThreadNullState state;
     ASSERT(newWithScriptExecutionContextAttributeRaises);
 
-    WebCore::ExceptionCode ec = 0;
-    IMPL->setWithScriptExecutionContextAttributeRaises(core(newWithScriptExecutionContextAttributeRaises), ec);
-    WebCore::raiseOnDOMError(ec);
+    IMPL->setWithScriptExecutionContextAttributeRaises(core(newWithScriptExecutionContextAttributeRaises));
 }
 
 - (DOMTestObj *)withScriptExecutionContextAndScriptStateAttribute
@@ -502,9 +489,7 @@
     WebCore::JSMainThreadNullState state;
     ASSERT(newWithScriptExecutionContextAndScriptStateAttributeRaises);
 
-    WebCore::ExceptionCode ec = 0;
-    IMPL->setWithScriptExecutionContextAndScriptStateAttributeRaises(core(newWithScriptExecutionContextAndScriptStateAttributeRaises), ec);
-    WebCore::raiseOnDOMError(ec);
+    IMPL->setWithScriptExecutionContextAndScriptStateAttributeRaises(core(newWithScriptExecutionContextAndScriptStateAttributeRaises));
 }
 
 - (DOMTestObj *)withScriptExecutionContextAndScriptStateWithSpacesAttribute
@@ -625,6 +610,20 @@
 }
 #endif
 
+- (DOMany *)anyAttribute
+{
+    WebCore::JSMainThreadNullState state;
+    return kit(WTF::getPtr(IMPL->anyAttribute()));
+}
+
+- (void)setAnyAttribute:(DOMany *)newAnyAttribute
+{
+    WebCore::JSMainThreadNullState state;
+    ASSERT(newAnyAttribute);
+
+    IMPL->setAnyAttribute(core(newAnyAttribute));
+}
+
 - (DOMDocument *)contentDocument
 {
     WebCore::JSMainThreadNullState state;
@@ -713,10 +712,55 @@
     return IMPL->replaceableAttribute();
 }
 
-- (void)setReplaceableAttribute:(int)newReplaceableAttribute
+- (double)nullableDoubleAttribute
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setReplaceableAttribute(newReplaceableAttribute);
+    return IMPL->nullableDoubleAttribute(isNull);
+}
+
+- (int)nullableLongAttribute
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->nullableLongAttribute(isNull);
+}
+
+- (BOOL)nullableBooleanAttribute
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->nullableBooleanAttribute(isNull);
+}
+
+- (NSString *)nullableStringAttribute
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->nullableStringAttribute(isNull);
+}
+
+- (int)nullableLongSettableAttribute
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->nullableLongSettableAttribute(isNull);
+}
+
+- (void)setNullableLongSettableAttribute:(int)newNullableLongSettableAttribute
+{
+    WebCore::JSMainThreadNullState state;
+    IMPL->setNullableLongSettableAttribute(newNullableLongSettableAttribute);
+}
+
+- (int)nullableStringValue
+{
+    WebCore::JSMainThreadNullState state;
+    WebCore::ExceptionCode ec = 0;
+    int result = IMPL->nullableStringValue(isNull, ec);
+    WebCore::raiseOnDOMError(ec);
+    return result;
+}
+
+- (void)setNullableStringValue:(int)newNullableStringValue
+{
+    WebCore::JSMainThreadNullState state;
+    IMPL->setNullableStringValue(newNullableStringValue);
 }
 
 - (void)voidMethod
@@ -725,22 +769,22 @@
     IMPL->voidMethod();
 }
 
-- (void)voidMethodWithArgs:(int)intArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
+- (void)voidMethodWithArgs:(int)longArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->voidMethodWithArgs(intArg, strArg, core(objArg));
+    IMPL->voidMethodWithArgs(longArg, strArg, core(objArg));
 }
 
-- (int)intMethod
+- (int)longMethod
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->intMethod();
+    return IMPL->longMethod();
 }
 
-- (int)intMethodWithArgs:(int)intArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
+- (int)longMethodWithArgs:(int)longArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->intMethodWithArgs(intArg, strArg, core(objArg));
+    return IMPL->longMethodWithArgs(longArg, strArg, core(objArg));
 }
 
 - (DOMTestObj *)objMethod
@@ -749,10 +793,16 @@
     return kit(WTF::getPtr(IMPL->objMethod()));
 }
 
-- (DOMTestObj *)objMethodWithArgs:(int)intArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
+- (DOMTestObj *)objMethodWithArgs:(int)longArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
 {
     WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(IMPL->objMethodWithArgs(intArg, strArg, core(objArg))));
+    return kit(WTF::getPtr(IMPL->objMethodWithArgs(longArg, strArg, core(objArg))));
+}
+
+- (void)methodWithEnumArg:(DOMTestEnumType *)enumArg
+{
+    WebCore::JSMainThreadNullState state;
+    IMPL->methodWithEnumArg(core(enumArg));
 }
 
 - (DOMTestObj *)methodThatRequiresAllArgsAndThrows:(NSString *)strArg objArg:(DOMTestObj *)objArg
@@ -768,12 +818,6 @@
 {
     WebCore::JSMainThreadNullState state;
     IMPL->serializedValue(WebCore::SerializedScriptValue::create(WTF::String(serializedArg)));
-}
-
-- (void)idbKey:(DOMIDBKey *)key
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->idbKey(core(key));
 }
 
 - (void)optionsObject:(DOMDictionary *)oo ooo:(DOMDictionary *)ooo
@@ -796,10 +840,10 @@
     IMPL->customMethod();
 }
 
-- (void)customMethodWithArgs:(int)intArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
+- (void)customMethodWithArgs:(int)longArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->customMethodWithArgs(intArg, strArg, core(objArg));
+    IMPL->customMethodWithArgs(longArg, strArg, core(objArg));
 }
 
 - (void)addEventListener:(NSString *)type listener:(id <DOMEventListener>)listener useCapture:(BOOL)useCapture
@@ -991,34 +1035,28 @@
     return result;
 }
 
-- (void)convert1:(DOMa *)
+- (void)convert1:(DOMTestNode *)value
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->convert1(core());
+    IMPL->convert1(core(value));
 }
 
-- (void)convert2:(DOMb *)
+- (void)convert2:(DOMTestNode *)value
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->convert2(core());
+    IMPL->convert2(core(value));
 }
 
-- (void)convert3:(DOMc *)
+- (void)convert4:(DOMTestNode *)value
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->convert3(core());
+    IMPL->convert4(core(value));
 }
 
-- (void)convert4:(DOMd *)
+- (void)convert5:(DOMTestNode *)value
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->convert4(core());
-}
-
-- (void)convert5:(DOMe *)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->convert5(core());
+    IMPL->convert5(core(value));
 }
 
 - (DOMSVGPoint *)mutablePointFunction
@@ -1046,6 +1084,24 @@
     DOMbool *result = kit(WTF::getPtr(IMPL->strictFunction(str, a, b, ec)));
     WebCore::raiseOnDOMError(ec);
     return result;
+}
+
+- (void)variadicStringMethod:(NSString *)head tail:(NSString *)tail
+{
+    WebCore::JSMainThreadNullState state;
+    IMPL->variadicStringMethod(head, tail);
+}
+
+- (void)variadicDoubleMethod:(double)head tail:(double)tail
+{
+    WebCore::JSMainThreadNullState state;
+    IMPL->variadicDoubleMethod(head, tail);
+}
+
+- (void)variadicNodeMethod:(DOMNode *)head tail:(DOMNode *)tail
+{
+    WebCore::JSMainThreadNullState state;
+    IMPL->variadicNodeMethod(core(head), core(tail));
 }
 
 @end

@@ -23,6 +23,7 @@
 #define RenderTextControl_h
 
 #include "RenderBlock.h"
+#include "RenderFlexibleBox.h"
 
 namespace WebCore {
 
@@ -38,7 +39,7 @@ public:
     VisiblePosition visiblePositionForIndex(int index) const;
 
 protected:
-    RenderTextControl(Node*);
+    RenderTextControl(Element*);
 
     // This convenience function should not be made public because innerTextElement may outlive the render tree.
     HTMLElement* innerTextElement() const;
@@ -50,52 +51,73 @@ protected:
 
     void hitInnerTextElement(HitTestResult&, const LayoutPoint& pointInContainer, const LayoutPoint& accumulatedOffset);
 
-    int textBlockWidth() const;
-    int textBlockHeight() const;
+    int textBlockLogicalWidth() const;
+    int textBlockLogicalHeight() const;
 
     float scaleEmToUnits(int x) const;
 
     static bool hasValidAvgCharWidth(AtomicString family);
     virtual float getAvgCharWidth(AtomicString family);
-    virtual LayoutUnit preferredContentWidth(float charWidth) const = 0;
-    virtual LayoutUnit computeControlHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const = 0;
+    virtual LayoutUnit preferredContentLogicalWidth(float charWidth) const = 0;
+    virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const = 0;
     virtual RenderStyle* textBaseStyle() const = 0;
 
     virtual void updateFromElement();
-    virtual void computeLogicalHeight();
+    virtual void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const OVERRIDE;
     virtual RenderObject* layoutSpecialExcludedChild(bool relayoutChildren);
 
 private:
     virtual const char* renderName() const { return "RenderTextControl"; }
     virtual bool isTextControl() const { return true; }
-    virtual void computePreferredLogicalWidths();
+    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const OVERRIDE;
+    virtual void computePreferredLogicalWidths() OVERRIDE;
     virtual void removeLeftoverAnonymousBlock(RenderBlock*) { }
     virtual bool avoidsFloats() const { return true; }
     virtual bool canHaveGeneratedChildren() const OVERRIDE { return false; }
+    virtual bool canBeReplacedWithInlineRunIn() const OVERRIDE;
     
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint&);
+    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) OVERRIDE;
 
     virtual bool canBeProgramaticallyScrolled() const { return true; }
 
     virtual bool requiresForcedStyleRecalcPropagation() const { return true; }
-
-    static bool isSelectableElement(HTMLElement*, Node*);
 };
 
 inline RenderTextControl* toRenderTextControl(RenderObject* object)
 { 
-    ASSERT(!object || object->isTextControl());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTextControl());
     return static_cast<RenderTextControl*>(object);
 }
 
 inline const RenderTextControl* toRenderTextControl(const RenderObject* object)
 { 
-    ASSERT(!object || object->isTextControl());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTextControl());
     return static_cast<const RenderTextControl*>(object);
 }
 
 // This will catch anyone doing an unnecessary cast.
 void toRenderTextControl(const RenderTextControl*);
+
+// Renderer for our inner container, for <search> and others.
+// We can't use RenderFlexibleBox directly, because flexboxes have a different
+// baseline definition, and then inputs of different types wouldn't line up
+// anymore.
+class RenderTextControlInnerContainer : public RenderFlexibleBox {
+public:
+    explicit RenderTextControlInnerContainer(Element* element)
+        : RenderFlexibleBox(element)
+    { }
+    virtual ~RenderTextControlInnerContainer() { }
+
+    virtual int baselinePosition(FontBaseline baseline, bool firstLine, LineDirectionMode direction, LinePositionMode position) const OVERRIDE
+    {
+        return RenderBlock::baselinePosition(baseline, firstLine, direction, position);
+    }
+    virtual int firstLineBoxBaseline() const OVERRIDE { return RenderBlock::firstLineBoxBaseline(); }
+    virtual int inlineBlockBaseline(LineDirectionMode direction) const OVERRIDE { return RenderBlock::inlineBlockBaseline(direction); }
+
+};
+
 
 } // namespace WebCore
 

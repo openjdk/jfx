@@ -23,11 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS
-    ] SVGFEDiffuseLightingElement : SVGElement,
+] interface SVGFEDiffuseLightingElement : SVGStyledElement,
                                                               SVGFilterPrimitiveStandardAttributes {
         readonly attribute SVGAnimatedString in1;
         readonly attribute SVGAnimatedNumber surfaceScale;
@@ -36,4 +34,3 @@ module svg {
         readonly attribute SVGAnimatedNumber kernelUnitLengthY;
     };
 
-}

@@ -38,10 +38,9 @@ class FormData;
 class HTMLFormControlElement;
 class HTMLImageElement;
 class HTMLInputElement;
-class HTMLFormCollection;
 class TextEncoding;
 
-class HTMLFormElement : public HTMLElement {
+class HTMLFormElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLFormElement> create(Document*);
     static PassRefPtr<HTMLFormElement> create(const QualifiedName&, Document*);
@@ -72,11 +71,6 @@ public:
     void submit();
     void submitFromJavaScript();
     void reset();
-
-    // Used to indicate a malformed state to keep from applying the bottom margin of the form.
-    // FIXME: Would probably be better to call this wasUnclosed; that's more specific.
-    void setMalformed(bool malformed) { m_wasMalformed = malformed; }
-    bool isMalformed() const { return m_wasMalformed; }
 
     void setDemoted(bool demoted) { m_wasDemoted = demoted; }
 
@@ -124,14 +118,14 @@ private:
 
     virtual void handleLocalEvents(Event*);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
 
     virtual void documentDidResumeFromPageCache();
 
     virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
 
-    virtual bool shouldRegisterAsNamedItem() const OVERRIDE { return true; }
+    virtual void copyNonAttributePropertiesFromElement(const Element&) OVERRIDE;
 
     void submit(Event*, bool activateSubmitButton, bool processingUserGesture, FormSubmissionTrigger);
 
@@ -164,7 +158,6 @@ private:
 
     bool m_isInResetFunction;
 
-    bool m_wasMalformed;
     bool m_wasDemoted;
 };
 

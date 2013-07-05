@@ -39,10 +39,13 @@
 #include "FontCache.h"
 #include "FontDescription.h"
 #include "GlyphBuffer.h"
+#include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
 #include <fontconfig/fcfreetype.h>
+#include <unicode/normlzr.h>
 #include <wtf/MathExtras.h>
+#include <wtf/unicode/Unicode.h>
 
 namespace WebCore {
 
@@ -63,8 +66,12 @@ void SimpleFontData::platformInit()
     m_fontMetrics.setAscent(ascent);
     m_fontMetrics.setDescent(descent);
 
+#if PLATFORM(EFL)
+    m_fontMetrics.setLineSpacing(ascent + descent + lineGap);
+#else
     // Match CoreGraphics metrics.
     m_fontMetrics.setLineSpacing(lroundf(ascent) + lroundf(descent) + lroundf(lineGap));
+#endif
     m_fontMetrics.setLineGap(lineGap);
 
     cairo_scaled_font_text_extents(m_platformData.scaledFont(), "x", &text_extents);
@@ -87,49 +94,30 @@ void SimpleFontData::platformDestroy()
 {
 }
 
-PassOwnPtr<SimpleFontData> SimpleFontData::createScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
+PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
 {
     ASSERT(m_platformData.scaledFont());
-    return adoptPtr(new SimpleFontData(FontPlatformData(cairo_scaled_font_get_font_face(m_platformData.scaledFont()),
+    return SimpleFontData::create(FontPlatformData(cairo_scaled_font_get_font_face(m_platformData.scaledFont()),
                                                         scaleFactor * fontDescription.computedSize(),
                                                         m_platformData.syntheticBold(),
-                                                        m_platformData.syntheticOblique()),
-                                       isCustomFont(), false));
+                                                        m_platformData.syntheticOblique()), isCustomFont(), false);
 }
 
-SimpleFontData* SimpleFontData::smallCapsFontData(const FontDescription& fontDescription) const
-{
-    if (!m_derivedFontData)
-        m_derivedFontData = DerivedFontData::create(isCustomFont());
-    // FIXME: I think we want to ask FontConfig for the right font again.
-    if (!m_derivedFontData->smallCaps)
-        m_derivedFontData->smallCaps = createScaledFontData(fontDescription, .7);
-
-    return m_derivedFontData->smallCaps.get();
-}
-
-SimpleFontData* SimpleFontData::emphasisMarkFontData(const FontDescription& fontDescription) const
-{
-    if (!m_derivedFontData)
-        m_derivedFontData = DerivedFontData::create(isCustomFont());
-    if (!m_derivedFontData->emphasisMark)
-        m_derivedFontData->emphasisMark = createScaledFontData(fontDescription, .5);
-
-    return m_derivedFontData->emphasisMark.get();
-}
-
-bool SimpleFontData::containsCharacters(const UChar* characters, int length) const
+bool SimpleFontData::containsCharacters(const UChar* characters, int bufferLength) const
 {
     ASSERT(m_platformData.scaledFont());
     FT_Face face = cairo_ft_scaled_font_lock_face(m_platformData.scaledFont());
     if (!face)
         return false;
 
-    for (int i = 0; i < length; i++) {
-        if (FcFreeTypeCharIndex(face, characters[i]) == 0) {
+    UTF16UChar32Iterator iterator(characters, bufferLength);
+    UChar32 character = iterator.next();
+    while (character != iterator.end()) {
+        if (!FcFreeTypeCharIndex(face, character)) {
             cairo_ft_scaled_font_unlock_face(m_platformData.scaledFont());
             return false;
         }
+        character = iterator.next();
     }
 
     cairo_ft_scaled_font_unlock_face(m_platformData.scaledFont());
@@ -141,8 +129,18 @@ void SimpleFontData::determinePitch()
     m_treatAsFixedPitch = m_platformData.isFixedPitch();
 }
 
-FloatRect SimpleFontData::platformBoundsForGlyph(Glyph) const
+FloatRect SimpleFontData::platformBoundsForGlyph(Glyph glyph) const
 {
+    if (!m_platformData.size())
+        return FloatRect();
+
+    cairo_glyph_t cglyph = { glyph, 0, 0 };
+    cairo_text_extents_t extents;
+    cairo_scaled_font_glyph_extents(m_platformData.scaledFont(), &cglyph, 1, &extents);
+
+    if (cairo_scaled_font_status(m_platformData.scaledFont()) == CAIRO_STATUS_SUCCESS)
+        return FloatRect(extents.x_bearing, extents.y_bearing, extents.width, extents.height);
+
     return FloatRect();
 }
 
@@ -161,5 +159,34 @@ float SimpleFontData::platformWidthForGlyph(Glyph glyph) const
 
     return w;    
 }
+
+#if USE(HARFBUZZ)
+bool SimpleFontData::canRenderCombiningCharacterSequence(const UChar* characters, size_t length) const
+{
+    if (!m_combiningCharacterSequenceSupport)
+        m_combiningCharacterSequenceSupport = adoptPtr(new HashMap<String, bool>);
+
+    WTF::HashMap<String, bool>::AddResult addResult = m_combiningCharacterSequenceSupport->add(String(characters, length), false);
+    if (!addResult.isNewEntry)
+        return addResult.iterator->value;
+
+    UErrorCode error = U_ZERO_ERROR;
+    Vector<UChar, 4> normalizedCharacters(length);
+    int32_t normalizedLength = unorm_normalize(characters, length, UNORM_NFC, UNORM_UNICODE_3_2, &normalizedCharacters[0], length, &error);
+    // Can't render if we have an error or no composition occurred.
+    if (U_FAILURE(error) || (static_cast<size_t>(normalizedLength) == length))
+        return false;
+
+    FT_Face face = cairo_ft_scaled_font_lock_face(m_platformData.scaledFont());
+    if (!face)
+        return false;
+
+    if (FcFreeTypeCharIndex(face, normalizedCharacters[0]))
+        addResult.iterator->value = true;
+
+    cairo_ft_scaled_font_unlock_face(m_platformData.scaledFont());
+    return addResult.iterator->value;
+}
+#endif
 
 }

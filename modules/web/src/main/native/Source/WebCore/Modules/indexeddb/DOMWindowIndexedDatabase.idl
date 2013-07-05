@@ -24,23 +24,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module window {
+[
+    Conditional=INDEXED_DATABASE,
+] partial interface DOMWindow {
+    [ImplementedAs=indexedDB] readonly attribute IDBFactory webkitIndexedDB;
 
-    interface [
-        Conditional=INDEXED_DATABASE,
-        Supplemental=DOMWindow
-    ] DOMWindowIndexedDatabase {
-        readonly attribute IDBFactory webkitIndexedDB;
-
-        attribute IDBCursorConstructor webkitIDBCursor;
-        attribute IDBDatabaseConstructor webkitIDBDatabase;
-        attribute IDBDatabaseExceptionConstructor webkitIDBDatabaseException;
-        attribute IDBFactoryConstructor webkitIDBFactory;
-        attribute IDBIndexConstructor webkitIDBIndex;
-        attribute IDBKeyRangeConstructor webkitIDBKeyRange;
-        attribute IDBObjectStoreConstructor webkitIDBObjectStore;
-        attribute IDBRequestConstructor webkitIDBRequest;
-        attribute IDBTransactionConstructor webkitIDBTransaction;
+    readonly attribute IDBFactory indexedDB;
     };
 
-}

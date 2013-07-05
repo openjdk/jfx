@@ -71,7 +71,7 @@ class MockTool(MockHost):
         self.irc_password = "MOCK irc password"
         self.wakeup_event = threading.Event()
 
-    def port(self):
+    def deprecated_port(self):
         return self._deprecated_port
 
     def path(self):
@@ -83,6 +83,3 @@ class MockTool(MockHost):
 
     def irc(self):
         return self._irc
-
-    def buildbot_for_builder_name(self, name):
-        return MockBuildBot()

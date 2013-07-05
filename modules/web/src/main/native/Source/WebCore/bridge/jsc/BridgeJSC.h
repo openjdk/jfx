@@ -29,6 +29,7 @@
 
 #include "Bridge.h"
 #include <runtime/JSString.h>
+#include <runtime/Operations.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -48,8 +49,6 @@ class Method;
 class RootObject;
 class RuntimeObject;
 
-typedef Vector<Method*> MethodList;
-
 class Field {
 public:
     virtual JSValue valueFromInstance(ExecState*, const Instance*) const = 0;
@@ -62,21 +61,16 @@ class Class {
     WTF_MAKE_NONCOPYABLE(Class); WTF_MAKE_FAST_ALLOCATED;
 public:
     Class() { }
-    virtual MethodList methodsNamed(PropertyName, Instance*) const = 0;
+    virtual Method* methodNamed(PropertyName, Instance*) const = 0;
     virtual Field* fieldNamed(PropertyName, Instance*) const = 0;
     virtual JSValue fallbackObject(ExecState*, Instance*, PropertyName) { return jsUndefined(); }
 
     virtual ~Class() { }
 };
 
-typedef void (*KJSDidExecuteFunctionPtr)(ExecState*, JSObject* rootObject);
-
 class Instance : public RefCounted<Instance> {
 public:
     Instance(PassRefPtr<RootObject>);
-
-    static void setDidExecuteFunction(KJSDidExecuteFunctionPtr func);
-    static KJSDidExecuteFunctionPtr didExecuteFunction();
 
     // These functions are called before and after the main entry points into
     // the native implementations.  They can be used to establish and cleanup
@@ -141,8 +135,11 @@ protected:
 
 const char* signatureForParameters(const ArgList&);
 
-typedef HashMap<RefPtr<StringImpl>, MethodList*> MethodListMap;
 typedef HashMap<RefPtr<StringImpl>, Method*> MethodMap;
+#if ENABLE(JAVA_BRIDGE)
+typedef Vector<Method*> MethodList;
+typedef HashMap<RefPtr<StringImpl>, MethodList*> MethodListMap;
+#endif
 typedef HashMap<RefPtr<StringImpl>, Field*> FieldMap;
 
 } // namespace Bindings

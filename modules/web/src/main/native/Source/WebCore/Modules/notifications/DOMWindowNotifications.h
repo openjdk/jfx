@@ -30,8 +30,8 @@
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
 
 #include "DOMWindowProperty.h"
-#include "PlatformString.h"
 #include "Supplementable.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -55,6 +55,7 @@ private:
     explicit DOMWindowNotifications(DOMWindow*);
 
     NotificationCenter* webkitNotifications();
+    static const char* supplementName();
 
     DOMWindow* m_window;
     RefPtr<NotificationCenter> m_notificationCenter;

@@ -10,12 +10,14 @@
 #include "JavaEnv.h"
 #include "JavaRef.h"
 #include "NotImplemented.h"
-#include "PlatformString.h"
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
-#include "PlatformContextJava.h"
 
 #include <wtf/RefPtr.h>
 #include <wtf/PassRefPtr.h>
+#include <wtf/text/WTFString.h>
+
+#include "PlatformContextJava.h"
+#include "com_sun_webkit_graphics_GraphicsDecoder.h"
+
 
 using namespace WebCore;
 

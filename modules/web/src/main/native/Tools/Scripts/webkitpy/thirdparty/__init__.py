@@ -65,11 +65,18 @@ class AutoinstallImportHook(object):
     def __init__(self, filesystem=None):
         self._fs = filesystem or FileSystem()
 
-    def find_module(self, fullname, path):
+    def _ensure_autoinstalled_dir_is_in_sys_path(self):
+        # Some packages require that the are being put somewhere under a directory in sys.path.
+        if not _AUTOINSTALLED_DIR in sys.path:
+            sys.path.append(_AUTOINSTALLED_DIR)
+
+    def find_module(self, fullname, _):
         # This method will run before each import. See http://www.python.org/dev/peps/pep-0302/
         if '.autoinstalled' not in fullname:
             return
 
+        # Note: all of the methods must follow the "_install_XXX" convention in
+        # order for autoinstall_everything(), below, to work properly.
         if '.mechanize' in fullname:
             self._install_mechanize()
         elif '.pep8' in fullname:
@@ -88,18 +95,27 @@ class AutoinstallImportHook(object):
             self._install_webpagereplay()
 
     def _install_mechanize(self):
-        self._install("http://pypi.python.org/packages/source/m/mechanize/mechanize-0.2.5.tar.gz",
+        return self._install("http://pypi.python.org/packages/source/m/mechanize/mechanize-0.2.5.tar.gz",
                       "mechanize-0.2.5/mechanize")
 
     def _install_pep8(self):
-        self._install("http://pypi.python.org/packages/source/p/pep8/pep8-0.5.0.tar.gz#md5=512a818af9979290cd619cce8e9c2e2b",
+        return self._install("http://pypi.python.org/packages/source/p/pep8/pep8-0.5.0.tar.gz#md5=512a818af9979290cd619cce8e9c2e2b",
                       "pep8-0.5.0/pep8.py")
 
     def _install_pylint(self):
-        if not self._fs.exists(self._fs.join(_AUTOINSTALLED_DIR, "pylint")):
-            self._install('http://pypi.python.org/packages/source/p/pylint/pylint-0.25.1.tar.gz#md5=728bbc2b339bc3749af013709a7f87a5', 'pylint-0.25.1')
-            self._fs.move(self._fs.join(_AUTOINSTALLED_DIR, "pylint-0.25.1"), self._fs.join(_AUTOINSTALLED_DIR, "pylint"))
-
+        self._ensure_autoinstalled_dir_is_in_sys_path()
+        did_install_something = False
+        if (not self._fs.exists(self._fs.join(_AUTOINSTALLED_DIR, "pylint")) or
+            not self._fs.exists(self._fs.join(_AUTOINSTALLED_DIR, "logilab/astng")) or
+            not self._fs.exists(self._fs.join(_AUTOINSTALLED_DIR, "logilab/common"))):
+            installer = AutoInstaller(target_dir=_AUTOINSTALLED_DIR)
+            files_to_remove = []
+            if sys.platform == 'win32':
+                files_to_remove = ['test/data/write_protected_file.txt']
+            did_install_something = installer.install("http://pypi.python.org/packages/source/l/logilab-common/logilab-common-0.58.1.tar.gz#md5=77298ab2d8bb8b4af9219791e7cee8ce", url_subpath="logilab-common-0.58.1", target_name="logilab/common", files_to_remove=files_to_remove)
+            did_install_something |= installer.install("http://pypi.python.org/packages/source/l/logilab-astng/logilab-astng-0.24.1.tar.gz#md5=ddaf66e4d85714d9c47a46d4bed406de", url_subpath="logilab-astng-0.24.1", target_name="logilab/astng")
+            did_install_something |= installer.install('http://pypi.python.org/packages/source/p/pylint/pylint-0.25.1.tar.gz#md5=728bbc2b339bc3749af013709a7f87a5', url_subpath="pylint-0.25.1", target_name="pylint")
+        return did_install_something
 
     # autoinstalled.buildbot is used by BuildSlaveSupport/build.webkit.org-config/mastercfg_unittest.py
     # and should ideally match the version of BuildBot used at build.webkit.org.
@@ -111,24 +127,23 @@ class AutoinstallImportHook(object):
         # without including other modules as a side effect.
         jinja_dir = self._fs.join(_AUTOINSTALLED_DIR, "jinja2")
         installer = AutoInstaller(append_to_search_path=True, target_dir=jinja_dir)
-        installer.install(url="http://pypi.python.org/packages/source/J/Jinja2/Jinja2-2.6.tar.gz#md5=1c49a8825c993bfdcf55bb36897d28a2",
+        did_install_something = installer.install(url="http://pypi.python.org/packages/source/J/Jinja2/Jinja2-2.6.tar.gz#md5=1c49a8825c993bfdcf55bb36897d28a2",
                           url_subpath="Jinja2-2.6/jinja2")
 
         SQLAlchemy_dir = self._fs.join(_AUTOINSTALLED_DIR, "sqlalchemy")
         installer = AutoInstaller(append_to_search_path=True, target_dir=SQLAlchemy_dir)
-        installer.install(url="http://pypi.python.org/packages/source/S/SQLAlchemy/SQLAlchemy-0.7.7.tar.gz#md5=ddf6df7e014cea318fa981364f3f93b9",
+        did_install_something |= installer.install(url="http://pypi.python.org/packages/source/S/SQLAlchemy/SQLAlchemy-0.7.7.tar.gz#md5=ddf6df7e014cea318fa981364f3f93b9",
                           url_subpath="SQLAlchemy-0.7.7/lib/sqlalchemy")
 
-        self._install("http://pypi.python.org/packages/source/b/buildbot/buildbot-0.8.6p1.tar.gz#md5=b6727d2810c692062c657492bcbeac6a", "buildbot-0.8.6p1/buildbot")
+        did_install_something |= self._install("http://pypi.python.org/packages/source/b/buildbot/buildbot-0.8.6p1.tar.gz#md5=b6727d2810c692062c657492bcbeac6a", "buildbot-0.8.6p1/buildbot")
+        return did_install_something
 
     def _install_coverage(self):
-        installer = AutoInstaller(target_dir=_AUTOINSTALLED_DIR)
-        installer.install(url="http://pypi.python.org/packages/source/c/coverage/coverage-3.5.1.tar.gz#md5=410d4c8155a4dab222f2bc51212d4a24", url_subpath="coverage-3.5.1/coverage")
+        self._ensure_autoinstalled_dir_is_in_sys_path()
+        return self._install(url="http://pypi.python.org/packages/source/c/coverage/coverage-3.5.1.tar.gz#md5=410d4c8155a4dab222f2bc51212d4a24", url_subpath="coverage-3.5.1/coverage")
 
     def _install_eliza(self):
-        installer = AutoInstaller(target_dir=_AUTOINSTALLED_DIR)
-        installer.install(url="http://www.adambarth.com/webkit/eliza",
-                          target_name="eliza.py")
+        return self._install(url="http://www.adambarth.com/webkit/eliza", target_name="eliza.py")
 
     def _install_irc(self):
         # Since irclib and ircbot are two top-level packages, we need to import
@@ -136,23 +151,39 @@ class AutoinstallImportHook(object):
         # organization purposes.
         irc_dir = self._fs.join(_AUTOINSTALLED_DIR, "irc")
         installer = AutoInstaller(target_dir=irc_dir)
-        installer.install(url="http://downloads.sourceforge.net/project/python-irclib/python-irclib/0.4.8/python-irclib-0.4.8.zip",
+        did_install_something = installer.install(url="http://downloads.sourceforge.net/project/python-irclib/python-irclib/0.4.8/python-irclib-0.4.8.zip",
                           url_subpath="irclib.py")
-        installer.install(url="http://downloads.sourceforge.net/project/python-irclib/python-irclib/0.4.8/python-irclib-0.4.8.zip",
+        did_install_something |= installer.install(url="http://downloads.sourceforge.net/project/python-irclib/python-irclib/0.4.8/python-irclib-0.4.8.zip",
                           url_subpath="ircbot.py")
+        return did_install_something
+
+    def _install_unittest2(self):
+        self._ensure_autoinstalled_dir_is_in_sys_path()
+        return self._install(url="http://pypi.python.org/packages/source/u/unittest2/unittest2-0.5.1.tar.gz#md5=a0af5cac92bbbfa0c3b0e99571390e0f", url_subpath="unittest2-0.5.1/unittest2")
 
     def _install_webpagereplay(self):
+        did_install_something = False
         if not self._fs.exists(self._fs.join(_AUTOINSTALLED_DIR, "webpagereplay")):
-            self._install("http://web-page-replay.googlecode.com/files/webpagereplay-1.1.2.tar.gz", "webpagereplay-1.1.2")
+            did_install_something = self._install("http://web-page-replay.googlecode.com/files/webpagereplay-1.1.2.tar.gz", "webpagereplay-1.1.2")
             self._fs.move(self._fs.join(_AUTOINSTALLED_DIR, "webpagereplay-1.1.2"), self._fs.join(_AUTOINSTALLED_DIR, "webpagereplay"))
 
-        init_path = self._fs.join(_AUTOINSTALLED_DIR, "webpagereplay", "__init__.py")
-        if not self._fs.exists(init_path):
-            self._fs.write_text_file(init_path, "")
+        module_init_path = self._fs.join(_AUTOINSTALLED_DIR, "webpagereplay", "__init__.py")
+        if not self._fs.exists(module_init_path):
+            self._fs.write_text_file(module_init_path, "")
+        return did_install_something
 
-    def _install(self, url, url_subpath):
+    def _install(self, url, url_subpath=None, target_name=None):
         installer = AutoInstaller(target_dir=_AUTOINSTALLED_DIR)
-        installer.install(url=url, url_subpath=url_subpath)
+        return installer.install(url=url, url_subpath=url_subpath, target_name=target_name)
 
 
-sys.meta_path.append(AutoinstallImportHook())
+_hook = AutoinstallImportHook()
+sys.meta_path.append(_hook)
+
+
+def autoinstall_everything():
+    install_methods = [method for method in dir(_hook.__class__) if method.startswith('_install_')]
+    did_install_something = False
+    for method in install_methods:
+        did_install_something |= getattr(_hook, method)()
+    return did_install_something

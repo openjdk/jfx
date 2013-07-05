@@ -41,7 +41,7 @@ namespace WebCore {
 // Save the state value to the m_state member of a JSPopStateEvent, and return it, for convenience.
 static const JSValue& cacheState(ExecState* exec, JSPopStateEvent* event, const JSValue& state)
 {
-    event->m_state.set(exec->globalData(), event, state);
+    event->m_state.set(exec->vm(), event, state);
     return state;
 }
 
@@ -66,7 +66,7 @@ JSValue JSPopStateEvent::state(ExecState* exec) const
     // The current history state object might've changed in the meantime, so we need to take care
     // of using the correct one, and always share the same deserialization with history.state.
 
-    bool isSameState = history->isSameAsCurrentState(event->serializedState());
+    bool isSameState = history->isSameAsCurrentState(event->serializedState().get());
     JSValue result;
 
     if (isSameState) {

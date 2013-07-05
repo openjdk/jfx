@@ -3,8 +3,9 @@
  */
 #include "config.h"
 
-#include "NotImplemented.h"
+#include "FrameLoaderClientJava.h"
 
+#include "NotImplemented.h"
 #include "CSSParser.h"
 #include "CString.h"
 #include "Chrome.h"
@@ -19,18 +20,28 @@
 #include "HTTPParsers.h"
 #include "MIMETypeRegistry.h"
 #include "Page.h"
-#include "PlatformString.h"
+//critical!!! MSVC bug:
+//
+//forward decelerated class member reference accepted as non-virtual, but virtual in fact
+//  no problem in gcc
+//  GPF with ms cc (_fastcall in caller, but _stdcall/_thiscall in fact)
+#include "PolicyChecker.h"
+#include "ResourceBuffer.h"
 #include "ProgressTracker.h"
 #include "RenderPart.h"
+#include "ScriptController.h"
 #include "Settings.h"
+#include "SharedBuffer.h"
 #include "FrameNetworkingContext.h"
 #include "WebPage.h"
 #include "WindowFeatures.h"
 
-#include "FrameLoaderClientJava.h"
-#include <plugins/chromium/PluginDataChromium.h>
+#include <bindings/js/DOMWrapperWorld.h>
 #include <API/APICast.h>
 #include <API/JavaScript.h>
+#include <wtf/text/WTFString.h>
+
+
 
 #include "com_sun_webkit_LoadListenerClient.h"
 
@@ -218,11 +229,9 @@ void FrameLoaderClientJava::postLoadEvent(Frame* f, int state,
     {
         if (f->loader()) {
             DocumentLoader* dl = f->loader()->activeDocumentLoader();
-            SharedBuffer* data = NULL;
-            int size = 0;
+            unsigned size = 0;
             if (dl && dl->mainResourceData()) {
-                data = (dl->mainResourceData()).get();
-                size = data->size();
+                size = dl->mainResourceData()->sharedBuffer()->size();
             }
         }
     }
@@ -266,7 +275,7 @@ void FrameLoaderClientJava::transitionToCommittedFromCachedFrame(CachedFrame*)
 
 void FrameLoaderClientJava::transitionToCommittedForNewPage()
 {
-    FloatRect pageRect = frame()->page()->chrome()->pageRect();
+    FloatRect pageRect = frame()->page()->chrome().pageRect();
     Color bkColor(Color::white);
     bool isTransparent = false;
     FrameView *fv = frame()->view();
@@ -274,8 +283,7 @@ void FrameLoaderClientJava::transitionToCommittedForNewPage()
         bkColor = fv->baseBackgroundColor();
         isTransparent = fv->isTransparent();
     }
-    frame()->createView(IntRect(pageRect).size(),
-                        bkColor, isTransparent, IntSize(), false);
+    frame()->createView(IntRect(pageRect).size(), bkColor, isTransparent);
 }
 
 WTF::PassRefPtr<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(const WebCore::ResourceRequest& request, const SubstituteData& substituteData)
@@ -403,7 +411,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(FramePolicyFu
 void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(FramePolicyFunction policyFunction,
                                                                     const NavigationAction& action,
                                                                     const ResourceRequest& req,
-                                                                    PassRefPtr<FormState>)
+                                                                    PassRefPtr<FormState> state)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
@@ -788,7 +796,7 @@ void FrameLoaderClientJava::restoreViewState()
 Frame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& action)
 {
     struct WindowFeatures features;
-    Page* newPage = frame()->page()->chrome()->createWindow(
+    Page* newPage = frame()->page()->chrome().createWindow(
         frame(),
         FrameLoadRequest( frame()->document()->securityOrigin() ),
         features,
@@ -1122,10 +1130,14 @@ void FrameLoaderClientJava::transferLoadingResourceFromPage(ResourceLoader*, con
     //notImplemented();
 }
 
+void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&)
+{
+    //notImplemented();
+}
+
 PassRefPtr<FrameNetworkingContext> FrameLoaderClientJava::createNetworkingContext() {
     return FrameNetworkingContextJava::create(frame());
 }
-
 
 
 bool FrameLoaderClientJava::shouldUseCredentialStorage(
@@ -1135,5 +1147,6 @@ bool FrameLoaderClientJava::shouldUseCredentialStorage(
     notImplemented();
     return false;
 }
+
 
 }

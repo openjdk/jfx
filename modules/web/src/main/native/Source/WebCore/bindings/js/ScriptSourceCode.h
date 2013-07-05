@@ -31,10 +31,11 @@
 #ifndef ScriptSourceCode_h
 #define ScriptSourceCode_h
 
+#include "CachedResourceHandle.h"
+#include "CachedScript.h"
 #include "CachedScriptSourceProvider.h"
-#include "ScriptSourceProvider.h"
-#include "StringSourceProvider.h"
 #include "KURL.h"
+#include <parser/SourceProvider.h>
 #include <wtf/text/TextPosition.h>
 #include <wtf/RefPtr.h>
 
@@ -43,15 +44,16 @@ namespace WebCore {
 class ScriptSourceCode {
 public:
     ScriptSourceCode(const String& source, const KURL& url = KURL(), const TextPosition& startPosition = TextPosition::minimumPosition())
-        : m_provider(StringSourceProvider::create(source, url.isNull() ? String() : url.string(), startPosition))
+        : m_provider(JSC::StringSourceProvider::create(source, url.isNull() ? String() : url.string(), startPosition))
         , m_code(m_provider, startPosition.m_line.oneBasedInt())
         , m_url(url)
     {
     }
 
-    ScriptSourceCode(CachedScript* cs)
-        : m_provider(CachedScriptSourceProvider::create(cs))
+    explicit ScriptSourceCode(CachedScript* cachedScript)
+        : m_provider(CachedScriptSourceProvider::create(cachedScript))
         , m_code(m_provider)
+        , m_cachedScript(cachedScript)
     {
     }
 
@@ -63,13 +65,17 @@ public:
 
     int startLine() const { return m_code.firstLine(); }
 
+    CachedScript* cachedScript() const { return m_cachedScript.get(); }
+
     const KURL& url() const { return m_url; }
     
 private:
-    RefPtr<ScriptSourceProvider> m_provider;
+    RefPtr<JSC::SourceProvider> m_provider;
     
     JSC::SourceCode m_code;
     
+    CachedResourceHandle<CachedScript> m_cachedScript;
+
     KURL m_url;
 
 };

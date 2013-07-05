@@ -26,12 +26,13 @@
 #include "config.h"
 #include "LevelDBTransaction.h"
 
+#if ENABLE(INDEXED_DATABASE)
+#if USE(LEVELDB)
+
 #include "LevelDBDatabase.h"
 #include "LevelDBSlice.h"
 #include "LevelDBWriteBatch.h"
-
-#if ENABLE(INDEXED_DATABASE)
-#if USE(LEVELDB)
+#include <leveldb/db.h>
 
 namespace WebCore {
 
@@ -42,6 +43,7 @@ PassRefPtr<LevelDBTransaction> LevelDBTransaction::create(LevelDBDatabase* db)
 
 LevelDBTransaction::LevelDBTransaction(LevelDBDatabase* db)
     : m_db(db)
+    , m_snapshot(db)
     , m_comparator(db->comparator())
     , m_finished(false)
 {
@@ -76,7 +78,7 @@ static void initVector(const LevelDBSlice& slice, Vector<char>* vector)
     vector->append(slice.begin(), slice.end() - slice.begin());
 }
 
-bool LevelDBTransaction::set(const LevelDBSlice& key, const Vector<char>& value, bool deleted)
+void LevelDBTransaction::set(const LevelDBSlice& key, const Vector<char>& value, bool deleted)
 {
     ASSERT(!m_finished);
     bool newNode = false;
@@ -93,38 +95,50 @@ bool LevelDBTransaction::set(const LevelDBSlice& key, const Vector<char>& value,
 
     if (newNode)
         notifyIteratorsOfTreeChange();
-    return true;
 }
 
-bool LevelDBTransaction::put(const LevelDBSlice& key, const Vector<char>& value)
+void LevelDBTransaction::put(const LevelDBSlice& key, const Vector<char>& value)
 {
-    return set(key, value, false);
+    set(key, value, false);
 }
 
-bool LevelDBTransaction::remove(const LevelDBSlice& key)
+void LevelDBTransaction::remove(const LevelDBSlice& key)
 {
-    return set(key, Vector<char>(), true);
+    set(key, Vector<char>(), true);
 }
 
-bool LevelDBTransaction::get(const LevelDBSlice& key, Vector<char>& value)
+bool LevelDBTransaction::safeGet(const LevelDBSlice& key, Vector<char>& value, bool& found)
 {
+    found = false;
     ASSERT(!m_finished);
     AVLTreeNode* node = m_tree.search(key);
 
     if (node) {
         if (node->deleted)
-            return false;
+            return true;
 
         value = node->value;
+        found = true;
         return true;
     }
 
-    return m_db->get(key, value);
+    bool ok = m_db->safeGet(key, value, found, &m_snapshot);
+    if (!ok) {
+        ASSERT(!found);
+        return false;
+    }
+    return true;
 }
 
 bool LevelDBTransaction::commit()
 {
     ASSERT(!m_finished);
+
+    if (m_tree.is_empty()) {
+        m_finished = true;
+        return true;
+    }
+
     OwnPtr<LevelDBWriteBatch> writeBatch = LevelDBWriteBatch::create();
 
     TreeType::Iterator iterator;
@@ -252,7 +266,7 @@ LevelDBTransaction::TransactionIterator::TransactionIterator(PassRefPtr<LevelDBT
     : m_transaction(transaction)
     , m_comparator(m_transaction->m_comparator)
     , m_treeIterator(TreeIterator::create(m_transaction.get()))
-    , m_dbIterator(m_transaction->m_db->createIterator())
+    , m_dbIterator(m_transaction->m_db->createIterator(&m_transaction->m_snapshot))
     , m_current(0)
     , m_direction(kForward)
     , m_treeChanged(false)
@@ -483,6 +497,41 @@ void LevelDBTransaction::notifyIteratorsOfTreeChange()
         TransactionIterator* transactionIterator = *i;
         transactionIterator->treeChanged();
     }
+}
+
+PassOwnPtr<LevelDBWriteOnlyTransaction> LevelDBWriteOnlyTransaction::create(LevelDBDatabase* db)
+{
+    return adoptPtr(new LevelDBWriteOnlyTransaction(db));
+}
+
+LevelDBWriteOnlyTransaction::LevelDBWriteOnlyTransaction(LevelDBDatabase* db)
+    : m_db(db)
+    , m_writeBatch(LevelDBWriteBatch::create())
+    , m_finished(false)
+{
+}
+
+LevelDBWriteOnlyTransaction::~LevelDBWriteOnlyTransaction()
+{
+    m_writeBatch->clear();
+}
+
+void LevelDBWriteOnlyTransaction::remove(const LevelDBSlice& key)
+{
+    ASSERT(!m_finished);
+    m_writeBatch->remove(key);
+}
+
+bool LevelDBWriteOnlyTransaction::commit()
+{
+    ASSERT(!m_finished);
+
+    if (!m_db->write(*m_writeBatch))
+        return false;
+
+    m_finished = true;
+    m_writeBatch->clear();
+    return true;
 }
 
 } // namespace WebCore

@@ -32,8 +32,8 @@
 #include "JavaInstanceJSC.h"
 
 #include <runtime/JSLock.h>
-#include <runtime/ScopeChain.h>
-
+#include <wtf/text/WTFString.h>
+#include <wtf/text/StringImpl.h>
 
 namespace JSC {
 
@@ -53,26 +53,26 @@ public:
 
     JavaString()
     {
-        JSLockHolder lock(WebCore::JSDOMWindowBase::commonJSGlobalData());
-        m_impl = UString().impl();
+        //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
+        m_impl = StringImpl::empty();
     }
 
     ~JavaString()
     {
-        JSLockHolder lock(WebCore::JSDOMWindowBase::commonJSGlobalData());
+        //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
         m_impl = 0;
     }
 
     const char* utf8() const
     {
         if (!m_utf8String.data()) {
-            JSLockHolder lock(WebCore::JSDOMWindowBase::commonJSGlobalData());
-            m_utf8String = UString(m_impl).utf8();
+            //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
+            m_utf8String = String(m_impl).utf8();
         }
         return m_utf8String.data();
     }
     int length() const { return m_impl->length(); }
-    StringImpl* impl() const { return m_impl.get(); }
+    PassRefPtr<StringImpl> impl() const { return m_impl; }
 
 private:
     void init(JNIEnv* e, jstring s)
@@ -80,8 +80,8 @@ private:
         int size = e->GetStringLength(s);
         const jchar* uc = getUCharactersFromJStringInEnv(e, s);
         {
-            JSLockHolder lock(WebCore::JSDOMWindowBase::commonJSGlobalData());
-            m_impl = UString(reinterpret_cast<const UChar*>(uc), size).impl();
+            //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
+            m_impl = StringImpl::create(reinterpret_cast<const UChar*>(uc), size);
         }
         releaseUCharactersForJStringInEnv(e, s, uc);
     }

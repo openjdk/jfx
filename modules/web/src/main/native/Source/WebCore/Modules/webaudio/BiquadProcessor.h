@@ -67,10 +67,12 @@ public:
     void checkForDirtyCoefficients();
     
     bool filterCoefficientsDirty() const { return m_filterCoefficientsDirty; }
+    bool hasSampleAccurateValues() const { return m_hasSampleAccurateValues; }
 
     AudioParam* parameter1() { return m_parameter1.get(); }
     AudioParam* parameter2() { return m_parameter2.get(); }
     AudioParam* parameter3() { return m_parameter3.get(); }
+    AudioParam* parameter4() { return m_parameter4.get(); }
 
     FilterType type() const { return m_type; }
     void setType(FilterType);
@@ -81,9 +83,13 @@ private:
     RefPtr<AudioParam> m_parameter1;
     RefPtr<AudioParam> m_parameter2;
     RefPtr<AudioParam> m_parameter3;
+    RefPtr<AudioParam> m_parameter4;
 
     // so DSP kernels know when to re-compute coefficients
     bool m_filterCoefficientsDirty;
+
+    // Set to true if any of the filter parameters are sample-accurate.
+    bool m_hasSampleAccurateValues;
 };
 
 } // namespace WebCore

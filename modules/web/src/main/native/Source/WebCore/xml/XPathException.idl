@@ -26,11 +26,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module xpath {
-
-    exception [
-        DoNotCheckConstants
-    ] XPathException {
+[
+    DoNotCheckConstants,
+    ImplementationLacksVTable
+] exception XPathException {
 
         readonly attribute unsigned short   code;
         readonly attribute DOMString        name;
@@ -46,4 +45,3 @@ module xpath {
         const unsigned short TYPE_ERR = 52;
     };
 
-}

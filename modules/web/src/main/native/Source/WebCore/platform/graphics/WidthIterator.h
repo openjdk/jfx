@@ -22,7 +22,9 @@
 #ifndef WidthIterator_h
 #define WidthIterator_h
 
+#include "Font.h"
 #include "SVGGlyph.h"
+#include "TextRun.h"
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/unicode/Unicode.h>
@@ -36,10 +38,12 @@ class TextRun;
 struct GlyphData;
 
 struct WidthIterator {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
     WidthIterator(const Font*, const TextRun&, HashSet<const SimpleFontData*>* fallbackFonts = 0, bool accountForGlyphBounds = false, bool forTextEmphasis = false);
 
-    unsigned advance(int to, GlyphBuffer* = 0);
-    bool advanceOneCharacter(float& width, GlyphBuffer* = 0);
+    unsigned advance(int to, GlyphBuffer*);
+    bool advanceOneCharacter(float& width, GlyphBuffer&);
 
     float maxGlyphBoundingBoxY() const { ASSERT(m_accountForGlyphBounds); return m_maxGlyphBoundingBoxY; }
     float minGlyphBoundingBoxY() const { ASSERT(m_accountForGlyphBounds); return m_minGlyphBoundingBoxY; }
@@ -54,6 +58,20 @@ struct WidthIterator {
     void setLastGlyphName(const String& name) { m_lastGlyphName = name; }
     Vector<SVGGlyph::ArabicForm>& arabicForms() { return m_arabicForms; }
 #endif
+
+    static bool supportsTypesettingFeatures(const Font& font)
+    {
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 1080
+        if (!font.isPrinterFont())
+            return !font.typesettingFeatures();
+
+        return !(font.typesettingFeatures() & ~(Kerning | Ligatures));
+#elif PLATFORM(QT) && QT_VERSION >= 0x050100
+        return !(font.typesettingFeatures() & ~Kerning) && !font.isSmallCaps();
+#else
+        return !font.typesettingFeatures();
+#endif
+    }
 
     const Font* m_font;
 
@@ -73,7 +91,12 @@ struct WidthIterator {
 
 private:
     GlyphData glyphDataForCharacter(UChar32, bool mirror, int currentCharacter, unsigned& advanceLength);
+    template <typename TextIterator>
+    inline unsigned advanceInternal(TextIterator&, GlyphBuffer*);
 
+    bool shouldApplyFontTransforms() const { return m_run.length() > 1 && (m_typesettingFeatures & (Kerning | Ligatures)); }
+
+    TypesettingFeatures m_typesettingFeatures;
     HashSet<const SimpleFontData*>* m_fallbackFonts;
     bool m_accountForGlyphBounds;
     float m_maxGlyphBoundingBoxY;

@@ -35,9 +35,7 @@
 #include <runtime/Identifier.h>
 #include <runtime/JSLock.h>
 
-#if PLATFORM(JAVA)
 using namespace JSC;
-#endif
 using namespace JSC::Bindings;
 
 JavaClass::JavaClass(jobject anInstance, RootObject* rootObject, jobject accessControlContext)
@@ -119,30 +117,29 @@ JavaClass::~JavaClass()
 
     MethodListMap::const_iterator end = m_methods.end();
     for (MethodListMap::const_iterator it = m_methods.begin(); it != end; ++it) {
-        const MethodList* methodList = it->second;
+        const MethodList* methodList = it->value;
         deleteAllValues(*methodList);
         delete methodList;
     }
     m_methods.clear();
 }
 
-MethodList JavaClass::methodsNamed(PropertyName propertyName, Instance*) const
+Method *JavaClass::methodNamed(PropertyName propertyName, Instance*) const
 {
-#if ENABLE(JAVA_JSC)
-    const UString& name = propertyName.publicName();
+    const String name(propertyName.publicName());
     unsigned nameLength = name.length();
     MethodList* methodList;
     int i;
     if (nameLength >= 3 && name[nameLength-1] == ')'
         && (i = name.find('(', 1)) != WTF::notFound) {
-        Vector<UString> pnames;
+        Vector<String> pnames;
         int pstart = i+1;
         if (pstart < nameLength-1) {
             do {
                 int pnext = name.find(',', pstart);
                 if (pnext == WTF::notFound)
                     pnext = nameLength-1;
-                UString pname = name.substringSharingImpl(pstart, pnext-pstart);
+                String pname = name.substringSharingImpl(pstart, pnext-pstart);
                 pnames.append(pname);
                 pstart = pnext+1;
             } while (pstart < nameLength);
@@ -165,9 +162,7 @@ MethodList JavaClass::methodsNamed(PropertyName propertyName, Instance*) const
                     }
                     String methodParam = jMethod->parameterAt(i);
                     size_t methodParamLength = methodParam.length();
-                    // Compare a UString and a String.
-                    // Is there a better way to do it?
-                    UString pname = pnames[i];
+                    String pname = pnames[i];
                     size_t pnameLength = pname.length();
                     // Handle array type names.
                     while (methodParamLength >= 2 && methodParam[0] == '['
@@ -229,13 +224,9 @@ MethodList JavaClass::methodsNamed(PropertyName propertyName, Instance*) const
     } else {
         methodList = m_methods.get(name.impl());
     }
-#else
-    MethodList* methodList = m_methods.get(propertyName.publicName());
-#endif
-
     if (methodList)
-        return *methodList;
-    return MethodList();
+        return methodList->at(0);
+    return NULL;
 }
 
 Field* JavaClass::fieldNamed(PropertyName propertyName, Instance*) const
@@ -258,12 +249,10 @@ bool JavaClass::isBooleanClass() const
     return !strcmp(m_name, "java.lang.Boolean");
 }
 
-#if ENABLE(JAVA_JSC)
 bool JavaClass::isCharacterClass() const
 {
     return !strcmp(m_name, "java.lang.Character");
 }
-#endif
 
 bool JavaClass::isStringClass() const
 {

@@ -125,7 +125,8 @@ RGBA32 makeRGBAFromCMYKA(float c, float m, float y, float k, float a)
 }
 
 // originally moved here from the CSS parser
-bool Color::parseHexColor(const UChar* name, unsigned length, RGBA32& rgb)
+template <typename CharacterType>
+static inline bool parseHexColorInternal(const CharacterType* name, unsigned length, RGBA32& rgb)
 {
     if (length != 3 && length != 6)
         return false;
@@ -148,8 +149,24 @@ bool Color::parseHexColor(const UChar* name, unsigned length, RGBA32& rgb)
     return true;
 }
 
+bool Color::parseHexColor(const LChar* name, unsigned length, RGBA32& rgb)
+{
+    return parseHexColorInternal(name, length, rgb);
+}
+
+bool Color::parseHexColor(const UChar* name, unsigned length, RGBA32& rgb)
+{
+    return parseHexColorInternal(name, length, rgb);
+}
+
 bool Color::parseHexColor(const String& name, RGBA32& rgb)
 {
+    unsigned length = name.length();
+    
+    if (!length)
+        return false;
+    if (name.is8Bit())
+        return parseHexColor(name.characters8(), name.length(), rgb);
     return parseHexColor(name.characters(), name.length(), rgb);
 }
 
@@ -163,9 +180,12 @@ int differenceSquared(const Color& c1, const Color& c2)
 
 Color::Color(const String& name)
 {
-    if (name[0] == '#')
+    if (name[0] == '#') {
+        if (name.is8Bit())
+            m_valid = parseHexColor(name.characters8() + 1, name.length() - 1, m_color);
+        else
         m_valid = parseHexColor(name.characters() + 1, name.length() - 1, m_color);
-    else
+    } else
         setNamedColor(name);
 }
 
@@ -182,9 +202,6 @@ Color::Color(const char* name)
 
 String Color::serialized() const
 {
-    DEFINE_STATIC_LOCAL(const String, commaSpace, (", "));
-    DEFINE_STATIC_LOCAL(const String, rgbaParen, ("rgba("));
-
     if (!hasAlpha()) {
         StringBuilder builder;
         builder.reserveCapacity(7);
@@ -195,21 +212,23 @@ String Color::serialized() const
         return builder.toString();
     }
 
-    Vector<UChar> result;
+    Vector<LChar> result;
     result.reserveInitialCapacity(28);
+    const char commaSpace[] = ", ";
+    const char rgbaParen[] = "rgba(";
 
-    append(result, rgbaParen);
+    result.append(rgbaParen, 5);
     appendNumber(result, red());
-    append(result, commaSpace);
+    result.append(commaSpace, 2);
     appendNumber(result, green());
-    append(result, commaSpace);
+    result.append(commaSpace, 2);
     appendNumber(result, blue());
-    append(result, commaSpace);
+    result.append(commaSpace, 2);
 
     if (!alpha())
         result.append('0');
     else {
-        NumberToUStringBuffer buffer;
+        NumberToLStringBuffer buffer;
         unsigned length = DecimalNumber(alpha() / 255.0).toStringDecimal(buffer, WTF::NumberToStringBufferLength);
         result.append(buffer, length);
     }
@@ -395,31 +414,30 @@ void Color::getHSL(double& hue, double& saturation, double& lightness) const
         saturation = ((max - min) / (2.0 - (max + min)));
 }
 
-Color colorFromPremultipliedARGB(unsigned pixelColor)
+Color colorFromPremultipliedARGB(RGBA32 pixelColor)
 {
-    Color color;
-
-    if (unsigned alpha = (pixelColor & 0xFF000000) >> 24) {
-        color = Color::createUnCheked(
-                        ((pixelColor & 0x00FF0000) >> 16) * 255 / alpha,
-                        ((pixelColor & 0x0000FF00) >> 8) * 255 / alpha,
-                         (pixelColor & 0x000000FF) * 255 / alpha,
+    int alpha = alphaChannel(pixelColor);
+    if (alpha && alpha < 255) {
+        return Color::createUnchecked(
+            redChannel(pixelColor) * 255 / alpha,
+            greenChannel(pixelColor) * 255 / alpha,
+            blueChannel(pixelColor) * 255 / alpha,
                           alpha);
     } else
-        color = Color(pixelColor);
-
-    return color;
+        return Color(pixelColor);
 }
 
-unsigned premultipliedARGBFromColor(const Color& color)
+RGBA32 premultipliedARGBFromColor(const Color& color)
 {
     unsigned pixelColor;
 
-    if (unsigned alpha = color.alpha()) {
-        pixelColor = alpha << 24 |
-             ((color.red() * alpha  + 254) / 255) << 16 | 
-             ((color.green() * alpha  + 254) / 255) << 8 | 
-             ((color.blue() * alpha  + 254) / 255);
+    unsigned alpha = color.alpha();
+    if (alpha < 255) {
+        pixelColor = Color::createUnchecked(
+            fastDivideBy255(color.red() * alpha + 254),
+            fastDivideBy255(color.green() * alpha + 254),
+            fastDivideBy255(color.blue() * alpha + 254),
+            alpha).rgb();
     } else
          pixelColor = color.rgb();
 

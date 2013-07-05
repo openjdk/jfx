@@ -36,10 +36,10 @@
 #include "Navigator.h"
 #include "NetworkInfo.h"
 #include "NetworkInfoController.h"
-#include "PlatformString.h"
 
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -55,6 +55,7 @@ public:
     bool metered() const;
     
     void didChangeNetworkInformation(PassRefPtr<Event>, PassRefPtr<NetworkInfo>);
+    void networkInfoControllerDestroyed() { m_controller = 0; }
 
     // EventTarget implementation.
     virtual const AtomicString& interfaceName() const;

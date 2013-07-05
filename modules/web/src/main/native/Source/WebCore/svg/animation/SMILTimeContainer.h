@@ -29,7 +29,6 @@
 #if ENABLE(SVG)
 
 #include "QualifiedName.h"
-#include "PlatformString.h"
 #include "SMILTime.h"
 #include "Timer.h"
 #include <wtf/HashMap.h>
@@ -37,6 +36,7 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
     
@@ -47,14 +47,17 @@ class SVGSVGElement;
 class SMILTimeContainer : public RefCounted<SMILTimeContainer>  {
 public:
     static PassRefPtr<SMILTimeContainer> create(SVGSVGElement* owner) { return adoptRef(new SMILTimeContainer(owner)); } 
+    ~SMILTimeContainer();
 
-    void schedule(SVGSMILElement*);
-    void unschedule(SVGSMILElement*);
+    void schedule(SVGSMILElement*, SVGElement*, const QualifiedName&);
+    void unschedule(SVGSMILElement*, SVGElement*, const QualifiedName&);
+    void notifyIntervalsChanged();
     
     SMILTime elapsed() const;
 
     bool isActive() const;
     bool isPaused() const;
+    bool isStarted() const;
     
     void begin();
     void pause();
@@ -82,10 +85,16 @@ private:
     
     Timer<SMILTimeContainer> m_timer;
 
-    typedef HashSet<SVGSMILElement*> TimingElementSet;
-    TimingElementSet m_scheduledAnimations;
+    typedef pair<SVGElement*, QualifiedName> ElementAttributePair;
+    typedef Vector<SVGSMILElement*> AnimationsVector;
+    typedef HashMap<ElementAttributePair, OwnPtr<AnimationsVector> > GroupedAnimationsMap;
+    GroupedAnimationsMap m_scheduledAnimations;
 
     SVGSVGElement* m_ownerSVGElement;
+
+#ifndef NDEBUG
+    bool m_preventScheduledAnimationsChanges;
+#endif
 };
 }
 

@@ -22,8 +22,6 @@
 
 #if ENABLE(FILTERS)
 #include "FilterEffect.h"
-
-#include "PlatformString.h"
 #include "Filter.h"
 
 namespace WebCore {
@@ -35,6 +33,9 @@ public:
     static const AtomicString& effectName();
 
     virtual void platformApplySoftware();
+#if ENABLE(OPENCL)
+    virtual bool platformApplyOpenCL();
+#endif
     virtual void dump();
 
     virtual void determineAbsolutePaintRect();

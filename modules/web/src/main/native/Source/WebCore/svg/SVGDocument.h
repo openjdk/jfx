@@ -31,7 +31,7 @@ class DOMImplementation;
 class SVGElement;
 class SVGSVGElement;
 
-class SVGDocument : public Document {
+class SVGDocument FINAL : public Document {
 public:
     static PassRefPtr<SVGDocument> create(Frame* frame, const KURL& url)
     {
@@ -51,12 +51,25 @@ public:
 private:
     SVGDocument(Frame*, const KURL&);
 
-    virtual bool isSVGDocument() const { return true; }
-
     virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const;
 
     FloatPoint m_translate;
 };
+
+inline SVGDocument* toSVGDocument(Document* document)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isSVGDocument());
+    return static_cast<SVGDocument*>(document);
+}
+
+inline const SVGDocument* toSVGDocument(const Document* document)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isSVGDocument());
+    return static_cast<const SVGDocument*>(document);
+}
+
+// This will catch anyone doing an unnecessary cast.
+void toSVGDocument(const SVGDocument*);
 
 } // namespace WebCore
 

@@ -43,7 +43,7 @@ class KURL;
 template<typename T> class EventSender;
 typedef EventSender<HTMLLinkElement> LinkEventSender;
 
-class HTMLLinkElement : public HTMLElement, public CachedStyleSheetClient, public LinkLoaderClient {
+class HTMLLinkElement FINAL : public HTMLElement, public CachedStyleSheetClient, public LinkLoaderClient {
 public:
     static PassRefPtr<HTMLLinkElement> create(const QualifiedName&, Document*, bool createdByParser);
     virtual ~HTMLLinkElement();
@@ -73,7 +73,7 @@ public:
     static void dispatchPendingLoadEvents();
 
 private:
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
     virtual bool shouldLoadLink();
     void process();
@@ -89,8 +89,8 @@ private:
     virtual void notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred);
     virtual void startLoadingDynamicSheet();
 
-    virtual void linkLoaded();
-    virtual void linkLoadingErrored();
+    virtual void linkLoaded() OVERRIDE;
+    virtual void linkLoadingErrored() OVERRIDE;
 
     bool isAlternate() const { return m_disabledState == Unset && m_relAttribute.m_isAlternate; }
     
@@ -105,7 +105,13 @@ private:
     
     enum PendingSheetType { None, NonBlocking, Blocking };
     void addPendingSheet(PendingSheetType);
-    void removePendingSheet();
+
+    enum RemovePendingSheetNotificationType {
+        RemovePendingSheetNotifyImmediately,
+        RemovePendingSheetNotifyLater
+    };
+
+    void removePendingSheet(RemovePendingSheetNotificationType = RemovePendingSheetNotifyImmediately);
 
 #if ENABLE(MICRODATA)
     virtual String itemValueText() const OVERRIDE;
@@ -124,7 +130,6 @@ private:
         Disabled
     };
 
-    KURL m_url;
     String m_type;
     String m_media;
     RefPtr<DOMSettableTokenList> m_sizes;

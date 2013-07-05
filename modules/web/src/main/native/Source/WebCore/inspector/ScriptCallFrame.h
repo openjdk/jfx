@@ -35,8 +35,8 @@
 #include "InspectorTypeBuilder.h"
 #endif
 
-#include "PlatformString.h"
 #include <wtf/Forward.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -44,12 +44,13 @@ class InspectorObject;
 
 class ScriptCallFrame  {
 public:
-    ScriptCallFrame(const String& functionName, const String& scriptName, unsigned lineNumber, unsigned column = 0);
+    ScriptCallFrame(const String& functionName, const String& scriptName, unsigned lineNumber, unsigned column);
     ~ScriptCallFrame();
 
     const String& functionName() const { return m_functionName; }
     const String& sourceURL() const { return m_scriptName; }
     unsigned lineNumber() const { return m_lineNumber; }
+    unsigned columnNumber() const { return m_column; }
 
     bool isEqual(const ScriptCallFrame&) const;
 

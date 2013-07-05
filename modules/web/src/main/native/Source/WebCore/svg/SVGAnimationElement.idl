@@ -23,12 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=SVG,
         OmitConstructor
-    ] SVGAnimationElement : SVGElement,
+] interface SVGAnimationElement : SVGElement,
                                                       SVGTests,
                                                       SVGExternalResourcesRequired,
                                                       ElementTimeControl {
@@ -40,4 +39,3 @@ module svg {
             raises(DOMException);
     };
 
-}

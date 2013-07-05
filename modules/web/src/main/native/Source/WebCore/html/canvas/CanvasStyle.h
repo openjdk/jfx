@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,9 +28,9 @@
 #define CanvasStyle_h
 
 #include "Color.h"
-#include "PlatformString.h"
 #include <wtf/Assertions.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -40,66 +40,123 @@ namespace WebCore {
     class GraphicsContext;
     class HTMLCanvasElement;
 
-    class CanvasStyle : public RefCounted<CanvasStyle> {
+    class CanvasStyle {
     public:
-        static PassRefPtr<CanvasStyle> createFromRGBA(RGBA32 rgba) { return adoptRef(new CanvasStyle(rgba)); }
-        static PassRefPtr<CanvasStyle> createFromString(const String& color, Document* = 0);
-        static PassRefPtr<CanvasStyle> createFromStringWithOverrideAlpha(const String& color, float alpha);
-        static PassRefPtr<CanvasStyle> createFromGrayLevelWithAlpha(float grayLevel, float alpha) { return adoptRef(new CanvasStyle(grayLevel, alpha)); }
-        static PassRefPtr<CanvasStyle> createFromRGBAChannels(float r, float g, float b, float a) { return adoptRef(new CanvasStyle(r, g, b, a)); }
-        static PassRefPtr<CanvasStyle> createFromCMYKAChannels(float c, float m, float y, float k, float a) { return adoptRef(new CanvasStyle(c, m, y, k, a)); }
-        static PassRefPtr<CanvasStyle> createFromGradient(PassRefPtr<CanvasGradient>);
-        static PassRefPtr<CanvasStyle> createFromPattern(PassRefPtr<CanvasPattern>);
+        CanvasStyle();
+        explicit CanvasStyle(RGBA32);
+        CanvasStyle(float grayLevel, float alpha);
+        CanvasStyle(float r, float g, float b, float alpha);
+        CanvasStyle(float c, float m, float y, float k, float alpha);
+        explicit CanvasStyle(PassRefPtr<CanvasGradient>);
+        explicit CanvasStyle(PassRefPtr<CanvasPattern>);
+        ~CanvasStyle();
 
+        static CanvasStyle createFromString(const String& color, Document* = 0);
+        static CanvasStyle createFromStringWithOverrideAlpha(const String& color, float alpha);
+
+        bool isValid() const { return m_type != Invalid; }
         bool isCurrentColor() const { return m_type == CurrentColor || m_type == CurrentColorWithOverrideAlpha; }
         bool hasOverrideAlpha() const { return m_type == CurrentColorWithOverrideAlpha; }
         float overrideAlpha() const { ASSERT(m_type == CurrentColorWithOverrideAlpha); return m_overrideAlpha; }
 
-        String color() const { ASSERT(m_type == RGBA || m_type == CMYKA); return Color(m_rgba).serialized(); }
-        CanvasGradient* canvasGradient() const { return m_gradient.get(); }
-        CanvasPattern* canvasPattern() const { return m_pattern.get(); }
+        String color() const;
+        CanvasGradient* canvasGradient() const;
+        CanvasPattern* canvasPattern() const;
 
-        void applyFillColor(GraphicsContext*);
-        void applyStrokeColor(GraphicsContext*);
+        void applyFillColor(GraphicsContext*) const;
+        void applyStrokeColor(GraphicsContext*) const;
 
         bool isEquivalentColor(const CanvasStyle&) const;
         bool isEquivalentRGBA(float r, float g, float b, float a) const;
         bool isEquivalentCMYKA(float c, float m, float y, float k, float a) const;
 
+        CanvasStyle(const CanvasStyle&);
+        CanvasStyle& operator=(const CanvasStyle&);
+#if COMPILER_SUPPORTS(CXX_RVALUE_REFERENCES)
+        CanvasStyle(CanvasStyle&&);
+        CanvasStyle& operator=(CanvasStyle&&);
+#endif
+
     private:
-        enum Type { RGBA, CMYKA, Gradient, ImagePattern, CurrentColor, CurrentColorWithOverrideAlpha };
-
-        CanvasStyle(Type, float overrideAlpha = 0);
-        CanvasStyle(RGBA32 rgba);
-        CanvasStyle(float grayLevel, float alpha);
-        CanvasStyle(float r, float g, float b, float a);
-        CanvasStyle(float c, float m, float y, float k, float a);
-        CanvasStyle(PassRefPtr<CanvasGradient>);
-        CanvasStyle(PassRefPtr<CanvasPattern>);
-
-        Type m_type;
-
-        union {
-            RGBA32 m_rgba;
-            float m_overrideAlpha;
-        };
-
-        RefPtr<CanvasGradient> m_gradient;
-        RefPtr<CanvasPattern> m_pattern;
-
+        enum Type { RGBA, CMYKA, Gradient, ImagePattern, CurrentColor, CurrentColorWithOverrideAlpha, Invalid };
         struct CMYKAValues {
-            CMYKAValues() : c(0), m(0), y(0), k(0), a(0) { }
-            CMYKAValues(float cyan, float magenta, float yellow, float black, float alpha) : c(cyan), m(magenta), y(yellow), k(black), a(alpha) { }
+            WTF_MAKE_FAST_ALLOCATED;
+            WTF_MAKE_NONCOPYABLE(CMYKAValues);
+        public:
+            CMYKAValues() : rgba(0), c(0), m(0), y(0), k(0), a(0) { }
+            CMYKAValues(RGBA32 rgba, float cyan, float magenta, float yellow, float black, float alpha) : rgba(rgba), c(cyan), m(magenta), y(yellow), k(black), a(alpha) { }
+            RGBA32 rgba;
             float c;
             float m;
             float y;
             float k;
             float a;
-        } m_cmyka;
+        };
+
+        enum ConstructCurrentColorTag { ConstructCurrentColor };
+        CanvasStyle(ConstructCurrentColorTag) : m_type(CurrentColor) { }
+        CanvasStyle(Type type, float overrideAlpha)
+            : m_overrideAlpha(overrideAlpha)
+            , m_type(type)
+        {
+        }
+
+        union {
+            RGBA32 m_rgba;
+            float m_overrideAlpha;
+            CanvasGradient* m_gradient;
+            CanvasPattern* m_pattern;
+            CMYKAValues* m_cmyka;
+        };
+        Type m_type;
     };
 
     RGBA32 currentColor(HTMLCanvasElement*);
     bool parseColorOrCurrentColor(RGBA32& parsedColor, const String& colorString, HTMLCanvasElement*);
+
+    inline CanvasStyle::CanvasStyle()
+        : m_type(Invalid)
+    {
+    }
+
+    inline CanvasGradient* CanvasStyle::canvasGradient() const
+    {
+        if (m_type == Gradient)
+            return m_gradient;
+        return 0;
+    }
+
+    inline CanvasPattern* CanvasStyle::canvasPattern() const
+    {
+        if (m_type == ImagePattern)
+            return m_pattern;
+        return 0;
+    }
+
+    inline String CanvasStyle::color() const
+    {
+        ASSERT(m_type == RGBA || m_type == CMYKA);
+        if (m_type == RGBA)
+            return Color(m_rgba).serialized();
+        return Color(m_cmyka->rgba).serialized();
+    }
+
+#if COMPILER_SUPPORTS(CXX_RVALUE_REFERENCES)
+    inline CanvasStyle::CanvasStyle(CanvasStyle&& other)
+    {
+        memcpy(this, &other, sizeof(CanvasStyle));
+        other.m_type = Invalid;
+    }
+
+    inline CanvasStyle& CanvasStyle::operator=(CanvasStyle&& other)
+    {
+        if (this != &other) {
+            memcpy(this, &other, sizeof(CanvasStyle));
+            other.m_type = Invalid;
+        }
+        return *this;
+    }
+#endif
 
 } // namespace WebCore
 

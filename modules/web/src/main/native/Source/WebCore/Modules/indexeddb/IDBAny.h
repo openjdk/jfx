@@ -28,10 +28,13 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
-#include "PlatformString.h"
+#include "IDBKeyPath.h"
+#include "ScriptValue.h"
+#include "ScriptWrappable.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -41,12 +44,11 @@ class IDBCursorWithValue;
 class IDBDatabase;
 class IDBFactory;
 class IDBIndex;
-class IDBKey;
+class IDBKeyPath;
 class IDBObjectStore;
 class IDBTransaction;
-class SerializedScriptValue;
 
-class IDBAny : public RefCounted<IDBAny> {
+class IDBAny : public ScriptWrappable, public RefCounted<IDBAny> {
 public:
     static PassRefPtr<IDBAny> createInvalid();
     static PassRefPtr<IDBAny> createNull();
@@ -54,16 +56,21 @@ public:
     template<typename T>
     static PassRefPtr<IDBAny> create(T* idbObject)
     {
-        RefPtr<IDBAny> any = IDBAny::createInvalid();
-        any->set(idbObject);
-        return any.release();
+        return adoptRef(new IDBAny(idbObject));
+    }
+    template<typename T>
+    static PassRefPtr<IDBAny> create(const T& idbObject)
+    {
+        return adoptRef(new IDBAny(idbObject));
     }
     template<typename T>
     static PassRefPtr<IDBAny> create(PassRefPtr<T> idbObject)
     {
-        RefPtr<IDBAny> any = IDBAny::createInvalid();
-        any->set(idbObject);
-        return any.release();
+        return adoptRef(new IDBAny(idbObject));
+    }
+    static PassRefPtr<IDBAny> create(int64_t value)
+    {
+        return adoptRef(new IDBAny(value));
     }
     ~IDBAny();
 
@@ -76,11 +83,12 @@ public:
         IDBDatabaseType,
         IDBFactoryType,
         IDBIndexType,
-        IDBKeyType,
         IDBObjectStoreType,
         IDBTransactionType,
-        SerializedScriptValueType,
+        ScriptValueType,
+        IntegerType,
         StringType,
+        KeyPathType,
     };
 
     Type type() const { return m_type; }
@@ -91,43 +99,43 @@ public:
     PassRefPtr<IDBDatabase> idbDatabase();
     PassRefPtr<IDBFactory> idbFactory();
     PassRefPtr<IDBIndex> idbIndex();
-    PassRefPtr<IDBKey> idbKey();
     PassRefPtr<IDBObjectStore> idbObjectStore();
     PassRefPtr<IDBTransaction> idbTransaction();
-    PassRefPtr<SerializedScriptValue> serializedScriptValue();
+    const ScriptValue& scriptValue();
+    int64_t integer();
     const String& string();
-
-    // Set can only be called once.
-    void setNull();
-    void set(PassRefPtr<DOMStringList>);
-    void set(PassRefPtr<IDBCursor>);
-    void set(PassRefPtr<IDBCursorWithValue>);
-    void set(PassRefPtr<IDBDatabase>);
-    void set(PassRefPtr<IDBFactory>);
-    void set(PassRefPtr<IDBIndex>);
-    void set(PassRefPtr<IDBKey>);
-    void set(PassRefPtr<IDBObjectStore>);
-    void set(PassRefPtr<IDBTransaction>);
-    void set(PassRefPtr<SerializedScriptValue>);
-    void set(const String&);
+    const IDBKeyPath& keyPath() { return m_idbKeyPath; };
 
 private:
-    IDBAny();
+    explicit IDBAny(Type);
+    explicit IDBAny(PassRefPtr<DOMStringList>);
+    explicit IDBAny(PassRefPtr<IDBCursor>);
+    explicit IDBAny(PassRefPtr<IDBCursorWithValue>);
+    explicit IDBAny(PassRefPtr<IDBDatabase>);
+    explicit IDBAny(PassRefPtr<IDBFactory>);
+    explicit IDBAny(PassRefPtr<IDBIndex>);
+    explicit IDBAny(PassRefPtr<IDBObjectStore>);
+    explicit IDBAny(PassRefPtr<IDBTransaction>);
+    explicit IDBAny(const IDBKeyPath&);
+    explicit IDBAny(const String&);
+    explicit IDBAny(const ScriptValue&);
+    explicit IDBAny(int64_t);
 
-    Type m_type;
+    const Type m_type;
 
     // Only one of the following should ever be in use at any given time.
-    RefPtr<DOMStringList> m_domStringList;
-    RefPtr<IDBCursor> m_idbCursor;
-    RefPtr<IDBCursorWithValue> m_idbCursorWithValue;
-    RefPtr<IDBDatabase> m_idbDatabase;
-    RefPtr<IDBFactory> m_idbFactory;
-    RefPtr<IDBIndex> m_idbIndex;
-    RefPtr<IDBKey> m_idbKey;
-    RefPtr<IDBObjectStore> m_idbObjectStore;
-    RefPtr<IDBTransaction> m_idbTransaction;
-    RefPtr<SerializedScriptValue> m_serializedScriptValue;
-    String m_string;
+    const RefPtr<DOMStringList> m_domStringList;
+    const RefPtr<IDBCursor> m_idbCursor;
+    const RefPtr<IDBCursorWithValue> m_idbCursorWithValue;
+    const RefPtr<IDBDatabase> m_idbDatabase;
+    const RefPtr<IDBFactory> m_idbFactory;
+    const RefPtr<IDBIndex> m_idbIndex;
+    const RefPtr<IDBObjectStore> m_idbObjectStore;
+    const RefPtr<IDBTransaction> m_idbTransaction;
+    const IDBKeyPath m_idbKeyPath;
+    const ScriptValue m_scriptValue;
+    const String m_string;
+    const int64_t m_integer;
 };
 
 } // namespace WebCore

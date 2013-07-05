@@ -26,21 +26,26 @@
 
 #include "Attribute.h"
 #include "DNS.h"
+#include "EventHandler.h"
 #include "EventNames.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameLoaderTypes.h"
+#include "FrameSelection.h"
 #include "HTMLImageElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "KeyboardEvent.h"
 #include "MouseEvent.h"
-#include "Page.h"
 #include "PingLoader.h"
+#include "PlatformMouseEvent.h"
 #include "RenderImage.h"
+#include "ResourceRequest.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -89,15 +94,38 @@ bool HTMLAnchorElement::supportsFocus() const
 
 bool HTMLAnchorElement::isMouseFocusable() const
 {
-    // Anchor elements should be mouse focusable, https://bugs.webkit.org/show_bug.cgi?id=26856
-#if !PLATFORM(GTK) && !PLATFORM(QT) && !PLATFORM(EFL)
+#if !(PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(QT))
+    // Only allow links with tabIndex or contentEditable to be mouse focusable.
+    // This is our rule for the Mac platform; on many other platforms we focus any link you click on.
     if (isLink())
-        // Only allow links with tabIndex or contentEditable to be mouse focusable.
         return HTMLElement::supportsFocus();
 #endif
 
-    // Allow tab index etc to control focus.
     return HTMLElement::isMouseFocusable();
+}
+
+static bool hasNonEmptyBox(RenderBoxModelObject* renderer)
+{
+    if (!renderer)
+        return false;
+
+    // Before calling absoluteRects, check for the common case where borderBoundingBox
+    // is non-empty, since this is a faster check and almost always returns true.
+    // FIXME: Why do we need to call absoluteRects at all?
+    if (!renderer->borderBoundingBox().isEmpty())
+        return true;
+
+    // FIXME: Since all we are checking is whether the rects are empty, could we just
+    // pass in 0,0 for the layout point instead of calling localToAbsolute?
+    Vector<IntRect> rects;
+    renderer->absoluteRects(rects, flooredLayoutPoint(renderer->localToAbsolute()));
+    size_t size = rects.size();
+    for (size_t i = 0; i < size; ++i) {
+        if (!rects[i].isEmpty())
+            return true;
+    }
+
+    return false;
 }
 
 bool HTMLAnchorElement::isKeyboardFocusable(KeyboardEvent* event) const
@@ -114,10 +142,13 @@ bool HTMLAnchorElement::isKeyboardFocusable(KeyboardEvent* event) const
     if (!document()->frame()->eventHandler()->tabsToLinks(event))
         return false;
 
-    return hasNonEmptyBoundingBox();
+    if (isInCanvasSubtree())
+        return true;
+
+    return hasNonEmptyBox(renderBoxModelObject());
 }
 
-static void appendServerMapMousePosition(String& url, Event* event)
+static void appendServerMapMousePosition(StringBuilder& url, Event* event)
 {
     if (!event->isMouseEvent())
         return;
@@ -132,18 +163,18 @@ static void appendServerMapMousePosition(String& url, Event* event)
     if (!imageElement || !imageElement->isServerMap())
         return;
 
-    RenderImage* renderer = toRenderImage(imageElement->renderer());
-    if (!renderer)
+    if (!imageElement->renderer() || !imageElement->renderer()->isRenderImage())
         return;
+    RenderImage* renderer = toRenderImage(imageElement->renderer());
 
     // FIXME: This should probably pass true for useTransforms.
     FloatPoint absolutePosition = renderer->absoluteToLocal(FloatPoint(static_cast<MouseEvent*>(event)->pageX(), static_cast<MouseEvent*>(event)->pageY()));
     int x = absolutePosition.x();
     int y = absolutePosition.y();
-    url += "?";
-    url += String::number(x);
-    url += ",";
-    url += String::number(y);
+    url.append('?');
+    url.appendNumber(x);
+    url.append(',');
+    url.appendNumber(y);
 }
 
 void HTMLAnchorElement::defaultEventHandler(Event* event)
@@ -207,47 +238,40 @@ void HTMLAnchorElement::setActive(bool down, bool pause)
 
     }
     
-    ContainerNode::setActive(down, pause);
+    HTMLElement::setActive(down, pause);
 }
 
-void HTMLAnchorElement::parseAttribute(const Attribute& attribute)
+void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == hrefAttr) {
+    if (name == hrefAttr) {
         bool wasLink = isLink();
-        setIsLink(!attribute.isNull());
+        setIsLink(!value.isNull());
         if (wasLink != isLink())
-            setNeedsStyleRecalc();
+            didAffectSelector(AffectedSelectorLink | AffectedSelectorVisited | AffectedSelectorEnabled);
         if (isLink()) {
-            String parsedURL = stripLeadingAndTrailingHTMLSpaces(attribute.value());
+            String parsedURL = stripLeadingAndTrailingHTMLSpaces(value);
             if (document()->isDNSPrefetchEnabled()) {
                 if (protocolIs(parsedURL, "http") || protocolIs(parsedURL, "https") || parsedURL.startsWith("//"))
                     prefetchDNS(document()->completeURL(parsedURL).host());
             }
-            if (document()->page() && !document()->page()->javaScriptURLsAreAllowed() && protocolIsJavaScript(parsedURL)) {
-                clearIsLink();
-                // FIXME: This is horribly factored.
-                if (Attribute* hrefAttribute = getAttributeItem(hrefAttr))
-                    hrefAttribute->setValue(nullAtom);
-            }
         }
         invalidateCachedVisitedLinkHash();
-    } else if (attribute.name() == nameAttr || attribute.name() == titleAttr) {
+    } else if (name == nameAttr || name == titleAttr) {
         // Do nothing.
-    } else if (attribute.name() == relAttr)
-        setRel(attribute.value());
+    } else if (name == relAttr)
+        setRel(value);
     else
-        HTMLElement::parseAttribute(attribute);
+        HTMLElement::parseAttribute(name, value);
 }
 
 void HTMLAnchorElement::accessKeyAction(bool sendMouseEvents)
 {
-    // send the mouse button events if the caller specified sendMouseEvents
-    dispatchSimulatedClick(0, sendMouseEvents);
+    dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
 bool HTMLAnchorElement::isURLAttribute(const Attribute& attribute) const
 {
-    return attribute.name() == hrefAttr || HTMLElement::isURLAttribute(attribute);
+    return attribute.name().localName() == hrefAttr || HTMLElement::isURLAttribute(attribute);
 }
 
 bool HTMLAnchorElement::canStartSelection() const
@@ -466,7 +490,7 @@ void HTMLAnchorElement::setSearch(const String& value)
     KURL url = href();
     String newSearch = (value[0] == '?') ? value.substring(1) : value;
     // Make sure that '#' in the query does not leak to the hash.
-    url.setQuery(newSearch.replace('#', "%23"));
+    url.setQuery(newSearch.replaceWithLiteral('#', "%23"));
 
     setHref(url.string());
 }
@@ -504,14 +528,16 @@ void HTMLAnchorElement::handleClick(Event* event)
     if (!frame)
         return;
 
-    String url = stripLeadingAndTrailingHTMLSpaces(fastGetAttribute(hrefAttr));
+    StringBuilder url;
+    url.append(stripLeadingAndTrailingHTMLSpaces(fastGetAttribute(hrefAttr)));
     appendServerMapMousePosition(url, event);
-    KURL kurl = document()->completeURL(url);
+    KURL kurl = document()->completeURL(url.toString());
 
 #if ENABLE(DOWNLOAD_ATTRIBUTE)
     if (hasAttribute(downloadAttr)) {
         ResourceRequest request(kurl);
 
+        // FIXME: Why are we not calling addExtraFieldsToMainResourceRequest() if this check fails? It sets many important header fields.
         if (!hasRel(RelationNoReferrer)) {
             String referrer = SecurityPolicy::generateReferrerHeader(document()->referrerPolicy(), kurl, frame->loader()->outgoingReferrer());
             if (!referrer.isEmpty())
@@ -569,24 +595,14 @@ bool isEnterKeyKeydownEvent(Event* event)
     return event->type() == eventNames().keydownEvent && event->isKeyboardEvent() && static_cast<KeyboardEvent*>(event)->keyIdentifier() == "Enter";
 }
 
-bool isMiddleMouseButtonEvent(Event* event)
-{
-    return event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == MiddleButton;
-}
-
 bool isLinkClick(Event* event)
 {
     return event->type() == eventNames().clickEvent && (!event->isMouseEvent() || static_cast<MouseEvent*>(event)->button() != RightButton);
 }
 
-void handleLinkClick(Event* event, Document* document, const String& url, const String& target, bool hideReferrer)
+bool HTMLAnchorElement::willRespondToMouseClickEvents()
 {
-    event->setDefaultHandled();
-
-    Frame* frame = document->frame();
-    if (!frame)
-        return;
-    frame->loader()->urlSelected(document->completeURL(url), target, event, false, false, hideReferrer ? NeverSendReferrer : MaybeSendReferrer);
+    return isLink() || HTMLElement::willRespondToMouseClickEvents();
 }
 
 #if ENABLE(MICRODATA)
@@ -613,7 +629,7 @@ Element* HTMLAnchorElement::rootEditableElementForSelectionOnMouseDown() const
 {
     if (!m_hasRootEditableElementForSelectionOnMouseDown)
         return 0;
-    return rootEditableElementMap().get(this).get();
+    return rootEditableElementMap().get(this);
 }
 
 void HTMLAnchorElement::clearRootEditableElementForSelectionOnMouseDown()

@@ -27,22 +27,15 @@
 #include "config.h"
 #include "CachedFont.h"
 
-#if !PLATFORM(WIN_CAIRO) && !PLATFORM(WX)
-#define STORE_FONT_CUSTOM_PLATFORM_DATA
-#endif
-
-#include "CachedResourceClient.h"
+#include "CachedFontClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceLoader.h"
+#include "FontCustomPlatformData.h"
 #include "FontPlatformData.h"
 #include "MemoryCache.h"
-#include "SharedBuffer.h"
+#include "ResourceBuffer.h"
 #include "TextResourceDecoder.h"
 #include <wtf/Vector.h>
-
-#ifdef STORE_FONT_CUSTOM_PLATFORM_DATA
-#include "FontCustomPlatformData.h"
-#endif
 
 #if ENABLE(SVG_FONTS)
 #include "NodeList.h"
@@ -59,14 +52,13 @@ CachedFont::CachedFont(const ResourceRequest& resourceRequest)
     : CachedResource(resourceRequest, FontResource)
     , m_fontData(0)
     , m_loadInitiated(false)
+    , m_hasCreatedFontData(false)
 {
 }
 
 CachedFont::~CachedFont()
 {
-#ifdef STORE_FONT_CUSTOM_PLATFORM_DATA
     delete m_fontData;
-#endif
 }
 
 void CachedFont::load(CachedResourceLoader*, const ResourceLoaderOptions& options)
@@ -83,7 +75,7 @@ void CachedFont::didAddClient(CachedResourceClient* c)
         static_cast<CachedFontClient*>(c)->fontLoaded(this);
 }
 
-void CachedFont::data(PassRefPtr<SharedBuffer> data, bool allDataReceived)
+void CachedFont::data(PassRefPtr<ResourceBuffer> data, bool allDataReceived)
 {
     if (!allDataReceived)
         return;
@@ -104,28 +96,24 @@ void CachedFont::beginLoadIfNeeded(CachedResourceLoader* dl)
 
 bool CachedFont::ensureCustomFontData()
 {
-#ifdef STORE_FONT_CUSTOM_PLATFORM_DATA
     if (!m_fontData && !errorOccurred() && !isLoading() && m_data) {
-        m_fontData = createFontCustomPlatformData(m_data.get());
-        if (!m_fontData)
+        m_fontData = createFontCustomPlatformData(m_data.get()->sharedBuffer());
+        if (m_fontData)
+            m_hasCreatedFontData = true;
+        else
             setStatus(DecodeError);
     }
-#endif
     return m_fontData;
 }
 
-FontPlatformData CachedFont::platformDataFromCustomData(float size, bool bold, bool italic, FontOrientation orientation, TextOrientation textOrientation, FontWidthVariant widthVariant, FontRenderingMode renderingMode)
+FontPlatformData CachedFont::platformDataFromCustomData(float size, bool bold, bool italic, FontOrientation orientation, FontWidthVariant widthVariant, FontRenderingMode renderingMode)
 {
 #if ENABLE(SVG_FONTS)
     if (m_externalSVGDocument)
         return FontPlatformData(size, bold, italic);
 #endif
-#ifdef STORE_FONT_CUSTOM_PLATFORM_DATA
     ASSERT(m_fontData);
-    return m_fontData->fontPlatformData(static_cast<int>(size), bold, italic, orientation, textOrientation, widthVariant, renderingMode);
-#else
-    return FontPlatformData();
-#endif
+    return m_fontData->fontPlatformData(static_cast<int>(size), bold, italic, orientation, widthVariant, renderingMode);
 }
 
 #if ENABLE(SVG_FONTS)
@@ -136,7 +124,7 @@ bool CachedFont::ensureSVGFontData()
 
         RefPtr<TextResourceDecoder> decoder = TextResourceDecoder::create("application/xml");
         String svgSource = decoder->decode(m_data->data(), m_data->size());
-        svgSource += decoder->flush();
+        svgSource.append(decoder->flush());
         
         m_externalSVGDocument->setContent(svgSource);
         
@@ -179,12 +167,10 @@ SVGFontElement* CachedFont::getSVGFontById(const String& fontName) const
 
 void CachedFont::allClientsRemoved()
 {
-#ifdef STORE_FONT_CUSTOM_PLATFORM_DATA
     if (m_fontData) {
         delete m_fontData;
         m_fontData = 0;
     }
-#endif
 }
 
 void CachedFont::checkNotify()
@@ -197,13 +183,13 @@ void CachedFont::checkNotify()
          c->fontLoaded(this);
 }
 
-
-void CachedFont::error(CachedResource::Status status)
+bool CachedFont::mayTryReplaceEncodedData() const
 {
-    setStatus(status);
-    ASSERT(errorOccurred());
-    setLoading(false);
-    checkNotify();
+    // If the FontCustomPlatformData has ever been constructed then it still might be in use somewhere.
+    // That platform font object might directly reference the encoded data buffer behind this CachedFont,
+    // so replacing it is unsafe.
+
+    return !m_hasCreatedFontData;
 }
 
 }

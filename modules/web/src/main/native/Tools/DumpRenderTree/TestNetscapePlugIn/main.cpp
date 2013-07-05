@@ -202,7 +202,18 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc
         else if (strcasecmp(argn[i], "src") == 0 &&
                  strcasecmp(argv[i], "data:application/x-webkit-test-netscape,alertwhenloaded") == 0)
             executeScript(obj, "alert('Plugin Loaded!')");
-        else if (strcasecmp(argn[i], "onSetWindow") == 0 && !obj->onSetWindow)
+        else if (strcasecmp(argn[i], "src") == 0 &&
+                 strcasecmp(argv[i], "data:application/x-webkit-test-netscape,logifloaded") == 0) {
+            for (int j = 0; j < argc; j++) {
+              if (strcasecmp(argn[j], "log") == 0) {
+                int length = 26 + strlen(argv[j]) + 1;
+                char* buffer = (char*) malloc(length);
+                snprintf(buffer, length, "xWebkitTestNetscapeLog('%s')", argv[j]);
+                executeScript(obj, buffer);
+                free(buffer);
+              }
+            }
+        } else if (strcasecmp(argn[i], "onSetWindow") == 0 && !obj->onSetWindow)
             obj->onSetWindow = strdup(argv[i]);
         else if (strcasecmp(argn[i], "onNew") == 0 && !onNewScript)
             onNewScript = argv[i];
@@ -340,6 +351,7 @@ NPError NPP_SetWindow(NPP instance, NPWindow *window)
         if (obj->logSetWindow) {
             pluginLog(instance, "NPP_SetWindow: %d %d", (int)window->width, (int)window->height);
             obj->logSetWindow = FALSE;
+            executeScript(obj, "testRunner.notifyDone();");
         }
 
         if (obj->onSetWindow)
@@ -495,7 +507,7 @@ static int16_t handleEventCarbon(NPP instance, PluginObject* obj, EventRecord* e
             if (obj->testKeyboardFocusForPlugins) {
                 obj->eventLogging = false;
                 obj->testKeyboardFocusForPlugins = FALSE;
-                executeScript(obj, "layoutTestController.notifyDone();");
+                executeScript(obj, "testRunner.notifyDone();");
             }
             break;
         case autoKey:
@@ -588,7 +600,7 @@ static int16_t handleEventCocoa(NPP instance, PluginObject* obj, NPCocoaEvent* e
                 if (obj->testKeyboardFocusForPlugins) {
                     obj->eventLogging = false;
                     obj->testKeyboardFocusForPlugins = FALSE;
-                    executeScript(obj, "layoutTestController.notifyDone();");
+                    executeScript(obj, "testRunner.notifyDone();");
                 }
             }
             return 1;
@@ -660,6 +672,11 @@ static int16_t handleEventX11(NPP instance, PluginObject* obj, XEvent* event)
         // FIXME: extract key code
         if (obj->eventLogging)
             pluginLog(instance, "keyUp '%c'", keyEventToChar(&event->xkey));
+        if (obj->testKeyboardFocusForPlugins) {
+            obj->eventLogging = false;
+            obj->testKeyboardFocusForPlugins = FALSE;
+            executeScript(obj, "testRunner.notifyDone();");
+        }
         break;
     case GraphicsExpose:
         if (obj->eventLogging)
@@ -712,7 +729,7 @@ static int16_t handleEventWin(NPP instance, PluginObject* obj, NPEvent* event)
         if (obj->testKeyboardFocusForPlugins) {
             obj->eventLogging = false;
             obj->testKeyboardFocusForPlugins = FALSE;
-            executeScript(obj, "layoutTestController.notifyDone();");
+            executeScript(obj, "testRunner.notifyDone();");
         }
         break;
     case WM_LBUTTONDOWN:

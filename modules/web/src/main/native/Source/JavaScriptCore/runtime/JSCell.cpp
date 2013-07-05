@@ -27,6 +27,7 @@
 #include "JSString.h"
 #include "JSObject.h"
 #include "NumberObject.h"
+#include "Operations.h"
 #include <wtf/MathExtras.h>
 
 namespace JSC {
@@ -38,7 +39,11 @@ void JSCell::destroy(JSCell* cell)
     cell->JSCell::~JSCell();
 }
 
-bool JSCell::getString(ExecState* exec, UString&stringValue) const
+void JSCell::copyBackingStore(JSCell*, CopyVisitor&)
+{
+}
+
+bool JSCell::getString(ExecState* exec, String& stringValue) const
 {
     if (!isString())
         return false;
@@ -46,9 +51,9 @@ bool JSCell::getString(ExecState* exec, UString&stringValue) const
     return true;
 }
 
-UString JSCell::getString(ExecState* exec) const
+String JSCell::getString(ExecState* exec) const
 {
-    return isString() ? static_cast<const JSString*>(this)->value(exec) : UString();
+    return isString() ? static_cast<const JSString*>(this)->value(exec) : String();
 }
 
 JSObject* JSCell::getObject()
@@ -169,19 +174,24 @@ void slowValidateCell(JSCell* cell)
 
 JSValue JSCell::defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType)
 {
-    ASSERT_NOT_REACHED();
+    RELEASE_ASSERT_NOT_REACHED();
     return jsUndefined();
 }
 
 void JSCell::getOwnPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode)
 {
-    ASSERT_NOT_REACHED();
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
-UString JSCell::className(const JSObject*)
+void JSCell::getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode)
 {
-    ASSERT_NOT_REACHED();
-    return UString();
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+String JSCell::className(const JSObject*)
+{
+    RELEASE_ASSERT_NOT_REACHED();
+    return String();
 }
 
 const char* JSCell::className()
@@ -191,29 +201,29 @@ const char* JSCell::className()
 
 void JSCell::getPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode)
 {
-    ASSERT_NOT_REACHED();
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
-bool JSCell::hasInstance(JSObject*, ExecState*, JSValue, JSValue)
+bool JSCell::customHasInstance(JSObject*, ExecState*, JSValue)
 {
-    ASSERT_NOT_REACHED();
+    RELEASE_ASSERT_NOT_REACHED();
     return false;
 }
 
 void JSCell::putDirectVirtual(JSObject*, ExecState*, PropertyName, JSValue, unsigned)
 {
-    ASSERT_NOT_REACHED();
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 bool JSCell::defineOwnProperty(JSObject*, ExecState*, PropertyName, PropertyDescriptor&, bool)
 {
-    ASSERT_NOT_REACHED();
+    RELEASE_ASSERT_NOT_REACHED();
     return false;
 }
 
 bool JSCell::getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&)
 {
-    ASSERT_NOT_REACHED();
+    RELEASE_ASSERT_NOT_REACHED();
     return false;
 }
 

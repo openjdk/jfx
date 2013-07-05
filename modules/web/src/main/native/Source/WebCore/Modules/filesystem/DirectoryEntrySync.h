@@ -34,10 +34,10 @@
 #if ENABLE(FILE_SYSTEM)
 
 #include "EntrySync.h"
-#include "PlatformString.h"
-#include "WebKitFlags.h"
+#include "FileSystemFlags.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -53,8 +53,8 @@ public:
     virtual bool isDirectory() const { return true; }
 
     PassRefPtr<DirectoryReaderSync> createReader(ExceptionCode&);
-    PassRefPtr<FileEntrySync> getFile(const String& path, PassRefPtr<WebKitFlags>, ExceptionCode&);
-    PassRefPtr<DirectoryEntrySync> getDirectory(const String& path, PassRefPtr<WebKitFlags>, ExceptionCode&);
+    PassRefPtr<FileEntrySync> getFile(const String& path, const Dictionary&, ExceptionCode&);
+    PassRefPtr<DirectoryEntrySync> getDirectory(const String& path, const Dictionary&, ExceptionCode&);
     void removeRecursively(ExceptionCode&);
 
 private:

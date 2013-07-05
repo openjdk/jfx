@@ -23,11 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module core {
-
-    interface [
-        Conditional=GEOLOCATION
-    ] PositionError {
+[
+    NoInterfaceObject,
+    Conditional=GEOLOCATION,
+    ImplementationLacksVTable
+] interface PositionError {
         readonly attribute unsigned short code;
         readonly attribute DOMString message;
 
@@ -36,4 +36,3 @@ module core {
         const unsigned short TIMEOUT = 3;
     };
 
-}

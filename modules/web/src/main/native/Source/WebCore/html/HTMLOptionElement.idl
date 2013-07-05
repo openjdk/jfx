@@ -18,17 +18,15 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module html {
-
-    interface [
+[
         JSGenerateToNativeObject,
-        NamedConstructor=Option(in [Optional=DefaultIsNullString] DOMString data, in [Optional=DefaultIsNullString] DOMString value, in [Optional=DefaultIsUndefined] boolean defaultSelected, in [Optional=DefaultIsUndefined] boolean selected),
+    NamedConstructor=Option([Default=NullString] optional DOMString data, [Default=NullString] optional DOMString value, [Default=Undefined] optional boolean defaultSelected, [Default=Undefined] optional boolean selected),
         ConstructorRaisesException
-    ] HTMLOptionElement : HTMLElement {
-        attribute [Reflect] boolean disabled;
+] interface HTMLOptionElement : HTMLElement {
+    [Reflect] attribute boolean disabled;
         readonly attribute HTMLFormElement form;
         attribute DOMString label;
-        attribute [Reflect=selected] boolean defaultSelected;
+    [Reflect=selected] attribute boolean defaultSelected;
         attribute boolean selected;
         attribute DOMString value;
 
@@ -39,4 +37,3 @@ module html {
 #endif
         readonly attribute long index;
     };
-}

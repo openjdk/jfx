@@ -31,12 +31,14 @@
 #ifndef MeterShadowElement_h
 #define MeterShadowElement_h
 
+#if ENABLE(METER_ELEMENT)
 #include "HTMLDivElement.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 class HTMLMeterElement;
+class RenderMeter;
 
 class MeterShadowElement : public HTMLDivElement {
 public:
@@ -47,15 +49,31 @@ private:
     virtual bool rendererIsNeeded(const NodeRenderingContext&);
 };
 
-class MeterBarElement : public MeterShadowElement {
+class MeterInnerElement FINAL : public MeterShadowElement {
+public:
+    MeterInnerElement(Document*);
+    static PassRefPtr<MeterInnerElement> create(Document*);
+
+private:
+    virtual bool rendererIsNeeded(const NodeRenderingContext&) OVERRIDE;
+    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*) OVERRIDE;
+};
+
+inline PassRefPtr<MeterInnerElement> MeterInnerElement::create(Document* document)
+{
+    return adoptRef(new MeterInnerElement(document));
+}
+
+class MeterBarElement FINAL : public MeterShadowElement {
 public:
     MeterBarElement(Document* document) 
         : MeterShadowElement(document)
     {
+        DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-meter-bar", AtomicString::ConstructFromLiteral));
+        setPseudo(pseudoId);
     }
 
     static PassRefPtr<MeterBarElement> create(Document*);
-    virtual const AtomicString& shadowPseudoId() const;
 };
 
 inline PassRefPtr<MeterBarElement> MeterBarElement::create(Document* document)
@@ -63,17 +81,20 @@ inline PassRefPtr<MeterBarElement> MeterBarElement::create(Document* document)
     return adoptRef(new MeterBarElement(document));
 }
 
-
-class MeterValueElement : public MeterShadowElement {
+class MeterValueElement FINAL : public MeterShadowElement {
 public:
     MeterValueElement(Document* document) 
         : MeterShadowElement(document)
     {
+        updatePseudo();
     }
 
-    virtual const AtomicString& shadowPseudoId() const;
     static PassRefPtr<MeterValueElement> create(Document*);
     void setWidthPercentage(double);
+    void updatePseudo() { setPseudo(valuePseudoId()); }
+
+private:
+    const AtomicString& valuePseudoId() const;
 };
 
 inline PassRefPtr<MeterValueElement> MeterValueElement::create(Document* document)
@@ -82,5 +103,5 @@ inline PassRefPtr<MeterValueElement> MeterValueElement::create(Document* documen
 }
 
 }
-
-#endif
+#endif // ENABLE(METER_ELEMENT)
+#endif // MeterShadowElement_h

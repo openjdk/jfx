@@ -36,7 +36,7 @@ namespace WebCore {
 class AccessibilityListBox : public AccessibilityRenderObject {
 
 private:
-    AccessibilityListBox(RenderObject*);
+    explicit AccessibilityListBox(RenderObject*);
 public:
     static PassRefPtr<AccessibilityListBox> create(RenderObject*);
     virtual ~AccessibilityListBox();
@@ -54,7 +54,6 @@ public:
 
 private:    
     AccessibilityObject* listBoxOptionAccessibilityObject(HTMLElement*) const;
-    virtual bool accessibilityIsIgnored() const;
     virtual AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const;
 };
     

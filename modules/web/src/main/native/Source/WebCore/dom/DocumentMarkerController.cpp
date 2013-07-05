@@ -28,14 +28,12 @@
 #include "DocumentMarkerController.h"
 
 #include "Node.h"
+#include "NodeTraversal.h"
 #include "Range.h"
 #include "RenderObject.h"
 #include "RenderedDocumentMarker.h"
 #include "TextIterator.h"
-
-#ifndef NDEBUG
 #include <stdio.h>
-#endif
 
 namespace WebCore {
 
@@ -49,13 +47,14 @@ DocumentMarkerController::DocumentMarkerController()
 {
 }
 
+DocumentMarkerController::~DocumentMarkerController()
+{
+}
+
 void DocumentMarkerController::detach()
 {
-    m_possiblyExistingMarkerTypes = 0;
-    if (m_markers.isEmpty())
-        return;
-    deleteAllValues(m_markers);
     m_markers.clear();
+    m_possiblyExistingMarkerTypes = 0;
 }
 
 void DocumentMarkerController::addMarker(Range* range, DocumentMarker::MarkerType type, const String& description)
@@ -63,9 +62,7 @@ void DocumentMarkerController::addMarker(Range* range, DocumentMarker::MarkerTyp
     // Use a TextIterator to visit the potentially multiple nodes the range covers.
     for (TextIterator markedText(range); !markedText.atEnd(); markedText.advance()) {
         RefPtr<Range> textPiece = markedText.range();
-        int exception = 0;
-        addMarker(textPiece->startContainer(exception),
-                  DocumentMarker(type, textPiece->startOffset(exception), textPiece->endOffset(exception), description));
+        addMarker(textPiece->startContainer(), DocumentMarker(type, textPiece->startOffset(), textPiece->endOffset(), description));
     }
 }
 
@@ -74,9 +71,7 @@ void DocumentMarkerController::addMarker(Range* range, DocumentMarker::MarkerTyp
     // Use a TextIterator to visit the potentially multiple nodes the range covers.
     for (TextIterator markedText(range); !markedText.atEnd(); markedText.advance()) {
         RefPtr<Range> textPiece = markedText.range();
-        int exception = 0;
-        addMarker(textPiece->startContainer(exception),
-                  DocumentMarker(type, textPiece->startOffset(exception), textPiece->endOffset(exception)));
+        addMarker(textPiece->startContainer(), DocumentMarker(type, textPiece->startOffset(), textPiece->endOffset()));
     }
 
 }
@@ -92,21 +87,20 @@ void DocumentMarkerController::addMarkerToNode(Node* node, unsigned startOffset,
 }
 
 
-void DocumentMarkerController::addTextMatchMarker(Range* range, bool activeMatch)
+void DocumentMarkerController::addTextMatchMarker(const Range* range, bool activeMatch)
 {
     // Use a TextIterator to visit the potentially multiple nodes the range covers.
     for (TextIterator markedText(range); !markedText.atEnd(); markedText.advance()) {
         RefPtr<Range> textPiece = markedText.range();
-        int exception = 0;
-        unsigned startOffset = textPiece->startOffset(exception);
-        unsigned endOffset = textPiece->endOffset(exception);
-        addMarker(textPiece->startContainer(exception), DocumentMarker(startOffset, endOffset, activeMatch));
+        unsigned startOffset = textPiece->startOffset();
+        unsigned endOffset = textPiece->endOffset();
+        addMarker(textPiece->startContainer(), DocumentMarker(startOffset, endOffset, activeMatch));
         if (endOffset > startOffset) {
             // Rendered rects for markers in WebKit are not populated until each time
             // the markers are painted. However, we need it to happen sooner, because
             // the whole purpose of tickmarks on the scrollbar is to show where
             // matches off-screen are (that haven't been painted yet).
-            Node* node = textPiece->startContainer(exception);
+            Node* node = textPiece->startContainer();
             Vector<DocumentMarker*> markers = markersFor(node);
             static_cast<RenderedDocumentMarker*>(markers[markers.size() - 1])->setRenderedRect(range->boundingBox());
         }
@@ -138,12 +132,11 @@ void DocumentMarkerController::addMarker(Node* node, const DocumentMarker& newMa
 
     m_possiblyExistingMarkerTypes.add(newMarker.type());
 
-    MarkerList* list = m_markers.get(node);
+    OwnPtr<MarkerList>& list = m_markers.add(node, nullptr).iterator->value;
 
     if (!list) {
-        list = new MarkerList;
+        list = adoptPtr(new MarkerList);
         list->append(RenderedDocumentMarker(newMarker));
-        m_markers.set(node, list);
     } else {
         RenderedDocumentMarker toInsert(newMarker);
         size_t numMarkers = list->size();
@@ -290,11 +283,9 @@ void DocumentMarkerController::removeMarkers(Node* node, unsigned startOffset, i
 
     if (list->isEmpty()) {
         m_markers.remove(node);
-        delete list;
-    }
-    
     if (m_markers.isEmpty())
         m_possiblyExistingMarkerTypes = 0;
+    }
 
     // repaint the affected node
     if (docDirty && node->renderer())
@@ -311,7 +302,7 @@ DocumentMarker* DocumentMarkerController::markerContainingPoint(const LayoutPoin
     MarkerMap::iterator end = m_markers.end();
     for (MarkerMap::iterator nodeIterator = m_markers.begin(); nodeIterator != end; ++nodeIterator) {
         // inner loop; process each marker in this node
-        MarkerList* list = nodeIterator->second;
+        MarkerList* list = nodeIterator->value.get();
         unsigned markerCount = list->size();
         for (unsigned markerIndex = 0; markerIndex < markerCount; ++markerIndex) {
             RenderedDocumentMarker& marker = list->at(markerIndex);
@@ -370,7 +361,7 @@ Vector<DocumentMarker*> DocumentMarkerController::markersInRange(Range* range, D
     ASSERT(endContainer);
 
     Node* pastLastNode = range->pastLastNode();
-    for (Node* node = range->firstNode(); node != pastLastNode; node = node->traverseNextNode()) {
+    for (Node* node = range->firstNode(); node != pastLastNode; node = NodeTraversal::next(node)) {
         Vector<DocumentMarker*> markers = markersFor(node);
         Vector<DocumentMarker*>::const_iterator end = markers.end();
         for (Vector<DocumentMarker*>::const_iterator it = markers.begin(); it != end; ++it) {
@@ -399,7 +390,7 @@ Vector<IntRect> DocumentMarkerController::renderedRectsForMarkers(DocumentMarker
     MarkerMap::iterator end = m_markers.end();
     for (MarkerMap::iterator nodeIterator = m_markers.begin(); nodeIterator != end; ++nodeIterator) {
         // inner loop; process each marker in this node
-        MarkerList* list = nodeIterator->second;
+        MarkerList* list = nodeIterator->value.get();
         unsigned markerCount = list->size();
         for (unsigned markerIndex = 0; markerIndex < markerCount; ++markerIndex) {
             const RenderedDocumentMarker& marker = list->at(markerIndex);
@@ -426,7 +417,7 @@ void DocumentMarkerController::removeMarkers(Node* node, DocumentMarker::MarkerT
     
     MarkerMap::iterator iterator = m_markers.find(node);
     if (iterator != m_markers.end())
-        removeMarkersFromList(node, iterator->second, markerTypes);
+        removeMarkersFromList(iterator, markerTypes);
 }
 
 void DocumentMarkerController::removeMarkers(DocumentMarker::MarkerTypes markerTypes)
@@ -435,24 +426,29 @@ void DocumentMarkerController::removeMarkers(DocumentMarker::MarkerTypes markerT
         return;
     ASSERT(!m_markers.isEmpty());
 
-    // outer loop: process each markered node in the document
-    MarkerMap markerMapCopy = m_markers;
-    MarkerMap::iterator end = markerMapCopy.end();
-    for (MarkerMap::iterator i = markerMapCopy.begin(); i != end; ++i)
-        removeMarkersFromList(i->first.get(), i->second, markerTypes);
+    Vector<RefPtr<Node> > nodesWithMarkers;
+    copyKeysToVector(m_markers, nodesWithMarkers);
+    unsigned size = nodesWithMarkers.size();
+    for (unsigned i = 0; i < size; ++i) {
+        MarkerMap::iterator iterator = m_markers.find(nodesWithMarkers[i]);
+        if (iterator != m_markers.end())
+            removeMarkersFromList(iterator, markerTypes);
+    }
+
     m_possiblyExistingMarkerTypes.remove(markerTypes);
 }
 
-// This function may release node and vectorPair.
-void DocumentMarkerController::removeMarkersFromList(Node* node, MarkerList* list, DocumentMarker::MarkerTypes markerTypes)
+void DocumentMarkerController::removeMarkersFromList(MarkerMap::iterator iterator, DocumentMarker::MarkerTypes markerTypes)
 {
+    bool needsRepainting = false;
+    bool listCanBeRemoved;
+
     if (markerTypes == DocumentMarker::AllMarkers()) {
-        delete list;
-        m_markers.remove(node);
-        if (RenderObject* renderer = node->renderer())
-            renderer->repaint();
+        needsRepainting = true;
+        listCanBeRemoved = true;
     } else {
-        bool needsRepaint = false;
+        MarkerList* list = iterator->value.get();
+
         for (size_t i = 0; i != list->size();) {
             DocumentMarker marker = list->at(i);
 
@@ -464,26 +460,23 @@ void DocumentMarkerController::removeMarkersFromList(Node* node, MarkerList* lis
 
             // pitch the old marker
             list->remove(i);
-            needsRepaint = true;
+            needsRepainting = true;
             // i now is the index of the next marker
         }
 
-        // Redraw the node if it changed. Do this before the node is removed from m_markers, since
-        // m_markers might contain the last reference to the node.
-        if (needsRepaint) {
-            RenderObject* renderer = node->renderer();
-            if (renderer)
+        listCanBeRemoved = list->isEmpty();
+    }
+
+    if (needsRepainting) {
+        if (RenderObject* renderer = iterator->key->renderer())
                 renderer->repaint();
         }
 
-        // delete the node's list if it is now empty
-        if (list->isEmpty()) {
-            m_markers.remove(node);
-            delete list;
-        }
-    }
+    if (listCanBeRemoved) {
+        m_markers.remove(iterator);
     if (m_markers.isEmpty())
         m_possiblyExistingMarkerTypes = 0;
+}
 }
 
 void DocumentMarkerController::repaintMarkers(DocumentMarker::MarkerTypes markerTypes)
@@ -495,10 +488,10 @@ void DocumentMarkerController::repaintMarkers(DocumentMarker::MarkerTypes marker
     // outer loop: process each markered node in the document
     MarkerMap::iterator end = m_markers.end();
     for (MarkerMap::iterator i = m_markers.begin(); i != end; ++i) {
-        Node* node = i->first.get();
+        Node* node = i->key.get();
 
         // inner loop: process each marker in the current node
-        MarkerList* list = i->second;
+        MarkerList* list = i->value.get();
         bool nodeNeedsRepaint = false;
         for (size_t i = 0; i != list->size(); ++i) {
             DocumentMarker marker = list->at(i);
@@ -526,7 +519,7 @@ void DocumentMarkerController::invalidateRenderedRectsForMarkersInRect(const Lay
     for (MarkerMap::iterator i = m_markers.begin(); i != end; ++i) {
 
         // inner loop: process each rect in the current node
-        MarkerList* list = i->second;
+        MarkerList* list = i->value.get();
         for (size_t listIndex = 0; listIndex < list->size(); ++listIndex)
             list->at(listIndex).invalidate(r);
     }
@@ -566,14 +559,14 @@ void DocumentMarkerController::setMarkersActive(Range* range, bool active)
         return;
     ASSERT(!m_markers.isEmpty());
 
-    ExceptionCode ec = 0;
-    Node* startContainer = range->startContainer(ec);
-    Node* endContainer = range->endContainer(ec);
+    Node* startContainer = range->startContainer();
+    Node* endContainer = range->endContainer();
 
     Node* pastLastNode = range->pastLastNode();
-    for (Node* node = range->firstNode(); node != pastLastNode; node = node->traverseNextNode()) {
-        int startOffset = node == startContainer ? range->startOffset(ec) : 0;
-        int endOffset = node == endContainer ? range->endOffset(ec) : INT_MAX;
+
+    for (Node* node = range->firstNode(); node != pastLastNode; node = NodeTraversal::next(node)) {
+        int startOffset = node == startContainer ? range->startOffset() : 0;
+        int endOffset = node == endContainer ? range->endOffset() : INT_MAX;
         setMarkersActive(node, startOffset, endOffset, active);
     }
 }
@@ -617,7 +610,7 @@ bool DocumentMarkerController::hasMarkers(Range* range, DocumentMarker::MarkerTy
     ASSERT(endContainer);
 
     Node* pastLastNode = range->pastLastNode();
-    for (Node* node = range->firstNode(); node != pastLastNode; node = node->traverseNextNode()) {
+    for (Node* node = range->firstNode(); node != pastLastNode; node = NodeTraversal::next(node)) {
         Vector<DocumentMarker*> markers = markersFor(node);
         Vector<DocumentMarker*>::const_iterator end = markers.end();
         for (Vector<DocumentMarker*>::const_iterator it = markers.begin(); it != end; ++it) {
@@ -644,7 +637,7 @@ void DocumentMarkerController::clearDescriptionOnMarkersIntersectingRange(Range*
     Node* endContainer = range->endContainer();
 
     Node* pastLastNode = range->pastLastNode();
-    for (Node* node = range->firstNode(); node != pastLastNode; node = node->traverseNextNode()) {
+    for (Node* node = range->firstNode(); node != pastLastNode; node = NodeTraversal::next(node)) {
         unsigned startOffset = node == startContainer ? range->startOffset() : 0;
         unsigned endOffset = node == endContainer ? static_cast<unsigned>(range->endOffset()) : std::numeric_limits<unsigned>::max();
         MarkerList* list = m_markers.get(node);
@@ -675,9 +668,9 @@ void DocumentMarkerController::showMarkers() const
     fprintf(stderr, "%d nodes have markers:\n", m_markers.size());
     MarkerMap::const_iterator end = m_markers.end();
     for (MarkerMap::const_iterator nodeIterator = m_markers.begin(); nodeIterator != end; ++nodeIterator) {
-        Node* node = nodeIterator->first.get();
+        Node* node = nodeIterator->key.get();
         fprintf(stderr, "%p", node);
-        MarkerList* list = nodeIterator->second;
+        MarkerList* list = nodeIterator->value.get();
         for (unsigned markerIndex = 0; markerIndex < list->size(); ++markerIndex) {
             const DocumentMarker& marker = list->at(markerIndex);
             fprintf(stderr, " %d:[%d:%d](%d)", marker.type(), marker.startOffset(), marker.endOffset(), marker.activeMatch());
@@ -689,7 +682,6 @@ void DocumentMarkerController::showMarkers() const
 #endif
 
 } // namespace WebCore
-
 
 #ifndef NDEBUG
 void showDocumentMarkers(const WebCore::DocumentMarkerController* controller)

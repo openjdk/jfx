@@ -28,10 +28,11 @@
 
 import os
 import tempfile
-import unittest
+import unittest2 as unittest
 from webkitpy.common.net.credentials import Credentials
 from webkitpy.common.system.executive import Executive
 from webkitpy.common.system.outputcapture import OutputCapture
+from webkitpy.common.system.user_mock import MockUser
 from webkitpy.thirdparty.mock import Mock
 from webkitpy.tool.mocktool import MockOptions
 from webkitpy.common.system.executive_mock import MockExecutive
@@ -91,7 +92,7 @@ password: "SECRETSAUCE"
             def _is_mac_os_x(self):
                 return False
         credentials = FakeCredentials("bugs.webkit.org")
-        self.assertEqual(credentials._is_mac_os_x(), False)
+        self.assertFalse(credentials._is_mac_os_x())
         self.assertEqual(credentials._credentials_from_keychain("foo"), ["foo", None])
 
     def test_security_output_parse(self):
@@ -108,15 +109,15 @@ password: "SECRETSAUCE"
         # by the test case CredentialsTest._assert_security_call (below).
         outputCapture = OutputCapture()
         outputCapture.capture_output()
-        self.assertEqual(credentials._run_security_tool(), None)
+        self.assertIsNone(credentials._run_security_tool())
         outputCapture.restore_output()
 
     def _assert_security_call(self, username=None):
         executive_mock = Mock()
         credentials = MockedCredentials("example.com", executive=executive_mock)
 
-        expected_stderr = "Reading Keychain for example.com account and password.  Click \"Allow\" to continue...\n"
-        OutputCapture().assert_outputs(self, credentials._run_security_tool, [username], expected_stderr=expected_stderr)
+        expected_logs = "Reading Keychain for example.com account and password.  Click \"Allow\" to continue...\n"
+        OutputCapture().assert_outputs(self, credentials._run_security_tool, [username], expected_logs=expected_logs)
 
         security_args = ["/usr/bin/security", "find-internet-password", "-g", "-s", "example.com"]
         if username:
@@ -134,8 +135,8 @@ password: "SECRETSAUCE"
         os.environ['WEBKIT_BUGZILLA_USERNAME'] = "foo"
         os.environ['WEBKIT_BUGZILLA_PASSWORD'] = "bar"
         username, password = credentials._credentials_from_environment()
-        self.assertEquals(username, "foo")
-        self.assertEquals(password, "bar")
+        self.assertEqual(username, "foo")
+        self.assertEqual(password, "bar")
         os.environ = saved_environ
 
     def test_read_credentials_without_git_repo(self):
@@ -179,6 +180,29 @@ password: "SECRETSAUCE"
             # credential source could be affected by the user's environment.
             self.assertEqual(credentials.read_credentials(), ("test@webkit.org", "NOMNOMNOM"))
 
+    def test_keyring_without_git_repo_nor_keychain(self):
+        class MockKeyring(object):
+            def get_password(self, host, username):
+                return "NOMNOMNOM"
 
-if __name__ == '__main__':
-    unittest.main()
+        class FakeCredentials(MockedCredentials):
+            def _credentials_from_keychain(self, username):
+                return (None, None)
+
+            def _credentials_from_environment(self):
+                return (None, None)
+
+        class FakeUser(MockUser):
+            @classmethod
+            def prompt(cls, message, repeat=1, raw_input=raw_input):
+                return "test@webkit.org"
+
+            @classmethod
+            def prompt_password(cls, message, repeat=1, raw_input=raw_input):
+                raise AssertionError("should not prompt for password")
+
+        with _TemporaryDirectory(suffix="not_a_git_repo") as temp_dir_path:
+            credentials = FakeCredentials("fake.hostname", cwd=temp_dir_path, keyring=MockKeyring())
+            # FIXME: Using read_credentials here seems too broad as higher-priority
+            # credential source could be affected by the user's environment.
+            self.assertEqual(credentials.read_credentials(FakeUser), ("test@webkit.org", "NOMNOMNOM"))

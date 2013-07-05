@@ -82,6 +82,7 @@ public:
 
     virtual bool isCreateLinkCommand() const;
     virtual bool isTypingCommand() const;
+    virtual bool callsAppliedEditingInDoApply() const;
     virtual bool isDictationCommand() const { return false; }
     virtual bool preservesTypingStyle() const;
     virtual bool shouldRetainAutocorrectionIndicator() const;
@@ -108,7 +109,7 @@ protected:
     void insertNodeAfter(PassRefPtr<Node>, PassRefPtr<Node> refChild);
     void insertNodeAt(PassRefPtr<Node>, const Position&);
     void insertNodeAtTabSpanPosition(PassRefPtr<Node>, const Position&);
-    void insertNodeBefore(PassRefPtr<Node>, PassRefPtr<Node> refChild);
+    void insertNodeBefore(PassRefPtr<Node>, PassRefPtr<Node> refChild, ShouldAssumeContentIsAlwaysEditable = DoNotAssumeContentIsAlwaysEditable);
     void insertParagraphSeparator(bool useDefaultParagraphElement = false, bool pasteBlockqutoeIntoUnquotedArea = false);
     void insertLineBreak();
     void insertTextIntoNode(PassRefPtr<Text>, unsigned offset, const String& text);
@@ -122,9 +123,9 @@ protected:
     void removeCSSProperty(PassRefPtr<StyledElement>, CSSPropertyID);
     void removeNodeAttribute(PassRefPtr<Element>, const QualifiedName& attribute);
     void removeChildrenInRange(PassRefPtr<Node>, unsigned from, unsigned to);
-    virtual void removeNode(PassRefPtr<Node>);
+    virtual void removeNode(PassRefPtr<Node>, ShouldAssumeContentIsAlwaysEditable = DoNotAssumeContentIsAlwaysEditable);
     HTMLElement* replaceElementWithSpanPreservingChildrenAndAttributes(PassRefPtr<HTMLElement>);
-    void removeNodePreservingChildren(PassRefPtr<Node>);
+    void removeNodePreservingChildren(PassRefPtr<Node>, ShouldAssumeContentIsAlwaysEditable = DoNotAssumeContentIsAlwaysEditable);
     void removeNodeAndPruneAncestors(PassRefPtr<Node>);
     void moveRemainingSiblingsToNewParent(Node*, Node* pastLastNodeToMove, PassRefPtr<Element> prpNewParent);
     void updatePositionForNodeRemovalPreservingChildren(Position&, Node*);

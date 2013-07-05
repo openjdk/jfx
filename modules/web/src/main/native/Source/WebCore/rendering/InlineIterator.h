@@ -26,7 +26,6 @@
 #include "BidiRun.h"
 #include "RenderBlock.h"
 #include "RenderText.h"
-#include <wtf/AlwaysInline.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -77,7 +76,7 @@ public:
     inline bool atTextParagraphSeparator()
     {
         return m_obj && m_obj->preservesNewline() && m_obj->isText() && toRenderText(m_obj)->textLength()
-            && !toRenderText(m_obj)->isWordBreak() && toRenderText(m_obj)->characters()[m_pos] == '\n';
+            && !toRenderText(m_obj)->isWordBreak() && toRenderText(m_obj)->characterAt(m_pos) == '\n';
     }
     
     inline bool atParagraphSeparator()
@@ -85,6 +84,7 @@ public:
         return (m_obj && m_obj->isBR()) || atTextParagraphSeparator();
     }
 
+    UChar characterAt(unsigned) const;
     UChar current() const;
     UChar previousInSameNode() const;
     ALWAYS_INLINE WTF::Unicode::Direction direction() const;
@@ -175,6 +175,23 @@ enum EmptyInlineBehavior {
     IncludeEmptyInlines,
 };
 
+static bool isEmptyInline(RenderObject* object)
+{
+    if (!object->isRenderInline())
+        return false;
+
+    for (RenderObject* curr = object->firstChild(); curr; curr = curr->nextSibling()) {
+        if (curr->isFloatingOrOutOfFlowPositioned())
+            continue;
+        if (curr->isText() && toRenderText(curr)->isAllCollapsibleWhitespace())
+            continue;
+
+        if (!isEmptyInline(curr))
+            return false;
+    }
+    return true;
+}
+
 // FIXME: This function is misleadingly named. It has little to do with bidi.
 // This function will iterate over inlines within a block, optionally notifying
 // a bidi resolver as it enters/exits inlines (so it can push/pop embedding levels).
@@ -224,7 +241,7 @@ static inline RenderObject* bidiNextShared(RenderObject* root, RenderObject* cur
             break;
 
         if (isIteratorTarget(next)
-            || ((emptyInlineBehavior == IncludeEmptyInlines || !next->firstChild()) // Always return EMPTY inlines.
+            || ((emptyInlineBehavior == IncludeEmptyInlines || isEmptyInline(next)) // Always return EMPTY inlines.
                 && next->isRenderInline()))
             break;
         current = next;
@@ -264,7 +281,7 @@ static inline RenderObject* bidiFirstSkippingEmptyInlines(RenderObject* root, In
 
     if (o->isRenderInline()) {
         notifyObserverEnteredObject(resolver, o);
-        if (o->firstChild())
+        if (!isEmptyInline(o))
             o = bidiNextSkippingEmptyInlines(root, o, resolver);
         else {
             // Never skip empty inlines.
@@ -352,25 +369,29 @@ inline bool InlineIterator::atEnd() const
     return !m_obj;
 }
 
-inline UChar InlineIterator::current() const
+inline UChar InlineIterator::characterAt(unsigned index) const
 {
     if (!m_obj || !m_obj->isText())
         return 0;
 
     RenderText* text = toRenderText(m_obj);
-    if (m_pos >= text->textLength())
+    if (index >= text->textLength())
         return 0;
 
-    return text->characters()[m_pos];
+    return text->characterAt(index);
+}
+
+inline UChar InlineIterator::current() const
+{
+    return characterAt(m_pos);
 }
 
 inline UChar InlineIterator::previousInSameNode() const
 {
-    if (!m_obj || !m_obj->isText() || !m_pos)
+    if (!m_pos)
         return 0;
 
-    RenderText* text = toRenderText(m_obj);
-    return text->characters()[m_pos - 1];
+    return characterAt(m_pos - 1);
 }
 
 ALWAYS_INLINE WTF::Unicode::Direction InlineIterator::direction() const
@@ -467,6 +488,14 @@ public:
         // We don't need to mark the end of the run because this is implicit: it is either endOfLine or the end of the
         // isolate, when we call createBidiRunsForLine it will stop at whichever comes first.
         addPlaceholderRunForIsolatedInline(resolver, obj, pos);
+        // FIXME: Inline isolates don't work properly with collapsing whitespace, see webkit.org/b/109624
+        // For now, if we enter an isolate between midpoints, we increment our current midpoint or else
+        // we'll leave the isolate and ignore the content that follows.
+        MidpointState<InlineIterator>& midpointState = resolver.midpointState();
+        if (midpointState.betweenMidpoints && midpointState.midpoints[midpointState.currentMidpoint].object() == obj) {
+            midpointState.betweenMidpoints = false;
+            ++midpointState.currentMidpoint;
+        }
     }
 
 private:

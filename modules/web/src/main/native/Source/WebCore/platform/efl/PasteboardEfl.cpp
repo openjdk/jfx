@@ -24,14 +24,8 @@
 #include "Pasteboard.h"
 
 #include "DocumentFragment.h"
-#include "Frame.h"
-#include "Image.h"
-#include "KURL.h"
 #include "NotImplemented.h"
-#include "PlatformString.h"
-#include "RenderImage.h"
-#include "markup.h"
-#include <wtf/text/CString.h>
+#include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
@@ -46,12 +40,12 @@ Pasteboard::Pasteboard()
     notImplemented();
 }
 
-void Pasteboard::writePlainText(const String&)
+void Pasteboard::writePlainText(const String&, SmartReplaceOption)
 {
     notImplemented();
 }
 
-void Pasteboard::writeSelection(Range* selectedRange, bool canSmartCopyOrDelete, Frame* frame)
+void Pasteboard::writeSelection(Range*, bool, Frame*, ShouldSerializeSelectedTextForClipboard)
 {
     notImplemented();
 }
@@ -61,7 +55,7 @@ void Pasteboard::writeURL(const KURL&, const String&, Frame*)
     notImplemented();
 }
 
-void Pasteboard::writeImage(Node* node, const KURL&, const String&)
+void Pasteboard::writeImage(Node*, const KURL&, const String&)
 {
     notImplemented();
 }
@@ -82,8 +76,7 @@ bool Pasteboard::canSmartReplace()
     return false;
 }
 
-PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame* frame, PassRefPtr<Range> context,
-                                                          bool allowPlainText, bool& chosePlainText)
+PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame*, PassRefPtr<Range>, bool, bool&)
 {
     notImplemented();
     return 0;
@@ -93,6 +86,75 @@ String Pasteboard::plainText(Frame*)
 {
     notImplemented();
     return String();
+}
+
+PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
+{
+    return adoptPtr(new Pasteboard);
+}
+
+PassOwnPtr<Pasteboard> Pasteboard::createPrivate()
+{
+    return createForCopyAndPaste();
+}
+
+#if ENABLE(DRAG_SUPPORT)
+PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop()
+{
+    return createForCopyAndPaste();
+}
+
+PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData&)
+{
+    return createForCopyAndPaste();
+}
+#endif
+
+bool Pasteboard::hasData()
+{
+    notImplemented();
+    return false;
+}
+
+void Pasteboard::clear(const String&)
+{
+    notImplemented();
+}
+
+String Pasteboard::readString(const String&)
+{
+    notImplemented();
+    return String();
+}
+
+bool Pasteboard::writeString(const String&, const String&)
+{
+    notImplemented();
+    return false;
+}
+
+ListHashSet<String> Pasteboard::types()
+{
+    notImplemented();
+    return ListHashSet<String>();
+}
+
+Vector<String> Pasteboard::readFilenames()
+{
+    notImplemented();
+    return Vector<String>();
+}
+
+#if ENABLE(DRAG_SUPPORT)
+void Pasteboard::setDragImage(DragImageRef, const IntPoint&)
+{
+    notImplemented();
+}
+#endif
+
+void Pasteboard::writePasteboard(const Pasteboard&)
+{
+    notImplemented();
 }
 
 }

@@ -28,26 +28,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module threads {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=WORKERS,
         ExtendsDOMGlobalObject,
         IsWorkerContext,
         JSGenerateToNativeObject,
         JSNoStaticTables,
         OmitConstructor
-    ] DedicatedWorkerContext : WorkerContext {
+] interface DedicatedWorkerContext : WorkerContext {
 
 #if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        [Custom] void postMessage(in any message, in [Optional] Array messagePorts)
-            raises(DOMException);
-        [Custom] void webkitPostMessage(in any message, in [Optional] Array transferList)
+    [Custom] void postMessage(any message, optional Array messagePorts)
             raises(DOMException);
 #else
         // There's no good way to expose an array via the ObjC bindings, so for now just allow passing in a single port.
-        void postMessage(in DOMString message, in [Optional] MessagePort messagePort)
+    void postMessage(DOMString message, optional MessagePort messagePort)
             raises(DOMException);
 #endif
 #endif
@@ -56,4 +53,3 @@ module threads {
 
     };
 
-}

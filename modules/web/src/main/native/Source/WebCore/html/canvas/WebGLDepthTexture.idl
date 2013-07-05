@@ -23,13 +23,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-    interface [
+[
+    NoInterfaceObject,
         Conditional=WEBGL,
-        JSGenerateIsReachable=ImplContext,
+    GenerateIsReachable=ImplContext,
         OmitConstructor,
         DoNotCheckConstants
-    ] WebGLDepthTexture {
+] interface WebGLDepthTexture {
         const unsigned int UNSIGNED_INT_24_8_WEBGL = 0x84FA;
     };
-}

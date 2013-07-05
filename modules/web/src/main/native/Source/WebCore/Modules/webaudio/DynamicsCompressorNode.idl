@@ -22,11 +22,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module audio {
-    interface [
+[
         Conditional=WEB_AUDIO,
         JSGenerateToJSObject
-    ] DynamicsCompressorNode : AudioNode {
+] interface DynamicsCompressorNode : AudioNode {
         readonly attribute AudioParam threshold; // in Decibels
         readonly attribute AudioParam knee; // in Decibels
         readonly attribute AudioParam ratio; // unit-less
@@ -34,4 +33,3 @@ module audio {
         readonly attribute AudioParam attack; // in Seconds
         readonly attribute AudioParam release; // in Seconds
     };
-}

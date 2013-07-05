@@ -43,27 +43,34 @@ public:
 
     bool updateImageViewport();
     virtual void setNeedsBoundariesUpdate() { m_needsBoundariesUpdate = true; }
+    virtual bool needsBoundariesUpdate() OVERRIDE { return m_needsBoundariesUpdate; }
     virtual void setNeedsTransformUpdate() { m_needsTransformUpdate = true; }
 
     RenderImageResource* imageResource() { return m_imageResource.get(); }
     const RenderImageResource* imageResource() const { return m_imageResource.get(); }
 
+    // Note: Assumes the PaintInfo context has had all local transforms applied.
+    void paintForeground(PaintInfo&);
+
 private:
     virtual const char* renderName() const { return "RenderSVGImage"; }
-    virtual bool isSVGImage() const { return true; }
+    virtual bool isSVGImage() const OVERRIDE { return true; }
 
     virtual const AffineTransform& localToParentTransform() const { return m_localTransform; }
 
     virtual FloatRect objectBoundingBox() const { return m_objectBoundingBox; }
     virtual FloatRect strokeBoundingBox() const { return m_objectBoundingBox; }
     virtual FloatRect repaintRectInLocalCoordinates() const { return m_repaintBoundingBox; }
+    virtual FloatRect repaintRectInLocalCoordinatesExcludingSVGShadow() const OVERRIDE { return m_repaintBoundingBoxExcludingShadow; }
 
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint&);
+    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) OVERRIDE;
 
     virtual void imageChanged(WrappedImagePtr, const IntRect* = 0);
 
     virtual void layout();
     virtual void paint(PaintInfo&, const LayoutPoint&);
+
+    void invalidateBufferedForeground();
 
     virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
 
@@ -75,18 +82,21 @@ private:
     AffineTransform m_localTransform;
     FloatRect m_objectBoundingBox;
     FloatRect m_repaintBoundingBox;
+    FloatRect m_repaintBoundingBoxExcludingShadow;
     OwnPtr<RenderImageResource> m_imageResource;
+
+    OwnPtr<ImageBuffer> m_bufferedForeground;
 };
 
 inline RenderSVGImage* toRenderSVGImage(RenderObject* object)
 {
-    ASSERT(!object || object->isSVGImage());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGImage());
     return static_cast<RenderSVGImage*>(object);
 }
 
 inline const RenderSVGImage* toRenderSVGImage(const RenderObject* object)
 {
-    ASSERT(!object || object->isSVGImage());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGImage());
     return static_cast<const RenderSVGImage*>(object);
 }
 

@@ -2,10 +2,10 @@
  * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
-#include "CookieJar.h"
+#include "PlatformCookieJar.h"
+#include "KURL.h"
 
 #include "JavaEnv.h"
-#include "KURL.h"
 #include "NotImplemented.h"
 
 static JGClass cookieJarClass;
@@ -50,17 +50,7 @@ static String getCookies(const KURL& url, bool includeHttpOnlyCookies)
     return result ? String(env, result) : emptyString();
 }
 
-String cookies(const Document*, const KURL& url)
-{
-    return getCookies(url, false);
-}
-
-String cookieRequestHeaderFieldValue(const Document*, const KURL& url)
-{
-    return getCookies(url, true);
-}
-
-void setCookies(Document*, const KURL& url, const String& value)
+void setCookiesFromDOM(const NetworkStorageSession&, const KURL&, const KURL& url, const String& value)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
@@ -73,18 +63,44 @@ void setCookies(Document*, const KURL& url, const String& value)
     CheckAndClearException(env);    
 }
 
-bool cookiesEnabled(const Document*)
+String cookiesForDOM(const NetworkStorageSession&, const KURL&, const KURL& url)
+{
+    // 'HttpOnly' cookies should no be accessible from scripts, so we filter them out here.
+    return getCookies(url, false);
+}
+
+String cookieRequestHeaderFieldValue(const NetworkStorageSession&, const KURL&, const KURL& url)
+{
+    return getCookies(url, true);
+}
+
+bool cookiesEnabled(const NetworkStorageSession&, const KURL&, const KURL&)
 {
     return true;
 }
 
-bool getRawCookies(const Document*, const KURL&, Vector<Cookie>&)
+bool getRawCookies(const NetworkStorageSession&, const KURL&, const KURL& url, Vector<Cookie>& rawCookies)
 {
     notImplemented();
     return false;
 }
 
-void deleteCookie(const Document*, const KURL&, const String&)
+void deleteCookie(const NetworkStorageSession&, const KURL& url, const String& name)
+{
+    notImplemented();
+}
+
+void getHostnamesWithCookies(const NetworkStorageSession&, HashSet<String>&)
+{
+    notImplemented();
+}
+
+void deleteCookiesForHostname(const NetworkStorageSession&, const String& /*hostname*/)
+{
+    notImplemented();
+}
+
+void deleteAllCookies(const NetworkStorageSession&)
 {
     notImplemented();
 }

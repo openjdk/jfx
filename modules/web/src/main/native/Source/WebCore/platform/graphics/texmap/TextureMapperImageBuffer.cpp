@@ -20,16 +20,19 @@
 #include "config.h"
 #include "TextureMapperImageBuffer.h"
 
-#include "FilterEffectRenderer.h"
+#include "GraphicsLayer.h"
 #if PLATFORM(QT)
 #include "NativeImageQt.h"
 #endif
+#include "NotImplemented.h"
 
 
 #if USE(TEXTURE_MAPPER)
 namespace WebCore {
 
-void BitmapTextureImageBuffer::updateContents(const void* data, const IntRect& targetRect, const IntPoint& sourceOffset, int bytesPerLine)
+static const int s_maximumAllowedImageBufferDimension = 4096;
+
+void BitmapTextureImageBuffer::updateContents(const void* data, const IntRect& targetRect, const IntPoint& sourceOffset, int bytesPerLine, UpdateContentsFlag)
 {
 #if PLATFORM(QT)
     QImage image(reinterpret_cast<const uchar*>(data), targetRect.width(), targetRect.height(), bytesPerLine, NativeImageQt::defaultFormatForAlphaEnabledImages());
@@ -46,7 +49,27 @@ void BitmapTextureImageBuffer::updateContents(const void* data, const IntRect& t
                                                                                    bytesPerLine));
     m_image->context()->platformContext()->drawSurfaceToContext(surface.get(), targetRect,
                                                                 IntRect(sourceOffset, targetRect.size()), m_image->context());
+#else
+    UNUSED_PARAM(data);
+    UNUSED_PARAM(targetRect);
+    UNUSED_PARAM(sourceOffset);
+    UNUSED_PARAM(bytesPerLine);
 #endif
+}
+
+void BitmapTextureImageBuffer::updateContents(TextureMapper*, GraphicsLayer* sourceLayer, const IntRect& targetRect, const IntPoint& sourceOffset, UpdateContentsFlag)
+{
+    GraphicsContext* context = m_image->context();
+
+    context->clearRect(targetRect);
+
+    IntRect sourceRect(targetRect);
+    sourceRect.setLocation(sourceOffset);
+    context->save();
+    context->clip(targetRect);
+    context->translate(targetRect.x() - sourceOffset.x(), targetRect.y() - sourceOffset.y());
+    sourceLayer->paintGraphicsLayerContents(*context, sourceRect);
+    context->restore();
 }
 
 void BitmapTextureImageBuffer::didReset()
@@ -54,9 +77,14 @@ void BitmapTextureImageBuffer::didReset()
     m_image = ImageBuffer::create(contentSize());
 }
 
-void BitmapTextureImageBuffer::updateContents(Image* image, const IntRect& targetRect, const IntPoint& offset)
+void BitmapTextureImageBuffer::updateContents(Image* image, const IntRect& targetRect, const IntPoint& offset, UpdateContentsFlag)
 {
     m_image->context()->drawImage(image, ColorSpaceDeviceRGB, targetRect, IntRect(offset, targetRect.size()), CompositeCopy);
+}
+
+IntSize TextureMapperImageBuffer::maxTextureSize() const
+{
+    return IntSize(s_maximumAllowedImageBufferDimension, s_maximumAllowedImageBufferDimension);
 }
 
 void TextureMapperImageBuffer::beginClip(const TransformationMatrix& matrix, const FloatRect& rect)
@@ -86,7 +114,7 @@ void TextureMapperImageBuffer::beginClip(const TransformationMatrix& matrix, con
 #endif
 }
 
-void TextureMapperImageBuffer::drawTexture(const BitmapTexture& texture, const FloatRect& targetRect, const TransformationMatrix& matrix, float opacity, const BitmapTexture* maskTexture, unsigned /* exposedEdges */)
+void TextureMapperImageBuffer::drawTexture(const BitmapTexture& texture, const FloatRect& targetRect, const TransformationMatrix& matrix, float opacity, unsigned /* exposedEdges */)
 {
     GraphicsContext* context = currentContext();
     if (!context)
@@ -94,22 +122,8 @@ void TextureMapperImageBuffer::drawTexture(const BitmapTexture& texture, const F
 
     const BitmapTextureImageBuffer& textureImageBuffer = static_cast<const BitmapTextureImageBuffer&>(texture);
     ImageBuffer* image = textureImageBuffer.m_image.get();
-    OwnPtr<ImageBuffer> maskedImage;
-
-    if (maskTexture && maskTexture->isValid()) {
-        const BitmapTextureImageBuffer* mask = static_cast<const BitmapTextureImageBuffer*>(maskTexture);
-        maskedImage = ImageBuffer::create(maskTexture->contentSize());
-        GraphicsContext* maskContext = maskedImage->context();
-        maskContext->drawImageBuffer(image, ColorSpaceDeviceRGB, IntPoint::zero(), CompositeCopy);
-        if (opacity < 1) {
-            maskContext->setAlpha(opacity);
-            opacity = 1;
-        }
-        maskContext->drawImageBuffer(mask->m_image.get(), ColorSpaceDeviceRGB, IntPoint::zero(), CompositeDestinationIn);
-        image = maskedImage.get();
-    }
-
     context->save();
+    context->setCompositeOperation(isInMaskMode() ? CompositeDestinationIn : CompositeSourceOver);
     context->setAlpha(opacity);
 #if ENABLE(3D_RENDERING)
     context->concat3DTransform(matrix);
@@ -120,19 +134,37 @@ void TextureMapperImageBuffer::drawTexture(const BitmapTexture& texture, const F
     context->restore();
 }
 
-#if ENABLE(CSS_FILTERS)
-PassRefPtr<BitmapTexture> BitmapTextureImageBuffer::applyFilters(const BitmapTexture& contentTexture, const FilterOperations& filters)
+void TextureMapperImageBuffer::drawSolidColor(const FloatRect& rect, const TransformationMatrix& matrix, const Color& color)
 {
-    RefPtr<FilterEffectRenderer> renderer = FilterEffectRenderer::create();
-    renderer->setSourceImageRect(FloatRect(FloatPoint::zero(), contentTexture.size()));
+    GraphicsContext* context = currentContext();
+    if (!context)
+        return;
 
-    // The document parameter is only needed for CSS shaders.
-    renderer->build(0 /*document */, filters);
-    renderer->allocateBackingStoreIfNeeded();
-    GraphicsContext* context = renderer->inputContext();
-    context->drawImageBuffer(static_cast<const BitmapTextureImageBuffer&>(contentTexture).m_image.get(), ColorSpaceDeviceRGB, IntPoint::zero());
-    renderer->apply();
-    m_image->context()->drawImageBuffer(renderer->output(), ColorSpaceDeviceRGB, renderer->outputRect());
+    context->save();
+    context->setCompositeOperation(isInMaskMode() ? CompositeDestinationIn : CompositeSourceOver);
+#if ENABLE(3D_RENDERING)
+    context->concat3DTransform(matrix);
+#else
+    context->concatCTM(matrix.toAffineTransform());
+#endif
+
+    context->fillRect(rect, color, ColorSpaceDeviceRGB);
+    context->restore();
+}
+
+void TextureMapperImageBuffer::drawBorder(const Color&, float /* borderWidth */, const FloatRect&, const TransformationMatrix&)
+{
+    notImplemented();
+}
+
+void TextureMapperImageBuffer::drawNumber(int /* number */, const Color&, const FloatPoint&, const TransformationMatrix&)
+{
+    notImplemented();
+}
+
+#if ENABLE(CSS_FILTERS)
+PassRefPtr<BitmapTexture> BitmapTextureImageBuffer::applyFilters(TextureMapper*, const FilterOperations&)
+{
     return this;
 }
 #endif

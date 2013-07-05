@@ -29,20 +29,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module threads {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=LEGACY_NOTIFICATIONS,
         ActiveDOMObject,
         OmitConstructor
-    ] NotificationCenter {
-#if !defined(ENABLE_TEXT_NOTIFICATIONS_ONLY) || !ENABLE_TEXT_NOTIFICATIONS_ONLY
-       [V8Custom] Notification createHTMLNotification(in DOMString url) raises(DOMException);
-#endif
-       [V8Custom] Notification createNotification(in DOMString iconUrl, in DOMString title, in DOMString body) raises(DOMException);
+] interface NotificationCenter {
+   Notification createNotification(DOMString iconUrl, DOMString title, DOMString body) raises(DOMException);
 
        int checkPermission();
-       [Custom] void requestPermission(in VoidCallback callback);
+   void requestPermission(optional VoidCallback callback);
     };
 
-}

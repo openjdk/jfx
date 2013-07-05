@@ -5,6 +5,7 @@
  * Copyright (C) 2008 INdT - Instituto Nokia de Tecnologia
  * Copyright (C) 2009-2010 ProFUSION embedded systems
  * Copyright (C) 2009-2011 Samsung Electronics
+ * Copyright (c) 2012 Intel Corporation. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,8 +28,12 @@
 #include "RenderThemeEfl.h"
 
 #include "CSSValueKeywords.h"
+#include "CairoUtilitiesEfl.h"
+#include "ExceptionCodePlaceholder.h"
+#include "FontDescription.h"
 #include "GraphicsContext.h"
 #include "HTMLInputElement.h"
+#include "InputTypeNames.h"
 #include "NotImplemented.h"
 #include "Page.h"
 #include "PaintInfo.h"
@@ -41,6 +46,7 @@
 
 #include <Ecore_Evas.h>
 #include <Edje.h>
+#include <new>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
@@ -62,22 +68,92 @@ using namespace HTMLNames;
 // Initialize default font size.
 float RenderThemeEfl::defaultFontSize = 16.0f;
 
+static const float minCancelButtonSize = 5;
+static const float maxCancelButtonSize = 21;
+
+static const float minSearchDecorationButtonSize = 1;
+static const float maxSearchDecorationButtonSize = 15;
+static const float searchFieldDecorationButtonOffset = 3;
+
 // Constants for progress tag animation.
 // These values have been copied from RenderThemeGtk.cpp
 static const int progressAnimationFrames = 10;
 static const double progressAnimationInterval = 0.125;
 
-static const int sliderThumbWidth = 12;
-static const int sliderThumbHeight = 12;
+static const int sliderThumbWidth = 29;
+static const int sliderThumbHeight = 11;
 #if ENABLE(VIDEO)
 static const int mediaSliderHeight = 14;
 static const int mediaSliderThumbWidth = 12;
 static const int mediaSliderThumbHeight = 12;
 #endif
 
+#define _ASSERT_ON_RELEASE_RETURN(o, fmt, ...) \
+    do { if (!o) { EINA_LOG_CRIT(fmt, ## __VA_ARGS__); ASSERT(o); return; } } while (0)
+#define _ASSERT_ON_RELEASE_RETURN_VAL(o, val, fmt, ...) \
+    do { if (!o) { EINA_LOG_CRIT(fmt, ## __VA_ARGS__); ASSERT(o); return val; } } while (0)
+
+
+static const char* toEdjeGroup(FormType type)
+{
+    static const char* groups[] = {
+#define W(n) "webkit/widget/"n
+        W("button"),
+        W("radio"),
+        W("entry"),
+        W("checkbox"),
+        W("combo"),
+#if ENABLE(PROGRESS_ELEMENT)
+        W("progressbar"),
+#endif
+        W("search/field"),
+        W("search/decoration"),
+        W("search/results_button"),
+        W("search/results_decoration"),
+        W("search/cancel_button"),
+        W("slider/vertical"),
+        W("slider/horizontal"),
+        W("slider/thumb_vertical"),
+        W("slider/thumb_horizontal"),
+#if ENABLE(VIDEO)
+        W("mediacontrol/playpause_button"),
+        W("mediacontrol/mute_button"),
+        W("mediacontrol/seekforward_button"),
+        W("mediacontrol/seekbackward_button"),
+        W("mediacontrol/fullscreen_button"),
+#endif
+#if ENABLE(VIDEO_TRACK)
+        W("mediacontrol/toggle_captions_button"),
+#endif
+        W("spinner"),
+#undef W
+        0
+    };
+    ASSERT(type >= 0);
+    ASSERT((size_t)type < sizeof(groups) / sizeof(groups[0])); // Out of sync?
+    return groups[type];
+}
+
+static bool setSourceGroupForEdjeObject(Evas_Object* o, const String& themePath, const char* group)
+{
+    ASSERT(o);
+    ASSERT(!themePath.isEmpty());
+
+    if (!edje_object_file_set(o, themePath.utf8().data(), group)) {
+        const char* message = edje_load_error_str(edje_object_load_error_get(o));
+        EINA_LOG_ERR("Could not set theme group '%s' of file '%s': %s", group, themePath.utf8().data(), message);
+        return false;
+    }
+
+    return true;
+}
+
 void RenderThemeEfl::adjustSizeConstraints(RenderStyle* style, FormType type) const
 {
-    const struct ThemePartDesc* desc = m_partDescs + (size_t)type;
+    loadThemeIfNeeded();
+
+    // These are always valid, even if no theme could be loaded.
+    const ThemePartDesc* desc = m_partDescs + (size_t)type;
 
     if (style->minWidth().isIntrinsic())
         style->setMinWidth(desc->min.width());
@@ -95,53 +171,7 @@ void RenderThemeEfl::adjustSizeConstraints(RenderStyle* style, FormType type) co
     style->setPaddingRight(desc->padding.right());
 }
 
-bool RenderThemeEfl::themePartCacheEntryReset(struct ThemePartCacheEntry* entry, FormType type)
-{
-    const char *file, *group;
-
-    ASSERT(entry);
-    ASSERT(m_edje);
-
-    edje_object_file_get(m_edje, &file, 0);
-    group = edjeGroupFromFormType(type);
-    ASSERT(file);
-    ASSERT(group);
-
-    if (!edje_object_file_set(entry->o, file, group)) {
-        Edje_Load_Error err = edje_object_load_error_get(entry->o);
-        const char *errmsg = edje_load_error_str(err);
-        EINA_LOG_ERR("Could not load '%s' from theme %s: %s",
-                     group, file, errmsg);
-        return false;
-    }
-    return true;
-}
-
-bool RenderThemeEfl::themePartCacheEntrySurfaceCreate(struct ThemePartCacheEntry* entry)
-{
-    int w, h;
-    cairo_status_t status;
-
-    ASSERT(entry);
-    ASSERT(entry->ee);
-
-    ecore_evas_geometry_get(entry->ee, 0, 0, &w, &h);
-    ASSERT(w > 0);
-    ASSERT(h > 0);
-
-    entry->surface = cairo_image_surface_create_for_data((unsigned char *)ecore_evas_buffer_pixels_get(entry->ee),
-                                                      CAIRO_FORMAT_ARGB32, w, h, w * 4);
-    status = cairo_surface_status(entry->surface);
-    if (status != CAIRO_STATUS_SUCCESS) {
-        EINA_LOG_ERR("Could not create cairo surface: %s",
-                     cairo_status_to_string(status));
-        return false;
-    }
-
-    return true;
-}
-
-bool RenderThemeEfl::isFormElementTooLargeToDisplay(const IntSize& elementSize)
+static bool isFormElementTooLargeToDisplay(const IntSize& elementSize)
 {
     // This limit of 20000 pixels is hardcoded inside edje -- anything above this size
     // will be clipped. This value seems to be reasonable enough so that hardcoding it
@@ -151,135 +181,120 @@ bool RenderThemeEfl::isFormElementTooLargeToDisplay(const IntSize& elementSize)
     return elementSize.width() > maxEdjeDimension || elementSize.height() > maxEdjeDimension;
 }
 
-// allocate a new entry and fill it with edje group
-struct RenderThemeEfl::ThemePartCacheEntry* RenderThemeEfl::cacheThemePartNew(FormType type, const IntSize& size)
+PassOwnPtr<RenderThemeEfl::ThemePartCacheEntry> RenderThemeEfl::ThemePartCacheEntry::create(const String& themePath, FormType type, const IntSize& size)
 {
-    if (isFormElementTooLargeToDisplay(size)) {
-        EINA_LOG_ERR("cannot render an element of size %dx%d", size.width(), size.height());
-        return 0;
+    ASSERT(!themePath.isEmpty());
+
+    if (isFormElementTooLargeToDisplay(size) || size.isEmpty()) {
+        EINA_LOG_ERR("Cannot render an element of size %dx%d.", size.width(), size.height());
+        return nullptr;
     }
 
-    ThemePartCacheEntry* entry = new ThemePartCacheEntry;
-    if (!entry) {
-        EINA_LOG_ERR("could not allocate ThemePartCacheEntry.");
-        return 0;
-    }
+    OwnPtr<ThemePartCacheEntry> entry = adoptPtr(new ThemePartCacheEntry);
 
-    entry->ee = ecore_evas_buffer_new(size.width(), size.height());
-    if (!entry->ee) {
-        EINA_LOG_ERR("ecore_evas_buffer_new(%d, %d) failed.",
-                     size.width(), size.height());
-        delete entry;
-        return 0;
+    entry->m_canvas = adoptPtr(ecore_evas_buffer_new(size.width(), size.height()));
+    if (!entry->canvas()) {
+        EINA_LOG_ERR("ecore_evas_buffer_new(%d, %d) failed.", size.width(), size.height());
+        return nullptr;
     }
 
     // By default EFL creates buffers without alpha.
-    ecore_evas_alpha_set(entry->ee, EINA_TRUE);
+    ecore_evas_alpha_set(entry->canvas(), EINA_TRUE);
 
-    entry->o = edje_object_add(ecore_evas_get(entry->ee));
-    ASSERT(entry->o);
-    if (!themePartCacheEntryReset(entry, type)) {
-        evas_object_del(entry->o);
-        ecore_evas_free(entry->ee);
-        delete entry;
-        return 0;
-    }
+    entry->m_edje = adoptRef(edje_object_add(ecore_evas_get(entry->canvas())));
+    ASSERT(entry->edje());
 
-    if (!themePartCacheEntrySurfaceCreate(entry)) {
-        evas_object_del(entry->o);
-        ecore_evas_free(entry->ee);
-        delete entry;
-        return 0;
-    }
+    if (!setSourceGroupForEdjeObject(entry->edje(), themePath, toEdjeGroup(type)))
+        return nullptr;
 
-    evas_object_resize(entry->o, size.width(), size.height());
-    evas_object_show(entry->o);
+    entry->m_surface = createSurfaceForBackingStore(entry->canvas());
+    if (!entry->surface())
+        return nullptr;
+
+    evas_object_resize(entry->edje(), size.width(), size.height());
+    evas_object_show(entry->edje());
 
     entry->type = type;
     entry->size = size;
 
-    m_partCache.prepend(entry);
-    return entry;
+    return entry.release();
 }
 
-// just change the edje group and return the same entry
-struct RenderThemeEfl::ThemePartCacheEntry* RenderThemeEfl::cacheThemePartReset(FormType type, struct RenderThemeEfl::ThemePartCacheEntry* entry)
+void RenderThemeEfl::ThemePartCacheEntry::reuse(const String& themePath, FormType newType, const IntSize& newSize)
 {
-    if (!themePartCacheEntryReset(entry, type)) {
-        entry->type = FormTypeLast; // invalidate
-        m_partCache.append(entry);
-        return 0;
-    }
-    entry->type = type;
-    m_partCache.prepend(entry);
-    return entry;
-}
+    ASSERT(!themePath.isEmpty());
 
-// resize entry and reset it
-struct RenderThemeEfl::ThemePartCacheEntry* RenderThemeEfl::cacheThemePartResizeAndReset(FormType type, const IntSize& size, struct RenderThemeEfl::ThemePartCacheEntry* entry)
-{
-    cairo_surface_finish(entry->surface);
-
-    entry->size = size;
-    ecore_evas_resize(entry->ee, size.width(), size.height());
-    evas_object_resize(entry->o, size.width(), size.height());
-
-    if (!themePartCacheEntrySurfaceCreate(entry)) {
-        evas_object_del(entry->o);
-        ecore_evas_free(entry->ee);
-        delete entry;
-        return 0;
-    }
-
-    return cacheThemePartReset(type, entry);
-}
-
-// general purpose get (will create, reuse and all)
-struct RenderThemeEfl::ThemePartCacheEntry* RenderThemeEfl::cacheThemePartGet(FormType type, const IntSize& size)
-{
-    Vector<struct ThemePartCacheEntry *>::iterator itr, end;
-    struct ThemePartCacheEntry *ce_last_size = 0;
-    int i, idxLastSize = -1;
-
-    itr = m_partCache.begin();
-    end = m_partCache.end();
-    for (i = 0; itr != end; i++, itr++) {
-        struct ThemePartCacheEntry *entry = *itr;
-        if (entry->size == size) {
-            if (entry->type == type)
-                return entry;
-            ce_last_size = entry;
-            idxLastSize = i;
+    if (type != newType) {
+        type = newType;
+        if (!setSourceGroupForEdjeObject(edje(), themePath, toEdjeGroup(newType))) {
+            type = FormTypeLast; // Invalidate.
+            return;
         }
     }
 
-    if (m_partCache.size() < RENDER_THEME_EFL_PART_CACHE_MAX)
-        return cacheThemePartNew(type, size);
+    if (size != newSize) {
+        size = newSize;
+        ecore_evas_resize(canvas(), newSize.width(), newSize.height());
+        evas_object_resize(edje(), newSize.width(), newSize.height());
 
-    if (ce_last_size && ce_last_size != m_partCache.first()) {
-        m_partCache.remove(idxLastSize);
-        return cacheThemePartReset(type, ce_last_size);
+        m_surface = createSurfaceForBackingStore(canvas());
+        if (!surface()) {
+            type = FormTypeLast; // Invalidate;
+            return;
+        }
     }
-
-    ThemePartCacheEntry* entry = m_partCache.last();
-    m_partCache.removeLast();
-    return cacheThemePartResizeAndReset(type, size, entry);
 }
 
-void RenderThemeEfl::cacheThemePartFlush()
+RenderThemeEfl::ThemePartCacheEntry* RenderThemeEfl::getThemePartFromCache(FormType type, const IntSize& size)
 {
-    Vector<struct ThemePartCacheEntry *>::iterator itr, end;
+    void* data;
+    Eina_List* node;
+    Eina_List* reusableNode = 0;
 
-    itr = m_partCache.begin();
-    end = m_partCache.end();
-    for (; itr != end; itr++) {
-        struct ThemePartCacheEntry *entry = *itr;
-        cairo_surface_destroy(entry->surface);
-        evas_object_del(entry->o);
-        ecore_evas_free(entry->ee);
-        delete entry;
+    // Look for the item in the cache.
+    EINA_LIST_FOREACH(m_partCache, node, data) {
+        ThemePartCacheEntry* cachedEntry = static_cast<ThemePartCacheEntry*>(data);
+        if (cachedEntry->size == size) {
+            if (cachedEntry->type == type) {
+                // Found the right item, move it to the head of the list
+                // and return it.
+                m_partCache = eina_list_promote_list(m_partCache, node);
+                return cachedEntry;
+            }
+            // We reuse in priority the last item in the list that has
+            // the requested size.
+            reusableNode = node;
+        }
     }
-    m_partCache.clear();
+
+    if (eina_list_count(m_partCache) < RENDER_THEME_EFL_PART_CACHE_MAX) {
+        ThemePartCacheEntry* entry = ThemePartCacheEntry::create(themePath(), type, size).leakPtr();
+        if (entry)
+            m_partCache = eina_list_prepend(m_partCache, entry);
+
+    return entry;
+}
+
+    // The cache is full, reuse the last item we found that had the
+    // requested size to avoid resizing. If there was none, reuse
+    // the last item of the list.
+    if (!reusableNode)
+        reusableNode = eina_list_last(m_partCache);
+
+    ThemePartCacheEntry* reusedEntry = static_cast<ThemePartCacheEntry*>(eina_list_data_get(reusableNode));
+    ASSERT(reusedEntry);
+    reusedEntry->reuse(themePath(), type, size);
+    m_partCache = eina_list_promote_list(m_partCache, reusableNode);
+
+    return reusedEntry;
+}
+
+void RenderThemeEfl::clearThemePartCache()
+{
+    void* data;
+    EINA_LIST_FREE(m_partCache, data)
+        delete static_cast<ThemePartCacheEntry*>(data);
+
 }
 
 void RenderThemeEfl::applyEdjeStateFromForm(Evas_Object* object, ControlStates states)
@@ -305,68 +320,73 @@ void RenderThemeEfl::applyEdjeStateFromForm(Evas_Object* object, ControlStates s
     }
 }
 
-bool RenderThemeEfl::paintThemePart(RenderObject* object, FormType type, const PaintInfo& info, const IntRect& rect)
+void RenderThemeEfl::applyEdjeRTLState(Evas_Object* edje, RenderObject* object, FormType type, const IntRect& rect)
 {
-    ThemePartCacheEntry* entry;
-    Eina_List* updates;
-    cairo_t* cairo;
-
-    ASSERT(m_canvas);
-    ASSERT(m_edje);
-
-    entry = cacheThemePartGet(type, rect.size());
-    if (!entry)
-        return false;
-
-    applyEdjeStateFromForm(entry->o, controlStatesForRenderer(object));
-
-    cairo = info.context->platformContext()->cr();
-    ASSERT(cairo);
-
-    // Currently, only sliders needs this message; if other widget ever needs special
-    // treatment, move them to special functions.
     if (type == SliderVertical || type == SliderHorizontal) {
+        if (!object->isSlider())
+            return; // probably have -webkit-appearance: slider..
+
         RenderSlider* renderSlider = toRenderSlider(object);
         HTMLInputElement* input = renderSlider->node()->toInputElement();
-        Edje_Message_Float_Set* msg;
         double valueRange = input->maximum() - input->minimum();
 
-        msg = static_cast<Edje_Message_Float_Set*>(alloca(sizeof(Edje_Message_Float_Set) + sizeof(float)));
+        OwnPtr<Edje_Message_Float_Set> msg = adoptPtr(static_cast<Edje_Message_Float_Set*>(::operator new (sizeof(Edje_Message_Float_Set) + sizeof(double))));
         msg->count = 2;
-        if (valueRange > 0)
-            msg->val[0] = static_cast<float>((input->valueAsNumber() - input->minimum()) / valueRange);
+
+        // The first parameter of the message decides if the progress bar
+        // grows from the end of the slider or from the beginning. On vertical
+        // sliders, it should always be the same and will not be affected by
+        // text direction settings.
+        if (object->style()->direction() == RTL || type == SliderVertical)
+            msg->val[0] = 1;
         else
             msg->val[0] = 0;
-        msg->val[1] = 0.1;
-        edje_object_message_send(entry->o, EDJE_MESSAGE_FLOAT_SET, 0, msg);
-#if ENABLE(PROGRESS_TAG)
+
+        msg->val[1] = (input->valueAsNumber() - input->minimum()) / valueRange;
+        edje_object_message_send(edje, EDJE_MESSAGE_FLOAT_SET, 0, msg.get());
+#if ENABLE(PROGRESS_ELEMENT)
     } else if (type == ProgressBar) {
         RenderProgress* renderProgress = toRenderProgress(object);
-        Edje_Message_Float_Set* msg;
-        int max;
-        double value;
 
-        msg = static_cast<Edje_Message_Float_Set*>(alloca(sizeof(Edje_Message_Float_Set) + sizeof(float)));
-        max = rect.width();
-        value = renderProgress->position();
+        int max = rect.width();
+        double value = renderProgress->position();
 
+        OwnPtr<Edje_Message_Float_Set> msg = adoptPtr(static_cast<Edje_Message_Float_Set*>(::operator new (sizeof(Edje_Message_Float_Set) + sizeof(double))));
         msg->count = 2;
+
         if (object->style()->direction() == RTL)
             msg->val[0] = (1.0 - value) * max;
         else
             msg->val[0] = 0;
         msg->val[1] = value;
-        edje_object_message_send(entry->o, EDJE_MESSAGE_FLOAT_SET, 0, msg);
+        edje_object_message_send(edje, EDJE_MESSAGE_FLOAT_SET, 0, msg.get());
+#else
+        UNUSED_PARAM(rect);
 #endif
     }
+}
 
-    edje_object_calc_force(entry->o);
-    edje_object_message_signal_process(entry->o);
-    updates = evas_render_updates(ecore_evas_get(entry->ee));
-    evas_render_updates_free(updates);
+bool RenderThemeEfl::paintThemePart(RenderObject* object, FormType type, const PaintInfo& info, const IntRect& rect)
+{
+    loadThemeIfNeeded();
+    _ASSERT_ON_RELEASE_RETURN_VAL(edje(), false, "Could not paint native HTML part due to missing theme.");
+
+    ThemePartCacheEntry* entry = getThemePartFromCache(type, rect.size());
+    if (!entry)
+        return false;
+
+    applyEdjeStateFromForm(entry->edje(), controlStatesForRenderer(object));
+    applyEdjeRTLState(entry->edje(), object, type, rect);
+
+    edje_object_calc_force(entry->edje());
+    edje_object_message_signal_process(entry->edje());
+    evas_render(ecore_evas_get(entry->canvas()));
+
+    cairo_t* cairo = info.context->platformContext()->cr();
+    ASSERT(cairo);
 
     cairo_save(cairo);
-    cairo_set_source_surface(cairo, entry->surface, rect.x(), rect.y());
+    cairo_set_source_surface(cairo, entry->surface(), rect.x(), rect.y());
     cairo_paint_with_alpha(cairo, 1.0);
     cairo_restore(cairo);
 
@@ -387,115 +407,120 @@ PassRefPtr<RenderTheme> RenderTheme::themeForPage(Page* page)
     return fallback;
 }
 
-static void renderThemeEflColorClassSelectionActive(void* data, Evas_Object* object, const char* signal, const char* source)
+static void applyColorCallback(void* data, Evas_Object*, const char* /* signal */, const char* colorClass)
 {
     RenderThemeEfl* that = static_cast<RenderThemeEfl *>(data);
-    int fr, fg, fb, fa, br, bg, bb, ba;
+    that->setColorFromThemeClass(colorClass);
+    that->platformColorsDidChange(); // Triggers relayout.
+}
 
-    if (!edje_object_color_class_get(object, source, &fr, &fg, &fb, &fa, &br, &bg, &bb, &ba, 0, 0, 0, 0))
+static bool fillColorsFromEdjeClass(Evas_Object* o, const char* colorClass, Color* color1, Color* color2 = 0, Color* color3 = 0)
+{
+    int r1, g1, b1, a1;
+    int r2, g2, b2, a2;
+    int r3, g3, b3, a3;
+
+    if (!edje_object_color_class_get(o, colorClass, &r1, &g1, &b1, &a1, &r2, &g2, &b2, &a2, &r3, &g3, &b3, &a3))
+        return false;
+
+    if (color1)
+        color1->setRGB(makeRGBA(r1, g1, b1, a1));
+    if (color2)
+        color2->setRGB(makeRGBA(r2, g2, b2, a2));
+    if (color3)
+        color3->setRGB(makeRGBA(r3, g3, b3, a3));
+
+    return true;
+}
+
+void RenderThemeEfl::setColorFromThemeClass(const char* colorClass)
+{
+    ASSERT(edje());
+
+    if (!strcmp("webkit/selection/foreground", colorClass))
+        m_supportsSelectionForegroundColor = fillColorsFromEdjeClass(edje(), colorClass, &m_activeSelectionForegroundColor, &m_inactiveSelectionForegroundColor);
+    else if (!strcmp("webkit/selection/background", colorClass))
+        fillColorsFromEdjeClass(edje(), colorClass, &m_activeSelectionBackgroundColor, &m_inactiveSelectionBackgroundColor);
+    else if (!strcmp("webkit/focus_ring", colorClass)) {
+        if (!fillColorsFromEdjeClass(edje(), colorClass, &m_focusRingColor))
         return;
 
-    that->setActiveSelectionColor(fr, fg, fb, fa, br, bg, bb, ba);
-}
-
-static void renderThemeEflColorClassSelectionInactive(void* data, Evas_Object* object, const char* signal, const char* source)
-{
-    RenderThemeEfl* that = static_cast<RenderThemeEfl *>(data);
-    int fr, fg, fb, fa, br, bg, bb, ba;
-
-    if (!edje_object_color_class_get(object, source, &fr, &fg, &fb, &fa, &br, &bg, &bb, &ba, 0, 0, 0, 0))
-        return;
-
-    that->setInactiveSelectionColor(fr, fg, fb, fa, br, bg, bb, ba);
-}
-
-static void renderThemeEflColorClassFocusRing(void* data, Evas_Object* object, const char* signal, const char* source)
-{
-    RenderThemeEfl* that = static_cast<RenderThemeEfl *>(data);
-    int fr, fg, fb, fa;
-
-    if (!edje_object_color_class_get(object, source, &fr, &fg, &fb, &fa, 0, 0, 0, 0, 0, 0, 0, 0))
-        return;
-
-    that->setFocusRingColor(fr, fg, fb, fa);
-}
-
-void RenderThemeEfl::setThemePath(const String& path)
-{
-    if (path == m_themePath)
-        return;
-
-    m_themePath = path;
-    themeChanged();
-}
-
-void RenderThemeEfl::createCanvas()
-{
-    ASSERT(!m_canvas);
-    m_canvas = ecore_evas_buffer_new(1, 1);
-    ASSERT(m_canvas);
-}
-
-void RenderThemeEfl::createEdje()
-{
-    ASSERT(!m_edje);
-    if (m_themePath.isEmpty())
-        EINA_LOG_ERR("No theme defined, unable to set RenderThemeEfl.");
-    else {
-        m_edje = edje_object_add(ecore_evas_get(m_canvas));
-        if (!m_edje)
-            EINA_LOG_ERR("Could not create base edje object.");
-        else if (!edje_object_file_set(m_edje, m_themePath.utf8().data(), "webkit/base")) {
-            Edje_Load_Error err = edje_object_load_error_get(m_edje);
-            const char* errmsg = edje_load_error_str(err);
-            EINA_LOG_ERR("Could not load 'webkit/base' from theme %s: %s",
-                         m_themePath.utf8().data(), errmsg);
-            evas_object_del(m_edje);
-            m_edje = 0;
-        } else {
-#define CONNECT(cc, func)                                               \
-            edje_object_signal_callback_add(m_edje, "color_class,set",  \
-                                            "webkit/"cc, func, this)
-
-            CONNECT("selection/active",
-                    renderThemeEflColorClassSelectionActive);
-            CONNECT("selection/inactive",
-                    renderThemeEflColorClassSelectionInactive);
-            CONNECT("focus_ring", renderThemeEflColorClassFocusRing);
-#undef CONNECT
-        }
-    }
-}
-
-void RenderThemeEfl::applyEdjeColors()
-{
-    int fr, fg, fb, fa, br, bg, bb, ba;
-    ASSERT(m_edje);
-#define COLOR_GET(cls)                                                  \
-    edje_object_color_class_get(m_edje, "webkit/"cls,                   \
-                                &fr, &fg, &fb, &fa, &br, &bg, &bb, &ba, \
-                                0, 0, 0, 0)
-
-    if (COLOR_GET("selection/active")) {
-        m_activeSelectionForegroundColor = Color(fr, fg, fb, fa);
-        m_activeSelectionBackgroundColor = Color(br, bg, bb, ba);
-    }
-    if (COLOR_GET("selection/inactive")) {
-        m_inactiveSelectionForegroundColor = Color(fr, fg, fb, fa);
-        m_inactiveSelectionBackgroundColor = Color(br, bg, bb, ba);
-    }
-    if (COLOR_GET("focus_ring")) {
-        m_focusRingColor = Color(fr, fg, fb, fa);
-        // webkit just use platformFocusRingColor() for default theme (without page)
-        // this is ugly, but no other way to do it unless we change
-        // it to use page themes as much as possible.
+        // platformFocusRingColor() is only used for the default theme (without page)
+        // The following is ugly, but no other way to do it unless we change it to use page themes as much as possible.
         RenderTheme::setCustomFocusRingColor(m_focusRingColor);
     }
-#undef COLOR_GET
-    platformColorsDidChange();
 }
 
-void RenderThemeEfl::applyPartDescriptionFallback(struct ThemePartDesc* desc)
+void RenderThemeEfl::setThemePath(const String& newThemePath)
+{
+    if (newThemePath == m_themePath)
+        return;
+
+    if (newThemePath.isEmpty()) {
+        EINA_LOG_CRIT("No valid theme defined, things will not work properly.");
+        return;
+}
+
+    String oldThemePath = m_themePath;
+    m_themePath = newThemePath;
+
+    // Keep the consistence by restoring the previous theme path
+    // if we cannot load the new one.
+    if (!loadTheme())
+        m_themePath = oldThemePath;
+}
+
+String RenderThemeEfl::themePath() const
+{
+#ifndef NDEBUG
+    if (edje()) {
+        const char* path;
+        edje_object_file_get(edje(), &path, 0);
+        ASSERT(m_themePath == path);
+    }
+#endif
+    return m_themePath;
+}
+
+bool RenderThemeEfl::loadTheme()
+{
+    ASSERT(!m_themePath.isEmpty());
+
+    if (!canvas()) {
+        m_canvas = adoptPtr(ecore_evas_buffer_new(1, 1));
+        _ASSERT_ON_RELEASE_RETURN_VAL(canvas(), false,
+                "Could not create canvas required by theme, things will not work properly.");
+}
+
+    RefPtr<Evas_Object> o = adoptRef(edje_object_add(ecore_evas_get(canvas())));
+    _ASSERT_ON_RELEASE_RETURN_VAL(o, false, "Could not create new base Edje object.");
+
+    if (!setSourceGroupForEdjeObject(o.get(), m_themePath, "webkit/base"))
+        return false; // Keep current theme.
+
+    // Invalidate existing theme part cache.
+    if (edje())
+        clearThemePartCache();
+
+    // Set new loaded theme, and apply it.
+    m_edje = o;
+
+    edje_object_signal_callback_add(edje(), "color_class,set", "webkit/selection/foreground", applyColorCallback, this);
+    edje_object_signal_callback_add(edje(), "color_class,set", "webkit/selection/background", applyColorCallback, this);
+    edje_object_signal_callback_add(edje(), "color_class,set", "webkit/focus_ring", applyColorCallback, this);
+
+    applyPartDescriptionsFrom(m_themePath);
+
+    setColorFromThemeClass("webkit/selection/foreground");
+    setColorFromThemeClass("webkit/selection/background");
+    setColorFromThemeClass("webkit/focus_ring");
+
+    platformColorsDidChange(); // Schedules a relayout, do last.
+
+    return true;
+}
+
+void RenderThemeEfl::applyPartDescriptionFallback(ThemePartDesc* desc)
 {
     desc->min.setWidth(Length(0, Fixed));
     desc->min.setHeight(Length(0, Fixed));
@@ -506,7 +531,7 @@ void RenderThemeEfl::applyPartDescriptionFallback(struct ThemePartDesc* desc)
     desc->padding = LengthBox(0, 0, 0, 0);
 }
 
-void RenderThemeEfl::applyPartDescription(Evas_Object* object, struct ThemePartDesc* desc)
+void RenderThemeEfl::applyPartDescription(Evas_Object* object, ThemePartDesc* desc)
 {
     Evas_Coord minw, minh, maxw, maxh;
 
@@ -557,94 +582,19 @@ void RenderThemeEfl::applyPartDescription(Evas_Object* object, struct ThemePartD
     }
 }
 
-const char* RenderThemeEfl::edjeGroupFromFormType(FormType type) const
+void RenderThemeEfl::applyPartDescriptionsFrom(const String& themePath)
 {
-    static const char* groups[] = {
-#define W(n) "webkit/widget/"n
-        W("button"),
-        W("radio"),
-        W("entry"),
-        W("checkbox"),
-        W("combo"),
-#if ENABLE(PROGRESS_TAG)
-        W("progressbar"),
-#endif
-        W("search/field"),
-        W("search/decoration"),
-        W("search/results_button"),
-        W("search/results_decoration"),
-        W("search/cancel_button"),
-        W("slider/vertical"),
-        W("slider/horizontal"),
-#if ENABLE(VIDEO)
-        W("mediacontrol/playpause_button"),
-        W("mediacontrol/mute_button"),
-        W("mediacontrol/seekforward_button"),
-        W("mediacontrol/seekbackward_button"),
-        W("mediacontrol/fullscreen_button"),
-#endif
-        W("spinner"),
-#undef W
-        0
-    };
-    ASSERT(type >= 0);
-    ASSERT((size_t)type < sizeof(groups) / sizeof(groups[0])); // out of sync?
-    return groups[type];
-}
+    RefPtr<Evas_Object> temp = adoptRef(edje_object_add(ecore_evas_get(canvas())));
+    _ASSERT_ON_RELEASE_RETURN(temp, "Could not create Edje object.");
 
-void RenderThemeEfl::applyPartDescriptions()
-{
-    Evas_Object* object;
-    unsigned int i;
-    const char* file;
-
-    ASSERT(m_canvas);
-    ASSERT(m_edje);
-
-    edje_object_file_get(m_edje, &file, 0);
-    ASSERT(file);
-
-    object = edje_object_add(ecore_evas_get(m_canvas));
-    if (!object) {
-        EINA_LOG_ERR("Could not create Edje object.");
-        return;
-    }
-
-    for (i = 0; i < FormTypeLast; i++) {
+    for (size_t i = 0; i < FormTypeLast; i++) {
         FormType type = static_cast<FormType>(i);
-        const char* group = edjeGroupFromFormType(type);
         m_partDescs[i].type = type;
-        if (!edje_object_file_set(object, file, group)) {
-            Edje_Load_Error err = edje_object_load_error_get(object);
-            const char* errmsg = edje_load_error_str(err);
-            EINA_LOG_ERR("Could not set theme group '%s' of file '%s': %s",
-                         group, file, errmsg);
-
+        if (!setSourceGroupForEdjeObject(temp.get(), themePath, toEdjeGroup(type)))
             applyPartDescriptionFallback(m_partDescs + i);
-        } else
-            applyPartDescription(object, m_partDescs + i);
-    }
-    evas_object_del(object);
+        else
+            applyPartDescription(temp.get(), m_partDescs + i);
 }
-
-void RenderThemeEfl::themeChanged()
-{
-    cacheThemePartFlush();
-
-    if (!m_canvas) {
-        createCanvas();
-        if (!m_canvas)
-            return;
-    }
-
-    if (!m_edje) {
-        createEdje();
-        if (!m_edje)
-            return;
-    }
-
-    applyEdjeColors();
-    applyPartDescriptions();
 }
 
 RenderThemeEfl::RenderThemeEfl(Page* page)
@@ -660,44 +610,14 @@ RenderThemeEfl::RenderThemeEfl(Page* page)
     , m_mediaPanelColor(220, 220, 195) // light tannish color.
     , m_mediaSliderColor(Color::white)
 #endif
-    , m_canvas(0)
-    , m_edje(0)
+    , m_supportsSelectionForegroundColor(false)
+    , m_partCache(0)
 {
 }
 
 RenderThemeEfl::~RenderThemeEfl()
 {
-    cacheThemePartFlush();
-
-    if (m_canvas) {
-        if (m_edje)
-            evas_object_del(m_edje);
-        ecore_evas_free(m_canvas);
-    }
-}
-
-void RenderThemeEfl::setActiveSelectionColor(int foreR, int foreG, int foreB, int foreA, int backR, int backG, int backB, int backA)
-{
-    m_activeSelectionForegroundColor = Color(foreR, foreG, foreB, foreA);
-    m_activeSelectionBackgroundColor = Color(backR, backG, backB, backA);
-    platformColorsDidChange();
-}
-
-void RenderThemeEfl::setInactiveSelectionColor(int foreR, int foreG, int foreB, int foreA, int backR, int backG, int backB, int backA)
-{
-    m_inactiveSelectionForegroundColor = Color(foreR, foreG, foreB, foreA);
-    m_inactiveSelectionBackgroundColor = Color(backR, backG, backB, backA);
-    platformColorsDidChange();
-}
-
-void RenderThemeEfl::setFocusRingColor(int r, int g, int b, int a)
-{
-    m_focusRingColor = Color(r, g, b, a);
-    // webkit just use platformFocusRingColor() for default theme (without page)
-    // this is ugly, but no other way to do it unless we change
-    // it to use page themes as much as possible.
-    RenderTheme::setCustomFocusRingColor(m_focusRingColor);
-    platformColorsDidChange();
+    clearThemePartCache();
 }
 
 static bool supportsFocus(ControlPart appearance)
@@ -729,7 +649,7 @@ bool RenderThemeEfl::controlSupportsTints(const RenderObject* object) const
     return isEnabled(object);
 }
 
-LayoutUnit RenderThemeEfl::baselinePosition(const RenderObject* object) const
+int RenderThemeEfl::baselinePosition(const RenderObject* object) const
 {
     if (!object->isBox())
         return 0;
@@ -741,54 +661,125 @@ LayoutUnit RenderThemeEfl::baselinePosition(const RenderObject* object) const
     return RenderTheme::baselinePosition(object);
 }
 
+Color RenderThemeEfl::platformActiveSelectionBackgroundColor() const
+{
+    loadThemeIfNeeded();
+    return m_activeSelectionBackgroundColor;
+}
+
+Color RenderThemeEfl::platformInactiveSelectionBackgroundColor() const
+{
+    loadThemeIfNeeded();
+    return m_inactiveSelectionBackgroundColor;
+}
+
+Color RenderThemeEfl::platformActiveSelectionForegroundColor() const
+{
+    loadThemeIfNeeded();
+    return m_activeSelectionForegroundColor;
+}
+
+Color RenderThemeEfl::platformInactiveSelectionForegroundColor() const
+{
+    loadThemeIfNeeded();
+    return m_inactiveSelectionForegroundColor;
+}
+
+Color RenderThemeEfl::platformFocusRingColor() const
+{
+    loadThemeIfNeeded();
+    return m_focusRingColor;
+}
+
+bool RenderThemeEfl::supportsSelectionForegroundColors() const
+{
+    loadThemeIfNeeded();
+    return m_supportsSelectionForegroundColor;
+}
+
 bool RenderThemeEfl::paintSliderTrack(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
     if (object->style()->appearance() == SliderHorizontalPart)
-        return paintThemePart(object, SliderHorizontal, info, rect);
-    return paintThemePart(object, SliderVertical, info, rect);
+        paintThemePart(object, SliderHorizontal, info, rect);
+    else
+        paintThemePart(object, SliderVertical, info, rect);
+
+#if ENABLE(DATALIST_ELEMENT)
+    paintSliderTicks(object, info, rect);
+#endif
+
+    return false;
 }
 
-void RenderThemeEfl::adjustSliderTrackStyle(StyleResolver* styleResolver, RenderStyle* style, Element* element) const
+void RenderThemeEfl::adjustSliderTrackStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
-    if (!m_page && element && element->document()->page()) {
-        static_cast<RenderThemeEfl*>(element->document()->page()->theme())->adjustSliderTrackStyle(styleResolver, style, element);
-        return;
-    }
-
-    adjustSizeConstraints(style, SliderHorizontal);
-    style->resetBorder();
-
-    const struct ThemePartDesc *desc = m_partDescs + (size_t)SliderHorizontal;
-    if (style->width().value() < desc->min.width().value())
-        style->setWidth(desc->min.width());
-    if (style->height().value() < desc->min.height().value())
-        style->setHeight(desc->min.height());
+    style->setBoxShadow(nullptr);
 }
 
 void RenderThemeEfl::adjustSliderThumbStyle(StyleResolver* styleResolver, RenderStyle* style, Element* element) const
 {
     RenderTheme::adjustSliderThumbStyle(styleResolver, style, element);
-    adjustSliderTrackStyle(styleResolver, style, element);
+    style->setBoxShadow(nullptr);
 }
 
 void RenderThemeEfl::adjustSliderThumbSize(RenderStyle* style, Element*) const
 {
     ControlPart part = style->appearance();
-    if (part == SliderThumbVerticalPart || part == SliderThumbHorizontalPart) {
+    if (part == SliderThumbVerticalPart) {
         style->setWidth(Length(sliderThumbHeight, Fixed));
         style->setHeight(Length(sliderThumbWidth, Fixed));
-    }
+    } else if (part == SliderThumbHorizontalPart) {
+        style->setWidth(Length(sliderThumbWidth, Fixed));
+        style->setHeight(Length(sliderThumbHeight, Fixed));
 #if ENABLE(VIDEO)
-    else if (part == MediaSliderThumbPart) {
+    } else if (part == MediaSliderThumbPart) {
         style->setWidth(Length(mediaSliderThumbWidth, Fixed));
         style->setHeight(Length(mediaSliderThumbHeight, Fixed));
+#endif
     }
+}
+
+#if ENABLE(DATALIST_ELEMENT)
+IntSize RenderThemeEfl::sliderTickSize() const
+{
+    return IntSize(1, 6);
+}
+
+int RenderThemeEfl::sliderTickOffsetFromTrackCenter() const
+{
+    static const int sliderTickOffset = -12;
+
+    return sliderTickOffset;
+}
+
+LayoutUnit RenderThemeEfl::sliderTickSnappingThreshold() const
+{
+    // The same threshold value as the Chromium port.
+    return 5;
+}
+#endif
+
+bool RenderThemeEfl::supportsDataListUI(const AtomicString& type) const
+{
+#if ENABLE(DATALIST_ELEMENT)
+    // FIXME: We need to support other types.
+    return type == InputTypeNames::email()
+        || type == InputTypeNames::range()
+        || type == InputTypeNames::search()
+        || type == InputTypeNames::url();
+#else
+    UNUSED_PARAM(type);
+    return false;
 #endif
 }
 
 bool RenderThemeEfl::paintSliderThumb(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
-    // We've already painted it in paintSliderTrack(), no need to do anything here.
+    if (object->style()->appearance() == SliderThumbHorizontalPart)
+        paintThemePart(object, SliderThumbHorizontal, info, rect);
+    else
+        paintThemePart(object, SliderThumbVertical, info, rect);
+
     return false;
 }
 
@@ -798,10 +789,12 @@ void RenderThemeEfl::adjustCheckboxStyle(StyleResolver* styleResolver, RenderSty
         static_cast<RenderThemeEfl*>(element->document()->page()->theme())->adjustCheckboxStyle(styleResolver, style, element);
         return;
     }
+
     adjustSizeConstraints(style, CheckBox);
+
     style->resetBorder();
 
-    const struct ThemePartDesc *desc = m_partDescs + (size_t)CheckBox;
+    const ThemePartDesc* desc = m_partDescs + (size_t)CheckBox;
     if (style->width().value() < desc->min.width().value())
         style->setWidth(desc->min.width());
     if (style->height().value() < desc->min.height().value())
@@ -819,10 +812,12 @@ void RenderThemeEfl::adjustRadioStyle(StyleResolver* styleResolver, RenderStyle*
         static_cast<RenderThemeEfl*>(element->document()->page()->theme())->adjustRadioStyle(styleResolver, style, element);
         return;
     }
+
     adjustSizeConstraints(style, RadioButton);
+
     style->resetBorder();
 
-    const struct ThemePartDesc *desc = m_partDescs + (size_t)RadioButton;
+    const ThemePartDesc* desc = m_partDescs + (size_t)RadioButton;
     if (style->width().value() < desc->min.width().value())
         style->setWidth(desc->min.width());
     if (style->height().value() < desc->min.height().value())
@@ -841,13 +836,9 @@ void RenderThemeEfl::adjustButtonStyle(StyleResolver* styleResolver, RenderStyle
         return;
     }
 
+    // adjustSizeConstrains can make SquareButtonPart's size wrong (by adjusting paddings), so call it only for PushButtonPart and ButtonPart
+    if (style->appearance() == PushButtonPart || style->appearance() == ButtonPart)
     adjustSizeConstraints(style, Button);
-
-    if (style->appearance() == PushButtonPart) {
-        style->resetBorder();
-        style->setWhiteSpace(PRE);
-        style->setHeight(Length(Auto));
-    }
 }
 
 bool RenderThemeEfl::paintButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
@@ -864,6 +855,8 @@ void RenderThemeEfl::adjustMenuListStyle(StyleResolver* styleResolver, RenderSty
     adjustSizeConstraints(style, ComboBox);
     style->resetBorder();
     style->setWhiteSpace(PRE);
+
+    style->setLineHeight(RenderStyle::initialLineHeight());
 }
 
 bool RenderThemeEfl::paintMenuList(RenderObject* object, const PaintInfo& info, const IntRect& rect)
@@ -896,9 +889,8 @@ bool RenderThemeEfl::paintTextField(RenderObject* object, const PaintInfo& info,
     return paintThemePart(object, TextField, info, rect);
 }
 
-void RenderThemeEfl::adjustTextAreaStyle(StyleResolver* styleResolver, RenderStyle* style, Element* element) const
+void RenderThemeEfl::adjustTextAreaStyle(StyleResolver*, RenderStyle*, Element*) const
 {
-    adjustTextFieldStyle(styleResolver, style, element);
 }
 
 bool RenderThemeEfl::paintTextArea(RenderObject* object, const PaintInfo& info, const IntRect& rect)
@@ -915,6 +907,12 @@ void RenderThemeEfl::adjustSearchFieldDecorationStyle(StyleResolver* styleResolv
     adjustSizeConstraints(style, SearchFieldDecoration);
     style->resetBorder();
     style->setWhiteSpace(PRE);
+
+    float fontScale = style->fontSize() / defaultFontSize;
+    int decorationSize = lroundf(std::min(std::max(minSearchDecorationButtonSize, defaultFontSize * fontScale), maxSearchDecorationButtonSize));
+
+    style->setWidth(Length(decorationSize + searchFieldDecorationButtonOffset, Fixed));
+    style->setHeight(Length(decorationSize, Fixed));
 }
 
 bool RenderThemeEfl::paintSearchFieldDecoration(RenderObject* object, const PaintInfo& info, const IntRect& rect)
@@ -963,6 +961,14 @@ void RenderThemeEfl::adjustSearchFieldCancelButtonStyle(StyleResolver* styleReso
     adjustSizeConstraints(style, SearchFieldCancelButton);
     style->resetBorder();
     style->setWhiteSpace(PRE);
+
+    // Logic taken from RenderThemeChromium.cpp.
+    // Scale the button size based on the font size.
+    float fontScale = style->fontSize() / defaultFontSize;
+    int cancelButtonSize = lroundf(std::min(std::max(minCancelButtonSize, defaultFontSize * fontScale), maxCancelButtonSize));
+
+    style->setWidth(Length(cancelButtonSize, Fixed));
+    style->setHeight(Length(cancelButtonSize, Fixed));
 }
 
 bool RenderThemeEfl::paintSearchFieldCancelButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
@@ -1005,14 +1011,14 @@ void RenderThemeEfl::setDefaultFontSize(int size)
     defaultFontSize = size;
 }
 
-void RenderThemeEfl::systemFont(int propId, FontDescription& fontDescription) const
+void RenderThemeEfl::systemFont(int, FontDescription& fontDescription) const
 {
     // It was called by RenderEmbeddedObject::paintReplaced to render alternative string.
     // To avoid cairo_error while rendering, fontDescription should be passed.
-    DEFINE_STATIC_LOCAL(String, fontFace, ("Sans"));
+    DEFINE_STATIC_LOCAL(String, fontFace, (ASCIILiteral("Sans")));
     float fontSize = defaultFontSize;
 
-    fontDescription.firstFamily().setFamily(fontFace);
+    fontDescription.setOneFamily(fontFace);
     fontDescription.setSpecifiedSize(fontSize);
     fontDescription.setIsAbsoluteSize(true);
     fontDescription.setGenericFamily(FontDescription::NoFamily);
@@ -1020,7 +1026,7 @@ void RenderThemeEfl::systemFont(int propId, FontDescription& fontDescription) co
     fontDescription.setItalic(false);
 }
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 void RenderThemeEfl::adjustProgressBarStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     style->setBoxShadow(nullptr);
@@ -1038,6 +1044,9 @@ double RenderThemeEfl::animationDurationForProgressBar(RenderProgress*) const
 
 bool RenderThemeEfl::paintProgressBar(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
+    if (!object->isProgress())
+        return true;
+
     return paintThemePart(object, ProgressBar, info, rect);
 }
 #endif
@@ -1045,27 +1054,34 @@ bool RenderThemeEfl::paintProgressBar(RenderObject* object, const PaintInfo& inf
 #if ENABLE(VIDEO)
 bool RenderThemeEfl::emitMediaButtonSignal(FormType formType, MediaControlElementType mediaElementType, const IntRect& rect)
 {
-    ThemePartCacheEntry* entry;
+    loadThemeIfNeeded();
+    _ASSERT_ON_RELEASE_RETURN_VAL(edje(), false, "Could not paint native HTML part due to missing theme.");
 
-    entry = cacheThemePartGet(formType, rect.size());
-    ASSERT(entry);
-    if (!entry)
-        return false;
+    ThemePartCacheEntry* entry = getThemePartFromCache(formType, rect.size());
+    _ASSERT_ON_RELEASE_RETURN_VAL(entry, false, "Could not paint native HTML part due to missing theme part.");
 
     if (mediaElementType == MediaPlayButton)
-        edje_object_signal_emit(entry->o, "play", "");
+        edje_object_signal_emit(entry->edje(), "play", "");
     else if (mediaElementType == MediaPauseButton)
-        edje_object_signal_emit(entry->o, "pause", "");
+        edje_object_signal_emit(entry->edje(), "pause", "");
     else if (mediaElementType == MediaMuteButton)
-        edje_object_signal_emit(entry->o, "mute", "");
+        edje_object_signal_emit(entry->edje(), "mute", "");
     else if (mediaElementType == MediaUnMuteButton)
-        edje_object_signal_emit(entry->o, "sound", "");
+        edje_object_signal_emit(entry->edje(), "sound", "");
     else if (mediaElementType == MediaSeekForwardButton)
-        edje_object_signal_emit(entry->o, "seekforward", "");
+        edje_object_signal_emit(entry->edje(), "seekforward", "");
     else if (mediaElementType == MediaSeekBackButton)
-        edje_object_signal_emit(entry->o, "seekbackward", "");
+        edje_object_signal_emit(entry->edje(), "seekbackward", "");
     else if (mediaElementType == MediaEnterFullscreenButton)
-        edje_object_signal_emit(entry->o, "fullscreen", "");
+        edje_object_signal_emit(entry->edje(), "fullscreen_enter", "");
+    else if (mediaElementType == MediaExitFullscreenButton)
+        edje_object_signal_emit(entry->edje(), "fullscreen_exit", "");
+#if ENABLE(VIDEO_TRACK)
+    else if (mediaElementType == MediaShowClosedCaptionsButton)
+        edje_object_signal_emit(entry->edje(), "show_captions", "");
+    else if (mediaElementType == MediaHideClosedCaptionsButton)
+        edje_object_signal_emit(entry->edje(), "hide_captions", "");
+#endif
     else
         return false;
 
@@ -1089,13 +1105,21 @@ String RenderThemeEfl::formatMediaControlsCurrentTime(float currentTime, float d
     return formatMediaControlsTime(currentTime) + " / " + formatMediaControlsTime(duration);
 }
 
+bool RenderThemeEfl::hasOwnDisabledStateHandlingFor(ControlPart part) const
+{
+    return (part != MediaMuteButtonPart);
+}
+
 bool RenderThemeEfl::paintMediaFullscreenButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
-    Node* mediaNode = object->node() ? object->node()->shadowAncestorNode() : 0;
-    if (!mediaNode || (!mediaNode->hasTagName(videoTag)))
+    Node* mediaNode = object->node() ? object->node()->shadowHost() : 0;
+    if (!mediaNode)
+        mediaNode = object->node();
+    if (!mediaNode || !mediaNode->isElementNode() || !toElement(mediaNode)->isMediaElement())
         return false;
 
-    if (!emitMediaButtonSignal(FullScreenButton, MediaEnterFullscreenButton, rect))
+    HTMLMediaElement* mediaElement = static_cast<HTMLMediaElement*>(mediaNode);
+    if (!emitMediaButtonSignal(FullScreenButton, mediaElement->isFullscreen() ? MediaExitFullscreenButton : MediaEnterFullscreenButton, rect))
         return false;
 
     return paintThemePart(object, FullScreenButton, info, rect);
@@ -1103,8 +1127,10 @@ bool RenderThemeEfl::paintMediaFullscreenButton(RenderObject* object, const Pain
 
 bool RenderThemeEfl::paintMediaMuteButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
-    Node* mediaNode = object->node() ? object->node()->shadowAncestorNode() : 0;
-    if (!mediaNode || !mediaNode->isElementNode() || !static_cast<Element*>(mediaNode)->isMediaElement())
+    Node* mediaNode = object->node() ? object->node()->shadowHost() : 0;
+    if (!mediaNode)
+        mediaNode = object->node();
+    if (!mediaNode || !mediaNode->isElementNode() || !toElement(mediaNode)->isMediaElement())
         return false;
 
     HTMLMediaElement* mediaElement = static_cast<HTMLMediaElement*>(mediaNode);
@@ -1177,9 +1203,8 @@ bool RenderThemeEfl::paintMediaSliderTrack(RenderObject* object, const PaintInfo
     context->setStrokeStyle(NoStroke);
 
     for (unsigned index = 0; index < timeRanges->length(); ++index) {
-        ExceptionCode ignoredException;
-        float start = timeRanges->start(index, ignoredException);
-        float end = timeRanges->end(index, ignoredException);
+        float start = timeRanges->start(index, IGNORE_EXCEPTION);
+        float end = timeRanges->end(index, IGNORE_EXCEPTION);
         int width = ((end - start) * totalWidth) / mediaDuration;
         IntRect rangeRect;
         if (!index) {
@@ -1198,41 +1223,67 @@ bool RenderThemeEfl::paintMediaSliderTrack(RenderObject* object, const PaintInfo
         IntPoint sliderTopRight = sliderTopLeft;
         sliderTopRight.move(0, rangeRect.height());
 
-        context->fillRect(FloatRect(rect), m_mediaPanelColor, ColorSpaceDeviceRGB);
+        context->fillRect(FloatRect(rangeRect), m_mediaPanelColor, ColorSpaceDeviceRGB);
     }
     context->restore();
     return true;
 }
 
-bool RenderThemeEfl::paintMediaSliderThumb(RenderObject* object, const PaintInfo& info, const IntRect& rect)
+bool RenderThemeEfl::paintMediaSliderThumb(RenderObject*, const PaintInfo& info, const IntRect& rect)
 {
     IntSize thumbRect(3, 3);
     info.context->fillRoundedRect(rect, thumbRect, thumbRect, thumbRect, thumbRect, m_sliderThumbColor, ColorSpaceDeviceRGB);
     return true;
 }
 
-bool RenderThemeEfl::paintMediaVolumeSliderContainer(RenderObject*, const PaintInfo& info, const IntRect& rect)
+bool RenderThemeEfl::paintMediaVolumeSliderContainer(RenderObject*, const PaintInfo&, const IntRect&)
 {
     notImplemented();
     return false;
 }
 
-bool RenderThemeEfl::paintMediaVolumeSliderTrack(RenderObject* object, const PaintInfo& info, const IntRect& rect)
+bool RenderThemeEfl::paintMediaVolumeSliderTrack(RenderObject*, const PaintInfo&, const IntRect&)
 {
     notImplemented();
     return false;
 }
 
-bool RenderThemeEfl::paintMediaVolumeSliderThumb(RenderObject* object, const PaintInfo& info, const IntRect& rect)
+bool RenderThemeEfl::paintMediaVolumeSliderThumb(RenderObject*, const PaintInfo&, const IntRect&)
 {
     notImplemented();
     return false;
 }
 
-bool RenderThemeEfl::paintMediaCurrentTime(RenderObject* object, const PaintInfo& info, const IntRect& rect)
+bool RenderThemeEfl::paintMediaCurrentTime(RenderObject*, const PaintInfo& info, const IntRect& rect)
 {
     info.context->fillRect(FloatRect(rect), m_mediaPanelColor, ColorSpaceDeviceRGB);
     return true;
 }
 #endif
+
+#if ENABLE(VIDEO_TRACK)
+bool RenderThemeEfl::supportsClosedCaptioning() const
+{
+    return true;
+}
+
+bool RenderThemeEfl::paintMediaToggleClosedCaptionsButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
+{
+    Node* mediaNode = object->node() ? object->node()->shadowHost() : 0;
+    if (!mediaNode)
+        mediaNode = object->node();
+    if (!mediaNode || (!mediaNode->hasTagName(videoTag)))
+        return false;
+
+    HTMLMediaElement* mediaElement = static_cast<HTMLMediaElement*>(mediaNode);
+    if (!emitMediaButtonSignal(ToggleCaptionsButton, mediaElement->webkitClosedCaptionsVisible() ? MediaShowClosedCaptionsButton : MediaHideClosedCaptionsButton, rect))
+        return false;
+
+    return paintThemePart(object, ToggleCaptionsButton, info, rect);
+}
+#endif
+
+#undef _ASSERT_ON_RELEASE_RETURN
+#undef _ASSERT_ON_RELEASE_RETURN_VAL
+
 }

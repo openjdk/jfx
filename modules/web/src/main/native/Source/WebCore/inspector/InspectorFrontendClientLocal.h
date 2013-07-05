@@ -32,13 +32,13 @@
 #define InspectorFrontendClientLocal_h
 
 #include "InspectorFrontendClient.h"
-#include "PlatformString.h"
-#include "ScriptState.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class Frame;
 class InspectorController;
 class InspectorBackendDispatchTask;
 class InspectorFrontendHost;
@@ -63,24 +63,30 @@ public:
 
     virtual void moveWindowBy(float x, float y);
 
-    virtual void requestAttachWindow();
-    virtual void requestDetachWindow();
-    virtual void requestSetDockSide(const String&) { }
+    virtual void requestSetDockSide(DockSide);
     virtual void changeAttachedWindowHeight(unsigned);
+    virtual void changeAttachedWindowWidth(unsigned);
     virtual void openInNewTab(const String& url);
     virtual bool canSave() { return false; }
     virtual void save(const String&, const String&, bool) { }
     virtual void append(const String&, const String&) { }
 
-    virtual void attachWindow() = 0;
+    virtual void attachWindow(DockSide) = 0;
     virtual void detachWindow() = 0;
 
     virtual void sendMessageToBackend(const String& message);
+
+    virtual bool supportsFileSystems() { return false; }
+    virtual void requestFileSystems() { }
+    virtual void addFileSystem() { }
+    virtual void removeFileSystem(const String&) { }
+    virtual bool isUnderTest();
 
     bool canAttachWindow();
     void setDockingUnavailable(bool);
 
     static unsigned constrainedAttachedWindowHeight(unsigned preferredHeight, unsigned totalWindowHeight);
+    static unsigned constrainedAttachedWindowWidth(unsigned preferredWidth, unsigned totalWindowWidth);
 
     // Direct Frontend API
     bool isDebuggingEnabled();
@@ -99,9 +105,11 @@ public:
     
     void showResources();
 
+    void setAttachedWindow(DockSide);
+
 protected:
     virtual void setAttachedWindowHeight(unsigned) = 0;
-    void setAttachedWindow(bool);
+    virtual void setAttachedWindowWidth(unsigned) = 0;
     void restoreAttachedWindowHeight();
 
 private:
@@ -111,11 +119,11 @@ private:
     friend class FrontendMenuProvider;
     InspectorController* m_inspectorController;
     Page* m_frontendPage;
-    ScriptState* m_frontendScriptState;
     // TODO(yurys): this ref shouldn't be needed.
     RefPtr<InspectorFrontendHost> m_frontendHost;
     OwnPtr<InspectorFrontendClientLocal::Settings> m_settings;
     bool m_frontendLoaded;
+    DockSide m_dockSide;
     Vector<String> m_evaluateOnLoad;
     OwnPtr<InspectorBackendDispatchTask> m_dispatchTask;
 };

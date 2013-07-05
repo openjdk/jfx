@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (C) 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,42 +31,23 @@
 #ifndef WebKitCSSRegionRule_h
 #define WebKitCSSRegionRule_h
 
-#include "CSSRule.h"
-#include <wtf/PassRefPtr.h>
-#include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
+#include "CSSGroupingRule.h"
 
 #if ENABLE(CSS_REGIONS)
 
 namespace WebCore {
 
-class CSSRuleList;
 class StyleRuleRegion;
 
-class WebKitCSSRegionRule : public CSSRule {
+class WebKitCSSRegionRule : public CSSGroupingRule {
 public:
     static PassRefPtr<WebKitCSSRegionRule> create(StyleRuleRegion* rule, CSSStyleSheet* sheet) { return adoptRef(new WebKitCSSRegionRule(rule, sheet)); }
 
-    ~WebKitCSSRegionRule();
-
-    String cssText() const;
-    CSSRuleList* cssRules() const;
-    
-    // For CSSRuleList
-    unsigned length() const;
-    CSSRule* item(unsigned index) const;
-
-    void reattach(StyleRuleRegion*);
+    virtual CSSRule::Type type() const OVERRIDE { return WEBKIT_REGION_RULE; }
+    virtual String cssText() const OVERRIDE;
 
 private:
     WebKitCSSRegionRule(StyleRuleRegion*, CSSStyleSheet* parent);
-
-    RefPtr<StyleRuleRegion> m_regionRule;
-    
-    mutable Vector<RefPtr<CSSRule> > m_childRuleCSSOMWrappers;
-    mutable OwnPtr<CSSRuleList> m_ruleListCSSOMWrapper;
-    
-    friend class StyleRuleBlock;
 };
 
 }

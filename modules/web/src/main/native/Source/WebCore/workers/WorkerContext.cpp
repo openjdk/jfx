@@ -57,7 +57,6 @@
 #include "WorkerThreadableLoader.h"
 #include "XMLHttpRequestException.h"
 #include <wtf/RefPtr.h>
-#include <wtf/UnusedParam.h>
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
 #include "NotificationCenter.h"
@@ -76,7 +75,7 @@ public:
 
     virtual void performTask(ScriptExecutionContext *context)
     {
-        ASSERT(context->isWorkerContext());
+        ASSERT_WITH_SECURITY_IMPLICATION(context->isWorkerContext());
         WorkerContext* workerContext = static_cast<WorkerContext*>(context);
         // Notify parent that this context is closed. Parent is responsible for calling WorkerThread::stop().
         workerContext->thread()->workerReportingProxy().workerContextClosed();
@@ -85,7 +84,7 @@ public:
     virtual bool isCleanupTask() const { return true; }
 };
 
-WorkerContext::WorkerContext(const KURL& url, const String& userAgent, PassOwnPtr<GroupSettings> settings, WorkerThread* thread, const String& policy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType)
+WorkerContext::WorkerContext(const KURL& url, const String& userAgent, PassOwnPtr<GroupSettings> settings, WorkerThread* thread, PassRefPtr<SecurityOrigin> topOrigin)
     : m_url(url)
     , m_userAgent(userAgent)
     , m_groupSettings(settings)
@@ -96,10 +95,9 @@ WorkerContext::WorkerContext(const KURL& url, const String& userAgent, PassOwnPt
 #endif
     , m_closing(false)
     , m_eventQueue(WorkerEventQueue::create(this))
+    , m_topOrigin(topOrigin)
 {
     setSecurityOrigin(SecurityOrigin::create(url));
-    setContentSecurityPolicy(ContentSecurityPolicy::create(this));
-    contentSecurityPolicy()->didReceiveHeader(policy, contentSecurityPolicyType);
 }
 
 WorkerContext::~WorkerContext()
@@ -111,6 +109,12 @@ WorkerContext::~WorkerContext()
 
     // Notify proxy that we are going away. This can free the WorkerThread object, so do not access it after this.
     thread()->workerReportingProxy().workerContextDestroyed();
+}
+
+void WorkerContext::applyContentSecurityPolicyFromString(const String& policy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType)
+{
+    setContentSecurityPolicy(ContentSecurityPolicy::create(this));
+    contentSecurityPolicy()->didReceiveHeader(policy, contentSecurityPolicyType);
 }
 
 ScriptExecutionContext* WorkerContext::scriptExecutionContext() const
@@ -143,9 +147,9 @@ String WorkerContext::userAgent(const KURL&) const
     return m_userAgent;
 }
 
-void WorkerContext::disableEval()
+void WorkerContext::disableEval(const String& errorMessage)
 {
-    m_script->disableEval();
+    m_script->disableEval(errorMessage);
 }
 
 WorkerLocation* WorkerContext::location() const
@@ -176,10 +180,9 @@ WorkerNavigator* WorkerContext::navigator() const
 
 bool WorkerContext::hasPendingActivity() const
 {
-    ActiveDOMObjectsMap& activeObjects = activeDOMObjects();
-    ActiveDOMObjectsMap::const_iterator activeObjectsEnd = activeObjects.end();
-    for (ActiveDOMObjectsMap::const_iterator iter = activeObjects.begin(); iter != activeObjectsEnd; ++iter) {
-        if (iter->first->hasPendingActivity())
+    ActiveDOMObjectsSet::const_iterator activeObjectsEnd = activeDOMObjects().end();
+    for (ActiveDOMObjectsSet::const_iterator iter = activeDOMObjects().begin(); iter != activeObjectsEnd; ++iter) {
+        if ((*iter)->hasPendingActivity())
             return true;
     }
 
@@ -226,6 +229,7 @@ void WorkerContext::clearInterval(int timeoutId)
 
 void WorkerContext::importScripts(const Vector<String>& urls, ExceptionCode& ec)
 {
+    ASSERT(contentSecurityPolicy());
     ec = 0;
     Vector<String>::const_iterator urlsEnd = urls.end();
     Vector<KURL> completedURLs;
@@ -241,7 +245,7 @@ void WorkerContext::importScripts(const Vector<String>& urls, ExceptionCode& ec)
 
     for (Vector<KURL>::const_iterator it = completedURLs.begin(); it != end; ++it) {
         RefPtr<WorkerScriptLoader> scriptLoader(WorkerScriptLoader::create());
-#if PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY)
+#if PLATFORM(BLACKBERRY)
         scriptLoader->setTargetType(ResourceRequest::TargetIsScript);
 #endif
         scriptLoader->loadSynchronously(scriptExecutionContext(), *it, AllowCrossOriginRequests);
@@ -268,28 +272,40 @@ EventTarget* WorkerContext::errorEventTarget()
     return this;
 }
 
-void WorkerContext::logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, PassRefPtr<ScriptCallStack>)
+void WorkerContext::logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, PassRefPtr<ScriptCallStack>)
 {
-    thread()->workerReportingProxy().postExceptionToWorkerObject(errorMessage, lineNumber, sourceURL);
+    thread()->workerReportingProxy().postExceptionToWorkerObject(errorMessage, lineNumber, columnNumber, sourceURL);
 }
 
-void WorkerContext::addMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack> callStack)
+void WorkerContext::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, unsigned long requestIdentifier)
 {
     if (!isContextThread()) {
-        postTask(AddConsoleMessageTask::create(source, type, level, message));
+        postTask(AddConsoleMessageTask::create(source, level, message));
         return;
     }
-    thread()->workerReportingProxy().postConsoleMessageToWorkerObject(source, type, level, message, lineNumber, sourceURL);
-    addMessageToWorkerConsole(source, type, level, message, sourceURL, lineNumber, callStack);
+
+    thread()->workerReportingProxy().postConsoleMessageToWorkerObject(source, level, message, 0, 0, String());
+    addMessageToWorkerConsole(source, level, message, String(), 0, 0, 0, 0, requestIdentifier);
 }
 
-void WorkerContext::addMessageToWorkerConsole(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack> callStack)
+void WorkerContext::addMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, PassRefPtr<ScriptCallStack> callStack, ScriptState* state, unsigned long requestIdentifier)
+{
+    if (!isContextThread()) {
+        postTask(AddConsoleMessageTask::create(source, level, message));
+        return;
+    }
+
+    thread()->workerReportingProxy().postConsoleMessageToWorkerObject(source, level, message, lineNumber, columnNumber, sourceURL);
+    addMessageToWorkerConsole(source, level, message, sourceURL, lineNumber, columnNumber, callStack, state, requestIdentifier);
+}
+
+void WorkerContext::addMessageToWorkerConsole(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, PassRefPtr<ScriptCallStack> callStack, ScriptState* state, unsigned long requestIdentifier)
 {
     ASSERT(isContextThread());
     if (callStack)
-        InspectorInstrumentation::addMessageToConsole(this, source, type, level, message, 0, callStack);
+        InspectorInstrumentation::addMessageToConsole(this, source, LogMessageType, level, message, callStack, requestIdentifier);
     else
-        InspectorInstrumentation::addMessageToConsole(this, source, type, level, message, sourceURL, lineNumber);
+        InspectorInstrumentation::addMessageToConsole(this, source, LogMessageType, level, message, sourceURL, lineNumber, columnNumber, state, requestIdentifier);
 }
 
 bool WorkerContext::isContextThread() const

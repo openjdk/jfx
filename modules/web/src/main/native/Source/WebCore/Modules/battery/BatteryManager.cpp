@@ -44,7 +44,7 @@ BatteryManager::~BatteryManager()
 }
 
 BatteryManager::BatteryManager(Navigator* navigator)
-    : ActiveDOMObject(navigator->frame()->document(), this)
+    : ActiveDOMObject(navigator->frame()->document())
     , m_batteryController(BatteryController::from(navigator->frame()->page()))
     , m_batteryStatus(0)
 {
@@ -79,8 +79,13 @@ double BatteryManager::level()
 
 void BatteryManager::didChangeBatteryStatus(PassRefPtr<Event> event, PassRefPtr<BatteryStatus> batteryStatus)
 {
-    m_batteryStatus = batteryStatus;
+    updateBatteryStatus(batteryStatus);
     dispatchEvent(event);
+}
+
+void BatteryManager::updateBatteryStatus(PassRefPtr<BatteryStatus> batteryStatus)
+{
+    m_batteryStatus = batteryStatus;
 }
 
 void BatteryManager::suspend(ReasonForSuspension)

@@ -28,16 +28,15 @@
 #define DOMTimer_h
 
 #include "SuspendableTimer.h"
+#include "UserGestureIndicator.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
     class ScheduledAction;
-    class Settings;
 
     class DOMTimer : public SuspendableTimer {
-        friend class Settings;
     public:
         virtual ~DOMTimer();
         // Creates a new timer owned by specified ScriptExecutionContext, starts it
@@ -60,17 +59,14 @@ namespace WebCore {
 
         double intervalClampedToMinimum(int timeout, double minimumTimerInterval) const;
 
-        // The default minimum allowable timer setting (in seconds, 0.001 == 1 ms).
-        // These are only modified via static methods in Settings.
-        static double defaultMinTimerInterval() { return s_minDefaultTimerInterval; }
-        static void setDefaultMinTimerInterval(double value) { s_minDefaultTimerInterval = value; }
+        // Retuns timer fire time rounded to the next multiple of timer alignment interval.
+        virtual double alignedFireTime(double) const;
 
         int m_timeoutId;
         int m_nestingLevel;
         OwnPtr<ScheduledAction> m_action;
         int m_originalInterval;
-        bool m_shouldForwardUserGesture;
-        static double s_minDefaultTimerInterval;
+        RefPtr<UserGestureToken> m_userGestureToken;
     };
 
 } // namespace WebCore

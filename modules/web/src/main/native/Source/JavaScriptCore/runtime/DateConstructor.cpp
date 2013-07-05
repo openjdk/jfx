@@ -31,6 +31,7 @@
 #include "JSString.h"
 #include "JSStringBuilder.h"
 #include "ObjectPrototype.h"
+#include "Operations.h"
 #include <math.h>
 #include <time.h>
 #include <wtf/MathExtras.h>
@@ -71,7 +72,6 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 @end
 */
 
-ASSERT_CLASS_FITS_IN_CELL(DateConstructor);
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(DateConstructor);
 
 DateConstructor::DateConstructor(JSGlobalObject* globalObject, Structure* structure)
@@ -81,9 +81,9 @@ DateConstructor::DateConstructor(JSGlobalObject* globalObject, Structure* struct
 
 void DateConstructor::finishCreation(ExecState* exec, DatePrototype* datePrototype)
 {
-    Base::finishCreation(exec->globalData(), datePrototype->classInfo()->className);
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().prototype, datePrototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().length, jsNumber(7), ReadOnly | DontEnum | DontDelete);
+    Base::finishCreation(exec->vm(), datePrototype->classInfo()->className);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().prototype, datePrototype, DontEnum | DontDelete | ReadOnly);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().length, jsNumber(7), ReadOnly | DontEnum | DontDelete);
 }
 
 bool DateConstructor::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
@@ -125,24 +125,24 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
             args.at(5).toNumber(exec),
             args.at(6).toNumber(exec)
         };
-        if (!isfinite(doubleArguments[0])
-            || !isfinite(doubleArguments[1])
-            || (numArgs >= 3 && !isfinite(doubleArguments[2]))
-            || (numArgs >= 4 && !isfinite(doubleArguments[3]))
-            || (numArgs >= 5 && !isfinite(doubleArguments[4]))
-            || (numArgs >= 6 && !isfinite(doubleArguments[5]))
-            || (numArgs >= 7 && !isfinite(doubleArguments[6])))
-            value = std::numeric_limits<double>::quiet_NaN();
+        if (!std::isfinite(doubleArguments[0])
+            || !std::isfinite(doubleArguments[1])
+            || (numArgs >= 3 && !std::isfinite(doubleArguments[2]))
+            || (numArgs >= 4 && !std::isfinite(doubleArguments[3]))
+            || (numArgs >= 5 && !std::isfinite(doubleArguments[4]))
+            || (numArgs >= 6 && !std::isfinite(doubleArguments[5]))
+            || (numArgs >= 7 && !std::isfinite(doubleArguments[6])))
+            value = QNaN;
         else {
             GregorianDateTime t;
             int year = JSC::toInt32(doubleArguments[0]);
-            t.year = (year >= 0 && year <= 99) ? year : year - 1900;
-            t.month = JSC::toInt32(doubleArguments[1]);
-            t.monthDay = (numArgs >= 3) ? JSC::toInt32(doubleArguments[2]) : 1;
-            t.hour = JSC::toInt32(doubleArguments[3]);
-            t.minute = JSC::toInt32(doubleArguments[4]);
-            t.second = JSC::toInt32(doubleArguments[5]);
-            t.isDST = -1;
+            t.setYear((year >= 0 && year <= 99) ? (year + 1900) : year);
+            t.setMonth(JSC::toInt32(doubleArguments[1]));
+            t.setMonthDay((numArgs >= 3) ? JSC::toInt32(doubleArguments[2]) : 1);
+            t.setHour(JSC::toInt32(doubleArguments[3]));
+            t.setMinute(JSC::toInt32(doubleArguments[4]));
+            t.setSecond(JSC::toInt32(doubleArguments[5]));
+            t.setIsDST(-1);
             double ms = (numArgs >= 7) ? doubleArguments[6] : 0;
             value = gregorianDateTimeToMS(exec, t, ms, false);
         }
@@ -168,11 +168,7 @@ static EncodedJSValue JSC_HOST_CALL callDate(ExecState* exec)
 {
     GregorianDateTime ts;
     msToGregorianDateTime(exec, currentTimeMS(), false, ts);
-    DateConversionBuffer date;
-    DateConversionBuffer time;
-    formatDate(ts, date);
-    formatTime(ts, time);
-    return JSValue::encode(jsMakeNontrivialString(exec, date, " ", time));
+    return JSValue::encode(jsNontrivialString(exec, formatDateTime(ts, DateTimeFormatDateAndTime, false)));
 }
 
 CallType DateConstructor::getCallData(JSCell*, CallData& callData)
@@ -203,23 +199,23 @@ static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
         exec->argument(6).toNumber(exec)
     };
     int n = exec->argumentCount();
-    if (isnan(doubleArguments[0])
-            || isnan(doubleArguments[1])
-            || (n >= 3 && isnan(doubleArguments[2]))
-            || (n >= 4 && isnan(doubleArguments[3]))
-            || (n >= 5 && isnan(doubleArguments[4]))
-            || (n >= 6 && isnan(doubleArguments[5]))
-            || (n >= 7 && isnan(doubleArguments[6])))
+    if (std::isnan(doubleArguments[0])
+        || std::isnan(doubleArguments[1])
+        || (n >= 3 && std::isnan(doubleArguments[2]))
+        || (n >= 4 && std::isnan(doubleArguments[3]))
+        || (n >= 5 && std::isnan(doubleArguments[4]))
+        || (n >= 6 && std::isnan(doubleArguments[5]))
+        || (n >= 7 && std::isnan(doubleArguments[6])))
         return JSValue::encode(jsNaN());
 
     GregorianDateTime t;
     int year = JSC::toInt32(doubleArguments[0]);
-    t.year = (year >= 0 && year <= 99) ? year : year - 1900;
-    t.month = JSC::toInt32(doubleArguments[1]);
-    t.monthDay = (n >= 3) ? JSC::toInt32(doubleArguments[2]) : 1;
-    t.hour = JSC::toInt32(doubleArguments[3]);
-    t.minute = JSC::toInt32(doubleArguments[4]);
-    t.second = JSC::toInt32(doubleArguments[5]);
+    t.setYear((year >= 0 && year <= 99) ? (year + 1900) : year);
+    t.setMonth(JSC::toInt32(doubleArguments[1]));
+    t.setMonthDay((n >= 3) ? JSC::toInt32(doubleArguments[2]) : 1);
+    t.setHour(JSC::toInt32(doubleArguments[3]));
+    t.setMinute(JSC::toInt32(doubleArguments[4]));
+    t.setSecond(JSC::toInt32(doubleArguments[5]));
     double ms = (n >= 7) ? doubleArguments[6] : 0;
     return JSValue::encode(jsNumber(timeClip(gregorianDateTimeToMS(exec, t, ms, true))));
 }

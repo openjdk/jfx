@@ -37,12 +37,24 @@
 #include "DedicatedWorkerThread.h"
 #include "DOMWindow.h"
 #include "MessageEvent.h"
+#include "SecurityOrigin.h"
 #include "WorkerObjectProxy.h"
 
 namespace WebCore {
 
-DedicatedWorkerContext::DedicatedWorkerContext(const KURL& url, const String& userAgent, PassOwnPtr<GroupSettings> settings, DedicatedWorkerThread* thread, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType)
-    : WorkerContext(url, userAgent, settings, thread, contentSecurityPolicy, contentSecurityPolicyType)
+PassRefPtr<DedicatedWorkerContext> DedicatedWorkerContext::create(const KURL& url, const String& userAgent, PassOwnPtr<GroupSettings> settings, DedicatedWorkerThread* thread, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, PassRefPtr<SecurityOrigin> topOrigin)
+{
+    RefPtr<DedicatedWorkerContext> context = adoptRef(new DedicatedWorkerContext(url, userAgent, settings, thread, topOrigin));
+    context->applyContentSecurityPolicyFromString(contentSecurityPolicy, contentSecurityPolicyType);
+    return context.release();
+}
+
+DedicatedWorkerContext::DedicatedWorkerContext(const KURL& url, const String& userAgent, PassOwnPtr<GroupSettings> settings, DedicatedWorkerThread* thread, PassRefPtr<SecurityOrigin> topOrigin)
+    : WorkerContext(url, userAgent, settings, thread, topOrigin)
+{
+}
+
+DedicatedWorkerContext::~DedicatedWorkerContext()
 {
 }
 
@@ -51,18 +63,12 @@ const AtomicString& DedicatedWorkerContext::interfaceName() const
     return eventNames().interfaceForDedicatedWorkerContext;
 }
 
-// FIXME: remove this when we update the ObjC bindings (bug #28774).
 void DedicatedWorkerContext::postMessage(PassRefPtr<SerializedScriptValue> message, MessagePort* port, ExceptionCode& ec)
 {
     MessagePortArray ports;
     if (port)
         ports.append(port);
     postMessage(message, &ports, ec);
-}
-
-void DedicatedWorkerContext::postMessage(PassRefPtr<SerializedScriptValue> message, ExceptionCode& ec)
-{
-    postMessage(message, static_cast<MessagePortArray*>(0), ec);
 }
 
 void DedicatedWorkerContext::postMessage(PassRefPtr<SerializedScriptValue> message, const MessagePortArray* ports, ExceptionCode& ec)

@@ -18,25 +18,24 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module html {
-
-    interface [
+[
         JSGenerateToNativeObject,
-        CustomIndexedSetter
-    ] HTMLOptionsCollection : HTMLCollection {
+    CustomIndexedSetter,
+    GenerateIsReachable=ImplOwnerNodeRoot,
+] interface HTMLOptionsCollection : HTMLCollection {
                  attribute long selectedIndex;
-                 attribute [Custom] unsigned long length
+    [CustomSetter] attribute unsigned long length
                         setter raises (DOMException);
 
-        [Custom] void add(in [Optional=DefaultIsUndefined] HTMLOptionElement option, 
-                          in [Optional] unsigned long index)
+    Node namedItem([Default=Undefined] optional DOMString name);
+
+    [Custom] void add([Default=Undefined] optional HTMLOptionElement option, 
+                      optional unsigned long index)
              raises (DOMException);
-        [Custom] void remove(in [Optional=DefaultIsUndefined] unsigned long index);
+    [Custom] void remove([Default=Undefined] optional unsigned long index);
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
-        Node item(in unsigned long index); 
-        Node namedItem(in DOMString name); 
+    Node item(unsigned long index);
 #endif
     };
 
-}

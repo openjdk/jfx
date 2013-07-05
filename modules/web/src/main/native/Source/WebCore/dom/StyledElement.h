@@ -25,92 +25,82 @@
 #ifndef StyledElement_h
 #define StyledElement_h
 
+#include "CSSPrimitiveValue.h"
+#include "CSSPropertyNames.h"
 #include "Element.h"
-#include "StylePropertySet.h"
 
 namespace WebCore {
 
 class Attribute;
+class MutableStylePropertySet;
+class PropertySetCSSStyleDeclaration;
+class StylePropertySet;
+
 struct PresentationAttributeCacheKey;
 
 class StyledElement : public Element {
 public:
     virtual ~StyledElement();
 
-    virtual StylePropertySet* additionalAttributeStyle() { return 0; }
+    virtual const StylePropertySet* additionalPresentationAttributeStyle() { return 0; }
     void invalidateStyleAttribute();
 
-    const StylePropertySet* inlineStyle() const { return attributeData() ? attributeData()->inlineStyle() : 0; }
-    const StylePropertySet* ensureInlineStyle() { return ensureAttributeData()->ensureInlineStyle(this); }
+    const StylePropertySet* inlineStyle() const { return elementData() ? elementData()->m_inlineStyle.get() : 0; }
     
-    // Unlike StylePropertySet setters, these implement invalidation.
     bool setInlineStyleProperty(CSSPropertyID, int identifier, bool important = false);
     bool setInlineStyleProperty(CSSPropertyID, double value, CSSPrimitiveValue::UnitTypes, bool important = false);
     bool setInlineStyleProperty(CSSPropertyID, const String& value, bool important = false);
     bool removeInlineStyleProperty(CSSPropertyID);
+    void removeAllInlineStyleProperties();
     
-    virtual CSSStyleDeclaration* style() OVERRIDE;
+    void synchronizeStyleAttributeInternal() const;
 
-    StylePropertySet* attributeStyle();
+    virtual CSSStyleDeclaration* style() OVERRIDE FINAL;
 
-    const SpaceSplitString& classNames() const;
-
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) { }
-
-    // May be called by ElementAttributeData::cloneDataFrom().
-    enum ShouldReparseStyleAttribute { DoNotReparseStyleAttribute = 0, ReparseStyleAttribute = 1 };
-    void styleAttributeChanged(const AtomicString& newStyleString, ShouldReparseStyleAttribute = ReparseStyleAttribute);
+    const StylePropertySet* presentationAttributeStyle();
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) { }
 
 protected:
-    StyledElement(const QualifiedName&, Document*, ConstructionType);
+    StyledElement(const QualifiedName& name, Document* document, ConstructionType type)
+        : Element(name, document, type)
+    {
+    }
 
-    virtual void attributeChanged(const Attribute&) OVERRIDE;
-    virtual void parseAttribute(const Attribute&);
+    virtual void attributeChanged(const QualifiedName&, const AtomicString&, AttributeModificationReason = ModifiedDirectly) OVERRIDE;
 
     virtual bool isPresentationAttribute(const QualifiedName&) const { return false; }
 
-    void addPropertyToAttributeStyle(StylePropertySet*, CSSPropertyID, int identifier);
-    void addPropertyToAttributeStyle(StylePropertySet*, CSSPropertyID, double value, CSSPrimitiveValue::UnitTypes);
-    void addPropertyToAttributeStyle(StylePropertySet*, CSSPropertyID, const String& value);
+    void addPropertyToPresentationAttributeStyle(MutableStylePropertySet*, CSSPropertyID, int identifier);
+    void addPropertyToPresentationAttributeStyle(MutableStylePropertySet*, CSSPropertyID, double value, CSSPrimitiveValue::UnitTypes);
+    void addPropertyToPresentationAttributeStyle(MutableStylePropertySet*, CSSPropertyID, const String& value);
 
     virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
 
-    // classAttributeChanged() exists to share code between
-    // parseAttribute (called via setAttribute()) and
-    // svgAttributeChanged (called when element.className.baseValue is set)
-    void classAttributeChanged(const AtomicString& newClassString);
-
 private:
-    virtual void updateStyleAttribute() const;
+    void styleAttributeChanged(const AtomicString& newStyleString, AttributeModificationReason);
+
     void inlineStyleChanged();
+    PropertySetCSSStyleDeclaration* inlineStyleCSSOMWrapper();
+    void setInlineStyleFromString(const AtomicString&);
+    MutableStylePropertySet* ensureMutableInlineStyle();
 
     void makePresentationAttributeCacheKey(PresentationAttributeCacheKey&) const;
-    void updateAttributeStyle();
-
-    void destroyInlineStyle()
-    {
-        if (attributeData())
-            attributeData()->destroyInlineStyle(this);
-    }
+    void rebuildPresentationAttributeStyle();
 };
-
-inline const SpaceSplitString& StyledElement::classNames() const
-{
-    ASSERT(hasClass());
-    ASSERT(attributeData());
-    return attributeData()->classNames();
-}
 
 inline void StyledElement::invalidateStyleAttribute()
 {
-    clearIsStyleAttributeValid();
+    ASSERT(elementData());
+    elementData()->m_styleAttributeIsDirty = true;
 }
 
-inline StylePropertySet* StyledElement::attributeStyle()
+inline const StylePropertySet* StyledElement::presentationAttributeStyle()
 {
-    if (attributeStyleDirty())
-        updateAttributeStyle();
-    return attributeData() ? attributeData()->attributeStyle() : 0;
+    if (!elementData())
+        return 0;
+    if (elementData()->m_presentationAttributeStyleIsDirty)
+        rebuildPresentationAttributeStyle();
+    return elementData()->presentationAttributeStyle();
 }
 
 } //namespace

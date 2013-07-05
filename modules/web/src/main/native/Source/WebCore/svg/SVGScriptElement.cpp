@@ -47,6 +47,7 @@ END_REGISTER_ANIMATED_PROPERTIES
 inline SVGScriptElement::SVGScriptElement(const QualifiedName& tagName, Document* document, bool wasInsertedByParser, bool alreadyStarted)
     : SVGElement(tagName, document)
     , ScriptElement(this, wasInsertedByParser, alreadyStarted)
+    , m_svgLoadEventTimer(this, &SVGElement::svgLoadEventTimerFired)
 {
     ASSERT(hasTagName(SVGNames::scriptTag));
     registerAnimatedPropertiesForSVGScriptElement();
@@ -69,26 +70,26 @@ bool SVGScriptElement::isSupportedAttribute(const QualifiedName& attrName)
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGScriptElement::parseAttribute(const Attribute& attribute)
+void SVGScriptElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(attribute.name())) {
-        SVGElement::parseAttribute(attribute);
+    if (!isSupportedAttribute(name)) {
+        SVGElement::parseAttribute(name, value);
         return;
     }
 
-    if (attribute.name() == SVGNames::typeAttr) {
-        setType(attribute.value());
+    if (name == SVGNames::typeAttr) {
+        setType(value);
         return;
     }
 
-    if (attribute.name() == HTMLNames::onerrorAttr) {
-        setAttributeEventListener(eventNames().errorEvent, createAttributeEventListener(this, attribute));
+    if (name == HTMLNames::onerrorAttr) {
+        setAttributeEventListener(eventNames().errorEvent, createAttributeEventListener(this, name, value));
         return;
     }
 
-    if (SVGURIReference::parseAttribute(attribute))
+    if (SVGURIReference::parseAttribute(name, value))
         return;
-    if (SVGExternalResourcesRequired::parseAttribute(attribute))
+    if (SVGExternalResourcesRequired::parseAttribute(name, value))
         return;
 
     ASSERT_NOT_REACHED();

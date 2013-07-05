@@ -32,24 +32,32 @@
 
 using namespace JSC;
 
-PassRefPtr<OpaqueJSString> OpaqueJSString::create(const UString& ustring)
+PassRefPtr<OpaqueJSString> OpaqueJSString::create(const String& string)
 {
-    if (!ustring.isNull())
-        return adoptRef(new OpaqueJSString(ustring.characters(), ustring.length()));
+    if (!string.isNull())
+        return adoptRef(new OpaqueJSString(string));
     return 0;
 }
 
-UString OpaqueJSString::ustring() const
+String OpaqueJSString::string() const
 {
-    if (this && m_characters)
-        return UString(m_characters, m_length);
-    return UString();
+    if (!this)
+        return String();
+
+    // Return a copy of the wrapped string, because the caller may make it an Identifier.
+    return m_string.isolatedCopy();
 }
 
-Identifier OpaqueJSString::identifier(JSGlobalData* globalData) const
+Identifier OpaqueJSString::identifier(VM* vm) const
 {
-    if (!this || !m_characters)
-        return Identifier(globalData, static_cast<const char*>(0));
+    if (!this || m_string.isNull())
+        return Identifier();
 
-    return Identifier(globalData, m_characters, m_length);
+    if (m_string.isEmpty())
+        return Identifier(Identifier::EmptyIdentifier);
+
+    if (m_string.is8Bit())
+        return Identifier(vm, m_string.characters8(), m_string.length());
+
+    return Identifier(vm, m_string.characters16(), m_string.length());
 }

@@ -21,7 +21,8 @@
 #include "ShadowValue.h"
 
 #include "CSSPrimitiveValue.h"
-#include "PlatformString.h"
+#include <wtf/text/StringBuilder.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -44,37 +45,47 @@ ShadowValue::ShadowValue(PassRefPtr<CSSPrimitiveValue> _x,
 
 String ShadowValue::customCssText() const
 {
-    String text("");
+    StringBuilder text;
 
     if (color)
-        text += color->cssText();
+        text.append(color->cssText());
     if (x) {
         if (!text.isEmpty())
-            text += " ";
-        text += x->cssText();
+            text.append(' ');
+        text.append(x->cssText());
     }
     if (y) {
         if (!text.isEmpty())
-            text += " ";
-        text += y->cssText();
+            text.append(' ');
+        text.append(y->cssText());
     }
     if (blur) {
         if (!text.isEmpty())
-            text += " ";
-        text += blur->cssText();
+            text.append(' ');
+        text.append(blur->cssText());
     }
     if (spread) {
         if (!text.isEmpty())
-            text += " ";
-        text += spread->cssText();
+            text.append(' ');
+        text.append(spread->cssText());
     }
     if (style) {
         if (!text.isEmpty())
-            text += " ";
-        text += style->cssText();
+            text.append(' ');
+        text.append(style->cssText());
     }
 
-    return text;
+    return text.toString();
+}
+
+bool ShadowValue::equals(const ShadowValue& other) const
+{
+    return compareCSSValuePtr(color, other.color)
+        && compareCSSValuePtr(x, other.x)
+        && compareCSSValuePtr(y, other.y)
+        && compareCSSValuePtr(blur, other.blur)
+        && compareCSSValuePtr(spread, other.spread)
+        && compareCSSValuePtr(style, other.style);
 }
 
 }

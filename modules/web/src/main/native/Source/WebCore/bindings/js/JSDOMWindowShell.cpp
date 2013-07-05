@@ -30,6 +30,7 @@
 #include "JSDOMWindowShell.h"
 
 #include "Frame.h"
+#include "GCController.h"
 #include "JSDOMWindow.h"
 #include "DOMWindow.h"
 #include "ScriptController.h"
@@ -40,19 +41,17 @@ using namespace JSC;
 
 namespace WebCore {
 
-ASSERT_CLASS_FITS_IN_CELL(JSDOMWindowShell);
-
 const ClassInfo JSDOMWindowShell::s_info = { "JSDOMWindowShell", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSDOMWindowShell) };
 
 JSDOMWindowShell::JSDOMWindowShell(Structure* structure, DOMWrapperWorld* world)
-    : Base(*world->globalData(), structure)
+    : Base(*world->vm(), structure)
     , m_world(world)
 {
 }
 
-void JSDOMWindowShell::finishCreation(JSGlobalData& globalData, PassRefPtr<DOMWindow> window)
+void JSDOMWindowShell::finishCreation(VM& vm, PassRefPtr<DOMWindow> window)
 {
-    Base::finishCreation(globalData);
+    Base::finishCreation(vm);
     ASSERT(inherits(&s_info));
     setWindow(window);
 }
@@ -60,6 +59,14 @@ void JSDOMWindowShell::finishCreation(JSGlobalData& globalData, PassRefPtr<DOMWi
 void JSDOMWindowShell::destroy(JSCell* cell)
 {
     static_cast<JSDOMWindowShell*>(cell)->JSDOMWindowShell::~JSDOMWindowShell();
+}
+
+void JSDOMWindowShell::setWindow(JSC::VM& vm, JSDOMWindow* window)
+{
+    ASSERT_ARG(window, window);
+    setTarget(vm, window);
+    structure()->setGlobalObject(*JSDOMWindow::commonVM(), window);
+    gcController().garbageCollectSoon();
 }
 
 void JSDOMWindowShell::setWindow(PassRefPtr<DOMWindow> domWindow)
@@ -70,75 +77,16 @@ void JSDOMWindowShell::setWindow(PassRefPtr<DOMWindow> domWindow)
     // Explicitly protect the global object's prototype so it isn't collected
     // when we allocate the global object. (Once the global object is fully
     // constructed, it can mark its own prototype.)
-    Structure* prototypeStructure = JSDOMWindowPrototype::createStructure(*JSDOMWindow::commonJSGlobalData(), 0, jsNull());
-    Strong<JSDOMWindowPrototype> prototype(*JSDOMWindow::commonJSGlobalData(), JSDOMWindowPrototype::create(*JSDOMWindow::commonJSGlobalData(), 0, prototypeStructure));
+    Structure* prototypeStructure = JSDOMWindowPrototype::createStructure(*JSDOMWindow::commonVM(), 0, jsNull());
+    Strong<JSDOMWindowPrototype> prototype(*JSDOMWindow::commonVM(), JSDOMWindowPrototype::create(*JSDOMWindow::commonVM(), 0, prototypeStructure));
 
-    Structure* structure = JSDOMWindow::createStructure(*JSDOMWindow::commonJSGlobalData(), 0, prototype.get());
-    JSDOMWindow* jsDOMWindow = JSDOMWindow::create(*JSDOMWindow::commonJSGlobalData(), structure, domWindow, this);
-    prototype->structure()->setGlobalObject(*JSDOMWindow::commonJSGlobalData(), jsDOMWindow);
-    setWindow(*JSDOMWindow::commonJSGlobalData(), jsDOMWindow);
+    Structure* structure = JSDOMWindow::createStructure(*JSDOMWindow::commonVM(), 0, prototype.get());
+    JSDOMWindow* jsDOMWindow = JSDOMWindow::create(*JSDOMWindow::commonVM(), structure, domWindow, this);
+    prototype->structure()->setGlobalObject(*JSDOMWindow::commonVM(), jsDOMWindow);
+    setWindow(*JSDOMWindow::commonVM(), jsDOMWindow);
     ASSERT(jsDOMWindow->globalObject() == jsDOMWindow);
     ASSERT(prototype->globalObject() == jsDOMWindow);
 }
-
-// ----
-// JSObject methods
-// ----
-
-UString JSDOMWindowShell::className(const JSObject* object)
-{
-    const JSDOMWindowShell* thisObject = jsCast<const JSDOMWindowShell*>(object);
-    return thisObject->window()->methodTable()->className(thisObject->window());
-}
-
-bool JSDOMWindowShell::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
-{
-    JSDOMWindowShell* thisObject = jsCast<JSDOMWindowShell*>(cell);
-    return thisObject->window()->methodTable()->getOwnPropertySlot(thisObject->window(), exec, propertyName, slot);
-}
-
-bool JSDOMWindowShell::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    JSDOMWindowShell* thisObject = jsCast<JSDOMWindowShell*>(object);
-    return thisObject->window()->methodTable()->getOwnPropertyDescriptor(thisObject->window(), exec, propertyName, descriptor);
-}
-
-void JSDOMWindowShell::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
-{
-    JSDOMWindowShell* thisObject = jsCast<JSDOMWindowShell*>(cell);
-    thisObject->window()->methodTable()->put(thisObject->window(), exec, propertyName, value, slot);
-}
-
-void JSDOMWindowShell::putDirectVirtual(JSObject* object, ExecState* exec, PropertyName propertyName, JSValue value, unsigned attributes)
-{
-    JSDOMWindowShell* thisObject = jsCast<JSDOMWindowShell*>(object);
-    thisObject->window()->putDirectVirtual(thisObject->window(), exec, propertyName, value, attributes);
-}
-
-bool JSDOMWindowShell::defineOwnProperty(JSC::JSObject* object, JSC::ExecState* exec, JSC::PropertyName propertyName, JSC::PropertyDescriptor& descriptor, bool shouldThrow)
-{
-    JSDOMWindowShell* thisObject = jsCast<JSDOMWindowShell*>(object);
-    return thisObject->window()->methodTable()->defineOwnProperty(thisObject->window(), exec, propertyName, descriptor, shouldThrow);
-}
-
-bool JSDOMWindowShell::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
-{
-    JSDOMWindowShell* thisObject = jsCast<JSDOMWindowShell*>(cell);
-    return thisObject->window()->methodTable()->deleteProperty(thisObject->window(), exec, propertyName);
-}
-
-void JSDOMWindowShell::getPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
-{
-    JSDOMWindowShell* thisObject = jsCast<JSDOMWindowShell*>(object);
-    thisObject->window()->methodTable()->getPropertyNames(thisObject->window(), exec, propertyNames, mode);
-}
-
-void JSDOMWindowShell::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
-{
-    JSDOMWindowShell* thisObject = jsCast<JSDOMWindowShell*>(object);
-    thisObject->window()->methodTable()->getOwnPropertyNames(thisObject->window(), exec, propertyNames, mode);
-}
-
 
 // ----
 // JSDOMWindow methods

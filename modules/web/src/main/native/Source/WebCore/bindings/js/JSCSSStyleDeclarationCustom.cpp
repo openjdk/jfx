@@ -33,7 +33,7 @@
 #include "HashTools.h"
 #include "JSCSSValue.h"
 #include "JSNode.h"
-#include "PlatformString.h"
+#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "StylePropertySet.h"
 #include <runtime/StringPrototype.h>
@@ -120,7 +120,7 @@ static PropertyNamePrefix getCSSPropertyNamePrefix(const StringImpl& propertyNam
     switch (firstChar) {
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
     case 'a':
-        if (matchesCSSPropertyNamePrefix(propertyName, "apple"))
+        if (RuntimeEnabledFeatures::legacyCSSVendorPrefixesEnabled() && matchesCSSPropertyNamePrefix(propertyName, "apple"))
             return PropertyNamePrefixApple;
         break;
 #endif
@@ -130,7 +130,7 @@ static PropertyNamePrefix getCSSPropertyNamePrefix(const StringImpl& propertyNam
         break;
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
     case 'k':
-        if (matchesCSSPropertyNamePrefix(propertyName, "khtml"))
+        if (RuntimeEnabledFeatures::legacyCSSVendorPrefixesEnabled() && matchesCSSPropertyNamePrefix(propertyName, "khtml"))
             return PropertyNamePrefixKHTML;
         break;
 #endif
@@ -223,6 +223,7 @@ static CSSPropertyInfo cssPropertyIDForJSCSSPropertyName(PropertyName propertyNa
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
     case PropertyNamePrefixApple:
     case PropertyNamePrefixKHTML:
+        ASSERT(RuntimeEnabledFeatures::legacyCSSVendorPrefixesEnabled());
         writeWebKitPrefix(bufferPtr);
         i += 5;
         break;
@@ -283,7 +284,7 @@ static inline JSValue getPropertyValueFallback(ExecState* exec, JSCSSStyleDeclar
 {
     // If the property is a shorthand property (such as "padding"),
     // it can only be accessed using getPropertyValue.
-    return jsString(exec, thisObj->impl()->getPropertyValueInternal(static_cast<CSSPropertyID>(index)));
+    return jsStringWithCache(exec, thisObj->impl()->getPropertyValueInternal(static_cast<CSSPropertyID>(index)));
 }
 
 static inline JSValue cssPropertyGetterPixelOrPosPrefix(ExecState* exec, JSCSSStyleDeclaration* thisObj, unsigned propertyID)
@@ -358,7 +359,7 @@ bool JSCSSStyleDeclaration::putDelegate(ExecState* exec, PropertyName propertyNa
 
     String propValue = valueToStringWithNullCheck(exec, value);
     if (propertyInfo.hadPixelOrPosPrefix)
-        propValue += "px";
+        propValue.append("px");
 
     bool important = false;
     if (Settings::shouldRespectPriorityInCSSAttributeSetters()) {
@@ -377,7 +378,7 @@ bool JSCSSStyleDeclaration::putDelegate(ExecState* exec, PropertyName propertyNa
 
 JSValue JSCSSStyleDeclaration::getPropertyCSSValue(ExecState* exec)
 {
-    const String& propertyName(ustringToString(exec->argument(0).toString(exec)->value(exec)));
+    const String& propertyName = exec->argument(0).toString(exec)->value(exec);
     if (exec->hadException())
         return jsUndefined();
 

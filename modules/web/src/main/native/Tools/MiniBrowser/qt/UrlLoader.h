@@ -35,22 +35,27 @@
 #include <QTimer>
 #include <QVector>
 
+class QWebLoadRequest;
+
 class UrlLoader : public QObject {
     Q_OBJECT
 
 public:
     UrlLoader(BrowserWindow*, const QString&, int, int);
 
-public slots:
+public Q_SLOTS:
     void loadNext();
 
-private slots:
+private Q_SLOTS:
     void checkIfFinished();
     void frameLoadStarted();
     void frameLoadFinished();
+    void loadingChanged(QWebLoadRequest*);
 
-signals:
+Q_SIGNALS:
     void pageLoadFinished();
+    void loadStarted();
+    void loadFinished();
 
 private:
     void loadUrlList(const QString& inputFileName);

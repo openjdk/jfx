@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Eric Seidel (eric@webkit.org)
- * Copyright (C) 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2009, 2010, 2011, 2012 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
@@ -43,10 +43,6 @@
 #include "Page.h"
 #include "ResourceError.h"
 
-#if USE(V8)
-#include <v8.h>
-#endif
-
 /*
  This file holds empty Client stubs for use by WebCore.
  Viewless element needs to create a dummy Page->Frame->FrameView tree for use in parsing or executing JavaScript.
@@ -65,11 +61,11 @@ namespace WebCore {
 class GraphicsContext3D;
 
 class EmptyChromeClient : public ChromeClient {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~EmptyChromeClient() { }
     virtual void chromeDestroyed() { }
 
-    virtual void* webView() const { return 0; }
     virtual void setWindowRect(const FloatRect&) { }
     virtual FloatRect windowRect() { return FloatRect(); }
 
@@ -104,7 +100,7 @@ public:
 
     virtual void setResizable(bool) { }
 
-    virtual void addMessageToConsole(MessageSource, MessageType, MessageLevel, const String&, unsigned, const String&) { }
+    virtual void addMessageToConsole(MessageSource, MessageLevel, const String&, unsigned, unsigned, const String&) { }
 
     virtual bool canRunBeforeUnloadConfirmPanel() { return false; }
     virtual bool runBeforeUnloadConfirmPanel(const String&, Frame*) { return true; }
@@ -121,12 +117,6 @@ public:
     virtual bool hasOpenedPopup() const OVERRIDE { return false; }
     virtual PassRefPtr<PopupMenu> createPopupMenu(PopupMenuClient*) const OVERRIDE;
     virtual PassRefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient*) const OVERRIDE;
-#if ENABLE(PAGE_POPUP)
-    virtual PagePopup* openPagePopup(PagePopupClient*, const IntRect&) OVERRIDE { return 0; }
-    virtual void closePagePopup(PagePopup*) OVERRIDE { }
-    virtual void setPagePopupDriver(PagePopupDriver*) OVERRIDE { }
-    virtual void resetPagePopupDriver() OVERRIDE { }
-#endif
 
     virtual void setStatusbarText(const String&) { }
 
@@ -158,7 +148,7 @@ public:
     virtual void print(Frame*) { }
 
 #if ENABLE(SQL_DATABASE)
-    virtual void exceededDatabaseQuota(Frame*, const String&) { }
+    virtual void exceededDatabaseQuota(Frame*, const String&, DatabaseDetails) { }
 #endif
 
     virtual void reachedMaxAppCacheSize(int64_t) { }
@@ -170,6 +160,10 @@ public:
 
 #if ENABLE(INPUT_TYPE_COLOR)
     virtual PassOwnPtr<ColorChooser> createColorChooser(ColorChooserClient*, const Color&) OVERRIDE;
+#endif
+
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    virtual PassRefPtr<DateTimeChooser> openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&) OVERRIDE;
 #endif
 
     virtual void runOpenPanel(Frame*, PassRefPtr<FileChooser>) OVERRIDE;
@@ -188,7 +182,7 @@ public:
 #if USE(ACCELERATED_COMPOSITING)
     virtual void attachRootGraphicsLayer(Frame*, GraphicsLayer*) {}
     virtual void setNeedsOneShotDrawingSynchronization() {}
-    virtual void scheduleCompositingLayerSync() {}
+    virtual void scheduleCompositingLayerFlush() { }
 #endif
 
 #if PLATFORM(WIN)
@@ -199,10 +193,16 @@ public:
 #endif
     
     virtual void numWheelEventHandlersChanged(unsigned) OVERRIDE { }
-    virtual void numTouchEventHandlersChanged(unsigned) OVERRIDE { }
     
     virtual bool shouldRubberBandInDirection(WebCore::ScrollDirection) const { return false; }
+    
+    virtual bool isEmptyChromeClient() const { return true; }
+
+    virtual void didAssociateFormControls(const Vector<RefPtr<Element> >&) { }
+    virtual bool shouldNotifyOnFormChanges() { return false; }
 };
+
+// FIXME (bug 116233): Get rid of EmptyFrameLoaderClient. It is a travesty.
 
 class EmptyFrameLoaderClient : public FrameLoaderClient {
     WTF_MAKE_NONCOPYABLE(EmptyFrameLoaderClient); WTF_MAKE_FAST_ALLOCATED;
@@ -222,7 +222,7 @@ public:
     virtual void detachedFromParent2() { }
     virtual void detachedFromParent3() { }
 
-    virtual void download(ResourceHandle*, const ResourceRequest&, const ResourceResponse&) { }
+    virtual void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) OVERRIDE { }
 
     virtual void assignIdentifierToInitialRequest(unsigned long, DocumentLoader*, const ResourceRequest&) { }
     virtual bool shouldUseCredentialStorage(DocumentLoader*, unsigned long) { return false; }
@@ -256,9 +256,7 @@ public:
     virtual void dispatchDidFailLoad(const ResourceError&) { }
     virtual void dispatchDidFinishDocumentLoad() { }
     virtual void dispatchDidFinishLoad() { }
-    virtual void dispatchDidFirstLayout() { }
-    virtual void dispatchDidFirstVisuallyNonEmptyLayout() { }
-    virtual void dispatchDidNewFirstVisuallyNonEmptyLayout() { }
+    virtual void dispatchDidLayout(LayoutMilestones) { }
 
     virtual Frame* dispatchCreatePage(const NavigationAction&) { return 0; }
     virtual void dispatchShow() { }
@@ -342,6 +340,7 @@ public:
     virtual void didDetectXSS(const KURL&, bool) { }
     virtual PassRefPtr<Frame> createFrame(const KURL&, const String&, HTMLFrameOwnerElement*, const String&, bool, int, int) OVERRIDE;
     virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const KURL&, const Vector<String>&, const Vector<String>&, const String&, bool) OVERRIDE;
+    virtual void recreatePlugin(Widget*) OVERRIDE;
     virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const KURL&, const Vector<String>&, const Vector<String>&) OVERRIDE;
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
     virtual PassRefPtr<Widget> createMediaPlayerProxyPlugin(const IntSize&, HTMLMediaElement*, const KURL&, const Vector<String>&, const Vector<String>&, const String&) OVERRIDE;
@@ -359,12 +358,6 @@ public:
 
     virtual void registerForIconNotification(bool) { }
 
-#if USE(V8)
-    virtual void didCreateScriptContext(v8::Handle<v8::Context>, int extensionGroup, int worldId) { }
-    virtual void willReleaseScriptContext(v8::Handle<v8::Context>, int worldId) { }
-    virtual bool allowScriptExtension(const String& extensionName, int extensionGroup, int worldId) { return false; }
-#endif
-
 #if PLATFORM(MAC)
     virtual RemoteAXObjectRef accessibilityRemoteObject() { return 0; }
     virtual NSCachedURLResponse* willCacheResponse(DocumentLoader*, unsigned long, NSCachedURLResponse* response) const { return response; }
@@ -376,9 +369,7 @@ public:
 
     virtual PassRefPtr<FrameNetworkingContext> createNetworkingContext() OVERRIDE;
 
-#if ENABLE(WEB_INTENTS)
-    virtual void dispatchIntent(PassRefPtr<IntentRequest>) OVERRIDE;
-#endif
+    virtual bool isEmptyFrameLoaderClient() OVERRIDE { return true; }
 };
 
 class EmptyTextCheckerClient : public TextCheckerClient {
@@ -407,7 +398,6 @@ public:
     virtual void frameWillDetachPage(Frame*) { }
 
     virtual bool shouldDeleteRange(Range*) { return false; }
-    virtual bool shouldShowDeleteInterface(HTMLElement*) { return false; }
     virtual bool smartInsertDeleteEnabled() { return false; }
     virtual bool isSelectTrailingWhitespaceEnabled() { return false; }
     virtual bool isContinuousSpellCheckingEnabled() { return false; }
@@ -432,7 +422,9 @@ public:
     virtual void respondToChangedContents() { }
     virtual void respondToChangedSelection(Frame*) { }
     virtual void didEndEditing() { }
+    virtual void willWriteSelectionToPasteboard(Range*) { }
     virtual void didWriteSelectionToPasteboard() { }
+    virtual void getClientPasteboardDataForRange(Range*, Vector<String>&, Vector<RefPtr<SharedBuffer> >&) { }
     virtual void didSetSelectionTypesForPasteboard() { }
 
     virtual void registerUndoStep(PassRefPtr<UndoStep>) OVERRIDE;
@@ -472,6 +464,7 @@ public:
     virtual void lowercaseWord() { }
     virtual void capitalizeWord() { }
 #endif
+
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
     virtual void showSubstitutionsPanel(bool) { }
     virtual bool substitutionsPanelIsShowing() { return false; }
@@ -487,6 +480,11 @@ public:
     virtual bool isAutomaticSpellingCorrectionEnabled() { return false; }
     virtual void toggleAutomaticSpellingCorrection() { }
 #endif
+
+#if ENABLE(DELETION_UI)
+    virtual bool shouldShowDeleteInterface(HTMLElement*) { return false; }
+#endif
+
 #if PLATFORM(GTK)
     virtual bool shouldShowUnicodeMenu() { return false; }
 #endif
@@ -568,11 +566,15 @@ public:
     virtual void hideHighlight() { }
 };
 
+class EmptyDeviceClient : public DeviceClient {
+public:
+    virtual void startUpdating() OVERRIDE { }
+    virtual void stopUpdating() OVERRIDE { }
+};
+
 class EmptyDeviceMotionClient : public DeviceMotionClient {
 public:
     virtual void setController(DeviceMotionController*) { }
-    virtual void startUpdating() { }
-    virtual void stopUpdating() { }
     virtual DeviceMotionData* lastMotion() const { return 0; }
     virtual void deviceMotionControllerDestroyed() { }
 };
@@ -580,8 +582,6 @@ public:
 class EmptyDeviceOrientationClient : public DeviceOrientationClient {
 public:
     virtual void setController(DeviceOrientationController*) { }
-    virtual void startUpdating() { }
-    virtual void stopUpdating() { }
     virtual DeviceOrientationData* lastOrientation() const { return 0; }
     virtual void deviceOrientationControllerDestroyed() { }
 };

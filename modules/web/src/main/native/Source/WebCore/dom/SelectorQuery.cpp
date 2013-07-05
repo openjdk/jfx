@@ -29,9 +29,11 @@
 #include "CSSParser.h"
 #include "CSSSelectorList.h"
 #include "Document.h"
+#include "NodeTraversal.h"
+#include "SelectorChecker.h"
+#include "SelectorCheckerFastPath.h"
 #include "StaticNodeList.h"
 #include "StyledElement.h"
-#include <wtf/HashMap.h>
 
 namespace WebCore {
 
@@ -39,56 +41,80 @@ void SelectorDataList::initialize(const CSSSelectorList& selectorList)
 {
     ASSERT(m_selectors.isEmpty());
 
-    for (CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector))
-        m_selectors.append(SelectorData(selector, SelectorChecker::isFastCheckableSelector(selector)));
+    unsigned selectorCount = 0;
+    for (const CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector))
+        selectorCount++;
+
+    m_selectors.reserveInitialCapacity(selectorCount);
+    for (const CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector))
+        m_selectors.uncheckedAppend(SelectorData(selector, SelectorCheckerFastPath::canUse(selector)));
 }
 
-bool SelectorDataList::matches(const SelectorChecker& selectorChecker, Element* targetElement) const
+inline bool SelectorDataList::selectorMatches(const SelectorData& selectorData, Element* element, const Node* rootNode) const
+{
+    if (selectorData.isFastCheckable && !element->isSVGElement()) {
+        SelectorCheckerFastPath selectorCheckerFastPath(selectorData.selector, element);
+        if (!selectorCheckerFastPath.matchesRightmostSelector(SelectorChecker::VisitedMatchDisabled))
+            return false;
+        return selectorCheckerFastPath.matches();
+    }
+
+    SelectorChecker selectorChecker(element->document(), SelectorChecker::QueryingRules);
+    SelectorChecker::SelectorCheckingContext selectorCheckingContext(selectorData.selector, element, SelectorChecker::VisitedMatchDisabled);
+    selectorCheckingContext.behaviorAtBoundary = SelectorChecker::StaysWithinTreeScope;
+    selectorCheckingContext.scope = !rootNode->isDocumentNode() && rootNode->isContainerNode() ? toContainerNode(rootNode) : 0;
+    PseudoId ignoreDynamicPseudo = NOPSEUDO;
+    return selectorChecker.match(selectorCheckingContext, ignoreDynamicPseudo) == SelectorChecker::SelectorMatches;
+}
+
+bool SelectorDataList::matches(Element* targetElement) const
 {
     ASSERT(targetElement);
 
     unsigned selectorCount = m_selectors.size();
     for (unsigned i = 0; i < selectorCount; ++i) {
-        if (selectorChecker.checkSelector(m_selectors[i].selector, targetElement, m_selectors[i].isFastCheckable))
+        if (selectorMatches(m_selectors[i], targetElement, targetElement))
             return true;
     }
 
     return false;
 }
 
-PassRefPtr<NodeList> SelectorDataList::queryAll(const SelectorChecker& selectorChecker, Node* rootNode) const
+PassRefPtr<NodeList> SelectorDataList::queryAll(Node* rootNode) const
 {
     Vector<RefPtr<Node> > result;
-    execute<false>(selectorChecker, rootNode, result);
+    execute<false>(rootNode, result);
     return StaticNodeList::adopt(result);
 }
 
-PassRefPtr<Element> SelectorDataList::queryFirst(const SelectorChecker& selectorChecker, Node* rootNode) const
+PassRefPtr<Element> SelectorDataList::queryFirst(Node* rootNode) const
 {
     Vector<RefPtr<Node> > result;
-    execute<true>(selectorChecker, rootNode, result);
+    execute<true>(rootNode, result);
     if (result.isEmpty())
         return 0;
     ASSERT(result.size() == 1);
     ASSERT(result.first()->isElementNode());
-    return static_cast<Element*>(result.first().get());
+    return toElement(result.first().get());
 }
 
-bool SelectorDataList::canUseIdLookup(Node* rootNode) const
+const CSSSelector* SelectorDataList::selectorForIdLookup(Node* rootNode) const
 {
     // We need to return the matches in document order. To use id lookup while there is possiblity of multiple matches
     // we would need to sort the results. For now, just traverse the document in that case.
     if (m_selectors.size() != 1)
-        return false;
-    if (m_selectors[0].selector->m_match != CSSSelector::Id)
-        return false;
+        return 0;
     if (!rootNode->inDocument())
-        return false;
+        return 0;
     if (rootNode->document()->inQuirksMode())
-        return false;
-    if (rootNode->document()->containsMultipleElementsWithId(m_selectors[0].selector->value()))
-        return false;
-    return true;
+        return 0;
+    for (const CSSSelector* selector = m_selectors[0].selector; selector; selector = selector->tagHistory()) {
+        if (selector->m_match == CSSSelector::Id)
+            return selector;
+        if (selector->relation() != CSSSelector::SubSelector)
+            break;
+    }
+    return 0;
 }
 
 static inline bool isTreeScopeRoot(Node* node)
@@ -98,44 +124,43 @@ static inline bool isTreeScopeRoot(Node* node)
 }
 
 template <bool firstMatchOnly>
-void SelectorDataList::execute(const SelectorChecker& selectorChecker, Node* rootNode, Vector<RefPtr<Node> >& matchedElements) const
+void SelectorDataList::execute(Node* rootNode, Vector<RefPtr<Node> >& matchedElements) const
 {
-    if (canUseIdLookup(rootNode)) {
+    if (const CSSSelector* idSelector = selectorForIdLookup(rootNode)) {
         ASSERT(m_selectors.size() == 1);
-        CSSSelector* selector = m_selectors[0].selector;
-        Element* element = rootNode->treeScope()->getElementById(selector->value());
+        const AtomicString& idToMatch = idSelector->value();
+        if (UNLIKELY(rootNode->treeScope()->containsMultipleElementsWithId(idToMatch))) {
+            const Vector<Element*>* elements = rootNode->treeScope()->getAllElementsById(idToMatch);
+            ASSERT(elements);
+            size_t count = elements->size();
+            for (size_t i = 0; i < count; ++i) {
+                Element* element = elements->at(i);
+                if (selectorMatches(m_selectors[0], element, rootNode)) {
+                    matchedElements.append(element);
+                    if (firstMatchOnly)
+                        return;
+                }
+            }
+            return;
+        }
+        Element* element = rootNode->treeScope()->getElementById(idToMatch);
         if (!element || !(isTreeScopeRoot(rootNode) || element->isDescendantOf(rootNode)))
             return;
-        if (selectorChecker.checkSelector(m_selectors[0].selector, element, m_selectors[0].isFastCheckable))
+        if (selectorMatches(m_selectors[0], element, rootNode))
             matchedElements.append(element);
         return;
     }
 
     unsigned selectorCount = m_selectors.size();
-
-    Node* n = rootNode->firstChild();
-    while (n) {
-        if (n->isElementNode()) {
-            Element* element = static_cast<Element*>(n);
+    for (Element* element = ElementTraversal::firstWithin(rootNode); element; element = ElementTraversal::next(element, rootNode)) {
             for (unsigned i = 0; i < selectorCount; ++i) {
-                if (selectorChecker.checkSelector(m_selectors[i].selector, element, m_selectors[i].isFastCheckable)) {
+            if (selectorMatches(m_selectors[i], element, rootNode)) {
                     matchedElements.append(element);
                     if (firstMatchOnly)
                         return;
                     break;
                 }
             }
-            if (element->firstChild()) {
-                n = element->firstChild();
-                continue;
-            }
-        }
-        while (!n->nextSibling()) {
-            n = n->parentNode();
-            if (n == rootNode)
-                return;
-        }
-        n = n->nextSibling();
     }
 }
 
@@ -145,37 +170,17 @@ SelectorQuery::SelectorQuery(const CSSSelectorList& selectorList)
     m_selectors.initialize(m_selectorList);
 }
 
-bool SelectorQuery::matches(Element* element) const
-{
-    SelectorChecker selectorChecker(element->document(), !element->document()->inQuirksMode());
-    return m_selectors.matches(selectorChecker, element);
-}
-
-PassRefPtr<NodeList> SelectorQuery::queryAll(Node* rootNode) const
-{
-    SelectorChecker selectorChecker(rootNode->document(), !rootNode->document()->inQuirksMode());
-    selectorChecker.setMode(SelectorChecker::QueryingRules);
-    return m_selectors.queryAll(selectorChecker, rootNode);
-}
-
-PassRefPtr<Element> SelectorQuery::queryFirst(Node* rootNode) const
-{
-    SelectorChecker selectorChecker(rootNode->document(), !rootNode->document()->inQuirksMode());
-    selectorChecker.setMode(SelectorChecker::QueryingRules);
-    return m_selectors.queryFirst(selectorChecker, rootNode);
-}
-
 SelectorQuery* SelectorQueryCache::add(const AtomicString& selectors, Document* document, ExceptionCode& ec)
 {
     HashMap<AtomicString, OwnPtr<SelectorQuery> >::iterator it = m_entries.find(selectors);
     if (it != m_entries.end())
-        return it->second.get();
+        return it->value.get();
 
     CSSParser parser(document);
     CSSSelectorList selectorList;
     parser.parseSelector(selectors, selectorList);
 
-    if (!selectorList.first() || selectorList.hasUnknownPseudoElements()) {
+    if (!selectorList.first() || selectorList.hasInvalidSelector()) {
         ec = SYNTAX_ERR;
         return 0;
     }
@@ -185,6 +190,10 @@ SelectorQuery* SelectorQueryCache::add(const AtomicString& selectors, Document* 
         ec = NAMESPACE_ERR;
         return 0;
     }
+    
+    const int maximumSelectorQueryCacheSize = 256;
+    if (m_entries.size() == maximumSelectorQueryCacheSize)
+        m_entries.remove(m_entries.begin());
     
     OwnPtr<SelectorQuery> selectorQuery = adoptPtr(new SelectorQuery(selectorList));
     SelectorQuery* rawSelectorQuery = selectorQuery.get();

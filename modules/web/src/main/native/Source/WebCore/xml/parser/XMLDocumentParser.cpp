@@ -42,7 +42,6 @@
 #include "ImageLoader.h"
 #include "ProcessingInstruction.h"
 #include "ResourceError.h"
-#include "ResourceHandle.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "ScriptElement.h"
@@ -112,22 +111,21 @@ void XMLDocumentParser::insert(const SegmentedString&)
     ASSERT_NOT_REACHED();
 }
 
-void XMLDocumentParser::append(const SegmentedString& s)
+void XMLDocumentParser::append(PassRefPtr<StringImpl> inputSource)
 {
-    String parseString = s.toString();
-
+    SegmentedString source(inputSource);
     if (m_sawXSLTransform || !m_sawFirstElement)
-        m_originalSourceForTransform += parseString;
+        m_originalSourceForTransform.append(source);
 
     if (isStopped() || m_sawXSLTransform)
         return;
 
     if (m_parserPaused) {
-        m_pendingSrc.append(s);
+        m_pendingSrc.append(source);
         return;
     }
 
-    doWrite(parseString);
+    doWrite(source.toString());
 
     // After parsing, go ahead and dispatch image beforeload events.
     ImageLoader::dispatchPendingBeforeLoadEvents();
@@ -148,8 +146,8 @@ void XMLDocumentParser::enterText()
     ASSERT(m_bufferedText.size() == 0);
 #endif
     ASSERT(!m_leafTextNode);
-    m_leafTextNode = Text::create(document(), "");
-    m_currentNode->parserAddChild(m_leafTextNode.get());
+    m_leafTextNode = Text::create(m_currentNode->document(), "");
+    m_currentNode->parserAppendChild(m_leafTextNode.get());
 }
 
 #if !USE(QXMLSTREAM)
@@ -169,8 +167,7 @@ void XMLDocumentParser::exitText()
         return;
 
 #if !USE(QXMLSTREAM)
-    ExceptionCode ec = 0;
-    m_leafTextNode->appendData(toString(m_bufferedText.data(), m_bufferedText.size()), ec);
+    m_leafTextNode->appendData(toString(m_bufferedText.data(), m_bufferedText.size()), IGNORE_EXCEPTION);
     Vector<xmlChar> empty;
     m_bufferedText.swap(empty);
 #endif
@@ -195,6 +192,11 @@ void XMLDocumentParser::end()
     ASSERT(!m_parsingFragment);
 
     doEnd();
+
+    // doEnd() call above can detach the parser and null out its document.
+    // In that case, we just bail out.
+    if (isDetached())
+        return;
 
     // doEnd() could process a script tag, thus pausing parsing.
     if (m_parserPaused)
@@ -226,11 +228,6 @@ void XMLDocumentParser::finish()
         end();
 }
 
-bool XMLDocumentParser::finishWasCalled()
-{
-    return m_finishCalled;
-}
-
 void XMLDocumentParser::insertErrorMessageBlock()
 {
 #if USE(QXMLSTREAM)
@@ -256,7 +253,7 @@ void XMLDocumentParser::notifyFinished(CachedResource* unusedResource)
     RefPtr<Element> e = m_scriptElement;
     m_scriptElement = 0;
 
-    ScriptElement* scriptElement = toScriptElement(e.get());
+    ScriptElement* scriptElement = toScriptElementIfPossible(e.get());
     ASSERT(scriptElement);
 
     // JavaScript can detach this parser, make sure it's kept alive even if detached.
@@ -288,7 +285,7 @@ void XMLDocumentParser::pauseParsing()
     m_parserPaused = true;
 }
 
-bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment* fragment, Element* contextElement, FragmentScriptingPermission scriptingPermission)
+bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment* fragment, Element* contextElement, ParserContentPolicy parserContentPolicy)
 {
     if (!chunk.length())
         return true;
@@ -297,11 +294,11 @@ bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragm
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#xml-fragment-parsing-algorithm
     // For now we have a hack for script/style innerHTML support:
     if (contextElement && (contextElement->hasLocalName(HTMLNames::scriptTag) || contextElement->hasLocalName(HTMLNames::styleTag))) {
-        fragment->parserAddChild(fragment->document()->createTextNode(chunk));
+        fragment->parserAppendChild(fragment->document()->createTextNode(chunk));
         return true;
     }
 
-    RefPtr<XMLDocumentParser> parser = XMLDocumentParser::create(fragment, contextElement, scriptingPermission);
+    RefPtr<XMLDocumentParser> parser = XMLDocumentParser::create(fragment, contextElement, parserContentPolicy);
     bool wellFormed = parser->appendFragmentSource(chunk);
     // Do not call finish().  Current finish() and doEnd() implementations touch the main Document/loader
     // and can cause crashes in the fragment case.

@@ -28,24 +28,26 @@ namespace WebCore {
 
 class EllipsisBox;
 class HitTestResult;
+class LogicalSelectionOffsetCaches;
+class RenderRegion;
 
 struct BidiStatus;
 struct GapRects;
 
 class RootInlineBox : public InlineFlowBox {
 public:
-    RootInlineBox(RenderBlock* block);
+    explicit RootInlineBox(RenderBlock*);
 
-    virtual void destroy(RenderArena*);
+    virtual void destroy(RenderArena*) FINAL;
 
-    virtual bool isRootInlineBox() const { return true; }
+    virtual bool isRootInlineBox() const FINAL { return true; }
 
     void detachEllipsisBox(RenderArena*);
 
     RootInlineBox* nextRootBox() const { return static_cast<RootInlineBox*>(m_nextLineBox); }
     RootInlineBox* prevRootBox() const { return static_cast<RootInlineBox*>(m_prevLineBox); }
 
-    virtual void adjustPosition(float dx, float dy);
+    virtual void adjustPosition(float dx, float dy) FINAL;
 
     LayoutUnit lineTop() const { return m_lineTop; }
     LayoutUnit lineBottom() const { return m_lineBottom; }
@@ -53,11 +55,17 @@ public:
     LayoutUnit lineTopWithLeading() const { return m_lineTopWithLeading; }
     LayoutUnit lineBottomWithLeading() const { return m_lineBottomWithLeading; }
     
-    LayoutUnit paginationStrut() const { return m_paginationStrut; }
-    void setPaginationStrut(LayoutUnit s) { m_paginationStrut = s; }
+    LayoutUnit paginationStrut() const { return m_fragmentationData ? m_fragmentationData->m_paginationStrut : LayoutUnit(0); }
+    void setPaginationStrut(LayoutUnit strut) { ensureLineFragmentationData()->m_paginationStrut = strut; }
 
-    LayoutUnit paginatedLineWidth() const { return m_paginatedLineWidth; }
-    void setPaginatedLineWidth(LayoutUnit width) { m_paginatedLineWidth = width; }
+    bool isFirstAfterPageBreak() const { return m_fragmentationData ? m_fragmentationData->m_isFirstAfterPageBreak : false; }
+    void setIsFirstAfterPageBreak(bool isFirstAfterPageBreak) { ensureLineFragmentationData()->m_isFirstAfterPageBreak = isFirstAfterPageBreak; }
+
+    LayoutUnit paginatedLineWidth() const { return m_fragmentationData ? m_fragmentationData->m_paginatedLineWidth : LayoutUnit(0); }
+    void setPaginatedLineWidth(LayoutUnit width) { ensureLineFragmentationData()->m_paginatedLineWidth = width; }
+
+    RenderRegion* containingRegion() const;
+    void setContainingRegion(RenderRegion*);
 
     LayoutUnit selectionTop() const;
     LayoutUnit selectionBottom() const;
@@ -66,7 +74,7 @@ public:
     LayoutUnit selectionTopAdjustedForPrecedingBlock() const;
     LayoutUnit selectionHeightAdjustedForPrecedingBlock() const { return max<LayoutUnit>(0, selectionBottom() - selectionTopAdjustedForPrecedingBlock()); }
 
-    int blockDirectionPointInLine() const { return max(lineTop(), selectionTop()); }
+    int blockDirectionPointInLine() const;
 
     LayoutUnit alignBoxesInBlockDirection(LayoutUnit heightOfBlock, GlyphOverflowAndFallbackFontsMap&, VerticalPositionCache&);
     void setLineTopBottomPositions(LayoutUnit top, LayoutUnit bottom, LayoutUnit topWithLeading, LayoutUnit bottomWithLeading)
@@ -77,7 +85,7 @@ public:
         m_lineBottomWithLeading = bottomWithLeading;
     }
 
-    virtual RenderLineBoxList* rendererLineBoxes() const;
+    virtual RenderLineBoxList* rendererLineBoxes() const FINAL;
 
     RenderObject* lineBreakObj() const { return m_lineBreakObj; }
     BidiStatus lineBreakBidiStatus() const;
@@ -95,19 +103,19 @@ public:
     // Return the truncatedWidth, the width of the truncated text + ellipsis.
     float placeEllipsis(const AtomicString& ellipsisStr, bool ltr, float blockLeftEdge, float blockRightEdge, float ellipsisWidth, InlineBox* markupBox = 0);
     // Return the position of the EllipsisBox or -1.
-    virtual float placeEllipsisBox(bool ltr, float blockLeftEdge, float blockRightEdge, float ellipsisWidth, float &truncatedWidth, bool& foundBox) OVERRIDE;
+    virtual float placeEllipsisBox(bool ltr, float blockLeftEdge, float blockRightEdge, float ellipsisWidth, float &truncatedWidth, bool& foundBox) OVERRIDE FINAL;
 
     using InlineBox::hasEllipsisBox;
     EllipsisBox* ellipsisBox() const;
 
     void paintEllipsisBox(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) const;
 
-    virtual void clearTruncation() OVERRIDE;
+    virtual void clearTruncation() OVERRIDE FINAL;
 
     bool isHyphenated() const;
 
-    virtual LayoutUnit baselinePosition(FontBaseline baselineType) const;
-    virtual LayoutUnit lineHeight() const;
+    virtual int baselinePosition(FontBaseline baselineType) const FINAL;
+    virtual LayoutUnit lineHeight() const FINAL;
 
 #if PLATFORM(MAC)
     void addHighlightOverflow();
@@ -115,16 +123,17 @@ public:
 #endif
 
     virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom);
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) OVERRIDE;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) OVERRIDE FINAL;
 
     using InlineBox::hasSelectedChildren;
     using InlineBox::setHasSelectedChildren;
 
-    virtual RenderObject::SelectionState selectionState();
+    virtual RenderObject::SelectionState selectionState() FINAL;
     InlineBox* firstSelectedBox();
     InlineBox* lastSelectedBox();
 
-    GapRects lineSelectionGap(RenderBlock* rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock, LayoutUnit selTop, LayoutUnit selHeight, const PaintInfo*);
+    GapRects lineSelectionGap(RenderBlock* rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock,
+        LayoutUnit selTop, LayoutUnit selHeight, const LogicalSelectionOffsetCaches&, const PaintInfo*);
 
     RenderBlock* block() const;
 
@@ -142,9 +151,9 @@ public:
 
     Vector<RenderBox*>* floatsPtr() { ASSERT(!isDirty()); return m_floats.get(); }
 
-    virtual void extractLineBoxFromRenderObject();
-    virtual void attachLineBoxToRenderObject();
-    virtual void removeLineBoxFromRenderObject();
+    virtual void extractLineBoxFromRenderObject() FINAL;
+    virtual void attachLineBoxToRenderObject() FINAL;
+    virtual void removeLineBoxFromRenderObject() FINAL;
     
     FontBaseline baselineType() const { return static_cast<FontBaseline>(m_baselineType); }
 
@@ -179,6 +188,11 @@ public:
         return InlineFlowBox::logicalBottomLayoutOverflow(lineBottom());
     }
 
+#if ENABLE(CSS3_TEXT)
+    // Used to calculate the underline offset for TextUnderlinePositionUnder.
+    float maxLogicalTop() const;
+#endif // CSS3_TEXT
+
     Node* getLogicalStartBoxWithNode(InlineBox*&) const;
     Node* getLogicalEndBoxWithNode(InlineBox*&) const;
 
@@ -189,6 +203,15 @@ private:
     LayoutUnit lineSnapAdjustment(LayoutUnit delta = 0) const;
 
     LayoutUnit beforeAnnotationsAdjustment() const;
+
+    struct LineFragmentationData;
+    LineFragmentationData* ensureLineFragmentationData()
+    {
+        if (!m_fragmentationData)
+            m_fragmentationData = adoptPtr(new LineFragmentationData());
+
+        return m_fragmentationData.get();
+    }
 
     // This folds into the padding at the end of InlineFlowBox on 64-bit.
     unsigned m_lineBreakPos;
@@ -204,8 +227,27 @@ private:
     LayoutUnit m_lineTopWithLeading;
     LayoutUnit m_lineBottomWithLeading;
 
+    struct LineFragmentationData {
+        WTF_MAKE_NONCOPYABLE(LineFragmentationData); WTF_MAKE_FAST_ALLOCATED;
+    public:
+        LineFragmentationData()
+            : m_containingRegion(0)
+            , m_paginationStrut(0)
+            , m_paginatedLineWidth(0)
+            , m_isFirstAfterPageBreak(false)
+        {
+
+        }
+
+        // It should not be assumed the |containingRegion| is always valid.
+        // It can also be 0 if the flow has no region chain.
+        RenderRegion* m_containingRegion;
     LayoutUnit m_paginationStrut;
     LayoutUnit m_paginatedLineWidth;
+        bool m_isFirstAfterPageBreak;
+    };
+
+    OwnPtr<LineFragmentationData> m_fragmentationData;
 
     // Floats hanging off the line are pushed into this vector during layout. It is only
     // good for as long as the line has not been marked dirty.

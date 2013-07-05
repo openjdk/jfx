@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.tool.grammar import join_with_separators
 
@@ -36,6 +36,3 @@ class GrammarTest(unittest.TestCase):
         self.assertEqual(join_with_separators(["one"]), "one")
         self.assertEqual(join_with_separators(["one", "two"]), "one and two")
         self.assertEqual(join_with_separators(["one", "two", "three"]), "one, two, and three")
-
-if __name__ == '__main__':
-    unittest.main()

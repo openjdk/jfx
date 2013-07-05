@@ -27,6 +27,7 @@
 #include "SVGParsingError.h"
 #include "SVGPropertyInfo.h"
 #include "StyledElement.h"
+#include "Timer.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -56,10 +57,10 @@ public:
 
     SVGDocumentExtensions* accessDocumentSVGExtensions();
 
-    virtual bool isStyled() const { return false; }
+    virtual bool isSVGStyledElement() const { return false; }
     virtual bool isStyledTransformable() const { return false; }
     virtual bool isStyledLocatable() const { return false; }
-    virtual bool isSVG() const { return false; }
+    virtual bool isSVGSVGElement() const { return false; }
     virtual bool isFilterEffect() const { return false; }
     virtual bool isGradientStop() const { return false; }
     virtual bool isTextContent() const { return false; }
@@ -72,14 +73,17 @@ public:
     virtual void animatedPropertyTypeForAttribute(const QualifiedName&, Vector<AnimatedPropertyType>&);
 
     void sendSVGLoadEventIfPossible(bool sendParentLoadEvents = false);
+    void sendSVGLoadEventIfPossibleAsynchronously();
+    void svgLoadEventTimerFired(Timer<SVGElement>*);
+    virtual Timer<SVGElement>* svgLoadEventTimer();
 
     virtual AffineTransform* supplementalTransform() { return 0; }
 
-    void invalidateSVGAttributes() { clearAreSVGAttributesValid(); }
+    void invalidateSVGAttributes() { ensureUniqueElementData()->m_animatedSVGAttributesAreDirty = true; }
 
     const HashSet<SVGElementInstance*>& instancesForElement() const;
 
-    bool boundingBox(FloatRect&, SVGLocatable::StyleUpdateStrategy = SVGLocatable::AllowStyleUpdate);
+    bool getBoundingBox(FloatRect&, SVGLocatable::StyleUpdateStrategy = SVGLocatable::AllowStyleUpdate);
 
     void setCursorElement(SVGCursorElement*);
     void cursorElementRemoved();
@@ -89,13 +93,13 @@ public:
     SVGElement* correspondingElement();
     void setCorrespondingElement(SVGElement*);
 
-    virtual void updateAnimatedSVGAttribute(const QualifiedName&) const;
+    void synchronizeAnimatedSVGAttribute(const QualifiedName&) const;
  
     virtual PassRefPtr<RenderStyle> customStyleForRenderer() OVERRIDE;
 
-    static void synchronizeRequiredFeatures(void* contextElement);
-    static void synchronizeRequiredExtensions(void* contextElement);
-    static void synchronizeSystemLanguage(void* contextElement);
+    static void synchronizeRequiredFeatures(SVGElement* contextElement);
+    static void synchronizeRequiredExtensions(SVGElement* contextElement);
+    static void synchronizeSystemLanguage(SVGElement* contextElement);
 
     virtual void synchronizeRequiredFeatures() { }
     virtual void synchronizeRequiredExtensions() { }
@@ -104,11 +108,11 @@ public:
     virtual SVGAttributeToPropertyMap& localAttributeToPropertyMap();
 
 #ifndef NDEBUG
-    static bool isAnimatableAttribute(const QualifiedName&);
+    bool isAnimatableAttribute(const QualifiedName&) const;
 #endif
 
-    StylePropertySet* animatedSMILStyleProperties() const;
-    StylePropertySet* ensureAnimatedSMILStyleProperties();
+    MutableStylePropertySet* animatedSMILStyleProperties() const;
+    MutableStylePropertySet* ensureAnimatedSMILStyleProperties();
     void setUseOverrideComputedStyle(bool);
 
     virtual bool haveLoadedRequiredResources();
@@ -116,13 +120,15 @@ public:
     virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture) OVERRIDE;
     virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture) OVERRIDE;
 
+    virtual bool moveToFlowThreadIsNeeded(RefPtr<RenderStyle>& cachedStyle) OVERRIDE;
+
 protected:
     SVGElement(const QualifiedName&, Document*, ConstructionType = CreateSVGElement);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
     virtual void finishParsingChildren();
-    virtual void attributeChanged(const Attribute&) OVERRIDE;
+    virtual void attributeChanged(const QualifiedName&, const AtomicString&, AttributeModificationReason = ModifiedDirectly) OVERRIDE;
     virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const OVERRIDE;
     
     virtual void removedFrom(ContainerNode*) OVERRIDE;
@@ -130,10 +136,14 @@ protected:
     SVGElementRareData* svgRareData() const;
     SVGElementRareData* ensureSVGRareData();
 
-    void reportAttributeParsingError(SVGParsingError, const Attribute&);
+    void reportAttributeParsingError(SVGParsingError, const QualifiedName&, const AtomicString&);
 
 private:
     friend class SVGElementInstance;
+
+    // FIXME: Author shadows should be allowed
+    // https://bugs.webkit.org/show_bug.cgi?id=77938
+    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
 
     RenderStyle* computedStyle(PseudoId = NOPSEUDO);
     virtual RenderStyle* virtualComputedStyle(PseudoId pseudoElementSpecifier = NOPSEUDO) { return computedStyle(pseudoElementSpecifier); }
@@ -149,18 +159,27 @@ private:
 };
 
 struct SVGAttributeHashTranslator {
-    static unsigned hash(QualifiedName key)
+    static unsigned hash(const QualifiedName& key)
     {
-        key.setPrefix(nullAtom);
+        if (key.hasPrefix()) {
+            QualifiedNameComponents components = { nullAtom.impl(), key.localName().impl(), key.namespaceURI().impl() };
+            return hashComponents(components);
+        }
         return DefaultHash<QualifiedName>::Hash::hash(key);
     }
-    static bool equal(QualifiedName a, QualifiedName b) { return a.matches(b); }
+    static bool equal(const QualifiedName& a, const QualifiedName& b) { return a.matches(b); }
 };
 
-inline SVGElement* toSVGElement(Element* element)
+inline SVGElement* toSVGElement(Node* node)
 {
-    ASSERT(!element || element->isSVGElement());
-    return static_cast<SVGElement*>(element);
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isSVGElement());
+    return static_cast<SVGElement*>(node);
+}
+
+inline const SVGElement* toSVGElement(const Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isSVGElement());
+    return static_cast<const SVGElement*>(node);
 }
 
 }

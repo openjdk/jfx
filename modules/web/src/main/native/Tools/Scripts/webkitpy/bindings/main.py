@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright (C) 2011 Google Inc.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -62,7 +61,7 @@ class BindingsTests:
             exit_code = e.exit_code
         return exit_code
 
-    def generate_supplemental_dependency(self, input_directory, supplemental_dependency_file):
+    def generate_supplemental_dependency(self, input_directory, supplemental_dependency_file, window_constructors_file):
         idl_files_list = tempfile.mkstemp()
         for input_file in os.listdir(input_directory):
             (name, extension) = os.path.splitext(input_file)
@@ -77,7 +76,7 @@ class BindingsTests:
                '--idlFilesList', idl_files_list[1],
                '--defines', '',
                '--supplementalDependencyFile', supplemental_dependency_file,
-               '--idlAttributesFile', 'WebCore/bindings/scripts/IDLAttributes.txt']
+               '--windowConstructorsFile', window_constructors_file]
 
         exit_code = 0
         try:
@@ -152,7 +151,8 @@ class BindingsTests:
 
         input_directory = os.path.join('WebCore', 'bindings', 'scripts', 'test')
         supplemental_dependency_file = tempfile.mkstemp()[1]
-        if self.generate_supplemental_dependency(input_directory, supplemental_dependency_file):
+        window_constructors_file = tempfile.mkstemp()[1]
+        if self.generate_supplemental_dependency(input_directory, supplemental_dependency_file, window_constructors_file):
             print 'Failed to generate a supplemental dependency file.'
             os.remove(supplemental_dependency_file)
             return -1

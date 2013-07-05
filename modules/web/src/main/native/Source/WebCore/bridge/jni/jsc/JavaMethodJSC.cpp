@@ -30,7 +30,6 @@
 #if ENABLE(JAVA_BRIDGE)
 
 #include <runtime/JSObject.h>
-#include <runtime/ScopeChain.h>
 #include <wtf/text/StringBuilder.h>
 
 using namespace JSC;
@@ -76,15 +75,8 @@ JavaMethod::JavaMethod(JNIEnv* env, jobject aMethod)
     // Created lazily.
     m_signature = 0;
 
-#if !ENABLE(JAVA_JSC)
-    jclass modifierClass = env->FindClass("java/lang/reflect/Modifier");
-    int modifiers = callJNIMethod<jint>(aMethod, "getModifiers", "()I");
-    m_isStatic = static_cast<bool>(callJNIStaticMethod<jboolean>(modifierClass, "isStatic", "(I)Z", modifiers));
-    env->DeleteLocalRef(modifierClass);
-#else
     jint modifiers = callJNIMethod<jint>(aMethod, "getModifiers", "()I");
     m_isStatic = (modifiers & 0x8) != 0;
-#endif
 }
 
 JavaMethod::~JavaMethod()
@@ -97,7 +89,7 @@ JavaMethod::~JavaMethod()
 // we get '.' between components from the reflection API.
 static void appendClassName(StringBuilder& builder, const char* className)
 {
-    ASSERT(JSC::JSGlobalData::sharedInstance().apiLock().currentThreadIsHoldingLock());
+    ASSERT(JSC::VM::sharedInstance().apiLock().currentThreadIsHoldingLock());
 
     char* c = fastStrDup(className);
 

@@ -33,16 +33,15 @@
 
 import codecs
 import logging
-import new
 import os
 import shutil
+import stat
 import sys
 import tarfile
 import tempfile
 import urllib
 import urlparse
 import zipfile
-import zipimport
 
 _log = logging.getLogger(__name__)
 
@@ -97,35 +96,9 @@ class AutoInstaller(object):
         self._target_dir = target_dir
         self._temp_dir = temp_dir
 
-    def _log_transfer(self, message, source, target, log_method=None):
-        """Log a debug message that involves a source and target."""
-        if log_method is None:
-            log_method = _log.debug
-
-        log_method("%s" % message)
-        log_method('    From: "%s"' % source)
-        log_method('      To: "%s"' % target)
-
-    def _create_directory(self, path, name=None):
-        """Create a directory."""
-        log = _log.debug
-
-        name = name + " " if name is not None else ""
-        log('Creating %sdirectory...' % name)
-        log('    "%s"' % path)
-
-        os.makedirs(path)
-
     def _write_file(self, path, text, encoding):
-        """Create a file at the given path with given text.
-
-        This method overwrites any existing file.
-
-        """
-        _log.debug("Creating file...")
-        _log.debug('    "%s"' % path)
-        with codecs.open(path, "w", encoding) as file:
-            file.write(text)
+        with codecs.open(path, "w", encoding) as filehandle:
+            filehandle.write(text)
 
     def _set_up_target_dir(self, target_dir, append_to_search_path,
                            make_package):
@@ -143,12 +116,15 @@ class AutoInstaller(object):
 
         """
         if not os.path.exists(target_dir):
-            self._create_directory(target_dir, "autoinstall target")
+            os.makedirs(target_dir)
 
         if append_to_search_path:
             sys.path.append(target_dir)
 
         if make_package:
+            self._make_package(target_dir)
+
+    def _make_package(self, target_dir):
             init_path = os.path.join(target_dir, "__init__.py")
             if not os.path.exists(init_path):
                 text = ("# This file is required for Python to search this "
@@ -171,7 +147,7 @@ class AutoInstaller(object):
         # The tempfile.mkdtemp() method function requires that the
         # directory corresponding to the "dir" parameter already exist
         # if it is not None.
-        scratch_dir = tempfile.mkdtemp(prefix=prefix, dir=self._temp_dir)
+        scratch_dir = tempfile.mkdtemp(prefix=prefix.replace('/', '.'), dir=self._temp_dir)
         return scratch_dir
 
     def _create_scratch_directory(self, target_name):
@@ -182,7 +158,7 @@ class AutoInstaller(object):
         temp directory if it does not already exist.
 
         """
-        prefix = target_name + "_"
+        prefix = target_name.replace(os.sep, "_") + "_"
         try:
             scratch_dir = self._create_scratch_directory_inner(prefix)
         except OSError:
@@ -192,50 +168,31 @@ class AutoInstaller(object):
             if temp_dir is None or os.path.exists(temp_dir):
                 raise
             # Else try again after creating the temp directory.
-            self._create_directory(temp_dir, "autoinstall temp")
+            os.makedirs(temp_dir)
             scratch_dir = self._create_scratch_directory_inner(prefix)
 
         return scratch_dir
 
     def _url_downloaded_path(self, target_name):
-        """Return the path to the file containing the URL downloaded."""
-        filename = ".%s.url" % target_name
-        path = os.path.join(self._target_dir, filename)
-        return path
+        return os.path.join(self._target_dir, ".%s.url" % target_name.replace('/', '_'))
 
     def _is_downloaded(self, target_name, url):
-        """Return whether a package version has been downloaded."""
         version_path = self._url_downloaded_path(target_name)
-
-        _log.debug('Checking %s URL downloaded...' % target_name)
-        _log.debug('    "%s"' % version_path)
 
         if not os.path.exists(version_path):
-            # Then no package version has been downloaded.
-            _log.debug("No URL file found.")
             return False
 
-        with codecs.open(version_path, "r", "utf-8") as file:
-            version = file.read()
-
-        return version.strip() == url.strip()
+        with codecs.open(version_path, "r", "utf-8") as filehandle:
+            return filehandle.read().strip() == url.strip()
 
     def _record_url_downloaded(self, target_name, url):
-        """Record the URL downloaded to a file."""
         version_path = self._url_downloaded_path(target_name)
-        _log.debug("Recording URL downloaded...")
-        _log.debug('    URL: "%s"' % url)
-        _log.debug('     To: "%s"' % version_path)
-
         self._write_file(version_path, url, "utf-8")
 
     def _extract_targz(self, path, scratch_dir):
-        # tarfile.extractall() extracts to a path without the
-        # trailing ".tar.gz".
+        # tarfile.extractall() extracts to a path without the trailing ".tar.gz".
         target_basename = os.path.basename(path[:-len(".tar.gz")])
         target_path = os.path.join(scratch_dir, target_basename)
-
-        self._log_transfer("Starting gunzip/extract...", path, target_path)
 
         try:
             tar_file = tarfile.open(path)
@@ -248,11 +205,6 @@ class AutoInstaller(object):
             raise Exception(message)
 
         try:
-            # This is helpful for debugging purposes.
-            _log.debug("Listing tar file contents...")
-            for name in tar_file.getnames():
-                _log.debug('    * "%s"' % name)
-            _log.debug("Extracting gzipped tar file...")
             tar_file.extractall(target_path)
         finally:
             tar_file.close()
@@ -263,33 +215,23 @@ class AutoInstaller(object):
     # available in Python 2.6 but not in earlier versions.
     # NOTE: The version in 2.6.1 (which shipped on Snow Leopard) is broken!
     def _extract_all(self, zip_file, target_dir):
-        self._log_transfer("Extracting zip file...", zip_file, target_dir)
-
-        # This is helpful for debugging purposes.
-        _log.debug("Listing zip file contents...")
-        for name in zip_file.namelist():
-            _log.debug('    * "%s"' % name)
-
         for name in zip_file.namelist():
             path = os.path.join(target_dir, name)
-            self._log_transfer("Extracting...", name, path)
-
             if not os.path.basename(path):
                 # Then the path ends in a slash, so it is a directory.
-                self._create_directory(path)
+                os.makedirs(path)
                 continue
-            # Otherwise, it is a file.
 
             try:
                 # We open this file w/o encoding, as we're reading/writing
                 # the raw byte-stream from the zip file.
                 outfile = open(path, 'wb')
-            except IOError, err:
+            except IOError:
                 # Not all zip files seem to list the directories explicitly,
                 # so try again after creating the containing directory.
                 _log.debug("Got IOError: retrying after creating directory...")
-                dir = os.path.dirname(path)
-                self._create_directory(dir)
+                dirname = os.path.dirname(path)
+                os.makedirs(dirname)
                 outfile = open(path, 'wb')
 
             try:
@@ -298,12 +240,9 @@ class AutoInstaller(object):
                 outfile.close()
 
     def _unzip(self, path, scratch_dir):
-        # zipfile.extractall() extracts to a path without the
-        # trailing ".zip".
+        # zipfile.extractall() extracts to a path without the trailing ".zip".
         target_basename = os.path.basename(path[:-len(".zip")])
         target_path = os.path.join(scratch_dir, target_basename)
-
-        self._log_transfer("Starting unzip...", path, target_path)
 
         try:
             zip_file = zipfile.ZipFile(path, "r")
@@ -345,10 +284,19 @@ class AutoInstaller(object):
         return new_path
 
     def _download_to_stream(self, url, stream):
-        """Download an URL to a stream, and return the number of bytes."""
+        failures = 0
+        while True:
         try:
             netstream = urllib.urlopen(url)
+                break
         except IOError, err:
+                # Try multiple times
+                if failures < 5:
+                    _log.warning("Failed to download %s, %s retrying" % (
+                        url, err))
+                    failures += 1
+                    continue
+
             # Append existing Error message to new Error.
             message = ('Could not download Python modules from URL "%s".\n'
                        " Make sure you are connected to the internet.\n"
@@ -364,34 +312,25 @@ class AutoInstaller(object):
             raise ValueError("HTTP Error code %s" % code)
 
         BUFSIZE = 2**13  # 8KB
-        bytes = 0
         while True:
             data = netstream.read(BUFSIZE)
             if not data:
                 break
             stream.write(data)
-            bytes += len(data)
         netstream.close()
-        return bytes
 
     def _download(self, url, scratch_dir):
-        """Download URL contents, and return the download path."""
         url_path = urlparse.urlsplit(url)[2]
         url_path = os.path.normpath(url_path)  # Removes trailing slash.
         target_filename = os.path.basename(url_path)
         target_path = os.path.join(scratch_dir, target_filename)
 
-        self._log_transfer("Starting download...", url, target_path)
-
         with open(target_path, "wb") as stream:
-            bytes = self._download_to_stream(url, stream)
-
-        _log.debug("Downloaded %s bytes." % bytes)
+            self._download_to_stream(url, stream)
 
         return target_path
 
-    def _install(self, scratch_dir, package_name, target_path, url,
-                 url_subpath):
+    def _install(self, scratch_dir, package_name, target_path, url, url_subpath, files_to_remove):
         """Install a python package from an URL.
 
         This internal method overwrites the target path if the target
@@ -406,24 +345,33 @@ class AutoInstaller(object):
         else:
             source_path = os.path.join(path, url_subpath)
 
+        for filename in files_to_remove:
+            path = os.path.join(source_path, filename.replace('/', os.sep))
+            if os.path.exists(path):
+                # Pre-emptively change the permissions to #0777 to try and work around win32 permissions issues.
+                os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+                os.remove(path)
+
         if os.path.exists(target_path):
-            _log.debug('Refreshing install: deleting "%s".' % target_path)
             if os.path.isdir(target_path):
-                shutil.rmtree(target_path)
+                shutil.rmtree(target_path, ignore_errors=True)
             else:
                 os.remove(target_path)
 
-        self._log_transfer("Moving files into place...", source_path, target_path)
-
-        # The shutil.move() command creates intermediate directories if they
-        # do not exist, but we do not rely on this behavior since we
-        # need to create the __init__.py file anyway.
+        # shutil.move() command creates intermediate directories if they do not exist.
         shutil.move(source_path, target_path)
+
+        # ensure all the new directories are importable.
+        intermediate_dirs = os.path.dirname(os.path.relpath(target_path, self._target_dir))
+        parent_dirname = self._target_dir
+        for dirname in intermediate_dirs.split(os.sep):
+            parent_dirname = os.path.join(parent_dirname, dirname)
+            self._make_package(parent_dirname)
 
         self._record_url_downloaded(package_name, url)
 
     def install(self, url, should_refresh=False, target_name=None,
-                url_subpath=None):
+                url_subpath=None, files_to_remove=None):
         """Install a python package from an URL.
 
         Args:
@@ -451,15 +399,13 @@ class AutoInstaller(object):
             url_subpath = os.path.normpath(url_subpath)
             target_name = os.path.basename(url_subpath)
 
-        target_path = os.path.join(self._target_dir, target_name)
+        target_path = os.path.join(self._target_dir, target_name.replace('/', os.sep))
         if not should_refresh and self._is_downloaded(target_name, url):
-            _log.debug('URL for %s already downloaded.  Skipping...'
-                       % target_name)
-            _log.debug('    "%s"' % url)
-            return
+            return False
 
-        self._log_transfer("Auto-installing package: %s" % target_name,
-                            url, target_path, log_method=_log.info)
+        files_to_remove = files_to_remove or []
+        package_name = target_name.replace(os.sep, '.')
+        _log.info("Auto-installing package: %s" % package_name)
 
         # The scratch directory is where we will download and prepare
         # files specific to this install until they are ready to move
@@ -467,11 +413,12 @@ class AutoInstaller(object):
         scratch_dir = self._create_scratch_directory(target_name)
 
         try:
-            self._install(package_name=target_name,
+            self._install(package_name=package_name,
                           target_path=target_path,
                           scratch_dir=scratch_dir,
                           url=url,
-                          url_subpath=url_subpath)
+                          url_subpath=url_subpath,
+                          files_to_remove=files_to_remove)
         except Exception, err:
             # Append existing Error message to new Error.
             message = ("Error auto-installing the %s package to:\n"
@@ -480,37 +427,7 @@ class AutoInstaller(object):
                        % (target_name, target_path, err))
             raise Exception(message)
         finally:
-            _log.debug('Cleaning up: deleting "%s".' % scratch_dir)
-            shutil.rmtree(scratch_dir)
-        _log.debug('Auto-installed %s to:' % target_name)
+            shutil.rmtree(scratch_dir, ignore_errors=True)
+        _log.debug('Auto-installed %s to:' % url)
         _log.debug('    "%s"' % target_path)
-
-
-if __name__=="__main__":
-
-    # Configure the autoinstall logger to log DEBUG messages for
-    # development testing purposes.
-    console = logging.StreamHandler()
-
-    formatter = logging.Formatter('%(name)s: %(levelname)-8s %(message)s')
-    console.setFormatter(formatter)
-    _log.addHandler(console)
-    _log.setLevel(logging.DEBUG)
-
-    # Use a more visible temp directory for debug purposes.
-    this_dir = os.path.dirname(__file__)
-    target_dir = os.path.join(this_dir, "autoinstalled")
-    temp_dir = os.path.join(target_dir, "Temp")
-
-    installer = AutoInstaller(target_dir=target_dir,
-                              temp_dir=temp_dir)
-
-    installer.install(should_refresh=False,
-                      target_name="pep8.py",
-                      url="http://pypi.python.org/packages/source/p/pep8/pep8-0.5.0.tar.gz#md5=512a818af9979290cd619cce8e9c2e2b",
-                      url_subpath="pep8-0.5.0/pep8.py")
-    installer.install(should_refresh=False,
-                      target_name="mechanize",
-                      url="http://pypi.python.org/packages/source/m/mechanize/mechanize-0.2.4.zip",
-                      url_subpath="mechanize")
-
+        return True

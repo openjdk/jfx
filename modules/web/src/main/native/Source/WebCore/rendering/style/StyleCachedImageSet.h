@@ -28,8 +28,9 @@
 
 #if ENABLE(CSS_IMAGE_SET)
 
-#include "CachedImage.h"
+#include "CachedImageClient.h"
 #include "CachedResourceHandle.h"
+#include "LayoutSize.h"
 #include "StyleImage.h"
 
 namespace WebCore {
@@ -55,12 +56,12 @@ public:
     // meaningful enough or not.
     virtual WrappedImagePtr data() const { return m_bestFitImage.get(); }
 
-    CachedImage* cachedImage() const { return m_bestFitImage.get(); }
+    void clearImageSetValue() { m_imageSetValue = 0; }
 
     virtual bool canRender(const RenderObject*, float multiplier) const;
     virtual bool isLoaded() const;
     virtual bool errorOccurred() const;
-    virtual IntSize imageSize(const RenderObject*, float multiplier) const;
+    virtual LayoutSize imageSize(const RenderObject*, float multiplier) const;
     virtual bool imageHasRelativeWidth() const;
     virtual bool imageHasRelativeHeight() const;
     virtual void computeIntrinsicDimensions(const RenderObject*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
@@ -70,6 +71,8 @@ public:
     virtual void removeClient(RenderObject*);
     virtual PassRefPtr<Image> image(RenderObject*, const IntSize&) const;
     virtual float imageScaleFactor() const { return m_imageScaleFactor; }
+    virtual bool knownToBeOpaque(const RenderObject*) const OVERRIDE;
+    virtual CachedImage* cachedImage() const OVERRIDE { return m_bestFitImage.get(); }
     
 private:
     StyleCachedImageSet(CachedImage*, float imageScaleFactor, CSSImageSetValue*);

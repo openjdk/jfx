@@ -479,6 +479,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\GeolocationProviderMock.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\GeolocationProviderMock.h"
+			>
+		</File>
+		<File
 			RelativePath="..\PixelDumpSupport.cpp"
 			>
 		</File>
@@ -507,7 +515,23 @@
 			>
 		</File>
 		<File
+			RelativePath="..\WebNotificationProvider.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\WebNotificationProvider.h"
+			>
+		</File>
+		<File
 			RelativePath="..\WebKitTestRunnerPrefix.h"
+			>
+		</File>
+		<File
+			RelativePath="..\WorkQueueManager.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\WorkQueueManager.h"
 			>
 		</File>
 	</Files>

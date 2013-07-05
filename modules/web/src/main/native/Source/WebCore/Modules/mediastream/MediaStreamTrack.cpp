@@ -28,30 +28,36 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "Event.h"
 #include "MediaStreamCenter.h"
 #include "MediaStreamComponent.h"
 
 namespace WebCore {
 
-PassRefPtr<MediaStreamTrack> MediaStreamTrack::create(PassRefPtr<MediaStreamDescriptor> streamDescriptor, MediaStreamComponent* component)
+PassRefPtr<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext* context, MediaStreamComponent* component)
 {
-    return adoptRef(new MediaStreamTrack(streamDescriptor, component));
+    RefPtr<MediaStreamTrack> track = adoptRef(new MediaStreamTrack(context, component));
+    track->suspendIfNeeded();
+    return track.release();
 }
 
-MediaStreamTrack::MediaStreamTrack(PassRefPtr<MediaStreamDescriptor> streamDescriptor, MediaStreamComponent* component)
-    : m_streamDescriptor(streamDescriptor)
+MediaStreamTrack::MediaStreamTrack(ScriptExecutionContext* context, MediaStreamComponent* component)
+    : ActiveDOMObject(context)
+    , m_stopped(false)
     , m_component(component)
 {
+    m_component->source()->addObserver(this);
 }
 
 MediaStreamTrack::~MediaStreamTrack()
 {
+    m_component->source()->removeObserver(this);
 }
 
 String MediaStreamTrack::kind() const
 {
-    DEFINE_STATIC_LOCAL(String, audioKind, ("audio"));
-    DEFINE_STATIC_LOCAL(String, videoKind, ("video"));
+    DEFINE_STATIC_LOCAL(String, audioKind, (ASCIILiteral("audio")));
+    DEFINE_STATIC_LOCAL(String, videoKind, (ASCIILiteral("video")));
 
     switch (m_component->source()->type()) {
     case MediaStreamSource::TypeAudio:
@@ -62,6 +68,11 @@ String MediaStreamTrack::kind() const
 
     ASSERT_NOT_REACHED();
     return audioKind;
+}
+
+String MediaStreamTrack::id() const
+{
+    return m_component->id();
 }
 
 String MediaStreamTrack::label() const
@@ -76,20 +87,86 @@ bool MediaStreamTrack::enabled() const
 
 void MediaStreamTrack::setEnabled(bool enabled)
 {
-    if (enabled == m_component->enabled())
+    if (m_stopped || enabled == m_component->enabled())
         return;
 
     m_component->setEnabled(enabled);
 
-    if (m_streamDescriptor->ended())
+    if (m_component->stream()->ended())
         return;
 
-    MediaStreamCenter::instance().didSetMediaStreamTrackEnabled(m_streamDescriptor.get(), m_component.get());
+    MediaStreamCenter::instance().didSetMediaStreamTrackEnabled(m_component->stream(), m_component.get());
+}
+
+String MediaStreamTrack::readyState() const
+{
+    if (m_stopped)
+        return ASCIILiteral("ended");
+
+    switch (m_component->source()->readyState()) {
+    case MediaStreamSource::ReadyStateLive:
+        return ASCIILiteral("live");
+    case MediaStreamSource::ReadyStateMuted:
+        return ASCIILiteral("muted");
+    case MediaStreamSource::ReadyStateEnded:
+        return ASCIILiteral("ended");
+    }
+
+    ASSERT_NOT_REACHED();
+    return String();
+}
+
+bool MediaStreamTrack::ended() const
+{
+    return m_stopped || (m_component->source()->readyState() == MediaStreamSource::ReadyStateEnded);
+}
+
+void MediaStreamTrack::sourceChangedState()
+{
+    if (m_stopped)
+        return;
+
+    switch (m_component->source()->readyState()) {
+    case MediaStreamSource::ReadyStateLive:
+        dispatchEvent(Event::create(eventNames().unmuteEvent, false, false));
+        break;
+    case MediaStreamSource::ReadyStateMuted:
+        dispatchEvent(Event::create(eventNames().muteEvent, false, false));
+        break;
+    case MediaStreamSource::ReadyStateEnded:
+        dispatchEvent(Event::create(eventNames().endedEvent, false, false));
+        break;
+    }
 }
 
 MediaStreamComponent* MediaStreamTrack::component()
 {
     return m_component.get();
+}
+
+void MediaStreamTrack::stop()
+{
+    m_stopped = true;
+}
+
+const AtomicString& MediaStreamTrack::interfaceName() const
+{
+    return eventNames().interfaceForMediaStreamTrack;
+}
+
+ScriptExecutionContext* MediaStreamTrack::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
+EventTargetData* MediaStreamTrack::eventTargetData()
+{
+    return &m_eventTargetData;
+}
+
+EventTargetData* MediaStreamTrack::ensureEventTargetData()
+{
+    return &m_eventTargetData;
 }
 
 } // namespace WebCore

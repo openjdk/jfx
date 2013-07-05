@@ -23,18 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG
-    ] SVGPolylineElement : SVGElement,
+] interface SVGPolylineElement : SVGStyledElement,
                                                      SVGTests,
                                                      SVGLangSpace,
                                                      SVGExternalResourcesRequired,
-                                                     SVGStylable,
                                                      SVGTransformable {
         readonly attribute SVGPointList points;
         readonly attribute SVGPointList animatedPoints;
     };
 
-}

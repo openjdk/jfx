@@ -40,13 +40,13 @@
 
 namespace WebCore {
 
-class MediaStreamDescriptorOwner {
+class MediaStreamDescriptorClient {
 public:
-    virtual ~MediaStreamDescriptorOwner() { }
+    virtual ~MediaStreamDescriptorClient() { }
 
     virtual void streamEnded() = 0;
-    virtual void addTrack(MediaStreamComponent*) = 0;
-    virtual void removeTrack(MediaStreamComponent*) = 0;
+    virtual void addRemoteTrack(MediaStreamComponent*) = 0;
+    virtual void removeRemoteTrack(MediaStreamComponent*) = 0;
 };
 
 class MediaStreamDescriptor : public RefCounted<MediaStreamDescriptor> {
@@ -56,21 +56,40 @@ public:
         virtual ~ExtraData() { }
     };
 
-    static PassRefPtr<MediaStreamDescriptor> create(const String& label, const MediaStreamSourceVector& audioSources, const MediaStreamSourceVector& videoSources)
+    static PassRefPtr<MediaStreamDescriptor> create(const String& id, const MediaStreamSourceVector& audioSources, const MediaStreamSourceVector& videoSources)
     {
-        return adoptRef(new MediaStreamDescriptor(label, audioSources, videoSources));
+        return adoptRef(new MediaStreamDescriptor(id, audioSources, videoSources));
     }
 
-    MediaStreamDescriptorOwner* owner() const { return m_owner; }
-    void setOwner(MediaStreamDescriptorOwner* owner) { m_owner = owner; }
+    static PassRefPtr<MediaStreamDescriptor> create(const String& id, const MediaStreamComponentVector& audioComponents, const MediaStreamComponentVector& videoComponents)
+    {
+        return adoptRef(new MediaStreamDescriptor(id, audioComponents, videoComponents));
+    }
 
-    String label() const { return m_label; }
+    MediaStreamDescriptorClient* client() const { return m_client; }
+    void setClient(MediaStreamDescriptorClient* client) { m_client = client; }
+
+    String id() const { return m_id; }
 
     unsigned numberOfAudioComponents() const { return m_audioComponents.size(); }
     MediaStreamComponent* audioComponent(unsigned index) const { return m_audioComponents[index].get(); }
+    void addAudioComponent(PassRefPtr<MediaStreamComponent> component) { m_audioComponents.append(component); }
+    void removeAudioComponent(MediaStreamComponent* component)
+    {
+        size_t pos = m_audioComponents.find(component);
+        if (pos != notFound)
+            m_audioComponents.remove(pos);
+    }
 
     unsigned numberOfVideoComponents() const { return m_videoComponents.size(); }
     MediaStreamComponent* videoComponent(unsigned index) const { return m_videoComponents[index].get(); }
+    void addVideoComponent(PassRefPtr<MediaStreamComponent> component) { m_videoComponents.append(component); }
+    void removeVideoComponent(MediaStreamComponent* component)
+    {
+        size_t pos = m_audioComponents.find(component);
+        if (pos != notFound)
+            m_audioComponents.remove(pos);
+    }
 
     bool ended() const { return m_ended; }
     void setEnded() { m_ended = true; }
@@ -79,20 +98,40 @@ public:
     void setExtraData(PassRefPtr<ExtraData> extraData) { m_extraData = extraData; }
 
 private:
-    MediaStreamDescriptor(const String& label, const MediaStreamSourceVector& audioSources, const MediaStreamSourceVector& videoSources)
-        : m_owner(0)
-        , m_label(label)
+    MediaStreamDescriptor(const String& id, const MediaStreamSourceVector& audioSources, const MediaStreamSourceVector& videoSources)
+        : m_client(0)
+        , m_id(id)
         , m_ended(false)
     {
+        ASSERT(m_id.length());
         for (size_t i = 0; i < audioSources.size(); i++)
-            m_audioComponents.append(MediaStreamComponent::create(audioSources[i]));
+            m_audioComponents.append(MediaStreamComponent::create(this, audioSources[i]));
 
         for (size_t i = 0; i < videoSources.size(); i++)
-            m_videoComponents.append(MediaStreamComponent::create(videoSources[i]));
+            m_videoComponents.append(MediaStreamComponent::create(this, videoSources[i]));
+
+        if (!audioSources.size() && !videoSources.size())
+            m_ended = true;
     }
 
-    MediaStreamDescriptorOwner* m_owner;
-    String m_label;
+    MediaStreamDescriptor(const String& id, const MediaStreamComponentVector& audioComponents, const MediaStreamComponentVector& videoComponents)
+        : m_client(0)
+        , m_id(id)
+        , m_ended(false)
+    {
+        ASSERT(m_id.length());
+        for (MediaStreamComponentVector::const_iterator iter = audioComponents.begin(); iter != audioComponents.end(); ++iter) {
+            (*iter)->setStream(this);
+            m_audioComponents.append((*iter));
+        }
+        for (MediaStreamComponentVector::const_iterator iter = videoComponents.begin(); iter != videoComponents.end(); ++iter) {
+            (*iter)->setStream(this);
+            m_videoComponents.append((*iter));
+        }
+    }
+
+    MediaStreamDescriptorClient* m_client;
+    String m_id;
     Vector<RefPtr<MediaStreamComponent> > m_audioComponents;
     Vector<RefPtr<MediaStreamComponent> > m_videoComponents;
     bool m_ended;

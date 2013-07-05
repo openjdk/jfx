@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright (C) 2010 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,7 +28,7 @@
 
 """Unit tests for update_webgl_conformance_tests."""
 
-import unittest
+import unittest2 as unittest
 from webkitpy.to_be_moved import update_webgl_conformance_tests as webgl
 
 
@@ -96,7 +95,3 @@ class TestTranslation(unittest.TestCase):
         input_text = head + input_text + foot
         output_text = head + output_text + foot
         self.assert_translate(input_text, output_text)
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -34,6 +34,8 @@
 #if ENABLE(QUOTA)
 
 #include "DOMWindow.h"
+#include "Document.h"
+#include "Frame.h"
 #include "StorageInfo.h"
 #include <wtf/PassRefPtr.h>
 
@@ -48,14 +50,18 @@ DOMWindowQuota::~DOMWindowQuota()
 {
 }
 
+const char* DOMWindowQuota::supplementName()
+{
+    return "DOMWindowQuota";
+}
+
 // static
 DOMWindowQuota* DOMWindowQuota::from(DOMWindow* window)
 {
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("DOMWindowQuota"));
-    DOMWindowQuota* supplement = static_cast<DOMWindowQuota*>(Supplement<DOMWindow>::from(window, name));
+    DOMWindowQuota* supplement = static_cast<DOMWindowQuota*>(Supplement<DOMWindow>::from(window, supplementName()));
     if (!supplement) {
         supplement = new DOMWindowQuota(window);
-        provideTo(window, name, adoptPtr(supplement));
+        provideTo(window, supplementName(), adoptPtr(supplement));
     }
     return supplement;
 }
@@ -68,8 +74,10 @@ StorageInfo* DOMWindowQuota::webkitStorageInfo(DOMWindow* window)
 
 StorageInfo* DOMWindowQuota::webkitStorageInfo() const
 {
-    if (!m_storageInfo && frame())
+    if (!m_storageInfo && frame()) {
+        frame()->document()->addConsoleMessage(JSMessageSource, WarningMessageLevel, "window.webkitStorageInfo is deprecated. Use navigator.webkitTemporaryStorage or navigator.webkitPersistentStorage instead.");
         m_storageInfo = StorageInfo::create();
+    }
     return m_storageInfo.get();
 }
 

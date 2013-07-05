@@ -5,9 +5,9 @@
 #include "config.h"
 #include "Language.h"
 
-#include "PlatformString.h"
 #include "ChromiumBridge.h"
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 

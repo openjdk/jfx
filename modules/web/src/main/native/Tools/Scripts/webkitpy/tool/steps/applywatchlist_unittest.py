@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.tool.mocktool import MockOptions, MockTool
@@ -41,11 +41,11 @@ class ApplyWatchListTest(unittest.TestCase):
             'bug_id': '50001',
             'diff': 'The diff',
         }
-        expected_stderr = """MockWatchList: determine_cc_and_messages
+        expected_logs = """MockWatchList: determine_cc_and_messages
 MOCK bug comment: bug_id=50001, cc=set(['levin@chromium.org'])
 --- Begin comment ---
 Message2.
 --- End comment ---
 
 """
-        capture.assert_outputs(self, step.run, [state], expected_stderr=expected_stderr)
+        capture.assert_outputs(self, step.run, [state], expected_logs=expected_logs)

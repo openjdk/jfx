@@ -35,6 +35,7 @@
 #include "CSSStyleSheet.h"
 #include "CachedCSSStyleSheet.h"
 #include "CachedResourceLoader.h"
+#include "CachedResourceRequest.h"
 #include "ContainerNode.h"
 #include "DNS.h"
 #include "Document.h"
@@ -43,11 +44,6 @@
 #include "LinkRelAttribute.h"
 #include "Settings.h"
 #include "StyleResolver.h"
-
-#if ENABLE(LINK_PRERENDER)
-#include "PrerenderHandle.h"
-#include "Prerenderer.h"
-#endif
 
 namespace WebCore {
 
@@ -119,37 +115,23 @@ bool LinkLoader::loadLink(const LinkRelAttribute& relAttribute, const String& ty
             priority = ResourceLoadPriorityLow;
             type = CachedResource::LinkSubresource;
         }
-        ResourceRequest linkRequest(document->completeURL(href));
+        CachedResourceRequest linkRequest(ResourceRequest(document->completeURL(href)), priority);
         
         if (m_cachedLinkResource) {
             m_cachedLinkResource->removeClient(this);
             m_cachedLinkResource = 0;
         }
-        m_cachedLinkResource = document->cachedResourceLoader()->requestLinkResource(type, linkRequest, priority);
+        m_cachedLinkResource = document->cachedResourceLoader()->requestLinkResource(type, linkRequest);
         if (m_cachedLinkResource)
             m_cachedLinkResource->addClient(this);
     }
 #endif
 
-#if ENABLE(LINK_PRERENDER)
-    if (relAttribute.m_isLinkPrerender) {
-        ASSERT(!m_prerenderHandle);
-        m_prerenderHandle = document->prerenderer()->render(href);
-    }
-#endif
     return true;
 }
 
 void LinkLoader::released()
 {
-    // Only prerenders need treatment here; other links either use the CachedResource interface, or are notionally
-    // atomic (dns prefetch).
-#if ENABLE(LINK_PRERENDER)
-    if (m_prerenderHandle) {
-        m_prerenderHandle->cancel();
-        m_prerenderHandle.clear();
-    }
-#endif
 }
 
 }

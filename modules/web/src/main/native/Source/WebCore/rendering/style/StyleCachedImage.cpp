@@ -24,6 +24,7 @@
 #include "config.h"
 #include "StyleCachedImage.h"
 
+#include "CachedImage.h"
 #include "RenderObject.h"
 
 namespace WebCore {
@@ -60,7 +61,7 @@ bool StyleCachedImage::errorOccurred() const
     return m_image->errorOccurred();
 }
 
-IntSize StyleCachedImage::imageSize(const RenderObject* renderer, float multiplier) const
+LayoutSize StyleCachedImage::imageSize(const RenderObject* renderer, float multiplier) const
 {
     return m_image->imageSizeForRenderer(renderer, multiplier);
 }
@@ -103,6 +104,11 @@ void StyleCachedImage::removeClient(RenderObject* renderer)
 PassRefPtr<Image> StyleCachedImage::image(RenderObject* renderer, const IntSize&) const
 {
     return m_image->imageForRenderer(renderer);
+}
+
+bool StyleCachedImage::knownToBeOpaque(const RenderObject* renderer) const
+{
+    return m_image->currentFrameKnownToBeOpaque(renderer);
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGCommon.h"
+#include "DFGMinifiedID.h"
 #include "DataFormat.h"
 #include "SpeculatedType.h"
 #include "ValueRecovery.h"
@@ -39,11 +40,11 @@ namespace JSC { namespace DFG {
 
 enum ValueSourceKind {
     SourceNotSet,
-    ValueInRegisterFile,
-    Int32InRegisterFile,
-    CellInRegisterFile,
-    BooleanInRegisterFile,
-    DoubleInRegisterFile,
+    ValueInJSStack,
+    Int32InJSStack,
+    CellInJSStack,
+    BooleanInJSStack,
+    DoubleInJSStack,
     ArgumentsSource,
     SourceIsDead,
     HaveNode
@@ -53,35 +54,35 @@ static inline ValueSourceKind dataFormatToValueSourceKind(DataFormat dataFormat)
 {
     switch (dataFormat) {
     case DataFormatInteger:
-        return Int32InRegisterFile;
+        return Int32InJSStack;
     case DataFormatDouble:
-        return DoubleInRegisterFile;
+        return DoubleInJSStack;
     case DataFormatBoolean:
-        return BooleanInRegisterFile;
+        return BooleanInJSStack;
     case DataFormatCell:
-        return CellInRegisterFile;
+        return CellInJSStack;
     case DataFormatDead:
         return SourceIsDead;
     case DataFormatArguments:
         return ArgumentsSource;
     default:
-        ASSERT(dataFormat & DataFormatJS);
-        return ValueInRegisterFile;
+        RELEASE_ASSERT(dataFormat & DataFormatJS);
+        return ValueInJSStack;
     }
 }
 
 static inline DataFormat valueSourceKindToDataFormat(ValueSourceKind kind)
 {
     switch (kind) {
-    case ValueInRegisterFile:
+    case ValueInJSStack:
         return DataFormatJS;
-    case Int32InRegisterFile:
+    case Int32InJSStack:
         return DataFormatInteger;
-    case CellInRegisterFile:
+    case CellInJSStack:
         return DataFormatCell;
-    case BooleanInRegisterFile:
+    case BooleanInJSStack:
         return DataFormatBoolean;
-    case DoubleInRegisterFile:
+    case DoubleInJSStack:
         return DataFormatDouble;
     case ArgumentsSource:
         return DataFormatArguments;
@@ -92,7 +93,7 @@ static inline DataFormat valueSourceKindToDataFormat(ValueSourceKind kind)
     }
 }
 
-static inline bool isInRegisterFile(ValueSourceKind kind)
+static inline bool isInJSStack(ValueSourceKind kind)
 {
     DataFormat format = valueSourceKindToDataFormat(kind);
     return format != DataFormatNone && format < DataFormatOSRMarker;
@@ -108,33 +109,33 @@ static inline bool isTriviallyRecoverable(ValueSourceKind kind)
 class ValueSource {
 public:
     ValueSource()
-        : m_nodeIndex(nodeIndexFromKind(SourceNotSet))
+        : m_value(idFromKind(SourceNotSet))
     {
     }
     
     explicit ValueSource(ValueSourceKind valueSourceKind)
-        : m_nodeIndex(nodeIndexFromKind(valueSourceKind))
+        : m_value(idFromKind(valueSourceKind))
     {
         ASSERT(kind() != SourceNotSet);
         ASSERT(kind() != HaveNode);
     }
     
-    explicit ValueSource(NodeIndex nodeIndex)
-        : m_nodeIndex(nodeIndex)
+    explicit ValueSource(MinifiedID id)
+        : m_value(id)
     {
-        ASSERT(nodeIndex != NoNode);
+        ASSERT(!!id);
         ASSERT(kind() == HaveNode);
     }
     
     static ValueSource forSpeculation(SpeculatedType prediction)
     {
         if (isInt32Speculation(prediction))
-            return ValueSource(Int32InRegisterFile);
-        if (isArraySpeculation(prediction))
-            return ValueSource(CellInRegisterFile);
+            return ValueSource(Int32InJSStack);
+        if (isArraySpeculation(prediction) || isCellSpeculation(prediction))
+            return ValueSource(CellInJSStack);
         if (isBooleanSpeculation(prediction))
-            return ValueSource(BooleanInRegisterFile);
-        return ValueSource(ValueInRegisterFile);
+            return ValueSource(BooleanInJSStack);
+        return ValueSource(ValueInJSStack);
     }
     
     static ValueSource forDataFormat(DataFormat dataFormat)
@@ -144,15 +145,15 @@ public:
     
     bool isSet() const
     {
-        return kindFromNodeIndex(m_nodeIndex) != SourceNotSet;
+        return kindFromID(m_value) != SourceNotSet;
     }
     
     ValueSourceKind kind() const
     {
-        return kindFromNodeIndex(m_nodeIndex);
+        return kindFromID(m_value);
     }
     
-    bool isInRegisterFile() const { return JSC::DFG::isInRegisterFile(kind()); }
+    bool isInJSStack() const { return JSC::DFG::isInJSStack(kind()); }
     bool isTriviallyRecoverable() const { return JSC::DFG::isTriviallyRecoverable(kind()); }
     
     DataFormat dataFormat() const
@@ -164,20 +165,20 @@ public:
     {
         ASSERT(isTriviallyRecoverable());
         switch (kind()) {
-        case ValueInRegisterFile:
-            return ValueRecovery::alreadyInRegisterFile();
+        case ValueInJSStack:
+            return ValueRecovery::alreadyInJSStack();
             
-        case Int32InRegisterFile:
-            return ValueRecovery::alreadyInRegisterFileAsUnboxedInt32();
+        case Int32InJSStack:
+            return ValueRecovery::alreadyInJSStackAsUnboxedInt32();
             
-        case CellInRegisterFile:
-            return ValueRecovery::alreadyInRegisterFileAsUnboxedCell();
+        case CellInJSStack:
+            return ValueRecovery::alreadyInJSStackAsUnboxedCell();
             
-        case BooleanInRegisterFile:
-            return ValueRecovery::alreadyInRegisterFileAsUnboxedBoolean();
+        case BooleanInJSStack:
+            return ValueRecovery::alreadyInJSStackAsUnboxedBoolean();
             
-        case DoubleInRegisterFile:
-            return ValueRecovery::alreadyInRegisterFileAsUnboxedDouble();
+        case DoubleInJSStack:
+            return ValueRecovery::alreadyInJSStackAsUnboxedDouble();
             
         case SourceIsDead:
             return ValueRecovery::constant(jsUndefined());
@@ -186,35 +187,35 @@ public:
             return ValueRecovery::argumentsThatWereNotCreated();
             
         default:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
             return ValueRecovery();
         }
     }
     
-    NodeIndex nodeIndex() const
+    MinifiedID id() const
     {
         ASSERT(kind() == HaveNode);
-        return m_nodeIndex;
+        return m_value;
     }
     
-    void dump(FILE* out) const;
+    void dump(PrintStream&) const;
     
 private:
-    static NodeIndex nodeIndexFromKind(ValueSourceKind kind)
+    static MinifiedID idFromKind(ValueSourceKind kind)
     {
         ASSERT(kind >= SourceNotSet && kind < HaveNode);
-        return NoNode - kind;
+        return MinifiedID::fromBits(MinifiedID::invalidID() - kind);
     }
     
-    static ValueSourceKind kindFromNodeIndex(NodeIndex nodeIndex)
+    static ValueSourceKind kindFromID(MinifiedID id)
     {
-        unsigned kind = static_cast<unsigned>(NoNode - nodeIndex);
-        if (kind >= static_cast<unsigned>(HaveNode))
+        uintptr_t kind = static_cast<uintptr_t>(MinifiedID::invalidID() - id.m_id);
+        if (kind >= static_cast<uintptr_t>(HaveNode))
             return HaveNode;
         return static_cast<ValueSourceKind>(kind);
     }
     
-    NodeIndex m_nodeIndex;
+    MinifiedID m_value;
 };
 
 } } // namespace JSC::DFG

@@ -29,6 +29,7 @@
 #include "Attribute.h"
 #include "CachedScript.h"
 #include "CachedResourceLoader.h"
+#include "CustomElementRegistry.h"
 #include "Element.h"
 #include "Event.h"
 #include "Frame.h"
@@ -36,6 +37,7 @@
 #include "HTMLNames.h"
 #include "HTMLScriptRunnerHost.h"
 #include "IgnoreDestructiveWriteCountIncrementer.h"
+#include "MutationObserver.h"
 #include "NestingLevelIncrementer.h"
 #include "NotImplemented.h"
 #include "ScriptElement.h"
@@ -110,7 +112,7 @@ bool HTMLScriptRunner::isPendingScriptReady(const PendingScript& script)
 void HTMLScriptRunner::executeParsingBlockingScript()
 {
     ASSERT(m_document);
-    ASSERT(!m_scriptNestingLevel);
+    ASSERT(!isExecutingScript());
     ASSERT(m_document->haveStylesheetsLoaded());
     ASSERT(isPendingScriptReady(m_parserBlockingScript));
 
@@ -127,9 +129,16 @@ void HTMLScriptRunner::executePendingScriptAndDispatchEvent(PendingScript& pendi
     if (pendingScript.cachedScript() && pendingScript.watchingForLoad())
         stopWatchingForLoad(pendingScript);
 
+    if (!isExecutingScript()) {
+#if ENABLE(CUSTOM_ELEMENTS)
+        CustomElementRegistry::deliverAllLifecycleCallbacks();
+#endif
+        MutationObserver::deliverAllMutations();
+    }
+
     // Clear the pending script before possible rentrancy from executeScript()
     RefPtr<Element> element = pendingScript.releaseElementAndClear();
-    if (ScriptElement* scriptElement = toScriptElement(element.get())) {
+    if (ScriptElement* scriptElement = toScriptElementIfPossible(element.get())) {
         NestingLevelIncrementer nestingLevelIncrementer(m_scriptNestingLevel);
         IgnoreDestructiveWriteCountIncrementer ignoreDestructiveWriteCountIncrementer(m_document);
         if (errorOccurred)
@@ -140,7 +149,7 @@ void HTMLScriptRunner::executePendingScriptAndDispatchEvent(PendingScript& pendi
             element->dispatchEvent(createScriptLoadEvent());
         }
     }
-    ASSERT(!m_scriptNestingLevel);
+    ASSERT(!isExecutingScript());
 }
 
 void HTMLScriptRunner::watchForLoad(PendingScript& pendingScript)
@@ -170,7 +179,7 @@ void HTMLScriptRunner::execute(PassRefPtr<Element> scriptElement, const TextPosi
     runScript(scriptElement.get(), scriptStartPosition);
 
     if (hasParserBlockingScript()) {
-        if (m_scriptNestingLevel)
+        if (isExecutingScript())
             return; // Unwind to the outermost HTMLScriptRunner::execute before continuing parsing.
         // If preload scanner got created, it is missing the source after the current insertion point. Append it and scan.
         if (!hadPreloadScanner && m_host->hasPreloadScanner())
@@ -192,7 +201,7 @@ void HTMLScriptRunner::executeParsingBlockingScripts()
 
 void HTMLScriptRunner::executeScriptsWaitingForLoad(CachedResource* cachedScript)
 {
-    ASSERT(!m_scriptNestingLevel);
+    ASSERT(!isExecutingScript());
     ASSERT(hasParserBlockingScript());
     ASSERT_UNUSED(cachedScript, m_parserBlockingScript.cachedScript() == cachedScript);
     ASSERT(m_parserBlockingScript.cachedScript()->isLoaded());
@@ -205,7 +214,7 @@ void HTMLScriptRunner::executeScriptsWaitingForStylesheets()
     // Callers should check hasScriptsWaitingForStylesheets() before calling
     // to prevent parser or script re-entry during </style> parsing.
     ASSERT(hasScriptsWaitingForStylesheets());
-    ASSERT(!m_scriptNestingLevel);
+    ASSERT(!isExecutingScript());
     ASSERT(m_document->haveStylesheetsLoaded());
     executeParsingBlockingScripts();
 }
@@ -213,7 +222,7 @@ void HTMLScriptRunner::executeScriptsWaitingForStylesheets()
 bool HTMLScriptRunner::executeScriptsWaitingForParsing()
 {
     while (!m_scriptsToExecuteAfterParsing.isEmpty()) {
-        ASSERT(!m_scriptNestingLevel);
+        ASSERT(!isExecutingScript());
         ASSERT(!hasParserBlockingScript());
         ASSERT(m_scriptsToExecuteAfterParsing.first().cachedScript());
         if (!m_scriptsToExecuteAfterParsing.first().cachedScript()->isLoaded()) {
@@ -258,7 +267,7 @@ bool HTMLScriptRunner::requestPendingScript(PendingScript& pendingScript, Elemen
     ASSERT(!pendingScript.element());
     pendingScript.setElement(script);
     // This should correctly return 0 for empty or invalid srcValues.
-    CachedScript* cachedScript = toScriptElement(script)->cachedScript().get();
+    CachedScript* cachedScript = toScriptElementIfPossible(script)->cachedScript().get();
     if (!cachedScript) {
         notImplemented(); // Dispatch error event.
         return false;
@@ -274,10 +283,7 @@ void HTMLScriptRunner::runScript(Element* script, const TextPosition& scriptStar
     ASSERT(m_document);
     ASSERT(!hasParserBlockingScript());
     {
-        InsertionPointRecord insertionPointRecord(m_host->inputStream());
-        NestingLevelIncrementer nestingLevelIncrementer(m_scriptNestingLevel);
-
-        ScriptElement* scriptElement = toScriptElement(script);
+        ScriptElement* scriptElement = toScriptElementIfPossible(script);
 
         // This contains both and ASSERTION and a null check since we should not
         // be getting into the case of a null script element, but seem to be from
@@ -286,6 +292,20 @@ void HTMLScriptRunner::runScript(Element* script, const TextPosition& scriptStar
         ASSERT(scriptElement);
         if (!scriptElement)
             return;
+
+        // FIXME: This may be too agressive as we always deliver mutations at
+        // every script element, even if it's not ready to execute yet. There's
+        // unfortuantely no obvious way to tell if prepareScript is going to
+        // execute the script from out here.
+        if (!isExecutingScript()) {
+#if ENABLE(CUSTOM_ELEMENTS)
+            CustomElementRegistry::deliverAllLifecycleCallbacks();
+#endif
+            MutationObserver::deliverAllMutations();
+        }
+
+        InsertionPointRecord insertionPointRecord(m_host->inputStream());
+        NestingLevelIncrementer nestingLevelIncrementer(m_scriptNestingLevel);
 
         scriptElement->prepareScript(scriptStartPosition);
 

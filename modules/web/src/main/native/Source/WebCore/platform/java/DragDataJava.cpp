@@ -4,6 +4,7 @@
 #include "config.h"
 #include "Frame.h"
 #include "DragData.h"
+#include "Range.h"
 
 #include "DataObjectJava.h"
 #include "Clipboard.h"
@@ -12,7 +13,8 @@
 #include "KURL.h"
 #include "markup.h"
 #include "NotImplemented.h"
-#include "PlatformString.h"
+
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 

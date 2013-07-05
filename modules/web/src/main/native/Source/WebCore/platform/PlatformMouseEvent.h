@@ -28,6 +28,9 @@
 
 #include "IntPoint.h"
 #include "PlatformEvent.h"
+#if OS(WINDOWS) && !PLATFORM(JAVA)
+#include "WindowsExtras.h"
+#endif
 
 #if PLATFORM(JAVA)
 #include "JavaEnv.h"
@@ -42,17 +45,6 @@ typedef struct _GdkEventMotion GdkEventMotion;
 typedef struct _Evas_Event_Mouse_Down Evas_Event_Mouse_Down;
 typedef struct _Evas_Event_Mouse_Up Evas_Event_Mouse_Up;
 typedef struct _Evas_Event_Mouse_Move Evas_Event_Mouse_Move;
-#endif
-
-#if PLATFORM(WIN)
-typedef struct HWND__* HWND;
-typedef unsigned UINT;
-typedef unsigned WPARAM;
-typedef long LPARAM;
-#endif
-
-#if PLATFORM(WX)
-class wxMouseEvent;
 #endif
 
 namespace WebCore {
@@ -107,8 +99,8 @@ namespace WebCore {
         
 
 #if PLATFORM(GTK) 
-        PlatformMouseEvent(GdkEventButton*);
-        PlatformMouseEvent(GdkEventMotion*);
+        explicit PlatformMouseEvent(GdkEventButton*);
+        explicit PlatformMouseEvent(GdkEventMotion*);
         void setClickCount(int count) { m_clickCount = count; }
 #endif
 
@@ -129,12 +121,8 @@ namespace WebCore {
         bool didActivateWebView() const { return m_didActivateWebView; }
 #endif
 
-#if PLATFORM(WX)
-        PlatformMouseEvent(const wxMouseEvent&, const wxPoint& globalPoint, int clickCount);
-#endif
-
 #if PLATFORM(BLACKBERRY)
-        PlatformMouseEvent(const IntPoint& eventPosition, const IntPoint& globalPosition, const PlatformEvent::Type, int clickCount, MouseButton, MouseInputMethod = PointingDevice);
+        PlatformMouseEvent(const IntPoint& eventPosition, const IntPoint& globalPosition, const PlatformEvent::Type, int clickCount, MouseButton, bool shiftKey, bool ctrlKey, bool altKey, MouseInputMethod = PointingDevice);
         MouseInputMethod inputMethod() const { return m_inputMethod; }
 #endif
     protected:

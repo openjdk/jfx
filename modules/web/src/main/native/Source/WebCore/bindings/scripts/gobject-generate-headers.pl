@@ -62,15 +62,33 @@ print "#define ${header}\n";
 print "\n";
 
 if ($outType eq "defines") {
+    print "#include <glib.h>\n\n";
+    print "#ifdef G_OS_WIN32\n";
+    print "    #ifdef BUILDING_WEBKIT\n";
+    print "        #define WEBKIT_API __declspec(dllexport)\n";
+    print "    #else\n";
+    print "        #define WEBKIT_API __declspec(dllimport)\n";
+    print "    #endif\n";
+    print "    #define WEBKIT_OBSOLETE_API WEBKIT_API\n";
+    print "#else\n";
+    print "    #define WEBKIT_API __attribute__((visibility(\"default\")))\n";
+    print "    #define WEBKIT_OBSOLETE_API WEBKIT_API __attribute__((deprecated))\n";
+    print "#endif\n\n";
+    print "#ifndef WEBKIT_API\n";
+    print "    #define WEBKIT_API\n";
+    print "#endif\n";
+
     foreach my $class (@classes) {
         print "typedef struct _WebKitDOM${class} WebKitDOM${class};\n";
         print "typedef struct _WebKitDOM${class}Class WebKitDOM${class}Class;\n";
         print "\n";
     }
 } elsif ($outType eq "gdom") {
+    print "#define __WEBKITDOM_H_INSIDE__\n\n";
     foreach my $class (@classes) {
-        print "#include <webkit/WebKitDOM${class}.h>\n";
+        print "#include <webkitdom/WebKitDOM${class}.h>\n";
     }
+    print "\n#undef __WEBKITDOM_H_INSIDE__\n";
 }
 
 print "\n";

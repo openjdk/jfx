@@ -1,12 +1,17 @@
+/*
+ * Copyright (c) 2012-2013, Oracle and/or its affiliates. All rights reserved.
+ */
+
 #include "config.h"
 #include "StorageNamespaceJava.h"
 
+#include "GroupSettings.h"
+#include "Page.h"
+#include "PageGroup.h"
 #include "SecurityOriginHash.h"
-#include "StorageMap.h"
-#include "StorageNamespace.h"
-#include "StorageNamespaceJava.h"
-#include "StorageArea.h"
+#include "Settings.h"
 #include "StorageAreaJava.h"
+#include "StorageMap.h"
 //#include "StorageSyncManager.h"
 //#include "StorageTracker.h"
 #include <wtf/MainThread.h>
@@ -14,18 +19,6 @@
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
-
-PassRefPtr<StorageNamespace> StorageNamespace::localStorageNamespace(const String& path, unsigned quota)
-{
-    return StorageNamespaceJava::localStorageNamespace(path, quota);
-}
-
-// The page argument is only used by the Chromium port.
-PassRefPtr<StorageNamespace> StorageNamespace::sessionStorageNamespace(Page*, unsigned quota)
-{
-    return StorageNamespaceJava::sessionStorageNamespace(quota);
-}
-
 
 typedef HashMap<String, StorageNamespace*> LocalStorageNamespaceMap;
 
@@ -35,22 +28,37 @@ static LocalStorageNamespaceMap& localStorageNamespaceMap()
     return localStorageNamespaceMap;
 }
 
-PassRefPtr<StorageNamespace> StorageNamespaceJava::localStorageNamespace(const String& path, unsigned quota)
+PassRefPtr<StorageNamespace> StorageNamespaceJava::localStorageNamespace(PageGroup* pageGroup)
 {
-    const String lookupPath = path.isNull() ? String("") : path;
-    LocalStorageNamespaceMap::iterator it = localStorageNamespaceMap().find(lookupPath);
-    if (it == localStorageNamespaceMap().end()) {
+    // Need a page in this page group to query the settings for the local storage database path.
+    // Having these parameters attached to the page settings is unfortunate since these settings are
+    // not per-page (and, in fact, we simply grab the settings from some page at random), but
+    // at this point we're stuck with it.
+    Page* page = *pageGroup->pages().begin();
+    const String& path = page->settings()->localStorageDatabasePath();
+    unsigned quota = pageGroup->groupSettings()->localStorageQuotaBytes();
+    const String lookupPath = path.isNull() ? emptyString() : path;
+
+    LocalStorageNamespaceMap::AddResult result = localStorageNamespaceMap().add(lookupPath, 0);
+    if (!result.isNewEntry)
+        return result.iterator->value;
+
         RefPtr<StorageNamespace> storageNamespace = adoptRef(new StorageNamespaceJava(LocalStorage, lookupPath, quota));
-        localStorageNamespaceMap().set(lookupPath, storageNamespace.get());
+
+    result.iterator->value = storageNamespace.get();
         return storageNamespace.release();
     }
 
-    return it->second;
+PassRefPtr<StorageNamespace> StorageNamespaceJava::sessionStorageNamespace(Page* page)
+{
+    return adoptRef(new StorageNamespaceJava(SessionStorage, String(), page->settings()->sessionStorageQuota()));
 }
 
-PassRefPtr<StorageNamespace> StorageNamespaceJava::sessionStorageNamespace(unsigned quota)
+PassRefPtr<StorageNamespace> StorageNamespaceJava::transientLocalStorageNamespace(PageGroup* pageGroup, SecurityOrigin*)
 {
-    return adoptRef(new StorageNamespaceJava(SessionStorage, String(), quota));
+    // FIXME: A smarter implementation would create a special namespace type instead of just piggy-backing off
+    // SessionStorageNamespace here.
+    return StorageNamespaceJava::sessionStorageNamespace(*pageGroup->pages().begin());
 }
 
 StorageNamespaceJava::StorageNamespaceJava(StorageType storageType, const String& path, unsigned quota)
@@ -77,7 +85,7 @@ StorageNamespaceJava::~StorageNamespaceJava()
         close();
 }
 
-PassRefPtr<StorageNamespace> StorageNamespaceJava::copy()
+PassRefPtr<StorageNamespace> StorageNamespaceJava::copy(Page*)
 {
     ASSERT(isMainThread());
     ASSERT(!m_isShutdown);
@@ -87,7 +95,7 @@ PassRefPtr<StorageNamespace> StorageNamespaceJava::copy()
 
     StorageAreaMap::iterator end = m_storageAreaMap.end();
     for (StorageAreaMap::iterator i = m_storageAreaMap.begin(); i != end; ++i)
-        newNamespace->m_storageAreaMap.set(i->first, i->second->copy());
+        newNamespace->m_storageAreaMap.set(i->key, i->value->copy());
     return newNamespace.release();
 }
 
@@ -121,17 +129,12 @@ void StorageNamespaceJava::close()
 
     StorageAreaMap::iterator end = m_storageAreaMap.end();
     for (StorageAreaMap::iterator it = m_storageAreaMap.begin(); it != end; ++it)
-        it->second->close();
+        it->value->close();
 
 //    if (m_syncManager)
 //        m_syncManager->close();
 
     m_isShutdown = true;
-}
-
-void StorageNamespaceJava::unlock()
-{
-    // Because there's a single event loop per-process, this is a no-op.
 }
 
 void StorageNamespaceJava::clearOriginForDeletion(SecurityOrigin* origin)
@@ -149,7 +152,7 @@ void StorageNamespaceJava::clearAllOriginsForDeletion()
 
     StorageAreaMap::iterator end = m_storageAreaMap.end();
     for (StorageAreaMap::iterator it = m_storageAreaMap.begin(); it != end; ++it)
-        it->second->clearForOriginDeletion();
+        it->value->clearForOriginDeletion();
 }
     
 void StorageNamespaceJava::sync()
@@ -157,7 +160,15 @@ void StorageNamespaceJava::sync()
     ASSERT(isMainThread());
     StorageAreaMap::iterator end = m_storageAreaMap.end();
     for (StorageAreaMap::iterator it = m_storageAreaMap.begin(); it != end; ++it)
-        it->second->sync();
+        it->value->sync();
+}
+    
+void StorageNamespaceJava::closeIdleLocalStorageDatabases()
+{
+    ASSERT(isMainThread());
+    StorageAreaMap::iterator end = m_storageAreaMap.end();
+    for (StorageAreaMap::iterator it = m_storageAreaMap.begin(); it != end; ++it)
+        it->value->closeDatabaseIfIdle();
 }
 
 } // namespace WebCore

@@ -62,11 +62,11 @@ FontTranscoder::FontTranscoder()
 
 FontTranscoder::ConverterType FontTranscoder::converterType(const FontDescription& fontDescription, const TextEncoding* encoding) const
 {
-    const AtomicString& fontFamily = fontDescription.family().family().string();
+    const AtomicString& fontFamily = fontDescription.firstFamily();
     if (!fontFamily.isNull()) {
         HashMap<AtomicString, ConverterType>::const_iterator found = m_converterTypes.find(fontFamily);
         if (found != m_converterTypes.end())
-            return found->second;
+            return found->value;
     }
 
     // IE's default fonts for Japanese encodings change backslashes into yen signs.

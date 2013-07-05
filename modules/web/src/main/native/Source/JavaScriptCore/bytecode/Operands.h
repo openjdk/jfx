@@ -28,7 +28,7 @@
 
 #include "CallFrame.h"
 #include "JSObject.h"
-#include "ScopeChain.h"
+#include <wtf/PrintStream.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -43,8 +43,10 @@ template<typename T> struct OperandValueTraits;
 template<typename T>
 struct OperandValueTraits {
     static T defaultValue() { return T(); }
-    static void dump(const T& value, FILE* out) { value.dump(out); }
+    static void dump(const T& value, PrintStream& out) { value.dump(out); }
 };
+
+enum OperandKind { ArgumentOperand, LocalOperand };
 
 template<typename T, typename Traits = OperandValueTraits<T> >
 class Operands {
@@ -65,6 +67,28 @@ public:
     
     T& local(size_t idx) { return m_locals[idx]; }
     const T& local(size_t idx) const { return m_locals[idx]; }
+    
+    template<OperandKind operandKind>
+    size_t sizeFor() const
+    {
+        if (operandKind == ArgumentOperand)
+            return numberOfArguments();
+        return numberOfLocals();
+    }
+    template<OperandKind operandKind>
+    T& atFor(size_t idx)
+    {
+        if (operandKind == ArgumentOperand)
+            return argument(idx);
+        return local(idx);
+    }
+    template<OperandKind operandKind>
+    const T& atFor(size_t idx) const
+    {
+        if (operandKind == ArgumentOperand)
+            return argument(idx);
+        return local(idx);
+    }
     
     void ensureLocals(size_t size)
     {
@@ -190,29 +214,21 @@ private:
 };
 
 template<typename T, typename Traits>
-void dumpOperands(Operands<T, Traits>& operands, FILE* out)
+void dumpOperands(const Operands<T, Traits>& operands, PrintStream& out)
 {
-    for (size_t argument = 0; argument < operands.numberOfArguments(); ++argument) {
-        if (argument)
-            fprintf(out, " ");
+    for (size_t argument = operands.numberOfArguments(); argument--;) {
+        if (argument != operands.numberOfArguments() - 1)
+            out.printf(" ");
+        out.print("arg", argument, ":");
         Traits::dump(operands.argument(argument), out);
     }
-    fprintf(out, " : ");
+    out.printf(" : ");
     for (size_t local = 0; local < operands.numberOfLocals(); ++local) {
         if (local)
-            fprintf(out, " ");
+            out.printf(" ");
+        out.print("r", local, ":");
         Traits::dump(operands.local(local), out);
     }
-}
-
-template<typename T, typename Traits>
-void dumpOperands(const Operands<T, Traits>& operands, FILE* out)
-{
-    // Use const-cast because:
-    // 1) I don't feel like writing this code twice, and
-    // 2) Some dump() methods may not be const, and I don't really care if that's
-    //    the case.
-    dumpOperands(*const_cast<Operands<T, Traits>*>(&operands), out);
 }
 
 } // namespace JSC

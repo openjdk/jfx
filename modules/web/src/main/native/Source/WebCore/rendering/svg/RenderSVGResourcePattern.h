@@ -37,6 +37,8 @@
 namespace WebCore {
 
 struct PatternData {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
     RefPtr<Pattern> pattern;
     AffineTransform transform;
 };
@@ -63,6 +65,8 @@ private:
     PassOwnPtr<ImageBuffer> createTileImage(const PatternAttributes&, const FloatRect& tileBoundaries,
                                             const FloatRect& absoluteTileBoundaries, const AffineTransform& tileImageTransform,
                                             FloatRect& clampedAbsoluteTileBoundaries) const;
+
+    PatternData* buildPattern(RenderObject*, unsigned short resourceMode);
 
     bool m_shouldCollectPatternAttributes : 1;
     PatternAttributes m_attributes;

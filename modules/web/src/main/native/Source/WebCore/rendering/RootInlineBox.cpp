@@ -29,10 +29,12 @@
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
 #include "InlineTextBox.h"
+#include "LogicalSelectionOffsetCaches.h"
 #include "Page.h"
 #include "PaintInfo.h"
 #include "RenderArena.h"
 #include "RenderBlock.h"
+#include "RenderFlowThread.h"
 #include "RenderView.h"
 #include "VerticalPositionCache.h"
 #include <wtf/unicode/Unicode.h>
@@ -41,6 +43,13 @@ using namespace std;
 
 namespace WebCore {
     
+struct SameSizeAsRootInlineBox : public InlineFlowBox {
+    unsigned variables[5];
+    void* pointers[4];
+};
+
+COMPILE_ASSERT(sizeof(RootInlineBox) == sizeof(SameSizeAsRootInlineBox), RootInlineBox_should_stay_small);
+
 typedef WTF::HashMap<const RootInlineBox*, EllipsisBox*> EllipsisBoxMap;
 static EllipsisBoxMap* gEllipsisBoxMap = 0;
 
@@ -52,8 +61,6 @@ RootInlineBox::RootInlineBox(RenderBlock* block)
     , m_lineBottom(0)
     , m_lineTopWithLeading(0)
     , m_lineBottomWithLeading(0)
-    , m_paginationStrut(0)
-    , m_paginatedLineWidth(0)
 {
     setIsHorizontal(block->isHorizontalWritingMode());
 }
@@ -100,7 +107,7 @@ bool RootInlineBox::isHyphenated() const
     return false;
 }
 
-LayoutUnit RootInlineBox::baselinePosition(FontBaseline baselineType) const
+int RootInlineBox::baselinePosition(FontBaseline baselineType) const
 {
     return boxModelObject()->baselinePosition(baselineType, isFirstLineStyle(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
 }
@@ -181,7 +188,7 @@ void RootInlineBox::addHighlightOverflow()
 
     // Highlight acts as a selection inflation.
     FloatRect rootRect(0, selectionTop(), logicalWidth(), selectionHeight());
-    IntRect inflatedRect = enclosingIntRect(page->chrome()->client()->customHighlightRect(renderer()->node(), renderer()->style()->highlight(), rootRect));
+    IntRect inflatedRect = enclosingIntRect(page->chrome().client()->customHighlightRect(renderer()->node(), renderer()->style()->highlight(), rootRect));
     setOverflowFromLogicalRects(inflatedRect, inflatedRect, lineTop(), lineBottom());
 }
 
@@ -199,9 +206,9 @@ void RootInlineBox::paintCustomHighlight(PaintInfo& paintInfo, const LayoutPoint
 
     // Get the inflated rect so that we can properly hit test.
     FloatRect rootRect(paintOffset.x() + x(), paintOffset.y() + selectionTop(), logicalWidth(), selectionHeight());
-    FloatRect inflatedRect = page->chrome()->client()->customHighlightRect(renderer()->node(), highlightType, rootRect);
+    FloatRect inflatedRect = page->chrome().client()->customHighlightRect(renderer()->node(), highlightType, rootRect);
     if (inflatedRect.intersects(paintInfo.rect))
-        page->chrome()->client()->paintCustomHighlight(renderer()->node(), highlightType, rootRect, rootRect, false, true);
+        page->chrome().client()->paintCustomHighlight(renderer()->node(), highlightType, rootRect, rootRect, false, true);
 }
 
 #endif
@@ -217,15 +224,15 @@ void RootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
 #endif
 }
 
-bool RootInlineBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom)
+bool RootInlineBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom)
 {
     if (hasEllipsisBox() && visibleToHitTesting()) {
-        if (ellipsisBox()->nodeAtPoint(request, result, pointInContainer, accumulatedOffset, lineTop, lineBottom)) {
-            renderer()->updateHitTestResult(result, pointInContainer.point() - toLayoutSize(accumulatedOffset));
+        if (ellipsisBox()->nodeAtPoint(request, result, locationInContainer, accumulatedOffset, lineTop, lineBottom)) {
+            renderer()->updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
             return true;
         }
     }
-    return InlineFlowBox::nodeAtPoint(request, result, pointInContainer, accumulatedOffset, lineTop, lineBottom);
+    return InlineFlowBox::nodeAtPoint(request, result, locationInContainer, accumulatedOffset, lineTop, lineBottom);
 }
 
 void RootInlineBox::adjustPosition(float dx, float dy)
@@ -251,6 +258,29 @@ void RootInlineBox::childRemoved(InlineBox* box)
     }
 }
 
+RenderRegion* RootInlineBox::containingRegion() const
+{
+    RenderRegion* region = m_fragmentationData ? m_fragmentationData->m_containingRegion : 0;
+
+#ifndef NDEBUG
+    if (region) {
+        RenderFlowThread* flowThread = block()->flowThreadContainingBlock();
+        const RenderRegionList& regionList = flowThread->renderRegionList();
+        ASSERT(regionList.contains(region));
+    }
+#endif
+
+    return region;
+}
+
+void RootInlineBox::setContainingRegion(RenderRegion* region)
+{
+    ASSERT(!isDirty());
+    ASSERT(block()->flowThreadContainingBlock());
+    LineFragmentationData* fragmentationData  = ensureLineFragmentationData();
+    fragmentationData->m_containingRegion = region;
+}
+
 LayoutUnit RootInlineBox::alignBoxesInBlockDirection(LayoutUnit heightOfBlock, GlyphOverflowAndFallbackFontsMap& textBoxDataMap, VerticalPositionCache& verticalPositionCache)
 {
 #if ENABLE(SVG)
@@ -261,8 +291,8 @@ LayoutUnit RootInlineBox::alignBoxesInBlockDirection(LayoutUnit heightOfBlock, G
 
     LayoutUnit maxPositionTop = 0;
     LayoutUnit maxPositionBottom = 0;
-    LayoutUnit maxAscent = 0;
-    LayoutUnit maxDescent = 0;
+    int maxAscent = 0;
+    int maxDescent = 0;
     bool setMaxAscent = false;
     bool setMaxDescent = false;
 
@@ -311,6 +341,15 @@ LayoutUnit RootInlineBox::alignBoxesInBlockDirection(LayoutUnit heightOfBlock, G
 
     return heightOfBlock + maxHeight;
 }
+
+#if ENABLE(CSS3_TEXT)
+float RootInlineBox::maxLogicalTop() const
+{
+    float maxLogicalTop = 0;
+    computeMaxLogicalTop(maxLogicalTop);
+    return maxLogicalTop;
+}
+#endif // CSS3_TEXT
 
 LayoutUnit RootInlineBox::beforeAnnotationsAdjustment() const
 {
@@ -435,7 +474,7 @@ LayoutUnit RootInlineBox::lineSnapAdjustment(LayoutUnit delta) const
 }
 
 GapRects RootInlineBox::lineSelectionGap(RenderBlock* rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock, 
-                                         LayoutUnit selTop, LayoutUnit selHeight, const PaintInfo* paintInfo)
+    LayoutUnit selTop, LayoutUnit selHeight, const LogicalSelectionOffsetCaches& cache, const PaintInfo* paintInfo)
 {
     RenderObject::SelectionState lineState = selectionState();
 
@@ -446,12 +485,14 @@ GapRects RootInlineBox::lineSelectionGap(RenderBlock* rootBlock, const LayoutPoi
 
     InlineBox* firstBox = firstSelectedBox();
     InlineBox* lastBox = lastSelectedBox();
-    if (leftGap)
-        result.uniteLeft(block()->logicalLeftSelectionGap(rootBlock, rootBlockPhysicalPosition, offsetFromRootBlock,
-                                                          firstBox->parent()->renderer(), firstBox->logicalLeft(), selTop, selHeight, paintInfo));
-    if (rightGap)
-        result.uniteRight(block()->logicalRightSelectionGap(rootBlock, rootBlockPhysicalPosition, offsetFromRootBlock,
-                                                            lastBox->parent()->renderer(), lastBox->logicalRight(), selTop, selHeight, paintInfo));
+    if (leftGap) {
+        result.uniteLeft(block()->logicalLeftSelectionGap(rootBlock, rootBlockPhysicalPosition, offsetFromRootBlock, firstBox->parent()->renderer(), firstBox->logicalLeft(),
+            selTop, selHeight, cache, paintInfo));
+    }
+    if (rightGap) {
+        result.uniteRight(block()->logicalRightSelectionGap(rootBlock, rootBlockPhysicalPosition, offsetFromRootBlock, lastBox->parent()->renderer(), lastBox->logicalRight(),
+            selTop, selHeight, cache, paintInfo));
+    }
 
     // When dealing with bidi text, a non-contiguous selection region is possible.
     // e.g. The logical text aaaAAAbbb (capitals denote RTL text and non-capitals LTR) is layed out
@@ -499,6 +540,10 @@ RenderObject::SelectionState RootInlineBox::selectionState()
                  ((boxState == RenderObject::SelectionStart || boxState == RenderObject::SelectionEnd) &&
                   (state == RenderObject::SelectionNone || state == RenderObject::SelectionInside)))
             state = boxState;
+        else if (boxState == RenderObject::SelectionNone && state == RenderObject::SelectionStart) {
+            // We are past the end of the selection.
+            state = RenderObject::SelectionBoth;
+        }
         if (state == RenderObject::SelectionBoth)
             break;
     }
@@ -599,6 +644,11 @@ LayoutUnit RootInlineBox::selectionBottom() const
     }
 
     return nextTop;
+}
+
+int RootInlineBox::blockDirectionPointInLine() const
+{
+    return !block()->style()->isFlippedBlocksWritingMode() ? max(lineTop(), selectionTop()) : min(lineBottom(), selectionBottom());
 }
 
 RenderBlock* RootInlineBox::block() const
@@ -750,8 +800,8 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
     GlyphOverflow* glyphOverflow = 0;
     if (box->isText()) {
         GlyphOverflowAndFallbackFontsMap::iterator it = textBoxDataMap.find(toInlineTextBox(box));
-        usedFonts = it == textBoxDataMap.end() ? 0 : &it->second.first;
-        glyphOverflow = it == textBoxDataMap.end() ? 0 : &it->second.second;
+        usedFonts = it == textBoxDataMap.end() ? 0 : &it->value.first;
+        glyphOverflow = it == textBoxDataMap.end() ? 0 : &it->value.second;
     }
         
     bool includeLeading = includeLeadingForBox(box);
@@ -799,8 +849,8 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
     }
     
     if (includeFontForBox(box) && !setUsedFont) {
-        int fontAscent = box->renderer()->style(isFirstLineStyle())->fontMetrics().ascent();
-        int fontDescent = box->renderer()->style(isFirstLineStyle())->fontMetrics().descent();
+        int fontAscent = box->renderer()->style(isFirstLineStyle())->fontMetrics().ascent(baselineType());
+        int fontDescent = box->renderer()->style(isFirstLineStyle())->fontMetrics().descent(baselineType());
         setAscentAndDescent(ascent, descent, fontAscent, fontDescent, ascentDescentSet);
         affectsAscent = fontAscent - box->logicalTop() > 0;
         affectsDescent = fontDescent + box->logicalTop() > 0; 
@@ -810,13 +860,13 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
         setAscentAndDescent(ascent, descent, glyphOverflow->top, glyphOverflow->bottom, ascentDescentSet);
         affectsAscent = glyphOverflow->top - box->logicalTop() > 0;
         affectsDescent = glyphOverflow->bottom + box->logicalTop() > 0; 
-        glyphOverflow->top = min(glyphOverflow->top, max(0, glyphOverflow->top - box->renderer()->style(isFirstLineStyle())->fontMetrics().ascent()));
-        glyphOverflow->bottom = min(glyphOverflow->bottom, max(0, glyphOverflow->bottom - box->renderer()->style(isFirstLineStyle())->fontMetrics().descent()));
+        glyphOverflow->top = min(glyphOverflow->top, max(0, glyphOverflow->top - box->renderer()->style(isFirstLineStyle())->fontMetrics().ascent(baselineType())));
+        glyphOverflow->bottom = min(glyphOverflow->bottom, max(0, glyphOverflow->bottom - box->renderer()->style(isFirstLineStyle())->fontMetrics().descent(baselineType())));
     }
 
     if (includeMarginForBox(box)) {
-        LayoutUnit ascentWithMargin = box->renderer()->style(isFirstLineStyle())->fontMetrics().ascent();
-        LayoutUnit descentWithMargin = box->renderer()->style(isFirstLineStyle())->fontMetrics().descent();
+        LayoutUnit ascentWithMargin = box->renderer()->style(isFirstLineStyle())->fontMetrics().ascent(baselineType());
+        LayoutUnit descentWithMargin = box->renderer()->style(isFirstLineStyle())->fontMetrics().descent(baselineType());
         if (box->parent() && !box->renderer()->isText()) {
             ascentWithMargin += box->boxModelObject()->borderBefore() + box->boxModelObject()->paddingBefore() + box->boxModelObject()->marginBefore();
             descentWithMargin += box->boxModelObject()->borderAfter() + box->boxModelObject()->paddingAfter() + box->boxModelObject()->marginAfter();
@@ -841,7 +891,7 @@ LayoutUnit RootInlineBox::verticalPositionForBox(InlineBox* box, VerticalPositio
 
     // This method determines the vertical position for inline elements.
     bool firstLine = isFirstLineStyle();
-    if (firstLine && !renderer->document()->usesFirstLineRules())
+    if (firstLine && !renderer->document()->styleSheetCollection()->usesFirstLineRules())
         firstLine = false;
 
     // Check the cache.

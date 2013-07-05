@@ -75,7 +75,7 @@ static const CFStringRef kUTTypePNG = CFSTR("public.png");
 static RetainPtr<CGImageRef> createImageFromStdin(int bytesRemaining)
 {
     unsigned char buffer[2048];
-    RetainPtr<CFMutableDataRef> data(AdoptCF, CFDataCreateMutable(0, bytesRemaining));
+    RetainPtr<CFMutableDataRef> data = adoptCF(CFDataCreateMutable(0, bytesRemaining));
 
     while (bytesRemaining > 0) {
         size_t bytesToRead = min(bytesRemaining, 2048);
@@ -83,8 +83,8 @@ static RetainPtr<CGImageRef> createImageFromStdin(int bytesRemaining)
         CFDataAppendBytes(data.get(), buffer, static_cast<CFIndex>(bytesRead));
         bytesRemaining -= static_cast<int>(bytesRead);
     }
-    RetainPtr<CGDataProviderRef> dataProvider(AdoptCF, CGDataProviderCreateWithCFData(data.get()));
-    return RetainPtr<CGImageRef>(AdoptCF, CGImageCreateWithPNGDataProvider(dataProvider.get(), 0, false, kCGRenderingIntentDefault));
+    RetainPtr<CGDataProviderRef> dataProvider = adoptCF(CGDataProviderCreateWithCFData(data.get()));
+    return adoptCF(CGImageCreateWithPNGDataProvider(dataProvider.get(), 0, false, kCGRenderingIntentDefault));
 }
 
 static void releaseMallocBuffer(void* info, const void* data, size_t size)
@@ -100,12 +100,12 @@ static RetainPtr<CGImageRef> createDifferenceImage(CGImageRef baseImage, CGImage
 
     // Draw base image in bitmap context
     void* baseBuffer = calloc(height, rowBytes);
-    RetainPtr<CGContextRef> baseContext(AdoptCF, CGBitmapContextCreate(baseBuffer, width, height, 8, rowBytes, CGImageGetColorSpace(baseImage), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host));
+    RetainPtr<CGContextRef> baseContext = adoptCF(CGBitmapContextCreate(baseBuffer, width, height, 8, rowBytes, CGImageGetColorSpace(baseImage), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host));
     CGContextDrawImage(baseContext.get(), CGRectMake(0, 0, width, height), baseImage);
 
     // Draw test image in bitmap context
     void* buffer = calloc(height, rowBytes);
-    RetainPtr<CGContextRef> context(AdoptCF, CGBitmapContextCreate(buffer, width, height, 8, rowBytes, CGImageGetColorSpace(testImage), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host));
+    RetainPtr<CGContextRef> context = adoptCF(CGBitmapContextCreate(buffer, width, height, 8, rowBytes, CGImageGetColorSpace(testImage), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host));
     CGContextDrawImage(context.get(), CGRectMake(0, 0, width, height), testImage);
 
     // Compare the content of the 2 bitmaps
@@ -154,8 +154,8 @@ static RetainPtr<CGImageRef> createDifferenceImage(CGImageRef baseImage, CGImage
         }
         
         static CGColorSpaceRef diffColorspace = CGColorSpaceCreateDeviceGray();
-        RetainPtr<CGDataProviderRef> provider(AdoptCF, CGDataProviderCreateWithData(0, diffBuffer, width * height, releaseMallocBuffer));
-        diffImage.adoptCF(CGImageCreate(width, height, 8, 8, width, diffColorspace, 0, provider.get(), 0, false, kCGRenderingIntentDefault));
+        RetainPtr<CGDataProviderRef> provider = adoptCF(CGDataProviderCreateWithData(0, diffBuffer, width * height, releaseMallocBuffer));
+        diffImage = adoptCF(CGImageCreate(width, height, 8, 8, width, diffColorspace, 0, provider.get(), 0, false, kCGRenderingIntentDefault));
     }
     else
         free(diffBuffer);
@@ -214,7 +214,7 @@ int main(int argc, const char* argv[])
             else if (imageSize > 0 && !baselineImage)
                 baselineImage = createImageFromStdin(imageSize);
             else
-                fputs("error, image size must be specified.\n", stderr);
+                fputs("Error: image size must be specified.\n", stderr);
         }
 
         if (actualImage && baselineImage) {
@@ -229,13 +229,21 @@ int main(int argc, const char* argv[])
                     difference = roundf(difference * 100.0f) / 100.0f;
                     difference = max(difference, 0.01f); // round to 2 decimal places
                 }
-            } else
-                fputs("error, test and reference image have different properties.\n", stderr);
+            } else {
+                if (CGImageGetWidth(actualImage.get()) != CGImageGetWidth(baselineImage.get()) || CGImageGetHeight(actualImage.get()) != CGImageGetHeight(baselineImage.get()))
+                    fprintf(stderr, "Error: test and reference images have different sizes. Test image is %lux%lu, reference image is %lux%lu\n",
+                        CGImageGetWidth(actualImage.get()), CGImageGetHeight(actualImage.get()),
+                        CGImageGetWidth(baselineImage.get()), CGImageGetHeight(baselineImage.get()));
+                else if (imageHasAlpha(actualImage.get()) != imageHasAlpha(baselineImage.get()))
+                    fprintf(stderr, "Error: test and reference images differ in alpha. Test image %s alpha, reference image %s alpha.\n",
+                        imageHasAlpha(actualImage.get()) ? "has" : "does not have",
+                        imageHasAlpha(baselineImage.get()) ? "has" : "does not have");
+            }
 
             if (difference > 0.0f) {
                 if (diffImage) {
-                    RetainPtr<CFMutableDataRef> imageData(AdoptCF, CFDataCreateMutable(0, 0));
-                    RetainPtr<CGImageDestinationRef> imageDest(AdoptCF, CGImageDestinationCreateWithData(imageData.get(), kUTTypePNG, 1, 0));
+                    RetainPtr<CFMutableDataRef> imageData = adoptCF(CFDataCreateMutable(0, 0));
+                    RetainPtr<CGImageDestinationRef> imageDest = adoptCF(CGImageDestinationCreateWithData(imageData.get(), kUTTypePNG, 1, 0));
                     CGImageDestinationAddImage(imageDest.get(), diffImage.get(), 0);
                     CGImageDestinationFinalize(imageDest.get());
                     printf("Content-Length: %lu\n", CFDataGetLength(imageData.get()));

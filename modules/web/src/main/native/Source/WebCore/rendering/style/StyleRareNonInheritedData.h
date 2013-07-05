@@ -25,13 +25,15 @@
 #ifndef StyleRareNonInheritedData_h
 #define StyleRareNonInheritedData_h
 
+#include "BasicShapes.h"
+#include "ClipPathOperation.h"
 #include "CounterDirectives.h"
 #include "CursorData.h"
 #include "DataRef.h"
+#include "ExclusionShapeValue.h"
 #include "FillLayer.h"
 #include "LineClampValue.h"
 #include "NinePieceImage.h"
-#include "WrapShapes.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
@@ -94,9 +96,6 @@ public:
     float m_aspectRatioDenominator;
     float m_aspectRatioNumerator;
 
-    short m_counterIncrement;
-    short m_counterReset;
-
     float m_perspective;
     Length m_perspectiveOriginX;
     Length m_perspectiveOriginY;
@@ -104,6 +103,9 @@ public:
     LineClampValue lineClamp; // An Apple extension.
 #if ENABLE(DASHBOARD_SUPPORT)
     Vector<StyleDashboardRegion> m_dashboardRegions;
+#endif
+#if ENABLE(DRAGGABLE_REGION)
+    DraggableRegionMode m_draggableRegionMode;
 #endif
 
     DataRef<StyleDeprecatedFlexibleBoxData> m_deprecatedFlexibleBox; // Flexible box properties
@@ -134,11 +136,17 @@ public:
 
     LengthSize m_pageSize;
 
-    RefPtr<WrapShape> m_wrapShapeInside;
-    RefPtr<WrapShape> m_wrapShapeOutside;
-    Length m_wrapMargin;
-    Length m_wrapPadding;
+    RefPtr<ExclusionShapeValue> m_shapeInside;
+    RefPtr<ExclusionShapeValue> m_shapeOutside;
+    Length m_shapeMargin;
+    Length m_shapePadding;
     
+    RefPtr<ClipPathOperation> m_clipPath;
+
+#if ENABLE(CSS3_TEXT)
+    Color m_textDecorationColor;
+    Color m_visitedLinkTextDecorationColor;
+#endif // CSS3_TEXT
     Color m_visitedLinkBackgroundColor;
     Color m_visitedLinkOutlineColor;
     Color m_visitedLinkBorderLeftColor;
@@ -146,7 +154,7 @@ public:
     Color m_visitedLinkBorderTopColor;
     Color m_visitedLinkBorderBottomColor;
 
-    float m_order;
+    int m_order;
 
     AtomicString m_flowThread;
     AtomicString m_regionThread;
@@ -173,13 +181,22 @@ public:
     unsigned m_borderFit : 1; // EBorderFit
     unsigned m_textCombine : 1; // CSS3 text-combine properties
 
+#if ENABLE(CSS3_TEXT)
+    unsigned m_textDecorationStyle : 3; // TextDecorationStyle
+    unsigned m_textUnderlinePosition : 3; // TextUnderlinePosition
+#endif // CSS3_TEXT
     unsigned m_wrapFlow: 3; // WrapFlow
     unsigned m_wrapThrough: 1; // WrapThrough
 
 #if USE(ACCELERATED_COMPOSITING)
     unsigned m_runningAcceleratedAnimation : 1;
 #endif
+
     unsigned m_hasAspectRatio : 1; // Whether or not an aspect ratio has been specified.
+
+#if ENABLE(CSS_COMPOSITING)
+    unsigned m_effectiveBlendMode: 5; // EBlendMode
+#endif
 
 private:
     StyleRareNonInheritedData();

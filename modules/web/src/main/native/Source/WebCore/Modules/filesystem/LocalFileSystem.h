@@ -35,9 +35,9 @@
 
 #include "DOMFileSystemBase.h"
 #include "FileSystemType.h"
-#include "PlatformString.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -59,15 +59,15 @@ public:
 
     void requestFileSystem(ScriptExecutionContext*, FileSystemType, long long size, PassOwnPtr<AsyncFileSystemCallbacks>, FileSystemSynchronousType = AsynchronousFileSystem);
 
-#if !PLATFORM(CHROMIUM)
+    void deleteFileSystem(ScriptExecutionContext*, FileSystemType, PassOwnPtr<AsyncFileSystemCallbacks>);
+
     // This call is not thread-safe; must be called before any worker threads are created.
     static void initializeLocalFileSystem(const String&);
 
     String fileSystemBasePath() const;
-#endif
 
 private:
-    LocalFileSystem(const String& basePath)
+    explicit LocalFileSystem(const String& basePath)
         : m_basePath(basePath)
     {
     }

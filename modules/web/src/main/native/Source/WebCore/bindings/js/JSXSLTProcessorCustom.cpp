@@ -38,60 +38,21 @@
 #include "JSDocumentFragment.h"
 #include "JSNode.h"
 #include "Node.h"
-#include "PlatformString.h"
 #include "XSLTProcessor.h"
 #include "JSDOMBinding.h"
+#include <wtf/text/WTFString.h>
 
 using namespace JSC;
 
 namespace WebCore {
 
-JSValue JSXSLTProcessor::importStylesheet(ExecState* exec)
-{
-    JSValue nodeVal = exec->argument(0);
-    if (nodeVal.inherits(&JSNode::s_info)) {
-        JSNode* node = jsCast<JSNode*>(asObject(nodeVal));
-        impl()->importStylesheet(node->impl());
-        return jsUndefined();
-    }
-    // Throw exception?
-    return jsUndefined();
-}
-
-JSValue JSXSLTProcessor::transformToFragment(ExecState* exec)
-{
-    JSValue nodeVal = exec->argument(0);
-    JSValue docVal = exec->argument(1);
-    if (nodeVal.inherits(&JSNode::s_info) && docVal.inherits(&JSDocument::s_info)) {
-        WebCore::Node* node = jsCast<JSNode*>(asObject(nodeVal))->impl();
-        Document* doc = static_cast<Document*>(jsCast<JSDocument*>(asObject(docVal))->impl());
-        return toJS(exec, globalObject(), impl()->transformToFragment(node, doc).get());
-    }
-    // Throw exception?
-    return jsUndefined();
-}
-
-JSValue JSXSLTProcessor::transformToDocument(ExecState* exec)
-{
-    JSValue nodeVal = exec->argument(0);
-    if (nodeVal.inherits(&JSNode::s_info)) {
-        JSNode* node = jsCast<JSNode*>(asObject(nodeVal));
-        RefPtr<Document> resultDocument = impl()->transformToDocument(node->impl());
-        if (resultDocument)
-            return toJS(exec, globalObject(), resultDocument.get());
-        return jsUndefined();
-    }
-    // Throw exception?
-    return jsUndefined();
-}
-
 JSValue JSXSLTProcessor::setParameter(ExecState* exec)
 {
     if (exec->argument(1).isUndefinedOrNull() || exec->argument(2).isUndefinedOrNull())
         return jsUndefined(); // Throw exception?
-    String namespaceURI = ustringToString(exec->argument(0).toString(exec)->value(exec));
-    String localName = ustringToString(exec->argument(1).toString(exec)->value(exec));
-    String value = ustringToString(exec->argument(2).toString(exec)->value(exec));
+    String namespaceURI = exec->argument(0).toString(exec)->value(exec);
+    String localName = exec->argument(1).toString(exec)->value(exec);
+    String value = exec->argument(2).toString(exec)->value(exec);
     impl()->setParameter(namespaceURI, localName, value);
     return jsUndefined();
 }
@@ -100,8 +61,8 @@ JSValue JSXSLTProcessor::getParameter(ExecState* exec)
 {
     if (exec->argument(1).isUndefinedOrNull())
         return jsUndefined();
-    String namespaceURI = ustringToString(exec->argument(0).toString(exec)->value(exec));
-    String localName = ustringToString(exec->argument(1).toString(exec)->value(exec));
+    String namespaceURI = exec->argument(0).toString(exec)->value(exec);
+    String localName = exec->argument(1).toString(exec)->value(exec);
     String value = impl()->getParameter(namespaceURI, localName);
     return jsStringOrUndefined(exec, value);
 }
@@ -110,8 +71,8 @@ JSValue JSXSLTProcessor::removeParameter(ExecState* exec)
 {
     if (exec->argument(1).isUndefinedOrNull())
         return jsUndefined();
-    String namespaceURI = ustringToString(exec->argument(0).toString(exec)->value(exec));
-    String localName = ustringToString(exec->argument(1).toString(exec)->value(exec));
+    String namespaceURI = exec->argument(0).toString(exec)->value(exec);
+    String localName = exec->argument(1).toString(exec)->value(exec);
     impl()->removeParameter(namespaceURI, localName);
     return jsUndefined();
 }

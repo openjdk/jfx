@@ -29,15 +29,14 @@
 #ifndef WindowFeatures_h
 #define WindowFeatures_h
 
-#include "PlatformString.h"
 #include <wtf/HashMap.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
     class FloatRect;
 
     struct WindowFeatures {
-        // FIXME: We can delete this constructor once V8 showModalDialog is changed to use DOMWindow.
         WindowFeatures()
             : xSet(false)
             , ySet(false)
@@ -53,8 +52,7 @@ namespace WebCore {
             , dialog(false)
         {
         }
-
-        WindowFeatures(const String& windowFeaturesString);
+    explicit WindowFeatures(const String& windowFeaturesString);
         WindowFeatures(const String& dialogFeaturesString, const FloatRect& screenAvailableRect);
 
         float x;
@@ -78,13 +76,11 @@ namespace WebCore {
 
         Vector<String> additionalFeatures;
 
-        // FIXME: We can make these functions private non-member functions once V8 showModalDialog is changed to use DOMWindow.
+private:
         typedef HashMap<String, String> DialogFeaturesMap;
         static void parseDialogFeatures(const String&, HashMap<String, String>&);
         static bool boolFeature(const DialogFeaturesMap&, const char* key, bool defaultValue = false);
         static float floatFeature(const DialogFeaturesMap&, const char* key, float min, float max, float defaultValue);
-
-    private:
         void setWindowFeature(const String& keyString, const String& valueString);
     };
 

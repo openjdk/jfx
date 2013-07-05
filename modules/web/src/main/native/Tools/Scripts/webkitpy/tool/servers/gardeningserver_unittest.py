@@ -28,11 +28,11 @@
 
 import json
 import sys
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.layout_tests.models.test_configuration import *
-from webkitpy.layout_tests.port import builders
+from webkitpy.port import builders
 from webkitpy.thirdparty.mock import Mock
 from webkitpy.tool.mocktool import MockTool
 from webkitpy.common.system.executive_mock import MockExecutive
@@ -83,93 +83,6 @@ class TestGardeningHTTPRequestHandler(GardeningHTTPRequestHandler):
         print "== End JSON Response =="
 
 
-class BuildCoverageExtrapolatorTest(unittest.TestCase):
-    def test_extrapolate(self):
-        # FIXME: Make this test not rely on actual (not mock) port objects.
-        host = MockHost()
-        port = host.port_factory.get('chromium-win-win7', None)
-        converter = TestConfigurationConverter(port.all_test_configurations(), port.configuration_specifier_macros())
-        extrapolator = BuildCoverageExtrapolator(converter)
-        self.assertEquals(extrapolator.extrapolate_test_configurations("Webkit Win"), set([TestConfiguration(version='xp', architecture='x86', build_type='release')]))
-        self.assertEquals(extrapolator.extrapolate_test_configurations("Webkit Win7"), set([
-            TestConfiguration(version='win7', architecture='x86', build_type='debug'),
-            TestConfiguration(version='win7', architecture='x86', build_type='release')]))
-        self.assertRaises(KeyError, extrapolator.extrapolate_test_configurations, "Potato")
-
-
-class GardeningExpectationsUpdaterTest(unittest.TestCase):
-    def __init__(self, testFunc):
-        self.tool = MockTool()
-        self.tool.executive = MockExecutive(should_log=True)
-        self.tool.filesystem.files[TestPortFactory.path_to_test_expectations_file()] = ""
-        unittest.TestCase.__init__(self, testFunc)
-
-    def assert_update(self, failure_info_list, expectations_before=None, expectations_after=None, expected_exception=None):
-        updater = GardeningExpectationsUpdater(self.tool, TestPortFactory.create())
-        path_to_test_expectations_file = TestPortFactory.path_to_test_expectations_file()
-        self.tool.filesystem.files[path_to_test_expectations_file] = expectations_before or ""
-        if expected_exception:
-            self.assertRaises(expected_exception, updater.update_expectations, (failure_info_list))
-        else:
-            updater.update_expectations(failure_info_list)
-            self.assertEquals(self.tool.filesystem.files[path_to_test_expectations_file], expectations_after)
-
-    def test_empty_expectations(self):
-        failure_info_list = []
-        expectations_before = ""
-        expectations_after = ""
-        self.assert_update(failure_info_list, expectations_before=expectations_before, expectations_after=expectations_after)
-
-    def test_unknown_builder(self):
-        failure_info_list = [{"testName": "failures/expected/image.html", "builderName": "Bob", "failureTypeList": ["IMAGE"]}]
-        self.assert_update(failure_info_list, expected_exception=KeyError)
-
-    def test_empty_failure_type_list(self):
-        failure_info_list = [{"testName": "failures/expected/image.html", "builderName": "Webkit Win", "failureTypeList": []}]
-        self.assert_update(failure_info_list, expected_exception=AssertionError)
-
-    def test_empty_test_name(self):
-        failure_info_list = [{"testName": "", "builderName": "Webkit Win", "failureTypeList": ["TEXT"]}]
-        self.assert_update(failure_info_list, expected_exception=AssertionError)
-
-    def test_unknown_failure_type(self):
-        failure_info_list = [{"testName": "failures/expected/image.html", "builderName": "Webkit Win", "failureTypeList": ["IMAGE", "EXPLODE"]}]
-        expectations_before = ""
-        expectations_after = "\nBUG_NEW XP RELEASE : failures/expected/image.html = IMAGE"
-        self.assert_update(failure_info_list, expectations_before=expectations_before, expectations_after=expectations_after)
-
-    def test_add_new_expectation(self):
-        failure_info_list = [{"testName": "failures/expected/image.html", "builderName": "Webkit Win", "failureTypeList": ["IMAGE"]}]
-        expectations_before = ""
-        expectations_after = "\nBUG_NEW XP RELEASE : failures/expected/image.html = IMAGE"
-        self.assert_update(failure_info_list, expectations_before=expectations_before, expectations_after=expectations_after)
-
-    def test_replace_old_expectation(self):
-        failure_info_list = [{"testName": "failures/expected/image.html", "builderName": "Webkit Win", "failureTypeList": ["IMAGE"]}]
-        expectations_before = "BUG_OLD XP RELEASE : failures/expected/image.html = TEXT"
-        expectations_after = "BUG_NEW XP RELEASE : failures/expected/image.html = IMAGE"
-        self.assert_update(failure_info_list, expectations_before=expectations_before, expectations_after=expectations_after)
-
-    def test_pass_expectation(self):
-        failure_info_list = [{"testName": "failures/expected/image.html", "builderName": "Webkit Win", "failureTypeList": ["PASS"]}]
-        expectations_before = "BUG_OLD XP RELEASE : failures/expected/image.html = TEXT"
-        expectations_after = ""
-        self.assert_update(failure_info_list, expectations_before=expectations_before, expectations_after=expectations_after)
-
-    def test_supplement_old_expectation(self):
-        failure_info_list = [{"testName": "failures/expected/image.html", "builderName": "Webkit Win", "failureTypeList": ["IMAGE"]}]
-        expectations_before = "BUG_OLD XP RELEASE :  failures/expected/text.html = TEXT"
-        expectations_after = ("BUG_OLD XP RELEASE :  failures/expected/text.html = TEXT\n"
-                              "BUG_NEW XP RELEASE : failures/expected/image.html = IMAGE")
-        self.assert_update(failure_info_list, expectations_before=expectations_before, expectations_after=expectations_after)
-
-    def test_spurious_updates(self):
-        failure_info_list = [{"testName": "failures/expected/image.html", "builderName": "Webkit Win", "failureTypeList": ["IMAGE"]}]
-        expectations_before = "BUG_OLDER MAC LINUX : failures/expected/image.html = IMAGE+TEXT\nBUG_OLD XP RELEASE :  failures/expected/image.html = TEXT"
-        expectations_after = "BUG_OLDER MAC LINUX : failures/expected/image.html = IMAGE+TEXT\nBUG_NEW XP RELEASE : failures/expected/image.html = IMAGE"
-        self.assert_update(failure_info_list, expectations_before=expectations_before, expectations_after=expectations_after)
-
-
 class GardeningServerTest(unittest.TestCase):
     def _post_to_path(self, path, body=None, expected_stderr=None, expected_stdout=None, server=None):
         handler = TestGardeningHTTPRequestHandler(server or MockServer())
@@ -177,12 +90,12 @@ class GardeningServerTest(unittest.TestCase):
         handler.body = body
         OutputCapture().assert_outputs(self, handler.do_POST, expected_stderr=expected_stderr, expected_stdout=expected_stdout)
 
-    def test_rollout(self):
+    def disabled_test_rollout(self):
         expected_stderr = "MOCK run_command: ['echo', 'rollout', '--force-clean', '--non-interactive', '2314', 'MOCK rollout reason'], cwd=/mock-checkout\n"
         expected_stdout = "== Begin Response ==\nsuccess\n== End Response ==\n"
         self._post_to_path("/rollout?revision=2314&reason=MOCK+rollout+reason", expected_stderr=expected_stderr, expected_stdout=expected_stdout)
 
-    def test_rebaselineall(self):
+    def disabled_test_rebaselineall(self):
         expected_stderr = "MOCK run_command: ['echo', 'rebaseline-json'], cwd=/mock-checkout, input={\"user-scripts/another-test.html\":{\"%s\": [%s]}}\n"
         expected_stdout = "== Begin Response ==\nsuccess\n== End Response ==\n"
         server = MockServer()
@@ -197,14 +110,3 @@ class GardeningServerTest(unittest.TestCase):
         self._post_to_path("/rebaselineall", body='{"user-scripts/another-test.html":{"MOCK builder": ["txt","png"]}}', expected_stderr=expected_stderr % ('MOCK builder', '"txt","png"'), expected_stdout=expected_stdout, server=server)
 
         self._post_to_path("/rebaselineall", body='{"user-scripts/another-test.html":{"MOCK builder (Debug)": ["txt","png"]}}', expected_stderr=expected_stderr % ('MOCK builder (Debug)', '"txt","png"'), expected_stdout=expected_stdout)
-
-    def test_rebaseline_new_port(self):
-        builders._exact_matches = {"MOCK builder": {"port_name": "test-mac-leopard", "specifiers": set(["mock-specifier"]), "move_overwritten_baselines_to": ["mock-port-fallback", "mock-port-fallback2"]}}
-        expected_stderr = 'MOCK run_command: [\'echo\', \'rebaseline-json\'], cwd=/mock-checkout, input={"user-scripts/another-test.html":{"MOCK builder": ["txt","png"]}}\n'
-        expected_stdout = "== Begin Response ==\nsuccess\n== End Response ==\n"
-        self._post_to_path("/rebaselineall", body='{"user-scripts/another-test.html":{"MOCK builder": ["txt","png"]}}', expected_stderr=expected_stderr, expected_stdout=expected_stdout)
-
-    def test_updateexpectations(self):
-        expected_stderr = ""
-        expected_stdout = "== Begin Response ==\nsuccess\n== End Response ==\n"
-        self._post_to_path("/updateexpectations", body="[]", expected_stderr=expected_stderr, expected_stdout=expected_stdout)

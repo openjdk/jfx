@@ -32,6 +32,8 @@
 
 #if ENABLE(CSS_SHADERS)
 
+#include "CustomFilterProgramInfo.h"
+
 #include <wtf/HashCountedSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -39,8 +41,8 @@
 namespace WebCore {
 
 class GraphicsContext3D;
-class CustomFilterCompiledProgram;
 class CustomFilterProgramClient;
+class CustomFilterValidatedProgram;
 
 // This is the base class for the StyleCustomFilterProgram class which knows how to keep
 // references to the cached shaders.
@@ -53,31 +55,41 @@ public:
     void addClient(CustomFilterProgramClient*);
     void removeClient(CustomFilterProgramClient*);
     
-#if USE(3D_GRAPHICS)
-    PassRefPtr<CustomFilterCompiledProgram> compileProgramWithContext(GraphicsContext3D*);
-#endif
+    CustomFilterProgramInfo programInfo() const;
 
-    // StyleCustomFilterProgram has the only implementation for the following method. That means, it casts to StyleCustomFilterProgram
-    // withouth checking the type. If you add another implementation, also add a mechanism to check for the correct type.
-    virtual bool operator==(const CustomFilterProgram&) const = 0;
-    bool operator!=(const CustomFilterProgram& o) const { return !(*this == o); }
+    virtual String vertexShaderString() const = 0;
+    virtual String fragmentShaderString() const = 0;
+    CustomFilterProgramType programType() const { return m_programType; }
+    CustomFilterProgramMixSettings mixSettings() const { return m_mixSettings; }
+    CustomFilterMeshType meshType() const { return m_meshType; }
+
+    PassRefPtr<CustomFilterValidatedProgram> validatedProgram();
+    void setValidatedProgram(PassRefPtr<CustomFilterValidatedProgram>);
+
 protected:
     // StyleCustomFilterProgram can notify the clients that the cached resources are
     // loaded and it is ready to create CustomFilterCompiledProgram objects.
     void notifyClients();
     
-    virtual String vertexShaderString() const = 0;
-    virtual String fragmentShaderString() const = 0;
-    
     virtual void willHaveClients() = 0;
     virtual void didRemoveLastClient() = 0;
 
     // Keep the constructor protected to prevent creating this object directly.
-    CustomFilterProgram();
+    CustomFilterProgram(CustomFilterProgramType, const CustomFilterProgramMixSettings&, CustomFilterMeshType);
 
 private:
+    // CustomFilterPrograms are unique combinations of shaders and can be 
+    // compared using just the pointer value instead.
+    // These will catch anyone doing a value equal comparison.
+    bool operator==(const CustomFilterProgram&) const;
+    bool operator!=(const CustomFilterProgram&) const;
+
     typedef HashCountedSet<CustomFilterProgramClient*> CustomFilterProgramClientList;
     CustomFilterProgramClientList m_clients;
+    CustomFilterProgramType m_programType;
+    CustomFilterProgramMixSettings m_mixSettings;
+    CustomFilterMeshType m_meshType;
+    RefPtr<CustomFilterValidatedProgram> m_validatedProgram;
 };
 
 }

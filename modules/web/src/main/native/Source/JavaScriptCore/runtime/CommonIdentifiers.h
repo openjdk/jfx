@@ -29,36 +29,65 @@
 #define JSC_COMMON_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
     macro(apply) \
     macro(arguments) \
+    macro(Array) \
     macro(bind) \
+    macro(bytecode) \
+    macro(bytecodeIndex) \
+    macro(bytecodes) \
+    macro(bytecodesID) \
     macro(call) \
     macro(callee) \
     macro(caller) \
+    macro(compilationKind) \
+    macro(compilations) \
     macro(compile) \
     macro(configurable) \
     macro(constructor) \
+    macro(count) \
+    macro(counters) \
+    macro(description) \
+    macro(descriptions) \
     macro(enumerable) \
     macro(eval) \
     macro(exec) \
+    macro(executionCount) \
+    macro(exitKind) \
     macro(fromCharCode) \
     macro(global) \
     macro(get) \
     macro(hasOwnProperty) \
+    macro(hash) \
+    macro(header) \
+    macro(id) \
     macro(ignoreCase) \
     macro(index) \
+    macro(inferredName) \
     macro(input) \
+    macro(instructionCount) \
     macro(isArray) \
     macro(isPrototypeOf) \
+    macro(isWatchpoint) \
     macro(lastIndex) \
     macro(length) \
     macro(message) \
     macro(multiline) \
     macro(name) \
     macro(now) \
+    macro(numInlinedGetByIds) \
+    macro(numInlinedPutByIds) \
+    macro(numInlinedCalls) \
+    macro(Object) \
+    macro(opcode) \
+    macro(origin) \
+    macro(osrExitSites) \
+    macro(osrExits) \
     macro(parse) \
+    macro(profiledBytecodes) \
     macro(propertyIsEnumerable) \
     macro(prototype) \
     macro(set) \
     macro(source) \
+    macro(sourceCode) \
     macro(stack) \
     macro(test) \
     macro(toExponential) \
@@ -73,7 +102,11 @@
     macro(valueOf) \
     macro(writable) \
     macro(displayName) \
-    macro(join)
+    macro(join) \
+    macro(__defineGetter__) \
+    macro(__defineSetter__) \
+    macro(__lookupGetter__) \
+    macro(__lookupSetter__)
 
 #define JSC_COMMON_IDENTIFIERS_EACH_KEYWORD(macro) \
     macro(null) \
@@ -128,8 +161,8 @@ namespace JSC {
     class CommonIdentifiers {
         WTF_MAKE_NONCOPYABLE(CommonIdentifiers); WTF_MAKE_FAST_ALLOCATED;
     private:
-        CommonIdentifiers(JSGlobalData*);
-        friend class JSGlobalData;
+        CommonIdentifiers(VM*);
+        friend class VM;
 
     public:
         const Identifier nullIdentifier;

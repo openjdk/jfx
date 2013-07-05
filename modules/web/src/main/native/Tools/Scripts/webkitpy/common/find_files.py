@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2011 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -44,15 +43,10 @@ If a callback is passed in, it will be called for the each file and the file
 will be included into the result if the callback returns True.
 The callback has to take three arguments: filesystem, dirname and filename."""
 
-import time
-
-from webkitpy.common.system import logutils
+import itertools
 
 
-_log = logutils.get_logger(__file__)
-
-
-def find(filesystem, base_dir, paths=None, skipped_directories=None, file_filter=None):
+def find(filesystem, base_dir, paths=None, skipped_directories=None, file_filter=None, directory_sort_key=None):
     """Finds the set of tests under a given list of sub-paths.
 
     Args:
@@ -64,38 +58,27 @@ def find(filesystem, base_dir, paths=None, skipped_directories=None, file_filter
 
     paths = paths or ['*']
     skipped_directories = skipped_directories or set(['.svn', '_svn'])
-    return _normalized_find(filesystem, _normalize(filesystem, base_dir, paths), skipped_directories, file_filter)
+    return _normalized_find(filesystem, _normalize(filesystem, base_dir, paths), skipped_directories, file_filter, directory_sort_key)
 
 
 def _normalize(filesystem, base_dir, paths):
     return [filesystem.normpath(filesystem.join(base_dir, path)) for path in paths]
 
 
-def _normalized_find(filesystem, paths, skipped_directories, file_filter):
+def _normalized_find(filesystem, paths, skipped_directories, file_filter, directory_sort_key):
     """Finds the set of tests under the list of paths.
 
     Args:
       paths: a list of absolute path expressions to search.
           Glob patterns are ok.
     """
-    gather_start_time = time.time()
-    paths_to_walk = set()
 
-    for path in paths:
-        # If there's an * in the name, assume it's a glob pattern.
-        if path.find('*') > -1:
-            filenames = filesystem.glob(path)
-            paths_to_walk.update(filenames)
-        else:
-            paths_to_walk.add(path)
+    paths_to_walk = itertools.chain(*(filesystem.glob(path) for path in paths))
 
-    # FIXME: I'm not sure there's much point in this being a set. A list would probably be faster.
-    all_files = set()
-    for path in paths_to_walk:
-        files = filesystem.files_under(path, skipped_directories, file_filter)
-        all_files.update(set(files))
+    def sort_by_directory_key(files_list):
+        if directory_sort_key:
+            files_list.sort(key=directory_sort_key)
+        return files_list
 
-    gather_time = time.time() - gather_start_time
-    _log.debug("Test gathering took %f seconds" % gather_time)
-
+    all_files = itertools.chain(*(sort_by_directory_key(filesystem.files_under(path, skipped_directories, file_filter)) for path in paths_to_walk))
     return all_files

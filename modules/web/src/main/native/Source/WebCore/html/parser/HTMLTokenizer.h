@@ -27,16 +27,22 @@
 #ifndef HTMLTokenizer_h
 #define HTMLTokenizer_h
 
+#include "HTMLParserOptions.h"
 #include "HTMLToken.h"
-#include "MarkupTokenizerBase.h"
+#include "InputStreamPreprocessor.h"
 #include "SegmentedString.h"
 
 namespace WebCore {
 
-class Frame;
-
-class HTMLTokenizerState {
+class HTMLTokenizer {
+    WTF_MAKE_NONCOPYABLE(HTMLTokenizer);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
+    static PassOwnPtr<HTMLTokenizer> create(const HTMLParserOptions& options) { return adoptPtr(new HTMLTokenizer(options)); }
+    ~HTMLTokenizer();
+
+    void reset();
+
     enum State {
         DataState,
         CharacterReferenceInDataState,
@@ -114,16 +120,33 @@ public:
         CDATASectionRightSquareBracketState,
         CDATASectionDoubleRightSquareBracketState,
     };
+
+#if ENABLE(THREADED_HTML_PARSER)
+
+    struct Checkpoint {
+        HTMLParserOptions options;
+        State state;
+        UChar additionalAllowedCharacter;
+        bool skipNextNewLine;
+        bool forceNullCharacterReplacement;
+        bool shouldAllowCDATA;
+
+        Checkpoint()
+            : options(0)
+            , state()
+            , additionalAllowedCharacter('\0')
+            , skipNextNewLine(false)
+            , forceNullCharacterReplacement(false)
+            , shouldAllowCDATA(false)
+        {
+        }
 };
 
-class HTMLTokenizer : public MarkupTokenizerBase<HTMLToken, HTMLTokenizerState> {
-    WTF_MAKE_NONCOPYABLE(HTMLTokenizer);
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    static PassOwnPtr<HTMLTokenizer> create(bool usePreHTML5ParserQuirks) { return adoptPtr(new HTMLTokenizer(usePreHTML5ParserQuirks)); }
-    ~HTMLTokenizer();
+    bool canCreateCheckpoint() const;
+    void createCheckpoint(Checkpoint&) const;
+    void restoreFromCheckpoint(const Checkpoint&);
 
-    void reset();
+#endif
 
     // This function returns true if it emits a token. Otherwise, callers
     // must provide the same (in progress) token on the next call (unless
@@ -157,7 +180,7 @@ public:
     //  * CDATA sections in foreign content will be tokenized as bogus comments
     //    instead of as character tokens.
     //
-    void updateStateFor(const AtomicString& tagName, Frame*);
+    void updateStateFor(const AtomicString& tagName);
 
     bool forceNullCharacterReplacement() const { return m_forceNullCharacterReplacement; }
     void setForceNullCharacterReplacement(bool value) { m_forceNullCharacterReplacement = value; }
@@ -165,26 +188,58 @@ public:
     bool shouldAllowCDATA() const { return m_shouldAllowCDATA; }
     void setShouldAllowCDATA(bool value) { m_shouldAllowCDATA = value; }
 
+    State state() const { return m_state; }
+    void setState(State state) { m_state = state; }
+
+    inline bool shouldSkipNullCharacters() const
+    {
+        return !m_forceNullCharacterReplacement
+            && (m_state == HTMLTokenizer::DataState
+                || m_state == HTMLTokenizer::RCDATAState
+                || m_state == HTMLTokenizer::RAWTEXTState);
+    }
+
 private:
-    explicit HTMLTokenizer(bool usePreHTML5ParserQuirks);
+    explicit HTMLTokenizer(const HTMLParserOptions&);
 
     inline bool processEntity(SegmentedString&);
 
     inline void parseError();
     
-    inline bool emitAndResumeIn(SegmentedString& source, HTMLTokenizerState::State state)
+    inline void bufferCharacter(UChar character)
     {
-        saveEndTagNameIfNeeded();
-        return MarkupTokenizerBase<HTMLToken, HTMLTokenizerState>::emitAndResumeIn(source, state);
-    }
-    
-    inline bool emitAndReconsumeIn(SegmentedString& source, HTMLTokenizerState::State state)
-    {
-        saveEndTagNameIfNeeded();
-        return MarkupTokenizerBase<HTMLToken, HTMLTokenizerState>::emitAndReconsumeIn(source, state);
+        ASSERT(character != kEndOfFileMarker);
+        m_token->ensureIsCharacterToken();
+        m_token->appendToCharacter(character);
     }
 
-    inline bool flushEmitAndResumeIn(SegmentedString&, HTMLTokenizerState::State);
+    inline bool emitAndResumeIn(SegmentedString& source, State state)
+    {
+        saveEndTagNameIfNeeded();
+        m_state = state;
+        source.advanceAndUpdateLineNumber();
+        return true;
+    }
+    
+    inline bool emitAndReconsumeIn(SegmentedString&, State state)
+    {
+        saveEndTagNameIfNeeded();
+        m_state = state;
+        return true;
+    }
+
+    inline bool emitEndOfFile(SegmentedString& source)
+    {
+        if (haveBufferedCharacterToken())
+            return true;
+        m_state = HTMLTokenizer::DataState;
+        source.advanceAndUpdateLineNumber();
+        m_token->clear();
+        m_token->makeEndOfFile();
+        return true;
+    }
+
+    inline bool flushEmitAndResumeIn(SegmentedString&, State);
 
     // Return whether we need to emit a character token before dealing with
     // the buffered end tag.
@@ -194,29 +249,47 @@ private:
     // Sometimes we speculatively consume input characters and we don't
     // know whether they represent end tags or RCDATA, etc. These
     // functions help manage these state.
-    inline void addToPossibleEndTag(UChar cc);
+    inline void addToPossibleEndTag(LChar cc);
 
     inline void saveEndTagNameIfNeeded()
     {
-        ASSERT(m_token->type() != HTMLTokenTypes::Uninitialized);
-        if (m_token->type() == HTMLTokenTypes::StartTag)
+        ASSERT(m_token->type() != HTMLToken::Uninitialized);
+        if (m_token->type() == HTMLToken::StartTag)
             m_appropriateEndTagName = m_token->name();
     }
     inline bool isAppropriateEndTag();
 
-    Vector<UChar, 32> m_appropriateEndTagName;
 
+    inline bool haveBufferedCharacterToken()
+    {
+        return m_token->type() == HTMLToken::Character;
+    }
+
+    State m_state;
+    bool m_forceNullCharacterReplacement;
     bool m_shouldAllowCDATA;
 
+    // m_token is owned by the caller. If nextToken is not on the stack,
+    // this member might be pointing to unallocated memory.
+    HTMLToken* m_token;
+
+    // http://www.whatwg.org/specs/web-apps/current-work/#additional-allowed-character
+    UChar m_additionalAllowedCharacter;
+
+    // http://www.whatwg.org/specs/web-apps/current-work/#preprocessing-the-input-stream
+    InputStreamPreprocessor<HTMLTokenizer> m_inputStreamPreprocessor;
+
+    Vector<UChar, 32> m_appropriateEndTagName;
+
     // http://www.whatwg.org/specs/web-apps/current-work/#temporary-buffer
-    Vector<UChar, 32> m_temporaryBuffer;
+    Vector<LChar, 32> m_temporaryBuffer;
 
     // We occationally want to emit both a character token and an end tag
     // token (e.g., when lexing script). We buffer the name of the end tag
     // token here so we remember it next time we re-enter the tokenizer.
-    Vector<UChar, 32> m_bufferedEndTagName;
+    Vector<LChar, 32> m_bufferedEndTagName;
 
-    bool m_usePreHTML5ParserQuirks;
+    HTMLParserOptions m_options;
 };
 
 }

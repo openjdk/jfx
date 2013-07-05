@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2011 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.layout_tests.reftests import extract_reference_link
 
@@ -56,9 +55,9 @@ CONTENT OF TEST
 </html>
 """
         matches, mismatches = extract_reference_link.get_reference_link(html_1)
-        self.assertEqual(matches,
+        self.assertItemsEqual(matches,
                          ["green-box-ref.xht", "blue-box-ref.xht"])
-        self.assertEqual(mismatches,
+        self.assertItemsEqual(mismatches,
                          ["red-box-notref.xht", "red-box-notref.xht"])
 
         html_2 = ""
@@ -79,7 +78,3 @@ CONTENT OF TEST
         html_5 = """<link rel="help" href="RELEVANT_SPEC_SECTION">"""
         empty_tuple_4 = extract_reference_link.get_reference_link(html_5)
         self.assertEqual(empty_tuple_4, ([], []))
-
-
-if __name__ == "__main__":
-    unittest.main()

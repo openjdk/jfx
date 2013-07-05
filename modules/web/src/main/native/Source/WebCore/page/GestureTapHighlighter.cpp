@@ -93,20 +93,24 @@ inline bool strikes(const LayoutRect& a, const LayoutRect& b)
         && a.y() <= b.maxY() && b.y() <= a.maxY();
 }
 
-inline void shiftXEdgesToContainIfStrikes(LayoutRect& rect, const LayoutRect& other)
+inline void shiftXEdgesToContainIfStrikes(LayoutRect& rect, LayoutRect& other, bool isFirst)
 {
     if (rect.isEmpty())
         return;
-    LayoutUnit leftSide = rect.x();
-    LayoutUnit rightSide = rect.maxX();
 
-    if (!other.isEmpty() && strikes(rect, other)) {
-        leftSide = std::min(leftSide, other.x());
-        rightSide = std::max(rightSide, other.maxX());
-    }
+    if (other.isEmpty() || !strikes(rect, other))
+        return;
 
-    rect.setX(leftSide);
-    rect.setWidth(rightSide - leftSide);
+    LayoutUnit leftSide = std::min(rect.x(), other.x());
+    LayoutUnit rightSide = std::max(rect.maxX(), other.maxX());
+
+    rect.shiftXEdgeTo(leftSide);
+    rect.shiftMaxXEdgeTo(rightSide);
+
+    if (isFirst)
+        other.shiftMaxXEdgeTo(rightSide);
+    else
+        other.shiftXEdgeTo(leftSide);
 }
 
 inline void addHighlightRect(Path& path, const LayoutRect& rect, const LayoutRect& prev, const LayoutRect& next)
@@ -158,32 +162,41 @@ Path absolutePathForRenderer(RenderObject* const o)
     for (int i = 1; i < end; ++i)
         mid.uniteIfNonZero(rects.at(i));
 
-    Vector<LayoutRect> drawableRects;
+    LayoutRect first;
+    LayoutRect last;
 
-    if (!mid.isEmpty())
-        drawableRects.append(mid);
-
-    // Add the first box, but merge it with the center boxes if it intersects.
+    // Add the first box, but merge it with the center boxes if it intersects or if the center box is empty.
     if (rects.size() && !rects.first().isEmpty()) {
-        // Adjust center boxes to boundary of first
-        if (drawableRects.size())
-            shiftXEdgesToContainIfStrikes(drawableRects.last(), rects.first());
-        if (drawableRects.size() && drawableRects.last().intersects(rects.first()))
-            drawableRects.last().unite(rects.first());
-        else
-            drawableRects.prepend(rects.first());
+        // If the mid box is empty at this point, unite it with the first box. This allows the first box to be
+        // united with the last box if they intersect in the following check for last. Not uniting them would
+        // trigger in assert in addHighlighRect due to the first and the last box intersecting, but being passed
+        // as two separate boxes.
+        if (mid.isEmpty() || mid.intersects(rects.first()))
+            mid.unite(rects.first());
+        else {
+            first = rects.first();
+            shiftXEdgesToContainIfStrikes(mid, first, /* isFirst */ true);
+        }
     }
 
     // Add the last box, but merge it with the center boxes if it intersects.
     if (rects.size() > 1 && !rects.last().isEmpty()) {
         // Adjust center boxes to boundary of last
-        if (drawableRects.size())
-            shiftXEdgesToContainIfStrikes(drawableRects.last(), rects.last());
-        if (drawableRects.size() && drawableRects.last().intersects(rects.last()))
-            drawableRects.last().unite(rects.last());
-        else
-            drawableRects.append(rects.last());
+        if (mid.intersects(rects.last()))
+            mid.unite(rects.last());
+        else {
+            last = rects.last();
+            shiftXEdgesToContainIfStrikes(mid, last, /* isFirst */ false);
     }
+    }
+
+    Vector<LayoutRect> drawableRects;
+    if (!first.isEmpty())
+        drawableRects.append(first);
+    if (!mid.isEmpty())
+        drawableRects.append(mid);
+    if (!last.isEmpty())
+        drawableRects.append(last);
 
     // Clip the overflow rects if needed, before the ring path is formed to
     // ensure rounded highlight rects. This clipping has the problem with nested
@@ -198,10 +211,15 @@ Path absolutePathForRenderer(RenderObject* const o)
         RenderObject* currentRenderer = o;
 
         // Check ancestor layers for overflow clip and intersect them.
-        while (layer) {
-            RenderObject* layerRenderer = layer->renderer();
+        for (; layer; layer = layer->parent()) {
+            RenderLayerModelObject* layerRenderer = layer->renderer();
 
             if (layerRenderer->hasOverflowClip() && layerRenderer != currentRenderer) {
+                bool containerSkipped = false;
+                // Skip ancestor layers that are not containers for the current renderer.
+                currentRenderer->container(layerRenderer, &containerSkipped);
+                if (containerSkipped)
+                    continue;
                 ringRect.move(currentRenderer->offsetFromAncestorContainer(layerRenderer));
                 currentRenderer = layerRenderer;
 
@@ -211,7 +229,6 @@ Path absolutePathForRenderer(RenderObject* const o)
                 if (ringRect.isEmpty())
                     break;
             }
-            layer = layer->parent();
         }
 
         if (ringRect.isEmpty()) {

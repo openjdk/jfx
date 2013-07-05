@@ -29,6 +29,7 @@
 #
 # Python module for reading stored web credentials from the OS.
 
+import logging
 import os
 import platform
 import re
@@ -36,7 +37,6 @@ import re
 from webkitpy.common.checkout.scm import Git
 from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.system.user import User
-from webkitpy.common.system.deprecated_logging import log
 
 try:
     # Use keyring, a cross platform keyring interface, as a fallback:
@@ -44,6 +44,8 @@ try:
     import keyring
 except ImportError:
     keyring = None
+
+_log = logging.getLogger(__name__)
 
 
 class Credentials(object):
@@ -98,7 +100,7 @@ class Credentials(object):
         if username:
             security_command += ["-a", username]
 
-        log("Reading Keychain for %s account and password.  "
+        _log.info("Reading Keychain for %s account and password.  "
             "Click \"Allow\" to continue..." % self.host)
         try:
             return self.executive.run_command(security_command)
@@ -106,7 +108,7 @@ class Credentials(object):
             # Failed to either find a keychain entry or somekind of OS-related
             # error occured (for instance, couldn't find the /usr/sbin/security
             # command).
-            log("Could not find a keychain entry for %s." % self.host)
+            _log.error("Could not find a keychain entry for %s." % self.host)
             return None
 
     def _credentials_from_keychain(self, username=None):
@@ -131,9 +133,12 @@ class Credentials(object):
             return
         if not User().confirm("Store password in system keyring?", User.DEFAULT_NO):
             return
+        try:
         self._keyring.set_password(self.host, username, password)
+        except:
+            pass
 
-    def read_credentials(self):
+    def read_credentials(self, user=User):
         username, password = self._credentials_from_environment()
         # FIXME: We don't currently support pulling the username from one
         # source and the password from a separate source.
@@ -142,13 +147,17 @@ class Credentials(object):
         if not username or not password:
             username, password = self._credentials_from_keychain(username)
 
-        if username and not password and self._keyring:
-            password = self._keyring.get_password(self.host, username)
-
         if not username:
-            username = User.prompt("%s login: " % self.host)
+            username = user.prompt("%s login: " % self.host)
+
+        if username and not password and self._keyring:
+            try:
+            password = self._keyring.get_password(self.host, username)
+            except:
+                pass
+
         if not password:
-            password = User.prompt_password("%s password for %s: " % (self.host, username))
+            password = user.prompt_password("%s password for %s: " % (self.host, username))
             self._offer_to_store_credentials_in_keyring(username, password)
 
         return (username, password)

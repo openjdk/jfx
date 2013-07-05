@@ -56,7 +56,7 @@ PassRefPtr<FileReader> FileReader::create(ScriptExecutionContext* context)
 }
 
 FileReader::FileReader(ScriptExecutionContext* context)
-    : ActiveDOMObject(context, this)
+    : ActiveDOMObject(context)
     , m_state(EMPTY)
     , m_aborting(false)
     , m_readType(FileReaderLoader::ReadAsBinaryString)
@@ -161,7 +161,7 @@ void FileReader::abort()
 {
     LOG(FileAPI, "FileReader: aborting\n");
 
-    if (m_aborting)
+    if (m_aborting || m_state != LOADING)
         return;
     m_aborting = true;
 
@@ -215,6 +215,9 @@ void FileReader::didReceiveData()
 
 void FileReader::didFinishLoading()
 {
+    if (m_aborting)
+        return;
+
     ASSERT(m_state != DONE);
     m_state = DONE;
 

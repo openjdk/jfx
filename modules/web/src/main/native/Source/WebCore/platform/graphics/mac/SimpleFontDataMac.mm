@@ -42,7 +42,6 @@
 #import <wtf/Assertions.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/RetainPtr.h>
-#import <wtf/UnusedParam.h>
 
 @interface NSFont (WebAppKitSecretAPI)
 - (BOOL)_isFakeFixedPitch;
@@ -52,12 +51,10 @@ using namespace std;
 
 namespace WebCore {
   
-const float smallCapsFontSizeMultiplier = 0.7f;
-
 static bool fontHasVerticalGlyphs(CTFontRef ctFont)
 {
     // The check doesn't look neat but this is what AppKit does for vertical writing...
-    RetainPtr<CFArrayRef> tableTags(AdoptCF, CTFontCopyAvailableTables(ctFont, kCTFontTableOptionNoOptions));
+    RetainPtr<CFArrayRef> tableTags = adoptCF(CTFontCopyAvailableTables(ctFont, kCTFontTableOptionNoOptions));
     CFIndex numTables = CFArrayGetCount(tableTags.get());
     for (CFIndex index = 0; index < numTables; ++index) {
         CTFontTableTag tag = (CTFontTableTag)(uintptr_t)CFArrayGetValueAtIndex(tableTags.get(), index);
@@ -81,41 +78,13 @@ static NSString *webFallbackFontFamily(void)
     return webFallbackFontFamily.get();
 }
 
-#if !ERROR_DISABLED
-#if defined(__LP64__) || PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
-static NSString* pathFromFont(NSFont*)
-{
-    // FMGetATSFontRefFromFont is not available. As pathFromFont is only used for debugging purposes,
-    // returning nil is acceptable.
-    return nil;
-}
-#else
-static NSString* pathFromFont(NSFont *font)
-{
-    ATSFontRef atsFont = FMGetATSFontRefFromFont(CTFontGetPlatformFont(toCTFontRef(font), 0));
-    FSRef fileRef;
-
-    OSStatus status = ATSFontGetFileReference(atsFont, &fileRef);
-    if (status != noErr)
-        return nil;
-
-    UInt8 filePathBuffer[PATH_MAX];
-    status = FSRefMakePath(&fileRef, filePathBuffer, PATH_MAX);
-    if (status == noErr)
-        return [NSString stringWithUTF8String:(const char*)filePathBuffer];
-
-    return nil;
-}
-#endif // __LP64__
-#endif // !ERROR_DISABLED
-
 const SimpleFontData* SimpleFontData::getCompositeFontReferenceFontData(NSFont *key) const
 {
-    if (key && !CFEqual(RetainPtr<CFStringRef>(AdoptCF, CTFontCopyPostScriptName(CTFontRef(key))).get(), CFSTR("LastResort"))) {
+    if (key && !CFEqual(adoptCF(CTFontCopyPostScriptName(CTFontRef(key))).get(), CFSTR("LastResort"))) {
         if (!m_derivedFontData)
             m_derivedFontData = DerivedFontData::create(isCustomFont());
         if (!m_derivedFontData->compositeFontReferences)
-            m_derivedFontData->compositeFontReferences.adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 1, &kCFTypeDictionaryKeyCallBacks, NULL));
+            m_derivedFontData->compositeFontReferences = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 1, &kCFTypeDictionaryKeyCallBacks, NULL));
         else {
             const SimpleFontData* found = static_cast<const SimpleFontData*>(CFDictionaryGetValue(m_derivedFontData->compositeFontReferences.get(), static_cast<const void *>(key)));
             if (found)
@@ -129,11 +98,11 @@ const SimpleFontData* SimpleFontData::getCompositeFontReferenceFontData(NSFont *
             bool syntheticBold = platformData().syntheticBold() && !(traits & kCTFontBoldTrait);
             bool syntheticOblique = platformData().syntheticOblique() && !(traits & kCTFontItalicTrait);
 
-            FontPlatformData substitutePlatform(substituteFont, platformData().size(), isUsingPrinterFont, syntheticBold, syntheticOblique, platformData().orientation(), platformData().textOrientation(), platformData().widthVariant());
-            SimpleFontData* value = new SimpleFontData(substitutePlatform, isCustomFont());
-            if (value) {
-                CFDictionaryAddValue(dictionary, key, value);
-                return value;
+            FontPlatformData substitutePlatform(substituteFont, platformData().size(), isUsingPrinterFont, syntheticBold, syntheticOblique, platformData().orientation(), platformData().widthVariant());
+            if (RefPtr<SimpleFontData> value = adoptRef(new SimpleFontData(substitutePlatform, isCustomFont()))) {
+                SimpleFontData* valuePtr = value.get();
+                CFDictionaryAddValue(dictionary, key, value.release().leakRef());
+                return valuePtr;
             }
         }
     }
@@ -142,12 +111,6 @@ const SimpleFontData* SimpleFontData::getCompositeFontReferenceFontData(NSFont *
 
 void SimpleFontData::platformInit()
 {
-#if USE(ATSUI)
-    m_ATSUMirrors = false;
-    m_checkedShapesArabic = false;
-    m_shapesArabic = false;
-#endif
-
     m_syntheticBoldOffset = m_platformData.m_syntheticBold ? 1.0f : 0.f;
 
     bool failedSetup = false;
@@ -174,11 +137,6 @@ void SimpleFontData::platformInit()
             m_platformData.setFont([[NSFontManager sharedFontManager] convertFont:m_platformData.font() toFamily:fallbackFontFamily]);
         else
             m_platformData.setFont([NSFont fontWithName:fallbackFontFamily size:m_platformData.size()]);
-#if !ERROR_DISABLED
-        NSString *filePath = pathFromFont(initialFont.get());
-        if (!filePath)
-            filePath = @"not known";
-#endif
         if (!initFontData(this)) {
             if ([fallbackFontFamily isEqual:@"Times New Roman"]) {
                 // OK, couldn't setup Times New Roman as an alternate to Times, fallback
@@ -186,19 +144,19 @@ void SimpleFontData::platformInit()
                 m_platformData.setFont([[NSFontManager sharedFontManager] convertFont:m_platformData.font() toFamily:webFallbackFontFamily()]);
                 if (!initFontData(this)) {
                     // We tried, Times, Times New Roman, and the system font. No joy. We have to give up.
-                    LOG_ERROR("unable to initialize with font %@ at %@", initialFont.get(), filePath);
+                    LOG_ERROR("unable to initialize with font %@", initialFont.get());
                     failedSetup = true;
                 }
             } else {
                 // We tried the requested font and the system font. No joy. We have to give up.
-                LOG_ERROR("unable to initialize with font %@ at %@", initialFont.get(), filePath);
+                LOG_ERROR("unable to initialize with font %@", initialFont.get());
                 failedSetup = true;
             }
         }
 
         // Report the problem.
-        LOG_ERROR("Corrupt font detected, using %@ in place of %@ located at \"%@\".",
-            [m_platformData.font() familyName], [initialFont.get() familyName], filePath);
+        LOG_ERROR("Corrupt font detected, using %@ in place of %@.",
+            [m_platformData.font() familyName], [initialFont.get() familyName]);
     }
 
     // If all else fails, try to set up using the system font.
@@ -233,15 +191,6 @@ void SimpleFontData::platformInit()
     NSString *familyName = [m_platformData.font() familyName];
     if ([familyName isEqualToString:@"Times"] || [familyName isEqualToString:@"Helvetica"] || [familyName isEqualToString:@"Courier"])
         ascent += floorf(((ascent + descent) * 0.15f) + 0.5f);
-#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
-    else if ([familyName isEqualToString:@"Geeza Pro"]) {
-        // Geeza Pro has glyphs that draw slightly above the ascent or far below the descent. Adjust
-        // those vertical metrics to better match reality, so that diacritics at the bottom of one line
-        // do not overlap diacritics at the top of the next line.
-        ascent *= 1.08f;
-        descent *= 2.f;
-    }
-#endif
 
     // Compute and store line spacing, before the line metrics hacks are applied.
     m_fontMetrics.setLineSpacing(lroundf(ascent) + lroundf(descent) + lroundf(lineGap));
@@ -287,14 +236,14 @@ void SimpleFontData::platformCharWidthInit()
     m_avgCharWidth = 0;
     m_maxCharWidth = 0;
     
-    RetainPtr<CFDataRef> os2Table(AdoptCF, copyFontTableForTag(m_platformData, 'OS/2'));
+    RetainPtr<CFDataRef> os2Table = adoptCF(copyFontTableForTag(m_platformData, 'OS/2'));
     if (os2Table && CFDataGetLength(os2Table.get()) >= 4) {
         const UInt8* os2 = CFDataGetBytePtr(os2Table.get());
         SInt16 os2AvgCharWidth = os2[2] * 256 + os2[3];
         m_avgCharWidth = scaleEmToUnits(os2AvgCharWidth, m_fontMetrics.unitsPerEm()) * m_platformData.m_size;
     }
 
-    RetainPtr<CFDataRef> headTable(AdoptCF, copyFontTableForTag(m_platformData, 'head'));
+    RetainPtr<CFDataRef> headTable = adoptCF(copyFontTableForTag(m_platformData, 'head'));
     if (headTable && CFDataGetLength(headTable.get()) >= 42) {
         const UInt8* head = CFDataGetBytePtr(headTable.get());
         ushort uxMin = head[36] * 256 + head[37];
@@ -314,25 +263,19 @@ void SimpleFontData::platformDestroy()
     if (!isCustomFont() && m_derivedFontData) {
         // These come from the cache.
         if (m_derivedFontData->smallCaps)
-            fontCache()->releaseFontData(m_derivedFontData->smallCaps.leakPtr());
+            fontCache()->releaseFontData(m_derivedFontData->smallCaps.get());
 
         if (m_derivedFontData->emphasisMark)
-            fontCache()->releaseFontData(m_derivedFontData->emphasisMark.leakPtr());
+            fontCache()->releaseFontData(m_derivedFontData->emphasisMark.get());
+    }
     }
 
-#if USE(ATSUI)
-    HashMap<unsigned, ATSUStyle>::iterator end = m_ATSUStyleMap.end();
-    for (HashMap<unsigned, ATSUStyle>::iterator it = m_ATSUStyleMap.begin(); it != end; ++it)
-        ATSUDisposeStyle(it->second);
-#endif
-}
-
-PassOwnPtr<SimpleFontData> SimpleFontData::createScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
+PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
 {
     if (isCustomFont()) {
         FontPlatformData scaledFontData(m_platformData);
         scaledFontData.m_size = scaledFontData.m_size * scaleFactor;
-        return adoptPtr(new SimpleFontData(scaledFontData, true, false));
+        return SimpleFontData::create(scaledFontData, true, false);
     }
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -357,31 +300,11 @@ PassOwnPtr<SimpleFontData> SimpleFontData::createScaledFontData(const FontDescri
         scaledFontData.m_syntheticOblique = (fontTraits & NSItalicFontMask) && !(scaledFontTraits & NSItalicFontMask);
 
         // SimpleFontData::platformDestroy() takes care of not deleting the cached font data twice.
-        return adoptPtr(fontCache()->getCachedFontData(&scaledFontData));
+        return fontCache()->getCachedFontData(&scaledFontData);
     }
     END_BLOCK_OBJC_EXCEPTIONS;
 
-    return nullptr;
-}
-
-SimpleFontData* SimpleFontData::smallCapsFontData(const FontDescription& fontDescription) const
-{
-    if (!m_derivedFontData)
-        m_derivedFontData = DerivedFontData::create(isCustomFont());
-    if (!m_derivedFontData->smallCaps)
-        m_derivedFontData->smallCaps = createScaledFontData(fontDescription, smallCapsFontSizeMultiplier);
-
-    return m_derivedFontData->smallCaps.get();
-}
-
-SimpleFontData* SimpleFontData::emphasisMarkFontData(const FontDescription& fontDescription) const
-{
-    if (!m_derivedFontData)
-        m_derivedFontData = DerivedFontData::create(isCustomFont());
-    if (!m_derivedFontData->emphasisMark)
-        m_derivedFontData->emphasisMark = createScaledFontData(fontDescription, .5f);
-
-    return m_derivedFontData->emphasisMark.get();
+    return 0;
 }
 
 bool SimpleFontData::containsCharacters(const UChar* characters, int length) const
@@ -473,12 +396,12 @@ bool SimpleFontData::canRenderCombiningCharacterSequence(const UChar* characters
 
     WTF::HashMap<String, bool>::AddResult addResult = m_combiningCharacterSequenceSupport->add(String(characters, length), false);
     if (!addResult.isNewEntry)
-        return addResult.iterator->second;
+        return addResult.iterator->value;
 
-    RetainPtr<CGFontRef> cgFont(AdoptCF, CTFontCopyGraphicsFont(platformData().ctFont(), 0));
+    RetainPtr<CGFontRef> cgFont = adoptCF(CTFontCopyGraphicsFont(platformData().ctFont(), 0));
 
     ProviderInfo info = { characters, length, getCFStringAttributes(0, platformData().orientation()) };
-    RetainPtr<CTLineRef> line(AdoptCF, wkCreateCTLineWithUniCharProvider(&provideStringAndAttributes, 0, &info));
+    RetainPtr<CTLineRef> line = adoptCF(wkCreateCTLineWithUniCharProvider(&provideStringAndAttributes, 0, &info));
 
     CFArrayRef runArray = CTLineGetGlyphRuns(line.get());
     CFIndex runCount = CFArrayGetCount(runArray);
@@ -488,12 +411,12 @@ bool SimpleFontData::canRenderCombiningCharacterSequence(const UChar* characters
         ASSERT(CFGetTypeID(ctRun) == CTRunGetTypeID());
         CFDictionaryRef runAttributes = CTRunGetAttributes(ctRun);
         CTFontRef runFont = static_cast<CTFontRef>(CFDictionaryGetValue(runAttributes, kCTFontAttributeName));
-        RetainPtr<CGFontRef> runCGFont(AdoptCF, CTFontCopyGraphicsFont(runFont, 0));
+        RetainPtr<CGFontRef> runCGFont = adoptCF(CTFontCopyGraphicsFont(runFont, 0));
         if (!CFEqual(runCGFont.get(), cgFont.get()))
             return false;
     }
 
-    addResult.iterator->second = true;
+    addResult.iterator->value = true;
     return true;
 }
 

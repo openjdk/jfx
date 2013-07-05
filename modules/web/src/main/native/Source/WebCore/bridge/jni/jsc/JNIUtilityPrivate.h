@@ -30,7 +30,7 @@
 #if ENABLE(JAVA_BRIDGE)
 
 #include "JNIUtility.h"
-#include <runtime/JSValue.h>
+#include <runtime/JSCJSValue.h>
 
 namespace JSC {
 
@@ -42,9 +42,7 @@ namespace Bindings {
 class RootObject;
 
 jvalue convertValueToJValue(ExecState*, RootObject*, JSValue, JavaType, const char* javaClassName);
-#if ENABLE(JAVA_JSC)
 jobject convertUndefinedToJObject();
-#endif
 
  jthrowable dispatchJNICall(int, RootObject *rootObject, jobject, bool isStatic, JavaType returnType, jmethodID, jobject* args, jvalue& result, jobject accessControlContext);
 

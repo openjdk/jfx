@@ -29,9 +29,8 @@
  */
 
 #include "config.h"
-#include "RenderInputSpeech.h"
-
 #if ENABLE(INPUT_SPEECH)
+#include "RenderInputSpeech.h"
 
 #include "GraphicsContext.h"
 #include "HTMLNames.h"
@@ -62,7 +61,7 @@ bool RenderInputSpeech::paintInputFieldSpeechButton(RenderObject* object, const 
         return false;
 
     // Get the renderer of <input> element.
-    Node* input = object->node()->shadowAncestorNode();
+    Node* input = object->node()->shadowHost();
     if (!input->renderer()->isBox())
         return false;
     RenderBox* inputRenderBox = toRenderBox(input->renderer());

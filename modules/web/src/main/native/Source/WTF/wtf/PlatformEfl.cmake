@@ -1,40 +1,31 @@
-LIST(APPEND WTF_SOURCES
+list(APPEND WTF_SOURCES
     efl/MainThreadEfl.cpp
     efl/OwnPtrEfl.cpp
+    efl/RefPtrEfl.cpp
+
     gobject/GOwnPtr.cpp
     gobject/GRefPtr.cpp
-
-    OSAllocatorPosix.cpp
-    ThreadIdentifierDataPthreads.cpp
-    ThreadingPthreads.cpp
-
-    unicode/icu/CollatorICU.cpp
 )
 
-LIST(APPEND WTF_LIBRARIES
+list(APPEND WTF_LIBRARIES
     pthread
-    ${Glib_LIBRARIES}
-    ${ICU_LIBRARIES}
-    ${ICU_I18N_LIBRARIES}
+    ${GLIB_LIBRARIES}
+    ${GLIB_GIO_LIBRARIES}
+    ${GLIB_GOBJECT_LIBRARIES}
     ${ECORE_LIBRARIES}
     ${ECORE_EVAS_LIBRARIES}
+    ${ECORE_IMF_LIBRARIES}
     ${EINA_LIBRARIES}
+    ${EO_LIBRARIES}
     ${EVAS_LIBRARIES}
-    ${CMAKE_DL_LIBS}
 )
 
-LIST(APPEND WTF_LINK_FLAGS
-    ${ECORE_LDFLAGS}
-    ${ECORE_EVAS_LDFLAGS}
-    ${EVAS_LDFLAGS}
-)
-
-LIST(APPEND WTF_INCLUDE_DIRECTORIES
-    ${ECORE_INCLUDE_DIRS}
+list(APPEND WTF_INCLUDE_DIRECTORIES
     ${ECORE_EVAS_INCLUDE_DIRS}
+    ${ECORE_INCLUDE_DIRS}
+    ${ECORE_IMF_INCLUDE_DIRS}
+    ${EINA_INCLUDE_DIRS}
+    ${EO_INCLUDE_DIRS}
     ${EVAS_INCLUDE_DIRS}
-    ${Glib_INCLUDE_DIRS}
-    ${ICU_INCLUDE_DIRS}
-    ${JAVASCRIPTCORE_DIR}/wtf/gobject
-    ${JAVASCRIPTCORE_DIR}/wtf/unicode/
+    ${GLIB_INCLUDE_DIRS}
 )

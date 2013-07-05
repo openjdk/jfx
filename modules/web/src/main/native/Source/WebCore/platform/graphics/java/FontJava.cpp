@@ -22,11 +22,16 @@ namespace WebCore {
 
 static JLString getJavaString(const TextRun& run)
 {
-    return String(
-        run.allowTabs()
-        ? String(run.characters())
-        : Font::normalizeSpaces(run.characters(), run.length())
-    ).toJavaString(WebCore_GetJavaEnv());
+    unsigned length = run.length();
+    bool allowTabs = run.allowTabs();
+    String ret = run.is8Bit()
+        ? String(allowTabs
+                ? String(run.characters8())
+                : Font::normalizeSpaces(run.characters8(), length))
+        : String(allowTabs
+                ? String(run.characters16())
+                : Font::normalizeSpaces(run.characters16(), length));
+    return ret.toJavaString(WebCore_GetJavaEnv());
 }
 
 void Font::drawComplexText(GraphicsContext* gc, const TextRun & run, const FloatPoint & point, int from, int to) const

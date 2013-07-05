@@ -1,11 +1,11 @@
 #if defined(WIN32) || defined(_WIN32)
 
 #ifndef WINVER
-#define WINVER 0x0500
+#define WINVER 0x0502
 #endif
 
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500
+#define _WIN32_WINNT 0x0502
 #endif
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -25,7 +25,6 @@
 #include <runtime/JSExportMacros.h>
 
 #include <wtf/Platform.h>
-#include <wtf/AlwaysInline.h>
 #include <wtf/Assertions.h>
 //#include <wtf/CurrentTime.h>
 //#include <wtf/DateMath.h>
@@ -42,7 +41,6 @@
 #include <wtf/HashTable.h>
 #include <wtf/HashTraits.h>
 #include <wtf/ListHashSet.h>
-#include <wtf/ListRefPtr.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OwnArrayPtr.h>
@@ -55,7 +53,6 @@
 #include <wtf/StringExtras.h>
 #include <wtf/TCPageMap.h>
 #include <wtf/TCSystemAlloc.h>
-#include <wtf/UnusedParam.h>
 #include <wtf/Vector.h>
 #include <wtf/VectorTraits.h>
 
@@ -125,7 +122,7 @@
 //#include <runtime/JSByteArray.h>
 #include <runtime/JSCell.h>
 #include <runtime/JSFunction.h>
-#include <runtime/JSGlobalData.h>
+#include <runtime/VM.h>
 #include <runtime/JSGlobalObject.h>
 #include <runtime/JSGlobalObjectFunctions.h>
 //#include <runtime/JSImmediate.h>
@@ -138,7 +135,7 @@
 #include <runtime/JSStaticScopeObject.h>
 #include <runtime/JSString.h>
 #include <runtime/JSType.h>
-#include <runtime/JSValue.h>
+#include <runtime/JSObject.h>
 #include <runtime/JSVariableObject.h>
 #include <runtime/JSWrapperObject.h>
 #include <runtime/Lookup.h>
@@ -153,7 +150,6 @@
 #include <runtime/StringObject.h>
 #include <runtime/StringPrototype.h>
 #include <runtime/Structure.h>
-#include <runtime/UString.h>
 #endif
 
 

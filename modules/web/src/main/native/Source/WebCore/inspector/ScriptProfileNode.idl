@@ -24,13 +24,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module core {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=JAVASCRIPT_DEBUGGER,
         OmitConstructor,
-        V8CustomToJSObject
-    ] ScriptProfileNode {
+    ImplementationLacksVTable
+] interface ScriptProfileNode {
         readonly attribute DOMString functionName;
         readonly attribute DOMString url;
         readonly attribute unsigned long lineNumber;
@@ -39,7 +38,6 @@ module core {
         readonly attribute unsigned long numberOfCalls;
         sequence<ScriptProfileNode> children();
         readonly attribute boolean visible;
-        readonly attribute [CustomGetter] unsigned long callUID;
+    readonly attribute unsigned long callUID;
     };
 
-}

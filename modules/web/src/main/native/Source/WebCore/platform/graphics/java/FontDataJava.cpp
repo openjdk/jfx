@@ -1,19 +1,20 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011-2013, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
-#include "CString.h"
+
 #include "Font.h"
 #include "FontData.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
 #include "GraphicsContextJava.h"
 #include "NotImplemented.h"
-#include "PlatformString.h"
 #include "SimpleFontData.h"
 
 #include <wtf/Assertions.h>
+#include <wtf/text/WTFString.h>
+#include <wtf/text/CString.h>
 
 namespace WebCore {
 
@@ -86,41 +87,16 @@ void SimpleFontData::platformDestroy()
     notImplemented();
 }
 
-PassOwnPtr<SimpleFontData> SimpleFontData::createScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
-{
-    FontDescription desc = FontDescription(fontDescription);
-    desc.setSpecifiedSize(scaleFactor * fontDescription.computedSize());
-    FontPlatformData fontPlatformData(desc, desc.family().family());
-    if (!fontPlatformData.nativeFontData()) {
-        return nullptr; // requested font does not exist
-    }
-    return adoptPtr(new SimpleFontData(fontPlatformData, isCustomFont(), false));
-}
-
-SimpleFontData* SimpleFontData::smallCapsFontData(const FontDescription& fontDescription) const
-{
-    if (!m_derivedFontData)
-        m_derivedFontData = DerivedFontData::create(isCustomFont());
-    if (!m_derivedFontData->smallCaps)
-        m_derivedFontData->smallCaps = createScaledFontData(fontDescription, .7);
-
-    return m_derivedFontData->smallCaps.get();
-}
-
-SimpleFontData* SimpleFontData::emphasisMarkFontData(const FontDescription& fontDescription) const
-{
-    if (!m_derivedFontData)
-        m_derivedFontData = DerivedFontData::create(isCustomFont());
-    if (!m_derivedFontData->emphasisMark)
-        m_derivedFontData->emphasisMark = createScaledFontData(fontDescription, .5);
-
-    return m_derivedFontData->emphasisMark.get();
-}
-
 bool SimpleFontData::containsCharacters(const UChar *characters, int length) const
 {
     notImplemented();
     return true;
+}
+
+PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
+{
+    const float scaledSize = lroundf(fontDescription.computedSize() * scaleFactor);
+    return SimpleFontData::create(FontPlatformData(fontDescription, scaledSize), isCustomFont(), false);
 }
 
 float SimpleFontData::platformWidthForGlyph(Glyph c) const

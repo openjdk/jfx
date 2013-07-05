@@ -29,12 +29,11 @@
 #ifndef SecurityOrigin_h
 #define SecurityOrigin_h
 
-#include "PlatformString.h"
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class Document;
 class KURL;
 
 class SecurityOrigin : public ThreadSafeRefCounted<SecurityOrigin> {
@@ -45,6 +44,12 @@ public:
         Ask
     };
 
+    enum StorageBlockingPolicy {
+        AllowAllStorage = 0,
+        BlockThirdPartyStorage,
+        BlockAllStorage
+    };
+
     static PassRefPtr<SecurityOrigin> create(const KURL&);
     static PassRefPtr<SecurityOrigin> createUnique();
 
@@ -52,9 +57,22 @@ public:
     static PassRefPtr<SecurityOrigin> createFromString(const String&);
     static PassRefPtr<SecurityOrigin> create(const String& protocol, const String& host, int port);
 
+    // Some URL schemes use nested URLs for their security context. For example,
+    // filesystem URLs look like the following:
+    //
+    //   filesystem:http://example.com/temporary/path/to/file.png
+    //
+    // We're supposed to use "http://example.com" as the origin.
+    //
+    // Generally, we add URL schemes to this list when WebKit support them. For
+    // example, we don't include the "jar" scheme, even though Firefox
+    // understands that "jar" uses an inner URL for it's security origin.
+    static bool shouldUseInnerURL(const KURL&);
+    static KURL extractInnerURL(const KURL&);
+
     // Create a deep copy of this SecurityOrigin. This method is useful
     // when marshalling a SecurityOrigin to another thread.
-    PassRefPtr<SecurityOrigin> isolatedCopy();
+    PassRefPtr<SecurityOrigin> isolatedCopy() const;
 
     // Set the domain property of this security origin to newDomain. This
     // function does not check whether newDomain is a suffix of the current
@@ -121,17 +139,22 @@ public:
     // WARNING: This is an extremely powerful ability. Use with caution!
     void grantUniversalAccess();
 
-    bool canAccessDatabase() const { return !isUnique(); }
-    bool canAccessLocalStorage() const { return !isUnique(); }
+    void setStorageBlockingPolicy(StorageBlockingPolicy policy) { m_storageBlockingPolicy = policy; }
+
+#if ENABLE(CACHE_PARTITIONING)
+    String cachePartition() const;
+#endif
+
+    bool canAccessDatabase(const SecurityOrigin* topOrigin = 0) const { return canAccessStorage(topOrigin); };
+    bool canAccessSessionStorage(const SecurityOrigin* topOrigin) const { return canAccessStorage(topOrigin, AlwaysAllowFromThirdParty); }
+    bool canAccessLocalStorage(const SecurityOrigin* topOrigin) const { return canAccessStorage(topOrigin); };
+    bool canAccessSharedWorkers(const SecurityOrigin* topOrigin) const { return canAccessStorage(topOrigin); }
+    bool canAccessPluginStorage(const SecurityOrigin* topOrigin) const { return canAccessStorage(topOrigin); }
+    bool canAccessApplicationCache(const SecurityOrigin* topOrigin) const { return canAccessStorage(topOrigin); }
     bool canAccessCookies() const { return !isUnique(); }
     bool canAccessPasswordManager() const { return !isUnique(); }
     bool canAccessFileSystem() const { return !isUnique(); }
     Policy canShowNotifications() const;
-
-    // Technically, we should always allow access to sessionStorage, but we
-    // currently don't handle creating a sessionStorage area for unique
-    // origins.
-    bool canAccessSessionStorage() const { return !isUnique(); }
 
     // The local SecurityOrigin is the most privileged SecurityOrigin.
     // The local SecurityOrigin can script any document, navigate to local
@@ -182,6 +205,8 @@ public:
     // (and whether it was set) but considering the host. It is used for postMessage.
     bool isSameSchemeHostPort(const SecurityOrigin*) const;
 
+    static String urlWithUniqueSecurityOrigin();
+
 private:
     SecurityOrigin();
     explicit SecurityOrigin(const KURL&);
@@ -189,10 +214,13 @@ private:
 
     // FIXME: Rename this function to something more semantic.
     bool passesFileCheck(const SecurityOrigin*) const;
+    bool isThirdParty(const SecurityOrigin*) const;
+    
+    enum ShouldAllowFromThirdParty { AlwaysAllowFromThirdParty, MaybeAllowFromThirdParty };
+    bool canAccessStorage(const SecurityOrigin*, ShouldAllowFromThirdParty = MaybeAllowFromThirdParty) const;
 
     String m_protocol;
     String m_host;
-    mutable String m_encodedHost;
     String m_domain;
     String m_filePath;
     unsigned short m_port;
@@ -200,6 +228,7 @@ private:
     bool m_universalAccess;
     bool m_domainWasSetInDOM;
     bool m_canLoadLocalResources;
+    StorageBlockingPolicy m_storageBlockingPolicy;
     bool m_enforceFilePathSeparation;
     bool m_needsDatabaseIdentifierQuirkForFiles;
 };

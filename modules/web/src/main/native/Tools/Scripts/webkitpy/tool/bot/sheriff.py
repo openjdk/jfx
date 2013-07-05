@@ -27,7 +27,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from webkitpy.common.config import urls
-from webkitpy.common.system.deprecated_logging import log
 from webkitpy.common.system.executive import ScriptError
 from webkitpy.tool.grammar import join_with_separators
 
@@ -36,6 +35,9 @@ class Sheriff(object):
     def __init__(self, tool, sheriffbot):
         self._tool = tool
         self._sheriffbot = sheriffbot
+
+    def name(self):
+        return self._sheriffbot.name
 
     def responsible_nicknames_from_commit_info(self, commit_info):
         nestedList = [party.irc_nicknames for party in commit_info.responsible_parties() if party.irc_nicknames]
@@ -87,18 +89,6 @@ class Sheriff(object):
             svn_revisions,
             rollout_reason,
         ])
-        return urls.parse_bug_id(output)
-
-    def post_chromium_deps_roll(self, revision, revision_name):
-        args = [
-            "post-chromium-deps-roll",
-            "--force-clean",
-            "--non-interactive",
-            "--parent-command=sheriff-bot",
-        ]
-        # revision can be None, but revision_name is always something meaningful.
-        args += [revision, revision_name]
-        output = self._sheriffbot.run_webkit_patch(args)
         return urls.parse_bug_id(output)
 
     def post_blame_comment_on_bug(self, commit_info, builders, tests):

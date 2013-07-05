@@ -29,11 +29,10 @@
 #ifndef Console_h
 #define Console_h
 
-#include "ConsoleTypes.h"
 #include "DOMWindowProperty.h"
-#include "ScriptCallStack.h"
 #include "ScriptProfile.h"
 #include "ScriptState.h"
+#include "ScriptWrappable.h"
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
@@ -44,54 +43,45 @@ class Frame;
 class MemoryInfo;
 class Page;
 class ScriptArguments;
-class ScriptCallStack;
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
 typedef Vector<RefPtr<ScriptProfile> > ProfilesArray;
 #endif
 
-class Console : public RefCounted<Console>, public DOMWindowProperty {
+class Console : public ScriptWrappable, public RefCounted<Console>, public DOMWindowProperty {
 public:
     static PassRefPtr<Console> create(Frame* frame) { return adoptRef(new Console(frame)); }
     virtual ~Console();
 
-    void addMessage(MessageSource, MessageType, MessageLevel, const String& message, const String& sourceURL = String(), unsigned lineNumber = 0, PassRefPtr<ScriptCallStack> = 0);
-    void addMessage(MessageSource, MessageType, MessageLevel, const String& message, PassRefPtr<ScriptCallStack>);
-
-    void debug(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void error(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void info(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void log(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void warn(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void dir(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void dirxml(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void trace(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void assertCondition(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>, bool condition);
-    void count(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void markTimeline(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
+    void debug(ScriptState*, PassRefPtr<ScriptArguments>);
+    void error(ScriptState*, PassRefPtr<ScriptArguments>);
+    void info(ScriptState*, PassRefPtr<ScriptArguments>);
+    void log(ScriptState*, PassRefPtr<ScriptArguments>);
+    void clear(ScriptState*, PassRefPtr<ScriptArguments>);
+    void warn(ScriptState*, PassRefPtr<ScriptArguments>);
+    void dir(ScriptState*, PassRefPtr<ScriptArguments>);
+    void dirxml(ScriptState*, PassRefPtr<ScriptArguments>);
+    void table(ScriptState*, PassRefPtr<ScriptArguments>);
+    void trace(ScriptState*, PassRefPtr<ScriptArguments>);
+    void assertCondition(ScriptState*, PassRefPtr<ScriptArguments>, bool condition);
+    void count(ScriptState*, PassRefPtr<ScriptArguments>);
+    void markTimeline(PassRefPtr<ScriptArguments>);
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     const ProfilesArray& profiles() const { return m_profiles; }
-    void profile(const String&, ScriptState*, PassRefPtr<ScriptCallStack>);
-    void profileEnd(const String&, ScriptState*, PassRefPtr<ScriptCallStack>);
+    void profile(const String&, ScriptState*);
+    void profileEnd(const String&, ScriptState*);
 #endif
     void time(const String&);
-    void timeEnd(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>, const String&);
-    void timeStamp(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void group(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void groupCollapsed(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
+    void timeEnd(ScriptState*, const String&);
+    void timeStamp(PassRefPtr<ScriptArguments>);
+    void group(ScriptState*, PassRefPtr<ScriptArguments>);
+    void groupCollapsed(ScriptState*, PassRefPtr<ScriptArguments>);
     void groupEnd();
-
-    static void mute();
-    static void unmute();
-
-    static bool shouldPrintExceptions();
-    static void setShouldPrintExceptions(bool);
 
     PassRefPtr<MemoryInfo> memory() const;
 
 private:
     inline Page* page() const;
-    void addMessage(MessageType, MessageLevel, PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>, bool acceptNoArguments = false);
 
     explicit Console(Frame*);
 

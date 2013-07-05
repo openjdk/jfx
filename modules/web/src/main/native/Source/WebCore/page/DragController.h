@@ -37,8 +37,6 @@ namespace WebCore {
     class Document;
     class DragClient;
     class DragData;
-    struct DragSession;
-    struct DragState;
     class Element;
     class Frame;
     class FrameSelection;
@@ -50,6 +48,9 @@ namespace WebCore {
     class PlatformMouseEvent;
     class Range;
     
+    struct DragSession;
+    struct DragState;
+
     class DragController {
         WTF_MAKE_NONCOPYABLE(DragController); WTF_MAKE_FAST_ALLOCATED;
     public:
@@ -68,8 +69,6 @@ namespace WebCore {
         // drag logic is in WebCore.
         void setDidInitiateDrag(bool initiated) { m_didInitiateDrag = initiated; } 
         bool didInitiateDrag() const { return m_didInitiateDrag; }
-        void setIsHandlingDrag(bool handling) { m_isHandlingDrag = handling; }
-        bool isHandlingDrag() const { return m_isHandlingDrag; }
         DragOperation sourceDragOperation() const { return m_sourceDragOperation; }
         const KURL& draggingImageURL() const { return m_draggingImageURL; }
         void setDragOffset(const IntPoint& offset) { m_dragOffset = offset; }
@@ -80,7 +79,7 @@ namespace WebCore {
         DragDestinationAction dragDestinationAction() const { return m_dragDestinationAction; }
         DragSourceAction delegateDragSourceAction(const IntPoint& rootViewPoint);
         
-        Node* draggableNode(const Frame*, Node*, const IntPoint&, DragState&) const;
+        Element* draggableElement(const Frame*, Element* start, const IntPoint&, DragState&) const;
         void dragEnded();
         
         void placeDragCaret(const IntPoint&);
@@ -111,8 +110,6 @@ namespace WebCore {
 
         void mouseMovedIntoDocument(Document*);
 
-        IntRect selectionDraggingRect(Frame*);
-        bool doDrag(Frame* src, Clipboard* clipboard, DragImageRef dragImage, const KURL& linkURL, const KURL& imageURL, Node* node, IntPoint& dragLoc, IntPoint& dragImageOffset);
         void doImageDrag(Element*, const IntPoint&, const IntRect&, Clipboard*, Frame*, IntPoint&);
         void doSystemDrag(DragImageRef, const IntPoint&, const IntPoint&, Clipboard*, Frame*, bool forLink);
         void cleanupAfterSystemDrag();
@@ -123,11 +120,11 @@ namespace WebCore {
         RefPtr<Document> m_documentUnderMouse; // The document the mouse was last dragged over.
         RefPtr<Document> m_dragInitiator; // The Document (if any) that initiated the drag.
         RefPtr<HTMLInputElement> m_fileInputElementUnderMouse;
+        bool m_documentIsHandlingDrag;
         
         DragDestinationAction m_dragDestinationAction;
         DragSourceAction m_dragSourceAction;
         bool m_didInitiateDrag;
-        bool m_isHandlingDrag;
         DragOperation m_sourceDragOperation; // Set in startDrag when a drag starts from a mouse down within WebKit
         IntPoint m_dragOffset;
         KURL m_draggingImageURL;

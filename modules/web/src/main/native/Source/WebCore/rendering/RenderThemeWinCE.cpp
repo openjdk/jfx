@@ -27,6 +27,7 @@
 #include "CSSStyleSheet.h"
 #include "CSSValueKeywords.h"
 #include "Document.h"
+#include "FontMetrics.h"
 #include "GraphicsContext.h"
 #if ENABLE(VIDEO)
 #include "HTMLMediaElement.h"
@@ -370,7 +371,7 @@ bool RenderThemeWinCE::paintSearchField(RenderObject* o, const PaintInfo& i, con
 
 bool RenderThemeWinCE::paintSearchFieldCancelButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
 {
-    Color buttonColor = (o->node() && o->node()->active()) ? Color(138, 138, 138) : Color(186, 186, 186);
+    Color buttonColor = (o->node() && o->node()->isElementNode() && toElement(o->node())->active()) ? Color(138, 138, 138) : Color(186, 186, 186);
 
     IntSize cancelSize(10, 10);
     IntSize cancelRadius(cancelSize.width() / 2, cancelSize.height() / 2);
@@ -378,7 +379,7 @@ bool RenderThemeWinCE::paintSearchFieldCancelButton(RenderObject* o, const Paint
     int y = r.y() + (r.height() - cancelSize.height()) / 2 + 1;
     IntRect cancelBounds(IntPoint(x, y), cancelSize);
     paintInfo.context->save();
-    paintInfo.context->addRoundedRectClip(RoundedRect(cancelBounds, cancelRadius, cancelRadius, cancelRadius, cancelRadius));
+    paintInfo.context->clipRoundedRect(RoundedRect(cancelBounds, cancelRadius, cancelRadius, cancelRadius, cancelRadius));
     paintInfo.context->fillRect(cancelBounds, buttonColor, ColorSpaceDeviceRGB);
 
     // Draw the 'x'
@@ -478,8 +479,10 @@ static HTMLMediaElement* mediaElementParent(Node* node)
 {
     if (!node)
         return 0;
-    Node* mediaNode = node->shadowAncestorNode();
-    if (!mediaNode || !mediaNode->isElementNode() || !static_cast<Element*>(mediaNode)->isMediaElement())
+    Node* mediaNode = node->shadowHost();
+    if (!mediaNode)
+        mediaNode = node;
+    if (!mediaNode || !mediaNode->isElementNode() || !toElement(mediaNode)->isMediaElement())
         return 0;
 
     return static_cast<HTMLMediaElement*>(mediaNode);

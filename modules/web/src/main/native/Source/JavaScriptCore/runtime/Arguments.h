@@ -26,6 +26,7 @@
 
 #include "CodeOrigin.h"
 #include "JSActivation.h"
+#include "JSDestructibleObject.h"
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
 #include "Interpreter.h"
@@ -33,44 +34,22 @@
 
 namespace JSC {
 
-    struct ArgumentsData {
-        WTF_MAKE_NONCOPYABLE(ArgumentsData); WTF_MAKE_FAST_ALLOCATED;
+class Arguments : public JSDestructibleObject {
+    friend class JIT;
+    friend class DFG::SpeculativeJIT;
     public:
-        ArgumentsData() { }
-        WriteBarrier<JSActivation> activation;
+    typedef JSDestructibleObject Base;
 
-        unsigned numArguments;
-
-        // We make these full byte booleans to make them easy to test from the JIT,
-        // and because even if they were single-bit booleans we still wouldn't save
-        // any space.
-        bool overrodeLength; 
-        bool overrodeCallee;
-        bool overrodeCaller;
-        bool isStrictMode;
-
-        WriteBarrier<Unknown>* registers;
-        OwnArrayPtr<WriteBarrier<Unknown> > registerArray;
-
-        OwnArrayPtr<bool> deletedArguments;
-
-        WriteBarrier<JSFunction> callee;
-    };
-
-    class Arguments : public JSNonFinalObject {
-    public:
-        typedef JSNonFinalObject Base;
-
-        static Arguments* create(JSGlobalData& globalData, CallFrame* callFrame)
+    static Arguments* create(VM& vm, CallFrame* callFrame)
         {
-            Arguments* arguments = new (NotNull, allocateCell<Arguments>(globalData.heap)) Arguments(callFrame);
+        Arguments* arguments = new (NotNull, allocateCell<Arguments>(vm.heap)) Arguments(callFrame);
             arguments->finishCreation(callFrame);
             return arguments;
         }
         
-        static Arguments* create(JSGlobalData& globalData, CallFrame* callFrame, InlineCallFrame* inlineCallFrame)
+    static Arguments* create(VM& vm, CallFrame* callFrame, InlineCallFrame* inlineCallFrame)
         {
-            Arguments* arguments = new (NotNull, allocateCell<Arguments>(globalData.heap)) Arguments(callFrame);
+        Arguments* arguments = new (NotNull, allocateCell<Arguments>(vm.heap)) Arguments(callFrame);
             arguments->finishCreation(callFrame, inlineCallFrame);
             return arguments;
         }
@@ -83,7 +62,7 @@ namespace JSC {
         Arguments(CallFrame*);
         Arguments(CallFrame*, NoParametersType);
         
-        void tearOffForInlineCallFrame(JSGlobalData& globalData, Register*, InlineCallFrame*);
+    void tearOffForInlineCallFrame(VM& vm, Register*, InlineCallFrame*);
 
     public:
         static const ClassInfo s_info;
@@ -94,32 +73,24 @@ namespace JSC {
 
         uint32_t length(ExecState* exec) const 
         {
-            if (UNLIKELY(d->overrodeLength))
+        if (UNLIKELY(m_overrodeLength))
                 return get(exec, exec->propertyNames().length).toUInt32(exec);
-            return d->numArguments; 
+        return m_numArguments; 
         }
         
         void copyToArguments(ExecState*, CallFrame*, uint32_t length);
         void tearOff(CallFrame*);
         void tearOff(CallFrame*, InlineCallFrame*);
-        bool isTornOff() const { return d->registerArray; }
-        void didTearOffActivation(JSGlobalData& globalData, JSActivation* activation)
-        {
-            if (isTornOff())
-                return;
-            d->activation.set(globalData, this, activation);
-            d->registers = &activation->registerAt(0);
-        }
+    bool isTornOff() const { return m_registerArray; }
+    void didTearOffActivation(ExecState*, JSActivation*);
 
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype) 
-        { 
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info); 
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
+        {
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info); 
         }
-        
-        static ptrdiff_t offsetOfData() { return OBJECT_OFFSETOF(Arguments, d); }
 
     protected:
-        static const unsigned StructureFlags = OverridesGetOwnPropertySlot | OverridesVisitChildren | OverridesGetPropertyNames | JSObject::StructureFlags;
+    static const unsigned StructureFlags = OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesVisitChildren | OverridesGetPropertyNames | JSObject::StructureFlags;
 
         void finishCreation(CallFrame*);
         void finishCreation(CallFrame*, InlineCallFrame*);
@@ -138,11 +109,34 @@ namespace JSC {
         void createStrictModeCallerIfNecessary(ExecState*);
         void createStrictModeCalleeIfNecessary(ExecState*);
 
-        WriteBarrier<Unknown>& argument(size_t);
+    bool isArgument(size_t);
+    bool trySetArgument(VM&, size_t argument, JSValue);
+    JSValue tryGetArgument(size_t argument);
+    bool isDeletedArgument(size_t);
+    bool tryDeleteArgument(size_t);
+    WriteBarrierBase<Unknown>& argument(size_t);
+    void allocateSlowArguments();
 
         void init(CallFrame*);
 
-        OwnPtr<ArgumentsData> d;
+    WriteBarrier<JSActivation> m_activation;
+
+    unsigned m_numArguments;
+
+    // We make these full byte booleans to make them easy to test from the JIT,
+    // and because even if they were single-bit booleans we still wouldn't save
+    // any space.
+    bool m_overrodeLength; 
+    bool m_overrodeCallee;
+    bool m_overrodeCaller;
+    bool m_isStrictMode;
+
+    WriteBarrierBase<Unknown>* m_registers;
+    OwnArrayPtr<WriteBarrier<Unknown> > m_registerArray;
+
+    OwnArrayPtr<SlowArgument> m_slowArguments;
+
+    WriteBarrier<JSFunction> m_callee;
     };
 
     Arguments* asArguments(JSValue);
@@ -154,59 +148,130 @@ namespace JSC {
     }
 
     inline Arguments::Arguments(CallFrame* callFrame)
-        : JSNonFinalObject(callFrame->globalData(), callFrame->lexicalGlobalObject()->argumentsStructure())
-        , d(adoptPtr(new ArgumentsData))
+    : JSDestructibleObject(callFrame->vm(), callFrame->lexicalGlobalObject()->argumentsStructure())
     {
     }
 
     inline Arguments::Arguments(CallFrame* callFrame, NoParametersType)
-        : JSNonFinalObject(callFrame->globalData(), callFrame->lexicalGlobalObject()->argumentsStructure())
-        , d(adoptPtr(new ArgumentsData))
+    : JSDestructibleObject(callFrame->vm(), callFrame->lexicalGlobalObject()->argumentsStructure())
     {
     }
 
-    inline WriteBarrier<Unknown>& Arguments::argument(size_t i)
+inline void Arguments::allocateSlowArguments()
     {
-        return d->registers[CallFrame::argumentOffset(i)];
+    if (m_slowArguments)
+        return;
+    m_slowArguments = adoptArrayPtr(new SlowArgument[m_numArguments]);
+    for (size_t i = 0; i < m_numArguments; ++i) {
+        ASSERT(m_slowArguments[i].status == SlowArgument::Normal);
+        m_slowArguments[i].index = CallFrame::argumentOffset(i);
+    }
+}
+
+inline bool Arguments::tryDeleteArgument(size_t argument)
+{
+    if (!isArgument(argument))
+        return false;
+    allocateSlowArguments();
+    m_slowArguments[argument].status = SlowArgument::Deleted;
+    return true;
+}
+
+inline bool Arguments::trySetArgument(VM& vm, size_t argument, JSValue value)
+{
+    if (!isArgument(argument))
+        return false;
+    this->argument(argument).set(vm, this, value);
+    return true;
+}
+
+inline JSValue Arguments::tryGetArgument(size_t argument)
+{
+    if (!isArgument(argument))
+        return JSValue();
+    return this->argument(argument).get();
+}
+
+inline bool Arguments::isDeletedArgument(size_t argument)
+{
+    if (argument >= m_numArguments)
+        return false;
+    if (!m_slowArguments)
+        return false;
+    if (m_slowArguments[argument].status != SlowArgument::Deleted)
+        return false;
+    return true;
+}
+
+inline bool Arguments::isArgument(size_t argument)
+{
+    if (argument >= m_numArguments)
+        return false;
+    if (m_slowArguments && m_slowArguments[argument].status == SlowArgument::Deleted)
+        return false;
+    return true;
+}
+
+inline WriteBarrierBase<Unknown>& Arguments::argument(size_t argument)
+{
+    ASSERT(isArgument(argument));
+    if (!m_slowArguments)
+        return m_registers[CallFrame::argumentOffset(argument)];
+
+    int index = m_slowArguments[argument].index;
+    if (!m_activation || m_slowArguments[argument].status != SlowArgument::Captured)
+        return m_registers[index];
+
+    return m_activation->registerAt(index);
     }
 
     inline void Arguments::finishCreation(CallFrame* callFrame)
     {
-        Base::finishCreation(callFrame->globalData());
+    Base::finishCreation(callFrame->vm());
         ASSERT(inherits(&s_info));
 
         JSFunction* callee = jsCast<JSFunction*>(callFrame->callee());
-        d->numArguments = callFrame->argumentCount();
-        d->registers = reinterpret_cast<WriteBarrier<Unknown>*>(callFrame->registers());
-        d->callee.set(callFrame->globalData(), this, callee);
-        d->overrodeLength = false;
-        d->overrodeCallee = false;
-        d->overrodeCaller = false;
-        d->isStrictMode = callFrame->codeBlock()->isStrictMode();
+    m_numArguments = callFrame->argumentCount();
+    m_registers = reinterpret_cast<WriteBarrierBase<Unknown>*>(callFrame->registers());
+    m_callee.set(callFrame->vm(), this, callee);
+    m_overrodeLength = false;
+    m_overrodeCallee = false;
+    m_overrodeCaller = false;
+    m_isStrictMode = callFrame->codeBlock()->isStrictMode();
+
+    SharedSymbolTable* symbolTable = callFrame->codeBlock()->symbolTable();
+    const SlowArgument* slowArguments = symbolTable->slowArguments();
+    if (slowArguments) {
+        allocateSlowArguments();
+        size_t count = std::min<unsigned>(m_numArguments, symbolTable->parameterCount());
+        for (size_t i = 0; i < count; ++i)
+            m_slowArguments[i] = slowArguments[i];
+    }
 
         // The bytecode generator omits op_tear_off_activation in cases of no
         // declared parameters, so we need to tear off immediately.
-        if (d->isStrictMode || !callee->jsExecutable()->parameterCount())
+    if (m_isStrictMode || !callee->jsExecutable()->parameterCount())
             tearOff(callFrame);
     }
 
     inline void Arguments::finishCreation(CallFrame* callFrame, InlineCallFrame* inlineCallFrame)
     {
-        Base::finishCreation(callFrame->globalData());
+    Base::finishCreation(callFrame->vm());
         ASSERT(inherits(&s_info));
 
-        JSFunction* callee = inlineCallFrame->callee.get();
-        d->numArguments = inlineCallFrame->arguments.size() - 1;
-        d->registers = reinterpret_cast<WriteBarrier<Unknown>*>(callFrame->registers()) + inlineCallFrame->stackOffset;
-        d->callee.set(callFrame->globalData(), this, callee);
-        d->overrodeLength = false;
-        d->overrodeCallee = false;
-        d->overrodeCaller = false;
-        d->isStrictMode = jsCast<FunctionExecutable*>(inlineCallFrame->executable.get())->isStrictMode();
+    JSFunction* callee = inlineCallFrame->calleeForCallFrame(callFrame);
+    m_numArguments = inlineCallFrame->arguments.size() - 1;
+    m_registers = reinterpret_cast<WriteBarrierBase<Unknown>*>(callFrame->registers()) + inlineCallFrame->stackOffset;
+    m_callee.set(callFrame->vm(), this, callee);
+    m_overrodeLength = false;
+    m_overrodeCallee = false;
+    m_overrodeCaller = false;
+    m_isStrictMode = jsCast<FunctionExecutable*>(inlineCallFrame->executable.get())->isStrictMode();
+    ASSERT(!jsCast<FunctionExecutable*>(inlineCallFrame->executable.get())->symbolTable(inlineCallFrame->isCall ? CodeForCall : CodeForConstruct)->slowArguments());
 
         // The bytecode generator omits op_tear_off_activation in cases of no
         // declared parameters, so we need to tear off immediately.
-        if (d->isStrictMode || !callee->jsExecutable()->parameterCount())
+    if (m_isStrictMode || !callee->jsExecutable()->parameterCount())
             tearOff(callFrame, inlineCallFrame);
     }
 

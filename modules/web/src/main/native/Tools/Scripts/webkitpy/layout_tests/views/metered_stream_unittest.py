@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright (C) 2010, 2012 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,7 +29,7 @@
 import logging
 import re
 import StringIO
-import unittest
+import unittest2 as unittest
 
 from webkitpy.layout_tests.views.metered_stream import MeteredStream
 
@@ -76,7 +75,7 @@ class RegularTest(unittest.TestCase):
             self.meter.write_throttled_update('foo')
             self.meter.write_update('bar')
             self.meter.write('baz')
-            self.assertEquals(logging_stream.buflist, [])
+            self.assertEqual(logging_stream.buflist, [])
         finally:
             root_logger.removeHandler(handler)
             root_logger.setLevel(orig_level)
@@ -88,12 +87,12 @@ class RegularTest(unittest.TestCase):
         self.meter.write_throttled_update('baz')
         self.meter.write_throttled_update('baz 2')
         self.meter.writeln('done')
-        self.assertEquals(self.times, [])
+        self.assertEqual(self.times, [])
         return self.buflist
 
     def test_basic(self):
         buflist = self._basic([0, 1, 2, 13, 14])
-        self.assertEquals(buflist, ['foo\n', 'bar\n', 'baz 2\n', 'done\n'])
+        self.assertEqual(buflist, ['foo\n', 'bar\n', 'baz 2\n', 'done\n'])
 
     def _log_after_update(self):
         self.meter.write_update('foo')
@@ -102,11 +101,11 @@ class RegularTest(unittest.TestCase):
 
     def test_log_after_update(self):
         buflist = self._log_after_update()
-        self.assertEquals(buflist, ['foo\n', 'bar\n'])
+        self.assertEqual(buflist, ['foo\n', 'bar\n'])
 
     def test_log_args(self):
         self.logger.info('foo %s %d', 'bar', 2)
-        self.assertEquals(self.buflist, ['foo bar 2\n'])
+        self.assertEqual(self.buflist, ['foo bar 2\n'])
 
 class TtyTest(RegularTest):
     verbose = False
@@ -114,14 +113,14 @@ class TtyTest(RegularTest):
 
     def test_basic(self):
         buflist = self._basic([0, 1, 1.05, 1.1, 2])
-        self.assertEquals(buflist, ['foo',
+        self.assertEqual(buflist, ['foo',
                                      MeteredStream._erasure('foo'), 'bar',
                                      MeteredStream._erasure('bar'), 'baz 2',
                                      MeteredStream._erasure('baz 2'), 'done\n'])
 
     def test_log_after_update(self):
         buflist = self._log_after_update()
-        self.assertEquals(buflist, ['foo',
+        self.assertEqual(buflist, ['foo',
                                      MeteredStream._erasure('foo'), 'bar\n'])
 
 
@@ -137,7 +136,7 @@ class VerboseTest(RegularTest):
         self.assertTrue(re.match('\d\d:\d\d:01.000 8675 bar\n', buflist[1]))
         self.assertTrue(re.match('\d\d:\d\d:13.000 8675 baz 2\n', buflist[2]))
         self.assertTrue(re.match('\d\d:\d\d:14.123 8675 done\n', buflist[3]))
-        self.assertEquals(len(buflist), 4)
+        self.assertEqual(len(buflist), 4)
 
     def test_log_after_update(self):
         buflist = self._log_after_update()
@@ -146,13 +145,9 @@ class VerboseTest(RegularTest):
         # The second argument should have a real timestamp and pid, so we just check the format.
         self.assertTrue(re.match('\d\d:\d\d:\d\d.\d\d\d \d+ bar\n', buflist[1]))
 
-        self.assertEquals(len(buflist), 2)
+        self.assertEqual(len(buflist), 2)
 
     def test_log_args(self):
         self.logger.info('foo %s %d', 'bar', 2)
-        self.assertEquals(len(self.buflist), 1)
+        self.assertEqual(len(self.buflist), 1)
         self.assertTrue(self.buflist[0].endswith('foo bar 2\n'))
-
-
-if __name__ == '__main__':
-    unittest.main()

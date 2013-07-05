@@ -68,7 +68,7 @@ namespace double_conversion {
         int needed_bigits = kUInt64Size / kBigitSize + 1;
         EnsureCapacity(needed_bigits);
         for (int i = 0; i < needed_bigits; ++i) {
-            bigits_[i] = (uint32_t)value & kBigitMask;
+            bigits_[i] = static_cast<Chunk>(value & kBigitMask);
             value = value >> kBigitSize;
         }
         used_digits_ = needed_bigits;
@@ -89,7 +89,7 @@ namespace double_conversion {
     }
     
     
-    static uint64_t ReadUInt64(Vector<const char> buffer,
+    static uint64_t ReadUInt64(BufferReference<const char> buffer,
                                int from,
                                int digits_to_read) {
         uint64_t result = 0;
@@ -102,7 +102,7 @@ namespace double_conversion {
     }
     
     
-    void Bignum::AssignDecimalString(Vector<const char> value) {
+    void Bignum::AssignDecimalString(BufferReference<const char> value) {
         // 2^64 = 18446744073709551616 > 10^19
         const int kMaxUint64DecimalDigits = 19;
         Zero();
@@ -132,7 +132,7 @@ namespace double_conversion {
     }
     
     
-    void Bignum::AssignHexString(Vector<const char> value) {
+    void Bignum::AssignHexString(BufferReference<const char> value) {
         Zero();
         int length = value.length();
         
@@ -267,7 +267,7 @@ namespace double_conversion {
         }
         while (carry != 0) {
             EnsureCapacity(used_digits_ + 1);
-            bigits_[used_digits_] = (uint32_t)carry & kBigitMask;
+            bigits_[used_digits_] = static_cast<Chunk>(carry & kBigitMask);
             used_digits_++;
             carry >>= kBigitSize;
         }
@@ -288,13 +288,13 @@ namespace double_conversion {
             uint64_t product_low = low * bigits_[i];
             uint64_t product_high = high * bigits_[i];
             uint64_t tmp = (carry & kBigitMask) + product_low;
-            bigits_[i] = (uint32_t)tmp & kBigitMask;
+            bigits_[i] = static_cast<Chunk>(tmp & kBigitMask);
             carry = (carry >> kBigitSize) + (tmp >> kBigitSize) +
             (product_high << (32 - kBigitSize));
         }
         while (carry != 0) {
             EnsureCapacity(used_digits_ + 1);
-            bigits_[used_digits_] = (uint32_t)carry & kBigitMask;
+            bigits_[used_digits_] = static_cast<Chunk>(carry & kBigitMask);
             used_digits_++;
             carry >>= kBigitSize;
         }
@@ -737,6 +737,13 @@ namespace double_conversion {
     
     
     void Bignum::SubtractTimes(const Bignum& other, int factor) {
+#ifndef NDEBUG
+        Bignum a, b;
+        a.AssignBignum(*this);
+        b.AssignBignum(other);
+        b.MultiplyByUInt32(factor);
+        a.SubtractBignum(b);
+#endif
         ASSERT(exponent_ <= other.exponent_);
         if (factor < 3) {
             for (int i = 0; i < factor; ++i) {
@@ -749,7 +756,8 @@ namespace double_conversion {
         for (int i = 0; i < other.used_digits_; ++i) {
             DoubleChunk product = static_cast<DoubleChunk>(factor) * other.bigits_[i];
             DoubleChunk remove = borrow + product;
-            Chunk difference = bigits_[i + exponent_diff] - ((uint32_t)remove & kBigitMask);
+            Chunk difference =
+                bigits_[i + exponent_diff] - static_cast<Chunk>(remove & kBigitMask);
             bigits_[i + exponent_diff] = difference & kBigitMask;
             borrow = static_cast<Chunk>((difference >> (kChunkSize - 1)) +
                                         (remove >> kBigitSize));
@@ -759,9 +767,9 @@ namespace double_conversion {
             Chunk difference = bigits_[i] - borrow;
             bigits_[i] = difference & kBigitMask;
             borrow = difference >> (kChunkSize - 1);
-            ++i;
         }
         Clamp();
+        ASSERT(Bignum::Equal(a, *this));
     }
     
     

@@ -270,10 +270,8 @@ void ScrollbarThemeWin::paintTrackPiece(GraphicsContext* context, ScrollbarTheme
         }
     }
 
-#if !OS(WINCE)
     if (!alphaBlend && !context->isInTransparencyLayer())
         DIBPixelData::setRGBABitmapAlpha(windowsContext.hdc(), rect, 255);
-#endif
 }
 
 void ScrollbarThemeWin::paintButton(GraphicsContext* context, ScrollbarThemeClient* scrollbar, const IntRect& rect, ScrollbarPart part)
@@ -324,10 +322,8 @@ void ScrollbarThemeWin::paintButton(GraphicsContext* context, ScrollbarThemeClie
     else
         ::DrawFrameControl(windowsContext.hdc(), &themeRect, DFC_SCROLL, classicState);
 
-#if !OS(WINCE)
     if (!alphaBlend && !context->isInTransparencyLayer())
         DIBPixelData::setRGBABitmapAlpha(windowsContext.hdc(), rect, 255);
-#endif
 }
 
 static IntRect gripperRect(int thickness, const IntRect& thumbRect)
@@ -375,19 +371,16 @@ void ScrollbarThemeWin::paintThumb(GraphicsContext* context, ScrollbarThemeClien
     bool alphaBlend = false;
     if (scrollbarTheme)
         alphaBlend = IsThemeBackgroundPartiallyTransparent(scrollbarTheme, scrollbar->orientation() == HorizontalScrollbar ? SP_THUMBHOR : SP_THUMBVERT, state);
-    HDC hdc = context->getWindowsContext(rect, alphaBlend);
+    LocalWindowsContext windowsContext(context, rect, alphaBlend);
     RECT themeRect(rect);
     if (scrollbarTheme) {
-        DrawThemeBackground(scrollbarTheme, hdc, scrollbar->orientation() == HorizontalScrollbar ? SP_THUMBHOR : SP_THUMBVERT, state, &themeRect, 0);
-        paintGripper(scrollbar, hdc, gripperRect(scrollbarThickness(), rect));
+        DrawThemeBackground(scrollbarTheme, windowsContext.hdc(), scrollbar->orientation() == HorizontalScrollbar ? SP_THUMBHOR : SP_THUMBVERT, state, &themeRect, 0);
+        paintGripper(scrollbar, windowsContext.hdc(), gripperRect(scrollbarThickness(), rect));
     } else
-        ::DrawEdge(hdc, &themeRect, EDGE_RAISED, BF_RECT | BF_MIDDLE);
+        ::DrawEdge(windowsContext.hdc(), &themeRect, EDGE_RAISED, BF_RECT | BF_MIDDLE);
 
-#if !OS(WINCE)
     if (!alphaBlend && !context->isInTransparencyLayer())
-        DIBPixelData::setRGBABitmapAlpha(hdc, rect, 255);
-#endif
-    context->releaseWindowsContext(hdc, rect, alphaBlend);
+        DIBPixelData::setRGBABitmapAlpha(windowsContext.hdc(), rect, 255);
 }
 
 }

@@ -23,15 +23,16 @@
 
 #if ENABLE(SVG) && ENABLE(FILTERS)
 #include "FilterEffect.h"
-#include "PlatformString.h"
-#include "RenderObject.h"
 
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/text/AtomicStringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+class RenderObject;
 
 class SVGFilterBuilder : public RefCounted<SVGFilterBuilder> {
 public:
@@ -50,7 +51,7 @@ public:
     {
         // Only allowed for effects belongs to this builder.
         ASSERT(m_effectReferences.contains(effect));
-        return m_effectReferences.find(effect)->second;
+        return m_effectReferences.find(effect)->value;
     }
 
     // Required to change the attributes of a filter during an svgAttributeChanged.
@@ -66,7 +67,7 @@ private:
     {
         HashMap<AtomicString, RefPtr<FilterEffect> >::iterator end = m_builtinEffects.end();
         for (HashMap<AtomicString, RefPtr<FilterEffect> >::iterator iterator = m_builtinEffects.begin(); iterator != end; ++iterator)
-             m_effectReferences.add(iterator->second, FilterEffectSet());
+             m_effectReferences.add(iterator->value, FilterEffectSet());
     }
 
     HashMap<AtomicString, RefPtr<FilterEffect> > m_builtinEffects;

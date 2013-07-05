@@ -33,6 +33,7 @@
 #include <QtTest/QtTest>
 #include <WebKit2/WKPagePrivate.h>
 #include <WebKit2/WKStringQt.h>
+#include <qpa/qwindowsysteminterface.h>
 
 namespace WTR {
 
@@ -69,6 +70,10 @@ EventSenderProxy::EventSenderProxy(TestController* testController)
     memset(eventQueue, 0, sizeof(eventQueue));
     endOfQueue = 0;
     isReplayingEvents = false;
+}
+
+EventSenderProxy::~EventSenderProxy()
+{
 }
 
 static Qt::MouseButton getMouseButton(unsigned button)
@@ -130,7 +135,7 @@ void EventSenderProxy::keyDown(WKStringRef keyRef, WKEventModifiers modifiersRef
             code = Qt::Key_Tab;
             if (modifiers == Qt::ShiftModifier)
                 code = Qt::Key_Backtab;
-            keyText = QString();
+            keyText = QStringLiteral("\t");
         } else if (code == KEYCODE_DEL || code == KEYCODE_BACKSPACE) {
             code = Qt::Key_Backspace;
             if (modifiers == Qt::AltModifier)
@@ -187,10 +192,6 @@ void EventSenderProxy::keyDown(WKStringRef keyRef, WKEventModifiers modifiersRef
                 code = Qt::Key_PageDown;
                 modifiers &= ~Qt::MetaModifier;
             }
-        } else if (code == 'a' && modifiers == Qt::ControlModifier) {
-            keyText = QString();
-            code = Qt::Key_Home;
-            modifiers = 0;
         } else
             code = key.unicode()->toUpper().unicode();
     } else {
@@ -249,12 +250,10 @@ void EventSenderProxy::keyDown(WKStringRef keyRef, WKEventModifiers modifiersRef
 void EventSenderProxy::updateClickCountForButton(int button)
 {
     if (m_time - m_clickTime < QApplication::doubleClickInterval() && m_position == m_clickPosition && button == m_clickButton) {
-        ++m_clickCount;
         m_clickTime = m_time;
         return;
     }
 
-    m_clickCount = 1;
     m_clickTime = m_time;
     m_clickPosition = m_position;
     m_clickButton = button;
@@ -270,9 +269,10 @@ void EventSenderProxy::mouseDown(unsigned button, WKEventModifiers wkModifiers)
     m_mouseButtons |= mouseButton;
 
     QPoint mousePos(m_position.x, m_position.y);
-    QMouseEvent* event = new QMouseEvent((m_clickCount == 2) ? QEvent::MouseButtonDblClick : QEvent::MouseButtonPress,
+    QMouseEvent* event = new QMouseEvent(QEvent::MouseButtonPress,
         mousePos, mousePos, mouseButton, m_mouseButtons, modifiers);
 
+    // We aren't generating MouseButtonDblClick events as they aren't used.
     sendOrQueueEvent(event);
 }
 
@@ -301,6 +301,11 @@ void EventSenderProxy::mouseMoveTo(double x, double y)
 }
 
 void EventSenderProxy::mouseScrollBy(int, int)
+{
+    // FIXME: Implement this.
+}
+
+void EventSenderProxy::continuousMouseScrollBy(int, int, bool)
 {
     // FIXME: Implement this.
 }
@@ -416,7 +421,10 @@ void EventSenderProxy::sendTouchEvent(QEvent::Type type)
         QWindowSystemInterface::registerTouchDevice(device);
     }
 
-    QTouchEvent event(type, device, m_touchModifiers);
+    Qt::TouchPointStates eventStates;
+    for (int i = 0; i < m_touchPoints.count(); i++)
+        eventStates |= m_touchPoints[i].state();
+    QTouchEvent event(type, device, m_touchModifiers, eventStates);
     event.setTouchPoints(m_touchPoints);
     m_testController->mainWebView()->sendEvent(&event);
     QList<QTouchEvent::TouchPoint>::Iterator it = m_touchPoints.begin();

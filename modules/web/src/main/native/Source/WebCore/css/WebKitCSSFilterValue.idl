@@ -23,13 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module css {
-
-    interface [
+[
             Conditional=CSS_FILTERS,
             IndexedGetter,
-            DoNotCheckConstants
-    ] WebKitCSSFilterValue : CSSValueList {
+        DoNotCheckConstants,
+    ImplementationLacksVTable
+] interface WebKitCSSFilterValue : CSSValueList {
 
         // OperationTypes
 
@@ -51,4 +50,3 @@ module css {
 
         readonly attribute unsigned short operationType;
     };
-}

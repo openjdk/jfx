@@ -24,9 +24,8 @@
  *
  */
 
-module threads {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=WORKERS,
         JSCustomMarkFunction,
         JSCustomGetOwnPropertySlotAndDescriptor,
@@ -36,38 +35,35 @@ module threads {
         JSLegacyParent=JSWorkerContextBase,
         JSNoStaticTables,
         OmitConstructor,
-        V8CustomToJSObject
-    ] WorkerContext {
+] interface WorkerContext {
 
         // WorkerGlobalScope
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-                 attribute [Replaceable] WorkerContext self;
+             [Replaceable] readonly attribute  WorkerContext self;
 #endif
-                 attribute [Replaceable] WorkerLocation location;
+             [Replaceable] readonly attribute WorkerLocation location;
         void close();
                  attribute EventListener onerror;
 
         // WorkerUtils
-        [Custom] void importScripts(/*[Variadic] in DOMString urls */);
-                 attribute [Replaceable] WorkerNavigator navigator;
+    [Custom] void importScripts(/*[Variadic] DOMString urls */);
+             [Replaceable] readonly attribute WorkerNavigator navigator;
 
         // Timers
-        [Custom] long setTimeout(in TimeoutHandler handler, in long timeout);
-        // [Custom] long setTimeout(in DOMString code, in long timeout);
-        void clearTimeout(in [Optional=DefaultIsUndefined] long handle);
-        [Custom] long setInterval(in TimeoutHandler handler, in long timeout);
-        // [Custom] long setInterval(in DOMString code, in long timeout);
-        void clearInterval(in [Optional=DefaultIsUndefined] long handle);
+    [Custom] long setTimeout(any handler, [Default=Undefined] optional long timeout);
+    void clearTimeout([Default=Undefined] optional long handle);
+    [Custom] long setInterval(any handler, [Default=Undefined] optional long timeout);
+    void clearInterval([Default=Undefined] optional long handle);
 
 
         // EventTarget interface
-        void addEventListener(in DOMString type, 
-                              in EventListener listener, 
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type, 
-                                 in EventListener listener, 
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type, 
+                          EventListener listener, 
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type, 
+                             EventListener listener, 
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
 
 #if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
@@ -75,26 +71,24 @@ module threads {
         attribute MessageEventConstructor MessageEvent;
         attribute WorkerLocationConstructor WorkerLocation;
 
-#if ENABLE_CHANNEL_MESSAGING
-        attribute [JSCustomGetter] MessageChannelConstructor MessageChannel;
-#endif
-        attribute [JSCustomGetter] EventSourceConstructor EventSource;
-        attribute [JSCustomGetter] XMLHttpRequestConstructor XMLHttpRequest;
+    [Conditional=CHANNEL_MESSAGING, CustomGetter] attribute MessageChannelConstructor MessageChannel;
+    [CustomGetter] attribute EventSourceConstructor EventSource;
+    [CustomGetter] attribute XMLHttpRequestConstructor XMLHttpRequest;
 #endif
 
 #if defined(ENABLE_BLOB) && ENABLE_BLOB
-        attribute [Conditional=LEGACY_WEBKIT_BLOB_BUILDER] WebKitBlobBuilderConstructor WebKitBlobBuilder;
         attribute BlobConstructor Blob;
         attribute FileReaderConstructor FileReader;
         attribute FileReaderSyncConstructor FileReaderSync;
 #endif
 
-        attribute [Conditional=BLOB] DOMURLConstructor webkitURL;
+    [Conditional=BLOB] attribute DOMURLConstructor URL;
+    [Conditional=BLOB] attribute DOMURLConstructor webkitURL; // FIXME: deprecate this.
 
         attribute ArrayBufferConstructor ArrayBuffer; // Usable with new operator
         attribute Int8ArrayConstructor Int8Array; // Usable with new operator
         attribute Uint8ArrayConstructor Uint8Array; // Usable with new operator
-        attribute Uint8ArrayConstructor Uint8ClampedArray; // Usable with new operator
+    attribute Uint8ClampedArrayConstructor Uint8ClampedArray; // Usable with new operator
         attribute Int16ArrayConstructor Int16Array; // Usable with new operator
         attribute Uint16ArrayConstructor Uint16Array; // Usable with new operator
         attribute Int32ArrayConstructor Int32Array; // Usable with new operator
@@ -104,4 +98,3 @@ module threads {
         attribute DataViewConstructor DataView; // Usable with new operator
     };
 
-}

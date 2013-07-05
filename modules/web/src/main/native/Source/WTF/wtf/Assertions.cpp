@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2003, 2006, 2007 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
+ * Copyright (C) 2011 University of Szeged. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,16 +34,24 @@
 #include "config.h"
 #include "Assertions.h"
 
+#include "Compiler.h"
 #include "OwnArrayPtr.h"
 
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
 
-#if PLATFORM(MAC)
+#if HAVE(SIGNAL_H)
+#include <signal.h>
+#endif
+
+#if USE(CF)
 #include <CoreFoundation/CFString.h>
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+#define WTF_USE_APPLE_SYSTEM_LOG 1
 #include <asl.h>
 #endif
+#endif // USE(CF)
 
 #if COMPILER(MSVC) && !OS(WINCE)
 #include <crtdbg.h>
@@ -50,16 +59,15 @@
 
 #if OS(WINDOWS)
 #include <windows.h>
+#if PLATFORM(JAVA) && defined(_DEBUG)
+#pragma comment(lib, "user32.lib")
+#endif
 #endif
 
-#if (OS(DARWIN) || OS(LINUX)) && !OS(ANDROID)
+#if OS(DARWIN) || (OS(LINUX) && !defined(__UCLIBC__))
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <execinfo.h>
-#endif
-
-#if OS(ANDROID)
-#include "android/log.h"
 #endif
 
 #if PLATFORM(BLACKBERRY)
@@ -71,7 +79,7 @@ extern "C" {
 WTF_ATTRIBUTE_PRINTF(1, 0)
 static void vprintf_stderr_common(const char* format, va_list args)
 {
-#if PLATFORM(MAC)
+#if USE(CF) && !OS(WINDOWS)
     if (strstr(format, "%@")) {
         CFStringRef cfFormat = CFStringCreateWithCString(NULL, format, kCFStringEncodingUTF8);
 
@@ -83,12 +91,12 @@ static void vprintf_stderr_common(const char* format, va_list args)
 #if COMPILER(CLANG)
 #pragma clang diagnostic pop
 #endif
-        int length = CFStringGetMaximumSizeForEncoding(CFStringGetLength(str), kCFStringEncodingUTF8);
+        CFIndex length = CFStringGetMaximumSizeForEncoding(CFStringGetLength(str), kCFStringEncodingUTF8);
         char* buffer = (char*)malloc(length + 1);
 
         CFStringGetCString(str, buffer, length, kCFStringEncodingUTF8);
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+#if USE(APPLE_SYSTEM_LOG)
         asl_log(0, 0, ASL_LEVEL_NOTICE, "%s", buffer);
 #endif
         fputs(buffer, stderr);
@@ -99,7 +107,7 @@ static void vprintf_stderr_common(const char* format, va_list args)
         return;
     }
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+#if USE(APPLE_SYSTEM_LOG)
     va_list copyOfArgs;
     va_copy(copyOfArgs, args);
     asl_vlog(0, 0, ASL_LEVEL_NOTICE, format, copyOfArgs);
@@ -109,9 +117,7 @@ static void vprintf_stderr_common(const char* format, va_list args)
     // Fall through to write to stderr in the same manner as other platforms.
 
 #elif PLATFORM(BLACKBERRY)
-    BlackBerry::Platform::logStreamV(format, args);
-#elif OS(ANDROID)
-    __android_log_vprint(ANDROID_LOG_WARN, "WebKit", format, args);
+    BBLOGV(BlackBerry::Platform::LogLevelCritical, format, args);
 #elif HAVE(ISDEBUGGERPRESENT)
     if (IsDebuggerPresent()) {
         size_t size = 1024;
@@ -209,26 +215,8 @@ static void printCallSite(const char* file, int line, const char* function)
 #endif
 }
 
-#if PLATFORM(BLACKBERRY)
-struct WTFLogLocker {
-    WTFLogLocker(BlackBerry::Platform::MessageLogLevel logLevel)
-    {
-        BlackBerry::Platform::lockLogging(logLevel);
-    }
-
-    ~WTFLogLocker()
-    {
-        BlackBerry::Platform::unlockLogging();
-    }
-};
-#endif
-
 void WTFReportAssertionFailure(const char* file, int line, const char* function, const char* assertion)
 {
-#if PLATFORM(BLACKBERRY)
-    WTFLogLocker locker(BlackBerry::Platform::LogLevelCritical);
-#endif
-
     if (assertion)
         printf_stderr_common("ASSERTION FAILED: %s\n", assertion);
     else
@@ -238,10 +226,6 @@ void WTFReportAssertionFailure(const char* file, int line, const char* function,
 
 void WTFReportAssertionFailureWithMessage(const char* file, int line, const char* function, const char* assertion, const char* format, ...)
 {
-#if PLATFORM(BLACKBERRY)
-    WTFLogLocker locker(BlackBerry::Platform::LogLevelCritical);
-#endif
-
     va_list args;
     va_start(args, format);
     vprintf_stderr_with_prefix("ASSERTION FAILED: ", format, args);
@@ -252,17 +236,13 @@ void WTFReportAssertionFailureWithMessage(const char* file, int line, const char
 
 void WTFReportArgumentAssertionFailure(const char* file, int line, const char* function, const char* argName, const char* assertion)
 {
-#if PLATFORM(BLACKBERRY)
-    WTFLogLocker locker(BlackBerry::Platform::LogLevelCritical);
-#endif
-
     printf_stderr_common("ARGUMENT BAD: %s, %s\n", argName, assertion);
     printCallSite(file, line, function);
 }
 
 void WTFGetBacktrace(void** stack, int* size)
 {
-#if (OS(DARWIN) || OS(LINUX)) && !OS(ANDROID)
+#if OS(DARWIN) || (OS(LINUX) && !defined(__UCLIBC__))
     *size = backtrace(stack, *size);
 #elif OS(WINDOWS) && !OS(WINCE)
     // The CaptureStackBackTrace function is available in XP, but it is not defined
@@ -301,7 +281,7 @@ void WTFReportBacktrace()
 #    if defined(__GLIBC__) && !defined(__UCLIBC__)
 #      define WTF_USE_BACKTRACE_SYMBOLS 1
 #    endif
-#  elif !OS(ANDROID)
+#  else
 #    define WTF_USE_DLADDR 1
 #  endif
 #endif
@@ -351,16 +331,65 @@ void WTFSetCrashHook(WTFCrashHookFunction function)
 
 void WTFInvokeCrashHook()
 {
+}
+
+void WTFCrash()
+{
     if (globalHook)
         globalHook();
+
+    WTFReportBacktrace();
+#if OS(WINDOWS) && PLATFORM(JAVA) && defined(_DEBUG)
+    ::MessageBoxW(NULL, L"Assert", L"Webnode", MB_OK | MB_TASKMODAL);
+#else
+    *(int *)(uintptr_t)0xbbadbeef = 0;
+    // More reliable, but doesn't say BBADBEEF.
+#if COMPILER(CLANG)
+    __builtin_trap();
+#else
+    ((void(*)())0)();
+#endif
+#endif
+}
+
+#if HAVE(SIGNAL_H)
+static NO_RETURN void dumpBacktraceSignalHandler(int sig)
+{
+    WTFReportBacktrace();
+    exit(128 + sig);
+}
+
+static void installSignalHandlersForFatalErrors(void (*handler)(int))
+{
+    signal(SIGILL, handler); //    4: illegal instruction (not reset when caught).
+    signal(SIGTRAP, handler); //   5: trace trap (not reset when caught).
+    signal(SIGFPE, handler); //    8: floating point exception.
+    signal(SIGBUS, handler); //   10: bus error.
+    signal(SIGSEGV, handler); //  11: segmentation violation.
+    signal(SIGSYS, handler); //   12: bad argument to system call.
+    signal(SIGPIPE, handler); //  13: write on a pipe with no reader.
+    signal(SIGXCPU, handler); //  24: exceeded CPU time limit.
+    signal(SIGXFSZ, handler); //  25: exceeded file size limit.
+}
+
+static void resetSignalHandlersForFatalErrors()
+{
+    installSignalHandlersForFatalErrors(SIG_DFL);
+}
+#endif
+
+void WTFInstallReportBacktraceOnCrashHook()
+{
+#if HAVE(SIGNAL_H)
+    // Needed otherwise we are going to dump the stack trace twice
+    // in case we hit an assertion.
+    WTFSetCrashHook(&resetSignalHandlersForFatalErrors);
+    installSignalHandlersForFatalErrors(&dumpBacktraceSignalHandler);
+#endif
 }
 
 void WTFReportFatalError(const char* file, int line, const char* function, const char* format, ...)
 {
-#if PLATFORM(BLACKBERRY)
-    WTFLogLocker locker(BlackBerry::Platform::LogLevelCritical);
-#endif
-
     va_list args;
     va_start(args, format);
     vprintf_stderr_with_prefix("FATAL ERROR: ", format, args);
@@ -371,10 +400,6 @@ void WTFReportFatalError(const char* file, int line, const char* function, const
 
 void WTFReportError(const char* file, int line, const char* function, const char* format, ...)
 {
-#if PLATFORM(BLACKBERRY)
-    WTFLogLocker locker(BlackBerry::Platform::LogLevelWarn);
-#endif
-
     va_list args;
     va_start(args, format);
     vprintf_stderr_with_prefix("ERROR: ", format, args);
@@ -388,10 +413,6 @@ void WTFLog(WTFLogChannel* channel, const char* format, ...)
     if (channel->state != WTFLogChannelOn)
         return;
 
-#if PLATFORM(BLACKBERRY)
-    WTFLogLocker locker(BlackBerry::Platform::LogLevelInfo);
-#endif
-
     va_list args;
     va_start(args, format);
     vprintf_stderr_with_trailing_newline(format, args);
@@ -403,10 +424,6 @@ void WTFLogVerbose(const char* file, int line, const char* function, WTFLogChann
     if (channel->state != WTFLogChannelOn)
         return;
 
-#if PLATFORM(BLACKBERRY)
-    WTFLogLocker locker(BlackBerry::Platform::LogLevelInfo);
-#endif
-
     va_list args;
     va_start(args, format);
     vprintf_stderr_with_trailing_newline(format, args);
@@ -417,10 +434,6 @@ void WTFLogVerbose(const char* file, int line, const char* function, WTFLogChann
 
 void WTFLogAlways(const char* format, ...)
 {
-#if PLATFORM(BLACKBERRY)
-    WTFLogLocker locker(BlackBerry::Platform::LogLevelInfo);
-#endif
-
     va_list args;
     va_start(args, format);
     vprintf_stderr_with_trailing_newline(format, args);

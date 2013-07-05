@@ -41,6 +41,7 @@
 namespace WebCore {
 
 class WebSocketExtensionDeflateFrame : public WebSocketExtensionProcessor {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static PassOwnPtr<WebSocketExtensionDeflateFrame> create(WebSocketDeflateFramer* framer)
     {
@@ -87,7 +88,7 @@ bool WebSocketExtensionDeflateFrame::processResponse(const HashMap<String, Strin
     int windowBits = 15;
     HashMap<String, String>::const_iterator parameter = serverParameters.find("max_window_bits");
     if (parameter != serverParameters.end()) {
-        windowBits = parameter->second.toInt();
+        windowBits = parameter->value.toInt();
         if (windowBits < 8 || windowBits > 15) {
             m_failureReason = "Received invalid max_window_bits parameter";
             return false;
@@ -98,7 +99,7 @@ bool WebSocketExtensionDeflateFrame::processResponse(const HashMap<String, Strin
     WebSocketDeflater::ContextTakeOverMode mode = WebSocketDeflater::TakeOverContext;
     parameter = serverParameters.find("no_context_takeover");
     if (parameter != serverParameters.end()) {
-        if (!parameter->second.isNull()) {
+        if (!parameter->value.isNull()) {
             m_failureReason = "Received invalid no_context_takeover parameter";
             return false;
         }

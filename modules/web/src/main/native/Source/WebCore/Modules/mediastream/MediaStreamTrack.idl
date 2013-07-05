@@ -22,14 +22,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module core {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=MEDIA_STREAM,
-    ] MediaStreamTrack {
+    EventTarget,
+    ActiveDOMObject
+] interface MediaStreamTrack {
         readonly attribute DOMString kind;
+    readonly attribute DOMString id;
         readonly attribute DOMString label;
                  attribute boolean enabled;
+
+    readonly attribute DOMString readyState;
+
+    attribute EventListener onmute;
+    attribute EventListener onunmute;
+    attribute EventListener onended;
+
+    // EventTarget interface
+    void addEventListener(DOMString type,
+                          EventListener listener,
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type,
+                             EventListener listener,
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event event)
+        raises(EventException);
     };
 
-}

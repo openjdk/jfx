@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2010 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,10 +28,10 @@
 
 """'with'-compliant StringIO implementation."""
 
-import StringIO
+import StringIO as OldStringIO
 
 
-class StringIO(StringIO.StringIO):
+class StringIO(OldStringIO.StringIO):
     def __enter__(self):
         return self
 

@@ -30,6 +30,7 @@
 #if USE(LEVELDB)
 
 #include "LevelDBComparator.h"
+#include "LevelDBDatabase.h"
 #include "LevelDBIterator.h"
 #include "LevelDBSlice.h"
 #include <wtf/AVLTree.h>
@@ -42,7 +43,7 @@
 
 namespace WebCore {
 
-class LevelDBDatabase;
+class LevelDBWriteBatch;
 
 using WTF::AVLTree;
 
@@ -51,9 +52,10 @@ public:
     static PassRefPtr<LevelDBTransaction> create(LevelDBDatabase*);
 
     ~LevelDBTransaction();
-    bool put(const LevelDBSlice& key, const Vector<char>& value);
-    bool remove(const LevelDBSlice& key);
-    bool get(const LevelDBSlice& key, Vector<char>& value);
+    void put(const LevelDBSlice& key, const Vector<char>& value);
+    void remove(const LevelDBSlice& key);
+    // FIXME: Rename safeGet to get.
+    bool safeGet(const LevelDBSlice& key, Vector<char>& value, bool& found);
     bool commit();
     void rollback();
 
@@ -156,17 +158,34 @@ private:
         mutable bool m_treeChanged;
     };
 
-    bool set(const LevelDBSlice& key, const Vector<char>& value, bool deleted);
+    void set(const LevelDBSlice& key, const Vector<char>& value, bool deleted);
     void clearTree();
     void registerIterator(TransactionIterator*);
     void unregisterIterator(TransactionIterator*);
     void notifyIteratorsOfTreeChange();
 
     LevelDBDatabase* m_db;
+    const LevelDBSnapshot m_snapshot;
     const LevelDBComparator* m_comparator;
     TreeType m_tree;
     bool m_finished;
     HashSet<TransactionIterator*> m_iterators;
+};
+
+class LevelDBWriteOnlyTransaction {
+public:
+    static PassOwnPtr<LevelDBWriteOnlyTransaction> create(LevelDBDatabase*);
+
+    ~LevelDBWriteOnlyTransaction();
+    void remove(const LevelDBSlice& key);
+    bool commit();
+
+private:
+    LevelDBWriteOnlyTransaction(LevelDBDatabase*);
+
+    LevelDBDatabase* m_db;
+    OwnPtr<LevelDBWriteBatch> m_writeBatch;
+    bool m_finished;
 };
 
 }

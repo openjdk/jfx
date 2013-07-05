@@ -60,7 +60,7 @@ public:
     // A method to obtain the baseline position for a "leaf" control.  This will only be used if a baseline
     // position cannot be determined by examining child content. Checkboxes and radio buttons are examples of
     // controls that need to do this.
-    virtual LayoutUnit baselinePosition(const RenderObject*) const;
+    virtual int baselinePosition(const RenderObject*) const;
 
     // The platform selection color.
     virtual Color platformActiveSelectionBackgroundColor() const;
@@ -91,6 +91,14 @@ public:
 #if ENABLE(FULLSCREEN_API)
     virtual String extraFullScreenStyleSheet();
 #endif
+#endif
+
+#if ENABLE(DATALIST_ELEMENT)
+    // Returns size of one slider tick mark for a horizontal track.
+    // For vertical tracks we rotate it and use it. i.e. Width is always length along the track.
+    virtual IntSize sliderTickSize() const;
+    // Returns the distance of slider tick origin from the slider track center.
+    virtual int sliderTickOffsetFromTrackCenter() const;
 #endif
 
 #ifdef GTK_API_VERSION_2
@@ -153,8 +161,7 @@ protected:
 #if ENABLE(VIDEO)
     void initMediaColors();
     void initMediaButtons();
-    void adjustMediaSliderThumbSize(RenderStyle*) const;
-    virtual bool hasOwnDisabledStateHandlingFor(ControlPart) const { return true; }
+    virtual bool hasOwnDisabledStateHandlingFor(ControlPart) const;
     virtual bool paintMediaFullscreenButton(RenderObject*, const PaintInfo&, const IntRect&);
     virtual bool paintMediaPlayButton(RenderObject*, const PaintInfo&, const IntRect&);
     virtual bool paintMediaMuteButton(RenderObject*, const PaintInfo&, const IntRect&);
@@ -168,7 +175,7 @@ protected:
     virtual bool paintMediaCurrentTime(RenderObject*, const PaintInfo&, const IntRect&);
 #endif
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
     virtual double animationRepeatIntervalForProgressBar(RenderProgress*) const;
     virtual double animationDurationForProgressBar(RenderProgress*) const;
     virtual void adjustProgressBarStyle(StyleResolver*, RenderStyle*, Element*) const;
@@ -188,10 +195,10 @@ private:
     static double getScreenDPI();
 
 #if ENABLE(VIDEO)
-    bool paintMediaButton(RenderObject*, GraphicsContext*, const IntRect&, const char* iconName);
+    bool paintMediaButton(RenderObject*, GraphicsContext*, const IntRect&, const char* symbolicIconName, const char* fallbackStockIconName);
 #endif
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
     static IntRect calculateProgressRect(RenderObject*, const IntRect&);
 #endif
 
@@ -200,8 +207,6 @@ private:
     mutable Color m_sliderThumbColor;
     const int m_mediaIconSize;
     const int m_mediaSliderHeight;
-    const int m_mediaSliderThumbWidth;
-    const int m_mediaSliderThumbHeight;
 
 #ifdef GTK_API_VERSION_2
     void setupWidgetAndAddToContainer(GtkWidget*, GtkWidget*) const;

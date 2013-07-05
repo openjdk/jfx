@@ -28,7 +28,9 @@
 #if PLATFORM(QT)
 #include "ImageDecoderQt.h"
 #endif
+#if !PLATFORM(QT) || USE(LIBJPEG)
 #include "JPEGImageDecoder.h"
+#endif
 #include "PNGImageDecoder.h"
 #include "SharedBuffer.h"
 #if USE(WEBP)
@@ -136,8 +138,6 @@ ImageDecoder* ImageDecoder::create(const SharedBuffer& data, ImageSource::AlphaO
     return 0;
 }
 
-#if !USE(SKIA)
-
 ImageFrame::ImageFrame()
     : m_hasAlpha(false)
     , m_status(FrameEmpty)
@@ -224,18 +224,6 @@ void ImageFrame::setStatus(FrameStatus status)
     m_status = status;
 }
 
-int ImageFrame::width() const
-{
-    return m_size.width();
-}
-
-int ImageFrame::height() const
-{
-    return m_size.height();
-}
-
-#endif
-
 namespace {
 
 enum MatchType {
@@ -275,6 +263,23 @@ template <MatchType type> int getScaledValue(const Vector<int>& scaledValues, in
     }
 }
 
+}
+
+bool ImageDecoder::frameHasAlphaAtIndex(size_t index) const
+{
+    if (m_frameBufferCache.size() <= index)
+        return true;
+    if (m_frameBufferCache[index].status() == ImageFrame::FrameComplete)
+        return m_frameBufferCache[index].hasAlpha();
+    return true;
+}
+
+unsigned ImageDecoder::frameBytesAtIndex(size_t index) const
+{
+    if (m_frameBufferCache.size() <= index)
+        return 0;
+    // FIXME: Use the dimension of the requested frame.
+    return m_size.area() * sizeof(ImageFrame::PixelData);
 }
 
 void ImageDecoder::prepareScaleDataIfNecessary()

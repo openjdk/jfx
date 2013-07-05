@@ -27,9 +27,7 @@
 #include "JavaInstanceJSC.h"
 
 #if ENABLE(JAVA_BRIDGE)
-#if ENABLE(JAVA_JSC)
 #include "BridgeUtils.h"
-#endif
 #include "JavaRuntimeObject.h"
 #include "JNIUtilityPrivate.h"
 #include "JSDOMBinding.h"
@@ -115,12 +113,11 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
     jstring stringValue = (jstring) result.l;
     JNIEnv* env = getJNIEnv();
     const jchar* c = getUCharactersFromJStringInEnv(env, stringValue);
-    UString u((const UChar*)c, (int)env->GetStringLength(stringValue));
+    String u((const UChar*)c, (int)env->GetStringLength(stringValue));
     releaseUCharactersForJStringInEnv(env, stringValue, c);
     return jsString(exec, u);
 }
 
-#if ENABLE(JAVA_JSC)
 static JSValue numberValueForCharacter(jobject obj) {
     return jsNumber((int) callJNIMethod<jchar>(obj, "charValue", "()C"));
 }
@@ -128,11 +125,10 @@ static JSValue numberValueForCharacter(jobject obj) {
 static JSValue numberValueForNumber(jobject obj) {
 return jsNumber(callJNIMethod<jdouble>(obj, "doubleValue", "()D"));
 }
-#endif
+
 
 JSValue JavaInstance::numberValue(ExecState*) const
 {
-#if ENABLE(JAVA_JSC)
     jobject obj = m_instance->instance();
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
     if (aClass->isCharacterClass())
@@ -143,20 +139,12 @@ JSValue JavaInstance::numberValue(ExecState*) const
 	                // callJNIMethod<jboolean>(obj, "booleanValue", "()Z"));
                         callJNIMethod(obj, JavaTypeBoolean, "booleanValue", "()Z", 0).z);
     return numberValueForNumber(obj);
-#else
-    jdouble doubleValue = callJNIMethod<jdouble>(m_instance->instance(), "doubleValue", "()D");
-    return jsNumber(doubleValue);
-#endif
 }
 
 JSValue JavaInstance::booleanValue() const
 {
-#if ENABLE(JAVA_JSC)
     // Changed the call to work around possible GCC bug, see RT-22725
     jboolean booleanValue = callJNIMethod(m_instance->instance(), JavaTypeBoolean, "booleanValue", "()Z", 0).z;
-#else
-    jboolean booleanValue = callJNIMethod<jboolean>(m_instance->instance(), "booleanValue", "()Z");
-#endif
     return jsBoolean(booleanValue);
 }
 
@@ -164,17 +152,17 @@ class JavaRuntimeMethod : public RuntimeMethod {
 public:
     typedef RuntimeMethod Base;
 
-    static JavaRuntimeMethod* create(ExecState* exec, JSGlobalObject* globalObject, const UString& name, Bindings::MethodList& list)
+    static JavaRuntimeMethod* create(ExecState* exec, JSGlobalObject* globalObject, const String& name, Bindings::Method *method)
     {
         // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
         // We need to pass in the right global object for "i".
         Structure* domStructure = WebCore::deprecatedGetDOMStructure<JavaRuntimeMethod>(exec);
-        JavaRuntimeMethod* method = new (NotNull, allocateCell<JavaRuntimeMethod>(*exec->heap())) JavaRuntimeMethod(globalObject, domStructure, list);
-        method->finishCreation(exec->globalData(), name);
-        return method;
+        JavaRuntimeMethod* _method = new (NotNull, allocateCell<JavaRuntimeMethod>(*exec->heap())) JavaRuntimeMethod(globalObject, domStructure, method);
+        _method->finishCreation(exec->vm(), name);
+        return _method;
     }
 
-    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    static Structure* createStructure(VM& globalData, JSGlobalObject* globalObject, JSValue prototype)
     {
         return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
     }
@@ -182,12 +170,12 @@ public:
     static const ClassInfo s_info;
 
 private:
-    JavaRuntimeMethod(JSGlobalObject* globalObject, Structure* structure, Bindings::MethodList& list)
-        : RuntimeMethod(globalObject, structure, list)
+    JavaRuntimeMethod(JSGlobalObject* globalObject, Structure* structure, Bindings::Method *method)
+        : RuntimeMethod(globalObject, structure, method)
     {
     }
 
-    void finishCreation(JSGlobalData& globalData, const UString& name)
+    void finishCreation(VM& globalData, const String& name)
     {
         Base::finishCreation(globalData, name);
         ASSERT(inherits(&s_info));
@@ -198,8 +186,8 @@ const ClassInfo JavaRuntimeMethod::s_info = { "JavaRuntimeMethod", &RuntimeMetho
 
 JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
 {
-    MethodList methodList = getClass()->methodsNamed(propertyName, this);
-    return JavaRuntimeMethod::create(exec, exec->lexicalGlobalObject(), propertyName.publicName(), methodList);
+    Method *method = getClass()->methodNamed(propertyName, this);
+    return JavaRuntimeMethod::create(exec, exec->lexicalGlobalObject(), propertyName.publicName(), method);
 }
 
 JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
@@ -207,14 +195,12 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     if (!asObject(runtimeMethod)->inherits(&JavaRuntimeMethod::s_info))
         return throwError(exec, createTypeError(exec, "Attempt to invoke non-Java method on Java object."));
 
-    const MethodList& methodList = *runtimeMethod->methods();
-
-    int i;
     int count = exec->argumentCount();
-    JSValue resultValue;
-    Method* method = 0;
+#if 0
+    const MethodList& methodList = *runtimeMethod->methods();
     size_t numMethods = methodList.size();
 
+    Method* method = 0;
     // Try to find a good match for the overloaded method.  The
     // fundamental problem is that JavaScript doesn't have the
     // notion of method overloading and Java does.  We could
@@ -227,17 +213,21 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
             break;
         }
     }
+#else
+    Method* method = runtimeMethod->method();
+#endif
+
     if (!method) {
-        LOG(LiveConnect, "JavaInstance::invokeMethod unable to find an appropiate method");
+        LOG(LiveConnect, "JavaInstance::invokeMethod unable to find an appropriate method");
         return jsUndefined();
     }
 
     const JavaMethod* jMethod = static_cast<const JavaMethod*>(method);
-    LOG(LiveConnect, "JavaInstance::invokeMethod call %s %s on %p", UString(jMethod->name().impl()).utf8().data(), jMethod->signature(), m_instance->instance());
+    LOG(LiveConnect, "JavaInstance::invokeMethod call %s %s on %p", String(jMethod->name().impl()).utf8().data(), jMethod->signature(), m_instance->instance());
 
     Vector<jobject> jArgs(count);
 
-    for (i = 0; i < count; i++) {
+    for (int i = 0; i < count; i++) {
         CString javaClassName = jMethod->parameterAt(i).utf8();
         JavaType jtype = javaTypeFromClassName(javaClassName.data());
         jvalue jarg = convertValueToJValue(exec, m_rootObject.get(),
@@ -252,10 +242,8 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     // normal JNI.  The JNI dispatch abstraction allows the Java plugin
     // to dispatch the call on the appropriate internal VM thread.
     RootObject* rootObject = this->rootObject();
-#if ENABLE(JAVA_JSC)
     if (jMethod->isStatic())
         return throwError(exec, createTypeError(exec, "invoking static method"));
-#endif
     if (!rootObject)
         return jsUndefined();
 
@@ -279,6 +267,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
         }
     }
 
+    JSValue resultValue;
     switch (jMethod->returnType()) {
     case JavaTypeVoid:
         {
@@ -286,40 +275,12 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
         }
         break;
 
-#if ENABLE(JAVA_JSC)
     case JavaTypeArray:
       /* ... fall through ... */
-#endif
     case JavaTypeObject:
         {
-#if ENABLE(JAVA_JSC)
             JNIEnv* env = getJNIEnv();
             resultValue = toJS(exec, WebCore::Java_Object_to_JSValue(env, toRef(exec), rootObject, result.l, accessControlContext()));
-#else
-            if (result.l) {
-                // FIXME: JavaTypeArray return type is handled below, can we actually get an array here?
-                const char* arrayType = jMethod->returnTypeClassName();
-                if (arrayType[0] == '[')
-                    resultValue = JavaArray::convertJObjectToArray(exec, result.l, arrayType, rootObject);
-                else {
-                    jobject classOfInstance = callJNIMethod<jobject>(result.l, "getClass", "()Ljava/lang/Class;");
-                    jstring className = static_cast<jstring>(callJNIMethod<jobject>(classOfInstance, "getName", "()Ljava/lang/String;"));
-                    if (!strcmp(JavaString(className).utf8(), "sun.plugin.javascript.webkit.JSObject")) {
-                        // Pull the nativeJSObject value from the Java instance.  This is a pointer to the JSObject.
-                        JNIEnv* env = getJNIEnv();
-                        jfieldID fieldID = env->GetFieldID(static_cast<jclass>(classOfInstance), "nativeJSObject", "J");
-                        jlong nativeHandle = env->GetLongField(result.l, fieldID);
-                        // FIXME: Handling of undefined values differs between functions in JNIUtilityPrivate.cpp and those in those in jni_jsobject.mm,
-                        // and so it does between different versions of LiveConnect spec. There should not be multiple code paths to do the same work.
-                        if (nativeHandle == 1 /* UndefinedHandle */)
-                            return jsUndefined();
-                        return jlong_to_impptr(nativeHandle);
-                    } else
-                        return JavaInstance::create(result.l, rootObject)->createRuntimeObject(exec);
-                }
-            } else
-                return jsUndefined();
-#endif
         }
         break;
 
@@ -371,16 +332,6 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
         }
         break;
 
-#if !ENABLE(JAVA_JSC)
-    case JavaTypeArray:
-        {
-            const char* arrayType = jMethod->returnTypeClassName();
-            ASSERT(arrayType[0] == '[');
-            resultValue = JavaArray::convertJObjectToArray(exec, result.l, arrayType, rootObject);
-        }
-        break;
-#endif
-
     case JavaTypeInvalid:
         {
             resultValue = jsUndefined();
@@ -400,15 +351,11 @@ JSValue JavaInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint)
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
     if (aClass->isStringClass())
         return stringValue(exec);
-#if ENABLE(JAVA_JSC)
+
     if (aClass->isNumberClass())
         return numberValueForNumber(m_instance->instance());
     if (aClass->isCharacterClass())
         return numberValueForCharacter(m_instance->instance());
-#else
-    if (aClass->isNumberClass())
-        return numberValue(exec);
-#endif
     if (aClass->isBooleanClass())
         return booleanValue();
     return valueOf(exec);

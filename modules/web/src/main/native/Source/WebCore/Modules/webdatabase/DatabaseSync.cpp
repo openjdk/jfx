@@ -33,7 +33,11 @@
 
 #if ENABLE(SQL_DATABASE)
 
+#include "DatabaseBackendContext.h"
+#include "DatabaseBackendSync.h"
 #include "DatabaseCallback.h"
+#include "DatabaseContext.h"
+#include "DatabaseManager.h"
 #include "DatabaseTracker.h"
 #include "Logging.h"
 #include "SQLException.h"
@@ -47,49 +51,27 @@
 
 namespace WebCore {
 
-PassRefPtr<DatabaseSync> DatabaseSync::openDatabaseSync(ScriptExecutionContext* context, const String& name, const String& expectedVersion, const String& displayName,
-                                                        unsigned long estimatedSize, PassRefPtr<DatabaseCallback> creationCallback, ExceptionCode& ec)
+PassRefPtr<DatabaseSync> DatabaseSync::create(ScriptExecutionContext*, PassRefPtr<DatabaseBackendBase> backend)
 {
-    ASSERT(context->isContextThread());
-
-    if (!DatabaseTracker::tracker().canEstablishDatabase(context, name, displayName, estimatedSize)) {
-        LOG(StorageAPI, "Database %s for origin %s not allowed to be established", name.ascii().data(), context->securityOrigin()->toString().ascii().data());
-        return 0;
+    return static_cast<DatabaseSync*>(backend.get());
     }
 
-    RefPtr<DatabaseSync> database = adoptRef(new DatabaseSync(context, name, expectedVersion, displayName, estimatedSize));
-
-    String errorMessage;
-    if (!database->performOpenAndVerify(!creationCallback, ec, errorMessage)) {
-        database->logErrorMessage(errorMessage);
-        DatabaseTracker::tracker().removeOpenDatabase(database.get());
-        return 0;
-    }
-
-    DatabaseTracker::tracker().setDatabaseDetails(context->securityOrigin(), name, displayName, estimatedSize);
-
-    if (database->isNew() && creationCallback.get()) {
-        LOG(StorageAPI, "Invoking the creation callback for database %p\n", database.get());
-        creationCallback->handleEvent(database.get());
-    }
-
-    return database;
-}
-
-DatabaseSync::DatabaseSync(ScriptExecutionContext* context, const String& name, const String& expectedVersion,
-                           const String& displayName, unsigned long estimatedSize)
-    : AbstractDatabase(context, name, expectedVersion, displayName, estimatedSize, SyncDatabase)
+DatabaseSync::DatabaseSync(PassRefPtr<DatabaseBackendContext> databaseContext,
+    const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize)
+    : DatabaseBase(databaseContext->scriptExecutionContext())
+    , DatabaseBackendSync(databaseContext, name, expectedVersion, displayName, estimatedSize)
 {
+    setFrontend(this);
 }
 
 DatabaseSync::~DatabaseSync()
 {
     ASSERT(m_scriptExecutionContext->isContextThread());
+}
 
-    if (opened()) {
-        DatabaseTracker::tracker().removeOpenDatabase(this);
-        closeDatabase();
-    }
+PassRefPtr<DatabaseBackendSync> DatabaseSync::backend()
+{
+    return this;
 }
 
 void DatabaseSync::changeVersion(const String& oldVersion, const String& newVersion, PassRefPtr<SQLTransactionSyncCallback> changeVersionCallback, ExceptionCode& ec)
@@ -97,7 +79,6 @@ void DatabaseSync::changeVersion(const String& oldVersion, const String& newVers
     ASSERT(m_scriptExecutionContext->isContextThread());
 
     if (sqliteDatabase().transactionInProgress()) {
-        reportChangeVersionResult(1, SQLException::DATABASE_ERR, 0);
         setLastErrorMessage("unable to changeVersion from within a transaction");
         ec = SQLException::DATABASE_ERR;
         return;
@@ -111,14 +92,12 @@ void DatabaseSync::changeVersion(const String& oldVersion, const String& newVers
 
     String actualVersion;
     if (!getVersionFromDatabase(actualVersion)) {
-        reportChangeVersionResult(2, SQLException::UNKNOWN_ERR, sqliteDatabase().lastError());
         setLastErrorMessage("unable to read the current version", sqliteDatabase().lastError(), sqliteDatabase().lastErrorMsg());
         ec = SQLException::UNKNOWN_ERR;
         return;
     }
 
     if (actualVersion != oldVersion) {
-        reportChangeVersionResult(3, SQLException::VERSION_ERR, 0);
         setLastErrorMessage("current version of the database and `oldVersion` argument do not match");
         ec = SQLException::VERSION_ERR;
         return;
@@ -130,7 +109,6 @@ void DatabaseSync::changeVersion(const String& oldVersion, const String& newVers
     }
 
     if (!setVersionInDatabase(newVersion)) {
-        reportChangeVersionResult(4, SQLException::UNKNOWN_ERR, sqliteDatabase().lastError());
         setLastErrorMessage("unable to set the new version", sqliteDatabase().lastError(), sqliteDatabase().lastErrorMsg());
         ec = SQLException::UNKNOWN_ERR;
         return;
@@ -141,8 +119,6 @@ void DatabaseSync::changeVersion(const String& oldVersion, const String& newVers
         setCachedVersion(oldVersion);
         return;
     }
-
-    reportChangeVersionResult(0, -1, 0); // OK
 
     setExpectedVersion(newVersion);
     setLastErrorMessage("");
@@ -211,7 +187,6 @@ void DatabaseSync::closeImmediately()
         return;
 
     logErrorMessage("forcibly closing database");
-    DatabaseTracker::tracker().removeOpenDatabase(this);
     closeDatabase();
 }
 

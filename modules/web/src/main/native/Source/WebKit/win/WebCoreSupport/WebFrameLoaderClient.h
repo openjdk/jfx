@@ -74,8 +74,7 @@ public:
     virtual void dispatchDidCommitLoad();
     virtual void dispatchDidFinishDocumentLoad();
     virtual void dispatchDidFinishLoad();
-    virtual void dispatchDidFirstLayout();
-    virtual void dispatchDidFirstVisuallyNonEmptyLayout();
+    virtual void dispatchDidLayout(WebCore::LayoutMilestones);
 
     virtual WebCore::Frame* dispatchCreatePage(const WebCore::NavigationAction&);
     virtual void dispatchShow();
@@ -116,9 +115,10 @@ public:
     virtual PassRefPtr<WebCore::Frame> createFrame(const WebCore::KURL& url, const WTF::String& name, WebCore::HTMLFrameOwnerElement* ownerElement,
                                const WTF::String& referrer, bool allowsScrolling, int marginWidth, int marginHeight);
     virtual PassRefPtr<WebCore::Widget> createPlugin(const WebCore::IntSize&, WebCore::HTMLPlugInElement*, const WebCore::KURL&, const Vector<WTF::String>&, const Vector<WTF::String>&, const WTF::String&, bool loadManually);
+    virtual void recreatePlugin(WebCore::Widget*) { }
     virtual void redirectDataToPlugin(WebCore::Widget* pluginWidget);
 
-    virtual bool shouldUsePluginDocument(const WTF::String& mimeType) const;
+    virtual bool shouldAlwaysUsePluginDocument(const WTF::String& mimeType) const;
 
     virtual void dispatchDidFailToStartPlugin(const WebCore::PluginView*) const;
 

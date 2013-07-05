@@ -31,7 +31,9 @@ namespace WebCore {
 class CSSPrimitiveValue;
 class CSSValueList;
 class Color;
+class MutableStylePropertySet;
 class Node;
+class RenderObject;
 class RenderStyle;
 class SVGPaint;
 class ShadowData;
@@ -60,8 +62,7 @@ public:
     String getPropertyValue(CSSPropertyID) const;
     bool getPropertyPriority(CSSPropertyID) const;
 
-    virtual PassRefPtr<StylePropertySet> copy() const;
-    virtual PassRefPtr<StylePropertySet> makeMutable();
+    virtual PassRefPtr<MutableStylePropertySet> copyProperties() const OVERRIDE;
 
     PassRefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID, EUpdateLayout) const;
     PassRefPtr<CSSValue> getFontSizeCSSValuePreferringKeyword() const;
@@ -70,10 +71,17 @@ public:
     PassRefPtr<CSSValue> getSVGPropertyCSSValue(CSSPropertyID, EUpdateLayout) const;
 #endif
 
-    PassRefPtr<StylePropertySet> copyPropertiesInSet(const CSSPropertyID* set, unsigned length) const;
+    PassRefPtr<MutableStylePropertySet> copyPropertiesInSet(const CSSPropertyID* set, unsigned length) const;
 
 private:
     CSSComputedStyleDeclaration(PassRefPtr<Node>, bool allowVisitedStyle, const String&);
+
+    // The styled node is either the node passed into getComputedStyle, or the
+    // PseudoElement for :before and :after if they exist.
+    // FIXME: This should be styledElement since in JS getComputedStyle only works
+    // on Elements, but right now editing creates these for text nodes. We should fix
+    // that.
+    Node* styledNode() const;
 
     // CSSOM functions. Don't make these public.
     virtual CSSRule* parentRule() const;
@@ -92,26 +100,22 @@ private:
     virtual String getPropertyValueInternal(CSSPropertyID);
     virtual void setPropertyInternal(CSSPropertyID, const String& value, bool important, ExceptionCode&);
 
-    virtual bool cssPropertyMatches(const CSSProperty*) const;
+    virtual bool cssPropertyMatches(CSSPropertyID, const CSSValue*) const OVERRIDE;
 
-    PassRefPtr<CSSValue> valueForShadow(const ShadowData*, CSSPropertyID, RenderStyle*) const;
+    PassRefPtr<CSSValue> valueForShadow(const ShadowData*, CSSPropertyID, const RenderStyle*) const;
     PassRefPtr<CSSPrimitiveValue> currentColorOrValidColor(RenderStyle*, const Color&) const;
 #if ENABLE(SVG)
     PassRefPtr<SVGPaint> adjustSVGPaintForCurrentColor(PassRefPtr<SVGPaint>, RenderStyle*) const;
 #endif
 
-#if ENABLE(CSS_SHADERS)
-    PassRefPtr<CSSValue> valueForCustomFilterNumberParameter(const CustomFilterNumberParameter*) const;
-    PassRefPtr<CSSValue> valueForCustomFilterParameter(const CustomFilterParameter*) const;
-#endif
-
 #if ENABLE(CSS_FILTERS)
-    PassRefPtr<CSSValue> valueForFilter(RenderStyle*) const;
+    PassRefPtr<CSSValue> valueForFilter(const RenderObject*, const RenderStyle*) const;
 #endif
 
     PassRefPtr<CSSValueList> getCSSPropertyValuesForShorthandProperties(const StylePropertyShorthand&) const;
     PassRefPtr<CSSValueList> getCSSPropertyValuesForSidesShorthand(const StylePropertyShorthand&) const;
     PassRefPtr<CSSValueList> getBackgroundShorthandValue() const;
+    PassRefPtr<CSSValueList> getCSSPropertyValuesForGridShorthand(const StylePropertyShorthand&) const;
 
     RefPtr<Node> m_node;
     PseudoId m_pseudoElementSpecifier;

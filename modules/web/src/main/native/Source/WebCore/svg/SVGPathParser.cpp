@@ -282,7 +282,7 @@ bool SVGPathParser::parseArcToSegment()
     return true;
 }
 
-bool SVGPathParser::parsePathDataFromSource(PathParsingMode pathParsingMode)
+bool SVGPathParser::parsePathDataFromSource(PathParsingMode pathParsingMode, bool checkForInitialMoveTo)
 {
     ASSERT(m_source);
     ASSERT(m_consumer);
@@ -303,7 +303,7 @@ bool SVGPathParser::parsePathDataFromSource(PathParsingMode pathParsingMode)
     m_lastCommand = PathSegUnknown;
 
     // Path must start with moveto.
-    if (command != PathSegMoveToAbs && command != PathSegMoveToRel)
+    if (checkForInitialMoveTo && command != PathSegMoveToAbs && command != PathSegMoveToRel)
         return false;
 
     while (true) {
@@ -448,11 +448,12 @@ bool SVGPathParser::decomposeArcToCubic(float angle, float rx, float ry, FloatPo
         scaleFactor = -scaleFactor;
 
     delta.scale(scaleFactor);
-    FloatPoint centerPoint = FloatPoint(0.5f * (point1.x() + point2.x()) - delta.height(),
-                                        0.5f * (point1.y() + point2.y()) + delta.width());
+    FloatPoint centerPoint = point1 + point2;
+    centerPoint.scale(0.5f, 0.5f);
+    centerPoint.move(-delta.height(), delta.width());
 
-    float theta1 = atan2f(point1.y() - centerPoint.y(), point1.x() - centerPoint.x());
-    float theta2 = atan2f(point2.y() - centerPoint.y(), point2.x() - centerPoint.x());
+    float theta1 = FloatPoint(point1 - centerPoint).slopeAngleRadians();
+    float theta2 = FloatPoint(point2 - centerPoint).slopeAngleRadians();
 
     float thetaArc = theta2 - theta1;
     if (thetaArc < 0 && sweepFlag)
@@ -472,7 +473,7 @@ bool SVGPathParser::decomposeArcToCubic(float angle, float rx, float ry, FloatPo
         float endTheta = theta1 + (i + 1) * thetaArc / segments;
 
         float t = (8 / 6.f) * tanf(0.25f * (endTheta - startTheta));
-        if (!isfinite(t))
+        if (!std::isfinite(t))
             return false;
         float sinStartTheta = sinf(startTheta);
         float cosStartTheta = cosf(startTheta);

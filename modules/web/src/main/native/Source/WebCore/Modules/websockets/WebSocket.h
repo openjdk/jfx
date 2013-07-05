@@ -38,6 +38,7 @@
 #include "EventNames.h"
 #include "EventTarget.h"
 #include "KURL.h"
+#include "WebSocketChannel.h"
 #include "WebSocketChannelClient.h"
 #include <wtf/Forward.h>
 #include <wtf/OwnPtr.h>
@@ -55,6 +56,9 @@ public:
     static bool isAvailable();
     static const char* subProtocolSeperator();
     static PassRefPtr<WebSocket> create(ScriptExecutionContext*);
+    static PassRefPtr<WebSocket> create(ScriptExecutionContext*, const String& url, ExceptionCode&);
+    static PassRefPtr<WebSocket> create(ScriptExecutionContext*, const String& url, const String& protocol, ExceptionCode&);
+    static PassRefPtr<WebSocket> create(ScriptExecutionContext*, const String& url, const Vector<String>& protocols, ExceptionCode&);
     virtual ~WebSocket();
 
     enum State {
@@ -68,11 +72,14 @@ public:
     void connect(const String& url, const String& protocol, ExceptionCode&);
     void connect(const String& url, const Vector<String>& protocols, ExceptionCode&);
 
-    bool send(const String& message, ExceptionCode&);
-    bool send(ArrayBuffer*, ExceptionCode&);
-    bool send(Blob*, ExceptionCode&);
+    void send(const String& message, ExceptionCode&);
+    void send(ArrayBuffer*, ExceptionCode&);
+    void send(ArrayBufferView*, ExceptionCode&);
+    void send(Blob*, ExceptionCode&);
 
     void close(int code, const String& reason, ExceptionCode&);
+    void close(ExceptionCode& ec) { close(WebSocketChannel::CloseEventCodeNotSpecified, String(), ec); }
+    void close(int code, ExceptionCode& ec) { close(code, String(), ec); }
 
     const KURL& url() const;
     State readyState() const;
@@ -82,7 +89,7 @@ public:
     String extensions() const;
 
     String binaryType() const;
-    void setBinaryType(const String& binaryType, ExceptionCode&);
+    void setBinaryType(const String&);
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(open);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(message);
@@ -113,7 +120,7 @@ public:
     virtual void didClose(unsigned long unhandledBufferedAmount, ClosingHandshakeCompletionStatus, unsigned short code, const String& reason) OVERRIDE;
 
 private:
-    WebSocket(ScriptExecutionContext*);
+    explicit WebSocket(ScriptExecutionContext*);
 
     virtual void refEventTarget() { ref(); }
     virtual void derefEventTarget() { deref(); }

@@ -27,39 +27,30 @@
 #include "config.h"
 #include "HTMLTreeBuilder.h"
 
-#include "Comment.h"
-#include "DOMWindow.h"
+#include "AtomicHTMLToken.h"
 #include "DocumentFragment.h"
-#include "DocumentType.h"
-#include "Frame.h"
 #include "HTMLDocument.h"
 #include "HTMLDocumentParser.h"
-#include "HTMLElementFactory.h"
 #include "HTMLFormElement.h"
-#include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "HTMLScriptElement.h"
+#include "HTMLStackItem.h"
+#include "HTMLTemplateElement.h"
 #include "HTMLToken.h"
 #include "HTMLTokenizer.h"
 #include "LocalizedStrings.h"
 #include "MathMLNames.h"
 #include "NotImplemented.h"
 #include "SVGNames.h"
-#include "Text.h"
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
+#include <wtf/MainThread.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
-
-static TextPosition uninitializedPositionValue1()
-{
-    return TextPosition(OrdinalNumber::fromOneBasedInt(-1), OrdinalNumber::first());
-}
 
 namespace {
 
@@ -68,17 +59,24 @@ inline bool isHTMLSpaceOrReplacementCharacter(UChar character)
     return isHTMLSpace(character) || character == replacementCharacter;
 }
 
-inline bool isAllWhitespace(const String& string)
+}
+
+static TextPosition uninitializedPositionValue1()
+{
+    return TextPosition(OrdinalNumber::fromOneBasedInt(-1), OrdinalNumber::first());
+}
+
+static inline bool isAllWhitespace(const String& string)
 {
     return string.isAllSpecialCharacters<isHTMLSpace>();
 }
 
-inline bool isAllWhitespaceOrReplacementCharacters(const String& string)
+static inline bool isAllWhitespaceOrReplacementCharacters(const String& string)
 {
     return string.isAllSpecialCharacters<isHTMLSpaceOrReplacementCharacter>();
 }
 
-bool isNumberedHeaderTag(const AtomicString& tagName)
+static bool isNumberedHeaderTag(const AtomicString& tagName)
 {
     return tagName == h1Tag
         || tagName == h2Tag
@@ -88,118 +86,26 @@ bool isNumberedHeaderTag(const AtomicString& tagName)
         || tagName == h6Tag;
 }
 
-bool isCaptionColOrColgroupTag(const AtomicString& tagName)
+static bool isCaptionColOrColgroupTag(const AtomicString& tagName)
 {
     return tagName == captionTag
         || tagName == colTag
         || tagName == colgroupTag;
 }
 
-bool isTableCellContextTag(const AtomicString& tagName)
+static bool isTableCellContextTag(const AtomicString& tagName)
 {
     return tagName == thTag || tagName == tdTag;
 }
 
-bool isTableBodyContextTag(const AtomicString& tagName)
+static bool isTableBodyContextTag(const AtomicString& tagName)
 {
     return tagName == tbodyTag
         || tagName == tfootTag
         || tagName == theadTag;
 }
 
-// http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#special
-bool isSpecialNode(Node* node)
-{
-    if (node->hasTagName(MathMLNames::miTag)
-        || node->hasTagName(MathMLNames::moTag)
-        || node->hasTagName(MathMLNames::mnTag)
-        || node->hasTagName(MathMLNames::msTag)
-        || node->hasTagName(MathMLNames::mtextTag)
-        || node->hasTagName(MathMLNames::annotation_xmlTag)
-        || node->hasTagName(SVGNames::foreignObjectTag)
-        || node->hasTagName(SVGNames::descTag)
-        || node->hasTagName(SVGNames::titleTag))
-        return true;
-    if (node->nodeType() == Node::DOCUMENT_FRAGMENT_NODE)
-        return true;
-    if (!isInHTMLNamespace(node))
-        return false;
-    const AtomicString& tagName = node->localName();
-    return tagName == addressTag
-        || tagName == appletTag
-        || tagName == areaTag
-        || tagName == articleTag
-        || tagName == asideTag
-        || tagName == baseTag
-        || tagName == basefontTag
-        || tagName == bgsoundTag
-        || tagName == blockquoteTag
-        || tagName == bodyTag
-        || tagName == brTag
-        || tagName == buttonTag
-        || tagName == captionTag
-        || tagName == centerTag
-        || tagName == colTag
-        || tagName == colgroupTag
-        || tagName == commandTag
-        || tagName == ddTag
-        || tagName == detailsTag
-        || tagName == dirTag
-        || tagName == divTag
-        || tagName == dlTag
-        || tagName == dtTag
-        || tagName == embedTag
-        || tagName == fieldsetTag
-        || tagName == figcaptionTag
-        || tagName == figureTag
-        || tagName == footerTag
-        || tagName == formTag
-        || tagName == frameTag
-        || tagName == framesetTag
-        || isNumberedHeaderTag(tagName)
-        || tagName == headTag
-        || tagName == headerTag
-        || tagName == hgroupTag
-        || tagName == hrTag
-        || tagName == htmlTag
-        || tagName == iframeTag
-        || tagName == imgTag
-        || tagName == inputTag
-        || tagName == isindexTag
-        || tagName == liTag
-        || tagName == linkTag
-        || tagName == listingTag
-        || tagName == marqueeTag
-        || tagName == menuTag
-        || tagName == metaTag
-        || tagName == navTag
-        || tagName == noembedTag
-        || tagName == noframesTag
-        || tagName == noscriptTag
-        || tagName == objectTag
-        || tagName == olTag
-        || tagName == pTag
-        || tagName == paramTag
-        || tagName == plaintextTag
-        || tagName == preTag
-        || tagName == scriptTag
-        || tagName == sectionTag
-        || tagName == selectTag
-        || tagName == styleTag
-        || tagName == summaryTag
-        || tagName == tableTag
-        || isTableBodyContextTag(tagName)
-        || tagName == tdTag
-        || tagName == textareaTag
-        || tagName == thTag
-        || tagName == titleTag
-        || tagName == trTag
-        || tagName == ulTag
-        || tagName == wbrTag
-        || tagName == xmpTag;
-}
-
-bool isNonAnchorNonNobrFormattingTag(const AtomicString& tagName)
+static bool isNonAnchorNonNobrFormattingTag(const AtomicString& tagName)
 {
     return tagName == bTag
         || tagName == bigTag
@@ -215,39 +121,39 @@ bool isNonAnchorNonNobrFormattingTag(const AtomicString& tagName)
         || tagName == uTag;
 }
 
-bool isNonAnchorFormattingTag(const AtomicString& tagName)
+static bool isNonAnchorFormattingTag(const AtomicString& tagName)
 {
     return tagName == nobrTag
         || isNonAnchorNonNobrFormattingTag(tagName);
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#formatting
-bool isFormattingTag(const AtomicString& tagName)
+static bool isFormattingTag(const AtomicString& tagName)
 {
     return tagName == aTag || isNonAnchorFormattingTag(tagName);
 }
 
-HTMLFormElement* closestFormAncestor(Element* element)
+static HTMLFormElement* closestFormAncestor(Element* element)
 {
+    ASSERT(isMainThread());
     while (element) {
         if (element->hasTagName(formTag))
             return static_cast<HTMLFormElement*>(element);
         ContainerNode* parent = element->parentNode();
         if (!parent || !parent->isElementNode())
             return 0;
-        element = static_cast<Element*>(parent);
+        element = toElement(parent);
     }
     return 0;
 }
 
-} // namespace
-
 class HTMLTreeBuilder::ExternalCharacterTokenBuffer {
     WTF_MAKE_NONCOPYABLE(ExternalCharacterTokenBuffer);
 public:
-    explicit ExternalCharacterTokenBuffer(AtomicHTMLToken& token)
-        : m_current(token.characters().data())
-        , m_end(m_current + token.characters().size())
+    explicit ExternalCharacterTokenBuffer(AtomicHTMLToken* token)
+        : m_current(token->characters())
+        , m_end(m_current + token->charactersLength())
+        , m_isAll8BitData(token->isAll8BitData())
     {
         ASSERT(!isEmpty());
     }
@@ -255,6 +161,7 @@ public:
     explicit ExternalCharacterTokenBuffer(const String& string)
         : m_current(string.characters())
         , m_end(m_current + string.length())
+        , m_isAll8BitData(string.length() && string.is8Bit())
     {
         ASSERT(!isEmpty());
     }
@@ -265,6 +172,8 @@ public:
     }
 
     bool isEmpty() const { return m_current == m_end; }
+
+    bool isAll8BitData() const { return m_isAll8BitData; }
 
     void skipAtMostOneLeadingNewline()
     {
@@ -293,7 +202,12 @@ public:
         ASSERT(!isEmpty());
         const UChar* start = m_current;
         m_current = m_end;
-        return String(start, m_current - start);
+        size_t length = m_current - start;
+
+        if (isAll8BitData())
+            return String::make8BitFrom16BitSource(start, length);
+
+        return String(start, length);
     }
 
     void giveRemainingTo(StringBuilder& recipient)
@@ -338,43 +252,49 @@ private:
         skipLeading<characterPredicate>();
         if (start == m_current)
             return String();
+        if (isAll8BitData())
+            return String::make8BitFrom16BitSource(start, m_current - start);
         return String(start, m_current - start);
     }
 
     const UChar* m_current;
     const UChar* m_end;
+    bool m_isAll8BitData;
 };
 
 
-HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, HTMLDocument* document, bool reportErrors, bool usePreHTML5ParserQuirks, unsigned maximumDOMTreeDepth)
+HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, HTMLDocument* document, ParserContentPolicy parserContentPolicy, bool, const HTMLParserOptions& options)
     : m_framesetOk(true)
-    , m_document(document)
-    , m_tree(document, maximumDOMTreeDepth)
-    , m_reportErrors(reportErrors)
+#ifndef NDEBUG
+    , m_isAttached(true)
+#endif
+    , m_tree(document, parserContentPolicy, options.maximumDOMTreeDepth)
     , m_insertionMode(InitialMode)
     , m_originalInsertionMode(InitialMode)
     , m_shouldSkipLeadingNewline(false)
     , m_parser(parser)
     , m_scriptToProcessStartPosition(uninitializedPositionValue1())
-    , m_usePreHTML5ParserQuirks(usePreHTML5ParserQuirks)
+    , m_options(options)
 {
 }
 
 // FIXME: Member variables should be grouped into self-initializing structs to
 // minimize code duplication between these constructors.
-HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, DocumentFragment* fragment, Element* contextElement, FragmentScriptingPermission scriptingPermission, bool usePreHTML5ParserQuirks, unsigned maximumDOMTreeDepth)
+HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, DocumentFragment* fragment, Element* contextElement, ParserContentPolicy parserContentPolicy, const HTMLParserOptions& options)
     : m_framesetOk(true)
-    , m_fragmentContext(fragment, contextElement, scriptingPermission)
-    , m_document(fragment->document())
-    , m_tree(fragment, scriptingPermission, maximumDOMTreeDepth)
-    , m_reportErrors(false) // FIXME: Why not report errors in fragments?
+#ifndef NDEBUG
+    , m_isAttached(true)
+#endif
+    , m_fragmentContext(fragment, contextElement)
+    , m_tree(fragment, parserContentPolicy, options.maximumDOMTreeDepth)
     , m_insertionMode(InitialMode)
     , m_originalInsertionMode(InitialMode)
     , m_shouldSkipLeadingNewline(false)
     , m_parser(parser)
     , m_scriptToProcessStartPosition(uninitializedPositionValue1())
-    , m_usePreHTML5ParserQuirks(usePreHTML5ParserQuirks)
+    , m_options(options)
 {
+    ASSERT(isMainThread());
     // FIXME: This assertion will become invalid if <http://webkit.org/b/60316> is fixed.
     ASSERT(contextElement);
     if (contextElement) {
@@ -382,7 +302,13 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, DocumentFragment* f
         // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-end.html#fragment-case
         // For efficiency, we skip step 4.2 ("Let root be a new html element with no attributes")
         // and instead use the DocumentFragment as a root node.
-        m_tree.openElements()->pushRootNode(fragment);
+        m_tree.openElements()->pushRootNode(HTMLStackItem::create(fragment, HTMLStackItem::ItemForDocumentFragmentNode));
+
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (contextElement->hasTagName(templateTag))
+            m_templateInsertionModes.append(TemplateContentsMode);
+#endif
+
         resetInsertionModeAppropriately();
         m_tree.setForm(closestFormAncestor(contextElement));
     }
@@ -394,9 +320,11 @@ HTMLTreeBuilder::~HTMLTreeBuilder()
 
 void HTMLTreeBuilder::detach()
 {
+#ifndef NDEBUG
     // This call makes little sense in fragment mode, but for consistency
     // DocumentParser expects detach() to always be called before it's destroyed.
-    m_document = 0;
+    m_isAttached = false;
+#endif
     // HTMLConstructionSite might be on the callstack when detach() is called
     // otherwise we'd just call m_tree.clear() here instead.
     m_tree.detach();
@@ -405,14 +333,12 @@ void HTMLTreeBuilder::detach()
 HTMLTreeBuilder::FragmentParsingContext::FragmentParsingContext()
     : m_fragment(0)
     , m_contextElement(0)
-    , m_scriptingPermission(AllowScriptingContent)
 {
 }
 
-HTMLTreeBuilder::FragmentParsingContext::FragmentParsingContext(DocumentFragment* fragment, Element* contextElement, FragmentScriptingPermission scriptingPermission)
+HTMLTreeBuilder::FragmentParsingContext::FragmentParsingContext(DocumentFragment* fragment, Element* contextElement)
     : m_fragment(fragment)
     , m_contextElement(contextElement)
-    , m_scriptingPermission(scriptingPermission)
 {
     ASSERT(!fragment->hasChildNodes());
 }
@@ -433,85 +359,62 @@ PassRefPtr<Element> HTMLTreeBuilder::takeScriptToProcess(TextPosition& scriptSta
     return m_scriptToProcess.release();
 }
 
-void HTMLTreeBuilder::constructTreeFromToken(HTMLToken& rawToken)
-{
-    AtomicHTMLToken token(rawToken);
-
-    // We clear the rawToken in case constructTreeFromAtomicToken
-    // synchronously re-enters the parser. We don't clear the token immedately
-    // for Character tokens because the AtomicHTMLToken avoids copying the
-    // characters by keeping a pointer to the underlying buffer in the
-    // HTMLToken. Fortuantely, Character tokens can't cause use to re-enter
-    // the parser.
-    //
-    // FIXME: Stop clearing the rawToken once we start running the parser off
-    // the main thread or once we stop allowing synchronous JavaScript
-    // execution from parseAttribute.
-    if (rawToken.type() != HTMLTokenTypes::Character)
-        rawToken.clear();
-
-    constructTreeFromAtomicToken(token);
-
-    if (!rawToken.isUninitialized()) {
-        ASSERT(rawToken.type() == HTMLTokenTypes::Character);
-        rawToken.clear();
-    }
-}
-
-void HTMLTreeBuilder::constructTreeFromAtomicToken(AtomicHTMLToken& token)
+void HTMLTreeBuilder::constructTree(AtomicHTMLToken* token)
 {
     if (shouldProcessTokenInForeignContent(token))
         processTokenInForeignContent(token);
     else
         processToken(token);
 
+    if (m_parser->tokenizer()) {
     bool inForeignContent = !m_tree.isEmpty()
-        && !isInHTMLNamespace(m_tree.currentNode())
-        && !HTMLElementStack::isHTMLIntegrationPoint(m_tree.currentNode())
-        && !HTMLElementStack::isMathMLTextIntegrationPoint(m_tree.currentNode());
+            && !m_tree.currentStackItem()->isInHTMLNamespace()
+            && !HTMLElementStack::isHTMLIntegrationPoint(m_tree.currentStackItem())
+            && !HTMLElementStack::isMathMLTextIntegrationPoint(m_tree.currentStackItem());
 
     m_parser->tokenizer()->setForceNullCharacterReplacement(m_insertionMode == TextMode || inForeignContent);
     m_parser->tokenizer()->setShouldAllowCDATA(inForeignContent);
+    }
 
     m_tree.executeQueuedTasks();
     // We might be detached now.
 }
 
-void HTMLTreeBuilder::processToken(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processToken(AtomicHTMLToken* token)
 {
-    switch (token.type()) {
-    case HTMLTokenTypes::Uninitialized:
+    switch (token->type()) {
+    case HTMLToken::Uninitialized:
         ASSERT_NOT_REACHED();
         break;
-    case HTMLTokenTypes::DOCTYPE:
+    case HTMLToken::DOCTYPE:
         m_shouldSkipLeadingNewline = false;
         processDoctypeToken(token);
         break;
-    case HTMLTokenTypes::StartTag:
+    case HTMLToken::StartTag:
         m_shouldSkipLeadingNewline = false;
         processStartTag(token);
         break;
-    case HTMLTokenTypes::EndTag:
+    case HTMLToken::EndTag:
         m_shouldSkipLeadingNewline = false;
         processEndTag(token);
         break;
-    case HTMLTokenTypes::Comment:
+    case HTMLToken::Comment:
         m_shouldSkipLeadingNewline = false;
         processComment(token);
         return;
-    case HTMLTokenTypes::Character:
+    case HTMLToken::Character:
         processCharacter(token);
         break;
-    case HTMLTokenTypes::EndOfFile:
+    case HTMLToken::EndOfFile:
         m_shouldSkipLeadingNewline = false;
         processEndOfFile(token);
         break;
     }
 }
 
-void HTMLTreeBuilder::processDoctypeToken(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processDoctypeToken(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::DOCTYPE);
+    ASSERT(token->type() == HTMLToken::DOCTYPE);
     if (m_insertionMode == InitialMode) {
         m_tree.insertDoctype(token);
         setInsertionMode(BeforeHTMLMode);
@@ -528,15 +431,20 @@ void HTMLTreeBuilder::processDoctypeToken(AtomicHTMLToken& token)
 void HTMLTreeBuilder::processFakeStartTag(const QualifiedName& tagName, const Vector<Attribute>& attributes)
 {
     // FIXME: We'll need a fancier conversion than just "localName" for SVG/MathML tags.
-    AtomicHTMLToken fakeToken(HTMLTokenTypes::StartTag, tagName.localName(), attributes);
-    processStartTag(fakeToken);
+    AtomicHTMLToken fakeToken(HTMLToken::StartTag, tagName.localName(), attributes);
+    processStartTag(&fakeToken);
+}
+
+void HTMLTreeBuilder::processFakeEndTag(const AtomicString& tagName)
+{
+    AtomicHTMLToken fakeToken(HTMLToken::EndTag, tagName);
+    processEndTag(&fakeToken);
 }
 
 void HTMLTreeBuilder::processFakeEndTag(const QualifiedName& tagName)
 {
     // FIXME: We'll need a fancier conversion than just "localName" for SVG/MathML tags.
-    AtomicHTMLToken fakeToken(HTMLTokenTypes::EndTag, tagName.localName());
-    processEndTag(fakeToken);
+    processFakeEndTag(tagName.localName());
 }
 
 void HTMLTreeBuilder::processFakeCharacters(const String& characters)
@@ -550,13 +458,13 @@ void HTMLTreeBuilder::processFakePEndTagIfPInButtonScope()
 {
     if (!m_tree.openElements()->inButtonScope(pTag.localName()))
         return;
-    AtomicHTMLToken endP(HTMLTokenTypes::EndTag, pTag.localName());
-    processEndTag(endP);
+    AtomicHTMLToken endP(HTMLToken::EndTag, pTag.localName());
+    processEndTag(&endP);
 }
 
-Vector<Attribute> HTMLTreeBuilder::attributesForIsindexInput(AtomicHTMLToken& token)
+Vector<Attribute> HTMLTreeBuilder::attributesForIsindexInput(AtomicHTMLToken* token)
 {
-    Vector<Attribute> attributes = token.attributes();
+    Vector<Attribute> attributes = token->attributes();
     for (int i = attributes.size() - 1; i >= 0; --i) {
         const QualifiedName& name = attributes.at(i).name();
         if (name.matches(nameAttr) || name.matches(actionAttr) || name.matches(promptAttr))
@@ -567,21 +475,21 @@ Vector<Attribute> HTMLTreeBuilder::attributesForIsindexInput(AtomicHTMLToken& to
     return attributes;
 }
 
-void HTMLTreeBuilder::processIsindexStartTagForInBody(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processIsindexStartTagForInBody(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::StartTag);
-    ASSERT(token.name() == isindexTag);
+    ASSERT(token->type() == HTMLToken::StartTag);
+    ASSERT(token->name() == isindexTag);
     parseError(token);
     if (m_tree.form())
         return;
     notImplemented(); // Acknowledge self-closing flag
     processFakeStartTag(formTag);
-    Attribute* actionAttribute = token.getAttributeItem(actionAttr);
+    Attribute* actionAttribute = token->getAttributeItem(actionAttr);
     if (actionAttribute)
         m_tree.form()->setAttribute(actionAttr, actionAttribute->value());
     processFakeStartTag(hrTag);
     processFakeStartTag(labelTag);
-    Attribute* promptAttribute = token.getAttributeItem(promptAttr);
+    Attribute* promptAttribute = token->getAttributeItem(promptAttr);
     if (promptAttribute)
         processFakeCharacters(promptAttribute->value());
     else
@@ -595,32 +503,32 @@ void HTMLTreeBuilder::processIsindexStartTagForInBody(AtomicHTMLToken& token)
 
 namespace {
 
-bool isLi(const ContainerNode* element)
+bool isLi(const HTMLStackItem* item)
 {
-    return element->hasTagName(liTag);
+    return item->hasTagName(liTag);
 }
 
-bool isDdOrDt(const ContainerNode* element)
+bool isDdOrDt(const HTMLStackItem* item)
 {
-    return element->hasTagName(ddTag)
-        || element->hasTagName(dtTag);
+    return item->hasTagName(ddTag)
+        || item->hasTagName(dtTag);
 }
 
 }
 
-template <bool shouldClose(const ContainerNode*)>
-void HTMLTreeBuilder::processCloseWhenNestedTag(AtomicHTMLToken& token)
+template <bool shouldClose(const HTMLStackItem*)>
+void HTMLTreeBuilder::processCloseWhenNestedTag(AtomicHTMLToken* token)
 {
     m_framesetOk = false;
     HTMLElementStack::ElementRecord* nodeRecord = m_tree.openElements()->topRecord();
     while (1) {
-        RefPtr<ContainerNode> node = nodeRecord->node();
-        if (shouldClose(node.get())) {
-            ASSERT(node->isElementNode());
-            processFakeEndTag(toElement(node.get())->tagQName());
+        RefPtr<HTMLStackItem> item = nodeRecord->stackItem();
+        if (shouldClose(item.get())) {
+            ASSERT(item->isElementNode());
+            processFakeEndTag(item->localName());
             break;
         }
-        if (isSpecialNode(node.get()) && !node->hasTagName(addressTag) && !node->hasTagName(divTag) && !node->hasTagName(pTag))
+        if (item->isSpecialNode() && !item->hasTagName(addressTag) && !item->hasTagName(divTag) && !item->hasTagName(pTag))
             break;
         nodeRecord = nodeRecord->next();
     }
@@ -628,11 +536,9 @@ void HTMLTreeBuilder::processCloseWhenNestedTag(AtomicHTMLToken& token)
     m_tree.insertHTMLElement(token);
 }
 
-namespace {
-
 typedef HashMap<AtomicString, QualifiedName> PrefixedNameToQualifiedNameMap;
 
-void mapLoweredLocalNameToName(PrefixedNameToQualifiedNameMap* map, QualifiedName** names, size_t length)
+static void mapLoweredLocalNameToName(PrefixedNameToQualifiedNameMap* map, QualifiedName** names, size_t length)
 {
     for (size_t i = 0; i < length; ++i) {
         const QualifiedName& name = *names[i];
@@ -643,52 +549,50 @@ void mapLoweredLocalNameToName(PrefixedNameToQualifiedNameMap* map, QualifiedNam
     }
 }
 
-void adjustSVGTagNameCase(AtomicHTMLToken& token)
+static void adjustSVGTagNameCase(AtomicHTMLToken* token)
 {
     static PrefixedNameToQualifiedNameMap* caseMap = 0;
     if (!caseMap) {
         caseMap = new PrefixedNameToQualifiedNameMap;
-        size_t length = 0;
-        QualifiedName** svgTags = SVGNames::getSVGTags(&length);
-        mapLoweredLocalNameToName(caseMap, svgTags, length);
+        QualifiedName** svgTags = SVGNames::getSVGTags();
+        mapLoweredLocalNameToName(caseMap, svgTags, SVGNames::SVGTagsCount);
     }
 
-    const QualifiedName& casedName = caseMap->get(token.name());
+    const QualifiedName& casedName = caseMap->get(token->name());
     if (casedName.localName().isNull())
         return;
-    token.setName(casedName.localName());
+    token->setName(casedName.localName());
 }
 
-template<QualifiedName** getAttrs(size_t* length)>
-void adjustAttributes(AtomicHTMLToken& token)
+template<QualifiedName** getAttrs(), unsigned length>
+static void adjustAttributes(AtomicHTMLToken* token)
 {
     static PrefixedNameToQualifiedNameMap* caseMap = 0;
     if (!caseMap) {
         caseMap = new PrefixedNameToQualifiedNameMap;
-        size_t length = 0;
-        QualifiedName** attrs = getAttrs(&length);
+        QualifiedName** attrs = getAttrs();
         mapLoweredLocalNameToName(caseMap, attrs, length);
     }
 
-    for (unsigned i = 0; i < token.attributes().size(); ++i) {
-        Attribute& tokenAttribute = token.attributes().at(i);
+    for (unsigned i = 0; i < token->attributes().size(); ++i) {
+        Attribute& tokenAttribute = token->attributes().at(i);
         const QualifiedName& casedName = caseMap->get(tokenAttribute.localName());
         if (!casedName.localName().isNull())
             tokenAttribute.parserSetName(casedName);
     }
 }
 
-void adjustSVGAttributes(AtomicHTMLToken& token)
+static void adjustSVGAttributes(AtomicHTMLToken* token)
 {
-    adjustAttributes<SVGNames::getSVGAttrs>(token);
+    adjustAttributes<SVGNames::getSVGAttrs, SVGNames::SVGAttrsCount>(token);
 }
 
-void adjustMathMLAttributes(AtomicHTMLToken& token)
+static void adjustMathMLAttributes(AtomicHTMLToken* token)
 {
-    adjustAttributes<MathMLNames::getMathMLAttrs>(token);
+    adjustAttributes<MathMLNames::getMathMLAttrs, MathMLNames::MathMLAttrsCount>(token);
 }
 
-void addNamesWithPrefix(PrefixedNameToQualifiedNameMap* map, const AtomicString& prefix, QualifiedName** names, size_t length)
+static void addNamesWithPrefix(PrefixedNameToQualifiedNameMap* map, const AtomicString& prefix, QualifiedName** names, size_t length)
 {
     for (size_t i = 0; i < length; ++i) {
         QualifiedName* name = names[i];
@@ -699,74 +603,74 @@ void addNamesWithPrefix(PrefixedNameToQualifiedNameMap* map, const AtomicString&
     }
 }
 
-void adjustForeignAttributes(AtomicHTMLToken& token)
+static void adjustForeignAttributes(AtomicHTMLToken* token)
 {
     static PrefixedNameToQualifiedNameMap* map = 0;
     if (!map) {
         map = new PrefixedNameToQualifiedNameMap;
-        size_t length = 0;
-        QualifiedName** attrs = XLinkNames::getXLinkAttrs(&length);
-        addNamesWithPrefix(map, "xlink", attrs, length);
 
-        attrs = XMLNames::getXMLAttrs(&length);
-        addNamesWithPrefix(map, "xml", attrs, length);
+        QualifiedName** attrs = XLinkNames::getXLinkAttrs();
+        addNamesWithPrefix(map, xlinkAtom, attrs, XLinkNames::XLinkAttrsCount);
 
-        map->add("xmlns", XMLNSNames::xmlnsAttr);
-        map->add("xmlns:xlink", QualifiedName("xmlns", "xlink", XMLNSNames::xmlnsNamespaceURI));
+        attrs = XMLNames::getXMLAttrs();
+        addNamesWithPrefix(map, xmlAtom, attrs, XMLNames::XMLAttrsCount);
+
+        map->add(WTF::xmlnsAtom, XMLNSNames::xmlnsAttr);
+        map->add("xmlns:xlink", QualifiedName(xmlnsAtom, xlinkAtom, XMLNSNames::xmlnsNamespaceURI));
     }
 
-    for (unsigned i = 0; i < token.attributes().size(); ++i) {
-        Attribute& tokenAttribute = token.attributes().at(i);
+    for (unsigned i = 0; i < token->attributes().size(); ++i) {
+        Attribute& tokenAttribute = token->attributes().at(i);
         const QualifiedName& name = map->get(tokenAttribute.localName());
         if (!name.localName().isNull())
             tokenAttribute.parserSetName(name);
     }
 }
 
-}
-
-void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::StartTag);
-    if (token.name() == htmlTag) {
-        m_tree.insertHTMLHtmlStartTagInBody(token);
+    ASSERT(token->type() == HTMLToken::StartTag);
+    if (token->name() == htmlTag) {
+        processHtmlStartTagForInBody(token);
         return;
     }
-    if (token.name() == baseTag
-        || token.name() == basefontTag
-        || token.name() == bgsoundTag
-        || token.name() == commandTag
-        || token.name() == linkTag
-        || token.name() == metaTag
-        || token.name() == noframesTag
-        || token.name() == scriptTag
-        || token.name() == styleTag
-        || token.name() == titleTag) {
+    if (token->name() == baseTag
+        || token->name() == basefontTag
+        || token->name() == bgsoundTag
+        || token->name() == commandTag
+        || token->name() == linkTag
+        || token->name() == metaTag
+        || token->name() == noframesTag
+        || token->name() == scriptTag
+        || token->name() == styleTag
+        || token->name() == titleTag) {
         bool didProcess = processStartTagForInHead(token);
         ASSERT_UNUSED(didProcess, didProcess);
         return;
     }
-    if (token.name() == bodyTag) {
+    if (token->name() == bodyTag) {
         parseError(token);
-        if (!m_tree.openElements()->secondElementIsHTMLBodyElement() || m_tree.openElements()->hasOnlyOneElement()) {
-            ASSERT(isParsingFragment());
+        bool fragmentOrTemplateCase = !m_tree.openElements()->secondElementIsHTMLBodyElement() || m_tree.openElements()->hasOnlyOneElement();
+#if ENABLE(TEMPLATE_ELEMENT)
+        fragmentOrTemplateCase = fragmentOrTemplateCase || m_tree.openElements()->hasTemplateInHTMLScope();
+#endif
+        if (fragmentOrTemplateCase) {
+            ASSERT(isParsingFragmentOrTemplateContents());
             return;
         }
         m_framesetOk = false;
         m_tree.insertHTMLBodyStartTagInBody(token);
         return;
     }
-    if (token.name() == framesetTag) {
+    if (token->name() == framesetTag) {
         parseError(token);
         if (!m_tree.openElements()->secondElementIsHTMLBodyElement() || m_tree.openElements()->hasOnlyOneElement()) {
-            ASSERT(isParsingFragment());
+            ASSERT(isParsingFragmentOrTemplateContents());
             return;
         }
         if (!m_framesetOk)
             return;
-        ExceptionCode ec = 0;
-        m_tree.openElements()->bodyElement()->remove(ec);
-        ASSERT(!ec);
+        m_tree.openElements()->bodyElement()->remove(ASSERT_NO_EXCEPTION);
         m_tree.openElements()->popUntil(m_tree.openElements()->bodyElement());
         m_tree.openElements()->popHTMLBodyElement();
         ASSERT(m_tree.openElements()->top() == m_tree.openElements()->htmlElement());
@@ -774,49 +678,50 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken& token)
         setInsertionMode(InFramesetMode);
         return;
     }
-    if (token.name() == addressTag
-        || token.name() == articleTag
-        || token.name() == asideTag
-        || token.name() == blockquoteTag
-        || token.name() == centerTag
-        || token.name() == detailsTag
-        || token.name() == dirTag
-        || token.name() == divTag
-        || token.name() == dlTag
-        || token.name() == fieldsetTag
-        || token.name() == figcaptionTag
-        || token.name() == figureTag
-        || token.name() == footerTag
-        || token.name() == headerTag
-        || token.name() == hgroupTag
-        || token.name() == menuTag
-        || token.name() == navTag
-        || token.name() == olTag
-        || token.name() == pTag
-        || token.name() == sectionTag
-        || token.name() == summaryTag
-        || token.name() == ulTag) {
+    if (token->name() == addressTag
+        || token->name() == articleTag
+        || token->name() == asideTag
+        || token->name() == blockquoteTag
+        || token->name() == centerTag
+        || token->name() == detailsTag
+        || token->name() == dirTag
+        || token->name() == divTag
+        || token->name() == dlTag
+        || token->name() == fieldsetTag
+        || token->name() == figcaptionTag
+        || token->name() == figureTag
+        || token->name() == footerTag
+        || token->name() == headerTag
+        || token->name() == hgroupTag
+        || token->name() == mainTag
+        || token->name() == menuTag
+        || token->name() == navTag
+        || token->name() == olTag
+        || token->name() == pTag
+        || token->name() == sectionTag
+        || token->name() == summaryTag
+        || token->name() == ulTag) {
         processFakePEndTagIfPInButtonScope();
         m_tree.insertHTMLElement(token);
         return;
     }
-    if (isNumberedHeaderTag(token.name())) {
+    if (isNumberedHeaderTag(token->name())) {
         processFakePEndTagIfPInButtonScope();
-        if (isNumberedHeaderTag(m_tree.currentNode()->localName())) {
+        if (m_tree.currentStackItem()->isNumberedHeaderElement()) {
             parseError(token);
             m_tree.openElements()->pop();
         }
         m_tree.insertHTMLElement(token);
         return;
     }
-    if (token.name() == preTag || token.name() == listingTag) {
+    if (token->name() == preTag || token->name() == listingTag) {
         processFakePEndTagIfPInButtonScope();
         m_tree.insertHTMLElement(token);
         m_shouldSkipLeadingNewline = true;
         m_framesetOk = false;
         return;
     }
-    if (token.name() == formTag) {
+    if (token->name() == formTag) {
         if (m_tree.form()) {
             parseError(token);
             return;
@@ -825,21 +730,22 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken& token)
         m_tree.insertHTMLFormElement(token);
         return;
     }
-    if (token.name() == liTag) {
+    if (token->name() == liTag) {
         processCloseWhenNestedTag<isLi>(token);
         return;
     }
-    if (token.name() == ddTag || token.name() == dtTag) {
+    if (token->name() == ddTag || token->name() == dtTag) {
         processCloseWhenNestedTag<isDdOrDt>(token);
         return;
     }
-    if (token.name() == plaintextTag) {
+    if (token->name() == plaintextTag) {
         processFakePEndTagIfPInButtonScope();
         m_tree.insertHTMLElement(token);
-        m_parser->tokenizer()->setState(HTMLTokenizerState::PLAINTEXTState);
+        if (m_parser->tokenizer())
+            m_parser->tokenizer()->setState(HTMLTokenizer::PLAINTEXTState);
         return;
     }
-    if (token.name() == buttonTag) {
+    if (token->name() == buttonTag) {
         if (m_tree.openElements()->inScope(buttonTag)) {
             parseError(token);
             processFakeEndTag(buttonTag);
@@ -851,7 +757,7 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken& token)
         m_framesetOk = false;
         return;
     }
-    if (token.name() == aTag) {
+    if (token->name() == aTag) {
         Element* activeATag = m_tree.activeFormattingElements()->closestElementInScopeWithName(aTag.localName());
         if (activeATag) {
             parseError(token);
@@ -864,12 +770,12 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken& token)
         m_tree.insertFormattingElement(token);
         return;
     }
-    if (isNonAnchorNonNobrFormattingTag(token.name())) {
+    if (isNonAnchorNonNobrFormattingTag(token->name())) {
         m_tree.reconstructTheActiveFormattingElements();
         m_tree.insertFormattingElement(token);
         return;
     }
-    if (token.name() == nobrTag) {
+    if (token->name() == nobrTag) {
         m_tree.reconstructTheActiveFormattingElements();
         if (m_tree.openElements()->inScope(nobrTag)) {
             parseError(token);
@@ -879,94 +785,101 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken& token)
         m_tree.insertFormattingElement(token);
         return;
     }
-    if (token.name() == appletTag
-        || token.name() == marqueeTag
-        || token.name() == objectTag) {
+    if (token->name() == appletTag
+        || token->name() == embedTag
+        || token->name() == objectTag) {
+        if (!pluginContentIsAllowed(m_tree.parserContentPolicy()))
+            return;
+    }
+    if (token->name() == appletTag
+        || token->name() == marqueeTag
+        || token->name() == objectTag) {
         m_tree.reconstructTheActiveFormattingElements();
         m_tree.insertHTMLElement(token);
         m_tree.activeFormattingElements()->appendMarker();
         m_framesetOk = false;
         return;
     }
-    if (token.name() == tableTag) {
-        if (!m_document->inQuirksMode() && m_tree.openElements()->inButtonScope(pTag))
+    if (token->name() == tableTag) {
+        if (!m_tree.inQuirksMode() && m_tree.openElements()->inButtonScope(pTag))
             processFakeEndTag(pTag);
         m_tree.insertHTMLElement(token);
         m_framesetOk = false;
         setInsertionMode(InTableMode);
         return;
     }
-    if (token.name() == imageTag) {
+    if (token->name() == imageTag) {
         parseError(token);
         // Apparently we're not supposed to ask.
-        token.setName(imgTag.localName());
+        token->setName(imgTag.localName());
         // Note the fall through to the imgTag handling below!
     }
-    if (token.name() == areaTag
-        || token.name() == brTag
-        || token.name() == embedTag
-        || token.name() == imgTag
-        || token.name() == keygenTag
-        || token.name() == wbrTag) {
+    if (token->name() == areaTag
+        || token->name() == brTag
+        || token->name() == embedTag
+        || token->name() == imgTag
+        || token->name() == keygenTag
+        || token->name() == wbrTag) {
         m_tree.reconstructTheActiveFormattingElements();
         m_tree.insertSelfClosingHTMLElement(token);
         m_framesetOk = false;
         return;
     }
-    if (token.name() == inputTag) {
-        Attribute* typeAttribute = token.getAttributeItem(typeAttr);
+    if (token->name() == inputTag) {
+        Attribute* typeAttribute = token->getAttributeItem(typeAttr);
         m_tree.reconstructTheActiveFormattingElements();
         m_tree.insertSelfClosingHTMLElement(token);
         if (!typeAttribute || !equalIgnoringCase(typeAttribute->value(), "hidden"))
             m_framesetOk = false;
         return;
     }
-    if (token.name() == paramTag
-        || token.name() == sourceTag
-        || token.name() == trackTag) {
+    if (token->name() == paramTag
+        || token->name() == sourceTag
+        || token->name() == trackTag) {
         m_tree.insertSelfClosingHTMLElement(token);
         return;
     }
-    if (token.name() == hrTag) {
+    if (token->name() == hrTag) {
         processFakePEndTagIfPInButtonScope();
         m_tree.insertSelfClosingHTMLElement(token);
         m_framesetOk = false;
         return;
     }
-    if (token.name() == isindexTag) {
+    if (token->name() == isindexTag) {
         processIsindexStartTagForInBody(token);
         return;
     }
-    if (token.name() == textareaTag) {
+    if (token->name() == textareaTag) {
         m_tree.insertHTMLElement(token);
         m_shouldSkipLeadingNewline = true;
-        m_parser->tokenizer()->setState(HTMLTokenizerState::RCDATAState);
+        if (m_parser->tokenizer())
+            m_parser->tokenizer()->setState(HTMLTokenizer::RCDATAState);
         m_originalInsertionMode = m_insertionMode;
         m_framesetOk = false;
         setInsertionMode(TextMode);
         return;
     }
-    if (token.name() == xmpTag) {
+    if (token->name() == xmpTag) {
         processFakePEndTagIfPInButtonScope();
         m_tree.reconstructTheActiveFormattingElements();
         m_framesetOk = false;
         processGenericRawTextStartTag(token);
         return;
     }
-    if (token.name() == iframeTag) {
+    if (token->name() == iframeTag) {
         m_framesetOk = false;
         processGenericRawTextStartTag(token);
         return;
     }
-    if (token.name() == noembedTag && pluginsEnabled(m_document->frame())) {
+    if (token->name() == noembedTag && m_options.pluginsEnabled) {
         processGenericRawTextStartTag(token);
         return;
     }
-    if (token.name() == noscriptTag && scriptEnabled(m_document->frame())) {
+    if (token->name() == noscriptTag && m_options.scriptEnabled) {
         processGenericRawTextStartTag(token);
         return;
     }
-    if (token.name() == selectTag) {
+    if (token->name() == selectTag) {
         m_tree.reconstructTheActiveFormattingElements();
         m_tree.insertHTMLElement(token);
         m_framesetOk = false;
@@ -981,55 +894,104 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken& token)
             setInsertionMode(InSelectMode);
         return;
     }
-    if (token.name() == optgroupTag || token.name() == optionTag) {
-        if (m_tree.currentNode()->hasTagName(optionTag)) {
-            AtomicHTMLToken endOption(HTMLTokenTypes::EndTag, optionTag.localName());
-            processEndTag(endOption);
+    if (token->name() == optgroupTag || token->name() == optionTag) {
+        if (m_tree.currentStackItem()->hasTagName(optionTag)) {
+            AtomicHTMLToken endOption(HTMLToken::EndTag, optionTag.localName());
+            processEndTag(&endOption);
         }
         m_tree.reconstructTheActiveFormattingElements();
         m_tree.insertHTMLElement(token);
         return;
     }
-    if (token.name() == rpTag || token.name() == rtTag) {
+    if (token->name() == rpTag || token->name() == rtTag) {
         if (m_tree.openElements()->inScope(rubyTag.localName())) {
             m_tree.generateImpliedEndTags();
-            if (!m_tree.currentNode()->hasTagName(rubyTag))
+            if (!m_tree.currentStackItem()->hasTagName(rubyTag))
                 parseError(token);
         }
         m_tree.insertHTMLElement(token);
         return;
     }
-    if (token.name() == MathMLNames::mathTag.localName()) {
+    if (token->name() == MathMLNames::mathTag.localName()) {
         m_tree.reconstructTheActiveFormattingElements();
         adjustMathMLAttributes(token);
         adjustForeignAttributes(token);
         m_tree.insertForeignElement(token, MathMLNames::mathmlNamespaceURI);
         return;
     }
-    if (token.name() == SVGNames::svgTag.localName()) {
+    if (token->name() == SVGNames::svgTag.localName()) {
         m_tree.reconstructTheActiveFormattingElements();
         adjustSVGAttributes(token);
         adjustForeignAttributes(token);
         m_tree.insertForeignElement(token, SVGNames::svgNamespaceURI);
         return;
     }
-    if (isCaptionColOrColgroupTag(token.name())
-        || token.name() == frameTag
-        || token.name() == headTag
-        || isTableBodyContextTag(token.name())
-        || isTableCellContextTag(token.name())
-        || token.name() == trTag) {
+    if (isCaptionColOrColgroupTag(token->name())
+        || token->name() == frameTag
+        || token->name() == headTag
+        || isTableBodyContextTag(token->name())
+        || isTableCellContextTag(token->name())
+        || token->name() == trTag) {
         parseError(token);
         return;
     }
+#if ENABLE(TEMPLATE_ELEMENT)
+    if (token->name() == templateTag) {
+        processTemplateStartTag(token);
+        return;
+    }
+#endif
     m_tree.reconstructTheActiveFormattingElements();
     m_tree.insertHTMLElement(token);
 }
 
+#if ENABLE(TEMPLATE_ELEMENT)
+void HTMLTreeBuilder::processTemplateStartTag(AtomicHTMLToken* token)
+{
+    m_tree.activeFormattingElements()->appendMarker();
+    m_tree.insertHTMLElement(token);
+    m_templateInsertionModes.append(TemplateContentsMode);
+    setInsertionMode(TemplateContentsMode);
+}
+
+bool HTMLTreeBuilder::processTemplateEndTag(AtomicHTMLToken* token)
+{
+    ASSERT(token->name() == templateTag.localName());
+    if (!m_tree.openElements()->hasTemplateInHTMLScope()) {
+        ASSERT(m_templateInsertionModes.isEmpty() || (m_templateInsertionModes.size() == 1 && m_fragmentContext.contextElement()->hasTagName(templateTag)));
+        parseError(token);
+        return false;
+    }
+    m_tree.generateImpliedEndTags();
+    if (!m_tree.currentStackItem()->hasTagName(templateTag))
+        parseError(token);
+    m_tree.openElements()->popUntilPopped(templateTag);
+    m_tree.activeFormattingElements()->clearToLastMarker();
+    m_templateInsertionModes.removeLast();
+    resetInsertionModeAppropriately();
+    return true;
+}
+
+bool HTMLTreeBuilder::processEndOfFileForInTemplateContents(AtomicHTMLToken* token)
+{
+    AtomicHTMLToken endTemplate(HTMLToken::EndTag, templateTag.localName());
+    if (!processTemplateEndTag(&endTemplate))
+        return false;
+
+    processEndOfFile(token);
+    return true;
+}
+#endif
+
 bool HTMLTreeBuilder::processColgroupEndTagForInColumnGroup()
 {
-    if (m_tree.currentNode() == m_tree.openElements()->rootNode()) {
-        ASSERT(isParsingFragment());
+    bool ignoreFakeEndTag = m_tree.currentIsRootNode();
+#if ENABLE(TEMPLATE_ELEMENT)
+    ignoreFakeEndTag = ignoreFakeEndTag || m_tree.currentNode()->hasTagName(templateTag);
+#endif
+
+    if (ignoreFakeEndTag) {
+        ASSERT(isParsingFragmentOrTemplateContents());
         // FIXME: parse error
         return false;
     }
@@ -1052,56 +1014,56 @@ void HTMLTreeBuilder::closeTheCell()
     ASSERT(insertionMode() == InRowMode);
 }
 
-void HTMLTreeBuilder::processStartTagForInTable(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processStartTagForInTable(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::StartTag);
-    if (token.name() == captionTag) {
+    ASSERT(token->type() == HTMLToken::StartTag);
+    if (token->name() == captionTag) {
         m_tree.openElements()->popUntilTableScopeMarker();
         m_tree.activeFormattingElements()->appendMarker();
         m_tree.insertHTMLElement(token);
         setInsertionMode(InCaptionMode);
         return;
     }
-    if (token.name() == colgroupTag) {
+    if (token->name() == colgroupTag) {
         m_tree.openElements()->popUntilTableScopeMarker();
         m_tree.insertHTMLElement(token);
         setInsertionMode(InColumnGroupMode);
         return;
     }
-    if (token.name() == colTag) {
+    if (token->name() == colTag) {
         processFakeStartTag(colgroupTag);
         ASSERT(InColumnGroupMode);
         processStartTag(token);
         return;
     }
-    if (isTableBodyContextTag(token.name())) {
+    if (isTableBodyContextTag(token->name())) {
         m_tree.openElements()->popUntilTableScopeMarker();
         m_tree.insertHTMLElement(token);
         setInsertionMode(InTableBodyMode);
         return;
     }
-    if (isTableCellContextTag(token.name())
-        || token.name() == trTag) {
+    if (isTableCellContextTag(token->name())
+        || token->name() == trTag) {
         processFakeStartTag(tbodyTag);
         ASSERT(insertionMode() == InTableBodyMode);
         processStartTag(token);
         return;
     }
-    if (token.name() == tableTag) {
+    if (token->name() == tableTag) {
         parseError(token);
         if (!processTableEndTagForInTable()) {
-            ASSERT(isParsingFragment());
+            ASSERT(isParsingFragmentOrTemplateContents());
             return;
         }
         processStartTag(token);
         return;
     }
-    if (token.name() == styleTag || token.name() == scriptTag) {
+    if (token->name() == styleTag || token->name() == scriptTag) {
         processStartTagForInHead(token);
         return;
     }
-    if (token.name() == inputTag) {
-        Attribute* typeAttribute = token.getAttributeItem(typeAttr);
+    if (token->name() == inputTag) {
+        Attribute* typeAttribute = token->getAttributeItem(typeAttr);
         if (typeAttribute && equalIgnoringCase(typeAttribute->value(), "hidden")) {
             parseError(token);
             m_tree.insertSelfClosingHTMLElement(token);
@@ -1109,7 +1071,7 @@ void HTMLTreeBuilder::processStartTagForInTable(AtomicHTMLToken& token)
         }
         // Fall through to "anything else" case.
     }
-    if (token.name() == formTag) {
+    if (token->name() == formTag) {
         parseError(token);
         if (m_tree.form())
             return;
@@ -1117,14 +1079,20 @@ void HTMLTreeBuilder::processStartTagForInTable(AtomicHTMLToken& token)
         m_tree.openElements()->pop();
         return;
     }
+#if ENABLE(TEMPLATE_ELEMENT)
+    if (token->name() == templateTag) {
+        processTemplateStartTag(token);
+        return;
+    }
+#endif
     parseError(token);
     HTMLConstructionSite::RedirectToFosterParentGuard redirecter(m_tree);
     processStartTagForInBody(token);
 }
 
-void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processStartTag(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::StartTag);
+    ASSERT(token->type() == HTMLToken::StartTag);
     switch (insertionMode()) {
     case InitialMode:
         ASSERT(insertionMode() == InitialMode);
@@ -1132,7 +1100,7 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         // Fall through.
     case BeforeHTMLMode:
         ASSERT(insertionMode() == BeforeHTMLMode);
-        if (token.name() == htmlTag) {
+        if (token->name() == htmlTag) {
             m_tree.insertHTMLHtmlStartTagBeforeHTML(token);
             setInsertionMode(BeforeHeadMode);
             return;
@@ -1141,11 +1109,11 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         // Fall through.
     case BeforeHeadMode:
         ASSERT(insertionMode() == BeforeHeadMode);
-        if (token.name() == htmlTag) {
-            m_tree.insertHTMLHtmlStartTagInBody(token);
+        if (token->name() == htmlTag) {
+            processHtmlStartTagForInBody(token);
             return;
         }
-        if (token.name() == headTag) {
+        if (token->name() == headTag) {
             m_tree.insertHTMLHeadElement(token);
             setInsertionMode(InHeadMode);
             return;
@@ -1160,38 +1128,38 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         // Fall through.
     case AfterHeadMode:
         ASSERT(insertionMode() == AfterHeadMode);
-        if (token.name() == htmlTag) {
-            m_tree.insertHTMLHtmlStartTagInBody(token);
+        if (token->name() == htmlTag) {
+            processHtmlStartTagForInBody(token);
             return;
         }
-        if (token.name() == bodyTag) {
+        if (token->name() == bodyTag) {
             m_framesetOk = false;
             m_tree.insertHTMLBodyElement(token);
             setInsertionMode(InBodyMode);
             return;
         }
-        if (token.name() == framesetTag) {
+        if (token->name() == framesetTag) {
             m_tree.insertHTMLElement(token);
             setInsertionMode(InFramesetMode);
             return;
         }
-        if (token.name() == baseTag
-            || token.name() == basefontTag
-            || token.name() == bgsoundTag
-            || token.name() == linkTag
-            || token.name() == metaTag
-            || token.name() == noframesTag
-            || token.name() == scriptTag
-            || token.name() == styleTag
-            || token.name() == titleTag) {
+        if (token->name() == baseTag
+            || token->name() == basefontTag
+            || token->name() == bgsoundTag
+            || token->name() == linkTag
+            || token->name() == metaTag
+            || token->name() == noframesTag
+            || token->name() == scriptTag
+            || token->name() == styleTag
+            || token->name() == titleTag) {
             parseError(token);
             ASSERT(m_tree.head());
-            m_tree.openElements()->pushHTMLHeadElement(m_tree.head());
+            m_tree.openElements()->pushHTMLHeadElement(m_tree.headStackItem());
             processStartTagForInHead(token);
             m_tree.openElements()->removeHTMLHeadElement(m_tree.head());
             return;
         }
-        if (token.name() == headTag) {
+        if (token->name() == headTag) {
             parseError(token);
             return;
         }
@@ -1207,10 +1175,10 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         break;
     case InCaptionMode:
         ASSERT(insertionMode() == InCaptionMode);
-        if (isCaptionColOrColgroupTag(token.name())
-            || isTableBodyContextTag(token.name())
-            || isTableCellContextTag(token.name())
-            || token.name() == trTag) {
+        if (isCaptionColOrColgroupTag(token->name())
+            || isTableBodyContextTag(token->name())
+            || isTableCellContextTag(token->name())
+            || token->name() == trTag) {
             parseError(token);
             if (!processCaptionEndTagForInCaption()) {
                 ASSERT(isParsingFragment());
@@ -1223,45 +1191,51 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         break;
     case InColumnGroupMode:
         ASSERT(insertionMode() == InColumnGroupMode);
-        if (token.name() == htmlTag) {
-            m_tree.insertHTMLHtmlStartTagInBody(token);
+        if (token->name() == htmlTag) {
+            processHtmlStartTagForInBody(token);
             return;
         }
-        if (token.name() == colTag) {
+        if (token->name() == colTag) {
             m_tree.insertSelfClosingHTMLElement(token);
             return;
         }
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (token->name() == templateTag) {
+            processTemplateStartTag(token);
+            return;
+        }
+#endif
         if (!processColgroupEndTagForInColumnGroup()) {
-            ASSERT(isParsingFragment());
+            ASSERT(isParsingFragmentOrTemplateContents());
             return;
         }
         processStartTag(token);
         break;
     case InTableBodyMode:
         ASSERT(insertionMode() == InTableBodyMode);
-        if (token.name() == trTag) {
+        if (token->name() == trTag) {
             m_tree.openElements()->popUntilTableBodyScopeMarker(); // How is there ever anything to pop?
             m_tree.insertHTMLElement(token);
             setInsertionMode(InRowMode);
             return;
         }
-        if (isTableCellContextTag(token.name())) {
+        if (isTableCellContextTag(token->name())) {
             parseError(token);
             processFakeStartTag(trTag);
             ASSERT(insertionMode() == InRowMode);
             processStartTag(token);
             return;
         }
-        if (isCaptionColOrColgroupTag(token.name()) || isTableBodyContextTag(token.name())) {
+        if (isCaptionColOrColgroupTag(token->name()) || isTableBodyContextTag(token->name())) {
             // FIXME: This is slow.
-            if (!m_tree.openElements()->inTableScope(tbodyTag.localName()) && !m_tree.openElements()->inTableScope(theadTag.localName()) && !m_tree.openElements()->inTableScope(tfootTag.localName())) {
-                ASSERT(isParsingFragment());
+            if (!m_tree.openElements()->inTableScope(tbodyTag) && !m_tree.openElements()->inTableScope(theadTag) && !m_tree.openElements()->inTableScope(tfootTag)) {
+                ASSERT(isParsingFragmentOrTemplateContents());
                 parseError(token);
                 return;
             }
             m_tree.openElements()->popUntilTableBodyScopeMarker();
-            ASSERT(isTableBodyContextTag(m_tree.currentElement()->localName()));
-            processFakeEndTag(m_tree.currentElement()->tagQName());
+            ASSERT(isTableBodyContextTag(m_tree.currentStackItem()->localName()));
+            processFakeEndTag(m_tree.currentStackItem()->localName());
             processStartTag(token);
             return;
         }
@@ -1269,18 +1243,18 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         break;
     case InRowMode:
         ASSERT(insertionMode() == InRowMode);
-        if (isTableCellContextTag(token.name())) {
+        if (isTableCellContextTag(token->name())) {
             m_tree.openElements()->popUntilTableRowScopeMarker();
             m_tree.insertHTMLElement(token);
             setInsertionMode(InCellMode);
             m_tree.activeFormattingElements()->appendMarker();
             return;
         }
-        if (token.name() == trTag
-            || isCaptionColOrColgroupTag(token.name())
-            || isTableBodyContextTag(token.name())) {
+        if (token->name() == trTag
+            || isCaptionColOrColgroupTag(token->name())
+            || isTableBodyContextTag(token->name())) {
             if (!processTrEndTagForInRow()) {
-                ASSERT(isParsingFragment());
+                ASSERT(isParsingFragmentOrTemplateContents());
                 return;
             }
             ASSERT(insertionMode() == InTableBodyMode);
@@ -1291,10 +1265,10 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         break;
     case InCellMode:
         ASSERT(insertionMode() == InCellMode);
-        if (isCaptionColOrColgroupTag(token.name())
-            || isTableCellContextTag(token.name())
-            || token.name() == trTag
-            || isTableBodyContextTag(token.name())) {
+        if (isCaptionColOrColgroupTag(token->name())
+            || isTableCellContextTag(token->name())
+            || token->name() == trTag
+            || isTableBodyContextTag(token->name())) {
             // FIXME: This could be more efficient.
             if (!m_tree.openElements()->inTableScope(tdTag) && !m_tree.openElements()->inTableScope(thTag)) {
                 ASSERT(isParsingFragment());
@@ -1310,8 +1284,8 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
     case AfterBodyMode:
     case AfterAfterBodyMode:
         ASSERT(insertionMode() == AfterBodyMode || insertionMode() == AfterAfterBodyMode);
-        if (token.name() == htmlTag) {
-            m_tree.insertHTMLHtmlStartTagInBody(token);
+        if (token->name() == htmlTag) {
+            processHtmlStartTagForInBody(token);
             return;
         }
         setInsertionMode(InBodyMode);
@@ -1319,21 +1293,21 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         break;
     case InHeadNoscriptMode:
         ASSERT(insertionMode() == InHeadNoscriptMode);
-        if (token.name() == htmlTag) {
-            m_tree.insertHTMLHtmlStartTagInBody(token);
+        if (token->name() == htmlTag) {
+            processHtmlStartTagForInBody(token);
             return;
         }
-        if (token.name() == basefontTag
-            || token.name() == bgsoundTag
-            || token.name() == linkTag
-            || token.name() == metaTag
-            || token.name() == noframesTag
-            || token.name() == styleTag) {
+        if (token->name() == basefontTag
+            || token->name() == bgsoundTag
+            || token->name() == linkTag
+            || token->name() == metaTag
+            || token->name() == noframesTag
+            || token->name() == styleTag) {
             bool didProcess = processStartTagForInHead(token);
             ASSERT_UNUSED(didProcess, didProcess);
             return;
         }
-        if (token.name() == htmlTag || token.name() == noscriptTag) {
+        if (token->name() == htmlTag || token->name() == noscriptTag) {
             parseError(token);
             return;
         }
@@ -1342,32 +1316,38 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         break;
     case InFramesetMode:
         ASSERT(insertionMode() == InFramesetMode);
-        if (token.name() == htmlTag) {
-            m_tree.insertHTMLHtmlStartTagInBody(token);
+        if (token->name() == htmlTag) {
+            processHtmlStartTagForInBody(token);
             return;
         }
-        if (token.name() == framesetTag) {
+        if (token->name() == framesetTag) {
             m_tree.insertHTMLElement(token);
             return;
         }
-        if (token.name() == frameTag) {
+        if (token->name() == frameTag) {
             m_tree.insertSelfClosingHTMLElement(token);
             return;
         }
-        if (token.name() == noframesTag) {
+        if (token->name() == noframesTag) {
             processStartTagForInHead(token);
             return;
         }
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (token->name() == templateTag) {
+            processTemplateStartTag(token);
+            return;
+        }
+#endif
         parseError(token);
         break;
     case AfterFramesetMode:
     case AfterAfterFramesetMode:
         ASSERT(insertionMode() == AfterFramesetMode || insertionMode() == AfterAfterFramesetMode);
-        if (token.name() == htmlTag) {
-            m_tree.insertHTMLHtmlStartTagInBody(token);
+        if (token->name() == htmlTag) {
+            processHtmlStartTagForInBody(token);
             return;
         }
-        if (token.name() == noframesTag) {
+        if (token->name() == noframesTag) {
             processStartTagForInHead(token);
             return;
         }
@@ -1375,68 +1355,74 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
         break;
     case InSelectInTableMode:
         ASSERT(insertionMode() == InSelectInTableMode);
-        if (token.name() == captionTag
-            || token.name() == tableTag
-            || isTableBodyContextTag(token.name())
-            || token.name() == trTag
-            || isTableCellContextTag(token.name())) {
+        if (token->name() == captionTag
+            || token->name() == tableTag
+            || isTableBodyContextTag(token->name())
+            || token->name() == trTag
+            || isTableCellContextTag(token->name())) {
             parseError(token);
-            AtomicHTMLToken endSelect(HTMLTokenTypes::EndTag, selectTag.localName());
-            processEndTag(endSelect);
+            AtomicHTMLToken endSelect(HTMLToken::EndTag, selectTag.localName());
+            processEndTag(&endSelect);
             processStartTag(token);
             return;
         }
         // Fall through
     case InSelectMode:
         ASSERT(insertionMode() == InSelectMode || insertionMode() == InSelectInTableMode);
-        if (token.name() == htmlTag) {
-            m_tree.insertHTMLHtmlStartTagInBody(token);
+        if (token->name() == htmlTag) {
+            processHtmlStartTagForInBody(token);
             return;
         }
-        if (token.name() == optionTag) {
-            if (m_tree.currentNode()->hasTagName(optionTag)) {
-                AtomicHTMLToken endOption(HTMLTokenTypes::EndTag, optionTag.localName());
-                processEndTag(endOption);
+        if (token->name() == optionTag) {
+            if (m_tree.currentStackItem()->hasTagName(optionTag)) {
+                AtomicHTMLToken endOption(HTMLToken::EndTag, optionTag.localName());
+                processEndTag(&endOption);
             }
             m_tree.insertHTMLElement(token);
             return;
         }
-        if (token.name() == optgroupTag) {
-            if (m_tree.currentNode()->hasTagName(optionTag)) {
-                AtomicHTMLToken endOption(HTMLTokenTypes::EndTag, optionTag.localName());
-                processEndTag(endOption);
+        if (token->name() == optgroupTag) {
+            if (m_tree.currentStackItem()->hasTagName(optionTag)) {
+                AtomicHTMLToken endOption(HTMLToken::EndTag, optionTag.localName());
+                processEndTag(&endOption);
             }
-            if (m_tree.currentNode()->hasTagName(optgroupTag)) {
-                AtomicHTMLToken endOptgroup(HTMLTokenTypes::EndTag, optgroupTag.localName());
-                processEndTag(endOptgroup);
+            if (m_tree.currentStackItem()->hasTagName(optgroupTag)) {
+                AtomicHTMLToken endOptgroup(HTMLToken::EndTag, optgroupTag.localName());
+                processEndTag(&endOptgroup);
             }
             m_tree.insertHTMLElement(token);
             return;
         }
-        if (token.name() == selectTag) {
+        if (token->name() == selectTag) {
             parseError(token);
-            AtomicHTMLToken endSelect(HTMLTokenTypes::EndTag, selectTag.localName());
-            processEndTag(endSelect);
+            AtomicHTMLToken endSelect(HTMLToken::EndTag, selectTag.localName());
+            processEndTag(&endSelect);
             return;
         }
-        if (token.name() == inputTag
-            || token.name() == keygenTag
-            || token.name() == textareaTag) {
+        if (token->name() == inputTag
+            || token->name() == keygenTag
+            || token->name() == textareaTag) {
             parseError(token);
             if (!m_tree.openElements()->inSelectScope(selectTag)) {
                 ASSERT(isParsingFragment());
                 return;
             }
-            AtomicHTMLToken endSelect(HTMLTokenTypes::EndTag, selectTag.localName());
-            processEndTag(endSelect);
+            AtomicHTMLToken endSelect(HTMLToken::EndTag, selectTag.localName());
+            processEndTag(&endSelect);
             processStartTag(token);
             return;
         }
-        if (token.name() == scriptTag) {
+        if (token->name() == scriptTag) {
             bool didProcess = processStartTagForInHead(token);
             ASSERT_UNUSED(didProcess, didProcess);
             return;
         }
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (token->name() == templateTag) {
+            processTemplateStartTag(token);
+            return;
+        }
+#endif
         break;
     case InTableTextMode:
         defaultForInTableText();
@@ -1445,13 +1431,64 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken& token)
     case TextMode:
         ASSERT_NOT_REACHED();
         break;
+    case TemplateContentsMode:
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (token->name() == templateTag) {
+            processTemplateStartTag(token);
+            return;
+}
+
+        if (token->name() == linkTag
+            || token->name() == scriptTag
+            || token->name() == styleTag
+            || token->name() == metaTag) {
+            processStartTagForInHead(token);
+            return;
+        }
+
+        InsertionMode insertionMode = TemplateContentsMode;
+        if (token->name() == frameTag)
+            insertionMode = InFramesetMode;
+        else if (token->name() == colTag)
+            insertionMode = InColumnGroupMode;
+        else if (isCaptionColOrColgroupTag(token->name()) || isTableBodyContextTag(token->name()))
+            insertionMode = InTableMode;
+        else if (token->name() == trTag)
+            insertionMode = InTableBodyMode;
+        else if (isTableCellContextTag(token->name()))
+            insertionMode = InRowMode;
+        else
+            insertionMode = InBodyMode;
+
+        ASSERT(insertionMode != TemplateContentsMode);
+        ASSERT(m_templateInsertionModes.last() == TemplateContentsMode);
+        m_templateInsertionModes.last() = insertionMode;
+        setInsertionMode(insertionMode);
+
+        processStartTag(token);
+#else
+        ASSERT_NOT_REACHED();
+#endif
+        break;
     }
 }
 
-bool HTMLTreeBuilder::processBodyEndTagForInBody(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processHtmlStartTagForInBody(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::EndTag);
-    ASSERT(token.name() == bodyTag);
+    parseError(token);
+#if ENABLE(TEMPLATE_ELEMENT)
+    if (m_tree.openElements()->hasTemplateInHTMLScope()) {
+        ASSERT(isParsingTemplateContents());
+        return;
+    }
+#endif
+    m_tree.insertHTMLHtmlStartTagInBody(token);
+}
+
+bool HTMLTreeBuilder::processBodyEndTagForInBody(AtomicHTMLToken* token)
+{
+    ASSERT(token->type() == HTMLToken::EndTag);
+    ASSERT(token->name() == bodyTag);
     if (!m_tree.openElements()->inScope(bodyTag.localName())) {
         parseError(token);
         return false;
@@ -1461,20 +1498,20 @@ bool HTMLTreeBuilder::processBodyEndTagForInBody(AtomicHTMLToken& token)
     return true;
 }
 
-void HTMLTreeBuilder::processAnyOtherEndTagForInBody(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processAnyOtherEndTagForInBody(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::EndTag);
+    ASSERT(token->type() == HTMLToken::EndTag);
     HTMLElementStack::ElementRecord* record = m_tree.openElements()->topRecord();
     while (1) {
-        RefPtr<ContainerNode> node = record->node();
-        if (node->hasLocalName(token.name())) {
-            m_tree.generateImpliedEndTagsWithExclusion(token.name());
-            if (!m_tree.currentNode()->hasLocalName(token.name()))
+        RefPtr<HTMLStackItem> item = record->stackItem();
+        if (item->matchesHTMLTag(token->name())) {
+            m_tree.generateImpliedEndTagsWithExclusion(token->name());
+            if (!m_tree.currentStackItem()->matchesHTMLTag(token->name()))
                 parseError(token);
-            m_tree.openElements()->popUntilPopped(toElement(node.get()));
+            m_tree.openElements()->popUntilPopped(item->element());
             return;
         }
-        if (isSpecialNode(node.get())) {
+        if (item->isSpecialNode()) {
             parseError(token);
             return;
         }
@@ -1482,23 +1519,8 @@ void HTMLTreeBuilder::processAnyOtherEndTagForInBody(AtomicHTMLToken& token)
     }
 }
 
-// FIXME: This probably belongs on HTMLElementStack.
-HTMLElementStack::ElementRecord* HTMLTreeBuilder::furthestBlockForFormattingElement(Element* formattingElement)
-{
-    HTMLElementStack::ElementRecord* furthestBlock = 0;
-    HTMLElementStack::ElementRecord* record = m_tree.openElements()->topRecord();
-    for (; record; record = record->next()) {
-        if (record->element() == formattingElement)
-            return furthestBlock;
-        if (isSpecialNode(record->element()))
-            furthestBlock = record;
-    }
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#parsing-main-inbody
-void HTMLTreeBuilder::callTheAdoptionAgency(AtomicHTMLToken& token)
+void HTMLTreeBuilder::callTheAdoptionAgency(AtomicHTMLToken* token)
 {
     // The adoption agency algorithm is N^2. We limit the number of iterations
     // to stop from hanging the whole browser. This limit is specified in the
@@ -1507,109 +1529,120 @@ void HTMLTreeBuilder::callTheAdoptionAgency(AtomicHTMLToken& token)
     static const int outerIterationLimit = 8;
     static const int innerIterationLimit = 3;
 
+    // 1, 2, 3 and 16 are covered by the for() loop.
     for (int i = 0; i < outerIterationLimit; ++i) {
-        // 1.
-        Element* formattingElement = m_tree.activeFormattingElements()->closestElementInScopeWithName(token.name());
-        if (!formattingElement || ((m_tree.openElements()->contains(formattingElement)) && !m_tree.openElements()->inScope(formattingElement))) {
+        // 4.
+        Element* formattingElement = m_tree.activeFormattingElements()->closestElementInScopeWithName(token->name());
+        // 4.a
+        if (!formattingElement)
+            return processAnyOtherEndTagForInBody(token);
+        // 4.c
+        if ((m_tree.openElements()->contains(formattingElement)) && !m_tree.openElements()->inScope(formattingElement)) {
             parseError(token);
             notImplemented(); // Check the stack of open elements for a more specific parse error.
             return;
         }
+        // 4.b
         HTMLElementStack::ElementRecord* formattingElementRecord = m_tree.openElements()->find(formattingElement);
         if (!formattingElementRecord) {
             parseError(token);
             m_tree.activeFormattingElements()->remove(formattingElement);
             return;
         }
+        // 4.d
         if (formattingElement != m_tree.currentElement())
             parseError(token);
-        // 2.
-        HTMLElementStack::ElementRecord* furthestBlock = furthestBlockForFormattingElement(formattingElement);
-        // 3.
+        // 5.
+        HTMLElementStack::ElementRecord* furthestBlock = m_tree.openElements()->furthestBlockForFormattingElement(formattingElement);
+        // 6.
         if (!furthestBlock) {
             m_tree.openElements()->popUntilPopped(formattingElement);
             m_tree.activeFormattingElements()->remove(formattingElement);
             return;
         }
-        // 4.
+        // 7.
         ASSERT(furthestBlock->isAbove(formattingElementRecord));
-        RefPtr<ContainerNode> commonAncestor = formattingElementRecord->next()->node();
-        // 5.
+        RefPtr<HTMLStackItem> commonAncestor = formattingElementRecord->next()->stackItem();
+        // 8.
         HTMLFormattingElementList::Bookmark bookmark = m_tree.activeFormattingElements()->bookmarkFor(formattingElement);
-        // 6.
+        // 9.
         HTMLElementStack::ElementRecord* node = furthestBlock;
         HTMLElementStack::ElementRecord* nextNode = node->next();
         HTMLElementStack::ElementRecord* lastNode = furthestBlock;
+        // 9.1, 9.2, 9.3 and 9.11 are covered by the for() loop.
         for (int i = 0; i < innerIterationLimit; ++i) {
-            // 6.1
+            // 9.4
             node = nextNode;
             ASSERT(node);
-            nextNode = node->next(); // Save node->next() for the next iteration in case node is deleted in 6.2.
-            // 6.2
+            nextNode = node->next(); // Save node->next() for the next iteration in case node is deleted in 9.5.
+            // 9.5
             if (!m_tree.activeFormattingElements()->contains(node->element())) {
                 m_tree.openElements()->remove(node->element());
                 node = 0;
                 continue;
             }
-            // 6.3
+            // 9.6
             if (node == formattingElementRecord)
                 break;
-            // 6.5
-            RefPtr<Element> newElement = m_tree.createHTMLElementFromElementRecord(node);
+            // 9.7
+            RefPtr<HTMLStackItem> newItem = m_tree.createElementFromSavedToken(node->stackItem().get());
+
             HTMLFormattingElementList::Entry* nodeEntry = m_tree.activeFormattingElements()->find(node->element());
-            nodeEntry->replaceElement(newElement.get());
-            node->replaceElement(newElement.release());
-            // 6.4 -- Intentionally out of order to handle the case where node
-            // was replaced in 6.5.
-            // http://www.w3.org/Bugs/Public/show_bug.cgi?id=10096
+            nodeEntry->replaceElement(newItem);
+            node->replaceElement(newItem.release());
+
+            // 9.8
             if (lastNode == furthestBlock)
                 bookmark.moveToAfter(nodeEntry);
-            // 6.6
+            // 9.9
             if (ContainerNode* parent = lastNode->element()->parentNode())
                 parent->parserRemoveChild(lastNode->element());
-            node->element()->parserAddChild(lastNode->element());
+            node->element()->parserAppendChild(lastNode->element());
             if (lastNode->element()->parentElement()->attached() && !lastNode->element()->attached())
                 lastNode->element()->lazyAttach();
-            // 6.7
+            // 9.10
             lastNode = node;
         }
-        // 7
-        const AtomicString& commonAncestorTag = commonAncestor->localName();
+        // 10.
         if (ContainerNode* parent = lastNode->element()->parentNode())
             parent->parserRemoveChild(lastNode->element());
-        // FIXME: If this moves to HTMLConstructionSite, this check should use
-        // causesFosterParenting(tagName) instead.
-        if (commonAncestorTag == tableTag
-            || commonAncestorTag == trTag
-            || isTableBodyContextTag(commonAncestorTag))
+        if (commonAncestor->causesFosterParenting())
             m_tree.fosterParent(lastNode->element());
         else {
-            commonAncestor->parserAddChild(lastNode->element());
-            ASSERT(lastNode->node()->isElementNode());
+#if ENABLE(TEMPLATE_ELEMENT)
+            if (commonAncestor->hasTagName(templateTag))
+                toHTMLTemplateElement(commonAncestor->node())->content()->parserAppendChild(lastNode->element());
+            else
+                commonAncestor->node()->parserAppendChild(lastNode->element());
+#else
+            commonAncestor->node()->parserAppendChild(lastNode->element());
+#endif
+            ASSERT(lastNode->stackItem()->isElementNode());
             ASSERT(lastNode->element()->parentNode());
             if (lastNode->element()->parentNode()->attached() && !lastNode->element()->attached())
                 lastNode->element()->lazyAttach();
         }
-        // 8
-        RefPtr<Element> newElement = m_tree.createHTMLElementFromElementRecord(formattingElementRecord);
-        // 9
-        newElement->takeAllChildrenFrom(furthestBlock->element());
-        // 10
+        // 11.
+        RefPtr<HTMLStackItem> newItem = m_tree.createElementFromSavedToken(formattingElementRecord->stackItem().get());
+        // 12.
+        newItem->element()->takeAllChildrenFrom(furthestBlock->element());
+        // 13.
         Element* furthestBlockElement = furthestBlock->element();
-        // FIXME: All this creation / parserAddChild / attach business should
-        //        be in HTMLConstructionSite.  My guess is that steps 8--12
+        // FIXME: All this creation / parserAppendChild / attach business should
+        //        be in HTMLConstructionSite. My guess is that steps 11--15
         //        should all be in some HTMLConstructionSite function.
-        furthestBlockElement->parserAddChild(newElement);
-        if (furthestBlockElement->attached() && !newElement->attached()) {
-            // Notice that newElement might already be attached if, for example, one of the reparented
+        furthestBlockElement->parserAppendChild(newItem->element());
+        // FIXME: Why is this attach logic necessary? Style resolve should attach us if needed.
+        if (furthestBlockElement->attached() && !newItem->element()->attached()) {
+            // Notice that newItem->element() might already be attached if, for example, one of the reparented
             // children is a style element, which attaches itself automatically.
-            newElement->attach();
+            newItem->element()->attach();
         }
-        // 11
-        m_tree.activeFormattingElements()->swapTo(formattingElement, newElement.get(), bookmark);
-        // 12
+        // 14.
+        m_tree.activeFormattingElements()->swapTo(formattingElement, newItem, bookmark);
+        // 15.
         m_tree.openElements()->remove(formattingElement);
-        m_tree.openElements()->insertAbove(newElement, furthestBlock);
+        m_tree.openElements()->insertAbove(newItem, furthestBlock);
     }
 }
 
@@ -1619,41 +1652,45 @@ void HTMLTreeBuilder::resetInsertionModeAppropriately()
     bool last = false;
     HTMLElementStack::ElementRecord* nodeRecord = m_tree.openElements()->topRecord();
     while (1) {
-        ContainerNode* node = nodeRecord->node();
-        if (node == m_tree.openElements()->rootNode()) {
+        RefPtr<HTMLStackItem> item = nodeRecord->stackItem();
+        if (item->node() == m_tree.openElements()->rootNode()) {
             ASSERT(isParsingFragment());
             last = true;
-            node = m_fragmentContext.contextElement();
+            item = HTMLStackItem::create(m_fragmentContext.contextElement(), HTMLStackItem::ItemForContextElement);
         }
-        if (node->hasTagName(selectTag)) {
-            ASSERT(isParsingFragment());
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (item->hasTagName(templateTag))
+            return setInsertionMode(m_templateInsertionModes.last());
+#endif
+        if (item->hasTagName(selectTag)) {
             return setInsertionMode(InSelectMode);
         }
-        if (node->hasTagName(tdTag) || node->hasTagName(thTag))
+        if (item->hasTagName(tdTag) || item->hasTagName(thTag))
             return setInsertionMode(InCellMode);
-        if (node->hasTagName(trTag))
+        if (item->hasTagName(trTag))
             return setInsertionMode(InRowMode);
-        if (node->hasTagName(tbodyTag) || node->hasTagName(theadTag) || node->hasTagName(tfootTag))
+        if (item->hasTagName(tbodyTag) || item->hasTagName(theadTag) || item->hasTagName(tfootTag))
             return setInsertionMode(InTableBodyMode);
-        if (node->hasTagName(captionTag))
+        if (item->hasTagName(captionTag))
             return setInsertionMode(InCaptionMode);
-        if (node->hasTagName(colgroupTag)) {
-            ASSERT(isParsingFragment());
+        if (item->hasTagName(colgroupTag)) {
             return setInsertionMode(InColumnGroupMode);
         }
-        if (node->hasTagName(tableTag))
+        if (item->hasTagName(tableTag))
             return setInsertionMode(InTableMode);
-        if (node->hasTagName(headTag)) {
-            ASSERT(isParsingFragment());
+        if (item->hasTagName(headTag)) {
+#if ENABLE(TEMPLATE_ELEMENT)
+            if (!m_fragmentContext.fragment() || m_fragmentContext.contextElement() != item->node())
+                return setInsertionMode(InHeadMode);
+#endif
             return setInsertionMode(InBodyMode);
         }
-        if (node->hasTagName(bodyTag))
+        if (item->hasTagName(bodyTag))
             return setInsertionMode(InBodyMode);
-        if (node->hasTagName(framesetTag)) {
-            ASSERT(isParsingFragment());
+        if (item->hasTagName(framesetTag)) {
             return setInsertionMode(InFramesetMode);
         }
-        if (node->hasTagName(htmlTag)) {
+        if (item->hasTagName(htmlTag)) {
             ASSERT(isParsingFragment());
             return setInsertionMode(BeforeHeadMode);
         }
@@ -1665,11 +1702,11 @@ void HTMLTreeBuilder::resetInsertionModeAppropriately()
     }
 }
 
-void HTMLTreeBuilder::processEndTagForInTableBody(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processEndTagForInTableBody(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::EndTag);
-    if (isTableBodyContextTag(token.name())) {
-        if (!m_tree.openElements()->inTableScope(token.name())) {
+    ASSERT(token->type() == HTMLToken::EndTag);
+    if (isTableBodyContextTag(token->name())) {
+        if (!m_tree.openElements()->inTableScope(token->name())) {
             parseError(token);
             return;
         }
@@ -1678,48 +1715,48 @@ void HTMLTreeBuilder::processEndTagForInTableBody(AtomicHTMLToken& token)
         setInsertionMode(InTableMode);
         return;
     }
-    if (token.name() == tableTag) {
+    if (token->name() == tableTag) {
         // FIXME: This is slow.
-        if (!m_tree.openElements()->inTableScope(tbodyTag.localName()) && !m_tree.openElements()->inTableScope(theadTag.localName()) && !m_tree.openElements()->inTableScope(tfootTag.localName())) {
-            ASSERT(isParsingFragment());
+        if (!m_tree.openElements()->inTableScope(tbodyTag) && !m_tree.openElements()->inTableScope(theadTag) && !m_tree.openElements()->inTableScope(tfootTag)) {
+            ASSERT(isParsingFragmentOrTemplateContents());
             parseError(token);
             return;
         }
         m_tree.openElements()->popUntilTableBodyScopeMarker();
-        ASSERT(isTableBodyContextTag(m_tree.currentElement()->localName()));
-        processFakeEndTag(m_tree.currentElement()->tagQName());
+        ASSERT(isTableBodyContextTag(m_tree.currentStackItem()->localName()));
+        processFakeEndTag(m_tree.currentStackItem()->localName());
         processEndTag(token);
         return;
     }
-    if (token.name() == bodyTag
-        || isCaptionColOrColgroupTag(token.name())
-        || token.name() == htmlTag
-        || isTableCellContextTag(token.name())
-        || token.name() == trTag) {
+    if (token->name() == bodyTag
+        || isCaptionColOrColgroupTag(token->name())
+        || token->name() == htmlTag
+        || isTableCellContextTag(token->name())
+        || token->name() == trTag) {
         parseError(token);
         return;
     }
     processEndTagForInTable(token);
 }
 
-void HTMLTreeBuilder::processEndTagForInRow(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processEndTagForInRow(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::EndTag);
-    if (token.name() == trTag) {
+    ASSERT(token->type() == HTMLToken::EndTag);
+    if (token->name() == trTag) {
         processTrEndTagForInRow();
         return;
     }
-    if (token.name() == tableTag) {
+    if (token->name() == tableTag) {
         if (!processTrEndTagForInRow()) {
-            ASSERT(isParsingFragment());
+            ASSERT(isParsingFragmentOrTemplateContents());
             return;
         }
         ASSERT(insertionMode() == InTableBodyMode);
         processEndTag(token);
         return;
     }
-    if (isTableBodyContextTag(token.name())) {
-        if (!m_tree.openElements()->inTableScope(token.name())) {
+    if (isTableBodyContextTag(token->name())) {
+        if (!m_tree.openElements()->inTableScope(token->name())) {
             parseError(token);
             return;
         }
@@ -1728,43 +1765,47 @@ void HTMLTreeBuilder::processEndTagForInRow(AtomicHTMLToken& token)
         processEndTag(token);
         return;
     }
-    if (token.name() == bodyTag
-        || isCaptionColOrColgroupTag(token.name())
-        || token.name() == htmlTag
-        || isTableCellContextTag(token.name())) {
+    if (token->name() == bodyTag
+        || isCaptionColOrColgroupTag(token->name())
+        || token->name() == htmlTag
+        || isTableCellContextTag(token->name())) {
         parseError(token);
         return;
     }
     processEndTagForInTable(token);
 }
 
-void HTMLTreeBuilder::processEndTagForInCell(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processEndTagForInCell(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::EndTag);
-    if (isTableCellContextTag(token.name())) {
-        if (!m_tree.openElements()->inTableScope(token.name())) {
+    ASSERT(token->type() == HTMLToken::EndTag);
+    if (isTableCellContextTag(token->name())) {
+        if (!m_tree.openElements()->inTableScope(token->name())) {
             parseError(token);
             return;
         }
         m_tree.generateImpliedEndTags();
-        if (!m_tree.currentNode()->hasLocalName(token.name()))
+        if (!m_tree.currentStackItem()->matchesHTMLTag(token->name()))
             parseError(token);
-        m_tree.openElements()->popUntilPopped(token.name());
+        m_tree.openElements()->popUntilPopped(token->name());
         m_tree.activeFormattingElements()->clearToLastMarker();
         setInsertionMode(InRowMode);
         return;
     }
-    if (token.name() == bodyTag
-        || isCaptionColOrColgroupTag(token.name())
-        || token.name() == htmlTag) {
+    if (token->name() == bodyTag
+        || isCaptionColOrColgroupTag(token->name())
+        || token->name() == htmlTag) {
         parseError(token);
         return;
     }
-    if (token.name() == tableTag
-        || token.name() == trTag
-        || isTableBodyContextTag(token.name())) {
-        if (!m_tree.openElements()->inTableScope(token.name())) {
-            ASSERT(isTableBodyContextTag(token.name()) || isParsingFragment());
+    if (token->name() == tableTag
+        || token->name() == trTag
+        || isTableBodyContextTag(token->name())) {
+        if (!m_tree.openElements()->inTableScope(token->name())) {
+#if ENABLE(TEMPLATE_ELEMENT)
+            ASSERT(isTableBodyContextTag(token->name()) || m_tree.openElements()->inTableScope(templateTag) || isParsingFragment());
+#else
+            ASSERT(isTableBodyContextTag(token->name()) || isParsingFragment());
+#endif
             parseError(token);
             return;
         }
@@ -1775,54 +1816,55 @@ void HTMLTreeBuilder::processEndTagForInCell(AtomicHTMLToken& token)
     processEndTagForInBody(token);
 }
 
-void HTMLTreeBuilder::processEndTagForInBody(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processEndTagForInBody(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::EndTag);
-    if (token.name() == bodyTag) {
+    ASSERT(token->type() == HTMLToken::EndTag);
+    if (token->name() == bodyTag) {
         processBodyEndTagForInBody(token);
         return;
     }
-    if (token.name() == htmlTag) {
-        AtomicHTMLToken endBody(HTMLTokenTypes::EndTag, bodyTag.localName());
-        if (processBodyEndTagForInBody(endBody))
+    if (token->name() == htmlTag) {
+        AtomicHTMLToken endBody(HTMLToken::EndTag, bodyTag.localName());
+        if (processBodyEndTagForInBody(&endBody))
             processEndTag(token);
         return;
     }
-    if (token.name() == addressTag
-        || token.name() == articleTag
-        || token.name() == asideTag
-        || token.name() == blockquoteTag
-        || token.name() == buttonTag
-        || token.name() == centerTag
-        || token.name() == detailsTag
-        || token.name() == dirTag
-        || token.name() == divTag
-        || token.name() == dlTag
-        || token.name() == fieldsetTag
-        || token.name() == figcaptionTag
-        || token.name() == figureTag
-        || token.name() == footerTag
-        || token.name() == headerTag
-        || token.name() == hgroupTag
-        || token.name() == listingTag
-        || token.name() == menuTag
-        || token.name() == navTag
-        || token.name() == olTag
-        || token.name() == preTag
-        || token.name() == sectionTag
-        || token.name() == summaryTag
-        || token.name() == ulTag) {
-        if (!m_tree.openElements()->inScope(token.name())) {
+    if (token->name() == addressTag
+        || token->name() == articleTag
+        || token->name() == asideTag
+        || token->name() == blockquoteTag
+        || token->name() == buttonTag
+        || token->name() == centerTag
+        || token->name() == detailsTag
+        || token->name() == dirTag
+        || token->name() == divTag
+        || token->name() == dlTag
+        || token->name() == fieldsetTag
+        || token->name() == figcaptionTag
+        || token->name() == figureTag
+        || token->name() == footerTag
+        || token->name() == headerTag
+        || token->name() == hgroupTag
+        || token->name() == listingTag
+        || token->name() == mainTag
+        || token->name() == menuTag
+        || token->name() == navTag
+        || token->name() == olTag
+        || token->name() == preTag
+        || token->name() == sectionTag
+        || token->name() == summaryTag
+        || token->name() == ulTag) {
+        if (!m_tree.openElements()->inScope(token->name())) {
             parseError(token);
             return;
         }
         m_tree.generateImpliedEndTags();
-        if (!m_tree.currentNode()->hasLocalName(token.name()))
+        if (!m_tree.currentStackItem()->matchesHTMLTag(token->name()))
             parseError(token);
-        m_tree.openElements()->popUntilPopped(token.name());
+        m_tree.openElements()->popUntilPopped(token->name());
         return;
     }
-    if (token.name() == formTag) {
+    if (token->name() == formTag) {
         RefPtr<Element> node = m_tree.takeForm();
         if (!node || !m_tree.openElements()->inScope(node.get())) {
             parseError(token);
@@ -1833,77 +1875,83 @@ void HTMLTreeBuilder::processEndTagForInBody(AtomicHTMLToken& token)
             parseError(token);
         m_tree.openElements()->remove(node.get());
     }
-    if (token.name() == pTag) {
-        if (!m_tree.openElements()->inButtonScope(token.name())) {
+    if (token->name() == pTag) {
+        if (!m_tree.openElements()->inButtonScope(token->name())) {
             parseError(token);
             processFakeStartTag(pTag);
-            ASSERT(m_tree.openElements()->inScope(token.name()));
+            ASSERT(m_tree.openElements()->inScope(token->name()));
             processEndTag(token);
             return;
         }
-        m_tree.generateImpliedEndTagsWithExclusion(token.name());
-        if (!m_tree.currentNode()->hasLocalName(token.name()))
+        m_tree.generateImpliedEndTagsWithExclusion(token->name());
+        if (!m_tree.currentStackItem()->matchesHTMLTag(token->name()))
             parseError(token);
-        m_tree.openElements()->popUntilPopped(token.name());
+        m_tree.openElements()->popUntilPopped(token->name());
         return;
     }
-    if (token.name() == liTag) {
-        if (!m_tree.openElements()->inListItemScope(token.name())) {
+    if (token->name() == liTag) {
+        if (!m_tree.openElements()->inListItemScope(token->name())) {
             parseError(token);
             return;
         }
-        m_tree.generateImpliedEndTagsWithExclusion(token.name());
-        if (!m_tree.currentNode()->hasLocalName(token.name()))
+        m_tree.generateImpliedEndTagsWithExclusion(token->name());
+        if (!m_tree.currentStackItem()->matchesHTMLTag(token->name()))
             parseError(token);
-        m_tree.openElements()->popUntilPopped(token.name());
+        m_tree.openElements()->popUntilPopped(token->name());
         return;
     }
-    if (token.name() == ddTag
-        || token.name() == dtTag) {
-        if (!m_tree.openElements()->inScope(token.name())) {
+    if (token->name() == ddTag
+        || token->name() == dtTag) {
+        if (!m_tree.openElements()->inScope(token->name())) {
             parseError(token);
             return;
         }
-        m_tree.generateImpliedEndTagsWithExclusion(token.name());
-        if (!m_tree.currentNode()->hasLocalName(token.name()))
+        m_tree.generateImpliedEndTagsWithExclusion(token->name());
+        if (!m_tree.currentStackItem()->matchesHTMLTag(token->name()))
             parseError(token);
-        m_tree.openElements()->popUntilPopped(token.name());
+        m_tree.openElements()->popUntilPopped(token->name());
         return;
     }
-    if (isNumberedHeaderTag(token.name())) {
+    if (isNumberedHeaderTag(token->name())) {
         if (!m_tree.openElements()->hasNumberedHeaderElementInScope()) {
             parseError(token);
             return;
         }
         m_tree.generateImpliedEndTags();
-        if (!m_tree.currentNode()->hasLocalName(token.name()))
+        if (!m_tree.currentStackItem()->matchesHTMLTag(token->name()))
             parseError(token);
         m_tree.openElements()->popUntilNumberedHeaderElementPopped();
         return;
     }
-    if (isFormattingTag(token.name())) {
+    if (isFormattingTag(token->name())) {
         callTheAdoptionAgency(token);
         return;
     }
-    if (token.name() == appletTag
-        || token.name() == marqueeTag
-        || token.name() == objectTag) {
-        if (!m_tree.openElements()->inScope(token.name())) {
+    if (token->name() == appletTag
+        || token->name() == marqueeTag
+        || token->name() == objectTag) {
+        if (!m_tree.openElements()->inScope(token->name())) {
             parseError(token);
             return;
         }
         m_tree.generateImpliedEndTags();
-        if (!m_tree.currentNode()->hasLocalName(token.name()))
+        if (!m_tree.currentStackItem()->matchesHTMLTag(token->name()))
             parseError(token);
-        m_tree.openElements()->popUntilPopped(token.name());
+        m_tree.openElements()->popUntilPopped(token->name());
         m_tree.activeFormattingElements()->clearToLastMarker();
         return;
     }
-    if (token.name() == brTag) {
+    if (token->name() == brTag) {
         parseError(token);
         processFakeStartTag(brTag);
         return;
     }
+#if ENABLE(TEMPLATE_ELEMENT)
+    if (token->name() == templateTag) {
+        processTemplateEndTag(token);
+        return;
+    }
+#endif
     processAnyOtherEndTagForInBody(token);
 }
 
@@ -1915,7 +1963,7 @@ bool HTMLTreeBuilder::processCaptionEndTagForInCaption()
         return false;
     }
     m_tree.generateImpliedEndTags();
-    // FIXME: parse error if (!m_tree.currentElement()->hasTagName(captionTag))
+    // FIXME: parse error if (!m_tree.currentStackItem()->hasTagName(captionTag))
     m_tree.openElements()->popUntilPopped(captionTag.localName());
     m_tree.activeFormattingElements()->clearToLastMarker();
     setInsertionMode(InTableMode);
@@ -1924,13 +1972,13 @@ bool HTMLTreeBuilder::processCaptionEndTagForInCaption()
 
 bool HTMLTreeBuilder::processTrEndTagForInRow()
 {
-    if (!m_tree.openElements()->inTableScope(trTag.localName())) {
-        ASSERT(isParsingFragment());
+    if (!m_tree.openElements()->inTableScope(trTag)) {
+        ASSERT(isParsingFragmentOrTemplateContents());
         // FIXME: parse error
         return false;
     }
     m_tree.openElements()->popUntilTableRowScopeMarker();
-    ASSERT(m_tree.currentElement()->hasTagName(trTag));
+    ASSERT(m_tree.currentStackItem()->hasTagName(trTag));
     m_tree.openElements()->pop();
     setInsertionMode(InTableBodyMode);
     return true;
@@ -1939,7 +1987,7 @@ bool HTMLTreeBuilder::processTrEndTagForInRow()
 bool HTMLTreeBuilder::processTableEndTagForInTable()
 {
     if (!m_tree.openElements()->inTableScope(tableTag)) {
-        ASSERT(isParsingFragment());
+        ASSERT(isParsingFragmentOrTemplateContents());
         // FIXME: parse error.
         return false;
     }
@@ -1948,30 +1996,31 @@ bool HTMLTreeBuilder::processTableEndTagForInTable()
     return true;
 }
 
-void HTMLTreeBuilder::processEndTagForInTable(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processEndTagForInTable(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::EndTag);
-    if (token.name() == tableTag) {
+    ASSERT(token->type() == HTMLToken::EndTag);
+    if (token->name() == tableTag) {
         processTableEndTagForInTable();
         return;
     }
-    if (token.name() == bodyTag
-        || isCaptionColOrColgroupTag(token.name())
-        || token.name() == htmlTag
-        || isTableBodyContextTag(token.name())
-        || isTableCellContextTag(token.name())
-        || token.name() == trTag) {
+    if (token->name() == bodyTag
+        || isCaptionColOrColgroupTag(token->name())
+        || token->name() == htmlTag
+        || isTableBodyContextTag(token->name())
+        || isTableCellContextTag(token->name())
+        || token->name() == trTag) {
         parseError(token);
         return;
     }
+    parseError(token);
     // Is this redirection necessary here?
     HTMLConstructionSite::RedirectToFosterParentGuard redirecter(m_tree);
     processEndTagForInBody(token);
 }
 
-void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processEndTag(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::EndTag);
+    ASSERT(token->type() == HTMLToken::EndTag);
     switch (insertionMode()) {
     case InitialMode:
         ASSERT(insertionMode() == InitialMode);
@@ -1979,7 +2028,7 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         // Fall through.
     case BeforeHTMLMode:
         ASSERT(insertionMode() == BeforeHTMLMode);
-        if (token.name() != headTag && token.name() != bodyTag && token.name() != htmlTag && token.name() != brTag) {
+        if (token->name() != headTag && token->name() != bodyTag && token->name() != htmlTag && token->name() != brTag) {
             parseError(token);
             return;
         }
@@ -1987,7 +2036,7 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         // Fall through.
     case BeforeHeadMode:
         ASSERT(insertionMode() == BeforeHeadMode);
-        if (token.name() != headTag && token.name() != bodyTag && token.name() != htmlTag && token.name() != brTag) {
+        if (token->name() != headTag && token->name() != bodyTag && token->name() != htmlTag && token->name() != brTag) {
             parseError(token);
             return;
         }
@@ -1995,12 +2044,21 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         // Fall through.
     case InHeadMode:
         ASSERT(insertionMode() == InHeadMode);
-        if (token.name() == headTag) {
+        // FIXME: This case should be broken out into processEndTagForInHead,
+        // because other end tag cases now refer to it ("process the token for using the rules of the "in head" insertion mode").
+        // but because the logic falls through to AfterHeadMode, that gets a little messy.
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (token->name() == templateTag) {
+            processTemplateEndTag(token);
+            return;
+        }
+#endif
+        if (token->name() == headTag) {
             m_tree.openElements()->popHTMLHeadElement();
             setInsertionMode(AfterHeadMode);
             return;
         }
-        if (token.name() != bodyTag && token.name() != htmlTag && token.name() != brTag) {
+        if (token->name() != bodyTag && token->name() != htmlTag && token->name() != brTag) {
             parseError(token);
             return;
         }
@@ -2008,7 +2066,7 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         // Fall through.
     case AfterHeadMode:
         ASSERT(insertionMode() == AfterHeadMode);
-        if (token.name() != bodyTag && token.name() != htmlTag && token.name() != brTag) {
+        if (token->name() != bodyTag && token->name() != htmlTag && token->name() != brTag) {
             parseError(token);
             return;
         }
@@ -2024,11 +2082,11 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         break;
     case InCaptionMode:
         ASSERT(insertionMode() == InCaptionMode);
-        if (token.name() == captionTag) {
+        if (token->name() == captionTag) {
             processCaptionEndTagForInCaption();
             return;
         }
-        if (token.name() == tableTag) {
+        if (token->name() == tableTag) {
             parseError(token);
             if (!processCaptionEndTagForInCaption()) {
                 ASSERT(isParsingFragment());
@@ -2037,13 +2095,13 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
             processEndTag(token);
             return;
         }
-        if (token.name() == bodyTag
-            || token.name() == colTag
-            || token.name() == colgroupTag
-            || token.name() == htmlTag
-            || isTableBodyContextTag(token.name())
-            || isTableCellContextTag(token.name())
-            || token.name() == trTag) {
+        if (token->name() == bodyTag
+            || token->name() == colTag
+            || token->name() == colgroupTag
+            || token->name() == htmlTag
+            || isTableBodyContextTag(token->name())
+            || isTableCellContextTag(token->name())
+            || token->name() == trTag) {
             parseError(token);
             return;
         }
@@ -2051,16 +2109,22 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         break;
     case InColumnGroupMode:
         ASSERT(insertionMode() == InColumnGroupMode);
-        if (token.name() == colgroupTag) {
+        if (token->name() == colgroupTag) {
             processColgroupEndTagForInColumnGroup();
             return;
         }
-        if (token.name() == colTag) {
+        if (token->name() == colTag) {
             parseError(token);
             return;
         }
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (token->name() == templateTag) {
+            processTemplateEndTag(token);
+            return;
+        }
+#endif
         if (!processColgroupEndTagForInColumnGroup()) {
-            ASSERT(isParsingFragment());
+            ASSERT(isParsingFragmentOrTemplateContents());
             return;
         }
         processEndTag(token);
@@ -2079,7 +2143,7 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         break;
     case AfterBodyMode:
         ASSERT(insertionMode() == AfterBodyMode);
-        if (token.name() == htmlTag) {
+        if (token->name() == htmlTag) {
             if (isParsingFragment()) {
                 parseError(token);
                 return;
@@ -2096,14 +2160,14 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         break;
     case InHeadNoscriptMode:
         ASSERT(insertionMode() == InHeadNoscriptMode);
-        if (token.name() == noscriptTag) {
-            ASSERT(m_tree.currentElement()->hasTagName(noscriptTag));
+        if (token->name() == noscriptTag) {
+            ASSERT(m_tree.currentStackItem()->hasTagName(noscriptTag));
             m_tree.openElements()->pop();
-            ASSERT(m_tree.currentElement()->hasTagName(headTag));
+            ASSERT(m_tree.currentStackItem()->hasTagName(headTag));
             setInsertionMode(InHeadMode);
             return;
         }
-        if (token.name() != brTag) {
+        if (token->name() != brTag) {
             parseError(token);
             return;
         }
@@ -2111,21 +2175,22 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         processToken(token);
         break;
     case TextMode:
-        if (token.name() == scriptTag) {
+        if (token->name() == scriptTag) {
             // Pause ourselves so that parsing stops until the script can be processed by the caller.
-            ASSERT(m_tree.currentElement()->hasTagName(scriptTag));
+            ASSERT(m_tree.currentStackItem()->hasTagName(scriptTag));
+            if (scriptingContentIsAllowed(m_tree.parserContentPolicy()))
             m_scriptToProcess = m_tree.currentElement();
             m_tree.openElements()->pop();
-            if (isParsingFragment() && m_fragmentContext.scriptingPermission() == DisallowScriptingContent)
-                m_scriptToProcess->removeAllChildren();
             setInsertionMode(m_originalInsertionMode);
 
+            if (m_parser->tokenizer()) {
             // This token will not have been created by the tokenizer if a
             // self-closing script tag was encountered and pre-HTML5 parser
             // quirks are enabled. We must set the tokenizer's state to
             // DataState explicitly if the tokenizer didn't have a chance to.
-            ASSERT(m_parser->tokenizer()->state() == HTMLTokenizerState::DataState || m_usePreHTML5ParserQuirks);
-            m_parser->tokenizer()->setState(HTMLTokenizerState::DataState);
+                ASSERT(m_parser->tokenizer()->state() == HTMLTokenizer::DataState || m_options.usePreHTML5ParserQuirks || m_options.useThreading);
+                m_parser->tokenizer()->setState(HTMLTokenizer::DataState);
+            }
             return;
         }
         m_tree.openElements()->pop();
@@ -2133,20 +2198,31 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         break;
     case InFramesetMode:
         ASSERT(insertionMode() == InFramesetMode);
-        if (token.name() == framesetTag) {
-            if (m_tree.currentNode() == m_tree.openElements()->rootNode()) {
+        if (token->name() == framesetTag) {
+            bool ignoreFramesetForFragmentParsing  = m_tree.currentIsRootNode();
+#if ENABLE(TEMPLATE_ELEMENT)
+            ignoreFramesetForFragmentParsing = ignoreFramesetForFragmentParsing || m_tree.openElements()->hasTemplateInHTMLScope();
+#endif
+            if (ignoreFramesetForFragmentParsing) {
+                ASSERT(isParsingFragmentOrTemplateContents());
                 parseError(token);
                 return;
             }
             m_tree.openElements()->pop();
-            if (!isParsingFragment() && !m_tree.currentElement()->hasTagName(framesetTag))
+            if (!isParsingFragment() && !m_tree.currentStackItem()->hasTagName(framesetTag))
                 setInsertionMode(AfterFramesetMode);
             return;
         }
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (token->name() == templateTag) {
+            processTemplateEndTag(token);
+            return;
+        }
+#endif
         break;
     case AfterFramesetMode:
         ASSERT(insertionMode() == AfterFramesetMode);
-        if (token.name() == htmlTag) {
+        if (token->name() == htmlTag) {
             setInsertionMode(AfterAfterFramesetMode);
             return;
         }
@@ -2157,15 +2233,15 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         break;
     case InSelectInTableMode:
         ASSERT(insertionMode() == InSelectInTableMode);
-        if (token.name() == captionTag
-            || token.name() == tableTag
-            || isTableBodyContextTag(token.name())
-            || token.name() == trTag
-            || isTableCellContextTag(token.name())) {
+        if (token->name() == captionTag
+            || token->name() == tableTag
+            || isTableBodyContextTag(token->name())
+            || token->name() == trTag
+            || isTableCellContextTag(token->name())) {
             parseError(token);
-            if (m_tree.openElements()->inTableScope(token.name())) {
-                AtomicHTMLToken endSelect(HTMLTokenTypes::EndTag, selectTag.localName());
-                processEndTag(endSelect);
+            if (m_tree.openElements()->inTableScope(token->name())) {
+                AtomicHTMLToken endSelect(HTMLToken::EndTag, selectTag.localName());
+                processEndTag(&endSelect);
                 processEndTag(token);
             }
             return;
@@ -2173,26 +2249,26 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
         // Fall through.
     case InSelectMode:
         ASSERT(insertionMode() == InSelectMode || insertionMode() == InSelectInTableMode);
-        if (token.name() == optgroupTag) {
-            if (m_tree.currentNode()->hasTagName(optionTag) && m_tree.oneBelowTop() && m_tree.oneBelowTop()->hasTagName(optgroupTag))
+        if (token->name() == optgroupTag) {
+            if (m_tree.currentStackItem()->hasTagName(optionTag) && m_tree.oneBelowTop() && m_tree.oneBelowTop()->hasTagName(optgroupTag))
                 processFakeEndTag(optionTag);
-            if (m_tree.currentNode()->hasTagName(optgroupTag)) {
+            if (m_tree.currentStackItem()->hasTagName(optgroupTag)) {
                 m_tree.openElements()->pop();
                 return;
             }
             parseError(token);
             return;
         }
-        if (token.name() == optionTag) {
-            if (m_tree.currentNode()->hasTagName(optionTag)) {
+        if (token->name() == optionTag) {
+            if (m_tree.currentStackItem()->hasTagName(optionTag)) {
                 m_tree.openElements()->pop();
                 return;
             }
             parseError(token);
             return;
         }
-        if (token.name() == selectTag) {
-            if (!m_tree.openElements()->inSelectScope(token.name())) {
+        if (token->name() == selectTag) {
+            if (!m_tree.openElements()->inSelectScope(token->name())) {
                 ASSERT(isParsingFragment());
                 parseError(token);
                 return;
@@ -2201,17 +2277,35 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
             resetInsertionModeAppropriately();
             return;
         }
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (token->name() == templateTag) {
+            processTemplateEndTag(token);
+            return;
+        }
+#endif
         break;
     case InTableTextMode:
         defaultForInTableText();
         processEndTag(token);
         break;
+    case TemplateContentsMode:
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (token->name() == templateTag) {
+            processTemplateEndTag(token);
+            return;
+}
+
+        break;
+#else
+        ASSERT_NOT_REACHED();
+#endif
+        break;
     }
 }
 
-void HTMLTreeBuilder::processComment(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processComment(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::Comment);
+    ASSERT(token->type() == HTMLToken::Comment);
     if (m_insertionMode == InitialMode
         || m_insertionMode == BeforeHTMLMode
         || m_insertionMode == AfterAfterBodyMode
@@ -2231,9 +2325,9 @@ void HTMLTreeBuilder::processComment(AtomicHTMLToken& token)
     m_tree.insertComment(token);
 }
 
-void HTMLTreeBuilder::processCharacter(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processCharacter(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::Character);
+    ASSERT(token->type() == HTMLToken::Character);
     ExternalCharacterTokenBuffer buffer(token);
     processCharacterBuffer(buffer);
 }
@@ -2306,8 +2400,14 @@ ReprocessBuffer:
     }
     case InBodyMode:
     case InCaptionMode:
+    case TemplateContentsMode:
     case InCellMode: {
+#if ENABLE(TEMPLATE_ELEMENT)
+        ASSERT(insertionMode() == InBodyMode || insertionMode() == InCaptionMode || insertionMode() == InCellMode || insertionMode() == TemplateContentsMode);
+#else
+        ASSERT(insertionMode() != TemplateContentsMode);
         ASSERT(insertionMode() == InBodyMode || insertionMode() == InCaptionMode || insertionMode() == InCellMode);
+#endif
         processCharacterBufferForInBody(buffer);
         break;
     }
@@ -2316,12 +2416,12 @@ ReprocessBuffer:
     case InRowMode: {
         ASSERT(insertionMode() == InTableMode || insertionMode() == InTableBodyMode || insertionMode() == InRowMode);
         ASSERT(m_pendingTableCharacters.isEmpty());
-        if (m_tree.currentNode()->isElementNode()
-            && (m_tree.currentElement()->hasTagName(HTMLNames::tableTag)
-                || m_tree.currentElement()->hasTagName(HTMLNames::tbodyTag)
-                || m_tree.currentElement()->hasTagName(HTMLNames::tfootTag)
-                || m_tree.currentElement()->hasTagName(HTMLNames::theadTag)
-                || m_tree.currentElement()->hasTagName(HTMLNames::trTag))) {
+        if (m_tree.currentStackItem()->isElementNode()
+            && (m_tree.currentStackItem()->hasTagName(HTMLNames::tableTag)
+                || m_tree.currentStackItem()->hasTagName(HTMLNames::tbodyTag)
+                || m_tree.currentStackItem()->hasTagName(HTMLNames::tfootTag)
+                || m_tree.currentStackItem()->hasTagName(HTMLNames::theadTag)
+                || m_tree.currentStackItem()->hasTagName(HTMLNames::trTag))) {
             m_originalInsertionMode = m_insertionMode;
             setInsertionMode(InTableTextMode);
             // Note that we fall through to the InTableTextMode case below.
@@ -2344,7 +2444,7 @@ ReprocessBuffer:
         if (buffer.isEmpty())
             return;
         if (!processColgroupEndTagForInColumnGroup()) {
-            ASSERT(isParsingFragment());
+            ASSERT(isParsingFragmentOrTemplateContents());
             // The spec tells us to drop these characters on the floor.
             buffer.skipLeadingNonWhitespace();
             if (buffer.isEmpty())
@@ -2414,9 +2514,9 @@ void HTMLTreeBuilder::processCharacterBufferForInBody(ExternalCharacterTokenBuff
         m_framesetOk = false;
 }
 
-void HTMLTreeBuilder::processEndOfFile(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processEndOfFile(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::EndOfFile);
+    ASSERT(token->type() == HTMLToken::EndOfFile);
     switch (insertionMode()) {
     case InitialMode:
         ASSERT(insertionMode() == InitialMode);
@@ -2442,8 +2542,18 @@ void HTMLTreeBuilder::processEndOfFile(AtomicHTMLToken& token)
     case InCellMode:
     case InCaptionMode:
     case InRowMode:
+#if ENABLE(TEMPLATE_ELEMENT)
+        ASSERT(insertionMode() == InBodyMode || insertionMode() == InCellMode || insertionMode() == InCaptionMode || insertionMode() == InRowMode || insertionMode() == TemplateContentsMode);
+#else
+        ASSERT(insertionMode() != TemplateContentsMode);
         ASSERT(insertionMode() == InBodyMode || insertionMode() == InCellMode || insertionMode() == InCaptionMode || insertionMode() == InRowMode);
+#endif
         notImplemented(); // Emit parse error based on what elements are still open.
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (!m_templateInsertionModes.isEmpty())
+            if (processEndOfFileForInTemplateContents(token))
+                return;
+#endif
         break;
     case AfterBodyMode:
     case AfterAfterBodyMode:
@@ -2458,39 +2568,54 @@ void HTMLTreeBuilder::processEndOfFile(AtomicHTMLToken& token)
     case AfterAfterFramesetMode:
         ASSERT(insertionMode() == AfterFramesetMode || insertionMode() == AfterAfterFramesetMode);
         break;
+    case InColumnGroupMode:
+        if (m_tree.currentIsRootNode()) {
+            ASSERT(isParsingFragment());
+            return; // FIXME: Should we break here instead of returning?
+        }
+#if ENABLE(TEMPLATE_ELEMENT)
+        ASSERT(m_tree.currentNode()->hasTagName(colgroupTag) || m_tree.currentNode()->hasTagName(templateTag));
+#else
+        ASSERT(m_tree.currentNode()->hasTagName(colgroupTag));
+#endif
+        processColgroupEndTagForInColumnGroup();
+        // Fall through
     case InFramesetMode:
     case InTableMode:
     case InTableBodyMode:
     case InSelectInTableMode:
     case InSelectMode:
-        ASSERT(insertionMode() == InSelectMode || insertionMode() == InSelectInTableMode || insertionMode() == InTableMode || insertionMode() == InFramesetMode || insertionMode() == InTableBodyMode);
+        ASSERT(insertionMode() == InSelectMode || insertionMode() == InSelectInTableMode || insertionMode() == InTableMode || insertionMode() == InFramesetMode || insertionMode() == InTableBodyMode || insertionMode() == InColumnGroupMode);
         if (m_tree.currentNode() != m_tree.openElements()->rootNode())
             parseError(token);
+
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (!m_templateInsertionModes.isEmpty())
+            if (processEndOfFileForInTemplateContents(token))
+                return;
+#endif
         break;
-    case InColumnGroupMode:
-        if (m_tree.currentNode() == m_tree.openElements()->rootNode()) {
-            ASSERT(isParsingFragment());
-            return; // FIXME: Should we break here instead of returning?
-        }
-        if (!processColgroupEndTagForInColumnGroup()) {
-            ASSERT(isParsingFragment());
-            return; // FIXME: Should we break here instead of returning?
-        }
-        processEndOfFile(token);
-        return;
     case InTableTextMode:
         defaultForInTableText();
         processEndOfFile(token);
         return;
     case TextMode:
         parseError(token);
-        if (m_tree.currentNode()->hasTagName(scriptTag))
+        if (m_tree.currentStackItem()->hasTagName(scriptTag))
             notImplemented(); // mark the script element as "already started".
         m_tree.openElements()->pop();
         ASSERT(m_originalInsertionMode != TextMode);
         setInsertionMode(m_originalInsertionMode);
         processEndOfFile(token);
         return;
+    case TemplateContentsMode:
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (processEndOfFileForInTemplateContents(token))
+            return;
+        break;
+#else
+        ASSERT_NOT_REACHED();
+#endif
     }
     ASSERT(m_tree.currentNode());
     m_tree.openElements()->popAll();
@@ -2499,41 +2624,40 @@ void HTMLTreeBuilder::processEndOfFile(AtomicHTMLToken& token)
 void HTMLTreeBuilder::defaultForInitial()
 {
     notImplemented();
-    if (!m_fragmentContext.fragment() && !m_document->isSrcdocDocument())
-        m_document->setCompatibilityMode(Document::QuirksMode);
+    m_tree.setDefaultCompatibilityMode();
     // FIXME: parse error
     setInsertionMode(BeforeHTMLMode);
 }
 
 void HTMLTreeBuilder::defaultForBeforeHTML()
 {
-    AtomicHTMLToken startHTML(HTMLTokenTypes::StartTag, htmlTag.localName());
-    m_tree.insertHTMLHtmlStartTagBeforeHTML(startHTML);
+    AtomicHTMLToken startHTML(HTMLToken::StartTag, htmlTag.localName());
+    m_tree.insertHTMLHtmlStartTagBeforeHTML(&startHTML);
     setInsertionMode(BeforeHeadMode);
 }
 
 void HTMLTreeBuilder::defaultForBeforeHead()
 {
-    AtomicHTMLToken startHead(HTMLTokenTypes::StartTag, headTag.localName());
-    processStartTag(startHead);
+    AtomicHTMLToken startHead(HTMLToken::StartTag, headTag.localName());
+    processStartTag(&startHead);
 }
 
 void HTMLTreeBuilder::defaultForInHead()
 {
-    AtomicHTMLToken endHead(HTMLTokenTypes::EndTag, headTag.localName());
-    processEndTag(endHead);
+    AtomicHTMLToken endHead(HTMLToken::EndTag, headTag.localName());
+    processEndTag(&endHead);
 }
 
 void HTMLTreeBuilder::defaultForInHeadNoscript()
 {
-    AtomicHTMLToken endNoscript(HTMLTokenTypes::EndTag, noscriptTag.localName());
-    processEndTag(endNoscript);
+    AtomicHTMLToken endNoscript(HTMLToken::EndTag, noscriptTag.localName());
+    processEndTag(&endNoscript);
 }
 
 void HTMLTreeBuilder::defaultForAfterHead()
 {
-    AtomicHTMLToken startBody(HTMLTokenTypes::StartTag, bodyTag.localName());
-    processStartTag(startBody);
+    AtomicHTMLToken startBody(HTMLToken::StartTag, bodyTag.localName());
+    processStartTag(&startBody);
     m_framesetOk = true;
 }
 
@@ -2554,29 +2678,29 @@ void HTMLTreeBuilder::defaultForInTableText()
     setInsertionMode(m_originalInsertionMode);
 }
 
-bool HTMLTreeBuilder::processStartTagForInHead(AtomicHTMLToken& token)
+bool HTMLTreeBuilder::processStartTagForInHead(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::StartTag);
-    if (token.name() == htmlTag) {
-        m_tree.insertHTMLHtmlStartTagInBody(token);
+    ASSERT(token->type() == HTMLToken::StartTag);
+    if (token->name() == htmlTag) {
+        processHtmlStartTagForInBody(token);
         return true;
     }
-    if (token.name() == baseTag
-        || token.name() == basefontTag
-        || token.name() == bgsoundTag
-        || token.name() == commandTag
-        || token.name() == linkTag
-        || token.name() == metaTag) {
+    if (token->name() == baseTag
+        || token->name() == basefontTag
+        || token->name() == bgsoundTag
+        || token->name() == commandTag
+        || token->name() == linkTag
+        || token->name() == metaTag) {
         m_tree.insertSelfClosingHTMLElement(token);
         // Note: The custom processing for the <meta> tag is done in HTMLMetaElement::process().
         return true;
     }
-    if (token.name() == titleTag) {
+    if (token->name() == titleTag) {
         processGenericRCDATAStartTag(token);
         return true;
     }
-    if (token.name() == noscriptTag) {
-        if (scriptEnabled(m_document->frame())) {
+    if (token->name() == noscriptTag) {
+        if (m_options.scriptEnabled) {
             processGenericRawTextStartTag(token);
             return true;
         }
@@ -2584,46 +2708,55 @@ bool HTMLTreeBuilder::processStartTagForInHead(AtomicHTMLToken& token)
         setInsertionMode(InHeadNoscriptMode);
         return true;
     }
-    if (token.name() == noframesTag || token.name() == styleTag) {
+    if (token->name() == noframesTag || token->name() == styleTag) {
         processGenericRawTextStartTag(token);
         return true;
     }
-    if (token.name() == scriptTag) {
+    if (token->name() == scriptTag) {
         processScriptStartTag(token);
-        if (m_usePreHTML5ParserQuirks && token.selfClosing())
+        if (m_options.usePreHTML5ParserQuirks && token->selfClosing())
             processFakeEndTag(scriptTag);
         return true;
     }
-    if (token.name() == headTag) {
+#if ENABLE(TEMPLATE_ELEMENT)
+    if (token->name() == templateTag) {
+        processTemplateStartTag(token);
+        return true;
+    }
+#endif
+    if (token->name() == headTag) {
         parseError(token);
         return true;
     }
     return false;
 }
 
-void HTMLTreeBuilder::processGenericRCDATAStartTag(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processGenericRCDATAStartTag(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::StartTag);
+    ASSERT(token->type() == HTMLToken::StartTag);
     m_tree.insertHTMLElement(token);
-    m_parser->tokenizer()->setState(HTMLTokenizerState::RCDATAState);
+    if (m_parser->tokenizer())
+        m_parser->tokenizer()->setState(HTMLTokenizer::RCDATAState);
     m_originalInsertionMode = m_insertionMode;
     setInsertionMode(TextMode);
 }
 
-void HTMLTreeBuilder::processGenericRawTextStartTag(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processGenericRawTextStartTag(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::StartTag);
+    ASSERT(token->type() == HTMLToken::StartTag);
     m_tree.insertHTMLElement(token);
-    m_parser->tokenizer()->setState(HTMLTokenizerState::RAWTEXTState);
+    if (m_parser->tokenizer())
+        m_parser->tokenizer()->setState(HTMLTokenizer::RAWTEXTState);
     m_originalInsertionMode = m_insertionMode;
     setInsertionMode(TextMode);
 }
 
-void HTMLTreeBuilder::processScriptStartTag(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processScriptStartTag(AtomicHTMLToken* token)
 {
-    ASSERT(token.type() == HTMLTokenTypes::StartTag);
+    ASSERT(token->type() == HTMLToken::StartTag);
     m_tree.insertScriptElement(token);
-    m_parser->tokenizer()->setState(HTMLTokenizerState::ScriptDataState);
+    if (m_parser->tokenizer())
+        m_parser->tokenizer()->setState(HTMLTokenizer::ScriptDataState);
     m_originalInsertionMode = m_insertionMode;
 
     TextPosition position = m_parser->textPosition();
@@ -2634,92 +2767,92 @@ void HTMLTreeBuilder::processScriptStartTag(AtomicHTMLToken& token)
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/tree-construction.html#tree-construction
-bool HTMLTreeBuilder::shouldProcessTokenInForeignContent(AtomicHTMLToken& token)
+bool HTMLTreeBuilder::shouldProcessTokenInForeignContent(AtomicHTMLToken* token)
 {
     if (m_tree.isEmpty())
         return false;
-    ContainerNode* node = m_tree.currentNode();
-    if (isInHTMLNamespace(node))
+    HTMLStackItem* item = m_tree.currentStackItem();
+    if (item->isInHTMLNamespace())
         return false;
-    if (HTMLElementStack::isMathMLTextIntegrationPoint(node)) {
-        if (token.type() == HTMLTokenTypes::StartTag
-            && token.name() != MathMLNames::mglyphTag
-            && token.name() != MathMLNames::malignmarkTag)
+    if (HTMLElementStack::isMathMLTextIntegrationPoint(item)) {
+        if (token->type() == HTMLToken::StartTag
+            && token->name() != MathMLNames::mglyphTag
+            && token->name() != MathMLNames::malignmarkTag)
             return false;
-        if (token.type() == HTMLTokenTypes::Character)
+        if (token->type() == HTMLToken::Character)
             return false;
     }
-    if (node->hasTagName(MathMLNames::annotation_xmlTag)
-        && token.type() == HTMLTokenTypes::StartTag
-        && token.name() == SVGNames::svgTag)
+    if (item->hasTagName(MathMLNames::annotation_xmlTag)
+        && token->type() == HTMLToken::StartTag
+        && token->name() == SVGNames::svgTag)
         return false;
-    if (HTMLElementStack::isHTMLIntegrationPoint(node)) {
-        if (token.type() == HTMLTokenTypes::StartTag)
+    if (HTMLElementStack::isHTMLIntegrationPoint(item)) {
+        if (token->type() == HTMLToken::StartTag)
             return false;
-        if (token.type() == HTMLTokenTypes::Character)
+        if (token->type() == HTMLToken::Character)
             return false;
     }
-    if (token.type() == HTMLTokenTypes::EndOfFile)
+    if (token->type() == HTMLToken::EndOfFile)
         return false;
     return true;
 }
 
-void HTMLTreeBuilder::processTokenInForeignContent(AtomicHTMLToken& token)
+void HTMLTreeBuilder::processTokenInForeignContent(AtomicHTMLToken* token)
 {
-    switch (token.type()) {
-    case HTMLTokenTypes::Uninitialized:
+    switch (token->type()) {
+    case HTMLToken::Uninitialized:
         ASSERT_NOT_REACHED();
         break;
-    case HTMLTokenTypes::DOCTYPE:
+    case HTMLToken::DOCTYPE:
         parseError(token);
         break;
-    case HTMLTokenTypes::StartTag: {
-        if (token.name() == bTag
-            || token.name() == bigTag
-            || token.name() == blockquoteTag
-            || token.name() == bodyTag
-            || token.name() == brTag
-            || token.name() == centerTag
-            || token.name() == codeTag
-            || token.name() == ddTag
-            || token.name() == divTag
-            || token.name() == dlTag
-            || token.name() == dtTag
-            || token.name() == emTag
-            || token.name() == embedTag
-            || isNumberedHeaderTag(token.name())
-            || token.name() == headTag
-            || token.name() == hrTag
-            || token.name() == iTag
-            || token.name() == imgTag
-            || token.name() == liTag
-            || token.name() == listingTag
-            || token.name() == menuTag
-            || token.name() == metaTag
-            || token.name() == nobrTag
-            || token.name() == olTag
-            || token.name() == pTag
-            || token.name() == preTag
-            || token.name() == rubyTag
-            || token.name() == sTag
-            || token.name() == smallTag
-            || token.name() == spanTag
-            || token.name() == strongTag
-            || token.name() == strikeTag
-            || token.name() == subTag
-            || token.name() == supTag
-            || token.name() == tableTag
-            || token.name() == ttTag
-            || token.name() == uTag
-            || token.name() == ulTag
-            || token.name() == varTag
-            || (token.name() == fontTag && (token.getAttributeItem(colorAttr) || token.getAttributeItem(faceAttr) || token.getAttributeItem(sizeAttr)))) {
+    case HTMLToken::StartTag: {
+        if (token->name() == bTag
+            || token->name() == bigTag
+            || token->name() == blockquoteTag
+            || token->name() == bodyTag
+            || token->name() == brTag
+            || token->name() == centerTag
+            || token->name() == codeTag
+            || token->name() == ddTag
+            || token->name() == divTag
+            || token->name() == dlTag
+            || token->name() == dtTag
+            || token->name() == emTag
+            || token->name() == embedTag
+            || isNumberedHeaderTag(token->name())
+            || token->name() == headTag
+            || token->name() == hrTag
+            || token->name() == iTag
+            || token->name() == imgTag
+            || token->name() == liTag
+            || token->name() == listingTag
+            || token->name() == menuTag
+            || token->name() == metaTag
+            || token->name() == nobrTag
+            || token->name() == olTag
+            || token->name() == pTag
+            || token->name() == preTag
+            || token->name() == rubyTag
+            || token->name() == sTag
+            || token->name() == smallTag
+            || token->name() == spanTag
+            || token->name() == strongTag
+            || token->name() == strikeTag
+            || token->name() == subTag
+            || token->name() == supTag
+            || token->name() == tableTag
+            || token->name() == ttTag
+            || token->name() == uTag
+            || token->name() == ulTag
+            || token->name() == varTag
+            || (token->name() == fontTag && (token->getAttributeItem(colorAttr) || token->getAttributeItem(faceAttr) || token->getAttributeItem(sizeAttr)))) {
             parseError(token);
             m_tree.openElements()->popUntilForeignContentScopeMarker();
             processStartTag(token);
             return;
         }
-        const AtomicString& currentNamespace = m_tree.currentElement()->namespaceURI();
+        const AtomicString& currentNamespace = m_tree.currentStackItem()->namespaceURI();
         if (currentNamespace == MathMLNames::mathmlNamespaceURI)
             adjustMathMLAttributes(token);
         if (currentNamespace == SVGNames::svgNamespaceURI) {
@@ -2730,28 +2863,29 @@ void HTMLTreeBuilder::processTokenInForeignContent(AtomicHTMLToken& token)
         m_tree.insertForeignElement(token, currentNamespace);
         break;
     }
-    case HTMLTokenTypes::EndTag: {
-        if (m_tree.currentNode()->namespaceURI() == SVGNames::svgNamespaceURI)
+    case HTMLToken::EndTag: {
+        if (m_tree.currentStackItem()->namespaceURI() == SVGNames::svgNamespaceURI)
             adjustSVGTagNameCase(token);
 
-        if (token.name() == SVGNames::scriptTag && m_tree.currentNode()->hasTagName(SVGNames::scriptTag)) {
+        if (token->name() == SVGNames::scriptTag && m_tree.currentStackItem()->hasTagName(SVGNames::scriptTag)) {
+            if (scriptingContentIsAllowed(m_tree.parserContentPolicy()))
             m_scriptToProcess = m_tree.currentElement();
             m_tree.openElements()->pop();
             return;
         }
-        if (!isInHTMLNamespace(m_tree.currentNode())) {
+        if (!m_tree.currentStackItem()->isInHTMLNamespace()) {
             // FIXME: This code just wants an Element* iterator, instead of an ElementRecord*
             HTMLElementStack::ElementRecord* nodeRecord = m_tree.openElements()->topRecord();
-            if (!nodeRecord->node()->hasLocalName(token.name()))
+            if (!nodeRecord->stackItem()->hasLocalName(token->name()))
                 parseError(token);
             while (1) {
-                if (nodeRecord->node()->hasLocalName(token.name())) {
+                if (nodeRecord->stackItem()->hasLocalName(token->name())) {
                     m_tree.openElements()->popUntilPopped(nodeRecord->element());
                     return;
                 }
                 nodeRecord = nodeRecord->next();
 
-                if (isInHTMLNamespace(nodeRecord->node()))
+                if (nodeRecord->stackItem()->isInHTMLNamespace())
                     break;
             }
         }
@@ -2759,17 +2893,17 @@ void HTMLTreeBuilder::processTokenInForeignContent(AtomicHTMLToken& token)
         processEndTag(token);
         break;
     }
-    case HTMLTokenTypes::Comment:
+    case HTMLToken::Comment:
         m_tree.insertComment(token);
         return;
-    case HTMLTokenTypes::Character: {
-        String characters = String(token.characters().data(), token.characters().size());
+    case HTMLToken::Character: {
+        String characters = String(token->characters(), token->charactersLength());
         m_tree.insertTextNode(characters);
         if (m_framesetOk && !isAllWhitespaceOrReplacementCharacters(characters))
             m_framesetOk = false;
         break;
     }
-    case HTMLTokenTypes::EndOfFile:
+    case HTMLToken::EndOfFile:
         ASSERT_NOT_REACHED();
         break;
     }
@@ -2780,27 +2914,17 @@ void HTMLTreeBuilder::finished()
     if (isParsingFragment())
         return;
     
-    ASSERT(m_document);
+#if ENABLE(TEMPLATE_ELEMENT)
+    ASSERT(m_templateInsertionModes.isEmpty());
+#endif
+
+    ASSERT(m_isAttached);
     // Warning, this may detach the parser. Do not do anything else after this.
-    m_document->finishedParsing();
+    m_tree.finishedParsing();
 }
 
-void HTMLTreeBuilder::parseError(AtomicHTMLToken&)
+void HTMLTreeBuilder::parseError(AtomicHTMLToken*)
 {
-}
-
-bool HTMLTreeBuilder::scriptEnabled(Frame* frame)
-{
-    if (!frame)
-        return false;
-    return frame->script()->canExecuteScripts(NotAboutToExecuteScript);
-}
-
-bool HTMLTreeBuilder::pluginsEnabled(Frame* frame)
-{
-    if (!frame)
-        return false;
-    return frame->loader()->subframeLoader()->allowPlugins(NotAboutToInstantiatePlugin);
 }
 
 }

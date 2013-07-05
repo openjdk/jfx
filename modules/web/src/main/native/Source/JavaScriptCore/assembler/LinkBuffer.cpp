@@ -45,16 +45,15 @@ LinkBuffer::CodeRef LinkBuffer::finalizeCodeWithDisassembly(const char* format, 
     
     CodeRef result = finalizeCodeWithoutDisassembly();
     
-    dataLog("Generated JIT code for ");
+    dataLogF("Generated JIT code for ");
     va_list argList;
     va_start(argList, format);
-    WTF::dataLogV(format, argList);
+    WTF::dataLogFV(format, argList);
     va_end(argList);
-    dataLog(":\n");
+    dataLogF(":\n");
     
-    dataLog("    Code at [%p, %p):\n", result.code().executableAddress(), static_cast<char*>(result.code().executableAddress()) + result.size());
-    if (!tryToDisassemble(result.code(), m_size, "    ", WTF::dataFile()))
-        dataLog("        <no disassembly available>\n");
+    dataLogF("    Code at [%p, %p):\n", result.code().executableAddress(), static_cast<char*>(result.code().executableAddress()) + result.size());
+    disassemble(result.code(), m_size, "    ", WTF::dataFile());
     
     return result;
 }
@@ -63,7 +62,7 @@ void LinkBuffer::linkCode(void* ownerUID, JITCompilationEffort effort)
 {
     ASSERT(!m_code);
 #if !ENABLE(BRANCH_COMPACTION)
-    m_executableMemory = m_assembler->m_assembler.executableCopy(*m_globalData, ownerUID, effort);
+    m_executableMemory = m_assembler->m_assembler.executableCopy(*m_vm, ownerUID, effort);
     if (!m_executableMemory)
         return;
     m_code = m_executableMemory->start();
@@ -71,7 +70,7 @@ void LinkBuffer::linkCode(void* ownerUID, JITCompilationEffort effort)
     ASSERT(m_code);
 #else
     m_initialSize = m_assembler->m_assembler.codeSize();
-    m_executableMemory = m_globalData->executableAllocator.allocate(*m_globalData, m_initialSize, ownerUID, effort);
+    m_executableMemory = m_vm->executableAllocator.allocate(*m_vm, m_initialSize, ownerUID, effort);
     if (!m_executableMemory)
         return;
     m_code = (uint8_t*)m_executableMemory->start();
@@ -81,7 +80,7 @@ void LinkBuffer::linkCode(void* ownerUID, JITCompilationEffort effort)
     uint8_t* outData = reinterpret_cast<uint8_t*>(m_code);
     int readPtr = 0;
     int writePtr = 0;
-    Vector<LinkRecord>& jumpsToLink = m_assembler->jumpsToLink();
+    Vector<LinkRecord, 0, UnsafeVectorOverflow>& jumpsToLink = m_assembler->jumpsToLink();
     unsigned jumpCount = jumpsToLink.size();
     for (unsigned i = 0; i < jumpCount; ++i) {
         int offset = readPtr - writePtr;
@@ -169,11 +168,11 @@ void LinkBuffer::dumpLinkStatistics(void* code, size_t initializeSize, size_t fi
     linkCount++;
     totalInitialSize += initialSize;
     totalFinalSize += finalSize;
-    dataLog("link %p: orig %u, compact %u (delta %u, %.2f%%)\n", 
+    dataLogF("link %p: orig %u, compact %u (delta %u, %.2f%%)\n", 
             code, static_cast<unsigned>(initialSize), static_cast<unsigned>(finalSize),
             static_cast<unsigned>(initialSize - finalSize),
             100.0 * (initialSize - finalSize) / initialSize);
-    dataLog("\ttotal %u: orig %u, compact %u (delta %u, %.2f%%)\n", 
+    dataLogF("\ttotal %u: orig %u, compact %u (delta %u, %.2f%%)\n", 
             linkCount, totalInitialSize, totalFinalSize, totalInitialSize - totalFinalSize,
             100.0 * (totalInitialSize - totalFinalSize) / totalInitialSize);
 }
@@ -192,7 +191,7 @@ void LinkBuffer::dumpCode(void* code, size_t size)
     size_t tsize = size / sizeof(short);
     char nameBuf[128];
     snprintf(nameBuf, sizeof(nameBuf), "_jsc_jit%u", codeCount++);
-    dataLog("\t.syntax unified\n"
+    dataLogF("\t.syntax unified\n"
             "\t.section\t__TEXT,__text,regular,pure_instructions\n"
             "\t.globl\t%s\n"
             "\t.align 2\n"
@@ -202,7 +201,7 @@ void LinkBuffer::dumpCode(void* code, size_t size)
             "%s:\n", nameBuf, nameBuf, code, nameBuf);
         
     for (unsigned i = 0; i < tsize; i++)
-        dataLog("\t.short\t0x%x\n", tcode[i]);
+        dataLogF("\t.short\t0x%x\n", tcode[i]);
 #elif CPU(ARM_TRADITIONAL)
     //   gcc -c jit.s
     //   objdump -D jit.o
@@ -211,7 +210,7 @@ void LinkBuffer::dumpCode(void* code, size_t size)
     size_t tsize = size / sizeof(unsigned int);
     char nameBuf[128];
     snprintf(nameBuf, sizeof(nameBuf), "_jsc_jit%u", codeCount++);
-    dataLog("\t.globl\t%s\n"
+    dataLogF("\t.globl\t%s\n"
             "\t.align 4\n"
             "\t.code 32\n"
             "\t.text\n"
@@ -219,7 +218,7 @@ void LinkBuffer::dumpCode(void* code, size_t size)
             "%s:\n", nameBuf, code, nameBuf);
 
     for (unsigned i = 0; i < tsize; i++)
-        dataLog("\t.long\t0x%x\n", tcode[i]);
+        dataLogF("\t.long\t0x%x\n", tcode[i]);
 #endif
 }
 #endif

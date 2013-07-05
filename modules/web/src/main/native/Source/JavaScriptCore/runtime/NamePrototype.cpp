@@ -27,10 +27,9 @@
 #include "NamePrototype.h"
 
 #include "Error.h"
+#include "Operations.h"
 
 namespace JSC {
-
-ASSERT_CLASS_FITS_IN_CELL(NamePrototype);
 
 static EncodedJSValue JSC_HOST_CALL privateNameProtoFuncToString(ExecState*);
 
@@ -48,16 +47,14 @@ const ClassInfo NamePrototype::s_info = { "Name", &Base::s_info, 0, ExecState::p
 @end
 */
 
-ASSERT_CLASS_FITS_IN_CELL(NamePrototype);
-
 NamePrototype::NamePrototype(ExecState* exec, Structure* structure)
-    : Base(exec->globalData(), structure, jsEmptyString(exec))
+    : Base(exec->vm(), structure, jsEmptyString(exec))
 {
 }
 
 void NamePrototype::finishCreation(ExecState* exec)
 {
-    Base::finishCreation(exec->globalData());
+    Base::finishCreation(exec->vm());
     ASSERT(inherits(&s_info));
 }
 

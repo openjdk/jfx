@@ -37,11 +37,7 @@ String::String(const QString& qstr)
 {
     if (qstr.isNull())
         return;
-#if HAVE(QT5)
     m_impl = StringImpl::adopt(const_cast<QString&>(qstr).data_ptr());
-#else
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(qstr.constData()), qstr.length());
-#endif
 }
 
 String::String(const QStringRef& ref)
@@ -56,7 +52,6 @@ String::operator QString() const
     if (!m_impl)
         return QString();
 
-#if HAVE(QT5)
     if (QStringData* qStringData = m_impl->qStringData()) {
         // The WTF string was adopted from a QString at some point, so we
         // can just adopt the QStringData like a regular QString copy.
@@ -64,7 +59,7 @@ String::operator QString() const
         QStringDataPtr qStringDataPointer = { qStringData };
         return QString(qStringDataPointer);
     }
-#endif
+
     if (is8Bit() && !m_impl->has16BitShadow()) {
         // Asking for characters() of an 8-bit string will make a 16-bit copy internally
         // in WTF::String. Since we're going to copy the data to QStringData anyways, we
@@ -73,22 +68,6 @@ String::operator QString() const
     }
 
     return QString(reinterpret_cast<const QChar*>(characters()), length());
-}
-
-QDataStream& operator<<(QDataStream& stream, const String& str)
-{
-    // could be faster
-    stream << QString(str);
-    return stream;
-}
-
-QDataStream& operator>>(QDataStream& stream, String& str)
-{
-    // mabe not the fastest way, but really easy
-    QString tmp;
-    stream >> tmp;
-    str = tmp;
-    return stream;
 }
 
 }

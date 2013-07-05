@@ -27,7 +27,7 @@
 #define LayoutState_h
 
 #include "ColumnInfo.h"
-#include "LayoutTypes.h"
+#include "LayoutRect.h"
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 
@@ -38,6 +38,9 @@ class RenderBlock;
 class RenderBox;
 class RenderObject;
 class RenderFlowThread;
+#if ENABLE(CSS_EXCLUSIONS)
+class ExclusionShapeInsideInfo;
+#endif
 
 class LayoutState {
     WTF_MAKE_NONCOPYABLE(LayoutState);
@@ -45,11 +48,18 @@ public:
     LayoutState()
         : m_clipped(false)
         , m_isPaginated(false)
-        , m_pageLogicalHeight(0)
         , m_pageLogicalHeightChanged(false)
+#if !ASSERT_DISABLED && ENABLE(SATURATED_LAYOUT_ARITHMETIC)
+        , m_layoutDeltaXSaturated(false)
+        , m_layoutDeltaYSaturated(false)
+#endif
         , m_columnInfo(0)
         , m_lineGrid(0)
         , m_next(0)
+#if ENABLE(CSS_EXCLUSIONS)
+        , m_exclusionShapeInsideInfo(0)
+#endif
+        , m_pageLogicalHeight(0)
 #ifndef NDEBUG
         , m_renderer(0)
 #endif
@@ -57,7 +67,6 @@ public:
     }
 
     LayoutState(LayoutState*, RenderBox*, const LayoutSize& offset, LayoutUnit pageHeight, bool pageHeightChanged, ColumnInfo*);
-    LayoutState(LayoutState*, RenderFlowThread*, bool regionsChanged);
     LayoutState(RenderObject*);
 
     void destroy(RenderArena*);
@@ -89,6 +98,9 @@ public:
 
     bool needsBlockDirectionLocationSetBeforeLayout() const { return m_lineGrid || (m_isPaginated && m_pageLogicalHeight); }
 
+#if ENABLE(CSS_EXCLUSIONS)
+    ExclusionShapeInsideInfo* exclusionShapeInsideInfo() const { return m_exclusionShapeInsideInfo; }
+#endif
 private:
     // The normal operator new is disallowed.
     void* operator new(size_t) throw();
@@ -99,8 +111,26 @@ private:
     void computeLineGridPaginationOrigin(RenderBox*);
 
 public:
-    bool m_clipped;
-    bool m_isPaginated;
+    // Do not add anything apart from bitfields until after m_columnInfo. See https://bugs.webkit.org/show_bug.cgi?id=100173
+    bool m_clipped:1;
+    bool m_isPaginated:1;
+    // If our page height has changed, this will force all blocks to relayout.
+    bool m_pageLogicalHeightChanged:1;
+#if !ASSERT_DISABLED && ENABLE(SATURATED_LAYOUT_ARITHMETIC)
+    bool m_layoutDeltaXSaturated:1;
+    bool m_layoutDeltaYSaturated:1;
+#endif
+    // If the enclosing pagination model is a column model, then this will store column information for easy retrieval/manipulation.
+    ColumnInfo* m_columnInfo;
+    // The current line grid that we're snapping to and the offset of the start of the grid.
+    RenderBlock* m_lineGrid;
+    LayoutState* m_next;
+#if ENABLE(CSS_EXCLUSIONS)
+    ExclusionShapeInsideInfo* m_exclusionShapeInsideInfo;
+#endif
+
+    // FIXME: Distinguish between the layout clip rect and the paint clip rect which may be larger,
+    // e.g., because of composited scrolling.
     LayoutRect m_clipRect;
     
     // x/y offset from container. Includes relative positioning and scroll offsets.
@@ -114,19 +144,11 @@ public:
 
     // The current page height for the pagination model that encloses us.
     LayoutUnit m_pageLogicalHeight;
-    // If our page height has changed, this will force all blocks to relayout.
-    bool m_pageLogicalHeightChanged;
     // The offset of the start of the first page in the nearest enclosing pagination model.
     LayoutSize m_pageOffset;
-    // If the enclosing pagination model is a column model, then this will store column information for easy retrieval/manipulation.
-    ColumnInfo* m_columnInfo;
-
-    // The current line grid that we're snapping to and the offset of the start of the grid.
-    RenderBlock* m_lineGrid;
     LayoutSize m_lineGridOffset;
     LayoutSize m_lineGridPaginationOrigin;
 
-    LayoutState* m_next;
 #ifndef NDEBUG
     RenderObject* m_renderer;
 #endif

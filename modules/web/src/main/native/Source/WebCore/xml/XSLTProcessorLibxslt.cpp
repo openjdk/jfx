@@ -27,12 +27,11 @@
 #include "XSLTProcessor.h"
 
 #include "CachedResourceLoader.h"
-#include "Console.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "Frame.h"
+#include "Page.h"
+#include "PageConsole.h"
 #include "ResourceError.h"
-#include "ResourceHandle.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
@@ -82,14 +81,14 @@ void XSLTProcessor::genericErrorFunc(void*, const char*, ...)
 
 void XSLTProcessor::parseErrorFunc(void* userData, xmlError* error)
 {
-    Console* console = static_cast<Console*>(userData);
+    PageConsole* console = static_cast<PageConsole*>(userData);
     if (!console)
         return;
 
     MessageLevel level;
     switch (error->level) {
     case XML_ERR_NONE:
-        level = TipMessageLevel;
+        level = DebugMessageLevel;
         break;
     case XML_ERR_WARNING:
         level = WarningMessageLevel;
@@ -101,7 +100,8 @@ void XSLTProcessor::parseErrorFunc(void* userData, xmlError* error)
         break;
     }
 
-    console->addMessage(XMLMessageSource, LogMessageType, level, error->message, error->file, error->line);
+    // xmlError->int2 is the column number of the error or 0 if N/A.
+    console->addMessage(XMLMessageSource, level, error->message, error->file, error->line, error->int2);
 }
 
 // FIXME: There seems to be no way to control the ctxt pointer for loading here, thus we have globals.
@@ -129,7 +129,7 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
 
         bool requestAllowed = globalCachedResourceLoader->frame() && globalCachedResourceLoader->document()->securityOrigin()->canRequest(url);
         if (requestAllowed) {
-            globalCachedResourceLoader->frame()->loader()->loadResourceSynchronously(url, AllowStoredCredentials, error, response, data);
+            globalCachedResourceLoader->frame()->loader()->loadResourceSynchronously(url, AllowStoredCredentials, DoNotAskClientForCrossOriginCredentials, error, response, data);
             requestAllowed = globalCachedResourceLoader->document()->securityOrigin()->canRequest(response.url());
         }
         if (!requestAllowed) {
@@ -137,9 +137,10 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
             globalCachedResourceLoader->printAccessDeniedMessage(url);
         }
 
-        Console* console = 0;
-        if (Frame* frame = globalProcessor->xslStylesheet()->ownerDocument()->frame())
-            console = frame->domWindow()->console();
+        PageConsole* console = 0;
+        Frame* frame = globalProcessor->xslStylesheet()->ownerDocument()->frame();
+        if (frame && frame->page())
+            console = frame->page()->console();
         xmlSetStructuredErrorFunc(console, XSLTProcessor::parseErrorFunc);
         xmlSetGenericErrorFunc(console, XSLTProcessor::genericErrorFunc);
 
@@ -225,8 +226,8 @@ static const char** xsltParamArrayFromParameterMap(XSLTProcessor::ParameterMap& 
     XSLTProcessor::ParameterMap::iterator end = parameters.end();
     unsigned index = 0;
     for (XSLTProcessor::ParameterMap::iterator it = parameters.begin(); it != end; ++it) {
-        parameterArray[index++] = fastStrDup(it->first.utf8().data());
-        parameterArray[index++] = fastStrDup(it->second.utf8().data());
+        parameterArray[index++] = fastStrDup(it->key.utf8().data());
+        parameterArray[index++] = fastStrDup(it->value.utf8().data());
     }
     parameterArray[index] = 0;
 

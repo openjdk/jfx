@@ -95,6 +95,21 @@ KURL AccessibilityImageMapLink::url() const
     return m_areaElement->href();
 }
     
+void AccessibilityImageMapLink::accessibilityText(Vector<AccessibilityText>& textOrder)
+{
+    String description = accessibilityDescription();
+    if (!description.isEmpty())
+        textOrder.append(AccessibilityText(description, AlternativeText));
+
+    const AtomicString& titleText = getAttribute(titleAttr);
+    if (!titleText.isEmpty())
+        textOrder.append(AccessibilityText(titleText, TitleTagText));
+
+    const AtomicString& summary = getAttribute(summaryAttr);
+    if (!summary.isEmpty())
+        textOrder.append(AccessibilityText(summary, SummaryText));
+}
+    
 String AccessibilityImageMapLink::accessibilityDescription() const
 {
     const AtomicString& ariaLabel = getAttribute(aria_labelAttr);
@@ -119,17 +134,32 @@ String AccessibilityImageMapLink::title() const
     return String();
 }
 
-LayoutRect AccessibilityImageMapLink::elementRect() const
+RenderObject* AccessibilityImageMapLink::imageMapLinkRenderer() const
 {
     if (!m_mapElement.get() || !m_areaElement.get())
-        return LayoutRect();
+        return 0;
 
-    RenderObject* renderer;
+    RenderObject* renderer = 0;
     if (m_parent && m_parent->isAccessibilityRenderObject())
         renderer = static_cast<AccessibilityRenderObject*>(m_parent)->renderer();
     else
         renderer = m_mapElement->renderer();
     
+    return renderer;
+}
+    
+Path AccessibilityImageMapLink::elementPath() const
+{
+    RenderObject* renderer = imageMapLinkRenderer();
+    if (!renderer)
+        return Path();
+    
+    return m_areaElement->computePath(renderer);
+}
+    
+LayoutRect AccessibilityImageMapLink::elementRect() const
+{
+    RenderObject* renderer = imageMapLinkRenderer();
     if (!renderer)
         return LayoutRect();
     

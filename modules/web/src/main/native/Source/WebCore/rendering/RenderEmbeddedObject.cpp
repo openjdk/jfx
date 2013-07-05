@@ -24,10 +24,11 @@
 #include "config.h"
 #include "RenderEmbeddedObject.h"
 
+#include "CSSValueKeywords.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Cursor.h"
-#include "CSSValueKeywords.h"
+#include "EventHandler.h"
 #include "Font.h"
 #include "FontSelector.h"
 #include "Frame.h"
@@ -38,6 +39,7 @@
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLParamElement.h"
+#include "HTMLPlugInElement.h"
 #include "HitTestResult.h"
 #include "LocalizedStrings.h"
 #include "MIMETypeRegistry.h"
@@ -45,6 +47,7 @@
 #include "Page.h"
 #include "PaintInfo.h"
 #include "Path.h"
+#include "PlatformMouseEvent.h"
 #include "PluginViewBase.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
@@ -52,6 +55,11 @@
 #include "Settings.h"
 #include "Text.h"
 #include "TextRun.h"
+#include <wtf/StackStats.h>
+
+#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+#include "HTMLMediaElement.h"
+#endif
 
 namespace WebCore {
 
@@ -98,7 +106,7 @@ bool RenderEmbeddedObject::requiresLayer() const
 
 bool RenderEmbeddedObject::allowsAcceleratedCompositing() const
 {
-    return widget() && widget()->isPluginViewBase() && static_cast<PluginViewBase*>(widget())->platformLayer();
+    return widget() && widget()->isPluginViewBase() && toPluginViewBase(widget())->platformLayer();
 }
 #endif
 
@@ -109,8 +117,12 @@ static String unavailablePluginReplacementText(RenderEmbeddedObject::PluginUnava
         return missingPluginText();
     case RenderEmbeddedObject::PluginCrashed:
         return crashedPluginText();
+    case RenderEmbeddedObject::PluginBlockedByContentSecurityPolicy:
+        return blockedPluginByContentSecurityPolicyText();
     case RenderEmbeddedObject::InsecurePluginVersion:
         return insecurePluginVersionText();
+    case RenderEmbeddedObject::PluginInactive:
+        return inactivePluginText();
     }
 
     ASSERT_NOT_REACHED();
@@ -138,6 +150,49 @@ void RenderEmbeddedObject::setUnavailablePluginIndicatorIsPressed(bool pressed)
     
     m_unavailablePluginIndicatorIsPressed = pressed;
     repaint();
+}
+
+void RenderEmbeddedObject::paintSnapshotImage(PaintInfo& paintInfo, const LayoutPoint& paintOffset, Image* image)
+{
+    LayoutUnit cWidth = contentWidth();
+    LayoutUnit cHeight = contentHeight();
+    if (!cWidth || !cHeight)
+        return;
+
+    GraphicsContext* context = paintInfo.context;
+    LayoutSize contentSize(cWidth, cHeight);
+    LayoutPoint contentLocation = location() + paintOffset;
+    contentLocation.move(borderLeft() + paddingLeft(), borderTop() + paddingTop());
+
+    LayoutRect rect(contentLocation, contentSize);
+    IntRect alignedRect = pixelSnappedIntRect(rect);
+    if (alignedRect.width() <= 0 || alignedRect.height() <= 0)
+        return;
+
+    bool useLowQualityScaling = shouldPaintAtLowQuality(context, image, image, alignedRect.size());
+    context->drawImage(image, style()->colorSpace(), alignedRect, CompositeSourceOver, shouldRespectImageOrientation(), useLowQualityScaling);
+}
+
+void RenderEmbeddedObject::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
+{
+    Element* element = toElement(node());
+    if (!element || !element->isPluginElement())
+        return;
+
+    HTMLPlugInElement* plugInElement = toHTMLPlugInElement(element);
+
+    if (plugInElement->displayState() > HTMLPlugInElement::DisplayingSnapshot) {
+        RenderPart::paintContents(paintInfo, paintOffset);
+        if (!plugInElement->isRestartedPlugin())
+            return;
+    }
+
+    if (!plugInElement->isPlugInImageElement())
+        return;
+
+    Image* snapshot = toHTMLPlugInImageElement(plugInElement)->snapshotImage();
+    if (snapshot)
+        paintSnapshotImage(paintInfo, paintOffset, snapshot);
 }
 
 void RenderEmbeddedObject::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -226,10 +281,13 @@ bool RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumul
 
 void RenderEmbeddedObject::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
-    computeLogicalWidth();
-    computeLogicalHeight();
+    LayoutSize oldSize = contentBoxRect().size();
+
+    updateLogicalWidth();
+    updateLogicalHeight();
 
     RenderPart::layout();
 
@@ -238,17 +296,64 @@ void RenderEmbeddedObject::layout()
 
     updateLayerTransform();
 
-    if (!widget() && frameView())
+    bool wasMissingWidget = false;
+    if (!widget() && frameView() && canHaveWidget()) {
+        wasMissingWidget = true;
         frameView()->addWidgetToUpdate(this);
+    }
 
     setNeedsLayout(false);
+
+    LayoutSize newSize = contentBoxRect().size();
+
+    if (!wasMissingWidget && newSize.width() >= oldSize.width() && newSize.height() >= oldSize.height()) {
+        Element* element = toElement(node());
+        if (element && element->isPluginElement() && toHTMLPlugInElement(element)->isPlugInImageElement()) {
+            HTMLPlugInImageElement* plugInImageElement = toHTMLPlugInImageElement(element);
+            if (plugInImageElement->displayState() > HTMLPlugInElement::DisplayingSnapshot && plugInImageElement->snapshotDecision() == HTMLPlugInImageElement::MaySnapshotWhenResized && document()->view()) {
+                plugInImageElement->setNeedsCheckForSizeChange();
+                document()->view()->addWidgetToUpdate(this);
+            }
+        }
+    }
+
+    if (!canHaveChildren())
+        return;
+
+    // This code copied from RenderMedia::layout().
+    RenderObject* child = m_children.firstChild();
+
+    if (!child)
+        return;
+
+    RenderBox* childBox = toRenderBox(child);
+
+    if (!childBox)
+        return;
+    
+    if (newSize == oldSize && !childBox->needsLayout())
+        return;
+    
+    // When calling layout() on a child node, a parent must either push a LayoutStateMaintainter, or
+    // instantiate LayoutStateDisabler. Since using a LayoutStateMaintainer is slightly more efficient,
+    // and this method will be called many times per second during playback, use a LayoutStateMaintainer:
+    LayoutStateMaintainer statePusher(view(), this, locationOffset(), hasTransform() || hasReflection() || style()->isFlippedBlocksWritingMode());
+    
+    childBox->setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
+    childBox->style()->setHeight(Length(newSize.height(), Fixed));
+    childBox->style()->setWidth(Length(newSize.width(), Fixed));
+    childBox->setNeedsLayout(true, MarkOnlyThis);
+    childBox->layout();
+    setChildNeedsLayout(false);
+    
+    statePusher.pop();
 }
 
 void RenderEmbeddedObject::viewCleared()
 {
     // This is required for <object> elements whose contents are rendered by WebCore (e.g. src="foo.html").
     if (node() && widget() && widget()->isFrameView()) {
-        FrameView* view = static_cast<FrameView*>(widget());
+        FrameView* view = toFrameView(widget());
         int marginWidth = -1;
         int marginHeight = -1;
         if (node()->hasTagName(iframeTag)) {
@@ -263,16 +368,16 @@ void RenderEmbeddedObject::viewCleared()
     }
 }
 
-bool RenderEmbeddedObject::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)
+bool RenderEmbeddedObject::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)
 {
-    if (!RenderPart::nodeAtPoint(request, result, pointInContainer, accumulatedOffset, hitTestAction))
+    if (!RenderPart::nodeAtPoint(request, result, locationInContainer, accumulatedOffset, hitTestAction))
         return false;
 
     if (!widget() || !widget()->isPluginViewBase())
         return true;
 
-    PluginViewBase* view = static_cast<PluginViewBase*>(widget());
-    IntPoint roundedPoint = pointInContainer.roundedPoint();
+    PluginViewBase* view = toPluginViewBase(widget());
+    IntPoint roundedPoint = locationInContainer.roundedPoint();
 
     if (Scrollbar* horizontalScrollbar = view->horizontalScrollbar()) {
         if (horizontalScrollbar->shouldParticipateInHitTesting() && horizontalScrollbar->frameRect().contains(roundedPoint)) {
@@ -296,7 +401,7 @@ bool RenderEmbeddedObject::scroll(ScrollDirection direction, ScrollGranularity g
     if (!widget() || !widget()->isPluginViewBase())
         return false;
 
-    return static_cast<PluginViewBase*>(widget())->scroll(direction, granularity);
+    return toPluginViewBase(widget())->scroll(direction, granularity);
 }
 
 bool RenderEmbeddedObject::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, float multiplier, Node** stopNode)
@@ -320,13 +425,13 @@ bool RenderEmbeddedObject::isInUnavailablePluginIndicator(const LayoutPoint& poi
 
 bool RenderEmbeddedObject::isInUnavailablePluginIndicator(MouseEvent* event) const
 {
-    return isInUnavailablePluginIndicator(roundedLayoutPoint(absoluteToLocal(event->absoluteLocation(), false, true)));
+    return isInUnavailablePluginIndicator(roundedLayoutPoint(absoluteToLocal(event->absoluteLocation(), UseTransforms)));
 }
 
 static bool shouldUnavailablePluginMessageBeButton(Document* document, RenderEmbeddedObject::PluginUnavailabilityReason pluginUnavailabilityReason)
 {
     Page* page = document->page();
-    return page && page->chrome()->client()->shouldUnavailablePluginMessageBeButton(pluginUnavailabilityReason);
+    return page && page->chrome().client()->shouldUnavailablePluginMessageBeButton(pluginUnavailabilityReason);
 }
 
 void RenderEmbeddedObject::handleUnavailablePluginIndicatorEvent(Event* event)
@@ -338,7 +443,7 @@ void RenderEmbeddedObject::handleUnavailablePluginIndicatorEvent(Event* event)
         return;
     
     MouseEvent* mouseEvent = static_cast<MouseEvent*>(event);
-    HTMLPlugInElement* element = static_cast<HTMLPlugInElement*>(node());
+    HTMLPlugInElement* element = toHTMLPlugInElement(node());
     if (event->type() == eventNames().mousedownEvent && static_cast<MouseEvent*>(event)->button() == LeftButton) {
         m_mouseDownWasInUnavailablePluginIndicator = isInUnavailablePluginIndicator(mouseEvent);
         if (m_mouseDownWasInUnavailablePluginIndicator) {
@@ -360,7 +465,7 @@ void RenderEmbeddedObject::handleUnavailablePluginIndicatorEvent(Event* event)
         }
         if (m_mouseDownWasInUnavailablePluginIndicator && isInUnavailablePluginIndicator(mouseEvent)) {
             if (Page* page = document()->page())
-                page->chrome()->client()->unavailablePluginButtonClicked(element, m_pluginUnavailabilityReason);
+                page->chrome().client()->unavailablePluginButtonClicked(element, m_pluginUnavailabilityReason);
         }
         m_mouseDownWasInUnavailablePluginIndicator = false;
         event->setDefaultHandled();
@@ -378,6 +483,22 @@ CursorDirective RenderEmbeddedObject::getCursor(const LayoutPoint& point, Cursor
         return SetCursor;
     }
     return RenderPart::getCursor(point, cursor);
+}
+
+bool RenderEmbeddedObject::canHaveChildren() const
+{
+#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+    if (!node())
+        return false;
+
+    if (toElement(node())->isMediaElement())
+        return true;
+#endif
+
+    if (isSnapshottedPlugIn())
+        return true;
+
+    return false;
 }
 
 }

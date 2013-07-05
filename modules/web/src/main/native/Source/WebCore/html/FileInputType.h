@@ -45,9 +45,13 @@ class FileList;
 class FileInputType : public BaseClickableWithKeyInputType, private FileChooserClient, private FileIconLoaderClient {
 public:
     static PassOwnPtr<InputType> create(HTMLInputElement*);
+    virtual ~FileInputType();
+
+    static Vector<FileChooserFileInfo> filesFromFormControlState(const FormControlState&);
 
 private:
     FileInputType(HTMLInputElement*);
+
     virtual const AtomicString& formControlType() const OVERRIDE;
     virtual FormControlState saveFormControlState() const OVERRIDE;
     virtual void restoreFormControlState(const FormControlState&) OVERRIDE;
@@ -70,6 +74,7 @@ private:
     virtual Icon* icon() const OVERRIDE;
     virtual bool isFileUpload() const OVERRIDE;
     virtual void createShadowSubtree() OVERRIDE;
+    virtual void disabledAttributeChanged() OVERRIDE;
     virtual void multipleAttributeChanged() OVERRIDE;
     virtual String defaultToolTip() const OVERRIDE;
 
@@ -84,6 +89,11 @@ private:
     void receiveDropForDirectoryUpload(const Vector<String>&);
 #endif
     void requestIcon(const Vector<String>&);
+
+    void applyFileChooserSettings(const FileChooserSettings&);
+
+    RefPtr<FileChooser> m_fileChooser;
+    RefPtr<FileIconLoader> m_fileIconLoader;
 
     RefPtr<FileList> m_fileList;
     RefPtr<Icon> m_icon;

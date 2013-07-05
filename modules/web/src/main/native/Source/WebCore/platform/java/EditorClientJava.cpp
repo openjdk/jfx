@@ -6,6 +6,7 @@
 #include "NotImplemented.h"
 
 #include "CharacterData.h"
+#include "Document.h"
 #include "EditCommand.h"
 #include "Editor.h"
 #include "NodeList.h"
@@ -19,9 +20,10 @@
 #include "PlatformKeyboardEvent.h"
 #include "TextIterator.h"
 #include "Widget.h"
-#include "visible_units.h"
+//#include "visible_units.h"
 
 #include <wtf/Assertions.h>
+
 #include <iostream>
 
 #include "com_sun_webkit_event_WCKeyEvent.h"
@@ -30,8 +32,9 @@ using namespace std;
 
 namespace WebCore {
 
+
 EditorClientJava::EditorClientJava(const JLObject &webPage)
-    : m_webPage(webPage)
+    : m_webPage(webPage), m_isInRedo(false)
 {
 }
 
@@ -283,7 +286,7 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
         return false;
 
     String commandName = interpretKeyEvent(evt);
-    Editor::Command command = frame->editor()->command(commandName);
+    Editor::Command command = frame->editor().command(commandName);
 
     if (keyEvent->type() == PlatformKeyboardEvent::RawKeyDown) {
         // WebKit doesn't have enough information about mode to decide how
@@ -338,10 +341,10 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
 #endif
     }
 
-    if (!frame->editor()->canEdit())
+    if (!frame->editor().canEdit())
         return false;
 
-    return frame->editor()->insertText(evt->keyEvent()->text(), evt);
+    return frame->editor().insertText(evt->keyEvent()->text(), evt);
 }
 
 void EditorClientJava::handleKeyboardEvent(KeyboardEvent* evt)
@@ -357,10 +360,12 @@ bool EditorClientJava::shouldDeleteRange(Range*)
     return true;
 }
 
+#if ENABLE(DELETION_UI)
 bool EditorClientJava::shouldShowDeleteInterface(HTMLElement*)
 {
     return false;
 }
+#endif
 
 bool EditorClientJava::isContinuousSpellCheckingEnabled()
 {
@@ -427,19 +432,19 @@ void EditorClientJava::respondToChangedContents()
 void EditorClientJava::respondToChangedSelection(Frame *frame)
 {
     //Frame* frame = page()->focusController()->focusedOrMainFrame();
-    if (!frame || !frame->editor()->hasComposition()
-        || frame->editor()->ignoreCompositionSelectionChange()) {
+    if (!frame || !frame->editor().hasComposition()
+        || frame->editor().ignoreCompositionSelectionChange()) {
         return;
     }
     unsigned start, end;
-    if (!frame->editor()->getCompositionSelection(start, end)) {
+    if (!frame->editor().getCompositionSelection(start, end)) {
         // Commit composed text here outside the Java Input Method
         // Framework. InputContext.endComposition() will be called
         // later through a setInputMethodState() call. The
         // endComposition call will generate an InputMethodEvent with
         // committed text which will be ignored in
         // JWebPane.processInputMethodEvent().
-        frame->editor()->cancelComposition();
+        frame->editor().cancelComposition();
         setInputMethodState(false);
     }
 }
@@ -459,32 +464,38 @@ void EditorClientJava::didSetSelectionTypesForPasteboard()
     notImplemented();
 }
 
-bool EditorClientJava::selectWordBeforeMenuEvent()
-{
-    notImplemented();
-    return false;
-}
-
 bool EditorClientJava::canUndo() const
 {
-    notImplemented();
-    return false;
+    return !m_undoStack.isEmpty();
 }
 
 bool EditorClientJava::canRedo() const
 {
-    notImplemented();
-    return false;
+    return !m_redoStack.isEmpty();
 }
 
 void EditorClientJava::undo()
 {
-    notImplemented();
+    if (canUndo()) {
+        RefPtr<WebCore::UndoStep> step(*(--m_undoStack.end()));
+        m_undoStack.remove(--m_undoStack.end());
+        // unapply will call us back to push this command onto the redo stack.
+        step->unapply();
+    }
 }
 
 void EditorClientJava::redo()
 {
-    notImplemented();
+    if (canRedo()) {
+        RefPtr<WebCore::UndoStep> step(*(--m_redoStack.end()));
+        m_redoStack.remove(--m_redoStack.end());
+
+        ASSERT(!m_isInRedo);
+        m_isInRedo = true;
+        // reapply will call us back to push this command onto the undo stack.
+        step->reapply();
+        m_isInRedo = false;
+    }
 }
 
 bool EditorClientJava::shouldInsertNode(Node*, Range*, EditorInsertAction)
@@ -540,32 +551,6 @@ void EditorClientJava::textDidChangeInTextArea(Element*)
     notImplemented();
 }
 
-void EditorClientJava::ignoreWordInSpellDocument(const String&)
-{
-    notImplemented();
-}
-
-void EditorClientJava::learnWord(const String&)
-{
-    notImplemented();
-}
-
-void EditorClientJava::checkSpellingOfString(const UChar*, int, int*, int*)
-{
-    notImplemented();
-}
-
-String EditorClientJava::getAutoCorrectSuggestionForMisspelledWord(const String& misspelledWord)
-{
-    notImplemented();
-    return "EditorClientJava::getAutoCorrectSuggestionForMisspelledWord";
-}
-
-void EditorClientJava::checkGrammarOfString(const UChar*, int, Vector<GrammarDetail>&, int*, int*)
-{
-    notImplemented();
-}
-
 void EditorClientJava::updateSpellingUIWithGrammarString(const String&, const GrammarDetail&)
 {
     notImplemented();
@@ -587,10 +572,6 @@ bool EditorClientJava::spellingUIIsShowing()
     return false;
 }
 
-void EditorClientJava::getGuessesForWord(const String&, Vector<String>&)
-{
-    notImplemented();
-}
 
 bool EditorClientJava::shouldMoveRangeAfterDelete(Range*, Range*)
 {
@@ -633,6 +614,40 @@ bool EditorClientJava::canCopyCut(Frame*, bool defaultValue) const
 bool EditorClientJava::canPaste(Frame*, bool defaultValue) const
 {
     return defaultValue;
+}
+
+void EditorClientJava::frameWillDetachPage(Frame*)
+{
+    notImplemented();
+}
+
+const int gc_maximumm_undoStackDepth = 1000;
+void EditorClientJava::registerUndoStep(PassRefPtr<UndoStep> step)
+{
+    if (m_undoStack.size() == gc_maximumm_undoStackDepth)
+        m_undoStack.removeFirst();
+    if (!m_isInRedo)
+        m_redoStack.clear();
+    m_undoStack.append(step);
+}
+
+void EditorClientJava::registerRedoStep(PassRefPtr<UndoStep> step)
+{
+    m_redoStack.append(step);
+}
+
+void EditorClientJava::clearUndoRedoOperations()
+{
+    m_undoStack.clear();
+    m_redoStack.clear();
+}
+
+void EditorClientJava::getClientPasteboardDataForRange(Range*, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
+{
+}
+
+void EditorClientJava::willWriteSelectionToPasteboard(Range*)
+{
 }
 
 

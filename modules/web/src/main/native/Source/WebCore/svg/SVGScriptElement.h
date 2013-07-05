@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-class SVGScriptElement : public SVGElement
+class SVGScriptElement FINAL : public SVGElement
                        , public SVGURIReference
                        , public SVGExternalResourcesRequired
                        , public ScriptElement {
@@ -45,7 +45,7 @@ private:
     SVGScriptElement(const QualifiedName&, Document*, bool wasInsertedByParser, bool alreadyStarted);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
 
@@ -75,6 +75,7 @@ private:
     virtual void setHaveFiredLoadEvent(bool haveFiredLoadEvent) { ScriptElement::setHaveFiredLoadEvent(haveFiredLoadEvent); }
     virtual bool isParserInserted() const { return ScriptElement::isParserInserted(); }
     virtual bool haveFiredLoadEvent() const { return ScriptElement::haveFiredLoadEvent(); }
+    virtual Timer<SVGElement>* svgLoadEventTimer() OVERRIDE { return &m_svgLoadEventTimer; }
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGScriptElement)
         DECLARE_ANIMATED_STRING(Href, href)
@@ -82,6 +83,7 @@ private:
     END_DECLARE_ANIMATED_PROPERTIES
 
     String m_type;
+    Timer<SVGElement> m_svgLoadEventTimer;
 };
 
 } // namespace WebCore

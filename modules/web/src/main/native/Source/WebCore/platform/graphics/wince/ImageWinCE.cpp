@@ -31,17 +31,17 @@
 #include "GraphicsContext.h"
 #include "ImageDecoder.h"
 #include "NotImplemented.h"
-#include "PlatformString.h"
 #include "SharedBuffer.h"
 #include "TransformationMatrix.h"
 #include "WinceGraphicsExtras.h"
 #include <wtf/OwnPtr.h>
+#include <wtf/text/WTFString.h>
 
 #include <windows.h>
 
 namespace WebCore {
 
-NativeImagePtr ImageFrame::asNewNativeImage() const
+PassNativeImagePtr ImageFrame::asNewNativeImage() const
 {
     return SharedBitmap::create(m_backingStore, m_size, hasAlpha());
 }
@@ -80,7 +80,7 @@ bool BitmapImage::getHBITMAPOfSize(HBITMAP bmp, LPSIZE size)
         if (size)
             drawFrameMatchingSourceSize(&gc, FloatRect(0, 0, bmpInfo.bmWidth, bmpInfo.bmHeight), IntSize(*size), ColorSpaceDeviceRGB, CompositeCopy);
         else
-            draw(&gc, FloatRect(0, 0, bmpInfo.bmWidth, bmpInfo.bmHeight), FloatRect(0, 0, imageSize.width(), imageSize.height()), ColorSpaceDeviceRGB, CompositeCopy);
+            draw(&gc, FloatRect(0, 0, bmpInfo.bmWidth, bmpInfo.bmHeight), FloatRect(0, 0, imageSize.width(), imageSize.height()), ColorSpaceDeviceRGB, CompositeCopy, BlendModeNormal);
     }
 
     SelectObject(hdc.get(), hOldBmp);
@@ -98,17 +98,17 @@ void BitmapImage::drawFrameMatchingSourceSize(GraphicsContext* ctxt, const Float
 
         size_t currentFrame = m_currentFrame;
         m_currentFrame = i;
-        draw(ctxt, dstRect, FloatRect(0, 0, srcSize.width(), srcSize.height()), styleColorSpace, compositeOp);
+        draw(ctxt, dstRect, FloatRect(0, 0, srcSize.width(), srcSize.height()), styleColorSpace, compositeOp, BlendModeNormal);
         m_currentFrame = currentFrame;
         return;
     }
 
     // No image of the correct size was found, fallback to drawing the current frame
     IntSize imageSize = BitmapImage::size();
-    draw(ctxt, dstRect, FloatRect(0, 0, imageSize.width(), imageSize.height()), styleColorSpace, compositeOp);
+    draw(ctxt, dstRect, FloatRect(0, 0, imageSize.width(), imageSize.height()), styleColorSpace, compositeOp, BlendModeNormal);
 }
 
-void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& dstRect, const FloatRect& srcRectIn, ColorSpace styleColorSpace, CompositeOperator compositeOp)
+void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& dstRect, const FloatRect& srcRectIn, ColorSpace styleColorSpace, CompositeOperator compositeOp, BlendMode blendMode)
 {
     if (!m_source.initialized())
         return;
@@ -118,7 +118,7 @@ void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& dstRect, const Fl
     else {
         IntRect intSrcRect(srcRectIn);
         RefPtr<SharedBitmap> bmp = frameAtIndex(m_currentFrame);
-
+        if (bmp) {
         if (bmp->width() != m_source.size().width()) {
             double scaleFactor = static_cast<double>(bmp->width()) / m_source.size().width();
 
@@ -127,14 +127,15 @@ void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& dstRect, const Fl
             intSrcRect.setY(stableRound(srcRectIn.y() * scaleFactor));
             intSrcRect.setHeight(stableRound(srcRectIn.height() * scaleFactor));
         }
-        bmp->draw(ctxt, enclosingIntRect(dstRect), intSrcRect, styleColorSpace, compositeOp);
+            bmp->draw(ctxt, enclosingIntRect(dstRect), intSrcRect, styleColorSpace, compositeOp, blendMode);
+        }
     }
 
     startAnimation();
 }
 
 void Image::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRect, const AffineTransform& patternTransform,
-                        const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator op, const FloatRect& destRect)
+    const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator op, const FloatRect& destRect, BlendMode blendMode)
 {
     notImplemented();
 }

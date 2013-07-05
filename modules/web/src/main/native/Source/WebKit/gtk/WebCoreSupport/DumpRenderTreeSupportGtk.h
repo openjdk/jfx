@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) Research In Motion Limited 2010. All rights reserved.
+ *  Copyright (C) 2012 Apple Inc. All Rights Reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,6 +21,7 @@
 #define DumpRenderTreeSupportGtk_h
 
 #include "JSStringRef.h"
+#include "PageVisibilityState.h"
 #include <atk/atk.h>
 #include <glib.h>
 #include <webkit/webkitdefines.h>
@@ -50,8 +52,6 @@ public:
 
     static void setLinksIncludedInFocusChain(bool);
     static bool linksIncludedInFocusChain();
-    static void setSelectTrailingWhitespaceEnabled(bool);
-    static bool selectTrailingWhitespaceEnabled();
 
     static void clearOpener(WebKitWebFrame*);
 
@@ -59,36 +59,23 @@ public:
     static GSList* getFrameChildren(WebKitWebFrame*);
     static WTF::CString getInnerText(WebKitWebFrame*);
     static WTF::CString dumpRenderTree(WebKitWebFrame*);
-    static int pageNumberForElementById(WebKitWebFrame*, const char* id, float pageWidth, float pageHeight);
-    static int numberOfPagesForFrame(WebKitWebFrame*, float pageWidth, float pageHeight);
-    static WTF::CString pageProperty(WebKitWebFrame*, const char* propertyName, int pageNumber);
-    static WTF::CString pageSizeAndMarginsInPixels(WebKitWebFrame*, int pageNumber, int width, int height, int marginTop, int marginRight, int marginBottom, int marginLeft);
+    static void addUserScript(WebKitWebFrame*, const char*, bool, bool);
     static void addUserStyleSheet(WebKitWebFrame*, const char* sourceCode, bool allFrames);
     static guint getPendingUnloadEventCount(WebKitWebFrame*);
-    static bool pauseAnimation(WebKitWebFrame*, const char* name, double time, const char* element);
-    static bool pauseTransition(WebKitWebFrame*, const char* name, double time, const char* element);
-    static WTF::CString markerTextForListItem(WebKitWebFrame*, JSContextRef, JSValueRef nodeObject);
-    static unsigned int numberOfActiveAnimations(WebKitWebFrame*);
     static void clearMainFrameName(WebKitWebFrame*);
     static AtkObject* getFocusedAccessibleElement(WebKitWebFrame*);
     static AtkObject* getRootAccessibleElement(WebKitWebFrame*);
     static void layoutFrame(WebKitWebFrame*);
-    static void setAutofilled(JSContextRef, JSValueRef, bool);
     static void setValueForUser(JSContextRef, JSValueRef, JSStringRef);
     static bool shouldClose(WebKitWebFrame*);
-    static bool elementDoesAutoCompleteForElementWithId(WebKitWebFrame*, JSStringRef);
-    static JSValueRef computedStyleIncludingVisitedInfo(JSContextRef, JSValueRef);
 
     // WebKitWebView
     static void executeCoreCommandByName(WebKitWebView*, const gchar* name, const gchar* value);
     static bool isCommandEnabled(WebKitWebView*, const gchar* name);
     static bool findString(WebKitWebView*, const gchar*, WebKitFindOptions);
-    static double defaultMinimumTimerInterval(); // Not really tied to WebView
-    static void setMinimumTimerInterval(WebKitWebView*, double);
     static void rectangleForSelection(WebKitWebFrame*, cairo_rectangle_int_t*);
     static void scalePageBy(WebKitWebView*, float, float, float);
     static void setDefersLoading(WebKitWebView*, bool);
-    static void setSmartInsertDeleteEnabled(WebKitWebView*, bool);
     static void forceWebViewPaint(WebKitWebView*);
 
     // Accessibility
@@ -110,17 +97,21 @@ public:
     static void whiteListAccessFromOrigin(const gchar* sourceOrigin, const gchar* destinationProtocol, const gchar* destinationHost, bool allowDestinationSubdomains);
     static void removeWhiteListAccessFromOrigin(const char* sourceOrigin, const char* destinationProtocol, const char* destinationHost, bool allowDestinationSubdomains);
     static void resetOriginAccessWhiteLists();
-    static unsigned int workerThreadCount();
 
     static void resetGeolocationClientMock(WebKitWebView*);
     static void setMockGeolocationPermission(WebKitWebView*, bool allowed);
     static void setMockGeolocationPosition(WebKitWebView*, double latitude, double longitude, double accuracy);
-    static void setMockGeolocationError(WebKitWebView*, int errorCode, const gchar* errorMessage);
+    static void setMockGeolocationPositionUnavailableError(WebKitWebView*, const gchar* errorMessage);
     static int numberOfPendingGeolocationPermissionRequests(WebKitWebView*);
 
     static void setPageCacheSupportsPlugins(WebKitWebView*, bool enabled);
     static void setCSSGridLayoutEnabled(WebKitWebView*, bool enabled);
     static void setCSSRegionsEnabled(WebKitWebView*, bool enabled);
+    static void setCSSCustomFilterEnabled(WebKitWebView*, bool enabled);
+    static void setExperimentalContentSecurityPolicyFeaturesEnabled(bool);
+    static void setSeamlessIFramesEnabled(bool);
+    static void setShadowDOMEnabled(bool);
+    static void setStyleScopedEnabled(bool);
 
     static void deliverAllMutationsIfNecessary();
     static void setDomainRelaxationForbiddenForURLScheme(bool forbidden, const char* urlScheme);
@@ -131,10 +122,28 @@ public:
     static GSList* trackedRepaintRects(WebKitWebFrame*);
     static void resetTrackedRepaints(WebKitWebFrame*);
 
+    static void clearMemoryCache();
+    static void clearApplicationCache();
+
+    enum FrameLoadEvent {
+        WillPerformClientRedirectToURL,
+        DidCancelClientRedirect,
+        DidReceiveServerRedirectForProvisionalLoad,
+        DidDisplayInsecureContent,
+        DidDetectXSS,
+    };
+    typedef void (*FrameLoadEventCallback)(WebKitWebFrame*, FrameLoadEvent, const char* url);
+    static void setFrameLoadEventCallback(FrameLoadEventCallback);
+    static FrameLoadEventCallback s_frameLoadEventCallback;
+
+    typedef bool (*AuthenticationCallback) (CString& username, CString& password);
+    static void setAuthenticationCallback(AuthenticationCallback);
+    static AuthenticationCallback s_authenticationCallback;
+    static void setPageVisibility(WebKitWebView*, WebCore::PageVisibilityState, bool);
+
 private:
     static bool s_drtRun;
     static bool s_linksIncludedInTabChain;
-    static bool s_selectTrailingWhitespaceEnabled;
 };
 
 #endif

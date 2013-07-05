@@ -42,6 +42,7 @@ namespace JSC {
 class Heap;
 
 class GCActivityCallback : public HeapTimer {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual void didAllocate(size_t) { }
     virtual void willCollect() { }
@@ -51,14 +52,14 @@ public:
 
 protected:
 #if USE(CF)
-    GCActivityCallback(JSGlobalData* globalData, CFRunLoopRef runLoop)
-        : HeapTimer(globalData, runLoop)
+    GCActivityCallback(VM* vm, CFRunLoopRef runLoop)
+        : HeapTimer(vm, runLoop)
         , m_enabled(true)
     {
     }
 # else
-    GCActivityCallback(JSGlobalData* globalData)
-        : HeapTimer(globalData)
+    GCActivityCallback(VM* vm)
+        : HeapTimer(vm)
         , m_enabled(true)
     {
     }
@@ -69,7 +70,7 @@ protected:
 
 class DefaultGCActivityCallback : public GCActivityCallback {
 public:
-    static DefaultGCActivityCallback* create(Heap*);
+    static PassOwnPtr<DefaultGCActivityCallback> create(Heap*);
 
     DefaultGCActivityCallback(Heap*);
 
@@ -82,7 +83,9 @@ public:
 #if USE(CF)
 protected:
     DefaultGCActivityCallback(Heap*, CFRunLoopRef);
-    
+#endif
+#if USE(CF) || PLATFORM(QT)
+protected:
     void cancelTimer();
     void scheduleTimer(double);
     
@@ -91,9 +94,9 @@ private:
 #endif
 };
 
-inline DefaultGCActivityCallback* DefaultGCActivityCallback::create(Heap* heap)
+inline PassOwnPtr<DefaultGCActivityCallback> DefaultGCActivityCallback::create(Heap* heap)
 {
-    return new DefaultGCActivityCallback(heap);
+    return adoptPtr(new DefaultGCActivityCallback(heap));
 }
 
 }

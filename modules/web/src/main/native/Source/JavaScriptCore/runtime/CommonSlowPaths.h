@@ -43,7 +43,7 @@ namespace JSC {
 
 namespace CommonSlowPaths {
 
-ALWAYS_INLINE ExecState* arityCheckFor(ExecState* exec, RegisterFile* registerFile, CodeSpecializationKind kind)
+ALWAYS_INLINE ExecState* arityCheckFor(ExecState* exec, JSStack* stack, CodeSpecializationKind kind)
 {
     JSFunction* callee = jsCast<JSFunction*>(exec->callee());
     ASSERT(!callee->isHostFunction());
@@ -51,7 +51,7 @@ ALWAYS_INLINE ExecState* arityCheckFor(ExecState* exec, RegisterFile* registerFi
     int argumentCountIncludingThis = exec->argumentCountIncludingThis();
 
     // This ensures enough space for the worst case scenario of zero arguments passed by the caller.
-    if (!registerFile->grow(exec->registers() + newCodeBlock->numParameters() + newCodeBlock->m_numCalleeRegisters))
+    if (!stack->grow(exec->registers() + newCodeBlock->numParameters() + newCodeBlock->m_numCalleeRegisters))
         return 0;
 
     ASSERT(argumentCountIncludingThis < newCodeBlock->numParameters());
@@ -71,36 +71,14 @@ ALWAYS_INLINE ExecState* arityCheckFor(ExecState* exec, RegisterFile* registerFi
         dst[i] = jsUndefined();
 
     ExecState* newExec = ExecState::create(dst);
-    ASSERT((void*)newExec <= registerFile->end());
+    ASSERT((void*)newExec <= stack->end());
     return newExec;
-}
-
-ALWAYS_INLINE bool opInstanceOfSlow(ExecState* exec, JSValue value, JSValue baseVal, JSValue proto)
-{
-    ASSERT(!value.isCell() || !baseVal.isCell() || !proto.isCell()
-           || !value.isObject() || !baseVal.isObject() || !proto.isObject() 
-           || !asObject(baseVal)->structure()->typeInfo().implementsDefaultHasInstance());
-
-
-    // ECMA-262 15.3.5.3:
-    // Throw an exception either if baseVal is not an object, or if it does not implement 'HasInstance' (i.e. is a function).
-    TypeInfo typeInfo(UnspecifiedType);
-    if (!baseVal.isObject() || !(typeInfo = asObject(baseVal)->structure()->typeInfo()).implementsHasInstance()) {
-        exec->globalData().exception = createInvalidParamError(exec, "instanceof", baseVal);
-        return false;
-    }
-    ASSERT(typeInfo.type() != UnspecifiedType);
-
-    if (!typeInfo.overridesHasInstance() && !value.isObject())
-        return false;
-
-    return asObject(baseVal)->methodTable()->hasInstance(asObject(baseVal), exec, value, proto);
 }
 
 inline bool opIn(ExecState* exec, JSValue propName, JSValue baseVal)
 {
     if (!baseVal.isObject()) {
-        exec->globalData().exception = createInvalidParamError(exec, "in", baseVal);
+        exec->vm().exception = createInvalidParamError(exec, "in", baseVal);
         return false;
     }
 
@@ -114,128 +92,11 @@ inline bool opIn(ExecState* exec, JSValue propName, JSValue baseVal)
         return baseObj->hasProperty(exec, jsCast<NameInstance*>(propName.asCell())->privateName());
 
     Identifier property(exec, propName.toString(exec)->value(exec));
-    if (exec->globalData().exception)
+    if (exec->vm().exception)
         return false;
     return baseObj->hasProperty(exec, property);
-}
-
-ALWAYS_INLINE JSValue opResolve(ExecState* exec, Identifier& ident)
-{
-    ScopeChainNode* scopeChain = exec->scopeChain();
-
-    ScopeChainIterator iter = scopeChain->begin();
-    ScopeChainIterator end = scopeChain->end();
-    ASSERT(iter != end);
-    
-    do {
-        JSObject* o = iter->get();
-        PropertySlot slot(o);
-        if (o->getPropertySlot(exec, ident, slot))
-            return slot.getValue(exec, ident);
-    } while (++iter != end);
-
-    exec->globalData().exception = createUndefinedVariableError(exec, ident);
-    return JSValue();
-}
-
-ALWAYS_INLINE JSValue opResolveSkip(ExecState* exec, Identifier& ident, int skip)
-{
-    ScopeChainNode* scopeChain = exec->scopeChain();
-
-    ScopeChainIterator iter = scopeChain->begin();
-    ScopeChainIterator end = scopeChain->end();
-    ASSERT(iter != end);
-    CodeBlock* codeBlock = exec->codeBlock();
-    bool checkTopLevel = codeBlock->codeType() == FunctionCode && codeBlock->needsFullScopeChain();
-    ASSERT(skip || !checkTopLevel);
-    if (checkTopLevel && skip--) {
-        if (exec->uncheckedR(codeBlock->activationRegister()).jsValue())
-            ++iter;
-    }
-    while (skip--) {
-        ++iter;
-        ASSERT(iter != end);
-    }
-    do {
-        JSObject* o = iter->get();
-        PropertySlot slot(o);
-        if (o->getPropertySlot(exec, ident, slot))
-            return slot.getValue(exec, ident);
-    } while (++iter != end);
-
-    exec->globalData().exception = createUndefinedVariableError(exec, ident);
-    return JSValue();
-}
-
-ALWAYS_INLINE JSValue opResolveWithBase(ExecState* exec, Identifier& ident, Register& baseSlot)
-{
-    ScopeChainNode* scopeChain = exec->scopeChain();
-
-    ScopeChainIterator iter = scopeChain->begin();
-    ScopeChainIterator end = scopeChain->end();
-
-    // FIXME: add scopeDepthIsZero optimization
-
-    ASSERT(iter != end);
-
-    JSObject* base;
-    do {
-        base = iter->get();
-        PropertySlot slot(base);
-        if (base->getPropertySlot(exec, ident, slot)) {
-            JSValue result = slot.getValue(exec, ident);
-            if (exec->globalData().exception)
-                return JSValue();
-
-            baseSlot = JSValue(base);
-            return result;
-        }
-        ++iter;
-    } while (iter != end);
-
-    exec->globalData().exception = createUndefinedVariableError(exec, ident);
-    return JSValue();
-}
-
-ALWAYS_INLINE JSValue opResolveWithThis(ExecState* exec, Identifier& ident, Register& baseSlot)
-{
-    ScopeChainNode* scopeChain = exec->scopeChain();
-
-    ScopeChainIterator iter = scopeChain->begin();
-    ScopeChainIterator end = scopeChain->end();
-
-    // FIXME: add scopeDepthIsZero optimization
-
-    ASSERT(iter != end);
-
-    JSObject* base;
-    do {
-        base = iter->get();
-        ++iter;
-        PropertySlot slot(base);
-        if (base->getPropertySlot(exec, ident, slot)) {
-            JSValue result = slot.getValue(exec, ident);
-            if (exec->globalData().exception)
-                return JSValue();
-
-            // All entries on the scope chain should be EnvironmentRecords (activations etc),
-            // other then 'with' object, which are directly referenced from the scope chain,
-            // and the global object. If we hit either an EnvironmentRecord or a global
-            // object at the end of the scope chain, this is undefined. If we hit a non-
-            // EnvironmentRecord within the scope chain, pass the base as the this value.
-            if (iter == end || base->structure()->typeInfo().isEnvironmentRecord())
-                baseSlot = jsUndefined();
-            else
-                baseSlot = JSValue(base);
-            return result;
-        }
-    } while (iter != end);
-
-    exec->globalData().exception = createUndefinedVariableError(exec, ident);
-    return JSValue();
 }
 
 } } // namespace JSC::CommonSlowPaths
 
 #endif // CommonSlowPaths_h
-

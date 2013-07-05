@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,25 +31,25 @@
 
 #if ENABLE(SQL_DATABASE)
 
-#include "ChangeVersionWrapper.h"
+#include "ChangeVersionData.h"
 #include "CrossThreadTask.h"
+#include "DatabaseBackendContext.h"
 #include "DatabaseCallback.h"
 #include "DatabaseContext.h"
+#include "DatabaseManager.h"
 #include "DatabaseTask.h"
 #include "DatabaseThread.h"
 #include "DatabaseTracker.h"
 #include "Document.h"
-#include "InspectorDatabaseInstrumentation.h"
+#include "JSDOMWindow.h"
 #include "Logging.h"
 #include "NotImplemented.h"
 #include "Page.h"
 #include "SQLError.h"
+#include "SQLTransaction.h"
 #include "SQLTransactionCallback.h"
-#include "SQLTransactionClient.h"
-#include "SQLTransactionCoordinator.h"
 #include "SQLTransactionErrorCallback.h"
 #include "SQLiteStatement.h"
-#include "ScriptController.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "VoidCallback.h"
@@ -60,78 +60,28 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 
-#if USE(JSC)
-#include "JSDOMWindow.h"
-#endif
-
 namespace WebCore {
 
-class DatabaseCreationCallbackTask : public ScriptExecutionContext::Task {
-public:
-    static PassOwnPtr<DatabaseCreationCallbackTask> create(PassRefPtr<Database> database, PassRefPtr<DatabaseCallback> creationCallback)
+PassRefPtr<Database> Database::create(ScriptExecutionContext*, PassRefPtr<DatabaseBackendBase> backend)
     {
-        return adoptPtr(new DatabaseCreationCallbackTask(database, creationCallback));
+    // FIXME: Currently, we're only simulating the backend by return the
+    // frontend database as its own the backend. When we split the 2 apart,
+    // this create() function should be changed to be a factory method for
+    // instantiating the backend.
+    return static_cast<Database*>(backend.get());
     }
 
-    virtual void performTask(ScriptExecutionContext*)
-    {
-        m_creationCallback->handleEvent(m_database.get());
-    }
-
-private:
-    DatabaseCreationCallbackTask(PassRefPtr<Database> database, PassRefPtr<DatabaseCallback> callback)
-        : m_database(database)
-        , m_creationCallback(callback)
-    {
-    }
-
-    RefPtr<Database> m_database;
-    RefPtr<DatabaseCallback> m_creationCallback;
-};
-
-PassRefPtr<Database> Database::openDatabase(ScriptExecutionContext* context, const String& name,
-                                            const String& expectedVersion, const String& displayName,
-                                            unsigned long estimatedSize, PassRefPtr<DatabaseCallback> creationCallback,
-                                            ExceptionCode& e)
-{
-    if (!DatabaseTracker::tracker().canEstablishDatabase(context, name, displayName, estimatedSize)) {
-        LOG(StorageAPI, "Database %s for origin %s not allowed to be established", name.ascii().data(), context->securityOrigin()->toString().ascii().data());
-        return 0;
-    }
-
-    RefPtr<Database> database = adoptRef(new Database(context, name, expectedVersion, displayName, estimatedSize));
-
-    String errorMessage;
-    if (!database->openAndVerifyVersion(!creationCallback, e, errorMessage)) {
-        database->logErrorMessage(errorMessage);
-        DatabaseTracker::tracker().removeOpenDatabase(database.get());
-        return 0;
-    }
-
-    DatabaseTracker::tracker().setDatabaseDetails(context->securityOrigin(), name, displayName, estimatedSize);
-
-    DatabaseContext::from(context)->setHasOpenDatabases();
-
-    InspectorInstrumentation::didOpenDatabase(context, database, context->securityOrigin()->host(), name, expectedVersion);
-
-    if (database->isNew() && creationCallback.get()) {
-        LOG(StorageAPI, "Scheduling DatabaseCreationCallbackTask for database %p\n", database.get());
-        database->m_scriptExecutionContext->postTask(DatabaseCreationCallbackTask::create(database, creationCallback));
-    }
-
-    return database;
-}
-
-Database::Database(ScriptExecutionContext* context, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize)
-    : AbstractDatabase(context, name, expectedVersion, displayName, estimatedSize, AsyncDatabase)
-    , m_transactionInProgress(false)
-    , m_isTransactionQueueEnabled(true)
+Database::Database(PassRefPtr<DatabaseBackendContext> databaseContext,
+    const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize)
+    : DatabaseBase(databaseContext->scriptExecutionContext())
+    , DatabaseBackend(databaseContext, name, expectedVersion, displayName, estimatedSize)
+    , m_databaseContext(DatabaseBackend::databaseContext()->frontend())
     , m_deleted(false)
 {
     m_databaseThreadSecurityOrigin = m_contextThreadSecurityOrigin->isolatedCopy();
+    setFrontend(this);
 
-    ScriptController::initializeThreading();
-    ASSERT(databaseContext()->databaseThread());
+    ASSERT(m_databaseContext->databaseThread());
 }
 
 class DerefContextTask : public ScriptExecutionContext::Task {
@@ -170,25 +120,21 @@ Database::~Database()
     }
 }
 
+Database* Database::from(DatabaseBackend* backend)
+{
+    return static_cast<Database*>(backend->m_frontend);
+}
+
+PassRefPtr<DatabaseBackend> Database::backend()
+{
+    return this;
+}
+
 String Database::version() const
 {
     if (m_deleted)
         return String();
-    return AbstractDatabase::version();
-}
-
-bool Database::openAndVerifyVersion(bool setVersionInNewDatabase, ExceptionCode& e, String& errorMessage)
-{
-    DatabaseTaskSynchronizer synchronizer;
-    if (!databaseContext()->databaseThread() || databaseContext()->databaseThread()->terminationRequested(&synchronizer))
-        return false;
-
-    bool success = false;
-    OwnPtr<DatabaseOpenTask> task = DatabaseOpenTask::create(this, setVersionInNewDatabase, &synchronizer, e, errorMessage, success);
-    databaseContext()->databaseThread()->scheduleImmediateTask(task.release());
-    synchronizer.waitForTaskCompletion();
-
-    return success;
+    return DatabaseBackendBase::version();
 }
 
 void Database::markAsDeletedAndClose()
@@ -210,27 +156,6 @@ void Database::markAsDeletedAndClose()
     synchronizer.waitForTaskCompletion();
 }
 
-void Database::close()
-{
-    ASSERT(databaseContext()->databaseThread());
-    ASSERT(currentThread() == databaseContext()->databaseThread()->getThreadID());
-
-    {
-        MutexLocker locker(m_transactionInProgressMutex);
-        m_isTransactionQueueEnabled = false;
-        m_transactionInProgress = false;
-        m_transactionQueue.clear();
-    }
-
-    closeDatabase();
-
-    // Must ref() before calling databaseThread()->recordDatabaseClosed().
-    RefPtr<Database> protect = this;
-    databaseContext()->databaseThread()->recordDatabaseClosed(this);
-    databaseContext()->databaseThread()->unscheduleDatabaseTasks(this);
-    DatabaseTracker::tracker().removeOpenDatabase(this);
-}
-
 void Database::closeImmediately()
 {
     ASSERT(m_scriptExecutionContext->isContextThread());
@@ -241,38 +166,22 @@ void Database::closeImmediately()
     }
 }
 
-unsigned long long Database::maximumSize() const
-{
-    return DatabaseTracker::tracker().getMaxSizeForDatabase(this);
-}
-
-bool Database::performOpenAndVerify(bool setVersionInNewDatabase, ExceptionCode& e, String& errorMessage)
-{
-    if (AbstractDatabase::performOpenAndVerify(setVersionInNewDatabase, e, errorMessage)) {
-        if (databaseContext()->databaseThread())
-            databaseContext()->databaseThread()->recordDatabaseOpen(this);
-
-        return true;
-    }
-
-    return false;
-}
-
 void Database::changeVersion(const String& oldVersion, const String& newVersion,
                              PassRefPtr<SQLTransactionCallback> callback, PassRefPtr<SQLTransactionErrorCallback> errorCallback,
                              PassRefPtr<VoidCallback> successCallback)
 {
-    runTransaction(callback, errorCallback, successCallback, ChangeVersionWrapper::create(oldVersion, newVersion), false);
+    ChangeVersionData data(oldVersion, newVersion);
+    runTransaction(callback, errorCallback, successCallback, false, &data);
 }
 
 void Database::transaction(PassRefPtr<SQLTransactionCallback> callback, PassRefPtr<SQLTransactionErrorCallback> errorCallback, PassRefPtr<VoidCallback> successCallback)
 {
-    runTransaction(callback, errorCallback, successCallback, 0, false);
+    runTransaction(callback, errorCallback, successCallback, false);
 }
 
 void Database::readTransaction(PassRefPtr<SQLTransactionCallback> callback, PassRefPtr<SQLTransactionErrorCallback> errorCallback, PassRefPtr<VoidCallback> successCallback)
 {
-    runTransaction(callback, errorCallback, successCallback, 0, true);
+    runTransaction(callback, errorCallback, successCallback, true);
 }
 
 static void callTransactionErrorCallback(ScriptExecutionContext*, PassRefPtr<SQLTransactionErrorCallback> callback, PassRefPtr<SQLError> error)
@@ -281,57 +190,17 @@ static void callTransactionErrorCallback(ScriptExecutionContext*, PassRefPtr<SQL
 }
 
 void Database::runTransaction(PassRefPtr<SQLTransactionCallback> callback, PassRefPtr<SQLTransactionErrorCallback> errorCallback,
-                              PassRefPtr<VoidCallback> successCallback, PassRefPtr<SQLTransactionWrapper> wrapper, bool readOnly)
+    PassRefPtr<VoidCallback> successCallback, bool readOnly, const ChangeVersionData* changeVersionData)
 {
-    MutexLocker locker(m_transactionInProgressMutex);
-    if (!m_isTransactionQueueEnabled) {
-        if (errorCallback) {
+    RefPtr<SQLTransactionErrorCallback> anotherRefToErrorCallback = errorCallback;
+    RefPtr<SQLTransaction> transaction = SQLTransaction::create(this, callback, successCallback, anotherRefToErrorCallback, readOnly);
+
+    RefPtr<SQLTransactionBackend> transactionBackend;
+    transactionBackend = backend()->runTransaction(transaction.release(), readOnly, changeVersionData);
+    if (!transactionBackend && anotherRefToErrorCallback) {
             RefPtr<SQLError> error = SQLError::create(SQLError::UNKNOWN_ERR, "database has been closed");
-            scriptExecutionContext()->postTask(createCallbackTask(&callTransactionErrorCallback, errorCallback, error.release()));
+        scriptExecutionContext()->postTask(createCallbackTask(&callTransactionErrorCallback, anotherRefToErrorCallback, error.release()));
         }
-        return;
-    }
-    RefPtr<SQLTransaction> transaction = SQLTransaction::create(this, callback, errorCallback, successCallback, wrapper, readOnly);
-    m_transactionQueue.append(transaction.release());
-    if (!m_transactionInProgress)
-        scheduleTransaction();
-}
-
-void Database::inProgressTransactionCompleted()
-{
-    MutexLocker locker(m_transactionInProgressMutex);
-    m_transactionInProgress = false;
-    scheduleTransaction();
-}
-
-void Database::scheduleTransaction()
-{
-    ASSERT(!m_transactionInProgressMutex.tryLock()); // Locked by caller.
-    RefPtr<SQLTransaction> transaction;
-
-    if (m_isTransactionQueueEnabled && !m_transactionQueue.isEmpty())
-        transaction = m_transactionQueue.takeFirst();
-
-    if (transaction && databaseContext()->databaseThread()) {
-        OwnPtr<DatabaseTransactionTask> task = DatabaseTransactionTask::create(transaction);
-        LOG(StorageAPI, "Scheduling DatabaseTransactionTask %p for transaction %p\n", task.get(), task->transaction());
-        m_transactionInProgress = true;
-        databaseContext()->databaseThread()->scheduleTask(task.release());
-    } else
-        m_transactionInProgress = false;
-}
-
-void Database::scheduleTransactionStep(SQLTransaction* transaction, bool immediately)
-{
-    if (!databaseContext()->databaseThread())
-        return;
-
-    OwnPtr<DatabaseTransactionTask> task = DatabaseTransactionTask::create(transaction);
-    LOG(StorageAPI, "Scheduling DatabaseTransactionTask %p for the transaction step\n", task.get());
-    if (immediately)
-        databaseContext()->databaseThread()->scheduleImmediateTask(task.release());
-    else
-        databaseContext()->databaseThread()->scheduleTask(task.release());
 }
 
 class DeliverPendingCallbackTask : public ScriptExecutionContext::Task {
@@ -387,16 +256,6 @@ Vector<String> Database::performGetTableNames()
     }
 
     return tableNames;
-}
-
-SQLTransactionClient* Database::transactionClient() const
-{
-    return databaseContext()->databaseThread()->transactionClient();
-}
-
-SQLTransactionCoordinator* Database::transactionCoordinator() const
-{
-    return databaseContext()->databaseThread()->transactionCoordinator();
 }
 
 Vector<String> Database::tableNames()

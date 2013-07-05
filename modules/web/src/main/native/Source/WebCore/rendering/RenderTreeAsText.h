@@ -28,17 +28,16 @@
 #include "TextStream.h"
 
 #include <wtf/Forward.h>
-#include <wtf/MathExtras.h>
 
 namespace WebCore {
 
 class Element;
-class FractionalLayoutPoint;
 class FloatPoint;
 class FloatSize;
 class Frame;
 class IntPoint;
 class IntRect;
+class LayoutPoint;
 class RenderObject;
 class TextStream;
 
@@ -71,7 +70,7 @@ static void writeRenderObject(TextStream& ts, const RenderObject& o, RenderAsTex
 
 TextStream& operator<<(TextStream&, const IntPoint&);
 TextStream& operator<<(TextStream&, const IntRect&);
-TextStream& operator<<(TextStream&, const FractionalLayoutPoint&);
+TextStream& operator<<(TextStream&, const LayoutPoint&);
 TextStream& operator<<(TextStream&, const FloatPoint&);
 TextStream& operator<<(TextStream&, const FloatSize&);
 
@@ -97,8 +96,6 @@ String quoteAndEscapeNonPrintables(const String&);
 String counterValueForElement(Element*);
 
 String markerTextForListItem(Element*);
-
-String formatNumberRespectingIntegers(double);
 
 } // namespace WebCore
 

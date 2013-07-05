@@ -1,4 +1,5 @@
 # Copyright (C) 2010 Apple Inc. All rights reserved.
+# Copyright (C) 2012 Samsung Electronics
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,34 +30,30 @@ package CodeGeneratorTestRunner;
 
 sub new
 {
-    my ($class, $codeGenerator, $outputDir) = @_;
+    my ($class, $codeGenerator, $layerOnTop, $preprocessor, $writeDependencies, $verbose, $idlFilePath) = @_;
 
     my $reference = {
         codeGenerator => $codeGenerator,
-        outputDir => $outputDir,
+        idlFilePath => $idlFilePath,
     };
 
     bless($reference, $class);
     return $reference;
 }
 
-sub GenerateModule
+sub GenerateInterface
 {
 }
 
-sub GenerateInterface
+sub WriteData
 {
-    my ($self, $interface, $defines) = @_;
+    my ($self, $interface, $outputDir) = @_;
 
     foreach my $file ($self->_generateHeaderFile($interface), $self->_generateImplementationFile($interface)) {
-        open(FILE, ">", File::Spec->catfile($$self{outputDir}, $$file{name})) or die "Failed to open $$file{name} for writing: $!";
+        open(FILE, ">", File::Spec->catfile($outputDir, $$file{name})) or die "Failed to open $$file{name} for writing: $!";
         print FILE @{$$file{contents}};
         close(FILE) or die "Failed to close $$file{name} after writing: $!";
     }
-}
-
-sub finish
-{
 }
 
 sub _className
@@ -72,12 +69,37 @@ sub _classRefGetter
     return $$self{codeGenerator}->WK_lcfirst(_implementationClassName($idlType)) . "Class";
 }
 
-sub _fileHeaderString
+sub _parseLicenseBlock
 {
-    my ($filename) = @_;
+    my ($fileHandle) = @_;
 
-    # FIXME: We should pull header out of the IDL file to get the copyright
-    # year(s) right.
+    my ($copyright, $readCount, $buffer, $currentCharacter, $previousCharacter);
+    my $startSentinel = "/*";
+    my $lengthOfStartSentinel = length($startSentinel);
+    $readCount = read($fileHandle, $buffer, $lengthOfStartSentinel);
+    return "" if ($readCount < $lengthOfStartSentinel || $buffer ne $startSentinel);
+    $copyright = $buffer;
+
+    while ($readCount = read($fileHandle, $currentCharacter, 1)) {
+        $copyright .= $currentCharacter;
+        return $copyright if $currentCharacter eq "/" && $previousCharacter eq "*";
+        $previousCharacter = $currentCharacter;
+    }
+
+    return "";
+}
+
+sub _parseLicenseBlockFromFile
+{
+    my ($path) = @_;
+    open my $fileHandle, "<", $path or die "Failed to open $path for reading: $!";
+    my $licenseBlock = _parseLicenseBlock($fileHandle);
+    close($fileHandle);
+    return $licenseBlock;
+}
+
+sub _defaultLicenseBlock
+{
     return <<EOF;
 /*
  * Copyright (C) 2010 Apple Inc. All rights reserved.
@@ -106,6 +128,16 @@ sub _fileHeaderString
 EOF
 }
 
+sub _licenseBlock
+{
+    my ($self) = @_;
+    return $self->{licenseBlock} if $self->{licenseBlock};
+
+    my $licenseBlock = _parseLicenseBlockFromFile($self->{idlFilePath}) || _defaultLicenseBlock();
+    $self->{licenseBlock} = $licenseBlock;
+    return $licenseBlock;
+}
+
 sub _generateHeaderFile
 {
     my ($self, $interface) = @_;
@@ -117,7 +149,7 @@ sub _generateHeaderFile
     my $implementationClassName = _implementationClassName($idlType);
     my $filename = $className . ".h";
 
-    push(@contents, _fileHeaderString($filename));
+    push(@contents, $self->_licenseBlock());
 
     my $parentClassName = _parentClassName($interface);
 
@@ -154,7 +186,7 @@ EOF
         push(@contents, "\n    // Attributes\n\n");
         foreach my $attribute (@attributes) {
             push(@contents, "    static JSValueRef @{[$self->_getterName($attribute)]}(JSContextRef, JSObjectRef, JSStringRef, JSValueRef*);\n");
-            push(@contents, "    static bool @{[$self->_setterName($attribute)]}(JSContextRef, JSObjectRef, JSStringRef, JSValueRef, JSValueRef*);\n") unless $attribute->type =~ /^readonly/;
+            push(@contents, "    static bool @{[$self->_setterName($attribute)]}(JSContextRef, JSObjectRef, JSStringRef, JSValueRef, JSValueRef*);\n") unless $attribute->isReadOnly;
         }
     }
 
@@ -184,7 +216,7 @@ sub _generateImplementationFile
     my $implementationClassName = _implementationClassName($idlType);
     my $filename = $className . ".cpp";
 
-    push(@contentsPrefix, _fileHeaderString($filename));
+    push(@contentsPrefix, $self->_licenseBlock());
 
     my $classRefGetter = $self->_classRefGetter($idlType);
     my $parentClassName = _parentClassName($interface);
@@ -298,7 +330,7 @@ JSValueRef ${className}::${getterName}(JSContextRef context, JSObjectRef object,
 }
 EOF
 
-            unless ($attribute->type =~ /^readonly/) {
+            unless ($attribute->isReadOnly) {
                 push(@contents, <<EOF);
 
 bool ${className}::@{[$self->_setterName($attribute)]}(JSContextRef context, JSObjectRef object, JSStringRef, JSValueRef value, JSValueRef* exception)
@@ -328,6 +360,7 @@ EOF
 EOF
 
     unshift(@contents, map { "#include \"$_\"\n" } sort keys(%contentsIncludes));
+    unshift(@contents, "#include \"config.h\"\n");
     unshift(@contents, @contentsPrefix);
 
     return { name => $filename, contents => \@contents };
@@ -427,7 +460,11 @@ sub _platformTypeVariableDeclaration
     );
 
     my $nullValue = "0";
-    $nullValue = "$platformType()" if defined $nonPointerTypes{$platformType} && $platformType ne "double";
+    if ($platformType eq "JSValueRef") {
+        $nullValue = "JSValueMakeUndefined(context)";
+    } elsif (defined $nonPointerTypes{$platformType} && $platformType ne "double") {
+        $nullValue = "$platformType()";
+    }
 
     $platformType .= "*" unless defined $nonPointerTypes{$platformType};
 
@@ -518,11 +555,10 @@ sub _staticValuesGetterImplementation
         return if $_->signature->extendedAttributes->{"NoImplementation"};
 
         my $attributeName = $_->signature->name;
-        my $attributeIsReadonly = $_->type =~ /^readonly/;
         my $getterName = $self->_getterName($_);
-        my $setterName = $attributeIsReadonly ? "0" : $self->_setterName($_);
+        my $setterName = $_->isReadOnly ? "0" : $self->_setterName($_);
         my @attributes = qw(kJSPropertyAttributeDontDelete);
-        push(@attributes, "kJSPropertyAttributeReadOnly") if $attributeIsReadonly;
+        push(@attributes, "kJSPropertyAttributeReadOnly") if $_->isReadOnly;
         push(@attributes, "kJSPropertyAttributeDontEnum") if $_->signature->extendedAttributes->{"DontEnum"};
 
         return "{ \"$attributeName\", $getterName, $setterName, " . join(" | ", @attributes) . " }";

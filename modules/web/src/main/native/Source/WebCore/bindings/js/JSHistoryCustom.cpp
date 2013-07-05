@@ -155,6 +155,15 @@ bool JSHistory::deleteProperty(JSCell* cell, ExecState* exec, PropertyName prope
     return Base::deleteProperty(thisObject, exec, propertyName);
 }
 
+bool JSHistory::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned propertyName)
+{
+    JSHistory* thisObject = jsCast<JSHistory*>(cell);
+    // Only allow deleting by frames in the same origin.
+    if (!shouldAllowAccessToFrame(exec, thisObject->impl()->frame()))
+        return false;
+    return Base::deletePropertyByIndex(thisObject, exec, propertyName);
+}
+
 void JSHistory::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
     JSHistory* thisObject = jsCast<JSHistory*>(object);
@@ -172,9 +181,9 @@ JSValue JSHistory::state(ExecState *exec) const
     if (!cachedValue.isEmpty() && !history->stateChanged())
         return cachedValue;
 
-    SerializedScriptValue* serialized = history->state();
+    RefPtr<SerializedScriptValue> serialized = history->state();
     JSValue result = serialized ? serialized->deserialize(exec, globalObject(), 0) : jsNull();
-    const_cast<JSHistory*>(this)->m_state.set(exec->globalData(), this, result);
+    const_cast<JSHistory*>(this)->m_state.set(exec->vm(), this, result);
     return result;
 }
 

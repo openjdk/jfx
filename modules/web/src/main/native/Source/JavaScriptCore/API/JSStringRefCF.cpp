@@ -30,8 +30,7 @@
 #include "InitializeThreading.h"
 #include "JSStringRef.h"
 #include "OpaqueJSString.h"
-#include <runtime/UString.h>
-#include <runtime/JSValue.h>
+#include <runtime/JSCJSValue.h>
 #include <wtf/OwnArrayPtr.h>
 
 JSStringRef JSStringCreateWithCFString(CFStringRef string)
@@ -42,13 +41,19 @@ JSStringRef JSStringCreateWithCFString(CFStringRef string)
     // it can hold.  (<rdar://problem/6806478>)
     size_t length = CFStringGetLength(string);
     if (length) {
+        Vector<LChar, 1024> lcharBuffer(length);
+        CFIndex usedBufferLength;
+        CFIndex convertedSize = CFStringGetBytes(string, CFRangeMake(0, length), kCFStringEncodingISOLatin1, 0, false, lcharBuffer.data(), length, &usedBufferLength);
+        if (static_cast<size_t>(convertedSize) == length && static_cast<size_t>(usedBufferLength) == length)
+            return OpaqueJSString::create(lcharBuffer.data(), length).leakRef();
+
         OwnArrayPtr<UniChar> buffer = adoptArrayPtr(new UniChar[length]);
         CFStringGetCharacters(string, CFRangeMake(0, length), buffer.get());
         COMPILE_ASSERT(sizeof(UniChar) == sizeof(UChar), unichar_and_uchar_must_be_same_size);
         return OpaqueJSString::create(reinterpret_cast<UChar*>(buffer.get()), length).leakRef();
-    } else {
-        return OpaqueJSString::create(0, 0).leakRef();
     }
+    
+    return OpaqueJSString::create(static_cast<const LChar*>(0), 0).leakRef();
 }
 
 CFStringRef JSStringCopyCFString(CFAllocatorRef alloc, JSStringRef string)

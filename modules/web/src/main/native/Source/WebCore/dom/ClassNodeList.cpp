@@ -37,7 +37,7 @@
 namespace WebCore {
 
 ClassNodeList::ClassNodeList(PassRefPtr<Node> rootNode, const String& classNames)
-    : DynamicSubtreeNodeList(rootNode, InvalidateOnClassAttrChange)
+    : LiveNodeList(rootNode, ClassNodeListType, InvalidateOnClassAttrChange)
     , m_classNames(classNames, document()->inQuirksMode())
     , m_originalClassNames(classNames)
 {
@@ -45,17 +45,12 @@ ClassNodeList::ClassNodeList(PassRefPtr<Node> rootNode, const String& classNames
 
 ClassNodeList::~ClassNodeList()
 {
-    ownerNode()->nodeLists()->removeCacheWithName(this, DynamicNodeList::ClassNodeListType, m_originalClassNames);
+    ownerNode()->nodeLists()->removeCacheWithName(this, ClassNodeListType, m_originalClassNames);
 } 
 
 bool ClassNodeList::nodeMatches(Element* testNode) const
 {
-    if (!testNode->hasClass())
-        return false;
-    if (!m_classNames.size())
-        return false;
-    ASSERT(testNode->isStyledElement());
-    return static_cast<StyledElement*>(testNode)->classNames().containsAll(m_classNames);
+    return nodeMatchesInlined(testNode);
 }
 
 } // namespace WebCore

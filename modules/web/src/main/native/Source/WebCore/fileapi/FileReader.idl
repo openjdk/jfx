@@ -29,15 +29,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-    interface [
+[
         Conditional=BLOB,
         ActiveDOMObject,
         Constructor,
         CallWith=ScriptExecutionContext,
         EventTarget,
         JSNoStaticTables
-    ] FileReader {
+] interface FileReader {
         // ready states
         const unsigned short EMPTY = 0;
         const unsigned short LOADING = 1;
@@ -45,30 +44,30 @@ module html {
         readonly attribute unsigned short readyState;
 
         // async read methods
-        void readAsArrayBuffer(in Blob blob)
+    void readAsArrayBuffer(Blob blob)
             raises(DOMException);
-        void readAsBinaryString(in Blob blob)
+    void readAsBinaryString(Blob blob)
             raises(DOMException);
-        void readAsText(in Blob blob, in [Optional] DOMString encoding)
+    void readAsText(Blob blob, optional DOMString encoding)
             raises(DOMException);
-        void readAsDataURL(in Blob blob)
+    void readAsDataURL(Blob blob)
             raises(DOMException);
 
         void abort();
 
         // file data
-        readonly attribute [Custom] DOMObject result;
+    [Custom] readonly attribute any result;
 
         readonly attribute FileError error;
 
         // EventTarget interface
-        void addEventListener(in DOMString type,
-                              in EventListener listener,
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type,
-                                 in EventListener listener,
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type,
+                          EventListener listener,
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type,
+                             EventListener listener,
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
 
         attribute EventListener onloadstart;
@@ -78,4 +77,3 @@ module html {
         attribute EventListener onerror;
         attribute EventListener onloadend;
     };
-}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2009, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,20 +29,20 @@
 
 namespace WebCore {
 
-class Node;
+class HTMLPlugInElement;
 class Widget;
 
-class PluginDocument : public HTMLDocument {
+class PluginDocument FINAL : public HTMLDocument {
 public:
     static PassRefPtr<PluginDocument> create(Frame* frame, const KURL& url)
     {
         return adoptRef(new PluginDocument(frame, url));
     }
 
-    void setPluginNode(Node* pluginNode) { m_pluginNode = pluginNode; }
+    void setPluginElement(PassRefPtr<HTMLPlugInElement>);
 
     Widget* pluginWidget();
-    Node* pluginNode();
+    HTMLPlugInElement* pluginElement() { return m_pluginElement.get(); }
 
     virtual void detach() OVERRIDE;
 
@@ -54,23 +54,22 @@ private:
     PluginDocument(Frame*, const KURL&);
 
     virtual PassRefPtr<DocumentParser> createParser() OVERRIDE;
-    virtual bool isPluginDocument() const OVERRIDE { return true; }    
         
     void setShouldLoadPluginManually(bool loadManually) { m_shouldLoadPluginManually = loadManually; }
 
     bool m_shouldLoadPluginManually;
-    RefPtr<Node> m_pluginNode;
+    RefPtr<HTMLPlugInElement> m_pluginElement;
 };
 
 inline PluginDocument* toPluginDocument(Document* document)
 {
-    ASSERT(!document || document->isPluginDocument());
+    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isPluginDocument());
     return static_cast<PluginDocument*>(document);
 }
 
 inline const PluginDocument* toPluginDocument(const Document* document)
 {
-    ASSERT(!document || document->isPluginDocument());
+    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isPluginDocument());
     return static_cast<const PluginDocument*>(document);
 }
 

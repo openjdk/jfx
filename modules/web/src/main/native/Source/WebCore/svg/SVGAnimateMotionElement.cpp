@@ -46,6 +46,7 @@ inline SVGAnimateMotionElement::SVGAnimateMotionElement(const QualifiedName& tag
     : SVGAnimationElement(tagName, document)
     , m_hasToPointAtEndOfDuration(false)
 {
+    setCalcMode(CalcModePaced);
     ASSERT(hasTagName(animateMotionTag));
 }
 
@@ -68,7 +69,7 @@ bool SVGAnimateMotionElement::hasValidAttributeType()
     if (targetElement->hasTagName(gTag)
         || targetElement->hasTagName(defsTag)
         || targetElement->hasTagName(useTag)
-        || targetElement->hasTagName(imageTag)
+        || targetElement->hasTagName(SVGNames::imageTag)
         || targetElement->hasTagName(switchTag)
         || targetElement->hasTagName(pathTag)
         || targetElement->hasTagName(rectTag)
@@ -80,11 +81,17 @@ bool SVGAnimateMotionElement::hasValidAttributeType()
         || targetElement->hasTagName(textTag)
         || targetElement->hasTagName(clipPathTag)
         || targetElement->hasTagName(maskTag)
-        || targetElement->hasTagName(aTag)
+        || targetElement->hasTagName(SVGNames::aTag)
         || targetElement->hasTagName(foreignObjectTag)
         )
         return true;
     return false;
+}
+
+bool SVGAnimateMotionElement::hasValidAttributeName()
+{
+    // AnimateMotion does not use attributeName so it is always valid.
+    return true;
 }
 
 bool SVGAnimateMotionElement::isSupportedAttribute(const QualifiedName& attrName)
@@ -95,16 +102,17 @@ bool SVGAnimateMotionElement::isSupportedAttribute(const QualifiedName& attrName
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGAnimateMotionElement::parseAttribute(const Attribute& attribute)
+void SVGAnimateMotionElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(attribute.name())) {
-        SVGAnimationElement::parseAttribute(attribute);
+    if (!isSupportedAttribute(name)) {
+        SVGAnimationElement::parseAttribute(name, value);
         return;
     }
 
-    if (attribute.name() == SVGNames::pathAttr) {
+    if (name == SVGNames::pathAttr) {
         m_path = Path();
-        buildPathFromString(attribute.value(), m_path);
+        buildPathFromString(value, m_path);
+        updateAnimationPath();
         return;
     }
 
@@ -113,8 +121,8 @@ void SVGAnimateMotionElement::parseAttribute(const Attribute& attribute)
     
 SVGAnimateMotionElement::RotateMode SVGAnimateMotionElement::rotateMode() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, autoVal, ("auto"));
-    DEFINE_STATIC_LOCAL(const AtomicString, autoReverse, ("auto-reverse"));
+    DEFINE_STATIC_LOCAL(const AtomicString, autoVal, ("auto", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, autoReverse, ("auto-reverse", AtomicString::ConstructFromLiteral));
     const AtomicString& rotate = getAttribute(SVGNames::rotateAttr);
     if (rotate == autoVal)
         return RotateAuto;
@@ -123,21 +131,27 @@ SVGAnimateMotionElement::RotateMode SVGAnimateMotionElement::rotateMode() const
     return RotateAngle;
 }
 
-Path SVGAnimateMotionElement::animationPath() const
+void SVGAnimateMotionElement::updateAnimationPath()
 {
+    m_animationPath = Path();
+    bool foundMPath = false;
+
     for (Node* child = firstChild(); child; child = child->nextSibling()) {
         if (child->hasTagName(SVGNames::mpathTag)) {
             SVGMPathElement* mPath = static_cast<SVGMPathElement*>(child);
             SVGPathElement* pathElement = mPath->pathElement();
-            Path path;
-            if (pathElement)
-                updatePathFromGraphicsElement(pathElement, path);
-            return path;
+            if (pathElement) {
+                updatePathFromGraphicsElement(pathElement, m_animationPath);
+                foundMPath = true;
+                break;
         }
     }
-    if (fastHasAttribute(SVGNames::pathAttr))
-        return m_path;
-    return Path();
+    }
+
+    if (!foundMPath && fastHasAttribute(SVGNames::pathAttr))
+        m_animationPath = m_path;
+
+    updateAnimationMode();
 }
 
 static bool parsePoint(const String& s, FloatPoint& point)
@@ -212,19 +226,18 @@ bool SVGAnimateMotionElement::calculateFromAndByValues(const String& fromString,
 
 void SVGAnimateMotionElement::buildTransformForProgress(AffineTransform* transform, float percentage)
 {
-    Path path = animationPath();
-    ASSERT(!path.isEmpty());
+    ASSERT(!m_animationPath.isEmpty());
 
     bool ok = false;
-    float positionOnPath = path.length() * percentage;
-    FloatPoint position = path.pointAtLength(positionOnPath, ok);
+    float positionOnPath = m_animationPath.length() * percentage;
+    FloatPoint position = m_animationPath.pointAtLength(positionOnPath, ok);
     if (!ok)
         return;
     transform->translate(position.x(), position.y());
     RotateMode rotateMode = this->rotateMode();
     if (rotateMode != RotateAuto && rotateMode != RotateAutoReverse)
         return;
-    float angle = path.normalAngleAtLength(positionOnPath, ok);
+    float angle = m_animationPath.normalAngleAtLength(positionOnPath, ok);
     if (rotateMode == RotateAutoReverse)
         angle += 180;
     transform->rotate(angle);
@@ -310,6 +323,14 @@ float SVGAnimateMotionElement::calculateDistance(const String& fromString, const
         return -1;
     FloatSize diff = to - from;
     return sqrtf(diff.width() * diff.width() + diff.height() * diff.height());
+}
+
+void SVGAnimateMotionElement::updateAnimationMode()
+{
+    if (!m_animationPath.isEmpty())
+        setAnimationMode(PathAnimation);
+    else
+        SVGAnimationElement::updateAnimationMode();
 }
 
 }

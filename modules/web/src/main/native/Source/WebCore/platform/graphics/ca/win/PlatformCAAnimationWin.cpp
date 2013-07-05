@@ -30,14 +30,13 @@
 #include "PlatformCAAnimation.h"
 
 #include "FloatConversion.h"
-#include "PlatformString.h"
 #include "TimingFunction.h"
 #include <QuartzCore/CACFAnimation.h>
 #include <QuartzCore/CACFTiming.h>
 #include <QuartzCore/CACFTimingFunction.h>
 #include <QuartzCore/CACFValueFunction.h>
 #include <QuartzCore/CACFVector.h>
-#include <wtf/UnusedParam.h>
+#include <wtf/text/WTFString.h>
 
 using namespace WebCore;
 
@@ -127,7 +126,7 @@ static RetainPtr<CACFTimingFunctionRef> toCACFTimingFunction(const TimingFunctio
     ASSERT(timingFunction);
     if (timingFunction->isCubicBezierTimingFunction()) {
         const CubicBezierTimingFunction* ctf = static_cast<const CubicBezierTimingFunction*>(timingFunction);
-        return RetainPtr<CACFTimingFunctionRef>(AdoptCF, CACFTimingFunctionCreate(static_cast<float>(ctf->x1()), static_cast<float>(ctf->y1()), static_cast<float>(ctf->x2()), static_cast<float>(ctf->y2())));
+        return adoptCF(CACFTimingFunctionCreate(static_cast<float>(ctf->x1()), static_cast<float>(ctf->y1()), static_cast<float>(ctf->x2()), static_cast<float>(ctf->y2())));
     }
     
     return CACFTimingFunctionGetFunctionWithName(kCACFTimingFunctionLinear);
@@ -147,12 +146,11 @@ PlatformCAAnimation::PlatformCAAnimation(AnimationType type, const String& keyPa
     : m_type(type)
 {
     if (type == Basic)
-        m_animation.adoptCF(CACFAnimationCreate(kCACFBasicAnimation));
+        m_animation = adoptCF(CACFAnimationCreate(kCACFBasicAnimation));
     else
-        m_animation.adoptCF(CACFAnimationCreate(kCACFKeyframeAnimation));
+        m_animation = adoptCF(CACFAnimationCreate(kCACFKeyframeAnimation));
     
-    RetainPtr<CFStringRef> s(AdoptCF, keyPath.createCFString());
-    CACFAnimationSetKeyPath(m_animation.get(), s.get());
+    CACFAnimationSetKeyPath(m_animation.get(), keyPath.createCFString().get());
 }
 
 PlatformCAAnimation::PlatformCAAnimation(PlatformAnimationRef animation)
@@ -296,7 +294,9 @@ void PlatformCAAnimation::setTimingFunction(const TimingFunction* value, bool re
 
 void PlatformCAAnimation::copyTimingFunctionFrom(const PlatformCAAnimation* value)
 {
-    CACFAnimationSetTimingFunction(m_animation.get(), CACFAnimationGetTimingFunction(value->m_animation.get()));
+    CACFTimingFunctionRef timingFunc = CACFAnimationGetTimingFunction(value->m_animation.get());
+    if (timingFunc)
+        CACFAnimationSetTimingFunction(m_animation.get(), timingFunc);
 }
 
 bool PlatformCAAnimation::isRemovedOnCompletion() const
@@ -336,7 +336,7 @@ void PlatformCAAnimation::setFromValue(float value)
     if (animationType() != Basic)
         return;
 
-    RetainPtr<CFNumberRef> v(AdoptCF, CFNumberCreate(0, kCFNumberFloatType, &value));
+    RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value));
     CACFAnimationSetFromValue(m_animation.get(), v.get());
 }
 
@@ -345,7 +345,7 @@ void PlatformCAAnimation::setFromValue(const WebCore::TransformationMatrix& valu
     if (animationType() != Basic)
         return;
     
-    RetainPtr<CACFVectorRef> v(AdoptCF, CACFVectorCreateTransform(value));
+    RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreateTransform(value));
     CACFAnimationSetFromValue(m_animation.get(), v.get());
 }
 
@@ -355,7 +355,7 @@ void PlatformCAAnimation::setFromValue(const FloatPoint3D& value)
         return;
 
     float a[3] = { value.x(), value.y(), value.z() };
-    RetainPtr<CACFVectorRef> v(AdoptCF, CACFVectorCreate(3, a));
+    RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(3, a));
     CACFAnimationSetFromValue(m_animation.get(), v.get());
 }
 
@@ -365,7 +365,7 @@ void PlatformCAAnimation::setFromValue(const WebCore::Color& value)
         return;
 
     float a[4] = { value.red(), value.green(), value.blue(), value.alpha() };
-    RetainPtr<CACFVectorRef> v(AdoptCF, CACFVectorCreate(4, a));
+    RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
     CACFAnimationSetFromValue(m_animation.get(), v.get());
 }
 
@@ -389,7 +389,7 @@ void PlatformCAAnimation::setToValue(float value)
     if (animationType() != Basic)
         return;
 
-    RetainPtr<CFNumberRef> v(AdoptCF, CFNumberCreate(0, kCFNumberFloatType, &value));
+    RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value));
     CACFAnimationSetToValue(m_animation.get(), v.get());
 }
 
@@ -398,7 +398,7 @@ void PlatformCAAnimation::setToValue(const WebCore::TransformationMatrix& value)
     if (animationType() != Basic)
         return;
 
-    RetainPtr<CACFVectorRef> v(AdoptCF, CACFVectorCreateTransform(value));
+    RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreateTransform(value));
     CACFAnimationSetToValue(m_animation.get(), v.get());
 }
 
@@ -408,7 +408,7 @@ void PlatformCAAnimation::setToValue(const FloatPoint3D& value)
         return;
 
     float a[3] = { value.x(), value.y(), value.z() };
-    RetainPtr<CACFVectorRef> v(AdoptCF, CACFVectorCreate(3, a));
+    RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(3, a));
     CACFAnimationSetToValue(m_animation.get(), v.get());
 }
 
@@ -418,7 +418,7 @@ void PlatformCAAnimation::setToValue(const WebCore::Color& value)
         return;
 
     float a[4] = { value.red(), value.green(), value.blue(), value.alpha() };
-    RetainPtr<CACFVectorRef> v(AdoptCF, CACFVectorCreate(4, a));
+    RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
     CACFAnimationSetToValue(m_animation.get(), v.get());
 }
 
@@ -444,9 +444,9 @@ void PlatformCAAnimation::setValues(const Vector<float>& value)
     if (animationType() != Keyframe)
         return;
 
-    RetainPtr<CFMutableArrayRef> array(AdoptCF, CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
+    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
-        RetainPtr<CFNumberRef> v(AdoptCF, CFNumberCreate(0, kCFNumberFloatType, &value[i]));
+        RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value[i]));
         CFArrayAppendValue(array.get(), v.get());
     }
 
@@ -458,9 +458,9 @@ void PlatformCAAnimation::setValues(const Vector<WebCore::TransformationMatrix>&
     if (animationType() != Keyframe)
         return;
 
-    RetainPtr<CFMutableArrayRef> array(AdoptCF, CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
+    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
-        RetainPtr<CACFVectorRef> v(AdoptCF, CACFVectorCreateTransform(value[i]));
+        RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreateTransform(value[i]));
         CFArrayAppendValue(array.get(), v.get());
     }
 
@@ -472,10 +472,10 @@ void PlatformCAAnimation::setValues(const Vector<FloatPoint3D>& value)
     if (animationType() != Keyframe)
         return;
         
-    RetainPtr<CFMutableArrayRef> array(AdoptCF, CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
+    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
         float a[3] = { value[i].x(), value[i].y(), value[i].z() };
-        RetainPtr<CACFVectorRef> v(AdoptCF, CACFVectorCreate(3, a));
+        RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(3, a));
         CFArrayAppendValue(array.get(), v.get());
     }
 
@@ -487,10 +487,10 @@ void PlatformCAAnimation::setValues(const Vector<WebCore::Color>& value)
     if (animationType() != Keyframe)
         return;
         
-    RetainPtr<CFMutableArrayRef> array(AdoptCF, CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
+    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
         float a[4] = { value[i].red(), value[i].green(), value[i].blue(), value[i].alpha() };
-        RetainPtr<CACFVectorRef> v(AdoptCF, CACFVectorCreate(4, a));
+        RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
         CFArrayAppendValue(array.get(), v.get());
     }
 
@@ -517,9 +517,9 @@ void PlatformCAAnimation::setKeyTimes(const Vector<float>& value)
     if (animationType() != Keyframe)
         return;
         
-    RetainPtr<CFMutableArrayRef> array(AdoptCF, CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
+    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
-        RetainPtr<CFNumberRef> v(AdoptCF, CFNumberCreate(0, kCFNumberFloatType, &value[i]));
+        RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value[i]));
         CFArrayAppendValue(array.get(), v.get());
     }
 
@@ -540,9 +540,9 @@ void PlatformCAAnimation::setTimingFunctions(const Vector<const TimingFunction*>
     if (animationType() != Keyframe)
         return;
 
-    RetainPtr<CFMutableArrayRef> array(AdoptCF, CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
+    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
-        RetainPtr<CFNumberRef> v(AdoptCF, CFNumberCreate(0, kCFNumberFloatType, &value[i]));
+        RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value[i]));
         CFArrayAppendValue(array.get(), toCACFTimingFunction(value[i]).get());
     }
 
@@ -553,19 +553,5 @@ void PlatformCAAnimation::copyTimingFunctionsFrom(const PlatformCAAnimation* val
 {
     CACFAnimationSetTimingFunctions(m_animation.get(), CACFAnimationGetTimingFunctions(value->platformAnimation()));
 }
-
-#if ENABLE(CSS_FILTERS)
-int PlatformCAAnimation::numAnimatedFilterProperties(FilterOperation::OperationType)
-{
-    // FIXME: Hardware filter animation not implemented on Windows
-    return 0;
-}
-
-const char* PlatformCAAnimation::animatedFilterPropertyName(FilterOperation::OperationType, int)
-{
-    // FIXME: Hardware filter animation not implemented on Windows
-    return "";
-}
-#endif
 
 #endif // USE(ACCELERATED_COMPOSITING)

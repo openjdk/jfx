@@ -22,13 +22,12 @@
 #define WebKitDOMTestMediaQueryListListenerPrivate_h
 
 #include "TestMediaQueryListListener.h"
-#include <glib-object.h>
-#include <webkit/WebKitDOMObject.h>
+#include <webkitdom/WebKitDOMTestMediaQueryListListener.h>
 
 namespace WebKit {
 WebKitDOMTestMediaQueryListListener* wrapTestMediaQueryListListener(WebCore::TestMediaQueryListListener*);
-WebCore::TestMediaQueryListListener* core(WebKitDOMTestMediaQueryListListener* request);
-WebKitDOMTestMediaQueryListListener* kit(WebCore::TestMediaQueryListListener* node);
+WebKitDOMTestMediaQueryListListener* kit(WebCore::TestMediaQueryListListener*);
+WebCore::TestMediaQueryListListener* core(WebKitDOMTestMediaQueryListListener*);
 } // namespace WebKit
 
 #endif /* WebKitDOMTestMediaQueryListListenerPrivate_h */

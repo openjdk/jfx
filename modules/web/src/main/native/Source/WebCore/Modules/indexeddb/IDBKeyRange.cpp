@@ -26,12 +26,20 @@
 #include "config.h"
 #include "IDBKeyRange.h"
 
+#include "DOMRequestState.h"
+#include "IDBBindingUtilities.h"
 #include "IDBDatabaseException.h"
 #include "IDBKey.h"
 
 #if ENABLE(INDEXED_DATABASE)
 
 namespace WebCore {
+
+PassRefPtr<IDBKeyRange> IDBKeyRange::create(PassRefPtr<IDBKey> prpKey)
+{
+    RefPtr<IDBKey> key = prpKey;
+    return adoptRef(new IDBKeyRange(key, key, LowerBoundClosed, UpperBoundClosed));
+}
 
 IDBKeyRange::IDBKeyRange(PassRefPtr<IDBKey> lower, PassRefPtr<IDBKey> upper, LowerBoundType lowerType, UpperBoundType upperType)
     : m_lower(lower)
@@ -41,53 +49,95 @@ IDBKeyRange::IDBKeyRange(PassRefPtr<IDBKey> lower, PassRefPtr<IDBKey> upper, Low
 {
 }
 
+ScriptValue IDBKeyRange::lowerValue(ScriptExecutionContext* context) const
+{
+    DOMRequestState requestState(context);
+    return idbKeyToScriptValue(&requestState, m_lower);
+}
+
+ScriptValue IDBKeyRange::upperValue(ScriptExecutionContext* context) const
+{
+    DOMRequestState requestState(context);
+    return idbKeyToScriptValue(&requestState, m_upper);
+}
+
 PassRefPtr<IDBKeyRange> IDBKeyRange::only(PassRefPtr<IDBKey> prpKey, ExceptionCode& ec)
 {
     RefPtr<IDBKey> key = prpKey;
     if (!key || !key->isValid()) {
-        ec = IDBDatabaseException::DATA_ERR;
+        ec = IDBDatabaseException::DataError;
         return 0;
     }
 
     return IDBKeyRange::create(key, key, LowerBoundClosed, UpperBoundClosed);
 }
 
-PassRefPtr<IDBKeyRange> IDBKeyRange::lowerBound(PassRefPtr<IDBKey> bound, bool open, ExceptionCode& ec)
+PassRefPtr<IDBKeyRange> IDBKeyRange::only(ScriptExecutionContext* context, const ScriptValue& keyValue, ExceptionCode& ec)
 {
+    DOMRequestState requestState(context);
+    RefPtr<IDBKey> key = scriptValueToIDBKey(&requestState, keyValue);
+    if (!key || !key->isValid()) {
+        ec = IDBDatabaseException::DataError;
+        return 0;
+    }
+
+    return IDBKeyRange::create(key, key, LowerBoundClosed, UpperBoundClosed);
+}
+
+PassRefPtr<IDBKeyRange> IDBKeyRange::lowerBound(ScriptExecutionContext* context, const ScriptValue& boundValue, bool open, ExceptionCode& ec)
+{
+    DOMRequestState requestState(context);
+    RefPtr<IDBKey> bound = scriptValueToIDBKey(&requestState, boundValue);
     if (!bound || !bound->isValid()) {
-        ec = IDBDatabaseException::DATA_ERR;
+        ec = IDBDatabaseException::DataError;
         return 0;
     }
 
     return IDBKeyRange::create(bound, 0, open ? LowerBoundOpen : LowerBoundClosed, UpperBoundOpen);
 }
 
-PassRefPtr<IDBKeyRange> IDBKeyRange::upperBound(PassRefPtr<IDBKey> bound, bool open, ExceptionCode& ec)
+PassRefPtr<IDBKeyRange> IDBKeyRange::upperBound(ScriptExecutionContext* context, const ScriptValue& boundValue, bool open, ExceptionCode& ec)
 {
+    DOMRequestState requestState(context);
+    RefPtr<IDBKey> bound = scriptValueToIDBKey(&requestState, boundValue);
     if (!bound || !bound->isValid()) {
-        ec = IDBDatabaseException::DATA_ERR;
+        ec = IDBDatabaseException::DataError;
         return 0;
     }
 
     return IDBKeyRange::create(0, bound, LowerBoundOpen, open ? UpperBoundOpen : UpperBoundClosed);
 }
 
-PassRefPtr<IDBKeyRange> IDBKeyRange::bound(PassRefPtr<IDBKey> lower, PassRefPtr<IDBKey> upper, bool lowerOpen, bool upperOpen, ExceptionCode& ec)
+PassRefPtr<IDBKeyRange> IDBKeyRange::bound(ScriptExecutionContext* context, const ScriptValue& lowerValue, const ScriptValue& upperValue, bool lowerOpen, bool upperOpen, ExceptionCode& ec)
 {
+    DOMRequestState requestState(context);
+    RefPtr<IDBKey> lower = scriptValueToIDBKey(&requestState, lowerValue);
+    RefPtr<IDBKey> upper = scriptValueToIDBKey(&requestState, upperValue);
+
     if (!lower || !lower->isValid() || !upper || !upper->isValid()) {
-        ec = IDBDatabaseException::DATA_ERR;
+        ec = IDBDatabaseException::DataError;
         return 0;
     }
     if (upper->isLessThan(lower.get())) {
-        ec = IDBDatabaseException::DATA_ERR;
+        ec = IDBDatabaseException::DataError;
         return 0;
     }
     if (upper->isEqual(lower.get()) && (lowerOpen || upperOpen)) {
-        ec = IDBDatabaseException::DATA_ERR;
+        ec = IDBDatabaseException::DataError;
         return 0;
     }
 
     return IDBKeyRange::create(lower, upper, lowerOpen ? LowerBoundOpen : LowerBoundClosed, upperOpen ? UpperBoundOpen : UpperBoundClosed);
+}
+
+bool IDBKeyRange::isOnlyKey() const
+{
+    if (m_lowerType != LowerBoundClosed || m_upperType != UpperBoundClosed)
+        return false;
+
+    ASSERT(m_lower);
+    ASSERT(m_upper);
+    return m_lower->isEqual(m_upper.get());
 }
 
 } // namespace WebCore

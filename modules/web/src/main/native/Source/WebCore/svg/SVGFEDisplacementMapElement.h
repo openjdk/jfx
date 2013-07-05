@@ -65,7 +65,7 @@ struct SVGPropertyTraits<ChannelSelectorType> {
     }
 };
 
-class SVGFEDisplacementMapElement : public SVGFilterPrimitiveStandardAttributes {
+class SVGFEDisplacementMapElement FINAL : public SVGFilterPrimitiveStandardAttributes {
 public:
     static PassRefPtr<SVGFEDisplacementMapElement> create(const QualifiedName&, Document*);
 
@@ -75,7 +75,7 @@ private:
     SVGFEDisplacementMapElement(const QualifiedName& tagName, Document*);
     
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName);
     virtual void svgAttributeChanged(const QualifiedName&);
     virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*);

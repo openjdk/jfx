@@ -25,11 +25,12 @@
 
 #include "CallFrame.h"
 #include "CodeProfiling.h"
+#include "Debugger.h"
+#include "Interpreter.h"
 #include "JSGlobalObject.h"
 #include "JSLock.h"
-#include "Interpreter.h"
+#include "Operations.h"
 #include "Parser.h"
-#include "Debugger.h"
 #include <wtf/WTFThreadData.h>
 #include <stdio.h>
 
@@ -38,7 +39,7 @@ namespace JSC {
 bool checkSyntax(ExecState* exec, const SourceCode& source, JSValue* returnedException)
 {
     JSLockHolder lock(exec);
-    ASSERT(exec->globalData().identifierTable == wtfThreadData().currentIdentifierTable());
+    RELEASE_ASSERT(exec->vm().identifierTable == wtfThreadData().currentIdentifierTable());
 
     ProgramExecutable* program = ProgramExecutable::create(exec, source);
     JSObject* error = program->checkSyntax(exec);
@@ -51,28 +52,35 @@ bool checkSyntax(ExecState* exec, const SourceCode& source, JSValue* returnedExc
     return true;
 }
 
-JSValue evaluate(ExecState* exec, ScopeChainNode* scopeChain, const SourceCode& source, JSValue thisValue, JSValue* returnedException)
+bool checkSyntax(VM& vm, const SourceCode& source, ParserError& error)
+{
+    JSLockHolder lock(vm);
+    RELEASE_ASSERT(vm.identifierTable == wtfThreadData().currentIdentifierTable());
+    RefPtr<ProgramNode> programNode = parse<ProgramNode>(&vm, source, 0, Identifier(), JSParseNormal, JSParseProgramCode, error);
+    return programNode;
+}
+
+JSValue evaluate(ExecState* exec, const SourceCode& source, JSValue thisValue, JSValue* returnedException)
 {
     JSLockHolder lock(exec);
-    ASSERT(exec->globalData().identifierTable == wtfThreadData().currentIdentifierTable());
-    if (exec->globalData().isCollectorBusy())
-        CRASH();
+    RELEASE_ASSERT(exec->vm().identifierTable == wtfThreadData().currentIdentifierTable());
+    RELEASE_ASSERT(!exec->vm().isCollectorBusy());
 
     CodeProfiling profile(source);
 
     ProgramExecutable* program = ProgramExecutable::create(exec, source);
     if (!program) {
         if (returnedException)
-            *returnedException = exec->globalData().exception;
+            *returnedException = exec->vm().exception;
 
-        exec->globalData().exception = JSValue();
+        exec->vm().exception = JSValue();
         return jsUndefined();
     }
 
     if (!thisValue || thisValue.isUndefinedOrNull())
         thisValue = exec->dynamicGlobalObject();
     JSObject* thisObj = thisValue.toThisObject(exec);
-    JSValue result = exec->interpreter()->execute(program, exec, scopeChain, thisObj);
+    JSValue result = exec->interpreter()->execute(program, exec, thisObj);
 
     if (exec->hadException()) {
         if (returnedException)
@@ -82,7 +90,7 @@ JSValue evaluate(ExecState* exec, ScopeChainNode* scopeChain, const SourceCode& 
         return jsUndefined();
     }
 
-    ASSERT(result);
+    RELEASE_ASSERT(result);
     return result;
 }
 

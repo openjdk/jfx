@@ -1,6 +1,6 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2010, 2012 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -22,14 +22,18 @@
 #include "config.h"
 #include "WTFString.h"
 
+#include "IntegerToStringConversion.h"
 #include <stdarg.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/DataLog.h>
+#include <wtf/HexNumber.h>
 #include <wtf/MathExtras.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/StringExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/dtoa.h>
+#include <wtf/unicode/CharacterNames.h>
 #include <wtf/unicode/UTF8.h>
 #include <wtf/unicode/Unicode.h>
 
@@ -54,7 +58,7 @@ String::String(const UChar* str)
         
     size_t len = 0;
     while (str[len] != UChar(0))
-        len++;
+        ++len;
 
     if (len > numeric_limits<unsigned>::max())
         CRASH();
@@ -84,6 +88,11 @@ String::String(const char* characters)
 {
 }
 
+String::String(ASCIILiteral characters)
+    : m_impl(StringImpl::createFromLiteral(characters))
+{
+}
+
 void String::append(const String& str)
 {
     if (str.isEmpty())
@@ -95,6 +104,16 @@ void String::append(const String& str)
     // call to fastMalloc every single time.
     if (str.m_impl) {
         if (m_impl) {
+            if (m_impl->is8Bit() && str.m_impl->is8Bit()) {
+                LChar* data;
+                if (str.length() > numeric_limits<unsigned>::max() - m_impl->length())
+                    CRASH();
+                RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(m_impl->length() + str.length(), data);
+                memcpy(data, m_impl->characters8(), m_impl->length() * sizeof(LChar));
+                memcpy(data + m_impl->length(), str.characters8(), str.length() * sizeof(LChar));
+                m_impl = newImpl.release();
+                return;
+            }
             UChar* data;
             if (str.length() > numeric_limits<unsigned>::max() - m_impl->length())
                 CRASH();
@@ -160,7 +179,7 @@ void String::insert(const String& str, unsigned pos)
     insert(str.characters(), str.length(), pos);
 }
 
-void String::append(const UChar* charactersToAppend, unsigned lengthToAppend)
+void String::append(const LChar* charactersToAppend, unsigned lengthToAppend)
 {
     if (!m_impl) {
         if (!charactersToAppend)
@@ -173,14 +192,56 @@ void String::append(const UChar* charactersToAppend, unsigned lengthToAppend)
         return;
 
     ASSERT(charactersToAppend);
-    UChar* data;
-    if (lengthToAppend > numeric_limits<unsigned>::max() - length())
+
+    unsigned strLength = m_impl->length();
+
+    if (m_impl->is8Bit()) {
+        if (lengthToAppend > numeric_limits<unsigned>::max() - strLength)
+            CRASH();
+        LChar* data;
+        RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(strLength + lengthToAppend, data);
+        StringImpl::copyChars(data, m_impl->characters8(), strLength);
+        StringImpl::copyChars(data + strLength, charactersToAppend, lengthToAppend);
+        m_impl = newImpl.release();
+        return;
+    }
+
+    if (lengthToAppend > numeric_limits<unsigned>::max() - strLength)
         CRASH();
+    UChar* data;
     RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(length() + lengthToAppend, data);
-    memcpy(data, characters(), length() * sizeof(UChar));
-    memcpy(data + length(), charactersToAppend, lengthToAppend * sizeof(UChar));
+    StringImpl::copyChars(data, m_impl->characters16(), strLength);
+    StringImpl::copyChars(data + strLength, charactersToAppend, lengthToAppend);
     m_impl = newImpl.release();
 }
+
+void String::append(const UChar* charactersToAppend, unsigned lengthToAppend)
+{
+    if (!m_impl) {
+        if (!charactersToAppend)
+            return;
+        m_impl = StringImpl::create(charactersToAppend, lengthToAppend);
+        return;
+    }
+
+    if (!lengthToAppend)
+        return;
+
+    unsigned strLength = m_impl->length();
+    
+    ASSERT(charactersToAppend);
+    if (lengthToAppend > numeric_limits<unsigned>::max() - strLength)
+        CRASH();
+    UChar* data;
+    RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(strLength + lengthToAppend, data);
+    if (m_impl->is8Bit())
+        StringImpl::copyChars(data, characters8(), strLength);
+    else
+        StringImpl::copyChars(data, characters16(), strLength);
+    StringImpl::copyChars(data + strLength, charactersToAppend, lengthToAppend);
+    m_impl = newImpl.release();
+}
+
 
 void String::insert(const UChar* charactersToInsert, unsigned lengthToInsert, unsigned position)
 {
@@ -222,6 +283,18 @@ void String::truncate(unsigned position)
     m_impl = newImpl.release();
 }
 
+template <typename CharacterType>
+inline void String::removeInternal(const CharacterType* characters, unsigned position, int lengthToRemove)
+{
+    CharacterType* data;
+    RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(length() - lengthToRemove, data);
+    memcpy(data, characters, position * sizeof(CharacterType));
+    memcpy(data + position, characters + position + lengthToRemove,
+        (length() - lengthToRemove - position) * sizeof(CharacterType));
+
+    m_impl = newImpl.release();
+}
+
 void String::remove(unsigned position, int lengthToRemove)
 {
     if (lengthToRemove <= 0)
@@ -230,12 +303,14 @@ void String::remove(unsigned position, int lengthToRemove)
         return;
     if (static_cast<unsigned>(lengthToRemove) > length() - position)
         lengthToRemove = length() - position;
-    UChar* data;
-    RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(length() - lengthToRemove, data);
-    memcpy(data, characters(), position * sizeof(UChar));
-    memcpy(data + position, characters() + position + lengthToRemove,
-        (length() - lengthToRemove - position) * sizeof(UChar));
-    m_impl = newImpl.release();
+
+    if (is8Bit()) {
+        removeInternal(characters8(), position, lengthToRemove);
+
+        return;
+    }
+
+    removeInternal(characters16(), position, lengthToRemove);
 }
 
 String String::substring(unsigned pos, unsigned len) const
@@ -412,64 +487,52 @@ String String::format(const char *format, ...)
 #endif
 }
 
-String String::number(short n)
+String String::number(int number)
 {
-    return String::format("%hd", n);
+    return numberToStringSigned<String>(number);
 }
 
-String String::number(unsigned short n)
+String String::number(unsigned int number)
 {
-    return String::format("%hu", n);
+    return numberToStringUnsigned<String>(number);
 }
 
-String String::number(int n)
+String String::number(long number)
 {
-    return String::format("%d", n);
+    return numberToStringSigned<String>(number);
 }
 
-String String::number(unsigned n)
+String String::number(unsigned long number)
 {
-    return String::format("%u", n);
+    return numberToStringUnsigned<String>(number);
 }
 
-String String::number(long n)
+String String::number(long long number)
 {
-    return String::format("%ld", n);
+    return numberToStringSigned<String>(number);
 }
 
-String String::number(unsigned long n)
+String String::number(unsigned long long number)
 {
-    return String::format("%lu", n);
+    return numberToStringUnsigned<String>(number);
 }
 
-String String::number(long long n)
-{
-#if OS(WINDOWS) && !PLATFORM(QT)
-    return String::format("%I64i", n);
-#else
-    return String::format("%lli", n);
-#endif
-}
-
-String String::number(unsigned long long n)
-{
-#if OS(WINDOWS) && !PLATFORM(QT)
-    return String::format("%I64u", n);
-#else
-    return String::format("%llu", n);
-#endif
-}
-    
-String String::number(double number, unsigned flags, unsigned precision)
+String String::number(double number, unsigned precision, TrailingZerosTruncatingPolicy trailingZerosTruncatingPolicy)
 {
     NumberToStringBuffer buffer;
+    return String(numberToFixedPrecisionString(number, precision, buffer, trailingZerosTruncatingPolicy == TruncateTrailingZeros));
+}
 
-    // Mimic String::format("%.[precision]g", ...), but use dtoas rounding facilities.
-    if (flags & ShouldRoundSignificantFigures)
-        return String(numberToFixedPrecisionString(number, precision, buffer, flags & ShouldTruncateTrailingZeros));
-
-    // Mimic String::format("%.[precision]f", ...), but use dtoas rounding facilities.
-    return String(numberToFixedWidthString(number, precision, buffer));
+String String::numberToStringECMAScript(double number)
+{
+    NumberToStringBuffer buffer;
+    return String(numberToString(number, buffer));
+}
+    
+String String::numberToStringFixedWidth(double number, unsigned decimalPlaces)
+{
+    NumberToStringBuffer buffer;
+    return String(numberToFixedWidthString(number, decimalPlaces, buffer));
 }
 
 int String::toIntStrict(bool* ok, int base) const
@@ -592,11 +655,49 @@ float String::toFloat(bool* ok) const
     return m_impl->toFloat(ok);
 }
 
+#if COMPILER_SUPPORTS(CXX_REFERENCE_QUALIFIED_FUNCTIONS)
+String String::isolatedCopy() const &
+{
+    if (!m_impl)
+        return String();
+    return m_impl->isolatedCopy();
+}
+
+String String::isolatedCopy() const &&
+{
+    if (isSafeToSendToAnotherThread()) {
+        // Since we know that our string is a temporary that will be destroyed
+        // we can just steal the m_impl from it, thus avoiding a copy.
+        return String(std::move(*this));
+    }
+
+    if (!m_impl)
+        return String();
+
+    return m_impl->isolatedCopy();
+}
+#else
 String String::isolatedCopy() const
 {
     if (!m_impl)
         return String();
     return m_impl->isolatedCopy();
+}
+#endif
+
+bool String::isSafeToSendToAnotherThread() const
+{
+    if (!impl())
+        return true;
+    // AtomicStrings are not safe to send between threads as ~StringImpl()
+    // will try to remove them from the wrong AtomicStringTable.
+    if (impl()->isAtomic())
+        return false;
+    if (impl()->hasOneRef())
+        return true;
+    if (isEmpty())
+        return true;
+    return false;
 }
 
 void String::split(const String& separator, bool allowEmptyEntries, Vector<String>& result) const
@@ -614,11 +715,6 @@ void String::split(const String& separator, bool allowEmptyEntries, Vector<Strin
         result.append(substring(startPos));
 }
 
-void String::split(const String& separator, Vector<String>& result) const
-{
-    split(separator, false, result);
-}
-
 void String::split(UChar separator, bool allowEmptyEntries, Vector<String>& result) const
 {
     result.clear();
@@ -634,18 +730,12 @@ void String::split(UChar separator, bool allowEmptyEntries, Vector<String>& resu
         result.append(substring(startPos));
 }
 
-void String::split(UChar separator, Vector<String>& result) const
-{
-    split(String(&separator, 1), false, result);
-}
-
 CString String::ascii() const
 {
     // Printable ASCII characters 32..127 and the null character are
     // preserved, characters outside of this range are converted to '?'.
 
     unsigned length = this->length();
-
     if (!length) {
         char* characterBuffer;
         return CString::newUninitialized(length, characterBuffer);
@@ -691,7 +781,7 @@ CString String::latin1() const
     if (is8Bit())
         return CString(reinterpret_cast<const char*>(this->characters8()), length);
 
-    const UChar* characters = this->characters();
+    const UChar* characters = this->characters16();
 
     char* characterBuffer;
     CString result = CString::newUninitialized(length, characterBuffer);
@@ -713,7 +803,7 @@ static inline void putUTF8Triple(char*& buffer, UChar ch)
     *buffer++ = static_cast<char>((ch & 0x3F) | 0x80);
 }
 
-CString String::utf8(bool strict) const
+CString String::utf8(ConversionMode mode) const
 {
     unsigned length = this->length();
 
@@ -744,12 +834,33 @@ CString String::utf8(bool strict) const
     } else {
         const UChar* characters = this->characters16();
 
+        if (mode == StrictConversionReplacingUnpairedSurrogatesWithFFFD) {
+            const UChar* charactersEnd = characters + length;
+            char* bufferEnd = buffer + bufferVector.size();
+            while (characters < charactersEnd) {
+                // Use strict conversion to detect unpaired surrogates.
+                ConversionResult result = convertUTF16ToUTF8(&characters, charactersEnd, &buffer, bufferEnd, true);
+                ASSERT(result != targetExhausted);
+                // Conversion fails when there is an unpaired surrogate.
+                // Put replacement character (U+FFFD) instead of the unpaired surrogate.
+                if (result != conversionOK) {
+                    ASSERT((0xD800 <= *characters && *characters <= 0xDFFF));
+                    // There should be room left, since one UChar hasn't been converted.
+                    ASSERT((buffer + 3) <= bufferEnd);
+                    putUTF8Triple(buffer, replacementCharacter);
+                    ++characters;
+                }
+            }
+        } else {
+            bool strict = mode == StrictConversion;
         ConversionResult result = convertUTF16ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size(), strict);
         ASSERT(result != targetExhausted); // (length * 3) should be sufficient for any conversion
 
         // Only produced from strict conversion.
-        if (result == sourceIllegal)
+            if (result == sourceIllegal) {
+                ASSERT(strict);
             return CString();
+            }
 
         // Check for an unconverted high surrogate.
         if (result == sourceExhausted) {
@@ -766,8 +877,35 @@ CString String::utf8(bool strict) const
             putUTF8Triple(buffer, *characters);
         }
     }
+    }
 
     return CString(bufferVector.data(), buffer - bufferVector.data());
+}
+
+String String::make8BitFrom16BitSource(const UChar* source, size_t length)
+{
+    if (!length)
+        return String();
+
+    LChar* destination;
+    String result = String::createUninitialized(length, destination);
+
+    copyLCharsFromUCharSource(destination, source, length);
+
+    return result;
+}
+
+String String::make16BitFrom8BitSource(const LChar* source, size_t length)
+{
+    if (!length)
+        return String();
+    
+    UChar* destination;
+    String result = String::createUninitialized(length, destination);
+    
+    StringImpl::copyChars(destination, source, length);
+    
+    return result;
 }
 
 String String::fromUTF8(const LChar* stringStart, size_t length)
@@ -778,6 +916,9 @@ String String::fromUTF8(const LChar* stringStart, size_t length)
     if (!stringStart)
         return String();
 
+    if (!length)
+        return emptyString();
+
     // We'll use a StringImpl as a buffer; if the source string only contains ascii this should be
     // the right length, if there are any multi-byte sequences this buffer will be too large.
     UChar* buffer;
@@ -786,8 +927,12 @@ String String::fromUTF8(const LChar* stringStart, size_t length)
 
     // Try converting into the buffer.
     const char* stringCurrent = reinterpret_cast<const char*>(stringStart);
-    if (convertUTF8ToUTF16(&stringCurrent, reinterpret_cast<const char *>(stringStart + length), &buffer, bufferEnd) != conversionOK)
+    bool isAllASCII;
+    if (convertUTF8ToUTF16(&stringCurrent, reinterpret_cast<const char *>(stringStart + length), &buffer, bufferEnd, &isAllASCII) != conversionOK)
         return String();
+
+    if (isAllASCII)
+        return String(stringStart, length);
 
     // stringBuffer is full (the input must have been all ascii) so just return it!
     if (buffer == bufferEnd)
@@ -804,6 +949,11 @@ String String::fromUTF8(const LChar* string)
     if (!string)
         return String();
     return fromUTF8(string, strlen(reinterpret_cast<const char*>(string)));
+}
+
+String String::fromUTF8(const CString& s)
+{
+    return fromUTF8(s.data());
 }
 
 String String::fromUTF8WithLatin1Fallback(const LChar* string, size_t size)
@@ -847,24 +997,24 @@ static inline IntegralType toIntegralType(const CharType* data, size_t length, b
 
     // skip leading whitespace
     while (length && isSpaceOrNewline(*data)) {
-        length--;
-        data++;
+        --length;
+        ++data;
     }
 
     if (isSigned && length && *data == '-') {
-        length--;
-        data++;
+        --length;
+        ++data;
         isNegative = true;
     } else if (length && *data == '+') {
-        length--;
-        data++;
+        --length;
+        ++data;
     }
 
     if (!length || !isCharacterAllowedInBase(*data, base))
         goto bye;
 
     while (length && isCharacterAllowedInBase(*data, base)) {
-        length--;
+        --length;
         IntegralType digitValue;
         CharType c = *data;
         if (isASCIIDigit(c))
@@ -878,7 +1028,7 @@ static inline IntegralType toIntegralType(const CharType* data, size_t length, b
             goto bye;
 
         value = base * value + digitValue;
-        data++;
+        ++data;
     }
 
 #if COMPILER(MSVC)
@@ -895,8 +1045,8 @@ static inline IntegralType toIntegralType(const CharType* data, size_t length, b
 
     // skip trailing space
     while (length && isSpaceOrNewline(*data)) {
-        length--;
-        data++;
+        --length;
+        ++data;
     }
 
     if (!length)
@@ -1093,7 +1243,8 @@ float charactersToFloat(const UChar* data, size_t length, size_t& parsedLength)
 
 const String& emptyString()
 {
-    DEFINE_STATIC_LOCAL(String, emptyString, (StringImpl::empty()));
+    static NeverDestroyed<String> emptyString(StringImpl::empty());
+
     return emptyString;
 }
 
@@ -1107,7 +1258,7 @@ Vector<char> asciiDebug(String& string);
 
 void String::show() const
 {
-    dataLog("%s\n", asciiDebug(impl()).data());
+    dataLogF("%s\n", asciiDebug(impl()).data());
 }
 
 String* string(const char* s)
@@ -1122,16 +1273,19 @@ Vector<char> asciiDebug(StringImpl* impl)
         return asciiDebug(String("[null]").impl());
 
     Vector<char> buffer;
-    unsigned length = impl->length();
-    const UChar* characters = impl->characters();
-
-    buffer.resize(length + 1);
-    for (unsigned i = 0; i < length; ++i) {
-        UChar ch = characters[i];
-        buffer[i] = ch && (ch < 0x20 || ch > 0x7f) ? '?' : ch;
+    for (unsigned i = 0; i < impl->length(); ++i) {
+        UChar ch = (*impl)[i];
+        if (isASCIIPrintable(ch)) {
+            if (ch == '\\')
+                buffer.append(ch);
+            buffer.append(ch);
+        } else {
+            buffer.append('\\');
+            buffer.append('u');
+            appendUnsignedAsHexFixedSize(ch, buffer, 4);
     }
-    buffer[length] = '\0';
-
+    }
+    buffer.append('\0');
     return buffer;
 }
 

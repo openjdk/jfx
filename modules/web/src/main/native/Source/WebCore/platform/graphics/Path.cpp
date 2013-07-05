@@ -32,12 +32,13 @@
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "PathTraversalState.h"
+#include "RoundedRect.h"
 #include <math.h>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
 
-#if !PLATFORM(OPENVG) && !PLATFORM(QT)
+#if !PLATFORM(QT)
 static void pathLengthApplierFunction(void* info, const PathElement* element)
 {
     PathTraversalState& traversalState = *static_cast<PathTraversalState*>(info);
@@ -144,16 +145,14 @@ void Path::addRoundedRect(const FloatRect& rect, const FloatSize& topLeftRadius,
 
 void Path::addPathForRoundedRect(const FloatRect& rect, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius, RoundedRectStrategy strategy)
 {
-    if (strategy == PreferBezierRoundedRect) {
-        addBeziersForRoundedRect(rect, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
+    if (strategy == PreferNativeRoundedRect) {
+#if USE(CG) || PLATFORM(BLACKBERRY)
+        platformAddPathForRoundedRect(rect, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
         return;
+#endif
     }
 
-#if USE(CG)
-    platformAddPathForRoundedRect(rect, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
-#else
     addBeziersForRoundedRect(rect, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
-#endif
 }
 
 // Approximation of control point positions on a bezier to simulate a quarter of a circle.
@@ -165,18 +164,22 @@ void Path::addBeziersForRoundedRect(const FloatRect& rect, const FloatSize& topL
     moveTo(FloatPoint(rect.x() + topLeftRadius.width(), rect.y()));
 
     addLineTo(FloatPoint(rect.maxX() - topRightRadius.width(), rect.y()));
+    if (topRightRadius.width() > 0 || topRightRadius.height() > 0)
     addBezierCurveTo(FloatPoint(rect.maxX() - topRightRadius.width() * gCircleControlPoint, rect.y()),
                      FloatPoint(rect.maxX(), rect.y() + topRightRadius.height() * gCircleControlPoint),
                      FloatPoint(rect.maxX(), rect.y() + topRightRadius.height()));
     addLineTo(FloatPoint(rect.maxX(), rect.maxY() - bottomRightRadius.height()));
+    if (bottomRightRadius.width() > 0 || bottomRightRadius.height() > 0)
     addBezierCurveTo(FloatPoint(rect.maxX(), rect.maxY() - bottomRightRadius.height() * gCircleControlPoint),
                      FloatPoint(rect.maxX() - bottomRightRadius.width() * gCircleControlPoint, rect.maxY()),
                      FloatPoint(rect.maxX() - bottomRightRadius.width(), rect.maxY()));
     addLineTo(FloatPoint(rect.x() + bottomLeftRadius.width(), rect.maxY()));
+    if (bottomLeftRadius.width() > 0 || bottomLeftRadius.height() > 0)
     addBezierCurveTo(FloatPoint(rect.x() + bottomLeftRadius.width() * gCircleControlPoint, rect.maxY()),
                      FloatPoint(rect.x(), rect.maxY() - bottomLeftRadius.height() * gCircleControlPoint),
                      FloatPoint(rect.x(), rect.maxY() - bottomLeftRadius.height()));
     addLineTo(FloatPoint(rect.x(), rect.y() + topLeftRadius.height()));
+    if (topLeftRadius.width() > 0 || topLeftRadius.height() > 0)
     addBezierCurveTo(FloatPoint(rect.x(), rect.y() + topLeftRadius.height() * gCircleControlPoint),
                      FloatPoint(rect.x() + topLeftRadius.width() * gCircleControlPoint, rect.y()),
                      FloatPoint(rect.x() + topLeftRadius.width(), rect.y()));
@@ -184,7 +187,7 @@ void Path::addBeziersForRoundedRect(const FloatRect& rect, const FloatSize& topL
     closeSubpath();
 }
 
-#if !USE(CG)
+#if !USE(CG) && !PLATFORM(QT)
 FloatRect Path::fastBoundingRect() const
 {
     return boundingRect();

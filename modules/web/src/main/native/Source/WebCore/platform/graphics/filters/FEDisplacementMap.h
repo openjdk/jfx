@@ -23,9 +23,9 @@
 #define FEDisplacementMap_h
 
 #if ENABLE(FILTERS)
-#include "PlatformString.h"
 #include "FilterEffect.h"
 #include "Filter.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -49,6 +49,9 @@ public:
 
     float scale() const;
     bool setScale(float);
+
+    void setResultColorSpace(ColorSpace) OVERRIDE;
+    virtual void transformResultColorSpace(FilterEffect*, const int) OVERRIDE;
 
     virtual void platformApplySoftware();
     virtual void dump();

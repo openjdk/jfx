@@ -34,7 +34,7 @@ class ScrollbarThemeComposite : public ScrollbarTheme {
 public:
     // Implement ScrollbarTheme interface
     virtual bool paint(ScrollbarThemeClient*, GraphicsContext*, const IntRect& damageRect);
-    virtual ScrollbarPart hitTest(ScrollbarThemeClient*, const PlatformMouseEvent&);
+    virtual ScrollbarPart hitTest(ScrollbarThemeClient*, const IntPoint&);
     virtual void invalidatePart(ScrollbarThemeClient*, ScrollbarPart);
     virtual int thumbPosition(ScrollbarThemeClient*);
     virtual int thumbLength(ScrollbarThemeClient*);
@@ -60,7 +60,6 @@ public:
     virtual void paintTrackPiece(GraphicsContext*, ScrollbarThemeClient*, const IntRect&, ScrollbarPart) { }
     virtual void paintButton(GraphicsContext*, ScrollbarThemeClient*, const IntRect&, ScrollbarPart) { }
     virtual void paintThumb(GraphicsContext*, ScrollbarThemeClient*, const IntRect&) { }
-    virtual void paintTickmarks(GraphicsContext*, ScrollbarThemeClient*, const IntRect&) { }
 
     virtual IntRect constrainTrackRectToTrackPieces(ScrollbarThemeClient*, const IntRect& rect) { return rect; }
 };

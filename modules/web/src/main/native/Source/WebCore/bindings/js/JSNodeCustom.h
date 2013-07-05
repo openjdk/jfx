@@ -27,32 +27,10 @@
 #define JSNodeCustom_h
 
 #include "JSDOMBinding.h"
-#include <wtf/AlwaysInline.h>
+#include "JSNode.h"
+#include "ScriptState.h"
 
 namespace WebCore {
-
-inline JSDOMWrapper* getInlineCachedWrapper(DOMWrapperWorld* world, Node* node)
-{
-    if (!world->isNormal())
-        return 0;
-    return node->wrapper();
-}
-
-inline bool setInlineCachedWrapper(DOMWrapperWorld* world, Node* node, JSDOMWrapper* wrapper)
-{
-    if (!world->isNormal())
-        return false;
-    node->setWrapper(*world->globalData(), wrapper, wrapperOwner(world, node), wrapperContext(world, node));
-    return true;
-}
-
-inline bool clearInlineCachedWrapper(DOMWrapperWorld* world, Node* node, JSDOMWrapper* wrapper)
-{
-    if (!world->isNormal())
-        return false;
-    node->clearWrapper(wrapper);
-    return true;
-}
 
 JSC::JSValue createWrapper(JSC::ExecState*, JSDOMGlobalObject*, Node*);
 
@@ -68,6 +46,32 @@ inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, 
     return createWrapper(exec, globalObject, node);
 }
 
+// In the C++ DOM, a node tree survives as long as there is a reference to its
+// root. In the JavaScript DOM, a node tree survives as long as there is a
+// reference to any node in the tree. To model the JavaScript DOM on top of
+// the C++ DOM, we ensure that the root of every tree has a JavaScript wrapper.
+void willCreatePossiblyOrphanedTreeByRemovalSlowCase(Node* root);
+inline void willCreatePossiblyOrphanedTreeByRemoval(Node* root)
+{
+    if (root->wrapper())
+        return;
+
+    if (!root->hasChildNodes())
+        return;
+
+    willCreatePossiblyOrphanedTreeByRemovalSlowCase(root);
 }
+
+inline void* root(Node* node)
+{
+    if (node->inDocument())
+        return node->document();
+
+    while (node->parentOrShadowHostNode())
+        node = node->parentOrShadowHostNode();
+    return node;
+}
+
+} // namespace WebCore
 
 #endif // JSDOMNodeCustom_h

@@ -31,42 +31,50 @@
 
 #include "APIShims.h"
 #include "Heap.h"
-#include "JSGlobalData.h"
+#include "VM.h"
 #include "JSLock.h"
 #include "JSObject.h"
-#include "ScopeChain.h"
+
 #include <wtf/RetainPtr.h>
 #include <wtf/WTFThreadData.h>
 
 namespace JSC {
 
-#if USE(CF)
+#if USE(CF) || PLATFORM(QT)
 
 const double gcTimeSlicePerMB = 0.01; // Percentage of CPU time we will spend to reclaim 1 MB
 const double maxGCTimeSlice = 0.05; // The maximum amount of CPU time we want to use for opportunistic timer-triggered collections.
 const double timerSlop = 2.0; // Fudge factor to avoid performance cost of resetting timer.
 const double pagingTimeOut = 0.1; // Time in seconds to allow opportunistic timer to iterate over all blocks to see if the Heap is paged out.
-const CFTimeInterval hour = 60 * 60;
+const double hour = 60 * 60;
 
+#if USE(CF)
 DefaultGCActivityCallback::DefaultGCActivityCallback(Heap* heap)
-    : GCActivityCallback(heap->globalData(), CFRunLoopGetCurrent())
+    : GCActivityCallback(heap->vm(), CFRunLoopGetCurrent())
     , m_delay(s_decade)
 {
 }
 
 DefaultGCActivityCallback::DefaultGCActivityCallback(Heap* heap, CFRunLoopRef runLoop)
-    : GCActivityCallback(heap->globalData(), runLoop)
+    : GCActivityCallback(heap->vm(), runLoop)
     , m_delay(s_decade)
 {
 }
+#elif PLATFORM(QT)
+DefaultGCActivityCallback::DefaultGCActivityCallback(Heap* heap)
+    : GCActivityCallback(heap->vm())
+    , m_delay(hour)
+{
+}
+#endif
 
 void DefaultGCActivityCallback::doWork()
 {
-    Heap* heap = &m_globalData->heap;
+    Heap* heap = &m_vm->heap;
     if (!isEnabled())
         return;
     
-    APIEntryShim shim(m_globalData);
+    APIEntryShim shim(m_vm);
 #if !PLATFORM(IOS)
     double startTime = WTF::monotonicallyIncreasingTime();
     if (heap->isPagedOut(startTime + pagingTimeOut)) {
@@ -78,6 +86,7 @@ void DefaultGCActivityCallback::doWork()
     heap->collect(Heap::DoNotSweep);
 }
     
+#if USE(CF)
 void DefaultGCActivityCallback::scheduleTimer(double newDelay)
 {
     if (newDelay * timerSlop > m_delay)
@@ -92,6 +101,22 @@ void DefaultGCActivityCallback::cancelTimer()
     m_delay = s_decade;
     CFRunLoopTimerSetNextFireDate(m_timer.get(), CFAbsoluteTimeGetCurrent() + s_decade);
 }
+#elif PLATFORM(QT)
+
+void DefaultGCActivityCallback::scheduleTimer(double newDelay)
+{
+    if (newDelay * timerSlop > m_delay)
+        return;
+    m_delay = newDelay;
+    m_timer.start(newDelay * 1000, this);
+}
+
+void DefaultGCActivityCallback::cancelTimer()
+{
+    m_delay = hour;
+    m_timer.stop();
+}
+#endif
 
 void DefaultGCActivityCallback::didAllocate(size_t bytes)
 {
@@ -99,7 +124,7 @@ void DefaultGCActivityCallback::didAllocate(size_t bytes)
     // We pretend it's one byte so that we don't ignore this allocation entirely.
     if (!bytes)
         bytes = 1;
-    Heap* heap = static_cast<Heap*>(&m_globalData->heap);
+    Heap* heap = static_cast<Heap*>(&m_vm->heap);
     double gcTimeSlice = std::min((static_cast<double>(bytes) / MB) * gcTimeSlicePerMB, maxGCTimeSlice);
     double newDelay = heap->lastGCLength() / gcTimeSlice;
     scheduleTimer(newDelay);
@@ -118,7 +143,7 @@ void DefaultGCActivityCallback::cancel()
 #else
 
 DefaultGCActivityCallback::DefaultGCActivityCallback(Heap* heap)
-    : GCActivityCallback(heap->globalData())
+    : GCActivityCallback(heap->vm())
 {
 }
 

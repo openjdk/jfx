@@ -41,9 +41,10 @@ typedef int GC3Dint;
 typedef int GC3Dsizei;
 typedef unsigned int GC3Duint;
 typedef float GC3Dfloat;
+typedef unsigned short GC3Dhalffloat;
 typedef float GC3Dclampf;
-typedef signed long int GC3Dintptr;
-typedef signed long int GC3Dsizeiptr;
+typedef intptr_t GC3Dintptr;
+typedef intptr_t GC3Dsizeiptr;
 typedef char GC3Dchar;
 
 typedef GC3Duint Platform3DObject;

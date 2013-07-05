@@ -28,7 +28,7 @@
 
 namespace WebCore {
 
-class SVGTextElement : public SVGTextPositioningElement,
+class SVGTextElement FINAL : public SVGTextPositioningElement,
                        public SVGTransformable {
 public:
     static PassRefPtr<SVGTextElement> create(const QualifiedName&, Document*);
@@ -44,10 +44,10 @@ public:
 private:
     SVGTextElement(const QualifiedName&, Document*);
 
-    virtual bool supportsFocus() const { return true; }
+    virtual bool supportsFocus() const OVERRIDE { return true; }
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
     virtual AffineTransform* supplementalTransform();
     virtual AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope mode) const { return SVGTransformable::localCoordinateSpaceTransform(mode); }

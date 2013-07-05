@@ -28,8 +28,8 @@
 
 #if ENABLE(DFG_JIT)
 
-#include <assembler/MacroAssembler.h>
-#include <dfg/DFGRegisterBank.h>
+#include "DFGRegisterBank.h"
+#include "MacroAssembler.h"
 
 namespace JSC { namespace DFG {
 
@@ -82,7 +82,7 @@ public:
     {
         ASSERT(reg != InvalidFPRReg);
 #if CPU(X86_64)
-        ASSERT(reg < 16);
+        ASSERT(static_cast<int>(reg) < 16);
         static const char* nameForRegister[16] = {
             "xmm0", "xmm1", "xmm2", "xmm3",
             "xmm4", "xmm5", "xmm6", "xmm7",
@@ -90,7 +90,7 @@ public:
             "xmm12", "xmm13", "xmm14", "xmm15"
         };
 #elif CPU(X86)
-        ASSERT(reg < 8);
+        ASSERT(static_cast<int>(reg) < 8);
         static const char* nameForRegister[8] = {
             "xmm0", "xmm1", "xmm2", "xmm3",
             "xmm4", "xmm5", "xmm6", "xmm7"
@@ -122,6 +122,11 @@ public:
     // we'll return in d0 for simplicity.
     static const FPRReg returnValueFPR = ARMRegisters::d0; // fpRegT0
 
+#if CPU(ARM_HARDFP)
+    static const FPRReg argumentFPR0 = ARMRegisters::d0; // fpRegT0
+    static const FPRReg argumentFPR1 = ARMRegisters::d1; // fpRegT1
+#endif
+
     // FPRReg mapping is direct, the machine regsiter numbers can
     // be used directly as indices into the FPR RegisterBank.
     COMPILE_ASSERT(ARMRegisters::d0 == 0, d0_is_0);
@@ -142,19 +147,87 @@ public:
     static const char* debugName(FPRReg reg)
     {
         ASSERT(reg != InvalidFPRReg);
-        ASSERT(reg < 32);
+        ASSERT(static_cast<int>(reg) < 32);
         static const char* nameForRegister[32] = {
             "d0", "d1", "d2", "d3",
             "d4", "d5", "d6", "d7",
             "d8", "d9", "d10", "d11",
-            "d12", "d13", "d14", "d15"
-            "d16", "d17", "d18", "d19"
-            "d20", "d21", "d22", "d23"
-            "d24", "d25", "d26", "d27"
+            "d12", "d13", "d14", "d15",
+            "d16", "d17", "d18", "d19",
+            "d20", "d21", "d22", "d23",
+            "d24", "d25", "d26", "d27",
             "d28", "d29", "d30", "d31"
         };
         return nameForRegister[reg];
     }
+};
+
+#endif
+
+#if CPU(MIPS)
+
+class FPRInfo {
+public:
+    typedef FPRReg RegisterType;
+    static const unsigned numberOfRegisters = 6;
+
+    // Temporary registers.
+    static const FPRReg fpRegT0 = MIPSRegisters::f0;
+    static const FPRReg fpRegT1 = MIPSRegisters::f4;
+    static const FPRReg fpRegT2 = MIPSRegisters::f6;
+    static const FPRReg fpRegT3 = MIPSRegisters::f8;
+    static const FPRReg fpRegT4 = MIPSRegisters::f10;
+    static const FPRReg fpRegT5 = MIPSRegisters::f18;
+
+    static const FPRReg returnValueFPR = MIPSRegisters::f0;
+
+    static const FPRReg argumentFPR0 = MIPSRegisters::f12;
+    static const FPRReg argumentFPR1 = MIPSRegisters::f14;
+
+    static FPRReg toRegister(unsigned index)
+    {
+        static const FPRReg registerForIndex[numberOfRegisters] = {
+            fpRegT0, fpRegT1, fpRegT2, fpRegT3, fpRegT4, fpRegT5 };
+
+        ASSERT(index < numberOfRegisters);
+        return registerForIndex[index];
+    }
+
+    static unsigned toIndex(FPRReg reg)
+    {
+        ASSERT(reg != InvalidFPRReg);
+        ASSERT(reg < 20);
+        static const unsigned indexForRegister[20] = {
+            0, InvalidIndex, InvalidIndex, InvalidIndex,
+            1, InvalidIndex, 2, InvalidIndex,
+            3, InvalidIndex, 4, InvalidIndex,
+            InvalidIndex, InvalidIndex, InvalidIndex, InvalidIndex,
+            InvalidIndex, InvalidIndex, 5, InvalidIndex,
+        };
+        unsigned result = indexForRegister[reg];
+        ASSERT(result != InvalidIndex);
+        return result;
+    }
+
+    static const char* debugName(FPRReg reg)
+    {
+        ASSERT(reg != InvalidFPRReg);
+        ASSERT(reg < 32);
+        static const char* nameForRegister[32] = {
+            "f0", "f1", "f2", "f3",
+            "f4", "f5", "f6", "f7",
+            "f8", "f9", "f10", "f11",
+            "f12", "f13", "f14", "f15"
+            "f16", "f17", "f18", "f19"
+            "f20", "f21", "f22", "f23"
+            "f24", "f25", "f26", "f27"
+            "f28", "f29", "f30", "f31"
+        };
+        return nameForRegister[reg];
+    }
+private:
+
+    static const unsigned InvalidIndex = 0xffffffff;
 };
 
 #endif

@@ -40,20 +40,22 @@ class ContextFeatures : public RefCountedSupplement<Page, ContextFeatures> {
 public:
     enum FeatureType {
         DialogElement = 0,
-        ShadowDOM,
         StyleScoped,
-        PagePopup,
+        HTMLNotifications,
+        MutationEvents,
+        PushState,
         FeatureTypeSize // Should be the last entry.
     };
 
-    static const AtomicString& supplementName();
+    static const char* supplementName();
     static ContextFeatures* defaultSwitch();
     static PassRefPtr<ContextFeatures> create(ContextFeaturesClient*);
 
     static bool dialogElementEnabled(Document*);
-    static bool shadowDOMEnabled(Document*);
     static bool styleScopedEnabled(Document*);
-    static bool pagePopupEnabled(Document*);
+    static bool htmlNotificationsEnabled(Document*);
+    static bool mutationEventsEnabled(Document*);
+    static bool pushStateEnabled(Document*);
 
     bool isEnabled(Document*, FeatureType, bool) const;
     void urlDidChange(Document*);
@@ -75,6 +77,7 @@ inline void ContextFeatures::hostDestroyed()
 
 
 class ContextFeaturesClient {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static ContextFeaturesClient* empty();
 

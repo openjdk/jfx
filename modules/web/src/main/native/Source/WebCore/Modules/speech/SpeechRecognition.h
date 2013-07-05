@@ -30,11 +30,11 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "PlatformString.h"
 #include "SpeechGrammarList.h"
 #include <wtf/Compiler.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -56,11 +56,13 @@ public:
     void setLang(const String& lang) { m_lang = lang; }
     bool continuous() { return m_continuous; }
     void setContinuous(bool continuous) { m_continuous = continuous; }
+    bool interimResults() { return m_interimResults; }
+    void setInterimResults(bool interimResults) { m_interimResults = interimResults; }
     unsigned long maxAlternatives() { return m_maxAlternatives; }
     void setMaxAlternatives(unsigned long maxAlternatives) { m_maxAlternatives = maxAlternatives; }
 
     // Callable by the user.
-    void start();
+    void start(ExceptionCode&);
     void stopFunction();
     void abort();
 
@@ -71,9 +73,8 @@ public:
     void didEndSpeech();
     void didEndSound();
     void didEndAudio();
-    void didReceiveResult(PassRefPtr<SpeechRecognitionResult>, unsigned long resultIndex, PassRefPtr<SpeechRecognitionResultList> resultHistory);
+    void didReceiveResults(const Vector<RefPtr<SpeechRecognitionResult> >& newFinalResults, const Vector<RefPtr<SpeechRecognitionResult> >& currentInterimResults);
     void didReceiveNoMatch(PassRefPtr<SpeechRecognitionResult>);
-    void didDeleteResult(unsigned resultIndex, PassRefPtr<SpeechRecognitionResultList> resultHistory);
     void didReceiveError(PassRefPtr<SpeechRecognitionError>);
     void didStart();
     void didEnd();
@@ -96,7 +97,6 @@ public:
     DEFINE_ATTRIBUTE_EVENT_LISTENER(audioend);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(result);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(nomatch);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(resultdeleted);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(start);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(end);
@@ -104,7 +104,7 @@ public:
 private:
     friend class RefCounted<SpeechRecognition>;
 
-    SpeechRecognition(ScriptExecutionContext*);
+    explicit SpeechRecognition(ScriptExecutionContext*);
 
 
     // EventTarget
@@ -116,12 +116,16 @@ private:
     RefPtr<SpeechGrammarList> m_grammars;
     String m_lang;
     bool m_continuous;
+    bool m_interimResults;
     unsigned long m_maxAlternatives;
 
     EventTargetData m_eventTargetData;
 
     SpeechRecognitionController* m_controller;
     bool m_stoppedByActiveDOMObject;
+    bool m_started;
+    bool m_stopping;
+    Vector<RefPtr<SpeechRecognitionResult> > m_finalResults;
 };
 
 } // namespace WebCore

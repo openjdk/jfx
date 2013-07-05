@@ -23,7 +23,7 @@ class ImageBuffer;
 namespace WebCore {
 
 void Image::drawPattern(GraphicsContext *gc, const FloatRect& srcRect, const AffineTransform& patternTransform,
-                        const FloatPoint& phase, ColorSpace, CompositeOperator, const FloatRect& destRect)
+                        const FloatPoint& phase, ColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -60,7 +60,7 @@ void Image::drawPattern(GraphicsContext *gc, const FloatRect& srcRect, const Aff
 }
 
 void Image::drawImage(GraphicsContext *gc, const FloatRect &dstRect, const FloatRect &srcRect,
-                       ColorSpace, CompositeOperator)
+                       ColorSpace, CompositeOperator, BlendMode)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 

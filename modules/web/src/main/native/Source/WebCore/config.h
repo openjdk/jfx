@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006 Apple Inc.
+ * Copyright (C) 2004, 2005, 2006, 2013 Apple Inc.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -29,7 +29,11 @@
 
 #include <wtf/Platform.h>
 
-#if OS(WINDOWS) && !OS(WINCE) && !PLATFORM(QT) && !PLATFORM(CHROMIUM) && !PLATFORM(GTK) && !PLATFORM(WX) && !PLATFORM(JAVA)
+#if PLATFORM(MAC) || PLATFORM(IOS)
+#define WTF_USE_FILE_LOCK 1
+#endif
+
+#if PLATFORM(WIN) && !OS(WINCE)
 #include <WebCore/WebCoreHeaderDetection.h>
 #endif
 
@@ -45,11 +49,11 @@
 #if OS(WINDOWS)
 
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500
+#define _WIN32_WINNT 0x0502
 #endif
 
 #ifndef WINVER
-#define WINVER 0x0500
+#define WINVER 0x0502
 #endif
 
 // If we don't define these, they get defined in windef.h.
@@ -82,20 +86,7 @@
 
 #endif
 
-// On MSW, wx headers need to be included before windows.h is.
-// The only way we can always ensure this is if we include wx here.
-#if PLATFORM(WX)
-#include <wx/defs.h>
-#endif
-
-// this breaks compilation of <QFontDatabase>, at least, so turn it off for now
-// Also generates errors on wx on Windows, presumably because these functions
-// are used from wx headers. On GTK+ for Mac many GTK+ files include <libintl.h>
-// or <glib/gi18n-lib.h>, which in turn include <xlocale/_ctype.h> which uses
-// isacii(). 
-#if !PLATFORM(QT) && !PLATFORM(WX) && !PLATFORM(CHROMIUM) && !(OS(DARWIN) && PLATFORM(GTK)) && !OS(QNX) && !defined(_LIBCPP_VERSION)
 #include <wtf/DisallowCType.h>
-#endif
 
 #if COMPILER(MSVC)
 #define SKIP_STATIC_CONSTRUCTORS_ON_MSVC 1
@@ -122,17 +113,6 @@
 // New theme
 #define WTF_USE_NEW_THEME 1
 #endif // PLATFORM(MAC)
-
-#if PLATFORM(CHROMIUM)
-
-// Chromium uses this file instead of JavaScriptCore/config.h to compile
-// JavaScriptCore/wtf (chromium doesn't compile the rest of JSC). Therefore,
-// this define is required.
-#define WTF_CHANGES 1
-
-#define WTF_USE_GOOGLEURL 1
-
-#endif /* PLATFORM(CHROMIUM) */
 
 #if USE(CG)
 #ifndef CGFLOAT_DEFINED

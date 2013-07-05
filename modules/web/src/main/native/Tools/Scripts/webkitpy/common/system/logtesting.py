@@ -32,7 +32,7 @@ see the TestLogStream class, and perhaps also the LogTesting class.
 """
 
 import logging
-import unittest
+import unittest2 as unittest
 
 
 class TestLogStream(object):
@@ -72,7 +72,7 @@ class TestLogStream(object):
         messages: A list of log message strings.
 
         """
-        self._test_case.assertEquals(messages, self.messages)
+        self._test_case.assertEqual(messages, self.messages)
 
 
 class LogTesting(object):

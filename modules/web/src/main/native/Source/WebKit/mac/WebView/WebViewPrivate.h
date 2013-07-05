@@ -108,7 +108,20 @@ typedef enum {
     WebPaginationModeBottomToTop,
 } WebPaginationMode;
 
-// This needs to be in sync with WebCore::NotificationClient::Permission
+enum {
+    WebDidFirstLayout = 1 << 0,
+    WebDidFirstVisuallyNonEmptyLayout = 1 << 1,
+    WebDidHitRelevantRepaintedObjectsAreaThreshold = 1 << 2
+};
+typedef NSUInteger WebLayoutMilestones;
+
+typedef enum {
+    WebPageVisibilityStateVisible,
+    WebPageVisibilityStateHidden,
+    WebPageVisibilityStatePrerender,
+    WebPageVisibilityStateUnloaded
+} WebPageVisibilityState;
+
 typedef enum {
     WebNotificationPermissionAllowed,
     WebNotificationPermissionNotAllowed,
@@ -309,6 +322,10 @@ Could be worth adding to the API.
 // Indicates if the WebView is in the midst of a user gesture.
 - (BOOL)_isProcessingUserGesture;
 
+// Determining and updating page visibility state.
+- (BOOL)_isViewVisible;
+- (void)_updateVisibilityState;
+
 // SPI for DumpRenderTree
 - (void)_updateActiveState;
 
@@ -360,9 +377,6 @@ Could be worth adding to the API.
 
 + (void)_setShouldUseFontSmoothing:(BOOL)f;
 + (BOOL)_shouldUseFontSmoothing;
-
-- (void)_setCatchesDelegateExceptions:(BOOL)f;
-- (BOOL)_catchesDelegateExceptions;
 
 // These two methods are useful for a test harness that needs a consistent appearance for the focus rings
 // regardless of OS X version.
@@ -482,8 +496,6 @@ Could be worth adding to the API.
 - (void)setMemoryCacheDelegateCallsEnabled:(BOOL)suspend;
 - (BOOL)areMemoryCacheDelegateCallsEnabled;
 
-- (void)_setJavaScriptURLsAreAllowed:(BOOL)setJavaScriptURLsAreAllowed;
-
 + (NSCursor *)_pointingHandCursor;
 
 // SPI for DumpRenderTree
@@ -569,6 +581,11 @@ Could be worth adding to the API.
 - (void)_setPaginationMode:(WebPaginationMode)paginationMode;
 - (WebPaginationMode)_paginationMode;
 
+- (void)_listenForLayoutMilestones:(WebLayoutMilestones)layoutMilestones;
+- (WebLayoutMilestones)_layoutMilestones;
+
+- (void)_setVisibilityState:(WebPageVisibilityState)visibilityState isInitialState:(BOOL)isInitialState;
+
 // Whether the column-break-{before,after} properties are respected instead of the
 // page-break-{before,after} properties.
 - (void)_setPaginationBehavesLikeColumns:(BOOL)behavesLikeColumns;
@@ -603,23 +620,6 @@ Could be worth adding to the API.
 - (BOOL)searchFor:(NSString *)string direction:(BOOL)forward caseSensitive:(BOOL)caseFlag wrap:(BOOL)wrapFlag startInSelection:(BOOL)startInSelection;
 
 /*!
-    @method defaultMinimumTimerInterval
-    @discussion Should consider moving this to the public API.
-    @result Returns the default minimum timer interval.
-*/
-+ (double)_defaultMinimumTimerInterval;
-
-/*!
-    @method setMinimumTimerInterval:
-    @discussion Sets the minimum interval for DOMTimers in this WebView. This method is
-    exposed here in the Mac port rather than through WebPreferences (which generally
-    governs Settings) because this value is something adjusted at run time, not set
-    globally via "defaults write". Should consider adding this to the public API.
-    @param intervalInSeconds The new minimum timer interval, in seconds.
-*/
-- (void)_setMinimumTimerInterval:(double)intervalInSeconds;
-
-/*!
     @method _HTTPPipeliningEnabled
     @abstract Checks the HTTP pipelining status.
     @discussion Defaults to NO.
@@ -634,6 +634,8 @@ Could be worth adding to the API.
     @param enabled The new HTTP pipelining status.
  */
 + (void)_setHTTPPipeliningEnabled:(BOOL)enabled;
+
+@property (nonatomic, copy, getter=_sourceApplicationAuditData, setter=_setSourceApplicationAuditData:) NSData *sourceApplicationAuditData;
 
 @end
 
@@ -677,7 +679,6 @@ Could be worth adding to the API.
 - (BOOL)isAutomaticDashSubstitutionEnabled;
 - (BOOL)isAutomaticTextReplacementEnabled;
 - (BOOL)isAutomaticSpellingCorrectionEnabled;
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 - (void)setAutomaticQuoteSubstitutionEnabled:(BOOL)flag;
 - (void)toggleAutomaticQuoteSubstitution:(id)sender;
 - (void)setAutomaticLinkDetectionEnabled:(BOOL)flag;
@@ -688,7 +689,6 @@ Could be worth adding to the API.
 - (void)toggleAutomaticTextReplacement:(id)sender;
 - (void)setAutomaticSpellingCorrectionEnabled:(BOOL)flag;
 - (void)toggleAutomaticSpellingCorrection:(id)sender;
-#endif
 @end
 
 @interface WebView (WebViewEditingInMail)
@@ -731,21 +731,18 @@ Could be worth adding to the API.
 - (id<WebGeolocationProvider>)_geolocationProvider;
 
 - (void)_geolocationDidChangePosition:(WebGeolocationPosition *)position;
-- (void)_geolocationDidFailWithError:(NSError *)error;
+- (void)_geolocationDidFailWithMessage:(NSString *)errorMessage;
 @end
 
 @interface WebView (WebViewNotification)
 - (void)_setNotificationProvider:(id<WebNotificationProvider>)notificationProvider;
 - (id<WebNotificationProvider>)_notificationProvider;
-- (void)_notificationControllerDestroyed;
 
 - (void)_notificationDidShow:(uint64_t)notificationID;
 - (void)_notificationDidClick:(uint64_t)notificationID;
 - (void)_notificationsDidClose:(NSArray *)notificationIDs;
-@end
 
-@interface WebView (WebViewPrivateStyleInfo)
-- (JSValueRef)_computedStyleIncludingVisitedInfo:(JSContextRef)context forElement:(JSValueRef)value;
+- (uint64_t)_notificationIDForTesting:(JSValueRef)jsNotification;
 @end
 
 @interface NSObject (WebViewFrameLoadDelegatePrivate)
@@ -760,6 +757,8 @@ Could be worth adding to the API.
 - (void)webView:(WebView *)sender didHandleOnloadEventsForFrame:(WebFrame *)frame;
 
 - (void)webView:(WebView *)sender didFirstVisuallyNonEmptyLayoutInFrame:(WebFrame *)frame;
+
+- (void)webView:(WebView *)sender didLayout:(WebLayoutMilestones)milestones;
 
 // For implementing the WebInspector's test harness
 - (void)webView:(WebView *)webView didClearInspectorWindowObject:(WebScriptObject *)windowObject forFrame:(WebFrame *)frame;

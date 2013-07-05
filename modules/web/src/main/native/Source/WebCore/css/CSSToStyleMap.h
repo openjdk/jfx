@@ -30,6 +30,7 @@ namespace WebCore {
 class FillLayer;
 class CSSValue;
 class Animation;
+class RenderStyle;
 class StyleImage;
 class StyleResolver;
 class NinePieceImage;
@@ -44,6 +45,7 @@ public:
     void mapFillAttachment(CSSPropertyID, FillLayer*, CSSValue*);
     void mapFillClip(CSSPropertyID, FillLayer*, CSSValue*);
     void mapFillComposite(CSSPropertyID, FillLayer*, CSSValue*);
+    void mapFillBlendMode(CSSPropertyID, FillLayer*, CSSValue*);
     void mapFillOrigin(CSSPropertyID, FillLayer*, CSSValue*);
     void mapFillImage(CSSPropertyID, FillLayer*, CSSValue*);
     void mapFillRepeatX(CSSPropertyID, FillLayer*, CSSValue*);

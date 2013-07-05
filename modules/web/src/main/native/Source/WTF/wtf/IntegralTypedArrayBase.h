@@ -43,19 +43,11 @@ class IntegralTypedArrayBase : public TypedArrayBase<T> {
     {
         if (index >= TypedArrayBase<T>::m_length)
             return;
-        if (isnan(value)) // Clamp NaN to 0
+        if (std::isnan(value)) // Clamp NaN to 0
             value = 0;
         // The double cast is necessary to get the correct wrapping
         // for out-of-range values with Int32Array and Uint32Array.
         TypedArrayBase<T>::data()[index] = static_cast<T>(static_cast<int64_t>(value));
-    }
-
-    // Invoked by the indexed getter. Does not perform range checks; caller
-    // is responsible for doing so and returning undefined as necessary.
-    T item(unsigned index) const
-    {
-        ASSERT(index < TypedArrayBase<T>::m_length);
-        return TypedArrayBase<T>::data()[index];
     }
 
   protected:

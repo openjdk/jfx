@@ -23,16 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module html {
-
-    interface [
-        JSGenerateIsReachable=Impl,
-        CustomConstructor,
-        ConstructorParameters=1,
-        JSNoStaticTables
-    ] ArrayBuffer {
-        readonly attribute int byteLength;
-        ArrayBuffer slice(in long begin, in [Optional] long end);
+[
+    GenerateIsReachable=Impl,
+    CustomConstructor(unsigned long length),
+    JSNoStaticTables,
+    ImplementationNamespace=WTF,
+    ImplementationLacksVTable
+] interface ArrayBuffer {
+    readonly attribute unsigned long byteLength;
+    ArrayBuffer slice(long begin, optional long end);
     };
 
-}

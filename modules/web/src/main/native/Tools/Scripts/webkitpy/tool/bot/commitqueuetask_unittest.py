@@ -27,11 +27,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from datetime import datetime
-import unittest
+import logging
+import unittest2 as unittest
 
 from webkitpy.common.net import bugzilla
 from webkitpy.common.net.layouttestresults import LayoutTestResults
-from webkitpy.common.system.deprecated_logging import error, log
 from webkitpy.common.system.executive import ScriptError
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.layout_tests.models import test_results
@@ -41,26 +41,30 @@ from webkitpy.tool.bot.commitqueuetask import *
 from webkitpy.tool.bot.expectedfailures import ExpectedFailures
 from webkitpy.tool.mocktool import MockTool
 
+_log = logging.getLogger(__name__)
+
 
 class MockCommitQueue(CommitQueueTaskDelegate):
     def __init__(self, error_plan):
         self._error_plan = error_plan
+        self._failure_status_id = 0
 
     def run_command(self, command):
-        log("run_webkit_patch: %s" % command)
+        _log.info("run_webkit_patch: %s" % command)
         if self._error_plan:
             error = self._error_plan.pop(0)
             if error:
                 raise error
 
     def command_passed(self, success_message, patch):
-        log("command_passed: success_message='%s' patch='%s'" % (
+        _log.info("command_passed: success_message='%s' patch='%s'" % (
             success_message, patch.id()))
 
     def command_failed(self, failure_message, script_error, patch):
-        log("command_failed: failure_message='%s' script_error='%s' patch='%s'" % (
+        _log.info("command_failed: failure_message='%s' script_error='%s' patch='%s'" % (
             failure_message, script_error, patch.id()))
-        return 3947
+        self._failure_status_id += 1
+        return self._failure_status_id
 
     def refetch_patch(self, patch):
         return patch
@@ -73,10 +77,10 @@ class MockCommitQueue(CommitQueueTaskDelegate):
 
     def report_flaky_tests(self, patch, flaky_results, results_archive):
         flaky_tests = [result.filename for result in flaky_results]
-        log("report_flaky_tests: patch='%s' flaky_tests='%s' archive='%s'" % (patch.id(), flaky_tests, results_archive.filename))
+        _log.info("report_flaky_tests: patch='%s' flaky_tests='%s' archive='%s'" % (patch.id(), flaky_tests, results_archive.filename))
 
     def archive_last_test_results(self, patch):
-        log("archive_last_test_results: patch='%s'" % patch.id())
+        _log.info("archive_last_test_results: patch='%s'" % patch.id())
         archive = Mock()
         archive.filename = "mock-archive-%s.zip" % patch.id()
         return archive
@@ -119,24 +123,25 @@ class GoldenScriptError(ScriptError):
 
 
 class CommitQueueTaskTest(unittest.TestCase):
-    def _run_through_task(self, commit_queue, expected_stderr, expected_exception=None, expect_retry=False):
+    def _run_through_task(self, commit_queue, expected_logs, expected_exception=None, expect_retry=False):
+        self.maxDiff = None
         tool = MockTool(log_executive=True)
         patch = tool.bugs.fetch_attachment(10000)
         task = CommitQueueTask(commit_queue, patch)
-        success = OutputCapture().assert_outputs(self, task.run, expected_stderr=expected_stderr, expected_exception=expected_exception)
+        success = OutputCapture().assert_outputs(self, task.run, expected_logs=expected_logs, expected_exception=expected_exception)
         if not expected_exception:
             self.assertEqual(success, not expect_retry)
         return task
 
     def test_success_case(self):
         commit_queue = MockCommitQueue([])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
@@ -145,46 +150,46 @@ command_passed: success_message='Passed tests' patch='10000'
 run_webkit_patch: ['land-attachment', '--force-clean', '--non-interactive', '--parent-command=commit-queue', 10000]
 command_passed: success_message='Landed patch' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr)
+        self._run_through_task(commit_queue, expected_logs)
 
     def test_fast_success_case(self):
         commit_queue = MockCommitQueue([])
         commit_queue.did_pass_testing_ews = lambda patch: True
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
 run_webkit_patch: ['land-attachment', '--force-clean', '--non-interactive', '--parent-command=commit-queue', 10000]
 command_passed: success_message='Landed patch' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr)
+        self._run_through_task(commit_queue, expected_logs)
 
     def test_clean_failure(self):
         commit_queue = MockCommitQueue([
             ScriptError("MOCK clean failure"),
         ])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_failed: failure_message='Unable to clean working directory' script_error='MOCK clean failure' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr, expect_retry=True)
+        self._run_through_task(commit_queue, expected_logs, expect_retry=True)
 
     def test_update_failure(self):
         commit_queue = MockCommitQueue([
             None,
             ScriptError("MOCK update failure"),
         ])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_failed: failure_message='Unable to update working directory' script_error='MOCK update failure' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr, expect_retry=True)
+        self._run_through_task(commit_queue, expected_logs, expect_retry=True)
 
     def test_apply_failure(self):
         commit_queue = MockCommitQueue([
@@ -192,14 +197,14 @@ command_failed: failure_message='Unable to update working directory' script_erro
             None,
             GoldenScriptError("MOCK apply failure"),
         ])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_failed: failure_message='Patch does not apply' script_error='MOCK apply failure' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr, GoldenScriptError)
+        self._run_through_task(commit_queue, expected_logs, GoldenScriptError)
 
     def test_validate_changelog_failure(self):
         commit_queue = MockCommitQueue([
@@ -208,16 +213,16 @@ command_failed: failure_message='Patch does not apply' script_error='MOCK apply 
             None,
             GoldenScriptError("MOCK validate failure"),
         ])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_failed: failure_message='ChangeLog did not pass validation' script_error='MOCK validate failure' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr, GoldenScriptError)
+        self._run_through_task(commit_queue, expected_logs, GoldenScriptError)
 
     def test_build_failure(self):
         commit_queue = MockCommitQueue([
@@ -227,20 +232,20 @@ command_failed: failure_message='ChangeLog did not pass validation' script_error
             None,
             GoldenScriptError("MOCK build failure"),
         ])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_failed: failure_message='Patch does not build' script_error='MOCK build failure' patch='10000'
 run_webkit_patch: ['build', '--force-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Able to build without patch' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr, GoldenScriptError)
+        self._run_through_task(commit_queue, expected_logs, GoldenScriptError)
 
     def test_red_build_failure(self):
         commit_queue = MockCommitQueue([
@@ -251,20 +256,20 @@ command_passed: success_message='Able to build without patch' patch='10000'
             ScriptError("MOCK build failure"),
             ScriptError("MOCK clean build failure"),
         ])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_failed: failure_message='Patch does not build' script_error='MOCK build failure' patch='10000'
 run_webkit_patch: ['build', '--force-clean', '--no-update', '--build-style=both']
 command_failed: failure_message='Unable to build without patch' script_error='MOCK clean build failure' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr, expect_retry=True)
+        self._run_through_task(commit_queue, expected_logs, expect_retry=True)
 
     def test_flaky_test_failure(self):
         commit_queue = MockCommitQueue([
@@ -276,15 +281,15 @@ command_failed: failure_message='Unable to build without patch' script_error='MO
             ScriptError("MOCK tests failure"),
         ])
         # CommitQueueTask will only report flaky tests if we successfully parsed
-        # results.html and returned a LayoutTestResults object, so we fake one.
+        # results.json and returned a LayoutTestResults object, so we fake one.
         commit_queue.test_results = lambda: LayoutTestResults([])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
@@ -297,7 +302,7 @@ report_flaky_tests: patch='10000' flaky_tests='[]' archive='mock-archive-10000.z
 run_webkit_patch: ['land-attachment', '--force-clean', '--non-interactive', '--parent-command=commit-queue', 10000]
 command_passed: success_message='Landed patch' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr)
+        self._run_through_task(commit_queue, expected_logs)
 
     def test_failed_archive(self):
         commit_queue = MockCommitQueue([
@@ -312,13 +317,13 @@ command_passed: success_message='Landed patch' patch='10000'
         # It's possible delegate to fail to archive layout tests, don't try to report
         # flaky tests when that happens.
         commit_queue.archive_last_test_results = lambda patch: None
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
@@ -329,7 +334,7 @@ command_passed: success_message='Passed tests' patch='10000'
 run_webkit_patch: ['land-attachment', '--force-clean', '--non-interactive', '--parent-command=commit-queue', 10000]
 command_passed: success_message='Landed patch' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr)
+        self._run_through_task(commit_queue, expected_logs)
 
     def test_double_flaky_test_failure(self):
         commit_queue = FailingTestCommitQueue([
@@ -346,15 +351,15 @@ command_passed: success_message='Landed patch' patch='10000'
             "foo.html",
         ])
         # The (subtle) point of this test is that report_flaky_tests does not appear
-        # in the expected_stderr for this run.
+        # in the expected_logs for this run.
         # Note also that there is no attempt to run the tests w/o the patch.
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
@@ -367,8 +372,8 @@ command_failed: failure_message='Patch does not pass tests' script_error='MOCK t
         tool = MockTool(log_executive=True)
         patch = tool.bugs.fetch_attachment(10000)
         task = CommitQueueTask(commit_queue, patch)
-        success = OutputCapture().assert_outputs(self, task.run, expected_stderr=expected_stderr)
-        self.assertEqual(success, False)
+        success = OutputCapture().assert_outputs(self, task.run, expected_logs=expected_logs)
+        self.assertFalse(success)
 
     def test_test_failure(self):
         commit_queue = MockCommitQueue([
@@ -380,13 +385,13 @@ command_failed: failure_message='Patch does not pass tests' script_error='MOCK t
             GoldenScriptError("MOCK test failure"),
             ScriptError("MOCK test failure again"),
         ])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
@@ -399,7 +404,7 @@ archive_last_test_results: patch='10000'
 run_webkit_patch: ['build-and-test', '--force-clean', '--no-update', '--build', '--test', '--non-interactive']
 command_passed: success_message='Able to pass tests without patch' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr, GoldenScriptError)
+        self._run_through_task(commit_queue, expected_logs, GoldenScriptError)
 
     def test_red_test_failure(self):
         commit_queue = FailingTestCommitQueue([
@@ -419,13 +424,13 @@ command_passed: success_message='Able to pass tests without patch' patch='10000'
 
         # Tests always fail, and always return the same results, but we
         # should still be able to land in this case!
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
@@ -440,7 +445,7 @@ command_failed: failure_message='Unable to pass tests without patch (tree is red
 run_webkit_patch: ['land-attachment', '--force-clean', '--non-interactive', '--parent-command=commit-queue', 10000]
 command_passed: success_message='Landed patch' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr)
+        self._run_through_task(commit_queue, expected_logs)
 
     def test_very_red_tree_retry(self):
         lots_of_failing_tests = map(lambda num: "test-%s.html" % num, range(0, 100))
@@ -462,13 +467,13 @@ command_passed: success_message='Landed patch' patch='10000'
         # Tests always fail, and return so many failures that we do not
         # trust the results (see ExpectedFailures._can_trust_results) so we
         # just give up and retry the patch.
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
@@ -481,7 +486,7 @@ archive_last_test_results: patch='10000'
 run_webkit_patch: ['build-and-test', '--force-clean', '--no-update', '--build', '--test', '--non-interactive']
 command_failed: failure_message='Unable to pass tests without patch (tree is red?)' script_error='MOCK clean test failure' patch='10000'
 """
-        self._run_through_task(commit_queue, expected_stderr, expect_retry=True)
+        self._run_through_task(commit_queue, expected_logs, expect_retry=True)
 
     def test_red_tree_patch_rejection(self):
         commit_queue = FailingTestCommitQueue([
@@ -501,13 +506,13 @@ command_failed: failure_message='Unable to pass tests without patch (tree is red
 
         # Tests always fail, but the clean tree only fails one test
         # while the patch fails two.  So we should reject the patch!
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
@@ -520,8 +525,10 @@ archive_last_test_results: patch='10000'
 run_webkit_patch: ['build-and-test', '--force-clean', '--no-update', '--build', '--test', '--non-interactive']
 command_failed: failure_message='Unable to pass tests without patch (tree is red?)' script_error='MOCK clean test failure' patch='10000'
 """
-        task = self._run_through_task(commit_queue, expected_stderr, GoldenScriptError)
+        task = self._run_through_task(commit_queue, expected_logs, GoldenScriptError)
         self.assertEqual(task.results_from_patch_test_run(task._patch).failing_tests(), ["foo.html", "bar.html"])
+        # failure_status_id should be of the test with patch (1), not the test without patch (2).
+        self.assertEqual(task.failure_status_id, 1)
 
     def test_land_failure(self):
         commit_queue = MockCommitQueue([
@@ -533,13 +540,13 @@ command_failed: failure_message='Unable to pass tests without patch (tree is red
             None,
             GoldenScriptError("MOCK land failure"),
         ])
-        expected_stderr = """run_webkit_patch: ['clean']
+        expected_logs = """run_webkit_patch: ['clean']
 command_passed: success_message='Cleaned working directory' patch='10000'
 run_webkit_patch: ['update']
 command_passed: success_message='Updated working directory' patch='10000'
 run_webkit_patch: ['apply-attachment', '--no-update', '--non-interactive', 10000]
 command_passed: success_message='Applied patch' patch='10000'
-run_webkit_patch: ['validate-changelog', '--non-interactive', 10000]
+run_webkit_patch: ['validate-changelog', '--check-oops', '--non-interactive', 10000]
 command_passed: success_message='ChangeLog validated' patch='10000'
 run_webkit_patch: ['build', '--no-clean', '--no-update', '--build-style=both']
 command_passed: success_message='Built patch' patch='10000'
@@ -549,7 +556,7 @@ run_webkit_patch: ['land-attachment', '--force-clean', '--non-interactive', '--p
 command_failed: failure_message='Unable to land patch' script_error='MOCK land failure' patch='10000'
 """
         # FIXME: This should really be expect_retry=True for a better user experiance.
-        self._run_through_task(commit_queue, expected_stderr, GoldenScriptError)
+        self._run_through_task(commit_queue, expected_logs, GoldenScriptError)
 
     def _expect_validate(self, patch, is_valid):
         class MockDelegate(object):
@@ -560,7 +567,7 @@ command_failed: failure_message='Unable to land patch' script_error='MOCK land f
                 return ExpectedFailures()
 
         task = CommitQueueTask(MockDelegate(), patch)
-        self.assertEquals(task.validate(), is_valid)
+        self.assertEqual(task.validate(), is_valid)
 
     def _mock_patch(self, attachment_dict={}, bug_dict={'bug_status': 'NEW'}, committer="fake"):
         bug = bugzilla.Bug(bug_dict, None)

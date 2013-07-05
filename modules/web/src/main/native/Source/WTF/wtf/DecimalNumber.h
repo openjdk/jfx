@@ -40,7 +40,7 @@ class DecimalNumber {
 public:
     DecimalNumber(double d)
     {
-        ASSERT(isfinite(d));
+        ASSERT(std::isfinite(d));
         dtoa(m_significand, d, m_sign, m_exponent, m_precision);
 
         ASSERT(m_precision);
@@ -54,10 +54,10 @@ public:
 
     DecimalNumber(double d, RoundingSignificantFiguresType, unsigned significantFigures)
     {
-        ASSERT(isfinite(d));
+        ASSERT(std::isfinite(d));
         dtoaRoundSF(m_significand, d, significantFigures, m_sign, m_exponent, m_precision);
 
-        ASSERT(significantFigures && significantFigures <= sizeof(DtoaBuffer));
+        ASSERT_WITH_SECURITY_IMPLICATION(significantFigures && significantFigures <= sizeof(DtoaBuffer));
         while (m_precision < significantFigures)
             m_significand[m_precision++] = '0';
 
@@ -68,11 +68,11 @@ public:
 
     DecimalNumber(double d, RoundingDecimalPlacesType, unsigned decimalPlaces)
     {
-        ASSERT(isfinite(d));
+        ASSERT(std::isfinite(d));
         dtoaRoundDP(m_significand, d, decimalPlaces, m_sign, m_exponent, m_precision);
 
         unsigned significantFigures = 1 + m_exponent + decimalPlaces;
-        ASSERT(significantFigures && significantFigures <= sizeof(DtoaBuffer));
+        ASSERT_WITH_SECURITY_IMPLICATION(significantFigures && significantFigures <= sizeof(DtoaBuffer));
         while (m_precision < significantFigures)
             m_significand[m_precision++] = '0';
 
@@ -84,8 +84,8 @@ public:
     WTF_EXPORT_PRIVATE unsigned bufferLengthForStringDecimal() const;
     WTF_EXPORT_PRIVATE unsigned bufferLengthForStringExponential() const;
 
-    WTF_EXPORT_PRIVATE unsigned toStringDecimal(UChar* buffer, unsigned bufferLength) const;
-    WTF_EXPORT_PRIVATE unsigned toStringExponential(UChar* buffer, unsigned bufferLength) const;
+    WTF_EXPORT_PRIVATE unsigned toStringDecimal(LChar* buffer, unsigned bufferLength) const;
+    WTF_EXPORT_PRIVATE unsigned toStringExponential(LChar* buffer, unsigned bufferLength) const;
 
     bool sign() const { return m_sign; }
     int exponent() const { return m_exponent; }

@@ -21,7 +21,7 @@
 #ifndef RenderButton_h
 #define RenderButton_h
 
-#include "RenderDeprecatedFlexibleBox.h"
+#include "RenderFlexibleBox.h"
 #include "Timer.h"
 #include <wtf/OwnPtr.h>
 
@@ -32,9 +32,9 @@ class RenderTextFragment;
 // RenderButtons are just like normal flexboxes except that they will generate an anonymous block child.
 // For inputs, they will also generate an anonymous RenderText and keep its style and content up
 // to date as the button changes.
-class RenderButton : public RenderDeprecatedFlexibleBox {
+class RenderButton : public RenderFlexibleBox {
 public:
-    explicit RenderButton(Node*);
+    explicit RenderButton(Element*);
     virtual ~RenderButton();
 
     virtual const char* renderName() const { return "RenderButton"; }
@@ -50,8 +50,6 @@ public:
     void setupInnerStyle(RenderStyle*);
     virtual void updateFromElement();
 
-    virtual void updateBeforeAfterContent(PseudoId);
-
     virtual bool canHaveGeneratedChildren() const OVERRIDE;
     virtual bool hasControlClip() const { return true; }
     virtual LayoutRect controlClipRect(const LayoutPoint&) const;
@@ -63,7 +61,7 @@ private:
     virtual void styleWillChange(StyleDifference, const RenderStyle* newStyle);
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
 
-    virtual bool hasLineIfEmpty() const { return true; }
+    virtual bool hasLineIfEmpty() const { return node() && node()->toInputElement(); }
 
     virtual bool requiresForcedStyleRecalcPropagation() const { return true; }
 
@@ -78,13 +76,13 @@ private:
 
 inline RenderButton* toRenderButton(RenderObject* object)
 { 
-    ASSERT(!object || object->isRenderButton());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderButton());
     return static_cast<RenderButton*>(object);
 }
 
 inline const RenderButton* toRenderButton(const RenderObject* object)
 { 
-    ASSERT(!object || object->isRenderButton());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderButton());
     return static_cast<const RenderButton*>(object);
 }
 

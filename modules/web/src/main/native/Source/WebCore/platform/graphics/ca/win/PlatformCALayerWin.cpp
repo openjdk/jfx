@@ -116,7 +116,7 @@ PlatformCALayer::PlatformCALayer(LayerType layerType, PlatformLayer* layer, Plat
         m_layer = layer;
     } else {
         m_layerType = layerType;
-        m_layer.adoptCF(CACFLayerCreate(toCACFLayerType(layerType)));
+        m_layer = adoptCF(CACFLayerCreate(toCACFLayerType(layerType)));
 
         // Create the PlatformCALayerWinInternal object and point to it in the userdata.
         PlatformCALayerWinInternal* intern = new PlatformCALayerWinInternal(this);
@@ -149,6 +149,30 @@ PlatformCALayer* PlatformCALayer::platformCALayer(void* platformLayer)
     return layerIntern ? layerIntern->owner() : 0;
 }
 
+PassRefPtr<PlatformCALayer> PlatformCALayer::clone(PlatformCALayerClient* owner) const
+{
+    PlatformCALayer::LayerType type = (layerType() == PlatformCALayer::LayerTypeTransformLayer) ?
+        PlatformCALayer::LayerTypeTransformLayer : PlatformCALayer::LayerTypeLayer;
+    RefPtr<PlatformCALayer> newLayer = PlatformCALayer::create(type, owner);
+
+    newLayer->setPosition(position());
+    newLayer->setBounds(bounds());
+    newLayer->setAnchorPoint(anchorPoint());
+    newLayer->setTransform(transform());
+    newLayer->setSublayerTransform(sublayerTransform());
+    newLayer->setContents(contents());
+    newLayer->setMasksToBounds(masksToBounds());
+    newLayer->setDoubleSided(isDoubleSided());
+    newLayer->setOpaque(isOpaque());
+    newLayer->setBackgroundColor(backgroundColor());
+    newLayer->setContentsScale(contentsScale());
+#if ENABLE(CSS_FILTERS)
+    newLayer->copyFiltersFrom(this);
+#endif
+
+    return newLayer;
+}
+
 PlatformLayer* PlatformCALayer::platformLayer() const
 {
     return m_layer.get();
@@ -167,7 +191,7 @@ void PlatformCALayer::animationStarted(CFTimeInterval beginTime)
 
     HashMap<String, RefPtr<PlatformCAAnimation> >::const_iterator end = m_animations.end();
     for (HashMap<String, RefPtr<PlatformCAAnimation> >::const_iterator it = m_animations.begin(); it != end; ++it)
-        it->second->setActualStartTimeIfNeeded(cacfBeginTime);
+        it->value->setActualStartTimeIfNeeded(cacfBeginTime);
 
     if (m_owner)
         m_owner->platformCALayerAnimationStarted(beginTime);
@@ -176,10 +200,8 @@ void PlatformCALayer::animationStarted(CFTimeInterval beginTime)
 static void resubmitAllAnimations(PlatformCALayer* layer)
 {
     HashMap<String, RefPtr<PlatformCAAnimation> >::const_iterator end = layer->animations().end();
-    for (HashMap<String, RefPtr<PlatformCAAnimation> >::const_iterator it = layer->animations().begin(); it != end; ++it) {
-        RetainPtr<CFStringRef> s(AdoptCF, it->first.createCFString());
-        CACFLayerAddAnimation(layer->platformLayer(), s.get(), it->second->platformAnimation());
-    }
+    for (HashMap<String, RefPtr<PlatformCAAnimation> >::const_iterator it = layer->animations().begin(); it != end; ++it)
+        CACFLayerAddAnimation(layer->platformLayer(), it->key.createCFString().get(), it->value->platformAnimation());
 }
 
 void PlatformCALayer::ensureAnimationsSubmitted()
@@ -297,8 +319,7 @@ void PlatformCALayer::addAnimationForKey(const String& key, PlatformCAAnimation*
     // Add it to the animation list
     m_animations.add(key, animation);
 
-    RetainPtr<CFStringRef> s(AdoptCF, key.createCFString());
-    CACFLayerAddAnimation(m_layer.get(), s.get(), animation->platformAnimation());
+    CACFLayerAddAnimation(m_layer.get(), key.createCFString().get(), animation->platformAnimation());
     setNeedsCommit();
 
     // Tell the host about it so we can fire the start animation event
@@ -312,8 +333,7 @@ void PlatformCALayer::removeAnimationForKey(const String& key)
     // Remove it from the animation list
     m_animations.remove(key);
 
-    RetainPtr<CFStringRef> s(AdoptCF, key.createCFString());
-    CACFLayerRemoveAnimation(m_layer.get(), s.get());
+    CACFLayerRemoveAnimation(m_layer.get(), key.createCFString().get());
 
     // We don't "remove" a layer from AbstractCACFLayerTreeHost when it loses an animation.
     // There may be other active animations on the layer and if an animation
@@ -328,7 +348,7 @@ PassRefPtr<PlatformCAAnimation> PlatformCALayer::animationForKey(const String& k
     if (it == m_animations.end())
         return 0;
 
-    return it->second;
+    return it->value;
 }
 
 PlatformCALayer* PlatformCALayer::mask() const
@@ -520,8 +540,8 @@ void PlatformCALayer::setBackgroundColor(const Color& value)
     CGFloat components[4];
     value.getRGBA(components[0], components[1], components[2], components[3]);
 
-    RetainPtr<CGColorSpaceRef> colorSpace(AdoptCF, CGColorSpaceCreateDeviceRGB());
-    RetainPtr<CGColorRef> color(AdoptCF, CGColorCreate(colorSpace.get(), components));
+    RetainPtr<CGColorSpaceRef> colorSpace = adoptCF(CGColorSpaceCreateDeviceRGB());
+    RetainPtr<CGColorRef> color = adoptCF(CGColorCreate(colorSpace.get(), components));
 
     CACFLayerSetBackgroundColor(m_layer.get(), color.get());
     setNeedsCommit();
@@ -548,8 +568,8 @@ void PlatformCALayer::setBorderColor(const Color& value)
     CGFloat components[4];
     value.getRGBA(components[0], components[1], components[2], components[3]);
 
-    RetainPtr<CGColorSpaceRef> colorSpace(AdoptCF, CGColorSpaceCreateDeviceRGB());
-    RetainPtr<CGColorRef> color(AdoptCF, CGColorCreate(colorSpace.get(), components));
+    RetainPtr<CGColorSpaceRef> colorSpace = adoptCF(CGColorSpaceCreateDeviceRGB());
+    RetainPtr<CGColorRef> color = adoptCF(CGColorCreate(colorSpace.get(), components));
 
     CACFLayerSetBorderColor(m_layer.get(), color.get());
     setNeedsCommit();
@@ -572,6 +592,10 @@ void PlatformCALayer::setFilters(const FilterOperations&)
 {
 }
 
+void PlatformCALayer::copyFiltersFrom(const PlatformCALayer*)
+{
+}
+
 bool PlatformCALayer::filtersCanBeComposited(const FilterOperations&)
 {
     return false;
@@ -586,8 +610,7 @@ String PlatformCALayer::name() const
 
 void PlatformCALayer::setName(const String& value)
 {
-    RetainPtr<CFStringRef> s(AdoptCF, value.createCFString());
-    CACFLayerSetName(m_layer.get(), s.get());
+    CACFLayerSetName(m_layer.get(), value.createCFString().get());
     setNeedsCommit();
 }
 

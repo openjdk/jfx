@@ -34,6 +34,14 @@
 #import <Foundation/Foundation.h>
 #endif
 
+#ifndef CF_RELEASES_ARGUMENT
+#define CF_RELEASES_ARGUMENT
+#endif
+
+#ifndef NS_RELEASES_ARGUMENT
+#define NS_RELEASES_ARGUMENT
+#endif
+
 namespace WTF {
 
     // Unlike most most of our smart pointers, RetainPtr can take either the pointer type or the pointed-to type,
@@ -43,6 +51,11 @@ namespace WTF {
     enum AdoptNSTag { AdoptNS };
     
 #ifdef __OBJC__
+#ifdef OBJC_NO_GC
+    inline void adoptNSReference(id)
+    {
+    }
+#else
     inline void adoptNSReference(id ptr)
     {
         if (ptr) {
@@ -50,6 +63,7 @@ namespace WTF {
             [ptr release];
         }
     }
+#endif
 #endif
 
     template<typename T> class RetainPtr {
@@ -60,8 +74,19 @@ namespace WTF {
         RetainPtr() : m_ptr(0) {}
         RetainPtr(PtrType ptr) : m_ptr(ptr) { if (ptr) CFRetain(ptr); }
 
-        RetainPtr(AdoptCFTag, PtrType ptr) : m_ptr(ptr) { }
-        RetainPtr(AdoptNSTag, PtrType ptr) : m_ptr(ptr) { adoptNSReference(ptr); }
+        RetainPtr(AdoptCFTag, PtrType ptr)
+            : m_ptr(ptr)
+        {
+#ifdef __OBJC__
+            static_assert(!std::is_convertible<T, id>::value, "Don't use adoptCF with Objective-C pointer types, use adoptNS.");
+#endif
+        }
+
+        RetainPtr(AdoptNSTag, PtrType ptr)
+            : m_ptr(ptr)
+        {
+            adoptNSReference(ptr);
+        }
         
         RetainPtr(const RetainPtr& o) : m_ptr(o.m_ptr) { if (PtrType ptr = m_ptr) CFRetain(ptr); }
 
@@ -77,12 +102,14 @@ namespace WTF {
         
         template<typename U> RetainPtr(const RetainPtr<U>&);
         
-        PtrType get() const { return m_ptr; }
-
         void clear();
         PtrType leakRef() WARN_UNUSED_RETURN;
 
+        PtrType get() const { return m_ptr; }
         PtrType operator->() const { return m_ptr; }
+#if COMPILER_SUPPORTS(CXX_EXPLICIT_CONVERSIONS)
+        explicit operator PtrType() const { return m_ptr; }
+#endif
         
         bool operator!() const { return !m_ptr; }
     
@@ -104,9 +131,6 @@ namespace WTF {
         RetainPtr& operator=(std::nullptr_t) { clear(); return *this; }
 #endif
 
-        void adoptCF(PtrType);
-        void adoptNS(PtrType);
-        
         void swap(RetainPtr&);
 
     private:
@@ -186,34 +210,23 @@ namespace WTF {
 #if COMPILER_SUPPORTS(CXX_RVALUE_REFERENCES)
     template<typename T> inline RetainPtr<T>& RetainPtr<T>::operator=(RetainPtr<T>&& o)
     {
-        adoptCF(o.leakRef());
+        PtrType ptr = m_ptr;
+        m_ptr = o.leakRef();
+        if (ptr)
+            CFRelease(ptr);
+
         return *this;
     }
     
     template<typename T> template<typename U> inline RetainPtr<T>& RetainPtr<T>::operator=(RetainPtr<U>&& o)
     {
-        adoptCF(o.leakRef());
+        PtrType ptr = m_ptr;
+        m_ptr = o.leakRef();
+        if (ptr)
+            CFRelease(ptr);
         return *this;
     }
 #endif
-
-    template<typename T> inline void RetainPtr<T>::adoptCF(PtrType optr)
-    {
-        PtrType ptr = m_ptr;
-        m_ptr = optr;
-        if (ptr)
-            CFRelease(ptr);
-    }
-
-    template<typename T> inline void RetainPtr<T>::adoptNS(PtrType optr)
-    {
-        adoptNSReference(optr);
-        
-        PtrType ptr = m_ptr;
-        m_ptr = optr;
-        if (ptr)
-            CFRelease(ptr);
-    }
 
     template<typename T> inline void RetainPtr<T>::swap(RetainPtr<T>& o)
     {
@@ -255,13 +268,13 @@ namespace WTF {
         return a != b.get(); 
     }
 
-    template<typename T> inline RetainPtr<T> adoptCF(T) WARN_UNUSED_RETURN;
+    template<typename T> inline RetainPtr<T> adoptCF(T CF_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
     template<typename T> inline RetainPtr<T> adoptCF(T o)
     {
         return RetainPtr<T>(AdoptCF, o);
     }
 
-    template<typename T> inline RetainPtr<T> adoptNS(T) WARN_UNUSED_RETURN;
+    template<typename T> inline RetainPtr<T> adoptNS(T NS_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
     template<typename T> inline RetainPtr<T> adoptNS(T o)
     {
         return RetainPtr<T>(AdoptNS, o);
@@ -287,6 +300,28 @@ namespace WTF {
     
     template<typename P> struct DefaultHash<RetainPtr<P> > { typedef PtrHash<RetainPtr<P> > Hash; };
 
+    template <typename P>
+    struct RetainPtrObjectHashTraits : SimpleClassHashTraits<RetainPtr<P> > {
+        static const RetainPtr<P>& emptyValue()
+        {
+            static RetainPtr<P>& null = *(new RetainPtr<P>);
+            return null;
+        }
+    };
+
+    template <typename P>
+    struct RetainPtrObjectHash {
+        static unsigned hash(const RetainPtr<P>& o)
+        {
+            ASSERT_WITH_MESSAGE(o.get(), "attempt to use null RetainPtr in HashTable");
+            return static_cast<unsigned>(CFHash(o.get()));
+        }
+        static bool equal(const RetainPtr<P>& a, const RetainPtr<P>& b)
+        {
+            return CFEqual(a.get(), b.get());
+        }
+        static const bool safeToCompareToEmptyOrDeleted = false;
+    };
 } // namespace WTF
 
 using WTF::AdoptCF;

@@ -2,7 +2,7 @@
  * Copyright (C) 2002, 2003 The Karbon Developers
  * Copyright (C) 2006 Alexander Kellett <lypanov@kde.org>
  * Copyright (C) 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2007, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2009, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -43,11 +43,11 @@ template <typename FloatType> static inline bool isValidRange(const FloatType& x
 // We use this generic parseNumber function to allow the Path parsing code to work 
 // at a higher precision internally, without any unnecessary runtime cost or code
 // complexity.
-template <typename FloatType> static bool genericParseNumber(const UChar*& ptr, const UChar* end, FloatType& number, bool skip)
+template <typename CharacterType, typename FloatType> static bool genericParseNumber(const CharacterType*& ptr, const CharacterType* end, FloatType& number, bool skip)
 {
     FloatType integer, decimal, frac, exponent;
     int sign, expsign;
-    const UChar* start = ptr;
+    const CharacterType* start = ptr;
 
     exponent = 0;
     integer = 0;
@@ -69,12 +69,12 @@ template <typename FloatType> static bool genericParseNumber(const UChar*& ptr, 
         return false;
 
     // read the integer part, build right-to-left
-    const UChar* ptrStartIntPart = ptr;
+    const CharacterType* ptrStartIntPart = ptr;
     while (ptr < end && *ptr >= '0' && *ptr <= '9')
         ++ptr; // Advance to first non-digit.
 
     if (ptr != ptrStartIntPart) {
-        const UChar* ptrScanIntPart = ptr - 1;
+        const CharacterType* ptrScanIntPart = ptr - 1;
         FloatType multiplier = 1;
         while (ptrScanIntPart >= ptrStartIntPart) {
             integer += multiplier * static_cast<FloatType>(*(ptrScanIntPart--) - '0');
@@ -142,11 +142,21 @@ template <typename FloatType> static bool genericParseNumber(const UChar*& ptr, 
     return true;
 }
 
-bool parseSVGNumber(UChar*& begin, size_t length, double& number)
+template <typename CharacterType>
+bool parseSVGNumber(CharacterType* begin, size_t length, double& number)
 {
-    const UChar* ptr = begin;
-    const UChar* end = ptr + length;
+    const CharacterType* ptr = begin;
+    const CharacterType* end = ptr + length;
     return genericParseNumber(ptr, end, number, false);
+}
+
+// Explicitly instantiate the two flavors of parseSVGNumber() to satisfy external callers
+template bool parseSVGNumber(LChar* begin, size_t length, double&);
+template bool parseSVGNumber(UChar* begin, size_t length, double&);
+
+bool parseNumber(const LChar*& ptr, const LChar* end, float& number, bool skip)
+{
+    return genericParseNumber(ptr, end, number, skip);
 }
 
 bool parseNumber(const UChar*& ptr, const UChar* end, float& number, bool skip) 
@@ -163,11 +173,12 @@ bool parseNumberFromString(const String& string, float& number, bool skip)
 
 // only used to parse largeArcFlag and sweepFlag which must be a "0" or "1"
 // and might not have any whitespace/comma after it
-bool parseArcFlag(const UChar*& ptr, const UChar* end, bool& flag)
+template <typename CharacterType>
+bool genericParseArcFlag(const CharacterType*& ptr, const CharacterType* end, bool& flag)
 {
     if (ptr >= end)
         return false;
-    const UChar flagChar = *ptr++;
+    const CharacterType flagChar = *ptr++;
     if (flagChar == '0')
         flag = false;
     else if (flagChar == '1')
@@ -178,6 +189,16 @@ bool parseArcFlag(const UChar*& ptr, const UChar* end, bool& flag)
     skipOptionalSVGSpacesOrDelimiter(ptr, end);
     
     return true;
+}
+
+bool parseArcFlag(const LChar*& ptr, const LChar* end, bool& flag)
+{
+    return genericParseArcFlag(ptr, end, flag);
+}
+
+bool parseArcFlag(const UChar*& ptr, const UChar* end, bool& flag)
+{
+    return genericParseArcFlag(ptr, end, flag);
 }
 
 bool parseNumberOptionalNumber(const String& s, float& x, float& y)
@@ -399,6 +420,66 @@ Vector<String> parseDelimitedString(const String& input, const char seperator)
 
     return values;
 }
+
+template <typename CharacterType>
+bool parseFloatPoint(const CharacterType*& current, const CharacterType* end, FloatPoint& point)
+{
+    float x;
+    float y;
+    if (!parseNumber(current, end, x)
+        || !parseNumber(current, end, y))
+        return false;
+    point = FloatPoint(x, y);
+    return true;
+}
+
+template bool parseFloatPoint(const LChar*& current, const LChar* end, FloatPoint& point1);
+template bool parseFloatPoint(const UChar*& current, const UChar* end, FloatPoint& point1);
+
+template <typename CharacterType>
+inline bool parseFloatPoint2(const CharacterType*& current, const CharacterType* end, FloatPoint& point1, FloatPoint& point2)
+{
+    float x1;
+    float y1;
+    float x2;
+    float y2;
+    if (!parseNumber(current, end, x1)
+        || !parseNumber(current, end, y1)
+        || !parseNumber(current, end, x2)
+        || !parseNumber(current, end, y2))
+        return false;
+    point1 = FloatPoint(x1, y1);
+    point2 = FloatPoint(x2, y2);
+    return true;
+}
+
+template bool parseFloatPoint2(const LChar*& current, const LChar* end, FloatPoint& point1, FloatPoint& point2);
+template bool parseFloatPoint2(const UChar*& current, const UChar* end, FloatPoint& point1, FloatPoint& point2);
+
+template <typename CharacterType>
+bool parseFloatPoint3(const CharacterType*& current, const CharacterType* end, FloatPoint& point1, FloatPoint& point2, FloatPoint& point3)
+{
+    float x1;
+    float y1;
+    float x2;
+    float y2;
+    float x3;
+    float y3;
+    if (!parseNumber(current, end, x1)
+        || !parseNumber(current, end, y1)
+        || !parseNumber(current, end, x2)
+        || !parseNumber(current, end, y2)
+        || !parseNumber(current, end, x3)
+        || !parseNumber(current, end, y3))
+        return false;
+    point1 = FloatPoint(x1, y1);
+    point2 = FloatPoint(x2, y2);
+    point3 = FloatPoint(x3, y3);
+    return true;
+}
+
+template bool parseFloatPoint3(const LChar*& current, const LChar* end, FloatPoint& point1, FloatPoint& point2, FloatPoint& point3);
+template bool parseFloatPoint3(const UChar*& current, const UChar* end, FloatPoint& point1, FloatPoint& point2, FloatPoint& point3);
 
 }
 

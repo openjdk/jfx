@@ -28,11 +28,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from .detection import SCMDetector
 from webkitpy.common.system.filesystem_mock import MockFileSystem
 from webkitpy.common.system.executive_mock import MockExecutive
+from webkitpy.common.system.outputcapture import OutputCapture
 
 
 class SCMDetectorTest(unittest.TestCase):
@@ -41,5 +42,10 @@ class SCMDetectorTest(unittest.TestCase):
         executive = MockExecutive(should_log=True)
         detector = SCMDetector(filesystem, executive)
 
-        self.assertEqual(detector.detect_scm_system("/"), None)
+        expected_logs = """\
+MOCK run_command: ['svn', 'info'], cwd=/
+MOCK run_command: ['git', 'rev-parse', '--is-inside-work-tree'], cwd=/
+"""
+        scm = OutputCapture().assert_outputs(self, detector.detect_scm_system, ["/"], expected_logs=expected_logs)
+        self.assertIsNone(scm)
         # FIXME: This should make a synthetic tree and test SVN and Git detection in that tree.

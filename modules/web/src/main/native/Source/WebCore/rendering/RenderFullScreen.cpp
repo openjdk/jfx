@@ -39,9 +39,10 @@ using namespace WebCore;
 class RenderFullScreenPlaceholder : public RenderBlock {
 public:
     RenderFullScreenPlaceholder(RenderFullScreen* owner) 
-        : RenderBlock(owner->document())
+        : RenderBlock(0)
         , m_owner(owner) 
     { 
+        setDocumentForAnonymous(owner->document());
     }
 private:
     virtual bool isRenderFullScreenPlaceholder() const { return true; }
@@ -55,11 +56,18 @@ void RenderFullScreenPlaceholder::willBeDestroyed()
     RenderBlock::willBeDestroyed();
 }
 
-RenderFullScreen::RenderFullScreen(Node* node) 
-    : RenderDeprecatedFlexibleBox(node)
+RenderFullScreen::RenderFullScreen()
+    : RenderFlexibleBox(0)
     , m_placeholder(0)
 { 
     setReplaced(false); 
+}
+
+RenderFullScreen* RenderFullScreen::createAnonymous(Document* document)
+{
+    RenderFullScreen* renderer = new (document->renderArena()) RenderFullScreen();
+    renderer->setDocumentForAnonymous(document);
+    return renderer;
 }
 
 void RenderFullScreen::willBeDestroyed()
@@ -76,7 +84,7 @@ void RenderFullScreen::willBeDestroyed()
     if (document() && document()->fullScreenRenderer() == this)
         document()->fullScreenRendererDestroyed();
 
-    RenderDeprecatedFlexibleBox::willBeDestroyed();
+    RenderFlexibleBox::willBeDestroyed();
 }
 
 static PassRefPtr<RenderStyle> createFullScreenStyle()
@@ -89,10 +97,10 @@ static PassRefPtr<RenderStyle> createFullScreenStyle()
     fullscreenStyle->setFontDescription(FontDescription());
     fullscreenStyle->font().update(0);
 
-    fullscreenStyle->setDisplay(BOX);
-    fullscreenStyle->setBoxPack(Center);
-    fullscreenStyle->setBoxAlign(BCENTER);
-    fullscreenStyle->setBoxOrient(VERTICAL);
+    fullscreenStyle->setDisplay(FLEX);
+    fullscreenStyle->setJustifyContent(JustifyCenter);
+    fullscreenStyle->setAlignItems(AlignCenter);
+    fullscreenStyle->setFlexDirection(FlowColumn);
     
     fullscreenStyle->setPosition(FixedPosition);
     fullscreenStyle->setWidth(Length(100.0, Percent));
@@ -105,15 +113,32 @@ static PassRefPtr<RenderStyle> createFullScreenStyle()
     return fullscreenStyle.release();
 }
 
-RenderObject* RenderFullScreen::wrapRenderer(RenderObject* object, Document* document)
+RenderObject* RenderFullScreen::wrapRenderer(RenderObject* object, RenderObject* parent, Document* document)
 {
-    RenderFullScreen* fullscreenRenderer = new (document->renderArena()) RenderFullScreen(document);
+    RenderFullScreen* fullscreenRenderer = RenderFullScreen::createAnonymous(document);
     fullscreenRenderer->setStyle(createFullScreenStyle());
+    if (parent && !parent->isChildAllowed(fullscreenRenderer, fullscreenRenderer->style())) {
+        fullscreenRenderer->destroy();
+        return 0;
+    }
     if (object) {
+        // |object->parent()| can be null if the object is not yet attached
+        // to |parent|.
         if (RenderObject* parent = object->parent()) {
+            RenderBlock* containingBlock = object->containingBlock();
+            ASSERT(containingBlock);
+            // Since we are moving the |object| to a new parent |fullscreenRenderer|,
+            // the line box tree underneath our |containingBlock| is not longer valid.
+            containingBlock->deleteLineBoxTree();
+
             parent->addChild(fullscreenRenderer, object);
             object->remove();
+            
+            // Always just do a full layout to ensure that line boxes get deleted properly.
+            // Because objects moved from |parent| to |fullscreenRenderer|, we want to
+            // make new line boxes instead of leaving the old ones around.
             parent->setNeedsLayoutAndPrefWidthsRecalc();
+            containingBlock->setNeedsLayoutAndPrefWidthsRecalc();
         }
         fullscreenRenderer->addChild(object);
         fullscreenRenderer->setNeedsLayoutAndPrefWidthsRecalc();
@@ -127,6 +152,11 @@ void RenderFullScreen::unwrapRenderer()
     if (parent()) {
         RenderObject* child;
         while ((child = firstChild())) {
+            // We have to clear the override size, because as a flexbox, we
+            // may have set one on the child, and we don't want to leave that
+            // lying around on the child.
+            if (child->isBox())
+                toRenderBox(child)->clearOverrideSize();
             child->remove();
             parent()->addChild(child, this);
             parent()->setNeedsLayoutAndPrefWidthsRecalc();

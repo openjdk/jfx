@@ -28,14 +28,17 @@
 #include "TransformationMatrix.h"
 
 #include "AffineTransform.h"
-#include "FractionalLayoutRect.h"
-#include "FloatPoint3D.h"
 #include "FloatRect.h"
 #include "FloatQuad.h"
 #include "IntRect.h"
+#include "LayoutRect.h"
 
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
+
+#if CPU(X86_64)
+#include <emmintrin.h>
+#endif
 
 using namespace std;
 
@@ -532,12 +535,12 @@ TransformationMatrix& TransformationMatrix::rotateFromVector(double x, double y)
 
 TransformationMatrix& TransformationMatrix::flipX()
 {
-    return scaleNonUniform(-1.0f, 1.0f);
+    return scaleNonUniform(-1.0, 1.0);
 }
 
 TransformationMatrix& TransformationMatrix::flipY()
 {
-    return scaleNonUniform(1.0f, -1.0f);
+    return scaleNonUniform(1.0, -1.0);
 }
 
 FloatPoint TransformationMatrix::projectPoint(const FloatPoint& p, bool* clamped) const
@@ -589,7 +592,7 @@ FloatPoint TransformationMatrix::projectPoint(const FloatPoint& p, bool* clamped
     return FloatPoint(static_cast<float>(outX), static_cast<float>(outY));
 }
 
-FloatQuad TransformationMatrix::projectQuad(const FloatQuad& q) const
+FloatQuad TransformationMatrix::projectQuad(const FloatQuad& q, bool* clamped) const
 {
     FloatQuad projectedQuad;
 
@@ -603,6 +606,9 @@ FloatQuad TransformationMatrix::projectQuad(const FloatQuad& q) const
     projectedQuad.setP3(projectPoint(q.p3(), &clamped3));
     projectedQuad.setP4(projectPoint(q.p4(), &clamped4));
 
+    if (clamped)
+        *clamped = clamped1 || clamped2 || clamped3 || clamped4;
+        
     // If all points on the quad had w < 0, then the entire quad would not be visible to the projected surface.
     bool everythingWasClipped = clamped1 && clamped2 && clamped3 && clamped4;
     if (everythingWasClipped)
@@ -613,8 +619,8 @@ FloatQuad TransformationMatrix::projectQuad(const FloatQuad& q) const
 
 static float clampEdgeValue(float f)
 {
-    ASSERT(!isnan(f));
-    return min<float>(max<float>(f, -MAX_LAYOUT_UNIT / 2), MAX_LAYOUT_UNIT / 2);
+    ASSERT(!std::isnan(f));
+    return min<float>(max<float>(f, -LayoutUnit::max() / 2), LayoutUnit::max() / 2);
 }
 
 LayoutRect TransformationMatrix::clampedBoundsOfProjectedQuad(const FloatQuad& q) const
@@ -625,19 +631,18 @@ LayoutRect TransformationMatrix::clampedBoundsOfProjectedQuad(const FloatQuad& q
     float top = clampEdgeValue(floorf(mappedQuadBounds.y()));
 
     float right;
-    if (isinf(mappedQuadBounds.x()) && isinf(mappedQuadBounds.width()))
-        right = MAX_LAYOUT_UNIT / 2;
+    if (std::isinf(mappedQuadBounds.x()) && std::isinf(mappedQuadBounds.width()))
+        right = LayoutUnit::max() / 2;
     else
         right = clampEdgeValue(ceilf(mappedQuadBounds.maxX()));
 
     float bottom;
-    if (isinf(mappedQuadBounds.y()) && isinf(mappedQuadBounds.height()))
-        bottom = MAX_LAYOUT_UNIT / 2;
+    if (std::isinf(mappedQuadBounds.y()) && std::isinf(mappedQuadBounds.height()))
+        bottom = LayoutUnit::max() / 2;
     else
         bottom = clampEdgeValue(ceilf(mappedQuadBounds.maxY()));
     
-    return LayoutRect(clampToLayoutUnit(left), clampToLayoutUnit(top), 
-                      clampToLayoutUnit(right - left), clampToLayoutUnit(bottom - top));
+    return LayoutRect(LayoutUnit::clamp(left), LayoutUnit::clamp(top),  LayoutUnit::clamp(right - left), LayoutUnit::clamp(bottom - top));
 }
 
 FloatPoint TransformationMatrix::mapPoint(const FloatPoint& p) const
@@ -645,9 +650,7 @@ FloatPoint TransformationMatrix::mapPoint(const FloatPoint& p) const
     if (isIdentityOrTranslation())
         return FloatPoint(p.x() + static_cast<float>(m_matrix[3][0]), p.y() + static_cast<float>(m_matrix[3][1]));
 
-    double x, y;
-    multVecMatrix(p.x(), p.y(), x, y);
-    return FloatPoint(static_cast<float>(x), static_cast<float>(y));
+    return internalMapPoint(p);
 }
 
 FloatPoint3D TransformationMatrix::mapPoint(const FloatPoint3D& p) const
@@ -657,9 +660,7 @@ FloatPoint3D TransformationMatrix::mapPoint(const FloatPoint3D& p) const
                             p.y() + static_cast<float>(m_matrix[3][1]),
                             p.z() + static_cast<float>(m_matrix[3][2]));
 
-    double x, y, z;
-    multVecMatrix(p.x(), p.y(), p.z(), x, y, z);
-    return FloatPoint3D(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
+    return internalMapPoint(p);
 }
 
 IntRect TransformationMatrix::mapRect(const IntRect &rect) const
@@ -667,9 +668,9 @@ IntRect TransformationMatrix::mapRect(const IntRect &rect) const
     return enclosingIntRect(mapRect(FloatRect(rect)));
 }
 
-FractionalLayoutRect TransformationMatrix::mapRect(const FractionalLayoutRect& r) const
+LayoutRect TransformationMatrix::mapRect(const LayoutRect& r) const
 {
-    return enclosingFractionalLayoutRect(mapRect(FloatRect(r)));
+    return enclosingLayoutRect(mapRect(FloatRect(r)));
 }
 
 FloatRect TransformationMatrix::mapRect(const FloatRect& r) const
@@ -680,8 +681,16 @@ FloatRect TransformationMatrix::mapRect(const FloatRect& r) const
         return mappedRect;
     }
 
-    FloatQuad resultQuad = mapQuad(FloatQuad(r));
-    return resultQuad.boundingBox();
+    FloatQuad result;
+
+    float maxX = r.maxX();
+    float maxY = r.maxY();
+    result.setP1(internalMapPoint(FloatPoint(r.x(), r.y())));
+    result.setP2(internalMapPoint(FloatPoint(maxX, r.y())));
+    result.setP3(internalMapPoint(FloatPoint(maxX, maxY)));
+    result.setP4(internalMapPoint(FloatPoint(r.x(), maxY)));
+
+    return result.boundingBox();
 }
 
 FloatQuad TransformationMatrix::mapQuad(const FloatQuad& q) const
@@ -693,10 +702,10 @@ FloatQuad TransformationMatrix::mapQuad(const FloatQuad& q) const
     }
 
     FloatQuad result;
-    result.setP1(mapPoint(q.p1()));
-    result.setP2(mapPoint(q.p2()));
-    result.setP3(mapPoint(q.p3()));
-    result.setP4(mapPoint(q.p4()));
+    result.setP1(internalMapPoint(q.p1()));
+    result.setP2(internalMapPoint(q.p2()));
+    result.setP3(internalMapPoint(q.p3()));
+    result.setP4(internalMapPoint(q.p4()));
     return result;
 }
 
@@ -727,67 +736,65 @@ TransformationMatrix& TransformationMatrix::scale3d(double sx, double sy, double
 
 TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double z, double angle)
 {
+    // Normalize the axis of rotation
+    double length = sqrt(x * x + y * y + z * z);
+    if (length == 0) {
+        // A direction vector that cannot be normalized, such as [0, 0, 0], will cause the rotation to not be applied. 
+        return *this;
+    } else if (length != 1) {
+        x /= length;
+        y /= length;
+        z /= length;
+    }
+
     // Angles are in degrees. Switch to radians.
     angle = deg2rad(angle);
 
     double sinTheta = sin(angle);
     double cosTheta = cos(angle);
     
-    // Normalize the axis of rotation
-    double length = sqrt(x * x + y * y + z * z);
-    if (length == 0) {
-        // bad vector, just use something reasonable
-        x = 0;
-        y = 0;
-        z = 1;
-    } else if (length != 1) {
-        x /= length;
-        y /= length;
-        z /= length;
-    }
-    
     TransformationMatrix mat;
 
     // Optimize cases where the axis is along a major axis
-    if (x == 1.0f && y == 0.0f && z == 0.0f) {
-        mat.m_matrix[0][0] = 1.0f;
-        mat.m_matrix[0][1] = 0.0f;
-        mat.m_matrix[0][2] = 0.0f;
-        mat.m_matrix[1][0] = 0.0f;
+    if (x == 1.0 && y == 0.0 && z == 0.0) {
+        mat.m_matrix[0][0] = 1.0;
+        mat.m_matrix[0][1] = 0.0;
+        mat.m_matrix[0][2] = 0.0;
+        mat.m_matrix[1][0] = 0.0;
         mat.m_matrix[1][1] = cosTheta;
         mat.m_matrix[1][2] = sinTheta;
-        mat.m_matrix[2][0] = 0.0f;
+        mat.m_matrix[2][0] = 0.0;
         mat.m_matrix[2][1] = -sinTheta;
         mat.m_matrix[2][2] = cosTheta;
-        mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0f;
-        mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0f;
-        mat.m_matrix[3][3] = 1.0f;
-    } else if (x == 0.0f && y == 1.0f && z == 0.0f) {
+        mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
+        mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
+        mat.m_matrix[3][3] = 1.0;
+    } else if (x == 0.0 && y == 1.0 && z == 0.0) {
         mat.m_matrix[0][0] = cosTheta;
-        mat.m_matrix[0][1] = 0.0f;
+        mat.m_matrix[0][1] = 0.0;
         mat.m_matrix[0][2] = -sinTheta;
-        mat.m_matrix[1][0] = 0.0f;
-        mat.m_matrix[1][1] = 1.0f;
-        mat.m_matrix[1][2] = 0.0f;
+        mat.m_matrix[1][0] = 0.0;
+        mat.m_matrix[1][1] = 1.0;
+        mat.m_matrix[1][2] = 0.0;
         mat.m_matrix[2][0] = sinTheta;
-        mat.m_matrix[2][1] = 0.0f;
+        mat.m_matrix[2][1] = 0.0;
         mat.m_matrix[2][2] = cosTheta;
-        mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0f;
-        mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0f;
-        mat.m_matrix[3][3] = 1.0f;
-    } else if (x == 0.0f && y == 0.0f && z == 1.0f) {
+        mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
+        mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
+        mat.m_matrix[3][3] = 1.0;
+    } else if (x == 0.0 && y == 0.0 && z == 1.0) {
         mat.m_matrix[0][0] = cosTheta;
         mat.m_matrix[0][1] = sinTheta;
-        mat.m_matrix[0][2] = 0.0f;
+        mat.m_matrix[0][2] = 0.0;
         mat.m_matrix[1][0] = -sinTheta;
         mat.m_matrix[1][1] = cosTheta;
-        mat.m_matrix[1][2] = 0.0f;
-        mat.m_matrix[2][0] = 0.0f;
-        mat.m_matrix[2][1] = 0.0f;
-        mat.m_matrix[2][2] = 1.0f;
-        mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0f;
-        mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0f;
-        mat.m_matrix[3][3] = 1.0f;
+        mat.m_matrix[1][2] = 0.0;
+        mat.m_matrix[2][0] = 0.0;
+        mat.m_matrix[2][1] = 0.0;
+        mat.m_matrix[2][2] = 1.0;
+        mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
+        mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
+        mat.m_matrix[3][3] = 1.0;
     } else {
         // This case is the rotation about an arbitrary unit vector.
         //
@@ -806,9 +813,9 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
         mat.m_matrix[2][0] = x * z * oneMinusCosTheta + y * sinTheta;
         mat.m_matrix[2][1] = y * z * oneMinusCosTheta - x * sinTheta;
         mat.m_matrix[2][2] = cosTheta + z * z * oneMinusCosTheta;
-        mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0f;
-        mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0f;
-        mat.m_matrix[3][3] = 1.0f;
+        mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
+        mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
+        mat.m_matrix[3][3] = 1.0;
     }
     multiply(mat);
     return *this;
@@ -828,16 +835,16 @@ TransformationMatrix& TransformationMatrix::rotate3d(double rx, double ry, doubl
     
     mat.m_matrix[0][0] = cosTheta;
     mat.m_matrix[0][1] = sinTheta;
-    mat.m_matrix[0][2] = 0.0f;
+    mat.m_matrix[0][2] = 0.0;
     mat.m_matrix[1][0] = -sinTheta;
     mat.m_matrix[1][1] = cosTheta;
-    mat.m_matrix[1][2] = 0.0f;
-    mat.m_matrix[2][0] = 0.0f;
-    mat.m_matrix[2][1] = 0.0f;
-    mat.m_matrix[2][2] = 1.0f;
-    mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0f;
-    mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0f;
-    mat.m_matrix[3][3] = 1.0f;
+    mat.m_matrix[1][2] = 0.0;
+    mat.m_matrix[2][0] = 0.0;
+    mat.m_matrix[2][1] = 0.0;
+    mat.m_matrix[2][2] = 1.0;
+    mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
+    mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
+    mat.m_matrix[3][3] = 1.0;
     
     TransformationMatrix rmat(mat);
     
@@ -845,35 +852,35 @@ TransformationMatrix& TransformationMatrix::rotate3d(double rx, double ry, doubl
     cosTheta = cos(ry);
     
     mat.m_matrix[0][0] = cosTheta;
-    mat.m_matrix[0][1] = 0.0f;
+    mat.m_matrix[0][1] = 0.0;
     mat.m_matrix[0][2] = -sinTheta;
-    mat.m_matrix[1][0] = 0.0f;
-    mat.m_matrix[1][1] = 1.0f;
-    mat.m_matrix[1][2] = 0.0f;
+    mat.m_matrix[1][0] = 0.0;
+    mat.m_matrix[1][1] = 1.0;
+    mat.m_matrix[1][2] = 0.0;
     mat.m_matrix[2][0] = sinTheta;
-    mat.m_matrix[2][1] = 0.0f;
+    mat.m_matrix[2][1] = 0.0;
     mat.m_matrix[2][2] = cosTheta;
-    mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0f;
-    mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0f;
-    mat.m_matrix[3][3] = 1.0f;
+    mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
+    mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
+    mat.m_matrix[3][3] = 1.0;
 
     rmat.multiply(mat);
 
     sinTheta = sin(rx);
     cosTheta = cos(rx);
     
-    mat.m_matrix[0][0] = 1.0f;
-    mat.m_matrix[0][1] = 0.0f;
-    mat.m_matrix[0][2] = 0.0f;
-    mat.m_matrix[1][0] = 0.0f;
+    mat.m_matrix[0][0] = 1.0;
+    mat.m_matrix[0][1] = 0.0;
+    mat.m_matrix[0][2] = 0.0;
+    mat.m_matrix[1][0] = 0.0;
     mat.m_matrix[1][1] = cosTheta;
     mat.m_matrix[1][2] = sinTheta;
-    mat.m_matrix[2][0] = 0.0f;
+    mat.m_matrix[2][0] = 0.0;
     mat.m_matrix[2][1] = -sinTheta;
     mat.m_matrix[2][2] = cosTheta;
-    mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0f;
-    mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0f;
-    mat.m_matrix[3][3] = 1.0f;
+    mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
+    mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
+    mat.m_matrix[3][3] = 1.0;
 
     rmat.multiply(mat);
 
@@ -965,11 +972,275 @@ TransformationMatrix TransformationMatrix::rectToRect(const FloatRect& from, con
                                 to.y() - from.y());
 }
 
-//
-// *this = mat * *this
-//
+// this = mat * this.
 TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix& mat)
 {
+#if CPU(APPLE_ARMV7S)
+    double* leftMatrix = &(m_matrix[0][0]);
+    const double* rightMatrix = &(mat.m_matrix[0][0]);
+    asm volatile (// First row of leftMatrix.
+        "mov        r3, %[leftMatrix]\n\t"
+        "vld1.64    { d16-d19 }, [%[leftMatrix], :128]!\n\t"
+        "vld1.64    { d0-d3}, [%[rightMatrix], :128]!\n\t"
+        "vmul.f64   d4, d0, d16\n\t"
+        "vld1.64    { d20-d23 }, [%[leftMatrix], :128]!\n\t"
+        "vmla.f64   d4, d1, d20\n\t"
+        "vld1.64    { d24-d27 }, [%[leftMatrix], :128]!\n\t"
+        "vmla.f64   d4, d2, d24\n\t"
+        "vld1.64    { d28-d31 }, [%[leftMatrix], :128]!\n\t"
+        "vmla.f64   d4, d3, d28\n\t"
+
+        "vmul.f64   d5, d0, d17\n\t"
+        "vmla.f64   d5, d1, d21\n\t"
+        "vmla.f64   d5, d2, d25\n\t"
+        "vmla.f64   d5, d3, d29\n\t"
+
+        "vmul.f64   d6, d0, d18\n\t"
+        "vmla.f64   d6, d1, d22\n\t"
+        "vmla.f64   d6, d2, d26\n\t"
+        "vmla.f64   d6, d3, d30\n\t"
+
+        "vmul.f64   d7, d0, d19\n\t"
+        "vmla.f64   d7, d1, d23\n\t"
+        "vmla.f64   d7, d2, d27\n\t"
+        "vmla.f64   d7, d3, d31\n\t"
+        "vld1.64    { d0-d3}, [%[rightMatrix], :128]!\n\t"
+        "vst1.64    { d4-d7 }, [r3, :128]!\n\t"
+
+        // Second row of leftMatrix.
+        "vmul.f64   d4, d0, d16\n\t"
+        "vmla.f64   d4, d1, d20\n\t"
+        "vmla.f64   d4, d2, d24\n\t"
+        "vmla.f64   d4, d3, d28\n\t"
+
+        "vmul.f64   d5, d0, d17\n\t"
+        "vmla.f64   d5, d1, d21\n\t"
+        "vmla.f64   d5, d2, d25\n\t"
+        "vmla.f64   d5, d3, d29\n\t"
+
+        "vmul.f64   d6, d0, d18\n\t"
+        "vmla.f64   d6, d1, d22\n\t"
+        "vmla.f64   d6, d2, d26\n\t"
+        "vmla.f64   d6, d3, d30\n\t"
+
+        "vmul.f64   d7, d0, d19\n\t"
+        "vmla.f64   d7, d1, d23\n\t"
+        "vmla.f64   d7, d2, d27\n\t"
+        "vmla.f64   d7, d3, d31\n\t"
+        "vld1.64    { d0-d3}, [%[rightMatrix], :128]!\n\t"
+        "vst1.64    { d4-d7 }, [r3, :128]!\n\t"
+
+        // Third row of leftMatrix.
+        "vmul.f64   d4, d0, d16\n\t"
+        "vmla.f64   d4, d1, d20\n\t"
+        "vmla.f64   d4, d2, d24\n\t"
+        "vmla.f64   d4, d3, d28\n\t"
+
+        "vmul.f64   d5, d0, d17\n\t"
+        "vmla.f64   d5, d1, d21\n\t"
+        "vmla.f64   d5, d2, d25\n\t"
+        "vmla.f64   d5, d3, d29\n\t"
+
+        "vmul.f64   d6, d0, d18\n\t"
+        "vmla.f64   d6, d1, d22\n\t"
+        "vmla.f64   d6, d2, d26\n\t"
+        "vmla.f64   d6, d3, d30\n\t"
+
+        "vmul.f64   d7, d0, d19\n\t"
+        "vmla.f64   d7, d1, d23\n\t"
+        "vmla.f64   d7, d2, d27\n\t"
+        "vmla.f64   d7, d3, d31\n\t"
+        "vld1.64    { d0-d3}, [%[rightMatrix], :128]\n\t"
+        "vst1.64    { d4-d7 }, [r3, :128]!\n\t"
+
+        // Fourth and last row of leftMatrix.
+        "vmul.f64   d4, d0, d16\n\t"
+        "vmla.f64   d4, d1, d20\n\t"
+        "vmla.f64   d4, d2, d24\n\t"
+        "vmla.f64   d4, d3, d28\n\t"
+
+        "vmul.f64   d5, d0, d17\n\t"
+        "vmla.f64   d5, d1, d21\n\t"
+        "vmla.f64   d5, d2, d25\n\t"
+        "vmla.f64   d5, d3, d29\n\t"
+
+        "vmul.f64   d6, d0, d18\n\t"
+        "vmla.f64   d6, d1, d22\n\t"
+        "vmla.f64   d6, d2, d26\n\t"
+        "vmla.f64   d6, d3, d30\n\t"
+
+        "vmul.f64   d7, d0, d19\n\t"
+        "vmla.f64   d7, d1, d23\n\t"
+        "vmla.f64   d7, d2, d27\n\t"
+        "vmla.f64   d7, d3, d31\n\t"
+        "vst1.64    { d4-d7 }, [r3, :128]\n\t"
+        : [leftMatrix]"+r"(leftMatrix), [rightMatrix]"+r"(rightMatrix)
+        :
+        : "memory", "r3", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d16", "d17", "d18", "d19", "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31");
+#elif CPU(ARM_VFP) && PLATFORM(IOS)
+
+#define MATRIX_MULTIPLY_ONE_LINE \
+    "vldmia.64  %[rightMatrix]!, { d0-d3}\n\t" \
+    "vmul.f64   d4, d0, d16\n\t" \
+    "vmla.f64   d4, d1, d20\n\t" \
+    "vmla.f64   d4, d2, d24\n\t" \
+    "vmla.f64   d4, d3, d28\n\t" \
+    \
+    "vmul.f64   d5, d0, d17\n\t" \
+    "vmla.f64   d5, d1, d21\n\t" \
+    "vmla.f64   d5, d2, d25\n\t" \
+    "vmla.f64   d5, d3, d29\n\t" \
+    \
+    "vmul.f64   d6, d0, d18\n\t" \
+    "vmla.f64   d6, d1, d22\n\t" \
+    "vmla.f64   d6, d2, d26\n\t" \
+    "vmla.f64   d6, d3, d30\n\t" \
+    \
+    "vmul.f64   d7, d0, d19\n\t" \
+    "vmla.f64   d7, d1, d23\n\t" \
+    "vmla.f64   d7, d2, d27\n\t" \
+    "vmla.f64   d7, d3, d31\n\t" \
+    "vstmia.64  %[leftMatrix]!, { d4-d7 }\n\t"
+
+    double* leftMatrix = &(m_matrix[0][0]);
+    const double* rightMatrix = &(mat.m_matrix[0][0]);
+    // We load the full m_matrix at once in d16-d31.
+    asm volatile("vldmia.64  %[leftMatrix], { d16-d31 }\n\t"
+                 :
+                 : [leftMatrix]"r"(leftMatrix)
+                 : "d16", "d17", "d18", "d19", "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31");
+    for (unsigned i = 0; i < 4; ++i) {
+        asm volatile(MATRIX_MULTIPLY_ONE_LINE
+                     : [leftMatrix]"+r"(leftMatrix), [rightMatrix]"+r"(rightMatrix)
+                     :
+                     : "memory", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7");
+    }
+#undef MATRIX_MULTIPLY_ONE_LINE
+
+#elif defined(TRANSFORMATION_MATRIX_USE_X86_64_SSE2)
+    // x86_64 has 16 XMM registers which is enough to do the multiplication fully in registers.
+    __m128d matrixBlockA = _mm_load_pd(&(m_matrix[0][0]));
+    __m128d matrixBlockC = _mm_load_pd(&(m_matrix[1][0]));
+    __m128d matrixBlockE = _mm_load_pd(&(m_matrix[2][0]));
+    __m128d matrixBlockG = _mm_load_pd(&(m_matrix[3][0]));
+
+    // First row.
+    __m128d otherMatrixFirstParam = _mm_set1_pd(mat.m_matrix[0][0]);
+    __m128d otherMatrixSecondParam = _mm_set1_pd(mat.m_matrix[0][1]);
+    __m128d otherMatrixThirdParam = _mm_set1_pd(mat.m_matrix[0][2]);
+    __m128d otherMatrixFourthParam = _mm_set1_pd(mat.m_matrix[0][3]);
+
+    // output00 and output01.
+    __m128d accumulator = _mm_mul_pd(matrixBlockA, otherMatrixFirstParam);
+    __m128d temp1 = _mm_mul_pd(matrixBlockC, otherMatrixSecondParam);
+    __m128d temp2 = _mm_mul_pd(matrixBlockE, otherMatrixThirdParam);
+    __m128d temp3 = _mm_mul_pd(matrixBlockG, otherMatrixFourthParam);
+
+    __m128d matrixBlockB = _mm_load_pd(&(m_matrix[0][2]));
+    __m128d matrixBlockD = _mm_load_pd(&(m_matrix[1][2]));
+    __m128d matrixBlockF = _mm_load_pd(&(m_matrix[2][2]));
+    __m128d matrixBlockH = _mm_load_pd(&(m_matrix[3][2]));
+
+    accumulator = _mm_add_pd(accumulator, temp1);
+    accumulator = _mm_add_pd(accumulator, temp2);
+    accumulator = _mm_add_pd(accumulator, temp3);
+    _mm_store_pd(&m_matrix[0][0], accumulator);
+
+    // output02 and output03.
+    accumulator = _mm_mul_pd(matrixBlockB, otherMatrixFirstParam);
+    temp1 = _mm_mul_pd(matrixBlockD, otherMatrixSecondParam);
+    temp2 = _mm_mul_pd(matrixBlockF, otherMatrixThirdParam);
+    temp3 = _mm_mul_pd(matrixBlockH, otherMatrixFourthParam);
+
+    accumulator = _mm_add_pd(accumulator, temp1);
+    accumulator = _mm_add_pd(accumulator, temp2);
+    accumulator = _mm_add_pd(accumulator, temp3);
+    _mm_store_pd(&m_matrix[0][2], accumulator);
+
+    // Second row.
+    otherMatrixFirstParam = _mm_set1_pd(mat.m_matrix[1][0]);
+    otherMatrixSecondParam = _mm_set1_pd(mat.m_matrix[1][1]);
+    otherMatrixThirdParam = _mm_set1_pd(mat.m_matrix[1][2]);
+    otherMatrixFourthParam = _mm_set1_pd(mat.m_matrix[1][3]);
+
+    // output10 and output11.
+    accumulator = _mm_mul_pd(matrixBlockA, otherMatrixFirstParam);
+    temp1 = _mm_mul_pd(matrixBlockC, otherMatrixSecondParam);
+    temp2 = _mm_mul_pd(matrixBlockE, otherMatrixThirdParam);
+    temp3 = _mm_mul_pd(matrixBlockG, otherMatrixFourthParam);
+
+    accumulator = _mm_add_pd(accumulator, temp1);
+    accumulator = _mm_add_pd(accumulator, temp2);
+    accumulator = _mm_add_pd(accumulator, temp3);
+    _mm_store_pd(&m_matrix[1][0], accumulator);
+
+    // output12 and output13.
+    accumulator = _mm_mul_pd(matrixBlockB, otherMatrixFirstParam);
+    temp1 = _mm_mul_pd(matrixBlockD, otherMatrixSecondParam);
+    temp2 = _mm_mul_pd(matrixBlockF, otherMatrixThirdParam);
+    temp3 = _mm_mul_pd(matrixBlockH, otherMatrixFourthParam);
+
+    accumulator = _mm_add_pd(accumulator, temp1);
+    accumulator = _mm_add_pd(accumulator, temp2);
+    accumulator = _mm_add_pd(accumulator, temp3);
+    _mm_store_pd(&m_matrix[1][2], accumulator);
+
+    // Third row.
+    otherMatrixFirstParam = _mm_set1_pd(mat.m_matrix[2][0]);
+    otherMatrixSecondParam = _mm_set1_pd(mat.m_matrix[2][1]);
+    otherMatrixThirdParam = _mm_set1_pd(mat.m_matrix[2][2]);
+    otherMatrixFourthParam = _mm_set1_pd(mat.m_matrix[2][3]);
+
+    // output20 and output21.
+    accumulator = _mm_mul_pd(matrixBlockA, otherMatrixFirstParam);
+    temp1 = _mm_mul_pd(matrixBlockC, otherMatrixSecondParam);
+    temp2 = _mm_mul_pd(matrixBlockE, otherMatrixThirdParam);
+    temp3 = _mm_mul_pd(matrixBlockG, otherMatrixFourthParam);
+
+    accumulator = _mm_add_pd(accumulator, temp1);
+    accumulator = _mm_add_pd(accumulator, temp2);
+    accumulator = _mm_add_pd(accumulator, temp3);
+    _mm_store_pd(&m_matrix[2][0], accumulator);
+
+    // output22 and output23.
+    accumulator = _mm_mul_pd(matrixBlockB, otherMatrixFirstParam);
+    temp1 = _mm_mul_pd(matrixBlockD, otherMatrixSecondParam);
+    temp2 = _mm_mul_pd(matrixBlockF, otherMatrixThirdParam);
+    temp3 = _mm_mul_pd(matrixBlockH, otherMatrixFourthParam);
+
+    accumulator = _mm_add_pd(accumulator, temp1);
+    accumulator = _mm_add_pd(accumulator, temp2);
+    accumulator = _mm_add_pd(accumulator, temp3);
+    _mm_store_pd(&m_matrix[2][2], accumulator);
+
+    // Fourth row.
+    otherMatrixFirstParam = _mm_set1_pd(mat.m_matrix[3][0]);
+    otherMatrixSecondParam = _mm_set1_pd(mat.m_matrix[3][1]);
+    otherMatrixThirdParam = _mm_set1_pd(mat.m_matrix[3][2]);
+    otherMatrixFourthParam = _mm_set1_pd(mat.m_matrix[3][3]);
+
+    // output30 and output31.
+    accumulator = _mm_mul_pd(matrixBlockA, otherMatrixFirstParam);
+    temp1 = _mm_mul_pd(matrixBlockC, otherMatrixSecondParam);
+    temp2 = _mm_mul_pd(matrixBlockE, otherMatrixThirdParam);
+    temp3 = _mm_mul_pd(matrixBlockG, otherMatrixFourthParam);
+
+    accumulator = _mm_add_pd(accumulator, temp1);
+    accumulator = _mm_add_pd(accumulator, temp2);
+    accumulator = _mm_add_pd(accumulator, temp3);
+    _mm_store_pd(&m_matrix[3][0], accumulator);
+
+    // output32 and output33.
+    accumulator = _mm_mul_pd(matrixBlockB, otherMatrixFirstParam);
+    temp1 = _mm_mul_pd(matrixBlockD, otherMatrixSecondParam);
+    temp2 = _mm_mul_pd(matrixBlockF, otherMatrixThirdParam);
+    temp3 = _mm_mul_pd(matrixBlockH, otherMatrixFourthParam);
+
+    accumulator = _mm_add_pd(accumulator, temp1);
+    accumulator = _mm_add_pd(accumulator, temp2);
+    accumulator = _mm_add_pd(accumulator, temp3);
+    _mm_store_pd(&m_matrix[3][2], accumulator);
+#else
     Matrix4 tmp;
     
     tmp[0][0] = (mat.m_matrix[0][0] * m_matrix[0][0] + mat.m_matrix[0][1] * m_matrix[1][0]
@@ -1009,6 +1280,7 @@ TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix&
                + mat.m_matrix[3][2] * m_matrix[2][3] + mat.m_matrix[3][3] * m_matrix[3][3]);
     
     setMatrix(tmp);
+#endif
     return *this;
 }
 
@@ -1152,13 +1424,13 @@ void TransformationMatrix::recompose(const DecomposedType& decomp)
     makeIdentity();
     
     // first apply perspective
-    m_matrix[0][3] = (float) decomp.perspectiveX;
-    m_matrix[1][3] = (float) decomp.perspectiveY;
-    m_matrix[2][3] = (float) decomp.perspectiveZ;
-    m_matrix[3][3] = (float) decomp.perspectiveW;
+    m_matrix[0][3] = decomp.perspectiveX;
+    m_matrix[1][3] = decomp.perspectiveY;
+    m_matrix[2][3] = decomp.perspectiveZ;
+    m_matrix[3][3] = decomp.perspectiveW;
     
     // now translate
-    translate3d((float) decomp.translateX, (float) decomp.translateY, (float) decomp.translateZ);
+    translate3d(decomp.translateX, decomp.translateY, decomp.translateZ);
     
     // apply rotation
     double xx = decomp.quaternionX * decomp.quaternionX;
@@ -1182,24 +1454,24 @@ void TransformationMatrix::recompose(const DecomposedType& decomp)
     // now apply skew
     if (decomp.skewYZ) {
         TransformationMatrix tmp;
-        tmp.setM32((float) decomp.skewYZ);
+        tmp.setM32(decomp.skewYZ);
         multiply(tmp);
     }
     
     if (decomp.skewXZ) {
         TransformationMatrix tmp;
-        tmp.setM31((float) decomp.skewXZ);
+        tmp.setM31(decomp.skewXZ);
         multiply(tmp);
     }
     
     if (decomp.skewXY) {
         TransformationMatrix tmp;
-        tmp.setM21((float) decomp.skewXY);
+        tmp.setM21(decomp.skewXY);
         multiply(tmp);
     }
     
     // finally, apply scale
-    scale3d((float) decomp.scaleX, (float) decomp.scaleY, (float) decomp.scaleZ);
+    scale3d(decomp.scaleX, decomp.scaleY, decomp.scaleZ);
 }
 
 bool TransformationMatrix::isIntegerTranslation() const

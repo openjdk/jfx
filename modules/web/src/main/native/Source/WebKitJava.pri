@@ -10,6 +10,9 @@ CONFIG(release, debug|release) {
 DEFINES += \
     BUILDING_JAVA__ \
     USE_SYSTEM_MALLOC \
+    STATICALLY_LINKED_WITH_WebCore \
+    STATICALLY_LINKED_WITH_JavaScriptCore 
+
 
 *-cross-* {
     INCLUDEPATH += $$(WK_INCLUDE)

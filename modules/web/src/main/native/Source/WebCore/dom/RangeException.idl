@@ -17,11 +17,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module ranges {
-
-    exception [
-        DoNotCheckConstants
-    ] RangeException {
+[
+    DoNotCheckConstants,
+    ImplementationLacksVTable
+] exception RangeException {
 
         readonly attribute unsigned short   code;
         readonly attribute DOMString        name;
@@ -37,4 +36,3 @@ module ranges {
         const unsigned short INVALID_NODE_TYPE_ERR = 2;
     };
 
-}

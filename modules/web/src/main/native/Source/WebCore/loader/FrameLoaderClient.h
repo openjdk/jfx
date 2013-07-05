@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,8 @@
 
 #include "FrameLoaderTypes.h"
 #include "IconURL.h"
+#include "LayoutMilestones.h"
+#include "ResourceLoadPriority.h"
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
@@ -51,17 +53,11 @@ class NSCachedURLResponse;
 class NSView;
 #endif
 
-#if USE(V8)
-namespace v8 {
-class Context;
-template<class T> class Handle;
-}
-#endif
-
 namespace WebCore {
 
     class AuthenticationChallenge;
     class CachedFrame;
+    class CachedResourceRequest;
     class Color;
     class DOMWindowExtension;
     class DOMWrapperWorld;
@@ -80,9 +76,6 @@ namespace WebCore {
 #endif
     class HTMLPlugInElement;
     class IntSize;
-#if ENABLE(WEB_INTENTS)
-    class IntentRequest;
-#endif
     class KURL;
     class MessageEvent;
     class NavigationAction;
@@ -92,9 +85,11 @@ namespace WebCore {
     class PolicyChecker;
     class ResourceError;
     class ResourceHandle;
-    class ResourceLoader;
     class ResourceRequest;
     class ResourceResponse;
+#if ENABLE(MEDIA_STREAM)
+    class RTCPeerConnectionHandler;
+#endif
     class SecurityOrigin;
     class SharedBuffer;
     class SocketStreamHandle;
@@ -162,10 +157,8 @@ namespace WebCore {
         virtual void dispatchDidFinishDocumentLoad() = 0;
         virtual void dispatchDidFinishLoad() = 0;
 
-        virtual void dispatchDidFirstLayout() = 0;
-        virtual void dispatchDidFirstVisuallyNonEmptyLayout() = 0;
-        virtual void dispatchDidNewFirstVisuallyNonEmptyLayout() { }
         virtual void dispatchDidLayout() { }
+        virtual void dispatchDidLayout(LayoutMilestones) { }
 
         virtual Frame* dispatchCreatePage(const NavigationAction&) = 0;
         virtual void dispatchShow() = 0;
@@ -176,6 +169,8 @@ namespace WebCore {
         virtual void cancelPolicyCheck() = 0;
 
         virtual void dispatchUnableToImplementPolicy(const ResourceError&) = 0;
+
+        virtual void dispatchWillRequestResource(CachedResourceRequest*) { }
 
         virtual void dispatchWillSendSubmitEvent(PassRefPtr<FormState>) = 0;
         virtual void dispatchWillSubmitForm(FramePolicyFunction, PassRefPtr<FormState>) = 0;
@@ -206,6 +201,11 @@ namespace WebCore {
         virtual bool shouldGoToHistoryItem(HistoryItem*) const = 0;
         virtual bool shouldStopLoadingForHistoryItem(HistoryItem*) const = 0;
         virtual void updateGlobalHistoryItemForPage() { }
+
+        // This frame has set its opener to null, disowning it for the lifetime of the frame.
+        // See http://html.spec.whatwg.org/#dom-opener.
+        // FIXME: JSC should allow disowning opener. - <https://bugs.webkit.org/show_bug.cgi?id=103913>.
+        virtual void didDisownOpener() { }
 
         // This frame has displayed inactive content (such as an image) from an
         // insecure source.  Inactive content cannot spread to other frames.
@@ -256,10 +256,11 @@ namespace WebCore {
         virtual void dispatchDidBecomeFrameset(bool) = 0; // Can change due to navigation or DOM modification.
 
         virtual bool canCachePage() const = 0;
-        virtual void download(ResourceHandle*, const ResourceRequest&, const ResourceResponse&) = 0;
+        virtual void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) = 0;
 
         virtual PassRefPtr<Frame> createFrame(const KURL& url, const String& name, HTMLFrameOwnerElement* ownerElement, const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) = 0;
         virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const KURL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) = 0;
+        virtual void recreatePlugin(Widget*) = 0;
         virtual void redirectDataToPlugin(Widget* pluginWidget) = 0;
 
         virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const KURL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) = 0;
@@ -278,20 +279,13 @@ namespace WebCore {
         virtual void documentElementAvailable() = 0;
         virtual void didPerformFirstNavigation() const = 0; // "Navigation" here means a transition from one page to another that ends up in the back/forward list.
 
-#if USE(V8)
-        virtual void didCreateScriptContext(v8::Handle<v8::Context>, int extensionGroup, int worldId) = 0;
-        virtual void willReleaseScriptContext(v8::Handle<v8::Context>, int worldId) = 0;
-        virtual bool allowScriptExtension(const String& extensionName, int extensionGroup, int worldId) = 0;
-#endif
+        virtual void didExhaustMemoryAvailableForScript() { };
 
         virtual void registerForIconNotification(bool listen = true) = 0;
         
 #if PLATFORM(MAC)
         // Allow an accessibility object to retrieve a Frame parent if there's no PlatformWidget.
         virtual RemoteAXObjectRef accessibilityRemoteObject() = 0;
-#if ENABLE(JAVA_BRIDGE)
-        virtual jobject javaApplet(NSView*) { return 0; }
-#endif
         virtual NSCachedURLResponse* willCacheResponse(DocumentLoader*, unsigned long identifier, NSCachedURLResponse*) const = 0;
 #endif
 #if PLATFORM(WIN) && USE(CFNETWORK)
@@ -299,7 +293,7 @@ namespace WebCore {
         virtual bool shouldCacheResponse(DocumentLoader*, unsigned long identifier, const ResourceResponse&, const unsigned char* data, unsigned long long length) = 0;
 #endif
 
-        virtual bool shouldUsePluginDocument(const String& /*mimeType*/) const { return false; }
+        virtual bool shouldAlwaysUsePluginDocument(const String& /*mimeType*/) const { return false; }
         virtual bool shouldLoadMediaElementURL(const KURL&) const { return true; }
 
         virtual void didChangeScrollOffset() { }
@@ -330,12 +324,7 @@ namespace WebCore {
         // Returns true if the embedder intercepted the postMessage call
         virtual bool willCheckAndDispatchMessageEvent(SecurityOrigin* /*target*/, MessageEvent*) const { return false; }
 
-#if ENABLE(WEB_INTENTS)
-        virtual void dispatchIntent(PassRefPtr<IntentRequest>) = 0;
-#endif
-#if ENABLE(WEB_INTENTS_TAG)
-        virtual void registerIntentService(const String& action, const String& type, const KURL& href, const String& title, const String& disposition) { }
-#endif
+        virtual void didChangeName(const String&) { }
 
         virtual void dispatchWillOpenSocketStream(SocketStreamHandle*) { }
 
@@ -343,6 +332,25 @@ namespace WebCore {
         virtual void dispatchWillDisconnectDOMWindowExtensionFromGlobalObject(DOMWindowExtension*) { }
         virtual void dispatchDidReconnectDOMWindowExtensionToGlobalObject(DOMWindowExtension*) { }
         virtual void dispatchWillDestroyGlobalObjectForDOMWindowExtension(DOMWindowExtension*) { }
+
+#if ENABLE(MEDIA_STREAM)
+        virtual void dispatchWillStartUsingPeerConnectionHandler(RTCPeerConnectionHandler*) { }
+#endif
+
+#if ENABLE(WEBGL)
+        virtual bool allowWebGL(bool enabledPerSettings) { return enabledPerSettings; }
+        // Informs the embedder that a WebGL canvas inside this frame received a lost context
+        // notification with the given GL_ARB_robustness guilt/innocence code (see Extensions3D.h).
+        virtual void didLoseWebGLContext(int) { }
+#endif
+
+        // If an HTML document is being loaded, informs the embedder that the document will have its <body> attached soon.
+        virtual void dispatchWillInsertBody() { }
+
+        virtual void dispatchDidChangeResourcePriority(unsigned long /*identifier*/, ResourceLoadPriority) { }
+
+        // FIXME (bug 116233): We need to get rid of EmptyFrameLoaderClient completely, then this will no longer be needed.
+        virtual bool isEmptyFrameLoaderClient() { return false; }
     };
 
 } // namespace WebCore

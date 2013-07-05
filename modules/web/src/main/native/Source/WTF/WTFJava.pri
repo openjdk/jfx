@@ -5,6 +5,7 @@
 # -------------------------------------------------------------------
 
 DEFINES += BUILDING_WTF
+DEFINES += STATICALLY_LINKED_WITH_WTF
 
 VPATH += $$PWD/wtf
 
@@ -27,6 +28,7 @@ HEADERS += \
     BloomFilter.h \
     BoundsCheckedPointer.h \
     BumpPointerAllocator.h \
+    ByteOrder.h \
     CheckedArithmetic.h \
     Compiler.h \
     CryptographicallyRandomNumber.h \
@@ -50,15 +52,20 @@ HEADERS += \
     dtoa/utils.h \
     DynamicAnnotations.h \
     Encoder.h \
+    EnumClass.h \
     ExportMacros.h \
     FastAllocBase.h \
     FastMalloc.h \
+    FeatureDefines.h \
+    FilePrintStream.h \
     FixedArray.h \
     Float32Array.h \
     Float64Array.h \
     Forward.h \
+    FunctionDispatcher.h \
     Functional.h \
     GetPtr.h \
+    GregorianDateTime.h \
     HashCountedSet.h \
     HashFunctions.h \
     HashIterators.h \
@@ -71,12 +78,11 @@ HEADERS += \
     Int32Array.h \
     Int8Array.h \
     ListHashSet.h \
-    ListRefPtr.h \
     Locker.h \
     MainThread.h \
-    MallocZoneSupport.h \
     MathExtras.h \
     MD5.h \
+    MediaTime.h \
     MessageQueue.h \
     MetaAllocator.h \
     MetaAllocatorHandle.h \
@@ -106,9 +112,11 @@ HEADERS += \
     PassTraits.h \
     Platform.h \
     PossiblyNull.h \
-#   qt/UtilsQt.h \
+    PrintStream.h \
+    ProcessID.h \
     RandomNumber.h \
     RandomNumberSeed.h \
+    RawPointer.h \
     RedBlackTree.h \
     RefCounted.h \
     RefCountedLeakCounter.h \
@@ -116,12 +124,14 @@ HEADERS += \
     RefPtrHashMap.h \
     RetainPtr.h \
     SHA1.h \
+    SaturatedArithmetic.h \
     Spectrum.h \
     StackBounds.h \
     StaticConstructors.h \
     StdLibExtras.h \
     StringExtras.h \
     StringHasher.h \
+    StringPrintStream.h \
     TCPackedCache.h \
     TCSpinLock.h \
     TCSystemAlloc.h \
@@ -131,6 +141,7 @@ HEADERS += \
     text/AtomicStringImpl.h \
     text/Base64.h \
     text/CString.h \
+    text/IntegerToStringConversion.h \
     text/StringBuffer.h \
     text/StringBuilder.h \
     text/StringConcatenate.h \
@@ -139,6 +150,7 @@ HEADERS += \
     text/StringOperators.h \
     text/TextPosition.h \
     text/WTFString.h \
+    threads/BinarySemaphore.h \
     Threading.h \
     ThreadingPrimitives.h \
     ThreadRestrictionVerifier.h \
@@ -152,17 +164,16 @@ HEADERS += \
     unicode/CharacterNames.h \
     unicode/Collator.h \
     unicode/icu/UnicodeIcu.h \
-#    unicode/qt4/UnicodeQt4.h \
     unicode/ScriptCodesFromICU.h \
     unicode/Unicode.h \
     unicode/UnicodeMacrosFromICU.h \
     unicode/UTF8.h \
-    UnusedParam.h \
     ValueCheck.h \
     Vector.h \
     VectorTraits.h \
     VMTags.h \
-    WTFThreadData.h
+    WTFThreadData.h \
+    WeakPtr.h
 
 unix: HEADERS += ThreadIdentifierDataPthreads.h
 
@@ -170,6 +181,7 @@ SOURCES += \
     ArrayBuffer.cpp \
     ArrayBufferView.cpp \
     Assertions.cpp \
+    Atomics.cpp \
     BitVector.cpp \
     CryptographicallyRandomNumber.cpp \
     CurrentTime.cpp \
@@ -186,11 +198,15 @@ SOURCES += \
     dtoa/fixed-dtoa.cc \
     dtoa/strtod.cc \
     FastMalloc.cpp \
+    FilePrintStream.cpp \
+    FunctionDispatcher.cpp \
+    GregorianDateTime.cpp \
     gobject/GOwnPtr.cpp \
     gobject/GRefPtr.cpp \
     HashTable.cpp \
     MD5.cpp \
     MainThread.cpp \
+    MediaTime.cpp \
     MetaAllocator.cpp \
     NullPtr.cpp \
     NumberOfCores.cpp \
@@ -201,10 +217,12 @@ SOURCES += \
     PageAllocationAligned.cpp \
     PageBlock.cpp \
     ParallelJobsGeneric.cpp \
+    PrintStream.cpp \
     RandomNumber.cpp \
     RefCountedLeakCounter.cpp \
     SHA1.cpp \
     StackBounds.cpp \
+    StringPrintStream.cpp \
     TCSystemAlloc.cpp \
     Threading.cpp \
     TypeTraits.cpp \
@@ -230,6 +248,15 @@ win*|wince*: SOURCES += \
     OSAllocatorWin.cpp \
     ThreadSpecificWin.cpp \
     ThreadingWin.cpp
+
+win32 {
+    SOURCES += \
+        threads/win/BinarySemaphoreWin.cpp
+    INCLUDEPATH += $$PWD/wtf/threads
+} else {
+    SOURCES += \
+        threads/BinarySemaphore.cpp
+}
 
 
 *-g++*:QMAKE_CXXFLAGS_RELEASE -= -O2

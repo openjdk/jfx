@@ -41,7 +41,6 @@ class AnimationControllerPrivate;
 class AnimationController;
 class RenderObject;
 class RenderStyle;
-class WebKitAnimationList;
 
 // A CompositeAnimation represents a collection of animations that are running
 // on a single RenderObject, such as a number of properties transitioning at once.
@@ -65,11 +64,10 @@ public:
 
     void suspendAnimations();
     void resumeAnimations();
-    bool suspended() const { return m_suspended; }
+    bool isSuspended() const { return m_suspended; }
     
     bool hasAnimations() const  { return !m_transitions.isEmpty() || !m_keyframeAnimations.isEmpty(); }
 
-    void setAnimating(bool);
     bool isAnimatingProperty(CSSPropertyID, bool acceleratedOnly, bool isRunningNow) const;
 
     PassRefPtr<KeyframeAnimation> getAnimationForProperty(CSSPropertyID) const;
@@ -81,14 +79,8 @@ public:
     bool pauseTransitionAtTime(CSSPropertyID, double);
     unsigned numberOfActiveAnimations() const;
 
-    PassRefPtr<WebKitAnimationList> animations() const;
-
 private:
-    CompositeAnimation(AnimationControllerPrivate* animationController)
-        : m_animationController(animationController)
-        , m_suspended(false)
-    {
-    }
+    CompositeAnimation(AnimationControllerPrivate*);
 
     void updateTransitions(RenderObject*, RenderStyle* currentStyle, RenderStyle* targetStyle);
     void updateKeyframeAnimations(RenderObject*, RenderStyle* currentStyle, RenderStyle* targetStyle);

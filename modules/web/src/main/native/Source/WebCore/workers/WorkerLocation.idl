@@ -26,13 +26,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module threads {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=WORKERS,
-        JSGenerateIsReachable=Impl,
-        JSNoStaticTables
-    ] WorkerLocation {
+    GenerateIsReachable=Impl,
+    JSNoStaticTables,
+    ImplementationLacksVTable
+] interface WorkerLocation {
         readonly attribute DOMString href;
         readonly attribute DOMString protocol;
         readonly attribute DOMString host;
@@ -45,4 +45,3 @@ module threads {
         [NotEnumerable] DOMString toString();
     };
 
-}

@@ -113,17 +113,6 @@ AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntP
     return axObjectCache()->getOrCreate(m_renderer);
 }
 
-bool AccessibilitySlider::accessibilityIsIgnored() const
-{
-    AccessibilityObjectInclusion decision = accessibilityIsIgnoredBase();
-    if (decision == IncludeObject)
-        return false;
-    if (decision == IgnoreObject)
-        return true;
-    
-    return false;
-}
-    
 float AccessibilitySlider::valueForRange() const
 {
     return element()->value().toFloat();
@@ -175,18 +164,12 @@ LayoutRect AccessibilitySliderThumb::elementRect() const
     RenderObject* sliderRenderer = m_parent->renderer();
     if (!sliderRenderer || !sliderRenderer->isSlider())
         return LayoutRect();
-    return sliderThumbElementOf(sliderRenderer->node())->getRect();
+    return sliderThumbElementOf(sliderRenderer->node())->boundingBox();
 }
 
-bool AccessibilitySliderThumb::accessibilityIsIgnored() const
+bool AccessibilitySliderThumb::computeAccessibilityIsIgnored() const
 {
-    AccessibilityObjectInclusion decision = accessibilityPlatformIncludesObject();
-    if (decision == IncludeObject)
-        return false;
-    if (decision == IgnoreObject)
-        return true;
-
-    return false;
+    return accessibilityIsIgnoredByDefault();
 }
 
 } // namespace WebCore

@@ -27,13 +27,15 @@
 
 #if ENABLE(FULLSCREEN_API)
 
-#include "RenderDeprecatedFlexibleBox.h"
+#include "RenderFlexibleBox.h"
+#include "StyleInheritedData.h"
 
 namespace WebCore {
 
-class RenderFullScreen : public RenderDeprecatedFlexibleBox {
+class RenderFullScreen : public RenderFlexibleBox {
 public:
-    RenderFullScreen(Node*);
+    static RenderFullScreen* createAnonymous(Document*);
+
     virtual bool isRenderFullScreen() const { return true; }
     virtual const char* renderName() const { return "RenderFullScreen"; }
 
@@ -42,10 +44,11 @@ public:
     void createPlaceholder(PassRefPtr<RenderStyle>, const LayoutRect& frameRect);
 
 
-    static RenderObject* wrapRenderer(RenderObject* renderer, Document*);
+    static RenderObject* wrapRenderer(RenderObject*, RenderObject*, Document*);
     void unwrapRenderer();
 
 private:
+    RenderFullScreen();
     virtual void willBeDestroyed();
     
 protected:
@@ -54,7 +57,7 @@ protected:
     
 inline RenderFullScreen* toRenderFullScreen(RenderObject* object)
 {
-    ASSERT(object->isRenderFullScreen());
+    ASSERT_WITH_SECURITY_IMPLICATION(object->isRenderFullScreen());
     return static_cast<RenderFullScreen*>(object);
 }
     

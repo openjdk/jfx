@@ -28,7 +28,7 @@
 #ifndef MediaQueryEvaluator_h
 #define MediaQueryEvaluator_h
 
-#include "PlatformString.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 class Frame;
@@ -56,7 +56,7 @@ public:
      *  Evaluator returns true for "all", and returns value of \mediaFeatureResult
      *  for any media features
      */
-    MediaQueryEvaluator(bool mediaFeatureResult = false);
+    explicit MediaQueryEvaluator(bool mediaFeatureResult = false);
 
     /** Creates evaluator which evaluates only simple media queries
      *  Evaluator  returns true for acceptedMediaType and returns value of \mediafeatureResult

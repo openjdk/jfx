@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-class HTMLTableSectionElement : public HTMLTablePartElement {
+class HTMLTableSectionElement FINAL : public HTMLTablePartElement {
 public:
     static PassRefPtr<HTMLTableSectionElement> create(const QualifiedName&, Document*);
 
@@ -56,7 +56,7 @@ public:
 private:
     HTMLTableSectionElement(const QualifiedName& tagName, Document*);
 
-    virtual StylePropertySet* additionalAttributeStyle() OVERRIDE;
+    virtual const StylePropertySet* additionalPresentationAttributeStyle() OVERRIDE;
 };
 
 } //namespace

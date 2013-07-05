@@ -48,18 +48,20 @@ namespace WebCore {
 using namespace HTMLNames;
 
 AccessibilityTable::AccessibilityTable(RenderObject* renderer)
-    : AccessibilityRenderObject(renderer),
-    m_headerContainer(0)
+    : AccessibilityRenderObject(renderer)
+    , m_headerContainer(0)
+    , m_isAccessibilityTable(true)
 {
-#if ACCESSIBILITY_TABLES
-    m_isAccessibilityTable = isTableExposableThroughAccessibility();
-#else
-    m_isAccessibilityTable = false;
-#endif
 }
 
 AccessibilityTable::~AccessibilityTable()
 {
+}
+
+void AccessibilityTable::init()
+{
+    AccessibilityRenderObject::init();
+    m_isAccessibilityTable = isTableExposableThroughAccessibility();
 }
 
 PassRefPtr<AccessibilityTable> AccessibilityTable::create(RenderObject* renderer)
@@ -121,8 +123,15 @@ bool AccessibilityTable::isDataTable() const
     if (!tableElement->rules().isEmpty())
         return true;    
     
+    // if there's a colgroup or col element, it's probably a data table.
+    for (Node* child = tableElement->firstChild(); child; child = child->nextSibling()) {
+        if (child->hasTagName(colTag) || child->hasTagName(colgroupTag))
+            return true;
+    }
+    
     // go through the cell's and check for tell-tale signs of "data" table status
     // cells have borders, or use attributes like headers, abbr, scope or axis
+    table->recalcSectionsIfNeeded();
     RenderTableSection* firstBody = table->firstBody();
     if (!firstBody)
         return false;
@@ -130,11 +139,15 @@ bool AccessibilityTable::isDataTable() const
     int numCols = firstBody->numColumns();
     int numRows = firstBody->numRows();
     
-    // if there's only one cell, it's not a good AXTable candidate
+    // If there's only one cell, it's not a good AXTable candidate.
     if (numRows == 1 && numCols == 1)
         return false;
     
-    // store the background color of the table to check against cell's background colors
+    // If there are at least 20 rows, we'll call it a data table.
+    if (numRows >= 20)
+        return true;
+    
+    // Store the background color of the table to check against cell's background colors.
     RenderStyle* tableStyle = table->style();
     if (!tableStyle)
         return false;
@@ -148,6 +161,10 @@ bool AccessibilityTable::isDataTable() const
     unsigned validCellCount = 0;
     unsigned borderedCellCount = 0;
     unsigned backgroundDifferenceCellCount = 0;
+    unsigned cellsWithTopBorder = 0;
+    unsigned cellsWithBottomBorder = 0;
+    unsigned cellsWithLeftBorder = 0;
+    unsigned cellsWithRightBorder = 0;
     
     Color alternatingRowColors[5];
     int alternatingRowColorCount = 0;
@@ -189,19 +206,34 @@ bool AccessibilityTable::isDataTable() const
             if (!renderStyle)
                 continue;
 
-            // a cell needs to have matching bordered sides, before it can be considered a bordered cell.
+            // If the empty-cells style is set, we'll call it a data table.
+            if (renderStyle->emptyCells() == HIDE)
+                return true;
+
+            // If a cell has matching bordered sides, call it a (fully) bordered cell.
             if ((cell->borderTop() > 0 && cell->borderBottom() > 0)
                 || (cell->borderLeft() > 0 && cell->borderRight() > 0))
                 borderedCellCount++;
             
-            // if the cell has a different color from the table and there is cell spacing,
-            // then it is probably a data table cell (spacing and colors take the place of borders)
+            // Also keep track of each individual border, so we can catch tables where most
+            // cells have a bottom border, for example.
+            if (cell->borderTop() > 0)
+                cellsWithTopBorder++;
+            if (cell->borderBottom() > 0)
+                cellsWithBottomBorder++;
+            if (cell->borderLeft() > 0)
+                cellsWithLeftBorder++;
+            if (cell->borderRight() > 0)
+                cellsWithRightBorder++;
+            
+            // If the cell has a different color from the table and there is cell spacing,
+            // then it is probably a data table cell (spacing and colors take the place of borders).
             Color cellColor = renderStyle->visitedDependentColor(CSSPropertyBackgroundColor);
             if (table->hBorderSpacing() > 0 && table->vBorderSpacing() > 0
                 && tableBGColor != cellColor && cellColor.alpha() != 1)
                 backgroundDifferenceCellCount++;
             
-            // if we've found 10 "good" cells, we don't need to keep searching
+            // If we've found 10 "good" cells, we don't need to keep searching.
             if (borderedCellCount >= 10 || backgroundDifferenceCellCount >= 10)
                 return true;
             
@@ -232,7 +264,11 @@ bool AccessibilityTable::isDataTable() const
     
     // half of the cells had borders, it's a data table
     unsigned neededCellCount = validCellCount / 2;
-    if (borderedCellCount >= neededCellCount)
+    if (borderedCellCount >= neededCellCount
+        || cellsWithTopBorder >= neededCellCount
+        || cellsWithBottomBorder >= neededCellCount
+        || cellsWithLeftBorder >= neededCellCount
+        || cellsWithRightBorder >= neededCellCount)
         return true;
     
     // half had different background colors, it's a data table
@@ -308,52 +344,43 @@ void AccessibilityTable::addChildren()
     RenderTable* table = toRenderTable(m_renderer);
     AXObjectCache* axCache = m_renderer->document()->axObjectCache();
 
-    // go through all the available sections to pull out the rows
-    // and add them as children
-    // FIXME: This will skip a table with just a tfoot. Should fix by using RenderTable::topSection.
-    RenderTableSection* tableSection = table->header();
-    if (!tableSection)
-        tableSection = table->firstBody();
-    
+    // Go through all the available sections to pull out the rows and add them as children.
+    table->recalcSectionsIfNeeded();
+    RenderTableSection* tableSection = table->topSection();
     if (!tableSection)
         return;
     
     RenderTableSection* initialTableSection = tableSection;
-    
     while (tableSection) {
         
         HashSet<AccessibilityObject*> appendedRows;
-
         unsigned numRows = tableSection->numRows();
-        unsigned numCols = tableSection->numColumns();
         for (unsigned rowIndex = 0; rowIndex < numRows; ++rowIndex) {
-            for (unsigned colIndex = 0; colIndex < numCols; ++colIndex) {
-                
-                RenderTableCell* cell = tableSection->primaryCellAt(rowIndex, colIndex);
-                if (!cell)
+
+            RenderTableRow* renderRow = tableSection->rowRendererAt(rowIndex);
+            if (!renderRow)
                     continue;
                 
-                AccessibilityObject* rowObject = axCache->getOrCreate(cell->parent());
+            AccessibilityObject* rowObject = axCache->getOrCreate(renderRow);
                 if (!rowObject->isTableRow())
                     continue;
                 
                 AccessibilityTableRow* row = static_cast<AccessibilityTableRow*>(rowObject);
-                // we need to check every cell for a new row, because cell spans
-                // can cause us to mess rows if we just check the first column
+            // We need to check every cell for a new row, because cell spans
+            // can cause us to miss rows if we just check the first column.
                 if (appendedRows.contains(row))
                     continue;
                 
-                row->setRowIndex((int)m_rows.size());        
+            row->setRowIndex(static_cast<int>(m_rows.size()));
                 m_rows.append(row);
                 if (!row->accessibilityIsIgnored())
                     m_children.append(row);
 #if PLATFORM(GTK)
                 else
-                    m_children.append(row->children());
+                m_children.appendVector(row->children());
 #endif
                 appendedRows.add(row);
             }
-        }
         
         tableSection = table->sectionBelow(tableSection, SkipEmptySections);
     }
@@ -439,11 +466,8 @@ void AccessibilityTable::cells(AccessibilityObject::AccessibilityChildrenVector&
     
     updateChildrenIfNecessary();
     
-    int numRows = m_rows.size();
-    for (int row = 0; row < numRows; ++row) {
-        AccessibilityChildrenVector rowChildren = m_rows[row]->children();
-        cells.append(rowChildren);
-    }
+    for (size_t row = 0; row < m_rows.size(); ++row)
+        cells.appendVector(m_rows[row]->children());
 }
     
 unsigned AccessibilityTable::columnCount()
@@ -473,76 +497,36 @@ int AccessibilityTable::tableLevel() const
 
 AccessibilityTableCell* AccessibilityTable::cellForColumnAndRow(unsigned column, unsigned row)
 {
-    if (!m_renderer || !m_renderer->isTable())
-        return 0;
-    
     updateChildrenIfNecessary();
-    
-    RenderTable* table = toRenderTable(m_renderer);
-    // FIXME: This will skip a table with just a tfoot. Should fix by using RenderTable::topSection.
-    RenderTableSection* tableSection = table->header();
-    if (!tableSection)
-        tableSection = table->firstBody();
-    
-    RenderTableCell* cell = 0;
-    unsigned rowCount = 0;
-    unsigned rowOffset = 0;
-    while (tableSection) {
-        
-        unsigned numRows = tableSection->numRows();
-        unsigned numCols = tableSection->numColumns();
-        
-        rowCount += numRows;
-        
-        unsigned sectionSpecificRow = row - rowOffset;            
-        if (row < rowCount && column < numCols && sectionSpecificRow < numRows) {
-            cell = tableSection->primaryCellAt(sectionSpecificRow, column);
-            
-            // we didn't find the cell, which means there's spanning happening
-            // search backwards to find the spanning cell
-            if (!cell) {
-                
-                // first try rows
-                for (int testRow = sectionSpecificRow - 1; testRow >= 0; --testRow) {
-                    cell = tableSection->primaryCellAt(testRow, column);
-                    // cell overlapped. use this one
-                    ASSERT(!cell || cell->rowSpan() >= 1);
-                    if (cell && ((cell->rowIndex() + (cell->rowSpan() - 1)) >= sectionSpecificRow))
-                        break;
-                    cell = 0;
-                }
-                
-                if (!cell) {
-                    // try cols
-                    for (int testCol = column - 1; testCol >= 0; --testCol) {
-                        cell = tableSection->primaryCellAt(sectionSpecificRow, testCol);
-                        // cell overlapped. use this one
-                        ASSERT(!cell || cell->rowSpan() >= 1);
-                        if (cell && ((cell->col() + (cell->colSpan() - 1)) >= column))
-                            break;
-                        cell = 0;
-                    }
-                }
-            }
-        }
-        
-        if (cell)
-            break;
-        
-        rowOffset += numRows;
-        // we didn't find anything between the rows we should have
-        if (row < rowCount)
-            break;
-        tableSection = table->sectionBelow(tableSection, SkipEmptySections);
-    }
-    
-    if (!cell)
+    if (column >= columnCount() || row >= rowCount())
         return 0;
     
-    AccessibilityObject* cellObject = axObjectCache()->getOrCreate(cell);
-    ASSERT(cellObject->isTableCell());
+    // Iterate backwards through the rows in case the desired cell has a rowspan and exists in a previous row.
+    for (unsigned rowIndexCounter = row + 1; rowIndexCounter > 0; --rowIndexCounter) {
+        unsigned rowIndex = rowIndexCounter - 1;
+        AccessibilityChildrenVector children = m_rows[rowIndex]->children();
+        // Since some cells may have colspans, we have to check the actual range of each
+        // cell to determine which is the right one.
+        for (unsigned colIndexCounter = std::min(static_cast<unsigned>(children.size()), column + 1); colIndexCounter > 0; --colIndexCounter) {
+            unsigned colIndex = colIndexCounter - 1;
+            AccessibilityObject* child = children[colIndex].get();
+            ASSERT(child->isTableCell());
+            if (!child->isTableCell())
+                continue;
     
-    return static_cast<AccessibilityTableCell*>(cellObject);
+            pair<unsigned, unsigned> columnRange;
+            pair<unsigned, unsigned> rowRange;
+            AccessibilityTableCell* tableCellChild = static_cast<AccessibilityTableCell*>(child);
+            tableCellChild->columnIndexRange(columnRange);
+            tableCellChild->rowIndexRange(rowRange);
+    
+            if ((column >= columnRange.first && column < (columnRange.first + columnRange.second))
+                && (row >= rowRange.first && row < (rowRange.first + rowRange.second)))
+                return tableCellChild;
+        }
+                }
+                
+        return 0;
 }
 
 AccessibilityRole AccessibilityTable::roleValue() const
@@ -553,16 +537,16 @@ AccessibilityRole AccessibilityTable::roleValue() const
     return TableRole;
 }
     
-bool AccessibilityTable::accessibilityIsIgnored() const
+bool AccessibilityTable::computeAccessibilityIsIgnored() const
 {
-    AccessibilityObjectInclusion decision = accessibilityIsIgnoredBase();
+    AccessibilityObjectInclusion decision = defaultObjectInclusion();
     if (decision == IncludeObject)
         return false;
     if (decision == IgnoreObject)
         return true;
     
     if (!isAccessibilityTable())
-        return AccessibilityRenderObject::accessibilityIsIgnored();
+        return AccessibilityRenderObject::computeAccessibilityIsIgnored();
         
     return false;
 }

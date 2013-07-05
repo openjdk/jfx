@@ -30,14 +30,14 @@
 
 #include "CachedResourceClient.h"
 #include "CachedResourceHandle.h"
-#include "CachedTextTrack.h"
-#include "Document.h"
 #include "Timer.h"
 #include "WebVTTParser.h"
 #include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
+class CachedTextTrack;
+class Document;
 class TextTrackLoader;
 class ScriptExecutionContext;
 
@@ -49,6 +49,9 @@ public:
     virtual void newCuesAvailable(TextTrackLoader*) = 0;
     virtual void cueLoadingStarted(TextTrackLoader*) = 0;
     virtual void cueLoadingCompleted(TextTrackLoader*, bool loadingFailed) = 0;
+#if ENABLE(WEBVTT_REGIONS)
+    virtual void newRegionsAvailable(TextTrackLoader*) = 0;
+#endif
 };
 
 class TextTrackLoader : public CachedResourceClient, private WebVTTParserClient {
@@ -64,15 +67,20 @@ public:
     bool load(const KURL&, const String& crossOriginMode);
     void cancelLoad();
     void getNewCues(Vector<RefPtr<TextTrackCue> >& outputCues);
-    
+#if ENABLE(WEBVTT_REGIONS)
+    void getNewRegions(Vector<RefPtr<TextTrackRegion> >& outputRegions);
+#endif
 private:
 
     // CachedResourceClient
     virtual void notifyFinished(CachedResource*);
-    virtual void didReceiveData(CachedResource*);
+    virtual void deprecatedDidReceiveCachedResource(CachedResource*);
     
     // WebVTTParserClient
     virtual void newCuesParsed();
+#if ENABLE(WEBVTT_REGIONS)
+    virtual void newRegionsParsed();
+#endif
     virtual void fileFailedToParse();
     
     TextTrackLoader(TextTrackLoaderClient*, ScriptExecutionContext*);

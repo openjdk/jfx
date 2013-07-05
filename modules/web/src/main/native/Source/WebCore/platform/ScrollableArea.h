@@ -69,8 +69,8 @@ public:
     ScrollElasticity horizontalScrollElasticity() const { return static_cast<ScrollElasticity>(m_horizontalScrollElasticity); }
 
     bool inLiveResize() const { return m_inLiveResize; }
-    void willStartLiveResize();
-    void willEndLiveResize();
+    virtual void willStartLiveResize();
+    virtual void willEndLiveResize();
 
     void contentAreaWillPaint() const;
     void mouseEnteredContentArea() const;
@@ -81,10 +81,11 @@ public:
     void contentAreaDidShow() const;
     void contentAreaDidHide() const;
 
-    void didAddVerticalScrollbar(Scrollbar*);
-    void willRemoveVerticalScrollbar(Scrollbar*);
-    virtual void didAddHorizontalScrollbar(Scrollbar*);
-    virtual void willRemoveHorizontalScrollbar(Scrollbar*);
+    void finishCurrentScrollAnimations() const;
+    virtual bool scrollbarAnimationsAreSuppressed() const { return false; }
+
+    virtual void didAddScrollbar(Scrollbar*, ScrollbarOrientation);
+    virtual void willRemoveScrollbar(Scrollbar*, ScrollbarOrientation);
 
     virtual void contentsResized();
 
@@ -104,10 +105,10 @@ public:
     virtual bool isActive() const = 0;
     virtual int scrollSize(ScrollbarOrientation) const = 0;
     virtual int scrollPosition(Scrollbar*) const = 0;
-    void invalidateScrollbar(Scrollbar*, const IntRect&);
+    virtual void invalidateScrollbar(Scrollbar*, const IntRect&);
     virtual bool isScrollCornerVisible() const = 0;
     virtual IntRect scrollCornerRect() const = 0;
-    void invalidateScrollCorner(const IntRect&);
+    virtual void invalidateScrollCorner(const IntRect&);
     virtual void getTickmarks(Vector<IntRect>&) const { }
 
     // Convert points and rects between the scrollbar and its containing view.
@@ -133,34 +134,47 @@ public:
     virtual Scrollbar* horizontalScrollbar() const { return 0; }
     virtual Scrollbar* verticalScrollbar() const { return 0; }
 
-    virtual IntPoint scrollPosition() const { ASSERT_NOT_REACHED(); return IntPoint(); }
-    virtual IntPoint minimumScrollPosition() const { ASSERT_NOT_REACHED(); return IntPoint(); }
-    virtual IntPoint maximumScrollPosition() const { ASSERT_NOT_REACHED(); return IntPoint(); }
-    virtual IntRect visibleContentRect(bool /*includeScrollbars*/ = false) const { ASSERT_NOT_REACHED(); return IntRect(); }
-    virtual int visibleHeight() const { ASSERT_NOT_REACHED(); return 0; }
-    virtual int visibleWidth() const { ASSERT_NOT_REACHED(); return 0; }
-    virtual IntSize contentsSize() const { ASSERT_NOT_REACHED(); return IntSize(); }
-    virtual IntSize overhangAmount() const { ASSERT_NOT_REACHED(); return IntSize(); }
-    virtual IntPoint currentMousePosition() const { return IntPoint(); }
+    virtual IntPoint scrollPosition() const;
+    virtual IntPoint minimumScrollPosition() const;
+    virtual IntPoint maximumScrollPosition() const;
+
+    enum VisibleContentRectIncludesScrollbars { ExcludeScrollbars, IncludeScrollbars };
+    virtual IntRect visibleContentRect(VisibleContentRectIncludesScrollbars = ExcludeScrollbars) const;
+    virtual int visibleHeight() const = 0;
+    virtual int visibleWidth() const = 0;
+    virtual IntSize contentsSize() const = 0;
+    virtual IntSize overhangAmount() const { return IntSize(); }
+    virtual IntPoint lastKnownMousePosition() const { return IntPoint(); }
+    virtual bool isHandlingWheelEvent() const { return false; }
+
+    virtual int headerHeight() const { return 0; }
+    virtual int footerHeight() const { return 0; }
+
+    // The totalContentsSize() is equivalent to the contentsSize() plus the header and footer heights.
+    IntSize totalContentsSize() const;
 
     virtual bool shouldSuspendScrollAnimations() const { return true; }
     virtual void scrollbarStyleChanged(int /*newStyle*/, bool /*forceUpdate*/) { }
     virtual void setVisibleScrollerThumbRect(const IntRect&) { }
 
-    virtual bool isOnActivePage() const { ASSERT_NOT_REACHED(); return true; }
+    virtual bool scrollbarsCanBeActive() const = 0;
     
     // Note that this only returns scrollable areas that can actually be scrolled.
     virtual ScrollableArea* enclosingScrollableArea() const = 0;
 
     // Returns the bounding box of this scrollable area, in the coordinate system of the enclosing scroll view.
-    virtual IntRect scrollableAreaBoundingBox() const { ASSERT_NOT_REACHED(); return IntRect(); }
+    virtual IntRect scrollableAreaBoundingBox() const = 0;
 
     virtual bool shouldRubberBandInDirection(ScrollDirection) const { return true; }
+    virtual bool isRubberBandInProgress() const { return false; }
 
     virtual bool scrollAnimatorEnabled() const { return false; }
 
     // NOTE: Only called from Internals for testing.
     void setScrollOffsetFromInternals(const IntPoint&);
+
+    static IntPoint constrainScrollPositionForOverhang(const IntRect& visibleContentRect, const IntSize& totalContentsSize, const IntPoint& scrollPosition, const IntPoint& scrollOrigin, int headerHeight, int footetHeight);
+    IntPoint constrainScrollPositionForOverhang(const IntPoint& scrollPosition);
 
     // Let subclasses provide a way of asking for and servicing scroll
     // animations.
@@ -169,6 +183,7 @@ public:
 
 #if USE(ACCELERATED_COMPOSITING)
     virtual TiledBacking* tiledBacking() { return 0; }
+    virtual bool usesCompositedScrolling() const { return false; }
 #endif
 
 protected:
@@ -182,6 +197,8 @@ protected:
     virtual void invalidateScrollCornerRect(const IntRect&) = 0;
 
 #if USE(ACCELERATED_COMPOSITING)
+    friend class ScrollingCoordinator;
+    virtual GraphicsLayer* layerForScrolling() const { return 0; }
     virtual GraphicsLayer* layerForHorizontalScrollbar() const { return 0; }
     virtual GraphicsLayer* layerForVerticalScrollbar() const { return 0; }
     virtual GraphicsLayer* layerForScrollCorner() const { return 0; }

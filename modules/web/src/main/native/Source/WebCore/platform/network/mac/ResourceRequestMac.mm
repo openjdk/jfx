@@ -30,6 +30,7 @@
 #import "ResourceRequestCFNet.h"
 #import "RuntimeApplicationChecks.h"
 #import "WebCoreSystemInterface.h"
+#import <wtf/text/CString.h>
 
 #import <Foundation/Foundation.h>
 
@@ -47,9 +48,9 @@
 
 namespace WebCore {
 
-NSURLRequest *ResourceRequest::nsURLRequest() const
+NSURLRequest *ResourceRequest::nsURLRequest(HTTPBodyUpdatePolicy bodyPolicy) const
 { 
-    updatePlatformRequest();
+    updatePlatformRequest(bodyPolicy);
     
     return [[m_nsRequest.get() retain] autorelease]; 
 }
@@ -66,10 +67,15 @@ ResourceRequest::ResourceRequest(NSURLRequest *nsRequest)
 void ResourceRequest::updateNSURLRequest()
 {
     if (m_cfRequest)
-        m_nsRequest.adoptNS([[NSURLRequest alloc] _initWithCFURLRequest:m_cfRequest.get()]);
+        m_nsRequest = adoptNS([[NSURLRequest alloc] _initWithCFURLRequest:m_cfRequest.get()]);
 }
 
 #else
+
+CFURLRequestRef ResourceRequest::cfURLRequest(HTTPBodyUpdatePolicy bodyPolicy) const
+{
+    return [nsURLRequest(bodyPolicy) _CFURLRequest];
+}
 
 void ResourceRequest::doUpdateResourceRequest()
 {
@@ -94,9 +100,6 @@ void ResourceRequest::doUpdateResourceRequest()
     while ((name = [e nextObject]))
         m_httpHeaderFields.set(name, [headers objectForKey:name]);
 
-    // The below check can be removed once we require a version of Foundation with -[NSURLRequest contentDispositionEncodingFallbackArray] method.
-    static bool supportsContentDispositionEncodingFallbackArray = [NSURLRequest instancesRespondToSelector:@selector(contentDispositionEncodingFallbackArray)];
-    if (supportsContentDispositionEncodingFallbackArray) {
         m_responseContentDispositionEncodingFallbackArray.clear();
         NSArray *encodingFallbacks = [m_nsRequest.get() contentDispositionEncodingFallbackArray];
         NSUInteger count = [encodingFallbacks count];
@@ -105,13 +108,26 @@ void ResourceRequest::doUpdateResourceRequest()
             if (encoding != kCFStringEncodingInvalidId)
                 m_responseContentDispositionEncodingFallbackArray.append(CFStringConvertEncodingToIANACharSetName(encoding));
         }
+
+#if ENABLE(CACHE_PARTITIONING)
+    NSString* cachePartition = [NSURLProtocol propertyForKey:(NSString *)wkCachePartitionKey() inRequest:m_nsRequest.get()];
+    if (cachePartition)
+        m_cachePartition = cachePartition;
+#endif
     }
 
+void ResourceRequest::doUpdateResourceHTTPBody()
+{
     if (NSData* bodyData = [m_nsRequest.get() HTTPBody])
         m_httpBody = FormData::create([bodyData bytes], [bodyData length]);
-    else if (NSInputStream* bodyStream = [m_nsRequest.get() HTTPBodyStream])
-        if (FormData* formData = httpBodyFromStream(bodyStream))
+    else if (NSInputStream* bodyStream = [m_nsRequest.get() HTTPBodyStream]) {
+        FormData* formData = httpBodyFromStream(bodyStream);
+        // There is no FormData object if a client provided a custom data stream.
+        // We shouldn't be looking at http body after client callbacks.
+        ASSERT(formData);
+        if (formData)
             m_httpBody = formData;
+}
 }
 
 void ResourceRequest::doUpdatePlatformRequest()
@@ -155,45 +171,82 @@ void ResourceRequest::doUpdatePlatformRequest()
         [nsRequest setValue:nil forHTTPHeaderField:[oldHeaderFieldNames objectAtIndex:i - 1]];
     HTTPHeaderMap::const_iterator end = httpHeaderFields().end();
     for (HTTPHeaderMap::const_iterator it = httpHeaderFields().begin(); it != end; ++it)
-        [nsRequest setValue:it->second forHTTPHeaderField:it->first];
+        [nsRequest setValue:it->value forHTTPHeaderField:it->key];
 
-    // The below check can be removed once we require a version of Foundation with -[NSMutableURLRequest setContentDispositionEncodingFallbackArray:] method.
-    static bool supportsContentDispositionEncodingFallbackArray = [NSMutableURLRequest instancesRespondToSelector:@selector(setContentDispositionEncodingFallbackArray:)];
-    if (supportsContentDispositionEncodingFallbackArray) {
         NSMutableArray *encodingFallbacks = [NSMutableArray array];
         unsigned count = m_responseContentDispositionEncodingFallbackArray.size();
         for (unsigned i = 0; i != count; ++i) {
-            CFStringRef encodingName = m_responseContentDispositionEncodingFallbackArray[i].createCFString();
-            unsigned long nsEncoding = CFStringConvertEncodingToNSStringEncoding(CFStringConvertIANACharSetNameToEncoding(encodingName));
-            CFRelease(encodingName);
+        RetainPtr<CFStringRef> encodingName = m_responseContentDispositionEncodingFallbackArray[i].createCFString();
+        unsigned long nsEncoding = CFStringConvertEncodingToNSStringEncoding(CFStringConvertIANACharSetNameToEncoding(encodingName.get()));
+
             if (nsEncoding != kCFStringEncodingInvalidId)
                 [encodingFallbacks addObject:[NSNumber numberWithUnsignedLong:nsEncoding]];
         }
         [nsRequest setContentDispositionEncodingFallbackArray:encodingFallbacks];
+
+#if ENABLE(CACHE_PARTITIONING)
+    String partition = cachePartition();
+    if (!partition.isNull() && !partition.isEmpty()) {
+        NSString *partitionValue = [NSString stringWithUTF8String:partition.utf8().data()];
+        [NSURLProtocol setProperty:partitionValue forKey:(NSString *)wkCachePartitionKey() inRequest:nsRequest];
     }
+#endif
+
+    m_nsRequest = adoptNS(nsRequest);
+}
+
+void ResourceRequest::doUpdatePlatformHTTPBody()
+{
+    if (isNull()) {
+        ASSERT(!m_nsRequest);
+        return;
+    }
+
+    NSMutableURLRequest *nsRequest = [m_nsRequest.get() mutableCopy];
+
+    if (nsRequest)
+        [nsRequest setURL:url()];
+    else
+        nsRequest = [[NSMutableURLRequest alloc] initWithURL:url()];
 
     RefPtr<FormData> formData = httpBody();
     if (formData && !formData->isEmpty())
         WebCore::setHTTPBody(nsRequest, formData);
     
-    m_nsRequest.adoptNS(nsRequest);
+    if (NSInputStream *bodyStream = [nsRequest HTTPBodyStream]) {
+        // For streams, provide a Content-Length to avoid using chunked encoding, and to get accurate total length in callbacks.
+        NSString *lengthString = [bodyStream propertyForKey:(NSString *)formDataStreamLengthPropertyName()];
+        if (lengthString) {
+            [nsRequest setValue:lengthString forHTTPHeaderField:@"Content-Length"];
+            // Since resource request is already marked updated, we need to keep it up to date too.
+            ASSERT(m_resourceRequestUpdated);
+            m_httpHeaderFields.set("Content-Length", lengthString);
+        }
+    }
+
+    m_nsRequest = adoptNS(nsRequest);
+}
+
+void ResourceRequest::updateFromDelegatePreservingOldHTTPBody(const ResourceRequest& delegateProvidedRequest)
+{
+    RefPtr<FormData> oldHTTPBody = httpBody();
+
+    *this = delegateProvidedRequest;
+    setHTTPBody(oldHTTPBody.release());
 }
 
 void ResourceRequest::applyWebArchiveHackForMail()
 {
     // Hack because Mail checks for this property to detect data / archive loads
-    [NSURLProtocol setProperty:@"" forKey:@"WebDataRequest" inRequest:(NSMutableURLRequest *)nsURLRequest()];
+    [NSURLProtocol setProperty:@"" forKey:@"WebDataRequest" inRequest:(NSMutableURLRequest *)nsURLRequest(DoNotUpdateHTTPBody)];
 }
-
-#if USE(CFURLSTORAGESESSIONS)
 
 void ResourceRequest::setStorageSession(CFURLStorageSessionRef storageSession)
 {
-    m_nsRequest.adoptNS(wkCopyRequestWithStorageSession(storageSession, m_nsRequest.get()));
+    updatePlatformRequest();
+    m_nsRequest = adoptNS(wkCopyRequestWithStorageSession(storageSession, m_nsRequest.get()));
 }
 
-#endif
-    
 #endif // USE(CFNETWORK)
 
 static bool initQuickLookResourceCachingQuirks()

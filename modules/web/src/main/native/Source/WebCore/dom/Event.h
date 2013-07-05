@@ -24,15 +24,20 @@
 #ifndef Event_h
 #define Event_h
 
-#include "Clipboard.h"
 #include "DOMTimeStamp.h"
+#include "EventNames.h"
+#include "ScriptWrappable.h"
+#include <wtf/HashMap.h>
+#include <wtf/ListHashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
 
+class Clipboard;
     class EventTarget;
     class EventDispatcher;
+class HTMLIFrameElement;
 
     struct EventInit {
         EventInit();
@@ -41,7 +46,7 @@ namespace WebCore {
         bool cancelable;
     };
 
-    class Event : public RefCounted<Event> {
+class Event : public ScriptWrappable, public RefCounted<Event> {
     public:
         enum PhaseType { 
             NONE                = 0,
@@ -88,6 +93,7 @@ namespace WebCore {
         void initEvent(const AtomicString& type, bool canBubble, bool cancelable);
 
         const AtomicString& type() const { return m_type; }
+    void setType(const AtomicString& type) { m_type = type; }
         
         EventTarget* target() const { return m_target.get(); }
         void setTarget(PassRefPtr<EventTarget>);
@@ -119,6 +125,7 @@ namespace WebCore {
         // These events are general classes of events.
         virtual bool isUIEvent() const;
         virtual bool isMouseEvent() const;
+    virtual bool isFocusEvent() const;
         virtual bool isKeyboardEvent() const;
         virtual bool isTouchEvent() const;
 
@@ -133,7 +140,11 @@ namespace WebCore {
         bool immediatePropagationStopped() const { return m_immediatePropagationStopped; }
 
         bool defaultPrevented() const { return m_defaultPrevented; }
-        void preventDefault() { if (m_cancelable) m_defaultPrevented = true; }
+    void preventDefault()
+    {
+        if (m_cancelable)
+            m_defaultPrevented = true;
+    }
         void setDefaultPrevented(bool defaultPrevented) { m_defaultPrevented = defaultPrevented; }
 
         bool defaultHandled() const { return m_defaultHandled; }
@@ -151,6 +162,8 @@ namespace WebCore {
         virtual Clipboard* clipboard() const { return 0; }
 
         bool isBeingDispatched() const { return eventPhase(); }
+
+    virtual PassRefPtr<Event> cloneFor(HTMLIFrameElement*) const;
 
     protected:
         Event();

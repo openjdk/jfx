@@ -21,7 +21,7 @@
 #ifndef RenderSlider_h
 #define RenderSlider_h
 
-#include "RenderBlock.h"
+#include "RenderFlexibleBox.h"
 
 namespace WebCore {
 
@@ -29,9 +29,11 @@ namespace WebCore {
     class MouseEvent;
     class SliderThumbElement;
     
-    class RenderSlider : public RenderBlock {
+class RenderSlider : public RenderFlexibleBox {
     public:
-        RenderSlider(HTMLInputElement*);
+    static const int defaultTrackLength;
+
+    explicit RenderSlider(HTMLInputElement*);
         virtual ~RenderSlider();
 
         bool inDragMode() const;
@@ -39,16 +41,18 @@ namespace WebCore {
     private:
         virtual const char* renderName() const { return "RenderSlider"; }
         virtual bool isSlider() const { return true; }
+    virtual bool canBeReplacedWithInlineRunIn() const OVERRIDE;
 
-        virtual LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
-        virtual void computePreferredLogicalWidths();
+    virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
+    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const OVERRIDE;
+    virtual void computePreferredLogicalWidths() OVERRIDE;
         virtual bool requiresForcedStyleRecalcPropagation() const { return true; }
         virtual void layout();
     };
 
     inline RenderSlider* toRenderSlider(RenderObject* object)
     {
-        ASSERT(!object || object->isSlider());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSlider());
         return static_cast<RenderSlider*>(object);
     }
 

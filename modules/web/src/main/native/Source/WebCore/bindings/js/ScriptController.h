@@ -25,7 +25,7 @@
 #include "FrameLoaderTypes.h"
 #include "JSDOMWindowShell.h"
 #include "ScriptControllerBase.h"
-#include "ScriptInstance.h"
+#include <JavaScriptCore/JSBase.h>
 #include <heap/Strong.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
@@ -34,6 +34,7 @@
 #if PLATFORM(MAC)
 #include <wtf/RetainPtr.h>
 OBJC_CLASS WebScriptObject;
+OBJC_CLASS JSContext;
 #endif
 
 struct NPObject;
@@ -43,6 +44,7 @@ namespace JSC {
     class ExecState;
 
     namespace Bindings {
+        class Instance;
         class RootObject;
     }
 }
@@ -74,12 +76,12 @@ public:
     JSDOMWindowShell* windowShell(DOMWrapperWorld* world)
     {
         ShellMap::iterator iter = m_windowShells.find(world);
-        return (iter != m_windowShells.end()) ? iter->second.get() : initScript(world);
+        return (iter != m_windowShells.end()) ? iter->value.get() : initScript(world);
     }
     JSDOMWindowShell* existingWindowShell(DOMWrapperWorld* world) const
     {
         ShellMap::const_iterator iter = m_windowShells.find(world);
-        return (iter != m_windowShells.end()) ? iter->second.get() : 0;
+        return (iter != m_windowShells.end()) ? iter->value.get() : 0;
     }
     JSDOMWindow* globalObject(DOMWrapperWorld* world)
     {
@@ -105,7 +107,7 @@ public:
     WTF::TextPosition eventHandlerPosition() const;
 
     void enableEval();
-    void disableEval();
+    void disableEval(const String& errorMessage);
 
     static bool processingUserGesture();
 
@@ -121,24 +123,18 @@ public:
 
     const String* sourceURL() const { return m_sourceURL; } // 0 if we are not evaluating any script
 
-    void clearWindowShell(bool goingIntoPageCache = false);
+    void clearWindowShell(DOMWindow* newDOMWindow, bool goingIntoPageCache);
     void updateDocument();
 
     void namedItemAdded(HTMLDocument*, const AtomicString&) { }
     void namedItemRemoved(HTMLDocument*, const AtomicString&) { }
-
-    // Notifies the ScriptController that the securityOrigin of the current
-    // document was modified.  For example, this method is called when
-    // document.domain is set.  This method is *not* called when a new document
-    // is attached to a frame because updateDocument() is called instead.
-    void updateSecurityOrigin();
 
     void clearScriptObjects();
     void cleanupScriptObjectsForPlugin(void*);
 
     void updatePlatformScriptObjects();
 
-    PassScriptInstance createScriptInstanceForWidget(Widget*);
+    PassRefPtr<JSC::Bindings::Instance>  createScriptInstanceForWidget(Widget*);
     JSC::Bindings::RootObject* bindingRootObject();
     JSC::Bindings::RootObject* cacheableBindingRootObject();
 
@@ -150,10 +146,8 @@ public:
 #endif
 
 #if PLATFORM(MAC)
-#if ENABLE(JAVA_BRIDGE)
-    static void initJavaJSBindings();
-#endif
     WebScriptObject* windowScriptObject();
+    JSContext *javaScriptContext();
 #endif
 
     JSC::JSObject* jsObjectForPluginElement(HTMLPlugInElement*);
@@ -162,6 +156,8 @@ public:
     NPObject* createScriptObjectForPluginElement(HTMLPlugInElement*);
     NPObject* windowScriptNPObject();
 #endif
+
+    bool shouldBypassMainWorldContentSecurityPolicy();
 
 private:
     JSDOMWindowShell* initScript(DOMWrapperWorld* world);

@@ -30,54 +30,83 @@
 #define IDBMetadata_h
 
 #include "IDBKeyPath.h"
-#include "PlatformString.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 #if ENABLE(INDEXED_DATABASE)
 
 namespace WebCore {
 
-struct IDBObjectStoreMetadata;
-struct IDBIndexMetadata;
-
-struct IDBDatabaseMetadata {
-    IDBDatabaseMetadata() { }
-    IDBDatabaseMetadata(const String& name, const String& version)
-        : name(name)
-        , version(version) { }
-    String name;
-    String version;
-
-    typedef HashMap<String, IDBObjectStoreMetadata> ObjectStoreMap;
-    ObjectStoreMap objectStores;
-};
-
-struct IDBObjectStoreMetadata {
-    IDBObjectStoreMetadata() { }
-    IDBObjectStoreMetadata(const String& name, const IDBKeyPath& keyPath, bool autoIncrement)
-        : name(name)
-        , keyPath(keyPath)
-        , autoIncrement(autoIncrement) { }
-    String name;
-    IDBKeyPath keyPath;
-    bool autoIncrement;
-
-    typedef HashMap<String, IDBIndexMetadata> IndexMap;
-    IndexMap indexes;
-};
-
 struct IDBIndexMetadata {
     IDBIndexMetadata() { }
-    IDBIndexMetadata(const String& name, const IDBKeyPath& keyPath, bool unique, bool multiEntry)
+    IDBIndexMetadata(const String& name, int64_t id, const IDBKeyPath& keyPath, bool unique, bool multiEntry)
         : name(name)
+        , id(id)
         , keyPath(keyPath)
         , unique(unique)
         , multiEntry(multiEntry) { }
     String name;
+    int64_t id;
     IDBKeyPath keyPath;
     bool unique;
     bool multiEntry;
+
+    static const int64_t InvalidId = -1;
+};
+
+struct IDBObjectStoreMetadata {
+    IDBObjectStoreMetadata() { }
+    IDBObjectStoreMetadata(const String& name, int64_t id, const IDBKeyPath& keyPath, bool autoIncrement, int64_t maxIndexId)
+        : name(name)
+        , id(id)
+        , keyPath(keyPath)
+        , autoIncrement(autoIncrement)
+        , maxIndexId(maxIndexId)
+    {
+    }
+    String name;
+    int64_t id;
+    IDBKeyPath keyPath;
+    bool autoIncrement;
+    int64_t maxIndexId;
+
+    static const int64_t InvalidId = -1;
+
+    typedef HashMap<int64_t, IDBIndexMetadata> IndexMap;
+    IndexMap indexes;
+
+};
+
+struct IDBDatabaseMetadata {
+    // FIXME: These can probably be collapsed into 0.
+    enum {
+        NoIntVersion = -1,
+        DefaultIntVersion = 0
+    };
+
+    typedef HashMap<int64_t, IDBObjectStoreMetadata> ObjectStoreMap;
+
+    IDBDatabaseMetadata()
+        : intVersion(NoIntVersion)
+    {
+    }
+    IDBDatabaseMetadata(const String& name, int64_t id, const String& version, int64_t intVersion, int64_t maxObjectStoreId)
+        : name(name)
+        , id(id)
+        , version(version)
+        , intVersion(intVersion)
+        , maxObjectStoreId(maxObjectStoreId)
+    {
+    }
+
+    String name;
+    int64_t id;
+    String version;
+    int64_t intVersion;
+    int64_t maxObjectStoreId;
+
+    ObjectStoreMap objectStores;
 };
 
 }

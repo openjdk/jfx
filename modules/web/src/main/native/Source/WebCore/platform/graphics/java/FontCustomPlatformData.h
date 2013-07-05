@@ -7,7 +7,7 @@
 #include "FontOrientation.h"
 #include "FontRenderingMode.h"
 #include "FontWidthVariant.h"
-#include "TextOrientation.h"
+#include "RenderStyleConstants.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
@@ -27,7 +27,6 @@ public:
             bool bold,
             bool italic,
             FontOrientation = Horizontal,
-            TextOrientation = TextOrientationVerticalRight,
             FontWidthVariant = RegularWidth,
             FontRenderingMode = NormalRenderingMode);
 

@@ -23,6 +23,7 @@
 #include "RegExpConstructor.h"
 
 #include "Error.h"
+#include "Operations.h"
 #include "RegExpMatchesArray.h"
 #include "RegExpPrototype.h"
 
@@ -52,8 +53,6 @@ static void setRegExpConstructorMultiline(ExecState*, JSObject*, JSValue);
 #include "RegExpConstructor.lut.h"
 
 namespace JSC {
-
-ASSERT_CLASS_FITS_IN_CELL(RegExpConstructor);
 
 const ClassInfo RegExpConstructor::s_info = { "Function", &InternalFunction::s_info, 0, ExecState::regExpConstructorTable, CREATE_METHOD_TABLE(RegExpConstructor) };
 
@@ -85,21 +84,21 @@ const ClassInfo RegExpConstructor::s_info = { "Function", &InternalFunction::s_i
 
 RegExpConstructor::RegExpConstructor(JSGlobalObject* globalObject, Structure* structure, RegExpPrototype* regExpPrototype)
     : InternalFunction(globalObject, structure)
-    , m_cachedResult(globalObject->globalData(), this, regExpPrototype->regExp())
+    , m_cachedResult(globalObject->vm(), this, regExpPrototype->regExp())
     , m_multiline(false)
 {
 }
 
 void RegExpConstructor::finishCreation(ExecState* exec, RegExpPrototype* regExpPrototype)
 {
-    Base::finishCreation(exec->globalData(), Identifier(exec, "RegExp").ustring());
+    Base::finishCreation(exec->vm(), Identifier(exec, "RegExp").string());
     ASSERT(inherits(&s_info));
 
     // ECMA 15.10.5.1 RegExp.prototype
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().prototype, regExpPrototype, DontEnum | DontDelete | ReadOnly);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().prototype, regExpPrototype, DontEnum | DontDelete | ReadOnly);
 
     // no. of arguments for constructor
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().length, jsNumber(2), ReadOnly | DontDelete | DontEnum);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().length, jsNumber(2), ReadOnly | DontDelete | DontEnum);
 }
 
 void RegExpConstructor::destroy(JSCell* cell)
@@ -249,9 +248,9 @@ void setRegExpConstructorInput(ExecState* exec, JSObject* baseObject, JSValue va
     asRegExpConstructor(baseObject)->setInput(exec, value.toString(exec));
 }
 
-void setRegExpConstructorMultiline(ExecState*, JSObject* baseObject, JSValue value)
+void setRegExpConstructorMultiline(ExecState* exec, JSObject* baseObject, JSValue value)
 {
-    asRegExpConstructor(baseObject)->setMultiline(value.toBoolean());
+    asRegExpConstructor(baseObject)->setMultiline(value.toBoolean(exec));
 }
 
 // ECMA 15.10.4
@@ -262,7 +261,7 @@ JSObject* constructRegExp(ExecState* exec, JSGlobalObject* globalObject, const A
 
     if (arg0.inherits(&RegExpObject::s_info)) {
         if (!arg1.isUndefined())
-            return throwError(exec, createTypeError(exec, "Cannot supply flags when constructing one RegExp from another."));
+            return throwError(exec, createTypeError(exec, ASCIILiteral("Cannot supply flags when constructing one RegExp from another.")));
         // If called as a function, this just returns the first argument (see 15.10.3.1).
         if (callAsConstructor) {
             RegExp* regExp = static_cast<RegExpObject*>(asObject(arg0))->regExp();
@@ -271,7 +270,7 @@ JSObject* constructRegExp(ExecState* exec, JSGlobalObject* globalObject, const A
         return asObject(arg0);
     }
 
-    UString pattern = arg0.isUndefined() ? UString("") : arg0.toString(exec)->value(exec);
+    String pattern = arg0.isUndefined() ? String("") : arg0.toString(exec)->value(exec);
     if (exec->hadException())
         return 0;
 
@@ -281,10 +280,10 @@ JSObject* constructRegExp(ExecState* exec, JSGlobalObject* globalObject, const A
         if (exec->hadException())
             return 0;
         if (flags == InvalidFlags)
-            return throwError(exec, createSyntaxError(exec, "Invalid flags supplied to RegExp constructor."));
+            return throwError(exec, createSyntaxError(exec, ASCIILiteral("Invalid flags supplied to RegExp constructor.")));
     }
 
-    RegExp* regExp = RegExp::create(exec->globalData(), pattern, flags);
+    RegExp* regExp = RegExp::create(exec->vm(), pattern, flags);
     if (!regExp->isValid())
         return throwError(exec, createSyntaxError(exec, regExp->errorMessage()));
     return RegExpObject::create(exec, exec->lexicalGlobalObject(), globalObject->regExpStructure(), regExp);

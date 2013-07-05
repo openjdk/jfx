@@ -26,12 +26,10 @@
 #ifndef ANGLEWebKitBridge_h
 #define ANGLEWebKitBridge_h
 
-#include "PlatformString.h"
 #include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 
-#if PLATFORM(QT)
-#include "ANGLE/include/GLSLANG/ShaderLang.h"
-#elif !PLATFORM(GTK) && !PLATFORM(EFL) && !PLATFORM(BLACKBERRY)
+#if !PLATFORM(GTK) && !PLATFORM(EFL) && !PLATFORM(BLACKBERRY) && !PLATFORM(QT)
 #include "ANGLE/ShaderLang.h"
 #else
 #include "ShaderLang.h"
@@ -44,16 +42,39 @@ enum ANGLEShaderType {
     SHADER_TYPE_FRAGMENT = SH_FRAGMENT_SHADER,
 };
 
+enum ANGLEShaderSymbolType {
+    SHADER_SYMBOL_TYPE_ATTRIBUTE,
+    SHADER_SYMBOL_TYPE_UNIFORM
+};
+
+struct ANGLEShaderSymbol {
+    ANGLEShaderSymbolType symbolType;
+    String name;
+    String mappedName;
+    ShDataType dataType;
+    int size;
+    bool isArray;
+
+    bool isSampler() const
+    {
+        return symbolType == SHADER_SYMBOL_TYPE_UNIFORM
+            && (dataType == SH_SAMPLER_2D
+            || dataType == SH_SAMPLER_CUBE
+            || dataType == SH_SAMPLER_2D_RECT_ARB
+            || dataType == SH_SAMPLER_EXTERNAL_OES);
+    }
+};
+
 class ANGLEWebKitBridge {
 public:
 
-    ANGLEWebKitBridge(ShShaderOutput = SH_GLSL_OUTPUT);
+    ANGLEWebKitBridge(ShShaderOutput = SH_GLSL_OUTPUT, ShShaderSpec = SH_WEBGL_SPEC);
     ~ANGLEWebKitBridge();
     
     ShBuiltInResources getResources() { return m_resources; }
     void setResources(ShBuiltInResources);
     
-    bool validateShaderSource(const char* shaderSource, ANGLEShaderType shaderType, String& translatedShaderSource, String& shaderValidationLog);
+    bool compileShaderSource(const char* shaderSource, ANGLEShaderType, String& translatedShaderSource, String& shaderValidationLog, Vector<ANGLEShaderSymbol>& symbols, int extraCompileOptions = 0);
 
 private:
 
@@ -65,6 +86,7 @@ private:
     ShHandle m_vertexCompiler;
 
     ShShaderOutput m_shaderOutput;
+    ShShaderSpec m_shaderSpec;
 
     ShBuiltInResources m_resources;
 };

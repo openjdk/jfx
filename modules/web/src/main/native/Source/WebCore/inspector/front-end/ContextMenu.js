@@ -58,6 +58,22 @@ WebInspector.ContextMenuItem.prototype = {
         return this._type;
     },
 
+    /**
+     * @return {boolean}
+     */
+    isEnabled: function()
+    {
+        return !this._disabled;
+    },
+
+    /**
+     * @param {boolean} enabled
+     */
+    setEnabled: function(enabled)
+    {
+        this._disabled = !enabled;
+    },
+
     _buildDescriptor: function()
     {
         switch (this._type) {
@@ -81,12 +97,16 @@ WebInspector.ContextMenuItem.prototype = {
 WebInspector.ContextSubMenuItem = function(topLevelMenu, label, disabled)
 {
     WebInspector.ContextMenuItem.call(this, topLevelMenu, "subMenu", label, disabled);
+    /** @type {!Array.<!WebInspector.ContextMenuItem>} */
     this._items = [];
 }
 
 WebInspector.ContextSubMenuItem.prototype = {
     /**
+     * @param {string} label
+     * @param {function(?)} handler
      * @param {boolean=} disabled
+     * @return {WebInspector.ContextMenuItem}
      */
     appendItem: function(label, handler, disabled)
     {
@@ -96,6 +116,11 @@ WebInspector.ContextSubMenuItem.prototype = {
         return item;
     },
 
+    /**
+     * @param {string} label
+     * @param {boolean=} disabled
+     * @return {WebInspector.ContextMenuItem}
+     */
     appendSubMenuItem: function(label, disabled)
     {
         var item = new WebInspector.ContextSubMenuItem(this._contextMenu, label, disabled);
@@ -120,6 +145,9 @@ WebInspector.ContextSubMenuItem.prototype = {
             this._pendingSeparator = true;
     },
 
+    /**
+     * @param {!WebInspector.ContextMenuItem} item
+     */
     _pushItem: function(item)
     {
         if (this._pendingSeparator) {
@@ -143,17 +171,18 @@ WebInspector.ContextSubMenuItem.prototype = {
         for (var i = 0; i < this._items.length; ++i)
             result.subItems.push(this._items[i]._buildDescriptor());
         return result;
-    }
-}
+    },
 
-WebInspector.ContextSubMenuItem.prototype.__proto__ = WebInspector.ContextMenuItem.prototype;
+    __proto__: WebInspector.ContextMenuItem.prototype
+    }
 
 /**
  * @constructor
  * @extends {WebInspector.ContextSubMenuItem}
  */
-WebInspector.ContextMenu = function() {
+WebInspector.ContextMenu = function(event) {
     WebInspector.ContextSubMenuItem.call(this, this, "");
+    this._event = event;
     this._handlers = {};
     this._id = 0;
 }
@@ -164,15 +193,27 @@ WebInspector.ContextMenu.prototype = {
         return this._id++;
     },
 
-    show: function(event)
+    show: function()
     {
         var menuObject = this._buildDescriptor();
 
         if (menuObject.length) {
             WebInspector._contextMenu = this;
-            InspectorFrontendHost.showContextMenu(event, menuObject);
+            InspectorFrontendHost.showContextMenu(this._event, menuObject);
+            this._event.consume();
         }
-        event.consume();
+    },
+
+    showSoftMenu: function()
+    {
+        var menuObject = this._buildDescriptor();
+
+        if (menuObject.length) {
+            WebInspector._contextMenu = this;
+            var softMenu = new WebInspector.SoftContextMenu(menuObject);
+            softMenu.show(this._event, true);
+        }
+        this._event.consume();
     },
 
     _setHandler: function(id, handler)
@@ -203,13 +244,13 @@ WebInspector.ContextMenu.prototype = {
         for (var i = 0; i < WebInspector.ContextMenu._providers.length; ++i) {
             var provider = WebInspector.ContextMenu._providers[i];
             this.appendSeparator();
-            provider.appendApplicableItems(this, target);
+            provider.appendApplicableItems(this._event, this, target);
             this.appendSeparator();
         }
-    }
-}
+    },
 
-WebInspector.ContextMenu.prototype.__proto__ = WebInspector.ContextSubMenuItem.prototype;
+    __proto__: WebInspector.ContextSubMenuItem.prototype
+    }
 
 /**
  * @interface
@@ -222,7 +263,7 @@ WebInspector.ContextMenu.Provider.prototype = {
      * @param {WebInspector.ContextMenu} contextMenu
      * @param {Object} target
      */
-    appendApplicableItems: function(contextMenu, target) { }
+    appendApplicableItems: function(event, contextMenu, target) { }
 }
 
 /**

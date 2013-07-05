@@ -55,6 +55,8 @@ inline bool isStrictParserMode(CSSParserMode cssParserMode)
 }
 
 struct CSSParserContext {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
     CSSParserContext(CSSParserMode, const KURL& baseURL = KURL());
     CSSParserContext(Document*, const KURL& baseURL = KURL(), const String& charset = emptyString());
 
@@ -63,13 +65,16 @@ struct CSSParserContext {
     CSSParserMode mode;
     bool isHTMLDocument;
     bool isCSSCustomFilterEnabled;
+    bool isCSSStickyPositionEnabled;
     bool isCSSRegionsEnabled;
+    bool isCSSCompositingEnabled;
     bool isCSSGridLayoutEnabled;
 #if ENABLE(CSS_VARIABLES)
     bool isCSSVariablesEnabled;
 #endif
     bool needsSiteSpecificQuirks;
     bool enforcesCSSMIMETypeInNoQuirksMode;
+    bool useLegacyBackgroundSizeShorthandBehavior;
 };
 
 bool operator==(const CSSParserContext&, const CSSParserContext&);

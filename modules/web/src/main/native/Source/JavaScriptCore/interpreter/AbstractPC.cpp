@@ -27,28 +27,23 @@
 #include "AbstractPC.h"
 
 #include "CallFrame.h"
-#include "JSGlobalData.h"
+#include "VM.h"
 #include "JSObject.h"
-#include "ScopeChain.h"
+
 
 namespace JSC {
 
-AbstractPC::AbstractPC(JSGlobalData& globalData, ExecState* exec)
+AbstractPC::AbstractPC(VM& vm, ExecState* exec)
 {
-    UNUSED_PARAM(globalData);
+    UNUSED_PARAM(vm);
+    UNUSED_PARAM(exec);
     
 #if ENABLE(JIT)
-    if (globalData.canUseJIT()) {
+    if (vm.canUseJIT()) {
         m_pointer = exec->returnPC().value();
         m_mode = JIT;
         return;
     }
-#endif
-    
-#if ENABLE(CLASSIC_INTERPRETER)
-    UNUSED_PARAM(globalData);
-    m_pointer = exec->returnVPC();
-    m_mode = Interpreter;
 #endif
 }
 

@@ -31,7 +31,7 @@
 #include <WebKit2/WKGeometry.h>
 #include <wtf/PassRefPtr.h>
 
-#if !PLATFORM(MAC) && !PLATFORM(QT) && !PLATFORM(GTK)
+#if !PLATFORM(MAC) && !PLATFORM(QT) && !PLATFORM(GTK) && !PLATFORM(EFL)
 #define USE_WEBPROCESS_EVENT_SIMULATION
 #endif
 
@@ -51,9 +51,13 @@ public:
     void mouseUp(int button, JSValueRef modifierArray);
     void mouseMoveTo(int x, int y);
     void mouseScrollBy(int x, int y);
+    void continuousMouseScrollBy(int x, int y, bool paged);
+    JSValueRef contextClick();
     void leapForward(int milliseconds);
+    void scheduleAsynchronousClick();
 
     void keyDown(JSStringRef key, JSValueRef modifierArray, int location);
+    void scheduleAsynchronousKeyDown(JSStringRef key);
 
     // Zoom functions.
     void textZoomIn();

@@ -44,6 +44,7 @@
 #include "SVGRenderingContext.h"
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
+#include <wtf/StackStats.h>
 
 namespace WebCore {
 
@@ -79,9 +80,10 @@ bool RenderSVGImage::updateImageViewport()
 
 void RenderSVGImage::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
-    LayoutRepainter repainter(*this, checkForRepaintDuringLayout() && selfNeedsLayout());
+    LayoutRepainter repainter(*this, SVGRenderSupport::checkForSVGRepaintDuringLayout(this) && selfNeedsLayout());
     updateImageViewport();
 
     bool transformOrBoundariesUpdate = m_needsTransformUpdate || m_needsBoundariesUpdate;
@@ -91,8 +93,12 @@ void RenderSVGImage::layout()
     }
 
     if (m_needsBoundariesUpdate) {
-        m_repaintBoundingBox = m_objectBoundingBox;
-        SVGRenderSupport::intersectRepaintRectWithResources(this, m_repaintBoundingBox);
+        m_repaintBoundingBoxExcludingShadow = m_objectBoundingBox;
+        SVGRenderSupport::intersectRepaintRectWithResources(this, m_repaintBoundingBoxExcludingShadow);
+
+        m_repaintBoundingBox = m_repaintBoundingBoxExcludingShadow;
+        SVGRenderSupport::intersectRepaintRectWithShadows(this, m_repaintBoundingBox);
+
         m_needsBoundariesUpdate = false;
     }
 
@@ -127,6 +133,20 @@ void RenderSVGImage::paint(PaintInfo& paintInfo, const LayoutPoint&)
             SVGRenderingContext renderingContext(this, childPaintInfo);
 
             if (renderingContext.isRenderingPrepared()) {
+                if (style()->svgStyle()->bufferedRendering() == BR_STATIC  && renderingContext.bufferForeground(m_bufferedForeground))
+                    return;
+
+                paintForeground(childPaintInfo);
+            }
+        }
+
+        if (drawsOutline)
+            paintOutline(childPaintInfo, IntRect(boundingBox));
+    }
+}
+
+void RenderSVGImage::paintForeground(PaintInfo& paintInfo)
+{
                 RefPtr<Image> image = m_imageResource->image();
                 FloatRect destRect = m_objectBoundingBox;
                 FloatRect srcRect(0, 0, image->width(), image->height());
@@ -134,13 +154,12 @@ void RenderSVGImage::paint(PaintInfo& paintInfo, const LayoutPoint&)
                 SVGImageElement* imageElement = static_cast<SVGImageElement*>(node());
                 imageElement->preserveAspectRatio().transformRect(destRect, srcRect);
 
-                childPaintInfo.context->drawImage(image.get(), ColorSpaceDeviceRGB, destRect, srcRect);
-            }
+    paintInfo.context->drawImage(image.get(), ColorSpaceDeviceRGB, destRect, srcRect);
         }
 
-        if (drawsOutline)
-            paintOutline(childPaintInfo.context, IntRect(boundingBox));
-    }
+void RenderSVGImage::invalidateBufferedForeground()
+{
+    m_bufferedForeground.clear();
 }
 
 bool RenderSVGImage::nodeAtFloatPoint(const HitTestRequest& request, HitTestResult& result, const FloatPoint& pointInParent, HitTestAction hitTestAction)
@@ -178,10 +197,17 @@ void RenderSVGImage::imageChanged(WrappedImagePtr, const IntRect*)
     // Eventually notify parent resources, that we've changed.
     RenderSVGResource::markForLayoutAndParentResourceInvalidation(this, false);
 
+    // Update the SVGImageCache sizeAndScales entry in case image loading finished after layout.
+    // (https://bugs.webkit.org/show_bug.cgi?id=99489)
+    m_objectBoundingBox = FloatRect();
+    updateImageViewport();
+
+    invalidateBufferedForeground();
+
     repaint();
 }
 
-void RenderSVGImage::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint&)
+void RenderSVGImage::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint&, const RenderLayerModelObject*)
 {
     // this is called from paint() after the localTransform has already been applied
     IntRect contentRect = enclosingIntRect(repaintRectInLocalCoordinates());

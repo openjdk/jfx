@@ -33,6 +33,7 @@
 #include "CheckboxInputType.h"
 
 #include "HTMLInputElement.h"
+#include "InputTypeNames.h"
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
 #include <wtf/PassOwnPtr.h>
@@ -51,7 +52,7 @@ const AtomicString& CheckboxInputType::formControlType() const
 
 bool CheckboxInputType::valueMissing(const String&) const
 {
-    return element()->required() && !element()->checked();
+    return element()->isRequired() && !element()->checked();
 }
 
 String CheckboxInputType::valueMissingText() const

@@ -36,10 +36,6 @@
 #include "Threading.h"
 #include <wtf/ThreadSpecific.h>
 
-#if PLATFORM(CHROMIUM)
-#error Chromium uses a different main thread implementation
-#endif
-
 namespace WTF {
 
 struct FunctionWithContext {
@@ -120,6 +116,7 @@ void initializeMainThread()
     pthread_once(&initializeMainThreadKeyOnce, initializeMainThreadOnce);
 }
 
+#if !USE(WEB_THREAD)
 static void initializeMainThreadToProcessMainThreadOnce()
 {
     mainThreadFunctionQueueMutex();
@@ -130,6 +127,8 @@ void initializeMainThreadToProcessMainThread()
 {
     pthread_once(&initializeMainThreadKeyOnce, initializeMainThreadToProcessMainThreadOnce);
 }
+#endif // !USE(WEB_THREAD)
+
 #endif
 
 // 0.1 sec delays in UI is approximate threshold when they become noticeable. Have a limit that's half of that.

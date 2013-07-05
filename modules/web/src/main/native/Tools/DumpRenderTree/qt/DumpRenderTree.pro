@@ -9,45 +9,48 @@ TEMPLATE = app
 TARGET = DumpRenderTree
 DESTDIR = $$ROOT_BUILD_DIR/bin
 
-WEBKIT += wtf webcore
-!v8: WEBKIT += javascriptcore
+WEBKIT += wtf javascriptcore webcore
 
 INCLUDEPATH += \
+    $$PWD/ \
     $$PWD/.. \
+    $${ROOT_WEBKIT_DIR}/Source/WebCore/platform/qt \
     $${ROOT_WEBKIT_DIR}/Source/WebKit/qt/WebCoreSupport \
+    $${ROOT_WEBKIT_DIR}/Source/WebKit/qt/WidgetSupport \
     $${ROOT_WEBKIT_DIR}/Source/WTF
 
-QT = core gui network testlib webkit
+QT = core gui network testlib webkitwidgets widgets
+have?(QTPRINTSUPPORT): QT += printsupport
 macx: QT += xml
-haveQt(5): QT += widgets printsupport
-
-contains(DEFINES, HAVE_FONTCONFIG=1): PKGCONFIG += fontconfig
 
 HEADERS += \
     $$PWD/../WorkQueue.h \
+    $$PWD/../DumpRenderTree.h \
+    $$PWD/../GCController.h \
+    $$PWD/../TestRunner.h \
     DumpRenderTreeQt.h \
     EventSenderQt.h \
     TextInputControllerQt.h \
     WorkQueueItemQt.h \
-    LayoutTestControllerQt.h \
-    GCControllerQt.h \
-    QtInitializeTestFonts.h \
+    TestRunnerQt.h \
     testplugin.h
 
 SOURCES += \
     $$PWD/../WorkQueue.cpp \
+    $$PWD/../DumpRenderTreeCommon.cpp \
+    $$PWD/../GCController.cpp \
+    $$PWD/../TestRunner.cpp \
     DumpRenderTreeQt.cpp \
     EventSenderQt.cpp \
     TextInputControllerQt.cpp \
     WorkQueueItemQt.cpp \
-    LayoutTestControllerQt.cpp \
+    TestRunnerQt.cpp \
     GCControllerQt.cpp \
-    QtInitializeTestFonts.cpp \
     testplugin.cpp \
-    main.cpp
+    DumpRenderTreeMain.cpp
 
 wince*: {
-    INCLUDEPATH += $$QT.core.sources/../3rdparty/ce-compat $$WCECOMPAT/include
+    INCLUDEPATH += $$WCECOMPAT/include
     LIBS += $$WCECOMPAT/lib/wcecompat.lib
 }
 

@@ -34,6 +34,8 @@
 #include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include "IntRectExtent.h"
+#include "LayoutRect.h"
 #include "SVGFilterBuilder.h"
 #include "SourceGraphic.h"
 
@@ -49,30 +51,33 @@ class CustomFilterProgram;
 class Document;
 class GraphicsContext;
 class RenderLayer;
+class RenderObject;
 
 class FilterEffectRendererHelper {
 public:
     FilterEffectRendererHelper(bool haveFilterEffect)
-        : m_savedGraphicsContext(0)
-        , m_renderLayer(0)
+        : m_renderLayer(0)
         , m_haveFilterEffect(haveFilterEffect)
+        , m_startedFilterEffect(false)
     {
     }
     
     bool haveFilterEffect() const { return m_haveFilterEffect; }
-    bool hasStartedFilterEffect() const { return m_savedGraphicsContext; }
+    bool hasStartedFilterEffect() const { return m_startedFilterEffect; }
 
     bool prepareFilterEffect(RenderLayer*, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect);
-    GraphicsContext* beginFilterEffect(GraphicsContext* oldContext);
-    GraphicsContext* applyFilterEffect();
+    bool beginFilterEffect();
+    void applyFilterEffect(GraphicsContext* destinationContext);
+    
+    GraphicsContext* filterContext() const;
 
     const LayoutRect& repaintRect() const { return m_repaintRect; }
 private:
-    GraphicsContext* m_savedGraphicsContext;
-    RenderLayer* m_renderLayer;
+    RenderLayer* m_renderLayer; // FIXME: this is mainly used to get the FilterEffectRenderer. FilterEffectRendererHelper should be weaned off it.
     LayoutPoint m_paintOffset;
     LayoutRect m_repaintRect;
     bool m_haveFilterEffect;
+    bool m_startedFilterEffect;
 };
 
 class FilterEffectRenderer : public Filter
@@ -99,8 +104,8 @@ public:
     GraphicsContext* inputContext();
     ImageBuffer* output() const { return lastEffect()->asImageBuffer(); }
 
-    bool build(Document*, const FilterOperations&);
-    PassRefPtr<FilterEffect> buildReferenceFilter(Document*, PassRefPtr<FilterEffect> previousEffect, ReferenceFilterOperation*);
+    bool build(RenderObject* renderer, const FilterOperations&);
+    PassRefPtr<FilterEffect> buildReferenceFilter(RenderObject* renderer, PassRefPtr<FilterEffect> previousEffect, ReferenceFilterOperation*);
     bool updateBackingStoreRect(const FloatRect& filterRect);
     void allocateBackingStoreIfNeeded();
     void clearIntermediateResults();
@@ -138,10 +143,7 @@ private:
     FilterEffectList m_effects;
     RefPtr<SourceGraphic> m_sourceGraphic;
     
-    int m_topOutset;
-    int m_rightOutset;
-    int m_bottomOutset;
-    int m_leftOutset;
+    IntRectExtent m_outsets;
     
     bool m_graphicsBufferAttached;
     bool m_hasFilterThatMovesPixels;

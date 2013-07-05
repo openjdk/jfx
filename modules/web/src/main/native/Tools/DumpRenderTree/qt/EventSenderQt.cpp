@@ -29,8 +29,10 @@
 #include "config.h"
 #include "EventSenderQt.h"
 
+#include <QGestureEvent>
 #include <QGraphicsSceneMouseEvent>
 #include <QtTest/QtTest>
+#include <qpa/qwindowsysteminterface.h>
 
 #define KEYCODE_DEL         127
 #define KEYCODE_BACKSPACE   8
@@ -58,6 +60,10 @@ static unsigned startOfQueue;
 
 EventSender::EventSender(QWebPage* parent)
     : QObject(parent)
+#ifndef QT_NO_GESTURES
+    , m_tapGesture(parent)
+    , m_tapAndHoldGesture(parent)
+#endif
 {
     m_page = parent;
     m_mouseButtonPressed = false;
@@ -67,6 +73,7 @@ EventSender::EventSender(QWebPage* parent)
     startOfQueue = 0;
     m_eventLoop = 0;
     m_currentButton = 0;
+    m_currentDragActionsAllowed = 0;
     resetClickCount();
     m_page->view()->installEventFilter(this);
     // This is a hack that works because we normally scroll 60 pixels (3*20) per tick, but Apple scrolls 120.
@@ -179,6 +186,13 @@ void EventSender::mouseUp(int button)
     }
 
     sendOrQueueEvent(event);
+
+    if (m_currentDragData.urls().isEmpty())
+        return;
+
+    event = new QDropEvent(m_mousePos, m_currentDragActionsAllowed, &m_currentDragData, m_mouseButtons, Qt::NoModifier);
+    sendEvent(m_page, event);
+    m_currentDragData.clear();
 }
 
 void EventSender::mouseMoveTo(int x, int y)
@@ -196,6 +210,31 @@ void EventSender::mouseMoveTo(int x, int y)
     }
 
     sendOrQueueEvent(event);
+
+    if (m_currentDragData.urls().isEmpty())
+        return;
+
+    Qt::MouseButtons mouseButtons = m_mouseButtons | Qt::LeftButton;
+    event = new QDragMoveEvent(m_mousePos, m_currentDragActionsAllowed, &m_currentDragData, mouseButtons, Qt::NoModifier);
+    sendEvent(m_page, event);
+}
+
+// Simulates a mouse down event for drag without sending an actual mouse down event.
+void EventSender::beginDragWithFiles(const QStringList& files)
+{
+    m_currentDragData.clear();
+    QList<QUrl> fileUrls;
+    QUrl baseUrl = m_page->mainFrame()->baseUrl();
+    foreach (const QString& file, files) {
+        QUrl resolvedUrl = baseUrl.resolved(file);
+        fileUrls.append(resolvedUrl);
+    }
+
+    m_currentDragData.setUrls(fileUrls);
+    m_currentDragActionsAllowed = Qt::CopyAction;
+    Qt::MouseButtons mouseButtons = m_mouseButtons | Qt::LeftButton;
+    QDragEnterEvent* event = new QDragEnterEvent(m_mousePos, m_currentDragActionsAllowed, &m_currentDragData, mouseButtons, Qt::NoModifier);
+    sendEvent(m_page, event);
 }
 
 #ifndef QT_NO_WHEELEVENT
@@ -385,14 +424,14 @@ QStringList EventSender::contextClick()
         QGraphicsSceneContextMenuEvent ctxEvent(QEvent::GraphicsSceneContextMenu);
         ctxEvent.setReason(QGraphicsSceneContextMenuEvent::Mouse);
         ctxEvent.setPos(m_mousePos);
-        WebCore::WebViewGraphicsBased* view = qobject_cast<WebCore::WebViewGraphicsBased*>(m_page->view());
+        WebViewGraphicsBased* view = qobject_cast<WebViewGraphicsBased*>(m_page->view());
         if (view)
             sendEvent(view->graphicsView(), &ctxEvent);
     } else {
         QContextMenuEvent ctxEvent(QContextMenuEvent::Mouse, m_mousePos);
         sendEvent(m_page->view(), &ctxEvent);
     }
-    return DumpRenderTreeSupportQt::contextMenu(m_page);
+    return DumpRenderTreeSupportQt::contextMenu(m_page->handle());
 }
 
 void EventSender::scheduleAsynchronousClick()
@@ -477,13 +516,11 @@ void EventSender::touchEnd()
     m_touchActive = false;
 }
 
-#if QT_VERSION >= 0x050000
 void EventSender::touchCancel()
 {
     sendTouchEvent(QEvent::TouchCancel);
     m_touchActive = false;
 }
-#endif
 
 void EventSender::clearTouchPoints()
 {
@@ -511,7 +548,6 @@ void EventSender::cancelTouchPoint(int index)
 
 void EventSender::sendTouchEvent(QEvent::Type type)
 {
-#if HAVE(QT5)
     static QTouchDevice* device = 0;
     if (!device) {
         device = new QTouchDevice;
@@ -520,9 +556,6 @@ void EventSender::sendTouchEvent(QEvent::Type type)
     }
 
     QTouchEvent event(type, device, m_touchModifiers);
-#else
-    QTouchEvent event(type, QTouchEvent::TouchScreen, m_touchModifiers);
-#endif
     event.setTouchPoints(m_touchPoints);
     sendEvent(m_page, &event);
     QList<QTouchEvent::TouchPoint>::Iterator it = m_touchPoints.begin();
@@ -535,6 +568,26 @@ void EventSender::sendTouchEvent(QEvent::Type type)
         }
     }
 }
+
+#ifndef QT_NO_GESTURES
+void EventSender::gestureTap(int x, int y)
+{
+    m_tapGesture.setPosition(QPointF(x, y));
+    m_gestures.clear();
+    m_gestures.append(&m_tapGesture);
+    QGestureEvent event(m_gestures);
+    sendEvent(m_page, &event);
+}
+
+void EventSender::gestureLongPress(int x, int y)
+{
+    m_tapAndHoldGesture.setPosition(QPointF(x, y));
+    m_gestures.clear();
+    m_gestures.append(&m_tapAndHoldGesture);
+    QGestureEvent event(m_gestures);
+    sendEvent(m_page, &event);
+}
+#endif
 
 void EventSender::zoomPageIn()
 {
@@ -563,7 +616,7 @@ void EventSender::textZoomOut()
 void EventSender::scalePageBy(float scaleFactor, float x, float y)
 {
     if (QWebFrame* frame = m_page->mainFrame())
-        DumpRenderTreeSupportQt::scalePageBy(frame, scaleFactor, QPoint(x, y));
+        DumpRenderTreeSupportQt::scalePageBy(frame->handle(), scaleFactor, QPoint(x, y));
 }
 
 QWebFrame* EventSender::frameUnderMouse() const
@@ -692,7 +745,7 @@ QGraphicsSceneWheelEvent* EventSender::createGraphicsSceneWheelEvent(QEvent::Typ
 
 void EventSender::sendEvent(QObject* receiver, QEvent* event)
 {
-    if (WebCore::WebViewGraphicsBased* view = qobject_cast<WebCore::WebViewGraphicsBased*>(receiver))
+    if (WebViewGraphicsBased* view = qobject_cast<WebViewGraphicsBased*>(receiver))
         view->scene()->sendEvent(view->graphicsView(), event);
     else
         QApplication::sendEvent(receiver, event);
@@ -702,9 +755,11 @@ void EventSender::postEvent(QObject* receiver, QEvent* event)
 {
     // QGraphicsScene does not have a postEvent method, so send the event in this case
     // and delete it after that.
-    if (WebCore::WebViewGraphicsBased* view = qobject_cast<WebCore::WebViewGraphicsBased*>(receiver)) {
+    if (WebViewGraphicsBased* view = qobject_cast<WebViewGraphicsBased*>(receiver)) {
         view->scene()->sendEvent(view->graphicsView(), event);
         delete event;
     } else
         QApplication::postEvent(receiver, event); // event deleted by the system
 }
+
+#include "moc_EventSenderQt.cpp"

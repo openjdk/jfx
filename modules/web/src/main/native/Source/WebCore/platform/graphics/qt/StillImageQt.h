@@ -34,17 +34,17 @@ namespace WebCore {
 
     class StillImage : public Image {
     public:
-        static PassRefPtr<StillImage> create(const QImage& image)
+        static PassRefPtr<StillImage> create(const QPixmap& pixmap)
         {
-            return adoptRef(new StillImage(image));
+            return adoptRef(new StillImage(pixmap));
         }
 
-        static PassRefPtr<StillImage> createForRendering(const QImage* image)
+        static PassRefPtr<StillImage> createForRendering(const QPixmap* pixmap)
         {
-            return adoptRef(new StillImage(image));
+            return adoptRef(new StillImage(pixmap));
         }
 
-        virtual bool currentFrameHasAlpha();
+        virtual bool currentFrameKnownToBeOpaque();
 
         // FIXME: StillImages are underreporting decoded sizes and will be unable
         // to prune because these functions are not implemented yet.
@@ -52,16 +52,16 @@ namespace WebCore {
         virtual unsigned decodedSize() const { return 0; }
 
         virtual IntSize size() const;
-        virtual NativeImagePtr nativeImageForCurrentFrame();
-        virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator);
+        virtual PassNativeImagePtr nativeImageForCurrentFrame();
+        virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode);
 
     private:
-        StillImage(const QImage&);
-        StillImage(const QImage*);
+        StillImage(const QPixmap&);
+        StillImage(const QPixmap*);
         virtual ~StillImage();
         
-        const QImage* m_image;
-        bool m_ownsImage;
+        const QPixmap* m_pixmap;
+        bool m_ownsPixmap;
     };
 
 }

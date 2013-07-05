@@ -26,11 +26,13 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import os
 import StringIO
 
-from webkitpy.common.system.deprecated_logging import log
 from webkitpy.common.system.executive import ScriptError
+
+_log = logging.getLogger(__name__)
 
 
 class MockProcess(object):
@@ -58,21 +60,35 @@ class MockExecutive(object):
         self._should_throw = should_throw
         self._should_throw_when_run = should_throw_when_run or set()
         # FIXME: Once executive wraps os.getpid() we can just use a static pid for "this" process.
-        self._running_pids = [os.getpid()]
+        self._running_pids = {'test-webkitpy': os.getpid()}
         self._proc = None
+        self.calls = []
 
     def check_running_pid(self, pid):
-        return pid in self._running_pids
+        return pid in self._running_pids.values()
+
+    def running_pids(self, process_name_filter):
+        running_pids = []
+        for process_name, process_pid in self._running_pids.iteritems():
+            if process_name_filter(process_name):
+                running_pids.append(process_pid)
+
+        _log.info("MOCK running_pids: %s" % running_pids)
+        return running_pids
 
     def run_and_throw_if_fail(self, args, quiet=False, cwd=None, env=None):
         if self._should_log:
             env_string = ""
             if env:
                 env_string = ", env=%s" % env
-            log("MOCK run_and_throw_if_fail: %s, cwd=%s%s" % (args, cwd, env_string))
+            _log.info("MOCK run_and_throw_if_fail: %s, cwd=%s%s" % (args, cwd, env_string))
         if self._should_throw_when_run.intersection(args):
             raise ScriptError("Exception for %s" % args, output="MOCK command output")
         return "MOCK output of child process"
+
+    def command_for_printing(self, args):
+        string_args = map(unicode, args)
+        return " ".join(string_args)
 
     def run_command(self,
                     args,
@@ -83,6 +99,9 @@ class MockExecutive(object):
                     return_stderr=True,
                     decode_output=False,
                     env=None):
+
+        self.calls.append(args)
+
         assert(isinstance(args, list) or isinstance(args, tuple))
         if self._should_log:
             env_string = ""
@@ -91,46 +110,15 @@ class MockExecutive(object):
             input_string = ""
             if input:
                 input_string = ", input=%s" % input
-            log("MOCK run_command: %s, cwd=%s%s%s" % (args, cwd, env_string, input_string))
+            _log.info("MOCK run_command: %s, cwd=%s%s%s" % (args, cwd, env_string, input_string))
         output = "MOCK output of child process"
+
+        if self._should_throw_when_run.intersection(args):
+            raise ScriptError("Exception for %s" % args, output="MOCK command output")
+
         if self._should_throw:
             raise ScriptError("MOCK ScriptError", output=output)
         return output
-
-    def cpu_count(self):
-        return 2
-
-    def popen(self, args, cwd=None, env=None, **kwargs):
-        if self._should_log:
-            cwd_string = ""
-            if cwd:
-                cwd_string = ", cwd=%s" % cwd
-            env_string = ""
-            if env:
-                env_string = ", env=%s" % env
-            log("MOCK popen: %s%s%s" % (args, cwd_string, env_string))
-        if not self._proc:
-            self._proc = MockProcess()
-        return self._proc
-
-    def run_in_parallel(self, commands):
-        command_outputs = []
-        for cmd_line, cwd in commands:
-            command_outputs.append([0, self.run_command(cmd_line, cwd=cwd), ''])
-        return command_outputs
-
-class MockExecutive2(object):
-    @staticmethod
-    def ignore_error(error):
-        pass
-
-    def __init__(self, output='', exit_code=0, exception=None,
-                 run_command_fn=None, stderr=''):
-        self._output = output
-        self._stderr = stderr
-        self._exit_code = exit_code
-        self._exception = exception
-        self._run_command_fn = run_command_fn
 
     def cpu_count(self):
         return 2
@@ -141,6 +129,43 @@ class MockExecutive2(object):
     def kill_process(self, pid):
         pass
 
+    def popen(self, args, cwd=None, env=None, **kwargs):
+        self.calls.append(args)
+        if self._should_log:
+            cwd_string = ""
+            if cwd:
+                cwd_string = ", cwd=%s" % cwd
+            env_string = ""
+            if env:
+                env_string = ", env=%s" % env
+            _log.info("MOCK popen: %s%s%s" % (args, cwd_string, env_string))
+        if not self._proc:
+            self._proc = MockProcess()
+        return self._proc
+
+    def run_in_parallel(self, commands):
+        num_previous_calls = len(self.calls)
+        command_outputs = []
+        for cmd_line, cwd in commands:
+            command_outputs.append([0, self.run_command(cmd_line, cwd=cwd), ''])
+
+        new_calls = self.calls[num_previous_calls:]
+        self.calls = self.calls[:num_previous_calls]
+        self.calls.append(new_calls)
+        return command_outputs
+
+
+class MockExecutive2(MockExecutive):
+    """MockExecutive2 is like MockExecutive except it doesn't log anything."""
+
+    def __init__(self, output='', exit_code=0, exception=None, run_command_fn=None, stderr=''):
+        self._output = output
+        self._stderr = stderr
+        self._exit_code = exit_code
+        self._exception = exception
+        self._run_command_fn = run_command_fn
+        self.calls = []
+
     def run_command(self,
                     args,
                     cwd=None,
@@ -150,9 +175,10 @@ class MockExecutive2(object):
                     return_stderr=True,
                     decode_output=False,
                     env=None):
+        self.calls.append(args)
         assert(isinstance(args, list) or isinstance(args, tuple))
         if self._exception:
-            raise self._exception
+            raise self._exception  # pylint: disable=E0702
         if self._run_command_fn:
             return self._run_command_fn(args)
         if return_exit_code:

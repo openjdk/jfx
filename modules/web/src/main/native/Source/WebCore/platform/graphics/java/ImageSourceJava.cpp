@@ -159,7 +159,7 @@ size_t ImageSource::frameCount() const
         : count;
 }
 
-NativeImagePtr ImageSource::createFrameAtIndex(size_t idx)
+PassNativeImagePtr ImageSource::createFrameAtIndex(size_t idx)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(m_decoder);
@@ -232,6 +232,13 @@ bool ImageSource::frameIsCompleteAtIndex(size_t idx)
 {
     ASSERT(idx < m_frameInfos.size());
     return m_frameInfos[idx].complete;
+}
+
+unsigned ImageSource::frameBytesAtIndex(size_t idx) const
+{
+    //utatodo: need support for variable frame size.
+    ASSERT(idx < m_frameInfos.size());
+    return m_frameInfos[idx].size.width() * m_frameInfos[idx].size.height() * 4;
 }
 
 int ImageSource::repetitionCount()

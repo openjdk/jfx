@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.layout_tests.models.test_failures import *
 
@@ -36,7 +36,7 @@ class TestFailuresTest(unittest.TestCase):
         failure_obj = cls()
         s = failure_obj.dumps()
         new_failure_obj = TestFailure.loads(s)
-        self.assertTrue(isinstance(new_failure_obj, cls))
+        self.assertIsInstance(new_failure_obj, cls)
 
         self.assertEqual(failure_obj, new_failure_obj)
 
@@ -69,5 +69,5 @@ class TestFailuresTest(unittest.TestCase):
         self.assertEqual(len(crash_set), 2)
 
     def test_crashes(self):
-        self.assertEquals(FailureCrash().message(), 'DumpRenderTree crashed')
-        self.assertEquals(FailureCrash(process_name='foo', pid=1234).message(), 'foo (pid 1234) crashed')
+        self.assertEqual(FailureCrash().message(), 'DumpRenderTree crashed')
+        self.assertEqual(FailureCrash(process_name='foo', pid=1234).message(), 'foo crashed [pid=1234]')

@@ -29,12 +29,6 @@
 #ifndef AccessibilityList_h
 #define AccessibilityList_h
 
-#if PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
-#define ACCESSIBILITY_LISTS 0
-#else
-#define ACCESSIBILITY_LISTS 1
-#endif
-
 #include "AccessibilityRenderObject.h"
 
 namespace WebCore {
@@ -42,7 +36,7 @@ namespace WebCore {
 class AccessibilityList : public AccessibilityRenderObject {
     
 private:
-    AccessibilityList(RenderObject*);
+    explicit AccessibilityList(RenderObject*);
 public:
     static PassRefPtr<AccessibilityList> create(RenderObject*);
     virtual ~AccessibilityList();
@@ -50,12 +44,18 @@ public:
     virtual bool isList() const { return true; }
     bool isUnorderedList() const;
     bool isOrderedList() const;
-    bool isDefinitionList() const;
+    bool isDescriptionList() const;
 
     virtual AccessibilityRole roleValue() const { return ListRole; }
-    virtual bool accessibilityIsIgnored() const;
-    
+private:
+    virtual bool computeAccessibilityIsIgnored() const;
 };
+    
+inline AccessibilityList* toAccessibilityList(AccessibilityObject* object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isList());
+    return static_cast<AccessibilityList*>(object);
+}
     
 } // namespace WebCore
 

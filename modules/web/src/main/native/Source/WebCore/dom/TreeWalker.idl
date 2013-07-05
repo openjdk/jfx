@@ -18,12 +18,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module traversal {
-
     // Introduced in DOM Level 2:
-    interface [
-        JSCustomMarkFunction
-    ] TreeWalker {
+[
+    NoInterfaceObject,
+    JSCustomMarkFunction,
+    ImplementationLacksVTable
+] interface TreeWalker {
         readonly attribute Node root;
         readonly attribute unsigned long whatToShow;
         readonly attribute NodeFilter filter;
@@ -40,4 +40,3 @@ module traversal {
         [CallWith=ScriptState] Node nextNode();
     };
 
-}

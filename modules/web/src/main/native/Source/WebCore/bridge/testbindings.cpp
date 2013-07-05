@@ -21,8 +21,8 @@
 #include "config.h"
 
 #include "BridgeJSC.h"
+#include "JSCJSValue.h"
 #include "JSObject.h"
-#include "JSValue.h"
 #include "interpreter.h"
 #include "npruntime_internal.h"
 #include "runtime_object.h"
@@ -336,7 +336,7 @@ using namespace JSC::Bindings;
 
 class GlobalImp : public ObjectImp {
 public:
-  virtual UString className() const { return "global"; }
+    virtual String className() const { return "global"; }
 };
 
 #define BufferSize 200000
