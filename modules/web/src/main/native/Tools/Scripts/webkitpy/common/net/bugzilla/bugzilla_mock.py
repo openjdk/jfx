@@ -391,7 +391,7 @@ class MockBugzilla(object):
 
     def post_comment_to_bug(self, bug_id, comment_text, cc=None):
         _log.info("MOCK bug comment: bug_id=%s, cc=%s\n--- Begin comment ---\n%s\n--- End comment ---\n" % (
-            bug_id, cc, comment_text))
+                  bug_id, cc, comment_text))
 
     def add_attachment_to_bug(self, bug_id, file_or_string, description, filename=None, comment_text=None, mimetype=None):
         _log.info("MOCK add_attachment_to_bug: bug_id=%s, description=%s filename=%s mimetype=%s" %
@@ -410,7 +410,7 @@ class MockBugzilla(object):
                          mark_for_commit_queue=False,
                          mark_for_landing=False):
         _log.info("MOCK add_patch_to_bug: bug_id=%s, description=%s, mark_for_review=%s, mark_for_commit_queue=%s, mark_for_landing=%s" %
-            (bug_id, description, mark_for_review, mark_for_commit_queue, mark_for_landing))
+                  (bug_id, description, mark_for_review, mark_for_commit_queue, mark_for_landing))
         if comment_text:
             _log.info("-- Begin comment --")
             _log.info(comment_text)

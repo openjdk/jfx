@@ -1127,16 +1127,16 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Foo(int f);
-               };''',
+                Foo(int f);
+            };''',
             'Single-argument constructors should be marked explicit.'
             '  [runtime/explicit] [5]')
         # missing explicit is bad, even with whitespace
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Foo (int f);
-               };''',
+                Foo (int f);
+            };''',
             ['Extra space before ( in function call  [whitespace/parens] [4]',
              'Single-argument constructors should be marked explicit.'
              '  [runtime/explicit] [5]'])
@@ -1144,92 +1144,92 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Foo(int f); // simpler than Foo(blargh, blarg)
-               };''',
+                Foo(int f); // simpler than Foo(blargh, blarg)
+            };''',
             'Single-argument constructors should be marked explicit.'
             '  [runtime/explicit] [5]')
         # missing explicit, with qualified classname
         self.assert_multi_line_lint(
             '''\
             class Qualifier::AnotherOne::Foo {
-                 Foo(int f);
-               };''',
+                Foo(int f);
+            };''',
             'Single-argument constructors should be marked explicit.'
             '  [runtime/explicit] [5]')
         # structs are caught as well.
         self.assert_multi_line_lint(
             '''\
             struct Foo {
-                 Foo(int f);
-               };''',
+                Foo(int f);
+            };''',
             'Single-argument constructors should be marked explicit.'
             '  [runtime/explicit] [5]')
         # Templatized classes are caught as well.
         self.assert_multi_line_lint(
             '''\
             template<typename T> class Foo {
-                 Foo(int f);
-               };''',
+                Foo(int f);
+            };''',
             'Single-argument constructors should be marked explicit.'
             '  [runtime/explicit] [5]')
         # proper style is okay
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 explicit Foo(int f);
-               };''',
+                explicit Foo(int f);
+            };''',
             '')
         # two argument constructor is okay
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Foo(int f, int b);
-               };''',
+                Foo(int f, int b);
+            };''',
             '')
         # two argument constructor, across two lines, is okay
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Foo(int f,
-                     int b);
-               };''',
+                Foo(int f,
+                    int b);
+            };''',
             '')
         # non-constructor (but similar name), is okay
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 aFoo(int f);
-               };''',
+                aFoo(int f);
+            };''',
             '')
         # constructor with void argument is okay
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Foo(void);
-               };''',
+                Foo(void);
+            };''',
             '')
         # single argument method is okay
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Bar(int b);
-               };''',
+                Bar(int b);
+            };''',
             '')
         # comments should be ignored
         self.assert_multi_line_lint(
             '''\
             class Foo {
-               // Foo(int f);
-               };''',
+            // Foo(int f);
+            };''',
             '')
         # single argument function following class definition is okay
         # (okay, it's not actually valid, but we don't want a false positive)
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Foo(int f, int b);
-               };
-               Foo(int f);''',
+                Foo(int f, int b);
+            };
+            Foo(int f);''',
             '')
         # single argument function is okay
         self.assert_multi_line_lint(
@@ -1239,14 +1239,14 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Foo(const Foo&);
-               };''',
+                Foo(const Foo&);
+            };''',
             '')
         self.assert_multi_line_lint(
             '''\
             class Foo {
-                 Foo(Foo&);
-               };''',
+                Foo(Foo&);
+            };''',
             '')
 
     def test_slash_star_comment_on_single_line(self):
@@ -1398,25 +1398,25 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint(
             '''\
             const int foo[] =
-                   {1, 2, 3 };''',
+                {1, 2, 3 };''',
             '')
         # For single line, unmatched '}' with a ';' is ignored (not enough context)
         self.assert_multi_line_lint(
             '''\
             int a[3] = { 1,
-                            2,
-                            3 };''',
+                2,
+                3 };''',
             '')
         self.assert_multi_line_lint(
             '''\
             int a[2][3] = { { 1, 2 },
-                             { 3, 4 } };''',
+                { 3, 4 } };''',
             '')
         self.assert_multi_line_lint(
             '''\
             int a[2][3] =
-                   { { 1, 2 },
-                     { 3, 4 } };''',
+                { { 1, 2 },
+                { 3, 4 } };''',
             '')
 
     # CHECK/EXPECT_TRUE/EXPECT_FALSE replacements
@@ -1770,7 +1770,7 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint('default:;',
                          'Semicolon defining empty statement. Use { } instead.'
                          '  [whitespace/semicolon] [5]')
-        self.assert_lint('      ;',
+        self.assert_lint('        ;',
                          'Line contains only semicolon. If this should be an empty '
                          'statement, use { } instead.'
                          '  [whitespace/semicolon] [5]')
@@ -1812,10 +1812,10 @@ class CppStyleTest(CppStyleTestBase):
                          '    VeryLongNameType veryLongNameVariable) { }', '')
         self.assert_lint('template<>\n'
                          'string FunctionTemplateSpecialization<SomeType>(\n'
-                         '      int x) { return ""; }', '')
+                         '    int x) { return ""; }', '')
         self.assert_lint('template<>\n'
                          'string FunctionTemplateSpecialization<vector<A::B>* >(\n'
-                         '      int x) { return ""; }', '')
+                         '    int x) { return ""; }', '')
 
         # should not catch methods of template classes.
         self.assert_lint('string Class<Type>::Method() const\n'
@@ -2045,7 +2045,7 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint(' char* oneSpaceIndent = "public:";',
                          'Weird number of spaces at line-start.  '
                          'Are you using a 4-space indent?  [whitespace/indent] [3]')
-        self.assert_lint('public:',
+        self.assert_lint(' public:',
                          'Weird number of spaces at line-start.  '
                          'Are you using a 4-space indent?  [whitespace/indent] [3]')
         self.assert_lint('  public:',
@@ -2105,7 +2105,7 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_multi_line_lint(
             '''\
             struct Foo*
-                 foo = NewFoo();''',
+                foo = NewFoo();''',
             '')
         # Here is an example where the linter gets confused, even though
         # the code doesn't violate the style guide.
@@ -3188,33 +3188,33 @@ class NoNonVirtualDestructorsTest(CppStyleTestBase):
         self.assert_multi_line_lint(
             '''\
                 class Foo {
-                   virtual ~Foo();
-                   virtual void foo();
-               };''',
+                    virtual ~Foo();
+                    virtual void foo();
+                };''',
             '')
 
         self.assert_multi_line_lint(
             '''\
                 class Foo {
-                   virtual inline ~Foo();
-                   virtual void foo();
-               };''',
+                    virtual inline ~Foo();
+                    virtual void foo();
+                };''',
             '')
 
         self.assert_multi_line_lint(
             '''\
                 class Foo {
-                   inline virtual ~Foo();
-                   virtual void foo();
-               };''',
+                    inline virtual ~Foo();
+                    virtual void foo();
+                };''',
             '')
 
         self.assert_multi_line_lint(
             '''\
                 class Foo::Goo {
-                   virtual ~Goo();
-                   virtual void goo();
-               };''',
+                    virtual ~Goo();
+                    virtual void goo();
+                };''',
             '')
         self.assert_multi_line_lint(
             'class Foo { void foo(); };',
@@ -3236,16 +3236,16 @@ class NoNonVirtualDestructorsTest(CppStyleTestBase):
         self.assert_multi_line_lint(
             '''\
                 class Qualified::Goo : public Foo {
-                   virtual void goo();
-               };''',
+                    virtual void goo();
+                };''',
             '')
 
     def test_no_destructor_when_virtual_needed(self):
         self.assert_multi_line_lint_re(
             '''\
                 class Foo {
-                   virtual void foo();
-               };''',
+                    virtual void foo();
+                };''',
             'The class Foo probably needs a virtual destructor')
 
     def test_enum_casing(self):
@@ -3304,74 +3304,74 @@ class NoNonVirtualDestructorsTest(CppStyleTestBase):
         self.assert_multi_line_lint_re(
             '''\
                 class Foo {
-                   ~Foo();
-                   virtual void foo();
-               };''',
+                    ~Foo();
+                    virtual void foo();
+                };''',
             'The class Foo probably needs a virtual destructor')
 
     def test_no_warn_when_derived(self):
         self.assert_multi_line_lint(
             '''\
                 class Foo : public Goo {
-                   virtual void foo();
-               };''',
+                    virtual void foo();
+                };''',
             '')
 
     def test_internal_braces(self):
         self.assert_multi_line_lint_re(
             '''\
                 class Foo {
-                   enum Goo {
+                    enum Goo {
                         Goo
-                   };
-                   virtual void foo();
-               };''',
+                    };
+                    virtual void foo();
+                };''',
             'The class Foo probably needs a virtual destructor')
 
     def test_inner_class_needs_virtual_destructor(self):
         self.assert_multi_line_lint_re(
             '''\
                 class Foo {
-                   class Goo {
-                       virtual void goo();
-                   };
-               };''',
+                    class Goo {
+                        virtual void goo();
+                    };
+                };''',
             'The class Goo probably needs a virtual destructor')
 
     def test_outer_class_needs_virtual_destructor(self):
         self.assert_multi_line_lint_re(
             '''\
                 class Foo {
-                   class Goo {
-                   };
-                   virtual void foo();
-               };''',
+                    class Goo {
+                    };
+                    virtual void foo();
+                };''',
             'The class Foo probably needs a virtual destructor')
 
     def test_qualified_class_needs_virtual_destructor(self):
         self.assert_multi_line_lint_re(
             '''\
                 class Qualified::Foo {
-                   virtual void foo();
-               };''',
+                    virtual void foo();
+                };''',
             'The class Qualified::Foo probably needs a virtual destructor')
 
     def test_multi_line_declaration_no_error(self):
         self.assert_multi_line_lint_re(
             '''\
                 class Foo
-                   : public Goo {
-                   virtual void foo();
-               };''',
+                    : public Goo {
+                    virtual void foo();
+                };''',
             '')
 
     def test_multi_line_declaration_with_error(self):
         self.assert_multi_line_lint(
             '''\
                 class Foo
-               {
-                   virtual void foo();
-               };''',
+                {
+                    virtual void foo();
+                };''',
             ['This { should be at the end of the previous line  '
              '[whitespace/braces] [4]',
              'The class Foo probably needs a virtual destructor due to having '
@@ -3896,7 +3896,7 @@ class WebKitStyleTest(CppStyleTestBase):
             'More than one command on the same line  [whitespace/newline] [4]')
         # Ignore preprocessor if's.
         self.assert_multi_line_lint(
-            '    #if (condition) || (condition2)\n',
+            '#if (condition) || (condition2)\n',
             '')
 
         # 2. An else statement should go on the same line as a preceding
@@ -4790,12 +4790,12 @@ class WebKitStyleTest(CppStyleTestBase):
         self.assertEqual('',
             self.perform_lint(
                 '{}\n'
-                                            'WEBKIT_EXPORT\n'
-                                            'virtual\n'
-                                            'int\n'
-                                            'foo() = 0;\n',
-                                            'test.h',
-                                            webkit_export_error_rules))
+                'WEBKIT_EXPORT\n'
+                'virtual\n'
+                'int\n'
+                'foo() = 0;\n',
+                'test.h',
+                webkit_export_error_rules))
 
     def test_other(self):
         # FIXME: Implement this.

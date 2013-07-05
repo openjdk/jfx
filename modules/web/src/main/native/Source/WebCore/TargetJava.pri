@@ -143,8 +143,8 @@ win32-* {
 # http://en.wikipedia.org/wiki/Relocation_%28computer_science%29
     QMAKE_LFLAGS += /BASE:0x6F000000 /DEF:$$PWD/WebCoreJava.def
 # TODO: remove debug!
-    QMAKE_CFLAGS += -Zi -Od
-    QMAKE_CXXFLAGS += -Zi -Od
+#    QMAKE_CFLAGS += -Zi -Od
+#    QMAKE_CXXFLAGS += -Zi -Od
 }
 
 linux-*|solaris-* {
@@ -1656,7 +1656,7 @@ contains(DEFINES, IMAGEIO=1) {
         platform/image-decoders/ico/ICOImageDecoder.cpp \
         platform/image-decoders/jpeg/JPEGImageDecoder.cpp \
         platform/image-decoders/png/PNGImageDecoder.cpp \
-    platform/image-decoders/webp/WEBPImageDecoder.cpp
+        platform/image-decoders/webp/WEBPImageDecoder.cpp
 }
 
 SOURCES += \
@@ -2110,7 +2110,7 @@ contains(DEFINES, ENABLE_SVG=1) {
             svg/SVGViewElement.cpp \
             svg/SVGViewSpec.cpp \
             svg/SVGZoomAndPan.cpp \
-            svg/SVGZoomEvent.cpp
+            svg/SVGZoomEvent.cpp    
 
     ALL_IN_ONE_SOURCES += \
         rendering/svg/RenderSVGAllInOne.cpp \

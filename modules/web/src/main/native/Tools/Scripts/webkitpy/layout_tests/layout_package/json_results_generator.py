@@ -278,7 +278,7 @@ class JSONResultsGenerator(object):
         results_for_builder = results_json[builder_name]
 
         if builder_name:
-        self._insert_generic_metadata(results_for_builder)
+            self._insert_generic_metadata(results_for_builder)
 
         self._insert_failure_summaries(results_for_builder)
 

@@ -125,11 +125,11 @@ class AutoInstaller(object):
             self._make_package(target_dir)
 
     def _make_package(self, target_dir):
-            init_path = os.path.join(target_dir, "__init__.py")
-            if not os.path.exists(init_path):
-                text = ("# This file is required for Python to search this "
-                        "directory for modules.\n")
-                self._write_file(init_path, text, "ascii")
+        init_path = os.path.join(target_dir, "__init__.py")
+        if not os.path.exists(init_path):
+            text = ("# This file is required for Python to search this "
+                    "directory for modules.\n")
+            self._write_file(init_path, text, "ascii")
 
     def _create_scratch_directory_inner(self, prefix):
         """Create a scratch directory without exception handling.
@@ -286,10 +286,10 @@ class AutoInstaller(object):
     def _download_to_stream(self, url, stream):
         failures = 0
         while True:
-        try:
-            netstream = urllib.urlopen(url)
+            try:
+                netstream = urllib.urlopen(url)
                 break
-        except IOError, err:
+            except IOError, err:
                 # Try multiple times
                 if failures < 5:
                     _log.warning("Failed to download %s, %s retrying" % (
@@ -297,14 +297,14 @@ class AutoInstaller(object):
                     failures += 1
                     continue
 
-            # Append existing Error message to new Error.
-            message = ('Could not download Python modules from URL "%s".\n'
-                       " Make sure you are connected to the internet.\n"
-                       " You must be connected to the internet when "
-                       "downloading needed modules for the first time.\n"
-                       " --> Inner message: %s"
-                       % (url, err))
-            raise IOError(message)
+                # Append existing Error message to new Error.
+                message = ('Could not download Python modules from URL "%s".\n'
+                           " Make sure you are connected to the internet.\n"
+                           " You must be connected to the internet when "
+                           "downloading needed modules for the first time.\n"
+                           " --> Inner message: %s"
+                           % (url, err))
+                raise IOError(message)
         code = 200
         if hasattr(netstream, "getcode"):
             code = netstream.getcode()

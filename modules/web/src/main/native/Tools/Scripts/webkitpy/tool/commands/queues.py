@@ -4,7 +4,7 @@
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
 # met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright
 # notice, this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above
@@ -14,7 +14,7 @@
 #     * Neither the name of Google Inc. nor the names of its
 # contributors may be used to endorse or promote products derived from
 # this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 # LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -214,15 +214,15 @@ class AbstractPatchQueue(AbstractQueue):
         # it should return None.
         patch = None
         while not patch:
-        patch_id = self._tool.status_server.next_work_item(self.name)
-        if not patch_id:
-            return None
-        patch = self._tool.bugs.fetch_attachment(patch_id)
-        if not patch:
-            # FIXME: Using a fake patch because release_work_item has the wrong API.
-            # We also don't really need to release the lock (although that's fine),
-            # mostly we just need to remove this bogus patch from our queue.
-            # If for some reason bugzilla is just down, then it will be re-fed later.
+            patch_id = self._tool.status_server.next_work_item(self.name)
+            if not patch_id:
+                return None
+            patch = self._tool.bugs.fetch_attachment(patch_id)
+            if not patch:
+                # FIXME: Using a fake patch because release_work_item has the wrong API.
+                # We also don't really need to release the lock (although that's fine),
+                # mostly we just need to remove this bogus patch from our queue.
+                # If for some reason bugzilla is just down, then it will be re-fed later.
                 fake_patch = Attachment({'id': patch_id}, None)
                 self._release_work_item(fake_patch)
         return patch

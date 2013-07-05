@@ -149,7 +149,7 @@ def _default_handlers(stream, logging_level):
     # Create the handler.
     handler = logging.StreamHandler(stream)
     if logging_level == logging.DEBUG:
-    formatter = logging.Formatter("%(name)s: [%(levelname)s] %(message)s")
+        formatter = logging.Formatter("%(name)s: [%(levelname)s] %(message)s")
     else:
         formatter = logging.Formatter("%(message)s")
 

@@ -96,11 +96,11 @@ class AutoinstallImportHook(object):
 
     def _install_mechanize(self):
         return self._install("http://pypi.python.org/packages/source/m/mechanize/mechanize-0.2.5.tar.gz",
-                      "mechanize-0.2.5/mechanize")
+                             "mechanize-0.2.5/mechanize")
 
     def _install_pep8(self):
         return self._install("http://pypi.python.org/packages/source/p/pep8/pep8-0.5.0.tar.gz#md5=512a818af9979290cd619cce8e9c2e2b",
-                      "pep8-0.5.0/pep8.py")
+                             "pep8-0.5.0/pep8.py")
 
     def _install_pylint(self):
         self._ensure_autoinstalled_dir_is_in_sys_path()
@@ -128,12 +128,12 @@ class AutoinstallImportHook(object):
         jinja_dir = self._fs.join(_AUTOINSTALLED_DIR, "jinja2")
         installer = AutoInstaller(append_to_search_path=True, target_dir=jinja_dir)
         did_install_something = installer.install(url="http://pypi.python.org/packages/source/J/Jinja2/Jinja2-2.6.tar.gz#md5=1c49a8825c993bfdcf55bb36897d28a2",
-                          url_subpath="Jinja2-2.6/jinja2")
+                                                url_subpath="Jinja2-2.6/jinja2")
 
         SQLAlchemy_dir = self._fs.join(_AUTOINSTALLED_DIR, "sqlalchemy")
         installer = AutoInstaller(append_to_search_path=True, target_dir=SQLAlchemy_dir)
         did_install_something |= installer.install(url="http://pypi.python.org/packages/source/S/SQLAlchemy/SQLAlchemy-0.7.7.tar.gz#md5=ddf6df7e014cea318fa981364f3f93b9",
-                          url_subpath="SQLAlchemy-0.7.7/lib/sqlalchemy")
+                                                 url_subpath="SQLAlchemy-0.7.7/lib/sqlalchemy")
 
         did_install_something |= self._install("http://pypi.python.org/packages/source/b/buildbot/buildbot-0.8.6p1.tar.gz#md5=b6727d2810c692062c657492bcbeac6a", "buildbot-0.8.6p1/buildbot")
         return did_install_something
@@ -152,7 +152,7 @@ class AutoinstallImportHook(object):
         irc_dir = self._fs.join(_AUTOINSTALLED_DIR, "irc")
         installer = AutoInstaller(target_dir=irc_dir)
         did_install_something = installer.install(url="http://downloads.sourceforge.net/project/python-irclib/python-irclib/0.4.8/python-irclib-0.4.8.zip",
-                          url_subpath="irclib.py")
+                                                url_subpath="irclib.py")
         did_install_something |= installer.install(url="http://downloads.sourceforge.net/project/python-irclib/python-irclib/0.4.8/python-irclib-0.4.8.zip",
                           url_subpath="ircbot.py")
         return did_install_something

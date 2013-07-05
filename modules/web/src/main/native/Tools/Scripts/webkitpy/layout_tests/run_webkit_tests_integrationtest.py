@@ -58,7 +58,7 @@ from webkitpy.tool.mocktool import MockOptions
 
 def parse_args(extra_args=None, tests_included=False, new_results=False, print_nothing=True):
     extra_args = extra_args or []
-        args = []
+    args = []
     if not '--platform' in extra_args:
         args.extend(['--platform', 'test'])
     if not new_results:
@@ -764,7 +764,7 @@ class RunTest(unittest.TestCase, StreamTestingMixin):
         host = MockHost()
         host.filesystem.write_text_file('/tmp/overrides.txt', 'Bug(x) failures/unexpected/mismatch.html [ ImageOnlyFailure ]\n')
         self.assertTrue(passing_run(['--additional-expectations', '/tmp/overrides.txt', 'failures/unexpected/mismatch.html'],
-                                     tests_included=True, host=host))
+                                    tests_included=True, host=host))
 
     def test_no_http_and_force(self):
         # See test_run_force, using --force raises an exception.
@@ -885,7 +885,7 @@ class RebaselineTest(unittest.TestCase, StreamTestingMixin):
         host = MockHost()
         details, err, _ = logging_run(
             ['--pixel-tests', '--reset-results', 'passes/image.html', 'failures/expected/missing_image.html'],
-                        tests_included=True, host=host, new_results=True)
+            tests_included=True, host=host, new_results=True)
         file_list = host.filesystem.written_files.keys()
         self.assertEqual(details.exit_code, 0)
         self.assertEqual(len(file_list), 8)
@@ -897,11 +897,11 @@ class RebaselineTest(unittest.TestCase, StreamTestingMixin):
         # is missing, update the expected generic location.
         host = MockHost()
         details, err, _ = logging_run(['--no-show-results',
-                     'failures/unexpected/missing_text.html',
-                     'failures/unexpected/missing_image.html',
-                     'failures/unexpected/missing_audio.html',
-                     'failures/unexpected/missing_render_tree_dump.html'],
-                     tests_included=True, host=host, new_results=True)
+            'failures/unexpected/missing_text.html',
+            'failures/unexpected/missing_image.html',
+            'failures/unexpected/missing_audio.html',
+            'failures/unexpected/missing_render_tree_dump.html'],
+            tests_included=True, host=host, new_results=True)
         file_list = host.filesystem.written_files.keys()
         self.assertEqual(details.exit_code, 0)
         self.assertEqual(len(file_list), 10)
@@ -915,7 +915,7 @@ class RebaselineTest(unittest.TestCase, StreamTestingMixin):
         host = MockHost()
         details, err, _ = logging_run(
             ['--pixel-tests', '--new-baseline', 'passes/image.html', 'failures/expected/missing_image.html'],
-                    tests_included=True, host=host, new_results=True)
+            tests_included=True, host=host, new_results=True)
         file_list = host.filesystem.written_files.keys()
         self.assertEqual(details.exit_code, 0)
         self.assertEqual(len(file_list), 8)

@@ -101,7 +101,7 @@ class Credentials(object):
             security_command += ["-a", username]
 
         _log.info("Reading Keychain for %s account and password.  "
-            "Click \"Allow\" to continue..." % self.host)
+                  "Click \"Allow\" to continue..." % self.host)
         try:
             return self.executive.run_command(security_command)
         except ScriptError:
@@ -134,7 +134,7 @@ class Credentials(object):
         if not User().confirm("Store password in system keyring?", User.DEFAULT_NO):
             return
         try:
-        self._keyring.set_password(self.host, username, password)
+            self._keyring.set_password(self.host, username, password)
         except:
             pass
 
@@ -152,7 +152,7 @@ class Credentials(object):
 
         if username and not password and self._keyring:
             try:
-            password = self._keyring.get_password(self.host, username)
+                password = self._keyring.get_password(self.host, username)
             except:
                 pass
 

@@ -514,7 +514,7 @@ class Stream(StreamBase):
             MAX_PAYLOAD_DATA_SIZE = -1
 
             if MAX_PAYLOAD_DATA_SIZE <= 0:
-            self._write(self._writer.build(message, end, binary))
+                self._write(self._writer.build(message, end, binary))
                 return
 
             bytes_written = 0

@@ -182,7 +182,7 @@ class TestExpectationParser(object):
             # the LayoutTests directory
             expectation_line.warnings.append('Path does not exist.')
             return False
-            return True
+        return True
 
     def _collect_matching_tests(self, expectation_line):
         """Convert the test specification to an absolute, normalized
@@ -267,7 +267,7 @@ class TestExpectationParser(object):
         # special-case parsing this so that we fail immediately instead of treating this as a test name
         if remaining_string.startswith('//'):
             expectation_line.warnings = ['use "#" instead of "//" for comments']
-        return expectation_line
+            return expectation_line
 
         bugs = []
         modifiers = []

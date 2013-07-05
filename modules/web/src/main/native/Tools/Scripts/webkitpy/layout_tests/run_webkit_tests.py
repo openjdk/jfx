@@ -69,7 +69,7 @@ def main(argv, stdout, stderr):
         from webkitpy.layout_tests.lint_test_expectations import lint
         return lint(host, options, stderr)
 
-        try:
+    try:
         port = host.port_factory.get(options.platform, options)
     except NotImplementedError, e:
         # FIXME: is this the best way to handle unsupported port names?
@@ -352,7 +352,7 @@ def _set_up_derived_options(port, options):
             filesystem = port.host.filesystem
             if not filesystem.isdir(filesystem.join(port.layout_tests_dir(), directory)):
                 _log.warning("'%s' was passed to --pixel-test-directories, which doesn't seem to be a directory" % str(directory))
-    else:
+            else:
                 varified_dirs.add(directory)
 
         options.pixel_test_directories = list(varified_dirs)

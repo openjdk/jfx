@@ -50,7 +50,7 @@ def print_options():
                              help='print detailed results for every test'),
         optparse.make_option('--debug-rwt-logging', action='store_true', default=False,
                              help='print timestamps and debug information for run-webkit-tests itself'),
-   ]
+    ]
 
 
 class Printer(object):
@@ -92,7 +92,7 @@ class Printer(object):
             self._print_default("Pixel tests disabled")
 
         self._print_default("Regular timeout: %s, slow test timeout: %s" %
-                           (self._options.time_out_ms, self._options.slow_time_out_ms))
+                  (self._options.time_out_ms, self._options.slow_time_out_ms))
 
         self._print_default('Command line: ' + ' '.join(self._port.driver_cmd_line()))
         self._print_default('')

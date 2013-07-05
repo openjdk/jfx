@@ -275,7 +275,7 @@ class GlobalVariablesTest(unittest.TestCase):
         all_categories = self._all_categories()
         for category in _MAX_REPORTS_PER_CATEGORY.iterkeys():
             self.assertIn(category, all_categories,
-                            'Key "%s" is not a category' % category)
+                          'Key "%s" is not a category' % category)
 
 
 class CheckWebKitStyleFunctionTest(unittest.TestCase):

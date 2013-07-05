@@ -223,6 +223,6 @@ class Lighttpd(http_server_base.HttpServerBase):
                 # If this is actually working, we should figure out a clean API.
                 self._executive.run_command(["taskkill.exe", "/f", "/t", "/pid", self._pid], error_handler=self._executive.ignore_error)
             else:
-            self._executive.kill_process(self._pid)
+                self._executive.kill_process(self._pid)
             return False
         return True

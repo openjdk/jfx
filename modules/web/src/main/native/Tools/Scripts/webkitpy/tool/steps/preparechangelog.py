@@ -105,7 +105,7 @@ class PrepareChangeLog(AbstractStep):
         if self.cached_lookup(state, "changelogs"):
             self._ensure_bug_url(state)
             if not self._options.update_changelogs:
-            return
+                return
 
         args = self._tool.deprecated_port().prepare_changelog_command()
         if state.get("bug_id"):

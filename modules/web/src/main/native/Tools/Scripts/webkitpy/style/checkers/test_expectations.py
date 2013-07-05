@@ -56,7 +56,7 @@ class TestExpectationsChecker(object):
             for port in ports:
                 for test_expectation_file in port.expectations_files():
                     if test_expectation_file.replace(port.path_from_webkit_base() + host.filesystem.sep, '') == expectations_path:
-                return port
+                        return port
         return None
 
     def __init__(self, file_path, handle_style_error, host=None):

@@ -67,7 +67,7 @@ class ExtensionProcessorInterface(object):
             if response is None:
                 self._active = False
             return response
-            return None
+        return None
 
     def _setup_stream_options_internal(self, stream_options):
         pass
@@ -176,8 +176,8 @@ class DeflateFrameExtensionProcessor(ExtensionProcessorInterface):
 
         window_bits = None
         if self._request.has_parameter(self._WINDOW_BITS_PARAM):
-        window_bits = self._request.get_parameter_value(
-            self._WINDOW_BITS_PARAM)
+            window_bits = self._request.get_parameter_value(
+                self._WINDOW_BITS_PARAM)
             try:
                 window_bits = _parse_window_bits(window_bits)
             except ValueError, e:
@@ -268,7 +268,7 @@ class DeflateFrameExtensionProcessor(ExtensionProcessorInterface):
         if (not self._compress_outgoing or
             common.is_control_opcode(frame.opcode)):
             self._outgoing_average_ratio_calculator.add_result_bytes(
-                original_payload_size)
+                    original_payload_size)
             return
 
         frame.payload = self._rfc1979_deflater.filter(
@@ -296,7 +296,7 @@ class DeflateFrameExtensionProcessor(ExtensionProcessorInterface):
 
         if frame.rsv1 != 1 or common.is_control_opcode(frame.opcode):
             self._incoming_average_ratio_calculator.add_original_bytes(
-                received_payload_size)
+                    received_payload_size)
             return
 
         frame.payload = self._rfc1979_inflater.filter(frame.payload)

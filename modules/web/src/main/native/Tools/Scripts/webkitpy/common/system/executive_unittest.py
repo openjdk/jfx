@@ -181,7 +181,7 @@ class ExecutiveTest(unittest.TestCase):
             self.assertIn(process.wait(), (-signal.SIGABRT, -signal.SIGKILL))
         else:
             expected_exit_code = -signal.SIGKILL
-                self.assertEqual(process.wait(), expected_exit_code)
+            self.assertEqual(process.wait(), expected_exit_code)
 
         # Killing again should fail silently.
         executive.kill_process(process.pid)

@@ -273,11 +273,11 @@ class SingleTestRunner(object):
                 failures.append(test_failures.FailureImageHashMismatch())
                 driver_output.error = (driver_output.error or '') + err_str
             else:
-            driver_output.image_diff = diff_result[0]
-            if driver_output.image_diff:
-                failures.append(test_failures.FailureImageHashMismatch(diff_result[1]))
-            else:
-                # See https://bugs.webkit.org/show_bug.cgi?id=69444 for why this isn't a full failure.
+                driver_output.image_diff = diff_result[0]
+                if driver_output.image_diff:
+                    failures.append(test_failures.FailureImageHashMismatch(diff_result[1]))
+                else:
+                    # See https://bugs.webkit.org/show_bug.cgi?id=69444 for why this isn't a full failure.
                     _log.warning('  %s -> pixel hash failed (but diff passed)' % self._test_name)
         return failures
 
@@ -328,14 +328,14 @@ class SingleTestRunner(object):
             if reference_driver_output.image_hash == actual_driver_output.image_hash:
                 diff_result = self._port.diff_image(reference_driver_output.image, actual_driver_output.image, tolerance=0)
                 if not diff_result[0]:
-                failures.append(test_failures.FailureReftestMismatchDidNotOccur(reference_filename))
+                    failures.append(test_failures.FailureReftestMismatchDidNotOccur(reference_filename))
                 else:
                     _log.warning("  %s -> ref test hashes matched but diff failed" % self._test_name)
 
         elif reference_driver_output.image_hash != actual_driver_output.image_hash:
             diff_result = self._port.diff_image(reference_driver_output.image, actual_driver_output.image, tolerance=0)
             if diff_result[0]:
-            failures.append(test_failures.FailureReftestMismatch(reference_filename))
+                failures.append(test_failures.FailureReftestMismatch(reference_filename))
             else:
                 _log.warning("  %s -> ref test hashes didn't match but diff passed" % self._test_name)
 

@@ -343,7 +343,7 @@ class _RFC1979Deflater(object):
         if flush:
             # Strip last 4 octets which is LEN and NLEN field of a
             # non-compressed block added for Z_SYNC_FLUSH.
-        return self._deflater.compress_and_flush(bytes)[:-4]
+            return self._deflater.compress_and_flush(bytes)[:-4]
         return self._deflater.compress(bytes)
 
 

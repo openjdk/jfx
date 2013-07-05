@@ -76,8 +76,8 @@ class HttpServerBase(object):
         # Stop any stale servers left over from previous instances.
         if self._filesystem.exists(self._pid_file):
             try:
-            self._pid = int(self._filesystem.read_text_file(self._pid_file))
-            self._stop_running_server()
+                self._pid = int(self._filesystem.read_text_file(self._pid_file))
+                self._stop_running_server()
             except (ValueError, UnicodeDecodeError):
                 # These could be raised if the pid file is corrupt.
                 self._remove_pid_file()
@@ -99,33 +99,33 @@ class HttpServerBase(object):
         """Stops the server. Stopping a server that isn't started is harmless."""
         actual_pid = None
         try:
-        if self._filesystem.exists(self._pid_file):
+            if self._filesystem.exists(self._pid_file):
                 try:
-            actual_pid = int(self._filesystem.read_text_file(self._pid_file))
+                    actual_pid = int(self._filesystem.read_text_file(self._pid_file))
                 except (ValueError, UnicodeDecodeError):
                     # These could be raised if the pid file is corrupt.
                     pass
+                if not self._pid:
+                    self._pid = actual_pid
+
             if not self._pid:
-                self._pid = actual_pid
+                return
 
-        if not self._pid:
-            return
+            if not actual_pid:
+                _log.warning('Failed to stop %s: pid file is missing' % self._name)
+                return
+            if self._pid != actual_pid:
+                _log.warning('Failed to stop %s: pid file contains %d, not %d' %
+                            (self._name, actual_pid, self._pid))
+                # Try to kill the existing pid, anyway, in case it got orphaned.
+                self._executive.kill_process(self._pid)
+                self._pid = None
+                return
 
-        if not actual_pid:
-            _log.warning('Failed to stop %s: pid file is missing' % self._name)
-            return
-        if self._pid != actual_pid:
-            _log.warning('Failed to stop %s: pid file contains %d, not %d' %
-                         (self._name, actual_pid, self._pid))
-            # Try to kill the existing pid, anyway, in case it got orphaned.
-            self._executive.kill_process(self._pid)
+            _log.debug("Attempting to shut down %s server at pid %d" % (self._name, self._pid))
+            self._stop_running_server()
+            _log.debug("%s server at pid %d stopped" % (self._name, self._pid))
             self._pid = None
-            return
-
-        _log.debug("Attempting to shut down %s server at pid %d" % (self._name, self._pid))
-        self._stop_running_server()
-        _log.debug("%s server at pid %d stopped" % (self._name, self._pid))
-        self._pid = None
         finally:
             # Make sure we delete the pid file no matter what happens.
             self._remove_pid_file()

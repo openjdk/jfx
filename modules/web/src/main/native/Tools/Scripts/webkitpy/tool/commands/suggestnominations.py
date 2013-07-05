@@ -171,35 +171,35 @@ class SuggestNominations(AbstractCommitLogCommand):
         # See if we already have a contributor with this author_name or email
         counter_by_name = analysis['counters_by_name'].get(author_name)
         counter_by_email = analysis['counters_by_email'].get(author_email)
-            if counter_by_name:
-                if counter_by_email:
-                    if counter_by_name != counter_by_email:
-                        # Merge these two counters  This is for the case where we had
-                        # John Smith (jsmith@gmail.com) and Jonathan Smith (jsmith@apple.com)
-                        # and just found a John Smith (jsmith@apple.com).  Now we know the
-                        # two names are the same person
-                        counter_by_name['names'] |= counter_by_email['names']
-                        counter_by_name['emails'] |= counter_by_email['emails']
-                        counter_by_name['count'] += counter_by_email.get('count', 0)
+        if counter_by_name:
+            if counter_by_email:
+                if counter_by_name != counter_by_email:
+                    # Merge these two counters  This is for the case where we had
+                    # John Smith (jsmith@gmail.com) and Jonathan Smith (jsmith@apple.com)
+                    # and just found a John Smith (jsmith@apple.com).  Now we know the
+                    # two names are the same person
+                    counter_by_name['names'] |= counter_by_email['names']
+                    counter_by_name['emails'] |= counter_by_email['emails']
+                    counter_by_name['count'] += counter_by_email.get('count', 0)
                     analysis['counters_by_email'][author_email] = counter_by_name
-                else:
-                    # Add email to the existing counter
-                analysis['counters_by_email'][author_email] = counter_by_name
-                    counter_by_name['emails'] |= set([author_email])
             else:
-                if counter_by_email:
-                    # Add name to the existing counter
+                # Add email to the existing counter
+                analysis['counters_by_email'][author_email] = counter_by_name
+                counter_by_name['emails'] |= set([author_email])
+        else:
+            if counter_by_email:
+                # Add name to the existing counter
                 analysis['counters_by_name'][author_name] = counter_by_email
-                    counter_by_email['names'] |= set([author_name])
-                else:
-                    # Create new counter
-                    new_counter = {'names': set([author_name]), 'emails': set([author_email]), 'latest_name': author_name, 'latest_email': author_email, 'commits': ""}
+                counter_by_email['names'] |= set([author_name])
+            else:
+                # Create new counter
+                new_counter = {'names': set([author_name]), 'emails': set([author_email]), 'latest_name': author_name, 'latest_email': author_email, 'commits': ""}
                 analysis['counters_by_name'][author_name] = new_counter
                 analysis['counters_by_email'][author_email] = new_counter
 
         assert(analysis['counters_by_name'][author_name] == analysis['counters_by_email'][author_email])
         counter = analysis['counters_by_name'][author_name]
-            counter['count'] = counter.get('count', 0) + 1
+        counter['count'] = counter.get('count', 0) + 1
 
         if revision.isdigit():
             revision = "http://trac.webkit.org/changeset/" + revision

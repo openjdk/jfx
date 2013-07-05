@@ -195,7 +195,7 @@ def headerparserhandler(request):
         if not _dispatcher.get_handler_suite(request.uri):
             request.log_error(
                 'mod_pywebsocket: No handler for resource: %r' % request.uri,
-                              apache.APLOG_INFO)
+                apache.APLOG_INFO)
             request.log_error(
                 'mod_pywebsocket: Fallback to Apache', apache.APLOG_INFO)
             return apache.DECLINED

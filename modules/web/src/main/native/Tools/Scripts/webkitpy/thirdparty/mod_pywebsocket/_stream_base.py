@@ -114,9 +114,9 @@ class StreamBase(object):
         try:
             read_bytes = self._request.connection.read(length)
             if not read_bytes:
-            raise ConnectionTerminatedException(
-                'Receiving %d byte failed. Peer (%r) closed connection' %
-                (length, (self._request.connection.remote_addr,)))
+                raise ConnectionTerminatedException(
+                    'Receiving %d byte failed. Peer (%r) closed connection' %
+                    (length, (self._request.connection.remote_addr,)))
             return read_bytes
         except socket.error, e:
             # Catch a socket.error. Because it's not a child class of the

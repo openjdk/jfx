@@ -153,9 +153,9 @@ class RebaselineTest(AbstractRebaseliningCommand):
             lock = self._tool.make_file_lock(path + '.lock')
             lock.acquire_lock()
             expectations = TestExpectations(port, include_generic=False, include_overrides=False)
-        for test_configuration in port.all_test_configurations():
-            if test_configuration.version == port.test_configuration().version:
-                expectationsString = expectations.remove_configuration_from_test(test_name, test_configuration)
+            for test_configuration in port.all_test_configurations():
+                if test_configuration.version == port.test_configuration().version:
+                    expectationsString = expectations.remove_configuration_from_test(test_name, test_configuration)
 
             self._tool.filesystem.write_text_file(path, expectationsString)
         finally:
@@ -325,8 +325,8 @@ class AbstractParallelRebaselineCommand(AbstractRebaseliningCommand):
             for line in output:
                 try:
                     if line:
-                    files_to_add.update(json.loads(line)['add'])
-                    file_added = True
+                        files_to_add.update(json.loads(line)['add'])
+                        file_added = True
                 except ValueError:
                     _log.debug('"%s" is not a JSON object, ignoring' % line)
 
@@ -361,7 +361,7 @@ class AbstractParallelRebaselineCommand(AbstractRebaseliningCommand):
 
         files_to_add = self._files_to_add(command_results)
         if files_to_add:
-        self._tool.scm().add_list(list(files_to_add))
+            self._tool.scm().add_list(list(files_to_add))
 
         if options.optimize:
             self._optimize_baselines(test_list, options.verbose)
@@ -456,7 +456,7 @@ class Rebaseline(AbstractParallelRebaselineCommand):
     def _builders_to_pull_from(self):
         webkit_buildbot_builder_names = []
         for name in builders.all_builder_names():
-                webkit_buildbot_builder_names.append(name)
+            webkit_buildbot_builder_names.append(name)
 
         titles = ["build.webkit.org bots"]
         lists = [webkit_buildbot_builder_names]

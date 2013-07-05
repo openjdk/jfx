@@ -93,16 +93,16 @@ def validate_subprotocol(subprotocol):
     if not subprotocol:
         raise HandshakeException('Invalid subprotocol name: empty')
 
-        # Parameter should be encoded HTTP token.
-        state = http_header_util.ParsingState(subprotocol)
-        token = http_header_util.consume_token(state)
-        rest = http_header_util.peek(state)
-        # If |rest| is not None, |subprotocol| is not one token or invalid. If
-        # |rest| is None, |token| must not be None because |subprotocol| is
-        # concatenation of |token| and |rest| and is not None.
-        if rest is not None:
-            raise HandshakeException('Invalid non-token string in subprotocol '
-                                     'name: %r' % rest)
+    # Parameter should be encoded HTTP token.
+    state = http_header_util.ParsingState(subprotocol)
+    token = http_header_util.consume_token(state)
+    rest = http_header_util.peek(state)
+    # If |rest| is not None, |subprotocol| is not one token or invalid. If
+    # |rest| is None, |token| must not be None because |subprotocol| is
+    # concatenation of |token| and |rest| and is not None.
+    if rest is not None:
+        raise HandshakeException('Invalid non-token string in subprotocol '
+                                 'name: %r' % rest)
 
 
 def parse_host_header(request):

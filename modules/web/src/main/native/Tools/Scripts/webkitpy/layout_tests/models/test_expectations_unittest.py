@@ -572,7 +572,7 @@ class TestExpectationSerializationTests(unittest.TestCase):
         expectation = TestExpectationLine()
 
         self.assertEqual(expectation.to_string(self._converter), '')
-        expectation.comment = 'Qux.'
+        expectation.comment = ' Qux.'
         self.assertEqual(expectation.to_string(self._converter), '# Qux.')
         expectation.name = 'bar'
         self.assertEqual(expectation.to_string(self._converter), 'bar # Qux.')

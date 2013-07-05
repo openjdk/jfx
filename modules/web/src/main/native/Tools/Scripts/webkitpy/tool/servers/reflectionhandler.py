@@ -141,4 +141,4 @@ class ReflectionHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.end_headers()
 
             if not headers_only:
-            shutil.copyfileobj(static_file, self.wfile)
+                shutil.copyfileobj(static_file, self.wfile)

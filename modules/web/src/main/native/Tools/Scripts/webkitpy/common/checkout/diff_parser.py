@@ -80,15 +80,15 @@ def get_diff_converter(lines):
 
     Args:
       lines: The lines of a diff file.
-                       If this line is git formatted, we'll return a
-                       converter from git to SVN.
+             If this line is git formatted, we'll return a
+             converter from git to SVN.
     """
     for i, line in enumerate(lines[:-1]):
         # Stop when we find the first patch
         if line[:3] == "+++" and lines[i + 1] == "---":
             break
         if match(r"^diff --git \w/", line):
-        return git_diff_to_svn_diff
+            return git_diff_to_svn_diff
     return svn_diff_to_svn_diff
 
 _INITIAL_STATE = 1

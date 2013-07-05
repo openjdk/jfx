@@ -286,12 +286,12 @@ class Dispatcher(object):
             if mux.use_mux(request):
                 mux.start(request, self)
             else:
-        handler_suite = self.get_handler_suite(request.ws_resource)
-        if handler_suite is None:
+                handler_suite = self.get_handler_suite(request.ws_resource)
+                if handler_suite is None:
                     raise DispatchException('No handler for: %r' %
                                             request.ws_resource)
-        transfer_data_ = handler_suite.transfer_data
-            transfer_data_(request)
+                transfer_data_ = handler_suite.transfer_data
+                transfer_data_(request)
 
             if not request.server_terminated:
                 request.ws_stream.close_connection()

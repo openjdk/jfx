@@ -145,9 +145,9 @@ class PerfTestsRunner(object):
         paths = []
         for arg in self._args:
             if filesystem.exists(filesystem.join(self._base_path, arg)):
-            paths.append(arg)
+                paths.append(arg)
             else:
-            relpath = filesystem.relpath(arg, self._base_path)
+                relpath = filesystem.relpath(arg, self._base_path)
                 if filesystem.exists(filesystem.join(self._base_path, relpath)):
                     paths.append(filesystem.normpath(relpath))
                 else:
@@ -185,12 +185,12 @@ class PerfTestsRunner(object):
         while (run_count < repeat):
             run_count += 1
 
-        tests = self._collect_tests()
+            tests = self._collect_tests()
             runs = ' (Run %d of %d)' % (run_count, repeat) if repeat > 1 else ''
             _log.info("Running %d tests%s" % (len(tests), runs))
 
-        for test in tests:
-            if not test.prepare(self._options.time_out_ms):
+            for test in tests:
+                if not test.prepare(self._options.time_out_ms):
                     return self.EXIT_CODE_BAD_PREPARATION
 
             try:
@@ -304,7 +304,7 @@ class PerfTestsRunner(object):
             _log.error("Missing slave configuration JSON file: %s" % slave_config_json_path)
             return None
 
-            try:
+        try:
             slave_config_json = self._host.filesystem.open_text_file_for_reading(slave_config_json_path)
             slave_config = json.load(slave_config_json)
             for key in slave_config:
@@ -339,9 +339,9 @@ class PerfTestsRunner(object):
                 parsed_response = json.loads('\n'.join(response_body))
             except:
                 _log.error("Uploaded JSON to %s but got a bad response:" % url)
-            for line in response_body:
-                _log.error(line)
-            return False
+                for line in response_body:
+                    _log.error(line)
+                return False
             if parsed_response.get('status') != 'OK':
                 _log.error("Uploaded JSON to %s but got an error:" % url)
                 _log.error(json.dumps(parsed_response, indent=4))
@@ -361,7 +361,7 @@ class PerfTestsRunner(object):
             metrics = test.run(self._options.time_out_ms)
             if metrics:
                 self._results.append((test, metrics))
-        else:
+            else:
                 failures += 1
                 _log.error('FAILED')
 

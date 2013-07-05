@@ -388,17 +388,17 @@ class ChangeLog(object):
         result = StringIO()
         with self._filesystem.open_text_file_for_reading(self.path) as file:
             for line in file:
-            if first_boilerplate_line_regexp.search(line):
-                message_lines = self._wrap_lines(message)
+                if first_boilerplate_line_regexp.search(line):
+                    message_lines = self._wrap_lines(message)
                     result.write(first_boilerplate_line_regexp.sub(message_lines, line))
-                # Remove all the ChangeLog boilerplate before the first changed
-                # file.
-                removing_boilerplate = True
-            elif removing_boilerplate:
-                if line.find('*') >= 0: # each changed file is preceded by a *
-                    removing_boilerplate = False
+                    # Remove all the ChangeLog boilerplate before the first changed
+                    # file.
+                    removing_boilerplate = True
+                elif removing_boilerplate:
+                    if line.find('*') >= 0:  # each changed file is preceded by a *
+                        removing_boilerplate = False
 
-            if not removing_boilerplate:
+                if not removing_boilerplate:
                     result.write(line)
         self._filesystem.write_text_file(self.path, result.getvalue())
 
@@ -414,14 +414,14 @@ class ChangeLog(object):
             result = StringIO()
             with self._filesystem.open_text_file_for_reading(self.path) as file:
                 for line in file:
-                found_bug_url = re.search(config_urls.bug_url_long, line)
-                if not found_bug_url:
-                    found_bug_url = re.search(config_urls.bug_url_short, line)
+                    found_bug_url = re.search(config_urls.bug_url_long, line)
+                    if not found_bug_url:
+                        found_bug_url = re.search(config_urls.bug_url_short, line)
                     result.write(line)
-                if found_bug_url:
-                    if bug_url_number_of_items == 1:
+                    if found_bug_url:
+                        if bug_url_number_of_items == 1:
                             result.write("\n        Reviewed by %s.\n" % reviewer)
-                    bug_url_number_of_items -= 1
+                        bug_url_number_of_items -= 1
             self._filesystem.write_text_file(self.path, result.getvalue())
         else:
             data = self._filesystem.read_text_file(self.path)
@@ -435,7 +435,7 @@ class ChangeLog(object):
         with self._filesystem.open_text_file_for_reading(self.path) as file:
             for line in file:
                 line = line.replace("Need a short description (OOPS!).", message)
-            if line != bug_boilerplate:
+                if line != bug_boilerplate:
                     result.write(line)
         self._filesystem.write_text_file(self.path, result.getvalue())
 

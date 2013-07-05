@@ -41,7 +41,7 @@ Go to the src directory and run
 
   $ python mod_pywebsocket/standalone.py [-p <ws_port>]
                                          [-w <websock_handlers>]
-                         [-d <document_root>]
+                                         [-d <document_root>]
 
 <ws_port> is the port number to use for ws:// connection.
 
@@ -287,7 +287,7 @@ class _StandaloneSSLConnection(object):
     - convert SysCallError exceptions that its recv method may raise into a
       return value of '', meaning EOF. We cannot overwrite the recv method on
       self._connection since it's immutable.
-        """
+    """
 
     _OVERRIDDEN_ATTRIBUTES = ['_connection', 'makefile', 'shutdown', 'recv']
 
@@ -432,7 +432,7 @@ class WebSocketServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
                         if server_options.tls_client_cert_optional:
                             client_cert_ = ssl.CERT_OPTIONAL
                         else:
-                        client_cert_ = ssl.CERT_REQUIRED
+                            client_cert_ = ssl.CERT_REQUIRED
                     else:
                         client_cert_ = ssl.CERT_NONE
                     socket_ = ssl.wrap_socket(socket_,
@@ -585,7 +585,7 @@ class WebSocketServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
                 cert = accepted_socket.get_peer_certificate()
                 self._logger.debug('Client cert subject: %r',
                                    cert.get_subject().get_components())
-            accepted_socket = _StandaloneSSLConnection(accepted_socket)
+                accepted_socket = _StandaloneSSLConnection(accepted_socket)
             else:
                 raise ValueError('No TLS support module is available')
 
@@ -1073,7 +1073,7 @@ def _main(args=None):
             else:
                 logging.critical(
                         'TLS support requires ssl or pyOpenSSL module.')
-            sys.exit(1)
+                sys.exit(1)
         elif options.tls_module == _TLS_BY_STANDARD_MODULE:
             if not _import_ssl():
                 logging.critical('ssl module is not available')

@@ -56,9 +56,9 @@ CONTENT OF TEST
 """
         matches, mismatches = extract_reference_link.get_reference_link(html_1)
         self.assertItemsEqual(matches,
-                         ["green-box-ref.xht", "blue-box-ref.xht"])
+                              ["green-box-ref.xht", "blue-box-ref.xht"])
         self.assertItemsEqual(mismatches,
-                         ["red-box-notref.xht", "red-box-notref.xht"])
+                              ["red-box-notref.xht", "red-box-notref.xht"])
 
         html_2 = ""
         empty_tuple_1 = extract_reference_link.get_reference_link(html_2)
