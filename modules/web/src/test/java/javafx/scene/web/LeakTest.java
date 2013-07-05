@@ -24,7 +24,7 @@ public class LeakTest extends TestBase {
 
     @Ignore // RT-26710: javafx.scene.web.LeakTest hangs
     @Test public void testOleg() throws InterruptedException{
-        final String URL = new File("test/html/guimark2-vector.html").toURI().toASCIIString();
+        final String URL = new File("src/test/resources/html/guimark2-vector.html").toURI().toASCIIString();
         final int CYCLE_COUNT = 16;
         final int CYCLE_LENGTH = 5;
         final CountDownLatch latch = new CountDownLatch(CYCLE_COUNT);

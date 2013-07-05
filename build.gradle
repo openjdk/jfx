@@ -2320,7 +2320,14 @@ project(":web") {
     }
     compileJava.exclude "com/sun/javafx/webkit/drt/**/*"
 
-    test.enabled = false
+    test {
+        classpath += files("../../../artifacts/sdk/rt/lib/ext/jfxrt.jar")
+        doFirst {
+            classpath.each { p ->
+                print "Test CLASSPATH: ${p.getPath()}\n"
+            }
+        }
+    }
     
     task generateHeaders(dependsOn: compileJava) {
         doLast {

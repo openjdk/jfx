@@ -28,7 +28,7 @@ import com.sun.webkit.dom.*;
 public class DOMTest extends TestBase {
 
     @Test public void testEmptyTextContent() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             Element emptyP = doc.getElementById("empty-paragraph");
             String textContent = emptyP.getTextContent();
@@ -37,7 +37,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testAppendChild() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             Node p1 = doc.getElementById("p1");
             NodeList c1 = p1.getChildNodes();
@@ -67,7 +67,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testInsertBeforeEnd() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             Node p1 = doc.getElementById("p1");
             NodeList c1 = p1.getChildNodes();
@@ -106,7 +106,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testInsertBefore() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             Node p1 = doc.getElementById("p1");
             NodeList c1 = p1.getChildNodes();
@@ -131,7 +131,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testReplaceChild() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             Node p1 = doc.getElementById("p1");
             NodeList c1 = p1.getChildNodes();
@@ -158,7 +158,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testRemoveChild() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             Node p = doc.getElementById("p1");
             NodeList c = p.getChildNodes();
@@ -176,7 +176,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testRemoveChildWithEventHandler() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             Node p = doc.getElementById("p1");
             NodeList c = p.getChildNodes();
@@ -203,7 +203,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testNodeTypes() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             Element p = doc.getElementById("showcase-paragraph");
             assertEquals("P element's node type", Node.ELEMENT_NODE, p.getNodeType());
@@ -234,7 +234,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testNodeTypification() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             NodeList inputsp = doc.getElementsByTagName("p");
             HTMLParagraphElement elp = (HTMLParagraphElement) inputsp.item(0);
@@ -247,7 +247,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testEventListenerCascade() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             HTMLDocument htmlDoc = (HTMLDocument)doc;
             final HTMLBodyElement body = (HTMLBodyElement)htmlDoc.getBody();
@@ -315,7 +315,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testDOMWindowAndStyleAccess() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             HTMLDocument htmlDoc = (HTMLDocument)doc;
             final HTMLBodyElement body = (HTMLBodyElement)htmlDoc.getBody();
@@ -332,7 +332,7 @@ public class DOMTest extends TestBase {
     }
 
     @Test public void testDOMCSS() {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(new Runnable() { public void run() {
             StyleSheetList shl = ((HTMLDocumentImpl)doc).getStyleSheets();
             for (int i = 0; i < shl.getLength(); ++i ) {

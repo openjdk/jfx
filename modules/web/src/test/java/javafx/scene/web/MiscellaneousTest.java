@@ -74,7 +74,7 @@ public class MiscellaneousTest extends TestBase {
         submit(new Runnable() { public void run() {
             getEngine().getLoadWorker().stateProperty().addListener(listener);
         }});
-        String location = new File("src/test/java/html/RT30835.html")
+        String location = new File("src/test/resources/html/RT30835.html")
                 .toURI().toASCIIString().replaceAll("^file:/", "file:///");
         load(location);
         assertEquals(1, records.size());
