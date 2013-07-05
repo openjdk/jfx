@@ -26,13 +26,19 @@
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 
-#if TARGET_OS_MAC && !(TARGET_OS_IPHONE)
+#if TARGET_OS_MAC
 
 #include <jni.h>
 #include <com_sun_javafx_font_DFontDecoder.h>
 
 #import <CoreFoundation/CoreFoundation.h>
+
+#if TARGET_OS_IPHONE
+#import <CoreGraphics/CoreGraphics.h>
+#import <CoreText/CoreText.h>
+#else
 #import <ApplicationServices/ApplicationServices.h>
+#endif
 
 
 JNIEXPORT jlong JNICALL Java_com_sun_javafx_font_DFontDecoder_createCTFont

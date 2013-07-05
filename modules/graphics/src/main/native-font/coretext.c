@@ -26,13 +26,20 @@
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 
-#if TARGET_OS_MAC && !(TARGET_OS_IPHONE)
+#if TARGET_OS_MAC
 
 #include <jni.h>
 #include <com_sun_javafx_font_coretext_OS.h>
 
 #import <CoreFoundation/CoreFoundation.h>
+
+#if TARGET_OS_IPHONE
+#import <CoreGraphics/CoreGraphics.h>
+#import <CoreText/CoreText.h>
+#else
 #import <ApplicationServices/ApplicationServices.h>
+#endif
+
 
 #define OS_NATIVE(func) Java_com_sun_javafx_font_coretext_OS_##func
 

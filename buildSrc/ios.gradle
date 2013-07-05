@@ -80,6 +80,7 @@ def linkFlags = [
     "-static",
     "-framework", "Foundation",
     "-framework", "CoreGraphics",
+    "-framework", "CoreText",
     "-framework", "UIKit",
     "-framework", "QuartzCore",
     "-framework", "OpenGLES"].flatten()
