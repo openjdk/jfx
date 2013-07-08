@@ -25,7 +25,6 @@
 
 package com.sun.javafx.font.directwrite;
 
-import java.text.Bidi;
 import com.sun.javafx.font.CompositeFontResource;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
@@ -34,43 +33,36 @@ import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.GlyphLayout;
 import com.sun.javafx.text.PrismTextLayout;
-import com.sun.javafx.text.ScriptMapper;
 import com.sun.javafx.text.TextRun;
-import static com.sun.javafx.scene.text.TextLayout.*;
 
 public class DWGlyphLayout extends GlyphLayout {
 
     private static final String LOCALE = "en-us";
 
-    private TextRun addTextRun(PrismTextLayout layout, char[] chars, int start, int length,
-                               PGFont font, TextSpan span, byte level, boolean complex) {
+    protected TextRun addTextRun(PrismTextLayout layout, char[] chars, int start,
+                                 int length, PGFont font, TextSpan span, byte level) {
         TextRun textRun = null;
-        if (complex) {
-            int dir = (level & 1) != 0 ? OS.DWRITE_READING_DIRECTION_RIGHT_TO_LEFT :
-                                         OS.DWRITE_READING_DIRECTION_LEFT_TO_RIGHT;
-            JFXTextAnalysisSink sink = OS.NewJFXTextAnalysisSink(chars, start, length, LOCALE, dir);
-            sink.AddRef();
+        int dir = (level & 1) != 0 ? OS.DWRITE_READING_DIRECTION_RIGHT_TO_LEFT :
+                                     OS.DWRITE_READING_DIRECTION_LEFT_TO_RIGHT;
+        JFXTextAnalysisSink sink = OS.NewJFXTextAnalysisSink(chars, start, length, LOCALE, dir);
+        sink.AddRef();
 
-            IDWriteFactory factory = DWFactory.getDWriteFactory();
-            IDWriteTextAnalyzer analyzer = factory.CreateTextAnalyzer();
-            analyzer.AnalyzeScript(sink, 0, length, sink);
+        IDWriteFactory factory = DWFactory.getDWriteFactory();
+        IDWriteTextAnalyzer analyzer = factory.CreateTextAnalyzer();
+        analyzer.AnalyzeScript(sink, 0, length, sink);
 
-            while (sink.Next()) {
-                int runStart = sink.GetStart();
-                int runLength = sink.GetLength();
-                DWRITE_SCRIPT_ANALYSIS analysis = sink.GetAnalysis();
-                textRun = new TextRun(start + runStart, runLength, level, true,
-                                      analysis.script, span,
-                                      analysis.shapes, false);
-                layout.addTextRun(textRun) ;
-            }
-
-            analyzer.Release();
-            sink.Release();
-        } else {
-            textRun = new TextRun(start, length, level, false, 0, span, 0, false);
-            layout.addTextRun(textRun);
+        while (sink.Next()) {
+            int runStart = sink.GetStart();
+            int runLength = sink.GetLength();
+            DWRITE_SCRIPT_ANALYSIS analysis = sink.GetAnalysis();
+            textRun = new TextRun(start + runStart, runLength, level, true,
+                                  analysis.script, span,
+                                  analysis.shapes, false);
+            layout.addTextRun(textRun) ;
         }
+
+        analyzer.Release();
+        sink.Release();
         return textRun;
     }
 
@@ -279,198 +271,4 @@ public class DWGlyphLayout extends GlyphLayout {
         }
         run.shape(totalGlyphCount, glyphs, pos, clusterMap);
     }
-
-    /*
-    * Ideally DirectWrite could be used to do the entire job.
-    * Still need to verify if JFX handling of non-complex is indeed faster
-    * than DirectWrite.
-    *
-    * (this method was copied from the CoreText implementation).
-    */
-    public int breakRuns(PrismTextLayout layout, char[] chars, int flags) {
-        int length = chars.length;
-        boolean complexRun = false;
-        boolean complex = false;
-        boolean feature = false;
-
-        boolean checkComplex = true;
-        boolean checkBidi = true;
-        if ((flags & FLAGS_ANALYSIS_VALID) != 0) {
-            /* Avoid work when it is known neither complex
-             * text nor bidi are not present. */
-            checkComplex = (flags & FLAGS_HAS_COMPLEX) != 0;
-            checkBidi = (flags & FLAGS_HAS_BIDI) != 0;
-        }
-
-        TextRun run = null;
-        Bidi bidi = null;
-        byte bidiLevel = 0;
-        int bidiEnd = length;
-        int bidiIndex = 0;
-        int spanIndex = 0;
-        TextSpan span = null;
-        int spanEnd = length;
-        PGFont font = null;
-        TextSpan[] spans = layout.getTextSpans();
-        if (spans != null) {
-            if (spans.length > 0) {
-                span = spans[spanIndex];
-                spanEnd = span.getText().length();
-                font = (PGFont)span.getFont();
-                if (font == null) {
-                    flags |= FLAGS_HAS_EMBEDDED;
-                }
-            }
-        } else {
-            font = layout.getFont();
-        }
-        if (font != null) {
-            FontResource fr = font.getFontResource();
-            int requestedFeatures = font.getFeatures();
-            int supportedFeatures = fr.getFeatures();
-            feature = (requestedFeatures & supportedFeatures) != 0;
-        }
-        if (checkBidi && length > 0) {
-            int direction = layout.getDirection();
-            bidi = new Bidi(chars, 0, null, 0, length, direction);
-            /* Temporary Code: See RT-26997 */
-//            bidiLevel = (byte)bidi.getRunLevel(bidiIndex);
-            bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
-            bidiEnd = bidi.getRunLimit(bidiIndex);
-            if ((bidiLevel & 1) != 0) {
-                flags |= FLAGS_HAS_BIDI;
-            }
-        }
-
-        int start = 0;
-        int i = 0;
-        while (i < length) {
-            char ch = chars[i];
-            int codePoint = ch;
-
-            boolean delimiterChanged = ch == '\t' || ch == '\n' || ch == '\r';
-            boolean spanChanged = i >= spanEnd;
-            boolean levelChanged = i >= bidiEnd;
-            boolean complexChanged = false;
-
-            if (checkComplex) {
-                if (Character.isHighSurrogate(ch)) {
-                    /* Only merge surrogate when the pair is in the same span. */
-                    if (i + 1 < spanEnd && Character.isLowSurrogate(chars[i + 1])) {
-                        codePoint = Character.toCodePoint(ch, chars[++i]);
-                    }
-                }
-                if (Character.isWhitespace(codePoint)) {
-                    complex = feature || complexRun;
-                } else {
-                    complex = feature || ScriptMapper.isComplexCharCode(codePoint);
-                }
-                complexChanged = complex != complexRun;
-            }
-
-            if (delimiterChanged || spanChanged || levelChanged || complexChanged) {
-
-                /* Create text run */
-                if (i != start) {
-                    run = addTextRun(layout, chars, start, i - start,
-                                     font, span, bidiLevel, complexRun);
-                    if (complexRun) {
-                        flags |= FLAGS_HAS_COMPLEX;
-                    }
-                    start = i;
-                }
-
-                if (delimiterChanged) {
-                    i++;
-                    /* Only merge \r\n when the are in the same text span */
-                    if (ch == '\r' && i < spanEnd && chars[i] == '\n') {
-                        i++;
-                    }
-
-                    /* Create delimiter run */
-                    run = new TextRun(start, i - start, bidiLevel, false,
-                                      ScriptMapper.COMMON, span, 0, false);
-                    if (ch == '\t') {
-                        run.setTab();
-                        flags |= FLAGS_HAS_TABS;
-                    } else {
-                        run.setLinebreak();
-                    }
-                    layout.addTextRun(run);
-
-                    start = i;
-                    if (i == length) break;
-                    spanChanged = i >= spanEnd;
-                    levelChanged = i >= bidiEnd;
-                }
-                if (spanChanged) {
-                    /* Only true for rich text (spans != null) */
-                    span = spans[++spanIndex];
-                    spanEnd += span.getText().length();
-                    font = (PGFont)span.getFont();
-                    if (font == null) {
-                        flags |= FLAGS_HAS_EMBEDDED;
-                    } else {
-                        FontResource fr = font.getFontResource();
-                        int requestedFeatures = font.getFeatures();
-                        int supportedFeatures = fr.getFeatures();
-                        feature = (requestedFeatures & supportedFeatures) != 0;
-                    }
-                }
-                if (levelChanged) {
-                    bidiIndex++;
-                    /* Temporary Code: See RT-26997 */
-//                    bidiLevel = (byte)bidi.getRunLevel(bidiIndex);
-                    bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
-                    bidiEnd = bidi.getRunLimit(bidiIndex);
-                    if ((bidiLevel & 1) != 0) {
-                        flags |= FLAGS_HAS_BIDI;
-                    }
-                }
-
-                if (complexChanged) {
-                    if (delimiterChanged) {
-                        ch = chars[i]; /* update ch because of delimiterChanged */
-                        if (Character.isHighSurrogate(ch)) {
-                            /* Only merge surrogate when the pair is in the same span */
-                            if (i + 1 < spanEnd && Character.isLowSurrogate(chars[i + 1])) {
-                                codePoint = Character.toCodePoint(ch, chars[++i]);
-                            }
-                        }
-                        if (Character.isWhitespace(codePoint)) {
-                            complex = feature || complexRun;
-                        } else {
-                            complex = feature || ScriptMapper.isComplexCharCode(codePoint);
-                        }
-                    }
-                    complexRun = complex;
-                }
-            }
-            if (!delimiterChanged) i++;
-        }
-
-        /* Create final text run */
-        if (start < length) {
-            addTextRun(layout, chars, start, length - start,
-                       font, span, bidiLevel, complexRun);
-            if (complexRun) {
-                flags |= FLAGS_HAS_COMPLEX;
-            }
-        } else {
-            /* Ensure every lines has at least one run */
-            if (run == null || run.isLinebreak()) {
-                run = new TextRun(start, 0, (byte)0, false,
-                                  ScriptMapper.COMMON, span, 0, false);
-                layout.addTextRun(run);
-            }
-        }
-        if (bidi != null) {
-            if (!bidi.baseIsLeftToRight()) {
-                flags |= FLAGS_RTL_BASE;
-            }
-        }
-        flags |= FLAGS_ANALYSIS_VALID;
-        return flags;
-    }
-
 }
