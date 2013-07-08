@@ -419,7 +419,7 @@
 #define WTF_OS_MAC ERROR "USE MAC_OS_X WITH OS NOT MAC"
 
 /* OS(UNIX) - Any Unix-like system */
-#if   OS(AIX)              \
+#if    OS(AIX)              \
     || OS(DARWIN)           \
     || OS(FREEBSD)          \
     || OS(HURD)             \
@@ -515,16 +515,16 @@
 #endif  /* OS(WINCE) && !PLATFORM(QT) */
 
 #if PLATFORM(JAVA)
-#if defined(ICU_UNICODE) && (ICU_UNICODE == 1)
-#define WTF_USE_ICU_UNICODE 1
-#else
-#define WTF_USE_JAVA_UNICODE 1
-#endif
-#if defined(IMAGEIO) && (IMAGEIO == 1)
-#define WTF_USE_IMAGEIO 1
-#endif
+ #if defined(ICU_UNICODE) && (ICU_UNICODE == 1)
+  #define WTF_USE_ICU_UNICODE 1
+ #else
+  #define WTF_USE_JAVA_UNICODE 1
+ #endif
+ #if defined(IMAGEIO) && (IMAGEIO == 1)
+  #define WTF_USE_IMAGEIO 1
+ #endif
 #elif !USE(WCHAR_UNICODE)
-#define WTF_USE_ICU_UNICODE 1
+ #define WTF_USE_ICU_UNICODE 1
 #endif
 
 #if PLATFORM(JAVA)
@@ -744,6 +744,11 @@
 #define ENABLE_JIT 1
 #endif
 
+#if PLATFORM(JAVA) && CPU(X86_64) &&  COMPILER(MSVC)
+/* [ctiTrampoline] is not implemented for MS compiler in JITStubs.cpp */
+#define ENABLE_JIT 0
+#endif
+
 /* If possible, try to enable a disassembler. This is optional. We proceed in two
    steps: first we try to find some disassembler that we can use, and then we
    decide if the high-level disassembler API can be enabled. */
@@ -760,7 +765,7 @@
 #define ENABLE_DISASSEMBLER 1
 #endif
 
-/* On some of the platforms where we have a JIT, we want to also have the
+/* On some of the platforms where we have a JIT, we want to also have the 
    low-level interpreter. */
 #if !defined(ENABLE_LLINT) \
     && ENABLE(JIT) \
@@ -953,7 +958,7 @@
 #include <wtf/gobject/GTypedefs.h>
 #endif
 
-/* FIXME: This define won't be needed once #27551 is fully landed. However,
+/* FIXME: This define won't be needed once #27551 is fully landed. However, 
    since most ports try to support sub-project independence, adding new headers
    to WTF causes many ports to break, and so this way we can address the build
    breakages one port at a time. */

@@ -180,7 +180,7 @@ mac* {
     }
     SOURCES +=  \
         platform/mac/PurgeableBufferMac.cpp \
-	platform/cf/FileSystemCF.cpp \
+#	platform/cf/FileSystemCF.cpp \
 	platform/cf/KURLCFNet.cpp \
 	platform/cf/SharedBufferCF.cpp \
 	platform/text/cf/AtomicStringCF.cpp \
