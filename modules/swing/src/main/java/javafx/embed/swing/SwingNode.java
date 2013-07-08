@@ -535,7 +535,10 @@ public class SwingNode extends Node {
             Platform.runLater(new Runnable() {
                 @Override
                 public void run() {
-                    if (getScene() != null && getScene().getWindow() != null) {
+                    if (getScene() != null &&
+                        getScene().getWindow() != null &&
+                        getScene().getWindow().impl_getPeer() != null)
+                    {
                         getScene().getWindow().impl_getPeer().grabFocus();
                         grabbed = true;
                     }
@@ -555,7 +558,9 @@ public class SwingNode extends Node {
 
     private void ungrabFocus(boolean postUngrabEvent) {
         if (grabbed &&
-            getScene() != null && getScene().getWindow() != null)
+            getScene() != null &&
+            getScene().getWindow() != null &&
+            getScene().getWindow().impl_getPeer() != null)
         {
             skipBackwardUnrgabNotification = !postUngrabEvent;
             getScene().getWindow().impl_getPeer().ungrabFocus();
