@@ -97,7 +97,7 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, TableCell<S
 
     /** @{@inheritDoc} */
     @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
-        return getTableControl().getVisibleLeafIndex(null);
+        return getTableControl().getVisibleLeafIndex((TableColumn) tc);
     }
 
     /** @{@inheritDoc} */
