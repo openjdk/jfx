@@ -251,7 +251,7 @@ public final class FileChooser {
      * file open dialogs.
      * </p>
      *
-     * @since JavaFX 8.0
+     * @since JavaFX 2.2.40
      */
     private ObjectProperty<String> initialFileName;
 
