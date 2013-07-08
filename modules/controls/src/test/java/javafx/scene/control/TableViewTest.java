@@ -1365,4 +1365,28 @@ public class TableViewTest {
         assertEquals(firstNameCol, editingCell.getTableColumn());
         assertTrue(cell.isEditing());
     }
+
+    @Test public void test_rt31471() {
+        Person jacobSmith;
+        final TableView<Person> tableView = new TableView<Person>();
+        tableView.setItems(FXCollections.observableArrayList(
+                jacobSmith = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                new Person("Jim", "Bob", "jim.bob@example.com")
+        ));
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        tableView.getColumns().add(firstNameCol);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0);
+        assertEquals(jacobSmith, cell.getItem());
+
+        tableView.setFixedCellSize(50);
+
+        VirtualFlowTestUtils.getVirtualFlow(tableView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(jacobSmith, cell.getItem());
+        assertEquals(50, cell.getHeight(), 0.00);
+    }
 }

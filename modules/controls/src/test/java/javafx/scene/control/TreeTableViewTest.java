@@ -2113,4 +2113,28 @@ public class TreeTableViewTest {
         treeTableView.setShowRoot(false);
         assertEquals("Child 1", cell.getText());
     }
+
+    @Test public void test_rt31471() {
+        installChildren();
+
+        TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue().getValue());
+            }
+        });
+
+        treeTableView.getColumns().add(firstNameCol);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertEquals("Root", cell.getItem());
+
+        treeTableView.setFixedCellSize(50);
+
+        VirtualFlowTestUtils.getVirtualFlow(treeTableView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals("Root", cell.getItem());
+        assertEquals(50, cell.getHeight(), 0.00);
+    }
 }

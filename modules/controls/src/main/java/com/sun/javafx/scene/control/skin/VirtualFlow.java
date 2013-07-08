@@ -264,6 +264,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     public void setFixedCellSize(final double value) {
         this.fixedCellSize = value;
         this.fixedCellSizeEnabled = fixedCellSize > 0;
+        needsCellsLayout = true;
         layoutChildren();
     }
     
