@@ -2388,6 +2388,11 @@
     -fx-background-insets: 1 0 -1 0, 0; 
 }
 
+.table-view .column-header .label,
+.tree-table-view .column-header .label {
+    -fx-alignment: center;
+}
+
 .table-view > .column-header-background > .show-hide-columns-button,
 .tree-table-view > .column-header-background > .show-hide-columns-button{
     -fx-background-color: -fx-body-color;

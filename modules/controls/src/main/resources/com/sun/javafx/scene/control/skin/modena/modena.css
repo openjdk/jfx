@@ -2386,6 +2386,11 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.115em;
     -fx-background-radius: 0.115em;
 }
+.table-view .column-header .label,
+.tree-table-view .column-header .label {
+    -fx-alignment: center;
+}
+
 /* Plus Symbol */
 .table-view .show-hide-column-image,
 .tree-table-view .show-hide-column-image {

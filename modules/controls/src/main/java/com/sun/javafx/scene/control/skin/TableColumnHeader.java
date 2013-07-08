@@ -421,7 +421,6 @@ public class TableColumnHeader extends Region {
 
         // --- label
         label = new Label();
-        label.setAlignment(Pos.CENTER);
         label.setText(column.getText());
         label.setGraphic(column.getGraphic());
         label.setVisible(column.isVisible());
