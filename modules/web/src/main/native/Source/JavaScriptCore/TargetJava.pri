@@ -343,3 +343,18 @@ contains(DEFINES, ICU_UNICODE=1) {
 } else {
     SOURCES += $$PWD/../WTF/wtf/unicode/java/UnicodeJava.cpp
 }
+
+win32-*:contains(QMAKE_TARGET.arch, x86_64) {
+    ASM_SOURCES += $$PWD/jit/JITStubsMSVC64.asm $${GENERATED_SOURCES_DIR}/GeneratedJITStubs_MSVC.asm
+
+    asm_compiler.CONFIG = target_predeps
+    asm_compiler.dependency_type = TYPE_C
+    asm_compiler.commands = ml64 /c /Fo ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
+    asm_compiler.output = ${QMAKE_VAR_OBJECTS_DIR}${QMAKE_FILE_BASE}$${first(QMAKE_EXT_OBJ)}
+    asm_compiler.input = ASM_SOURCES
+    asm_compiler.variable_out = OBJECTS
+    asm_compiler.name = compiling[asm] ${QMAKE_FILE_IN}
+
+    QMAKE_EXTRA_COMPILERS += asm_compiler
+    DEFAULT_TARGETS += compiler_asm_compiler_make_all
+}

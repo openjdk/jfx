@@ -744,11 +744,6 @@
 #define ENABLE_JIT 1
 #endif
 
-#if PLATFORM(JAVA) && CPU(X86_64) &&  COMPILER(MSVC)
-/* [ctiTrampoline] is not implemented for MS compiler in JITStubs.cpp */
-#define ENABLE_JIT 0
-#endif
-
 /* If possible, try to enable a disassembler. This is optional. We proceed in two
    steps: first we try to find some disassembler that we can use, and then we
    decide if the high-level disassembler API can be enabled. */

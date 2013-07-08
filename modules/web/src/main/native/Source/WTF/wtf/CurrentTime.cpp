@@ -257,8 +257,10 @@ double currentTime()
     return time.tv_sec + time.tv_nsec / 1.0e9;
 }
 
-#elif PLATFORM(JAVA)
-
+#elif PLATFORM(JAVA) && 0
+// Attention! That can be called from non-Java thread. And very often, 
+// so back to native implementation.
+//
 // Return the current system time in seconds, using the classic POSIX epoch of January 1, 1970.
 // Like time(0) from <time.h>, except with a wider range of values and higher precision.
 double currentTime()
