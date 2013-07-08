@@ -46,7 +46,7 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
 
     public VirtualContainerBase(final C control, B behavior) {
         super(control, behavior);
-        flow = new VirtualFlow<I>();
+        flow = createVirtualFlow();
         
         control.addEventHandler(ScrollToEvent.scrollToTopIndex(), new EventHandler<ScrollToEvent<Integer>>() {
             @Override public void handle(ScrollToEvent<Integer> event) {
@@ -77,6 +77,14 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
      * performance costs down.
      */
     public abstract I createCell();
+
+    /**
+     * This enables skin subclasses to provide a custom VirtualFlow implementation,
+     * rather than have VirtualContainerBase instantiate the default instance.
+     */
+    protected VirtualFlow<I> createVirtualFlow() {
+        return new VirtualFlow<I>();
+    }
 
     /**
      * Returns the total number of items in this container, including those

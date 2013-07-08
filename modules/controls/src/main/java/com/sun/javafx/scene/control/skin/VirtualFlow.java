@@ -25,7 +25,12 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
@@ -369,6 +374,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * This is package private ONLY FOR TESTING
      */
     final ArrayLinkedList<T> cells = new ArrayLinkedList<T>();
+    @ReturnsUnmodifiableCollection
+    protected List<T> getCells() {
+        return Collections.unmodifiableList(cells);
+    }
 
     /**
      * A structure containing cells that can be reused later. These are cells
@@ -407,7 +416,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     private VirtualScrollBar hbar = new VirtualScrollBar(this);
 
-    final VirtualScrollBar getHbar() {
+    protected final VirtualScrollBar getHbar() {
         return hbar;
     }
     /**
@@ -416,7 +425,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     private VirtualScrollBar vbar = new VirtualScrollBar(this);
 
-    final VirtualScrollBar getVbar() {
+    protected final VirtualScrollBar getVbar() {
         return vbar;
     }
 
@@ -2350,7 +2359,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * <p>
      * This class is package private solely for the sake of testing.
      */
-    static class ArrayLinkedList<T> {
+    static class ArrayLinkedList<T> extends AbstractList {
         /**
          * The array list backing this class. We default the size of the array
          * list to be fairly large so as not to require resizing during normal
