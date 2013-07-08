@@ -937,8 +937,12 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     @Override
-    public void drawWidget(RenderTheme theme, Ref widget, int x, int y) {
-        theme.drawWidget(this, widget, x, y);
+    public void drawWidget(final RenderTheme theme, final Ref widget, final int x, final int y) {
+        new Composite() {
+            @Override void doPaint(Graphics g) {
+                theme.drawWidget(WCGraphicsPrismContext.this, widget, x, y);
+            }
+        }.paint();
     }
 
     @Override
