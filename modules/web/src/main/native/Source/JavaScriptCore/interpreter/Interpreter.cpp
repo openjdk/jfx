@@ -130,9 +130,8 @@ Interpreter::StackPolicy::StackPolicy(Interpreter& interpreter, const StackBound
     const size_t errorModeRequiredStack = 64 * KB;
 
     size_t requiredCapacity = m_interpreter.m_errorHandlingModeReentry ? errorModeRequiredStack : requiredStack;
-#if !PLATFORM(JAVA)
+
     RELEASE_ASSERT(size > requiredCapacity);
-#endif
 
     m_requiredCapacity = requiredCapacity;    
 }

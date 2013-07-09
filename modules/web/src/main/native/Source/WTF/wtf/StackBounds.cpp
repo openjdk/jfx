@@ -75,7 +75,9 @@ namespace WTF {
 #if CPU(X86_64)
 static const ptrdiff_t estimatedStackSize = 1024 * 1024;
 #else
-static const ptrdiff_t estimatedStackSize = 256 * 1024;
+// it is limited by reserved space 256 + 64 KB in
+// [Interpreter::StackPolicy::StackPolicy] call
+static const ptrdiff_t estimatedStackSize = 128 * 3 * 1024;
 #endif
 #else
 // Based on the current limit used by the JSC parser, guess the stack size.
