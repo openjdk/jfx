@@ -207,7 +207,7 @@ import javafx.util.Callback;
  * normal JavaBean properties too, although there is a caveat to this, so refer 
  * to the class documentation for more information). When this is not the case, 
  * it is necessary to provide a custom cell value factory. More information
- * about cell value factories can be found in the {@link TreeTableColumns} API 
+ * about cell value factories can be found in the {@link TreeTableColumn} API
  * documentation, but briefly, here is how a TreeTableColumns could be specified:
  * 
  * <pre>
@@ -259,7 +259,7 @@ import javafx.util.Callback;
  * 
  * <p>You can create custom {@link TreeTableCell} instances per column by assigning 
  * the appropriate function to the TreeTableColumns
- * {@link TreeTableColumns#cellFactoryProperty() cell factory} property.
+ * {@link TreeTableColumn#cellFactoryProperty() cell factory} property.
  * 
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
@@ -1457,7 +1457,7 @@ public class TreeTableView<S> extends Control {
      * Instructs the TreeTableView to begin editing the given TreeItem, if 
      * the TreeTableView is {@link #editableProperty() editable}. Once
      * this method is called, if the current 
-     * {@link #cellFactoryProperty() cell factory} is set up to support editing,
+     * {@link javafx.scene.control.TreeTableColumn#cellFactoryProperty()} cell factory} is set up to support editing,
      * the Cell will switch its visual state to enable the user input to take place.
      * 
      * @param item The TreeItem in the TreeTableView that should be edited.
@@ -1916,7 +1916,7 @@ public class TreeTableView<S> extends Control {
          * TreeTableColumn and delta values being set and stored in this immutable
          * instance.
          * 
-         * @param table The TreeTableView upon which the resize operation is occurring.
+         * @param treeTable The TreeTableView upon which the resize operation is occurring.
          * @param column The column upon which the resize is occurring, or null
          *      if this ResizeFeatures instance is being created as a result of a
          *      TreeTableView resize operation.
@@ -2018,8 +2018,8 @@ public class TreeTableView<S> extends Control {
      * allow for special support for TableView controls.
      * @since JavaFX 8.0
      */
-    public static abstract class TreeTableViewSelectionModel<S> extends 
-            TableSelectionModel<TreeItem<S>, TreeTableColumn<S, ?>> {
+    public static abstract class TreeTableViewSelectionModel<S> extends
+            TableSelectionModel<TreeItem<S>> {
 
         /***********************************************************************
          *                                                                     *
@@ -2040,7 +2040,7 @@ public class TreeTableView<S> extends Control {
         /**
          * Builds a default TableViewSelectionModel instance with the provided
          * TableView.
-         * @param tableView The TableView upon which this selection model should
+         * @param treeTableView The TableView upon which this selection model should
          *      operate.
          * @throws NullPointerException TableView can not be null.
          */
@@ -2451,7 +2451,7 @@ public class TreeTableView<S> extends Control {
             clearAndSelect(row, null);
         }
 
-        @Override public void clearAndSelect(int row, TreeTableColumn<S,?> column) {
+        @Override public void clearAndSelect(int row, TableColumnBase column) {
             quietClearSelection();
             select(row, column);
         }
@@ -2460,7 +2460,7 @@ public class TreeTableView<S> extends Control {
             select(row, null);
         }
 
-        @Override public void select(int row, TreeTableColumn<S,?> column) {
+        @Override public void select(int row, TableColumnBase column) {
             // TODO we need to bring in the TreeView selection stuff here...
             if (row < 0 || row >= getRowCount()) return;
 
@@ -2472,7 +2472,7 @@ public class TreeTableView<S> extends Control {
 //            // if a column is given, I return
 //            if (! isCellSelectionEnabled() && column != null) return;
 
-            TreeTablePosition pos = new TreeTablePosition(getTreeTableView(), row, column);
+            TreeTablePosition pos = new TreeTablePosition(getTreeTableView(), row, (TreeTableColumn)column);
             
             if (! selectedCells.contains(pos)) {
                 if (getSelectionMode() == SelectionMode.SINGLE) {
@@ -2483,7 +2483,7 @@ public class TreeTableView<S> extends Control {
 
 //            setSelectedIndex(row);
             updateSelectedIndex(row);
-            focus(row, column);
+            focus(row, (TreeTableColumn)column);
             
             int changeIndex = selectedCellsSeq.indexOf(pos);
             selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<TreeTablePosition<S,?>>(changeIndex, changeIndex+1, selectedCellsSeq));
@@ -2649,8 +2649,8 @@ public class TreeTableView<S> extends Control {
             clearSelection(index, null);
         }
 
-        @Override public void clearSelection(int row, TreeTableColumn<S,?> column) {
-            TreeTablePosition tp = new TreeTablePosition(getTreeTableView(), row, column);
+        @Override public void clearSelection(int row, TableColumnBase column) {
+            TreeTablePosition tp = new TreeTablePosition(getTreeTableView(), row, (TreeTableColumn)column);
 
             boolean csMode = isCellSelectionEnabled();
             
@@ -2680,7 +2680,7 @@ public class TreeTableView<S> extends Control {
             return isSelected(index, null);
         }
 
-        @Override public boolean isSelected(int row, TreeTableColumn<S,?> column) {
+        @Override public boolean isSelected(int row, TableColumnBase column) {
             // When in cell selection mode, we currently do NOT support selecting
             // entire rows, so a isSelected(row, null) 
             // should always return false.
@@ -2894,7 +2894,7 @@ public class TreeTableView<S> extends Control {
          * Creates a default TableViewFocusModel instance that will be used to
          * manage focus of the provided TableView control.
          * 
-         * @param tableView The tableView upon which this focus model operates.
+         * @param treeTableView The tableView upon which this focus model operates.
          * @throws NullPointerException The TableView argument can not be null.
          */
         public TreeTableViewFocusModel(final TreeTableView<S> treeTableView) {

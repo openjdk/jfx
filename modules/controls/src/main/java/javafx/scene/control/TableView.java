@@ -1512,7 +1512,7 @@ public class TableView<S> extends Control {
      * allow for special support for TableView controls.
      * @since JavaFX 2.0
      */
-    public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S, TableColumn<S,?>> {
+    public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S> {
 
         /***********************************************************************
          *                                                                     *
@@ -1579,7 +1579,7 @@ public class TableView<S> extends Control {
          * Convenience method that returns getTableView().getItems().
          * @return The items list of the current TableView.
          */
-        protected ObservableList<S> getTableModel()  {
+        protected List<S> getTableModel()  {
             return tableView.getItems();
         }
 
@@ -1796,7 +1796,7 @@ public class TableView<S> extends Control {
             tableView.itemsProperty().addListener(weakItemsPropertyListener);
             
             // watching for changes to the items list content
-            ObservableList<S> items = getTableModel();
+            ObservableList<S> items = getTableView().getItems();//getTableModel();
             if (items != null) {
                 items.addListener(weakItemsContentListener);
             }
