@@ -147,7 +147,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     pile.clear();
                     sheetChildren.clear();
                     cells.clear();
-                    numCellsVisibleOnScreen = -1;
                     lastWidth = lastHeight = maxPrefBreadth = -1;
                     viewportBreadth = viewportLength = lastPosition = 0;
                     hbar.setValue(0);
@@ -264,6 +263,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     public void setFixedCellSize(final double value) {
         this.fixedCellSize = value;
         this.fixedCellSizeEnabled = fixedCellSize > 0;
+        needsCellsLayout = true;
         layoutChildren();
     }
     
@@ -284,13 +284,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             if (getParent() != null) getParent().requestLayout();
         }
     }
-
-    /**
-     * The number of cells on the first full page. This is recomputed whenever
-     * the viewportLength changes, and is used for computing the visibleAmount
-     * of the lengthBar.
-     */
-    private int numCellsVisibleOnScreen = -1;
 
     /**
      * The maximum preferred size in the non-virtual direction. For example,
@@ -811,7 +804,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             maxPrefBreadth = -1;
             lastWidth = -1;
             lastHeight = -1;
-            numCellsVisibleOnScreen = -1;
             releaseCell(accumCell);
 //            accumCell = null;
 //            accumCellParent.getChildren().clear();
@@ -1370,25 +1362,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         double flowLength = (isVertical ? getHeight() : getWidth()) -
             (breadthBar.isVisible() ? breadthBar.prefHeight(-1) : 0);
         
-        // This was changed from '== -1' to '<= 0' due to RT-29390. If this needs
-        // to change in the future there are unit tests developed against
-        // ListView, TreeView, TableView and TreeTableView, so it is hoped that
-        // RT-29390 will not be reintroduced.
-        if (numCellsVisibleOnScreen <= 0) {
-            numCellsVisibleOnScreen = 0;
-            for (int i = 0, max = cells.size(); i < max; i++) {
-                T cell = cells.get(i);
-                if (cell != null && ! cell.isEmpty()) {
-                    sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
-                    if (sumCellLength > flowLength) {
-                        break;
-                    }
-
-                    numCellsVisibleOnScreen++;
-                }
-            }
-        }
-
         // Now position and update the scroll bars
         if (breadthBar.isVisible()) {
             /*
@@ -1431,8 +1404,22 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         if (lengthBar.isVisible()) {
-            lengthBar.setMax(1);
+            // determine how many cells there are on screen so that the scrollbar
+            // thumb can be appropriately sized
+            int numCellsVisibleOnScreen = 0;
+            for (int i = 0, max = cells.size(); i < max; i++) {
+                T cell = cells.get(i);
+                if (cell != null && ! cell.isEmpty()) {
+                    sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
+                    if (sumCellLength > flowLength) {
+                        break;
+                    }
 
+                    numCellsVisibleOnScreen++;
+                }
+            }
+
+            lengthBar.setMax(1);
             if (numCellsVisibleOnScreen == 0 && cellCount == 1) {
                 // special case to help resolve RT-17701 and the case where we have
                 // only a single row and it is bigger than the viewport

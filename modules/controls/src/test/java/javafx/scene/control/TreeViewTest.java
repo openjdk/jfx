@@ -1057,4 +1057,19 @@ public class TreeViewTest {
         treeView.setShowRoot(false);
         assertEquals("Child 1", cell.getText());
     }
+
+    @Test public void test_rt31471() {
+        installChildren();
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertEquals("Root", cell.getItem());
+
+        treeView.setFixedCellSize(50);
+
+        VirtualFlowTestUtils.getVirtualFlow(treeView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals("Root", cell.getItem());
+        assertEquals(50, cell.getHeight(), 0.00);
+    }
 }

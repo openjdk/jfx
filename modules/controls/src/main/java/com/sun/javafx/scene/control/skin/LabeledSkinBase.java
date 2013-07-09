@@ -599,6 +599,11 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 getChildren().setAll(graphic, text);
             }
         }
+
+        // Fix for RT-31120
+        if (graphic != null) {
+            graphic.impl_processCSS(false);
+        }
     }
 
     /**
