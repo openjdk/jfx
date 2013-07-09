@@ -27,7 +27,7 @@ package javafx.scene.control;
 
 import java.time.LocalDate;
 import java.time.chrono.*;
-import java.util.Set;
+import java.util.*;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -227,31 +227,6 @@ public class DatePickerTest {
         assertTrue(str == null || str.isEmpty());
     }
 
-    @Ignore("Fails due to RT-29927")
-    @Test public void ensureImpl_getPseudoClassStateReturnsValidValue() {
-        Set<PseudoClass> value1 = datePicker.getPseudoClassStates();
-        assertFalse(datePicker.isEditable());
-        assertTrue(value1.size() >= 0);
-
-        datePicker.setEditable(true);
-        Set<PseudoClass> value2 = datePicker.getPseudoClassStates();
-        assertTrue(value2.contains(PseudoClass.getPseudoClass("editable")));
-
-        datePicker.show();
-        Set<PseudoClass> value3 = datePicker.getPseudoClassStates();
-        assertTrue(value3.contains(PseudoClass.getPseudoClass("showing")));
-
-        datePicker.arm();
-        Set<PseudoClass> value4 = datePicker.getPseudoClassStates();
-        assertTrue(value4.contains(PseudoClass.getPseudoClass("armed")));
-
-        assertFalse(value1.equals(value2));
-        assertFalse(value1.equals(value3));
-        assertFalse(value1.equals(value4));
-        assertFalse(value2.equals(value3));
-        assertFalse(value2.equals(value4));
-        assertFalse(value3.equals(value4));
-    }
 
     /*********************************************************************
      * Tests for properties                                              *
@@ -403,4 +378,22 @@ public class DatePickerTest {
      * Tests for bug reports                                             *
      ********************************************************************/
 
+    @Test public void test_rt30549() {
+        Locale.setDefault(Locale.forLanguageTag("en-US"));
+        StringConverter<LocalDate> converter = datePicker.getConverter();
+
+        // Set a MinguoDate from a String
+        datePicker.setChronology(MinguoChronology.INSTANCE);
+        datePicker.getEditor().setText("5/22/0102 1");
+        datePicker.setValue(converter.fromString(datePicker.getEditor().getText()));
+        assertEquals(MinguoChronology.INSTANCE.date(MinguoEra.ROC, 102, 5, 22),
+                     MinguoDate.from(datePicker.getValue()));
+        assertEquals("5/22/0102 1", datePicker.getEditor().getText());
+
+        // Convert from MinguoDate to LocalDate (ISO)
+        datePicker.setChronology(IsoChronology.INSTANCE);
+        assertEquals(LocalDate.of(2013, 5, 22), datePicker.getValue());
+        datePicker.getEditor().setText(converter.toString(datePicker.getValue()));
+        assertEquals("5/22/2013", datePicker.getEditor().getText());
+    }
 }
