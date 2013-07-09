@@ -1,9 +1,23 @@
 <classpath>
-  <classpathentry kind="src" path="build/generated-src/version-info"/>
-  <classpathentry kind="src" path="src/main/java"/>
-  <classpathentry kind="src" path="src/test/java"/>
-  <classpathentry exported="true" kind="src" path="/buildSrc"/>
-  <classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-  <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
   <classpathentry kind="output" path="bin"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+  <classpathentry kind="src" exported="true" path="src/main/java"/>
+  <classpathentry kind="src" exported="true" path="src/test/java">
+  <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="src/main/resources">
+  <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="src/test/resources">
+  <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" exported="true" path="build/generated-src/version-info"/>
+  <classpathentry kind="src" exported="true" path="/buildSrc"/>
 </classpath>

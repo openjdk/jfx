@@ -32,6 +32,9 @@
 #ifndef PISCES_RENDERER_H
 #define PISCES_RENDERER_H
 
+#ifdef ANDROID_NDK
+#include <sys/types.h>
+#endif
 #include <PiscesDefs.h>
 #include <PiscesSurface.h>
 #include <PiscesTransform.h>

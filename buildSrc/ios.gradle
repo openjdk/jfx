@@ -29,10 +29,22 @@ ext.IOS = [:]
 IOS.canBuild = IS_MAC
 if (!IOS.canBuild) return;
 
+IOS.artifactsName = "ios"
+
 IOS.compileSwing = false;
 IOS.compileSWT = false;
 IOS.compileFXPackager = false;
 IOS.compileDesignTime = false;
+
+defineProperty("USE_LIPO", "false")
+defineProperty("GENERATE_SYMBOLS", "false")
+if (USE_LIPO instanceof String) IOS.useLipo = Boolean.parseBoolean(USE_LIPO)
+if (GENERATE_SYMBOLS instanceof String) IOS.generateSymbols = Boolean.parseBoolean(GENERATE_SYMBOLS)
+
+defineProperty("IOS_VERSION", "6.1")
+
+// Lambda for naming the generated libs
+IOS.library = { name -> return "lib${name}.a" as String }
 
 IOS.libDest = "lib"
 
@@ -70,19 +82,20 @@ def iPhoneOS = "iPhoneOS"
 def iPhoneSim = "iPhoneSimulator"
 
 String sdkPath(String platform) {
-    return "/Applications/Xcode.app/Contents/Developer/Platforms/${platform}.platform/Developer/SDKs/${platform}6.1.sdk";
+    return "/Applications/Xcode.app/Contents/Developer/Platforms/${platform}.platform/Developer/SDKs/${platform}${IOS_VERSION}.sdk";
 }
 
 def linkFlags = [
     "-static",
     "-framework", "Foundation",
     "-framework", "CoreGraphics",
+    "-framework", "CoreText",
     "-framework", "UIKit",
     "-framework", "QuartzCore",
     "-framework", "OpenGLES"].flatten()
 
 def ccFlags = [
-    "-miphoneos-version-min=6.1", "-fmessage-length=0", "-std=c99", "-fno-common",
+    "-miphoneos-version-min=6.0", "-fmessage-length=0", "-std=c99", "-fno-common",
     "-Wall", "-fno-strict-aliasing", "-fwrapv", "-fpascal-strings", "-fobjc-abi-version=2", "-fobjc-legacy-dispatch",
     "-I$JDK_HOME/include", "-I$JDK_HOME/include/darwin", "-c",
     IS_DEBUG ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
@@ -122,6 +135,7 @@ IOS.decora.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS),
 IOS.decora.lib = "decora-sse-${archArm}"
 
 IOS.prism = [:]
+IOS.prism.lib = "prism-common"
 IOS.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 IOS.prism.variants = ["arm", "x86"];
 
@@ -142,6 +156,7 @@ IOS.prism.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneS
 IOS.prism.x86.lib = "prism-common-${archX86}"
 
 IOS.prismSW = [:]
+IOS.prismSW.lib = "prism-sw"
 IOS.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 IOS.prismSW.variants = ["arm", "x86"];
 
@@ -162,6 +177,7 @@ IOS.prismSW.x86.linkFlags = [IOS.prism.x86.linkFlags].flatten()
 IOS.prismSW.x86.lib = "prism-sw-${archX86}"
 
 IOS.iio = [:]
+IOS.iio.lib = "javafx-iio"
 IOS.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 IOS.iio.variants = ["arm", "x86"];
 
@@ -185,6 +201,7 @@ IOS.iio.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim
 IOS.iio.x86.lib = "javafx-iio-${archX86}"
 
 IOS.prismES2 = [:]
+IOS.prismES2.lib = "prism-es2"
 IOS.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 IOS.prismES2.variants = ["arm", "x86"];
 
@@ -210,6 +227,7 @@ IOS.prismES2.x86.lib = "prism-es2-${archX86}"
 
 def closedDir = file("$projectDir/../rt-closed")
 IOS.font = [:]
+IOS.font.lib = "javafx-font"
 IOS.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
@@ -232,6 +250,7 @@ IOS.font.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSi
 IOS.font.x86.lib = "javafx-font-${archX86}"
 
 IOS.fontT2K = [:]
+IOS.fontT2K.lib = "javafx-font-t2k"
 IOS.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
 IOS.fontT2K.variants = ["arm", "x86"];
 
@@ -253,3 +272,79 @@ IOS.fontT2K.x86.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archX86, "-isysro
 IOS.fontT2K.x86.linker = linker
 IOS.fontT2K.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
 IOS.fontT2K.x86.lib = "javafx-font-t2k-${archX86}"
+
+IOS.webview = [:]
+IOS.webview.lib = "javafx-ios-webnode"
+IOS.webview.javahInclude = ["javafx/scene/web/*"]
+IOS.webview.variants = ["arm", "x86"];
+
+IOS.webview.arm = [:]
+IOS.webview.arm.nativeSource = file("$closedDir/javafx-ios-webnode/native")
+IOS.webview.arm.compiler = compiler
+IOS.webview.arm.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
+IOS.webview.arm.linker = linker
+IOS.webview.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
+IOS.webview.arm.lib = "javafx-ios-webnode-${archArm}"
+
+IOS.webview.x86 = [:]
+IOS.webview.x86.nativeSource = [IOS.webview.arm.nativeSource].flatten()
+IOS.webview.x86.compiler = compiler
+IOS.webview.x86.ccFlags = [ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
+IOS.webview.x86.linker = linker
+IOS.webview.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
+IOS.webview.x86.lib = "javafx-ios-webnode-${archX86}"
+
+project(":web") {
+    if (BUILD_CLOSED) {
+        apply plugin: 'java'
+
+        compileJava {
+            enabled = false
+        }
+
+        afterEvaluate {
+            def compileWebJavaIos = task("compileWebJavaIos",
+                type: JavaCompile, group: "Build") {
+
+                dependsOn(project(":graphics").classes, project(":base").classes)
+                description = "Task compiles web component for iOS."
+                classpath = files(
+                    project(":controls").sourceSets.main.output.classesDir,
+                    project(":graphics").sourceSets.main.output.classesDir,
+                    project(":base").sourceSets.main.output.classesDir
+                )
+                destinationDir = file("modules/web/build/classes/ios")
+                dependencyCacheDir = file("modules/web/build/dependency-cache")
+                source file("$closedDir/javafx-ios-webnode/src")
+            }
+
+            def jarWebJavaIos = task("jarWebJavaIos",
+                type: Jar, group: "Build") {
+                description = "Creates web.jar for iOS."
+                dependsOn(compileWebJavaIos)
+                archiveName = "web.jar"
+                includeEmptyDirs = false
+                destinationDir = project.file("build/libs/ios")
+                from("build/classes/ios")
+            }
+
+            addNative(project, "webview")
+            javahIosWebview.dependsOn(compileWebJavaIos)
+
+            jfxrtIos {
+                from "modules/web/build/classes/ios"
+            }
+
+            sdkIos  {
+                dependsOn(jarWebJavaIos)
+                doLast {
+                    def props = project.ext["IOS"]
+                    copy {
+                        from ("modules/web/build/libs/webview/ios/${props.library(props.webview.lib)}")
+                        into ("build/ios-sdk/rt/${props.libDest}")
+                    }
+                }
+            }
+        }
+    }
+}

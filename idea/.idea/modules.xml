@@ -2,6 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/3DViewer.iml" filepath="$PROJECT_DIR$/3DViewer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Ensemble8.iml" filepath="$PROJECT_DIR$/Ensemble8.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Modena.iml" filepath="$PROJECT_DIR$/Modena.iml" />
       <module fileurl="file://$PROJECT_DIR$/base.iml" filepath="$PROJECT_DIR$/base.iml" />
       <module fileurl="file://$PROJECT_DIR$/buildSrc.iml" filepath="$PROJECT_DIR$/buildSrc.iml" />
       <module fileurl="file://$PROJECT_DIR$/builders.iml" filepath="$PROJECT_DIR$/builders.iml" />
@@ -11,8 +14,8 @@
       <module fileurl="file://$PROJECT_DIR$/fxml.iml" filepath="$PROJECT_DIR$/fxml.iml" />
       <module fileurl="file://$PROJECT_DIR$/fxpackager.iml" filepath="$PROJECT_DIR$/fxpackager.iml" />
       <module fileurl="file://$PROJECT_DIR$/graphics.iml" filepath="$PROJECT_DIR$/graphics.iml" />
-      <module fileurl="file://$PROJECT_DIR$/javafx.iml" filepath="$PROJECT_DIR$/javafx.iml" />
       <module fileurl="file://$PROJECT_DIR$/media.iml" filepath="$PROJECT_DIR$/media.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rt.iml" filepath="$PROJECT_DIR$/rt.iml" />
       <module fileurl="file://$PROJECT_DIR$/rt-closed.iml" filepath="$PROJECT_DIR$/rt-closed.iml" />
       <module fileurl="file://$PROJECT_DIR$/swing.iml" filepath="$PROJECT_DIR$/swing.iml" />
       <module fileurl="file://$PROJECT_DIR$/swt.iml" filepath="$PROJECT_DIR$/swt.iml" />

@@ -104,7 +104,7 @@ public class BindingTest extends TestBase {
         title.bind(web.titleProperty());
         loc.bind(web.locationProperty());
 
-        load(new File("test/html/ipsum.html"));
+        load(new File("src/test/resources/html/ipsum.html"));
         assertSame("WebEngine.document", web.getDocument(), doc.get());
         assertSame("WebEngine.title",    web.getTitle(),    title.get());
         assertSame("WebEngine.location", web.getLocation(), loc.get());

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="EclipseModuleManager">
+    <libelement value="jar://$MODULE_DIR$/../apps/samples/Ensemble8/lib/lucene-core-3.2.0.jar!/" />
+    <libelement value="jar://$MODULE_DIR$/../apps/samples/Ensemble8/lib/lucene-grouping-3.2.0.jar!/" />
+    <src_description expected_position="0">
+      <src_folder value="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/app/java" expected_position="0" />
+      <src_folder value="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/app/resources" expected_position="1" />
+      <src_folder value="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/samples/java" expected_position="2" />
+      <src_folder value="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/samples/resources" expected_position="3" />
+      <src_folder value="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/compiletime/java" expected_position="4" />
+      <src_folder value="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/generated/java" expected_position="5" />
+      <src_folder value="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/generated/resources" expected_position="6" />
+    </src_description>
+  </component>
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../apps/samples/Ensemble8">
+      <sourceFolder url="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/app/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/app/resources" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/samples/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/samples/resources" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/compiletime/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/generated/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../apps/samples/Ensemble8/src/generated/resources" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/../apps/samples/Ensemble8/build" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library">
+      <library name="lucene-core-3.2.0.jar">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../apps/samples/Ensemble8/lib/lucene-core-3.2.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="lucene-grouping-3.2.0.jar">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../apps/samples/Ensemble8/lib/lucene-grouping-3.2.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module" module-name="rt" />
+    <orderEntry type="inheritedJdk" />
+  </component>
+</module>
+

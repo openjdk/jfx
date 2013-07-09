@@ -4,8 +4,13 @@
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/j2se-project/3">
             <name>Modena</name>
+            <explicit-platform explicit-source-supported="true"/>
             <source-roots>
+                <root id="src.modena.dir"/>
+                <root id="src.modena2.dir"/>
                 <root id="src.dir"/>
+                <root id="src.java.dir"/>
+                <root id="src.resources.dir"/>
             </source-roots>
             <test-roots>
                 <root id="test.src.dir"/>

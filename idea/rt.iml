@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/..">
+      <excludeFolder url="file://$MODULE_DIR$/../.gradle" />
+      <excludeFolder url="file://$MODULE_DIR$/../build/libs" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="fxml" exported="" />
+    <orderEntry type="module" module-name="fxpackager" exported="" />
+    <orderEntry type="module" module-name="swt" exported="" />
+    <orderEntry type="module" module-name="swing" exported="" />
+    <orderEntry type="module" module-name="media" exported="" />
+    <orderEntry type="module" module-name="web" exported="" />
+    <orderEntry type="inheritedJdk" />
+  </component>
+</module>
+

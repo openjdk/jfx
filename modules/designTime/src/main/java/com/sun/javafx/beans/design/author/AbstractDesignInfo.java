@@ -29,7 +29,6 @@ import com.sun.javafx.beans.metadata.BeanMetaData;
 
 /**
  *
- * @author Richard
  */
 public abstract class AbstractDesignInfo<T> implements DesignInfo<T> {
     private Class<T> type;
@@ -37,7 +36,6 @@ public abstract class AbstractDesignInfo<T> implements DesignInfo<T> {
 
     protected AbstractDesignInfo(Class<T> type) {
         this.type = type;
-        metaData = new BeanMetaData<T>(type);
     }
 
     @Override public Class<T> getBeanClass() {
@@ -45,6 +43,9 @@ public abstract class AbstractDesignInfo<T> implements DesignInfo<T> {
     }
 
     protected final BeanMetaData getMetaData() {
+        if(metaData == null){
+            metaData = new BeanMetaData<>(type);
+        }
         return metaData;
     }
 }

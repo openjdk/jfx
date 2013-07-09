@@ -204,16 +204,20 @@ public class MainController implements Initializable {
         loadedPath = file;
         try {
             doLoad(file.toURI().toURL().toString());
-        } catch (MalformedURLException ex) {
+        } catch (Exception ex) {
             Logger.getLogger(MainController.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
     private void load(String fileUrl) {
         try {
-            loadedPath = new File(new URL(fileUrl).toURI()).getAbsoluteFile();
+            try {
+                loadedPath = new File(new URL(fileUrl).toURI()).getAbsoluteFile();
+            } catch (IllegalArgumentException | MalformedURLException | URISyntaxException ignored) {
+                loadedPath = null;
+            }
             doLoad(fileUrl);
-        } catch (MalformedURLException | URISyntaxException ex) {
+        } catch (Exception ex) {
             Logger.getLogger(MainController.class.getName()).log(Level.SEVERE, null, ex);
         }
     }

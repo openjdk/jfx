@@ -143,7 +143,7 @@ class CTGlyph implements Glyph {
     private synchronized byte[] getImage(double x, double y, int w, int h,
                                          double subPixelX, double subPixelY) {
 
-        if (w == 0 || h == 0) return null;
+        if (w == 0 || h == 0) return new byte[0];
 
         long fontRef = strike.getFontRef();
         boolean lcd = isLCDGlyph();

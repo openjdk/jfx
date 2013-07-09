@@ -25,7 +25,7 @@ public class LoadNotificationsTest extends TestBase {
     AssertionError assertion;
 
     @Test public void testSuccessfulLoad() {
-        testFile("test/html/ipsum.html");
+        testFile("src/test/resources/html/ipsum.html");
     }
 
     @Test public void testFailedLoad() {

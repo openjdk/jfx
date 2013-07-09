@@ -66,6 +66,9 @@ LINUX.jfxrtJarExcludes = [
     "com/sun/prism/es2/MacGL*",
 ]
 
+// Lambda for naming the generated libs
+LINUX.library = { name -> return "lib${name}.so" as String }
+
 // A set of common parameters to use for both compiling and linking
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags

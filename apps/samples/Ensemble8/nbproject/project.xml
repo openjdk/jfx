@@ -4,11 +4,15 @@
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/j2se-project/3">
             <name>Ensemble8</name>
+            <explicit-platform explicit-source-supported="true"/>
             <source-roots>
-                <root id="src.compiletime.dir"/>
-                <root id="src.generated.dir"/>
-                <root id="src.app.dir"/>
-                <root id="src.samples.dir"/>
+                <root id="src.java.dir"/>
+                <root id="src.resources.dir"/>
+                <root id="src.java2.dir"/>
+                <root id="src.resources2.dir"/>
+                <root id="src.java3.dir"/>
+                <root id="src.java4.dir"/>
+                <root id="src.resources3.dir"/>
             </source-roots>
             <test-roots/>
         </data>

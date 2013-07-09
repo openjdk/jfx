@@ -11,6 +11,7 @@
     <content url="file://$MODULE_DIR$/../modules/builders">
       <excludeFolder url="file://$MODULE_DIR$/../modules/builders/build" />
     </content>
+    <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library" exported="">
       <library name="builders.jar">
         <CLASSES>
@@ -22,14 +23,7 @@
         </SOURCES>
       </library>
     </orderEntry>
-    <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="base" exported="" />
-    <orderEntry type="module" module-name="controls" exported="" />
-    <orderEntry type="module" module-name="graphics" exported="" />
-    <orderEntry type="module" module-name="swing" exported="" />
-    <orderEntry type="module" module-name="swt" exported="" />
     <orderEntry type="inheritedJdk" />
-    <orderEntry type="module" module-name="web" exported="" />
   </component>
 </module>
 

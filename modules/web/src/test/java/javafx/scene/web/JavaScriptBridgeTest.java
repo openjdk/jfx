@@ -17,7 +17,7 @@ public class JavaScriptBridgeTest extends TestBase {
     }
     
     public @Test void testJSBridge1() throws InterruptedException {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         final WebEngine web = getEngine();
         
         submit(new Runnable() { public void run() {
@@ -113,7 +113,7 @@ public class JavaScriptBridgeTest extends TestBase {
     }
 
     public @Test void testJSBridge3() throws InterruptedException {
-        //final Document doc = getDocumentFor("test/html/dom.html");
+        //final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         final WebEngine web = getEngine();
 
         submit(new Runnable() { public void run() {
@@ -185,7 +185,7 @@ public class JavaScriptBridgeTest extends TestBase {
     }
 
     @Test public void testJSBridge5() throws InterruptedException {
-        final Document doc = getDocumentFor("test/html/dom.html");
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         final WebEngine web = getEngine();
 
         submit(new Runnable() { public void run() {
