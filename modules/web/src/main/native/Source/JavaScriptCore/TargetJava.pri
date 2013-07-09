@@ -345,9 +345,8 @@ contains(DEFINES, ICU_UNICODE=1) {
 }
 
 win32-* {
-    procarch = $$(PROCESSOR_ARCHITECTURE)
-    procw6432 = $$(PROCESSOR_ARCHITEW6432)
-    contains(procarch, AMD64) | contains(procw6432, AMD64) {
+    procarch = $$(PROCESSOR_ARCHITECTURE) $$(PROCESSOR_ARCHITEW6432)
+    contains(procarch, AMD64) {
         ASM_SOURCES += $$PWD/jit/JITStubsMSVC64.asm
 
         asm_compiler.CONFIG = target_predeps

@@ -1018,7 +1018,7 @@ generateBindings.commands = perl -I$$PWD/bindings/scripts $$generateBindings.scr
                --include $$PWD/Modules/filesystem \
                --include $$PWD/Modules/geolocation \
                --include $$PWD/Modules/indexeddb \
-               --include $$PWD/Modules/mediasource \
+#              --include $$PWD/Modules/mediasource \
                --include $$PWD/Modules/notifications \
                --include $$PWD/Modules/quota \
                --include $$PWD/Modules/webaudio \
@@ -1064,7 +1064,7 @@ idljava.commands = perl -I$$PWD/bindings/scripts $$idljava.script \
                --include $$PWD/Modules/filesystem \
                --include $$PWD/Modules/geolocation \
                --include $$PWD/Modules/indexeddb \
-               --include $$PWD/Modules/mediasource \
+#              --include $$PWD/Modules/mediasource \
                --include $$PWD/Modules/notifications \
                --include $$PWD/Modules/quota \
                --include $$PWD/Modules/webaudio \
