@@ -758,6 +758,47 @@ task updateCacheIfNeeded() {
 *        Project definitions (dependencies, etc)                             *
 *****************************************************************************/
 
+void addJCov(p, test) {
+    test.doFirst {
+        def jcovJVMArgument =
+                "include=javafx," +
+                "include=com.sun.javafx," +
+                "include=com.sun.glass," +
+                "include=com.sun.openpisces," +
+                "include=com.sun.pisces," +
+                "include=com.sun.prism," +
+                "include=com.sun.scenario," +
+                "include=com.sun.webkit," +
+                "exclude=com," +
+                "exclude=java," +
+                "exclude=javax," +
+                "exclude=\"**.test\"," +
+                "exclude=\"**.*Test\"," +
+                "file=build/reports/jcov/report.xml," +
+                "merge=merge";
+        test.jvmArgs("-javaagent:${p.configurations.testCompile.files.find { it.name.startsWith('jcov') }}=$jcovJVMArgument");
+        p.mkdir p.file("build/reports/jcov")
+    }
+    test.doLast {
+        def reportFile = p.file("build/reports/jcov/report.xml")
+        if (reportFile.exists()) {
+            p.javaexec {
+                workingDir = p.file("build/reports/jcov")
+                classpath = p.files(p.configurations.testCompile.files.find { it.name.startsWith('jcov') })
+                main = "com.sun.tdk.jcov.Helper"
+                args = [
+                        "RepGen",
+                        "-exclude", "\"**.test\"",
+                        "-exclude", "\"**.*Test\"",
+                        "-output", ".",
+                        "-source", p.sourceSets.main.java.srcDirs.collect{p.file(it)}.join(":"),
+                        "report.xml"
+                ]
+            }
+        }
+    }
+}
+
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore (and for now media)
@@ -793,7 +834,8 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testCompile(group: "junit", name: "junit", version: "4.8.2");
+        testCompile group: "junit", name: "junit", version: "4.8.2"
+        if (BUILD_CLOSED) testCompile name: "jcov"
     }
 
     // At the moment the ASM library shipped with Gradle that is used to
@@ -812,6 +854,9 @@ allprojects {
         include("**/*Test.*");
         exclude("**/DepthTest.*");
         exclude("**/*Abstract*.*");
+        if (BUILD_CLOSED) {
+            addJCov(project, test)
+        }
     }
 
     // Exclude any non-public-API classes from having javadoc generated. This block is used
@@ -1129,6 +1174,9 @@ project(":graphics") {
         test.scanForTestClasses = false
         test.include "**/*Test.*"
         test.exclude "**/*Abstract*.*"
+        if (BUILD_CLOSED) {
+            addJCov(project, test)
+        }
     }
     test.dependsOn testWithoutStub, testWithStub
 
