@@ -145,6 +145,10 @@ project(":web") {
     }
 
     afterEvaluate {
+        if (!BUILD_CLOSED) {
+            logger.warn("OpenJFX build. Skipping webkit build on Android.")
+            return
+        }
         def compileWebJavaAndroid = task("compileWebJavaAndroid",
             type: JavaCompile, group: "Build") {
             

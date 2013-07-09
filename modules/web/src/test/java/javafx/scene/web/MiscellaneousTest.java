@@ -50,6 +50,7 @@ public class MiscellaneousTest extends TestBase {
         private static int dummyField;
     }
 
+    @org.junit.Ignore
     @Test public void testRT30835() throws Exception {
         class Record {
             private final Document document;

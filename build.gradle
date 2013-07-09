@@ -688,6 +688,16 @@ void addNative(Project project, String name) {
                 linkTask.dependsOn rcTask;
             }
         }
+
+        def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
+        if (useLipo) {
+            def lipoTask = project.task("lipo${t.capital}$capitalName", type: LipoTask, dependsOn: javahTask, group: "Build") {
+                description = "Creates native fat library for $name for ${t.name}"
+                libDir = file("$libRootDir/${t.name}")
+                lib = file("$libRootDir/${t.name}/${library(properties.lib)}")
+            }
+            nativeTask.dependsOn(lipoTask)
+        }
     }
 }
 
@@ -1665,10 +1675,12 @@ compileTargets { t ->
              "modules/graphics/build/resources/jsl-prism");
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
         if (COMPILE_SWT) from ("modules/swt/build/classes/main", "modules/swt/build/resources/main")
-        if (t.name != 'android') {
-            from ("modules/web/build/classes/main", "modules/web/build/resources/main")
-        } else {
+        if (t.name == 'android') {
             from ("modules/web/build/classes/android", "modules/web/build/resources/android")
+        } else if (t.name == 'ios') {
+            from ("modules/web/build/classes/ios", "modules/web/build/resources/ios")
+        } else {
+            from ("modules/web/build/classes/main", "modules/web/build/resources/main")
         }
         exclude("js/**/*", // er...
                 "PrismLoaderBackend*", // More decora stuff
@@ -1691,9 +1703,10 @@ compileTargets { t ->
             // TODO instead of using copy everywhere, I probably want to use "sync" instead?
             // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
             copy {
+                def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
                 from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
                 ['font', 'prism', 'prismSW', 'prismES2', 'glass', 'iio'].each { lib ->
-                    def variants = targetProperties[lib].containsKey('variants') ? targetProperties[lib].variants : [null]
+                    def variants = targetProperties[lib].containsKey('variants') && !useLipo ? targetProperties[lib].variants : [null]
                     variants.each { variant ->
                         def variantProperties = variant ? targetProperties[lib][variant] : targetProperties[lib]
                         println "modules/graphics/build/libs/$lib/$t.name/${library(variantProperties.lib)}"
@@ -1709,7 +1722,7 @@ compileTargets { t ->
                         from ("modules/web/src/main/native/WebKitLibraries/import/runtime")
                     }
                 } else {
-                    if (IS_MAC) from ("$LIBRARY_STUB/libjfxwebkit.dylib")
+                    if (IS_MAC && COMPILE_TARGETS != "ios") from ("$LIBRARY_STUB/libjfxwebkit.dylib")
                     else if (IS_WINDOWS) {
                         from ("$LIBRARY_STUB/jfxwebkit.dll")
                         from ("$LIBRARY_STUB/libxml2.dll")
@@ -1772,6 +1785,18 @@ compileTargets { t ->
         dependsOn(jfxrtTask)
         dependsOn(javadoc)
     }
+
+    def generateSymbols = targetProperties.containsKey('generateSymbols') ? targetProperties.generateSymbols : false
+    if (generateSymbols) {
+        def exportedSymbolsTask = project.task("exportedSymbols${t.capital}", type: ExportedSymbolsTask, dependsOn: sdkTask, group: "Build") {
+            description = "Generates exported symbols file for iOS build (from .a libraries)"
+            def libDirName = "build/${t.name}-sdk/rt/$targetProperties.libDest"
+            libDir = file("$libDirName")
+            outputFile = file("$libDirName/exported.symbols")
+        }
+        sdk.dependsOn(exportedSymbolsTask)
+    }
+
     sdk.dependsOn(sdkTask)
 }
 

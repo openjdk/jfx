@@ -203,10 +203,10 @@ public abstract class PrismFontFactory implements FontFactory {
     }
 
     PrismFontFile createFontResource(String name, String filename,
-                                          boolean register,
-                                          boolean embedded,
-                                          boolean copy,
-                                          boolean tracked) {
+                                     boolean register,
+                                     boolean embedded,
+                                     boolean copy,
+                                     boolean tracked) {
         if (filename == null) {
             return null;
         } else {
@@ -228,8 +228,8 @@ public abstract class PrismFontFactory implements FontFactory {
                             }
                         } else {
                             fr = createFontFile(name, filename, index,
-                                                embedded,
-                                                register, copy, tracked);
+                                                register, embedded,
+                                                copy, tracked);
                         }
                     } catch (Exception e) {
                         if (PrismFontFactory.debugFonts) {
@@ -1467,7 +1467,7 @@ public abstract class PrismFontFactory implements FontFactory {
          * know to reference the file directly.
          */
         PrismFontFile fr = createFontResource(name, path, register,
-                                            true, copy, tracked);
+                                              true, copy, tracked);
         if (fr == null) {
             return null; // yes, this means the caller needs to handle null.
         }
