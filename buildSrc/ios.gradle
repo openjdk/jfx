@@ -41,6 +41,11 @@ defineProperty("GENERATE_SYMBOLS", "false")
 if (USE_LIPO instanceof String) IOS.useLipo = Boolean.parseBoolean(USE_LIPO)
 if (GENERATE_SYMBOLS instanceof String) IOS.generateSymbols = Boolean.parseBoolean(GENERATE_SYMBOLS)
 
+IOS.generateSymbolsExcludes = [
+    "libprism-sw.a",
+    "libdecora-sse-armv7.a"
+]
+
 defineProperty("IOS_VERSION", "6.1")
 
 // Lambda for naming the generated libs

@@ -1841,6 +1841,7 @@ compileTargets { t ->
             def libDirName = "build/${t.name}-sdk/rt/$targetProperties.libDest"
             libDir = file("$libDirName")
             outputFile = file("$libDirName/exported.symbols")
+            excludes = targetProperties.generateSymbolsExcludes
         }
         sdk.dependsOn(exportedSymbolsTask)
     }

@@ -25,12 +25,14 @@
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 class ExportedSymbolsTask extends DefaultTask {
     @OutputFile File outputFile;
     @InputDirectory File libDir;
+    @Optional List<String> excludes;
 
 
     @TaskAction void generateExportedSymbols() {
@@ -38,8 +40,8 @@ class ExportedSymbolsTask extends DefaultTask {
         List<String> libNames = [];
         List<File> files = libDir.listFiles();
         files.each { file ->
-            if (!file.isDirectory() && file.getName().endsWith(".a")) {
-                libNames.add(file.getAbsolutePath())
+            if (!file.isDirectory() && file.getName().endsWith(".a") && !excludes.contains(file.getName())) {
+                libNames.add(file.getAbsolutePath());
             }
         }
 
