@@ -460,7 +460,7 @@ if (isJava()) {
     my $javaHome = $ENV{'JAVA_HOME'};
     die "JAVA_HOME is undefined" if !defined($javaHome);
 
-    my $baseDir = "$productDir/../../../../../artifacts";
+    my $baseDir = "$productDir/../../../../../../../../artifacts";
     if (isCygwin()) {
         chomp($baseDir = `cygpath -m \"$baseDir\"`);
     }

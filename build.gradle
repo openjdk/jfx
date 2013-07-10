@@ -1950,8 +1950,7 @@ project(":web") {
                 "../media/build/classes/main",
                 "$jfxTopDir/media/jfxmedia/dist/jfxmedia.jar")
     }
-    compileJava.exclude "com/sun/javafx/webkit/drt/**/*"
-
+    
     test {
         classpath += files("../../../artifacts/sdk/rt/lib/ext/jfxrt.jar")
         doFirst {
@@ -2083,11 +2082,16 @@ project(":web") {
                 commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio")
             }
             copy {
-                /// Reuse the library lambda here
                 from "$webkitOutputDir/lib/libjfxwebkit.so"
                 from "$webkitOutputDir/lib/libjfxwebkit.dylib"
                 from "$webkitOutputDir/lib/jfxwebkit.dll"
                 into "build/libs"
+            }
+            copy {
+                from "$webkitOutputDir/lib/libDumpRenderTreeJava.so"
+                from "$webkitOutputDir/lib/libDumpRenderTreeJava.dylib"
+                from "$webkitOutputDir/lib/DumpRenderTreeJava.dll"
+                into "build/test"
             }
         }
     }
@@ -2113,10 +2117,19 @@ project(":web") {
         }
     }
 
+    def drtClasses = "com/sun/javafx/webkit/drt/**"
+    jar.exclude(drtClasses)
+    task drtJar(type: Jar, dependsOn: compileJava) {
+        archiveName = "drt.jar"
+        destinationDir = file("$buildDir/test")
+        from "$buildDir/classes/main"
+        include drtClasses
+    }
+
     task copyClassesFromBinaryStub << {
         copy {
             from zipTree(BINARY_STUB.getSingleFile())
-            into "build/classes/main"
+            into "$buildDir/classes/main"
             include("javafx/scene/web/**",
                 "com/sun/javafx/scene/web/**",
                 "com/sun/webkit/**",
@@ -2126,8 +2139,12 @@ project(":web") {
         }
     }
 
-    jar.dependsOn (COMPILE_WEBKIT ? compileGenerated : copyClassesFromBinaryStub)
-    
+    if (COMPILE_WEBKIT) {
+        jar.dependsOn compileGenerated, drtJar
+    } else {
+        jar.dependsOn copyClassesFromBinaryStub
+    }
+
     clean << {
         project.delete(
             "src/main/build",
