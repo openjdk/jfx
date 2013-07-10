@@ -279,6 +279,11 @@ defineProperty("COMPILE_GSTREAMER", "false")
 if (COMPILE_WEBKIT instanceof String) ext.COMPILE_WEBKIT = Boolean.parseBoolean(COMPILE_WEBKIT)
 if (COMPILE_GSTREAMER instanceof String) ext.COMPILE_GSTREAMER = Boolean.parseBoolean(COMPILE_GSTREAMER)
 
+// COMPILE_PANGO specifies whether to build javafx-font-pango.
+defineProperty("COMPILE_PANGO", "false")
+if (COMPILE_PANGO instanceof String) ext.COMPILE_PANGO = Boolean.parseBoolean(COMPILE_PANGO)
+
+
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
 ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f" :
@@ -617,18 +622,18 @@ ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
  * @param name The name of the project, such as "prism-common". This name is used
  *        in the name of the generated task, such as ccPrismCommon, and also
  *        in the name of the final library, such as libprism-common.dylib.
- * @param libName The name of the shared library we will create. Should be
- *        something like "prism-common", which we will turn into libprism-common.dylib
- *        or whatnot depending on the platform.
+ * @param optional If the task is optional or not
  */
-void addNative(Project project, String name) {
+void addNative(Project project, String name, boolean optional = false) {
     // TODO if we want to handle 32/64 bit windows in the same build,
     // Then we will need to modify the win compile target to be win32 or win64
     def capitalName = name.split("-").collect{it.capitalize()}.join()
     def nativeTask = project.task("native$capitalName", group: "Build") {
         description = "Generates JNI headers, compiles, and builds native dynamic library for $name for all compile targets"
     }
-    project.assemble.dependsOn(nativeTask)
+    if (!optional) {
+        project.assemble.dependsOn(nativeTask)
+    }
     // Each of the different compile targets will be placed in a sub directory
     // of these root dirs, with the name of the dir being the name of the target
     def headerRootDir = project.file("$project.buildDir/generated-src/headers/$name")
@@ -954,6 +959,11 @@ project(":graphics") {
     addNative(project, "font")
     addNative(project, "iio")
     addNative(project, "prismES2")
+
+    // Currently lets not build pango by default
+    if (IS_LINUX) {
+        addNative(project, "fontPango", !COMPILE_PANGO)
+    }
 
     if (IS_WINDOWS) {
         addNative(project, "prismD3D")
@@ -1753,7 +1763,11 @@ compileTargets { t ->
             copy {
                 def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
                 from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
-                ['font', 'prism', 'prismSW', 'prismES2', 'glass', 'iio'].each { lib ->
+                def libs = ['font', 'prism', 'prismSW', 'prismES2', 'glass', 'iio']
+                if (COMPILE_PANGO) {
+                    libs += 'fontPango';
+                }
+                libs.each { lib ->
                     def variants = targetProperties[lib].containsKey('variants') && !useLipo ? targetProperties[lib].variants : [null]
                     variants.each { variant ->
                         def variantProperties = variant ? targetProperties[lib][variant] : targetProperties[lib]
