@@ -12,9 +12,9 @@ namespace WebCore {
 
 class ScrollbarThemeJava : public ScrollbarTheme {
 public:
-    virtual bool paint(ScrollbarThemeClient*, GraphicsContext*, const IntRect& damageRect);
+    virtual bool paint(ScrollbarThemeClient*, GraphicsContext*, const IntRect& /*damageRect*/);
 
-    virtual ScrollbarPart hitTest(ScrollbarThemeClient*, const PlatformMouseEvent&);
+    virtual ScrollbarPart hitTest(ScrollbarThemeClient*, const IntPoint&);
 
     virtual void invalidatePart(ScrollbarThemeClient*, ScrollbarPart);
 

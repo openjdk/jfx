@@ -26,15 +26,35 @@
 #include "config.h"
 #include "RegExpMatchesArray.h"
 
-namespace JSC {
+#include "ButterflyInlines.h"
+#include "Operations.h"
 
-ASSERT_CLASS_FITS_IN_CELL(RegExpMatchesArray);
+namespace JSC {
 
 const ClassInfo RegExpMatchesArray::s_info = {"Array", &JSArray::s_info, 0, 0, CREATE_METHOD_TABLE(RegExpMatchesArray)};
 
-void RegExpMatchesArray::finishCreation(JSGlobalData& globalData)
+RegExpMatchesArray::RegExpMatchesArray(VM& vm, Butterfly* butterfly, JSGlobalObject* globalObject, JSString* input, RegExp* regExp, MatchResult result)
+    : JSArray(vm, globalObject->regExpMatchesArrayStructure(), butterfly)
+    , m_result(result)
+    , m_state(ReifiedNone)
 {
-    Base::finishCreation(globalData, m_regExp->numSubpatterns() + 1);
+    m_input.set(vm, this, input);
+    m_regExp.set(vm, this, regExp);
+}
+
+RegExpMatchesArray* RegExpMatchesArray::create(ExecState* exec, JSString* input, RegExp* regExp, MatchResult result)
+{
+    ASSERT(result);
+    VM& vm = exec->vm();
+    Butterfly* butterfly = createArrayButterfly(vm, regExp->numSubpatterns() + 1);
+    RegExpMatchesArray* array = new (NotNull, allocateCell<RegExpMatchesArray>(vm.heap)) RegExpMatchesArray(vm, butterfly, exec->lexicalGlobalObject(), input, regExp, result);
+    array->finishCreation(vm);
+    return array;
+}
+
+void RegExpMatchesArray::finishCreation(VM& vm)
+{
+    Base::finishCreation(vm);
 }
 
 void RegExpMatchesArray::visitChildren(JSCell* cell, SlotVisitor& visitor)
@@ -58,7 +78,7 @@ void RegExpMatchesArray::reifyAllProperties(ExecState* exec)
 
     if (unsigned numSubpatterns = m_regExp->numSubpatterns()) {
         Vector<int, 32> subpatternResults;
-        int position = m_regExp->match(exec->globalData(), m_input->value(exec), m_result.start, subpatternResults);
+        int position = m_regExp->match(exec->vm(), m_input->value(exec), m_result.start, subpatternResults);
         ASSERT_UNUSED(position, position >= 0 && static_cast<size_t>(position) == m_result.start);
         ASSERT(m_result.start == static_cast<size_t>(subpatternResults[0]));
         ASSERT(m_result.end == static_cast<size_t>(subpatternResults[1]));
@@ -66,9 +86,9 @@ void RegExpMatchesArray::reifyAllProperties(ExecState* exec)
         for (unsigned i = 1; i <= numSubpatterns; ++i) {
             int start = subpatternResults[2 * i];
             if (start >= 0)
-                putDirectIndex(exec, i, jsSubstring(exec, m_input.get(), start, subpatternResults[2 * i + 1] - start), false);
+                putDirectIndex(exec, i, jsSubstring(exec, m_input.get(), start, subpatternResults[2 * i + 1] - start));
             else
-                putDirectIndex(exec, i, jsUndefined(), false);
+                putDirectIndex(exec, i, jsUndefined());
         }
     }
 
@@ -83,7 +103,7 @@ void RegExpMatchesArray::reifyMatchProperty(ExecState* exec)
 {
     ASSERT(m_state == ReifiedNone);
     ASSERT(m_result);
-    putDirectIndex(exec, 0, jsSubstring(exec, m_input.get(), m_result.start, m_result.end - m_result.start), false);
+    putDirectIndex(exec, 0, jsSubstring(exec, m_input.get(), m_result.start, m_result.end - m_result.start));
     m_state = ReifiedMatch;
 }
 

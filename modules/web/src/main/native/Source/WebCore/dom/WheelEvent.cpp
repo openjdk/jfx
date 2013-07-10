@@ -23,6 +23,7 @@
 #include "config.h"
 #include "WheelEvent.h"
 
+#include "Clipboard.h"
 #include "EventDispatcher.h"
 #include "EventNames.h"
 #include "PlatformWheelEvent.h"
@@ -31,17 +32,29 @@
 
 namespace WebCore {
 
+WheelEventInit::WheelEventInit()
+    : wheelDeltaX(0)
+    , wheelDeltaY(0)
+    , deltaMode(WheelEvent::DOM_DELTA_PIXEL)
+{
+}
+
 WheelEvent::WheelEvent()
-    : m_granularity(Pixel)
+    : m_deltaMode(DOM_DELTA_PIXEL)
     , m_directionInvertedFromDevice(false)
 {
 }
 
-WheelEvent::WheelEvent(const FloatPoint& wheelTicks, const FloatPoint& rawDelta,
-                       Granularity granularity, PassRefPtr<AbstractView> view,
-                       const IntPoint& screenLocation, const IntPoint& pageLocation,
-                       bool ctrlKey, bool altKey, bool shiftKey, bool metaKey,
-                       bool directionInvertedFromDevice)
+WheelEvent::WheelEvent(const AtomicString& type, const WheelEventInit& initializer)
+    : MouseEvent(type, initializer)
+    , m_wheelDelta(IntPoint(initializer.wheelDeltaX, initializer.wheelDeltaY))
+    , m_deltaMode(initializer.deltaMode)
+{
+}
+
+WheelEvent::WheelEvent(const FloatPoint& wheelTicks, const FloatPoint& rawDelta, unsigned deltaMode,
+    PassRefPtr<AbstractView> view, const IntPoint& screenLocation, const IntPoint& pageLocation,
+    bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool directionInvertedFromDevice)
     : MouseEvent(eventNames().mousewheelEvent,
                  true, true, view, 0, screenLocation.x(), screenLocation.y(),
                  pageLocation.x(), pageLocation.y(),
@@ -49,9 +62,9 @@ WheelEvent::WheelEvent(const FloatPoint& wheelTicks, const FloatPoint& rawDelta,
                  0, 0,
 #endif
                  ctrlKey, altKey, shiftKey, metaKey, 0, 0, 0, false)
-    , m_wheelDelta(IntPoint(static_cast<int>(wheelTicks.x() * tickMultiplier), static_cast<int>(wheelTicks.y() * tickMultiplier)))
+    , m_wheelDelta(IntPoint(static_cast<int>(wheelTicks.x() * TickMultiplier), static_cast<int>(wheelTicks.y() * TickMultiplier)))
     , m_rawDelta(roundedIntPoint(rawDelta))
-    , m_granularity(granularity)
+    , m_deltaMode(deltaMode)
     , m_directionInvertedFromDevice(directionInvertedFromDevice)
 {
 }
@@ -72,10 +85,10 @@ void WheelEvent::initWheelEvent(int rawDeltaX, int rawDeltaY, PassRefPtr<Abstrac
     m_metaKey = metaKey;
     
     // Normalize to the Windows 120 multiple
-    m_wheelDelta = IntPoint(rawDeltaX * tickMultiplier, rawDeltaY * tickMultiplier);
+    m_wheelDelta = IntPoint(rawDeltaX * TickMultiplier, rawDeltaY * TickMultiplier);
     
     m_rawDelta = IntPoint(rawDeltaX, rawDeltaY);
-    m_granularity = Pixel;
+    m_deltaMode = DOM_DELTA_PIXEL;
     m_directionInvertedFromDevice = false;
 
     initCoordinates(IntPoint(pageX, pageY));
@@ -99,9 +112,9 @@ bool WheelEvent::isMouseEvent() const
     return false;
 }
 
-inline static WheelEvent::Granularity granularity(const PlatformWheelEvent& event)
+inline static unsigned deltaMode(const PlatformWheelEvent& event)
 {
-    return event.granularity() == ScrollByPageWheelEvent ? WheelEvent::Page : WheelEvent::Pixel;
+    return event.granularity() == ScrollByPageWheelEvent ? WheelEvent::DOM_DELTA_PAGE : WheelEvent::DOM_DELTA_PIXEL;
 }
 
 PassRefPtr<WheelEventDispatchMediator> WheelEventDispatchMediator::create(const PlatformWheelEvent& event, PassRefPtr<AbstractView> view)
@@ -115,7 +128,7 @@ WheelEventDispatchMediator::WheelEventDispatchMediator(const PlatformWheelEvent&
         return;
 
     setEvent(WheelEvent::create(FloatPoint(event.wheelTicksX(), event.wheelTicksY()), FloatPoint(event.deltaX(), event.deltaY()),
-                                granularity(event), view, event.globalPosition(), event.position(),
+        deltaMode(event), view, event.globalPosition(), event.position(),
                                 event.ctrlKey(), event.altKey(), event.shiftKey(), event.metaKey(), event.directionInvertedFromDevice()));
 }
 
@@ -126,9 +139,7 @@ WheelEvent* WheelEventDispatchMediator::event() const
 
 bool WheelEventDispatchMediator::dispatchEvent(EventDispatcher* dispatcher) const
 {
-    if (!event())
-        return true;
-
+    ASSERT(event());
     return EventDispatchMediator::dispatchEvent(dispatcher) && !event()->defaultHandled();
 }
 

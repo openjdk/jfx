@@ -26,13 +26,16 @@
 namespace WTF {
 
     template<typename KeyTraits, typename MappedTraits> struct HashMapValueTraits;
-    template<typename PairType> struct PairFirstExtractor;
 
     template<typename T> struct ReferenceTypeMaker {
         typedef T& ReferenceType;
     };
     template<typename T> struct ReferenceTypeMaker<T&> {
         typedef T& ReferenceType;
+    };
+
+    template<typename T> struct KeyValuePairKeyExtractor {
+        static const typename T::KeyType& extract(const T& p) { return p.key; }
     };
 
     template<typename KeyArg, typename MappedArg, typename HashArg = typename DefaultHash<KeyArg>::Hash,
@@ -58,7 +61,7 @@ namespace WTF {
 
         typedef HashArg HashFunctions;
 
-        typedef HashTable<KeyType, ValueType, PairFirstExtractor<ValueType>,
+        typedef HashTable<KeyType, ValueType, KeyValuePairKeyExtractor<ValueType>,
             HashFunctions, ValueTraits, KeyTraits> HashTableType;
 
         class HashMapKeysProxy;
@@ -128,32 +131,40 @@ namespace WTF {
 
         void checkConsistency() const;
 
+        static bool isValidKey(const KeyType&);
+
     private:
         AddResult inlineAdd(const KeyType&, MappedPassInReferenceType);
 
-        class HashMapKeysProxy : private HashMap {
+        HashTableType m_impl;
+    };
+
+    template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+    class HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::HashMapKeysProxy : 
+        private HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg> {
         public:
-            typedef typename HashMap::iterator::Keys iterator;
-            typedef typename HashMap::const_iterator::Keys const_iterator;
+            typedef HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg> HashMapType;
+            typedef typename HashMapType::iterator::Keys iterator;
+            typedef typename HashMapType::const_iterator::Keys const_iterator;
             
             iterator begin()
             {
-                return HashMap::begin().keys();
+                return HashMapType::begin().keys();
             }
             
             iterator end()
             {
-                return HashMap::end().keys();
+                return HashMapType::end().keys();
             }
 
             const_iterator begin() const
             {
-                return HashMap::begin().keys();
+                return HashMapType::begin().keys();
             }
             
             const_iterator end() const
             {
-                return HashMap::end().keys();
+                return HashMapType::end().keys();
             }
 
         private:
@@ -166,29 +177,32 @@ namespace WTF {
             ~HashMapKeysProxy();
         };
 
-        class HashMapValuesProxy : private HashMap {
+    template<typename KeyArg, typename MappedArg, typename HashArg,  typename KeyTraitsArg, typename MappedTraitsArg>
+    class HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::HashMapValuesProxy : 
+        private HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg> {
         public:
-            typedef typename HashMap::iterator::Values iterator;
-            typedef typename HashMap::const_iterator::Values const_iterator;
+            typedef HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg> HashMapType;
+            typedef typename HashMapType::iterator::Values iterator;
+            typedef typename HashMapType::const_iterator::Values const_iterator;
             
             iterator begin()
             {
-                return HashMap::begin().values();
+                return HashMapType::begin().values();
             }
             
             iterator end()
             {
-                return HashMap::end().values();
+                return HashMapType::end().values();
             }
 
             const_iterator begin() const
             {
-                return HashMap::begin().values();
+                return HashMapType::begin().values();
             }
             
             const_iterator end() const
             {
-                return HashMap::end().values();
+                return HashMapType::end().values();
             }
 
         private:
@@ -201,19 +215,12 @@ namespace WTF {
             ~HashMapValuesProxy();
         };
 
-        HashTableType m_impl;
-    };
-
-    template<typename KeyTraits, typename MappedTraits> struct HashMapValueTraits : PairHashTraits<KeyTraits, MappedTraits> {
+    template<typename KeyTraits, typename MappedTraits> struct HashMapValueTraits : KeyValuePairHashTraits<KeyTraits, MappedTraits> {
         static const bool hasIsEmptyValueFunction = true;
-        static bool isEmptyValue(const typename PairHashTraits<KeyTraits, MappedTraits>::TraitType& value)
+        static bool isEmptyValue(const typename KeyValuePairHashTraits<KeyTraits, MappedTraits>::TraitType& value)
         {
-            return isHashTraitsEmptyValue<KeyTraits>(value.first);
+            return isHashTraitsEmptyValue<KeyTraits>(value.key);
         }
-    };
-
-    template<typename PairType> struct PairFirstExtractor {
-        static const typename PairType::first_type& extract(const PairType& p) { return p.first; }
     };
 
     template<typename ValueTraits, typename HashFunctions>
@@ -222,8 +229,8 @@ namespace WTF {
         template<typename T, typename U> static bool equal(const T& a, const U& b) { return HashFunctions::equal(a, b); }
         template<typename T, typename U, typename V> static void translate(T& location, const U& key, const V& mapped)
         {
-            location.first = key;
-            ValueTraits::SecondTraits::store(mapped, location.second);
+            location.key = key;
+            ValueTraits::ValueTraits::store(mapped, location.value);
         }
     };
 
@@ -233,8 +240,8 @@ namespace WTF {
         template<typename T, typename U> static bool equal(const T& a, const U& b) { return Translator::equal(a, b); }
         template<typename T, typename U, typename V> static void translate(T& location, const U& key, const V& mapped, unsigned hashCode)
         {
-            Translator::translate(location.first, key, hashCode);
-            ValueTraits::SecondTraits::store(mapped, location.second);
+            Translator::translate(location.key, key, hashCode);
+            ValueTraits::ValueTraits::store(mapped, location.value);
         }
     };
 
@@ -342,7 +349,7 @@ namespace WTF {
         AddResult result = inlineAdd(key, mapped);
         if (!result.isNewEntry) {
             // The inlineAdd call above found an existing hash table entry; we need to set the mapped value.
-            MappedTraits::store(mapped, result.iterator->second);
+            MappedTraits::store(mapped, result.iterator->value);
         }
         return result;
     }
@@ -369,7 +376,7 @@ namespace WTF {
         ValueType* entry = const_cast<HashTableType&>(m_impl).lookup(key);
         if (!entry)
             return MappedTraits::peek(MappedTraits::emptyValue());
-        return MappedTraits::peek(entry->second);
+        return MappedTraits::peek(entry->value);
     }
 
     template<typename T, typename U, typename V, typename W, typename X>
@@ -400,7 +407,7 @@ namespace WTF {
         iterator it = find(key);
         if (it == end())
             return MappedTraits::passOut(MappedTraits::emptyValue());
-        MappedPassOutType result = MappedTraits::passOut(it->second);
+        MappedPassOutType result = MappedTraits::passOut(it->value);
         remove(it);
         return result;
     }
@@ -409,6 +416,23 @@ namespace WTF {
     inline void HashMap<T, U, V, W, X>::checkConsistency() const
     {
         m_impl.checkTableConsistency();
+    }
+
+    template<typename T, typename U, typename V, typename W, typename X>
+    inline bool HashMap<T, U, V, W, X>::isValidKey(const KeyType& key)
+    {
+        if (KeyTraits::isDeletedValue(key))
+            return false;
+
+        if (HashFunctions::safeToCompareToEmptyOrDeleted) {
+            if (key == KeyTraits::emptyValue())
+                return false;
+        } else {
+            if (isHashTraitsEmptyValue<KeyTraits>(key))
+                return false;
+        }
+
+        return true;
     }
 
     template<typename T, typename U, typename V, typename W, typename X>
@@ -422,8 +446,8 @@ namespace WTF {
         const_iterator end = a.end();
         const_iterator notFound = b.end();
         for (const_iterator it = a.begin(); it != end; ++it) {
-            const_iterator bPos = b.find(it->first);
-            if (bPos == notFound || it->second != bPos->second)
+            const_iterator bPos = b.find(it->key);
+            if (bPos == notFound || it->value != bPos->value)
                 return false;
         }
 
@@ -436,34 +460,13 @@ namespace WTF {
         return !(a == b);
     }
 
-    template<typename HashTableType>
-    void deleteAllPairSeconds(HashTableType& collection)
-    {
-        typedef typename HashTableType::const_iterator iterator;
-        iterator end = collection.end();
-        for (iterator it = collection.begin(); it != end; ++it)
-            delete it->second;
-    }
-
     template<typename T, typename U, typename V, typename W, typename X>
     inline void deleteAllValues(const HashMap<T, U, V, W, X>& collection)
     {
-        deleteAllPairSeconds(collection);
-    }
-
-    template<typename HashTableType>
-    void deleteAllPairFirsts(HashTableType& collection)
-    {
-        typedef typename HashTableType::const_iterator iterator;
+        typedef typename HashMap<T, U, V, W, X>::const_iterator iterator;
         iterator end = collection.end();
         for (iterator it = collection.begin(); it != end; ++it)
-            delete it->first;
-    }
-
-    template<typename T, typename U, typename V, typename W, typename X>
-    inline void deleteAllKeys(const HashMap<T, U, V, W, X>& collection)
-    {
-        deleteAllPairFirsts(collection);
+            delete it->value;
     }
     
     template<typename T, typename U, typename V, typename W, typename X, typename Y>

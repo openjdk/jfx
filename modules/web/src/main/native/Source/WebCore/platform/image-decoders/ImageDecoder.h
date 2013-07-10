@@ -32,16 +32,11 @@
 #include "IntRect.h"
 #include "ImageSource.h"
 #include "PlatformScreen.h"
-#include "PlatformString.h"
 #include "SharedBuffer.h"
 #include <wtf/Assertions.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
-
-#if USE(SKIA)
-#include "NativeImageSkia.h"
-#include "SkColorPriv.h"
-#endif
+#include <wtf/text/WTFString.h>
 
 #if USE(QCMSLIB)
 #include "qcms.h"
@@ -69,11 +64,7 @@ namespace WebCore {
             DisposeOverwritePrevious  // Clear frame to previous framebuffer
                                       // contents
         };
-#if USE(SKIA)
-        typedef uint32_t PixelData;
-#else
         typedef unsigned PixelData;
-#endif
 
         ImageFrame();
 
@@ -115,7 +106,7 @@ namespace WebCore {
         // Returns a caller-owned pointer to the underlying native image data.
         // (Actual use: This pointer will be owned by BitmapImage and freed in
         // FrameData::clear()).
-        NativeImagePtr asNewNativeImage() const;
+        PassNativeImagePtr asNewNativeImage() const;
 
         bool hasAlpha() const;
         const IntRect& originalFrameRect() const { return m_originalFrameRect; }
@@ -139,51 +130,56 @@ namespace WebCore {
 
         inline PixelData* getAddr(int x, int y)
         {
-#if USE(SKIA)
-            return m_bitmap.bitmap().getAddr32(x, y);
-#else
             return m_bytes + (y * width()) + x;
-#endif
         }
+        
 #if PLATFORM(JAVA)
     friend class BitmapImage;
 #endif
-    private:
-        int width() const;
-        int height() const;
+
+        // Use fix point multiplier instead of integer division or floating point math.
+        // This multipler produces exactly the same result for all values in range 0 - 255.
+        static const unsigned fixPointShift = 24;
+        static const unsigned fixPointMult = static_cast<unsigned>(1.0 / 255.0 * (1 << fixPointShift)) + 1;
+        // Multiplies unsigned value by fixpoint value and converts back to unsigned.
+        static unsigned fixPointUnsignedMultiply(unsigned fixed, unsigned v)
+        {
+            return  (fixed * v) >> fixPointShift;
+        }
 
         inline void setRGBA(PixelData* dest, unsigned r, unsigned g, unsigned b, unsigned a)
         {
-            if (m_premultiplyAlpha && !a)
+            if (m_premultiplyAlpha && a < 255) {
+                if (!a) {
                 *dest = 0;
-            else {
-                if (m_premultiplyAlpha && a < 255) {
-                    float alphaPercent = a / 255.0f;
-                    r = static_cast<unsigned>(r * alphaPercent);
-                    g = static_cast<unsigned>(g * alphaPercent);
-                    b = static_cast<unsigned>(b * alphaPercent);
-                }
-#if USE(SKIA)
-                // we are sure to call the NoCheck version, since we may
-                // deliberately pass non-premultiplied values, and we don't want
-                // an assert.
-                *dest = SkPackARGB32NoCheck(a, r, g, b);
-#else
-                *dest = (a << 24 | r << 16 | g << 8 | b);
-#endif
-            }
+                    return;
         }
 
-#if USE(SKIA)
-        NativeImageSkia m_bitmap;
-#else
+                unsigned alphaMult = a * fixPointMult;
+                r = fixPointUnsignedMultiply(r, alphaMult);
+                g = fixPointUnsignedMultiply(g, alphaMult);
+                b = fixPointUnsignedMultiply(b, alphaMult);
+            }
+            *dest = (a << 24 | r << 16 | g << 8 | b);
+        }
+
+    private:
+        int width() const
+        {
+            return m_size.width();
+        }
+
+        int height() const
+        {
+            return m_size.height();
+        }
+
         Vector<PixelData> m_backingStore;
         PixelData* m_bytes; // The memory is backed by m_backingStore.
         IntSize m_size;
-        bool m_hasAlpha;
         // FIXME: Do we need m_colorProfile anymore?
         ColorProfile m_colorProfile;
-#endif
+        bool m_hasAlpha;
         IntRect m_originalFrameRect; // This will always just be the entire
                                      // buffer except for GIF frames whose
                                      // original rect was smaller than the
@@ -279,21 +275,29 @@ namespace WebCore {
         // ImageDecoder-owned pointer.
         virtual ImageFrame* frameBufferAtIndex(size_t) = 0;
 
+        // Make the best effort guess to check if the requested frame has alpha channel.
+        virtual bool frameHasAlphaAtIndex(size_t) const;
+
+        // Number of bytes in the decoded frame requested. Return 0 if not yet decoded.
+        virtual unsigned frameBytesAtIndex(size_t) const;
+
         void setIgnoreGammaAndColorProfile(bool flag) { m_ignoreGammaAndColorProfile = flag; }
         bool ignoresGammaAndColorProfile() const { return m_ignoreGammaAndColorProfile; }
+
+        ImageOrientation orientation() const { return m_orientation; }
 
         enum { iccColorProfileHeaderLength = 128 };
 
         static bool rgbColorProfile(const char* profileData, unsigned profileLength)
         {
-            ASSERT(profileLength >= iccColorProfileHeaderLength);
+            ASSERT_UNUSED(profileLength, profileLength >= iccColorProfileHeaderLength);
 
             return !memcmp(&profileData[16], "RGB ", 4);
         }
 
         static bool inputDeviceColorProfile(const char* profileData, unsigned profileLength)
         {
-            ASSERT(profileLength >= iccColorProfileHeaderLength);
+            ASSERT_UNUSED(profileLength, profileLength >= iccColorProfileHeaderLength);
 
             return !memcmp(&profileData[12], "mntr", 4) || !memcmp(&profileData[12], "scnr", 4);
         }
@@ -308,7 +312,7 @@ namespace WebCore {
                 qcmsInitialized = true;
                 // FIXME: Add optional ICCv4 support.
 #if OS(DARWIN)
-                RetainPtr<CGColorSpaceRef> monitorColorSpace(AdoptCF, CGDisplayCopyColorSpace(CGMainDisplayID()));
+                RetainPtr<CGColorSpaceRef> monitorColorSpace = adoptCF(CGDisplayCopyColorSpace(CGMainDisplayID()));
                 CFDataRef iccProfile(CGColorSpaceCopyICCProfile(monitorColorSpace.get()));
                 if (iccProfile) {
                     size_t length = CFDataGetLength(iccProfile);
@@ -356,6 +360,10 @@ namespace WebCore {
         void setMaxNumPixels(int m) { m_maxNumPixels = m; }
 #endif
 
+        // If the image has a cursor hot-spot, stores it in the argument
+        // and returns true. Otherwise returns false.
+        virtual bool hotSpot(IntPoint&) const { return false; }
+
     protected:
         void prepareScaleDataIfNecessary();
         int upperBoundScaledX(int origX, int searchStart = 0);
@@ -373,6 +381,7 @@ namespace WebCore {
         Vector<int> m_scaledRows;
         bool m_premultiplyAlpha;
         bool m_ignoreGammaAndColorProfile;
+        ImageOrientation m_orientation;
 
     private:
         // Some code paths compute the size of the image as "width * height * 4"

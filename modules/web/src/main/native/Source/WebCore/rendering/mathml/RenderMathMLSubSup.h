@@ -44,7 +44,9 @@ protected:
     virtual void layout();
     
 private:
-    void fixScriptsStyle();
+    virtual bool isRenderMathMLSubSup() const { return true; }
+    void fixAnonymousStyles();
+
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
 
     virtual const char* renderName() const { return "RenderMathMLSubSup"; }
@@ -53,7 +55,7 @@ private:
     // won't occur in valid MathML).
     RenderBoxModelObject* base() const;
     
-    enum SubSupType { Sub, Sup, SubSup };
+    enum SubSupType { Sub, Super, SubSup };
     SubSupType m_kind;
     RenderMathMLBlock* m_scripts;
 };

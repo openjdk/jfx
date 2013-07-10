@@ -6,9 +6,10 @@
 #include "TextBreakIterator.h"
 
 #include "JavaEnv.h"
-#include "PlatformString.h"
+
 #include <wtf/Assertions.h>
 #include <wtf/Atomics.h>
+#include <wtf/text/WTFString.h>
 
 #include "com_sun_webkit_text_TextBreakIterator.h"
 
@@ -122,8 +123,7 @@ TextBreakIterator* cursorMovementIterator(const UChar* string, int length)
 
 //TextBreakIterator* lineBreakIterator(const UChar* string, int length)
 //UTATODO: need to recycle staticLineBreakIterator
-
-TextBreakIterator* acquireLineBreakIterator(const UChar* string, int length, const AtomicString&)
+TextBreakIterator* acquireLineBreakIterator(const UChar* string, int length, const AtomicString& locale, const UChar* priorContext, unsigned priorContextLength)
 {
     return setUpIterator(JNI_EXPAND(LINE_ITERATOR), string, length);
 }

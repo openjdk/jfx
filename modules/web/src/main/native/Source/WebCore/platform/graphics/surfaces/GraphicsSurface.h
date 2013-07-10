@@ -20,24 +20,34 @@
 #ifndef GraphicsSurface_h
 #define GraphicsSurface_h
 
+#if USE(GRAPHICS_SURFACE)
+
 #include "GraphicsContext.h"
+#include "GraphicsContext3D.h"
+#include "GraphicsSurfaceToken.h"
 #include "IntRect.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
-#if USE(GRAPHICS_SURFACE)
-
 #if OS(DARWIN)
 typedef struct __IOSurface* IOSurfaceRef;
 typedef IOSurfaceRef PlatformGraphicsSurface;
-#else
+#endif
+
+#if OS(LINUX)
 typedef uint32_t PlatformGraphicsSurface;
+#endif
+
+#if OS(WINDOWS)
+typedef HANDLE PlatformGraphicsSurface;
 #endif
 
 namespace WebCore {
 
+class BitmapTexture;
+class TextureMapper;
 struct GraphicsSurfacePrivate;
 
 class GraphicsSurface : public RefCounted<GraphicsSurface> {
@@ -50,7 +60,8 @@ public:
         SupportsTextureSource = 0x10,
         SupportsCopyToTexture = 0x20,
         SupportsCopyFromTexture = 0x40,
-        SupportsSharing = 0x80
+        SupportsSharing = 0x80,
+        SupportsSingleBuffered = 0x100
     };
 
     enum LockOption {
@@ -62,30 +73,36 @@ public:
     typedef int LockOptions;
 
     Flags flags() const { return m_flags; }
-    PlatformGraphicsSurface platformSurface() const { return m_platformSurface; }
-    IntSize size() const { return m_size; }
+    IntSize size() const;
 
-    static PassRefPtr<GraphicsSurface> create(const IntSize&, Flags);
-    static PassRefPtr<GraphicsSurface> create(const IntSize&, Flags, uint32_t token);
+    static PassRefPtr<GraphicsSurface> create(const IntSize&, Flags, const PlatformGraphicsContext3D shareContext = 0);
+    static PassRefPtr<GraphicsSurface> create(const IntSize&, Flags, const GraphicsSurfaceToken&);
     void copyToGLTexture(uint32_t target, uint32_t texture, const IntRect& targetRect, const IntPoint& sourceOffset);
-    void copyFromFramebuffer(uint32_t fbo, const IntRect& sourceRect);
-    uint32_t exportToken();
+    void copyFromTexture(uint32_t texture, const IntRect& sourceRect);
+    void paintToTextureMapper(TextureMapper*, const FloatRect& targetRect, const TransformationMatrix&, float opacity);
+    uint32_t frontBuffer();
+    uint32_t swapBuffers();
+    GraphicsSurfaceToken exportToken();
     uint32_t getTextureID();
     PassOwnPtr<GraphicsContext> beginPaint(const IntRect&, LockOptions);
     PassRefPtr<Image> createReadOnlyImage(const IntRect&);
     ~GraphicsSurface();
 
 protected:
-    static PassRefPtr<GraphicsSurface> platformCreate(const IntSize&, Flags);
-    static PassRefPtr<GraphicsSurface> platformImport(const IntSize&, Flags, uint32_t);
-    uint32_t platformExport();
+    static PassRefPtr<GraphicsSurface> platformCreate(const IntSize&, Flags, const PlatformGraphicsContext3D);
+    static PassRefPtr<GraphicsSurface> platformImport(const IntSize&, Flags, const GraphicsSurfaceToken&);
+    GraphicsSurfaceToken platformExport();
     void platformDestroy();
 
     uint32_t platformGetTextureID();
     char* platformLock(const IntRect&, int* stride, LockOptions);
     void platformUnlock();
     void platformCopyToGLTexture(uint32_t target, uint32_t texture, const IntRect&, const IntPoint&);
-    void platformCopyFromFramebuffer(uint32_t fbo, const IntRect& sourceRect);
+    void platformCopyFromTexture(uint32_t texture, const IntRect& sourceRect);
+    void platformPaintToTextureMapper(TextureMapper*, const FloatRect& targetRect, const TransformationMatrix&, float opacity);
+    uint32_t platformFrontBuffer() const;
+    uint32_t platformSwapBuffers();
+    IntSize platformSize() const;
 
     PassOwnPtr<GraphicsContext> platformBeginPaint(const IntSize&, char* bits, int stride);
 
@@ -101,9 +118,6 @@ private:
 #endif
 
 private:
-    IntSize m_size;
-    PlatformGraphicsSurface m_platformSurface;
-    uint32_t m_texture;
     uint32_t m_fbo;
     GraphicsSurfacePrivate* m_private;
 };

@@ -31,8 +31,6 @@
 #ifndef MutationObserver_h
 #define MutationObserver_h
 
-#if ENABLE(MUTATION_OBSERVERS)
-
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/PassRefPtr.h>
@@ -86,11 +84,14 @@ public:
     void observationEnded(MutationObserverRegistration*);
     void enqueueMutationRecord(PassRefPtr<MutationRecord>);
     void setHasTransientRegistration();
+    bool canDeliver();
+
+    HashSet<Node*> getObservedNodes() const;
 
 private:
     struct ObserverLessThan;
 
-    MutationObserver(PassRefPtr<MutationCallback>);
+    explicit MutationObserver(PassRefPtr<MutationCallback>);
     void deliver();
 
     static bool validateOptions(MutationObserverOptions);
@@ -102,7 +103,5 @@ private:
 };
 
 }
-
-#endif // ENABLE(MUTATION_OBSERVERS)
 
 #endif // MutationObserver_h

@@ -75,29 +75,29 @@ MessageEvent::MessageEvent(PassRefPtr<SerializedScriptValue> data, const String&
 {
 }
 
-MessageEvent::MessageEvent(const String& data)
+MessageEvent::MessageEvent(const String& data, const String& origin)
     : Event(eventNames().messageEvent, false, false)
     , m_dataType(DataTypeString)
     , m_dataAsString(data)
-    , m_origin("")
+    , m_origin(origin)
     , m_lastEventId("")
 {
 }
 
-MessageEvent::MessageEvent(PassRefPtr<Blob> data)
+MessageEvent::MessageEvent(PassRefPtr<Blob> data, const String& origin)
     : Event(eventNames().messageEvent, false, false)
     , m_dataType(DataTypeBlob)
     , m_dataAsBlob(data)
-    , m_origin("")
+    , m_origin(origin)
     , m_lastEventId("")
 {
 }
 
-MessageEvent::MessageEvent(PassRefPtr<ArrayBuffer> data)
+MessageEvent::MessageEvent(PassRefPtr<ArrayBuffer> data, const String& origin)
     : Event(eventNames().messageEvent, false, false)
     , m_dataType(DataTypeArrayBuffer)
     , m_dataAsArrayBuffer(data)
-    , m_origin("")
+    , m_origin(origin)
     , m_lastEventId("")
 {
 }
@@ -144,7 +144,6 @@ SerializedScriptValue* MessageEvent::data() const
     return m_dataAsSerializedScriptValue.get();
 }
 
-// FIXME: remove this when we update the ObjC bindings (bug #28774).
 MessagePort* MessageEvent::messagePort()
 {
     if (!m_ports)
@@ -153,7 +152,6 @@ MessagePort* MessageEvent::messagePort()
     return (*m_ports)[0].get();
 }
 
-// FIXME: remove this when we update the ObjC bindings (bug #28774).
 void MessageEvent::initMessageEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<SerializedScriptValue> data, const String& origin, const String& lastEventId, DOMWindow* source, MessagePort* port)
 {
     OwnPtr<MessagePortArray> ports;

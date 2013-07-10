@@ -28,11 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-    interface [
+[
         Conditional=SQL_DATABASE,
-        Callback
-    ] SQLTransactionSyncCallback {
-        boolean handleEvent(in SQLTransactionSync transaction);
+] callback interface SQLTransactionSyncCallback {
+    boolean handleEvent(SQLTransactionSync transaction);
     };
-}

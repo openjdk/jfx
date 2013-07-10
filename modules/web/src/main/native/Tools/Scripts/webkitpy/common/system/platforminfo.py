@@ -27,6 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
+import sys
 
 
 class PlatformInfo(object):
@@ -86,6 +87,31 @@ class PlatformInfo(object):
             return long(self._executive.run_command(["sysctl", "-n", "hw.memsize"]))
         return None
 
+    def terminal_width(self):
+        """Returns sys.maxint if the width cannot be determined."""
+        try:
+            if self.is_win():
+                # From http://code.activestate.com/recipes/440694-determine-size-of-console-window-on-windows/
+                from ctypes import windll, create_string_buffer
+                handle = windll.kernel32.GetStdHandle(-12)  # -12 == stderr
+                console_screen_buffer_info = create_string_buffer(22)  # 22 == sizeof(console_screen_buffer_info)
+                if windll.kernel32.GetConsoleScreenBufferInfo(handle, console_screen_buffer_info):
+                    import struct
+                    _, _, _, _, _, left, _, right, _, _, _ = struct.unpack("hhhhHhhhhhh", console_screen_buffer_info.raw)
+                    # Note that we return 1 less than the width since writing into the rightmost column
+                    # automatically performs a line feed.
+                    return right - left
+                return sys.maxint
+            else:
+                import fcntl
+                import struct
+                import termios
+                packed = fcntl.ioctl(sys.stderr.fileno(), termios.TIOCGWINSZ, '\0' * 8)
+                _, columns, _, _ = struct.unpack('HHHH', packed)
+                return columns
+        except:
+            return sys.maxint
+
     def _determine_os_name(self, sys_platform):
         if sys_platform == 'darwin':
             return 'mac'
@@ -103,6 +129,7 @@ class PlatformInfo(object):
             '5': 'leopard',
             '6': 'snowleopard',
             '7': 'lion',
+            '8': 'mountainlion',
         }
         assert release_version >= min(version_strings.keys())
         return version_strings.get(release_version, 'future')
@@ -128,7 +155,7 @@ class PlatformInfo(object):
 
     def _win_version_tuple_from_cmd(self):
         # Note that this should only ever be called on windows, so this should always work.
-        ver_output = self._executive.run_command(['cmd', '/c', 'ver'])
+        ver_output = self._executive.run_command(['cmd', '/c', 'ver'], decode_output=False)
         match_object = re.search(r'(?P<major>\d)\.(?P<minor>\d)\.(?P<build>\d+)', ver_output)
         assert match_object, 'cmd returned an unexpected version string: ' + ver_output
         return tuple(map(int, match_object.groups()))

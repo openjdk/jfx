@@ -32,7 +32,7 @@ INTERFACES = \
     AccessibilityUIElement \
     EventSendingController \
     GCController \
-    LayoutTestController \
+    TestRunner \
     TextInputController \
 #
 
@@ -40,7 +40,6 @@ SCRIPTS = \
     $(WebCoreScripts)/CodeGenerator.pm \
     $(WebKitTestRunner)/InjectedBundle/Bindings/CodeGeneratorTestRunner.pm \
     $(WebCoreScripts)/IDLParser.pm \
-    $(WebCoreScripts)/IDLStructure.pm \
     $(WebCoreScripts)/generate-bindings.pl \
 #
 

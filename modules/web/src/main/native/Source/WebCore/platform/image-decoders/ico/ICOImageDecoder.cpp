@@ -35,11 +35,8 @@
 
 #include "BMPImageReader.h"
 #include "PNGImageDecoder.h"
+#include "PlatformInstrumentation.h"
 #include <wtf/PassOwnPtr.h>
-
-#if PLATFORM(CHROMIUM)
-#include "TraceEvent.h"
-#endif
 
 namespace WebCore {
 
@@ -121,8 +118,11 @@ ImageFrame* ICOImageDecoder::frameBufferAtIndex(size_t index)
         return 0;
 
     ImageFrame* buffer = &m_frameBufferCache[index];
-    if (buffer->status() != ImageFrame::FrameComplete)
+    if (buffer->status() != ImageFrame::FrameComplete) {
+        PlatformInstrumentation::willDecodeImage("ICO");
         decode(index, false);
+        PlatformInstrumentation::didDecodeImage();
+    }
     return buffer;
 }
 
@@ -132,6 +132,24 @@ bool ICOImageDecoder::setFailed()
     m_pngDecoders.clear();
     return ImageDecoder::setFailed();
 }
+
+bool ICOImageDecoder::hotSpot(IntPoint& hotSpot) const
+{
+    // When unspecified, the default frame is always frame 0. This is consistent with
+    // BitmapImage where currentFrame() starts at 0 and only increases when animation is
+    // requested.
+    return hotSpotAtIndex(0, hotSpot);
+}
+
+bool ICOImageDecoder::hotSpotAtIndex(size_t index, IntPoint& hotSpot) const
+{
+    if (index >= m_dirEntries.size() || m_fileType != CURSOR)
+        return false;
+
+    hotSpot = m_dirEntries[index].m_hotSpot;
+    return true;
+}
+
 
 // static
 bool ICOImageDecoder::compareEntries(const IconDirectoryEntry& a, const IconDirectoryEntry& b)
@@ -157,9 +175,6 @@ void ICOImageDecoder::setDataForPNGDecoderAtIndex(size_t index)
 
 void ICOImageDecoder::decode(size_t index, bool onlySize)
 {
-#if PLATFORM(CHROMIUM)
-    TRACE_EVENT("ICOImageDecoder::decode", this, 0);
-#endif
     if (failed())
         return;
 
@@ -188,7 +203,7 @@ bool ICOImageDecoder::decodeDirectory()
 
 bool ICOImageDecoder::decodeAtIndex(size_t index)
 {
-    ASSERT(index < m_dirEntries.size());
+    ASSERT_WITH_SECURITY_IMPLICATION(index < m_dirEntries.size());
     const IconDirectoryEntry& dirEntry = m_dirEntries[index];
     const ImageType imageType = imageTypeAtIndex(index);
     if (imageType == Unknown)
@@ -235,12 +250,10 @@ bool ICOImageDecoder::processDirectory()
 
     // See if this is an icon filetype we understand, and make sure we have at
     // least one entry in the directory.
-    enum {
-        ICON = 1,
-        CURSOR = 2,
-    };
     if (((fileType != ICON) && (fileType != CURSOR)) || (!idCount))
         return setFailed();
+
+    m_fileType = static_cast<FileType>(fileType);
 
     // Enlarge member vectors to hold all the entries.
     m_dirEntries.resize(idCount);
@@ -290,7 +303,13 @@ ICOImageDecoder::IconDirectoryEntry ICOImageDecoder::readDirectoryEntry()
         height = 256;
     IconDirectoryEntry entry;
     entry.m_size = IntSize(width, height);
+    if (m_fileType == CURSOR) {
+        entry.m_bitCount = 0;
+        entry.m_hotSpot = IntPoint(readUint16(4), readUint16(6));
+    } else {
     entry.m_bitCount = readUint16(6);
+        entry.m_hotSpot = IntPoint();
+    }
     entry.m_imageOffset = readUint32(12);
 
     // Some icons don't have a bit depth, only a color count.  Convert the
@@ -313,7 +332,7 @@ ICOImageDecoder::ImageType ICOImageDecoder::imageTypeAtIndex(size_t index)
 {
     // Check if this entry is a BMP or a PNG; we need 4 bytes to check the magic
     // number.
-    ASSERT(index < m_dirEntries.size());
+    ASSERT_WITH_SECURITY_IMPLICATION(index < m_dirEntries.size());
     const uint32_t imageOffset = m_dirEntries[index].m_imageOffset;
     if ((imageOffset > m_data->size()) || ((m_data->size() - imageOffset) < 4))
         return Unknown;

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,44 +34,76 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "PlatformString.h"
+#include "AudioDestinationConsumer.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class MediaStreamSource : public RefCounted<MediaStreamSource> {
 public:
+    class Observer {
+    public:
+        virtual ~Observer() { }
+        virtual void sourceChangedState() = 0;
+    };
+
+    class ExtraData : public RefCounted<ExtraData> {
+    public:
+        virtual ~ExtraData() { }
+    };
+
     enum Type {
         TypeAudio,
         TypeVideo
     };
 
-    static PassRefPtr<MediaStreamSource> create(const String& id, Type type, const String& name)
-    {
-        return adoptRef(new MediaStreamSource(id, type, name));
-    }
+    enum ReadyState {
+        ReadyStateLive = 0,
+        ReadyStateMuted = 1,
+        ReadyStateEnded = 2
+    };
+
+    static PassRefPtr<MediaStreamSource> create(const String& id, Type, const String& name, ReadyState = ReadyStateLive, bool requiresConsumer = false);
 
     const String& id() const { return m_id; }
     Type type() const { return m_type; }
     const String& name() const { return m_name; }
 
-    bool muted() const { return m_muted; }
-    void setMuted(bool muted) { m_muted = muted; }
+    void setReadyState(ReadyState);
+    ReadyState readyState() const { return m_readyState; }
+
+    void addObserver(Observer*);
+    void removeObserver(Observer*);
+
+    PassRefPtr<ExtraData> extraData() const { return m_extraData; }
+    void setExtraData(PassRefPtr<ExtraData> extraData) { m_extraData = extraData; }
+
+    const String& deviceId() { return m_deviceId; }
+    void setDeviceId(const String& deviceId) { m_deviceId = deviceId; }
+
+    void setAudioFormat(size_t numberOfChannels, float sampleRate);
+    void consumeAudio(AudioBus*, size_t numberOfFrames);
+
+    bool requiresAudioConsumer() const { return m_requiresConsumer; }
+    void addAudioConsumer(PassRefPtr<AudioDestinationConsumer>);
+    bool removeAudioConsumer(AudioDestinationConsumer*);
+    const Vector<RefPtr<AudioDestinationConsumer> >& audioConsumers() { return m_audioConsumers; }
 
 private:
-    MediaStreamSource(const String& id, Type type, const String& name)
-        : m_id(id)
-        , m_type(type)
-        , m_name(name)
-        , m_muted(false)
-    {
-    }
+    MediaStreamSource(const String& id, Type, const String& name, ReadyState, bool requiresConsumer);
 
     String m_id;
     Type m_type;
     String m_name;
-    bool m_muted;
+    ReadyState m_readyState;
+    String m_deviceId;
+    bool m_requiresConsumer;
+    Vector<Observer*> m_observers;
+    Mutex m_audioConsumersLock;
+    Vector<RefPtr<AudioDestinationConsumer> > m_audioConsumers;
+    RefPtr<ExtraData> m_extraData;
 };
 
 typedef Vector<RefPtr<MediaStreamSource> > MediaStreamSourceVector;

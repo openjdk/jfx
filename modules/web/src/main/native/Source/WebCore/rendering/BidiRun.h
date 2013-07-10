@@ -38,8 +38,13 @@ struct BidiRun : BidiCharacterRun {
         : BidiCharacterRun(start, stop, context, dir)
         , m_object(object)
         , m_box(0)
-        , m_hasHyphen(false)
     {
+        ASSERT(!object->isText() || static_cast<unsigned>(stop) <= toRenderText(object)->textLength());
+        // Stored in base class to save space.
+        m_hasHyphen = false;
+#if ENABLE(CSS_EXCLUSIONS)
+        m_startsSegment = false;
+#endif
     }
 
     void destroy();
@@ -60,7 +65,6 @@ private:
 public:
     RenderObject* m_object;
     InlineBox* m_box;
-    bool m_hasHyphen;
 };
 
 }

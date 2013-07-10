@@ -21,11 +21,31 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
-import unittest
+import sys
+import unittest2 as unittest
 import StringIO
 
+from webkitpy.common.system.filesystem import FileSystem
+from webkitpy.common.system.executive import Executive
 from webkitpy.common.system.outputcapture import OutputCapture
-from webkitpy.test.main import Tester
+from webkitpy.test.main import Tester, _Loader
+
+
+STUBS_CLASS = __name__ + ".TestStubs"
+
+
+class TestStubs(unittest.TestCase):
+    def test_empty(self):
+        pass
+
+    def integration_test_empty(self):
+        pass
+
+    def serial_test_empty(self):
+        pass
+
+    def serial_integration_test_empty(self):
+        pass
 
 
 class TesterTest(unittest.TestCase):
@@ -41,14 +61,57 @@ class TesterTest(unittest.TestCase):
         root_logger.handlers = []
 
         tester.printer.stream = errors
-        tester.finder.find_names = lambda args, skip_integration, run_all, skip_if_parallel: []
+        tester.finder.find_names = lambda args, run_all: []
         oc = OutputCapture()
         try:
             oc.capture_output()
             self.assertFalse(tester.run())
         finally:
-            out, err, logs = oc.restore_output()
+            _, _, logs = oc.restore_output()
             root_logger.handlers = root_handlers
 
-        self.assertTrue('No tests to run' in errors.getvalue())
-        self.assertTrue('No tests to run' in logs)
+        self.assertIn('No tests to run', errors.getvalue())
+        self.assertIn('No tests to run', logs)
+
+    def _find_test_names(self, args):
+        tester = Tester()
+        tester._options, args = tester._parse_args(args)
+        return tester._test_names(_Loader(), args)
+
+    def test_individual_names_are_not_run_twice(self):
+        args = [STUBS_CLASS + '.test_empty']
+        parallel_tests, serial_tests = self._find_test_names(args)
+        self.assertEqual(parallel_tests, args)
+        self.assertEqual(serial_tests, [])
+
+    def test_integration_tests_are_not_found_by_default(self):
+        parallel_tests, serial_tests = self._find_test_names([STUBS_CLASS])
+        self.assertEqual(parallel_tests, [
+            STUBS_CLASS + '.test_empty',
+            ])
+        self.assertEqual(serial_tests, [
+            STUBS_CLASS + '.serial_test_empty',
+            ])
+
+    def test_integration_tests_are_found(self):
+        parallel_tests, serial_tests = self._find_test_names(['--integration-tests', STUBS_CLASS])
+        self.assertEqual(parallel_tests, [
+            STUBS_CLASS + '.integration_test_empty',
+            STUBS_CLASS + '.test_empty',
+            ])
+        self.assertEqual(serial_tests, [
+            STUBS_CLASS + '.serial_integration_test_empty',
+            STUBS_CLASS + '.serial_test_empty',
+            ])
+
+    def integration_test_coverage_works(self):
+        filesystem = FileSystem()
+        executive = Executive()
+        module_path = filesystem.path_to_module(self.__module__)
+        script_dir = module_path[0:module_path.find('webkitpy') - 1]
+        proc = executive.popen([sys.executable, filesystem.join(script_dir, 'test-webkitpy'), '-c', STUBS_CLASS + '.test_empty'],
+                               stdout=executive.PIPE, stderr=executive.PIPE)
+        out, _ = proc.communicate()
+        retcode = proc.returncode
+        self.assertEqual(retcode, 0)
+        self.assertIn('Cover', out)

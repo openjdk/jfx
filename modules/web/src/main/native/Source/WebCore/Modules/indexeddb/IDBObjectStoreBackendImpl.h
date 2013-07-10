@@ -26,10 +26,10 @@
 #ifndef IDBObjectStoreBackendImpl_h
 #define IDBObjectStoreBackendImpl_h
 
+#include "IDBBackingStore.h"
 #include "IDBDatabaseBackendImpl.h"
 #include "IDBKeyPath.h"
 #include "IDBMetadata.h"
-#include "IDBObjectStoreBackendInterface.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
 
@@ -38,84 +38,38 @@
 namespace WebCore {
 
 class IDBDatabaseBackendImpl;
-class IDBIndexBackendImpl;
-class IDBTransactionBackendInterface;
-class ScriptExecutionContext;
+class IDBTransactionBackendImpl;
 struct IDBObjectStoreMetadata;
 
-class IDBObjectStoreBackendImpl : public IDBObjectStoreBackendInterface {
+// FIXME: this namespace is temporary until we move its contents out to their own home.
+namespace IDBObjectStoreBackendImpl {
+
+    class IndexWriter {
 public:
-    static PassRefPtr<IDBObjectStoreBackendImpl> create(const IDBDatabaseBackendImpl* database, int64_t id, const String& name, const IDBKeyPath& keyPath, bool autoIncrement)
-    {
-        return adoptRef(new IDBObjectStoreBackendImpl(database, id, name, keyPath, autoIncrement));
-    }
-    static PassRefPtr<IDBObjectStoreBackendImpl> create(const IDBDatabaseBackendImpl* database, const String& name, const IDBKeyPath& keyPath, bool autoIncrement)
-    {
-        return adoptRef(new IDBObjectStoreBackendImpl(database, name, keyPath, autoIncrement));
-    }
-    virtual ~IDBObjectStoreBackendImpl();
+        explicit IndexWriter(const IDBIndexMetadata& indexMetadata)
+            : m_indexMetadata(indexMetadata)
+        { }
 
-    static const int64_t InvalidId = 0;
-    int64_t id() const
-    {
-        ASSERT(m_id != InvalidId);
-        return m_id;
-    }
-    void setId(int64_t id) { m_id = id; }
+        IndexWriter(const IDBIndexMetadata& indexMetadata, const IDBDatabaseBackendInterface::IndexKeys& indexKeys)
+            : m_indexMetadata(indexMetadata)
+            , m_indexKeys(indexKeys)
+        { }
 
-    virtual IDBObjectStoreMetadata metadata() const;
+        bool verifyIndexKeys(IDBBackingStore&, IDBBackingStore::Transaction*, int64_t databaseId, int64_t objectStoreId, int64_t indexId, bool& canAddKeys, const IDBKey* primaryKey = 0, String* errorMessage = 0) const WARN_UNUSED_RETURN;
 
-    virtual void get(PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>, IDBTransactionBackendInterface*, ExceptionCode&);
-    virtual void put(PassRefPtr<SerializedScriptValue>, PassRefPtr<IDBKey>, PutMode, PassRefPtr<IDBCallbacks>, IDBTransactionBackendInterface*, ExceptionCode&);
-    virtual void putWithIndexKeys(PassRefPtr<SerializedScriptValue>, PassRefPtr<IDBKey>, PutMode, PassRefPtr<IDBCallbacks>, IDBTransactionBackendInterface*, const Vector<String>&, const Vector<IndexKeys>&, ExceptionCode&);
-    virtual void deleteFunction(PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>, IDBTransactionBackendInterface*, ExceptionCode&);
-    virtual void clear(PassRefPtr<IDBCallbacks>, IDBTransactionBackendInterface*, ExceptionCode&);
-
-    virtual PassRefPtr<IDBIndexBackendInterface> createIndex(const String& name, const IDBKeyPath&, bool unique, bool multiEntry, IDBTransactionBackendInterface*, ExceptionCode&);
-    virtual PassRefPtr<IDBIndexBackendInterface> index(const String& name, ExceptionCode&);
-    virtual void deleteIndex(const String& name, IDBTransactionBackendInterface*, ExceptionCode&);
-
-    virtual void openCursor(PassRefPtr<IDBKeyRange> range, unsigned short direction, PassRefPtr<IDBCallbacks>, IDBTransactionBackendInterface*, ExceptionCode&);
-    virtual void count(PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>, IDBTransactionBackendInterface*, ExceptionCode&);
-
-    static bool populateIndex(IDBBackingStore&, int64_t databaseId, int64_t objectStoreId, PassRefPtr<IDBIndexBackendImpl>);
-
-    const String& name() { return m_name; }
-    const IDBKeyPath& keyPath() const { return m_keyPath; }
-    const bool& autoIncrement() const { return m_autoIncrement; }
+        void writeIndexKeys(const IDBBackingStore::RecordIdentifier&, IDBBackingStore&, IDBBackingStore::Transaction*, int64_t databaseId, int64_t objectStoreId) const;
 
 private:
-    IDBObjectStoreBackendImpl(const IDBDatabaseBackendImpl*, int64_t databaseId, const String& name, const IDBKeyPath&, bool autoIncrement);
-    IDBObjectStoreBackendImpl(const IDBDatabaseBackendImpl*, const String& name, const IDBKeyPath&, bool autoIncrement);
+        bool addingKeyAllowed(IDBBackingStore&, IDBBackingStore::Transaction*, int64_t databaseId, int64_t objectStoreId, int64_t indexId, const IDBKey* indexKey, const IDBKey* primaryKey, bool& allowed) const WARN_UNUSED_RETURN;
 
-    void loadIndexes();
-    PassRefPtr<IDBKey> generateKey();
-    void updateKeyGenerator(const IDBKey*, bool checkCurrent);
+        const IDBIndexMetadata m_indexMetadata;
+        IDBDatabaseBackendInterface::IndexKeys m_indexKeys;
+    };
 
-    static void getInternal(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>);
-    static void putInternal(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<SerializedScriptValue>, PassRefPtr<IDBKey>, PutMode, PassRefPtr<IDBCallbacks>, PassRefPtr<IDBTransactionBackendInterface>, PassOwnPtr<Vector<String> > popIndexNames, PassOwnPtr<Vector<IndexKeys> >);
-    static void deleteInternal(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>);
-    static void clearInternal(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBCallbacks>);
-    static void createIndexInternal(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBIndexBackendImpl>, PassRefPtr<IDBTransactionBackendInterface>);
-    static void deleteIndexInternal(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBIndexBackendImpl>, PassRefPtr<IDBTransactionBackendInterface>);
-    static void openCursorInternal(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBKeyRange> range, unsigned short direction, PassRefPtr<IDBCallbacks>, PassRefPtr<IDBTransactionBackendInterface>);
-    static void countInternal(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>, PassRefPtr<IDBTransactionBackendInterface>);
+    bool makeIndexWriters(PassRefPtr<IDBTransactionBackendImpl>, IDBBackingStore*, int64_t databaseId, const IDBObjectStoreMetadata&, PassRefPtr<IDBKey> primaryKey, bool keyWasGenerated, const Vector<int64_t>& indexIds, const Vector<IDBDatabaseBackendInterface::IndexKeys>&, Vector<OwnPtr<IndexWriter> >* indexWriters, String* errorMessage, bool& completed) WARN_UNUSED_RETURN;
 
-    // These are used as setVersion transaction abort tasks.
-    static void removeIndexFromMap(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBIndexBackendImpl>);
-    static void addIndexToMap(ScriptExecutionContext*, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBIndexBackendImpl>);
-
-    PassRefPtr<IDBBackingStore> backingStore() const { return m_database->backingStore(); }
-    int64_t databaseId() const { return m_database->id(); }
-
-    const IDBDatabaseBackendImpl* m_database;
-    int64_t m_id;
-    String m_name;
-    IDBKeyPath m_keyPath;
-    bool m_autoIncrement;
-
-    typedef HashMap<String, RefPtr<IDBIndexBackendImpl> > IndexMap;
-    IndexMap m_indexes;
+    PassRefPtr<IDBKey> generateKey(PassRefPtr<IDBBackingStore>, PassRefPtr<IDBTransactionBackendImpl>, int64_t databaseId, int64_t objectStoreId);
+    bool updateKeyGenerator(PassRefPtr<IDBBackingStore>, PassRefPtr<IDBTransactionBackendImpl>, int64_t databaseId, int64_t objectStoreId, const IDBKey*, bool checkCurrent);
 };
 
 } // namespace WebCore

@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "PlatformWebView.h"
+#include "TestController.h"
 
 #import <WebKit2/WKImageCG.h>
 #import <WebKit2/WKViewPrivate.h>
@@ -33,9 +34,34 @@
 @interface WebKitTestRunnerWindow : NSWindow {
     WTR::PlatformWebView* _platformWebView;
     NSPoint _fakeOrigin;
-    bool _shouldUseFakeOrigin;
 }
 @property (nonatomic, assign) WTR::PlatformWebView* platformWebView;
+@end
+
+@interface TestRunnerWKView : WKView {
+    BOOL _useTiledDrawing;
+}
+
+- (id)initWithFrame:(NSRect)frame contextRef:(WKContextRef)context pageGroupRef:(WKPageGroupRef)pageGroup relatedToPage:(WKPageRef)relatedPage useTiledDrawing:(BOOL)useTiledDrawing;
+
+@property (nonatomic, assign) BOOL useTiledDrawing;
+@end
+
+@implementation TestRunnerWKView
+
+@synthesize useTiledDrawing = _useTiledDrawing;
+
+- (id)initWithFrame:(NSRect)frame contextRef:(WKContextRef)context pageGroupRef:(WKPageGroupRef)pageGroup relatedToPage:(WKPageRef)relatedPage useTiledDrawing:(BOOL)useTiledDrawing
+{
+    _useTiledDrawing = useTiledDrawing;
+    return [super initWithFrame:frame contextRef:context pageGroupRef:pageGroup relatedToPage:relatedPage];
+}
+
+- (BOOL)_shouldUseTiledDrawingArea
+{
+    return _useTiledDrawing;
+}
+
 @end
 
 @implementation WebKitTestRunnerWindow
@@ -49,7 +75,6 @@
 - (void)setFrameOrigin:(NSPoint)point
 {
     _fakeOrigin = point;
-    _shouldUseFakeOrigin = YES;
 }
 
 - (void)setFrame:(NSRect)windowFrame display:(BOOL)displayViews animate:(BOOL)performAnimation
@@ -57,7 +82,6 @@
     NSRect currentFrame = [super frame];
 
     _fakeOrigin = windowFrame.origin;
-    _shouldUseFakeOrigin = YES;
 
     [super setFrame:NSMakeRect(currentFrame.origin.x, currentFrame.origin.y, windowFrame.size.width, windowFrame.size.height) display:displayViews animate:performAnimation];
 }
@@ -67,7 +91,6 @@
     NSRect currentFrame = [super frame];
 
     _fakeOrigin = windowFrame.origin;
-    _shouldUseFakeOrigin = YES;
 
     [super setFrame:NSMakeRect(currentFrame.origin.x, currentFrame.origin.y, windowFrame.size.width, windowFrame.size.height) display:displayViews];
 }
@@ -75,34 +98,53 @@
 - (NSRect)frameRespectingFakeOrigin
 {
     NSRect currentFrame = [self frame];
-
-    if (_shouldUseFakeOrigin)
-        return NSMakeRect(_fakeOrigin.x, _fakeOrigin.y, currentFrame.size.width, currentFrame.size.height);
-
-    return currentFrame;
+    return NSMakeRect(_fakeOrigin.x, _fakeOrigin.y, currentFrame.size.width, currentFrame.size.height);
 }
+
+- (CGFloat)backingScaleFactor
+{
+    return 1;
+}
+
+@end
+
+@interface NSWindow (Details)
+
+- (void)_setWindowResolution:(CGFloat)resolution displayIfChanged:(BOOL)displayIfChanged;
 
 @end
 
 namespace WTR {
 
-PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef)
+PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef, WKPageRef relatedPage, WKDictionaryRef options)
     : m_windowIsKey(true)
+    , m_options(options)
 {
-    NSRect rect = NSMakeRect(0, 0, 800, 600);
-    m_view = [[WKView alloc] initWithFrame:rect contextRef:contextRef pageGroupRef:pageGroupRef];
+    WKRetainPtr<WKStringRef> useTiledDrawingKey(AdoptWK, WKStringCreateWithUTF8CString("TiledDrawing"));
+    WKTypeRef useTiledDrawingValue = options ? WKDictionaryGetItemForKey(options, useTiledDrawingKey.get()) : NULL;
+    bool useTiledDrawing = useTiledDrawingValue && WKBooleanGetValue(static_cast<WKBooleanRef>(useTiledDrawingValue));
+
+    NSRect rect = NSMakeRect(0, 0, TestController::viewWidth, TestController::viewHeight);
+    m_view = [[TestRunnerWKView alloc] initWithFrame:rect contextRef:contextRef pageGroupRef:pageGroupRef relatedToPage:relatedPage useTiledDrawing:useTiledDrawing];
+    [m_view setWindowOcclusionDetectionEnabled:NO];
 
     NSRect windowRect = NSOffsetRect(rect, -10000, [(NSScreen *)[[NSScreen screens] objectAtIndex:0] frame].size.height - rect.size.height + 10000);
     m_window = [[WebKitTestRunnerWindow alloc] initWithContentRect:windowRect styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
     m_window.platformWebView = this;
     [m_window setColorSpace:[[NSScreen mainScreen] colorSpace]];
+    [m_window setCollectionBehavior:NSWindowCollectionBehaviorStationary];
     [[m_window contentView] addSubview:m_view];
     [m_window orderBack:nil];
     [m_window setReleasedWhenClosed:NO];
+    [m_window _setWindowResolution:1 displayIfChanged:YES];
 }
 
 void PlatformWebView::resizeTo(unsigned width, unsigned height)
 {
+    NSRect windowFrame = [m_window frame];
+    windowFrame.size.width = width;
+    windowFrame.size.height = height;
+    [m_window setFrame:windowFrame display:YES];
     [m_view setFrame:NSMakeRect(0, 0, width, height)];
 }
 
@@ -142,6 +184,14 @@ void PlatformWebView::setWindowFrame(WKRect frame)
     [m_window setFrame:NSMakeRect(frame.origin.x, frame.origin.y, frame.size.width, frame.size.height) display:YES];
 }
 
+void PlatformWebView::didInitializeClients()
+{
+    // Set a temporary 1x1 window frame to force a WindowAndViewFramesChanged notification. <rdar://problem/13380145>
+    WKRect wkFrame = windowFrame();
+    [m_window setFrame:NSMakeRect(0, 0, 1, 1) display:YES];
+    setWindowFrame(wkFrame);
+}
+
 void PlatformWebView::addChromeInputField()
 {
     NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 100, 20)];
@@ -170,10 +220,19 @@ void PlatformWebView::makeWebViewFirstResponder()
 WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
 {
     [m_view display];
-    RetainPtr<CGImageRef> windowSnapshotImage(AdoptCF, CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, [m_window windowNumber], kCGWindowImageBoundsIgnoreFraming | kCGWindowImageShouldBeOpaque));
+    RetainPtr<CGImageRef> windowSnapshotImage = adoptCF(CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, [m_window windowNumber], kCGWindowImageBoundsIgnoreFraming | kCGWindowImageShouldBeOpaque));
 
     // windowSnapshotImage will be in GenericRGB, as we've set the main display's color space to GenericRGB.
     return adoptWK(WKImageCreateFromCGImage(windowSnapshotImage.get(), 0));
+}
+
+bool PlatformWebView::viewSupportsOptions(WKDictionaryRef options) const
+{
+    WKRetainPtr<WKStringRef> useTiledDrawingKey(AdoptWK, WKStringCreateWithUTF8CString("TiledDrawing"));
+    WKTypeRef useTiledDrawingValue = WKDictionaryGetItemForKey(options, useTiledDrawingKey.get());
+    bool useTiledDrawing = useTiledDrawingValue && WKBooleanGetValue(static_cast<WKBooleanRef>(useTiledDrawingValue));
+
+    return useTiledDrawing == [(TestRunnerWKView *)m_view useTiledDrawing];
 }
 
 } // namespace WTR

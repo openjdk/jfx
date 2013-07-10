@@ -27,14 +27,15 @@
 
 #include "CallFrame.h"
 #include "Interpreter.h"
+#include "JSFunction.h"
 #include "JSGlobalObject.h"
 #include "JSString.h"
 #include "JSStringBuilder.h"
 #include "Lexer.h"
 #include "LiteralParser.h"
 #include "Nodes.h"
+#include "Operations.h"
 #include "Parser.h"
-#include "UStringBuilder.h"
 #include <wtf/dtoa.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,6 +43,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StringExtras.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/UTF8.h>
 
 using namespace WTF;
@@ -51,9 +53,9 @@ namespace JSC {
 
 static JSValue encode(ExecState* exec, const char* doNotEscape)
 {
-    CString cstr = exec->argument(0).toString(exec)->value(exec).utf8(true);
+    CString cstr = exec->argument(0).toString(exec)->value(exec).utf8(String::StrictConversion);
     if (!cstr.data())
-        return throwError(exec, createURIError(exec, "String contained an illegal UTF-16 sequence."));
+        return throwError(exec, createURIError(exec, ASCIILiteral("String contained an illegal UTF-16 sequence.")));
 
     JSStringBuilder builder;
     const char* p = cstr.data();
@@ -114,7 +116,7 @@ static JSValue decode(ExecState* exec, const CharType* characters, int length, c
             }
             if (charLen == 0) {
                 if (strict)
-                    return throwError(exec, createURIError(exec, "URI error"));
+                    return throwError(exec, createURIError(exec, ASCIILiteral("URI error")));
                 // The only case where we don't use "strict" mode is the "unescape" function.
                 // For that, it's good to support the wonky "%u" syntax for compatibility with WinIE.
                 if (k <= length - 6 && p[1] == 'u'
@@ -142,7 +144,7 @@ static JSValue decode(ExecState* exec, const CharType* characters, int length, c
 static JSValue decode(ExecState* exec, const char* doNotUnescape, bool strict)
 {
     JSStringBuilder builder;
-    UString str = exec->argument(0).toString(exec)->value(exec);
+    String str = exec->argument(0).toString(exec)->value(exec);
     
     if (str.is8Bit())
         return decode(exec, str.characters8(), str.length(), doNotUnescape, strict);
@@ -232,7 +234,7 @@ double parseIntOverflow(const UChar* s, int length, int radix)
 // ES5.1 15.1.2.2
 template <typename CharType>
 ALWAYS_INLINE
-static double parseInt(const UString& s, const CharType* data, int radix)
+static double parseInt(const String& s, const CharType* data, int radix)
 {
     // 1. Let inputString be ToString(string).
     // 2. Let S be a newly created substring of inputString consisting of the first character that is not a
@@ -275,7 +277,7 @@ static double parseInt(const UString& s, const CharType* data, int radix)
 
     // 8.a If R < 2 or R > 36, then return NaN.
     if (radix < 2 || radix > 36)
-        return std::numeric_limits<double>::quiet_NaN();
+        return QNaN;
 
     // 13. Let mathInt be the mathematical integer value that is represented by Z in radix-R notation, using the letters
     //     A-Z and a-z for digits with values 10 through 35. (However, if R is 10 and Z contains more than 20 significant
@@ -298,7 +300,7 @@ static double parseInt(const UString& s, const CharType* data, int radix)
 
     // 12. If Z is empty, return NaN.
     if (!sawDigit)
-        return std::numeric_limits<double>::quiet_NaN();
+        return QNaN;
 
     // Alternate code path for certain large numbers.
     if (number >= mantissaOverflowLowerBound) {
@@ -313,7 +315,7 @@ static double parseInt(const UString& s, const CharType* data, int radix)
     return sign * number;
 }
 
-static double parseInt(const UString& s, int radix)
+static double parseInt(const String& s, int radix)
 {
     if (s.is8Bit())
         return parseInt(s, s.characters8(), radix);
@@ -362,7 +364,7 @@ static double jsHexIntegerLiteral(const CharType*& data, const CharType* end)
 template <typename CharType>
 static double jsStrDecimalLiteral(const CharType*& data, const CharType* end)
 {
-    ASSERT(data < end);
+    RELEASE_ASSERT(data < end);
 
     size_t parsedLength;
     double number = parseDouble(data, end - data, parsedLength);
@@ -396,7 +398,7 @@ static double jsStrDecimalLiteral(const CharType*& data, const CharType* end)
     }
 
     // Not a number.
-    return std::numeric_limits<double>::quiet_NaN();
+    return QNaN;
 }
 
 template <typename CharType>
@@ -426,13 +428,13 @@ static double toDouble(const CharType* characters, unsigned size)
             break;
     }
     if (characters != endCharacters)
-        return std::numeric_limits<double>::quiet_NaN();
+        return QNaN;
     
     return number;
 }
 
 // See ecma-262 9.3.1
-double jsToNumber(const UString& s)
+double jsToNumber(const String& s)
 {
     unsigned size = s.length();
 
@@ -442,7 +444,7 @@ double jsToNumber(const UString& s)
             return c - '0';
         if (isStrWhiteSpace(c))
             return 0;
-        return std::numeric_limits<double>::quiet_NaN();
+        return QNaN;
     }
 
     if (s.is8Bit())
@@ -450,7 +452,7 @@ double jsToNumber(const UString& s)
     return toDouble(s.characters16(), size);
 }
 
-static double parseFloat(const UString& s)
+static double parseFloat(const String& s)
 {
     unsigned size = s.length();
 
@@ -458,7 +460,7 @@ static double parseFloat(const UString& s)
         UChar c = s[0];
         if (isASCIIDigit(c))
             return c - '0';
-        return std::numeric_limits<double>::quiet_NaN();
+        return QNaN;
     }
 
     if (s.is8Bit()) {
@@ -473,7 +475,7 @@ static double parseFloat(const UString& s)
 
         // Empty string.
         if (data == end)
-            return std::numeric_limits<double>::quiet_NaN();
+            return QNaN;
 
         return jsStrDecimalLiteral(data, end);
     }
@@ -489,23 +491,18 @@ static double parseFloat(const UString& s)
 
     // Empty string.
     if (data == end)
-        return std::numeric_limits<double>::quiet_NaN();
+        return QNaN;
 
     return jsStrDecimalLiteral(data, end);
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncEval(ExecState* exec)
 {
-    JSObject* thisObject = exec->hostThisValue().toThisObject(exec);
-    JSObject* unwrappedObject = thisObject->unwrappedObject();
-    if (!unwrappedObject->isGlobalObject() || jsCast<JSGlobalObject*>(unwrappedObject)->evalFunction() != exec->callee())
-        return throwVMError(exec, createEvalError(exec, "The \"this\" value passed to eval must be the global object from which eval originated"));
-
     JSValue x = exec->argument(0);
     if (!x.isString())
         return JSValue::encode(x);
 
-    UString s = x.toString(exec)->value(exec);
+    String s = x.toString(exec)->value(exec);
 
     if (s.is8Bit()) {
         LiteralParser<LChar> preparser(exec, s.characters8(), s.length(), NonStrictJSON);
@@ -517,12 +514,13 @@ EncodedJSValue JSC_HOST_CALL globalFuncEval(ExecState* exec)
             return JSValue::encode(parsedObject);        
     }
 
-    EvalExecutable* eval = EvalExecutable::create(exec, makeSource(s), false);
-    JSObject* error = eval->compile(exec, jsCast<JSGlobalObject*>(unwrappedObject)->globalScopeChain());
+    JSGlobalObject* calleeGlobalObject = exec->callee()->globalObject();
+    EvalExecutable* eval = EvalExecutable::create(exec, exec->vm().codeCache(), makeSource(s), false);
+    JSObject* error = eval->compile(exec, calleeGlobalObject);
     if (error)
         return throwVMError(exec, error);
 
-    return JSValue::encode(exec->interpreter()->execute(eval, exec, thisObject, jsCast<JSGlobalObject*>(unwrappedObject)->globalScopeChain()));
+    return JSValue::encode(exec->interpreter()->execute(eval, exec, calleeGlobalObject->globalThis(), calleeGlobalObject));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncParseInt(ExecState* exec)
@@ -548,7 +546,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncParseInt(ExecState* exec)
     }
 
     // If ToString throws, we shouldn't call ToInt32.
-    UString s = value.toString(exec)->value(exec);
+    String s = value.toString(exec)->value(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
 
@@ -562,13 +560,13 @@ EncodedJSValue JSC_HOST_CALL globalFuncParseFloat(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL globalFuncIsNaN(ExecState* exec)
 {
-    return JSValue::encode(jsBoolean(isnan(exec->argument(0).toNumber(exec))));
+    return JSValue::encode(jsBoolean(std::isnan(exec->argument(0).toNumber(exec))));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncIsFinite(ExecState* exec)
 {
     double n = exec->argument(0).toNumber(exec);
-    return JSValue::encode(jsBoolean(isfinite(n)));
+    return JSValue::encode(jsBoolean(std::isfinite(n)));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncDecodeURI(ExecState* exec)
@@ -615,7 +613,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
         "*+-./@_";
 
     JSStringBuilder builder;
-    UString str = exec->argument(0).toString(exec)->value(exec);
+    String str = exec->argument(0).toString(exec)->value(exec);
     if (str.is8Bit()) {
         const LChar* c = str.characters8();
         for (unsigned k = 0; k < str.length(); k++, c++) {
@@ -653,8 +651,8 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL globalFuncUnescape(ExecState* exec)
 {
-    UStringBuilder builder;
-    UString str = exec->argument(0).toString(exec)->value(exec);
+    StringBuilder builder;
+    String str = exec->argument(0).toString(exec)->value(exec);
     int k = 0;
     int len = str.length();
     
@@ -699,7 +697,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncUnescape(ExecState* exec)
         }
     }
 
-    return JSValue::encode(jsString(exec, builder.toUString()));
+    return JSValue::encode(jsString(exec, builder.toString()));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncThrowTypeError(ExecState* exec)
@@ -738,7 +736,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncProtoSetter(ExecState* exec)
     if (!thisObject->isExtensible())
         return throwVMError(exec, createTypeError(exec, StrictModeReadonlyPropertyWriteError));
 
-    if (!thisObject->setPrototypeWithCycleCheck(exec->globalData(), value))
+    if (!thisObject->setPrototypeWithCycleCheck(exec->vm(), value))
         throwError(exec, createError(exec, "cyclic __proto__ value"));
     return JSValue::encode(jsUndefined());
 }

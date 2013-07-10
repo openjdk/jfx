@@ -39,6 +39,8 @@ public:
 
     String customCssText() const;
 
+    bool equals(const FontValue&) const;
+
     RefPtr<CSSPrimitiveValue> style;
     RefPtr<CSSPrimitiveValue> variant;
     RefPtr<CSSPrimitiveValue> weight;

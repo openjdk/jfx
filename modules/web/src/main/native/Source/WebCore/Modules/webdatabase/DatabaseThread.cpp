@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,13 +31,12 @@
 
 #if ENABLE(SQL_DATABASE)
 
-#include "AutodrainedPool.h"
 #include "Database.h"
 #include "DatabaseTask.h"
 #include "Logging.h"
 #include "SQLTransactionClient.h"
 #include "SQLTransactionCoordinator.h"
-#include <wtf/UnusedParam.h>
+#include <wtf/AutodrainedPool.h>
 
 namespace WebCore {
 
@@ -52,7 +51,13 @@ DatabaseThread::DatabaseThread()
 
 DatabaseThread::~DatabaseThread()
 {
-    // FIXME: Any cleanup required here?  Since the thread deletes itself after running its detached course, I don't think so.  Lets be sure.
+    // The DatabaseThread will only be destructed when both its owner
+    // DatabaseContext has deref'ed it, and the databaseThread() thread function
+    // has deref'ed the DatabaseThread object. The DatabaseContext destructor
+    // will take care of ensuring that a termination request has been issued.
+    // The termination request will trigger an orderly shutdown of the thread
+    // function databaseThread(). In shutdown, databaseThread() will deref the
+    // DatabaseThread before returning.
     ASSERT(terminationRequested());
 }
 
@@ -70,7 +75,6 @@ bool DatabaseThread::start()
 
 void DatabaseThread::requestTermination(DatabaseTaskSynchronizer *cleanupSync)
 {
-    ASSERT(!m_cleanupSync);
     m_cleanupSync = cleanupSync;
     LOG(StorageAPI, "DatabaseThread %p was asked to terminate\n", this);
     m_queue.kill();
@@ -102,10 +106,10 @@ void DatabaseThread::databaseThread()
         LOG(StorageAPI, "Started DatabaseThread %p", this);
     }
 
-    AutodrainedPool pool;
     while (OwnPtr<DatabaseTask> task = m_queue.waitForMessage()) {
+    AutodrainedPool pool;
+
         task->performTask();
-        pool.cycle();
     }
 
     // Clean up the list of all pending transactions on this database thread
@@ -121,7 +125,7 @@ void DatabaseThread::databaseThread()
         openSetCopy.swap(m_openDatabaseSet);
         DatabaseSet::iterator end = openSetCopy.end();
         for (DatabaseSet::iterator it = openSetCopy.begin(); it != end; ++it)
-            (*it)->close();
+            (*it).get()->close();
     }
 
     // Detach the thread so its resources are no longer of any concern to anyone else
@@ -136,7 +140,7 @@ void DatabaseThread::databaseThread()
         cleanupSync->taskCompleted();
 }
 
-void DatabaseThread::recordDatabaseOpen(Database* database)
+void DatabaseThread::recordDatabaseOpen(DatabaseBackend* database)
 {
     ASSERT(currentThread() == m_threadID);
     ASSERT(database);
@@ -144,7 +148,7 @@ void DatabaseThread::recordDatabaseOpen(Database* database)
     m_openDatabaseSet.add(database);
 }
 
-void DatabaseThread::recordDatabaseClosed(Database* database)
+void DatabaseThread::recordDatabaseClosed(DatabaseBackend* database)
 {
     ASSERT(currentThread() == m_threadID);
     ASSERT(database);
@@ -166,13 +170,13 @@ void DatabaseThread::scheduleImmediateTask(PassOwnPtr<DatabaseTask> task)
 
 class SameDatabasePredicate {
 public:
-    SameDatabasePredicate(const Database* database) : m_database(database) { }
+    SameDatabasePredicate(const DatabaseBackend* database) : m_database(database) { }
     bool operator()(DatabaseTask* task) const { return task->database() == m_database; }
 private:
-    const Database* m_database;
+    const DatabaseBackend* m_database;
 };
 
-void DatabaseThread::unscheduleDatabaseTasks(Database* database)
+void DatabaseThread::unscheduleDatabaseTasks(DatabaseBackend* database)
 {
     // Note that the thread loop is running, so some tasks for the database
     // may still be executed. This is unavoidable.

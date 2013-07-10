@@ -23,14 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
-        Conditional=SVG
-    ] SVGAnimatedEnumeration {
-        attribute [StrictTypeChecking] unsigned short baseVal
+[
+    Conditional=SVG,
+    SkipVTableValidation
+] interface SVGAnimatedEnumeration {
+    [StrictTypeChecking] attribute unsigned short baseVal
             setter raises(DOMException);
         readonly attribute unsigned short animVal;
     };
 
-}

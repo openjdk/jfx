@@ -31,8 +31,6 @@
 #ifndef MutationCallback_h
 #define MutationCallback_h
 
-#if ENABLE(MUTATION_OBSERVERS)
-
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -42,17 +40,14 @@ namespace WebCore {
 class MutationRecord;
 class MutationObserver;
 
-typedef Vector<RefPtr<MutationRecord> > MutationRecordArray;
-
 class MutationCallback : public RefCounted<MutationCallback> {
 public:
     virtual ~MutationCallback() { }
 
-    virtual bool handleEvent(MutationRecordArray*, MutationObserver*) = 0;
+    virtual void call(const Vector<RefPtr<MutationRecord> >&, MutationObserver*) = 0;
+    virtual ScriptExecutionContext* scriptExecutionContext() const = 0;
 };
 
 }
-
-#endif // ENABLE(MUTATION_OBSERVERS)
 
 #endif // MutationCallback_h

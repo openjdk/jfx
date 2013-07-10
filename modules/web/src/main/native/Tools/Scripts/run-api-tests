@@ -52,6 +52,7 @@ my $showHelp = 0;
 my $verbose = 0;
 my $dumpTests = 0;
 my $build = 1;
+my $root;
 my $buildDefault = $build ? "build" : "do not build";
 my @testsFailed;
 my @testsTimedOut;
@@ -63,14 +64,15 @@ Usage: $programName [options] [suite or test prefixes]
   -v|--verbose          Verbose output
   -d|--dump-tests       Dump the names of testcases without running them
   --[no-]build          Build (or do not build) unit tests prior to running (default: $buildDefault)
-  --chromium            Run the Chromium port on Mac/Win/Linux
+  --root=               Path to the pre-built root containing TestWebKitAPI
 EOF
 
 GetOptions(
     'help' => \$showHelp,
     'verbose|v' => \$verbose,
     'dump|d' => \$dumpTests,
-    'build!' => \$build
+    'build!' => \$build,
+    'root=s' => \$root
 );
 
 if ($showHelp) {
@@ -79,7 +81,10 @@ if ($showHelp) {
 }
 
 setConfiguration();
-buildTestTool() if $build;
+
+setConfigurationProductDir(Cwd::abs_path($root)) if (defined($root));
+
+buildTestTool() if $build && !defined($root);
 setPathForRunningWebKitApp(\%ENV);
 my @testsToRun = listAllTests();
 
@@ -94,7 +99,7 @@ exit runTestsBySuite(@testsToRun, $verbose);
 
 sub isSupportedPlatform()
 {
-    return isAppleMacWebKit() || isAppleWinWebKit() || isChromium();
+    return isAppleMacWebKit() || isAppleWinWebKit();
 }
 
 sub dumpTestsBySuite(\@)
@@ -260,6 +265,8 @@ sub listAllTests()
        if ($line =~ m/\.$/) {
           $suite = $line; # "SuiteName."
        } else {
+          # Disabling WebKit2 API test on Windows since we will be disabling WebKit2 on Windows.
+          next if (isAppleWinWebKit() && $suite =~ m/WebKit2*/);       
           $line =~ s/^\s*//; # "TestName"
           push @tests, $suite . $line; # "SuiteName.TestName"
         }

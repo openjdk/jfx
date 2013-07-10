@@ -23,14 +23,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-    interface [
+[
+    NoInterfaceObject,
         Conditional=WEBGL,
-        JSGenerateIsReachable=ImplContext,
+    GenerateIsReachable=ImplContext,
         OmitConstructor,
         DoNotCheckConstants
-    ] WebGLDebugRendererInfo {
+] interface WebGLDebugRendererInfo {
         const unsigned int UNMASKED_VENDOR_WEBGL = 0x9245;
         const unsigned int UNMASKED_RENDERER_WEBGL = 0x9246;
     };
-}

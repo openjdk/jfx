@@ -28,14 +28,12 @@
 
 #include "DOMApplicationCache.h"
 #include "KURL.h"
-#include "PlatformString.h"
-#include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "SharedBuffer.h"
-
 #include <wtf/Noncopyable.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -44,6 +42,7 @@ class ApplicationCacheResource;
 class Document;
 class DocumentLoader;
 class Frame;
+class ResourceHandle;
 class SecurityOrigin;
 
 enum ApplicationCacheUpdateOption {

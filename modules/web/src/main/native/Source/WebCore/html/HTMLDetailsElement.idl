@@ -17,10 +17,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module html {
-
-    interface HTMLDetailsElement : HTMLElement {
-        attribute [Reflect] boolean open;
+[
+    NoInterfaceObject,
+    Conditional=DETAILS_ELEMENT
+] interface HTMLDetailsElement : HTMLElement {
+    [Reflect] attribute boolean open;
     };
 
-}

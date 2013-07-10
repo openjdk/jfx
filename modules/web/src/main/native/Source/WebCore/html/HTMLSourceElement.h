@@ -27,13 +27,12 @@
 #define HTMLSourceElement_h
 
 #if ENABLE(VIDEO)
-
 #include "HTMLElement.h"
 #include "Timer.h"
 
 namespace WebCore {
 
-class HTMLSourceElement : public HTMLElement {
+class HTMLSourceElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLSourceElement> create(const QualifiedName&, Document*);
 

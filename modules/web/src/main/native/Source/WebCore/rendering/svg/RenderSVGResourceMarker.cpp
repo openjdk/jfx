@@ -32,6 +32,7 @@
 #include "SVGRenderSupport.h"
 #include "SVGStyledElement.h"
 #include "SVGStyledTransformableElement.h"
+#include <wtf/StackStats.h>
 
 namespace WebCore {
 
@@ -48,6 +49,7 @@ RenderSVGResourceMarker::~RenderSVGResourceMarker()
 
 void RenderSVGResourceMarker::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     // Invalidate all resources if our layout changed.
     if (everHadLayout() && selfNeedsLayout())
         RenderSVGRoot::addResourceForClientInvalidation(this);
@@ -131,6 +133,12 @@ AffineTransform RenderSVGResourceMarker::markerTransformation(const FloatPoint& 
 
 void RenderSVGResourceMarker::draw(PaintInfo& paintInfo, const AffineTransform& transform)
 {
+    // An empty viewBox disables rendering.
+    SVGMarkerElement* marker = toSVGMarkerElement(toSVGElement(node()));
+    ASSERT(marker);
+    if (marker->hasAttribute(SVGNames::viewBoxAttr) && marker->viewBoxIsValid() && marker->viewBox().isEmpty())
+        return;
+
     PaintInfo info(paintInfo);
     GraphicsContextStateSaver stateSaver(*info.context);
     info.applyTransform(transform);

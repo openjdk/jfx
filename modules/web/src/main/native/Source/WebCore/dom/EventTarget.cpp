@@ -35,6 +35,8 @@
 #include "Event.h"
 #include "EventException.h"
 #include "InspectorInstrumentation.h"
+#include "ScriptController.h"
+#include "WebKitTransitionEvent.h"
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
@@ -42,32 +44,6 @@
 using namespace WTF;
 
 namespace WebCore {
-
-#ifndef NDEBUG
-static int gEventDispatchForbidden = 0;
-
-void forbidEventDispatch()
-{
-    if (!isMainThread())
-        return;
-    ++gEventDispatchForbidden;
-}
-
-void allowEventDispatch()
-{
-    if (!isMainThread())
-        return;
-    if (gEventDispatchForbidden > 0)
-        --gEventDispatchForbidden;
-}
-
-bool eventDispatchForbidden()
-{
-    if (!isMainThread())
-        return false;
-    return gEventDispatchForbidden > 0;
-}
-#endif // NDEBUG
 
 EventTargetData::EventTargetData()
 {
@@ -110,16 +86,19 @@ bool EventTarget::removeEventListener(const AtomicString& eventType, EventListen
 
     // Notify firing events planning to invoke the listener at 'index' that
     // they have one less listener to invoke.
-    for (size_t i = 0; i < d->firingEventIterators.size(); ++i) {
-        if (eventType != d->firingEventIterators[i].eventType)
+    if (!d->firingEventIterators)
+        return true;
+    for (size_t i = 0; i < d->firingEventIterators->size(); ++i) {
+        FiringEventIterator& firingIterator = d->firingEventIterators->at(i);
+        if (eventType != firingIterator.eventType)
             continue;
 
-        if (indexOfRemovedListener >= d->firingEventIterators[i].end)
+        if (indexOfRemovedListener >= firingIterator.end)
             continue;
 
-        --d->firingEventIterators[i].end;
-        if (indexOfRemovedListener <= d->firingEventIterators[i].iterator)
-            --d->firingEventIterators[i].iterator;
+        --firingIterator.end;
+        if (indexOfRemovedListener <= firingIterator.iterator)
+            --firingIterator.iterator;
     }
 
     return true;
@@ -183,19 +162,54 @@ void EventTarget::uncaughtExceptionInEventHandler()
 {
 }
 
+static AtomicString prefixedType(const Event* event)
+{
+    if (event->type() == eventNames().transitionendEvent)
+        return eventNames().webkitTransitionEndEvent;
+
+    return emptyString();
+}
+
 bool EventTarget::fireEventListeners(Event* event)
 {
-    ASSERT(!eventDispatchForbidden());
+    ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
     ASSERT(event && !event->type().isEmpty());
 
     EventTargetData* d = eventTargetData();
     if (!d)
         return true;
 
-    EventListenerVector* listenerVector = d->eventListenerMap.find(event->type());
+    EventListenerVector* listenerPrefixedVector = 0;
+    AtomicString prefixedTypeName = prefixedType(event);
+    if (!prefixedTypeName.isEmpty())
+        listenerPrefixedVector = d->eventListenerMap.find(prefixedTypeName);
 
-    if (listenerVector)
-        fireEventListeners(event, d, *listenerVector);
+    EventListenerVector* listenerUnprefixedVector = d->eventListenerMap.find(event->type());
+
+    if (listenerUnprefixedVector)
+        fireEventListeners(event, d, *listenerUnprefixedVector);
+    else if (listenerPrefixedVector) {
+        AtomicString unprefixedTypeName = event->type();
+        event->setType(prefixedTypeName);
+        fireEventListeners(event, d, *listenerPrefixedVector);
+        event->setType(unprefixedTypeName);
+    }
+
+    if (!prefixedTypeName.isEmpty()) {
+        ScriptExecutionContext* context = scriptExecutionContext();
+        if (context && context->isDocument()) {
+            Document* document = toDocument(context);
+            if (document->domWindow()) {
+                if (listenerPrefixedVector)
+                    if (listenerUnprefixedVector)
+                        FeatureObserver::observe(document->domWindow(), FeatureObserver::PrefixedAndUnprefixedTransitionEndEvent);
+                    else
+                        FeatureObserver::observe(document->domWindow(), FeatureObserver::PrefixedTransitionEndEvent);
+                else if (listenerUnprefixedVector)
+                    FeatureObserver::observe(document->domWindow(), FeatureObserver::UnprefixedTransitionEndEvent);
+            }
+        }
+    }
     
     return !event->defaultPrevented();
 }
@@ -209,9 +223,12 @@ void EventTarget::fireEventListeners(Event* event, EventTargetData* d, EventList
     // dispatch. Conveniently, all new event listeners will be added after 'end',
     // so iterating to 'end' naturally excludes new event listeners.
 
+    bool userEventWasHandled = false;
     size_t i = 0;
     size_t end = entry.size();
-    d->firingEventIterators.append(FiringEventIterator(event->type(), i, end));
+    if (!d->firingEventIterators)
+        d->firingEventIterators = adoptPtr(new FiringEventIteratorVector);
+    d->firingEventIterators->append(FiringEventIterator(event->type(), i, end));
     for ( ; i < end; ++i) {
         RegisteredEventListener& registeredListener = entry[i];
         if (event->eventPhase() == Event::CAPTURING_PHASE && !registeredListener.useCapture)
@@ -229,9 +246,18 @@ void EventTarget::fireEventListeners(Event* event, EventTargetData* d, EventList
         // To match Mozilla, the AT_TARGET phase fires both capturing and bubbling
         // event listeners, even though that violates some versions of the DOM spec.
         registeredListener.listener->handleEvent(context, event);
+        if (!userEventWasHandled && ScriptController::processingUserGesture())
+            userEventWasHandled = true;
         InspectorInstrumentation::didHandleEvent(cookie);
     }
-    d->firingEventIterators.removeLast();
+    d->firingEventIterators->removeLast();
+    if (userEventWasHandled) {
+        ScriptExecutionContext* context = scriptExecutionContext();
+        if (context && context->isDocument()) {
+            Document* document = toDocument(context);
+            document->resetLastHandledUserGestureTimestamp();
+        }
+    }
 }
 
 const EventListenerVector& EventTarget::getEventListeners(const AtomicString& eventType)
@@ -258,9 +284,11 @@ void EventTarget::removeAllEventListeners()
 
     // Notify firing events planning to invoke the listener at 'index' that
     // they have one less listener to invoke.
-    for (size_t i = 0; i < d->firingEventIterators.size(); ++i) {
-        d->firingEventIterators[i].iterator = 0;
-        d->firingEventIterators[i].end = 0;
+    if (d->firingEventIterators) {
+        for (size_t i = 0; i < d->firingEventIterators->size(); ++i) {
+            d->firingEventIterators->at(i).iterator = 0;
+            d->firingEventIterators->at(i).end = 0;
+        }
     }
 }
 

@@ -28,21 +28,19 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
-#include "DOMStringList.h"
-#include "IDBTransactionBackendInterface.h"
+#include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 class IDBTransactionBackendImpl;
-class IDBTransactionCallbacks;
 class IDBDatabaseBackendImpl;
 
 // Transactions are executed in the order the were created.
-class IDBTransactionCoordinator : public RefCounted<IDBTransactionCoordinator> {
+class IDBTransactionCoordinator {
 public:
-    static PassRefPtr<IDBTransactionCoordinator> create();
+    static PassOwnPtr<IDBTransactionCoordinator> create();
     virtual ~IDBTransactionCoordinator();
 
     // Called by transactions as they start and finish.
@@ -58,12 +56,13 @@ private:
     IDBTransactionCoordinator();
 
     void processStartedTransactions();
+    bool canRunTransaction(IDBTransactionBackendImpl*);
 
     // This is just an efficient way to keep references to all transactions.
     HashMap<IDBTransactionBackendImpl*, RefPtr<IDBTransactionBackendImpl> > m_transactions;
     // Transactions in different states are grouped below.
-    ListHashSet<IDBTransactionBackendImpl*> m_startedTransactions;
-    HashSet<IDBTransactionBackendImpl*> m_runningTransactions;
+    ListHashSet<IDBTransactionBackendImpl*> m_queuedTransactions;
+    HashSet<IDBTransactionBackendImpl*> m_startedTransactions;
 };
 
 } // namespace WebCore

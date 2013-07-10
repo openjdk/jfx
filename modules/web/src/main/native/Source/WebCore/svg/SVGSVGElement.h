@@ -29,7 +29,7 @@
 #include "SVGExternalResourcesRequired.h"
 #include "SVGFitToViewBox.h"
 #include "SVGLangSpace.h"
-#include "SVGStyledLocatableElement.h"
+#include "SVGStyledTransformableElement.h"
 #include "SVGTests.h"
 #include "SVGZoomAndPan.h"
 
@@ -42,7 +42,7 @@ class SVGViewSpec;
 class SVGViewElement;
 class SMILTimeContainer;
 
-class SVGSVGElement : public SVGStyledLocatableElement,
+class SVGSVGElement FINAL : public SVGStyledTransformableElement,
                       public SVGTests,
                       public SVGLangSpace,
                       public SVGExternalResourcesRequired,
@@ -51,11 +51,11 @@ class SVGSVGElement : public SVGStyledLocatableElement,
 public:
     static PassRefPtr<SVGSVGElement> create(const QualifiedName&, Document*);
 
-    using SVGStyledLocatableElement::ref;
-    using SVGStyledLocatableElement::deref;
+    using SVGStyledTransformableElement::ref;
+    using SVGStyledTransformableElement::deref;
 
     virtual bool isValid() const { return SVGTests::isValid(); }
-    virtual bool supportsFocus() const { return true; }
+    virtual bool supportsFocus() const OVERRIDE { return true; }
 
     // 'SVGSVGElement' functions
     const AtomicString& contentScriptType() const;
@@ -135,6 +135,8 @@ public:
     SVGZoomAndPanType zoomAndPan() const { return m_zoomAndPan; }
     void setZoomAndPan(unsigned short zoomAndPan) { m_zoomAndPan = SVGZoomAndPan::parseFromNumber(zoomAndPan); }
 
+    bool hasEmptyViewBox() const { return viewBoxIsValid() && viewBox().isEmpty(); }
+
 protected:
     virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
 
@@ -142,11 +144,11 @@ private:
     SVGSVGElement(const QualifiedName&, Document*);
     virtual ~SVGSVGElement();
 
-    virtual bool isSVG() const { return true; }
+    virtual bool isSVGSVGElement() const OVERRIDE { return true; }
     
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext& context) { return StyledElement::rendererIsNeeded(context); }
+    virtual bool rendererIsNeeded(const NodeRenderingContext&) OVERRIDE;
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
@@ -191,6 +193,13 @@ private:
     FloatPoint m_translation;
     RefPtr<SVGViewSpec> m_viewSpec;
 };
+
+inline SVGSVGElement* toSVGSVGElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isSVGElement());
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || toSVGElement(node)->isSVGSVGElement());
+    return static_cast<SVGSVGElement*>(node);
+}
 
 } // namespace WebCore
 

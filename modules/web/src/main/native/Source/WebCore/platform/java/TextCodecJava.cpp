@@ -3,8 +3,9 @@
  */
 #include "config.h"
 #include "TextCodecJava.h"
-#include "PlatformString.h"
-#include "CString.h"
+
+#include <wtf/text/WTFString.h>
+#include <wtf/text/CString.h>
 
 using std::pair;
 

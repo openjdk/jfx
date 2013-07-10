@@ -33,7 +33,6 @@
 #include <WebCore/BString.h>
 #include <WebCore/COMPtr.h>
 #include <WebCore/FormData.h>
-#include <WebCore/NotImplemented.h>
 #include <WebCore/ResourceHandle.h>
 #include <wtf/text/CString.h>
 #include <wtf/RetainPtr.h>
@@ -186,10 +185,12 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPMethod(
 }
 
 HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPShouldHandleCookies( 
-    /* [retval][out] */ BOOL* /*result*/)
+    /* [retval][out] */ BOOL* result)
 {
-    ASSERT_NOT_REACHED();
-    return E_NOTIMPL;
+    bool shouldHandleCookies = m_request.allowCookies();
+
+    *result = shouldHandleCookies ? TRUE : FALSE;
+    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE WebMutableURLRequest::initWithURL( 
@@ -264,11 +265,11 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::isEqual(
 // IWebMutableURLRequest --------------------------------------------------------
 
 HRESULT STDMETHODCALLTYPE WebMutableURLRequest::addValue( 
-    /* [in] */ BSTR /*value*/,
-    /* [in] */ BSTR /*field*/)
+    /* [in] */ BSTR value,
+    /* [in] */ BSTR field)
 {
-    ASSERT_NOT_REACHED();
-    return E_NOTIMPL;
+    m_request.addHTTPHeaderField(WTF::AtomicString(value, SysStringLen(value)), String(field, SysStringLen(field)));
+    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setAllHTTPHeaderFields( 
@@ -314,10 +315,10 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setHTTPShouldHandleCookies(
 }
 
 HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setMainDocumentURL( 
-    /* [in] */ BSTR /*theURL*/)
+    /* [in] */ BSTR theURL)
 {
-    ASSERT_NOT_REACHED();
-    return E_NOTIMPL;
+    m_request.setFirstPartyForCookies(MarshallingHelpers::BSTRToKURL(theURL));
+    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setTimeoutInterval( 
@@ -365,7 +366,7 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setClientCertificate(
 
 CFURLRequestRef STDMETHODCALLTYPE WebMutableURLRequest::cfRequest()
 {
-    return m_request.cfURLRequest();
+    return m_request.cfURLRequest(UpdateHTTPBody);
 }
 
 HRESULT STDMETHODCALLTYPE WebMutableURLRequest::mutableCopy(
@@ -375,7 +376,7 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::mutableCopy(
         return E_POINTER;
 
 #if USE(CFNETWORK)
-    RetainPtr<CFMutableURLRequestRef> mutableRequest(AdoptCF, CFURLRequestCreateMutableCopy(kCFAllocatorDefault, m_request.cfURLRequest()));
+    RetainPtr<CFMutableURLRequestRef> mutableRequest = adoptCF(CFURLRequestCreateMutableCopy(kCFAllocatorDefault, m_request.cfURLRequest(UpdateHTTPBody)));
     *result = createInstance(ResourceRequest(mutableRequest.get()));
     return S_OK;
 #else

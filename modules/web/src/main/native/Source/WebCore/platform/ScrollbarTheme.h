@@ -49,7 +49,7 @@ public:
     virtual void updateEnabledState(ScrollbarThemeClient*) { };
 
     virtual bool paint(ScrollbarThemeClient*, GraphicsContext*, const IntRect& /*damageRect*/) { return false; }
-    virtual ScrollbarPart hitTest(ScrollbarThemeClient*, const PlatformMouseEvent&) { return NoPart; }
+    virtual ScrollbarPart hitTest(ScrollbarThemeClient*, const IntPoint&) { return NoPart; }
     
     virtual int scrollbarThickness(ScrollbarControlSize = RegularScrollbar) { return 0; }
 
@@ -86,10 +86,11 @@ public:
     virtual void paintScrollCorner(ScrollView*, GraphicsContext* context, const IntRect& cornerRect) { defaultPaintScrollCorner(context, cornerRect); }
     static void defaultPaintScrollCorner(GraphicsContext* context, const IntRect& cornerRect) { context->fillRect(cornerRect, Color::white, ColorSpaceDeviceRGB); }
 
+    virtual void paintTickmarks(GraphicsContext*, ScrollbarThemeClient*, const IntRect&) { }
     virtual void paintOverhangAreas(ScrollView*, GraphicsContext*, const IntRect&, const IntRect&, const IntRect&) { }
 
 #if USE(ACCELERATED_COMPOSITING) && ENABLE(RUBBER_BANDING)
-    virtual void setUpOverhangAreasLayerContents(GraphicsLayer*) { }
+    virtual void setUpOverhangAreasLayerContents(GraphicsLayer*, const Color&) { }
     virtual void setUpContentShadowLayer(GraphicsLayer*) { }
 #endif
 

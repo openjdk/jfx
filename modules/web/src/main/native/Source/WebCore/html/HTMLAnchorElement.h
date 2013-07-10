@@ -94,6 +94,8 @@ public:
 
     bool isLiveLink() const;
 
+    virtual bool willRespondToMouseClickEvents() OVERRIDE;
+
     bool hasRel(uint32_t relation) const;
     void setRel(const String&);
     
@@ -103,19 +105,19 @@ public:
 protected:
     HTMLAnchorElement(const QualifiedName&, Document*);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
 private:
-    virtual bool supportsFocus() const;
-    virtual bool isMouseFocusable() const;
-    virtual bool isKeyboardFocusable(KeyboardEvent*) const;
+    virtual bool supportsFocus() const OVERRIDE;
+    virtual bool isMouseFocusable() const OVERRIDE;
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
     virtual void defaultEventHandler(Event*);
-    virtual void setActive(bool active = true, bool pause = false);
+    virtual void setActive(bool active = true, bool pause = false) OVERRIDE FINAL;
     virtual void accessKeyAction(bool sendMouseEvents);
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
     virtual bool canStartSelection() const;
     virtual String target() const;
-    virtual short tabIndex() const;
+    virtual short tabIndex() const OVERRIDE FINAL;
     virtual bool draggable() const;
 
     void sendPings(const KURL& destinationURL);
@@ -155,9 +157,7 @@ inline LinkHash HTMLAnchorElement::visitedLinkHash() const
 // Functions shared with the other anchor elements (i.e., SVG).
 
 bool isEnterKeyKeydownEvent(Event*);
-bool isMiddleMouseButtonEvent(Event*);
 bool isLinkClick(Event*);
-void handleLinkClick(Event*, Document*, const String& url, const String& target, bool hideReferrer = false);
 
 } // namespace WebCore
 

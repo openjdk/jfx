@@ -2,16 +2,24 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/javafx-beans-dt/javafx-beans-dt.iml" filepath="$PROJECT_DIR$/javafx-beans-dt/javafx-beans-dt.iml" group="Tools" />
-      <module fileurl="file://$PROJECT_DIR$/javafx-concurrent/javafx-concurrent.iml" filepath="$PROJECT_DIR$/javafx-concurrent/javafx-concurrent.iml" group="Concurrent" />
-      <module fileurl="file://$PROJECT_DIR$/javafx-designtime/javafx-designtime.iml" filepath="$PROJECT_DIR$/javafx-designtime/javafx-designtime.iml" group="Tools" />
-      <module fileurl="file://$PROJECT_DIR$/javafx-ui-charts/javafx-ui-charts.iml" filepath="$PROJECT_DIR$/javafx-ui-charts/javafx-ui-charts.iml" group="Controls" />
-      <module fileurl="file://$PROJECT_DIR$/javafx-ui-common/javafx-ui-common.iml" filepath="$PROJECT_DIR$/javafx-ui-common/javafx-ui-common.iml" group="Scene Graph" />
-      <module fileurl="file://$PROJECT_DIR$/javafx-ui-controls/javafx-ui-controls.iml" filepath="$PROJECT_DIR$/javafx-ui-controls/javafx-ui-controls.iml" group="Controls" />
-      <module fileurl="file://$PROJECT_DIR$/javafx-util-converter/javafx-util-converter.iml" filepath="$PROJECT_DIR$/javafx-util-converter/javafx-util-converter.iml" group="Core" />
-      <module fileurl="file://$PROJECT_DIR$/test-stub-toolkit/test-stub-toolkit.iml" filepath="$PROJECT_DIR$/test-stub-toolkit/test-stub-toolkit.iml" group="Tools" />
-      <module fileurl="file://$PROJECT_DIR$/javafx-embed-swing/javafx-embed-swing.iml" filepath="$PROJECT_DIR$/javafx-embed-swing/javafx-embed-swing.iml" />
-      <module fileurl="file://$PROJECT_DIR$/javafx-embed-swt/javafx-embed-swt.iml" filepath="$PROJECT_DIR$/javafx-embed-swt/javafx-embed-swt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/3DViewer.iml" filepath="$PROJECT_DIR$/.idea/3DViewer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Ensemble8.iml" filepath="$PROJECT_DIR$/.idea/Ensemble8.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Modena.iml" filepath="$PROJECT_DIR$/.idea/Modena.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/base.iml" filepath="$PROJECT_DIR$/.idea/base.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/buildSrc.iml" filepath="$PROJECT_DIR$/.idea/buildSrc.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/builders.iml" filepath="$PROJECT_DIR$/.idea/builders.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/controls.iml" filepath="$PROJECT_DIR$/.idea/controls.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/deploy.iml" filepath="$PROJECT_DIR$/.idea/deploy.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/designTime.iml" filepath="$PROJECT_DIR$/.idea/designTime.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/fxml.iml" filepath="$PROJECT_DIR$/.idea/fxml.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/fxpackager.iml" filepath="$PROJECT_DIR$/.idea/fxpackager.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/graphics.iml" filepath="$PROJECT_DIR$/.idea/graphics.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/media.iml" filepath="$PROJECT_DIR$/.idea/media.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/rt.iml" filepath="$PROJECT_DIR$/.idea/rt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/rt-closed.iml" filepath="$PROJECT_DIR$/.idea/rt-closed.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/swing.iml" filepath="$PROJECT_DIR$/.idea/swing.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/swt.iml" filepath="$PROJECT_DIR$/.idea/swt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/web.iml" filepath="$PROJECT_DIR$/.idea/web.iml" />
     </modules>
   </component>
 </project>

@@ -2,6 +2,7 @@
     Copyright (C) 2008 Holger Hans Peter Freyther
     Copyright (C) 2009 Torch Mobile Inc. http://www.torchmobile.com/
     Copyright (C) 2011 Nokia Corporation and/or its subsidiary(-ies)
+    Copyright (C) 2013 Digia Plc. and/or its subsidiary(-ies)
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -23,7 +24,8 @@
 #include "config.h"
 #include "FontPlatformData.h"
 
-#include "PlatformString.h"
+#include "Font.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -63,35 +65,30 @@ FontPlatformData::FontPlatformData(float size, bool bold, bool oblique)
 FontPlatformData::FontPlatformData(const FontDescription& description, const AtomicString& familyName, int wordSpacing, int letterSpacing)
     : m_data(adoptRef(new FontPlatformDataPrivate()))
 {
-#if !HAVE(QRAWFONT)
-    QFont& font = m_data->font;
-#else
     QFont font;
-#endif
     int requestedSize = description.computedPixelSize();
     font.setFamily(familyName);
+    if (requestedSize)
     font.setPixelSize(requestedSize);
     font.setItalic(description.italic());
     font.setWeight(toQFontWeight(description.weight()));
     font.setWordSpacing(wordSpacing);
     font.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
-    font.setStyleStrategy(QFont::ForceIntegerMetrics);
+    if (description.fontSmoothing() == NoSmoothing)
+        font.setStyleStrategy(QFont::NoAntialias);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
+    if (description.fontSmoothing() == AutoSmoothing && !Font::shouldUseSmoothing())
+        font.setStyleStrategy(QFont::NoAntialias);
+#endif
 
     m_data->bold = font.bold();
-#if !HAVE(QRAWFONT)
-    const bool smallCaps = description.smallCaps();
-    font.setCapitalization(smallCaps ? QFont::SmallCaps : QFont::MixedCase);
     // WebKit allows font size zero but QFont does not. We will return
     // m_data->size if a font size of zero is requested and pixelSize()
     // otherwise.
     m_data->size = (!requestedSize) ? requestedSize : font.pixelSize();
-#else
     m_data->rawFont = QRawFont::fromFont(font, QFontDatabase::Any);
-    m_data->size = requestedSize;
-#endif
 }
 
-#if HAVE(QRAWFONT)
 FontPlatformData::FontPlatformData(const FontPlatformData& other, float size)
     : m_data(adoptRef(new FontPlatformDataPrivate()))
 {
@@ -101,7 +98,6 @@ FontPlatformData::FontPlatformData(const FontPlatformData& other, float size)
     m_data->rawFont.setPixelSize(size);
     m_data->size = m_data->rawFont.pixelSize();
 }
-#endif // HAVE(QRAWFONT)
 
 bool FontPlatformData::operator==(const FontPlatformData& other) const
 {
@@ -114,11 +110,7 @@ bool FontPlatformData::operator==(const FontPlatformData& other) const
     const bool equals = (m_data->size == other.m_data->size
                          && m_data->bold == other.m_data->bold
                          && m_data->oblique == other.m_data->oblique
-#if !HAVE(QRAWFONT)
-                         && m_data->font == other.m_data->font);
-#else
                          && m_data->rawFont == other.m_data->rawFont);
-#endif
     return equals;
 }
 
@@ -128,15 +120,9 @@ unsigned FontPlatformData::hash() const
         return 0;
     if (m_data->isDeletedValue)
         return 1;
-#if !HAVE(QRAWFONT)
-    return (qHash(m_data->font.toString()) ^ qHash(m_data->bold)
-            ^ qHash(m_data->oblique))
-            ^ qHash(*reinterpret_cast<quint32*>(&m_data->size));
-#else
     return qHash(m_data->rawFont.familyName()) ^ qHash(m_data->rawFont.style())
             ^ qHash(m_data->rawFont.weight())
             ^ qHash(*reinterpret_cast<quint32*>(&m_data->size));
-#endif
 }
 
 #ifndef NDEBUG

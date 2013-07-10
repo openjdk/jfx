@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
@@ -21,12 +21,14 @@
 #ifndef Page_h
 #define Page_h
 
-#include "FrameLoaderTypes.h"
+#include "FeatureObserver.h"
 #include "FindOptions.h"
-#include "LayoutTypes.h"
+#include "FrameLoaderTypes.h"
+#include "LayoutMilestones.h"
+#include "LayoutRect.h"
 #include "PageVisibilityState.h"
+#include "Pagination.h"
 #include "PlatformScreen.h"
-#include "PlatformString.h"
 #include "Region.h"
 #include "Supplementable.h"
 #include "ViewportArguments.h"
@@ -34,13 +36,14 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/text/WTFString.h>
 
 #if OS(SOLARIS)
 #include <sys/time.h> // For time_t structure.
 #endif
 
 #if PLATFORM(MAC)
-#include "SchedulePair.h"
+#include <wtf/SchedulePair.h>
 #endif
 
 namespace JSC {
@@ -54,10 +57,9 @@ namespace WebCore {
     class BackForwardList;
     class Chrome;
     class ChromeClient;
-#if ENABLE(CONTEXT_MENUS)
+class ClientRectList;
     class ContextMenuClient;
     class ContextMenuController;
-#endif
     class Document;
     class DragCaretController;
     class DragClient;
@@ -72,8 +74,11 @@ namespace WebCore {
     class InspectorController;
     class MediaCanStartListener;
     class Node;
+class PageConsole;
     class PageGroup;
+class PlugInClient;
     class PluginData;
+class PluginViewBase;
     class PointerLockController;
     class ProgressTracker;
     class Range;
@@ -84,6 +89,7 @@ namespace WebCore {
     class ScrollingCoordinator;
     class Settings;
     class StorageNamespace;
+class ValidationMessageClient;
 
     typedef uint64_t LinkHash;
 
@@ -105,7 +111,7 @@ namespace WebCore {
         WTF_MAKE_NONCOPYABLE(Page);
         friend class Settings;
     public:
-        static void scheduleForcedStyleRecalcForAllPages();
+    static void updateStyleForAllPagesAfterGlobalChangeInEnvironment();
 
         // It is up to the platform to ensure that non-null clients are provided where required.
         struct PageClients {
@@ -122,17 +128,19 @@ namespace WebCore {
             EditorClient* editorClient;
             DragClient* dragClient;
             InspectorClient* inspectorClient;
+        PlugInClient* plugInClient;
             RefPtr<BackForwardList> backForwardClient;
+        ValidationMessageClient* validationMessageClient;
         };
 
-        Page(PageClients&);
+    explicit Page(PageClients&);
         ~Page();
 
         ArenaSize renderTreeSize() const;
 
         void setNeedsRecalcStyleInAllFrames();
 
-        RenderTheme* theme() const { return m_theme.get(); };
+    RenderTheme* theme() const { return m_theme.get(); }
 
         ViewportArguments viewportArguments() const;
 
@@ -143,6 +151,7 @@ namespace WebCore {
         bool canStartMedia() const { return m_canStartMedia; }
 
         EditorClient* editorClient() const { return m_editorClient; }
+    PlugInClient* plugInClient() const { return m_plugInClient; }
 
         void setMainFrame(PassRefPtr<Frame>);
         Frame* mainFrame() const { return m_mainFrame.get(); }
@@ -163,14 +172,14 @@ namespace WebCore {
         void setGroupName(const String&);
         const String& groupName() const;
 
-        PageGroup& group() { if (!m_group) initGroup(); return *m_group; }
+    PageGroup& group();
         PageGroup* groupPtr() { return m_group; } // can return 0
 
-        void incrementFrameCount() { ++m_frameCount; }
-        void decrementFrameCount() { ASSERT(m_frameCount); --m_frameCount; }
-        int frameCount() const { checkFrameCountConsistency(); return m_frameCount; }
+    void incrementSubframeCount() { ++m_subframeCount; }
+    void decrementSubframeCount() { ASSERT(m_subframeCount); --m_subframeCount; }
+    int subframeCount() const { checkSubframeCountConsistency(); return m_subframeCount; }
 
-        Chrome* chrome() const { return m_chrome.get(); }
+    Chrome& chrome() const { return *m_chrome; }
         DragCaretController* dragCaretController() const { return m_dragCaretController.get(); }
 #if ENABLE(DRAG_SUPPORT)
         DragController* dragController() const { return m_dragController.get(); }
@@ -185,13 +194,21 @@ namespace WebCore {
 #if ENABLE(POINTER_LOCK)
         PointerLockController* pointerLockController() const { return m_pointerLockController.get(); }
 #endif
+    ValidationMessageClient* validationMessageClient() const { return m_validationMessageClient; }
 
         ScrollingCoordinator* scrollingCoordinator();
+
+    String scrollingStateTreeAsText();
+    String mainThreadScrollingReasonsAsText();
+    PassRefPtr<ClientRectList> nonFastScrollableRects(const Frame*);
 
         Settings* settings() const { return m_settings.get(); }
         ProgressTracker* progress() const { return m_progress.get(); }
         BackForwardController* backForward() const { return m_backForwardController.get(); }
 
+    FeatureObserver* featureObserver() { return &m_featureObserver; }
+
+#if ENABLE(VIEW_MODE_CSS_MEDIA)
         enum ViewMode {
             ViewModeInvalid,
             ViewModeWindowed,
@@ -204,6 +221,7 @@ namespace WebCore {
 
         ViewMode viewMode() const { return m_viewMode; }
         void setViewMode(ViewMode);
+#endif // ENABLE(VIEW_MODE_CSS_MEDIA)
         
         void setTabKeyCyclesThroughElements(bool b) { m_tabKeyCyclesThroughElements = b; }
         bool tabKeyCyclesThroughElements() const { return m_tabKeyCyclesThroughElements; }
@@ -214,11 +232,18 @@ namespace WebCore {
 
         PassRefPtr<Range> rangeOfString(const String&, Range*, FindOptions);
 
-        unsigned markAllMatchesForText(const String&, FindOptions, bool shouldHighlight, unsigned);
-        // FIXME: Switch callers over to the FindOptions version and retire this one.
-        unsigned markAllMatchesForText(const String&, TextCaseSensitivity, bool shouldHighlight, unsigned);
+    unsigned countFindMatches(const String&, FindOptions, unsigned maxMatchCount);
+    unsigned markAllMatchesForText(const String&, FindOptions, bool shouldHighlight, unsigned maxMatchCount);
+
         void unmarkAllTextMatches();
 
+    // find all the Ranges for the matching text.
+    // Upon return, indexForSelection will be one of the following:
+    // 0 if there is no user selection
+    // the index of the first range after the user selection
+    // NoMatchBeforeUserSelection if there is no matching text after the user selection.
+    enum { NoMatchBeforeUserSelection = -1 };
+    void findStringMatchingRanges(const String&, FindOptions, int maxCount, Vector<RefPtr<Range> >*, int& indexForSelection);
 #if PLATFORM(MAC)
         void addSchedulePair(PassRefPtr<SchedulePair>);
         void removeSchedulePair(PassRefPtr<SchedulePair>);
@@ -238,7 +263,7 @@ namespace WebCore {
         void setInLowQualityImageInterpolationMode(bool = true);
 
         float mediaVolume() const { return m_mediaVolume; }
-        void setMediaVolume(float volume);
+    void setMediaVolume(float);
 
         void setPageScaleFactor(float scale, const IntPoint& origin);
         float pageScaleFactor() const { return m_pageScaleFactor; }
@@ -246,28 +271,18 @@ namespace WebCore {
         float deviceScaleFactor() const { return m_deviceScaleFactor; }
         void setDeviceScaleFactor(float);
 
-        struct Pagination {
-            enum Mode { Unpaginated, LeftToRightPaginated, RightToLeftPaginated, TopToBottomPaginated, BottomToTopPaginated };
+    bool shouldSuppressScrollbarAnimations() const { return m_suppressScrollbarAnimations; }
+    void setShouldSuppressScrollbarAnimations(bool suppressAnimations);
 
-            Pagination()
-                : mode(Unpaginated)
-                , behavesLikeColumns(false)
-                , pageLength(0)
-                , gap(0)
-            {
-            };
+    bool rubberBandsAtBottom();
+    void setRubberBandsAtBottom(bool);
+    bool rubberBandsAtTop();
+    void setRubberBandsAtTop(bool);
 
-            bool operator==(const Pagination& other) const
-            {
-                return mode == other.mode && behavesLikeColumns == other.behavesLikeColumns && pageLength == other.pageLength && gap == other.gap;
-            }
-
-            Mode mode;
-            bool behavesLikeColumns;
-            unsigned pageLength;
-            unsigned gap;
-        };
-
+    // Page and FrameView both store a Pagination value. Page::pagination() is set only by API,
+    // and FrameView::pagination() is set only by CSS. Page::pagination() will affect all
+    // FrameViews in the page cache, but FrameView::pagination() only affects the current
+    // FrameView.
         const Pagination& pagination() const { return m_pagination; }
         void setPagination(const Pagination&);
 
@@ -278,16 +293,22 @@ namespace WebCore {
         void willMoveOffscreen();
         bool isOnscreen() const { return m_isOnscreen; }
 
+    // Notification that this Page was moved into or out of a native window.
+    void setIsInWindow(bool);
+    bool isInWindow() const { return m_isInWindow; }
+
         void windowScreenDidChange(PlatformDisplayID);
         
         void suspendScriptedAnimations();
         void resumeScriptedAnimations();
         bool scriptedAnimationsSuspended() const { return m_scriptedAnimationsSuspended; }
+    void setThrottled(bool);
         
         void userStyleSheetLocationChanged();
         const String& userStyleSheet() const;
 
         void dnsPrefetchingStateChanged();
+    void storageBlockingStateChanged();
         void privateBrowsingStateChanged();
 
         static void setDebuggerForAllPages(JSC::Debugger*);
@@ -313,9 +334,6 @@ namespace WebCore {
         void setMemoryCacheClientCallsEnabled(bool);
         bool areMemoryCacheClientCallsEnabled() const { return m_areMemoryCacheClientCallsEnabled; }
 
-        void setJavaScriptURLsAreAllowed(bool);
-        bool javaScriptURLsAreAllowed() const;
-
         // Don't allow more than a certain number of frames in a page.
         // This seems like a reasonable upper bound, and otherwise mutually
         // recursive frameset pages can quickly bring the program to its knees
@@ -327,13 +345,26 @@ namespace WebCore {
 
 #if ENABLE(PAGE_VISIBILITY_API)
         PageVisibilityState visibilityState() const;
+#endif
+#if ENABLE(PAGE_VISIBILITY_API) || ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
         void setVisibilityState(PageVisibilityState, bool);
 #endif
 
         PlatformDisplayID displayID() const { return m_displayID; }
 
+    void addLayoutMilestones(LayoutMilestones);
+    void removeLayoutMilestones(LayoutMilestones);
+    LayoutMilestones requestedLayoutMilestones() const { return m_requestedLayoutMilestones; }
+
+#if ENABLE(RUBBER_BANDING)
+    void addHeaderWithHeight(int);
+    void addFooterWithHeight(int);
+#endif
+
+    int headerHeight() const { return m_headerHeight; }
+    int footerHeight() const { return m_footerHeight; }
+
         bool isCountingRelevantRepaintedObjects() const;
-        void setRelevantRepaintedObjectsCounterThreshold(uint64_t);
         void startCountingRelevantRepaintedObjects();
         void resetRelevantPaintedObjectCounter();
         void addRelevantRepaintedObject(RenderObject*, const LayoutRect& objectPaintRect);
@@ -348,21 +379,51 @@ namespace WebCore {
 
         AlternativeTextClient* alternativeTextClient() const { return m_alternativeTextClient; }
 
+    bool hasSeenPlugin(const String& serviceType) const;
+    bool hasSeenAnyPlugin() const;
+    void sawPlugin(const String& serviceType);
+    void resetSeenPlugins();
+
+    bool hasSeenMediaEngine(const String& engineName) const;
+    bool hasSeenAnyMediaEngine() const;
+    void sawMediaEngine(const String& engineName);
+    void resetSeenMediaEngines();
+
+    PageConsole* console() { return m_console.get(); }
+
+#if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
+    void hiddenPageDOMTimerThrottlingStateChanged();
+#endif
+#if ENABLE(PAGE_VISIBILITY_API)
+    void hiddenPageCSSAnimationSuspensionStateChanged();
+#endif
+
+#if ENABLE(VIDEO_TRACK)
+    void captionPreferencesChanged();
+#endif
+
     private:
         void initGroup();
 
 #if ASSERT_DISABLED
-        void checkFrameCountConsistency() const { }
+    void checkSubframeCountConsistency() const { }
 #else
-        void checkFrameCountConsistency() const;
+    void checkSubframeCountConsistency() const;
 #endif
+
+    unsigned findMatchesForText(const String&, FindOptions, unsigned maxMatchCount, bool shouldHighlight, bool markMatches);
 
         MediaCanStartListener* takeAnyMediaCanStartListener();
 
         void setMinimumTimerInterval(double);
         double minimumTimerInterval() const;
 
-        OwnPtr<Chrome> m_chrome;
+    void setTimerAlignmentInterval(double);
+    double timerAlignmentInterval() const;
+
+    void collectPluginViews(Vector<RefPtr<PluginViewBase>, 32>& pluginViewBases);
+
+    const OwnPtr<Chrome> m_chrome;
         OwnPtr<DragCaretController> m_dragCaretController;
 
 #if ENABLE(DRAG_SUPPORT)
@@ -391,8 +452,12 @@ namespace WebCore {
         RefPtr<RenderTheme> m_theme;
 
         EditorClient* m_editorClient;
+    PlugInClient* m_plugInClient;
+    ValidationMessageClient* m_validationMessageClient;
 
-        int m_frameCount;
+    FeatureObserver m_featureObserver;
+
+    int m_subframeCount;
         String m_groupName;
         bool m_openedByDOM;
 
@@ -408,9 +473,9 @@ namespace WebCore {
         float m_pageScaleFactor;
         float m_deviceScaleFactor;
 
-        Pagination m_pagination;
+    bool m_suppressScrollbarAnimations;
 
-        bool m_javaScriptURLsAreAllowed;
+        Pagination m_pagination;
 
         String m_userStyleSheetPath;
         mutable String m_userStyleSheet;
@@ -429,20 +494,31 @@ namespace WebCore {
 
         RefPtr<StorageNamespace> m_sessionStorage;
 
+#if ENABLE(VIEW_MODE_CSS_MEDIA)
         ViewMode m_viewMode;
+#endif // ENABLE(VIEW_MODE_CSS_MEDIA)
 
         double m_minimumTimerInterval;
 
+    double m_timerAlignmentInterval;
+
         bool m_isEditable;
         bool m_isOnscreen;
+    bool m_isInWindow;
 
 #if ENABLE(PAGE_VISIBILITY_API)
         PageVisibilityState m_visibilityState;
 #endif
         PlatformDisplayID m_displayID;
 
+    LayoutMilestones m_requestedLayoutMilestones;
+
+    int m_headerHeight;
+    int m_footerHeight;
+
         HashSet<RenderObject*> m_relevantUnpaintedRenderObjects;
-        Region m_relevantPaintedRegion;
+    Region m_topRelevantPaintedRegion;
+    Region m_bottomRelevantPaintedRegion;
         Region m_relevantUnpaintedRegion;
         bool m_isCountingRelevantRepaintedObjects;
 #ifndef NDEBUG
@@ -451,7 +527,18 @@ namespace WebCore {
         AlternativeTextClient* m_alternativeTextClient;
 
         bool m_scriptedAnimationsSuspended;
+    OwnPtr<PageConsole> m_console;
+
+    HashSet<String> m_seenPlugins;
+    HashSet<String> m_seenMediaEngines;
     };
+
+inline PageGroup& Page::group()
+{
+    if (!m_group)
+        initGroup();
+    return *m_group;
+}
 
 } // namespace WebCore
     

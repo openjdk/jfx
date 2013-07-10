@@ -25,6 +25,8 @@
 #ifndef AudioNode_h
 #define AudioNode_h
 
+#include "AudioBus.h"
+#include <wtf/Forward.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
@@ -63,6 +65,8 @@ public:
         NodeTypeOscillator,
         NodeTypeAudioBufferSource,
         NodeTypeMediaElementAudioSource,
+        NodeTypeMediaStreamAudioDestination,
+        NodeTypeMediaStreamAudioSource,
         NodeTypeJavaScript,
         NodeTypeBiquadFilter,
         NodeTypePanner,
@@ -75,6 +79,12 @@ public:
         NodeTypeDynamicsCompressor,
         NodeTypeWaveShaper,
         NodeTypeEnd
+    };
+
+    enum ChannelCountMode {
+        Max,
+        ClampedMax,
+        Explicit
     };
 
     NodeType nodeType() const { return m_nodeType; }
@@ -155,6 +165,19 @@ public:
 
     void enableOutputsIfNecessary();
     void disableOutputsIfNecessary();
+
+    unsigned long channelCount();
+    virtual void setChannelCount(unsigned long, ExceptionCode&);
+
+    String channelCountMode();
+    void setChannelCountMode(const String&, ExceptionCode&);
+
+    String channelInterpretation();
+    void setChannelInterpretation(const String&, ExceptionCode&);
+
+    ChannelCountMode internalChannelCountMode() const { return m_channelCountMode; }
+    AudioBus::ChannelInterpretation internalChannelInterpretation() const { return m_channelInterpretation; }
+
 protected:
     // Inputs and outputs must be created before the AudioNode is initialized.
     void addInput(PassOwnPtr<AudioNodeInput>);
@@ -164,6 +187,9 @@ protected:
     // Each rendering quantum, the audio data for each of the AudioNode's inputs will be available after this method is called.
     // Called from context's audio thread.
     virtual void pullInputs(size_t framesToProcess);
+
+    // Force all inputs to take any channel interpretation changes into account.
+    void updateChannelsForInputs();
 
 private:
     volatile bool m_isInitialized;
@@ -187,6 +213,11 @@ private:
     static bool s_isNodeCountInitialized;
     static int s_nodeCount[NodeTypeEnd];
 #endif
+
+protected:
+    unsigned m_channelCount;
+    ChannelCountMode m_channelCountMode;
+    AudioBus::ChannelInterpretation m_channelInterpretation;
 };
 
 } // namespace WebCore

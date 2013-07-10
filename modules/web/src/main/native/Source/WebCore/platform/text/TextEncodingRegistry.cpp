@@ -45,14 +45,8 @@
 #if PLATFORM(MAC)
 #include "TextCodecMac.h"
 #endif
-#if PLATFORM(QT)
-#include "qt/TextCodecQt.h"
-#endif
-#if USE(GLIB_UNICODE)
-#include "gtk/TextCodecGtk.h"
-#endif
-#if OS(WINCE) && !PLATFORM(QT)
-#include "TextCodecWinCE.h"
+#if OS(WINDOWS) && USE(WCHAR_UNICODE)
+#include "win/TextCodecWin.h"
 #endif
 #if USE(JAVA_UNICODE)
 #include "java/TextCodecJava.h"
@@ -74,10 +68,19 @@ struct TextEncodingNameHash {
         char c1;
         char c2;
         do {
+#if defined(_MSC_VER) && _MSC_VER == 1700
+            // Workaround for a bug in the VS2012 Update1 and Update2 optimizer, remove once the fix is released.
+            // https://connect.microsoft.com/VisualStudio/feedback/details/781189/vs2012-update-ctp4-c-optimizing-bug
+            c1 = toASCIILower(*s1++);
+            c2 = toASCIILower(*s2++);
+            if (c1 != c2)
+                return false;
+#else
             c1 = *s1++;
             c2 = *s2++;
             if (toASCIILower(c1) != toASCIILower(c2))
                 return false;
+#endif
         } while (c1 && c2);
         return !c1 && !c2;
     }
@@ -199,8 +202,8 @@ static void pruneBlacklistedCodecs()
         TextEncodingNameMap::const_iterator it = textEncodingNameMap->begin();
         TextEncodingNameMap::const_iterator end = textEncodingNameMap->end();
         for (; it != end; ++it) {
-            if (it->second == atomicName)
-                names.append(it->first);
+            if (it->value == atomicName)
+                names.append(it->key);
         }
 
         size_t length = names.size();
@@ -231,12 +234,6 @@ static void buildBaseTextCodecMaps()
 
     TextCodecUserDefined::registerEncodingNames(addToTextEncodingNameMap);
     TextCodecUserDefined::registerCodecs(addToTextCodecMap);
-
-#if USE(GLIB_UNICODE)
-    // FIXME: This is not needed. The code above covers all the base codecs.
-    TextCodecGtk::registerBaseEncodingNames(addToTextEncodingNameMap);
-    TextCodecGtk::registerBaseCodecs(addToTextCodecMap);
-#endif
 }
 
 static void addEncodingName(HashSet<const char*>* set, const char* name)
@@ -299,29 +296,19 @@ static void extendTextCodecMaps()
     TextCodecICU::registerCodecs(addToTextCodecMap);
 #endif
 
-#if USE(QT4_UNICODE)
-    TextCodecQt::registerEncodingNames(addToTextEncodingNameMap);
-    TextCodecQt::registerCodecs(addToTextCodecMap);
-#endif
 
 #if USE(JAVA_UNICODE)
     TextCodecJava::registerEncodingNames(addToTextEncodingNameMap);
     TextCodecJava::registerCodecs(addToTextCodecMap);
 #endif
-
 #if PLATFORM(MAC)
     TextCodecMac::registerEncodingNames(addToTextEncodingNameMap);
     TextCodecMac::registerCodecs(addToTextCodecMap);
 #endif
 
-#if USE(GLIB_UNICODE)
-    TextCodecGtk::registerExtendedEncodingNames(addToTextEncodingNameMap);
-    TextCodecGtk::registerExtendedCodecs(addToTextCodecMap);
-#endif
-
-#if OS(WINCE) && !PLATFORM(QT)
-    TextCodecWinCE::registerExtendedEncodingNames(addToTextEncodingNameMap);
-    TextCodecWinCE::registerExtendedCodecs(addToTextCodecMap);
+#if OS(WINDOWS) && USE(WCHAR_UNICODE)
+    TextCodecWin::registerExtendedEncodingNames(addToTextEncodingNameMap);
+    TextCodecWin::registerExtendedCodecs(addToTextCodecMap);
 #endif
 
     pruneBlacklistedCodecs();
@@ -356,18 +343,30 @@ const char* atomicCanonicalTextEncodingName(const char* name)
     return textEncodingNameMap->get(name);
 }
 
-const char* atomicCanonicalTextEncodingName(const UChar* characters, size_t length)
+template <typename CharacterType>
+const char* atomicCanonicalTextEncodingName(const CharacterType* characters, size_t length)
 {
     char buffer[maxEncodingNameLength + 1];
     size_t j = 0;
     for (size_t i = 0; i < length; ++i) {
-        UChar c = characters[i];
+        CharacterType c = characters[i];
         if (j == maxEncodingNameLength)
             return 0;
         buffer[j++] = c;
     }
     buffer[j] = 0;
     return atomicCanonicalTextEncodingName(buffer);
+}
+
+const char* atomicCanonicalTextEncodingName(const String& alias)
+{
+    if (!alias.length())
+        return 0;
+
+    if (alias.is8Bit())
+        return atomicCanonicalTextEncodingName<LChar>(alias.characters8(), alias.length());
+
+    return atomicCanonicalTextEncodingName<UChar>(alias.characters(), alias.length());
 }
 
 bool noExtendedTextEncodingNameUsed()
@@ -387,7 +386,7 @@ void dumpTextEncodingNameMap()
     TextEncodingNameMap::const_iterator it = textEncodingNameMap->begin();
     TextEncodingNameMap::const_iterator end = textEncodingNameMap->end();
     for (; it != end; ++it)
-        fprintf(stderr, "'%s' => '%s'\n", it->first, it->second);
+        fprintf(stderr, "'%s' => '%s'\n", it->key, it->value);
 }
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2004, 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2004, 2005, 2006, 2008, 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 
 #import "AccessibilityObject.h"
 #import "RenderObject.h"
-#import "WebAccessibilityObjectWrapper.h"
+#import "WebAccessibilityObjectWrapperMac.h"
 #import "WebCoreSystemInterface.h"
 
 #import <wtf/PassRefPtr.h>
@@ -51,7 +51,7 @@ void AXObjectCache::detachWrapper(AccessibilityObject* obj)
 
 void AXObjectCache::attachWrapper(AccessibilityObject* obj)
 {
-    RetainPtr<WebAccessibilityObjectWrapper> wrapper(AdoptNS, [[WebAccessibilityObjectWrapper alloc] initWithAccessibilityObject:obj]);
+    RetainPtr<WebAccessibilityObjectWrapper> wrapper = adoptNS([[WebAccessibilityObjectWrapper alloc] initWithAccessibilityObject:obj]);
     obj->setWrapper(wrapper.get());
 }
 
@@ -61,33 +61,35 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject* obj, AXNotific
         return;
     
     // Some notifications are unique to Safari and do not have NSAccessibility equivalents.
-    String macNotification;
+    NSString *macNotification;
     switch (notification) {
         case AXActiveDescendantChanged:
             // An active descendant change for trees means a selected rows change.
             if (obj->isTree())
                 macNotification = NSAccessibilitySelectedRowsChangedNotification;
+            
+            // When a combobox uses active descendant, it means the selected item in its associated
+            // list has changed. In these cases we should use selected children changed, because
+            // we don't want the focus to change away from the combobox where the user is typing.
+            else if (obj->isComboBox())
+                macNotification = NSAccessibilitySelectedChildrenChangedNotification;
             else
                 macNotification = NSAccessibilityFocusedUIElementChangedNotification;                
             break;
         case AXAutocorrectionOccured:
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
             macNotification = @"AXAutocorrectionOccurred";
             break;
-#else
-            return;
-#endif
         case AXFocusedUIElementChanged:
             macNotification = NSAccessibilityFocusedUIElementChangedNotification;
             break;
         case AXLayoutComplete:
-            macNotification = "AXLayoutComplete";
+            macNotification = @"AXLayoutComplete";
             break;
         case AXLoadComplete:
-            macNotification = "AXLoadComplete";
+            macNotification = @"AXLoadComplete";
             break;
         case AXInvalidStatusChanged:
-            macNotification = "AXInvalidStatusChanged";
+            macNotification = @"AXInvalidStatusChanged";
             break;
         case AXSelectedChildrenChanged:
             if (obj->isAccessibilityTable())
@@ -107,14 +109,12 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject* obj, AXNotific
         case AXRowCountChanged:
             macNotification = NSAccessibilityRowCountChangedNotification;
             break;
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         case AXRowExpanded:
             macNotification = NSAccessibilityRowExpandedNotification;
             break;
         case AXRowCollapsed:
             macNotification = NSAccessibilityRowCollapsedNotification;
             break;
-#endif
             // Does not exist on Mac.
         case AXCheckedStateChanged:
         default:
@@ -139,7 +139,7 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject*, 
 {
 }
 
-void AXObjectCache::handleFocusedUIElementChanged(RenderObject*, RenderObject*)
+void AXObjectCache::handleFocusedUIElementChanged(Node*, Node*)
 {
     wkAccessibilityHandleFocusChanged();
 }

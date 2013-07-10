@@ -23,33 +23,24 @@
 #define JSDOMWrapper_h
 
 #include "JSDOMGlobalObject.h"
-#include <runtime/JSObject.h>
+#include <runtime/JSDestructibleObject.h>
 
 namespace WebCore {
 
 class ScriptExecutionContext;
 
-class JSDOMWrapper : public JSC::JSNonFinalObject {
+class JSDOMWrapper : public JSC::JSDestructibleObject {
 public:
-    JSDOMGlobalObject* globalObject() const
-    {
-        return JSC::jsCast<JSDOMGlobalObject*>(JSC::JSNonFinalObject::globalObject());
-    }
+    typedef JSC::JSDestructibleObject Base;
 
-    ScriptExecutionContext* scriptExecutionContext() const
-    {
-        // FIXME: Should never be 0, but can be due to bug 27640.
-        return globalObject()->scriptExecutionContext();
-    }
+    JSDOMGlobalObject* globalObject() const { return JSC::jsCast<JSDOMGlobalObject*>(JSC::JSNonFinalObject::globalObject()); }
+    ScriptExecutionContext* scriptExecutionContext() const { return globalObject()->scriptExecutionContext(); }
 
 protected:
-    explicit JSDOMWrapper(JSC::Structure* structure, JSC::JSGlobalObject* globalObject) 
-        : JSNonFinalObject(globalObject->globalData(), structure)
+    JSDOMWrapper(JSC::Structure* structure, JSC::JSGlobalObject* globalObject) 
+        : JSDestructibleObject(globalObject->vm(), structure)
     {
-        // FIXME: This ASSERT is valid, but fires in fast/dom/gc-6.html when trying to create
-        // new JavaScript objects on detached windows due to DOMWindow::document()
-        // needing to reach through the frame to get to the Document*.  See bug 27640.
-        // ASSERT(globalObject->scriptExecutionContext());
+        ASSERT(scriptExecutionContext());
     }
 };
 

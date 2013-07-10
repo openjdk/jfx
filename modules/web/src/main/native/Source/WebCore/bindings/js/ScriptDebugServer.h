@@ -33,21 +33,20 @@
 #if ENABLE(JAVASCRIPT_DEBUGGER)
 
 #include "ScriptDebugListener.h"
-#include "PlatformString.h"
 #include "ScriptBreakpoint.h"
 #include "Timer.h"
-
 #include <debugger/Debugger.h>
-#include <runtime/UString.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/TextPosition.h>
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
 class DebuggerCallFrame;
 class JSGlobalObject;
+class ExecState;
 }
 namespace WebCore {
 
@@ -91,13 +90,20 @@ public:
     void recompileAllJSFunctionsSoon();
     virtual void recompileAllJSFunctions(Timer<ScriptDebugServer>* = 0) = 0;
 
+    void setScriptPreprocessor(const String&)
+    {
+        // FIXME(webkit.org/b/82203): Implement preprocessor.
+    }
+
     bool isPaused() { return m_paused; }
+    bool runningNestedMessageLoop() { return m_runningNestedMessageLoop; }
 
     void compileScript(ScriptState*, const String& expression, const String& sourceURL, String* scriptId, String* exceptionMessage);
     void clearCompiledScripts();
     void runScript(ScriptState*, const String& scriptId, ScriptValue* result, bool* wasThrown, String* exceptionMessage);
 
     class Task {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         virtual ~Task() { }
         virtual void run() = 0;
@@ -114,6 +120,10 @@ protected:
     virtual void didPause(JSC::JSGlobalObject*) = 0;
     virtual void didContinue(JSC::JSGlobalObject*) = 0;
 
+    virtual void runEventLoopWhilePaused() = 0;
+
+    virtual bool isContentScript(JSC::ExecState*);
+
     bool hasBreakpoint(intptr_t sourceID, const TextPosition&) const;
 
     void dispatchFunctionToListeners(JavaScriptExecutionCallback, JSC::JSGlobalObject*);
@@ -123,34 +133,39 @@ protected:
     void dispatchDidParseSource(const ListenerSet& listeners, JSC::SourceProvider*, bool isContentScript);
     void dispatchFailedToParseSource(const ListenerSet& listeners, JSC::SourceProvider*, int errorLine, const String& errorMessage);
 
-    void createCallFrameAndPauseIfNeeded(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber);
-    void updateCallFrameAndPauseIfNeeded(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber);
+    void createCallFrame(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
+    void updateCallFrameAndPauseIfNeeded(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
     void pauseIfNeeded(JSC::JSGlobalObject* dynamicGlobalObject);
 
     virtual void detach(JSC::JSGlobalObject*);
 
-    virtual void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int errorLine, const JSC::UString& errorMsg);
-    virtual void callEvent(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber);
-    virtual void atStatement(const JSC::DebuggerCallFrame&, intptr_t sourceID, int firstLine);
-    virtual void returnEvent(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber);
-    virtual void exception(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, bool hasHandler);
-    virtual void willExecuteProgram(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineno);
-    virtual void didExecuteProgram(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineno);
-    virtual void didReachBreakpoint(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineno);
+    virtual void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int errorLine, const String& errorMsg);
+    virtual void callEvent(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
+    virtual void atStatement(const JSC::DebuggerCallFrame&, intptr_t sourceID, int firstLine, int columnNumber);
+    virtual void returnEvent(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
+    virtual void exception(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber, bool hasHandler);
+    virtual void willExecuteProgram(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineno, int columnNumber);
+    virtual void didExecuteProgram(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineno, int columnNumber);
+    virtual void didReachBreakpoint(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineno, int columnNumber);
 
-    typedef HashMap<long, ScriptBreakpoint> LineToBreakpointMap;
+    typedef Vector<ScriptBreakpoint> BreakpointsInLine;
+    typedef HashMap<long, BreakpointsInLine> LineToBreakpointMap;
     typedef HashMap<intptr_t, LineToBreakpointMap> SourceIdToBreakpointsMap;
 
     bool m_callingListeners;
     PauseOnExceptionsState m_pauseOnExceptionsState;
     bool m_pauseOnNextStatement;
     bool m_paused;
+    bool m_runningNestedMessageLoop;
     bool m_doneProcessingDebuggerEvents;
     bool m_breakpointsActivated;
     JavaScriptCallFrame* m_pauseOnCallFrame;
     RefPtr<JavaScriptCallFrame> m_currentCallFrame;
     SourceIdToBreakpointsMap m_sourceIdToBreakpoints;
     Timer<ScriptDebugServer> m_recompileTimer;
+
+    int m_lastExecutedLine;
+    intptr_t m_lastExecutedSourceId;
 };
 
 } // namespace WebCore

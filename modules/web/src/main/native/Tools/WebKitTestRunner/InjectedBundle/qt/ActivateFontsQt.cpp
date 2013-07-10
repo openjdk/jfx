@@ -30,18 +30,16 @@
 #include "config.h"
 #include "ActivateFonts.h"
 #include "DumpRenderTreeSupportQt.h"
-#include "QtInitializeTestFonts.h"
-
-#include <QApplication>
-#include <QWindowsStyle>
+#include "QtTestSupport.h"
+#include <QCoreApplication>
 
 namespace WTR {
 
 void activateFonts()
 {
-    WebKit::initializeTestFonts();
-    QApplication::setStyle(new QWindowsStyle);
+    WebKit::QtTestSupport::initializeTestFonts();
     QCoreApplication::setAttribute(Qt::AA_Use96Dpi, true);
+    DumpRenderTreeSupportQt::disableDefaultTypesettingFeatures();
 }
 
 }

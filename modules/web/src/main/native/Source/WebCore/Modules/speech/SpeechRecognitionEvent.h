@@ -29,37 +29,33 @@
 #if ENABLE(SCRIPTED_SPEECH)
 
 #include "Event.h"
-#include "SpeechRecognitionError.h"
 #include "SpeechRecognitionResult.h"
 #include "SpeechRecognitionResultList.h"
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-class SpeechRecognitionError;
-class SpeechRecognitionResult;
-class SpeechRecognitionResultList;
+class Document;
 
 struct SpeechRecognitionEventInit : public EventInit {
     SpeechRecognitionEventInit();
 
-    RefPtr<SpeechRecognitionResult> result;
-    short resultIndex;
-    RefPtr<SpeechRecognitionResultList> resultHistory;
+    unsigned long resultIndex;
+    RefPtr<SpeechRecognitionResultList> results;
 };
 
 class SpeechRecognitionEvent : public Event {
 public:
     static PassRefPtr<SpeechRecognitionEvent> create();
     static PassRefPtr<SpeechRecognitionEvent> create(const AtomicString&, const SpeechRecognitionEventInit&);
+    virtual ~SpeechRecognitionEvent();
 
-    static PassRefPtr<SpeechRecognitionEvent> createResult(PassRefPtr<SpeechRecognitionResult>, short resultIndex, PassRefPtr<SpeechRecognitionResultList> resultHistory);
+    static PassRefPtr<SpeechRecognitionEvent> createResult(unsigned long resultIndex, const Vector<RefPtr<SpeechRecognitionResult> >& results);
     static PassRefPtr<SpeechRecognitionEvent> createNoMatch(PassRefPtr<SpeechRecognitionResult>);
-    static PassRefPtr<SpeechRecognitionEvent> createResultDeleted(short resultIndex, PassRefPtr<SpeechRecognitionResultList> resultHistory);
 
-    SpeechRecognitionResult* result() const { return m_result.get(); }
-    short resultIndex() const { return m_resultIndex; } // FIXME: Spec says this should be short, but other indices are unsigned ints.
-    SpeechRecognitionResultList* resultHistory() const { return m_resultHistory.get(); }
+    unsigned long resultIndex() const { return m_resultIndex; }
+    SpeechRecognitionResultList* results() const { return m_results.get(); }
+    Document* emma() { return 0; }
 
     // Event
     virtual const AtomicString& interfaceName() const OVERRIDE;
@@ -67,12 +63,10 @@ public:
 private:
     SpeechRecognitionEvent();
     SpeechRecognitionEvent(const AtomicString&, const SpeechRecognitionEventInit&);
-    SpeechRecognitionEvent(const AtomicString& eventName, PassRefPtr<SpeechRecognitionResult>, short resultIndex, PassRefPtr<SpeechRecognitionResultList> resultHistory);
-    SpeechRecognitionEvent(PassRefPtr<SpeechRecognitionError>);
+    SpeechRecognitionEvent(const AtomicString& eventName, unsigned long resultIndex, PassRefPtr<SpeechRecognitionResultList> results);
 
-    RefPtr<SpeechRecognitionResult> m_result;
-    short m_resultIndex;
-    RefPtr<SpeechRecognitionResultList> m_resultHistory;
+    unsigned long m_resultIndex;
+    RefPtr<SpeechRecognitionResultList> m_results;
 };
 
 } // namespace WebCore

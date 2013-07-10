@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2010, 2012 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -32,7 +31,6 @@ import os
 import sys
 import time
 
-
 LOG_HANDLER_NAME = 'MeteredStreamLogHandler'
 
 
@@ -53,7 +51,7 @@ class MeteredStream(object):
     def _ensure_newline(txt):
         return txt if txt.endswith('\n') else txt + '\n'
 
-    def __init__(self, stream=None, verbose=False, logger=None, time_fn=None, pid=None):
+    def __init__(self, stream=None, verbose=False, logger=None, time_fn=None, pid=None, number_of_columns=None):
         self._stream = stream or sys.stderr
         self._verbose = verbose
         self._time_fn = time_fn or time.time
@@ -63,6 +61,9 @@ class MeteredStream(object):
         self._last_partial_line = ''
         self._last_write_time = 0.0
         self._throttle_delay_in_secs = 0.066 if self._erasing else 10.0
+        self._number_of_columns = sys.maxint
+        if self._isatty and number_of_columns:
+            self._number_of_columns = number_of_columns
 
         self._logger = logger
         self._log_handler = None
@@ -119,6 +120,10 @@ class MeteredStream(object):
             self._stream.write('\n')
             self._last_partial_line = ''
             self._stream.flush()
+
+    def number_of_columns(self):
+        return self._number_of_columns
+
 
 class _LogHandler(logging.Handler):
     def __init__(self, meter):

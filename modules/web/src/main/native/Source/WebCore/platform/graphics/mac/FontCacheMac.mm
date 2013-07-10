@@ -52,30 +52,17 @@ static void invalidateFontCache(void*)
     fontCache()->invalidate();
 }
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 static void fontCacheRegisteredFontsChangedNotificationCallback(CFNotificationCenterRef, void* observer, CFStringRef name, const void *, CFDictionaryRef)
 {
     ASSERT_UNUSED(observer, observer == fontCache());
     ASSERT_UNUSED(name, CFEqual(name, kCTFontManagerRegisteredFontsChangedNotification));
     invalidateFontCache(0);
 }
-#else
-static void fontCacheATSNotificationCallback(ATSFontNotificationInfoRef, void*)
-{
-    invalidateFontCache(0);
-}
-#endif
 
 void FontCache::platformInit()
 {
     wkSetUpFontCache();
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     CFNotificationCenterAddObserver(CFNotificationCenterGetLocalCenter(), this, fontCacheRegisteredFontsChangedNotificationCallback, kCTFontManagerRegisteredFontsChangedNotification, 0, CFNotificationSuspensionBehaviorDeliverImmediately);
-#else
-    // kCTFontManagerRegisteredFontsChangedNotification does not exist on Leopard and earlier.
-    // FIXME: Passing kATSFontNotifyOptionReceiveWhileSuspended may be an overkill and does not seem to work anyway.
-    ATSFontNotificationSubscribe(fontCacheATSNotificationCallback, kATSFontNotifyOptionReceiveWhileSuspended, 0, 0);
-#endif
 }
 
 static int toAppKitFontWeight(FontWeight fontWeight)
@@ -99,11 +86,11 @@ static inline bool isAppKitFontWeightBold(NSInteger appKitFontWeight)
     return appKitFontWeight >= 7;
 }
 
-const SimpleFontData* FontCache::getFontDataForCharacters(const Font& font, const UChar* characters, int length)
+PassRefPtr<SimpleFontData> FontCache::systemFallbackForCharacters(const FontDescription& description, const SimpleFontData* originalFontData, bool isPlatformFont, const UChar* characters, int length)
 {
     UChar32 character;
     U16_GET(characters, 0, 0, length, character);
-    const FontPlatformData& platformData = font.fontDataAt(0)->fontDataForCharacter(character)->platformData();
+    const FontPlatformData& platformData = originalFontData->platformData();
     NSFont *nsFont = platformData.font();
 
     NSString *string = [[NSString alloc] initWithCharactersNoCopy:const_cast<UChar*>(characters) length:length freeWhenDone:NO];
@@ -137,9 +124,9 @@ const SimpleFontData* FontCache::getFontDataForCharacters(const Font& font, cons
         size = [nsFont pointSize];
     } else {
         // For custom fonts nsFont is nil.
-        traits = font.italic() ? NSFontItalicTrait : 0;
-        weight = toAppKitFontWeight(font.weight());
-        size = font.pixelSize();
+        traits = description.italic() ? NSFontItalicTrait : 0;
+        weight = toAppKitFontWeight(description.weight());
+        size = description.computedPixelSize();
     }
 
     NSFontTraitMask substituteFontTraits = [fontManager traitsOfFont:substituteFont];
@@ -153,55 +140,53 @@ const SimpleFontData* FontCache::getFontDataForCharacters(const Font& font, cons
         }
     }
 
-    substituteFont = font.fontDescription().usePrinterFont() ? [substituteFont printerFont] : [substituteFont screenFont];
+    substituteFont = description.usePrinterFont() ? [substituteFont printerFont] : [substituteFont screenFont];
 
     substituteFontTraits = [fontManager traitsOfFont:substituteFont];
     substituteFontWeight = [fontManager weightOfFont:substituteFont];
 
     FontPlatformData alternateFont(substituteFont, platformData.size(), platformData.isPrinterFont(),
-        !font.isPlatformFont() && isAppKitFontWeightBold(weight) && !isAppKitFontWeightBold(substituteFontWeight),
-        !font.isPlatformFont() && (traits & NSFontItalicTrait) && !(substituteFontTraits & NSFontItalicTrait),
+        !isPlatformFont && isAppKitFontWeightBold(weight) && !isAppKitFontWeightBold(substituteFontWeight),
+        !isPlatformFont && (traits & NSFontItalicTrait) && !(substituteFontTraits & NSFontItalicTrait),
         platformData.m_orientation);
 
     return getCachedFontData(&alternateFont, DoNotRetain);
 }
 
-SimpleFontData* FontCache::getSimilarFontPlatformData(const Font& font)
+PassRefPtr<SimpleFontData> FontCache::similarFontPlatformData(const FontDescription& description)
 {
     // Attempt to find an appropriate font using a match based on 
     // the presence of keywords in the the requested names.  For example, we'll
     // match any name that contains "Arabic" to Geeza Pro.
-    SimpleFontData* simpleFontData = 0;
-    const FontFamily* currFamily = &font.fontDescription().family();
-    while (currFamily && !simpleFontData) {
-        if (currFamily->family().length()) {
+    RefPtr<SimpleFontData> simpleFontData;
+    for (unsigned i = 0; i < description.familyCount(); ++i) {
+        const AtomicString& family = description.familyAt(i);
+        if (family.isEmpty())
+            continue;
             static String* matchWords[3] = { new String("Arabic"), new String("Pashto"), new String("Urdu") };
-            DEFINE_STATIC_LOCAL(AtomicString, geezaStr, ("Geeza Pro"));
+        DEFINE_STATIC_LOCAL(AtomicString, geezaStr, ("Geeza Pro", AtomicString::ConstructFromLiteral));
             for (int j = 0; j < 3 && !simpleFontData; ++j)
-                if (currFamily->family().contains(*matchWords[j], false))
-                    simpleFontData = getCachedFontData(font.fontDescription(), geezaStr);
+            if (family.contains(*matchWords[j], false))
+                simpleFontData = getCachedFontData(description, geezaStr);
         }
-        currFamily = currFamily->next();
+    return simpleFontData.release();
     }
 
-    return simpleFontData;
-}
-
-SimpleFontData* FontCache::getLastResortFallbackFont(const FontDescription& fontDescription, ShouldRetain shouldRetain)
+PassRefPtr<SimpleFontData> FontCache::getLastResortFallbackFont(const FontDescription& fontDescription, ShouldRetain shouldRetain)
 {
-    DEFINE_STATIC_LOCAL(AtomicString, timesStr, ("Times"));
+    DEFINE_STATIC_LOCAL(AtomicString, timesStr, ("Times", AtomicString::ConstructFromLiteral));
 
     // FIXME: Would be even better to somehow get the user's default font here.  For now we'll pick
     // the default that the user would get without changing any prefs.
-    SimpleFontData* simpleFontData = getCachedFontData(fontDescription, timesStr, false, shouldRetain);
+    RefPtr<SimpleFontData> simpleFontData = getCachedFontData(fontDescription, timesStr, false, shouldRetain);
     if (simpleFontData)
-        return simpleFontData;
+        return simpleFontData.release();
 
     // The Times fallback will almost always work, but in the highly unusual case where
     // the user doesn't have it, we fall back on Lucida Grande because that's
     // guaranteed to be there, according to Nathan Taylor. This is good enough
     // to avoid a crash at least.
-    DEFINE_STATIC_LOCAL(AtomicString, lucidaGrandeStr, ("Lucida Grande"));
+    DEFINE_STATIC_LOCAL(AtomicString, lucidaGrandeStr, ("Lucida Grande", AtomicString::ConstructFromLiteral));
     return getCachedFontData(fontDescription, lucidaGrandeStr, false, shouldRetain);
 }
 
@@ -210,7 +195,7 @@ void FontCache::getTraitsInFamily(const AtomicString& familyName, Vector<unsigne
     [WebFontCache getTraits:traitsMasks inFamily:familyName];
 }
 
-FontPlatformData* FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
+PassOwnPtr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
 {
     NSFontTraitMask traits = fontDescription.italic() ? NSFontItalicTrait : 0;
     NSInteger weight = toAppKitFontWeight(fontDescription.weight());
@@ -218,7 +203,7 @@ FontPlatformData* FontCache::createFontPlatformData(const FontDescription& fontD
 
     NSFont *nsFont = [WebFontCache fontWithFamily:family traits:traits weight:weight size:size];
     if (!nsFont)
-        return 0;
+        return nullptr;
 
     NSFontManager *fontManager = [NSFontManager sharedFontManager];
     NSFontTraitMask actualTraits = 0;
@@ -230,12 +215,8 @@ FontPlatformData* FontCache::createFontPlatformData(const FontDescription& fontD
     bool syntheticBold = isAppKitFontWeightBold(weight) && !isAppKitFontWeightBold(actualWeight);
     bool syntheticOblique = (traits & NSFontItalicTrait) && !(actualTraits & NSFontItalicTrait);
 
-    // FontPlatformData::font() can be null for the case of Chromium out-of-process font loading.
-    // In that case, we don't want to use the platformData.
-    OwnPtr<FontPlatformData> platformData = adoptPtr(new FontPlatformData(platformFont, size, fontDescription.usePrinterFont(), syntheticBold, syntheticOblique, fontDescription.orientation(), fontDescription.textOrientation(), fontDescription.widthVariant()));
-    if (!platformData->font())
-        return 0;
-    return platformData.leakPtr();
+    OwnPtr<FontPlatformData> platformData = adoptPtr(new FontPlatformData(platformFont, size, fontDescription.usePrinterFont(), syntheticBold, syntheticOblique, fontDescription.orientation(), fontDescription.widthVariant()));
+    return platformData.release();
 }
 
 } // namespace WebCore

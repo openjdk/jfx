@@ -27,6 +27,7 @@
 #define ReplaceSelectionCommand_h
 
 #include "CompositeEditCommand.h"
+#include "NodeTraversal.h"
 
 namespace WebCore {
 
@@ -62,10 +63,11 @@ private:
         void respondToNodeInsertion(Node*);
         void willRemoveNodePreservingChildren(Node*);
         void willRemoveNode(Node*);
+        void didReplaceNode(Node*, Node* newNode);
 
         Node* firstNodeInserted() const { return m_firstNodeInserted.get(); }
         Node* lastLeafInserted() const { return m_lastNodeInserted->lastDescendant(); }
-        Node* pastLastLeaf() const { return m_lastNodeInserted ? lastLeafInserted()->traverseNextNode() : 0; }
+        Node* pastLastLeaf() const { return m_lastNodeInserted ? NodeTraversal::next(lastLeafInserted()) : 0; }
 
     private:
         RefPtr<Node> m_firstNodeInserted;
@@ -86,6 +88,8 @@ private:
     void removeUnrenderedTextNodesAtEnds(InsertedNodes&);
     
     void removeRedundantStylesAndKeepStyleSpanInline(InsertedNodes&);
+    void makeInsertedContentRoundTrippableWithHTMLTreeBuilder(InsertedNodes&);
+    void moveNodeOutOfAncestor(PassRefPtr<Node>, PassRefPtr<Node> ancestor);
     void handleStyleSpans(InsertedNodes&);
     void handlePasteAsQuotationNode();
     
@@ -95,6 +99,7 @@ private:
     bool shouldPerformSmartReplace() const;
     void addSpacesForSmartReplace();
     void completeHTMLReplacement(const Position& lastPositionToSelect);
+    void mergeTextNodesAroundPosition(Position&, Position& positionOnlyToBeUpdated);
 
     bool performTrivialReplace(const ReplacementFragment&);
 

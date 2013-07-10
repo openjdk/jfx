@@ -38,12 +38,11 @@
 
 namespace WebCore {
 
+class ContainerNode;
 class Element;
 class InsertionPoint;
 class Node;
 class ShadowRoot;
-
-typedef Vector<RefPtr<Node> > ContentDistribution;
 
 class ContentDistributor {
     WTF_MAKE_NONCOPYABLE(ContentDistributor);
@@ -58,20 +57,31 @@ public:
     ContentDistributor();
     ~ContentDistributor();
 
+    void invalidateInsertionPointList();
+    
     InsertionPoint* findInsertionPointFor(const Node* key) const;
+
+    void distributeSelectionsTo(InsertionPoint*, Element* host);
+
+    void invalidateDistribution(Element* host);
+    void didShadowBoundaryChange(Element* host);
+
+    static void ensureDistribution(ShadowRoot*);
+
+private:
+    const Vector<RefPtr<InsertionPoint> >& ensureInsertionPointList(ShadowRoot*);
 
     void distribute(Element* host);
     bool invalidate(Element* host);
-    void finishInivalidation();
+
+    void setValidity(Validity validity) { m_validity = validity; }
+    bool isValid() const { return m_validity == Valid; }
     bool needsDistribution() const;
     bool needsInvalidation() const { return m_validity != Invalidated; }
 
-    void distributeSelectionsTo(InsertionPoint*, ContentDistribution& pool);
-    void distributeShadowChildrenTo(InsertionPoint*, ShadowRoot*);
-    void invalidateDistributionIn(ContentDistribution*);
-
-private:
-    HashMap<const Node*, InsertionPoint*> m_nodeToInsertionPoint;
+    Vector<RefPtr<InsertionPoint> > m_insertionPointList;
+    HashMap<const Node*, RefPtr<InsertionPoint> > m_nodeToInsertionPoint;
+    bool m_insertionPointListIsValid;
     unsigned m_validity : 2;
 };
 

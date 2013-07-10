@@ -47,19 +47,23 @@ inline double currentTimeMS()
     return currentTime() * 1000.0;
 }
 
-WTF_EXPORT_PRIVATE void getLocalTime(const time_t* localTime, struct tm* localTM);
-WTF_EXPORT_PRIVATE void getCurrentLocalTime(struct tm* localTM);
-
 // Provides a monotonically increasing time in seconds since an arbitrary point in the past.
 // On unsupported platforms, this function only guarantees the result will be non-decreasing.
 WTF_EXPORT_PRIVATE double monotonicallyIncreasingTime();
+
+// Returns the current CPU time of the current thread in seconds.
+// Precision varies depending on platform but is usually as good or better
+// than a millisecond.
+WTF_EXPORT_PRIVATE double currentCPUTime();
+
+// Returns the current CPU time of the current thread in milliseconds.
+WTF_EXPORT_PRIVATE double currentCPUTimeMS();
 
 } // namespace WTF
 
 using WTF::currentTime;
 using WTF::currentTimeMS;
-using WTF::getCurrentLocalTime;
-using WTF::getLocalTime;
 using WTF::monotonicallyIncreasingTime;
+using WTF::currentCPUTime;
 
 #endif // CurrentTime_h

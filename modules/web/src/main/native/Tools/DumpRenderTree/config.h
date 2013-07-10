@@ -30,16 +30,7 @@
 
 #include <wtf/Platform.h>
 #include <wtf/ExportMacros.h>
-#if USE(JSC)
 #include <runtime/JSExportMacros.h>
-#endif
-
-// On MSW, wx headers need to be included before windows.h is.
-// The only way we can always ensure this is if we include wx here.
-#if PLATFORM(WX)
-#include <wx/defs.h>
-#endif
-
 
 #ifdef __cplusplus
 #undef new
@@ -85,10 +76,10 @@
 #endif
 
 #undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500
+#define _WIN32_WINNT 0x0502
 
 #undef WINVER
-#define WINVER 0x0500
+#define WINVER 0x0502
 
 #undef _WINSOCKAPI_
 #define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h

@@ -28,16 +28,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-    interface [
+[
+    NoInterfaceObject,
         Conditional=FILE_SYSTEM,
         JSGenerateToNativeObject,
         JSGenerateToJSObject,
         JSNoStaticTables
-    ] DirectoryEntry : Entry {
+] interface DirectoryEntry : Entry {
         DirectoryReader createReader();
-        [Custom] void getFile(in [TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString path, in [Optional] WebKitFlags flags, in [Optional, Callback] EntryCallback successCallback, in [Optional, Callback] ErrorCallback errorCallback);
-        [Custom] void getDirectory(in [TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString path, in [Optional] WebKitFlags flags, in [Optional, Callback] EntryCallback successCallback, in [Optional, Callback] ErrorCallback errorCallback);
-        void removeRecursively(in [Callback] VoidCallback successCallback, in [Optional, Callback] ErrorCallback errorCallback);
+    void getFile([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString path, optional Dictionary options, optional EntryCallback successCallback, optional ErrorCallback errorCallback);
+    void getDirectory([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString path, optional Dictionary options, optional EntryCallback successCallback, optional ErrorCallback errorCallback);
+    void removeRecursively(VoidCallback successCallback, optional ErrorCallback errorCallback);
     };
-}

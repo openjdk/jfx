@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-class MediaDocument : public HTMLDocument {
+class MediaDocument FINAL : public HTMLDocument {
 public:
     static PassRefPtr<MediaDocument> create(Frame* frame, const KURL& url)
     {
@@ -45,7 +45,6 @@ public:
 private:
     MediaDocument(Frame*, const KURL&);
 
-    virtual bool isMediaDocument() const { return true; }        
     virtual PassRefPtr<DocumentParser> createParser();
 
     virtual void defaultEventHandler(Event*);
@@ -55,6 +54,21 @@ private:
     Timer<MediaDocument> m_replaceMediaElementTimer;
 };
     
+inline MediaDocument* toMediaDocument(Document* document)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isMediaDocument());
+    return static_cast<MediaDocument*>(document);
+}
+
+inline const MediaDocument* toMediaDocument(const Document* document)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isMediaDocument());
+    return static_cast<const MediaDocument*>(document);
+}
+
+// This will catch anyone doing an unnecessary cast.
+void toMediaDocument(const MediaDocument*);
+
 }
 
 #endif

@@ -26,9 +26,10 @@
  */
 
 #include "config.h"
-#if USE(GSTREAMER)
 #include "VideoSinkGStreamer.h"
 
+#if ENABLE(VIDEO) && USE(GSTREAMER)
+#include "GRefPtrGStreamer.h"
 #include "GStreamerVersioning.h"
 #include "IntSize.h"
 #include <glib.h>
@@ -80,7 +81,7 @@ struct _WebKitVideoSinkPrivate {
     GstVideoInfo info;
 #endif
 
-#ifndef GST_API_VERSION_1
+#if USE(NATIVE_FULLSCREEN_VIDEO)
     WebCore::GStreamerGWorld* gstGWorld;
 #endif
 
@@ -153,7 +154,7 @@ static GstFlowReturn webkitVideoSinkRender(GstBaseSink* baseSink, GstBuffer* buf
         return GST_FLOW_OK;
     }
 
-#ifndef GST_API_VERSION_1
+#if USE(NATIVE_FULLSCREEN_VIDEO)
     // Ignore buffers if the video is already in fullscreen using
     // another sink.
     if (priv->gstGWorld->isFullscreen()) {
@@ -172,26 +173,19 @@ static GstFlowReturn webkitVideoSinkRender(GstBaseSink* baseSink, GstBuffer* buf
         gst_buffer_set_caps(priv->buffer, GST_PAD_CAPS(GST_BASE_SINK_PAD(baseSink)));
     }
 
-    GstCaps* caps = GST_BUFFER_CAPS(buffer);
+    GRefPtr<GstCaps> caps = GST_BUFFER_CAPS(buffer);
 #else
-    GstCaps* caps = gst_video_info_to_caps(&priv->info);
+    GRefPtr<GstCaps> caps = adoptGRef(gst_video_info_to_caps(&priv->info));
 #endif
 
     GstVideoFormat format;
     WebCore::IntSize size;
     int pixelAspectRatioNumerator, pixelAspectRatioDenominator, stride;
-    if (!getVideoSizeAndFormatFromCaps(caps, size, format, pixelAspectRatioNumerator, pixelAspectRatioDenominator, stride)) {
+    if (!getVideoSizeAndFormatFromCaps(caps.get(), size, format, pixelAspectRatioNumerator, pixelAspectRatioDenominator, stride)) {
         gst_buffer_unref(buffer);
-#ifdef GST_API_VERSION_1
-        gst_caps_unref(caps);
-#endif
         g_mutex_unlock(priv->bufferMutex);
         return GST_FLOW_ERROR;
     }
-
-#ifdef GST_API_VERSION_1
-    gst_caps_unref(caps);
-#endif
 
     // Cairo's ARGB has pre-multiplied alpha while GStreamer's doesn't.
     // Here we convert to Cairo's ARGB.
@@ -362,7 +356,7 @@ static gboolean webkitVideoSinkProposeAllocation(GstBaseSink* baseSink, GstQuery
 #endif
 
 #ifndef GST_API_VERSION_1
-static void webkitVideoSinkMarshalVoidAndMiniObject(GClosure* closure, GValue* returnValue, guint parametersNumber, const GValue* parameterValues, gpointer invocationHint, gpointer marshalData)
+static void webkitVideoSinkMarshalVoidAndMiniObject(GClosure* closure, GValue*, guint parametersNumber, const GValue* parameterValues, gpointer, gpointer marshalData)
 {
     typedef void (*marshalfunc_VOID__MINIOBJECT) (gpointer obj, gpointer arg1, gpointer data2);
     marshalfunc_VOID__MINIOBJECT callback;
@@ -424,7 +418,7 @@ static void webkit_video_sink_class_init(WebKitVideoSinkClass* klass)
 }
 
 
-#ifndef GST_API_VERSION_1
+#if USE(NATIVE_FULLSCREEN_VIDEO)
 GstElement* webkitVideoSinkNew(WebCore::GStreamerGWorld* gstGWorld)
 {
     GstElement* element = GST_ELEMENT(g_object_new(WEBKIT_TYPE_VIDEO_SINK, 0));
@@ -438,4 +432,4 @@ GstElement* webkitVideoSinkNew()
 }
 #endif
 
-#endif // USE(GSTREAMER)
+#endif // ENABLE(VIDEO) && USE(GSTREAMER)

@@ -26,8 +26,8 @@
 #include "config.h"
 #include "IntRect.h"
 
-#include "FractionalLayoutRect.h"
 #include "FloatRect.h"
+#include "LayoutRect.h"
 #include <algorithm>
 
 using std::max;
@@ -36,14 +36,14 @@ using std::min;
 namespace WebCore {
 
 IntRect::IntRect(const FloatRect& r)
-    : m_location(IntPoint(static_cast<int>(r.x()), static_cast<int>(r.y())))
-    , m_size(IntSize(static_cast<int>(r.width()), static_cast<int>(r.height())))
+    : m_location(clampToInteger(r.x()), clampToInteger(r.y()))
+    , m_size(clampToInteger(r.width()), clampToInteger(r.height()))
 {
 }
 
-IntRect::IntRect(const FractionalLayoutRect& r)
-    : m_location(flooredIntPoint(r.location()))
-    , m_size(flooredIntSize(r.size()))
+IntRect::IntRect(const LayoutRect& r)
+    : m_location(r.x(), r.y())
+    , m_size(r.width(), r.height())
 {
 }
 
@@ -145,19 +145,6 @@ IntSize IntRect::differenceToPoint(const IntPoint& point) const
 {
     int xdistance = distanceToInterval(point.x(), x(), maxX());
     int ydistance = distanceToInterval(point.y(), y(), maxY());
-    return IntSize(xdistance, ydistance);
-}
-
-IntSize IntRect::differenceFromCenterLineToPoint(const IntPoint& point) const
-{
-    // The center-line is the natural center of a rectangle. It has an equal distance to all sides of the rectangle.
-    IntPoint centerPoint = center();
-    int xdistance = centerPoint.x() - point.x();
-    int ydistance = centerPoint.y() - point.y();
-    if (width() > height())
-        xdistance = distanceToInterval(point.x(), x() + (height() / 2), maxX() - (height() / 2));
-    else
-        ydistance = distanceToInterval(point.y(), y() + (width() / 2), maxY() - (width() / 2));
     return IntSize(xdistance, ydistance);
 }
 

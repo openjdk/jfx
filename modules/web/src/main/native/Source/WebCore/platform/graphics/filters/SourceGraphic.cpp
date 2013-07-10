@@ -24,11 +24,10 @@
 
 #include "Filter.h"
 #include "GraphicsContext.h"
-#include "PlatformString.h"
 #include "RenderTreeAsText.h"
 #include "TextStream.h"
-
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -39,7 +38,7 @@ PassRefPtr<SourceGraphic> SourceGraphic::create(Filter* filter)
 
 const AtomicString& SourceGraphic::effectName()
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, s_effectName, ("SourceGraphic"));
+    DEFINE_STATIC_LOCAL(const AtomicString, s_effectName, ("SourceGraphic", AtomicString::ConstructFromLiteral));
     return s_effectName;
 }
 

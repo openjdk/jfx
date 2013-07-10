@@ -34,23 +34,23 @@ namespace WebCore {
 
 void ChildNodeInsertionNotifier::notifyDescendantInsertedIntoDocument(ContainerNode* node)
 {
-    NodeVector children;
-    getChildNodes(node, children);
-    for (size_t i = 0; i < children.size(); ++i) {
+    ChildNodesLazySnapshot snapshot(node);
+    while (RefPtr<Node> child = snapshot.nextNode()) {
         // If we have been removed from the document during this loop, then
         // we don't want to tell the rest of our children that they've been
         // inserted into the document because they haven't.
-        if (node->inDocument() && children[i]->parentNode() == node)
-            notifyNodeInsertedIntoDocument(children[i].get());
+        if (node->inDocument() && child->parentNode() == node)
+            notifyNodeInsertedIntoDocument(child.get());
     }
         
     if (!node->isElementNode())
         return;
 
     if (ElementShadow* shadow = toElement(node)->shadow()) {
-        ShadowRootVector roots(shadow);
-        for (size_t i = 0; i < roots.size(); ++i)
-            notifyNodeInsertedIntoDocument(roots[i].get());
+        if (RefPtr<ShadowRoot> root = shadow->shadowRoot()) {
+            if (node->inDocument() && root->host() == node)
+                notifyNodeInsertedIntoDocument(root.get());
+        }
     }
 }
 
@@ -61,20 +61,19 @@ void ChildNodeInsertionNotifier::notifyDescendantInsertedIntoTree(ContainerNode*
             notifyNodeInsertedIntoTree(toContainerNode(child));
     }
 
-    for (ShadowRoot* root = node->youngestShadowRoot(); root; root = root->olderShadowRoot())
+    if (ShadowRoot* root = node->shadowRoot())
         notifyNodeInsertedIntoTree(root);
 }
 
 void ChildNodeRemovalNotifier::notifyDescendantRemovedFromDocument(ContainerNode* node)
 {
-    NodeVector children;
-    getChildNodes(node, children);
-    for (size_t i = 0; i < children.size(); ++i) {
+    ChildNodesLazySnapshot snapshot(node);
+    while (RefPtr<Node> child = snapshot.nextNode()) {
         // If we have been added to the document during this loop, then we
         // don't want to tell the rest of our children that they've been
         // removed from the document because they haven't.
-        if (!node->inDocument() && children[i]->parentNode() == node)
-            notifyNodeRemovedFromDocument(children[i].get());
+        if (!node->inDocument() && child->parentNode() == node)
+            notifyNodeRemovedFromDocument(child.get());
     }
 
     if (!node->isElementNode())
@@ -84,9 +83,10 @@ void ChildNodeRemovalNotifier::notifyDescendantRemovedFromDocument(ContainerNode
         node->document()->setCSSTarget(0);
 
     if (ElementShadow* shadow = toElement(node)->shadow()) {
-        ShadowRootVector roots(shadow);
-        for (size_t i = 0; i < roots.size(); ++i)
-            notifyNodeRemovedFromDocument(roots[i].get());
+        if (RefPtr<ShadowRoot> root = shadow->shadowRoot()) {
+            if (!node->inDocument() && root->host() == node)
+                notifyNodeRemovedFromDocument(root.get());
+        }
     }
 }
 
@@ -101,22 +101,46 @@ void ChildNodeRemovalNotifier::notifyDescendantRemovedFromTree(ContainerNode* no
         return;
 
     if (ElementShadow* shadow = toElement(node)->shadow()) {
-        ShadowRootVector roots(shadow);
-        for (size_t i = 0; i < roots.size(); ++i)
-            notifyNodeRemovedFromTree(roots[i].get());
+        if (RefPtr<ShadowRoot> root = shadow->shadowRoot())
+            notifyNodeRemovedFromTree(root.get());
     }
 }
 
-void ChildFrameDisconnector::collectDescendant(ElementShadow* shadow)
+void ChildFrameDisconnector::collectFrameOwners(ElementShadow* shadow)
 {
-    for (ShadowRoot* root = shadow->youngestShadowRoot(); root; root = root->olderShadowRoot())
-        collectDescendant(root);
+    if (ShadowRoot* root = shadow->shadowRoot())
+        collectFrameOwners(root);
 }
 
-void ChildFrameDisconnector::Target::disconnect()
+#ifndef NDEBUG
+unsigned assertConnectedSubrameCountIsConsistent(Node* node)
 {
-    ASSERT(isValid());
-    toFrameOwnerElement(m_owner.get())->disconnectContentFrame();
+    unsigned count = 0;
+
+    if (node->isElementNode()) {
+        if (node->isFrameOwnerElement() && toFrameOwnerElement(node)->contentFrame())
+            count++;
+
+        if (ElementShadow* shadow = toElement(node)->shadow()) {
+            if (ShadowRoot* root = shadow->shadowRoot())
+                count += assertConnectedSubrameCountIsConsistent(root);
+        }
 }
+
+    for (Node* child = node->firstChild(); child; child = child->nextSibling())
+        count += assertConnectedSubrameCountIsConsistent(child);
+
+    // If we undercount there's possibly a security bug since we'd leave frames
+    // in subtrees outside the document.
+    ASSERT(node->connectedSubframeCount() >= count);
+
+    // If we overcount it's safe, but not optimal because it means we'll traverse
+    // through the document in ChildFrameDisconnector looking for frames that have
+    // already been disconnected.
+    ASSERT(node->connectedSubframeCount() == count);
+
+    return count;
+}
+#endif
 
 }

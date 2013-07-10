@@ -61,13 +61,14 @@ public:
 
     GeolocationClient* client() { return m_client; }
 
-    static const AtomicString& supplementName();
+    static const char* supplementName();
     static GeolocationController* from(Page* page) { return static_cast<GeolocationController*>(Supplement<Page>::from(page, supplementName())); }
 
 private:
     GeolocationController(Page*, GeolocationClient*);
 
     GeolocationClient* m_client;
+    Page* m_page;
 
     RefPtr<GeolocationPosition> m_lastPosition;
     typedef HashSet<RefPtr<Geolocation> > ObserversSet;

@@ -29,12 +29,13 @@
  */
 
 #include "config.h"
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 #include "BaseDateAndTimeInputType.h"
 
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
-#include "LocalizedDate.h"
+#include "PlatformLocale.h"
 #include <limits>
 #include <wtf/CurrentTime.h>
 #include <wtf/DateMath.h>
@@ -95,27 +96,13 @@ bool BaseDateAndTimeInputType::isSteppable() const
     return true;
 }
 
-void BaseDateAndTimeInputType::handleKeydownEvent(KeyboardEvent* event)
-{
-    if (shouldHaveSpinButton())
-        handleKeydownEventForSpinButton(event);
-    if (!event->defaultHandled())
-        TextFieldInputType::handleKeydownEvent(event);
-}
-
-void BaseDateAndTimeInputType::handleWheelEvent(WheelEvent* event)
-{
-    if (shouldHaveSpinButton())
-        handleWheelEventForSpinButton(event);
-}
-
 Decimal BaseDateAndTimeInputType::parseToNumber(const String& source, const Decimal& defaultValue) const
 {
     DateComponents date;
     if (!parseToDateComponents(source, &date))
         return defaultValue;
     double msec = date.millisecondsSinceEpoch();
-    ASSERT(isfinite(msec));
+    ASSERT(std::isfinite(msec));
     return Decimal::fromDouble(msec);
 }
 
@@ -162,7 +149,7 @@ String BaseDateAndTimeInputType::localizeValue(const String& proposedValue) cons
     if (!parseToDateComponents(proposedValue, &date))
         return proposedValue;
 
-    String localized = formatLocalizedDate(date);
+    String localized = element()->locale().formatDateTime(date);
     return localized.isEmpty() ? proposedValue : localized;
 }
 
@@ -171,21 +158,25 @@ String BaseDateAndTimeInputType::visibleValue() const
     return localizeValue(element()->value());
 }
 
-String BaseDateAndTimeInputType::convertFromVisibleValue(const String& visibleValue) const
-{
-    if (visibleValue.isEmpty())
-        return visibleValue;
-
-    double parsedValue = parseLocalizedDate(visibleValue, dateType());
-    if (!isfinite(parsedValue))
-        return visibleValue;
-
-    return serializeWithMilliseconds(parsedValue);
-}
-
 String BaseDateAndTimeInputType::sanitizeValue(const String& proposedValue) const
 {
     return typeMismatchFor(proposedValue) ? String() : proposedValue;
 }
 
+bool BaseDateAndTimeInputType::supportsReadOnly() const
+{
+    return true;
+}
+
+bool BaseDateAndTimeInputType::shouldRespectListAttribute()
+{
+    return InputType::themeSupportsDataListUI(this);
+}
+
+bool BaseDateAndTimeInputType::valueMissing(const String& value) const
+{
+    return element()->isRequired() && value.isEmpty();
+}
+
 } // namespace WebCore
+#endif

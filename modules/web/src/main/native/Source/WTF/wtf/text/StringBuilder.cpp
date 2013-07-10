@@ -27,6 +27,7 @@
 #include "config.h"
 #include "StringBuilder.h"
 
+#include "IntegerToStringConversion.h"
 #include "WTFString.h"
 
 namespace WTF {
@@ -123,7 +124,7 @@ void StringBuilder::allocateBufferUpConvert(const LChar* currentCharacters, unsi
     ASSERT(m_is8Bit);
     // Copy the existing data into a new buffer, set result to point to the end of the existing data.
     RefPtr<StringImpl> buffer = StringImpl::createUninitialized(requiredLength, m_bufferCharacters16);
-    for (unsigned i = 0; i < m_length; i++)
+    for (unsigned i = 0; i < m_length; ++i)
         m_bufferCharacters16[i] = currentCharacters[i];
     
     m_is8Bit = false;
@@ -242,6 +243,13 @@ void StringBuilder::append(const UChar* characters, unsigned length)
     ASSERT(characters);
 
     if (m_is8Bit) {
+        if (length == 1 && !(*characters & ~0xff)) {
+            // Append as 8 bit character
+            LChar lChar = static_cast<LChar>(*characters);
+            append(&lChar, 1);
+            return;
+        }
+
         // Calculate the new size of the builder after appending.
         unsigned requiredLength = length + m_length;
         if (requiredLength < length)
@@ -284,6 +292,36 @@ void StringBuilder::append(const LChar* characters, unsigned length)
         while (characters < end)
             *(dest++) = *(characters++);
     }
+}
+
+void StringBuilder::appendNumber(int number)
+{
+    numberToStringSigned<StringBuilder>(number, this);
+}
+
+void StringBuilder::appendNumber(unsigned int number)
+{
+    numberToStringUnsigned<StringBuilder>(number, this);
+}
+
+void StringBuilder::appendNumber(long number)
+{
+    numberToStringSigned<StringBuilder>(number, this);
+}
+
+void StringBuilder::appendNumber(unsigned long number)
+{
+    numberToStringUnsigned<StringBuilder>(number, this);
+}
+
+void StringBuilder::appendNumber(long long number)
+{
+    numberToStringSigned<StringBuilder>(number, this);
+}
+
+void StringBuilder::appendNumber(unsigned long long number)
+{
+    numberToStringUnsigned<StringBuilder>(number, this);
 }
 
 bool StringBuilder::canShrink() const

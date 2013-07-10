@@ -38,58 +38,44 @@
 
 namespace WebCore {
 
-class DOMStringList;
+class PropertyNodeList;
 
 class HTMLPropertiesCollection : public HTMLCollection {
 public:
-    static PassRefPtr<HTMLPropertiesCollection> create(Node*);
+    static PassRefPtr<HTMLPropertiesCollection> create(Node*, CollectionType);
     virtual ~HTMLPropertiesCollection();
 
     void updateRefElements() const;
 
     PassRefPtr<DOMStringList> names() const;
-    virtual PassRefPtr<NodeList> namedItem(const String&) const OVERRIDE;
+    virtual PassRefPtr<PropertyNodeList> propertyNodeList(const String&) const;
     virtual bool hasNamedItem(const AtomicString&) const OVERRIDE;
 
     void invalidateCache() const
     {
         m_itemRefElements.clear();
         m_propertyNames.clear();
-        m_propertyCache.clear();
-        m_hasPropertyNameCache = false;
-        m_hasItemRefElements = false;
     }
 
 private:
     HTMLPropertiesCollection(Node*);
 
-    Node* findRefElements(Node* previous) const;
-
-    virtual Element* itemAfter(unsigned& offsetInArray, Element*) const OVERRIDE;
-    HTMLElement* itemAfter(HTMLElement* base, Element* previous) const;
+    virtual Element* virtualItemAfter(unsigned& offsetInArray, Element*) const OVERRIDE;
+    HTMLElement* virtualItemAfter(HTMLElement* base, Element* previous) const;
 
     void updateNameCache() const;
 
-    void updatePropertyCache(Element* element, const AtomicString& propertyName) const
+    void updatePropertyCache(const AtomicString& propertyName) const
     {
         if (!m_propertyNames)
             m_propertyNames = DOMStringList::create();
 
         if (!m_propertyNames->contains(propertyName))
             m_propertyNames->append(propertyName);
-
-        Vector<Element*>* propertyResults = m_propertyCache.get(propertyName.impl());
-        if (!propertyResults || !propertyResults->contains(element))
-            append(m_propertyCache, propertyName, element);
     }
 
     mutable Vector<HTMLElement*> m_itemRefElements;
     mutable RefPtr<DOMStringList> m_propertyNames;
-    mutable NodeCacheMap m_propertyCache;
-
-    // FIXME: Move these variables to DynamicNodeListCacheBase for better bit packing.
-    mutable bool m_hasPropertyNameCache : 1;
-    mutable bool m_hasItemRefElements : 1;
 };
 
 } // namespace WebCore

@@ -24,6 +24,7 @@
 
 #include "CSSValueKeywords.h"
 #include "Element.h"
+#include "FontMetrics.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
 #include "LocalWindowsContext.h"
@@ -144,7 +145,7 @@ static bool gWebKitIsBeingUnloaded;
 static bool documentIsInApplicationChromeMode(const Document* document)
 {
     Settings* settings = document->settings();
-    return settings && settings->inApplicationChromeMode();
+    return settings && settings->applicationChromeMode();
 }
 
 void RenderThemeWin::setWebKitIsBeingUnloaded()
@@ -284,7 +285,7 @@ static void fillFontDescription(FontDescription& fontDescription, LOGFONT& logFo
 {    
     fontDescription.setIsAbsoluteSize(true);
     fontDescription.setGenericFamily(FontDescription::NoFamily);
-    fontDescription.firstFamily().setFamily(String(logFont.lfFaceName));
+    fontDescription.setOneFamily(String(logFont.lfFaceName));
     fontDescription.setSpecifiedSize(fontSize);
     fontDescription.setWeight(logFont.lfWeight >= 700 ? FontWeightBold : FontWeightNormal); // FIXME: Use real weight.
     fontDescription.setItalic(logFont.lfItalic);
@@ -674,11 +675,8 @@ static void drawControl(GraphicsContext* context, RenderObject* o, HANDLE theme,
         }
     }
 
-
-#if !OS(WINCE)
     if (!alphaBlend && !context->isInTransparencyLayer())
         DIBPixelData::setRGBABitmapAlpha(windowsContext.hdc(), r, 255);
-#endif
 }
 
 bool RenderThemeWin::paintButton(RenderObject* o, const PaintInfo& i, const IntRect& r)
@@ -784,6 +782,8 @@ void RenderThemeWin::adjustMenuListButtonStyle(StyleResolver* styleResolver, Ren
     minHeight = max(minHeight, dropDownBoxMinHeight);
 
     style->setMinHeight(Length(minHeight, Fixed));
+    
+    style->setLineHeight(RenderStyle::initialLineHeight());
     
     // White-space is locked to pre
     style->setWhiteSpace(PRE);
@@ -1046,12 +1046,7 @@ String RenderThemeWin::extraFullScreenStyleSheet()
 
 bool RenderThemeWin::supportsClosedCaptioning() const
 {
-        // We rely on QuickTime to render captions so only enable the button for a video element.
-#if SAFARI_THEME_VERSION >= 4
     return true;
-#else
-    return false;
-#endif
 }
 
 bool RenderThemeWin::paintMediaFullscreenButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)

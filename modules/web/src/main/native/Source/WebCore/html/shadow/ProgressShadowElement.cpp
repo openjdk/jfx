@@ -29,12 +29,12 @@
  */
 
 #include "config.h"
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 #include "ProgressShadowElement.h"
 
 #include "HTMLNames.h"
 #include "HTMLProgressElement.h"
-#include "RenderObject.h"
+#include "RenderProgress.h"
 
 namespace WebCore {
 
@@ -47,9 +47,7 @@ ProgressShadowElement::ProgressShadowElement(Document* document)
 
 HTMLProgressElement* ProgressShadowElement::progressElement() const
 {
-    Node* node = const_cast<ProgressShadowElement*>(this)->shadowAncestorNode();
-    ASSERT(!node || progressTag == toElement(node)->tagQName());
-    return static_cast<HTMLProgressElement*>(node);
+    return toHTMLProgressElement(shadowHost());
 }
 
 bool ProgressShadowElement::rendererIsNeeded(const NodeRenderingContext& context)
@@ -58,17 +56,30 @@ bool ProgressShadowElement::rendererIsNeeded(const NodeRenderingContext& context
     return progressRenderer && !progressRenderer->style()->hasAppearance() && HTMLDivElement::rendererIsNeeded(context);
 }
 
-const AtomicString& ProgressBarElement::shadowPseudoId() const
+ProgressInnerElement::ProgressInnerElement(Document* document)
+    : ProgressShadowElement(document)
 {
-    DEFINE_STATIC_LOCAL(AtomicString, pseudId, ("-webkit-progress-bar"));
-    return pseudId;
+    DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-progress-inner-element", AtomicString::ConstructFromLiteral));
+    setPseudo(pseudoId);
 }
 
-
-const AtomicString& ProgressValueElement::shadowPseudoId() const
+PassRefPtr<ProgressInnerElement> ProgressInnerElement::create(Document* document)
 {
-    DEFINE_STATIC_LOCAL(AtomicString, pseudId, ("-webkit-progress-value"));
-    return pseudId;
+    return adoptRef(new ProgressInnerElement(document));
+}
+
+RenderObject* ProgressInnerElement::createRenderer(RenderArena* arena, RenderStyle*)
+{
+    return new (arena) RenderProgress(this);
+}
+
+bool ProgressInnerElement::rendererIsNeeded(const NodeRenderingContext& context)
+{
+    if (progressElement()->hasAuthorShadowRoot())
+        return HTMLDivElement::rendererIsNeeded(context);
+
+    RenderObject* progressRenderer = progressElement()->renderer();
+    return progressRenderer && !progressRenderer->style()->hasAppearance() && HTMLDivElement::rendererIsNeeded(context);    
 }
 
 void ProgressValueElement::setWidthPercentage(double width)
@@ -78,4 +89,3 @@ void ProgressValueElement::setWidthPercentage(double width)
 
 }
 #endif
-

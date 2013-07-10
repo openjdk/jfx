@@ -38,20 +38,20 @@ class SpeechRecognitionController : public Supplement<Page> {
 public:
     virtual ~SpeechRecognitionController();
 
-    void start(SpeechRecognition* recognition, const SpeechGrammarList* grammars, const String& lang, bool continuous, unsigned long maxAlternatives)
+    void start(SpeechRecognition* recognition, const SpeechGrammarList* grammars, const String& lang, bool continuous, bool interimResults, unsigned long maxAlternatives)
     {
-        m_client->start(recognition, grammars, lang, continuous, maxAlternatives);
+        m_client->start(recognition, grammars, lang, continuous, interimResults, maxAlternatives);
     }
 
     void stop(SpeechRecognition* recognition) { m_client->stop(recognition); }
     void abort(SpeechRecognition* recognition) { m_client->abort(recognition); }
 
     static PassOwnPtr<SpeechRecognitionController> create(SpeechRecognitionClient*);
-    static const AtomicString& supplementName();
+    static const char* supplementName();
     static SpeechRecognitionController* from(Page* page) { return static_cast<SpeechRecognitionController*>(Supplement<Page>::from(page, supplementName())); }
 
 private:
-    SpeechRecognitionController(SpeechRecognitionClient*);
+    explicit SpeechRecognitionController(SpeechRecognitionClient*);
 
     SpeechRecognitionClient* m_client;
 };

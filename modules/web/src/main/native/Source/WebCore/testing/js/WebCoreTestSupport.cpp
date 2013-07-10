@@ -46,7 +46,7 @@ void injectInternalsObject(JSContextRef context)
     JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
     ScriptExecutionContext* scriptContext = globalObject->scriptExecutionContext();
     if (scriptContext->isDocument())
-        globalObject->putDirect(exec->globalData(), Identifier(exec, Internals::internalsId), toJS(exec, globalObject, Internals::create(static_cast<Document*>(scriptContext))));
+        globalObject->putDirect(exec->vm(), Identifier(exec, Internals::internalsId), toJS(exec, globalObject, Internals::create(toDocument(scriptContext))));
 }
 
 void resetInternalsObject(JSContextRef context)
@@ -55,8 +55,9 @@ void resetInternalsObject(JSContextRef context)
     JSLockHolder lock(exec);
     JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
     ScriptExecutionContext* scriptContext = globalObject->scriptExecutionContext();
-    ASSERT(scriptContext->isDocument());
-    InternalSettings::from(static_cast<Document*>(scriptContext)->frame()->page())->reset();
+    Page* page = toDocument(scriptContext)->frame()->page();
+    Internals::resetToConsistentState(page);
+    InternalSettings::from(page)->resetToConsistentState();
 }
 
 }

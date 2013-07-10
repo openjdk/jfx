@@ -35,7 +35,7 @@ class HTMLTableCaptionElement;
 class HTMLTableRowsCollection;
 class HTMLTableSectionElement;
 
-class HTMLTableElement : public HTMLElement {
+class HTMLTableElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLTableElement> create(Document*);
     static PassRefPtr<HTMLTableElement> create(const QualifiedName&, Document*);
@@ -65,19 +65,19 @@ public:
     String rules() const;
     String summary() const;
 
-    StylePropertySet* additionalCellStyle();
-    StylePropertySet* additionalGroupStyle(bool rows);
+    const StylePropertySet* additionalCellStyle();
+    const StylePropertySet* additionalGroupStyle(bool rows);
 
 private:
     HTMLTableElement(const QualifiedName&, Document*);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
 
     // Used to obtain either a solid or outset border decl and to deal with the frame and rules attributes.
-    virtual StylePropertySet* additionalAttributeStyle() OVERRIDE;
+    virtual const StylePropertySet* additionalPresentationAttributeStyle() OVERRIDE;
 
     virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
 

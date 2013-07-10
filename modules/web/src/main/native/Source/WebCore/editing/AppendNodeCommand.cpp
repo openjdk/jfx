@@ -28,6 +28,7 @@
 
 #include "AXObjectCache.h"
 #include "Document.h"
+#include "ExceptionCodePlaceholder.h"
 #include "htmlediting.h"
 
 namespace WebCore {
@@ -51,7 +52,8 @@ static void sendAXTextChangedIgnoringLineBreaks(Node* node, AXObjectCache::AXTex
     if (nodeValue == "\n")
       return;
 
-    node->document()->axObjectCache()->nodeTextChangeNotification(node->renderer(), textChange, 0, nodeValue);
+    if (AXObjectCache* cache = node->document()->existingAXObjectCache())
+        cache->nodeTextChangeNotification(node, textChange, 0, nodeValue);
 }
 
 void AppendNodeCommand::doApply()
@@ -59,8 +61,7 @@ void AppendNodeCommand::doApply()
     if (!m_parent->rendererIsEditable() && m_parent->attached())
         return;
         
-    ExceptionCode ec;
-    m_parent->appendChild(m_node.get(), ec);
+    m_parent->appendChild(m_node.get(), IGNORE_EXCEPTION, AttachLazily);
 
     if (AXObjectCache::accessibilityEnabled())
         sendAXTextChangedIgnoringLineBreaks(m_node.get(), AXObjectCache::AXTextInserted);
@@ -75,8 +76,7 @@ void AppendNodeCommand::doUnapply()
     if (AXObjectCache::accessibilityEnabled())
         sendAXTextChangedIgnoringLineBreaks(m_node.get(), AXObjectCache::AXTextDeleted);
 
-    ExceptionCode ec;
-    m_node->remove(ec);
+    m_node->remove(IGNORE_EXCEPTION);
 }
 
 #ifndef NDEBUG

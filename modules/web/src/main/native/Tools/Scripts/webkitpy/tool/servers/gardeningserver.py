@@ -23,80 +23,38 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import BaseHTTPServer
+import SocketServer
 import logging
 import json
 import os
+import sys
+import urllib
 
 from webkitpy.common.memoized import memoized
 from webkitpy.tool.servers.reflectionhandler import ReflectionHandler
-from webkitpy.layout_tests.controllers.test_expectations_editor import BugManager, TestExpectationsEditor
-from webkitpy.layout_tests.models.test_expectations import TestExpectationParser, TestExpectations, TestExpectationSerializer
-from webkitpy.layout_tests.models.test_configuration import TestConfigurationConverter
-from webkitpy.layout_tests.port import builders
+from webkitpy.port import builders
 
 
 _log = logging.getLogger(__name__)
 
 
-class BuildCoverageExtrapolator(object):
-    def __init__(self, test_configuration_converter):
-        self._test_configuration_converter = test_configuration_converter
-
-    @memoized
-    def _covered_test_configurations_for_builder_name(self):
-        coverage = {}
-        for builder_name in builders.all_builder_names():
-            coverage[builder_name] = self._test_configuration_converter.to_config_set(builders.coverage_specifiers_for_builder_name(builder_name))
-        return coverage
-
-    def extrapolate_test_configurations(self, builder_name):
-        return self._covered_test_configurations_for_builder_name()[builder_name]
-
-
-class GardeningExpectationsUpdater(BugManager):
-    def __init__(self, tool, port):
-        self._converter = TestConfigurationConverter(port.all_test_configurations(), port.configuration_specifier_macros())
-        self._extrapolator = BuildCoverageExtrapolator(self._converter)
-        self._parser = TestExpectationParser(port, [], allow_rebaseline_modifier=False)
-        self._path_to_test_expectations_file = port.path_to_test_expectations_file()
-        self._tool = tool
-
-    def close_bug(self, bug_id, reference_bug_id=None):
-        # FIXME: Implement this properly.
-        pass
-
-    def create_bug(self):
-        return "BUG_NEW"
-
-    def update_expectations(self, failure_info_list):
-        expectation_lines = self._parser.parse(self._path_to_test_expectations_file, self._tool.filesystem.read_text_file(self._path_to_test_expectations_file))
-        editor = TestExpectationsEditor(expectation_lines, self)
-        updated_expectation_lines = []
-        # FIXME: Group failures by testName+failureTypeList.
-        for failure_info in failure_info_list:
-            expectation_set = set(filter(lambda expectation: expectation is not None,
-                                         map(TestExpectations.expectation_from_string, failure_info['failureTypeList'])))
-            assert(expectation_set)
-            test_name = failure_info['testName']
-            assert(test_name)
-            builder_name = failure_info['builderName']
-            affected_test_configuration_set = self._extrapolator.extrapolate_test_configurations(builder_name)
-            updated_expectation_lines.extend(editor.update_expectation(test_name, affected_test_configuration_set, expectation_set))
-        self._tool.filesystem.write_text_file(self._path_to_test_expectations_file, TestExpectationSerializer.list_to_string(expectation_lines, self._converter, reconstitute_only_these=updated_expectation_lines))
-
-
-class GardeningHTTPServer(BaseHTTPServer.HTTPServer):
+class GardeningHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
     def __init__(self, httpd_port, config):
         server_name = ''
         self.tool = config['tool']
+        self.options = config['options']
         BaseHTTPServer.HTTPServer.__init__(self, (server_name, httpd_port), GardeningHTTPRequestHandler)
 
-    def url(self):
-        return 'file://' + os.path.join(GardeningHTTPRequestHandler.STATIC_FILE_DIRECTORY, 'garden-o-matic.html')
+    def url(self, args=None):
+        # We can't use urllib.encode() here because that encodes spaces as plus signs and the buildbots don't decode those properly.
+        arg_string = ('?' + '&'.join("%s=%s" % (key, urllib.quote(value)) for (key, value) in args.items())) if args else ''
+        return 'http://localhost:8127/garden-o-matic.html' + arg_string
 
 
 class GardeningHTTPRequestHandler(ReflectionHandler):
     STATIC_FILE_NAMES = frozenset()
+
+    STATIC_FILE_EXTENSIONS = ('.js', '.css', '.html', '.gif', '.png', '.ico')
 
     STATIC_FILE_DIRECTORY = os.path.join(
         os.path.dirname(__file__),
@@ -110,37 +68,50 @@ class GardeningHTTPRequestHandler(ReflectionHandler):
         'TestFailures')
 
     allow_cross_origin_requests = True
-
-    def _run_webkit_patch(self, args):
-        return self.server.tool.executive.run_command([self.server.tool.path()] + args, cwd=self.server.tool.scm().checkout_root)
-
-    @memoized
-    def _expectations_updater(self):
-        # FIXME: Should split failure_info_list into lists per port, then edit each expectations file separately.
-        # For now, assume Chromium port.
-        port = self.server.tool.get("chromium-win-win7")
-        return GardeningExpectationsUpdater(self.server.tool, port)
-
-    def rollout(self):
-        revision = self.query['revision'][0]
-        reason = self.query['reason'][0]
-        self._run_webkit_patch([
-            'rollout',
-            '--force-clean',
-            '--non-interactive',
-            revision,
-            reason,
-        ])
-        self._serve_text('success')
+    debug_output = ''
 
     def ping(self):
         self._serve_text('pong')
 
-    def updateexpectations(self):
-        self._expectations_updater().update_expectations(self._read_entity_body_as_json())
-        self._serve_text('success')
+    def _run_webkit_patch(self, command, input_string):
+        PIPE = self.server.tool.executive.PIPE
+        process = self.server.tool.executive.popen([self.server.tool.path()] + command, cwd=self.server.tool.scm().checkout_root, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        process.stdin.write(input_string)
+        output, error = process.communicate()
+        return (process.returncode, output, error)
 
     def rebaselineall(self):
         command = ['rebaseline-json']
-        self.server.tool.executive.run_command([self.server.tool.path()] + command, input=self.read_entity_body(), cwd=self.server.tool.scm().checkout_root)
+        if self.server.options.move_overwritten_baselines:
+            command.append('--move-overwritten-baselines')
+        if self.server.options.results_directory:
+            command.extend(['--results-directory', self.server.options.results_directory])
+        if not self.server.options.optimize:
+            command.append('--no-optimize')
+        if self.server.options.verbose:
+            command.append('--verbose')
+        json_input = self.read_entity_body()
+
+        _log.debug("calling %s, input='%s'", command, json_input)
+        return_code, output, error = self._run_webkit_patch(command, json_input)
+        print >> sys.stderr, error
+        if return_code:
+            _log.error("rebaseline-json failed: %d, output='%s'" % (return_code, output))
+        else:
+            _log.debug("rebaseline-json succeeded")
+
+        # FIXME: propagate error and/or log messages back to the UI.
         self._serve_text('success')
+
+    def localresult(self):
+        path = self.query['path'][0]
+        filesystem = self.server.tool.filesystem
+
+        # Ensure that we're only serving files from inside the results directory.
+        if not filesystem.isabs(path) and self.server.options.results_directory:
+            fullpath = filesystem.abspath(filesystem.join(self.server.options.results_directory, path))
+            if fullpath.startswith(filesystem.abspath(self.server.options.results_directory)):
+                self._serve_file(fullpath, headers_only=(self.command == 'HEAD'))
+                return
+
+        self.send_response(403)

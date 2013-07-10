@@ -27,21 +27,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-
-    interface [
+[
         Conditional=INDEXED_DATABASE,
         ActiveDOMObject,
-        EventTarget
-    ] IDBRequest {
+    EventTarget,
+    JSNoStaticTables
+] interface IDBRequest {
         readonly attribute IDBAny result
-            getter raises (IDBDatabaseException);
-        readonly attribute unsigned short errorCode
-            getter raises (IDBDatabaseException);
+        getter raises (DOMException);
         readonly attribute DOMError error
-            getter raises (IDBDatabaseException);
-        readonly attribute [TreatReturnedNullStringAs=Undefined] DOMString webkitErrorMessage
-            getter raises (IDBDatabaseException);
+        getter raises (DOMException);
+    [TreatReturnedNullStringAs=Undefined] readonly attribute DOMString webkitErrorMessage
+        getter raises (DOMException);
 
         readonly attribute IDBAny source;
         readonly attribute IDBTransaction transaction;
@@ -54,13 +51,12 @@ module storage {
         attribute EventListener onerror;
 
         // EventTarget interface
-        void addEventListener(in DOMString type,
-                              in EventListener listener,
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type,
-                                 in EventListener listener,
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type,
+                          EventListener listener,
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type,
+                             EventListener listener,
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
     };
-}

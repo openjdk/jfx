@@ -72,6 +72,7 @@
 #include "InspectorInstrumentation.h"
 #include "KURL.h"
 #include "Page.h"
+#include "ScriptController.h"
 #include "Settings.h"
 #include "StyleResolver.h"
 #include <wtf/text/CString.h>
@@ -80,8 +81,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLDocument::HTMLDocument(Frame* frame, const KURL& url)
-    : Document(frame, url, false, true)
+HTMLDocument::HTMLDocument(Frame* frame, const KURL& url, DocumentClassFlags documentClasses)
+    : Document(frame, url, documentClasses | HTMLDocumentClass)
 {
     clearXMLVersion();
 }
@@ -138,8 +139,8 @@ void HTMLDocument::setDesignMode(const String& value)
 
 Element* HTMLDocument::activeElement()
 {
-    if (Node* node = treeScope()->focusedNode())
-        return node->isElementNode() ? toElement(node) : body();
+    if (Element* element = treeScope()->focusedElement())
+        return element;
     return body();
 }
 
@@ -294,135 +295,71 @@ PassRefPtr<Element> HTMLDocument::createElement(const AtomicString& name, Except
     return HTMLElementFactory::createHTMLElement(QualifiedName(nullAtom, name.lower(), xhtmlNamespaceURI), this, 0, false);
 }
 
-void HTMLDocument::addItemToMap(HashCountedSet<AtomicStringImpl*>& map, const AtomicString& name)
+static void addLocalNameToSet(HashSet<AtomicStringImpl*>* set, const QualifiedName& qName)
 {
-    if (name.isEmpty())
-        return;
-    map.add(name.impl());
-    if (Frame* f = frame())
-        f->script()->namedItemAdded(this, name);
+    set->add(qName.localName().impl());
 }
 
-void HTMLDocument::removeItemFromMap(HashCountedSet<AtomicStringImpl*>& map, const AtomicString& name)
+static HashSet<AtomicStringImpl*>* createHtmlCaseInsensitiveAttributesSet()
 {
-    if (name.isEmpty())
-        return;
-    map.remove(name.impl());
-    if (Frame* f = frame())
-        f->script()->namedItemRemoved(this, name);
+    // This is the list of attributes in HTML 4.01 with values marked as "[CI]" or case-insensitive
+    // Mozilla treats all other values as case-sensitive, thus so do we.
+    HashSet<AtomicStringImpl*>* attrSet = new HashSet<AtomicStringImpl*>;
+
+    addLocalNameToSet(attrSet, accept_charsetAttr);
+    addLocalNameToSet(attrSet, acceptAttr);
+    addLocalNameToSet(attrSet, alignAttr);
+    addLocalNameToSet(attrSet, alinkAttr);
+    addLocalNameToSet(attrSet, axisAttr);
+    addLocalNameToSet(attrSet, bgcolorAttr);
+    addLocalNameToSet(attrSet, charsetAttr);
+    addLocalNameToSet(attrSet, checkedAttr);
+    addLocalNameToSet(attrSet, clearAttr);
+    addLocalNameToSet(attrSet, codetypeAttr);
+    addLocalNameToSet(attrSet, colorAttr);
+    addLocalNameToSet(attrSet, compactAttr);
+    addLocalNameToSet(attrSet, declareAttr);
+    addLocalNameToSet(attrSet, deferAttr);
+    addLocalNameToSet(attrSet, dirAttr);
+    addLocalNameToSet(attrSet, disabledAttr);
+    addLocalNameToSet(attrSet, enctypeAttr);
+    addLocalNameToSet(attrSet, faceAttr);
+    addLocalNameToSet(attrSet, frameAttr);
+    addLocalNameToSet(attrSet, hreflangAttr);
+    addLocalNameToSet(attrSet, http_equivAttr);
+    addLocalNameToSet(attrSet, langAttr);
+    addLocalNameToSet(attrSet, languageAttr);
+    addLocalNameToSet(attrSet, linkAttr);
+    addLocalNameToSet(attrSet, mediaAttr);
+    addLocalNameToSet(attrSet, methodAttr);
+    addLocalNameToSet(attrSet, multipleAttr);
+    addLocalNameToSet(attrSet, nohrefAttr);
+    addLocalNameToSet(attrSet, noresizeAttr);
+    addLocalNameToSet(attrSet, noshadeAttr);
+    addLocalNameToSet(attrSet, nowrapAttr);
+    addLocalNameToSet(attrSet, readonlyAttr);
+    addLocalNameToSet(attrSet, relAttr);
+    addLocalNameToSet(attrSet, revAttr);
+    addLocalNameToSet(attrSet, rulesAttr);
+    addLocalNameToSet(attrSet, scopeAttr);
+    addLocalNameToSet(attrSet, scrollingAttr);
+    addLocalNameToSet(attrSet, selectedAttr);
+    addLocalNameToSet(attrSet, shapeAttr);
+    addLocalNameToSet(attrSet, targetAttr);
+    addLocalNameToSet(attrSet, textAttr);
+    addLocalNameToSet(attrSet, typeAttr);
+    addLocalNameToSet(attrSet, valignAttr);
+    addLocalNameToSet(attrSet, valuetypeAttr);
+    addLocalNameToSet(attrSet, vlinkAttr);
+
+    return attrSet;
 }
 
-void HTMLDocument::addNamedItem(const AtomicString& name)
+bool HTMLDocument::isCaseSensitiveAttribute(const QualifiedName& attributeName)
 {
-    addItemToMap(m_namedItemCounts, name);
-}
-
-void HTMLDocument::removeNamedItem(const AtomicString& name)
-{ 
-    removeItemFromMap(m_namedItemCounts, name);
-}
-
-void HTMLDocument::addExtraNamedItem(const AtomicString& name)
-{
-    addItemToMap(m_extraNamedItemCounts, name);
-}
-
-void HTMLDocument::removeExtraNamedItem(const AtomicString& name)
-{ 
-    removeItemFromMap(m_extraNamedItemCounts, name);
-}
-
-void HTMLDocument::setCompatibilityModeFromDoctype()
-{
-    // There are three possible compatibility modes:
-    // Quirks - quirks mode emulates WinIE and NS4.  CSS parsing is also relaxed in this mode, e.g., unit types can
-    // be omitted from numbers.
-    // Limited Quirks - This mode is identical to no-quirks mode except for its treatment of line-height in the inline box model.  
-    // No Quirks - no quirks apply.  Web pages will obey the specifications to the letter.
-    DocumentType* docType = doctype();
-    if (!docType)
-        return;
-
-    // Check for Quirks Mode.
-    const String& publicId = docType->publicId();
-    if (docType->name() != "html"
-        || publicId.startsWith("+//Silmaril//dtd html Pro v0r11 19970101//", false)
-        || publicId.startsWith("-//AdvaSoft Ltd//DTD HTML 3.0 asWedit + extensions//", false)
-        || publicId.startsWith("-//AS//DTD HTML 3.0 asWedit + extensions//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 2.0 Level 1//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 2.0 Level 2//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 2.0 Strict Level 1//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 2.0 Strict Level 2//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 2.0 Strict//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 2.0//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 2.1E//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 3.0//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 3.2 Final//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 3.2//", false)
-        || publicId.startsWith("-//IETF//DTD HTML 3//", false)
-        || publicId.startsWith("-//IETF//DTD HTML Level 0//", false)
-        || publicId.startsWith("-//IETF//DTD HTML Level 1//", false)
-        || publicId.startsWith("-//IETF//DTD HTML Level 2//", false)
-        || publicId.startsWith("-//IETF//DTD HTML Level 3//", false)
-        || publicId.startsWith("-//IETF//DTD HTML Strict Level 0//", false)
-        || publicId.startsWith("-//IETF//DTD HTML Strict Level 1//", false)
-        || publicId.startsWith("-//IETF//DTD HTML Strict Level 2//", false)
-        || publicId.startsWith("-//IETF//DTD HTML Strict Level 3//", false)
-        || publicId.startsWith("-//IETF//DTD HTML Strict//", false)
-        || publicId.startsWith("-//IETF//DTD HTML//", false)
-        || publicId.startsWith("-//Metrius//DTD Metrius Presentational//", false)
-        || publicId.startsWith("-//Microsoft//DTD Internet Explorer 2.0 HTML Strict//", false)
-        || publicId.startsWith("-//Microsoft//DTD Internet Explorer 2.0 HTML//", false)
-        || publicId.startsWith("-//Microsoft//DTD Internet Explorer 2.0 Tables//", false)
-        || publicId.startsWith("-//Microsoft//DTD Internet Explorer 3.0 HTML Strict//", false)
-        || publicId.startsWith("-//Microsoft//DTD Internet Explorer 3.0 HTML//", false)
-        || publicId.startsWith("-//Microsoft//DTD Internet Explorer 3.0 Tables//", false)
-        || publicId.startsWith("-//Netscape Comm. Corp.//DTD HTML//", false)
-        || publicId.startsWith("-//Netscape Comm. Corp.//DTD Strict HTML//", false)
-        || publicId.startsWith("-//O'Reilly and Associates//DTD HTML 2.0//", false)
-        || publicId.startsWith("-//O'Reilly and Associates//DTD HTML Extended 1.0//", false)
-        || publicId.startsWith("-//O'Reilly and Associates//DTD HTML Extended Relaxed 1.0//", false)
-        || publicId.startsWith("-//SoftQuad Software//DTD HoTMetaL PRO 6.0::19990601::extensions to HTML 4.0//", false)
-        || publicId.startsWith("-//SoftQuad//DTD HoTMetaL PRO 4.0::19971010::extensions to HTML 4.0//", false)
-        || publicId.startsWith("-//Spyglass//DTD HTML 2.0 Extended//", false)
-        || publicId.startsWith("-//SQ//DTD HTML 2.0 HoTMetaL + extensions//", false)
-        || publicId.startsWith("-//Sun Microsystems Corp.//DTD HotJava HTML//", false)
-        || publicId.startsWith("-//Sun Microsystems Corp.//DTD HotJava Strict HTML//", false)
-        || publicId.startsWith("-//W3C//DTD HTML 3 1995-03-24//", false)
-        || publicId.startsWith("-//W3C//DTD HTML 3.2 Draft//", false)
-        || publicId.startsWith("-//W3C//DTD HTML 3.2 Final//", false)
-        || publicId.startsWith("-//W3C//DTD HTML 3.2//", false)
-        || publicId.startsWith("-//W3C//DTD HTML 3.2S Draft//", false)
-        || publicId.startsWith("-//W3C//DTD HTML 4.0 Frameset//", false)
-        || publicId.startsWith("-//W3C//DTD HTML 4.0 Transitional//", false)
-        || publicId.startsWith("-//W3C//DTD HTML Experimental 19960712//", false)
-        || publicId.startsWith("-//W3C//DTD HTML Experimental 970421//", false)
-        || publicId.startsWith("-//W3C//DTD W3 HTML//", false)
-        || publicId.startsWith("-//W3O//DTD W3 HTML 3.0//", false)
-        || equalIgnoringCase(publicId, "-//W3O//DTD W3 HTML Strict 3.0//EN//")
-        || publicId.startsWith("-//WebTechs//DTD Mozilla HTML 2.0//", false)
-        || publicId.startsWith("-//WebTechs//DTD Mozilla HTML//", false)
-        || equalIgnoringCase(publicId, "-/W3C/DTD HTML 4.0 Transitional/EN")
-        || equalIgnoringCase(publicId, "HTML")
-        || equalIgnoringCase(docType->systemId(), "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd")
-        || (docType->systemId().isEmpty() && publicId.startsWith("-//W3C//DTD HTML 4.01 Frameset//", false))
-        || (docType->systemId().isEmpty() && publicId.startsWith("-//W3C//DTD HTML 4.01 Transitional//", false))) {
-        setCompatibilityMode(QuirksMode);
-        return;
-    }
-
-    // Check for Limited Quirks Mode.
-    if (publicId.startsWith("-//W3C//DTD XHTML 1.0 Frameset//", false)
-        || publicId.startsWith("-//W3C//DTD XHTML 1.0 Transitional//", false)
-        || (!docType->systemId().isEmpty() && publicId.startsWith("-//W3C//DTD HTML 4.01 Frameset//", false))
-        || (!docType->systemId().isEmpty() && publicId.startsWith("-//W3C//DTD HTML 4.01 Transitional//", false))) {
-        setCompatibilityMode(LimitedQuirksMode);
-        return;
-    }
-
-    // Otherwise we are No Quirks Mode.
-    setCompatibilityMode(NoQuirksMode);
-    return;
+    static HashSet<AtomicStringImpl*>* htmlCaseInsensitiveAttributesSet = createHtmlCaseInsensitiveAttributesSet();
+    bool isPossibleHTMLAttr = !attributeName.hasPrefix() && (attributeName.namespaceURI() == nullAtom);
+    return !isPossibleHTMLAttr || !htmlCaseInsensitiveAttributesSet->contains(attributeName.localName().impl());
 }
 
 void HTMLDocument::clear()

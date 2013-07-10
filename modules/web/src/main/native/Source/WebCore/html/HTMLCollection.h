@@ -23,9 +23,9 @@
 #ifndef HTMLCollection_h
 #define HTMLCollection_h
 
-#include "Node.h"
 #include "CollectionType.h"
-#include "DynamicNodeList.h"
+#include "LiveNodeList.h"
+#include "ScriptWrappable.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/PassOwnPtr.h>
@@ -33,53 +33,12 @@
 
 namespace WebCore {
 
-class Document;
-class Element;
-class NodeList;
-
-class HTMLCollectionCacheBase : public DynamicNodeListCacheBase {
-public:
-    HTMLCollectionCacheBase(NodeListRootType rootType, NodeListInvalidationType invalidationType, CollectionType collectionType, ItemBeforeSupportType itemBeforeSupportType)
-        : DynamicNodeListCacheBase(rootType, invalidationType, collectionType, itemBeforeSupportType)
-        , m_cachedElementsArrayOffset(0)
-    {
-    }
-
-protected:
-    void setItemCache(Node* item, unsigned offset, unsigned elementsArrayOffset) const
-    {
-        setItemCache(item, offset);
-        m_cachedElementsArrayOffset = elementsArrayOffset;
-    }
-    unsigned cachedElementsArrayOffset() const { return m_cachedElementsArrayOffset; }
-
-    typedef HashMap<AtomicStringImpl*, OwnPtr<Vector<Element*> > > NodeCacheMap;
-    Vector<Element*>* idCache(const AtomicString& name) const { return m_idCache.get(name.impl()); }
-    Vector<Element*>* nameCache(const AtomicString& name) const { return m_nameCache.get(name.impl()); }
-    void appendIdCache(const AtomicString& name, Element* element) const { append(m_idCache, name, element); }
-    void appendNameCache(const AtomicString& name, Element* element) const { append(m_nameCache, name, element); }
-
-    static void append(NodeCacheMap&, const AtomicString&, Element*);
-
-private:
-    using DynamicNodeListCacheBase::isRootedAtDocument;
-    using DynamicNodeListCacheBase::setItemCache;
-
-    mutable NodeCacheMap m_idCache;
-    mutable NodeCacheMap m_nameCache;
-    mutable unsigned m_cachedElementsArrayOffset;
-
-    friend void DynamicNodeListCacheBase::invalidateCache() const;
-};
-
-class HTMLCollection : public RefCounted<HTMLCollection>, public HTMLCollectionCacheBase {
+class HTMLCollection : public LiveNodeListBase {
 public:
     static PassRefPtr<HTMLCollection> create(Node* base, CollectionType);
     virtual ~HTMLCollection();
 
     // DOM API
-    unsigned length() const;
-    Node* item(unsigned index) const;
     virtual Node* namedItem(const AtomicString& name) const;
     PassRefPtr<NodeList> tags(const String&);
 
@@ -103,23 +62,34 @@ public:
         return item(0) && !item(1);
     }
 
-    Node* base() const { return m_base.get(); }
+    virtual Element* virtualItemAfter(unsigned& offsetInArray, Element*) const;
+
+    Element* traverseFirstElement(unsigned& offsetInArray, ContainerNode* root) const;
+    Element* traverseForwardToOffset(unsigned offset, Element* currentElement, unsigned& currentOffset, unsigned& offsetInArray, ContainerNode* root) const;
 
 protected:
-    HTMLCollection(Node* base, CollectionType, ItemBeforeSupportType);
+    HTMLCollection(Node* base, CollectionType, ItemAfterOverrideType);
 
     virtual void updateNameCache() const;
-    virtual Element* itemAfter(unsigned& offsetInArray, Element*) const;
+
+    typedef HashMap<AtomicStringImpl*, OwnPtr<Vector<Element*> > > NodeCacheMap;
+    Vector<Element*>* idCache(const AtomicString& name) const { return m_idCache.get(name.impl()); }
+    Vector<Element*>* nameCache(const AtomicString& name) const { return m_nameCache.get(name.impl()); }
+    void appendIdCache(const AtomicString& name, Element* element) const { append(m_idCache, name, element); }
+    void appendNameCache(const AtomicString& name, Element* element) const { append(m_nameCache, name, element); }
 
 private:
-    bool checkForNameMatch(Element*, bool checkName, const AtomicString& name) const;
+    Element* traverseNextElement(unsigned& offsetInArray, Element* previous, ContainerNode* root) const;
 
-    Element* itemBefore(unsigned& offsetInArray, Element*) const;
-    bool isLastItemCloserThanLastOrCachedItem(unsigned offset) const;
-    bool isFirstItemCloserThanCachedItem(unsigned offset) const;
-    Element* itemBeforeOrAfterCachedItem(unsigned offset) const;
+    virtual bool isLiveNodeList() const OVERRIDE { ASSERT_NOT_REACHED(); return true; }
 
-    RefPtr<Node> m_base;
+    static void append(NodeCacheMap&, const AtomicString&, Element*);
+
+    mutable NodeCacheMap m_idCache;
+    mutable NodeCacheMap m_nameCache;
+    mutable unsigned m_cachedElementsArrayOffset;
+
+    friend class LiveNodeListBase;
 };
 
 } // namespace

@@ -29,33 +29,23 @@
 namespace WebCore {
 
 enum MessageSource {
-    HTMLMessageSource,
     XMLMessageSource,
     JSMessageSource,
     NetworkMessageSource,
     ConsoleAPIMessageSource,
+    StorageMessageSource,
+    AppCacheMessageSource,
+    RenderingMessageSource,
+    CSSMessageSource,
+    SecurityMessageSource,
     OtherMessageSource,
 };
 
-// FIXME: make this enum private to inspector, remove it from client callbacks.
-// https://bugs.webkit.org/show_bug.cgi?id=66371
-enum MessageType {
-    LogMessageType,
-    DirMessageType,
-    DirXMLMessageType,
-    TraceMessageType,
-    StartGroupMessageType,
-    StartGroupCollapsedMessageType,
-    EndGroupMessageType,
-    AssertMessageType
-};
-
 enum MessageLevel {
-    TipMessageLevel,
-    LogMessageLevel,
-    WarningMessageLevel,
-    ErrorMessageLevel,
-    DebugMessageLevel
+    DebugMessageLevel = 4,
+    LogMessageLevel = 1,
+    WarningMessageLevel = 2,
+    ErrorMessageLevel = 3
 };
 
 } // namespace WebCore

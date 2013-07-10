@@ -16,13 +16,11 @@
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
-
-module core {
-
-    interface Entity : Node {
-        readonly attribute [TreatReturnedNullStringAs=Null] DOMString publicId;
-        readonly attribute [TreatReturnedNullStringAs=Null] DOMString systemId;
-        readonly attribute [TreatReturnedNullStringAs=Null] DOMString notationName;
+[
+    ImplementationLacksVTable
+] interface Entity : Node {
+    [TreatReturnedNullStringAs=Null] readonly attribute DOMString publicId;
+    [TreatReturnedNullStringAs=Null] readonly attribute DOMString systemId;
+    [TreatReturnedNullStringAs=Null] readonly attribute DOMString notationName;
     };
 
-}

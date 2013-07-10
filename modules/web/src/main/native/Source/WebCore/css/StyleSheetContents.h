@@ -43,15 +43,15 @@ class StyleSheetContents : public RefCounted<StyleSheetContents> {
 public:
     static PassRefPtr<StyleSheetContents> create(const CSSParserContext& context = CSSParserContext(CSSStrictMode))
     {
-        return adoptRef(new StyleSheetContents(0, String(), KURL(), context));
+        return adoptRef(new StyleSheetContents(0, String(), context));
     }
-    static PassRefPtr<StyleSheetContents> create(const String& originalURL, const KURL& finalURL, const CSSParserContext& context)
+    static PassRefPtr<StyleSheetContents> create(const String& originalURL, const CSSParserContext& context)
     {
-        return adoptRef(new StyleSheetContents(0, originalURL, finalURL, context));
+        return adoptRef(new StyleSheetContents(0, originalURL, context));
     }
-    static PassRefPtr<StyleSheetContents> create(StyleRuleImport* ownerRule, const String& originalURL, const KURL& finalURL, const CSSParserContext& context)
+    static PassRefPtr<StyleSheetContents> create(StyleRuleImport* ownerRule, const String& originalURL, const CSSParserContext& context)
     {
-        return adoptRef(new StyleSheetContents(ownerRule, originalURL, finalURL, context));
+        return adoptRef(new StyleSheetContents(ownerRule, originalURL, context));
     }
 
     ~StyleSheetContents();
@@ -62,7 +62,7 @@ public:
 
     void parseAuthorStyleSheet(const CachedCSSStyleSheet*, const SecurityOrigin*);
     bool parseString(const String&);
-    bool parseStringAtLine(const String&, int startLineNumber);
+    bool parseStringAtLine(const String&, int startLineNumber, bool);
 
     bool isCacheable() const;
 
@@ -78,6 +78,7 @@ public:
     const String& charset() const { return m_parserContext.charset; }
 
     bool loadCompleted() const { return m_loadCompleted; }
+    bool hasFailedOrCanceledSubresources() const;
 
     KURL completeURL(const String& url) const;
     void addSubresourceStyleURLs(ListHashSet<KURL>&);
@@ -110,8 +111,6 @@ public:
     // this style sheet. This property probably isn't useful for much except
     // the JavaScript binding (which needs to use this value for security).
     String originalURL() const { return m_originalURL; }
-    
-    const KURL& finalURL() const { return m_finalURL; }
     const KURL& baseURL() const { return m_parserContext.baseURL; }
 
     unsigned ruleCount() const;
@@ -137,8 +136,10 @@ public:
     void addedToMemoryCache();
     void removedFromMemoryCache();
 
+    void shrinkToFit();
+
 private:
-    StyleSheetContents(StyleRuleImport* ownerRule, const String& originalURL, const KURL& baseURL, const CSSParserContext&);
+    StyleSheetContents(StyleRuleImport* ownerRule, const String& originalURL, const CSSParserContext&);
     StyleSheetContents(const StyleSheetContents&);
 
     void clearCharsetRule();
@@ -146,7 +147,6 @@ private:
     StyleRuleImport* m_ownerRule;
 
     String m_originalURL;
-    KURL m_finalURL;
 
     String m_encodingFromCharsetRule;
     Vector<RefPtr<StyleRuleImport> > m_importRules;

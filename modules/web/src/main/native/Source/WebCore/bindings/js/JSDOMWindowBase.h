@@ -37,8 +37,8 @@ namespace WebCore {
     class JSDOMWindowBase : public JSDOMGlobalObject {
         typedef JSDOMGlobalObject Base;
     protected:
-        JSDOMWindowBase(JSC::JSGlobalData&, JSC::Structure*, PassRefPtr<DOMWindow>, JSDOMWindowShell*);
-        void finishCreation(JSC::JSGlobalData&, JSDOMWindowShell*);
+        JSDOMWindowBase(JSC::VM&, JSC::Structure*, PassRefPtr<DOMWindow>, JSDOMWindowShell*);
+        void finishCreation(JSC::VM&, JSDOMWindowShell*);
 
         static void destroy(JSCell*);
 
@@ -53,9 +53,9 @@ namespace WebCore {
 
         static const JSC::ClassInfo s_info;
 
-        static JSC::Structure* createStructure(JSC::JSGlobalData& globalData, JSC::JSValue prototype)
+        static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSValue prototype)
         {
-            return JSC::Structure::create(globalData, 0, prototype, JSC::TypeInfo(JSC::GlobalObjectType, StructureFlags), &s_info);
+            return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::GlobalObjectType, StructureFlags), &s_info);
         }
 
         static const JSC::GlobalObjectMethodTable s_globalObjectMethodTable;
@@ -64,27 +64,15 @@ namespace WebCore {
         static bool supportsRichSourceInfo(const JSC::JSGlobalObject*);
         static bool shouldInterruptScript(const JSC::JSGlobalObject*);
         static bool javaScriptExperimentsEnabled(const JSC::JSGlobalObject*);
-        static bool allowsAccessFrom(const JSC::JSGlobalObject*, JSC::ExecState*);
-        
-        bool allowsAccessFrom(JSC::ExecState*) const;
-        bool allowsAccessFromNoErrorMessage(JSC::ExecState*) const;
-        bool allowsAccessFrom(JSC::ExecState*, String& message) const;
         void printErrorMessage(const String&) const;
 
-        // Don't call this version of allowsAccessFrom -- it's a slightly incorrect implementation used only by WebScriptObject
-        bool allowsAccessFrom(const JSC::JSGlobalObject*) const;
-        
-        static JSC::JSObject* toThisObject(JSC::JSCell*, JSC::ExecState*);
         JSDOMWindowShell* shell() const;
 
-        static JSC::JSGlobalData* commonJSGlobalData();
+        static JSC::VM* commonVM();
 
     private:
         RefPtr<DOMWindow> m_impl;
         JSDOMWindowShell* m_shell;
-
-        bool allowsAccessFromPrivate(const JSC::JSGlobalObject*) const;
-        String crossDomainAccessErrorMessage(const JSC::JSGlobalObject*) const;
     };
 
     // Returns a JSDOMWindow or jsNull()

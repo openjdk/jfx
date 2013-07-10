@@ -29,30 +29,29 @@
 #include "config.h"
 #include "FileSystem.h"
 
-#include "PlatformString.h"
 #include <wtf/RetainPtr.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 CString fileSystemRepresentation(const String& path)
 {
-    RetainPtr<CFStringRef> cfString(AdoptCF, path.createCFString());
+    RetainPtr<CFStringRef> cfString = path.createCFString();
 
     if (!cfString)
         return CString();
 
     CFIndex size = CFStringGetMaximumSizeOfFileSystemRepresentation(cfString.get());
 
-    char* buffer;
-    CString string = CString::newUninitialized(size, buffer);
+    Vector<char> buffer(size);
 
-    if (!CFStringGetFileSystemRepresentation(cfString.get(), buffer, size)) {
+    if (!CFStringGetFileSystemRepresentation(cfString.get(), buffer.data(), buffer.size())) {
         LOG_ERROR("Failed to get filesystem representation to create CString from cfString");
         return CString();
     }
 
-    return string;
+    return CString(buffer.data(), strlen(buffer.data()));
 }
 
 RetainPtr<CFURLRef> pathAsURL(const String& path)
@@ -63,8 +62,7 @@ RetainPtr<CFURLRef> pathAsURL(const String& path)
 #else
     pathStyle = kCFURLPOSIXPathStyle;
 #endif
-    return RetainPtr<CFURLRef>(AdoptCF, CFURLCreateWithFileSystemPath(0,
-        RetainPtr<CFStringRef>(AdoptCF, path.createCFString()).get(), pathStyle, FALSE));
+    return adoptCF(CFURLCreateWithFileSystemPath(0, path.createCFString().get(), pathStyle, FALSE));
 }
 
 } // namespace WebCore

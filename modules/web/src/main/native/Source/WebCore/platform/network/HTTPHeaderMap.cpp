@@ -51,9 +51,9 @@ PassOwnPtr<CrossThreadHTTPHeaderMapData> HTTPHeaderMap::copyData() const
     data->reserveInitialCapacity(size());
 
     HTTPHeaderMap::const_iterator end_it = end();
-    for (HTTPHeaderMap::const_iterator it = begin(); it != end_it; ++it) {
-        data->append(make_pair(it->first.string().isolatedCopy(), it->second.isolatedCopy()));
-    }
+    for (HTTPHeaderMap::const_iterator it = begin(); it != end_it; ++it)
+        data->uncheckedAppend(make_pair(it->key.string().isolatedCopy(), it->value.isolatedCopy()));
+
     return data.release();
 }
 
@@ -100,7 +100,7 @@ String HTTPHeaderMap::get(const char* name) const
     const_iterator i = find<const char*, CaseFoldingCStringTranslator>(name);
     if (i == end())
         return String();
-    return i->second;
+    return i->value;
 }
     
 bool HTTPHeaderMap::contains(const char* name) const

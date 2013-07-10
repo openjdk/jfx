@@ -42,6 +42,7 @@ class RenderNamedFlowThread;
 typedef ListHashSet<RenderNamedFlowThread*> RenderNamedFlowThreadList;
 
 class FlowThreadController {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static PassOwnPtr<FlowThreadController> create(RenderView*);
     ~FlowThreadController();
@@ -61,19 +62,34 @@ public:
     const RenderNamedFlowThreadList* renderNamedFlowThreadList() const { return m_renderNamedFlowThreadList.get(); }
     bool hasRenderNamedFlowThreads() const { return m_renderNamedFlowThreadList && !m_renderNamedFlowThreadList->isEmpty(); }
     void layoutRenderNamedFlowThreads();
+    void styleDidChange();
 
     void registerNamedFlowContentNode(Node*, RenderNamedFlowThread*);
     void unregisterNamedFlowContentNode(Node*);
+    bool isContentNodeRegisteredWithAnyNamedFlow(Node*) const;
     
-    void removeFlowThread(RenderNamedFlowThread*);
+    bool hasFlowThreadsWithAutoLogicalHeightRegions() const { return m_flowThreadsWithAutoLogicalHeightRegions; }
+    void incrementFlowThreadsWithAutoLogicalHeightRegions() { ++m_flowThreadsWithAutoLogicalHeightRegions; }
+    void decrementFlowThreadsWithAutoLogicalHeightRegions() { ASSERT(m_flowThreadsWithAutoLogicalHeightRegions > 0); --m_flowThreadsWithAutoLogicalHeightRegions; }
+
+    bool updateFlowThreadsNeedingLayout();
+    bool updateFlowThreadsNeedingTwoStepLayout();
+    void updateFlowThreadsIntoConstrainedPhase();
+
+#ifndef NDEBUG
+    bool isAutoLogicalHeightRegionsCountConsistent() const;
+#endif
 
 protected:
     FlowThreadController(RenderView*);
+    void updateFlowThreadsChainIfNecessary();
+    void resetFlowThreadsWithAutoHeightRegions();
 
 private:
     RenderView* m_view;
     RenderFlowThread* m_currentRenderFlowThread;
     bool m_isRenderNamedFlowThreadOrderDirty;
+    unsigned m_flowThreadsWithAutoLogicalHeightRegions;
     OwnPtr<RenderNamedFlowThreadList> m_renderNamedFlowThreadList;
     // maps a content node to its render flow thread.
     HashMap<Node*, RenderNamedFlowThread*> m_mapNamedFlowContentNodes;

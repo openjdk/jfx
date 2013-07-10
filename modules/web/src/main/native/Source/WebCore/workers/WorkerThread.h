@@ -41,6 +41,7 @@ namespace WebCore {
 
     class KURL;
     class NotificationClient;
+    class SecurityOrigin;
     class WorkerContext;
     class WorkerLoaderProxy;
     class WorkerReportingProxy;
@@ -62,6 +63,7 @@ namespace WebCore {
 
         // Number of active worker threads.
         static unsigned workerThreadCount();
+        static void releaseFastMallocFreeMemoryInAllThreads();
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
         NotificationClient* getNotificationClient() { return m_notificationClient; }
@@ -69,10 +71,10 @@ namespace WebCore {
 #endif
 
     protected:
-        WorkerThread(const KURL&, const String& userAgent, const GroupSettings*,  const String& sourceCode, WorkerLoaderProxy&, WorkerReportingProxy&, WorkerThreadStartMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
+        WorkerThread(const KURL&, const String& userAgent, const GroupSettings*,  const String& sourceCode, WorkerLoaderProxy&, WorkerReportingProxy&, WorkerThreadStartMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType, const SecurityOrigin* topOrigin);
 
         // Factory method for creating a new worker context for the thread.
-        virtual PassRefPtr<WorkerContext> createWorkerContext(const KURL&, const String& userAgent, PassOwnPtr<GroupSettings>, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType) = 0;
+        virtual PassRefPtr<WorkerContext> createWorkerContext(const KURL&, const String& userAgent, PassOwnPtr<GroupSettings>, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType, PassRefPtr<SecurityOrigin> topOrigin) = 0;
 
         // Executes the event loop for the worker thread. Derived classes can override to perform actions before/after entering the event loop.
         virtual void runEventLoop();
@@ -97,9 +99,6 @@ namespace WebCore {
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
         NotificationClient* m_notificationClient;
 #endif
-
-        // Track the number of WorkerThread instances for use in layout tests.
-        static unsigned m_threadCount;
     };
 
 } // namespace WebCore

@@ -27,20 +27,77 @@
 
 #include "FloatSize.h"
 #include "Font.h"
+#include "RenderBlock.h"
+#include "RenderText.h"
 #include "TextBreakIterator.h"
 #include "TextRun.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/unicode/CharacterNames.h>
 
-#if (PLATFORM(MAC) || PLATFORM(CHROMIUM)) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
-// Undefined when compiling agains the 10.5 SDK.
-#define kCTVersionNumber10_6 0x00030000
-#endif
-
 using namespace std;
 
 namespace WebCore {
+
+class TextLayout {
+public:
+    static bool isNeeded(RenderText* text, const Font& font)
+    {
+        TextRun run = RenderBlock::constructTextRun(text, font, text, text->style());
+        return font.codePath(run) == Font::Complex;
+    }
+
+    TextLayout(RenderText* text, const Font& font, float xPos)
+        : m_font(font)
+        , m_run(constructTextRun(text, font, xPos))
+        , m_controller(adoptPtr(new ComplexTextController(&m_font, m_run, true)))
+    {
+    }
+
+    float width(unsigned from, unsigned len, HashSet<const SimpleFontData*>* fallbackFonts)
+    {
+        m_controller->advance(from, 0, ByWholeGlyphs, fallbackFonts);
+        float beforeWidth = m_controller->runWidthSoFar();
+        if (m_font.wordSpacing() && from && Font::treatAsSpace(m_run[from]))
+            beforeWidth += m_font.wordSpacing();
+        m_controller->advance(from + len, 0, ByWholeGlyphs, fallbackFonts);
+        float afterWidth = m_controller->runWidthSoFar();
+        return afterWidth - beforeWidth;
+    }
+
+private:
+    static TextRun constructTextRun(RenderText* text, const Font& font, float xPos)
+    {
+        TextRun run = RenderBlock::constructTextRun(text, font, text, text->style());
+        run.setCharactersLength(text->textLength());
+        ASSERT(run.charactersLength() >= run.length());
+
+        run.setXPos(xPos);
+        return run;
+    }
+
+    // ComplexTextController has only references to its Font and TextRun so they must be kept alive here.
+    Font m_font;
+    TextRun m_run;
+    OwnPtr<ComplexTextController> m_controller;
+};
+
+PassOwnPtr<TextLayout> Font::createLayout(RenderText* text, float xPos, bool collapseWhiteSpace) const
+{
+    if (!collapseWhiteSpace || !TextLayout::isNeeded(text, *this))
+        return nullptr;
+    return adoptPtr(new TextLayout(text, *this, xPos));
+}
+
+void Font::deleteLayout(TextLayout* layout)
+{
+    delete layout;
+}
+
+float Font::width(TextLayout& layout, unsigned from, unsigned len, HashSet<const SimpleFontData*>* fallbackFonts)
+{
+    return layout.width(from, len, fallbackFonts);
+}
 
 static inline CGFloat roundCGFloat(CGFloat f)
 {
@@ -59,6 +116,7 @@ static inline CGFloat ceilCGFloat(CGFloat f)
 ComplexTextController::ComplexTextController(const Font* font, const TextRun& run, bool mayUseNaturalWritingDirection, HashSet<const SimpleFontData*>* fallbackFonts, bool forTextEmphasis)
     : m_font(*font)
     , m_run(run)
+    , m_isLTROnly(true)
     , m_mayUseNaturalWritingDirection(mayUseNaturalWritingDirection)
     , m_forTextEmphasis(forTextEmphasis)
     , m_currentCharacter(0)
@@ -84,7 +142,11 @@ ComplexTextController::ComplexTextController(const Font* font, const TextRun& ru
         m_expansionPerOpportunity = 0;
     else {
         bool isAfterExpansion = m_afterExpansion;
-        unsigned expansionOpportunityCount = Font::expansionOpportunityCount(m_run.characters(), m_end, m_run.ltr() ? LTR : RTL, isAfterExpansion);
+        unsigned expansionOpportunityCount;
+        if (m_run.is8Bit())
+            expansionOpportunityCount = Font::expansionOpportunityCount(m_run.characters8(), m_end, m_run.ltr() ? LTR : RTL, isAfterExpansion);
+         else
+             expansionOpportunityCount = Font::expansionOpportunityCount(m_run.characters16(), m_end, m_run.ltr() ? LTR : RTL, isAfterExpansion);
         if (isAfterExpansion && !m_run.allowsTrailingExpansion())
             expansionOpportunityCount--;
 
@@ -96,6 +158,17 @@ ComplexTextController::ComplexTextController(const Font* font, const TextRun& ru
 
     collectComplexTextRuns();
     adjustGlyphsAndAdvances();
+
+    if (!m_isLTROnly) {
+        m_runIndices.reserveInitialCapacity(m_complexTextRuns.size());
+
+        m_glyphCountFromStartToIndex.reserveInitialCapacity(m_complexTextRuns.size());
+        unsigned glyphCountSoFar = 0;
+        for (unsigned i = 0; i < m_complexTextRuns.size(); ++i) {
+            m_glyphCountFromStartToIndex.uncheckedAppend(glyphCountSoFar);
+            glyphCountSoFar += m_complexTextRuns[i]->glyphCount();
+        }
+    }
 
     m_runWidthSoFar = m_leadingExpansion;
 }
@@ -223,7 +296,14 @@ void ComplexTextController::collectComplexTextRuns()
         return;
 
     // We break up glyph run generation for the string by FontData.
-    const UChar* cp = m_run.characters();
+    const UChar* cp;
+
+    if (m_run.is8Bit()) {
+        String stringFor8BitRun = String::make16BitFrom8BitSource(m_run.characters8(), m_run.length());
+        cp = stringFor8BitRun.characters16();
+        m_stringsFor8BitRuns.append(stringFor8BitRun);
+    } else
+        cp = m_run.characters16();
 
     if (m_font.isSmallCaps())
         m_smallCapsBuffer.resize(m_end);
@@ -255,15 +335,9 @@ void ComplexTextController::collectComplexTextRuns()
     }
 
     nextIsMissingGlyph = false;
-#if !PLATFORM(WX)
     nextFontData = m_font.fontDataForCombiningCharacterSequence(sequenceStart, curr - sequenceStart, nextIsSmallCaps ? SmallCapsVariant : NormalVariant);
-    if (!nextFontData) {
-        if (markCount)
-            nextFontData = systemFallbackFontData();
-        else
+    if (!nextFontData)
             nextIsMissingGlyph = true;
-    }
-#endif
 
     while (curr < end) {
         fontData = nextFontData;
@@ -286,17 +360,11 @@ void ComplexTextController::collectComplexTextRuns()
         nextIsMissingGlyph = false;
         if (baseCharacter == zeroWidthJoiner)
             nextFontData = fontData;
-#if !PLATFORM(WX)
         else {
             nextFontData = m_font.fontDataForCombiningCharacterSequence(cp + index, curr - cp - index, nextIsSmallCaps ? SmallCapsVariant : NormalVariant);
-            if (!nextFontData) {
-                if (markCount)
-                    nextFontData = systemFallbackFontData();
-                else
+            if (!nextFontData)
                     nextIsMissingGlyph = true;
             }
-        }
-#endif
 
         if (nextFontData != fontData || nextIsMissingGlyph != isMissingGlyph) {
             int itemStart = static_cast<int>(indexOfFontTransition);
@@ -316,68 +384,9 @@ void ComplexTextController::collectComplexTextRuns()
         m_complexTextRuns.reverse();
 }
 
-#if USE(CORE_TEXT) && USE(ATSUI)
-static inline bool shouldUseATSUIAPI()
-{
-    enum TypeRenderingAPIToUse { UnInitialized, UseATSUI, UseCoreText };
-    static TypeRenderingAPIToUse apiToUse = UnInitialized;
-
-    if (UNLIKELY(apiToUse == UnInitialized)) {
-        if (&CTGetCoreTextVersion != 0 && CTGetCoreTextVersion() >= kCTVersionNumber10_6)
-            apiToUse = UseCoreText;
-        else
-            apiToUse = UseATSUI;
-    }
-
-    return apiToUse == UseATSUI;
-}
-#endif
-
 CFIndex ComplexTextController::ComplexTextRun::indexAt(size_t i) const
 {
-#if USE(CORE_TEXT) && USE(ATSUI)
-    return shouldUseATSUIAPI() ? m_atsuiIndices[i] : m_coreTextIndices[i];
-#elif USE(ATSUI)
-    return m_atsuiIndices[i];
-#elif USE(CORE_TEXT)
     return m_coreTextIndices[i];
-#endif
-}
-
-void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cp, unsigned length, unsigned stringLocation, const SimpleFontData* fontData)
-{
-    if (!fontData) {
-        // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), cp, stringLocation, length, m_run.ltr()));
-        return;
-    }
-
-#if USE(CORE_TEXT) && USE(ATSUI)
-    if (shouldUseATSUIAPI())
-        return collectComplexTextRunsForCharactersATSUI(cp, length, stringLocation, fontData);
-    return collectComplexTextRunsForCharactersCoreText(cp, length, stringLocation, fontData);
-#elif USE(ATSUI)
-    return collectComplexTextRunsForCharactersATSUI(cp, length, stringLocation, fontData);
-#elif USE(CORE_TEXT)
-    return collectComplexTextRunsForCharactersCoreText(cp, length, stringLocation, fontData);
-#endif
-}
-
-ComplexTextController::ComplexTextRun::ComplexTextRun(const SimpleFontData* fontData, const UChar* characters, unsigned stringLocation, size_t stringLength, bool ltr)
-    : m_fontData(fontData)
-    , m_characters(characters)
-    , m_stringLocation(stringLocation)
-    , m_stringLength(stringLength)
-    , m_indexEnd(stringLength)
-    , m_isMonotonic(true)
-{
-#if USE(CORE_TEXT) && USE(ATSUI)
-    shouldUseATSUIAPI() ? createTextRunFromFontDataATSUI(ltr) : createTextRunFromFontDataCoreText(ltr);
-#elif USE(ATSUI)
-    createTextRunFromFontDataATSUI(ltr);
-#elif USE(CORE_TEXT)
-    createTextRunFromFontDataCoreText(ltr);
-#endif
 }
 
 void ComplexTextController::ComplexTextRun::setIsNonMonotonic()
@@ -404,25 +413,92 @@ void ComplexTextController::ComplexTextRun::setIsNonMonotonic()
     }
 }
 
-void ComplexTextController::advance(unsigned offset, GlyphBuffer* glyphBuffer)
+unsigned ComplexTextController::indexOfCurrentRun(unsigned& leftmostGlyph)
+{
+    leftmostGlyph = 0;
+    
+    size_t runCount = m_complexTextRuns.size();
+    if (m_currentRun >= runCount)
+        return runCount;
+
+    if (m_isLTROnly) {
+        for (unsigned i = 0; i < m_currentRun; ++i)
+            leftmostGlyph += m_complexTextRuns[i]->glyphCount();
+        return m_currentRun;
+    }
+
+    if (m_runIndices.isEmpty()) {
+        unsigned firstRun = 0;
+        unsigned firstRunOffset = stringBegin(*m_complexTextRuns[0]);
+        for (unsigned i = 1; i < runCount; ++i) {
+            unsigned offset = stringBegin(*m_complexTextRuns[i]);
+            if (offset < firstRunOffset) {
+                firstRun = i;
+                firstRunOffset = offset;
+            }
+        }
+        m_runIndices.uncheckedAppend(firstRun);
+    }
+
+    while (m_runIndices.size() <= m_currentRun) {
+        unsigned offset = stringEnd(*m_complexTextRuns[m_runIndices.last()]);
+
+        for (unsigned i = 0; i < runCount; ++i) {
+            if (offset == stringBegin(*m_complexTextRuns[i])) {
+                m_runIndices.uncheckedAppend(i);
+                break;
+            }
+        }
+    }
+
+    unsigned currentRunIndex = m_runIndices[m_currentRun];
+    leftmostGlyph = m_glyphCountFromStartToIndex[currentRunIndex];
+    return currentRunIndex;
+}
+
+unsigned ComplexTextController::incrementCurrentRun(unsigned& leftmostGlyph)
+{
+    if (m_isLTROnly) {
+        leftmostGlyph += m_complexTextRuns[m_currentRun++]->glyphCount();
+        return m_currentRun;
+    }
+
+    m_currentRun++;
+    leftmostGlyph = 0;
+    return indexOfCurrentRun(leftmostGlyph);
+}
+
+void ComplexTextController::advance(unsigned offset, GlyphBuffer* glyphBuffer, GlyphIterationStyle iterationStyle, HashSet<const SimpleFontData*>* fallbackFonts)
 {
     if (static_cast<int>(offset) > m_end)
         offset = m_end;
 
-    if (offset <= m_currentCharacter)
-        return;
+    if (offset <= m_currentCharacter) {
+        m_runWidthSoFar = m_leadingExpansion;
+        m_numGlyphsSoFar = 0;
+        m_currentRun = 0;
+        m_glyphInCurrentRun = 0;
+        m_characterInCurrentGlyph = 0;
+    }
 
     m_currentCharacter = offset;
 
     size_t runCount = m_complexTextRuns.size();
 
-    bool ltr = m_run.ltr();
-
-    unsigned k = ltr ? m_numGlyphsSoFar : m_adjustedGlyphs.size() - 1 - m_numGlyphsSoFar;
+    unsigned leftmostGlyph = 0;
+    unsigned currentRunIndex = indexOfCurrentRun(leftmostGlyph);
     while (m_currentRun < runCount) {
-        const ComplexTextRun& complexTextRun = *m_complexTextRuns[ltr ? m_currentRun : runCount - 1 - m_currentRun];
+        const ComplexTextRun& complexTextRun = *m_complexTextRuns[currentRunIndex];
+        bool ltr = complexTextRun.isLTR();
         size_t glyphCount = complexTextRun.glyphCount();
         unsigned g = ltr ? m_glyphInCurrentRun : glyphCount - 1 - m_glyphInCurrentRun;
+        unsigned k = leftmostGlyph + g;
+        if (fallbackFonts && complexTextRun.fontData() != m_font.primaryFont())
+            fallbackFonts->add(complexTextRun.fontData());
+
+        if (glyphBuffer && glyphBuffer->isEmpty())
+            glyphBuffer->setInitialAdvance(complexTextRun.initialAdvance());
+
         while (m_glyphInCurrentRun < glyphCount) {
             unsigned glyphStartOffset = complexTextRun.indexAt(g);
             unsigned glyphEndOffset;
@@ -451,6 +527,9 @@ void ComplexTextController::advance(unsigned offset, GlyphBuffer* glyphBuffer)
                 // When there are multiple glyphs per character we need to advance by the full width of the glyph.
                 ASSERT(m_characterInCurrentGlyph == oldCharacterInCurrentGlyph);
                 m_runWidthSoFar += adjustedAdvance.width;
+            } else if (iterationStyle == ByWholeGlyphs) {
+                if (!oldCharacterInCurrentGlyph)
+                    m_runWidthSoFar += adjustedAdvance.width;
             } else
                 m_runWidthSoFar += adjustedAdvance.width * (m_characterInCurrentGlyph - oldCharacterInCurrentGlyph) / (glyphEndOffset - glyphStartOffset);
 
@@ -468,10 +547,10 @@ void ComplexTextController::advance(unsigned offset, GlyphBuffer* glyphBuffer)
                 k--;
             }
         }
-        m_currentRun++;
+        currentRunIndex = incrementCurrentRun(leftmostGlyph);
         m_glyphInCurrentRun = 0;
     }
-    if (!ltr && m_numGlyphsSoFar == m_adjustedAdvances.size())
+    if (!m_run.ltr() && m_numGlyphsSoFar == m_adjustedAdvances.size())
         m_runWidthSoFar += m_finalRoundingWidth;
 }
 
@@ -484,6 +563,18 @@ void ComplexTextController::adjustGlyphsAndAdvances()
         ComplexTextRun& complexTextRun = *m_complexTextRuns[r];
         unsigned glyphCount = complexTextRun.glyphCount();
         const SimpleFontData* fontData = complexTextRun.fontData();
+
+        // Represent the initial advance for a text run by adjusting the advance
+        // of the last glyph of the previous text run in the glyph buffer.
+        if (r && m_adjustedAdvances.size()) {
+            CGSize previousAdvance = m_adjustedAdvances.last();
+            previousAdvance.width += complexTextRun.initialAdvance().width;
+            previousAdvance.height -= complexTextRun.initialAdvance().height;
+            m_adjustedAdvances[m_adjustedAdvances.size() - 1] = previousAdvance;
+        }
+
+        if (!complexTextRun.isLTR())
+            m_isLTROnly = false;
 
         const CGGlyph* glyphs = complexTextRun.glyphs();
         const CGSize* advances = complexTextRun.advances();
@@ -572,7 +663,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                         m_afterExpansion = false;
 
                     // Account for word-spacing.
-                    if (treatAsSpace && characterIndex > 0 && !Font::treatAsSpace(*m_run.data(characterIndex - 1)) && m_font.wordSpacing())
+                    if (treatAsSpace && (ch != '\t' || !m_run.allowTabs()) && (characterIndex > 0 || r > 0) && m_font.wordSpacing())
                         advance.width += m_font.wordSpacing();
                 } else
                     m_afterExpansion = false;

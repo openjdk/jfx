@@ -23,13 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module core {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=GEOLOCATION,
-        OmitConstructor
-    ] Geoposition {
+    OmitConstructor,
+    ImplementationLacksVTable
+] interface Geoposition {
         readonly attribute Coordinates coords;
         readonly attribute DOMTimeStamp timestamp;
     };
-}

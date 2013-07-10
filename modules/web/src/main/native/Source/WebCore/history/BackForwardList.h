@@ -32,7 +32,6 @@
 #include <wtf/RefCounted.h>
 
 #if PLATFORM(JAVA)
-#include <wtf/AlwaysInline.h>
 #include <wtf/java/JavaRef.h>
 #endif
 

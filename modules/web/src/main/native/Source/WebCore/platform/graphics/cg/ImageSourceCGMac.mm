@@ -26,23 +26,19 @@
 #import "config.h"
 #import "ImageSourceCG.h"
 
-#import "PlatformString.h"
-#import "wtf/RetainPtr.h"
+#import <wtf/RetainPtr.h>
+#import <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 String MIMETypeForImageSourceType(const String& uti)
 {
-    RetainPtr<CFStringRef> utiref(AdoptCF, uti.createCFString());
-    RetainPtr<CFStringRef> mime(AdoptCF, UTTypeCopyPreferredTagWithClass(utiref.get(), kUTTagClassMIMEType));
-    return mime.get();
+    return adoptCF(UTTypeCopyPreferredTagWithClass(uti.createCFString().get(), kUTTagClassMIMEType)).get();
 }
 
 String preferredExtensionForImageSourceType(const String& uti)
 {
-    RetainPtr<CFStringRef> type(AdoptCF, uti.createCFString());
-    RetainPtr<CFStringRef> extension(AdoptCF, UTTypeCopyPreferredTagWithClass(type.get(), kUTTagClassFilenameExtension));
-    return extension.get();
+    return adoptCF(UTTypeCopyPreferredTagWithClass(uti.createCFString().get(), kUTTagClassFilenameExtension)).get();
 }
 
 } // namespace WebCore

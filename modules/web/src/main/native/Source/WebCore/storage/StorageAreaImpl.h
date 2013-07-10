@@ -29,6 +29,7 @@
 #include "StorageArea.h"
 #include "Timer.h"
 
+#include <wtf/HashMap.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 
@@ -43,25 +44,28 @@ namespace WebCore {
         static PassRefPtr<StorageAreaImpl> create(StorageType, PassRefPtr<SecurityOrigin>, PassRefPtr<StorageSyncManager>, unsigned quota);
         virtual ~StorageAreaImpl();
 
-        // The HTML5 DOM Storage API (and contains)
-        virtual unsigned length(Frame* sourceFrame) const;
-        virtual String key(unsigned index, Frame* sourceFrame) const;
-        virtual String getItem(const String& key, Frame* sourceFrame) const;
-        virtual void setItem(const String& key, const String& value, ExceptionCode&, Frame* sourceFrame);
-        virtual void removeItem(const String& key, Frame* sourceFrame);
-        virtual void clear(Frame* sourceFrame);
-        virtual bool contains(const String& key, Frame* sourceFrame) const;
+    virtual unsigned length() OVERRIDE;
+    virtual String key(unsigned index) OVERRIDE;
+    virtual String item(const String& key) OVERRIDE;
+    virtual void setItem(Frame* sourceFrame, const String& key, const String& value, bool& quotaException) OVERRIDE;
+    virtual void removeItem(Frame* sourceFrame, const String& key) OVERRIDE;
+    virtual void clear(Frame* sourceFrame) OVERRIDE;
+    virtual bool contains(const String& key) OVERRIDE;
 
-        virtual bool disabledByPrivateBrowsingInFrame(const Frame* sourceFrame) const;
+    virtual bool canAccessStorage(Frame* sourceFrame) OVERRIDE;
+    virtual StorageType storageType() const OVERRIDE;
+
+    virtual size_t memoryBytesUsedByCache() OVERRIDE;
 
         virtual void incrementAccessCount();
         virtual void decrementAccessCount();
+    virtual void closeDatabaseIfIdle();
 
         PassRefPtr<StorageAreaImpl> copy();
         void close();
 
         // Only called from a background thread.
-        void importItem(const String& key, const String& value);
+    void importItems(const HashMap<String, String>& items);
 
         // Used to clear a StorageArea and close db before backing db file is deleted.
         void clearForOriginDeletion();
@@ -70,10 +74,12 @@ namespace WebCore {
 
     private:
         StorageAreaImpl(StorageType, PassRefPtr<SecurityOrigin>, PassRefPtr<StorageSyncManager>, unsigned quota);
-        StorageAreaImpl(StorageAreaImpl*);
+    explicit StorageAreaImpl(StorageAreaImpl*);
 
         void blockUntilImportComplete() const;
         void closeDatabaseTimerFired(Timer<StorageAreaImpl>*);
+
+    void dispatchStorageEvent(const String& key, const String& oldValue, const String& newValue, Frame* sourceFrame);
 
         StorageType m_storageType;
         RefPtr<SecurityOrigin> m_securityOrigin;

@@ -58,7 +58,7 @@ public:
     virtual void doApply() = 0;
 
 protected:
-    EditCommand(Document*);
+    explicit EditCommand(Document*);
     EditCommand(Document*, const VisibleSelection&, const VisibleSelection&);
 
     Document* document() const { return m_document.get(); }
@@ -73,6 +73,11 @@ private:
     CompositeEditCommand* m_parent;
 };
 
+enum ShouldAssumeContentIsAlwaysEditable {
+    AssumeContentIsAlwaysEditable,
+    DoNotAssumeContentIsAlwaysEditable,
+};
+
 class SimpleEditCommand : public EditCommand {
 public:
     virtual void doUnapply() = 0;
@@ -83,7 +88,7 @@ public:
 #endif
 
 protected:
-    SimpleEditCommand(Document* document) : EditCommand(document) { }
+    explicit SimpleEditCommand(Document* document) : EditCommand(document) { }
 
 #ifndef NDEBUG
     void addNodeAndDescendants(Node*, HashSet<Node*>&);
@@ -96,7 +101,7 @@ private:
 inline SimpleEditCommand* toSimpleEditCommand(EditCommand* command)
 {
     ASSERT(command);
-    ASSERT(command->isSimpleEditCommand());
+    ASSERT_WITH_SECURITY_IMPLICATION(command->isSimpleEditCommand());
     return static_cast<SimpleEditCommand*>(command);
 }
 

@@ -35,10 +35,10 @@ from webkitpy.layout_tests.models import test_failures
 _log = logging.getLogger(__name__)
 
 
-def write_test_result(filesystem, port, test_name, driver_output,
+def write_test_result(filesystem, port, results_directory, test_name, driver_output,
                       expected_driver_output, failures):
     """Write the test result to the result output directory."""
-    root_output_dir = port.results_directory()
+    root_output_dir = results_directory
     writer = TestResultWriter(filesystem, port, root_output_dir, test_name)
 
     if driver_output.error:
@@ -69,12 +69,12 @@ def write_test_result(filesystem, port, test_name, driver_output,
             # FIXME: This work should be done earlier in the pipeline (e.g., when we compare images for non-ref tests).
             # FIXME: We should always have 2 images here.
             if driver_output.image and expected_driver_output.image:
-                diff_image, diff_percent = port.diff_image(driver_output.image, expected_driver_output.image, tolerance=0)
+                diff_image, diff_percent, err_str = port.diff_image(expected_driver_output.image, driver_output.image, tolerance=0)
                 if diff_image:
                     writer.write_image_diff_files(diff_image)
                     failure.diff_percent = diff_percent
                 else:
-                    _log.warn('Can not get image diff. ImageDiff program might not work correctly.')
+                    _log.warn('ref test mismatch did not produce an image diff.')
             writer.write_reftest(failure.reference_filename)
         elif isinstance(failure, test_failures.FailureReftestMismatchDidNotOccur):
             writer.write_image_files(driver_output.image, expected_image=None)
@@ -92,6 +92,7 @@ class TestResultWriter(object):
     FILENAME_SUFFIX_DIFF = "-diff"
     FILENAME_SUFFIX_STDERR = "-stderr"
     FILENAME_SUFFIX_CRASH_LOG = "-crash-log"
+    FILENAME_SUFFIX_SAMPLE = "-sample"
     FILENAME_SUFFIX_WDIFF = "-wdiff.html"
     FILENAME_SUFFIX_PRETTY_PATCH = "-pretty-diff.html"
     FILENAME_SUFFIX_IMAGE_DIFF = "-diff.png"
@@ -165,6 +166,10 @@ class TestResultWriter(object):
     def write_crash_log(self, crash_log):
         filename = self.output_filename(self.FILENAME_SUFFIX_CRASH_LOG + ".txt")
         self._write_text_file(filename, crash_log)
+
+    def copy_sample_file(self, sample_file):
+        filename = self.output_filename(self.FILENAME_SUFFIX_SAMPLE + ".txt")
+        self._filesystem.copyfile(sample_file, filename)
 
     def write_text_files(self, actual_text, expected_text):
         self.write_output_files(".txt", actual_text, expected_text)

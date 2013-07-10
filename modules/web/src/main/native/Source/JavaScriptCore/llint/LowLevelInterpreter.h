@@ -32,25 +32,34 @@
 
 #include "Opcode.h"
 
+#if ENABLE(LLINT_C_LOOP)
+
+namespace JSC {
+
+// The following is a set of alias for the opcode names. This is needed
+// because there is code (e.g. in GetByIdStatus.cpp and PutByIdStatus.cpp)
+// which refers to the opcodes expecting them to be prefixed with "llint_".
+// In the CLoop implementation, the 2 are equivalent. Hence, we set up this
+// alias here.
+
+#define LLINT_OPCODE_ALIAS(opcode, length) \
+    const OpcodeID llint_##opcode = opcode;
+FOR_EACH_CORE_OPCODE_ID(LLINT_OPCODE_ALIAS)
+#undef LLINT_OPCODE_ALIAS
+
+} // namespace JSC
+
+#else // !ENABLE(LLINT_C_LOOP)
+
 #define LLINT_INSTRUCTION_DECL(opcode, length) extern "C" void llint_##opcode();
     FOR_EACH_OPCODE_ID(LLINT_INSTRUCTION_DECL);
 #undef LLINT_INSTRUCTION_DECL
 
-extern "C" void llint_begin();
-extern "C" void llint_end();
-extern "C" void llint_program_prologue();
-extern "C" void llint_eval_prologue();
-extern "C" void llint_function_for_call_prologue();
-extern "C" void llint_function_for_construct_prologue();
-extern "C" void llint_function_for_call_arity_check();
-extern "C" void llint_function_for_construct_arity_check();
-extern "C" void llint_generic_return_point();
-extern "C" void llint_throw_from_slow_path_trampoline();
-extern "C" void llint_throw_during_call_trampoline();
+#define DECLARE_LLINT_NATIVE_HELPER(name, length) extern "C" void name();
+    FOR_EACH_LLINT_NATIVE_HELPER(DECLARE_LLINT_NATIVE_HELPER)
+#undef DECLARE_LLINT_NATIVE_HELPER
 
-// Native call trampolines
-extern "C" void llint_native_call_trampoline();
-extern "C" void llint_native_construct_trampoline();
+#endif // !ENABLE(LLINT_C_LOOP)
 
 #endif // ENABLE(LLINT)
 

@@ -37,6 +37,7 @@ namespace WebCore {
 inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document* document, bool createdByParser)
     : SVGElement(tagName, document)
     , StyleElement(document, createdByParser)
+    , m_svgLoadEventTimer(this, &SVGElement::svgLoadEventTimerFired)
 {
     ASSERT(hasTagName(SVGNames::styleTag));
 }
@@ -67,7 +68,7 @@ void SVGStyleElement::setDisabled(bool setDisabled)
 
 const AtomicString& SVGStyleElement::type() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, defaultValue, ("text/css"));
+    DEFINE_STATIC_LOCAL(const AtomicString, defaultValue, ("text/css", AtomicString::ConstructFromLiteral));
     const AtomicString& n = getAttribute(SVGNames::typeAttr);
     return n.isNull() ? defaultValue : n;
 }
@@ -79,7 +80,7 @@ void SVGStyleElement::setType(const AtomicString& type, ExceptionCode&)
 
 const AtomicString& SVGStyleElement::media() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, defaultValue, ("all"));
+    DEFINE_STATIC_LOCAL(const AtomicString, defaultValue, ("all", AtomicString::ConstructFromLiteral));
     const AtomicString& n = fastGetAttribute(SVGNames::mediaAttr);
     return n.isNull() ? defaultValue : n;
 }
@@ -109,20 +110,20 @@ bool SVGStyleElement::isSupportedAttribute(const QualifiedName& attrName)
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGStyleElement::parseAttribute(const Attribute& attribute)
+void SVGStyleElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(attribute.name())) {
-        SVGElement::parseAttribute(attribute);
+    if (!isSupportedAttribute(name)) {
+        SVGElement::parseAttribute(name, value);
         return;
     }
 
-    if (attribute.name() == SVGNames::titleAttr) {
+    if (name == SVGNames::titleAttr) {
         if (m_sheet)
-            m_sheet->setTitle(attribute.value());
+            m_sheet->setTitle(value);
         return;
     }
 
-    if (SVGLangSpace::parseAttribute(attribute))
+    if (SVGLangSpace::parseAttribute(name, value))
         return;
 
     ASSERT_NOT_REACHED();

@@ -28,6 +28,7 @@
 #define ClientRect_h
 
 #include "FloatRect.h"
+#include "ScriptWrappable.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
@@ -35,7 +36,7 @@ namespace WebCore {
 
     class IntRect; 
 
-    class ClientRect : public RefCounted<ClientRect> {
+    class ClientRect : public ScriptWrappable, public RefCounted<ClientRect> {
     public:
         static PassRefPtr<ClientRect> create() { return adoptRef(new ClientRect); }
         static PassRefPtr<ClientRect> create(const IntRect& rect) { return adoptRef(new ClientRect(rect)); }
@@ -50,8 +51,8 @@ namespace WebCore {
 
     private:
         ClientRect();
-        ClientRect(const IntRect&);
-        ClientRect(const FloatRect&);
+        explicit ClientRect(const IntRect&);
+        explicit ClientRect(const FloatRect&);
 
         FloatRect m_rect;
     }; 

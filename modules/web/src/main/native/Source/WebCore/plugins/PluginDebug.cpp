@@ -26,7 +26,8 @@
 
 #include "config.h"
 #include "PluginDebug.h"
-#include "PlatformString.h"
+
+#include <wtf/text/WTFString.h>
 
 #if !LOG_DISABLED
 
@@ -157,6 +158,8 @@ CString prettyNameForNPPVariable(NPPVariable variable, void* value)
         return result.latin1();
     }
     case NPPVpluginCoreAnimationLayer: return "NPPVpluginCoreAnimationLayer";
+#else
+    UNUSED_PARAM(value);
 #endif
 
     default: return "Unknown variable";

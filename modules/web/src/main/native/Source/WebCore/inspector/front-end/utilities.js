@@ -82,7 +82,7 @@ String.prototype.escapeCharacters = function(chars)
     }
 
     if (!foundChar)
-        return this;
+        return String(this);
 
     var result = "";
     for (var i = 0; i < this.length; ++i) {
@@ -94,9 +94,14 @@ String.prototype.escapeCharacters = function(chars)
     return result;
 }
 
+String.regexSpecialCharacters = function()
+{
+    return "^[]{}()\\.$*+?|-,";
+}
+
 String.prototype.escapeForRegExp = function()
 {
-    return this.escapeCharacters("^[]{}()\\.$*+?|");
+    return this.escapeCharacters(String.regexSpecialCharacters);
 }
 
 String.prototype.escapeHTML = function()
@@ -112,7 +117,7 @@ String.prototype.collapseWhitespace = function()
 String.prototype.trimMiddle = function(maxLength)
 {
     if (this.length <= maxLength)
-        return this;
+        return String(this);
     var leftHalf = maxLength >> 1;
     var rightHalf = maxLength - leftHalf - 1;
     return this.substr(0, leftHalf) + "\u2026" + this.substr(this.length - rightHalf, rightHalf);
@@ -121,7 +126,7 @@ String.prototype.trimMiddle = function(maxLength)
 String.prototype.trimEnd = function(maxLength)
 {
     if (this.length <= maxLength)
-        return this;
+        return String(this);
     return this.substr(0, maxLength - 1) + "\u2026";
 }
 
@@ -131,6 +136,33 @@ String.prototype.trimURL = function(baseURLDomain)
     if (baseURLDomain)
         result = result.replace(new RegExp("^" + baseURLDomain.escapeForRegExp(), "i"), "");
     return result;
+}
+
+String.prototype.toTitleCase = function()
+{
+    return this.substring(0, 1).toUpperCase() + this.substring(1);
+}
+
+/**
+ * @param {string} other
+ * @return {number}
+ */
+String.prototype.compareTo = function(other)
+{
+    if (this > other)
+        return 1;
+    if (this < other)
+        return -1;
+    return 0;
+}
+
+/**
+ * @param {string} href
+ * @return {string}
+ */
+function sanitizeHref(href)
+{
+    return href && href.trim().toLowerCase().startsWith("javascript:") ? "" : href;
 }
 
 String.prototype.removeURLFragment = function()
@@ -256,7 +288,7 @@ Object.defineProperty(Uint32Array.prototype, "sort", {
 var partition = {
     /**
      * @this {Array.<number>}
-     * @param {function(number,number):boolean} comparator
+     * @param {function(number,number):number} comparator
      * @param {number} left
      * @param {number} right
      * @param {number} pivotIndex
@@ -289,7 +321,7 @@ Object.defineProperty(Uint32Array.prototype, "partition", partition);
 var sortRange = {
     /**
      * @this {Array.<number>}
-     * @param {function(number,number):boolean} comparator
+     * @param {function(number,number):number} comparator
      * @param {number} leftBound
      * @param {number} rightBound
      * @param {number} k
@@ -307,7 +339,7 @@ var sortRange = {
                 quickSortFirstK(array, comparator, pivotNewIndex + 1, right, k);
         }
 
-        if (leftBound === 0 && rightBound === (this.length - 1) && k === this.length)
+        if (leftBound === 0 && rightBound === (this.length - 1) && k >= this.length)
             this.sort(comparator);
         else
             quickSortFirstK(this, comparator, leftBound, rightBound, k);
@@ -384,6 +416,34 @@ Object.defineProperty(Array.prototype, "binaryIndexOf",
     }
 });
 
+Object.defineProperty(Array.prototype, "select",
+{
+    /**
+     * @this {Array.<*>}
+     * @param {string} field
+     * @return {Array.<*>}
+     */
+    value: function(field)
+    {
+        var result = new Array(this.length);
+        for (var i = 0; i < this.length; ++i)
+            result[i] = this[i][field];
+        return result;
+    }
+});
+
+Object.defineProperty(Array.prototype, "peekLast",
+{
+    /**
+     * @this {Array.<*>}
+     * @return {*}
+     */
+    value: function()
+    {
+        return this[this.length - 1];
+    }
+});
+
 /**
  * @param {*} anObject
  * @param {Array.<*>} aList
@@ -401,12 +461,6 @@ function insertionIndexForObjectInListSortedByFunction(anObject, aList, aFunctio
             index--;
         return index;
     }
-}
-
-Array.convert = function(list)
-{
-    // Cast array-like object to an array.
-    return Array.prototype.slice.call(list);
 }
 
 /**
@@ -606,12 +660,12 @@ function createSearchRegex(query, caseSensitive, isRegex)
 /**
  * @param {string} query
  * @param {string=} flags
- * @return {RegExp}
+ * @return {!RegExp}
  */
 function createPlainTextSearchRegex(query, flags)
 {
     // This should be kept the same as the one in ContentSearchUtils.cpp.
-    var regexSpecialCharacters = "[](){}+-*.,?\\^$|";
+    var regexSpecialCharacters = String.regexSpecialCharacters();
     var regex = "";
     for (var i = 0; i < query.length; ++i) {
         var c = query.charAt(i);
@@ -654,45 +708,150 @@ function numberToStringWithSpacesPadding(value, symbolsCount)
 }
 
 /**
+  * @return {string}
+  */
+var createObjectIdentifier = function()
+{
+    // It has to be string for better performance.
+    return '_' + ++createObjectIdentifier._last;
+}
+
+createObjectIdentifier._last = 0;
+
+/**
+ * @constructor
+ */
+var Set = function()
+{
+    /** @type !Object.<string, Object> */
+    this._set = {};
+    this._size = 0;
+}
+
+Set.prototype = {
+    /**
+     * @param {!Object} item
+     */
+    add: function(item)
+    {
+        var objectIdentifier = item.__identifier;
+        if (!objectIdentifier) {
+            objectIdentifier = createObjectIdentifier();
+            item.__identifier = objectIdentifier;
+        }
+        if (!this._set[objectIdentifier])
+            ++this._size;
+        this._set[objectIdentifier] = item;
+    },
+    
+    /**
+     * @param {!Object} item
+     */
+    remove: function(item)
+    {
+        if (this._set[item.__identifier]) {
+            --this._size;
+            delete this._set[item.__identifier];
+        }
+    },
+
+    /**
+     * @return {!Array.<Object>}
+     */
+    items: function()
+    {
+        var result = new Array(this._size);
+        var i = 0;
+        for (var objectIdentifier in this._set)
+            result[i++] = this._set[objectIdentifier];
+        return result;
+    },
+
+    /**
+     * @param {!Object} item
+     * @return {?Object}
+     */
+    hasItem: function(item)
+    {
+        return this._set[item.__identifier];
+    },
+
+    /**
+     * @return {number}
+     */
+    size: function()
+    {
+        return this._size;
+    },
+
+    clear: function()
+    {
+        this._set = {};
+        this._size = 0;
+    }
+}
+
+/**
  * @constructor
  */
 var Map = function()
 {
     this._map = {};
+    this._size = 0;
 }
-
-Map._lastObjectIdentifier = 0;
 
 Map.prototype = {
     /**
      * @param {Object} key
+     * @param {*=} value
      */
     put: function(key, value)
     {
         var objectIdentifier = key.__identifier;
         if (!objectIdentifier) {
-            objectIdentifier = ++Map._lastObjectIdentifier;
+            objectIdentifier = createObjectIdentifier();
             key.__identifier = objectIdentifier;
         }
-        this._map[objectIdentifier] = value;
+        if (!this._map[objectIdentifier])
+            ++this._size;
+        this._map[objectIdentifier] = [key, value];
     },
     
     /**
      * @param {Object} key
-     * @return {Object} value
      */
     remove: function(key)
     {
         var result = this._map[key.__identifier];
+        if (!result)
+            return undefined;
+        --this._size;
         delete this._map[key.__identifier];
-        return result;
+        return result[1];
+    },
+
+    /**
+     * @return {Array.<Object>}
+     */
+    keys: function()
+    {
+        return this._list(0);
     },
     
     values: function()
     {
-        var result = [];
+        return this._list(1);
+    },
+
+    /**
+     * @param {number} index
+     */
+    _list: function(index)
+    {
+        var result = new Array(this._size);
+        var i = 0;
         for (var objectIdentifier in this._map)
-            result.push(this._map[objectIdentifier]);
+            result[i++] = this._map[objectIdentifier][index];
         return result;
     },
     
@@ -701,15 +860,64 @@ Map.prototype = {
      */
     get: function(key)
     {
-        return this._map[key.__identifier];
+        var entry = this._map[key.__identifier];
+        return entry ? entry[1] : undefined;
+    },
+
+    /**
+     * @param {Object} key
+     */
+    contains: function(key)
+    {
+        var entry = this._map[key.__identifier];
+        return !!entry;
+    },
+
+    size: function()
+    {
+        return this._size;
     },
     
     clear: function()
     {
         this._map = {};
+        this._size = 0;
     }
-};
+}
+/**
+ * @param {string} url
+ * @param {boolean=} async
+ * @param {function(?string)=} callback
+ * @return {?string}
+ */
+function loadXHR(url, async, callback) 
+{
+    function onReadyStateChanged() 
+    {
+        if (xhr.readyState !== XMLHttpRequest.DONE)
+            return;
 
+        if (xhr.status === 200) {
+            callback(xhr.responseText);
+            return;
+        }
+
+        callback(null); 
+   }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url, async);
+    if (async)
+        xhr.onreadystatechange = onReadyStateChanged;        
+    xhr.send(null);
+
+    if (!async) {
+        if (xhr.status === 200) 
+            return xhr.responseText;
+        return null;
+    }
+    return null;
+}
 
 /**
  * @constructor
@@ -765,3 +973,35 @@ StringPool.prototype = {
         }
     }
 }
+
+var _importedScripts = {};
+
+/**
+ * This function behavior depends on the "debug_devtools" flag value.
+ * - In debug mode it loads scripts synchronously via xhr request.
+ * - In release mode every occurrence of "importScript" in the js files
+ *   that have been white listed in the build system gets replaced with
+ *   the script source code on the compilation phase.
+ *   The build system will throw an exception if it found importScript call
+ *   in other files.
+ *
+ * To load scripts lazily in release mode call "loadScript" function.
+ * @param {string} scriptName
+ */
+function importScript(scriptName)
+{
+    if (_importedScripts[scriptName])
+        return;
+    var xhr = new XMLHttpRequest();
+    _importedScripts[scriptName] = true;
+    if (window.flattenImports)
+        scriptName = scriptName.split("/").reverse()[0];
+    xhr.open("GET", scriptName, false);
+    xhr.send(null);
+    if (!xhr.responseText)
+        throw "empty response arrived for script '" + scriptName + "'";
+    var sourceURL = WebInspector.ParsedURL.completeURL(window.location.href, scriptName); 
+    window.eval(xhr.responseText + "\n//@ sourceURL=" + sourceURL);
+}
+
+var loadScript = importScript;

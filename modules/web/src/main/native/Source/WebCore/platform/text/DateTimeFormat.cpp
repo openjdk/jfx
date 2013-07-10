@@ -26,7 +26,7 @@
 #include "config.h"
 #include "DateTimeFormat.h"
 
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 #include <wtf/ASCIICType.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -55,7 +55,7 @@ static const DateTimeFormat::FieldType lowerCaseToFieldTypeMap[26] = {
     DateTimeFormat::FieldTypeInvalid, // t
     DateTimeFormat::FieldTypeExtendedYear, // u
     DateTimeFormat::FieldTypeNonLocationZone, // v
-    DateTimeFormat::FieldTypeWeekOfMonth, // w
+    DateTimeFormat::FieldTypeWeekOfYear, // w
     DateTimeFormat::FieldTypeInvalid, // x
     DateTimeFormat::FieldTypeYear, // y
     DateTimeFormat::FieldTypeZone, // z
@@ -84,7 +84,7 @@ static const DateTimeFormat::FieldType upperCaseToFieldTypeMap[26] = {
     DateTimeFormat::FieldTypeInvalid, // T
     DateTimeFormat::FieldTypeInvalid, // U
     DateTimeFormat::FieldTypeInvalid, // V
-    DateTimeFormat::FieldTypeWeekOfYear, // W
+    DateTimeFormat::FieldTypeWeekOfMonth, // W
     DateTimeFormat::FieldTypeInvalid, // X
     DateTimeFormat::FieldTypeYearOfWeekOfYear, // Y
     DateTimeFormat::FieldTypeRFC822Zone, // Z
@@ -239,6 +239,42 @@ bool DateTimeFormat::parse(const String& source, TokenHandler& tokenHandler)
 
     ASSERT_NOT_REACHED();
     return false;
+}
+
+static bool isASCIIAlphabetOrQuote(UChar ch)
+{
+    return isASCIIAlpha(ch) || ch == '\'';
+}
+
+void DateTimeFormat::quoteAndAppendLiteral(const String& literal, StringBuilder& buffer)
+{
+    if (literal.length() <= 0)
+        return;
+
+    if (literal.find(isASCIIAlphabetOrQuote) == notFound) {
+        buffer.append(literal);
+        return;
+    }
+    
+    if (literal.find('\'') == notFound) {
+        buffer.append("'");
+        buffer.append(literal);
+        buffer.append("'");
+        return;
+    }
+
+    for (unsigned i = 0; i < literal.length(); ++i) {
+        if (literal[i] == '\'')
+            buffer.append("''");
+        else {
+            String escaped = literal.substring(i);
+            escaped.replace(ASCIILiteral("'"), ASCIILiteral("''"));
+            buffer.append("'");
+            buffer.append(escaped);
+            buffer.append("'");
+            return;
+        }
+    }
 }
 
 } // namespace WebCore

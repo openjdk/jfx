@@ -88,7 +88,7 @@ private:
 
     // GraphicsLayerClient
     virtual void notifyAnimationStarted(const GraphicsLayer*, double);
-    virtual void notifySyncRequired(const GraphicsLayer*);
+    virtual void notifyFlushRequired(const GraphicsLayer*);
     virtual void paintContents(const GraphicsLayer*,
                                GraphicsContext&,
                                GraphicsLayerPaintingPhase,

@@ -22,13 +22,17 @@ SOURCES += \
     Tests/GetURLWithJavaScriptURLDestroyingPlugin.cpp \
     Tests/GetUserAgentWithNullNPPFromNPPNew.cpp \
     Tests/NPDeallocateCalledBeforeNPShutdown.cpp \
+    Tests/NPPNewFails.cpp \
     Tests/NPPSetWindowCalledDuringDestruction.cpp \
+    Tests/NPRuntimeCallsWithNullNPP.cpp \
     Tests/NPRuntimeObjectFromDestroyedPlugin.cpp \
     Tests/NPRuntimeRemoveProperty.cpp \
     Tests/NullNPPGetValuePointer.cpp \
     Tests/PassDifferentNPPStruct.cpp \
     Tests/PluginScriptableNPObjectInvokeDefault.cpp \
-    Tests/PrivateBrowsing.cpp
+    Tests/PluginScriptableObjectOverridesAllProperties.cpp \
+    Tests/PrivateBrowsing.cpp \
+    Tests/ToStringAndValueOfObject.cpp
 
 WEBKIT += webcore # For NPAPI headers
 
@@ -47,8 +51,6 @@ mac {
     QMAKE_INFO_PLIST = ../../TestNetscapePlugIn/mac/Info.plist
     QMAKE_PLUGIN_BUNDLE_NAME = $$TARGET
     QMAKE_BUNDLE_LOCATION += "Contents/MacOS"
-
-    !build_pass:CONFIG += build_all
 
     OBJECTIVE_SOURCES += PluginObjectMac.mm
     LIBS += -framework Carbon -framework Cocoa -framework QuartzCore

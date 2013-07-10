@@ -38,110 +38,113 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
+
 namespace {
 
-inline bool isNumberedHeaderElement(ContainerNode* node)
+inline bool isRootNode(HTMLStackItem* item)
 {
-    return node->hasTagName(h1Tag)
-        || node->hasTagName(h2Tag)
-        || node->hasTagName(h3Tag)
-        || node->hasTagName(h4Tag)
-        || node->hasTagName(h5Tag)
-        || node->hasTagName(h6Tag);
+    return item->isDocumentFragmentNode()
+        || item->hasTagName(htmlTag);
 }
     
-inline bool isRootNode(ContainerNode* node)
+inline bool isScopeMarker(HTMLStackItem* item)
 {
-    return node->nodeType() == Node::DOCUMENT_FRAGMENT_NODE
-        || node->hasTagName(htmlTag);
+    return item->hasTagName(appletTag)
+        || item->hasTagName(captionTag)
+        || item->hasTagName(marqueeTag)
+        || item->hasTagName(objectTag)
+        || item->hasTagName(tableTag)
+        || item->hasTagName(tdTag)
+        || item->hasTagName(thTag)
+        || item->hasTagName(MathMLNames::miTag)
+        || item->hasTagName(MathMLNames::moTag)
+        || item->hasTagName(MathMLNames::mnTag)
+        || item->hasTagName(MathMLNames::msTag)
+        || item->hasTagName(MathMLNames::mtextTag)
+        || item->hasTagName(MathMLNames::annotation_xmlTag)
+        || item->hasTagName(SVGNames::foreignObjectTag)
+        || item->hasTagName(SVGNames::descTag)
+        || item->hasTagName(SVGNames::titleTag)
+#if ENABLE(TEMPLATE_ELEMENT)
+        || item->hasTagName(templateTag)
+#endif
+        || isRootNode(item);
 }
 
-inline bool isScopeMarker(ContainerNode* node)
+inline bool isListItemScopeMarker(HTMLStackItem* item)
 {
-    return node->hasTagName(appletTag)
-        || node->hasTagName(captionTag)
-        || node->hasTagName(marqueeTag)
-        || node->hasTagName(objectTag)
-        || node->hasTagName(tableTag)
-        || node->hasTagName(tdTag)
-        || node->hasTagName(thTag)
-        || node->hasTagName(MathMLNames::miTag)
-        || node->hasTagName(MathMLNames::moTag)
-        || node->hasTagName(MathMLNames::mnTag)
-        || node->hasTagName(MathMLNames::msTag)
-        || node->hasTagName(MathMLNames::mtextTag)
-        || node->hasTagName(MathMLNames::annotation_xmlTag)
-        || node->hasTagName(SVGNames::foreignObjectTag)
-        || node->hasTagName(SVGNames::descTag)
-        || node->hasTagName(SVGNames::titleTag)
-        || isRootNode(node);
+    return isScopeMarker(item)
+        || item->hasTagName(olTag)
+        || item->hasTagName(ulTag);
 }
 
-inline bool isListItemScopeMarker(ContainerNode* node)
+inline bool isTableScopeMarker(HTMLStackItem* item)
 {
-    return isScopeMarker(node)
-        || node->hasTagName(olTag)
-        || node->hasTagName(ulTag);
+    return item->hasTagName(tableTag)
+#if ENABLE(TEMPLATE_ELEMENT)
+        || item->hasTagName(templateTag)
+#endif
+        || isRootNode(item);
 }
 
-inline bool isTableScopeMarker(ContainerNode* node)
+inline bool isTableBodyScopeMarker(HTMLStackItem* item)
 {
-    return node->hasTagName(tableTag)
-        || isRootNode(node);
+    return item->hasTagName(tbodyTag)
+        || item->hasTagName(tfootTag)
+        || item->hasTagName(theadTag)
+#if ENABLE(TEMPLATE_ELEMENT)
+        || item->hasTagName(templateTag)
+#endif
+        || isRootNode(item);
 }
 
-inline bool isTableBodyScopeMarker(ContainerNode* node)
+inline bool isTableRowScopeMarker(HTMLStackItem* item)
 {
-    return node->hasTagName(tbodyTag)
-        || node->hasTagName(tfootTag)
-        || node->hasTagName(theadTag)
-        || isRootNode(node);
+    return item->hasTagName(trTag)
+#if ENABLE(TEMPLATE_ELEMENT)
+        || item->hasTagName(templateTag)
+#endif
+        || isRootNode(item);
 }
 
-inline bool isTableRowScopeMarker(ContainerNode* node)
+inline bool isForeignContentScopeMarker(HTMLStackItem* item)
 {
-    return node->hasTagName(trTag)
-        || isRootNode(node);
+    return HTMLElementStack::isMathMLTextIntegrationPoint(item)
+        || HTMLElementStack::isHTMLIntegrationPoint(item)
+        || item->isInHTMLNamespace();
 }
 
-inline bool isForeignContentScopeMarker(ContainerNode* node)
+inline bool isButtonScopeMarker(HTMLStackItem* item)
 {
-    return HTMLElementStack::isMathMLTextIntegrationPoint(node)
-        || HTMLElementStack::isHTMLIntegrationPoint(node)
-        || isInHTMLNamespace(node);
+    return isScopeMarker(item)
+        || item->hasTagName(buttonTag);
 }
 
-inline bool isButtonScopeMarker(ContainerNode* node)
+inline bool isSelectScopeMarker(HTMLStackItem* item)
 {
-    return isScopeMarker(node)
-        || node->hasTagName(buttonTag);
-}
-
-inline bool isSelectScopeMarker(ContainerNode* node)
-{
-    return !node->hasTagName(optgroupTag)
-        && !node->hasTagName(optionTag);
+    return !item->hasTagName(optgroupTag)
+        && !item->hasTagName(optionTag);
 }
 
 }
 
-HTMLElementStack::ElementRecord::ElementRecord(PassRefPtr<ContainerNode> node, PassOwnPtr<ElementRecord> next)
-    : m_node(node)
+HTMLElementStack::ElementRecord::ElementRecord(PassRefPtr<HTMLStackItem> item, PassOwnPtr<ElementRecord> next)
+    : m_item(item)
     , m_next(next)
 {
-    ASSERT(m_node);
+    ASSERT(m_item);
 }
 
 HTMLElementStack::ElementRecord::~ElementRecord()
 {
 }
 
-void HTMLElementStack::ElementRecord::replaceElement(PassRefPtr<Element> element)
+void HTMLElementStack::ElementRecord::replaceElement(PassRefPtr<HTMLStackItem> item)
 {
-    ASSERT(element);
-    ASSERT(!m_node || m_node->isElementNode());
+    ASSERT(item);
+    ASSERT(!m_item || m_item->isElementNode());
     // FIXME: Should this call finishParsingChildren?
-    m_node = element;
+    m_item = item;
 }
 
 bool HTMLElementStack::ElementRecord::isAbove(ElementRecord* other) const
@@ -215,15 +218,14 @@ void HTMLElementStack::popAll()
 
 void HTMLElementStack::pop()
 {
-    ASSERT(!top()->hasTagName(HTMLNames::headTag));
+    ASSERT(!topStackItem()->hasTagName(HTMLNames::headTag));
     popCommon();
 }
 
 void HTMLElementStack::popUntil(const AtomicString& tagName)
 {
-    while (!top()->hasLocalName(tagName)) {
-        // pop() will ASSERT at <body> if callers fail to check that there is an
-        // element with localName |tagName| on the stack of open elements.
+    while (!topStackItem()->matchesHTMLTag(tagName)) {
+        // pop() will ASSERT if a <body>, <head> or <html> will be popped.
         pop();
     }
 }
@@ -236,7 +238,7 @@ void HTMLElementStack::popUntilPopped(const AtomicString& tagName)
 
 void HTMLElementStack::popUntilNumberedHeaderElementPopped()
 {
-    while (!isNumberedHeaderElement(topNode()))
+    while (!topStackItem()->isNumberedHeaderElement())
         pop();
     pop();
 }
@@ -256,118 +258,117 @@ void HTMLElementStack::popUntilPopped(Element* element)
 void HTMLElementStack::popUntilTableScopeMarker()
 {
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#clear-the-stack-back-to-a-table-context
-    while (!isTableScopeMarker(topNode()))
+    while (!isTableScopeMarker(topStackItem()))
         pop();
 }
 
 void HTMLElementStack::popUntilTableBodyScopeMarker()
 {
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#clear-the-stack-back-to-a-table-body-context
-    while (!isTableBodyScopeMarker(topNode()))
+    while (!isTableBodyScopeMarker(topStackItem()))
         pop();
 }
 
 void HTMLElementStack::popUntilTableRowScopeMarker()
 {
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#clear-the-stack-back-to-a-table-row-context
-    while (!isTableRowScopeMarker(topNode()))
+    while (!isTableRowScopeMarker(topStackItem()))
         pop();
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/tree-construction.html#mathml-text-integration-point
-bool HTMLElementStack::isMathMLTextIntegrationPoint(ContainerNode* node)
+bool HTMLElementStack::isMathMLTextIntegrationPoint(HTMLStackItem* item)
 {
-    if (!node->isElementNode())
+    if (!item->isElementNode())
         return false;
-    Element* element = static_cast<Element*>(node);
-    return element->hasTagName(MathMLNames::miTag)
-        || element->hasTagName(MathMLNames::moTag)
-        || element->hasTagName(MathMLNames::mnTag)
-        || element->hasTagName(MathMLNames::msTag)
-        || element->hasTagName(MathMLNames::mtextTag);
+    return item->hasTagName(MathMLNames::miTag)
+        || item->hasTagName(MathMLNames::moTag)
+        || item->hasTagName(MathMLNames::mnTag)
+        || item->hasTagName(MathMLNames::msTag)
+        || item->hasTagName(MathMLNames::mtextTag);
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/tree-construction.html#html-integration-point
-bool HTMLElementStack::isHTMLIntegrationPoint(ContainerNode* node)
+bool HTMLElementStack::isHTMLIntegrationPoint(HTMLStackItem* item)
 {
-    if (!node->isElementNode())
+    if (!item->isElementNode())
         return false;
-    Element* element = static_cast<Element*>(node);
-    if (element->hasTagName(MathMLNames::annotation_xmlTag)) {
-        // FIXME: Technically we shouldn't read back from the DOM here.
-        // Instead, we're supposed to track this information in the element
-        // stack, which lets the parser run on its own thread.
-        String encoding = element->fastGetAttribute(MathMLNames::encodingAttr);
+    if (item->hasTagName(MathMLNames::annotation_xmlTag)) {
+        Attribute* encodingAttr = item->getAttributeItem(MathMLNames::encodingAttr);
+        if (encodingAttr) {
+            const String& encoding = encodingAttr->value();
         return equalIgnoringCase(encoding, "text/html")
             || equalIgnoringCase(encoding, "application/xhtml+xml");
     }
-    return element->hasTagName(SVGNames::foreignObjectTag)
-        || element->hasTagName(SVGNames::descTag)
-        || element->hasTagName(SVGNames::titleTag);
+        return false;
+    }
+    return item->hasTagName(SVGNames::foreignObjectTag)
+        || item->hasTagName(SVGNames::descTag)
+        || item->hasTagName(SVGNames::titleTag);
 }
 
 void HTMLElementStack::popUntilForeignContentScopeMarker()
 {
-    while (!isForeignContentScopeMarker(topNode()))
+    while (!isForeignContentScopeMarker(topStackItem()))
         pop();
 }
     
-void HTMLElementStack::pushRootNode(PassRefPtr<ContainerNode> rootNode)
+void HTMLElementStack::pushRootNode(PassRefPtr<HTMLStackItem> rootItem)
 {
-    ASSERT(rootNode->nodeType() == Node::DOCUMENT_FRAGMENT_NODE);
-    pushRootNodeCommon(rootNode);
+    ASSERT(rootItem->isDocumentFragmentNode());
+    pushRootNodeCommon(rootItem);
 }
 
-void HTMLElementStack::pushHTMLHtmlElement(PassRefPtr<Element> element)
+void HTMLElementStack::pushHTMLHtmlElement(PassRefPtr<HTMLStackItem> item)
 {
-    ASSERT(element->hasTagName(HTMLNames::htmlTag));
-    pushRootNodeCommon(element);
+    ASSERT(item->hasTagName(HTMLNames::htmlTag));
+    pushRootNodeCommon(item);
 }
     
-void HTMLElementStack::pushRootNodeCommon(PassRefPtr<ContainerNode> rootNode)
+void HTMLElementStack::pushRootNodeCommon(PassRefPtr<HTMLStackItem> rootItem)
 {
     ASSERT(!m_top);
     ASSERT(!m_rootNode);
-    m_rootNode = rootNode.get();
-    pushCommon(rootNode);
+    m_rootNode = rootItem->node();
+    pushCommon(rootItem);
 }
 
-void HTMLElementStack::pushHTMLHeadElement(PassRefPtr<Element> element)
+void HTMLElementStack::pushHTMLHeadElement(PassRefPtr<HTMLStackItem> item)
 {
-    ASSERT(element->hasTagName(HTMLNames::headTag));
+    ASSERT(item->hasTagName(HTMLNames::headTag));
     ASSERT(!m_headElement);
-    m_headElement = element.get();
-    pushCommon(element);
+    m_headElement = item->element();
+    pushCommon(item);
 }
 
-void HTMLElementStack::pushHTMLBodyElement(PassRefPtr<Element> element)
+void HTMLElementStack::pushHTMLBodyElement(PassRefPtr<HTMLStackItem> item)
 {
-    ASSERT(element->hasTagName(HTMLNames::bodyTag));
+    ASSERT(item->hasTagName(HTMLNames::bodyTag));
     ASSERT(!m_bodyElement);
-    m_bodyElement = element.get();
-    pushCommon(element);
+    m_bodyElement = item->element();
+    pushCommon(item);
 }
 
-void HTMLElementStack::push(PassRefPtr<Element> element)
+void HTMLElementStack::push(PassRefPtr<HTMLStackItem> item)
 {
-    ASSERT(!element->hasTagName(HTMLNames::htmlTag));
-    ASSERT(!element->hasTagName(HTMLNames::headTag));
-    ASSERT(!element->hasTagName(HTMLNames::bodyTag));
+    ASSERT(!item->hasTagName(HTMLNames::htmlTag));
+    ASSERT(!item->hasTagName(HTMLNames::headTag));
+    ASSERT(!item->hasTagName(HTMLNames::bodyTag));
     ASSERT(m_rootNode);
-    pushCommon(element);
+    pushCommon(item);
 }
 
-void HTMLElementStack::insertAbove(PassRefPtr<Element> element, ElementRecord* recordBelow)
+void HTMLElementStack::insertAbove(PassRefPtr<HTMLStackItem> item, ElementRecord* recordBelow)
 {
-    ASSERT(element);
+    ASSERT(item);
     ASSERT(recordBelow);
     ASSERT(m_top);
-    ASSERT(!element->hasTagName(HTMLNames::htmlTag));
-    ASSERT(!element->hasTagName(HTMLNames::headTag));
-    ASSERT(!element->hasTagName(HTMLNames::bodyTag));
+    ASSERT(!item->hasTagName(HTMLNames::htmlTag));
+    ASSERT(!item->hasTagName(HTMLNames::headTag));
+    ASSERT(!item->hasTagName(HTMLNames::bodyTag));
     ASSERT(m_rootNode);
     if (recordBelow == m_top) {
-        push(element);
+        push(item);
         return;
     }
 
@@ -376,7 +377,7 @@ void HTMLElementStack::insertAbove(PassRefPtr<Element> element, ElementRecord* r
             continue;
 
         m_stackDepth++;
-        recordAbove->setNext(adoptPtr(new ElementRecord(element, recordAbove->releaseNext())));
+        recordAbove->setNext(adoptPtr(new ElementRecord(item, recordAbove->releaseNext())));
         recordAbove->next()->element()->beginParsingChildren();
         return;
     }
@@ -389,19 +390,14 @@ HTMLElementStack::ElementRecord* HTMLElementStack::topRecord() const
     return m_top.get();
 }
 
-Element* HTMLElementStack::oneBelowTop() const
+HTMLStackItem* HTMLElementStack::oneBelowTop() const
 {
     // We should never call this if there are fewer than 2 elements on the stack.
     ASSERT(m_top);
     ASSERT(m_top->next());
-    if (m_top->next()->node()->isElementNode())
-        return m_top->next()->element();
+    if (m_top->next()->stackItem()->isElementNode())
+        return m_top->next()->stackItem().get();
     return 0;
-}
-
-Element* HTMLElementStack::bottom() const
-{
-    return htmlElement();
 }
 
 void HTMLElementStack::removeHTMLHeadElement(Element* element)
@@ -437,7 +433,7 @@ HTMLElementStack::ElementRecord* HTMLElementStack::find(Element* element) const
 HTMLElementStack::ElementRecord* HTMLElementStack::topmost(const AtomicString& tagName) const
 {
     for (ElementRecord* pos = m_top.get(); pos; pos = pos->next()) {
-        if (pos->node()->hasLocalName(tagName))
+        if (pos->stackItem()->matchesHTMLTag(tagName))
             return pos;
     }
     return 0;
@@ -453,14 +449,14 @@ bool HTMLElementStack::contains(const AtomicString& tagName) const
     return !!topmost(tagName);
 }
 
-template <bool isMarker(ContainerNode*)>
+template <bool isMarker(HTMLStackItem*)>
 bool inScopeCommon(HTMLElementStack::ElementRecord* top, const AtomicString& targetTag)
 {
     for (HTMLElementStack::ElementRecord* pos = top; pos; pos = pos->next()) {
-        ContainerNode* node = pos->node();
-        if (node->hasLocalName(targetTag))
+        HTMLStackItem* item = pos->stackItem().get();
+        if (item->matchesHTMLTag(targetTag))
             return true;
-        if (isMarker(node))
+        if (isMarker(item))
             return false;
     }
     ASSERT_NOT_REACHED(); // <html> is always on the stack and is a scope marker.
@@ -470,10 +466,10 @@ bool inScopeCommon(HTMLElementStack::ElementRecord* top, const AtomicString& tar
 bool HTMLElementStack::hasNumberedHeaderElementInScope() const
 {
     for (ElementRecord* record = m_top.get(); record; record = record->next()) {
-        ContainerNode* node = record->node();
-        if (isNumberedHeaderElement(node))
+        HTMLStackItem* item = record->stackItem().get();
+        if (item->isNumberedHeaderElement())
             return true;
-        if (isScopeMarker(node))
+        if (isScopeMarker(item))
             return false;
     }
     ASSERT_NOT_REACHED(); // <html> is always on the stack and is a scope marker.
@@ -483,10 +479,10 @@ bool HTMLElementStack::hasNumberedHeaderElementInScope() const
 bool HTMLElementStack::inScope(Element* targetElement) const
 {
     for (ElementRecord* pos = m_top.get(); pos; pos = pos->next()) {
-        ContainerNode* node = pos->node();
-        if (node == targetElement)
+        HTMLStackItem* item = pos->stackItem().get();
+        if (item->node() == targetElement)
             return true;
-        if (isScopeMarker(node))
+        if (isScopeMarker(item))
             return false;
     }
     ASSERT_NOT_REACHED(); // <html> is always on the stack and is a scope marker.
@@ -500,7 +496,6 @@ bool HTMLElementStack::inScope(const AtomicString& targetTag) const
 
 bool HTMLElementStack::inScope(const QualifiedName& tagName) const
 {
-    // FIXME: Is localName() right for non-html elements?
     return inScope(tagName.localName());
 }
 
@@ -511,7 +506,6 @@ bool HTMLElementStack::inListItemScope(const AtomicString& targetTag) const
 
 bool HTMLElementStack::inListItemScope(const QualifiedName& tagName) const
 {
-    // FIXME: Is localName() right for non-html elements?
     return inListItemScope(tagName.localName());
 }
 
@@ -522,7 +516,6 @@ bool HTMLElementStack::inTableScope(const AtomicString& targetTag) const
 
 bool HTMLElementStack::inTableScope(const QualifiedName& tagName) const
 {
-    // FIXME: Is localName() right for non-html elements?
     return inTableScope(tagName.localName());
 }
 
@@ -533,7 +526,6 @@ bool HTMLElementStack::inButtonScope(const AtomicString& targetTag) const
 
 bool HTMLElementStack::inButtonScope(const QualifiedName& tagName) const
 {
-    // FIXME: Is localName() right for non-html elements?
     return inButtonScope(tagName.localName());
 }
 
@@ -544,9 +536,15 @@ bool HTMLElementStack::inSelectScope(const AtomicString& targetTag) const
 
 bool HTMLElementStack::inSelectScope(const QualifiedName& tagName) const
 {
-    // FIXME: Is localName() right for non-html elements?
     return inSelectScope(tagName.localName());
 }
+
+#if ENABLE(TEMPLATE_ELEMENT)
+bool HTMLElementStack::hasTemplateInHTMLScope() const
+{
+    return inScopeCommon<isRootNode>(m_top.get(), templateTag.localName());
+}
+#endif
 
 Element* HTMLElementStack::htmlElement() const
 {
@@ -572,19 +570,19 @@ ContainerNode* HTMLElementStack::rootNode() const
     return m_rootNode;
 }
 
-void HTMLElementStack::pushCommon(PassRefPtr<ContainerNode> node)
+void HTMLElementStack::pushCommon(PassRefPtr<HTMLStackItem> item)
 {
     ASSERT(m_rootNode);
 
     m_stackDepth++;
-    m_top = adoptPtr(new ElementRecord(node, m_top.release()));
+    m_top = adoptPtr(new ElementRecord(item, m_top.release()));
 }
 
 void HTMLElementStack::popCommon()
 {
-    ASSERT(!top()->hasTagName(HTMLNames::htmlTag));
-    ASSERT(!top()->hasTagName(HTMLNames::headTag) || !m_headElement);
-    ASSERT(!top()->hasTagName(HTMLNames::bodyTag) || !m_bodyElement);
+    ASSERT(!topStackItem()->hasTagName(HTMLNames::htmlTag));
+    ASSERT(!topStackItem()->hasTagName(HTMLNames::headTag) || !m_headElement);
+    ASSERT(!topStackItem()->hasTagName(HTMLNames::bodyTag) || !m_bodyElement);
     top()->finishParsingChildren();
     m_top = m_top->releaseNext();
 
@@ -607,6 +605,19 @@ void HTMLElementStack::removeNonTopCommon(Element* element)
         }
     }
     ASSERT_NOT_REACHED();
+}
+
+HTMLElementStack::ElementRecord* HTMLElementStack::furthestBlockForFormattingElement(Element* formattingElement) const
+{
+    ElementRecord* furthestBlock = 0;
+    for (ElementRecord* pos = m_top.get(); pos; pos = pos->next()) {
+        if (pos->element() == formattingElement)
+            return furthestBlock;
+        if (pos->stackItem()->isSpecialNode())
+            furthestBlock = pos;
+    }
+    ASSERT_NOT_REACHED();
+    return 0;
 }
 
 #ifndef NDEBUG

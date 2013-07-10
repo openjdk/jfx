@@ -95,6 +95,8 @@ public:
 
     PassRefPtr<SVGPaint> cloneForCSSOM() const;
 
+    bool equals(const SVGPaint&) const;
+
 private:
     friend class CSSComputedStyleDeclaration;
 

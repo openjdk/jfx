@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,14 +33,15 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
-#include "GraphicsLayer.h"
+#include "InbandTextTrackPrivateAVF.h"
+#include "InbandTextTrackPrivateClient.h"
 #include "KURL.h"
 #include "Logging.h"
+#include "PlatformLayer.h"
 #include "SoftLinking.h"
 #include "TimeRanges.h"
 #include <CoreMedia/CoreMedia.h>
 #include <wtf/MainThread.h>
-#include <wtf/UnusedParam.h>
 
 using namespace std;
 
@@ -55,6 +56,7 @@ MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(MediaPlayer* play
     , m_preload(MediaPlayer::Auto)
     , m_cachedMaxTimeLoaded(0)
     , m_cachedMaxTimeSeekable(0)
+    , m_cachedMinTimeSeekable(0)
     , m_cachedDuration(MediaPlayer::invalidTime())
     , m_reportedDuration(MediaPlayer::invalidTime())
     , m_maxTimeLoadedAtLastDidLoadingProgress(MediaPlayer::invalidTime())
@@ -72,6 +74,9 @@ MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(MediaPlayer* play
     , m_ignoreLoadStateChanges(false)
     , m_haveReportedFirstVideoFrame(false)
     , m_playWhenFramesAvailable(false)
+#if !PLATFORM(WIN)
+    , m_inbandTrackConfigurationPending(false)
+#endif
 {
     LOG(Media, "MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(%p)", this);
 }
@@ -116,6 +121,10 @@ void MediaPlayerPrivateAVFoundation::setUpVideoRendering()
 
     MediaRenderingMode currentMode = currentRenderingMode();
     MediaRenderingMode preferredMode = preferredRenderingMode();
+
+    if (preferredMode == MediaRenderingNone)
+        preferredMode = MediaRenderingToContext;
+
     if (currentMode == preferredMode && currentMode != MediaRenderingNone)
         return;
 
@@ -257,6 +266,11 @@ void MediaPlayerPrivateAVFoundation::seek(float time)
     if (currentTime() == time)
         return;
 
+#if !PLATFORM(WIN)
+    if (currentTrack())
+        currentTrack()->beginSeeking();
+#endif
+    
     LOG(Media, "MediaPlayerPrivateAVFoundation::seek(%p) - seeking to %f", this, time);
     m_seekTo = time;
 
@@ -344,7 +358,7 @@ PassRefPtr<TimeRanges> MediaPlayerPrivateAVFoundation::buffered() const
     return m_cachedLoadedTimeRanges->copy();
 }
 
-float MediaPlayerPrivateAVFoundation::maxTimeSeekable() const
+double MediaPlayerPrivateAVFoundation::maxTimeSeekableDouble() const
 {
     if (!metaDataAvailable())
         return 0;
@@ -354,6 +368,18 @@ float MediaPlayerPrivateAVFoundation::maxTimeSeekable() const
 
     LOG(Media, "MediaPlayerPrivateAVFoundation::maxTimeSeekable(%p) - returning %f", this, m_cachedMaxTimeSeekable);
     return m_cachedMaxTimeSeekable;   
+}
+
+double MediaPlayerPrivateAVFoundation::minTimeSeekable() const
+{
+    if (!metaDataAvailable())
+        return 0;
+
+    if (!m_cachedMinTimeSeekable)
+        m_cachedMinTimeSeekable = platformMinTimeSeekable();
+
+    LOG(Media, "MediaPlayerPrivateAVFoundation::minTimeSeekable(%p) - returning %f", this, m_cachedMinTimeSeekable);
+    return m_cachedMinTimeSeekable;
 }
 
 float MediaPlayerPrivateAVFoundation::maxTimeLoaded() const
@@ -374,7 +400,7 @@ bool MediaPlayerPrivateAVFoundation::didLoadingProgress() const
     float currentMaxTimeLoaded = maxTimeLoaded();
     bool didLoadingProgress = currentMaxTimeLoaded != m_maxTimeLoadedAtLastDidLoadingProgress;
     m_maxTimeLoadedAtLastDidLoadingProgress = currentMaxTimeLoaded;
-    LOG(Media, "MediaPlayerPrivateAVFoundation::didLoadingProgress(%p) - returning %d", this, didLoadingProgress);
+
     return didLoadingProgress;
 }
 
@@ -415,9 +441,6 @@ void MediaPlayerPrivateAVFoundation::updateStates()
 
     MediaPlayer::NetworkState oldNetworkState = m_networkState;
     MediaPlayer::ReadyState oldReadyState = m_readyState;
-
-    LOG(Media, "MediaPlayerPrivateAVFoundation::updateStates(%p) - entering with networkState = %i, readyState = %i", 
-        this, static_cast<int>(m_networkState), static_cast<int>(m_readyState));
 
     if (m_loadingMetadata)
         m_networkState = MediaPlayer::Loading;
@@ -505,8 +528,12 @@ void MediaPlayerPrivateAVFoundation::updateStates()
         platformPlay();
     }
 
-    LOG(Media, "MediaPlayerPrivateAVFoundation::updateStates(%p) - exiting with networkState = %i, readyState = %i", 
-        this, static_cast<int>(m_networkState), static_cast<int>(m_readyState));
+#if !LOG_DISABLED
+    if (m_networkState != oldNetworkState || oldReadyState != m_readyState) {
+        LOG(Media, "MediaPlayerPrivateAVFoundation::updateStates(%p) - entered with networkState = %i, readyState = %i,  exiting with networkState = %i, readyState = %i",
+            this, static_cast<int>(oldNetworkState), static_cast<int>(oldReadyState), static_cast<int>(m_networkState), static_cast<int>(m_readyState));
+    }
+#endif
 }
 
 void MediaPlayerPrivateAVFoundation::setSize(const IntSize&) 
@@ -552,6 +579,7 @@ void MediaPlayerPrivateAVFoundation::loadedTimeRangesChanged()
 void MediaPlayerPrivateAVFoundation::seekableTimeRangesChanged()
 {
     m_cachedMaxTimeSeekable = 0;
+    m_cachedMinTimeSeekable = 0;
 }
 
 void MediaPlayerPrivateAVFoundation::timeChanged(double time)
@@ -565,6 +593,11 @@ void MediaPlayerPrivateAVFoundation::seekCompleted(bool finished)
     LOG(Media, "MediaPlayerPrivateAVFoundation::seekCompleted(%p) - finished = %d", this, finished);
     UNUSED_PARAM(finished);
     
+#if !PLATFORM(WIN)
+    if (currentTrack())
+        currentTrack()->endSeeking();
+#endif
+
     m_seekTo = MediaPlayer::invalidTime();
     updateStates();
     m_player->timeChanged();
@@ -673,9 +706,22 @@ void MediaPlayerPrivateAVFoundation::scheduleMainThreadNotification(Notification
     scheduleMainThreadNotification(Notification(type, finished));
 }
 
+#if !LOG_DISABLED
+static const char* notificationName(MediaPlayerPrivateAVFoundation::Notification& notification)
+{
+#define DEFINE_TYPE_STRING_CASE(type) case MediaPlayerPrivateAVFoundation::Notification::type: return #type;
+    switch (notification.type()) {
+        FOR_EACH_MEDIAPLAYERPRIVATEAVFOUNDATION_NOTIFICATION_TYPE(DEFINE_TYPE_STRING_CASE)
+        default: return "";
+    }
+#undef DEFINE_TYPE_STRING_CASE
+}
+#endif // !LOG_DISABLED
+    
+
 void MediaPlayerPrivateAVFoundation::scheduleMainThreadNotification(Notification notification)
 {
-    LOG(Media, "MediaPlayerPrivateAVFoundation::scheduleMainThreadNotification(%p) - notification %d", this, static_cast<int>(notification.type()));
+    LOG(Media, "MediaPlayerPrivateAVFoundation::scheduleMainThreadNotification(%p) - notification %s", this, notificationName(notification));
     m_queueMutex.lock();
 
     // It is important to always process the properties in the order that we are notified, 
@@ -722,7 +768,7 @@ void MediaPlayerPrivateAVFoundation::dispatchNotification()
             return;
     }
 
-    LOG(Media, "MediaPlayerPrivateAVFoundation::dispatchNotification(%p) - dispatching %d", this, static_cast<int>(notification.type()));
+    LOG(Media, "MediaPlayerPrivateAVFoundation::dispatchNotification(%p) - dispatching %s", this, notificationName(notification));
 
     switch (notification.type()) {
     case Notification::ItemDidPlayToEndTime:
@@ -780,12 +826,47 @@ void MediaPlayerPrivateAVFoundation::dispatchNotification()
     case Notification::ContentsNeedsDisplay:
         contentsNeedsDisplay();
         break;
+    case Notification::InbandTracksNeedConfiguration:
+#if !PLATFORM(WIN)
+        m_inbandTrackConfigurationPending = false;
+        configureInbandTracks();
+#endif
+        break;
 
     case Notification::None:
         ASSERT_NOT_REACHED();
         break;
     }
 }
+
+#if !PLATFORM(WIN)
+void MediaPlayerPrivateAVFoundation::configureInbandTracks()
+{
+    RefPtr<InbandTextTrackPrivateAVF> trackToEnable;
+
+    // AVFoundation can only emit cues for one track at a time, so enable the first track that is showing, or the first that
+    // is hidden if none are showing. Otherwise disable all tracks.
+    for (unsigned i = 0; i < m_textTracks.size(); ++i) {
+        RefPtr<InbandTextTrackPrivateAVF> track = m_textTracks[i];
+        if (track->mode() == InbandTextTrackPrivate::Showing) {
+            trackToEnable = track;
+            break;
+        }
+        if (track->mode() == InbandTextTrackPrivate::Hidden)
+            trackToEnable = track;
+    }
+
+    setCurrentTrack(trackToEnable.get());
+}
+
+void MediaPlayerPrivateAVFoundation::trackModeChanged()
+{
+    if (m_inbandTrackConfigurationPending)
+        return;
+    m_inbandTrackConfigurationPending = true;
+    scheduleMainThreadNotification(Notification::InbandTracksNeedConfiguration);
+}
+#endif
 
 } // namespace WebCore
 

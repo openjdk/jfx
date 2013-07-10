@@ -34,6 +34,9 @@ WebInspector.UIString = function(s) { return s; };
 importScripts("HeapSnapshot.js");
 importScripts("HeapSnapshotLoader.js");
 importScripts("HeapSnapshotWorkerDispatcher.js");
+importScripts("JSHeapSnapshot.js");
+importScripts("NativeHeapSnapshot.js");
+importScripts("FileUtils.js");
 importScripts("utilities.js");
 
 function postMessageWrapper(message)

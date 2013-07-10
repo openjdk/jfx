@@ -43,8 +43,8 @@ class OpenBugsTest(CommandsTest):
     def test_find_bugs_in_string(self):
         openbugs = OpenBugs()
         for expectation in self.find_bugs_in_string_expectations:
-            self.assertEquals(openbugs._find_bugs_in_string(expectation[0]), expectation[1])
+            self.assertEqual(openbugs._find_bugs_in_string(expectation[0]), expectation[1])
 
     def test_args_parsing(self):
-        expected_stderr = "2 bugs found in input.\nMOCK: user.open_url: http://example.com/12345\nMOCK: user.open_url: http://example.com/23456\n"
-        self.assert_execute_outputs(OpenBugs(), ["12345\n23456"], expected_stderr=expected_stderr)
+        expected_logs = "2 bugs found in input.\nMOCK: user.open_url: http://example.com/12345\nMOCK: user.open_url: http://example.com/23456\n"
+        self.assert_execute_outputs(OpenBugs(), ["12345\n23456"], expected_logs=expected_logs)

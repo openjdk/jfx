@@ -23,14 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module core {
-
-    interface [
+[
+    NoInterfaceObject,
         IndexedGetter,
-        Conditional=INPUT_SPEECH
-    ] SpeechInputResultList {
+    Conditional=INPUT_SPEECH,
+    ImplementationLacksVTable
+] interface SpeechInputResultList {
         readonly attribute unsigned long length;
-        SpeechInputResult item(in [IsIndex] unsigned long index);
+    SpeechInputResult item([IsIndex] unsigned long index);
     };
 
-}

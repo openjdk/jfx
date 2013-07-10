@@ -26,17 +26,24 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module xml {
+enum XMLHttpRequestResponseType {
+    "",
+    "arraybuffer",
+    "blob",
+    "document",
+//    FIXME: enable once support for json responseText is completed. (bug #73648)
+//    "json",
+    "text"
+};
 
-    interface [
+[
         ActiveDOMObject,
         Constructor,
         CallWith=ScriptExecutionContext,
-        V8CustomConstructor,
         JSCustomMarkFunction,
         EventTarget,
         JSNoStaticTables
-    ] XMLHttpRequest {
+] interface XMLHttpRequest {
         // From XMLHttpRequestEventTarget
         // event handler attributes
         attribute EventListener onabort;
@@ -45,6 +52,7 @@ module xml {
         attribute EventListener onloadend;
         attribute EventListener onloadstart;
         attribute EventListener onprogress;
+    [Conditional=XHR_TIMEOUT] attribute EventListener ontimeout;
 
         // event handler attributes
         attribute EventListener onreadystatechange;
@@ -56,30 +64,20 @@ module xml {
         const unsigned short LOADING = 3;
         const unsigned short DONE = 4;
 
+    [Conditional=XHR_TIMEOUT] attribute unsigned long timeout
+        setter raises(DOMException);
         readonly attribute unsigned short readyState;
 
         attribute boolean withCredentials
             setter raises(DOMException);
 
-        [Custom] void open(in DOMString method, in DOMString url, in [Optional] boolean async, in [Optional] DOMString user, in [Optional] DOMString password)
+    [Custom] void open(DOMString method, DOMString url, optional boolean async, optional DOMString user, optional DOMString password)
             raises(DOMException);
 
-        void setRequestHeader(in DOMString header, in DOMString value)
+    void setRequestHeader(DOMString header, DOMString value)
             raises(DOMException);
 
         [Custom] void send()
-            raises(DOMException);
-        [Custom] void send(in ArrayBuffer data) // FIXME: this should be eventually deprecated.
-            raises(DOMException);
-        [Custom] void send(in ArrayBufferView data)
-            raises(DOMException);
-        [Conditional=BLOB, Custom] void send(in Blob data)
-            raises(DOMException);
-        [Custom] void send(in Document data)
-            raises(DOMException);
-        [Custom] void send(in DOMString data)
-            raises(DOMException);
-        [Custom] void send(in DOMFormData data)
             raises(DOMException);
 
         void abort();
@@ -89,16 +87,16 @@ module xml {
         // response
         [TreatReturnedNullStringAs=Undefined] DOMString getAllResponseHeaders()
             raises(DOMException);
-        [TreatReturnedNullStringAs=Null] DOMString getResponseHeader(in DOMString header)
+    [TreatReturnedNullStringAs=Null] DOMString getResponseHeader(DOMString header)
             raises(DOMException);
-        readonly attribute [CustomGetter] DOMString responseText // The custom getter implements TreatReturnedNullStringAs=Null
+    [CustomGetter] readonly attribute DOMString responseText // The custom getter implements TreatReturnedNullStringAs=Null
             getter raises(DOMException);
         readonly attribute Document responseXML
             getter raises(DOMException);
 
-        attribute DOMString responseType
+    attribute XMLHttpRequestResponseType responseType
             setter raises(DOMException);
-        readonly attribute [CustomGetter] Object response
+    [CustomGetter] readonly attribute Object response
             getter raises(DOMException);
 
         readonly attribute unsigned short status
@@ -107,17 +105,15 @@ module xml {
             getter raises(DOMException);
 
         // Extension
-        void overrideMimeType(in DOMString override);
+    void overrideMimeType(DOMString override);
 
         // EventTarget interface
-        void addEventListener(in DOMString type, 
-                              in EventListener listener, 
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type, 
-                                 in EventListener listener, 
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type, 
+                          EventListener listener, 
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type, 
+                             EventListener listener, 
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
     };
-
-}

@@ -28,22 +28,18 @@
 
 #include <wtf/Platform.h>
 #include <wtf/ExportMacros.h>
-// WTF cannot depend on JSC even if USE(JSC).
-#if USE(JSC) && !defined(BUILDING_WTF)
+#if !defined(BUILDING_WTF)
 #include "JSExportMacros.h"
-#elif PLATFORM(CHROMIUM)
-// Chromium doesn't have runtime/ in its include paths.
-#include "runtime/JSExportMacros.h"
 #endif
 
 #if OS(WINDOWS)
 
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500
+#define _WIN32_WINNT 0x0502
 #endif
 
 #ifndef WINVER
-#define WINVER 0x0500
+#define WINVER 0x0502
 #endif
 
 // If we don't define these, they get defined in windef.h.
@@ -56,13 +52,9 @@
 #ifndef _CRT_RAND_S
 #define _CRT_RAND_S
 #endif
-#endif
+#endif // !COMPILER(MSVC7_OR_LOWER) && !OS(WINCE)
 
-#endif
-
-#if PLATFORM(JAVA)
-#define WTF_USE_V8 0
-#endif
+#endif // OS(WINDOWS)
 
 #define WTF_CHANGES 1
 
@@ -72,12 +64,7 @@
 #include <wtf/FastMalloc.h>
 #endif
 
-// this breaks compilation of <QFontDatabase>, at least, so turn it off for now
-// Also generates errors on wx on Windows and QNX, because these functions
-// are used from wx and QNX headers.
-#if !PLATFORM(QT) && !PLATFORM(WX) && !OS(QNX)
 #include <wtf/DisallowCType.h>
-#endif
 
 #if COMPILER(MSVC)
 #define SKIP_STATIC_CONSTRUCTORS_ON_MSVC 1

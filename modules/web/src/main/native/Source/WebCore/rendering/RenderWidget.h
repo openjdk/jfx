@@ -28,6 +28,32 @@
 
 namespace WebCore {
 
+class WidgetHierarchyUpdatesSuspensionScope {
+public:
+    WidgetHierarchyUpdatesSuspensionScope()
+    {
+        s_widgetHierarchyUpdateSuspendCount++;
+    }
+    ~WidgetHierarchyUpdatesSuspensionScope()
+    {
+        ASSERT(s_widgetHierarchyUpdateSuspendCount);
+        if (s_widgetHierarchyUpdateSuspendCount == 1)
+            moveWidgets();
+        s_widgetHierarchyUpdateSuspendCount--;
+    }
+
+    static bool isSuspended() { return s_widgetHierarchyUpdateSuspendCount; }
+    static void scheduleWidgetToMove(Widget* widget, FrameView* frame) { widgetNewParentMap().set(widget, frame); }
+
+private:
+    typedef HashMap<RefPtr<Widget>, FrameView*> WidgetToParentMap;
+    static WidgetToParentMap& widgetNewParentMap();
+
+    void moveWidgets();
+
+    static unsigned s_widgetHierarchyUpdateSuspendCount;
+};
+    
 class RenderWidget : public RenderReplaced, private OverlapTestRequestClient {
 public:
     virtual ~RenderWidget();
@@ -43,14 +69,11 @@ public:
 
     void notifyWidget(WidgetNotification);
     
-    static void suspendWidgetHierarchyUpdates();
-    static void resumeWidgetHierarchyUpdates();
-
     RenderArena* ref() { ++m_refCount; return renderArena(); }
     void deref(RenderArena*);
 
 protected:
-    RenderWidget(Node*);
+    RenderWidget(Element*);
 
     FrameView* frameView() const { return m_frameView; }
 
@@ -60,7 +83,9 @@ protected:
     virtual void layout();
     virtual void paint(PaintInfo&, const LayoutPoint&);
     virtual CursorDirective getCursor(const LayoutPoint&, Cursor&) const;
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+
+    virtual void paintContents(PaintInfo&, const LayoutPoint&);
 
 private:
     virtual bool isWidget() const { return true; }
@@ -81,13 +106,13 @@ private:
 
 inline RenderWidget* toRenderWidget(RenderObject* object)
 {
-    ASSERT(!object || object->isWidget());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isWidget());
     return static_cast<RenderWidget*>(object);
 }
 
 inline const RenderWidget* toRenderWidget(const RenderObject* object)
 {
-    ASSERT(!object || object->isWidget());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isWidget());
     return static_cast<const RenderWidget*>(object);
 }
 

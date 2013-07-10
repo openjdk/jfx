@@ -31,7 +31,7 @@
 #include "config.h"
 #include "RuntimeEnabledFeatures.h"
 
-#include "AbstractDatabase.h"
+#include "DatabaseManager.h"
 #include "MediaPlayer.h"
 #include "SharedWorkerRepository.h"
 #include "WebSocket.h"
@@ -50,20 +50,27 @@ bool RuntimeEnabledFeatures::isDataTransferItemsEnabled = true;
 bool RuntimeEnabledFeatures::isGeolocationEnabled = true;
 bool RuntimeEnabledFeatures::isIndexedDBEnabled = false;
 bool RuntimeEnabledFeatures::isWebAudioEnabled = false;
-bool RuntimeEnabledFeatures::isPushStateEnabled = false;
 bool RuntimeEnabledFeatures::isTouchEnabled = true;
 bool RuntimeEnabledFeatures::isDeviceMotionEnabled = true;
 bool RuntimeEnabledFeatures::isDeviceOrientationEnabled = true;
 bool RuntimeEnabledFeatures::isSpeechInputEnabled = true;
-bool RuntimeEnabledFeatures::isCSSExclusionsEnabled = false;
+bool RuntimeEnabledFeatures::isCanvasPathEnabled = false;
+bool RuntimeEnabledFeatures::isCSSExclusionsEnabled = true;
+bool RuntimeEnabledFeatures::isCSSRegionsEnabled = false;
+bool RuntimeEnabledFeatures::isCSSCompositingEnabled = false;
+bool RuntimeEnabledFeatures::isLangAttributeAwareFormControlUIEnabled = false;
 
 #if ENABLE(SCRIPTED_SPEECH)
 bool RuntimeEnabledFeatures::isScriptedSpeechEnabled = false;
 #endif
 
 #if ENABLE(MEDIA_STREAM)
-bool RuntimeEnabledFeatures::isMediaStreamEnabled = false;
+bool RuntimeEnabledFeatures::isMediaStreamEnabled = true;
 bool RuntimeEnabledFeatures::isPeerConnectionEnabled = true;
+#endif
+
+#if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
+bool RuntimeEnabledFeatures::isLegacyCSSVendorPrefixesEnabled = false;
 #endif
 
 #if ENABLE(GAMEPAD)
@@ -149,12 +156,12 @@ bool RuntimeEnabledFeatures::webSocketEnabled()
 #if ENABLE(SQL_DATABASE)
 bool RuntimeEnabledFeatures::openDatabaseEnabled()
 {
-    return AbstractDatabase::isAvailable();
+    return DatabaseManager::manager().isAvailable();
 }
 
 bool RuntimeEnabledFeatures::openDatabaseSyncEnabled()
 {
-    return AbstractDatabase::isAvailable();
+    return DatabaseManager::manager().isAvailable();
 }
 #endif
 
@@ -166,16 +173,12 @@ bool RuntimeEnabledFeatures::isQuotaEnabled = false;
 bool RuntimeEnabledFeatures::isFullScreenAPIEnabled = true;
 #endif
 
-#if ENABLE(POINTER_LOCK)
-bool RuntimeEnabledFeatures::isPointerLockEnabled = false;
-#endif
-
 #if ENABLE(MEDIA_SOURCE)
 bool RuntimeEnabledFeatures::isMediaSourceEnabled = false;
 #endif
 
 #if ENABLE(VIDEO_TRACK)
-#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(EFL)
+#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(BLACKBERRY) || PLATFORM(WIN) || PLATFORM(QT)
     bool RuntimeEnabledFeatures::isVideoTrackEnabled = true;
 #else
     bool RuntimeEnabledFeatures::isVideoTrackEnabled = false;
@@ -188,6 +191,12 @@ bool RuntimeEnabledFeatures::isEncryptedMediaEnabled = false;
 
 #if ENABLE(SHADOW_DOM)
 bool RuntimeEnabledFeatures::isShadowDOMEnabled = false;
+
+bool RuntimeEnabledFeatures::isAuthorShadowDOMForAnyElementEnabled = false;
+#endif
+
+#if ENABLE(CUSTOM_ELEMENTS)
+bool RuntimeEnabledFeatures::isCustomDOMElementsEnabled = false;
 #endif
 
 #if ENABLE(STYLE_SCOPED)
@@ -198,8 +207,40 @@ bool RuntimeEnabledFeatures::isStyleScopedEnabled = false;
 bool RuntimeEnabledFeatures::isInputTypeDateEnabled = true;
 #endif
 
+#if ENABLE(INPUT_TYPE_DATETIME_INCOMPLETE)
+bool RuntimeEnabledFeatures::isInputTypeDateTimeEnabled = false;
+#endif
+
+#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
+bool RuntimeEnabledFeatures::isInputTypeDateTimeLocalEnabled = true;
+#endif
+
+#if ENABLE(INPUT_TYPE_MONTH)
+bool RuntimeEnabledFeatures::isInputTypeMonthEnabled = true;
+#endif
+
+#if ENABLE(INPUT_TYPE_TIME)
+bool RuntimeEnabledFeatures::isInputTypeTimeEnabled = true;
+#endif
+
+#if ENABLE(INPUT_TYPE_WEEK)
+bool RuntimeEnabledFeatures::isInputTypeWeekEnabled = true;
+#endif
+
 #if ENABLE(DIALOG_ELEMENT)
 bool RuntimeEnabledFeatures::isDialogElementEnabled = false;
+#endif
+
+#if ENABLE(CSP_NEXT)
+bool RuntimeEnabledFeatures::areExperimentalContentSecurityPolicyFeaturesEnabled = false;
+#endif
+
+#if ENABLE(IFRAME_SEAMLESS)
+bool RuntimeEnabledFeatures::areSeamlessIFramesEnabled = false;
+#endif
+
+#if ENABLE(FONT_LOAD_EVENTS)
+bool RuntimeEnabledFeatures::isFontLoadEventsEnabled = false;
 #endif
 
 } // namespace WebCore

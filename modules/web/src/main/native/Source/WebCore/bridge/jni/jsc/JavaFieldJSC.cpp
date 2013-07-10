@@ -29,9 +29,7 @@
 
 #if ENABLE(JAVA_BRIDGE)
 
-#if ENABLE(JAVA_JSC)
 #include "BridgeUtils.h"
-#endif
 #include "JNIUtilityPrivate.h"
 #include "JavaArrayJSC.h"
 #include "Logging.h"
@@ -87,11 +85,8 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
             if (arrayType[0] == '[')
                 jsresult = JavaArray::convertJObjectToArray(exec, anObject, arrayType, instance->rootObject(), instance->accessControlContext());
             else if (anObject)
-#if ENABLE(JAVA_JSC)
+
             jsresult = toJS(exec, WebCore::Java_Object_to_JSValue(getJNIEnv(), toRef(exec), instance->rootObject(), anObject, instance->accessControlContext()));
-#else
-                jsresult = JavaInstance::create(anObject, instance->rootObject())->createRuntimeObject(exec);
-#endif
         }
         break;
 
@@ -130,7 +125,7 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
         break;
     }
 
-    LOG(LiveConnect, "JavaField::valueFromInstance getting %s = %s", UString(name().impl()).utf8().data(), jsresult.toString(exec)->value(exec).ascii().data());
+    LOG(LiveConnect, "JavaField::valueFromInstance getting %s = %s", String(name().impl()).utf8().data(), jsresult.toString(exec)->value(exec).ascii().data());
 
     return jsresult;
 }
@@ -139,7 +134,7 @@ void JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue a
 {
     const JavaInstance* instance = static_cast<const JavaInstance*>(i);
     jvalue javaValue = convertValueToJValue(exec, i->rootObject(), aValue, m_type, typeClassName());
-    LOG(LiveConnect, "JavaField::setValueToInstance setting value %s to %s", UString(name().impl()).utf8().data(), aValue.toString(exec)->value(exec).ascii().data());
+    LOG(LiveConnect, "JavaField::setValueToInstance setting value %s to %s", String(name().impl()).utf8().data(), aValue.toString(exec)->value(exec).ascii().data());
 
     jobject jfield = m_field->instance();    
     jobject jinstance = instance->javaInstance();

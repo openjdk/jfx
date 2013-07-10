@@ -37,33 +37,27 @@
 
 namespace WebCore {
 
+// FIXME: Move this file to BlobBuilder.h
+
 class Blob;
-class ScriptExecutionContext;
 class TextEncoding;
 
 typedef int ExceptionCode;
 
-class WebKitBlobBuilder : public RefCounted<WebKitBlobBuilder> {
+class BlobBuilder {
 public:
-    // Called when BlobBuilder is instantiated in JS API. We show deprecate warning message.
-    static PassRefPtr<WebKitBlobBuilder> create(ScriptExecutionContext*);
-
-    // Called by Blob constructor.
-    static PassRefPtr<WebKitBlobBuilder> create() { return adoptRef(new WebKitBlobBuilder()); }
+    BlobBuilder();
 
     void append(Blob*);
-    void append(const String& text, ExceptionCode&);
-    void append(const String& text, const String& ending, ExceptionCode&);
+    void append(const String& text, const String& ending);
 #if ENABLE(BLOB)
-    void append(ScriptExecutionContext*, ArrayBuffer*);
+    void append(ArrayBuffer*);
     void append(ArrayBufferView*);
 #endif
 
-    PassRefPtr<Blob> getBlob(const String& contentType = String());
+    PassRefPtr<Blob> getBlob(const String& contentType);
 
 private:
-    WebKitBlobBuilder();
-
     void appendBytesData(const void*, size_t);
 
     Vector<char>& getBuffer();

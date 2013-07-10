@@ -25,6 +25,7 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "RenderView.h"
+#include "StyleInheritedData.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -59,7 +60,7 @@ void PrintContext::computePageRects(const FloatRect& printRect, float headerHeig
     m_pageRects.clear();
     outPageHeight = 0;
 
-    if (!m_frame->document() || !m_frame->view() || !m_frame->document()->renderer())
+    if (!m_frame->document() || !m_frame->view() || !m_frame->document()->renderView())
         return;
 
     if (userScaleFactor <= 0) {
@@ -67,7 +68,7 @@ void PrintContext::computePageRects(const FloatRect& printRect, float headerHeig
         return;
     }
 
-    RenderView* view = toRenderView(m_frame->document()->renderer());
+    RenderView* view = m_frame->document()->renderView();
     const IntRect& documentRect = view->documentRect();
     FloatSize pageSize = m_frame->resizePageRectsKeepingRatio(FloatSize(printRect.width(), printRect.height()), FloatSize(documentRect.width(), documentRect.height()));
     float pageWidth = pageSize.width();
@@ -92,10 +93,10 @@ void PrintContext::computePageRectsWithPageSize(const FloatSize& pageSizeInPixel
 
 void PrintContext::computePageRectsWithPageSizeInternal(const FloatSize& pageSizeInPixels, bool allowInlineDirectionTiling)
 {
-    if (!m_frame->document() || !m_frame->view() || !m_frame->document()->renderer())
+    if (!m_frame->document() || !m_frame->view() || !m_frame->document()->renderView())
         return;
 
-    RenderView* view = toRenderView(m_frame->document()->renderer());
+    RenderView* view = m_frame->document()->renderView();
 
     IntRect docRect = view->documentRect();
 
@@ -278,7 +279,7 @@ String PrintContext::pageProperty(Frame* frame, const char* propertyName, int pa
     if (!strcmp(propertyName, "font-size"))
         return String::number(style->fontDescription().computedPixelSize());
     if (!strcmp(propertyName, "font-family"))
-        return style->fontDescription().family().family().string();
+        return style->fontDescription().firstFamily();
     if (!strcmp(propertyName, "size"))
         return String::number(style->pageSize().width().value()) + ' ' + String::number(style->pageSize().height().value());
 

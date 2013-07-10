@@ -31,7 +31,6 @@
 #include "GraphicsContext.h"
 #include "GraphicsContextPlatformPrivateCairo.h"
 #include "Image.h"
-#include "NativeImageCairo.h"
 #include <wtf/RetainPtr.h>
 #include <cairo-win32.h>
 #include <windows.h>
@@ -169,15 +168,18 @@ DragImageRef createDragImageFromImage(Image* img, RespectImageOrientationEnum)
         hbmp = 0;
     }
 
+    { // This block is required due to the msvc compiler error C2362.
     cairo_t* cr = drawContext->cr();
     cairo_set_source_rgb(cr, 1.0, 0.0, 1.0);
     cairo_fill_preserve(cr);
 
-    cairo_surface_t* srcImage = img->nativeImageForCurrentFrame()->surface();
-
+        RefPtr<cairo_surface_t> surface = img->nativeImageForCurrentFrame();
+        if (surface) {
     // Draw the image.
-    cairo_set_source_surface(cr, srcImage, 0.0, 0.0);
+            cairo_set_source_surface(cr, surface.get(), 0.0, 0.0);
     cairo_paint(cr);
+        }
+    }
 
     deallocContext(drawContext);
 

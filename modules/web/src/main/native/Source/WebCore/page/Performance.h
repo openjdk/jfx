@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2012 Intel Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,6 +40,7 @@
 #include "PerformanceEntryList.h"
 #include "PerformanceNavigation.h"
 #include "PerformanceTiming.h"
+#include "ScriptWrappable.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -49,8 +51,9 @@ namespace WebCore {
 class Document;
 class ResourceRequest;
 class ResourceResponse;
+class UserTiming;
 
-class Performance : public RefCounted<Performance>, public DOMWindowProperty, public EventTarget {
+class Performance : public ScriptWrappable, public RefCounted<Performance>, public DOMWindowProperty, public EventTarget {
 public:
     static PassRefPtr<Performance> create(Frame* frame) { return adoptRef(new Performance(frame)); }
     ~Performance();
@@ -61,7 +64,7 @@ public:
     PassRefPtr<MemoryInfo> memory() const;
     PerformanceNavigation* navigation() const;
     PerformanceTiming* timing() const;
-    double webkitNow() const;
+    double now() const;
 
 #if ENABLE(PERFORMANCE_TIMELINE)
     PassRefPtr<PerformanceEntryList> webkitGetEntries() const;
@@ -75,11 +78,19 @@ public:
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitresourcetimingbufferfull);
 
-    void addResourceTiming(const ResourceRequest&, const ResourceResponse&, double finishTime, Document*);
+    void addResourceTiming(const String& initiatorName, Document*, const ResourceRequest&, const ResourceResponse&, double initiationTime, double finishTime);
 #endif
 
     using RefCounted<Performance>::ref;
     using RefCounted<Performance>::deref;
+
+#if ENABLE(USER_TIMING)
+    void webkitMark(const String& markName, ExceptionCode&);
+    void webkitClearMarks(const String& markName);
+
+    void webkitMeasure(const String& measureName, const String& startMark, const String& endMark, ExceptionCode&);
+    void webkitClearMeasures(const String& measureName);
+#endif // ENABLE(USER_TIMING)
 
 private:
     explicit Performance(Frame*);
@@ -88,6 +99,7 @@ private:
     virtual void derefEventTarget() { deref(); }
     virtual EventTargetData* eventTargetData();
     virtual EventTargetData* ensureEventTargetData();
+    bool isResourceTimingBufferFull();
 
     EventTargetData m_eventTargetData;
 
@@ -96,7 +108,12 @@ private:
 
 #if ENABLE(RESOURCE_TIMING)
     Vector<RefPtr<PerformanceEntry> > m_resourceTimingBuffer;
+    unsigned m_resourceTimingBufferSize;
 #endif
+
+#if ENABLE(USER_TIMING)
+    RefPtr<UserTiming> m_userTiming;
+#endif // ENABLE(USER_TIMING)
 };
 
 }

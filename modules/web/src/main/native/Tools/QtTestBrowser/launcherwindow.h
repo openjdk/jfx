@@ -39,10 +39,6 @@
 #include <QtOpenGL/QGLWidget>
 #endif
 
-#if !defined(QT_NO_PRINTER)
-#include <QPrintPreviewDialog>
-#endif
-
 #include <QDebug>
 
 #include <cstdio>
@@ -59,8 +55,12 @@
 #include "webpage.h"
 #include "webview.h"
 
+QT_BEGIN_NAMESPACE
 class QPropertyAnimation;
 class QLineEdit;
+QT_END_NAMESPACE
+
+struct HighlightedElement;
 
 class WindowOptions {
 public:
@@ -70,6 +70,7 @@ public:
         , useCompositing(true)
         , useTiledBackingStore(false)
         , useWebGL(false)
+        , useWebAudio(false)
         , useFrameFlattening(false)
         , cacheWebView(false)
         , showFrameRate(false)
@@ -79,6 +80,7 @@ public:
         , useOfflineStorageDatabase(false)
         , useOfflineWebApplicationCache(false)
         , useDiskCookies(true)
+        , enableScrollAnimator(false)
         , offlineStorageDefaultQuotaSize(0)
 #ifndef QT_NO_OPENGL
         , useQGLWidgetViewport(false)
@@ -93,6 +95,7 @@ public:
     bool useCompositing;
     bool useTiledBackingStore;
     bool useWebGL;
+    bool useWebAudio;
     bool useFrameFlattening;
     bool cacheWebView;
     bool showFrameRate;
@@ -102,6 +105,7 @@ public:
     bool useOfflineStorageDatabase;
     bool useOfflineWebApplicationCache;
     bool useDiskCookies;
+    bool enableScrollAnimator;
     quint64 offlineStorageDefaultQuotaSize;
 #ifndef QT_NO_OPENGL
     bool useQGLWidgetViewport;
@@ -123,7 +127,7 @@ public:
 
     bool eventFilter(QObject* obj, QEvent* event);
 
-protected slots:
+protected Q_SLOTS:
     void loadStarted();
     void loadFinished();
 
@@ -152,9 +156,11 @@ protected slots:
     void toggleTiledBackingStore(bool toggle);
     void toggleResizesToContents(bool toggle);
     void toggleWebGL(bool toggle);
+    void toggleWebAudio(bool toggle);
     void toggleSpatialNavigation(bool b);
     void toggleFullScreenMode(bool enable);
     void toggleFrameFlattening(bool toggle);
+    void toggleJavaScriptEnabled(bool enable);
     void toggleInterruptingJavaScriptEnabled(bool enable);
     void toggleJavascriptCanOpenWindows(bool enable);
     void toggleAutoLoadImages(bool enable);
@@ -164,6 +170,7 @@ protected slots:
     void toggleLocalStorage(bool toggle);
     void toggleOfflineStorageDatabase(bool toggle);
     void toggleOfflineWebApplicationCache(bool toggle);
+    void toggleScrollAnimator(bool toggle);
     void setOfflineStorageDefaultQuota();
 #ifndef QT_NO_LINEEDIT
     void showFindBar();
@@ -177,6 +184,7 @@ protected slots:
     void animatedFlip();
     void animatedYFlip();
     void selectElements();
+    void clearSelection();
     void showFPS(bool enable);
     void showUserAgentDialog();
 
@@ -186,12 +194,12 @@ protected slots:
     void fileDownloadFinished();
 #endif
 
-public slots:
+public Q_SLOTS:
     LauncherWindow* newWindow();
     LauncherWindow* cloneWindow();
     void updateFPS(int fps);
 
-signals:
+Q_SIGNALS:
     void enteredFullScreenMode(bool on);
 
 private:
@@ -221,6 +229,7 @@ private:
     QNetworkReply* m_reply;
 #endif
     QList<QTouchEvent::TouchPoint> m_touchPoints;
+    QList<HighlightedElement> m_highlightedElements;
     bool m_touchMocking;
 
     QString m_inputUrl;

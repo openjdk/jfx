@@ -23,12 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS,
         DoNotCheckConstants
-    ] SVGFEConvolveMatrixElement : SVGElement,
+] interface SVGFEConvolveMatrixElement : SVGStyledElement,
                                    SVGFilterPrimitiveStandardAttributes {
         // Edge Mode Values
         const unsigned short SVG_EDGEMODE_UNKNOWN   = 0;
@@ -50,4 +48,3 @@ module svg {
         readonly attribute SVGAnimatedBoolean     preserveAlpha;
     };
 
-}

@@ -27,15 +27,26 @@
  * SUCH DAMAGE.
  */
 
-module core {
-    interface [
-        JSGenerateToJSObject
-    ] WebKitNamedFlow {
+[
+    NoInterfaceObject,
+    EventTarget,
+    JSGenerateToJSObject,
+    GenerateIsReachable=ImplOwnerNodeRoot
+] interface WebKitNamedFlow {
         readonly attribute DOMString name;
         readonly attribute boolean overset;
-        readonly attribute int firstEmptyRegionIndex;
-        NodeList getRegionsByContent(in Node contentNode);
+    readonly attribute long firstEmptyRegionIndex;
+    NodeList getRegionsByContent(Node contentNode);
+    NodeList getRegions();
         NodeList getContent();
+    
+    // EventTarget interface
+    void addEventListener(DOMString type, 
+                          EventListener listener, 
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type, 
+                             EventListener listener, 
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event event)
+        raises(EventException);
     };
-}
-

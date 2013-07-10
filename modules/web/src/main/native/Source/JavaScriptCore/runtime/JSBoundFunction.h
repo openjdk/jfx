@@ -37,18 +37,20 @@ class JSBoundFunction : public JSFunction {
 public:
     typedef JSFunction Base;
 
-    static JSBoundFunction* create(ExecState*, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, JSValue boundArgs, int, const UString&);
+    static JSBoundFunction* create(ExecState*, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, JSValue boundArgs, int, const String&);
 
-    static bool hasInstance(JSObject*, ExecState*, JSValue, JSValue proto);
+    static void destroy(JSCell*);
+
+    static bool customHasInstance(JSObject*, ExecState*, JSValue);
 
     JSObject* targetFunction() { return m_targetFunction.get(); }
     JSValue boundThis() { return m_boundThis.get(); }
     JSValue boundArgs() { return m_boundArgs.get(); }
 
-    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype) 
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
     {
         ASSERT(globalObject);
-        return Structure::create(globalData, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), &s_info); 
+        return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), &s_info); 
     }
 
     static const ClassInfo s_info;
@@ -61,7 +63,7 @@ protected:
 private:
     JSBoundFunction(ExecState*, JSGlobalObject*, Structure*, JSObject* targetFunction, JSValue boundThis, JSValue boundArgs);
     
-    void finishCreation(ExecState*, NativeExecutable*, int, const UString&);
+    void finishCreation(ExecState*, NativeExecutable*, int, const String&);
 
     WriteBarrier<JSObject> m_targetFunction;
     WriteBarrier<Unknown> m_boundThis;

@@ -40,6 +40,7 @@
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SecurityOrigin.h"
 #include "ThreadableLoader.h"
 #include "WorkerContext.h"
 #include "WorkerLoaderProxy.h"
@@ -107,8 +108,7 @@ WorkerThreadableLoader::MainThreadBridge::~MainThreadBridge()
 void WorkerThreadableLoader::MainThreadBridge::mainThreadCreateLoader(ScriptExecutionContext* context, MainThreadBridge* thisPtr, PassOwnPtr<CrossThreadResourceRequestData> requestData, ThreadableLoaderOptions options, const String& outgoingReferrer)
 {
     ASSERT(isMainThread());
-    ASSERT(context->isDocument());
-    Document* document = static_cast<Document*>(context);
+    Document* document = toDocument(context);
 
     OwnPtr<ResourceRequest> request(ResourceRequest::adopt(requestData));
     request->setHTTPReferrer(outgoingReferrer);
@@ -203,19 +203,6 @@ void WorkerThreadableLoader::MainThreadBridge::didReceiveData(const char* data, 
     m_loaderProxy.postTaskForModeToWorkerContext(createCallbackTask(&workerContextDidReceiveData, m_workerClientWrapper, vector.release()), m_taskMode);
 }
 
-static void workerContextDidReceiveCachedMetadata(ScriptExecutionContext* context, RefPtr<ThreadableLoaderClientWrapper> workerClientWrapper, PassOwnPtr<Vector<char> > vectorData)
-{
-    ASSERT_UNUSED(context, context->isWorkerContext());
-    workerClientWrapper->didReceiveCachedMetadata(vectorData->data(), vectorData->size());
-}
-
-void WorkerThreadableLoader::MainThreadBridge::didReceiveCachedMetadata(const char* data, int dataLength)
-{
-    OwnPtr<Vector<char> > vector = adoptPtr(new Vector<char>(dataLength)); // needs to be an OwnPtr for usage with createCallbackTask.
-    memcpy(vector->data(), data, dataLength);
-    m_loaderProxy.postTaskForModeToWorkerContext(createCallbackTask(&workerContextDidReceiveCachedMetadata, m_workerClientWrapper, vector.release()), m_taskMode);
-}
-
 static void workerContextDidFinishLoading(ScriptExecutionContext* context, RefPtr<ThreadableLoaderClientWrapper> workerClientWrapper, unsigned long identifier, double finishTime)
 {
     ASSERT_UNUSED(context, context->isWorkerContext());
@@ -236,6 +223,17 @@ static void workerContextDidFail(ScriptExecutionContext* context, RefPtr<Threada
 void WorkerThreadableLoader::MainThreadBridge::didFail(const ResourceError& error)
 {
     m_loaderProxy.postTaskForModeToWorkerContext(createCallbackTask(&workerContextDidFail, m_workerClientWrapper, error), m_taskMode);
+}
+
+static void workerContextDidFailAccessControlCheck(ScriptExecutionContext* context, PassRefPtr<ThreadableLoaderClientWrapper> workerClientWrapper, const ResourceError& error)
+{
+    ASSERT_UNUSED(context, context->isWorkerContext());
+    workerClientWrapper->didFailAccessControlCheck(error);
+}
+
+void WorkerThreadableLoader::MainThreadBridge::didFailAccessControlCheck(const ResourceError& error)
+{
+    m_loaderProxy.postTaskForModeToWorkerContext(createCallbackTask(&workerContextDidFailAccessControlCheck, m_workerClientWrapper, error), m_taskMode);
 }
 
 static void workerContextDidFailRedirectCheck(ScriptExecutionContext* context, RefPtr<ThreadableLoaderClientWrapper> workerClientWrapper)

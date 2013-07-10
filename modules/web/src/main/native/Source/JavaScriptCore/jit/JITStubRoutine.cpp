@@ -29,7 +29,7 @@
 #if ENABLE(JIT)
 
 #include "JSObject.h"
-#include "ScopeChain.h"
+
 #include "SlotVisitor.h"
 
 namespace JSC {
@@ -38,7 +38,7 @@ JITStubRoutine::~JITStubRoutine() { }
 
 void JITStubRoutine::observeZeroRefCount()
 {
-    ASSERT(!m_refCount);
+    RELEASE_ASSERT(!m_refCount);
     delete this;
 }
 

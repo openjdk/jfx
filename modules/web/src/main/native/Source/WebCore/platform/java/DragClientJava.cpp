@@ -54,6 +54,12 @@ void deleteDragImage(DragImageRef pr)
         pr->deref();
 }
 
+DragImageRef createDragImageIconForCachedImageFilename(const String&)
+{
+    return 0;
+}
+
+
 DragClientJava::DragClientJava(const JLObject &webPage)
     : m_webPage(webPage)
 {
@@ -121,7 +127,7 @@ void DragClientJava::startDrag(
     static JGClass clsString(env->FindClass("java/lang/String"));
     static JGClass clsObject(env->FindClass("java/lang/Object"));
 
-    HashSet<String> mimeTypes( ((ClipboardJava*)clipboard)->typesPrivate() );
+    ListHashSet<String> mimeTypes( ((ClipboardJava*)clipboard)->typesPrivate() );
     JLObjectArray jmimeTypes( env->NewObjectArray(mimeTypes.size(), clsString, NULL) );
     JLObjectArray jvalues( env->NewObjectArray(mimeTypes.size(), clsObject, NULL) );
     CheckAndClearException(env); // OOME
@@ -134,8 +140,8 @@ void DragClientJava::startDrag(
         clipboard->setAccessPolicy(ClipboardReadable);
 
         int index = 0;
-        HashSet<String>::const_iterator end = mimeTypes.end();
-        for(HashSet<String>::const_iterator i = mimeTypes.begin();
+        ListHashSet<String>::const_iterator end = mimeTypes.end();
+        for(ListHashSet<String>::const_iterator i = mimeTypes.begin();
             end!=i;
             ++i, ++index)
         {

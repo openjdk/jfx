@@ -36,8 +36,9 @@
 
 #include "InspectorInstrumentation.h"
 #include "InspectorValues.h"
-#include "PlatformString.h"
 #include "ScriptFunctionCall.h"
+#include <runtime/JSGlobalObject.h>
+#include <wtf/text/WTFString.h>
 
 using WebCore::TypeBuilder::Runtime::RemoteObject;
 
@@ -80,16 +81,16 @@ ScriptValue InjectedScriptBase::callFunctionWithEvalEnabled(ScriptFunctionCall& 
     ScriptState* scriptState = m_injectedScriptObject.scriptState();
     bool evalIsDisabled = false;
     if (scriptState) {
-        evalIsDisabled = !evalEnabled(scriptState);
+        evalIsDisabled = !scriptState->lexicalGlobalObject()->evalEnabled();
         // Temporarily enable allow evals for inspector.
         if (evalIsDisabled)
-            setEvalEnabled(scriptState, true);
+            scriptState->lexicalGlobalObject()->setEvalEnabled(true);
     }
 
     ScriptValue resultValue = function.call(hadException);
 
     if (evalIsDisabled)
-        setEvalEnabled(scriptState, false);
+        scriptState->lexicalGlobalObject()->setEvalEnabled(false);
 
     InspectorInstrumentation::didCallFunction(cookie);
     return resultValue;
@@ -124,6 +125,7 @@ void InjectedScriptBase::makeEvalCall(ErrorString* errorString, ScriptFunctionCa
     }
     if (result->type() == InspectorValue::TypeString) {
         result->asString(errorString);
+        ASSERT(errorString->length());
         return;
     }
     RefPtr<InspectorObject> resultPair = result->asObject();

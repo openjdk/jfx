@@ -155,6 +155,8 @@ void ResourceResponseBase::setURL(const KURL& url)
     m_isNull = false;
 
     m_url = url; 
+
+    // FIXME: Should invalidate or update platform response if present.
 }
 
 const String& ResourceResponseBase::mimeType() const
@@ -169,7 +171,10 @@ void ResourceResponseBase::setMimeType(const String& mimeType)
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
 
+    // FIXME: MIME type is determined by HTTP Content-Type header. We should update the header, so that it doesn't disagree with m_mimeType.
     m_mimeType = mimeType; 
+
+    // FIXME: Should invalidate or update platform response if present.
 }
 
 long long ResourceResponseBase::expectedContentLength() const 
@@ -184,7 +189,10 @@ void ResourceResponseBase::setExpectedContentLength(long long expectedContentLen
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
 
+    // FIXME: Content length is determined by HTTP Content-Length header. We should update the header, so that it doesn't disagree with m_expectedContentLength.
     m_expectedContentLength = expectedContentLength; 
+
+    // FIXME: Should invalidate or update platform response if present.
 }
 
 const String& ResourceResponseBase::textEncodingName() const
@@ -199,7 +207,10 @@ void ResourceResponseBase::setTextEncodingName(const String& encodingName)
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
 
+    // FIXME: Text encoding is determined by HTTP Content-Type header. We should update the header, so that it doesn't disagree with m_textEncodingName.
     m_textEncodingName = encodingName; 
+
+    // FIXME: Should invalidate or update platform response if present.
 }
 
 // FIXME should compute this on the fly
@@ -215,7 +226,10 @@ void ResourceResponseBase::setSuggestedFilename(const String& suggestedName)
     lazyInit(AllFields);
     m_isNull = false;
 
+    // FIXME: Suggested file name is calculated based on other headers. There should not be a setter for it.
     m_suggestedFilename = suggestedName; 
+
+    // FIXME: Should invalidate or update platform response if present.
 }
 
 int ResourceResponseBase::httpStatusCode() const
@@ -230,6 +244,8 @@ void ResourceResponseBase::setHTTPStatusCode(int statusCode)
     lazyInit(CommonFieldsOnly);
 
     m_httpStatusCode = statusCode;
+
+    // FIXME: Should invalidate or update platform response if present.
 }
 
 const String& ResourceResponseBase::httpStatusText() const 
@@ -244,6 +260,8 @@ void ResourceResponseBase::setHTTPStatusText(const String& statusText)
     lazyInit(CommonAndUncommonFields);
 
     m_httpStatusText = statusText; 
+
+    // FIXME: Should invalidate or update platform response if present.
 }
 
 String ResourceResponseBase::httpHeaderField(const AtomicString& name) const
@@ -274,16 +292,15 @@ String ResourceResponseBase::httpHeaderField(const char* name) const
     return m_httpHeaderFields.get(name); 
 }
 
-void ResourceResponseBase::setHTTPHeaderField(const AtomicString& name, const String& value)
+void ResourceResponseBase::updateHeaderParsedState(const AtomicString& name)
 {
-    lazyInit(CommonAndUncommonFields);
+    DEFINE_STATIC_LOCAL(const AtomicString, ageHeader, ("age", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, cacheControlHeader, ("cache-control", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, dateHeader, ("date", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, expiresHeader, ("expires", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, lastModifiedHeader, ("last-modified", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, pragmaHeader, ("pragma", AtomicString::ConstructFromLiteral));
 
-    DEFINE_STATIC_LOCAL(const AtomicString, ageHeader, ("age"));
-    DEFINE_STATIC_LOCAL(const AtomicString, cacheControlHeader, ("cache-control"));
-    DEFINE_STATIC_LOCAL(const AtomicString, dateHeader, ("date"));
-    DEFINE_STATIC_LOCAL(const AtomicString, expiresHeader, ("expires"));
-    DEFINE_STATIC_LOCAL(const AtomicString, lastModifiedHeader, ("last-modified"));
-    DEFINE_STATIC_LOCAL(const AtomicString, pragmaHeader, ("pragma"));
     if (equalIgnoringCase(name, ageHeader))
         m_haveParsedAgeHeader = false;
     else if (equalIgnoringCase(name, cacheControlHeader) || equalIgnoringCase(name, pragmaHeader))
@@ -294,8 +311,28 @@ void ResourceResponseBase::setHTTPHeaderField(const AtomicString& name, const St
         m_haveParsedExpiresHeader = false;
     else if (equalIgnoringCase(name, lastModifiedHeader))
         m_haveParsedLastModifiedHeader = false;
+}
+
+void ResourceResponseBase::setHTTPHeaderField(const AtomicString& name, const String& value)
+{
+    lazyInit(CommonAndUncommonFields);
+
+    updateHeaderParsedState(name);
 
     m_httpHeaderFields.set(name, value);
+
+    // FIXME: Should invalidate or update platform response if present.
+}
+
+void ResourceResponseBase::addHTTPHeaderField(const AtomicString& name, const String& value)
+{
+    lazyInit(CommonAndUncommonFields);
+
+    updateHeaderParsedState(name);
+
+    HTTPHeaderMap::AddResult result = m_httpHeaderFields.add(name, value);
+    if (!result.isNewEntry)
+        result.iterator->value.append(", " + value);
 }
 
 const HTTPHeaderMap& ResourceResponseBase::httpHeaderFields() const
@@ -317,11 +354,11 @@ void ResourceResponseBase::parseCacheControlDirectives() const
     m_cacheControlContainsNoCache = false;
     m_cacheControlMaxAge = numeric_limits<double>::quiet_NaN();
 
-    DEFINE_STATIC_LOCAL(const AtomicString, cacheControlString, ("cache-control"));
-    DEFINE_STATIC_LOCAL(const AtomicString, noCacheDirective, ("no-cache"));
-    DEFINE_STATIC_LOCAL(const AtomicString, noStoreDirective, ("no-store"));
-    DEFINE_STATIC_LOCAL(const AtomicString, mustRevalidateDirective, ("must-revalidate"));
-    DEFINE_STATIC_LOCAL(const AtomicString, maxAgeDirective, ("max-age"));
+    DEFINE_STATIC_LOCAL(const AtomicString, cacheControlString, ("cache-control", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, noCacheDirective, ("no-cache", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, noStoreDirective, ("no-store", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, mustRevalidateDirective, ("must-revalidate", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, maxAgeDirective, ("max-age", AtomicString::ConstructFromLiteral));
 
     String cacheControlValue = m_httpHeaderFields.get(cacheControlString);
     if (!cacheControlValue.isEmpty()) {
@@ -339,7 +376,7 @@ void ResourceResponseBase::parseCacheControlDirectives() const
             else if (equalIgnoringCase(directives[i].first, mustRevalidateDirective))
                 m_cacheControlContainsMustRevalidate = true;
             else if (equalIgnoringCase(directives[i].first, maxAgeDirective)) {
-                if (!isnan(m_cacheControlMaxAge)) {
+                if (!std::isnan(m_cacheControlMaxAge)) {
                     // First max-age directive wins if there are multiple ones.
                     continue;
                 }
@@ -355,7 +392,7 @@ void ResourceResponseBase::parseCacheControlDirectives() const
         // Handle Pragma: no-cache
         // This is deprecated and equivalent to Cache-control: no-cache
         // Don't bother tokenizing the value, it is not important
-        DEFINE_STATIC_LOCAL(const AtomicString, pragmaHeader, ("pragma"));
+        DEFINE_STATIC_LOCAL(const AtomicString, pragmaHeader, ("pragma", AtomicString::ConstructFromLiteral));
         String pragmaValue = m_httpHeaderFields.get(pragmaHeader);
 
         m_cacheControlContainsNoCache = pragmaValue.lower().contains(noCacheDirective);
@@ -387,8 +424,8 @@ bool ResourceResponseBase::hasCacheValidatorFields() const
 {
     lazyInit(CommonFieldsOnly);
 
-    DEFINE_STATIC_LOCAL(const AtomicString, lastModifiedHeader, ("last-modified"));
-    DEFINE_STATIC_LOCAL(const AtomicString, eTagHeader, ("etag"));
+    DEFINE_STATIC_LOCAL(const AtomicString, lastModifiedHeader, ("last-modified", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, eTagHeader, ("etag", AtomicString::ConstructFromLiteral));
     return !m_httpHeaderFields.get(lastModifiedHeader).isEmpty() || !m_httpHeaderFields.get(eTagHeader).isEmpty();
 }
 
@@ -409,7 +446,7 @@ static double parseDateValueInHeader(const HTTPHeaderMap& headers, const AtomicS
     // Sunday, 06-Nov-94 08:49:37 GMT ; RFC 850, obsoleted by RFC 1036
     // Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
     double dateInMilliseconds = parseDate(headerValue);
-    if (!isfinite(dateInMilliseconds))
+    if (!std::isfinite(dateInMilliseconds))
         return std::numeric_limits<double>::quiet_NaN();
     return dateInMilliseconds / 1000;
 }
@@ -419,7 +456,7 @@ double ResourceResponseBase::date() const
     lazyInit(CommonFieldsOnly);
 
     if (!m_haveParsedDateHeader) {
-        DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("date"));
+        DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("date", AtomicString::ConstructFromLiteral));
         m_date = parseDateValueInHeader(m_httpHeaderFields, headerName);
         m_haveParsedDateHeader = true;
     }
@@ -431,7 +468,7 @@ double ResourceResponseBase::age() const
     lazyInit(CommonFieldsOnly);
 
     if (!m_haveParsedAgeHeader) {
-        DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("age"));
+        DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("age", AtomicString::ConstructFromLiteral));
         String headerValue = m_httpHeaderFields.get(headerName);
         bool ok;
         m_age = headerValue.toDouble(&ok);
@@ -447,7 +484,7 @@ double ResourceResponseBase::expires() const
     lazyInit(CommonFieldsOnly);
 
     if (!m_haveParsedExpiresHeader) {
-        DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("expires"));
+        DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("expires", AtomicString::ConstructFromLiteral));
         m_expires = parseDateValueInHeader(m_httpHeaderFields, headerName);
         m_haveParsedExpiresHeader = true;
     }
@@ -459,7 +496,7 @@ double ResourceResponseBase::lastModified() const
     lazyInit(CommonFieldsOnly);
 
     if (!m_haveParsedLastModifiedHeader) {
-        DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("last-modified"));
+        DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("last-modified", AtomicString::ConstructFromLiteral));
         m_lastModified = parseDateValueInHeader(m_httpHeaderFields, headerName);
         m_haveParsedLastModifiedHeader = true;
     }
@@ -470,13 +507,13 @@ bool ResourceResponseBase::isAttachment() const
 {
     lazyInit(CommonAndUncommonFields);
 
-    DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("content-disposition"));
+    DEFINE_STATIC_LOCAL(const AtomicString, headerName, ("content-disposition", AtomicString::ConstructFromLiteral));
     String value = m_httpHeaderFields.get(headerName);
     size_t loc = value.find(';');
     if (loc != notFound)
         value = value.left(loc);
     value = value.stripWhiteSpace();
-    DEFINE_STATIC_LOCAL(const AtomicString, attachmentString, ("attachment"));
+    DEFINE_STATIC_LOCAL(const AtomicString, attachmentString, ("attachment", AtomicString::ConstructFromLiteral));
     return equalIgnoringCase(value, attachmentString);
 }
   
@@ -485,6 +522,8 @@ void ResourceResponseBase::setLastModifiedDate(time_t lastModifiedDate)
     lazyInit(CommonAndUncommonFields);
 
     m_lastModifiedDate = lastModifiedDate;
+
+    // FIXME: Should invalidate or update platform response if present.
 }
 
 time_t ResourceResponseBase::lastModifiedDate() const
@@ -546,20 +585,6 @@ void ResourceResponseBase::setResourceLoadTiming(PassRefPtr<ResourceLoadTiming> 
     lazyInit(CommonAndUncommonFields);
 
     m_resourceLoadTiming = resourceLoadTiming;
-}
-
-PassRefPtr<ResourceLoadInfo> ResourceResponseBase::resourceLoadInfo() const
-{
-    lazyInit(CommonAndUncommonFields);
-
-    return m_resourceLoadInfo.get();
-}
-
-void ResourceResponseBase::setResourceLoadInfo(PassRefPtr<ResourceLoadInfo> loadInfo)
-{
-    lazyInit(CommonAndUncommonFields);
-
-    m_resourceLoadInfo = loadInfo;
 }
 
 void ResourceResponseBase::lazyInit(InitLevel initLevel) const

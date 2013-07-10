@@ -6,12 +6,13 @@
 #include "HTMLPlugInElement.h"
 #include "IntSize.h"
 #include "JavaEnv.h"
-#include "PlatformString.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
 #include "ScrollView.h"
 #include "Widget.h"
  
+#include <wtf/text/WTFString.h>
+
 
 namespace WebCore {
 

@@ -54,7 +54,7 @@ class JITStubRoutineSet;
 // list which does not get reclaimed all at once).
 class GCAwareJITStubRoutine : public JITStubRoutine {
 public:
-    GCAwareJITStubRoutine(const MacroAssemblerCodeRef&, JSGlobalData&);
+    GCAwareJITStubRoutine(const MacroAssemblerCodeRef&, VM&, bool isClosureCall = false);
     virtual ~GCAwareJITStubRoutine();
     
     void markRequiredObjects(SlotVisitor& visitor)
@@ -63,6 +63,8 @@ public:
     }
     
     void deleteFromGC();
+    
+    bool isClosureCall() const { return m_isClosureCall; }
     
 protected:
     virtual void observeZeroRefCount();
@@ -74,6 +76,7 @@ private:
 
     bool m_mayBeExecuting;
     bool m_isJettisoned;
+    bool m_isClosureCall;
 };
 
 // Use this if you want to mark one additional object during GC if your stub
@@ -81,7 +84,7 @@ private:
 class MarkingGCAwareJITStubRoutineWithOneObject : public GCAwareJITStubRoutine {
 public:
     MarkingGCAwareJITStubRoutineWithOneObject(
-        const MacroAssemblerCodeRef&, JSGlobalData&, const JSCell* owner, JSCell*);
+        const MacroAssemblerCodeRef&, VM&, const JSCell* owner, JSCell*);
     virtual ~MarkingGCAwareJITStubRoutineWithOneObject();
     
 protected:
@@ -99,7 +102,7 @@ private:
 // 
 // PassRefPtr<JITStubRoutine> createJITStubRoutine(
 //    const MacroAssemblerCodeRef& code,
-//    JSGlobalData& globalData,
+//    VM& vm,
 //    const JSCell* owner,
 //    bool makesCalls,
 //    ...);
@@ -111,9 +114,9 @@ private:
 // way.
 
 PassRefPtr<JITStubRoutine> createJITStubRoutine(
-    const MacroAssemblerCodeRef&, JSGlobalData&, const JSCell* owner, bool makesCalls);
+    const MacroAssemblerCodeRef&, VM&, const JSCell* owner, bool makesCalls);
 PassRefPtr<JITStubRoutine> createJITStubRoutine(
-    const MacroAssemblerCodeRef&, JSGlobalData&, const JSCell* owner, bool makesCalls,
+    const MacroAssemblerCodeRef&, VM&, const JSCell* owner, bool makesCalls,
     JSCell*);
 
 } // namespace JSC

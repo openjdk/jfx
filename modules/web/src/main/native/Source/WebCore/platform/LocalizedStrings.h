@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2009, 2011 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003, 2006, 2009, 2011, 2012, 2013 Apple Inc.  All rights reserved.
  * Copyright (C) 2010 Igalia S.L
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,6 +49,9 @@ namespace WebCore {
 
 #if ENABLE(CONTEXT_MENUS)
     String contextMenuItemTagOpenLinkInNewWindow();
+#if PLATFORM(QT)
+    String contextMenuItemTagOpenLinkInThisWindow();
+#endif
     String contextMenuItemTagDownloadLinkToDisk();
     String contextMenuItemTagCopyLinkToClipboard();
     String contextMenuItemTagOpenImageInNewWindow();
@@ -149,12 +152,12 @@ namespace WebCore {
     String AXListMarkerText();
     String AXImageMapText();
     String AXHeadingText();
-    String AXDefinitionListTermText();
-    String AXDefinitionListDefinitionText();
+    String AXDefinitionText();
+    String AXDescriptionListText();
+    String AXDescriptionListTermText();
+    String AXDescriptionListDetailText();
     String AXFooterRoleDescriptionText();
-#if PLATFORM(MAC)
-    String AXARIAContentGroupText(const String& ariaType);
-#endif
+    String AXFileUploadButtonText();
     
     String AXButtonActionVerb();
     String AXRadioButtonActionVerb();
@@ -165,9 +168,48 @@ namespace WebCore {
     String AXMenuListPopupActionVerb();
     String AXLinkActionVerb();
 
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    String AXAMPMFieldText();
+    String AXDayOfMonthFieldText();
+    String AXDateTimeFieldEmptyValueText();
+    String AXHourFieldText();
+    String AXMillisecondFieldText();
+    String AXMinuteFieldText();
+    String AXMonthFieldText();
+    String AXSecondFieldText();
+    String AXWeekOfYearFieldText();
+    String AXYearFieldText();
+
+    // placeholderForDayOfMonthField() returns localized placeholder text, e.g.
+    // "dd", for date field used in multiple fields "date", "datetime", and
+    // "datetime-local" input UI instead "--".
+    String placeholderForDayOfMonthField();
+
+    // placeholderForfMonthField() returns localized placeholder text, e.g.
+    // "mm", for month field used in multiple fields "date", "datetime", and
+    // "datetime-local" input UI instead "--".
+    String placeholderForMonthField();
+
+    // placeholderForYearField() returns localized placeholder text, e.g.
+    // "yyyy", for year field used in multiple fields "date", "datetime", and
+    // "datetime-local" input UI instead "----".
+    String placeholderForYearField();
+#endif
+#if ENABLE(INPUT_TYPE_WEEK)
+    // weekFormatInLDML() returns week and year format in LDML, Unicode
+    // technical standard 35, Locale Data Markup Language, e.g. "'Week' ww, yyyy"
+    String weekFormatInLDML();
+#endif
+#if PLATFORM(MAC) || PLATFORM(IOS)
+    String AXARIAContentGroupText(const String& ariaType);
+#endif
+
     String missingPluginText();
     String crashedPluginText();
+    String blockedPluginByContentSecurityPolicyText();
     String insecurePluginVersionText();
+    String inactivePluginText();
+
     String multipleFileUploadText(unsigned numberOfFiles);
     String unknownFileSizeText();
 
@@ -179,6 +221,7 @@ namespace WebCore {
 #if PLATFORM(MAC)
     String builtInPDFPluginName();
     String pdfDocumentTypeDescription();
+    String postScriptDocumentTypeDescription();
     String keygenMenuItem512();
     String keygenMenuItem1024();
     String keygenMenuItem2048();
@@ -212,20 +255,37 @@ namespace WebCore {
     String validationMessageRangeUnderflowText(const String& minimum);
     String validationMessageRangeOverflowText(const String& maximum);
     String validationMessageStepMismatchText(const String& base, const String& step);
-#if ENABLE(CALENDAR_PICKER)
-    String calendarTodayText();
-    String calendarClearText();
-    String dateFormatYearText();
-    String dateFormatMonthText();
-    String dateFormatDayInMonthText();
+    String validationMessageBadInputForNumberText();
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    String validationMessageBadInputForDateTimeText();
+#endif
+#if USE(SOUP)
+    String unacceptableTLSCertificate();
 #endif
 
-#if !PLATFORM(CHROMIUM)
+    String clickToExitFullScreenText();
+
+#if ENABLE(VIDEO_TRACK)
+    String textTrackSubtitlesText();
+    String textTrackOffMenuItemText();
+    String textTrackAutomaticMenuItemText(const String& language);
+    String textTrackNoLabelText();
+#if PLATFORM(MAC)
+    String textTrackCountryAndLanguageMenuItemText(const String& title, const String& country, const String& language);
+    String textTrackLanguageMenuItemText(const String& title, const String& language);
+    String closedCaptionTrackMenuItemText(const String&);
+    String sdhTrackMenuItemText(const String&);
+    String easyReaderTrackMenuItemText(const String&);
+#endif
+#endif
+
+    String snapshottedPlugInLabelTitle();
+    String snapshottedPlugInLabelSubtitle();
+
 #define WEB_UI_STRING(string, description) WebCore::localizedString(string)
 #define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(key)
 
     String localizedString(const char* key);
-#endif
 
 } // namespace WebCore
 

@@ -34,12 +34,14 @@
 
 #include "PageScriptDebugServer.h"
 
+#include "EventLoop.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "JSDOMWindowCustom.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "PluginView.h"
+#include "ScriptController.h"
 #include "ScriptDebugListener.h"
 #include "Widget.h"
 #include <runtime/JSLock.h>
@@ -82,7 +84,7 @@ void PageScriptDebugServer::addListener(ScriptDebugListener* listener, Page* pag
     ASSERT_ARG(listener, listener);
     ASSERT_ARG(page, page);
 
-    OwnPtr<ListenerSet>& listeners = m_pageListenersMap.add(page, nullptr).iterator->second;
+    OwnPtr<ListenerSet>& listeners = m_pageListenersMap.add(page, nullptr).iterator->value;
     if (!listeners)
         listeners = adoptPtr(new ListenerSet);
     listeners->add(listener);
@@ -100,7 +102,7 @@ void PageScriptDebugServer::removeListener(ScriptDebugListener* listener, Page* 
     if (it == m_pageListenersMap.end())
         return;
 
-    ListenerSet* listeners = it->second.get();
+    ListenerSet* listeners = it->value.get();
     listeners->remove(listener);
     if (listeners->isEmpty()) {
         m_pageListenersMap.remove(it);
@@ -110,12 +112,12 @@ void PageScriptDebugServer::removeListener(ScriptDebugListener* listener, Page* 
 
 void PageScriptDebugServer::recompileAllJSFunctions(Timer<ScriptDebugServer>*)
 {
-    JSLockHolder lock(JSDOMWindow::commonJSGlobalData());
+    JSLockHolder lock(JSDOMWindow::commonVM());
     // If JavaScript stack is not empty postpone recompilation.
-    if (JSDOMWindow::commonJSGlobalData()->dynamicGlobalObject)
+    if (JSDOMWindow::commonVM()->dynamicGlobalObject)
         recompileAllJSFunctionsSoon();
     else
-        Debugger::recompileAllJSFunctions(JSDOMWindow::commonJSGlobalData());
+        Debugger::recompileAllJSFunctions(JSDOMWindow::commonVM());
 }
 
 ScriptDebugServer::ListenerSet* PageScriptDebugServer::getListenersForGlobalObject(JSGlobalObject* globalObject)
@@ -163,6 +165,13 @@ void PageScriptDebugServer::didRemoveLastListener(Page* page)
     page->setDebugger(0);
 }
 
+void PageScriptDebugServer::runEventLoopWhilePaused()
+{
+    EventLoop loop;
+    while (!m_doneProcessingDebuggerEvents && !loop.ended())
+        loop.cycle();
+}
+
 void PageScriptDebugServer::setJavaScriptPaused(const PageGroup& pageGroup, bool paused)
 {
     setMainThreadCallbacksPaused(paused);
@@ -198,7 +207,7 @@ void PageScriptDebugServer::setJavaScriptPaused(Frame* frame, bool paused)
         document->suspendScriptedAnimationControllerCallbacks();
         document->suspendActiveDOMObjects(ActiveDOMObject::JavaScriptDebuggerPaused);
     } else {
-        document->resumeActiveDOMObjects();
+        document->resumeActiveDOMObjects(ActiveDOMObject::JavaScriptDebuggerPaused);
         document->resumeScriptedAnimationControllerCallbacks();
     }
 
@@ -218,7 +227,7 @@ void PageScriptDebugServer::setJavaScriptPaused(FrameView* view, bool paused)
         Widget* widget = (*it).get();
         if (!widget->isPluginView())
             continue;
-        static_cast<PluginView*>(widget)->setJavaScriptPaused(paused);
+        toPluginView(widget)->setJavaScriptPaused(paused);
     }
 }
 

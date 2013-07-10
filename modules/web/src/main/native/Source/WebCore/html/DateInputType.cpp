@@ -29,17 +29,19 @@
  */
 
 #include "config.h"
+#if ENABLE(INPUT_TYPE_DATE)
 #include "DateInputType.h"
 
-#include "CalendarPickerElement.h"
 #include "DateComponents.h"
+#include "DateTimeFieldsState.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
+#include "InputTypeNames.h"
 #include "KeyboardEvent.h"
-#include "LocalizedDate.h"
+#include "LocalizedStrings.h"
+#include "PickerIndicatorElement.h"
+#include "PlatformLocale.h"
 #include <wtf/PassOwnPtr.h>
-
-#if ENABLE(INPUT_TYPE_DATE)
 
 namespace WebCore {
 
@@ -50,13 +52,18 @@ static const int dateDefaultStepBase = 0;
 static const int dateStepScaleFactor = 86400000;
 
 inline DateInputType::DateInputType(HTMLInputElement* element)
-    : BaseDateAndTimeInputType(element)
+    : BaseDateInputType(element)
 {
 }
 
 PassOwnPtr<InputType> DateInputType::create(HTMLInputElement* element)
 {
     return adoptPtr(new DateInputType(element));
+}
+
+void DateInputType::attach()
+{
+    observeFeatureIfVisible(FeatureObserver::InputTypeDate);
 }
 
 const AtomicString& DateInputType::formControlType() const
@@ -98,70 +105,33 @@ bool DateInputType::isDateField() const
     return true;
 }
 
-#if ENABLE(CALENDAR_PICKER)
-void DateInputType::createShadowSubtree()
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+String DateInputType::formatDateTimeFieldsState(const DateTimeFieldsState& dateTimeFieldsState) const
 {
-    BaseDateAndTimeInputType::createShadowSubtree();
-    m_pickerElement = CalendarPickerElement::create(element()->document());
-    containerElement()->insertBefore(m_pickerElement.get(), innerBlockElement()->nextSibling(), ASSERT_NO_EXCEPTION);
+    if (!dateTimeFieldsState.hasDayOfMonth() || !dateTimeFieldsState.hasMonth() || !dateTimeFieldsState.hasYear())
+        return emptyString();
+
+    return String::format("%04u-%02u-%02u", dateTimeFieldsState.year(), dateTimeFieldsState.month(), dateTimeFieldsState.dayOfMonth());
 }
 
-void DateInputType::destroyShadowSubtree()
+void DateInputType::setupLayoutParameters(DateTimeEditElement::LayoutParameters& layoutParameters, const DateComponents& date) const
 {
-    TextFieldInputType::destroyShadowSubtree();
-    m_pickerElement.clear();
+    layoutParameters.dateTimeFormat = layoutParameters.locale.dateFormat();
+    layoutParameters.fallbackDateTimeFormat = ASCIILiteral("yyyy-MM-dd");
+    if (!parseToDateComponents(element()->fastGetAttribute(minAttr), &layoutParameters.minimum))
+        layoutParameters.minimum = DateComponents();
+    if (!parseToDateComponents(element()->fastGetAttribute(maxAttr), &layoutParameters.maximum))
+        layoutParameters.maximum = DateComponents();
+    layoutParameters.placeholderForDay = placeholderForDayOfMonthField();
+    layoutParameters.placeholderForMonth = placeholderForMonthField();
+    layoutParameters.placeholderForYear = placeholderForYearField();
 }
 
-bool DateInputType::needsContainer() const
+bool DateInputType::isValidFormat(bool hasYear, bool hasMonth, bool hasWeek, bool hasDay, bool hasAMPM, bool hasHour, bool hasMinute, bool hasSecond) const
 {
-    return true;
+    return hasYear && hasMonth && hasDay;
 }
-
-bool DateInputType::shouldHaveSpinButton() const
-{
-    return false;
-}
-
-void DateInputType::handleKeydownEvent(KeyboardEvent* event)
-{
-    if (element()->disabled() || element()->readOnly())
-        return;
-    if (event->keyIdentifier() == "Down") {
-        if (m_pickerElement)
-            m_pickerElement->openPopup();
-        event->setDefaultHandled();
-        return;
-    }
-    BaseDateAndTimeInputType::handleKeydownEvent(event);
-}
-
-void DateInputType::handleBlurEvent()
-{
-    if (m_pickerElement)
-        m_pickerElement->closePopup();
-
-    // Reset the renderer value, which might be unmatched with the element value.
-    element()->setFormControlValueMatchesRenderer(false);
-    // We need to reset the renderer value explicitly because an unacceptable
-    // renderer value should be purged before style calculation.
-    element()->updateInnerTextValue();
-}
-
-bool DateInputType::supportsPlaceholder() const
-{
-    return true;
-}
-
-bool DateInputType::usesFixedPlaceholder() const
-{
-    return true;
-}
-
-String DateInputType::fixedPlaceholder()
-{
-    return localizedDateFormatText();
-}
-#endif // ENABLE(CALENDAR_PICKER)
+#endif
 
 } // namespace WebCore
 #endif

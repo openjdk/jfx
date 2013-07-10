@@ -27,12 +27,14 @@
 #include "CSSValue.h"
 #include "Image.h"
 #include "IntSize.h"
+#include "LayoutSize.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
+class CachedImage;
 class CSSValue;
 class RenderObject;
 
@@ -52,7 +54,7 @@ public:
     virtual bool canRender(const RenderObject*, float /*multiplier*/) const { return true; }
     virtual bool isLoaded() const { return true; }
     virtual bool errorOccurred() const { return false; }
-    virtual IntSize imageSize(const RenderObject*, float multiplier) const = 0;
+    virtual LayoutSize imageSize(const RenderObject*, float multiplier) const = 0;
     virtual void computeIntrinsicDimensions(const RenderObject*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) = 0;
     virtual bool imageHasRelativeWidth() const = 0;
     virtual bool imageHasRelativeHeight() const = 0;
@@ -63,6 +65,8 @@ public:
     virtual PassRefPtr<Image> image(RenderObject*, const IntSize&) const = 0;
     virtual WrappedImagePtr data() const = 0;
     virtual float imageScaleFactor() const { return 1; }
+    virtual bool knownToBeOpaque(const RenderObject*) const = 0;
+    virtual CachedImage* cachedImage() const { return 0; }
 
     ALWAYS_INLINE bool isCachedImage() const { return m_isCachedImage; }
     ALWAYS_INLINE bool isPendingImage() const { return m_isPendingImage; }

@@ -31,7 +31,6 @@
 #include "RenderSVGText.h"
 #include "SVGRenderSupport.h"
 #include "SVGRenderingContext.h"
-#include <wtf/UnusedParam.h>
 
 namespace WebCore {
 
@@ -68,7 +67,7 @@ static inline bool createMaskAndSwapContextForTextGradient(GraphicsContext*& con
     ASSERT(textRootBlock);
 
     AffineTransform absoluteTransform;
-    SVGRenderingContext::calculateTransformationToOutermostSVGCoordinateSystem(textRootBlock, absoluteTransform);
+    SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(textRootBlock, absoluteTransform);
 
     FloatRect repaintRect = textRootBlock->repaintRectInLocalCoordinates();
     OwnPtr<ImageBuffer> maskImage;
@@ -95,7 +94,7 @@ static inline AffineTransform clipToTextMask(GraphicsContext* context,
     ASSERT(textRootBlock);
 
     AffineTransform absoluteTransform;
-    SVGRenderingContext::calculateTransformationToOutermostSVGCoordinateSystem(textRootBlock, absoluteTransform);
+    SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(textRootBlock, absoluteTransform);
 
     targetRect = textRootBlock->repaintRectInLocalCoordinates();
     SVGRenderingContext::clipToImageBuffer(context, absoluteTransform, targetRect, imageBuffer, false);
@@ -127,7 +126,7 @@ bool RenderSVGResourceGradient::applyResource(RenderObject* object, RenderStyle*
         return false;
 
     if (m_shouldCollectGradientAttributes) {
-        gradientElement->updateAnimatedSVGAttribute(anyQName());
+        gradientElement->synchronizeAnimatedSVGAttribute(anyQName());
         if (!collectGradientAttributes(gradientElement))
             return false;
 
@@ -140,7 +139,7 @@ bool RenderSVGResourceGradient::applyResource(RenderObject* object, RenderStyle*
     if (gradientUnits() == SVGUnitTypes::SVG_UNIT_TYPE_OBJECTBOUNDINGBOX && objectBoundingBox.isEmpty())
         return false;
 
-    OwnPtr<GradientData>& gradientData = m_gradientMap.add(object, nullptr).iterator->second;
+    OwnPtr<GradientData>& gradientData = m_gradientMap.add(object, nullptr).iterator->value;
     if (!gradientData)
         gradientData = adoptPtr(new GradientData);
 

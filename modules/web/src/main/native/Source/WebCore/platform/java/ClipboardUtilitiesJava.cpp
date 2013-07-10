@@ -4,7 +4,8 @@
 #include "config.h"
 
 #include "ClipboardUtilitiesJava.h"
-#include "PlatformString.h"
+
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 

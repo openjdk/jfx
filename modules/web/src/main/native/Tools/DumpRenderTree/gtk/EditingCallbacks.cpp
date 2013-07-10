@@ -30,7 +30,7 @@
 #include "EditingCallbacks.h"
 
 #include "DumpRenderTree.h"
-#include "LayoutTestController.h"
+#include "TestRunner.h"
 #include <gtk/gtk.h>
 #include <webkit/webkit.h>
 #include <wtf/gobject/GOwnPtr.h>
@@ -59,15 +59,12 @@ static CString dumpRange(WebKitDOMRange* range)
     if (!range)
         return "(null)";
 
-    GOwnPtr<GError> error1;
-    GOwnPtr<GError> error2;
-    GOwnPtr<GError> error3;
-    GOwnPtr<GError> error4;
     GOwnPtr<gchar> dump(g_strdup_printf("range from %li of %s to %li of %s",
-        webkit_dom_range_get_start_offset(range, &error1.outPtr()),
-        dumpNodePath(webkit_dom_range_get_start_container(range, &error2.outPtr())).data(),
-        webkit_dom_range_get_end_offset(range, &error3.outPtr()),
-        dumpNodePath(webkit_dom_range_get_end_container(range, &error4.outPtr())).data()));
+        webkit_dom_range_get_start_offset(range, 0),
+        dumpNodePath(webkit_dom_range_get_start_container(range, 0)).data(),
+        webkit_dom_range_get_end_offset(range, 0),
+        dumpNodePath(webkit_dom_range_get_end_container(range, 0)).data()));
+
     return dump.get();
 }
 
@@ -99,21 +96,21 @@ static const char* selectionAffinityString(WebKitSelectionAffinity affinity)
 
 gboolean shouldBeginEditing(WebKitWebView* webView, WebKitDOMRange* range)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks())
+    if (!done && gTestRunner->dumpEditingCallbacks())
         printf("EDITING DELEGATE: shouldBeginEditingInDOMRange:%s\n", dumpRange(range).data());
     return TRUE;
 }
 
 gboolean shouldEndEditing(WebKitWebView* webView, WebKitDOMRange* range)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks())
+    if (!done && gTestRunner->dumpEditingCallbacks())
         printf("EDITING DELEGATE: shouldEndEditingInDOMRange:%s\n", dumpRange(range).data());
     return TRUE;
 }
 
 gboolean shouldInsertNode(WebKitWebView* webView, WebKitDOMNode* node, WebKitDOMRange* range, WebKitInsertAction action)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks()) {
+    if (!done && gTestRunner->dumpEditingCallbacks()) {
         printf("EDITING DELEGATE: shouldInsertNode:%s replacingDOMRange:%s givenAction:%s\n",
                dumpNodePath(node).data(), dumpRange(range).data(), insertActionString(action));
     }
@@ -122,7 +119,7 @@ gboolean shouldInsertNode(WebKitWebView* webView, WebKitDOMNode* node, WebKitDOM
 
 gboolean shouldInsertText(WebKitWebView* webView, const gchar* text, WebKitDOMRange* range, WebKitInsertAction action)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks()) {
+    if (!done && gTestRunner->dumpEditingCallbacks()) {
         printf("EDITING DELEGATE: shouldInsertText:%s replacingDOMRange:%s givenAction:%s\n",
                text, dumpRange(range).data(), insertActionString(action));
     }
@@ -131,20 +128,19 @@ gboolean shouldInsertText(WebKitWebView* webView, const gchar* text, WebKitDOMRa
 
 gboolean shouldDeleteRange(WebKitWebView* webView, WebKitDOMRange* range)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks())
+    if (!done && gTestRunner->dumpEditingCallbacks())
         printf("EDITING DELEGATE: shouldDeleteDOMRange:%s\n", dumpRange(range).data());
     return TRUE;
 }
 
 gboolean shouldShowDeleteInterfaceForElement(WebKitWebView* webView, WebKitDOMHTMLElement* element)
 {
-    GOwnPtr<gchar> elementClassName(webkit_dom_html_element_get_class_name(element));
-    return g_str_equal(elementClassName.get(), "needsDeletionUI");
+    return FALSE;
 }
 
 gboolean shouldChangeSelectedRange(WebKitWebView* webView, WebKitDOMRange* fromRange, WebKitDOMRange* toRange, WebKitSelectionAffinity affinity, gboolean stillSelecting)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks()) {
+    if (!done && gTestRunner->dumpEditingCallbacks()) {
         printf("EDITING DELEGATE: shouldChangeSelectedDOMRange:%s toDOMRange:%s affinity:%s stillSelecting:%s\n",
                dumpRange(fromRange).data(), dumpRange(toRange).data(), selectionAffinityString(affinity),
                stillSelecting ? "TRUE" : "FALSE");
@@ -154,7 +150,7 @@ gboolean shouldChangeSelectedRange(WebKitWebView* webView, WebKitDOMRange* fromR
 
 gboolean shouldApplyStyle(WebKitWebView* webView, WebKitDOMCSSStyleDeclaration* style, WebKitDOMRange* range)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks()) {
+    if (!done && gTestRunner->dumpEditingCallbacks()) {
         GOwnPtr<gchar> styleText(webkit_dom_css_style_declaration_get_css_text(style));
         printf("EDITING DELEGATE: shouldApplyStyle:%s toElementsInDOMRange:%s\n",
                styleText.get(), dumpRange(range).data());
@@ -164,25 +160,25 @@ gboolean shouldApplyStyle(WebKitWebView* webView, WebKitDOMCSSStyleDeclaration* 
 
 void editingBegan(WebKitWebView*)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks())
+    if (!done && gTestRunner->dumpEditingCallbacks())
         printf("EDITING DELEGATE: webViewDidBeginEditing:WebViewDidBeginEditingNotification\n");
 }
 
 void userChangedContents(WebKitWebView*)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks())
+    if (!done && gTestRunner->dumpEditingCallbacks())
         printf("EDITING DELEGATE: webViewDidChange:WebViewDidChangeNotification\n");
 }
 
 void editingEnded(WebKitWebView*)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks())
+    if (!done && gTestRunner->dumpEditingCallbacks())
         printf("EDITING DELEGATE: webViewDidEndEditing:WebViewDidEndEditingNotification\n");
 }
 
 void selectionChanged(WebKitWebView*)
 {
-    if (!done && gLayoutTestController->dumpEditingCallbacks())
+    if (!done && gTestRunner->dumpEditingCallbacks())
         printf("EDITING DELEGATE: webViewDidChangeSelection:WebViewDidChangeSelectionNotification\n");
 }
 

@@ -69,7 +69,7 @@ static CString certificatePath()
 #if USE(CF)
     CFBundleRef webKitBundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebKit"));
     if (webKitBundle) {
-        RetainPtr<CFURLRef> certURLRef(AdoptCF, CFBundleCopyResourceURL(webKitBundle, CFSTR("cacert"), CFSTR("pem"), CFSTR("certificates")));
+        RetainPtr<CFURLRef> certURLRef = adoptCF(CFBundleCopyResourceURL(webKitBundle, CFSTR("cacert"), CFSTR("pem"), CFSTR("certificates")));
         if (certURLRef) {
             char path[MAX_PATH];
             CFURLGetFileSystemRepresentation(certURLRef.get(), false, reinterpret_cast<UInt8*>(path), MAX_PATH);
@@ -82,6 +82,15 @@ static CString certificatePath()
        return envPath;
 
     return CString();
+}
+
+static char* cookieJarPath()
+{
+    char* cookieJarPath = getenv("CURL_COOKIE_JAR_PATH");
+    if (cookieJarPath)
+        return fastStrDup(cookieJarPath);
+
+    return fastStrDup("cookies.dat");
 }
 
 static Mutex* sharedResourceMutex(curl_lock_data data) {
@@ -117,12 +126,21 @@ static void curl_unlock_callback(CURL* handle, curl_lock_data data, void* userPt
         mutex->unlock();
 }
 
+inline static bool isHttpInfo(int statusCode)
+{
+    return 100 <= statusCode && statusCode < 200;
+}
+
+inline static bool isHttpRedirect(int statusCode)
+{
+    return 300 <= statusCode && statusCode < 400 && statusCode != 304;
+}
+
 ResourceHandleManager::ResourceHandleManager()
     : m_downloadTimer(this, &ResourceHandleManager::downloadTimerCallback)
-    , m_cookieJarFileName(0)
+    , m_cookieJarFileName(cookieJarPath())
     , m_certificatePath (certificatePath())
     , m_runningJobs(0)
-
 {
     curl_global_init(CURL_GLOBAL_ALL);
     m_curlMultiHandle = curl_multi_init();
@@ -131,6 +149,8 @@ ResourceHandleManager::ResourceHandleManager()
     curl_share_setopt(m_curlShareHandle, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
     curl_share_setopt(m_curlShareHandle, CURLSHOPT_LOCKFUNC, curl_lock_callback);
     curl_share_setopt(m_curlShareHandle, CURLSHOPT_UNLOCKFUNC, curl_unlock_callback);
+
+    initCookieSession();
 }
 
 ResourceHandleManager::~ResourceHandleManager()
@@ -142,9 +162,19 @@ ResourceHandleManager::~ResourceHandleManager()
     curl_global_cleanup();
 }
 
+CURLSH* ResourceHandleManager::getCurlShareHandle() const
+{
+    return m_curlShareHandle;
+}
+
 void ResourceHandleManager::setCookieJarFileName(const char* cookieJarFileName)
 {
     m_cookieJarFileName = fastStrDup(cookieJarFileName);
+}
+
+const char* ResourceHandleManager::getCookieJarFileName() const
+{
+    return m_cookieJarFileName;
 }
 
 ResourceHandleManager* ResourceHandleManager::sharedInstance()
@@ -180,10 +210,8 @@ static size_t writeCallback(void* ptr, size_t size, size_t nmemb, void* data)
     if (d->m_cancelled)
         return 0;
 
-#if LIBCURL_VERSION_NUM > 0x071200
     // We should never be called when deferred loading is activated.
     ASSERT(!d->m_defersLoading);
-#endif
 
     size_t totalSize = size * nmemb;
 
@@ -223,10 +251,8 @@ static size_t headerCallback(char* ptr, size_t size, size_t nmemb, void* data)
     if (d->m_cancelled)
         return 0;
 
-#if LIBCURL_VERSION_NUM > 0x071200
     // We should never be called when deferred loading is activated.
     ASSERT(!d->m_defersLoading);
-#endif
 
     size_t totalSize = size * nmemb;
     ResourceHandleClient* client = d->client();
@@ -244,6 +270,15 @@ static size_t headerCallback(char* ptr, size_t size, size_t nmemb, void* data)
         CURL* h = d->m_handle;
         CURLcode err;
 
+        long httpCode = 0;
+        err = curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &httpCode);
+
+        if (isHttpInfo(httpCode)) {
+            // Just return when receiving http info, e.g. HTTP/1.1 100 Continue.
+            // If not, the request might be cancelled, because the MIME type will be empty for this response.
+            return totalSize;
+        }
+
         double contentLength = 0;
         err = curl_easy_getinfo(h, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &contentLength);
         d->m_response.setExpectedContentLength(static_cast<long long int>(contentLength));
@@ -252,16 +287,13 @@ static size_t headerCallback(char* ptr, size_t size, size_t nmemb, void* data)
         err = curl_easy_getinfo(h, CURLINFO_EFFECTIVE_URL, &hdr);
         d->m_response.setURL(KURL(ParsedURLString, hdr));
 
-        long httpCode = 0;
-        err = curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &httpCode);
         d->m_response.setHTTPStatusCode(httpCode);
-
-        d->m_response.setMimeType(extractMIMETypeFromMediaType(d->m_response.httpHeaderField("Content-Type")));
+        d->m_response.setMimeType(extractMIMETypeFromMediaType(d->m_response.httpHeaderField("Content-Type")).lower());
         d->m_response.setTextEncodingName(extractCharsetFromMediaType(d->m_response.httpHeaderField("Content-Type")));
         d->m_response.setSuggestedFilename(filenameFromHTTPContentDisposition(d->m_response.httpHeaderField("Content-Disposition")));
 
         // HTTP redirection
-        if (httpCode >= 300 && httpCode < 400) {
+        if (isHttpRedirect(httpCode)) {
             String location = d->m_response.httpHeaderField("location");
             if (!location.isEmpty()) {
                 KURL newURL = KURL(job->firstRequest().url(), location);
@@ -302,10 +334,8 @@ size_t readCallback(void* ptr, size_t size, size_t nmemb, void* data)
     if (d->m_cancelled)
         return 0;
 
-#if LIBCURL_VERSION_NUM > 0x071200
     // We should never be called when deferred loading is activated.
     ASSERT(!d->m_defersLoading);
-#endif
 
     if (!size || !nmemb)
         return 0;
@@ -583,12 +613,10 @@ void ResourceHandleManager::dispatchSynchronousJob(ResourceHandle* job)
 
     ResourceHandleInternal* handle = job->getInternal();
 
-#if LIBCURL_VERSION_NUM > 0x071200
     // If defersLoading is true and we call curl_easy_perform
     // on a paused handle, libcURL would do the transfert anyway
     // and we would assert so force defersLoading to be false.
     handle->m_defersLoading = false;
-#endif
 
     initializeHandle(job);
 
@@ -651,14 +679,12 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
 
     d->m_handle = curl_easy_init();
 
-#if LIBCURL_VERSION_NUM > 0x071200
     if (d->m_defersLoading) {
         CURLcode error = curl_easy_pause(d->m_handle, CURLPAUSE_ALL);
         // If we did not pause the handle, we would ASSERT in the
         // header callback. So just assert here.
         ASSERT_UNUSED(error, error == CURLE_OK);
     }
-#endif
 #ifndef NDEBUG
     if (getenv("DEBUG_CURL"))
         curl_easy_setopt(d->m_handle, CURLOPT_VERBOSE, 1);
@@ -693,18 +719,16 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
     d->m_url = fastStrDup(url.latin1().data());
     curl_easy_setopt(d->m_handle, CURLOPT_URL, d->m_url);
 
-    if (m_cookieJarFileName) {
-        curl_easy_setopt(d->m_handle, CURLOPT_COOKIEFILE, m_cookieJarFileName);
+    if (m_cookieJarFileName)
         curl_easy_setopt(d->m_handle, CURLOPT_COOKIEJAR, m_cookieJarFileName);
-    }
 
     struct curl_slist* headers = 0;
     if (job->firstRequest().httpHeaderFields().size() > 0) {
         HTTPHeaderMap customHeaders = job->firstRequest().httpHeaderFields();
         HTTPHeaderMap::const_iterator end = customHeaders.end();
         for (HTTPHeaderMap::const_iterator it = customHeaders.begin(); it != end; ++it) {
-            String key = it->first;
-            String value = it->second;
+            String key = it->key;
+            String value = it->value;
             String headerString(key);
             headerString.append(": ");
             headerString.append(value);
@@ -737,6 +761,28 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
         curl_easy_setopt(d->m_handle, CURLOPT_PROXY, m_proxy.utf8().data());
         curl_easy_setopt(d->m_handle, CURLOPT_PROXYTYPE, m_proxyType);
     }
+}
+
+void ResourceHandleManager::initCookieSession()
+{
+    // Curl saves both persistent cookies, and session cookies to the cookie file.
+    // The session cookies should be deleted before starting a new session.
+
+    CURL* curl = curl_easy_init();
+
+    if (!curl)
+        return;
+
+    curl_easy_setopt(curl, CURLOPT_SHARE, m_curlShareHandle);
+
+    if (m_cookieJarFileName) {
+        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, m_cookieJarFileName);
+        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, m_cookieJarFileName);
+    }
+
+    curl_easy_setopt(curl, CURLOPT_COOKIESESSION, 1);
+
+    curl_easy_cleanup(curl);
 }
 
 void ResourceHandleManager::cancel(ResourceHandle* job)

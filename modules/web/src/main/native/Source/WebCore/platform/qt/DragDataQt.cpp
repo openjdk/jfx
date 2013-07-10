@@ -29,6 +29,7 @@
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Frame.h"
+#include "Range.h"
 #include "markup.h"
 
 #include <QColor>
@@ -137,7 +138,7 @@ String DragData::asURL(Frame*, FilenameConversionPolicy filenamePolicy, String*)
 PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, PassRefPtr<Range>, bool, bool&) const
 {
     if (m_platformDragData && m_platformDragData->hasHtml())
-        return createFragmentFromMarkup(frame->document(), m_platformDragData->html(), "", DisallowScriptingContent);
+        return createFragmentFromMarkup(frame->document(), m_platformDragData->html(), "", DisallowScriptingAndPluginContent);
 
     return 0;
 }

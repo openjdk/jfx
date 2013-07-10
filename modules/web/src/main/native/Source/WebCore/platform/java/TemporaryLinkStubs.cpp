@@ -25,7 +25,7 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
-#include "JNIUtilityPrivate.h"
+//#include "JNIUtilityPrivate.h"
 #include "KURL.h" // WebKit BUG: must be included from Pasteboard.h
 #include "Language.h"
 #include "NotImplemented.h"
@@ -88,14 +88,6 @@ bool isCharacterSmartReplaceExempt(UChar32 c, bool isPreviousCharacter)
 }
 #endif
 
-// ---- KURL.h ---- //
-
-String KURL::fileSystemPath() const
-{
-    notImplemented();
-    return String();
-}
-
 // ---- CookieStorage.h ---- //
 void setCookieStoragePrivateBrowsingEnabled(bool)
 {
@@ -112,12 +104,12 @@ PassRefPtr<Clipboard> Editor::newGeneralClipboard(ClipboardAccessPolicy policy, 
     return ClipboardJava::create(policy, Clipboard::CopyAndPaste, DataObjectJava::create(), frame);
 }
 
-WTF::PassRefPtr<JSC::Bindings::Instance>
-                    ScriptController::createScriptInstanceForWidget(Widget *)
-{
-    notImplemented();
-    return 0;
-}
+//WTF::PassRefPtr<JSC::Bindings::Instance>
+//                    ScriptController::createScriptInstanceForWidget(Widget *)
+//{
+//    notImplemented();
+//    return 0;
+//}
 
 // ---- SSLKeyGenerator.h ---- //
 
@@ -295,11 +287,6 @@ bool Path::strokeContains(StrokeStyleApplier*, const FloatPoint&) const
 {
     notImplemented();
     return false;
-}
-
-
-void prefetchDNS(const String& hostname) {
-    notImplemented();
 }
 
 } // namespace WebCore

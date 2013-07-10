@@ -28,7 +28,8 @@
 #ifndef NetscapePluginInstanceProxy_h
 #define NetscapePluginInstanceProxy_h
 
-#include <JavaScriptCore/JSGlobalData.h>
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/VM.h>
 #include <JavaScriptCore/Strong.h>
 #include <WebCore/Timer.h>
 #include <WebKit/npapi.h>
@@ -319,7 +320,7 @@ private:
     public:
         LocalObjectMap();
         ~LocalObjectMap();
-        uint32_t idForObject(JSC::JSGlobalData&, JSC::JSObject*);
+        uint32_t idForObject(JSC::VM&, JSC::JSObject*);
         void retain(JSC::JSObject*);
         void release(JSC::JSObject*);
         void clear();

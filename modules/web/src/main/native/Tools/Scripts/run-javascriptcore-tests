@@ -50,6 +50,7 @@ my @testsToSkip = (
     "ecma/Date/15.9.2.2-5.js",
     "ecma/Date/15.9.2.2-6.js",
     # ecma_3/Date/15.9.5.7.js fails on Mac (but not Windows) https://bugs.webkit.org/show_bug.cgi?id=25161
+    "ecma_3/Date/15.9.5.6.js",
     "ecma_3/Date/15.9.5.7.js",
     # These three fail on Linux in certain time zones, at certain times
     # of the year (!): https://bugs.webkit.org/show_bug.cgi?id=71371
@@ -139,11 +140,16 @@ chdir "tests/mozilla" or die "Failed to switch directory to 'tests/mozilla'\n";
 printf "Running: jsDriver.pl -e squirrelfish -s %s -f actual.html %s\n", jscPath($productDir), join(" ", @jsArgs);
 my @jsDriverCmd = ("perl", "jsDriver.pl", "-e", "squirrelfish", "-s", jscPath($productDir), "-f", "actual.html", @jsArgs);
 if (isGtk() || isEfl()) {
-    my $jhbuildPrefix = sourceDir() . "/Tools/";
-    $jhbuildPrefix .= isEfl() ? "efl" : "";
-    $jhbuildPrefix .= isGtk() ? "gtk" : "";
-    $jhbuildPrefix .= "/run-with-jhbuild";
-    unshift(@jsDriverCmd, $jhbuildPrefix);
+    my @jhbuildPrefix = sourceDir() . "/Tools/jhbuild/jhbuild-wrapper";
+
+    if (isEfl()) {
+        push(@jhbuildPrefix, '--efl');
+    } elsif (isGtk()) {
+        push(@jhbuildPrefix, '--gtk');
+    }
+    push(@jhbuildPrefix, 'run');
+
+    unshift(@jsDriverCmd, @jhbuildPrefix);
 }
 my $result = system(@jsDriverCmd);
 exit exitStatus($result)  if $result;

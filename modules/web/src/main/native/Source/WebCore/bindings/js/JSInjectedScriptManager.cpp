@@ -36,6 +36,7 @@
 
 #include "InjectedScriptManager.h"
 
+#include "BindingSecurity.h"
 #include "ExceptionCode.h"
 #include "JSDOMWindow.h"
 #include "JSDOMWindowCustom.h"
@@ -53,12 +54,18 @@ ScriptObject InjectedScriptManager::createInjectedScript(const String& source, S
 {
     JSLockHolder lock(scriptState);
 
-    SourceCode sourceCode = makeSource(stringToUString(source));
+    SourceCode sourceCode = makeSource(source);
     JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(scriptState->lexicalGlobalObject());
     JSValue globalThisValue = scriptState->globalThisValue();
 
     JSValue evaluationException;
-    JSValue evaluationReturnValue = JSMainThreadExecState::evaluate(scriptState, globalObject->globalScopeChain(), sourceCode, globalThisValue, &evaluationException);
+    JSValue evaluationReturnValue;
+    if (isMainThread())
+        evaluationReturnValue = JSMainThreadExecState::evaluate(scriptState, sourceCode, globalThisValue, &evaluationException);
+    else {
+        JSC::JSLockHolder lock(scriptState);
+        evaluationReturnValue = JSC::evaluate(scriptState, sourceCode, globalThisValue, &evaluationException);
+    }
     if (evaluationException)
         return ScriptObject();
 
@@ -85,7 +92,7 @@ bool InjectedScriptManager::canAccessInspectedWindow(ScriptState* scriptState)
     JSDOMWindow* inspectedWindow = toJSDOMWindow(scriptState->lexicalGlobalObject());
     if (!inspectedWindow)
         return false;
-    return inspectedWindow->allowsAccessFromNoErrorMessage(scriptState);
+    return BindingSecurity::shouldAllowAccessToDOMWindow(scriptState, inspectedWindow->impl(), DoNotReportSecurityError);
 }
 
 } // namespace WebCore

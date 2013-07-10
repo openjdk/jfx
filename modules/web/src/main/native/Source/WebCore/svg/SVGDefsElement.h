@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-class SVGDefsElement : public SVGStyledTransformableElement,
+class SVGDefsElement FINAL : public SVGStyledTransformableElement,
                        public SVGTests,
                        public SVGLangSpace,
                        public SVGExternalResourcesRequired {

@@ -23,6 +23,7 @@
 
 #include "ElementShadow.h"
 #include "FileList.h"
+#include "Font.h"
 #include "GraphicsContext.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
@@ -60,20 +61,17 @@ RenderFileUploadControl::~RenderFileUploadControl()
 {
 }
 
+bool RenderFileUploadControl::canBeReplacedWithInlineRunIn() const
+{
+    return false;
+}
+
 void RenderFileUploadControl::updateFromElement()
 {
     HTMLInputElement* input = static_cast<HTMLInputElement*>(node());
     ASSERT(input->isFileUpload());
 
     if (HTMLInputElement* button = uploadButton()) {
-        bool newDisabled = !theme()->isEnabled(this);
-        // We should avoid to call HTMLFormControlElement::setDisabled() as
-        // possible because setAttribute() in setDisabled() can cause style
-        // recalculation, and HTMLFormControlElement::recalcStyle() calls
-        // updateFromElement() eventually.
-        if (button->disabled() != newDisabled)
-            button->setDisabled(newDisabled);
-
         bool newCanReceiveDroppedFilesState = input->canReceiveDroppedFiles();
         if (m_canReceiveDroppedFiles != newCanReceiveDroppedFilesState) {
             m_canReceiveDroppedFiles = newCanReceiveDroppedFilesState;
@@ -91,7 +89,7 @@ void RenderFileUploadControl::updateFromElement()
 
 static int nodeWidth(Node* node)
 {
-    return node ? node->renderBox()->pixelSnappedWidth() : 0;
+    return (node && node->renderBox()) ? node->renderBox()->pixelSnappedWidth() : 0;
 }
 
 int RenderFileUploadControl::maxFilenameWidth() const
@@ -138,11 +136,14 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
             textX = contentLeft + buttonAndIconWidth;
         else
             textX = contentLeft + contentWidth() - buttonAndIconWidth - font.width(textRun);
+
+        LayoutUnit textY = 0;
         // We want to match the button's baseline
-        RenderButton* buttonRenderer = toRenderButton(button->renderer());
         // FIXME: Make this work with transforms.
-        LayoutUnit textY = buttonRenderer->absoluteBoundingBoxRectIgnoringTransforms().y()
-            + buttonRenderer->baselinePosition(AlphabeticBaseline, true, HorizontalLine, PositionOnContainingLine);
+        if (RenderButton* buttonRenderer = toRenderButton(button->renderer()))
+            textY = paintOffset.y() + borderTop() + paddingTop() + buttonRenderer->baselinePosition(AlphabeticBaseline, true, HorizontalLine, PositionOnContainingLine);
+        else
+            textY = baselinePosition(AlphabeticBaseline, true, HorizontalLine, PositionOnContainingLine);
 
         paintInfo.context->setFillColor(style()->visitedDependentColor(CSSPropertyColor), style()->colorSpace());
         
@@ -167,6 +168,28 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
     RenderBlock::paintObject(paintInfo, paintOffset);
 }
 
+void RenderFileUploadControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
+{
+    // Figure out how big the filename space needs to be for a given number of characters
+    // (using "0" as the nominal character).
+    const UChar character = '0';
+    const String characterAsString = String(&character, 1);
+    const Font& font = style()->font();
+    // FIXME: Remove the need for this const_cast by making constructTextRun take a const RenderObject*.
+    RenderFileUploadControl* renderer = const_cast<RenderFileUploadControl*>(this);
+    float minDefaultLabelWidth = defaultWidthNumChars * font.width(constructTextRun(renderer, font, characterAsString, style(), TextRun::AllowTrailingExpansion));
+
+    const String label = theme()->fileListDefaultLabel(node()->toInputElement()->multiple());
+    float defaultLabelWidth = font.width(constructTextRun(renderer, font, label, style(), TextRun::AllowTrailingExpansion));
+    if (HTMLInputElement* button = uploadButton())
+        if (RenderObject* buttonRenderer = button->renderer())
+            defaultLabelWidth += buttonRenderer->maxPreferredLogicalWidth() + afterButtonSpacing;
+    maxLogicalWidth = static_cast<int>(ceilf(max(minDefaultLabelWidth, defaultLabelWidth)));
+
+    if (!style()->width().isPercent())
+        minLogicalWidth = maxLogicalWidth;
+}
+
 void RenderFileUploadControl::computePreferredLogicalWidths()
 {
     ASSERT(preferredLogicalWidthsDirty());
@@ -174,37 +197,19 @@ void RenderFileUploadControl::computePreferredLogicalWidths()
     m_minPreferredLogicalWidth = 0;
     m_maxPreferredLogicalWidth = 0;
 
-    RenderStyle* style = this->style();
-    ASSERT(style);
+    if (style()->width().isFixed() && style()->width().value() > 0)
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style()->width().value());
+    else
+        computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
-    const Font& font = style->font();
-    if (style->width().isFixed() && style->width().value() > 0)
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = computeContentBoxLogicalWidth(style->width().value());
-    else {
-        // Figure out how big the filename space needs to be for a given number of characters
-        // (using "0" as the nominal character).
-        const UChar character = '0';
-        const String characterAsString = String(&character, 1);
-        float minDefaultLabelWidth = defaultWidthNumChars * font.width(constructTextRun(this, font, characterAsString, style, TextRun::AllowTrailingExpansion));
-
-        const String label = theme()->fileListDefaultLabel(node()->toInputElement()->multiple());
-        float defaultLabelWidth = font.width(constructTextRun(this, font, label, style, TextRun::AllowTrailingExpansion));
-        if (HTMLInputElement* button = uploadButton())
-            defaultLabelWidth += button->renderer()->maxPreferredLogicalWidth() + afterButtonSpacing;
-        m_maxPreferredLogicalWidth = static_cast<int>(ceilf(max(minDefaultLabelWidth, defaultLabelWidth)));
+    if (style()->minWidth().isFixed() && style()->minWidth().value() > 0) {
+        m_maxPreferredLogicalWidth = max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->minWidth().value()));
+        m_minPreferredLogicalWidth = max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->minWidth().value()));
     }
 
-    if (style->minWidth().isFixed() && style->minWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = max(m_maxPreferredLogicalWidth, computeContentBoxLogicalWidth(style->minWidth().value()));
-        m_minPreferredLogicalWidth = max(m_minPreferredLogicalWidth, computeContentBoxLogicalWidth(style->minWidth().value()));
-    } else if (style->width().isPercent() || (style->width().isAuto() && style->height().isPercent()))
-        m_minPreferredLogicalWidth = 0;
-    else
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth;
-
-    if (style->maxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = min(m_maxPreferredLogicalWidth, computeContentBoxLogicalWidth(style->maxWidth().value()));
-        m_minPreferredLogicalWidth = min(m_minPreferredLogicalWidth, computeContentBoxLogicalWidth(style->maxWidth().value()));
+    if (style()->maxWidth().isFixed()) {
+        m_maxPreferredLogicalWidth = min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->maxWidth().value()));
+        m_minPreferredLogicalWidth = min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->maxWidth().value()));
     }
 
     int toAdd = borderAndPaddingWidth();
@@ -225,7 +230,7 @@ HTMLInputElement* RenderFileUploadControl::uploadButton() const
 
     ASSERT(input->shadow());
 
-    Node* buttonNode = input->shadow()->oldestShadowRoot()->firstChild();
+    Node* buttonNode = input->shadow()->shadowRoot()->firstChild();
     return buttonNode && buttonNode->isHTMLElement() && buttonNode->hasTagName(inputTag) ? static_cast<HTMLInputElement*>(buttonNode) : 0;
 }
 

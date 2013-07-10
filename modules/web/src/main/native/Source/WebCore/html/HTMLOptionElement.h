@@ -29,9 +29,10 @@
 
 namespace WebCore {
 
+class HTMLDataListElement;
 class HTMLSelectElement;
 
-class HTMLOptionElement : public HTMLElement {
+class HTMLOptionElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLOptionElement> create(Document*);
     static PassRefPtr<HTMLOptionElement> create(const QualifiedName&, Document*);
@@ -49,15 +50,17 @@ public:
     bool selected();
     void setSelected(bool);
 
+#if ENABLE(DATALIST_ELEMENT)
+    HTMLDataListElement* ownerDataListElement() const;
+#endif
     HTMLSelectElement* ownerSelectElement() const;
 
     String label() const;
     void setLabel(const String&);
 
-    virtual bool isEnabledFormControl() const OVERRIDE { return !disabled(); }
     bool ownElementDisabled() const { return m_disabled; }
 
-    virtual bool disabled() const;
+    virtual bool isDisabledFormControl() const OVERRIDE;
 
     String textIndentedToRespectGroupLabel() const;
 
@@ -66,26 +69,28 @@ public:
 private:
     HTMLOptionElement(const QualifiedName&, Document*);
 
-    virtual bool supportsFocus() const;
-    virtual bool isFocusable() const;
+    virtual bool supportsFocus() const OVERRIDE;
+    virtual bool isFocusable() const OVERRIDE;
     virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
     virtual void attach();
     virtual void detach();
-    virtual void setRenderStyle(PassRefPtr<RenderStyle>);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void accessKeyAction(bool);
 
     virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
 
-    virtual RenderStyle* nonRendererRenderStyle() const;
+    // <option> never has a renderer so we manually manage a cached style.
+    void updateNonRenderStyle();
+    virtual RenderStyle* nonRendererStyle() const OVERRIDE;
+    virtual PassRefPtr<RenderStyle> customStyleForRenderer() OVERRIDE;
+
+    void didRecalcStyle(StyleChange) OVERRIDE;
 
     String collectOptionInnerText() const;
 
-    String m_value;
-    String m_label;
     bool m_disabled;
     bool m_isSelected;
     RefPtr<RenderStyle> m_style;

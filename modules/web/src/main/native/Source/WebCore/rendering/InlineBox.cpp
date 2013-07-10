@@ -20,6 +20,7 @@
 #include "config.h"
 #include "InlineBox.h"
 
+#include "FontMetrics.h"
 #include "Frame.h"
 #include "HitTestResult.h"
 #include "InlineFlowBox.h"
@@ -158,7 +159,7 @@ float InlineBox::logicalHeight() const
     return result;
 }
 
-LayoutUnit InlineBox::baselinePosition(FontBaseline baselineType) const
+int InlineBox::baselinePosition(FontBaseline baselineType) const
 {
     return boxModelObject()->baselinePosition(baselineType, m_bitfields.firstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOnContainingLine);
 }
@@ -242,12 +243,16 @@ void InlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, Layo
     }
 }
 
-bool InlineBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit /* lineTop */, LayoutUnit /*lineBottom*/)
+bool InlineBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit /* lineTop */, LayoutUnit /*lineBottom*/)
 {
     // Hit test all phases of replaced elements atomically, as though the replaced element established its
     // own stacking context.  (See Appendix E.2, section 6.4 on inline block/table elements in the CSS2.1
     // specification.)
-    return renderer()->hitTest(request, result, pointInContainer, accumulatedOffset);
+    LayoutPoint childPoint = accumulatedOffset;
+    if (parent()->renderer()->style()->isFlippedBlocksWritingMode()) // Faster than calling containingBlock().
+        childPoint = renderer()->containingBlock()->flipForWritingModeForChild(toRenderBox(renderer()), childPoint);
+    
+    return renderer()->hitTest(request, result, locationInContainer, childPoint);
 }
 
 const RootInlineBox* InlineBox::root() const

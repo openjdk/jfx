@@ -32,7 +32,6 @@
 #import "Logging.h"
 #import "NotImplemented.h"
 #import "WebCoreFrameView.h"
-#import <wtf/UnusedParam.h>
 
 using namespace std;
 
@@ -123,8 +122,7 @@ void ScrollView::platformSetContentsSize()
     int w = m_contentsSize.width();
     int h = m_contentsSize.height();
     LOG(Frames, "%p %@ at w %d h %d\n", documentView(), [(id)[documentView() class] className], w, h);            
-    NSSize tempSize = { max(0, w), max(0, h) }; // workaround for 4213314
-    [documentView() setFrameSize:tempSize];
+    [documentView() setFrameSize:NSMakeSize(max(0, w), max(0, h))];
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 

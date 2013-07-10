@@ -25,7 +25,6 @@
 
 #include "Document.h"
 #include "HTMLDocumentParser.h"
-#include "NewXMLDocumentParser.h"
 #include "Page.h"
 #include "Settings.h"
 #include "XMLDocumentParser.h"
@@ -35,12 +34,12 @@ namespace WebCore {
 DocumentFragment::DocumentFragment(Document* document, ConstructionType constructionType)
     : ContainerNode(document, constructionType)
 {
-    ASSERT(document);
 }
 
 PassRefPtr<DocumentFragment> DocumentFragment::create(Document* document)
 {
-    return adoptRef(new DocumentFragment(document));
+    ASSERT(document);
+    return adoptRef(new DocumentFragment(document, Node::CreateDocumentFragment));
 }
 
 String DocumentFragment::nodeName() const
@@ -76,18 +75,14 @@ PassRefPtr<Node> DocumentFragment::cloneNode(bool deep)
     return clone.release();
 }
 
-void DocumentFragment::parseHTML(const String& source, Element* contextElement, FragmentScriptingPermission scriptingPermission)
+void DocumentFragment::parseHTML(const String& source, Element* contextElement, ParserContentPolicy parserContentPolicy)
 {
-    HTMLDocumentParser::parseDocumentFragment(source, this, contextElement, scriptingPermission);
+    HTMLDocumentParser::parseDocumentFragment(source, this, contextElement, parserContentPolicy);
 }
 
-bool DocumentFragment::parseXML(const String& source, Element* contextElement, FragmentScriptingPermission scriptingPermission)
+bool DocumentFragment::parseXML(const String& source, Element* contextElement, ParserContentPolicy parserContentPolicy)
 {
-#if ENABLE(NEW_XML)
-    return NewXMLDocumentParser::parseDocumentFragment(source, this, contextElement, scriptingPermission);
-#else
-    return XMLDocumentParser::parseDocumentFragment(source, this, contextElement, scriptingPermission);
-#endif
+    return XMLDocumentParser::parseDocumentFragment(source, this, contextElement, parserContentPolicy);
 }
 
 }

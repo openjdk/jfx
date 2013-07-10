@@ -42,7 +42,7 @@ const SVGPropertyInfo* SVGViewSpec::viewBoxPropertyInfo()
                                              SVGNames::viewBoxAttr,
                                              viewBoxIdentifier(),
                                              0,
-                                             &SVGViewSpec::lookupOrCreateViewBoxWrapper);
+                                             0);
     }
     return s_propertyInfo;
 }
@@ -57,7 +57,7 @@ const SVGPropertyInfo* SVGViewSpec::preserveAspectRatioPropertyInfo()
                                              SVGNames::preserveAspectRatioAttr,
                                              preserveAspectRatioIdentifier(),
                                              0,
-                                             &SVGViewSpec::lookupOrCreatePreserveAspectRatioWrapper);
+                                             0);
     }
     return s_propertyInfo;
 }
@@ -73,7 +73,7 @@ const SVGPropertyInfo* SVGViewSpec::transformPropertyInfo()
                                              SVGNames::transformAttr,
                                              transformIdentifier(),
                                              0,
-                                             &SVGViewSpec::lookupOrCreateTransformWrapper);
+                                             0);
     }
     return s_propertyInfo;
 }
@@ -87,19 +87,19 @@ SVGViewSpec::SVGViewSpec(SVGElement* contextElement)
 
 const AtomicString& SVGViewSpec::viewBoxIdentifier()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGViewSpecViewBoxAttribute"));
+    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGViewSpecViewBoxAttribute", AtomicString::ConstructFromLiteral));
     return s_identifier;
 }
 
 const AtomicString& SVGViewSpec::preserveAspectRatioIdentifier()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGViewSpecPreserveAspectRatioAttribute"));
+    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGViewSpecPreserveAspectRatioAttribute", AtomicString::ConstructFromLiteral));
     return s_identifier;
 }
 
 const AtomicString& SVGViewSpec::transformIdentifier()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGViewSpecTransformAttribute"));
+    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGViewSpecTransformAttribute", AtomicString::ConstructFromLiteral));
     return s_identifier;
 }
 
@@ -133,13 +133,6 @@ String SVGViewSpec::viewBoxString() const
     return SVGPropertyTraits<FloatRect>::toString(viewBoxBaseValue());
 }
 
-void SVGViewSpec::setPreserveAspectRatioString(const String& preserve)
-{
-    SVGPreserveAspectRatio preserveAspectRatio;
-    preserveAspectRatio.parse(preserve);
-    setPreserveAspectRatioBaseValue(preserveAspectRatio);
-}
-
 String SVGViewSpec::preserveAspectRatioString() const
 {
     return SVGPropertyTraits<SVGPreserveAspectRatio>::toString(preserveAspectRatioBaseValue());
@@ -149,33 +142,52 @@ SVGElement* SVGViewSpec::viewTarget() const
 {
     if (!m_contextElement)
         return 0;
-    return static_cast<SVGElement*>(m_contextElement->treeScope()->getElementById(m_viewTargetString));
+    Element* element = m_contextElement->treeScope()->getElementById(m_viewTargetString);
+    if (!element || !element->isSVGElement())
+        return 0;
+    return toSVGElement(element);
 }
 
 SVGTransformListPropertyTearOff* SVGViewSpec::transform()
 {
+    if (!m_contextElement)
+        return 0;
     // Return the animVal here, as its readonly by default - which is exactly what we want here.
     return static_cast<SVGTransformListPropertyTearOff*>(static_pointer_cast<SVGAnimatedTransformList>(lookupOrCreateTransformWrapper(this))->animVal());
 }
 
-PassRefPtr<SVGAnimatedProperty> SVGViewSpec::lookupOrCreateViewBoxWrapper(void* maskedOwnerType)
+PassRefPtr<SVGAnimatedRect> SVGViewSpec::viewBoxAnimated()
 {
-    ASSERT(maskedOwnerType);
-    SVGViewSpec* ownerType = static_cast<SVGViewSpec*>(maskedOwnerType);
+    if (!m_contextElement)
+        return 0;
+    return static_pointer_cast<SVGAnimatedRect>(lookupOrCreateViewBoxWrapper(this));
+}
+
+PassRefPtr<SVGAnimatedPreserveAspectRatio> SVGViewSpec::preserveAspectRatioAnimated()
+{
+    if (!m_contextElement)
+        return 0;
+    return static_pointer_cast<SVGAnimatedPreserveAspectRatio>(lookupOrCreatePreserveAspectRatioWrapper(this));
+}
+
+PassRefPtr<SVGAnimatedProperty> SVGViewSpec::lookupOrCreateViewBoxWrapper(SVGViewSpec* ownerType)
+{
+    ASSERT(ownerType);
+    ASSERT(ownerType->contextElement());
     return SVGAnimatedProperty::lookupOrCreateWrapper<SVGElement, SVGAnimatedRect, FloatRect>(ownerType->contextElement(), viewBoxPropertyInfo(), ownerType->m_viewBox);
 }
 
-PassRefPtr<SVGAnimatedProperty> SVGViewSpec::lookupOrCreatePreserveAspectRatioWrapper(void* maskedOwnerType)
+PassRefPtr<SVGAnimatedProperty> SVGViewSpec::lookupOrCreatePreserveAspectRatioWrapper(SVGViewSpec* ownerType)
 {
-    ASSERT(maskedOwnerType);
-    SVGViewSpec* ownerType = static_cast<SVGViewSpec*>(maskedOwnerType);
+    ASSERT(ownerType);
+    ASSERT(ownerType->contextElement());
     return SVGAnimatedProperty::lookupOrCreateWrapper<SVGElement, SVGAnimatedPreserveAspectRatio, SVGPreserveAspectRatio>(ownerType->contextElement(), preserveAspectRatioPropertyInfo(), ownerType->m_preserveAspectRatio);
 }
 
-PassRefPtr<SVGAnimatedProperty> SVGViewSpec::lookupOrCreateTransformWrapper(void* maskedOwnerType)
+PassRefPtr<SVGAnimatedProperty> SVGViewSpec::lookupOrCreateTransformWrapper(SVGViewSpec* ownerType)
 {
-    ASSERT(maskedOwnerType);
-    SVGViewSpec* ownerType = static_cast<SVGViewSpec*>(maskedOwnerType);
+    ASSERT(ownerType);
+    ASSERT(ownerType->contextElement());
     return SVGAnimatedProperty::lookupOrCreateWrapper<SVGElement, SVGAnimatedTransformList, SVGTransformList>(ownerType->contextElement(), transformPropertyInfo(), ownerType->m_transform);
 }
 

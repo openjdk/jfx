@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,9 @@
 
 #include "PlatformWheelEvent.h"
 #include "Region.h"
+#include "ScrollingCoordinator.h"
 #include <wtf/Functional.h>
+#include <wtf/HashMap.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
@@ -45,9 +47,10 @@ OBJC_CLASS CALayer;
 namespace WebCore {
 
 class IntPoint;
-class ScrollingCoordinator;
+class ScrollingStateNode;
+class ScrollingStateTree;
 class ScrollingTreeNode;
-class ScrollingTreeState;
+class ScrollingTreeScrollingNode;
 
 // The ScrollingTree class lives almost exclusively on the scrolling thread and manages the
 // hierarchy of scrollable regions on the page. It's also responsible for dispatching events
@@ -68,6 +71,7 @@ public:
     // Returns true if the wheel event can be handled on the scrolling thread and false if the
     // event must be sent again to the WebCore event handler.
     EventResult tryToHandleWheelEvent(const PlatformWheelEvent&);
+    bool hasWheelEventHandlers() const { return m_hasWheelEventHandlers; }
 
     // Can be called from any thread. Will update the back forward state of the page, used for rubber-banding.
     void updateBackForwardState(bool canGoBack, bool canGoForward);
@@ -75,35 +79,47 @@ public:
     // Must be called from the scrolling thread. Handles the wheel event.
     void handleWheelEvent(const PlatformWheelEvent&);
 
+    void setMainFrameIsRubberBanding(bool);
+    bool isRubberBandInProgress();
+
     void invalidate();
-    void commitNewTreeState(PassOwnPtr<ScrollingTreeState>);
+    void commitNewTreeState(PassOwnPtr<ScrollingStateTree>);
 
-    void setMainFramePinState(bool pinnedToTheLeft, bool pinnedToTheRight);
+    void setMainFramePinState(bool pinnedToTheLeft, bool pinnedToTheRight, bool pinnedToTheTop, bool pinnedToTheBottom);
 
-    void updateMainFrameScrollPosition(const IntPoint& scrollPosition);
-    void updateMainFrameScrollPositionAndScrollLayerPosition(const IntPoint& scrollPosition);
+    void updateMainFrameScrollPosition(const IntPoint& scrollPosition, SetOrSyncScrollingLayerPosition = SyncScrollingLayerPosition);
     IntPoint mainFrameScrollPosition();
 
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
+#if PLATFORM(MAC)
     void handleWheelEventPhase(PlatformWheelEventPhase);
 #endif
 
     bool canGoBack();
     bool canGoForward();
 
+    bool rubberBandsAtBottom();
+    void setRubberBandsAtBottom(bool);
+    bool rubberBandsAtTop();
+    void setRubberBandsAtTop(bool);
+
     bool willWheelEventStartSwipeGesture(const PlatformWheelEvent&);
 
-#if PLATFORM(MAC)
-    void setDebugRootLayer(CALayer *);
-#endif
+    void setScrollingPerformanceLoggingEnabled(bool flag);
+    bool scrollingPerformanceLoggingEnabled();
+
+    ScrollingTreeScrollingNode* rootNode() const { return m_rootNode.get(); }
 
 private:
     explicit ScrollingTree(ScrollingCoordinator*);
 
-    void updateDebugRootLayer();
+    void removeDestroyedNodes(ScrollingStateTree*);
+    void updateTreeFromStateNode(ScrollingStateNode*);
 
     RefPtr<ScrollingCoordinator> m_scrollingCoordinator;
-    OwnPtr<ScrollingTreeNode> m_rootNode;
+    OwnPtr<ScrollingTreeScrollingNode> m_rootNode;
+
+    typedef HashMap<ScrollingNodeID, ScrollingTreeNode*> ScrollingTreeNodeMap;
+    ScrollingTreeNodeMap m_nodeMap;
 
     Mutex m_mutex;
     Region m_nonFastScrollableRegion;
@@ -115,10 +131,15 @@ private:
     bool m_canGoForward;
     bool m_mainFramePinnedToTheLeft;
     bool m_mainFramePinnedToTheRight;
+    bool m_rubberBandsAtBottom;
+    bool m_rubberBandsAtTop;
+    bool m_mainFramePinnedToTheTop;
+    bool m_mainFramePinnedToTheBottom;
+    bool m_mainFrameIsRubberBanding;
 
-#if PLATFORM(MAC)
-    RetainPtr<CALayer> m_debugInfoLayer;
-#endif
+    bool m_scrollingPerformanceLoggingEnabled;
+    
+    bool m_isHandlingProgrammaticScroll;
 };
 
 } // namespace WebCore

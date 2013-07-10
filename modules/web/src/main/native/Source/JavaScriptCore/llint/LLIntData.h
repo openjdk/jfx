@@ -26,38 +26,68 @@
 #ifndef LLIntData_h
 #define LLIntData_h
 
+#include "JSCJSValue.h"
 #include "Opcode.h"
 #include <wtf/Platform.h>
 
 namespace JSC {
 
-class JSGlobalData;
+class VM;
 struct Instruction;
+
+#if ENABLE(LLINT_C_LOOP)
+typedef OpcodeID LLIntCode;
+#else
+typedef void (*LLIntCode)();
+#endif
 
 namespace LLInt {
 
 #if ENABLE(LLINT)
+
 class Data {
 public:
-    Data();
-    ~Data();
+    static void performAssertions(VM&);
     
-    void performAssertions(JSGlobalData&);
-    
-    Instruction* exceptionInstructions()
-    {
-        return m_exceptionInstructions;
-    }
-    
-    Opcode* opcodeMap()
-    {
-        return m_opcodeMap;
-    }
 private:
-    Instruction* m_exceptionInstructions;
-    Opcode* m_opcodeMap;
+    static Instruction* s_exceptionInstructions;
+    static Opcode* s_opcodeMap;
+    
+    friend void initialize();
+
+    friend Instruction* exceptionInstructions();
+    friend Opcode* opcodeMap();
+    friend Opcode getOpcode(OpcodeID);
+    friend void* getCodePtr(OpcodeID);
 };
-#else // ENABLE(LLINT)
+
+void initialize();
+
+inline Instruction* exceptionInstructions()
+    {
+    return Data::s_exceptionInstructions;
+    }
+    
+inline Opcode* opcodeMap()
+    {
+    return Data::s_opcodeMap;
+    }
+
+inline Opcode getOpcode(OpcodeID id)
+{
+#if ENABLE(COMPUTED_GOTO_OPCODES)
+    return Data::s_opcodeMap[id];
+#else
+    return static_cast<Opcode>(id);
+#endif
+}
+
+ALWAYS_INLINE void* getCodePtr(OpcodeID id)
+{
+    return reinterpret_cast<void*>(getOpcode(id));
+}
+
+#else // !ENABLE(LLINT)
 
 #if COMPILER(CLANG)
 #pragma clang diagnostic push
@@ -66,26 +96,30 @@ private:
 
 class Data {
 public:
-    void performAssertions(JSGlobalData&) { }
-
-    Instruction* exceptionInstructions()
-    {
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-    
-    Opcode* opcodeMap()
-    {
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
+    static void performAssertions(VM&) { }
 };
 
 #if COMPILER(CLANG)
 #pragma clang diagnostic pop
 #endif
 
-#endif // ENABLE(LLINT)
+#endif // !ENABLE(LLINT)
+
+ALWAYS_INLINE void* getOpcode(void llintOpcode())
+{
+    return bitwise_cast<void*>(llintOpcode);
+}
+
+ALWAYS_INLINE void* getCodePtr(void glueHelper())
+{
+    return bitwise_cast<void*>(glueHelper);
+}
+
+ALWAYS_INLINE void* getCodePtr(JSC::EncodedJSValue glueHelper())
+{
+    return bitwise_cast<void*>(glueHelper);
+}
+
 
 } } // namespace JSC::LLInt
 

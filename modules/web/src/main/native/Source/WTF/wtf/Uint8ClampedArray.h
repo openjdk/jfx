@@ -28,7 +28,10 @@
 #ifndef Uint8ClampedArray_h
 #define Uint8ClampedArray_h
 
+#include <wtf/Platform.h>
+
 #include <wtf/Uint8Array.h>
+#include <wtf/MathExtras.h>
 
 namespace WTF {
 
@@ -38,9 +41,8 @@ public:
     static inline PassRefPtr<Uint8ClampedArray> create(const unsigned char* array, unsigned length);
     static inline PassRefPtr<Uint8ClampedArray> create(PassRefPtr<ArrayBuffer>, unsigned byteOffset, unsigned length);
 
-    // Should only be used for WebCore-internal use (like filters and
-    // getImageData) when it is known the entire array will be filled.
-    // Do not return these results directly to JavaScript.
+    // Should only be used when it is known the entire array will be filled. Do
+    // not return these results directly to JavaScript without filling first.
     static inline PassRefPtr<Uint8ClampedArray> createUninitialized(unsigned length);
 
     // It's only needed to potentially call this method if the array
@@ -48,12 +50,16 @@ public:
     // zero the allocated memory.
     inline void zeroFill();
 
-    // Can’t use "using" here due to a bug in the RVCT compiler.
-    bool set(TypedArrayBase<unsigned char>* array, unsigned offset) { return TypedArrayBase<unsigned char>::set(array, offset); }
+    using TypedArrayBase<unsigned char>::set;
     inline void set(unsigned index, double value);
 
     inline PassRefPtr<Uint8ClampedArray> subarray(int start) const;
     inline PassRefPtr<Uint8ClampedArray> subarray(int start, int end) const;
+
+    virtual ViewType getType() const
+    {
+        return TypeUint8Clamped;
+    }
 
 private:
     inline Uint8ClampedArray(PassRefPtr<ArrayBuffer>,
@@ -61,9 +67,6 @@ private:
                              unsigned length);
     // Make constructor visible to superclass.
     friend class TypedArrayBase<unsigned char>;
-
-    // Overridden from ArrayBufferView.
-    virtual bool isUnsignedByteClampedArray() const { return true; }
 };
 
 PassRefPtr<Uint8ClampedArray> Uint8ClampedArray::create(unsigned length)
@@ -95,11 +98,11 @@ void Uint8ClampedArray::set(unsigned index, double value)
 {
     if (index >= m_length)
         return;
-    if (isnan(value) || value < 0)
+    if (std::isnan(value) || value < 0)
         value = 0;
     else if (value > 255)
         value = 255;
-    data()[index] = static_cast<unsigned char>(value + 0.5);
+    data()[index] = static_cast<unsigned char>(lrint(value));
 }
 
 Uint8ClampedArray::Uint8ClampedArray(PassRefPtr<ArrayBuffer> buffer, unsigned byteOffset, unsigned length)

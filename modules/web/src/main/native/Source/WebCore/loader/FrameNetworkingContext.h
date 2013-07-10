@@ -20,8 +20,10 @@
 #ifndef FrameNetworkingContext_h
 #define FrameNetworkingContext_h
 
+#include "Document.h"
 #include "Frame.h"
 #include "NetworkingContext.h"
+#include "ReferrerPolicy.h"
 
 namespace WebCore {
 
@@ -32,8 +34,17 @@ public:
         m_frame = 0;
     }
 
+    virtual bool shouldClearReferrerOnHTTPSToHTTPRedirect() const
+    {
+        // FIXME: PingLoader finishes without a frame, but it should use its document's referrer policy.
+        if (!m_frame)
+            return true;
+
+        return m_frame->document()->referrerPolicy() == ReferrerPolicyDefault;
+    }
+
 protected:
-    FrameNetworkingContext(Frame* frame)
+    explicit FrameNetworkingContext(Frame* frame)
         : m_frame(frame)
     {
     }
@@ -41,7 +52,7 @@ protected:
     Frame* frame() const { return m_frame; }
 
 private:
-    virtual bool isValid() const { return m_frame; }
+    virtual bool isValid() const OVERRIDE { return m_frame; }
 
     Frame* m_frame;
 };

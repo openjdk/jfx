@@ -24,7 +24,7 @@
 #define Length_h
 
 #include "AnimationUtilities.h"
-#include "LayoutTypes.h"
+#include <string.h>
 #include <wtf/Assertions.h>
 #include <wtf/FastAllocBase.h>
 #include <wtf/Forward.h>
@@ -39,7 +39,7 @@ enum LengthType {
     Intrinsic, MinIntrinsic,
     MinContent, MaxContent, FillAvailable, FitContent,
     Calculated,
-    ViewportPercentageWidth, ViewportPercentageHeight, ViewportPercentageMin,
+    ViewportPercentageWidth, ViewportPercentageHeight, ViewportPercentageMin, ViewportPercentageMax,
     Undefined
 };
 
@@ -65,7 +65,7 @@ public:
         ASSERT(t != Calculated);
     }
     
-    Length(FractionalLayoutUnit v, LengthType t, bool q = false)
+    Length(LayoutUnit v, LengthType t, bool q = false)
         : m_floatValue(v.toFloat()), m_quirk(q), m_type(t), m_isFloat(true)
     {
         ASSERT(t != Calculated);
@@ -173,7 +173,7 @@ public:
         m_isFloat = true;    
     }
 
-    void setValue(LengthType t, FractionalLayoutUnit value)
+    void setValue(LengthType t, LayoutUnit value)
     {
         m_type = t;
         m_floatValue = value;
@@ -224,17 +224,20 @@ public:
     bool isLegacyIntrinsic() const { return type() == Intrinsic || type() == MinIntrinsic; }
     bool isIntrinsic() const { return type() == MinContent || type() == MaxContent || type() == FillAvailable || type() == FitContent; }
     bool isSpecified() const { return type() == Fixed || type() == Percent || type() == Calculated || isViewportPercentage(); }
+    bool isSpecifiedOrIntrinsic() const { return isSpecified() || isIntrinsic(); }
     bool isCalculated() const { return type() == Calculated; }
     bool isCalculatedEqual(const Length&) const;
+    bool isMinContent() const { return type() == MinContent; }
+    bool isMaxContent() const { return type() == MaxContent; }
 
     Length blend(const Length& from, double progress) const
     {
         // Blend two lengths to produce a new length that is in between them.  Used for animation.
         if (from.type() == Calculated || type() == Calculated)
-            return blendCalculation(from, progress);
+            return blendMixedTypes(from, progress);
         
         if (!from.isZero() && !isZero() && from.type() != type())
-            return *this;
+            return blendMixedTypes(from, progress);
 
         if (from.isZero() && isZero())
             return *this;
@@ -264,7 +267,7 @@ public:
     bool isViewportPercentage() const
     {
         LengthType lengthType = type();
-        return lengthType >= ViewportPercentageWidth && lengthType <= ViewportPercentageMin;
+        return lengthType >= ViewportPercentageWidth && lengthType <= ViewportPercentageMax;
     }
     float viewportPercentageLength() const
     {
@@ -279,20 +282,12 @@ private:
     }
     void initFromLength(const Length &length) 
     {
-        m_quirk = length.m_quirk;
-        m_type = length.m_type;
-        m_isFloat = length.m_isFloat;
-        
-        if (m_isFloat)
-            m_floatValue = length.m_floatValue;
-        else
-            m_intValue = length.m_intValue;
-        
+        memcpy(this, &length, sizeof(Length));
         if (isCalculated())
             incrementCalculatedRef();
     }
 
-    Length blendCalculation(const Length& from, double progress) const;
+    Length blendMixedTypes(const Length& from, double progress) const;
 
     int calculationHandle() const
     {

@@ -44,7 +44,9 @@ public:
 private:
     virtual const char* renderName() const { return "RenderFileUploadControl"; }
 
+    virtual bool canBeReplacedWithInlineRunIn() const OVERRIDE;
     virtual void updateFromElement();
+    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const OVERRIDE;
     virtual void computePreferredLogicalWidths();
     virtual void paintObject(PaintInfo&, const LayoutPoint&);
 
@@ -61,13 +63,13 @@ private:
 
 inline RenderFileUploadControl* toRenderFileUploadControl(RenderObject* object)
 {
-    ASSERT(!object || object->isFileUploadControl());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isFileUploadControl());
     return static_cast<RenderFileUploadControl*>(object);
 }
 
 inline const RenderFileUploadControl* toRenderFileUploadControl(const RenderObject* object)
 {
-    ASSERT(!object || object->isFileUploadControl());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isFileUploadControl());
     return static_cast<const RenderFileUploadControl*>(object);
 }
 

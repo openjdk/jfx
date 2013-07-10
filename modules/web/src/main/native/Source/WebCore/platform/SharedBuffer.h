@@ -27,11 +27,11 @@
 #ifndef SharedBuffer_h
 #define SharedBuffer_h
 
-#include "PlatformString.h"
 #include <wtf/Forward.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 #if USE(CF)
 #include <wtf/RetainPtr.h>
@@ -43,7 +43,6 @@ OBJC_CLASS NSData;
 
 namespace WebCore {
     
-class MemoryObjectInfo;
 class PurgeableBuffer;
 
 class SharedBuffer : public RefCounted<SharedBuffer> {
@@ -90,7 +89,7 @@ public:
     const char* platformData() const;
     unsigned platformDataSize() const;
 
-#if HAVE(NETWORK_CFDATA_ARRAY_CALLBACK)
+#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     void append(CFDataRef);
 #endif
 
@@ -115,11 +114,13 @@ public:
     //      }
     unsigned getSomeData(const char*& data, unsigned position = 0) const;
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
+    void createPurgeableBuffer() const;
+
+    void tryReplaceContentsWithPlatformBuffer(SharedBuffer*);
 
 private:
     SharedBuffer();
-    SharedBuffer(size_t);
+    explicit SharedBuffer(size_t);
     SharedBuffer(const char*, int);
     SharedBuffer(const unsigned char*, int);
     
@@ -137,18 +138,21 @@ private:
     unsigned m_size;
     mutable Vector<char> m_buffer;
     mutable Vector<char*> m_segments;
-    OwnPtr<PurgeableBuffer> m_purgeableBuffer;
-#if HAVE(NETWORK_CFDATA_ARRAY_CALLBACK)
+    mutable OwnPtr<PurgeableBuffer> m_purgeableBuffer;
+#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     mutable Vector<RetainPtr<CFDataRef> > m_dataArray;
     void copyDataArrayAndClear(char *destination, unsigned bytesToCopy) const;
     unsigned copySomeDataFromDataArray(const char*& someData, unsigned position) const;
+    const char *singleDataArrayBuffer() const;
 #endif
 #if USE(CF)
-    SharedBuffer(CFDataRef);
+    explicit SharedBuffer(CFDataRef);
     RetainPtr<CFDataRef> m_cfData;
 #endif
 };
     
-}
+PassRefPtr<SharedBuffer> utf8Buffer(const String&);
+
+} // namespace WebCore
 
 #endif // SharedBuffer_h

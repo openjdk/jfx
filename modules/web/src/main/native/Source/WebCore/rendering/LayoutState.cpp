@@ -39,6 +39,9 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
     : m_columnInfo(columnInfo)
     , m_lineGrid(0)
     , m_next(prev)
+#if ENABLE(CSS_EXCLUSIONS)
+    , m_exclusionShapeInsideInfo(0)
+#endif
 #ifndef NDEBUG
     , m_renderer(renderer)
 #endif
@@ -48,22 +51,22 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
     bool fixed = renderer->isOutOfFlowPositioned() && renderer->style()->position() == FixedPosition;
     if (fixed) {
         // FIXME: This doesn't work correctly with transforms.
-        FloatPoint fixedOffset = renderer->view()->localToAbsolute(FloatPoint(), true);
+        FloatPoint fixedOffset = renderer->view()->localToAbsolute(FloatPoint(), IsFixed);
         m_paintOffset = LayoutSize(fixedOffset.x(), fixedOffset.y()) + offset;
     } else
         m_paintOffset = prev->m_paintOffset + offset;
 
     if (renderer->isOutOfFlowPositioned() && !fixed) {
         if (RenderObject* container = renderer->container()) {
-            if (container->isRelPositioned() && container->isRenderInline())
-                m_paintOffset += toRenderInline(container)->relativePositionedInlineOffset(renderer);
+            if (container->isInFlowPositioned() && container->isRenderInline())
+                m_paintOffset += toRenderInline(container)->offsetForInFlowPositionedInline(renderer);
         }
     }
 
     m_layoutOffset = m_paintOffset;
 
-    if (renderer->isRelPositioned() && renderer->hasLayer())
-        m_paintOffset += renderer->layer()->relativePositionOffset();
+    if (renderer->hasPaintOffset() && renderer->hasLayer())
+        m_paintOffset += renderer->layer()->paintOffset();
 
     m_clipped = !fixed && prev->m_clipped;
     if (m_clipped)
@@ -83,7 +86,7 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
 
     // If we establish a new page height, then cache the offset to the top of the first page.
     // We can compare this later on to figure out what part of the page we're actually on,
-    if (pageLogicalHeight || m_columnInfo) {
+    if (pageLogicalHeight || m_columnInfo || renderer->isRenderFlowThread()) {
         m_pageLogicalHeight = pageLogicalHeight;
         bool isFlipped = renderer->style()->isFlippedBlocksWritingMode();
         m_pageOffset = LayoutSize(m_layoutOffset.width() + (!isFlipped ? renderer->borderLeft() + renderer->paddingLeft() : renderer->borderRight() + renderer->paddingRight()),
@@ -107,9 +110,28 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
     if (!m_columnInfo)
         m_columnInfo = m_next->m_columnInfo;
 
+#if ENABLE(CSS_EXCLUSIONS)
+    if (renderer->isRenderBlock()) {
+        const RenderBlock* renderBlock = toRenderBlock(renderer);
+        m_exclusionShapeInsideInfo = renderBlock->exclusionShapeInsideInfo(RenderBlock::ShapePresentOrRemoved);
+        if (m_next->m_exclusionShapeInsideInfo && renderBlock->allowsExclusionShapeInsideInfoSharing()) {
+            if (!m_exclusionShapeInsideInfo)
+                m_exclusionShapeInsideInfo = m_next->m_exclusionShapeInsideInfo;
+            else if (m_exclusionShapeInsideInfo->needsRemoval()) {
+                m_exclusionShapeInsideInfo = m_next->m_exclusionShapeInsideInfo;
+                m_exclusionShapeInsideInfo->setNeedsLayout(true);
+            }
+        }
+    }
+#endif
+
     m_layoutDelta = m_next->m_layoutDelta;
+#if !ASSERT_DISABLED && ENABLE(SATURATED_LAYOUT_ARITHMETIC)
+    m_layoutDeltaXSaturated = m_next->m_layoutDeltaXSaturated;
+    m_layoutDeltaYSaturated = m_next->m_layoutDeltaYSaturated;
+#endif
     
-    m_isPaginated = m_pageLogicalHeight || m_columnInfo;
+    m_isPaginated = m_pageLogicalHeight || m_columnInfo || renderer->isRenderFlowThread();
 
     if (lineGrid() && renderer->hasColumns() && renderer->style()->hasInlineColumnAxis())
         computeLineGridPaginationOrigin(renderer);
@@ -121,37 +143,27 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
     // FIXME: <http://bugs.webkit.org/show_bug.cgi?id=13443> Apply control clip if present.
 }
 
-LayoutState::LayoutState(LayoutState* prev, RenderFlowThread* flowThread, bool regionsChanged)
-    : m_clipped(false)
-    , m_isPaginated(true)
-    , m_pageLogicalHeight(1) // Use a fake height here. That value is not important, just needs to be non-zero.
-    , m_pageLogicalHeightChanged(regionsChanged)
-    , m_columnInfo(0)
-    , m_lineGrid(0)
-    , m_next(prev)
-#ifndef NDEBUG
-    , m_renderer(flowThread)
-#endif
-{
-#ifdef NDEBUG
-    UNUSED_PARAM(flowThread);
-#endif
-}
-
 LayoutState::LayoutState(RenderObject* root)
     : m_clipped(false)
     , m_isPaginated(false)
-    , m_pageLogicalHeight(0)
     , m_pageLogicalHeightChanged(false)
+#if !ASSERT_DISABLED && ENABLE(SATURATED_LAYOUT_ARITHMETIC)
+    , m_layoutDeltaXSaturated(false)
+    , m_layoutDeltaYSaturated(false)
+#endif    
     , m_columnInfo(0)
     , m_lineGrid(0)
     , m_next(0)
+#if ENABLE(CSS_EXCLUSIONS)
+    , m_exclusionShapeInsideInfo(0)
+#endif
+    , m_pageLogicalHeight(0)
 #ifndef NDEBUG
     , m_renderer(root)
 #endif
 {
     RenderObject* container = root->container();
-    FloatPoint absContentPoint = container->localToAbsolute(FloatPoint(), false, true);
+    FloatPoint absContentPoint = container->localToAbsolute(FloatPoint(), UseTransforms);
     m_paintOffset = LayoutSize(absContentPoint.x(), absContentPoint.y());
 
     if (container->hasOverflowClip()) {

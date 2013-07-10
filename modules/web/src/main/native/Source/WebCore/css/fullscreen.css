@@ -1,6 +1,6 @@
 :-webkit-full-screen {
     background-color: white;
-    z-index: 2147483647;
+    z-index: 2147483647 !important;
 }
 
 :root:-webkit-full-screen-document:not(:-webkit-full-screen), :root:-webkit-full-screen-ancestor {
@@ -9,6 +9,7 @@
 
 :-webkit-full-screen-ancestor:not(iframe) {
     z-index: auto !important;
+    position: static !important;
     opacity: 1 !important;
     -webkit-transform: none !important;
     -webkit-mask: none !important;
@@ -26,8 +27,13 @@ video:-webkit-full-screen, audio:-webkit-full-screen {
     margin: 0 !important;
     height: 100% !important;
     width: 100% !important;
-    -webkit-box-flex: 1 !important;
+    -webkit-flex: 1 !important;
     display: block !important;
+    -webkit-transition: none !important;
+}
+
+:-webkit-full-screen video:hover {
+    -webkit-cursor-visibility:auto-hide;
 }
 
 img:-webkit-full-screen {

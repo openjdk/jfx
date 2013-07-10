@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013 Patrick Gansterer <paroga@paroga.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -178,105 +179,18 @@ template<size_t divisor> inline size_t roundUpToMultipleOf(size_t x)
 
 enum BinarySearchMode {
     KeyMustBePresentInArray,
-    KeyMustNotBePresentInArray
+    KeyMightNotBePresentInArray,
+    ReturnAdjacentElementIfKeyIsNotPresent
 };
 
-// Binary search algorithm, calls extractKey on pre-sorted elements in array,
-// compares result with key (KeyTypes should be comparable with '--', '<', '>').
-template<typename ArrayElementType, typename KeyType, KeyType(*extractKey)(ArrayElementType*)>
-inline ArrayElementType* binarySearch(ArrayElementType* array, size_t size, KeyType key, BinarySearchMode mode = KeyMustBePresentInArray)
+template<typename ArrayElementType, typename KeyType, typename ArrayType, typename ExtractKey, BinarySearchMode mode>
+inline ArrayElementType* binarySearchImpl(ArrayType& array, size_t size, KeyType key, const ExtractKey& extractKey = ExtractKey())
 {
-    // The array must contain at least one element (pre-condition, array does contain key).
-    // If the array contains only one element, no need to do the comparison.
-    while (size > 1) {
-        // Pick an element to check, half way through the array, and read the value.
-        int pos = (size - 1) >> 1;
-        KeyType val = extractKey(&array[pos]);
-
-        // If the key matches, success!
-        if (val == key)
-            return &array[pos];
-        // The item we are looking for is smaller than the item being check; reduce the value of 'size',
-        // chopping off the right hand half of the array.
-        else if (key < val)
-            size = pos;
-        // Discard all values in the left hand half of the array, up to and including the item at pos.
-        else {
-            size -= (pos + 1);
-            array += (pos + 1);
-        }
-
-        // In case of BinarySearchMode = KeyMustBePresentInArray 'size' should never reach zero.
-        if (mode == KeyMustBePresentInArray)
-            ASSERT(size);
-    }
-
-    // In case of BinarySearchMode = KeyMustBePresentInArray if we reach this point
-    // we've chopped down to one element, no need to check it matches
-    if (mode == KeyMustBePresentInArray) {
-        ASSERT(size == 1);
-        ASSERT(key == extractKey(&array[0]));
-    }
-
-    return &array[0];
-}
-
-// Modified binary search algorithm that uses a functor. Note that this is strictly
-// more powerful than the above, but results in somewhat less template specialization.
-// Hence, depending on inlining heuristics, it might be slower.
-template<typename ArrayElementType, typename KeyType, typename ExtractKey>
-inline ArrayElementType* binarySearchWithFunctor(ArrayElementType* array, size_t size, KeyType key, BinarySearchMode mode = KeyMustBePresentInArray, const ExtractKey& extractKey = ExtractKey())
-{
-    // The array must contain at least one element (pre-condition, array does contain key).
-    // If the array contains only one element, no need to do the comparison.
-    while (size > 1) {
-        // Pick an element to check, half way through the array, and read the value.
-        int pos = (size - 1) >> 1;
-        KeyType val = extractKey(&array[pos]);
-
-        // If the key matches, success!
-        if (val == key)
-            return &array[pos];
-        // The item we are looking for is smaller than the item being check; reduce the value of 'size',
-        // chopping off the right hand half of the array.
-        else if (key < val)
-            size = pos;
-        // Discard all values in the left hand half of the array, up to and including the item at pos.
-        else {
-            size -= (pos + 1);
-            array += (pos + 1);
-        }
-
-        // In case of BinarySearchMode = KeyMustBePresentInArray 'size' should never reach zero.
-        if (mode == KeyMustBePresentInArray)
-            ASSERT(size);
-    }
-
-    // In case of BinarySearchMode = KeyMustBePresentInArray if we reach this point
-    // we've chopped down to one element, no need to check it matches
-    if (mode == KeyMustBePresentInArray) {
-        ASSERT(size == 1);
-        ASSERT(key == extractKey(&array[0]));
-    }
-
-    return &array[0];
-}
-
-// Modified binarySearch() algorithm designed for array-like classes that support
-// operator[] but not operator+=. One example of a class that qualifies is
-// SegmentedVector.
-template<typename ArrayElementType, typename KeyType, KeyType(*extractKey)(ArrayElementType*), typename ArrayType>
-inline ArrayElementType* genericBinarySearch(ArrayType& array, size_t size, KeyType key)
-{
-    // The array must contain at least one element (pre-condition, array does conatin key).
-    // If the array only contains one element, no need to do the comparison.
     size_t offset = 0;
     while (size > 1) {
-        // Pick an element to check, half way through the array, and read the value.
-        int pos = (size - 1) >> 1;
+        size_t pos = (size - 1) >> 1;
         KeyType val = extractKey(&array[offset + pos]);
         
-        // If the key matches, success!
         if (val == key)
             return &array[offset + pos];
         // The item we are looking for is smaller than the item being check; reduce the value of 'size',
@@ -289,17 +203,89 @@ inline ArrayElementType* genericBinarySearch(ArrayType& array, size_t size, KeyT
             offset += (pos + 1);
         }
 
-        // 'size' should never reach zero.
-        ASSERT(size);
+        ASSERT(mode != KeyMustBePresentInArray || size);
     }
     
-    // If we reach this point we've chopped down to one element, no need to check it matches
+    if (mode == KeyMightNotBePresentInArray && !size)
+        return 0;
+    
+    ArrayElementType* result = &array[offset];
+
+    if (mode == KeyMightNotBePresentInArray && key != extractKey(result))
+        return 0;
+
+    if (mode == KeyMustBePresentInArray) {
     ASSERT(size == 1);
-    ASSERT(key == extractKey(&array[offset]));
-    return &array[offset];
+        ASSERT(key == extractKey(result));
+    }
+
+    return result;
+}
+
+// If the element is not found, crash if asserts are enabled, and behave like approximateBinarySearch in release builds.
+template<typename ArrayElementType, typename KeyType, typename ArrayType, typename ExtractKey>
+inline ArrayElementType* binarySearch(ArrayType& array, size_t size, KeyType key, ExtractKey extractKey = ExtractKey())
+{
+    return binarySearchImpl<ArrayElementType, KeyType, ArrayType, ExtractKey, KeyMustBePresentInArray>(array, size, key, extractKey);
+}
+
+// Return zero if the element is not found.
+template<typename ArrayElementType, typename KeyType, typename ArrayType, typename ExtractKey>
+inline ArrayElementType* tryBinarySearch(ArrayType& array, size_t size, KeyType key, ExtractKey extractKey = ExtractKey())
+{
+    return binarySearchImpl<ArrayElementType, KeyType, ArrayType, ExtractKey, KeyMightNotBePresentInArray>(array, size, key, extractKey);
+}
+
+// Return the element that is either to the left, or the right, of where the element would have been found.
+template<typename ArrayElementType, typename KeyType, typename ArrayType, typename ExtractKey>
+inline ArrayElementType* approximateBinarySearch(ArrayType& array, size_t size, KeyType key, ExtractKey extractKey = ExtractKey())
+{
+    return binarySearchImpl<ArrayElementType, KeyType, ArrayType, ExtractKey, ReturnAdjacentElementIfKeyIsNotPresent>(array, size, key, extractKey);
+}
+
+// Variants of the above that use const.
+template<typename ArrayElementType, typename KeyType, typename ArrayType, typename ExtractKey>
+inline ArrayElementType* binarySearch(const ArrayType& array, size_t size, KeyType key, ExtractKey extractKey = ExtractKey())
+{
+    return binarySearchImpl<ArrayElementType, KeyType, ArrayType, ExtractKey, KeyMustBePresentInArray>(const_cast<ArrayType&>(array), size, key, extractKey);
+}
+template<typename ArrayElementType, typename KeyType, typename ArrayType, typename ExtractKey>
+inline ArrayElementType* tryBinarySearch(const ArrayType& array, size_t size, KeyType key, ExtractKey extractKey = ExtractKey())
+{
+    return binarySearchImpl<ArrayElementType, KeyType, ArrayType, ExtractKey, KeyMightNotBePresentInArray>(const_cast<ArrayType&>(array), size, key, extractKey);
+}
+template<typename ArrayElementType, typename KeyType, typename ArrayType, typename ExtractKey>
+inline ArrayElementType* approximateBinarySearch(const ArrayType& array, size_t size, KeyType key, ExtractKey extractKey = ExtractKey())
+{
+    return binarySearchImpl<ArrayElementType, KeyType, ArrayType, ExtractKey, ReturnAdjacentElementIfKeyIsNotPresent>(const_cast<ArrayType&>(array), size, key, extractKey);
 }
 
 } // namespace WTF
+
+#if OS(WINCE)
+// Windows CE CRT has does not implement bsearch().
+inline void* wtf_bsearch(const void* key, const void* base, size_t count, size_t size, int (*compare)(const void *, const void *))
+{
+    const char* first = static_cast<const char*>(base);
+
+    while (count) {
+        size_t pos = (count - 1) >> 1;
+        const char* item = first + pos * size;
+        int compareResult = compare(item, key);
+        if (!compareResult)
+            return const_cast<char*>(item);
+        if (compareResult < 0) {
+            count -= (pos + 1);
+            first += (pos + 1) * size;
+        } else
+            count = pos;
+    }
+
+    return 0;
+}
+
+#define bsearch(key, base, count, size, compare) wtf_bsearch(key, base, count, size, compare)
+#endif
 
 // This version of placement new omits a 0 check.
 enum NotNullTag { NotNull };
@@ -314,6 +300,8 @@ using WTF::MB;
 using WTF::isPointerAligned;
 using WTF::is8ByteAligned;
 using WTF::binarySearch;
+using WTF::tryBinarySearch;
+using WTF::approximateBinarySearch;
 using WTF::bitwise_cast;
 using WTF::safeCast;
 

@@ -23,11 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module html {
-    interface [
-        ActiveDOMObject,
+[
+    EnabledAtRuntime,
         Conditional=VIDEO,
-        NamedConstructor=Audio(in [Optional=DefaultIsNullString] DOMString src)
-    ] HTMLAudioElement : HTMLMediaElement {
+    NamedConstructor=Audio([Default=NullString] optional DOMString src)
+] interface HTMLAudioElement : HTMLMediaElement {
     };
-}

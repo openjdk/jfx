@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,15 +30,10 @@
  */
 
 #include "config.h"
-
-#ifdef SKIP_STATIC_CONSTRUCTORS_ON_GCC
-#define CSSPROPERTYSOURCEDATA_HIDE_GLOBALS 1
-#endif
-
 #include "CSSPropertySourceData.h"
 
-#include "PlatformString.h"
 #include <wtf/StaticConstructors.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -88,36 +84,22 @@ CSSPropertySourceData::CSSPropertySourceData()
 
 String CSSPropertySourceData::toString() const
 {
-    DEFINE_STATIC_LOCAL(String, emptyValue, ("e"));
-    DEFINE_STATIC_LOCAL(String, importantSuffix, (" !important"));
-    if (!name && value == emptyValue)
+    if (!name && value == "e")
         return String();
 
-    String result = name;
-    result += ": ";
-    result += value;
+    StringBuilder result;
+    result.append(name);
+    result.appendLiteral(": ");
+    result.append(value);
     if (important)
-        result += importantSuffix;
-    result += ";";
-    return result;
+        result.appendLiteral(" !important");
+    result.append(';');
+    return result.toString();
 }
 
 unsigned CSSPropertySourceData::hash() const
 {
     return StringHash::hash(name) + 3 * StringHash::hash(value) + 7 * important + 13 * parsedOk + 31;
-}
-
-// Global init routines
-DEFINE_GLOBAL(CSSPropertySourceData, emptyCSSPropertySourceData, "", "e", false, false)
-
-// static
-void CSSPropertySourceData::init()
-{
-    static bool initialized;
-    if (!initialized) {
-        new ((void *) &emptyCSSPropertySourceData) CSSPropertySourceData("", "e", false, false, SourceRange(0, 0));
-        initialized = true;
-    }
 }
 
 } // namespace WebCore

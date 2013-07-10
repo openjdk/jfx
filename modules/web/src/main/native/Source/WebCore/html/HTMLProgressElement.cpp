@@ -19,16 +19,16 @@
  */
 
 #include "config.h"
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 #include "HTMLProgressElement.h"
 
 #include "Attribute.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
-#include "NodeRenderingContext.h"
 #include "HTMLDivElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "NodeRenderingContext.h"
 #include "ProgressShadowElement.h"
 #include "RenderProgress.h"
 #include "ShadowRoot.h"
@@ -43,6 +43,7 @@ const double HTMLProgressElement::InvalidPosition = -2;
 
 HTMLProgressElement::HTMLProgressElement(const QualifiedName& tagName, Document* document)
     : LabelableElement(tagName, document)
+    , m_value(0)
 {
     ASSERT(hasTagName(progressTag));
 }
@@ -54,12 +55,15 @@ HTMLProgressElement::~HTMLProgressElement()
 PassRefPtr<HTMLProgressElement> HTMLProgressElement::create(const QualifiedName& tagName, Document* document)
 {
     RefPtr<HTMLProgressElement> progress = adoptRef(new HTMLProgressElement(tagName, document));
-    progress->createShadowSubtree();
-    return progress;
+    progress->ensureUserAgentShadowRoot();
+    return progress.release();
 }
 
-RenderObject* HTMLProgressElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderObject* HTMLProgressElement::createRenderer(RenderArena* arena, RenderStyle* style)
 {
+    if (!style->hasAppearance() || hasAuthorShadowRoot())
+        return RenderObject::createObject(this, style);
+
     return new (arena) RenderProgress(this);
 }
 
@@ -68,36 +72,42 @@ bool HTMLProgressElement::childShouldCreateRenderer(const NodeRenderingContext& 
     return childContext.isOnUpperEncapsulationBoundary() && HTMLElement::childShouldCreateRenderer(childContext);
 }
 
-bool HTMLProgressElement::supportsFocus() const
+RenderProgress* HTMLProgressElement::renderProgress() const
 {
-    return Node::supportsFocus() && !disabled();
+    if (renderer() && renderer()->isProgress())
+        return static_cast<RenderProgress*>(renderer());
+
+    RenderObject* renderObject = userAgentShadowRoot()->firstChild()->renderer();
+    ASSERT_WITH_SECURITY_IMPLICATION(!renderObject || renderObject->isProgress());
+    return static_cast<RenderProgress*>(renderObject);
 }
 
-void HTMLProgressElement::parseAttribute(const Attribute& attribute)
+void HTMLProgressElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == valueAttr)
+    if (name == valueAttr)
         didElementStateChange();
-    else if (attribute.name() == maxAttr)
+    else if (name == maxAttr)
         didElementStateChange();
     else
-        LabelableElement::parseAttribute(attribute);
+        LabelableElement::parseAttribute(name, value);
 }
 
 void HTMLProgressElement::attach()
 {
     LabelableElement::attach();
-    didElementStateChange();
+    if (RenderProgress* render = renderProgress())
+        render->updateFromElement();
 }
 
 double HTMLProgressElement::value() const
 {
     double value = parseToDoubleForNumberType(fastGetAttribute(valueAttr));
-    return !isfinite(value) || value < 0 ? 0 : std::min(value, max());
+    return !std::isfinite(value) || value < 0 ? 0 : std::min(value, max());
 }
 
 void HTMLProgressElement::setValue(double value, ExceptionCode& ec)
 {
-    if (!isfinite(value)) {
+    if (!std::isfinite(value)) {
         ec = NOT_SUPPORTED_ERR;
         return;
     }
@@ -107,12 +117,12 @@ void HTMLProgressElement::setValue(double value, ExceptionCode& ec)
 double HTMLProgressElement::max() const
 {
     double max = parseToDoubleForNumberType(getAttribute(maxAttr));
-    return !isfinite(max) || max <= 0 ? 1 : max;
+    return !std::isfinite(max) || max <= 0 ? 1 : max;
 }
 
 void HTMLProgressElement::setMax(double max, ExceptionCode& ec)
 {
-    if (!isfinite(max)) {
+    if (!std::isfinite(max)) {
         ec = NOT_SUPPORTED_ERR;
         return;
     }
@@ -134,25 +144,33 @@ bool HTMLProgressElement::isDeterminate() const
 void HTMLProgressElement::didElementStateChange()
 {
     m_value->setWidthPercentage(position() * 100);
-    if (renderer() && renderer()->isProgress()) {
-        RenderProgress* render = toRenderProgress(renderer());
+    if (RenderProgress* render = renderProgress()) {
         bool wasDeterminate = render->isDeterminate();
-        renderer()->updateFromElement();
+        render->updateFromElement();
         if (wasDeterminate != isDeterminate())
-            setNeedsStyleRecalc();
+            didAffectSelector(AffectedSelectorIndeterminate);
     }
 }
 
-void HTMLProgressElement::createShadowSubtree()
+void HTMLProgressElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 {
-    ASSERT(!shadow());
+    ASSERT(!m_value);
+
+    RefPtr<ProgressInnerElement> inner = ProgressInnerElement::create(document());
+    root->appendChild(inner);
 
     RefPtr<ProgressBarElement> bar = ProgressBarElement::create(document());
-    m_value = ProgressValueElement::create(document());
+    RefPtr<ProgressValueElement> value = ProgressValueElement::create(document());
+    m_value = value.get();
+    m_value->setWidthPercentage(HTMLProgressElement::IndeterminatePosition * 100);
     bar->appendChild(m_value, ASSERT_NO_EXCEPTION);
 
-    RefPtr<ShadowRoot> root = ShadowRoot::create(this, ShadowRoot::UserAgentShadowRoot, ASSERT_NO_EXCEPTION);
-    root->appendChild(bar, ASSERT_NO_EXCEPTION);
+    inner->appendChild(bar, ASSERT_NO_EXCEPTION);
+}
+
+bool HTMLProgressElement::shouldAppearIndeterminate() const
+{
+    return !isDeterminate();
 }
 
 } // namespace

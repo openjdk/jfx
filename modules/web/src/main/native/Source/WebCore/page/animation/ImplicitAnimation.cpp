@@ -35,7 +35,6 @@
 #include "ImplicitAnimation.h"
 #include "KeyframeAnimation.h"
 #include "RenderBoxModelObject.h"
-#include <wtf/UnusedParam.h>
 
 namespace WebCore {
 
@@ -78,20 +77,17 @@ void ImplicitAnimation::animate(CompositeAnimation*, RenderObject*, const Render
     if (!animatedStyle)
         animatedStyle = RenderStyle::clone(targetStyle);
 
+#if USE(ACCELERATED_COMPOSITING)
     bool needsAnim = CSSPropertyAnimation::blendProperties(this, m_animatingProperty, animatedStyle.get(), m_fromStyle.get(), m_toStyle.get(), progress(1, 0, 0));
     // FIXME: we also need to detect cases where we have to software animate for other reasons,
     // such as a child using inheriting the transform. https://bugs.webkit.org/show_bug.cgi?id=23902
-    if (needsAnim)
-        setAnimating();
-    else {
-#if USE(ACCELERATED_COMPOSITING)
+    if (!needsAnim)
         // If we are running an accelerated animation, set a flag in the style which causes the style
         // to compare as different to any other style. This ensures that changes to the property
         // that is animating are correctly detected during the animation (e.g. when a transition
         // gets interrupted).
         animatedStyle->setIsRunningAcceleratedAnimation();
 #endif
-    }
 
     // Fire the start timeout if needed
     fireAnimationEventsIfNeeded();
@@ -151,22 +147,22 @@ void ImplicitAnimation::onAnimationEnd(double elapsedTime)
     if (keyframeAnim)
         keyframeAnim->setUnanimatedStyle(m_toStyle);
     
-    sendTransitionEvent(eventNames().webkitTransitionEndEvent, elapsedTime);
+    sendTransitionEvent(eventNames().transitionendEvent, elapsedTime);
     endAnimation();
 }
 
 bool ImplicitAnimation::sendTransitionEvent(const AtomicString& eventType, double elapsedTime)
 {
-    if (eventType == eventNames().webkitTransitionEndEvent) {
+    if (eventType == eventNames().transitionendEvent) {
         Document::ListenerType listenerType = Document::TRANSITIONEND_LISTENER;
 
         if (shouldSendEventForListener(listenerType)) {
-            String propertyName = getPropertyName(m_animatingProperty);
+            String propertyName = getPropertyNameString(m_animatingProperty);
                 
             // Dispatch the event
             RefPtr<Element> element = 0;
             if (m_object->node() && m_object->node()->isElementNode())
-                element = static_cast<Element*>(m_object->node());
+                element = toElement(m_object->node());
 
             ASSERT(!element || (element->document() && !element->document()->inPageCache()));
             if (!element)
@@ -176,7 +172,7 @@ bool ImplicitAnimation::sendTransitionEvent(const AtomicString& eventType, doubl
             m_compAnim->animationController()->addEventToDispatch(element, eventType, propertyName, elapsedTime);
 
             // Restore the original (unanimated) style
-            if (eventType == eventNames().webkitTransitionEndEvent && element->renderer())
+            if (eventType == eventNames().transitionendEvent && element->renderer())
                 setNeedsStyleRecalc(element.get());
 
             return true; // Did dispatch an event

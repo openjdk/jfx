@@ -42,7 +42,7 @@ static int contentsX(Frame* frame)
     FrameView* frameView = frame->view();
     if (!frameView)
         return 0;
-    return frameView->scrollX() / frame->pageZoomFactor();
+    return frameView->scrollX() / frame->pageZoomFactor() / frame->frameScaleFactor();
 }
 
 static int contentsY(Frame* frame)
@@ -52,7 +52,7 @@ static int contentsY(Frame* frame)
     FrameView* frameView = frame->view();
     if (!frameView)
         return 0;
-    return frameView->scrollY() / frame->pageZoomFactor();
+    return frameView->scrollY() / frame->pageZoomFactor() / frame->frameScaleFactor();
 }
 
 Touch::Touch(Frame* frame, EventTarget* target, unsigned identifier, int screenX, int screenY, int pageX, int pageY, int radiusX, int radiusY, float rotationAngle, float force)
@@ -73,6 +73,28 @@ Touch::Touch(Frame* frame, EventTarget* target, unsigned identifier, int screenX
     float x = pageX * scaleFactor;
     float y = pageY * scaleFactor;
     m_absoluteLocation = roundedLayoutPoint(FloatPoint(x, y));
+}
+
+Touch::Touch(EventTarget* target, unsigned identifier, int clientX, int clientY, int screenX, int screenY, int pageX, int pageY, int radiusX, int radiusY, float rotationAngle, float force, LayoutPoint absoluteLocation)
+    : m_target(target)
+    , m_identifier(identifier)
+    , m_clientX(clientX)
+    , m_clientY(clientY)
+    , m_screenX(screenX)
+    , m_screenY(screenY)
+    , m_pageX(pageX)
+    , m_pageY(pageY)
+    , m_radiusX(radiusX)
+    , m_radiusY(radiusY)
+    , m_rotationAngle(rotationAngle)
+    , m_force(force)
+    , m_absoluteLocation(absoluteLocation)
+{
+}
+
+PassRefPtr<Touch> Touch::cloneWithNewTarget(EventTarget* eventTarget) const
+{
+    return adoptRef(new Touch(eventTarget, m_identifier, m_clientX, m_clientY, m_screenX, m_screenY, m_pageX, m_pageY, m_radiusX, m_radiusY, m_rotationAngle, m_force, m_absoluteLocation));
 }
 
 } // namespace WebCore

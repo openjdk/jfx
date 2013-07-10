@@ -34,7 +34,7 @@
 #import "DumpRenderTree.h"
 
 // FIXME: This file is ObjC++ only because of this include. :(
-#import "LayoutTestController.h"
+#import "TestRunner.h"
 #import <WebKit/WebViewPrivate.h>
 #import <WebKit/WebTypesInternal.h>
 
@@ -79,7 +79,12 @@ static CFArrayCallBacks NonRetainingArrayCallbacks = {
 
 - (BOOL)isKeyWindow
 {
-    return gLayoutTestController ? gLayoutTestController->windowIsKey() : YES;
+    return gTestRunner ? gTestRunner->windowIsKey() : YES;
+}
+
+- (BOOL)_hasKeyAppearance
+{
+    return [self isKeyWindow];
 }
 
 - (void)keyDown:(NSEvent *)event
@@ -113,6 +118,11 @@ static CFArrayCallBacks NonRetainingArrayCallbacks = {
     // We only ever turn autodisplay on here, because we turn it off before every test.
     if ([[self webView] _isUsingAcceleratedCompositing])
         [self setAutodisplay:YES];
+}
+
+- (CGFloat)backingScaleFactor
+{
+    return 1;
 }
 
 @end

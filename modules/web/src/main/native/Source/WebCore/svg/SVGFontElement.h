@@ -52,7 +52,7 @@ typedef Vector<SVGKerningPair> KerningPairVector;
 
 class SVGMissingGlyphElement;    
 
-class SVGFontElement : public SVGStyledElement
+class SVGFontElement FINAL : public SVGStyledElement
                      , public SVGExternalResourcesRequired {
 public:
     static PassRefPtr<SVGFontElement> create(const QualifiedName&, Document*);

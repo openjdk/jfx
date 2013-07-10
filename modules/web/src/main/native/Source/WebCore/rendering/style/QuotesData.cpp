@@ -1,5 +1,6 @@
 /**
  * Copyright (C) 2011 Nokia Inc.  All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,38 +24,63 @@
 
 namespace WebCore {
 
-QuotesData* QuotesData::create(int stringCount)
+static size_t sizeForQuotesDataWithQuoteCount(unsigned count)
 {
-    char* tmp = new char[sizeof(QuotesData)+sizeof(String)*stringCount];
-    if (!tmp)
-        return 0;
-    QuotesData* ret = new (tmp) QuotesData(stringCount);
-    for (int i = 0; i < stringCount; ++i)
-        new (tmp +sizeof(QuotesData) + sizeof(String)*i) String();
-    return ret;
+    return sizeof(QuotesData) + sizeof(std::pair<String, String>) * count;
 }
 
-bool QuotesData::equal(const QuotesData* quotesData1, const QuotesData* quotesData2)
+PassRefPtr<QuotesData> QuotesData::create(const Vector<std::pair<String, String> >& quotes)
 {
-    if (quotesData1 == quotesData2)
-        return true;
-    if (!quotesData1 || !quotesData2)
-        return false;
-    if (quotesData1->length != quotesData2->length)
-        return false;
-    const String* data1 = quotesData1->data();
-    const String* data2 = quotesData2->data();
-    for (int i = quotesData1->length - 1; i >= 0; --i)
-        if (data1[i] != data2[i])
-            return false;
-    return true;
+    void* slot = fastMalloc(sizeForQuotesDataWithQuoteCount(quotes.size()));
+    return adoptRef(new (NotNull, slot) QuotesData(quotes));
+}
+
+QuotesData::QuotesData(const Vector<std::pair<String, String> >& quotes)
+    : m_quoteCount(quotes.size())
+{
+    for (unsigned i = 0; i < m_quoteCount; ++i)
+        new (NotNull, &m_quotePairs[i]) std::pair<String, String>(quotes[i]);
 }
 
 QuotesData::~QuotesData()
 {
-    String* p = data();
-    for (int i = 0; i < length; ++i)
-        p[i].~String();
+    for (unsigned i = 0; i < m_quoteCount; ++i)
+        m_quotePairs[i].~pair<String, String>();
+}
+
+const String& QuotesData::openQuote(unsigned index) const
+{
+    if (!m_quoteCount)
+        return emptyString();
+
+    if (index >= m_quoteCount)
+        return m_quotePairs[m_quoteCount - 1].first;
+
+    return m_quotePairs[index].first;
+}
+
+const String& QuotesData::closeQuote(unsigned index) const
+{
+    if (!m_quoteCount)
+        return emptyString();
+
+    if (index >= m_quoteCount)
+        return m_quotePairs[m_quoteCount - 1].second;
+
+    return m_quotePairs[index].second;
+}
+
+bool operator==(const QuotesData& a, const QuotesData& b)
+{
+    if (a.m_quoteCount != b.m_quoteCount)
+        return false;
+
+    for (unsigned i = 0; i < a.m_quoteCount; ++i) {
+        if (a.m_quotePairs[i] != b.m_quotePairs[i])
+            return false;
+    }
+
+    return true;
 }
 
 } // namespace WebCore

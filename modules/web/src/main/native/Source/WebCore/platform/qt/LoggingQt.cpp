@@ -18,13 +18,14 @@
 */
 
 #include "config.h"
+#include "InitializeLogging.h"
 #include "Logging.h"
 
 #if !LOG_DISABLED
 
-#include "PlatformString.h"
 #include <QDebug>
 #include <QStringList>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 

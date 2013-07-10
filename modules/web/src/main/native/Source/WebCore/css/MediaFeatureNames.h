@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Computer, Inc.
+ * Copyright (C) 2005, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,8 +25,15 @@
 namespace WebCore {
     namespace MediaFeatureNames {
 
+#if ENABLE(VIEW_MODE_CSS_MEDIA)
+#define CSS_MEDIAQUERY_VIEW_MODE(macro) macro(view_mode, "-webkit-view-mode")
+#else
+#define CSS_MEDIAQUERY_VIEW_MODE(macro)
+#endif
+
 #define CSS_MEDIAQUERY_NAMES_FOR_EACH_MEDIAFEATURE(macro) \
     macro(color, "color") \
+    macro(color_index, "color-index") \
     macro(grid, "grid") \
     macro(monochrome, "monochrome") \
     macro(height, "height") \
@@ -39,6 +46,7 @@ namespace WebCore {
     macro(device_height, "device-height") \
     macro(device_width, "device-width") \
     macro(max_color, "max-color") \
+    macro(max_color_index, "max-color-index") \
     macro(max_aspect_ratio, "max-aspect-ratio") \
     macro(max_device_aspect_ratio, "max-device-aspect-ratio") \
     macro(max_device_pixel_ratio, "-webkit-max-device-pixel-ratio") \
@@ -47,7 +55,9 @@ namespace WebCore {
     macro(max_height, "max-height") \
     macro(max_monochrome, "max-monochrome") \
     macro(max_width, "max-width") \
+    macro(max_resolution, "max-resolution") \
     macro(min_color, "min-color") \
+    macro(min_color_index, "min-color-index") \
     macro(min_aspect_ratio, "min-aspect-ratio") \
     macro(min_device_aspect_ratio, "min-device-aspect-ratio") \
     macro(min_device_pixel_ratio, "-webkit-min-device-pixel-ratio") \
@@ -56,12 +66,14 @@ namespace WebCore {
     macro(min_height, "min-height") \
     macro(min_monochrome, "min-monochrome") \
     macro(min_width, "min-width") \
+    macro(min_resolution, "min-resolution") \
     macro(pointer, "pointer") \
+    macro(resolution, "resolution") \
     macro(transform_2d, "-webkit-transform-2d") \
     macro(transform_3d, "-webkit-transform-3d") \
     macro(transition, "-webkit-transition") \
     macro(animation, "-webkit-animation") \
-    macro(view_mode, "-webkit-view-mode")
+    CSS_MEDIAQUERY_VIEW_MODE(macro)
 
 // end of macro
 

@@ -35,7 +35,6 @@
 #include "MIMETypeRegistry.h"
 #include "SharedBuffer.h"
 #include <ApplicationServices/ApplicationServices.h>
-#include <wtf/UnusedParam.h>
 
 using namespace std;
 
@@ -70,12 +69,10 @@ void sharedBufferRelease(void* info)
 }
 #endif
 
-ImageSource::ImageSource(ImageSource::AlphaOption alphaOption, ImageSource::GammaAndColorProfileOption gammaAndColorProfileOption)
+ImageSource::ImageSource(ImageSource::AlphaOption, ImageSource::GammaAndColorProfileOption)
     : m_decoder(0)
-    // FIXME: m_premultiplyAlpha is ignored in cg at the moment.
-    , m_alphaOption(alphaOption)
-    , m_gammaAndColorProfileOption(gammaAndColorProfileOption)
 {
+    // FIXME: AlphaOption and GammaAndColorProfileOption are ignored.
 }
 
 ImageSource::~ImageSource()
@@ -85,21 +82,11 @@ ImageSource::~ImageSource()
 
 void ImageSource::clear(bool destroyAllFrames, size_t, SharedBuffer* data, bool allDataReceived)
 {
-#if !PLATFORM(MAC) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     // Recent versions of ImageIO discard previously decoded image frames if the client
     // application no longer holds references to them, so there's no need to throw away
     // the decoder unless we're explicitly asked to destroy all of the frames.
-
     if (!destroyAllFrames)
         return;
-#else
-    // Older versions of ImageIO hold references to previously decoded image frames.
-    // There is no API to selectively release some of the frames it is holding, and
-    // if we don't release the frames we use too much memory on large images.
-    // Destroying the decoder is the only way to release previous frames.
-
-    UNUSED_PARAM(destroyAllFrames);
-#endif
 
     if (m_decoder) {
         CFRelease(m_decoder);
@@ -146,7 +133,7 @@ void ImageSource::setData(SharedBuffer* data, bool allDataReceived)
         m_decoder = CGImageSourceCreateIncremental(0);
     // On Mac the NSData inside the SharedBuffer can be secretly appended to without the SharedBuffer's knowledge.  We use SharedBuffer's ability
     // to wrap itself inside CFData to get around this, ensuring that ImageIO is really looking at the SharedBuffer.
-    RetainPtr<CFDataRef> cfData(AdoptCF, data->createCFData());
+    RetainPtr<CFDataRef> cfData = adoptCF(data->createCFData());
     CGImageSourceUpdateData(m_decoder, cfData.get(), allDataReceived);
 #else
     if (!m_decoder) {
@@ -165,7 +152,7 @@ void ImageSource::setData(SharedBuffer* data, bool allDataReceived)
     // does not provide a way to lock down the byte pointer and guarantee that it won't move, which
     // is a requirement for using the GetBytePointer callback.
     CGDataProviderDirectCallbacks providerCallbacks = { 0, 0, 0, sharedBufferGetBytesAtPosition, sharedBufferRelease };
-    RetainPtr<CGDataProviderRef> dataProvider(AdoptCF, CGDataProviderCreateDirect(data, data->size(), &providerCallbacks));
+    RetainPtr<CGDataProviderRef> dataProvider = adoptCF(CGDataProviderCreateDirect(data, data->size(), &providerCallbacks));
     CGImageSourceUpdateDataProvider(m_decoder, dataProvider.get(), allDataReceived);
 #endif
 }
@@ -185,7 +172,7 @@ bool ImageSource::isSizeAvailable()
 
     // Ragnaros yells: TOO SOON! You have awakened me TOO SOON, Executus!
     if (imageSourceStatus >= kCGImageStatusIncomplete) {
-        RetainPtr<CFDictionaryRef> image0Properties(AdoptCF, CGImageSourceCopyPropertiesAtIndex(m_decoder, 0, imageSourceOptions(SkipMetadata)));
+        RetainPtr<CFDictionaryRef> image0Properties = adoptCF(CGImageSourceCopyPropertiesAtIndex(m_decoder, 0, imageSourceOptions(SkipMetadata)));
         if (image0Properties) {
             CFNumberRef widthNumber = (CFNumberRef)CFDictionaryGetValue(image0Properties.get(), kCGImagePropertyPixelWidth);
             CFNumberRef heightNumber = (CFNumberRef)CFDictionaryGetValue(image0Properties.get(), kCGImagePropertyPixelHeight);
@@ -196,9 +183,21 @@ bool ImageSource::isSizeAvailable()
     return result;
 }
 
+static ImageOrientation orientationFromProperties(CFDictionaryRef imageProperties)
+{
+    ASSERT(imageProperties);
+    CFNumberRef orientationProperty = (CFNumberRef)CFDictionaryGetValue(imageProperties, kCGImagePropertyOrientation);
+    if (!orientationProperty)
+        return DefaultImageOrientation;
+
+    int exifValue;
+    CFNumberGetValue(orientationProperty, kCFNumberIntType, &exifValue);
+    return ImageOrientation::fromEXIFValue(exifValue);
+}
+
 IntSize ImageSource::frameSizeAtIndex(size_t index, RespectImageOrientationEnum shouldRespectOrientation) const
 {
-    RetainPtr<CFDictionaryRef> properties(AdoptCF, CGImageSourceCopyPropertiesAtIndex(m_decoder, index, imageSourceOptions(SkipMetadata)));
+    RetainPtr<CFDictionaryRef> properties = adoptCF(CGImageSourceCopyPropertiesAtIndex(m_decoder, index, imageSourceOptions(SkipMetadata)));
 
     if (!properties)
         return IntSize();
@@ -211,7 +210,7 @@ IntSize ImageSource::frameSizeAtIndex(size_t index, RespectImageOrientationEnum 
     if (num)
         CFNumberGetValue(num, kCFNumberIntType, &h);
 
-    if ((shouldRespectOrientation == RespectImageOrientation) && orientationAtIndex(index).usesWidthAsHeight())
+    if ((shouldRespectOrientation == RespectImageOrientation) && orientationFromProperties(properties.get()).usesWidthAsHeight())
         return IntSize(h, w);
 
     return IntSize(w, h);
@@ -219,17 +218,11 @@ IntSize ImageSource::frameSizeAtIndex(size_t index, RespectImageOrientationEnum 
 
 ImageOrientation ImageSource::orientationAtIndex(size_t index) const
 {
-    RetainPtr<CFDictionaryRef> properties(AdoptCF, CGImageSourceCopyPropertiesAtIndex(m_decoder, index, imageSourceOptions(SkipMetadata)));
+    RetainPtr<CFDictionaryRef> properties = adoptCF(CGImageSourceCopyPropertiesAtIndex(m_decoder, index, imageSourceOptions(SkipMetadata)));
     if (!properties)
         return DefaultImageOrientation;
 
-    CFNumberRef orientationProperty = (CFNumberRef)CFDictionaryGetValue(properties.get(), kCGImagePropertyOrientation);
-    if (!orientationProperty)
-        return DefaultImageOrientation;
-
-    int exifValue;
-    CFNumberGetValue(orientationProperty, kCFNumberIntType, &exifValue);
-    return ImageOrientation::fromEXIFValue(exifValue);
+    return orientationFromProperties(properties.get());
 }
 
 IntSize ImageSource::size(RespectImageOrientationEnum shouldRespectOrientation) const
@@ -239,7 +232,7 @@ IntSize ImageSource::size(RespectImageOrientationEnum shouldRespectOrientation) 
 
 bool ImageSource::getHotSpot(IntPoint& hotSpot) const
 {
-    RetainPtr<CFDictionaryRef> properties(AdoptCF, CGImageSourceCopyPropertiesAtIndex(m_decoder, 0, imageSourceOptions(SkipMetadata)));
+    RetainPtr<CFDictionaryRef> properties = adoptCF(CGImageSourceCopyPropertiesAtIndex(m_decoder, 0, imageSourceOptions(SkipMetadata)));
     if (!properties)
         return false;
 
@@ -276,7 +269,7 @@ int ImageSource::repetitionCount()
     if (!initialized())
         return result;
 
-    RetainPtr<CFDictionaryRef> properties(AdoptCF, CGImageSourceCopyProperties(m_decoder, imageSourceOptions(SkipMetadata)));
+    RetainPtr<CFDictionaryRef> properties = adoptCF(CGImageSourceCopyProperties(m_decoder, imageSourceOptions(SkipMetadata)));
     if (properties) {
         CFDictionaryRef gifProperties = (CFDictionaryRef)CFDictionaryGetValue(properties.get(), kCGImagePropertyGIFDictionary);
         if (gifProperties) {
@@ -304,7 +297,7 @@ CGImageRef ImageSource::createFrameAtIndex(size_t index)
     if (!initialized())
         return 0;
 
-    RetainPtr<CGImageRef> image(AdoptCF, CGImageSourceCreateImageAtIndex(m_decoder, index, imageSourceOptions(SkipMetadata)));
+    RetainPtr<CGImageRef> image = adoptCF(CGImageSourceCreateImageAtIndex(m_decoder, index, imageSourceOptions(SkipMetadata)));
     CFStringRef imageUTI = CGImageSourceGetType(m_decoder);
     static const CFStringRef xbmUTI = CFSTR("public.xbitmap-image");
     if (!imageUTI || !CFEqual(imageUTI, xbmUTI))
@@ -312,7 +305,7 @@ CGImageRef ImageSource::createFrameAtIndex(size_t index)
     
     // If it is an xbm image, mask out all the white areas to render them transparent.
     const CGFloat maskingColors[6] = {255, 255,  255, 255, 255, 255};
-    RetainPtr<CGImageRef> maskedImage(AdoptCF, CGImageCreateWithMaskingColors(image.get(), maskingColors));
+    RetainPtr<CGImageRef> maskedImage = adoptCF(CGImageCreateWithMaskingColors(image.get(), maskingColors));
     if (!maskedImage)
         return image.leakRef();
 
@@ -345,7 +338,7 @@ float ImageSource::frameDurationAtIndex(size_t index)
         return 0;
 
     float duration = 0;
-    RetainPtr<CFDictionaryRef> properties(AdoptCF, CGImageSourceCopyPropertiesAtIndex(m_decoder, index, imageSourceOptions(SkipMetadata)));
+    RetainPtr<CFDictionaryRef> properties = adoptCF(CGImageSourceCopyPropertiesAtIndex(m_decoder, index, imageSourceOptions(SkipMetadata)));
     if (properties) {
         CFDictionaryRef typeProperties = (CFDictionaryRef)CFDictionaryGetValue(properties.get(), kCGImagePropertyGIFDictionary);
         if (typeProperties) {
@@ -368,10 +361,13 @@ float ImageSource::frameDurationAtIndex(size_t index)
     return duration;
 }
 
-bool ImageSource::frameHasAlphaAtIndex(size_t)
+bool ImageSource::frameHasAlphaAtIndex(size_t index)
 {
     if (!m_decoder)
-        return false;
+        return false; // FIXME: why doesn't this return true?
+
+    if (!frameIsCompleteAtIndex(index))
+        return true;
 
     CFStringRef imageType = CGImageSourceGetType(m_decoder);
 
@@ -384,6 +380,12 @@ bool ImageSource::frameHasAlphaAtIndex(size_t)
     // FIXME: Could maybe return false for a GIF Frame if we have enough info in the GIF properties dictionary
     // to determine whether or not a transparent color was defined.
     return true;
+}
+
+unsigned ImageSource::frameBytesAtIndex(size_t index) const
+{
+    IntSize frameSize = frameSizeAtIndex(index, RespectImageOrientation);
+    return frameSize.width() * frameSize.height() * 4;
 }
 
 }

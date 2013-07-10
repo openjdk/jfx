@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006, 2008, 2012 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -52,25 +52,27 @@ namespace JSC {
     // FIXME: Rename to PropertyNameArrayBuilder.
     class PropertyNameArray {
     public:
-        PropertyNameArray(JSGlobalData* globalData)
+        PropertyNameArray(VM* vm)
             : m_data(PropertyNameArrayData::create())
-            , m_globalData(globalData)
-            , m_shouldCache(true)
+            , m_vm(vm)
+            , m_numCacheableSlots(0)
+            , m_baseObject(0)
         {
         }
 
         PropertyNameArray(ExecState* exec)
             : m_data(PropertyNameArrayData::create())
-            , m_globalData(&exec->globalData())
-            , m_shouldCache(true)
+            , m_vm(&exec->vm())
+            , m_numCacheableSlots(0)
+            , m_baseObject(0)
         {
         }
 
-        JSGlobalData* globalData() { return m_globalData; }
+        VM* vm() { return m_vm; }
 
         void add(const Identifier& identifier) { add(identifier.impl()); }
         JS_EXPORT_PRIVATE void add(StringImpl*);
-        void addKnownUnique(StringImpl* identifier) { m_data->propertyNameVector().append(Identifier(m_globalData, identifier)); }
+        void addKnownUnique(StringImpl* identifier) { m_data->propertyNameVector().append(Identifier(m_vm, identifier)); }
 
         Identifier& operator[](unsigned i) { return m_data->propertyNameVector()[i]; }
         const Identifier& operator[](unsigned i) const { return m_data->propertyNameVector()[i]; }
@@ -85,13 +87,28 @@ namespace JSC {
         const_iterator begin() const { return m_data->propertyNameVector().begin(); }
         const_iterator end() const { return m_data->propertyNameVector().end(); }
 
+        size_t numCacheableSlots() const { return m_numCacheableSlots; }
+        void setNumCacheableSlotsForObject(JSObject* object, size_t numCacheableSlots)
+        {
+            if (object != m_baseObject)
+                return;
+            m_numCacheableSlots = numCacheableSlots;
+        }
+        void setBaseObject(JSObject* object)
+        {
+            if (m_baseObject)
+                return;
+            m_baseObject = object;
+        }
+
     private:
         typedef HashSet<StringImpl*, PtrHash<StringImpl*> > IdentifierSet;
 
         RefPtr<PropertyNameArrayData> m_data;
         IdentifierSet m_set;
-        JSGlobalData* m_globalData;
-        bool m_shouldCache;
+        VM* m_vm;
+        size_t m_numCacheableSlots;
+        JSObject* m_baseObject;
     };
 
 } // namespace JSC

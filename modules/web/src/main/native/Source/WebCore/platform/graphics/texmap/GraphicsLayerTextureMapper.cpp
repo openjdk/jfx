@@ -20,43 +20,54 @@
 #include "config.h"
 #include "GraphicsLayerTextureMapper.h"
 
-#include "TextureMapperLayer.h"
+#include "GraphicsContext.h"
+#include "GraphicsLayerAnimation.h"
+#include "GraphicsLayerFactory.h"
+#include "ImageBuffer.h"
+#include <wtf/CurrentTime.h>
+
+#if USE(TEXTURE_MAPPER)
 
 namespace WebCore {
 
+TextureMapperLayer* toTextureMapperLayer(GraphicsLayer* layer)
+{
+    return layer ? toGraphicsLayerTextureMapper(layer)->layer() : 0;
+}
+
+PassOwnPtr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerFactory* factory, GraphicsLayerClient* client)
+{
+    if (!factory)
+        return adoptPtr(new GraphicsLayerTextureMapper(client));
+
+    return factory->createGraphicsLayer(client);
+}
+
 PassOwnPtr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerClient* client)
 {
-#if PLATFORM(QT) || PLATFORM(GTK) // added by JAVA port, see RT-22913
-    if (s_graphicsLayerFactory)
-        return (*s_graphicsLayerFactory)(client);
-#endif
     return adoptPtr(new GraphicsLayerTextureMapper(client));
 }
 
 GraphicsLayerTextureMapper::GraphicsLayerTextureMapper(GraphicsLayerClient* client)
     : GraphicsLayer(client)
     , m_layer(adoptPtr(new TextureMapperLayer()))
-    , m_changeMask(0)
+    , m_compositedNativeImagePtr(0)
+    , m_changeMask(NoChanges)
     , m_needsDisplay(false)
     , m_fixedToViewport(false)
+    , m_debugBorderWidth(0)
     , m_contentsLayer(0)
-    , m_animationStartedTimer(this, &GraphicsLayerTextureMapper::animationStartedTimerFired)
+    , m_animationStartTime(0)
+    , m_isScrollable(false)
 {
 }
 
-void GraphicsLayerTextureMapper::notifyChange(TextureMapperLayer::ChangeMask changeMask)
+void GraphicsLayerTextureMapper::notifyChange(ChangeMask changeMask)
 {
     m_changeMask |= changeMask;
     if (!client())
         return;
-    client()->notifySyncRequired(this);
-}
-
-void GraphicsLayerTextureMapper::didSynchronize()
-{
-    m_changeMask = 0;
-    m_needsDisplay = false;
-    m_needsDisplayRect = IntRect();
+    client()->notifyFlushRequired(this);
 }
 
 void GraphicsLayerTextureMapper::setName(const String& name)
@@ -78,50 +89,52 @@ void GraphicsLayerTextureMapper::willBeDestroyed()
 */
 void GraphicsLayerTextureMapper::setNeedsDisplay()
 {
+    if (!drawsContent())
+        return;
+
     m_needsDisplay = true;
-    notifyChange(TextureMapperLayer::DisplayChange);
+    notifyChange(DisplayChange);
+    addRepaintRect(FloatRect(FloatPoint(), m_size));
 }
 
 /* \reimp (GraphicsLayer.h)
 */
 void GraphicsLayerTextureMapper::setContentsNeedsDisplay()
 {
-    if (m_image)
-        setContentsToImage(m_image.get());
-    notifyChange(TextureMapperLayer::DisplayChange);
+    notifyChange(DisplayChange);
+    addRepaintRect(contentsRect());
 }
 
 /* \reimp (GraphicsLayer.h)
 */
 void GraphicsLayerTextureMapper::setNeedsDisplayInRect(const FloatRect& rect)
 {
+    if (!drawsContent())
+        return;
+
     if (m_needsDisplay)
         return;
     m_needsDisplayRect.unite(rect);
-    notifyChange(TextureMapperLayer::DisplayChange);
-}
-
-/* \reimp (GraphicsLayer.h)
-*/
-void GraphicsLayerTextureMapper::setParent(GraphicsLayer* layer)
-{
-    notifyChange(TextureMapperLayer::ParentChange);
-    GraphicsLayer::setParent(layer);
+    notifyChange(DisplayChange);
+    addRepaintRect(rect);
 }
 
 /* \reimp (GraphicsLayer.h)
 */
 bool GraphicsLayerTextureMapper::setChildren(const Vector<GraphicsLayer*>& children)
 {
-    notifyChange(TextureMapperLayer::ChildrenChange);
-    return GraphicsLayer::setChildren(children);
+    if (GraphicsLayer::setChildren(children)) {
+        notifyChange(ChildrenChange);
+        return true;
+    }
+    return false;
 }
 
 /* \reimp (GraphicsLayer.h)
 */
 void GraphicsLayerTextureMapper::addChild(GraphicsLayer* layer)
 {
-    notifyChange(TextureMapperLayer::ChildrenChange);
+    notifyChange(ChildrenChange);
     GraphicsLayer::addChild(layer);
 }
 
@@ -130,7 +143,7 @@ void GraphicsLayerTextureMapper::addChild(GraphicsLayer* layer)
 void GraphicsLayerTextureMapper::addChildAtIndex(GraphicsLayer* layer, int index)
 {
     GraphicsLayer::addChildAtIndex(layer, index);
-    notifyChange(TextureMapperLayer::ChildrenChange);
+    notifyChange(ChildrenChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -138,7 +151,7 @@ void GraphicsLayerTextureMapper::addChildAtIndex(GraphicsLayer* layer, int index
 void GraphicsLayerTextureMapper::addChildAbove(GraphicsLayer* layer, GraphicsLayer* sibling)
 {
      GraphicsLayer::addChildAbove(layer, sibling);
-     notifyChange(TextureMapperLayer::ChildrenChange);
+    notifyChange(ChildrenChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -146,7 +159,7 @@ void GraphicsLayerTextureMapper::addChildAbove(GraphicsLayer* layer, GraphicsLay
 void GraphicsLayerTextureMapper::addChildBelow(GraphicsLayer* layer, GraphicsLayer* sibling)
 {
     GraphicsLayer::addChildBelow(layer, sibling);
-    notifyChange(TextureMapperLayer::ChildrenChange);
+    notifyChange(ChildrenChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -154,20 +167,10 @@ void GraphicsLayerTextureMapper::addChildBelow(GraphicsLayer* layer, GraphicsLay
 bool GraphicsLayerTextureMapper::replaceChild(GraphicsLayer* oldChild, GraphicsLayer* newChild)
 {
     if (GraphicsLayer::replaceChild(oldChild, newChild)) {
-        notifyChange(TextureMapperLayer::ChildrenChange);
+        notifyChange(ChildrenChange);
         return true;
     }
     return false;
-}
-
-/* \reimp (GraphicsLayer.h)
-*/
-void GraphicsLayerTextureMapper::removeFromParent()
-{
-    if (!parent())
-        return;
-    notifyChange(TextureMapperLayer::ParentChange);
-    GraphicsLayer::removeFromParent();
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -177,7 +180,12 @@ void GraphicsLayerTextureMapper::setMaskLayer(GraphicsLayer* value)
     if (value == maskLayer())
         return;
     GraphicsLayer::setMaskLayer(value);
-    notifyChange(TextureMapperLayer::MaskLayerChange);
+    notifyChange(MaskLayerChange);
+
+    if (!value)
+        return;
+    value->setSize(size());
+    value->setContentsVisible(contentsAreVisible());
 }
 
 
@@ -188,7 +196,7 @@ void GraphicsLayerTextureMapper::setReplicatedByLayer(GraphicsLayer* value)
     if (value == replicaLayer())
         return;
     GraphicsLayer::setReplicatedByLayer(value);
-    notifyChange(TextureMapperLayer::ReplicaLayerChange);
+    notifyChange(ReplicaLayerChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -198,7 +206,7 @@ void GraphicsLayerTextureMapper::setPosition(const FloatPoint& value)
     if (value == position())
         return;
     GraphicsLayer::setPosition(value);
-    notifyChange(TextureMapperLayer::PositionChange);
+    notifyChange(PositionChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -208,7 +216,7 @@ void GraphicsLayerTextureMapper::setAnchorPoint(const FloatPoint3D& value)
     if (value == anchorPoint())
         return;
     GraphicsLayer::setAnchorPoint(value);
-    notifyChange(TextureMapperLayer::AnchorPointChange);
+    notifyChange(AnchorPointChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -219,7 +227,9 @@ void GraphicsLayerTextureMapper::setSize(const FloatSize& value)
         return;
 
     GraphicsLayer::setSize(value);
-    notifyChange(TextureMapperLayer::SizeChange);
+    if (maskLayer())
+        maskLayer()->setSize(value);
+    notifyChange(SizeChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -230,7 +240,7 @@ void GraphicsLayerTextureMapper::setTransform(const TransformationMatrix& value)
         return;
 
     GraphicsLayer::setTransform(value);
-    notifyChange(TextureMapperLayer::TransformChange);
+    notifyChange(TransformChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -240,7 +250,7 @@ void GraphicsLayerTextureMapper::setChildrenTransform(const TransformationMatrix
     if (value == childrenTransform())
         return;
     GraphicsLayer::setChildrenTransform(value);
-    notifyChange(TextureMapperLayer::ChildrenTransformChange);
+    notifyChange(ChildrenTransformChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -250,7 +260,7 @@ void GraphicsLayerTextureMapper::setPreserves3D(bool value)
     if (value == preserves3D())
         return;
     GraphicsLayer::setPreserves3D(value);
-    notifyChange(TextureMapperLayer::Preserves3DChange);
+    notifyChange(Preserves3DChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -260,7 +270,7 @@ void GraphicsLayerTextureMapper::setMasksToBounds(bool value)
     if (value == masksToBounds())
         return;
     GraphicsLayer::setMasksToBounds(value);
-    notifyChange(TextureMapperLayer::MasksToBoundsChange);
+    notifyChange(MasksToBoundsChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -269,8 +279,23 @@ void GraphicsLayerTextureMapper::setDrawsContent(bool value)
 {
     if (value == drawsContent())
         return;
-    notifyChange(TextureMapperLayer::DrawsContentChange);
     GraphicsLayer::setDrawsContent(value);
+    notifyChange(DrawsContentChange);
+
+    if (value)
+        setNeedsDisplay();
+}
+
+/* \reimp (GraphicsLayer.h)
+*/
+void GraphicsLayerTextureMapper::setContentsVisible(bool value)
+{
+    if (value == contentsAreVisible())
+        return;
+    notifyChange(ContentsVisibleChange);
+    GraphicsLayer::setContentsVisible(value);
+    if (maskLayer())
+        maskLayer()->setContentsVisible(value);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -279,7 +304,7 @@ void GraphicsLayerTextureMapper::setContentsOpaque(bool value)
 {
     if (value == contentsOpaque())
         return;
-    notifyChange(TextureMapperLayer::ContentsOpaqueChange);
+    notifyChange(ContentsOpaqueChange);
     GraphicsLayer::setContentsOpaque(value);
 }
 
@@ -290,7 +315,7 @@ void GraphicsLayerTextureMapper::setBackfaceVisibility(bool value)
     if (value == backfaceVisibility())
         return;
     GraphicsLayer::setBackfaceVisibility(value);
-    notifyChange(TextureMapperLayer::BackfaceVisibilityChange);
+    notifyChange(BackfaceVisibilityChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -300,7 +325,7 @@ void GraphicsLayerTextureMapper::setOpacity(float value)
     if (value == opacity())
         return;
     GraphicsLayer::setOpacity(value);
-    notifyChange(TextureMapperLayer::OpacityChange);
+    notifyChange(OpacityChange);
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -310,26 +335,45 @@ void GraphicsLayerTextureMapper::setContentsRect(const IntRect& value)
     if (value == contentsRect())
         return;
     GraphicsLayer::setContentsRect(value);
-    notifyChange(TextureMapperLayer::ContentsRectChange);
+    notifyChange(ContentsRectChange);
 }
+
+void GraphicsLayerTextureMapper::setContentsToSolidColor(const Color& color)
+{
+    if (color == m_solidColor)
+        return;
+
+    m_solidColor = color;
+    notifyChange(BackgroundColorChange);
+}
+
 
 /* \reimp (GraphicsLayer.h)
 */
 void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
 {
-    if (image == m_image)
+    if (image) {
+        // Make the decision about whether the image has changed.
+        // This code makes the assumption that pointer equality on a NativeImagePtr is a valid way to tell if the image is changed.
+        // This assumption is true in Qt, GTK and EFL.
+        NativeImagePtr newNativeImagePtr = image->nativeImageForCurrentFrame();
+        if (!newNativeImagePtr)
         return;
 
-    m_image = image;
-    if (m_image) {
-        RefPtr<TextureMapperTiledBackingStore> backingStore = TextureMapperTiledBackingStore::create();
-        backingStore->setContentsToImage(image);
-        m_compositedImage = backingStore;
-    } else
+        if (newNativeImagePtr == m_compositedNativeImagePtr)
+            return;
+
+        m_compositedNativeImagePtr = newNativeImagePtr;
+        if (!m_compositedImage)
+            m_compositedImage = TextureMapperTiledBackingStore::create();
+        m_compositedImage->setContentsToImage(image);
+    } else {
+        m_compositedNativeImagePtr = 0;
         m_compositedImage = 0;
+    }
 
     setContentsToMedia(m_compositedImage.get());
-    notifyChange(TextureMapperLayer::ContentChange);
+    notifyChange(ContentChange);
     GraphicsLayer::setContentsToImage(image);
 }
 
@@ -339,22 +383,243 @@ void GraphicsLayerTextureMapper::setContentsToMedia(TextureMapperPlatformLayer* 
         return;
 
     GraphicsLayer::setContentsToMedia(media);
-    notifyChange(TextureMapperLayer::ContentChange);
+    notifyChange(ContentChange);
     m_contentsLayer = media;
+
+    m_contentsLayer->setClient(this);
+}
+
+void GraphicsLayerTextureMapper::setShowDebugBorder(bool show)
+{
+    if (isShowingDebugBorder() == show)
+        return;
+
+    GraphicsLayer::setShowDebugBorder(show);
+    notifyChange(DebugVisualsChange);
+}
+
+void GraphicsLayerTextureMapper::setShowRepaintCounter(bool show)
+{
+    if (isShowingRepaintCounter() == show)
+        return;
+
+    GraphicsLayer::setShowRepaintCounter(show);
+    notifyChange(DebugVisualsChange);
+}
+
+void GraphicsLayerTextureMapper::didCommitScrollOffset(const IntSize& offset)
+{
+    if (offset.isZero())
+        return;
+
+    m_committedScrollOffset = offset;
+    notifyChange(CommittedScrollOffsetChange);
+}
+
+void GraphicsLayerTextureMapper::setIsScrollable(bool isScrollable)
+{
+    if (m_isScrollable == isScrollable)
+        return;
+
+    m_isScrollable = isScrollable;
+    notifyChange(IsScrollableChange);
 }
 
 /* \reimp (GraphicsLayer.h)
 */
-void GraphicsLayerTextureMapper::syncCompositingStateForThisLayerOnly()
+void GraphicsLayerTextureMapper::flushCompositingStateForThisLayerOnly()
 {
-    m_layer->syncCompositingState(this);
+    prepareBackingStoreIfNeeded();
+    commitLayerChanges();
+    m_layer->syncAnimations();
+    updateBackingStoreIfNeeded();
+}
+
+void GraphicsLayerTextureMapper::prepareBackingStoreIfNeeded()
+{
+    if (!shouldHaveBackingStore()) {
+        m_backingStore.clear();
+        m_changeMask |= BackingStoreChange;
+    } else {
+        if (!m_backingStore) {
+            m_backingStore = TextureMapperTiledBackingStore::create();
+            m_changeMask |= BackingStoreChange;
+        }
+    }
+
+    updateDebugBorderAndRepaintCount();
+}
+
+void GraphicsLayerTextureMapper::updateDebugBorderAndRepaintCount()
+{
+    if (isShowingDebugBorder())
+        updateDebugIndicators();
+
+    // When this has its own backing store (e.g. Qt WK1), update the repaint count before calling TextureMapperLayer::flushCompositingStateForThisLayerOnly().
+    bool needsToRepaint = shouldHaveBackingStore() && (m_needsDisplay || !m_needsDisplayRect.isEmpty());
+    if (isShowingRepaintCounter() && needsToRepaint) {
+        incrementRepaintCount();
+        m_changeMask |= RepaintCountChange;
+    }
+}
+
+void GraphicsLayerTextureMapper::setDebugBorder(const Color& color, float width)
+{
+    m_debugBorderColor = color;
+    m_debugBorderWidth = width;
+    m_changeMask |= DebugVisualsChange;
+}
+
+static void toTextureMapperLayerVector(const Vector<GraphicsLayer*>& layers, Vector<TextureMapperLayer*>& texmapLayers)
+{
+    texmapLayers.reserveCapacity(layers.size());
+    for (size_t i = 0; i < layers.size(); ++i)
+        texmapLayers.append(toTextureMapperLayer(layers[i]));
+}
+
+void GraphicsLayerTextureMapper::commitLayerChanges()
+{
+    if (m_changeMask == NoChanges)
+        return;
+
+    if (m_changeMask & ChildrenChange) {
+        Vector<TextureMapperLayer*> textureMapperLayerChildren;
+        toTextureMapperLayerVector(children(), textureMapperLayerChildren);
+        m_layer->setChildren(textureMapperLayerChildren);
+    }
+
+    if (m_changeMask & MaskLayerChange)
+        m_layer->setMaskLayer(toTextureMapperLayer(maskLayer()));
+
+    if (m_changeMask & ReplicaLayerChange)
+        m_layer->setReplicaLayer(toTextureMapperLayer(replicaLayer()));
+
+    if (m_changeMask & PositionChange)
+        m_layer->setPosition(position());
+
+    if (m_changeMask & AnchorPointChange)
+        m_layer->setAnchorPoint(anchorPoint());
+
+    if (m_changeMask & SizeChange)
+        m_layer->setSize(size());
+
+    if (m_changeMask & TransformChange)
+        m_layer->setTransform(transform());
+
+    if (m_changeMask & ChildrenTransformChange)
+        m_layer->setChildrenTransform(childrenTransform());
+
+    if (m_changeMask & Preserves3DChange)
+        m_layer->setPreserves3D(preserves3D());
+
+    if (m_changeMask & ContentsRectChange)
+        m_layer->setContentsRect(contentsRect());
+
+    if (m_changeMask & MasksToBoundsChange)
+        m_layer->setMasksToBounds(masksToBounds());
+
+    if (m_changeMask & DrawsContentChange)
+        m_layer->setDrawsContent(drawsContent());
+
+    if (m_changeMask & ContentsVisibleChange)
+        m_layer->setContentsVisible(contentsAreVisible());
+
+    if (m_changeMask & ContentsOpaqueChange)
+        m_layer->setContentsOpaque(contentsOpaque());
+
+    if (m_changeMask & BackfaceVisibilityChange)
+        m_layer->setBackfaceVisibility(backfaceVisibility());
+
+    if (m_changeMask & OpacityChange)
+        m_layer->setOpacity(opacity());
+
+    if (m_changeMask & BackgroundColorChange)
+        m_layer->setSolidColor(solidColor());
+
+#if ENABLE(CSS_FILTERS)
+    if (m_changeMask & FilterChange)
+        m_layer->setFilters(filters());
+#endif
+
+    if (m_changeMask & BackingStoreChange)
+        m_layer->setBackingStore(m_backingStore);
+
+    if (m_changeMask & DebugVisualsChange)
+        m_layer->setDebugVisuals(isShowingDebugBorder(), debugBorderColor(), debugBorderWidth(), isShowingRepaintCounter());
+
+    if (m_changeMask & RepaintCountChange)
+        m_layer->setRepaintCount(repaintCount());
+
+    if (m_changeMask & ContentChange)
+        m_layer->setContentsLayer(platformLayer());
+
+    if (m_changeMask & AnimationChange)
+        m_layer->setAnimations(m_animations);
+
+    if (m_changeMask & AnimationStarted)
+        client()->notifyAnimationStarted(this, m_animationStartTime);
+
+    if (m_changeMask & FixedToViewporChange)
+        m_layer->setFixedToViewport(fixedToViewport());
+
+    if (m_changeMask & IsScrollableChange)
+        m_layer->setIsScrollable(isScrollable());
+
+    if (m_changeMask & CommittedScrollOffsetChange)
+        m_layer->didCommitScrollOffset(m_committedScrollOffset);
+
+    m_changeMask = NoChanges;
 }
 
 /* \reimp (GraphicsLayer.h)
 */
-void GraphicsLayerTextureMapper::syncCompositingState(const FloatRect&)
+void GraphicsLayerTextureMapper::flushCompositingState(const FloatRect& rect)
 {
-    m_layer->syncCompositingState(this, TextureMapperLayer::TraverseDescendants);
+    if (!m_layer->textureMapper())
+        return;
+
+    flushCompositingStateForThisLayerOnly();
+
+    if (maskLayer())
+        maskLayer()->flushCompositingState(rect);
+    if (replicaLayer())
+        replicaLayer()->flushCompositingState(rect);
+    for (size_t i = 0; i < children().size(); ++i)
+        children()[i]->flushCompositingState(rect);
+}
+
+void GraphicsLayerTextureMapper::updateBackingStoreIfNeeded()
+{
+    TextureMapper* textureMapper = m_layer->textureMapper();
+    if (!textureMapper)
+        return;
+
+    if (!shouldHaveBackingStore()) {
+        ASSERT(!m_backingStore);
+        return;
+    }
+    ASSERT(m_backingStore);
+
+    IntRect dirtyRect = enclosingIntRect(FloatRect(FloatPoint::zero(), m_size));
+    if (!m_needsDisplay)
+        dirtyRect.intersect(enclosingIntRect(m_needsDisplayRect));
+    if (dirtyRect.isEmpty())
+        return;
+
+#if PLATFORM(QT) && !defined(QT_NO_DYNAMIC_CAST)
+    ASSERT(dynamic_cast<TextureMapperTiledBackingStore*>(m_backingStore.get()));
+#endif
+    TextureMapperTiledBackingStore* backingStore = static_cast<TextureMapperTiledBackingStore*>(m_backingStore.get());
+
+    backingStore->updateContents(textureMapper, this, m_size, dirtyRect, BitmapTexture::UpdateCanModifyOriginalImageData);
+
+    m_needsDisplay = false;
+    m_needsDisplayRect = IntRect();
+}
+
+bool GraphicsLayerTextureMapper::shouldHaveBackingStore() const
+{
+    return drawsContent() && contentsAreVisible() && !m_size.isEmpty();
 }
 
 bool GraphicsLayerTextureMapper::addAnimation(const KeyframeValueList& valueList, const IntSize& boxSize, const Animation* anim, const String& keyframesName, double timeOffset)
@@ -370,11 +635,24 @@ bool GraphicsLayerTextureMapper::addAnimation(const KeyframeValueList& valueList
     if (valueList.property() == AnimatedPropertyWebkitTransform)
         listsMatch = validateTransformOperations(valueList, hasBigRotation) >= 0;
 
-    m_animations.add(keyframesName, GraphicsLayerAnimation(valueList, boxSize, anim, timeOffset, listsMatch));
-    notifyChange(TextureMapperLayer::AnimationChange);
-    m_animationStartedTimer.startOneShot(0);
+    const double currentTime = WTF::currentTime();
+    m_animations.add(GraphicsLayerAnimation(keyframesName, valueList, boxSize, anim, currentTime - timeOffset, listsMatch));
+    // m_animationStartTime is the time of the first real frame of animation, now or delayed by a negative offset.
+    if (timeOffset > 0)
+        m_animationStartTime = currentTime;
+    else
+        m_animationStartTime = currentTime - timeOffset;
+    notifyChange(AnimationChange);
+    notifyChange(AnimationStarted);
     return true;
 }
+
+void GraphicsLayerTextureMapper::setAnimations(const GraphicsLayerAnimations& animations)
+{
+    m_animations = animations;
+    notifyChange(AnimationChange);
+}
+
 
 void GraphicsLayerTextureMapper::pauseAnimation(const String& animationName, double timeOffset)
 {
@@ -386,22 +664,28 @@ void GraphicsLayerTextureMapper::removeAnimation(const String& animationName)
     m_animations.remove(animationName);
 }
 
-void GraphicsLayerTextureMapper::animationStartedTimerFired(Timer<GraphicsLayerTextureMapper>*)
-{
-    client()->notifyAnimationStarted(this, /* DOM time */ WTF::currentTime());
-}
-
-void GraphicsLayerTextureMapper::setDebugBorder(const Color& color, float width)
-{
-    m_layer->setDebugBorder(color, width);
-}
-
 #if ENABLE(CSS_FILTERS)
 bool GraphicsLayerTextureMapper::setFilters(const FilterOperations& filters)
 {
-    notifyChange(TextureMapperLayer::FilterChange);
+    notifyChange(FilterChange);
     return GraphicsLayer::setFilters(filters);
 }
 #endif
 
+void GraphicsLayerTextureMapper::setFixedToViewport(bool fixed)
+{
+    if (m_fixedToViewport == fixed)
+        return;
+
+    m_fixedToViewport = fixed;
+    notifyChange(FixedToViewporChange);
 }
+
+void GraphicsLayerTextureMapper::setRepaintCount(int repaintCount)
+{
+    m_repaintCount = repaintCount;
+    notifyChange(RepaintCountChange);
+}
+
+}
+#endif

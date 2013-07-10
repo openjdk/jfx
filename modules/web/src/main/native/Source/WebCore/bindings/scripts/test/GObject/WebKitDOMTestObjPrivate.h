@@ -22,13 +22,12 @@
 #define WebKitDOMTestObjPrivate_h
 
 #include "TestObj.h"
-#include <glib-object.h>
-#include <webkit/WebKitDOMObject.h>
+#include <webkitdom/WebKitDOMTestObj.h>
 
 namespace WebKit {
 WebKitDOMTestObj* wrapTestObj(WebCore::TestObj*);
-WebCore::TestObj* core(WebKitDOMTestObj* request);
-WebKitDOMTestObj* kit(WebCore::TestObj* node);
+WebKitDOMTestObj* kit(WebCore::TestObj*);
+WebCore::TestObj* core(WebKitDOMTestObj*);
 } // namespace WebKit
 
 #endif /* WebKitDOMTestObjPrivate_h */

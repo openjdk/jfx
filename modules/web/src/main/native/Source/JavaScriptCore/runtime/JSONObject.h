@@ -43,9 +43,9 @@ namespace JSC {
             return object;
         }
 
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
         }
 
         static const ClassInfo s_info;
@@ -61,7 +61,7 @@ namespace JSC {
 
     };
 
-    UString JSONStringify(ExecState* exec, JSValue value, unsigned indent);
+    String JSONStringify(ExecState*, JSValue, unsigned indent);
 
 } // namespace JSC
 

@@ -35,6 +35,7 @@
 #include "Event.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
+#include "InputTypeNames.h"
 #include "LocalizedStrings.h"
 #include <wtf/PassOwnPtr.h>
 
@@ -57,7 +58,7 @@ bool ResetInputType::supportsValidation() const
 
 void ResetInputType::handleDOMActivateEvent(Event* event)
 {
-    if (element()->disabled() || !element()->form())
+    if (element()->isDisabledFormControl() || !element()->form())
         return;
     element()->form()->reset();
     event->setDefaultHandled();

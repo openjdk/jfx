@@ -24,15 +24,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG,
         JSCustomMarkFunction,
-        JSGenerateToNativeObject
-    ] SVGElementInstance
+    JSGenerateToNativeObject,
+    JSGenerateToJSObject,
+    EventTarget
+] interface SVGElementInstance
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
         : Object, EventTarget
+#else
+    : EventTarget
 #endif /* defined(LANGUAGE_OBJECTIVE_C) */
     {
         readonly attribute SVGElement correspondingElement;
@@ -60,6 +62,8 @@ module svg {
         attribute [NotEnumerable] EventListener onkeyup;
         attribute [NotEnumerable] EventListener onload;
         attribute [NotEnumerable] EventListener onmousedown;
+    attribute [NotEnumerable] EventListener onmouseenter;
+    attribute [NotEnumerable] EventListener onmouseleave;
         attribute [NotEnumerable] EventListener onmousemove;
         attribute [NotEnumerable] EventListener onmouseout;
         attribute [NotEnumerable] EventListener onmouseover;
@@ -86,15 +90,5 @@ module svg {
         attribute [NotEnumerable] EventListener onselectstart;
         attribute [NotEnumerable] EventListener onsubmit;
         attribute [NotEnumerable] EventListener onunload;
-
-        void addEventListener(in DOMString type, 
-                              in EventListener listener, 
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type, 
-                                 in EventListener listener, 
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event event)
-            raises(EventException);
 #endif /* defined(LANGUAGE_OBJECTIVE_C) */
     };
-}

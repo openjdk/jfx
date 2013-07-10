@@ -132,9 +132,9 @@ xt_event_prepare (GSource*  source_data,
 {   
   int mask;
 
-  GDK_THREADS_ENTER();
+  gdk_threads_enter();
   mask = XPending(xtdisplay);
-  GDK_THREADS_LEAVE();
+  gdk_threads_leave();
 
   return (gboolean)mask;
 }
@@ -142,16 +142,16 @@ xt_event_prepare (GSource*  source_data,
 static gboolean
 xt_event_check (GSource*  source_data)
 {
-  GDK_THREADS_ENTER ();
+  gdk_threads_enter();
 
   if (xt_event_poll_fd.revents & G_IO_IN) {
     int mask;
     mask = XPending(xtdisplay);
-    GDK_THREADS_LEAVE ();
+    gdk_threads_leave();
     return (gboolean)mask;
   }
 
-  GDK_THREADS_LEAVE ();
+  gdk_threads_leave();
   return FALSE;
 }   
 
@@ -165,7 +165,7 @@ xt_event_dispatch (GSource*  source_data,
 
   ac = XtDisplayToApplicationContext(xtdisplay);
 
-  GDK_THREADS_ENTER ();
+  gdk_threads_enter();
 
   /* Process only real X traffic here.  We only look for data on the
    * pipe, limit it to XTBIN_MAX_EVENTS and only call
@@ -176,7 +176,7 @@ xt_event_dispatch (GSource*  source_data,
     XtAppProcessEvent(ac, XtIMXEvent);
   }
 
-  GDK_THREADS_LEAVE ();
+  gdk_threads_leave();
 
   return TRUE;  
 }
@@ -273,9 +273,7 @@ gtk_xtbin_realize (GtkWidget *widget)
 {
   GtkXtBin     *xtbin;
   GtkAllocation allocation = { 0, 0, 200, 200 };
-#if GTK_CHECK_VERSION(2, 18, 0)
   GtkAllocation widget_allocation;
-#endif
 
 #ifdef DEBUG_XTBIN
   printf("gtk_xtbin_realize()\n");
@@ -286,29 +284,17 @@ gtk_xtbin_realize (GtkWidget *widget)
   xtbin = GTK_XTBIN (widget);
 
   /* caculate the allocation before realize */
-#if GTK_CHECK_VERSION(2, 24, 0)
   allocation.width = gdk_window_get_width(xtbin->parent_window);
   allocation.height = gdk_window_get_height(xtbin->parent_window);
-#else
-  gint  x, y, w, h, d; /* geometry of window */
-  gdk_window_get_geometry(xtbin->parent_window, &x, &y, &w, &h, &d);
-  allocation.width = w;
-  allocation.height = h;
-#endif
   gtk_widget_size_allocate (widget, &allocation);
 
 #ifdef DEBUG_XTBIN
   printf("initial allocation %d %d %d %d\n", x, y, w, h);
 #endif
 
-#if GTK_CHECK_VERSION(2, 18, 0)
   gtk_widget_get_allocation(widget, &widget_allocation);
   xtbin->width = widget_allocation.width;
   xtbin->height = widget_allocation.height;
-#else
-  xtbin->width = widget->allocation.width;
-  xtbin->height = widget->allocation.height;
-#endif
 
   /* use GtkSocket's realize */
   (*GTK_WIDGET_CLASS(parent_class)->realize)(widget);

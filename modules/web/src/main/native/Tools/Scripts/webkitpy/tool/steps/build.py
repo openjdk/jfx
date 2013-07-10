@@ -26,9 +26,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
 from webkitpy.tool.steps.abstractstep import AbstractStep
 from webkitpy.tool.steps.options import Options
-from webkitpy.common.system.deprecated_logging import log
+
+_log = logging.getLogger(__name__)
 
 
 class Build(AbstractStep):
@@ -45,14 +48,14 @@ class Build(AbstractStep):
         environment.disable_gcc_smartquotes()
         env = environment.to_dictionary()
 
-        build_webkit_command = self._tool.port().build_webkit_command(build_style=build_style)
+        build_webkit_command = self._tool.deprecated_port().build_webkit_command(build_style=build_style)
         self._tool.executive.run_and_throw_if_fail(build_webkit_command, self._options.quiet,
             cwd=self._tool.scm().checkout_root, env=env)
 
     def run(self, state):
         if not self._options.build:
             return
-        log("Building WebKit")
+        _log.info("Building WebKit")
         if self._options.build_style == "both":
             self.build("debug")
             self.build("release")

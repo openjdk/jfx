@@ -26,7 +26,7 @@
 #ifndef ClipboardQt_h
 #define ClipboardQt_h
 
-#include "CachedImage.h"
+#include "CachedImageClient.h"
 #include "Clipboard.h"
 
 QT_BEGIN_NAMESPACE
@@ -52,12 +52,12 @@ public:
     virtual ~ClipboardQt();
 
     void clearData(const String& type);
-    void clearAllData();
+    void clearData();
     String getData(const String& type) const;
     bool setData(const String& type, const String& data);
 
     // extensions beyond IE's API
-    virtual HashSet<String> types() const;
+    virtual ListHashSet<String> types() const;
     virtual PassRefPtr<FileList> files() const;
 
     void setDragImage(CachedImage*, const IntPoint&);
@@ -85,6 +85,8 @@ private:
     ClipboardQt(ClipboardAccessPolicy, ClipboardType, Frame*);
 
     void setDragImage(CachedImage*, Node*, const IntPoint& loc);
+
+    const QMimeData* readData() const;
 
     const QMimeData* m_readableData;
     QMimeData* m_writableData;

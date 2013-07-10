@@ -24,19 +24,16 @@
  *
  */
 
-module events {
-
-    interface [
+[
         Constructor,
         CallWith=ScriptExecutionContext,
-        V8CustomConstructor,
         JSCustomMarkFunction,
-        JSNoStaticTables
-    ] MessageChannel {
+    JSNoStaticTables,
+    ImplementationLacksVTable
+] interface MessageChannel {
 
         readonly attribute MessagePort port1;
         readonly attribute MessagePort port2;
 
     };
 
-}

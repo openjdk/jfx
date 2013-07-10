@@ -85,7 +85,6 @@ ImageBuffer::ImageBuffer(
     float resolutionScale,
     ColorSpace,
     RenderingMode,
-    DeferralMode,
     bool& success
 )
     : m_data(size, *this)
@@ -136,7 +135,7 @@ GraphicsContext* ImageBuffer::context() const
     return m_context.get();
 }
 
-PassRefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior) const
+PassRefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, ScaleBehavior scaleBehavior) const
 {
     //utatodo: seems [copyBehavior] is the rest of [drawsUsingCopy]
     return BufferImage::create(
@@ -345,6 +344,7 @@ void ImageBuffer::draw(
     const FloatRect& destRect,
     const FloatRect& srcRect,
     CompositeOperator op,
+    BlendMode bm,
     bool useLowQualityScale)
 {
     RefPtr<Image> imageCopy = copyImage();
@@ -354,6 +354,7 @@ void ImageBuffer::draw(
         destRect,
         srcRect,
         op,
+        bm,
         DoNotRespectImageOrientation,
         useLowQualityScale);
 }

@@ -23,11 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG
-    ] SVGTextPositioningElement : SVGTextContentElement {
+] interface SVGTextPositioningElement : SVGTextContentElement {
         readonly attribute SVGAnimatedLengthList x;
         readonly attribute SVGAnimatedLengthList y;
         readonly attribute SVGAnimatedLengthList dx;
@@ -35,4 +33,3 @@ module svg {
         readonly attribute SVGAnimatedNumberList rotate;
     };
 
-}

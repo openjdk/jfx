@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,18 +30,18 @@
 
 #if ENABLE(SQL_DATABASE)
 
-#include "Database.h"
-#include "PlatformString.h"
-#include "SQLTransaction.h"
+#include "DatabaseBackend.h"
+#include "DatabaseBasicTypes.h"
+#include "DatabaseError.h"
+#include "SQLTransactionBackend.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
-
-typedef int ExceptionCode;
 
 // Can be used to wait until DatabaseTask is completed.
 // Has to be passed into DatabaseTask::create to be associated with the task.
@@ -77,19 +77,19 @@ public:
 
     void performTask();
 
-    Database* database() const { return m_database; }
+    DatabaseBackend* database() const { return m_database; }
 #ifndef NDEBUG
     bool hasSynchronizer() const { return m_synchronizer; }
     bool hasCheckedForTermination() const { return m_synchronizer->hasCheckedForTermination(); }
 #endif
 
 protected:
-    DatabaseTask(Database*, DatabaseTaskSynchronizer*);
+    DatabaseTask(DatabaseBackend*, DatabaseTaskSynchronizer*);
 
 private:
     virtual void doPerformTask() = 0;
 
-    Database* m_database;
+    DatabaseBackend* m_database;
     DatabaseTaskSynchronizer* m_synchronizer;
 
 #if !LOG_DISABLED
@@ -98,15 +98,15 @@ private:
 #endif
 };
 
-class Database::DatabaseOpenTask : public DatabaseTask {
+class DatabaseBackend::DatabaseOpenTask : public DatabaseTask {
 public:
-    static PassOwnPtr<DatabaseOpenTask> create(Database* db, bool setVersionInNewDatabase, DatabaseTaskSynchronizer* synchronizer, ExceptionCode& code, String& errorMessage, bool& success)
+    static PassOwnPtr<DatabaseOpenTask> create(DatabaseBackend* db, bool setVersionInNewDatabase, DatabaseTaskSynchronizer* synchronizer, DatabaseError& error, String& errorMessage, bool& success)
     {
-        return adoptPtr(new DatabaseOpenTask(db, setVersionInNewDatabase, synchronizer, code, errorMessage, success));
+        return adoptPtr(new DatabaseOpenTask(db, setVersionInNewDatabase, synchronizer, error, errorMessage, success));
     }
 
 private:
-    DatabaseOpenTask(Database*, bool setVersionInNewDatabase, DatabaseTaskSynchronizer*, ExceptionCode&, String& errorMessage, bool& success);
+    DatabaseOpenTask(DatabaseBackend*, bool setVersionInNewDatabase, DatabaseTaskSynchronizer*, DatabaseError&, String& errorMessage, bool& success);
 
     virtual void doPerformTask();
 #if !LOG_DISABLED
@@ -114,20 +114,20 @@ private:
 #endif
 
     bool m_setVersionInNewDatabase;
-    ExceptionCode& m_code;
+    DatabaseError& m_error;
     String& m_errorMessage;
     bool& m_success;
 };
 
-class Database::DatabaseCloseTask : public DatabaseTask {
+class DatabaseBackend::DatabaseCloseTask : public DatabaseTask {
 public:
-    static PassOwnPtr<DatabaseCloseTask> create(Database* db, DatabaseTaskSynchronizer* synchronizer)
+    static PassOwnPtr<DatabaseCloseTask> create(DatabaseBackend* db, DatabaseTaskSynchronizer* synchronizer)
     {
         return adoptPtr(new DatabaseCloseTask(db, synchronizer));
     }
 
 private:
-    DatabaseCloseTask(Database*, DatabaseTaskSynchronizer*);
+    DatabaseCloseTask(DatabaseBackend*, DatabaseTaskSynchronizer*);
 
     virtual void doPerformTask();
 #if !LOG_DISABLED
@@ -135,36 +135,39 @@ private:
 #endif
 };
 
-class Database::DatabaseTransactionTask : public DatabaseTask {
+class DatabaseBackend::DatabaseTransactionTask : public DatabaseTask {
 public:
+    virtual ~DatabaseTransactionTask();
+
     // Transaction task is never synchronous, so no 'synchronizer' parameter.
-    static PassOwnPtr<DatabaseTransactionTask> create(PassRefPtr<SQLTransaction> transaction)
+    static PassOwnPtr<DatabaseTransactionTask> create(PassRefPtr<SQLTransactionBackend> transaction)
     {
         return adoptPtr(new DatabaseTransactionTask(transaction));
     }
 
-    SQLTransaction* transaction() const { return m_transaction.get(); }
+    SQLTransactionBackend* transaction() const { return m_transaction.get(); }
 
 private:
-    DatabaseTransactionTask(PassRefPtr<SQLTransaction>);
+    explicit DatabaseTransactionTask(PassRefPtr<SQLTransactionBackend>);
 
     virtual void doPerformTask();
 #if !LOG_DISABLED
     virtual const char* debugTaskName() const;
 #endif
 
-    RefPtr<SQLTransaction> m_transaction;
+    RefPtr<SQLTransactionBackend> m_transaction;
+    bool m_didPerformTask;
 };
 
-class Database::DatabaseTableNamesTask : public DatabaseTask {
+class DatabaseBackend::DatabaseTableNamesTask : public DatabaseTask {
 public:
-    static PassOwnPtr<DatabaseTableNamesTask> create(Database* db, DatabaseTaskSynchronizer* synchronizer, Vector<String>& names)
+    static PassOwnPtr<DatabaseTableNamesTask> create(DatabaseBackend* db, DatabaseTaskSynchronizer* synchronizer, Vector<String>& names)
     {
         return adoptPtr(new DatabaseTableNamesTask(db, synchronizer, names));
     }
 
 private:
-    DatabaseTableNamesTask(Database*, DatabaseTaskSynchronizer*, Vector<String>& names);
+    DatabaseTableNamesTask(DatabaseBackend*, DatabaseTaskSynchronizer*, Vector<String>& names);
 
     virtual void doPerformTask();
 #if !LOG_DISABLED

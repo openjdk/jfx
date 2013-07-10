@@ -32,9 +32,9 @@
 namespace JSC {
 namespace Bindings {
 
-class RuntimeObject : public JSNonFinalObject {
+class RuntimeObject : public JSDestructibleObject {
 public:
-    typedef JSNonFinalObject Base;
+    typedef JSDestructibleObject Base;
 
     static RuntimeObject* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, PassRefPtr<Instance> instance)
     {
@@ -68,9 +68,9 @@ public:
         return globalObject->objectPrototype();
     }
 
-    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
     }
 
 protected:

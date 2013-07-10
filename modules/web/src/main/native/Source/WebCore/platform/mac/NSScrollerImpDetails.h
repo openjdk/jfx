@@ -29,7 +29,7 @@
 #include "config.h"
 
 // Public APIs not available on versions of Mac on which we build
-#if __MAC_OS_X_VERSION_MAX_ALLOWED <= 1060
+#if __MAC_OS_X_VERSION_MAX_ALLOWED == 1060
 enum {
     NSScrollerStyleLegacy       = 0,
     NSScrollerStyleOverlay      = 1
@@ -44,7 +44,7 @@ enum {
 typedef NSInteger NSScrollerKnobStyle;
 #endif
 
-#if __MAC_OS_X_VERSION_MAX_ALLOWED <= 1060
+#if __MAC_OS_X_VERSION_MAX_ALLOWED == 1060
 @interface NSScroller(NSObject)
 + (NSScrollerStyle)preferredScrollerStyle;
 @end
@@ -94,6 +94,7 @@ typedef NSInteger NSScrollerKnobStyle;
 - (NSScrollerStyle)scrollerStyle;
 - (void)setScrollerStyle:(NSScrollerStyle)scrollerStyle;
 - (void)contentAreaScrolled;
+- (void)contentAreaScrolledInDirection:(NSPoint)direction;
 - (void)contentAreaWillDraw;
 - (void)mouseEnteredContentArea;
 - (void)mouseExitedContentArea;
@@ -109,9 +110,6 @@ typedef NSInteger NSScrollerKnobStyle;
 
 namespace WebCore {
 
-#if PLATFORM(CHROMIUM)
-bool isScrollbarOverlayAPIAvailable();
-#else
 static inline bool isScrollbarOverlayAPIAvailable()
 {
 #if USE(SCROLLBAR_PAINTER)
@@ -120,7 +118,6 @@ static inline bool isScrollbarOverlayAPIAvailable()
     return false;
 #endif
 }
-#endif
 
 NSScrollerStyle recommendedScrollerStyle();
 

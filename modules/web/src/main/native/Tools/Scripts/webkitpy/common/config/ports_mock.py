@@ -28,16 +28,8 @@
 
 
 class MockPort(object):
-    results_directory = "/mock-results"
-
     def name(self):
         return "MockPort"
-
-    def layout_tests_results_path(self):
-        return "/mock-results/full_results.json"
-
-    def unit_tests_results_path(self):
-        return "/mock-results/webkit_unit_tests_output.xml"
 
     def check_webkit_style_command(self):
         return ["mock-check-webkit-style"]
@@ -65,3 +57,6 @@ class MockPort(object):
 
     def run_webkit_tests_command(self):
         return ['mock-run-webkit-tests']
+
+    def run_bindings_tests_command(self):
+        return ['mock-run-bindings-tests']

@@ -24,40 +24,36 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-
-    interface [
+[
         Conditional=INDEXED_DATABASE,
         ActiveDOMObject,
-        EventTarget
-    ] IDBTransaction {
-        // FIXME: Eventually remove legacy enum constants, see https://bugs.webkit.org/show_bug.cgi?id=85315
-        const unsigned short READ_ONLY = 0;
-        const unsigned short READ_WRITE = 1;
-        const unsigned short VERSION_CHANGE = 2;
+    EventTarget,
+    JSNoStaticTables
+] interface IDBTransaction {
 
         // Properties
         readonly attribute DOMString mode;
         readonly attribute IDBDatabase db;
         readonly attribute DOMError error;
+    [TreatReturnedNullStringAs=Undefined] readonly attribute DOMString webkitErrorMessage;
 
         // Methods
-        IDBObjectStore objectStore (in DOMString name)
-            raises (IDBDatabaseException);
-        void abort ();
+    IDBObjectStore objectStore (DOMString name)
+        raises (DOMException);
+    void abort ()
+        raises (DOMException);
 
         // Events
         attribute EventListener onabort;
         attribute EventListener oncomplete;
         attribute EventListener onerror;
         // EventTarget interface
-        void addEventListener(in DOMString type,
-                              in EventListener listener,
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type,
-                                 in EventListener listener,
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt) 
+    void addEventListener(DOMString type,
+                          EventListener listener,
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type,
+                             EventListener listener,
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt) 
             raises(EventException);
     };
-}

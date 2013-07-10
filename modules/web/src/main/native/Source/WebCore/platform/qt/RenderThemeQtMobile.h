@@ -71,7 +71,7 @@ protected:
 
     virtual bool paintMenuListButton(RenderObject*, const PaintInfo&, const IntRect&);
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
     // Returns the duration of the animation for the progress bar.
     virtual double animationDurationForProgressBar(RenderProgress*) const;
     virtual bool paintProgressBar(RenderObject*, const PaintInfo&, const IntRect&);
@@ -83,12 +83,12 @@ protected:
     virtual void computeSizeBasedOnStyle(RenderStyle*) const;
     virtual QSharedPointer<StylePainter> getStylePainter(const PaintInfo&);
 
+    virtual QPalette colorPalette() const;
+
 private:
     bool checkMultiple(RenderObject*) const;
     void setButtonPadding(RenderStyle*) const;
     void setPopupPadding(RenderStyle*) const;
-
-    void setPaletteFromPageClientIfExists(QPalette&) const;
 };
 
 struct KeyIdentifier {

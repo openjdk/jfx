@@ -53,7 +53,7 @@ void NPN_MemFree(void* ptr)
     free(ptr);
 }
 
-uint32_t NPN_MemFlush(uint32_t size)
+uint32_t NPN_MemFlush(uint32_t)
 {
     // Do nothing
     return 0;
@@ -64,7 +64,7 @@ void NPN_ReloadPlugins(NPBool reloadPages)
     Page::refreshPlugins(reloadPages);
 }
 
-NPError NPN_RequestRead(NPStream* stream, NPByteRange* rangeList)
+NPError NPN_RequestRead(NPStream*, NPByteRange*)
 {
     return NPERR_STREAM_NOT_SEEKABLE;
 }
@@ -162,7 +162,7 @@ void* NPN_GetJavaEnv()
     return 0;
 }
 
-void* NPN_GetJavaPeer(NPP instance)
+void* NPN_GetJavaPeer(NPP)
 {
     // Unsupported
     return 0;
@@ -198,4 +198,17 @@ NPError NPN_SetValueForURL(NPP instance, NPNURLVariable variable, const char* ur
 NPError NPN_GetAuthenticationInfo(NPP instance, const char* protocol, const char* host, int32_t port, const char* scheme, const char* realm, char** username, uint32_t* ulen, char** password, uint32_t* plen)
 {
     return pluginViewForInstance(instance)->getAuthenticationInfo(protocol, host, port, scheme, realm, username, ulen, password, plen);
+}
+
+NPError NPN_PopUpContextMenu(NPP instance, NPMenu* menu)
+{
+#if PLATFORM(QT) && defined(XP_MACOSX)
+    PluginView* plugin = pluginViewForInstance(instance);
+    plugin->popUpContextMenu(menu);
+    return NPERR_NO_ERROR;
+#else
+    UNUSED_PARAM(instance);
+    UNUSED_PARAM(menu);
+    return NPERR_NO_ERROR;
+#endif // PLATFORM(QT) && defined(XP_MACOSX)
 }

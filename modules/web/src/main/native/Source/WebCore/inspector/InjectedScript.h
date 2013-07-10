@@ -34,6 +34,7 @@
 #include "InjectedScriptBase.h"
 #include "InjectedScriptManager.h"
 #include "InspectorTypeBuilder.h"
+#include "ScriptArguments.h"
 #include "ScriptObject.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -58,6 +59,7 @@ public:
                   const String& objectGroup,
                   bool includeCommandLineAPI,
                   bool returnByValue,
+                  bool generatePreview,
                   RefPtr<TypeBuilder::Runtime::RemoteObject>* result,
                   TypeBuilder::OptOutput<bool>* wasThrown);
     void callFunctionOn(ErrorString*,
@@ -65,6 +67,7 @@ public:
                         const String& expression,
                         const String& arguments,
                         bool returnByValue,
+                        bool generatePreview,
                         RefPtr<TypeBuilder::Runtime::RemoteObject>* result,
                         TypeBuilder::OptOutput<bool>* wasThrown);
     void evaluateOnCallFrame(ErrorString*,
@@ -74,11 +77,14 @@ public:
                              const String& objectGroup,
                              bool includeCommandLineAPI,
                              bool returnByValue,
+                             bool generatePreview,
                              RefPtr<TypeBuilder::Runtime::RemoteObject>* result,
                              TypeBuilder::OptOutput<bool>* wasThrown);
     void restartFrame(ErrorString*, const ScriptValue& callFrames, const String& callFrameId, RefPtr<InspectorObject>* result);
+    void setVariableValue(ErrorString*, const ScriptValue& callFrames, const String* callFrameIdOpt, const String* functionObjectIdOpt, int scopeNumber, const String& variableName, const String& newValueStr);
     void getFunctionDetails(ErrorString*, const String& functionId, RefPtr<TypeBuilder::Debugger::FunctionDetails>* result);
     void getProperties(ErrorString*, const String& objectId, bool ownProperties, RefPtr<TypeBuilder::Array<TypeBuilder::Runtime::PropertyDescriptor> >* result);
+    void getInternalProperties(ErrorString*, const String& objectId, RefPtr<TypeBuilder::Array<TypeBuilder::Runtime::InternalPropertyDescriptor> >* result);
     Node* nodeForObjectId(const String& objectId);
     void releaseObject(const String& objectId);
 
@@ -86,9 +92,9 @@ public:
     PassRefPtr<TypeBuilder::Array<TypeBuilder::Debugger::CallFrame> > wrapCallFrames(const ScriptValue&);
 #endif
 
-    PassRefPtr<TypeBuilder::Runtime::RemoteObject> wrapObject(const ScriptValue&, const String& groupName) const;
+    PassRefPtr<TypeBuilder::Runtime::RemoteObject> wrapObject(const ScriptValue&, const String& groupName, bool generatePreview = false) const;
+    PassRefPtr<TypeBuilder::Runtime::RemoteObject> wrapTable(const ScriptValue& table, const ScriptValue& columns) const;
     PassRefPtr<TypeBuilder::Runtime::RemoteObject> wrapNode(Node*, const String& groupName);
-    PassRefPtr<TypeBuilder::Runtime::RemoteObject> wrapSerializedObject(SerializedScriptValue*, const String& groupName) const;
     ScriptValue findObjectById(const String& objectId) const;
 
     void inspectNode(Node*);

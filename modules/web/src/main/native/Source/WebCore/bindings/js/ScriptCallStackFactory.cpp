@@ -42,10 +42,10 @@
 #include <interpreter/CallFrame.h>
 #include <interpreter/Interpreter.h>
 #include <runtime/ArgList.h>
+#include <runtime/JSCJSValue.h>
 #include <runtime/JSFunction.h>
-#include <runtime/JSGlobalData.h>
-#include <runtime/JSValue.h>
-#include <runtime/UString.h>
+#include <runtime/VM.h>
+#include <wtf/text/WTFString.h>
 
 using namespace JSC;
 
@@ -58,18 +58,15 @@ PassRefPtr<ScriptCallStack> createScriptCallStack(size_t maxStackSize, bool empt
     Vector<ScriptCallFrame> frames;
     if (JSC::ExecState* exec = JSMainThreadExecState::currentState()) {
         Vector<StackFrame> stackTrace;
-        Interpreter::getStackTrace(&exec->globalData(), stackTrace);
-        for (Vector<StackFrame>::const_iterator iter = stackTrace.begin(); iter < stackTrace.end(); iter++) {
-            frames.append(ScriptCallFrame(iter->friendlyFunctionName(exec), iter->friendlySourceURL(), iter->friendlyLineNumber()));
-            if (frames.size() >= maxStackSize)
-                break;
-        }
+        Interpreter::getStackTrace(&exec->vm(), stackTrace, maxStackSize);
+        for (size_t i = 0; i < stackTrace.size(); i++)
+            frames.append(ScriptCallFrame(stackTrace[i].friendlyFunctionName(exec), stackTrace[i].friendlySourceURL(), stackTrace[i].line(), stackTrace[i].column()));
     }
     if (frames.isEmpty() && !emptyIsAllowed) {
         // No frames found. It may happen in the case where
         // a bound function is called from native code for example.
         // Fallback to setting lineNumber to 0, and source and function name to "undefined".
-        frames.append(ScriptCallFrame("undefined", "undefined", 0));
+        frames.append(ScriptCallFrame("undefined", "undefined", 0, 0));
     }
     return ScriptCallStack::create(frames);
 }
@@ -77,39 +74,57 @@ PassRefPtr<ScriptCallStack> createScriptCallStack(size_t maxStackSize, bool empt
 PassRefPtr<ScriptCallStack> createScriptCallStack(JSC::ExecState* exec, size_t maxStackSize)
 {
     Vector<ScriptCallFrame> frames;
-    CallFrame* callFrame = exec;
-    while (true) {
-        ASSERT(callFrame);
-        int signedLineNumber;
-        intptr_t sourceID;
-        UString urlString;
-        JSValue function;
-
-        exec->interpreter()->retrieveLastCaller(callFrame, signedLineNumber, sourceID, urlString, function);
-        UString functionName;
-        if (function)
-            functionName = jsCast<JSFunction*>(function)->name(exec);
-        else {
-            // Caller is unknown, but if frames is empty we should still add the frame, because
-            // something called us, and gave us arguments.
-            if (!frames.isEmpty())
-                break;
-        }
-        unsigned lineNumber = signedLineNumber >= 0 ? signedLineNumber : 0;
-        frames.append(ScriptCallFrame(ustringToString(functionName), ustringToString(urlString), lineNumber));
-        if (!function || frames.size() == maxStackSize)
+    Vector<StackFrame> stackTrace;
+    Interpreter::getStackTrace(&exec->vm(), stackTrace, maxStackSize + 1);
+    for (size_t i = stackTrace.size() == 1 ? 0 : 1; i < stackTrace.size(); i++) {
+        // This early exit is necessary to maintain our old behaviour
+        // but the stack trace we produce now is complete and handles all
+        // ways in which code may be running
+        if (!stackTrace[i].callee && frames.size())
             break;
-        callFrame = callFrame->callerFrame();
-    }
+
+        String functionName = stackTrace[i].friendlyFunctionName(exec);
+        frames.append(ScriptCallFrame(functionName, stackTrace[i].sourceURL, stackTrace[i].line(), stackTrace[i].column()));
+        }
+
     return ScriptCallStack::create(frames);
 }
 
-PassRefPtr<ScriptCallStack> createScriptCallStackForInspector(JSC::ExecState* exec)
+PassRefPtr<ScriptCallStack> createScriptCallStackFromException(JSC::ExecState* exec, JSC::JSValue& exception, size_t maxStackSize)
+{
+    Vector<ScriptCallFrame> frames;
+    RefCountedArray<StackFrame> stackTrace = exec->vm().exceptionStack();
+    for (size_t i = 0; i < stackTrace.size() && i < maxStackSize; i++) {
+        if (!stackTrace[i].callee && frames.size())
+            break;
+
+        String functionName = stackTrace[i].friendlyFunctionName(exec);
+        frames.append(ScriptCallFrame(functionName, stackTrace[i].sourceURL, stackTrace[i].line(), stackTrace[i].column()));
+    }
+
+    // FIXME: <http://webkit.org/b/115087> Web Inspector: WebCore::reportException should not evaluate JavaScript handling exceptions
+    // Fallback to getting at least the line and sourceURL from the exception if it has values and the exceptionStack doesn't.
+    if (frames.size() > 0) {
+        const ScriptCallFrame& firstCallFrame = frames.first();
+        JSObject* exceptionObject = exception.toObject(exec);
+        if (exception.isObject() && firstCallFrame.sourceURL().isEmpty()) {
+            JSValue lineValue = exceptionObject->getDirect(exec->vm(), Identifier(exec, "line"));
+            int lineNumber = lineValue && lineValue.isNumber() ? int(lineValue.toNumber(exec)) : 0;
+            JSValue sourceURLValue = exceptionObject->getDirect(exec->vm(), Identifier(exec, "sourceURL"));
+            String exceptionSourceURL = sourceURLValue && sourceURLValue.isString() ? sourceURLValue.toString(exec)->value(exec) : ASCIILiteral("undefined");
+            frames[0] = ScriptCallFrame(firstCallFrame.functionName(), exceptionSourceURL, lineNumber, 0);
+        }
+    }
+
+    return ScriptCallStack::create(frames);
+}
+
+PassRefPtr<ScriptCallStack> createScriptCallStackForConsole(JSC::ExecState* exec)
 {
     size_t maxStackSize = 1;
     if (InspectorInstrumentation::hasFrontends()) {
         ScriptExecutionContext* scriptExecutionContext = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject())->scriptExecutionContext();
-        if (InspectorInstrumentation::hasFrontendForScriptContext(scriptExecutionContext))
+        if (InspectorInstrumentation::consoleAgentEnabled(scriptExecutionContext))
             maxStackSize = ScriptCallStack::maxCallStackSizeToCapture;
     }
     return createScriptCallStack(exec, maxStackSize);
@@ -120,7 +135,7 @@ PassRefPtr<ScriptArguments> createScriptArguments(JSC::ExecState* exec, unsigned
     Vector<ScriptValue> arguments;
     size_t argumentCount = exec->argumentCount();
     for (size_t i = skipArgumentCount; i < argumentCount; ++i)
-        arguments.append(ScriptValue(exec->globalData(), exec->argument(i)));
+        arguments.append(ScriptValue(exec->vm(), exec->argument(i)));
     return ScriptArguments::create(exec, arguments);
 }
 

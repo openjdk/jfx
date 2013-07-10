@@ -85,28 +85,27 @@ bool SVGForeignObjectElement::isSupportedAttribute(const QualifiedName& attrName
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGForeignObjectElement::parseAttribute(const Attribute& attribute)
+void SVGForeignObjectElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     SVGParsingError parseError = NoError;
-    const AtomicString& value = attribute.value();
 
-    if (!isSupportedAttribute(attribute.name()))
-        SVGStyledTransformableElement::parseAttribute(attribute);
-    else if (attribute.name() == SVGNames::xAttr)
+    if (!isSupportedAttribute(name))
+        SVGStyledTransformableElement::parseAttribute(name, value);
+    else if (name == SVGNames::xAttr)
         setXBaseValue(SVGLength::construct(LengthModeWidth, value, parseError));
-    else if (attribute.name() == SVGNames::yAttr)
+    else if (name == SVGNames::yAttr)
         setYBaseValue(SVGLength::construct(LengthModeHeight, value, parseError));
-    else if (attribute.name() == SVGNames::widthAttr)
+    else if (name == SVGNames::widthAttr)
         setWidthBaseValue(SVGLength::construct(LengthModeWidth, value, parseError));
-    else if (attribute.name() == SVGNames::heightAttr)
+    else if (name == SVGNames::heightAttr)
         setHeightBaseValue(SVGLength::construct(LengthModeHeight, value, parseError));
-    else if (SVGTests::parseAttribute(attribute)
-               || SVGLangSpace::parseAttribute(attribute)
-               || SVGExternalResourcesRequired::parseAttribute(attribute)) {
+    else if (SVGTests::parseAttribute(name, value)
+               || SVGLangSpace::parseAttribute(name, value)
+               || SVGExternalResourcesRequired::parseAttribute(name, value)) {
     } else
         ASSERT_NOT_REACHED();
 
-    reportAttributeParsingError(parseError, attribute);
+    reportAttributeParsingError(parseError, name, value);
 }
 
 void SVGForeignObjectElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -146,6 +145,24 @@ bool SVGForeignObjectElement::childShouldCreateRenderer(const NodeRenderingConte
 
     // Skip over SVG rules which disallow non-SVG kids
     return StyledElement::childShouldCreateRenderer(childContext);
+}
+
+bool SVGForeignObjectElement::rendererIsNeeded(const NodeRenderingContext& context)
+{
+    // Suppress foreignObject renderers in SVG hidden containers.
+    // (https://bugs.webkit.org/show_bug.cgi?id=87297)
+    // Note that we currently do not support foreignObject instantiation via <use>, hence it is safe
+    // to use parentElement() here. If that changes, this method should be updated to use
+    // parentOrShadowHostElement() instead.
+    Element* ancestor = parentElement();
+    while (ancestor && ancestor->isSVGElement()) {
+        if (ancestor->renderer() && ancestor->renderer()->isSVGHiddenContainer())
+            return false;
+
+        ancestor = ancestor->parentElement();
+    }
+
+    return SVGStyledTransformableElement::rendererIsNeeded(context);
 }
 
 bool SVGForeignObjectElement::selfHasRelativeLengths() const

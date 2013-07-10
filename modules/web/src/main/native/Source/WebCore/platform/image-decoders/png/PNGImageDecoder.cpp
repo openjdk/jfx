@@ -40,13 +40,11 @@
 #include "config.h"
 #include "PNGImageDecoder.h"
 
+#include "Color.h"
+#include "PlatformInstrumentation.h"
 #include "png.h"
 #include <wtf/OwnArrayPtr.h>
 #include <wtf/PassOwnPtr.h>
-
-#if PLATFORM(CHROMIUM)
-#include "TraceEvent.h"
-#endif
 
 #if USE(QCMSLIB)
 #include "qcms.h"
@@ -107,8 +105,8 @@ static void PNGAPI pngComplete(png_structp png, png_infop)
     static_cast<PNGImageDecoder*>(png_get_progressive_ptr(png))->pngComplete();
 }
 
-class PNGImageReader
-{
+class PNGImageReader {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     PNGImageReader(PNGImageDecoder* decoder)
         : m_readOffset(0)
@@ -261,8 +259,11 @@ ImageFrame* PNGImageDecoder::frameBufferAtIndex(size_t index)
     }
 
     ImageFrame& frame = m_frameBufferCache[0];
-    if (frame.status() != ImageFrame::FrameComplete)
+    if (frame.status() != ImageFrame::FrameComplete) {
+        PlatformInstrumentation::willDecodeImage("PNG");
         decode(false);
+        PlatformInstrumentation::didDecodeImage();
+    }
     return &frame;
 }
 
@@ -334,20 +335,6 @@ void PNGImageDecoder::headerAvailable()
     int bitDepth, colorType, interlaceType, compressionType, filterType, channels;
     png_get_IHDR(png, info, &width, &height, &bitDepth, &colorType, &interlaceType, &compressionType, &filterType);
 
-    if ((colorType == PNG_COLOR_TYPE_RGB || colorType == PNG_COLOR_TYPE_RGB_ALPHA) && !m_ignoreGammaAndColorProfile) {
-        // We currently support color profiles only for RGB and RGBA PNGs.  Supporting
-        // color profiles for gray-scale images is slightly tricky, at least using the
-        // CoreGraphics ICC library, because we expand gray-scale images to RGB but we
-        // don't similarly transform the color profile.  We'd either need to transform
-        // the color profile or we'd need to decode into a gray-scale image buffer and
-        // hand that to CoreGraphics.
-        readColorProfile(png, info, m_colorProfile);
-#if USE(QCMSLIB)
-        m_reader->createColorTransform(m_colorProfile, colorType & PNG_COLOR_MASK_ALPHA);
-        m_colorProfile.clear();
-#endif
-    }
-
     // The options we set here match what Mozilla does.
 
     // Expand to ensure we use 24-bit for RGB and 32-bit for RGBA.
@@ -366,6 +353,21 @@ void PNGImageDecoder::headerAvailable()
 
     if (colorType == PNG_COLOR_TYPE_GRAY || colorType == PNG_COLOR_TYPE_GRAY_ALPHA)
         png_set_gray_to_rgb(png);
+
+    if ((colorType & PNG_COLOR_MASK_COLOR) && !m_ignoreGammaAndColorProfile) {
+        // We only support color profiles for color PALETTE and RGB[A] PNG. Supporting
+        // color profiles for gray-scale images is slightly tricky, at least using the
+        // CoreGraphics ICC library, because we expand gray-scale images to RGB but we
+        // do not similarly transform the color profile. We'd either need to transform
+        // the color profile or we'd need to decode into a gray-scale image buffer and
+        // hand that to CoreGraphics.
+        readColorProfile(png, info, m_colorProfile);
+#if USE(QCMSLIB)
+        bool decodedImageHasAlpha = (colorType & PNG_COLOR_MASK_ALPHA) || trnsCount;
+        m_reader->createColorTransform(m_colorProfile, decodedImageHasAlpha);
+        m_colorProfile.clear();
+#endif
+    }
 
     // Deal with gamma and keep it under our control.
     double gamma;
@@ -401,7 +403,30 @@ void PNGImageDecoder::headerAvailable()
     }
 }
 
-void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, int interlacePass)
+static inline void setPixelRGB(ImageFrame::PixelData* dest, png_bytep pixel)
+{
+    *dest = 0xFF000000U | pixel[0] << 16 | pixel[1] << 8 | pixel[2];
+}
+
+static inline void setPixelRGBA(ImageFrame::PixelData* dest, png_bytep pixel, unsigned char& nonTrivialAlphaMask)
+{
+    unsigned char a = pixel[3];
+    *dest = a << 24 | pixel[0] << 16 | pixel[1] << 8 | pixel[2];
+    nonTrivialAlphaMask |= (255 - a);
+}
+
+static inline void setPixelPremultipliedRGBA(ImageFrame::PixelData* dest, png_bytep pixel, unsigned char& nonTrivialAlphaMask)
+{
+    unsigned char a = pixel[3];
+    unsigned char r = fastDivideBy255(pixel[0] * a);
+    unsigned char g = fastDivideBy255(pixel[1] * a);
+    unsigned char b = fastDivideBy255(pixel[2] * a);
+
+    *dest = a << 24 | r << 16 | g << 8 | b;
+    nonTrivialAlphaMask |= (255 - a);
+}
+
+void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, int)
 {
     if (m_frameBufferCache.isEmpty())
         return;
@@ -498,28 +523,39 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
 #endif
 
     // Write the decoded row pixels to the frame buffer.
+    ImageFrame::PixelData* address = buffer.getAddr(0, y);
     int width = scaledSize().width();
-    bool nonTrivialAlpha = false;
+    unsigned char nonTrivialAlphaMask = 0;
 
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
+    if (m_scaled) {
     for (int x = 0; x < width; ++x) {
-        png_bytep pixel = row + (m_scaled ? m_scaledColumns[x] : x) * colorChannels;
+            png_bytep pixel = row + m_scaledColumns[x] * colorChannels;
         unsigned alpha = hasAlpha ? pixel[3] : 255;
-        buffer.setRGBA(x, y, pixel[0], pixel[1], pixel[2], alpha);
-        nonTrivialAlpha |= alpha < 255;
+            buffer.setRGBA(address++, pixel[0], pixel[1], pixel[2], alpha);
+            nonTrivialAlphaMask |= (255 - alpha);
     }
-#else
-    ASSERT(!m_scaled);
-    png_bytep pixel = row;
-    for (int x = 0; x < width; ++x, pixel += colorChannels) {
-        unsigned alpha = hasAlpha ? pixel[3] : 255;
-        buffer.setRGBA(x, y, pixel[0], pixel[1], pixel[2], alpha);
-        nonTrivialAlpha |= alpha < 255;
-    }
+    } else
 #endif
+    {
+    png_bytep pixel = row;
+        if (hasAlpha) {
+            if (buffer.premultiplyAlpha()) {
+                for (int x = 0; x < width; ++x, pixel += 4)
+                    setPixelPremultipliedRGBA(address++, pixel, nonTrivialAlphaMask);
+            } else {
+                for (int x = 0; x < width; ++x, pixel += 4)
+                    setPixelRGBA(address++, pixel, nonTrivialAlphaMask);
+    }
+        } else {
+            for (int x = 0; x < width; ++x, pixel += 3)
+                setPixelRGB(address++, pixel);
+        }
+    }
 
-    if (nonTrivialAlpha && !buffer.hasAlpha())
-        buffer.setHasAlpha(nonTrivialAlpha);
+
+    if (nonTrivialAlphaMask && !buffer.hasAlpha())
+        buffer.setHasAlpha(true);
 }
 
 void PNGImageDecoder::pngComplete()
@@ -530,9 +566,6 @@ void PNGImageDecoder::pngComplete()
 
 void PNGImageDecoder::decode(bool onlySize)
 {
-#if PLATFORM(CHROMIUM)
-    TRACE_EVENT("PNGImageDecoder::decode", this, 0);
-#endif
     if (failed())
         return;
 

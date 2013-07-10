@@ -29,21 +29,18 @@
 #include "GraphicsContext.h"
 #include "PlatformMouseEvent.h"
 #include "ScrollAnimator.h"
+#include "ScrollView.h"
 #include "ScrollableArea.h"
 #include "ScrollbarTheme.h"
 #include <algorithm>
 
-// FIXME: The following #includes are a layering violation and should be removed.
-#include "AXObjectCache.h"
-#include "AccessibilityScrollbar.h"
-#include "Document.h"
-#include "EventHandler.h"
-#include "Frame.h"
-#include "FrameView.h"
+#if ENABLE(GESTURE_EVENTS)
+#include "PlatformGestureEvent.h"
+#endif
 
 using namespace std;
 
-#if (PLATFORM(CHROMIUM) && (OS(UNIX) && !OS(DARWIN))) || PLATFORM(GTK)
+#if PLATFORM(GTK)
 // The position of the scrollbar thumb affects the appearance of the steppers, so
 // when the thumb moves, we have to invalidate them for painting.
 #define THUMB_POSITION_AFFECTS_BUTTONS
@@ -80,12 +77,14 @@ Scrollbar::Scrollbar(ScrollableArea* scrollableArea, ScrollbarOrientation orient
     , m_hoveredPart(NoPart)
     , m_pressedPart(NoPart)
     , m_pressedPos(0)
+    , m_scrollPos(0)
     , m_draggingDocument(false)
     , m_documentDragPos(0)
     , m_enabled(true)
     , m_scrollTimer(this, &Scrollbar::autoscrollTimerFired)
     , m_overlapsResizer(false)
     , m_suppressInvalidation(false)
+    , m_isAlphaLocked(false)
 {
     if (!m_theme)
         m_theme = ScrollbarTheme::theme();
@@ -104,9 +103,6 @@ Scrollbar::Scrollbar(ScrollableArea* scrollableArea, ScrollbarOrientation orient
 
 Scrollbar::~Scrollbar()
 {
-    if (AXObjectCache::accessibilityEnabled() && axObjectCache())
-        axObjectCache()->remove(this);
-    
     stopTimerIfNeeded();
     
     m_theme->unregisterScrollbar(this);
@@ -114,7 +110,7 @@ Scrollbar::~Scrollbar()
 
 ScrollbarOverlayStyle Scrollbar::scrollbarOverlayStyle() const
 {
-    return m_scrollableArea ? ScrollbarOverlayStyleDefault : m_scrollableArea->scrollbarOverlayStyle();
+    return m_scrollableArea ? m_scrollableArea->scrollbarOverlayStyle() : ScrollbarOverlayStyleDefault;
 }
 
 void Scrollbar::getTickmarks(Vector<IntRect>& tickmarks) const
@@ -130,7 +126,7 @@ bool Scrollbar::isScrollableAreaActive() const
 
 bool Scrollbar::isScrollViewScrollbar() const
 {
-    return parent() && parent()->isFrameView() && static_cast<FrameView*>(parent())->isScrollViewScrollbar(this);
+    return parent() && parent()->isScrollViewScrollbar(this);
 }
 
 void Scrollbar::offsetDidChange()
@@ -350,6 +346,46 @@ void Scrollbar::setPressedPart(ScrollbarPart part)
         theme()->invalidatePart(this, m_hoveredPart);
 }
 
+#if ENABLE(GESTURE_EVENTS)
+bool Scrollbar::gestureEvent(const PlatformGestureEvent& evt)
+{
+    bool handled = false;
+    switch (evt.type()) {
+    case PlatformEvent::GestureTapDown:
+        setPressedPart(theme()->hitTest(this, evt.position()));
+        m_pressedPos = (orientation() == HorizontalScrollbar ? convertFromContainingWindow(evt.position()).x() : convertFromContainingWindow(evt.position()).y());
+        return true;
+    case PlatformEvent::GestureTapDownCancel:
+    case PlatformEvent::GestureScrollBegin:
+        if (m_pressedPart == ThumbPart) {
+            m_scrollPos = m_pressedPos;
+            return true;
+        }
+        break;
+    case PlatformEvent::GestureScrollUpdate:
+    case PlatformEvent::GestureScrollUpdateWithoutPropagation:
+        if (m_pressedPart == ThumbPart) {
+            m_scrollPos += HorizontalScrollbar ? evt.deltaX() : evt.deltaY();
+            moveThumb(m_scrollPos, false);
+            return true;
+        }
+        break;
+    case PlatformEvent::GestureScrollEnd:
+        m_scrollPos = 0;
+        break;
+    case PlatformEvent::GestureTap:
+        if (m_pressedPart != ThumbPart && m_pressedPart != NoPart)
+            handled = m_scrollableArea && m_scrollableArea->scroll(pressedPartScrollDirection(), pressedPartScrollGranularity());
+        break;
+    default:
+        break;
+    }
+    setPressedPart(NoPart);
+    m_pressedPos = 0;
+    return handled;
+}
+#endif
+
 bool Scrollbar::mouseMoved(const PlatformMouseEvent& evt)
 {
     if (m_pressedPart == ThumbPart) {
@@ -367,7 +403,7 @@ bool Scrollbar::mouseMoved(const PlatformMouseEvent& evt)
     if (m_pressedPart != NoPart)
         m_pressedPos = (orientation() == HorizontalScrollbar ? convertFromContainingWindow(evt.position()).x() : convertFromContainingWindow(evt.position()).y());
 
-    ScrollbarPart part = theme()->hitTest(this, evt);
+    ScrollbarPart part = theme()->hitTest(this, evt.position());
     if (part != m_hoveredPart) {
         if (m_pressedPart != NoPart) {
             if (part == m_pressedPart) {
@@ -413,13 +449,10 @@ bool Scrollbar::mouseUp(const PlatformMouseEvent& mouseEvent)
     if (m_scrollableArea) {
         // m_hoveredPart won't be updated until the next mouseMoved or mouseDown, so we have to hit test
         // to really know if the mouse has exited the scrollbar on a mouseUp.
-        ScrollbarPart part = theme()->hitTest(this, mouseEvent);
+        ScrollbarPart part = theme()->hitTest(this, mouseEvent.position());
         if (part == NoPart)
             m_scrollableArea->mouseExitedScrollbar(this);
     }
-
-    if (parent() && parent()->isFrameView())
-        static_cast<FrameView*>(parent())->frame()->eventHandler()->setMousePressed(false);
 
     return true;
 }
@@ -430,7 +463,7 @@ bool Scrollbar::mouseDown(const PlatformMouseEvent& evt)
     if (evt.button() == RightButton)
         return true; // FIXME: Handled as context menu by Qt right now.  Should just avoid even calling this method on a right click though.
 
-    setPressedPart(theme()->hitTest(this, evt));
+    setPressedPart(theme()->hitTest(this, evt.position()));
     int pressedPos = (orientation() == HorizontalScrollbar ? convertFromContainingWindow(evt.position()).x() : convertFromContainingWindow(evt.position()).y());
     
     if ((m_pressedPart == BackTrackPart || m_pressedPart == ForwardTrackPart) && theme()->shouldCenterOnThumb(this, evt)) {
@@ -521,17 +554,6 @@ bool Scrollbar::isWindowActive() const
     return m_scrollableArea && m_scrollableArea->isActive();
 }
     
-AXObjectCache* Scrollbar::axObjectCache() const
-{
-    if (!parent() || !parent()->isFrameView())
-        return 0;
-    
-    // FIXME: Accessing the FrameView and Document here is a layering violation
-    // and should be removed.
-    Document* document = static_cast<FrameView*>(parent())->frame()->document();
-    return document->axObjectCache();
-}
-
 void Scrollbar::invalidateRect(const IntRect& rect)
 {
     if (suppressInvalidation())

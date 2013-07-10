@@ -44,10 +44,15 @@ namespace JSC {
         {
         }
 
+        SourceCode(WTF::HashTableDeletedValueType)
+            : m_provider(WTF::HashTableDeletedValue)
+        {
+        }
+
         SourceCode(PassRefPtr<SourceProvider> provider, int firstLine = 1)
             : m_provider(provider)
             , m_startChar(0)
-            , m_endChar(m_provider->length())
+            , m_endChar(m_provider->source().length())
             , m_firstLine(std::max(firstLine, 1))
         {
         }
@@ -60,10 +65,12 @@ namespace JSC {
         {
         }
 
-        UString toString() const
+        bool isHashTableDeletedValue() const { return m_provider.isHashTableDeletedValue(); }
+
+        String toString() const
         {
             if (!m_provider)
-                return UString();
+                return String();
             return m_provider->getRange(m_startChar, m_endChar);
         }
         
@@ -90,15 +97,15 @@ namespace JSC {
         int m_firstLine;
     };
 
-    inline SourceCode makeSource(const UString& source, const UString& url = UString(), const TextPosition& startPosition = TextPosition::minimumPosition())
+    inline SourceCode makeSource(const String& source, const String& url = String(), const TextPosition& startPosition = TextPosition::minimumPosition())
     {
-        return SourceCode(UStringSourceProvider::create(source, url, startPosition), startPosition.m_line.oneBasedInt());
+        return SourceCode(StringSourceProvider::create(source, url, startPosition), startPosition.m_line.oneBasedInt());
     }
 
     inline SourceCode SourceCode::subExpression(unsigned openBrace, unsigned closeBrace, int firstLine)
     {
-        ASSERT((*provider()->data())[openBrace] == '{');
-        ASSERT((*provider()->data())[closeBrace] == '}');
+        ASSERT(provider()->source()[openBrace] == '{');
+        ASSERT(provider()->source()[closeBrace] == '}');
         return SourceCode(provider(), openBrace, closeBrace + 1, firstLine);
     }
 

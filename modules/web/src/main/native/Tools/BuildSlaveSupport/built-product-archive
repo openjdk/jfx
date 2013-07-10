@@ -51,14 +51,15 @@ def main():
         parser.error("Action is required")
         return 1
 
-    if not determineWebKitBuildDirectory(options.platform, options.configuration):
+    genericPlatform = options.platform.split('-', 1)[0]
+    if not determineWebKitBuildDirectory(genericPlatform, options.configuration):
         print >> sys.stderr, "Could not determine build directory"
         return 1
 
     if action == 'archive':
-        return archiveBuiltProduct(options.configuration, options.platform)
+        return archiveBuiltProduct(options.configuration, genericPlatform, options.platform)
     else:
-        return extractBuiltProduct(options.configuration, options.platform)
+        return extractBuiltProduct(options.configuration, genericPlatform)
 
 
 def determineWebKitBuildDirectory(platform, configuration):
@@ -90,11 +91,6 @@ def createZipManually(directoryToZip, archiveFile):
 
 def createZip(directoryToZip, configuration, archiveConfigurationOnMac=False):
     archiveDir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "WebKitBuild"))
-
-    # Chromium bots may not have this directory
-    if not os.path.isdir(archiveDir):
-        os.mkdir(archiveDir)
-
     archiveFile = os.path.join(archiveDir, configuration + ".zip")
 
     try:
@@ -116,8 +112,8 @@ def createZip(directoryToZip, configuration, archiveConfigurationOnMac=False):
         return subprocess.call(["zip", "-y", "-r", archiveFile, "."], cwd=directoryToZip)
 
 
-def archiveBuiltProduct(configuration, platform):
-    assert platform in ('mac', 'win', 'qt', 'gtk', 'efl', 'chromium')
+def archiveBuiltProduct(configuration, platform, fullPlatform):
+    assert platform in ('mac', 'win', 'qt', 'gtk', 'efl')
 
     configurationBuildDirectory = os.path.join(_buildDirectory, configuration.title())
 
@@ -144,7 +140,7 @@ def archiveBuiltProduct(configuration, platform):
         if platform == 'qt' or platform == 'efl':
             neededDirectories = ["bin", "lib"]
         elif platform == 'gtk':
-            neededDirectories = ["Programs", ".libs", "Libraries"]
+            neededDirectories = ["Programs", ".libs", "Libraries", "TestNetscapePlugin"]
 
         for dirname in neededDirectories:
             fromDir = os.path.join(configurationBuildDirectory, dirname, ".")
@@ -160,17 +156,6 @@ def archiveBuiltProduct(configuration, platform):
 
         if createZip(thinDirectory, configuration):
             return 1
-
-    elif platform == 'chromium':
-        thinDirectory = os.path.join(configurationBuildDirectory, "thin")
-
-        removeDirectoryIfExists(thinDirectory)
-        copyBuildFiles(configurationBuildDirectory, thinDirectory,
-            ['.svn', '*.a', '*.d', '*.dSYM', '*.o', '*.ilk', '*.lib', '*.idb', 'BuildLog.htm', '*.obj',
-            '*.pdb', '*.pch', '*.tlog', '*.lastbuildstate'])
-        if createZip(thinDirectory, configuration):
-            return 1
-
 
 def unzipArchive(directoryToExtractTo, configuration):
     archiveDir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "WebKitBuild"))
@@ -192,7 +177,7 @@ def unzipArchive(directoryToExtractTo, configuration):
 
 
 def extractBuiltProduct(configuration, platform):
-    assert platform in ('mac', 'win', 'qt', 'gtk', 'efl', 'chromium')
+    assert platform in ('mac', 'win', 'qt', 'gtk', 'efl')
 
     archiveFile = os.path.join(_buildDirectory, configuration + ".zip")
     configurationBuildDirectory = os.path.join(_buildDirectory, configuration.title())
@@ -213,7 +198,8 @@ def extractBuiltProduct(configuration, platform):
             return 1
 
         return unzipArchive(configurationBuildDirectory, configuration)
-    elif platform == 'qt' or platform == 'gtk' or platform == 'efl' or platform == 'chromium':
+    elif platform == 'qt' or platform == 'gtk' or platform == 'efl':
+        print "Extracting", configurationBuildDirectory
         return unzipArchive(configurationBuildDirectory, configuration)
 
 

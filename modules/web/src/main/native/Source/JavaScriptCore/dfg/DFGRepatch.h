@@ -41,6 +41,8 @@ void dfgBuildGetByIDProtoList(ExecState*, JSValue, const Identifier&, const Prop
 void dfgRepatchPutByID(ExecState*, JSValue, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
 void dfgBuildPutByIdList(ExecState*, JSValue, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
 void dfgLinkFor(ExecState*, CallLinkInfo&, CodeBlock*, JSFunction* callee, MacroAssemblerCodePtr, CodeSpecializationKind);
+void dfgLinkSlowFor(ExecState*, CallLinkInfo&, CodeSpecializationKind);
+void dfgLinkClosureCall(ExecState*, CallLinkInfo&, CodeBlock*, Structure*, ExecutableBase*, MacroAssemblerCodePtr);
 void dfgResetGetByID(RepatchBuffer&, StructureStubInfo&);
 void dfgResetPutByID(RepatchBuffer&, StructureStubInfo&);
 
@@ -57,8 +59,8 @@ struct StructureStubInfo;
 
 namespace DFG {
 
-inline NO_RETURN_DUE_TO_ASSERT void dfgResetGetByID(RepatchBuffer&, StructureStubInfo&) { ASSERT_NOT_REACHED(); }
-inline NO_RETURN_DUE_TO_ASSERT void dfgResetPutByID(RepatchBuffer&, StructureStubInfo&) { ASSERT_NOT_REACHED(); }
+inline NO_RETURN void dfgResetGetByID(RepatchBuffer&, StructureStubInfo&) { RELEASE_ASSERT_NOT_REACHED(); }
+inline NO_RETURN void dfgResetPutByID(RepatchBuffer&, StructureStubInfo&) { RELEASE_ASSERT_NOT_REACHED(); }
 
 } } // namespace JSC::DFG
 

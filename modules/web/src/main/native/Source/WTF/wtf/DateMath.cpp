@@ -86,6 +86,10 @@
 #include <time.h>
 #include <wtf/text/StringBuilder.h>
 
+#if OS(WINDOWS)
+#include <windows.h>
+#endif
+
 #if HAVE(ERRNO_H)
 #include <errno.h>
 #endif
@@ -96,6 +100,11 @@
 
 #if HAVE(SYS_TIMEB_H)
 #include <sys/timeb.h>
+#endif
+
+#if OS(QNX)
+// qnx6 defines timegm in nbutil.h
+#include <nbutil.h>
 #endif
 
 using namespace WTF;
@@ -122,6 +131,19 @@ static const int firstDayOfMonth[2][12] = {
     {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334},
     {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335}
 };
+
+#if !OS(WINCE)
+static inline void getLocalTime(const time_t* localTime, struct tm* localTM)
+{
+#if COMPILER(MINGW)
+    *localTM = *localtime(localTime);
+#elif COMPILER(MSVC)
+    localtime_s(localTM, localTime);
+#else
+    localtime_r(localTime, localTM);
+#endif
+}
+#endif
 
 bool isLeapYear(int year)
 {
@@ -282,9 +304,9 @@ int dayInMonthFromDayInYear(int dayInYear, bool leapYear)
     return d - step;
 }
 
-static inline int monthToDayInYear(int month, bool isLeapYear)
+int dayInYear(int year, int month, int day)
 {
-    return firstDayOfMonth[isLeapYear][month];
+    return firstDayOfMonth[isLeapYear(year)][month] + day - 1;
 }
 
 double dateToDaysFrom1970(int year, int month, int day)
@@ -299,9 +321,7 @@ double dateToDaysFrom1970(int year, int month, int day)
 
     double yearday = floor(daysFrom1970ToYear(year));
     ASSERT((year >= 1970 && yearday >= 0) || (year < 1970 && yearday < 0));
-    int monthday = monthToDayInYear(month, isLeapYear(year));
-
-    return yearday + monthday + day - 1;
+    return yearday + dayInYear(year, month, day);
 }
 
 // There is a hard limit at 2038 that we currently do not have a workaround
@@ -356,6 +376,12 @@ int equivalentYearForDST(int year)
 
 int32_t calculateUTCOffset()
 {
+#if OS(WINDOWS)
+    TIME_ZONE_INFORMATION timeZoneInformation;
+    GetTimeZoneInformation(&timeZoneInformation);
+    int32_t bias = timeZoneInformation.Bias + timeZoneInformation.StandardBias;
+    return -bias * 60 * 1000;
+#else
     time_t localTime = time(0);
     tm localt;
     getLocalTime(&localTime, &localt);
@@ -386,6 +412,7 @@ int32_t calculateUTCOffset()
 #endif
 
     return static_cast<int32_t>(utcOffset * 1000);
+#endif
 }
 
 /*
@@ -393,6 +420,11 @@ int32_t calculateUTCOffset()
  */
 static double calculateDSTOffsetSimple(double localTimeSeconds, double utcOffset)
 {
+#if OS(WINCE)
+    UNUSED_PARAM(localTimeSeconds);
+    UNUSED_PARAM(utcOffset);
+    return 0;
+#else
     if (localTimeSeconds > maxUnixTime)
         localTimeSeconds = maxUnixTime;
     else if (localTimeSeconds < 0) // Go ahead a day to make localtime work (does not work with 0)
@@ -417,6 +449,7 @@ static double calculateDSTOffsetSimple(double localTimeSeconds, double utcOffset
         diff += secondsPerDay;
 
     return (diff * msPerSecond);
+#endif
 }
 
 // Get the DST offset, given a time in UTC
@@ -452,7 +485,7 @@ void initializeDates()
     equivalentYearForDST(2000); // Need to call once to initialize a static used in this function.
 }
 
-static inline double ymdhmsToSeconds(long year, int mon, int day, int hour, int minute, double second)
+static inline double ymdhmsToSeconds(int year, long mon, long day, long hour, long minute, double second)
 {
     double days = (day - 32075)
         + floor(1461 * (year + 4800.0 + (mon - 14) / 12) / 4)
@@ -521,11 +554,21 @@ static int findMonth(const char* monthStr)
     return -1;
 }
 
+static bool parseInt(const char* string, char** stopPosition, int base, int* result)
+{
+    long longResult = strtol(string, stopPosition, base);
+    // Avoid the use of errno as it is not available on Windows CE
+    if (string == *stopPosition || longResult <= std::numeric_limits<int>::min() || longResult >= std::numeric_limits<int>::max())
+        return false;
+    *result = static_cast<int>(longResult);
+    return true;
+}
+
 static bool parseLong(const char* string, char** stopPosition, int base, long* result)
 {
     *result = strtol(string, stopPosition, base);
     // Avoid the use of errno as it is not available on Windows CE
-    if (string == *stopPosition || *result == LONG_MIN || *result == LONG_MAX)
+    if (string == *stopPosition || *result == std::numeric_limits<long>::min() || *result == std::numeric_limits<long>::max())
         return false;
     return true;
 }
@@ -533,14 +576,14 @@ static bool parseLong(const char* string, char** stopPosition, int base, long* r
 // Parses a date with the format YYYY[-MM[-DD]].
 // Year parsing is lenient, allows any number of digits, and +/-.
 // Returns 0 if a parse error occurs, else returns the end of the parsed portion of the string.
-static char* parseES5DatePortion(const char* currentPosition, long& year, long& month, long& day)
+static char* parseES5DatePortion(const char* currentPosition, int& year, long& month, long& day)
 {
     char* postParsePosition;
 
     // This is a bit more lenient on the year string than ES5 specifies:
     // instead of restricting to 4 digits (or 6 digits with mandatory +/-),
     // it accepts any integer value. Consider this an implementation fallback.
-    if (!parseLong(currentPosition, &postParsePosition, 10, &year))
+    if (!parseInt(currentPosition, &postParsePosition, 10, &year))
         return 0;
 
     // Check for presence of -MM portion.
@@ -677,7 +720,7 @@ double parseES5DateFromNullTerminatedCharacters(const char* dateString)
     static const long daysPerMonth[12] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
     
     // The year must be present, but the other fields may be omitted - see ES5.1 15.9.1.15.
-    long year = 0;
+    int year = 0;
     long month = 1;
     long day = 1;
     long hours = 0;
@@ -783,7 +826,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
     if (day < 0)
         return std::numeric_limits<double>::quiet_NaN();
 
-    long year = 0;
+    int year = 0;
     if (day > 31) {
         // ### where is the boundary and what happens below?
         if (*dateString != '/')
@@ -791,7 +834,9 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
         // looks like a YYYY/MM/DD date
         if (!*++dateString)
             return std::numeric_limits<double>::quiet_NaN();
-        year = day;
+        if (day <= std::numeric_limits<int>::min() || day >= std::numeric_limits<int>::max())
+            return std::numeric_limits<double>::quiet_NaN();
+        year = static_cast<int>(day);
         if (!parseLong(dateString, &newPosStr, 10, &month))
             return std::numeric_limits<double>::quiet_NaN();
         month -= 1;
@@ -846,7 +891,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
 
     // '99 23:12:40 GMT'
     if (year <= 0 && *dateString) {
-        if (!parseLong(dateString, &newPosStr, 10, &year))
+        if (!parseInt(dateString, &newPosStr, 10, &year))
             return std::numeric_limits<double>::quiet_NaN();
     }
 
@@ -933,7 +978,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
     
     // The year may be after the time but before the time zone.
     if (isASCIIDigit(*dateString) && year == -1) {
-        if (!parseLong(dateString, &newPosStr, 10, &year))
+        if (!parseInt(dateString, &newPosStr, 10, &year))
             return std::numeric_limits<double>::quiet_NaN();
         dateString = newPosStr;
         skipSpacesAndComments(dateString);
@@ -948,8 +993,8 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
         }
 
         if (*dateString == '+' || *dateString == '-') {
-            long o;
-            if (!parseLong(dateString, &newPosStr, 10, &o))
+            int o;
+            if (!parseInt(dateString, &newPosStr, 10, &o))
                 return std::numeric_limits<double>::quiet_NaN();
             dateString = newPosStr;
 
@@ -957,7 +1002,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
                 return std::numeric_limits<double>::quiet_NaN();
 
             int sgn = (o < 0) ? -1 : 1;
-            o = labs(o);
+            o = abs(o);
             if (*dateString != ':') {
                 if (o >= 24)
                     offset = ((o / 100) * 60 + (o % 100)) * sgn;
@@ -965,8 +1010,8 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
                     offset = o * 60 * sgn;
             } else { // GMT+05:00
                 ++dateString; // skip the ':'
-                long o2;
-                if (!parseLong(dateString, &newPosStr, 10, &o2))
+                int o2;
+                if (!parseInt(dateString, &newPosStr, 10, &o2))
                     return std::numeric_limits<double>::quiet_NaN();
                 dateString = newPosStr;
                 offset = (o * 60 + o2) * sgn;
@@ -987,7 +1032,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
     skipSpacesAndComments(dateString);
 
     if (*dateString && year == -1) {
-        if (!parseLong(dateString, &newPosStr, 10, &year))
+        if (!parseInt(dateString, &newPosStr, 10, &year))
             return std::numeric_limits<double>::quiet_NaN();
         dateString = newPosStr;
         skipSpacesAndComments(dateString);
@@ -1013,21 +1058,21 @@ double parseDateFromNullTerminatedCharacters(const char* dateString)
     bool haveTZ;
     int offset;
     double ms = parseDateFromNullTerminatedCharacters(dateString, haveTZ, offset);
-    if (isnan(ms))
+    if (std::isnan(ms))
         return std::numeric_limits<double>::quiet_NaN();
 
     // fall back to local timezone
     if (!haveTZ) {
         double utcOffset = calculateUTCOffset();
         double dstOffset = calculateDSTOffset(ms, utcOffset);
-        offset = static_cast<int>((utcOffset + dstOffset) / msPerMinute);
+        offset = (utcOffset + dstOffset) / msPerMinute;
     }
     return ms - (offset * msPerMinute);
 }
 
 double timeClip(double t)
 {
-    if (!isfinite(t))
+    if (!std::isfinite(t))
         return std::numeric_limits<double>::quiet_NaN();
     if (fabs(t) > maxECMAScriptTime)
         return std::numeric_limits<double>::quiet_NaN();
@@ -1039,13 +1084,13 @@ String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, u
 {
     StringBuilder stringBuilder;
     stringBuilder.append(weekdayName[dayOfWeek]);
-    stringBuilder.append(", ");
-    stringBuilder.append(String::number(day));
-    stringBuilder.append(" ");
+    stringBuilder.appendLiteral(", ");
+    stringBuilder.appendNumber(day);
+    stringBuilder.append(' ');
     stringBuilder.append(monthName[month]);
-    stringBuilder.append(" ");
-    stringBuilder.append(String::number(year));
-    stringBuilder.append(" ");
+    stringBuilder.append(' ');
+    stringBuilder.appendNumber(year);
+    stringBuilder.append(' ');
 
     stringBuilder.append(twoDigitStringFromNumber(hours));
     stringBuilder.append(':');
@@ -1054,7 +1099,7 @@ String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, u
     stringBuilder.append(twoDigitStringFromNumber(seconds));
     stringBuilder.append(' ');
 
-    stringBuilder.append(utcOffset > 0 ? "+" : "-");
+    stringBuilder.append(utcOffset > 0 ? '+' : '-');
     int absoluteUTCOffset = abs(utcOffset);
     stringBuilder.append(twoDigitStringFromNumber(absoluteUTCOffset / 60));
     stringBuilder.append(twoDigitStringFromNumber(absoluteUTCOffset % 60));

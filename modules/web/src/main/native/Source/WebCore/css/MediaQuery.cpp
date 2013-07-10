@@ -39,7 +39,7 @@ namespace WebCore {
 String MediaQuery::serialize() const
 {
     StringBuilder result;
-
+    if (!m_ignored) {
     switch (m_restrictor) {
     case MediaQuery::Only:
         result.append("only ");
@@ -65,6 +65,10 @@ String MediaQuery::serialize() const
     for (size_t i = 1; i < m_expressions->size(); ++i) {
         result.append(" and ");
         result.append(m_expressions->at(i)->serialize());
+    }
+    } else {
+        // If query is invalid, serialized text should turn into "not all".
+        result.append("not all");
     }
     return result.toString();
 }

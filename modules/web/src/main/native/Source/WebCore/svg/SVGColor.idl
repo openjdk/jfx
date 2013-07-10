@@ -19,11 +19,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module svg {
-
-    interface [
-        Conditional=SVG
-    ] SVGColor : CSSValue {
+[
+    Conditional=SVG,
+    ImplementationLacksVTable
+] interface SVGColor : CSSValue {
         const unsigned short SVG_COLORTYPE_UNKNOWN = 0;
         const unsigned short SVG_COLORTYPE_RGBCOLOR = 1;
         const unsigned short SVG_COLORTYPE_RGBCOLOR_ICCCOLOR = 2;
@@ -33,14 +32,13 @@ module svg {
         readonly attribute RGBColor rgbColor;
         // FIXME: readonly attribute SVGICCColor iccColor;
 
-        [StrictTypeChecking] void setRGBColor(in DOMString rgbColor)
+    [StrictTypeChecking] void setRGBColor(DOMString rgbColor)
             raises(DOMException, SVGException);
 
-        [StrictTypeChecking] void setRGBColorICCColor(in DOMString rgbColor, in DOMString iccColor)
+    [StrictTypeChecking] void setRGBColorICCColor(DOMString rgbColor, DOMString iccColor)
             raises(DOMException, SVGException);
 
-        [StrictTypeChecking] void setColor(in unsigned short colorType, in DOMString rgbColor, in DOMString iccColor)
+    [StrictTypeChecking] void setColor(unsigned short colorType, DOMString rgbColor, DOMString iccColor)
             raises(DOMException, SVGException);
     };
 
-}

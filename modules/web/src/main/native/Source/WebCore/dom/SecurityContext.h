@@ -49,6 +49,7 @@ enum SandboxFlag {
     SandboxPopups = 1 << 6, // See https://www.w3.org/Bugs/Public/show_bug.cgi?id=12393
     SandboxAutomaticFeatures = 1 << 7,
     SandboxSeamlessIframes = 1 << 8,
+    SandboxPointerLock = 1 << 9,
     SandboxAll = -1 // Mask with all bits set to 1.
 };
 
@@ -70,13 +71,11 @@ public:
     //       that already contains content.
     void setSecurityOrigin(PassRefPtr<SecurityOrigin>);
 
-    static SandboxFlags parseSandboxPolicy(const String& policy);
+    static SandboxFlags parseSandboxPolicy(const String& policy, String& invalidTokensErrorMessage);
 
 protected:
     SecurityContext();
     virtual ~SecurityContext();
-
-    virtual void didUpdateSecurityOrigin();
 
     void setContentSecurityPolicy(PassOwnPtr<ContentSecurityPolicy>);
 
@@ -85,7 +84,7 @@ protected:
 
     // Set in Document::initSecurityContext() at Document creation, per:
     // http://www.whatwg.org/specs/web-apps/current-work/#attr-iframe-seamless
-    bool m_mayDisplaySeamlessWithParent;
+    bool m_mayDisplaySeamlesslyWithParent;
 
 private:
     bool m_haveInitializedSecurityOrigin;

@@ -65,6 +65,22 @@ class TypedArrayBase : public ArrayBufferView {
         return m_length * sizeof(T);
     }
 
+    // Invoked by the indexed getter. Does not perform range checks; caller
+    // is responsible for doing so and returning undefined as necessary.
+    T item(unsigned index) const
+    {
+        ASSERT_WITH_SECURITY_IMPLICATION(index < TypedArrayBase<T>::m_length);
+        return TypedArrayBase<T>::data()[index];
+    }
+
+    bool checkInboundData(unsigned offset, unsigned pos) const
+    {
+        return (offset <= m_length
+            && offset + pos <= m_length
+            // check overflow
+            && offset + pos >= offset);
+    }
+
 protected:
     TypedArrayBase(PassRefPtr<ArrayBuffer> buffer, unsigned byteOffset, unsigned length)
         : ArrayBufferView(buffer, byteOffset)

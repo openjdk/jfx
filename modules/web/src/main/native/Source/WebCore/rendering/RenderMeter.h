@@ -21,7 +21,7 @@
 #ifndef RenderMeter_h
 #define RenderMeter_h
 
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
 #include "RenderBlock.h"
 #include "RenderWidget.h"
 
@@ -32,24 +32,24 @@ class HTMLMeterElement;
 
 class RenderMeter : public RenderBlock {
 public:
-    RenderMeter(HTMLMeterElement*);
+    explicit RenderMeter(HTMLElement*);
     virtual ~RenderMeter();
 
+    HTMLMeterElement* meterElement() const;
+    virtual void updateFromElement();
+
 private:
-    virtual void computeLogicalWidth();
-    virtual void computeLogicalHeight();
+    virtual void updateLogicalWidth() OVERRIDE;
+    virtual void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const OVERRIDE;
 
     virtual const char* renderName() const { return "RenderMeter"; }
     virtual bool isMeter() const { return true; }
     virtual bool requiresForcedStyleRecalcPropagation() const { return true; }
-    virtual void updateFromElement();
-
-    double valueRatio() const;
 };
 
 inline RenderMeter* toRenderMeter(RenderObject* object)
 {
-    ASSERT(!object || object->isMeter());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isMeter());
     return static_cast<RenderMeter*>(object);
 }
 

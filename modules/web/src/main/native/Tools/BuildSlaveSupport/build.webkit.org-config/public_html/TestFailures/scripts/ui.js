@@ -47,7 +47,7 @@ ui.urlForTest = function(testName)
 ui.urlForFlakinessDashboard = function(opt_testNameList)
 {
     var testsParameter = opt_testNameList ? opt_testNameList.join(',') : '';
-    return 'http://test-results.appspot.com/dashboards/flakiness_dashboard.html#tests=' + encodeURIComponent(testsParameter);
+    return 'http://webkit-test-results.appspot.com/dashboards/flakiness_dashboard.html#tests=' + encodeURIComponent(testsParameter);
 }
 
 ui.urlForEmbeddedFlakinessDashboard = function(opt_testNameList)
@@ -245,7 +245,7 @@ ui.StatusArea = base.extends('div',  {
         this.appendChild(new ui.actions.List([new ui.actions.Close()]));
         $(this).bind('close', this.close.bind(this));
 
-        var processing = document.createElement('div');
+        var processing = document.createElement('progress');
         processing.className = 'process-text';
         processing.textContent = 'Processing...';
         this.appendChild(processing);

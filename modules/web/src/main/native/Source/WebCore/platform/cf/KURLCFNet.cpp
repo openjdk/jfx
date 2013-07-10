@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ namespace WebCore {
 
 typedef Vector<char, 512> CharBuffer;
 
-CFURLRef createCFURLFromBuffer(const CharBuffer&);
+RetainPtr<CFURLRef> createCFURLFromBuffer(const CharBuffer&);
 
 KURL::KURL(CFURLRef url)
 {
@@ -49,48 +49,37 @@ KURL::KURL(CFURLRef url)
     char* bytes = &buffer[0];
     CFURLGetBytes(url, reinterpret_cast<UInt8*>(bytes), bytesLength);
     bytes[bytesLength] = '\0';
-#if !USE(WTFURL)
     parse(bytes);
-#else
-    // FIXME: Add WTFURL Implementation.
-    UNUSED_PARAM(url);
-    invalidate();
-#endif // USE(WTFURL)
 }
 
-CFURLRef createCFURLFromBuffer(const CharBuffer& buffer)
+RetainPtr<CFURLRef> createCFURLFromBuffer(const CharBuffer& buffer)
 {
     // NOTE: We use UTF-8 here since this encoding is used when computing strings when returning URL components
     // (e.g calls to NSURL -path). However, this function is not tolerant of illegal UTF-8 sequences, which
     // could either be a malformed string or bytes in a different encoding, like Shift-JIS, so we fall back
     // onto using ISO Latin-1 in those cases.
-    CFURLRef result = CFURLCreateAbsoluteURLWithBytes(0, reinterpret_cast<const UInt8*>(buffer.data()), buffer.size(), kCFStringEncodingUTF8, 0, true);
+    RetainPtr<CFURLRef> result = adoptCF(CFURLCreateAbsoluteURLWithBytes(0, reinterpret_cast<const UInt8*>(buffer.data()), buffer.size(), kCFStringEncodingUTF8, 0, true));
     if (!result)
-        result = CFURLCreateAbsoluteURLWithBytes(0, reinterpret_cast<const UInt8*>(buffer.data()), buffer.size(), kCFStringEncodingISOLatin1, 0, true);
+        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(0, reinterpret_cast<const UInt8*>(buffer.data()), buffer.size(), kCFStringEncodingISOLatin1, 0, true));
     return result;
 }
 
 #if !PLATFORM(MAC) && !(PLATFORM(QT) && USE(QTKIT))
-CFURLRef KURL::createCFURL() const
+RetainPtr<CFURLRef> KURL::createCFURL() const
 {
-#if !USE(WTFURL)
     // FIXME: What should this return for invalid URLs?
     // Currently it throws away the high bytes of the characters in the string in that case,
     // which is clearly wrong.
     CharBuffer buffer;
     copyToBuffer(buffer);
     return createCFURLFromBuffer(buffer);
-#else // USE(WTFURL)
-    // FIXME: Add WTFURL Implementation.
-    return 0;
-#endif
 }
 #endif
 
-#if !USE(WTFURL) && !(PLATFORM(QT) && USE(QTKIT))
+#if !(PLATFORM(QT) && USE(QTKIT))
 String KURL::fileSystemPath() const
 {
-    RetainPtr<CFURLRef> cfURL(AdoptCF, createCFURL());
+    RetainPtr<CFURLRef> cfURL = createCFURL();
     if (!cfURL)
         return String();
 
@@ -99,7 +88,7 @@ String KURL::fileSystemPath() const
 #else
     CFURLPathStyle pathStyle = kCFURLPOSIXPathStyle;
 #endif
-    return RetainPtr<CFStringRef>(AdoptCF, CFURLCopyFileSystemPath(cfURL.get(), pathStyle)).get();
+    return adoptCF(CFURLCopyFileSystemPath(cfURL.get(), pathStyle)).get();
 }
 #endif
 

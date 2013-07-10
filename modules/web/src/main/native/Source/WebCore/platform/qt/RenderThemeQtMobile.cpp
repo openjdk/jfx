@@ -36,7 +36,7 @@
 #include "PaintInfo.h"
 #include "QWebPageClient.h"
 #include "RenderBox.h"
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 #include "RenderProgress.h"
 #endif
 #include "StyleResolver.h"
@@ -69,7 +69,7 @@ static const float menuListPadding = 9;
 static const float textFieldPadding = 10;
 static const float radiusFactor = 0.36;
 static const float progressBarChunkPercentage = 0.2;
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 static const int progressAnimationGranularity = 2;
 #endif
 static const float sliderGrooveBorderRatio = 0.2;
@@ -200,6 +200,12 @@ static inline QPen borderPen(QPainter* painter = 0)
 QSharedPointer<StylePainter> RenderThemeQtMobile::getStylePainter(const PaintInfo& pi)
 {
     return QSharedPointer<StylePainter>(new StylePainterMobile(this, pi));
+}
+
+QPalette RenderThemeQtMobile::colorPalette() const
+{
+    static QPalette lightGrayPalette(Qt::lightGray);
+    return lightGrayPalette;
 }
 
 StylePainterMobile::StylePainterMobile(RenderThemeQtMobile* theme, const PaintInfo& paintInfo)
@@ -822,7 +828,7 @@ bool RenderThemeQtMobile::paintMenuListButton(RenderObject* o, const PaintInfo& 
     return false;
 }
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 double RenderThemeQtMobile::animationDurationForProgressBar(RenderProgress* renderProgress) const
 {
     if (renderProgress->isDeterminate())
@@ -869,11 +875,14 @@ bool RenderThemeQtMobile::paintSliderTrack(RenderObject* o, const PaintInfo& pi,
     QRect rect(r);
     const bool vertical = (o->style()->appearance() == SliderVerticalPart);
     const int groovePadding = vertical ? r.width() * sliderGrooveBorderRatio : r.height() * sliderGrooveBorderRatio;
-    if (vertical)
+    if (vertical) {
         rect.adjust(groovePadding, 0, -groovePadding, 0);
-    else
+        // Direction is ignored on vertical sliders and we assume LTR.
+        p.drawProgress(rect, progress, true, /*animated = */ false, vertical);
+    } else {
         rect.adjust(0, groovePadding, 0, -groovePadding);
     p.drawProgress(rect, progress, o->style()->isLeftToRightDirection(), /*animated = */ false, vertical);
+    }
 
     return false;
 }
@@ -892,15 +901,8 @@ bool RenderThemeQtMobile::paintSliderThumb(RenderObject* o, const PaintInfo& pi,
 
 bool RenderThemeQtMobile::checkMultiple(RenderObject* o) const
 {
-    HTMLSelectElement* select = o ? static_cast<HTMLSelectElement*>(o->node()) : 0;
+    HTMLSelectElement* select = o ? toHTMLSelectElement(o->node()) : 0;
     return select ? select->multiple() : false;
-}
-
-void RenderThemeQtMobile::setPaletteFromPageClientIfExists(QPalette& palette) const
-{
-    static QPalette lightGrayPalette(Qt::lightGray);
-    palette = lightGrayPalette;
-    return;
 }
 
 void RenderThemeQtMobile::adjustSliderThumbSize(RenderStyle* style, Element* element) const

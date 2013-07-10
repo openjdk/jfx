@@ -47,9 +47,6 @@ public:
     bool setRadiusY(float);
 
     virtual void platformApplySoftware();
-#if USE(SKIA)
-    virtual bool platformApplySkia();
-#endif
     virtual void dump();
 
     virtual void determineAbsolutePaintRect();

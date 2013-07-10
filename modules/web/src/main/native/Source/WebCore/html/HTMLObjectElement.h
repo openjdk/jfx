@@ -25,13 +25,12 @@
 
 #include "FormAssociatedElement.h"
 #include "HTMLPlugInImageElement.h"
-#include "ImageLoaderClient.h"
 
 namespace WebCore {
 
 class HTMLFormElement;
 
-class HTMLObjectElement : public HTMLPlugInImageElement, public FormAssociatedElement {
+class HTMLObjectElement FINAL : public HTMLPlugInImageElement, public FormAssociatedElement {
 public:
     static PassRefPtr<HTMLObjectElement> create(const QualifiedName&, Document*, HTMLFormElement*, bool createdByParser);
     virtual ~HTMLObjectElement();
@@ -67,9 +66,9 @@ public:
 private:
     HTMLObjectElement(const QualifiedName&, Document*, HTMLFormElement*, bool createdByParser);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
@@ -80,9 +79,9 @@ private:
     virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
 
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
-    virtual const QualifiedName& imageSourceAttributeName() const;
+    virtual const AtomicString& imageSourceURL() const OVERRIDE;
 
-    virtual RenderWidget* renderWidgetForJSBindings();
+    virtual RenderWidget* renderWidgetForJSBindings() const;
 
     virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
 
@@ -107,13 +106,16 @@ private:
     virtual void setItemValueText(const String&, ExceptionCode&) OVERRIDE;
 #endif
 
-    virtual bool shouldRegisterAsNamedItem() const OVERRIDE { return isDocNamedItem(); }
-    virtual bool shouldRegisterAsExtraNamedItem() const OVERRIDE { return isDocNamedItem(); }
-
     String m_classId;
     bool m_docNamedItem : 1;
     bool m_useFallbackContent : 1;
 };
+
+inline HTMLObjectElement* toHTMLObjectElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->hasTagName(HTMLNames::objectTag));
+    return static_cast<HTMLObjectElement*>(node);
+}
 
 }
 

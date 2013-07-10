@@ -26,7 +26,7 @@
 #ifndef ResolveGlobalStatus_h
 #define ResolveGlobalStatus_h
 
-#include "JSValue.h"
+#include "JSCJSValue.h"
 #include "PropertyOffset.h"
 #include <wtf/NotFound.h>
 
@@ -34,6 +34,7 @@ namespace JSC {
 
 class CodeBlock;
 class Identifier;
+struct ResolveOperation;
 class Structure;
 
 class ResolveGlobalStatus {
@@ -61,7 +62,7 @@ public:
     {
     }
     
-    static ResolveGlobalStatus computeFor(CodeBlock*, unsigned bytecodeIndex, Identifier&);
+    static ResolveGlobalStatus computeFor(CodeBlock*, int bytecodeIndex, ResolveOperation*, Identifier&);
     
     State state() const { return m_state; }
     

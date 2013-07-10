@@ -1049,6 +1049,8 @@ void lens_wm_notifyTouchEvent(JNIEnv *env,
     _mousePosX = xabs;
     _mousePosY = yabs;
 
+    fbCursorSetPosition(_mousePosX, _mousePosY);
+
     window = glass_window_findWindowAtLocation(xabs, yabs,
                           &relX, &relY);
 
@@ -1116,12 +1118,8 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
     _mousePosX = mousePosX;
     _mousePosY = mousePosY;
 
-    //update cursor if event came from pointer device
-    if (!isTouch) {
-        fbCursorSetPosition(mousePosX, mousePosY);
-    }
-
-
+    fbCursorSetPosition(mousePosX, mousePosY);
+    
     if (_mousePressed && !_onDraggingAction && !isDnDStarted) {
         GLASS_LOG_FINE("Starting native mouse drag");
         _onDraggingAction = JNI_TRUE;

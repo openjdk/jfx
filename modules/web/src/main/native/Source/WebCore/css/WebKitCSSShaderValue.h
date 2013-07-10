@@ -37,6 +37,7 @@
 namespace WebCore {
 
 class CachedResourceLoader;
+class KURL;
 class StyleCachedShader;
 class StyleShader;
 
@@ -45,18 +46,33 @@ public:
     static PassRefPtr<WebKitCSSShaderValue> create(const String& url) { return adoptRef(new WebKitCSSShaderValue(url)); }
     ~WebKitCSSShaderValue();
 
+    const String& format() const { return m_format; }
+    void setFormat(const String& format) { m_format = format; }
+
+    KURL completeURL(CachedResourceLoader*) const;
     StyleCachedShader* cachedShader(CachedResourceLoader*);
     StyleShader* cachedOrPendingShader();
 
     String customCssText() const;
 
+    bool equals(const WebKitCSSShaderValue&) const;
+
 private:
     WebKitCSSShaderValue(const String& url);
 
     String m_url;
+    String m_format;
     RefPtr<StyleShader> m_shader;
     bool m_accessedShader;
 };
+
+// This will catch anyone doing an unnecessary cast.
+WebKitCSSShaderValue* toWebKitCSSShaderValue(const WebKitCSSShaderValue*);
+
+inline WebKitCSSShaderValue* toWebKitCSSShaderValue(CSSValue* value)
+{
+    return value->isWebKitCSSShaderValue() ? static_cast<WebKitCSSShaderValue*>(value) : 0;
+}
 
 } // namespace WebCore
 

@@ -32,12 +32,13 @@
 
 namespace JSC {
 
-class JSGlobalData;
+class VM;
 
 // A strongly referenced handle that prevents the object it points to from being garbage collected.
 template <typename T> class Strong : public Handle<T> {
     using Handle<T>::slot;
     using Handle<T>::setSlot;
+    template <typename U> friend class Strong;
 
 public:
     typedef typename Handle<T>::ExternalType ExternalType;
@@ -47,9 +48,9 @@ public:
     {
     }
 
-    Strong(JSGlobalData&, ExternalType = ExternalType());
+    Strong(VM&, ExternalType = ExternalType());
 
-    Strong(JSGlobalData&, Handle<T>);
+    Strong(VM&, Handle<T>);
 
     Strong(const Strong& other)
         : Handle<T>()
@@ -94,7 +95,7 @@ public:
 
     ExternalType get() const { return HandleTypes<T>::getFromSlot(this->slot()); }
 
-    void set(JSGlobalData&, ExternalType);
+    void set(VM&, ExternalType);
 
     template <typename U> Strong& operator=(const Strong<U>& other)
     {
@@ -103,7 +104,7 @@ public:
             return *this;
         }
 
-        set(*HandleSet::heapFor(other.slot())->globalData(), other.get());
+        set(*HandleSet::heapFor(other.slot())->vm(), other.get());
         return *this;
     }
 
@@ -114,7 +115,7 @@ public:
             return *this;
         }
 
-        set(*HandleSet::heapFor(other.slot())->globalData(), other.get());
+        set(*HandleSet::heapFor(other.slot())->vm(), other.get());
         return *this;
     }
 

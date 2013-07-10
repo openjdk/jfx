@@ -53,9 +53,9 @@ void AudioParamTimeline::exponentialRampToValueAtTime(float value, float time)
     insertEvent(ParamEvent(ParamEvent::ExponentialRampToValue, value, time, 0, 0, 0));
 }
 
-void AudioParamTimeline::setTargetValueAtTime(float targetValue, float time, float timeConstant)
+void AudioParamTimeline::setTargetAtTime(float target, float time, float timeConstant)
 {
-    insertEvent(ParamEvent(ParamEvent::SetTargetValue, targetValue, time, timeConstant, 0, 0));
+    insertEvent(ParamEvent(ParamEvent::SetTarget, target, time, timeConstant, 0, 0));
 }
 
 void AudioParamTimeline::setValueCurveAtTime(Float32Array* curve, float time, float duration)
@@ -65,7 +65,7 @@ void AudioParamTimeline::setValueCurveAtTime(Float32Array* curve, float time, fl
 
 static bool isValidNumber(float x)
 {
-    return !isnan(x) && !isinf(x);
+    return !std::isnan(x) && !std::isinf(x);
 }
 
 void AudioParamTimeline::insertEvent(const ParamEvent& event)
@@ -117,30 +117,34 @@ float AudioParamTimeline::valueForContextTime(AudioContext* context, float defau
 {
     ASSERT(context);
 
-    if (!context || !m_events.size() || context->currentTime() < m_events[0].time()) {
+    {
+        MutexTryLocker tryLocker(m_eventsLock);
+        if (!tryLocker.locked() || !context || !m_events.size() || context->currentTime() < m_events[0].time()) {
         hasValue = false;
         return defaultValue;
+    }
     }
 
     // Ask for just a single value.
     float value;
-    float sampleRate = context->sampleRate();
-    float startTime = narrowPrecisionToFloat(context->currentTime());
-    float endTime = startTime + 1.1f / sampleRate; // time just beyond one sample-frame
-    float controlRate = sampleRate / AudioNode::ProcessingSizeInFrames; // one parameter change per render quantum
+    double sampleRate = context->sampleRate();
+    double startTime = context->currentTime();
+    double endTime = startTime + 1.1 / sampleRate; // time just beyond one sample-frame
+    double controlRate = sampleRate / AudioNode::ProcessingSizeInFrames; // one parameter change per render quantum
     value = valuesForTimeRange(startTime, endTime, defaultValue, &value, 1, sampleRate, controlRate);
 
     hasValue = true;
     return value;
 }
 
-float AudioParamTimeline::valuesForTimeRange(float startTime,
-                                             float endTime,
+float AudioParamTimeline::valuesForTimeRange(
+    double startTime,
+    double endTime,
                                              float defaultValue,
                                              float* values,
                                              unsigned numberOfValues,
-                                             float sampleRate,
-                                             float controlRate)
+    double sampleRate,
+    double controlRate)
 {
     // We can't contend the lock in the realtime audio thread.
     MutexTryLocker tryLocker(m_eventsLock);
@@ -157,20 +161,20 @@ float AudioParamTimeline::valuesForTimeRange(float startTime,
     return value;
 }
 
-float AudioParamTimeline::valuesForTimeRangeImpl(float startTime,
-                                                 float endTime,
+float AudioParamTimeline::valuesForTimeRangeImpl(
+    double startTime,
+    double endTime,
                                                  float defaultValue,
                                                  float* values,
                                                  unsigned numberOfValues,
-                                                 float sampleRate,
-                                                 float controlRate)
+    double sampleRate,
+    double controlRate)
 {
     ASSERT(values);
     if (!values)
         return defaultValue;
 
     // Return default value if there are no events matching the desired time range.
-    ASSERT(m_events.size());
     if (!m_events.size() || endTime <= m_events[0].time()) {
         for (unsigned i = 0; i < numberOfValues; ++i)
             values[i] = defaultValue;
@@ -178,14 +182,14 @@ float AudioParamTimeline::valuesForTimeRangeImpl(float startTime,
     }
 
     // Maintain a running time and index for writing the values buffer.
-    float currentTime = startTime;
+    double currentTime = startTime;
     unsigned writeIndex = 0;
 
     // If first event is after startTime then fill initial part of values buffer with defaultValue
     // until we reach the first event time.
-    float firstEventTime = m_events[0].time();
+    double firstEventTime = m_events[0].time();
     if (firstEventTime > startTime) {
-        float fillToTime = min(endTime, firstEventTime);
+        double fillToTime = min(endTime, firstEventTime);
         unsigned fillToFrame = AudioUtilities::timeToSampleFrame(fillToTime - startTime, sampleRate);
         fillToFrame = min(fillToFrame, numberOfValues);
         for (; writeIndex < fillToFrame; ++writeIndex)
@@ -210,15 +214,15 @@ float AudioParamTimeline::valuesForTimeRangeImpl(float startTime,
             continue;
 
         float value1 = event.value();
-        float time1 = event.time();
+        double time1 = event.time();
         float value2 = nextEvent ? nextEvent->value() : value1;
-        float time2 = nextEvent ? nextEvent->time() : endTime + 1;
+        double time2 = nextEvent ? nextEvent->time() : endTime + 1;
 
-        float deltaTime = time2 - time1;
+        double deltaTime = time2 - time1;
         float k = deltaTime > 0 ? 1 / deltaTime : 0;
-        float sampleFrameTimeIncr = 1 / sampleRate;
+        double sampleFrameTimeIncr = 1 / sampleRate;
 
-        float fillToTime = min(endTime, time2);
+        double fillToTime = min(endTime, time2);
         unsigned fillToFrame = AudioUtilities::timeToSampleFrame(fillToTime - startTime, sampleRate);
         fillToFrame = min(fillToFrame, numberOfValues);
 
@@ -272,18 +276,18 @@ float AudioParamTimeline::valuesForTimeRangeImpl(float startTime,
                     break;
                 }
 
-            case ParamEvent::SetTargetValue:
+            case ParamEvent::SetTarget:
                 {
                     currentTime = fillToTime;
 
                     // Exponential approach to target value with given time constant.
-                    float targetValue = event.value();
+                    float target = event.value();
                     float timeConstant = event.timeConstant();
                     float discreteTimeConstant = static_cast<float>(AudioUtilities::discreteTimeConstantForSampleRate(timeConstant, controlRate));
 
                     for (; writeIndex < fillToFrame; ++writeIndex) {
                         values[writeIndex] = value;
-                        value += (targetValue - value) * discreteTimeConstant;
+                        value += (target - value) * discreteTimeConstant;
                     }
 
                     break;

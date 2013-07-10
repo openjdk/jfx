@@ -33,7 +33,6 @@
 #include <wtf/Vector.h>
 
 #if PLATFORM(JAVA)
-#include <wtf/AlwaysInline.h>
 #include "JavaRef.h"
 #endif
 
@@ -81,7 +80,7 @@ public:
     HistoryItemVector& entries();
 
 private:
-    BackForwardListImpl(Page*);
+    explicit BackForwardListImpl(Page*);
 
     virtual bool isActive() { return enabled() && capacity(); }
 

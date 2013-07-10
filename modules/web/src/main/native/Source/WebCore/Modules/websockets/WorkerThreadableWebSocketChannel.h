@@ -33,7 +33,6 @@
 
 #if ENABLE(WEB_SOCKETS) && ENABLE(WORKERS)
 
-#include "PlatformString.h"
 #include "ThreadableWebSocketChannel.h"
 #include "WebSocketChannelClient.h"
 #include "WorkerContext.h"
@@ -42,6 +41,7 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Threading.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -66,7 +66,7 @@ public:
     virtual String subprotocol() OVERRIDE;
     virtual String extensions() OVERRIDE;
     virtual ThreadableWebSocketChannel::SendResult send(const String& message) OVERRIDE;
-    virtual ThreadableWebSocketChannel::SendResult send(const ArrayBuffer&) OVERRIDE;
+    virtual ThreadableWebSocketChannel::SendResult send(const ArrayBuffer&, unsigned byteOffset, unsigned byteLength) OVERRIDE;
     virtual ThreadableWebSocketChannel::SendResult send(const Blob&) OVERRIDE;
     virtual unsigned long bufferedAmount() const OVERRIDE;
     virtual void close(int code, const String& reason) OVERRIDE;
@@ -134,7 +134,7 @@ private:
         void initialize();
         void connect(const KURL&, const String& protocol);
         ThreadableWebSocketChannel::SendResult send(const String& message);
-        ThreadableWebSocketChannel::SendResult send(const ArrayBuffer&);
+        ThreadableWebSocketChannel::SendResult send(const ArrayBuffer&, unsigned byteOffset, unsigned byteLength);
         ThreadableWebSocketChannel::SendResult send(const Blob&);
         unsigned long bufferedAmount();
         void close(int code, const String& reason);

@@ -31,6 +31,7 @@
 #include "Image.h"
 #include "Color.h"
 #include "ImageOrientation.h"
+#include "ImageSource.h"
 #include "IntSize.h"
 
 #if PLATFORM(MAC)
@@ -42,10 +43,6 @@ OBJC_CLASS NSImage;
 typedef struct HBITMAP__ *HBITMAP;
 #elif PLATFORM(JAVA) && !USE(IMAGEIO)
 #include "SharedBuffer.h"
-#endif
-
-#if PLATFORM(WX)
-class wxBitmap;
 #endif
 
 namespace WebCore {
@@ -76,6 +73,7 @@ public:
         , m_haveMetadata(false)
         , m_isComplete(false)
         , m_hasAlpha(true) 
+        , m_frameBytes(0)
     {
     }
 
@@ -94,6 +92,7 @@ public:
     bool m_haveMetadata : 1;
     bool m_isComplete : 1;
     bool m_hasAlpha : 1;
+    unsigned m_frameBytes;
 };
 
 // =================================================
@@ -106,7 +105,7 @@ class BitmapImage : public Image {
     friend class GeneratorGeneratedImage;
     friend class GraphicsContext;
 public:
-    static PassRefPtr<BitmapImage> create(NativeImagePtr nativeImage, ImageObserver* observer = 0)
+    static PassRefPtr<BitmapImage> create(PassNativeImagePtr nativeImage, ImageObserver* observer = 0)
     {
         return adoptRef(new BitmapImage(nativeImage, observer));
     }
@@ -151,12 +150,6 @@ public:
 #if PLATFORM(WIN) || (PLATFORM(QT) && OS(WINDOWS))
     static PassRefPtr<BitmapImage> create(HBITMAP);
 #endif
-#if PLATFORM(WX)
-    static PassRefPtr<BitmapImage> create(const wxBitmap& bitmap)
-    {
-        return adoptRef(new BitmapImage(bitmap));
-    }
-#endif
 
 #if PLATFORM(JAVA)
     static PassRefPtr<Image> createFromName(const char* name);
@@ -168,24 +161,25 @@ public:
     virtual bool getHBITMAPOfSize(HBITMAP, LPSIZE);
 #endif
 
-#if USE(CAIRO)
-    static PassRefPtr<BitmapImage> create(cairo_surface_t*);
-#endif
-
 #if PLATFORM(GTK)
     virtual GdkPixbuf* getGdkPixbuf();
 #endif
 
-    virtual NativeImagePtr nativeImageForCurrentFrame();
-    bool frameHasAlphaAtIndex(size_t);
-    virtual bool currentFrameHasAlpha();
+#if PLATFORM(EFL)
+    virtual Evas_Object* getEvasObject(Evas*);
+#endif
+
+    virtual PassNativeImagePtr nativeImageForCurrentFrame() OVERRIDE;
+
+    virtual bool currentFrameKnownToBeOpaque() OVERRIDE;
 
     ImageOrientation currentFrameOrientation();
-    ImageOrientation frameOrientationAtIndex(size_t);
 
 #if !ASSERT_DISABLED
     virtual bool notSolidColor();
 #endif
+
+    bool canAnimate();
 
 private:
     void updateSize() const;
@@ -197,18 +191,15 @@ protected:
       Certain     // The repetition count is known to be correct.
     };
 
-    BitmapImage(NativeImagePtr, ImageObserver* = 0);
+    BitmapImage(PassNativeImagePtr, ImageObserver* = 0);
     BitmapImage(ImageObserver* = 0);
-#if PLATFORM(WX)
-    BitmapImage(const wxBitmap&);
-#endif
 
 #if PLATFORM(WIN)
     virtual void drawFrameMatchingSourceSize(GraphicsContext*, const FloatRect& dstRect, const IntSize& srcSize, ColorSpace styleColorSpace, CompositeOperator);
 #endif
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator);
-#if USE(CG)
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, RespectImageOrientationEnum);
+    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode);
+#if USE(CG) || USE(CAIRO) || PLATFORM(BLACKBERRY)
+    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, RespectImageOrientationEnum) OVERRIDE;
 #endif
 
 #if (OS(WINCE) && !PLATFORM(QT))
@@ -217,10 +208,12 @@ protected:
 #endif
 
     size_t currentFrame() const { return m_currentFrame; }
-    size_t frameCount();
-    NativeImagePtr frameAtIndex(size_t);
+    virtual size_t frameCount();
+    PassNativeImagePtr frameAtIndex(size_t);
     bool frameIsCompleteAtIndex(size_t);
     float frameDurationAtIndex(size_t);
+    bool frameHasAlphaAtIndex(size_t);
+    ImageOrientation frameOrientationAtIndex(size_t);
 
     // Decodes and caches a frame. Never accessed except internally.
     void cacheFrame(size_t index);
@@ -241,8 +234,8 @@ protected:
 
     // Generally called by destroyDecodedData(), destroys whole-image metadata
     // and notifies observers that the memory footprint has (hopefully)
-    // decreased by |framesCleared| times the size (in bytes) of a frame.
-    void destroyMetadataAndNotify(int framesCleared);
+    // decreased by |frameBytesCleared|.
+    void destroyMetadataAndNotify(unsigned frameBytesCleared);
 
     // Whether or not size is available yet.    
     bool isSizeAvailable();

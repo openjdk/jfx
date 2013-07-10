@@ -47,6 +47,8 @@ public:
     bool isPending() const { return false; }
     void loadSubimages(CachedResourceLoader*) { }
 
+    bool equals(const CSSCanvasValue&) const;
+
 private:
     CSSCanvasValue(const String& name)
         : CSSImageGeneratorValue(CanvasClass)

@@ -34,11 +34,11 @@
 
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
-#include "PlatformString.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -59,20 +59,21 @@ typedef String ErrorString;
 class InspectorProfilerAgent : public InspectorBaseAgent<InspectorProfilerAgent>, public InspectorBackendDispatcher::ProfilerCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorProfilerAgent); WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<InspectorProfilerAgent> create(InstrumentingAgents*, InspectorConsoleAgent*, Page*, InspectorState*, InjectedScriptManager*);
+    static PassOwnPtr<InspectorProfilerAgent> create(InstrumentingAgents*, InspectorConsoleAgent*, Page*, InspectorCompositeState*, InjectedScriptManager*);
 #if ENABLE(WORKERS)
-    static PassOwnPtr<InspectorProfilerAgent> create(InstrumentingAgents*, InspectorConsoleAgent*, WorkerContext*, InspectorState*, InjectedScriptManager*);
+    static PassOwnPtr<InspectorProfilerAgent> create(InstrumentingAgents*, InspectorConsoleAgent*, WorkerContext*, InspectorCompositeState*, InjectedScriptManager*);
 #endif
     virtual ~InspectorProfilerAgent();
 
-    void addProfile(PassRefPtr<ScriptProfile> prpProfile, unsigned lineNumber, const String& sourceURL);
-    void addProfileFinishedMessageToConsole(PassRefPtr<ScriptProfile>, unsigned lineNumber, const String& sourceURL);
-    void addStartProfilingMessageToConsole(const String& title, unsigned lineNumber, const String& sourceURL);
+    void addProfile(PassRefPtr<ScriptProfile> prpProfile, unsigned lineNumber, unsigned columnNumber, const String& sourceURL);
+    void addProfileFinishedMessageToConsole(PassRefPtr<ScriptProfile>, unsigned lineNumber, unsigned columnNumber, const String& sourceURL);
+    void addStartProfilingMessageToConsole(const String& title, unsigned lineNumber, unsigned columnNumber, const String& sourceURL);
     virtual void collectGarbage(ErrorString*);
     virtual void clearProfiles(ErrorString*) { resetState(); }
     void resetState();
 
     virtual void causesRecompilation(ErrorString*, bool*);
+    virtual void recompileScript() = 0;
     virtual void isSampling(ErrorString*, bool*);
     virtual void hasHeapProfiler(ErrorString*, bool*);
 
@@ -86,21 +87,25 @@ public:
     bool enabled() { return m_enabled; }
     String getCurrentUserInitiatedProfileName(bool incrementProfileNumber = false);
     virtual void getProfileHeaders(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Profiler::ProfileHeader> >&);
-    virtual void getProfile(ErrorString*, const String& type, int uid, RefPtr<TypeBuilder::Profiler::Profile>&);
+    virtual void getCPUProfile(ErrorString*, int uid, RefPtr<TypeBuilder::Profiler::CPUProfile>&);
+    virtual void getHeapSnapshot(ErrorString*, int uid);
     virtual void removeProfile(ErrorString*, const String& type, int uid);
 
     virtual void setFrontend(InspectorFrontend*);
     virtual void clearFrontend();
     virtual void restore();
 
-    virtual void takeHeapSnapshot(ErrorString*);
+    virtual void takeHeapSnapshot(ErrorString*, const bool* reportProgress);
     void toggleRecordButton(bool isProfiling);
 
     virtual void getObjectByHeapObjectId(ErrorString*, const String& heapSnapshotObjectId, const String* objectGroup, RefPtr<TypeBuilder::Runtime::RemoteObject>& result);
     virtual void getHeapObjectId(ErrorString*, const String& objectId, String* heapSnapshotObjectId);
 
+    void willProcessTask();
+    void didProcessTask();
+
 protected:
-    InspectorProfilerAgent(InstrumentingAgents*, InspectorConsoleAgent*, InspectorState*, InjectedScriptManager*);
+    InspectorProfilerAgent(InstrumentingAgents*, InspectorConsoleAgent*, InspectorCompositeState*, InjectedScriptManager*);
     virtual void startProfiling(const String& title) = 0;
     virtual PassRefPtr<ScriptProfile> stopProfiling(const String& title) = 0;
 
@@ -118,12 +123,16 @@ private:
     InjectedScriptManager* m_injectedScriptManager;
     InspectorFrontend::Profiler* m_frontend;
     bool m_enabled;
-    bool m_recordingUserInitiatedProfile;
+    bool m_recordingCPUProfile;
     int m_currentUserInitiatedProfileNumber;
     unsigned m_nextUserInitiatedProfileNumber;
     unsigned m_nextUserInitiatedHeapSnapshotNumber;
     ProfilesMap m_profiles;
     HeapSnapshotsMap m_snapshots;
+
+    typedef HashMap<String, double> ProfileNameIdleTimeMap;
+    ProfileNameIdleTimeMap* m_profileNameIdleTimeMap;
+    double m_previousTaskEndTime;
 };
 
 } // namespace WebCore

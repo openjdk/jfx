@@ -36,18 +36,21 @@
 
 namespace WTF {
 
-class WTF_EXPORT_PRIVATE_RTTI ArrayBufferView : public RefCounted<ArrayBufferView> {
+class ArrayBufferView : public RefCounted<ArrayBufferView> {
   public:
-    virtual bool isByteArray() const { return false; }
-    virtual bool isUnsignedByteArray() const { return false; }
-    virtual bool isUnsignedByteClampedArray() const { return false; }
-    virtual bool isShortArray() const { return false; }
-    virtual bool isUnsignedShortArray() const { return false; }
-    virtual bool isIntArray() const { return false; }
-    virtual bool isUnsignedIntArray() const { return false; }
-    virtual bool isFloatArray() const { return false; }
-    virtual bool isDoubleArray() const { return false; }
-    virtual bool isDataView() const { return false; }
+    enum ViewType {
+        TypeInt8,
+        TypeUint8,
+        TypeUint8Clamped,
+        TypeInt16,
+        TypeUint16,
+        TypeInt32,
+        TypeUint32,
+        TypeFloat32,
+        TypeFloat64,
+        TypeDataView
+    };
+    virtual ViewType getType() const = 0;
 
     PassRefPtr<ArrayBuffer> buffer() const
     {
@@ -66,10 +69,10 @@ class WTF_EXPORT_PRIVATE_RTTI ArrayBufferView : public RefCounted<ArrayBufferVie
 
     virtual unsigned byteLength() const = 0;
 
-    WTF_EXPORT_PRIVATE_NO_RTTI virtual ~ArrayBufferView();
+    WTF_EXPORT_PRIVATE virtual ~ArrayBufferView();
 
   protected:
-    WTF_EXPORT_PRIVATE_NO_RTTI ArrayBufferView(PassRefPtr<ArrayBuffer>, unsigned byteOffset);
+    WTF_EXPORT_PRIVATE ArrayBufferView(PassRefPtr<ArrayBuffer>, unsigned byteOffset);
 
     inline bool setImpl(ArrayBufferView*, unsigned byteOffset);
 
@@ -119,7 +122,7 @@ class WTF_EXPORT_PRIVATE_RTTI ArrayBufferView : public RefCounted<ArrayBufferVie
         *numElements = std::min(remainingElements, *numElements);
     }
 
-    WTF_EXPORT_PRIVATE_NO_RTTI virtual void neuter();
+    WTF_EXPORT_PRIVATE virtual void neuter();
 
     // This is the address of the ArrayBuffer's storage, plus the byte offset.
     void* m_baseAddress;

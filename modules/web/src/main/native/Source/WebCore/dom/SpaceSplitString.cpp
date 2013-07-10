@@ -31,24 +31,31 @@ using namespace WTF;
 
 namespace WebCore {
 
-static bool hasNonASCIIOrUpper(const String& string)
+template <typename CharacterType>
+static inline bool hasNonASCIIOrUpper(const CharacterType* characters, unsigned length)
 {
-    const UChar* characters = string.characters();
-    unsigned length = string.length();
     bool hasUpper = false;
-    UChar ored = 0;
+    CharacterType ored = 0;
     for (unsigned i = 0; i < length; i++) {
-        UChar c = characters[i];
+        CharacterType c = characters[i];
         hasUpper |= isASCIIUpper(c);
         ored |= c;
     }
     return hasUpper || (ored & ~0x7F);
 }
 
-void SpaceSplitStringData::createVector(const String& string)
+static inline bool hasNonASCIIOrUpper(const String& string)
 {
-    const UChar* characters = string.characters();
     unsigned length = string.length();
+
+    if (string.is8Bit())
+        return hasNonASCIIOrUpper(string.characters8(), length);
+    return hasNonASCIIOrUpper(string.characters16(), length);
+}
+
+template <typename CharacterType>
+inline void SpaceSplitStringData::createVector(const CharacterType* characters, unsigned length)
+{
     unsigned start = 0;
     while (true) {
         while (start < length && isHTMLSpace(characters[start]))
@@ -63,6 +70,18 @@ void SpaceSplitStringData::createVector(const String& string)
 
         start = end + 1;
     }
+}
+
+void SpaceSplitStringData::createVector(const String& string)
+{
+    unsigned length = string.length();
+
+    if (string.is8Bit()) {
+        createVector(string.characters8(), length);
+        return;
+    }
+
+    createVector(string.characters16(), length);
 }
 
 bool SpaceSplitStringData::containsAll(SpaceSplitStringData& other)
@@ -88,36 +107,43 @@ bool SpaceSplitStringData::containsAll(SpaceSplitStringData& other)
 void SpaceSplitStringData::add(const AtomicString& string)
 {
     ASSERT(hasOneRef());
-    if (contains(string))
-        return;
-
+    ASSERT(!contains(string));
     m_vector.append(string);
 }
 
-void SpaceSplitStringData::remove(const AtomicString& string)
+void SpaceSplitStringData::remove(unsigned index)
 {
     ASSERT(hasOneRef());
-    size_t position = 0;
-    while (position < m_vector.size()) {
-        if (m_vector[position] == string)
-            m_vector.remove(position);
-        else
-            ++position;
-    }
+    m_vector.remove(index);
 }
 
 void SpaceSplitString::add(const AtomicString& string)
 {
+    // FIXME: add() does not allow duplicates but createVector() does.
+    if (contains(string))
+        return;
     ensureUnique();
     if (m_data)
         m_data->add(string);
 }
 
-void SpaceSplitString::remove(const AtomicString& string)
+bool SpaceSplitString::remove(const AtomicString& string)
 {
+    if (!m_data)
+        return false;
+    unsigned i = 0;
+    bool changed = false;
+    while (i < m_data->size()) {
+        if ((*m_data)[i] == string) {
+            if (!changed)
     ensureUnique();
-    if (m_data)
-        m_data->remove(string);
+            m_data->remove(i);
+            changed = true;
+            continue;
+        }
+        ++i;
+    }
+    return changed;
 }
 
 typedef HashMap<AtomicString, SpaceSplitStringData*> SpaceSplitStringDataMap;
@@ -150,7 +176,7 @@ SpaceSplitStringData::~SpaceSplitStringData()
 
 PassRefPtr<SpaceSplitStringData> SpaceSplitStringData::create(const AtomicString& string)
 {
-    SpaceSplitStringData*& data = sharedDataMap().add(string, 0).iterator->second;
+    SpaceSplitStringData*& data = sharedDataMap().add(string, 0).iterator->value;
     if (!data) {
         data = new SpaceSplitStringData(string);
         return adoptRef(data);

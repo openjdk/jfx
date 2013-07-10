@@ -115,6 +115,20 @@ void CSSToStyleMap::mapFillComposite(CSSPropertyID, FillLayer* layer, CSSValue* 
     layer->setComposite(*primitiveValue);
 }
 
+void CSSToStyleMap::mapFillBlendMode(CSSPropertyID, FillLayer* layer, CSSValue* value)
+{
+    if (value->isInitialValue()) {
+        layer->setBlendMode(FillLayer::initialFillBlendMode(layer->type()));
+        return;
+    }
+
+    if (!value->isPrimitiveValue())
+        return;
+
+    CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+    layer->setBlendMode(*primitiveValue);
+}
+
 void CSSToStyleMap::mapFillOrigin(CSSPropertyID, FillLayer* layer, CSSValue* value)
 {
     if (value->isInitialValue()) {
@@ -213,7 +227,7 @@ void CSSToStyleMap::mapFillSize(CSSPropertyID, FillLayer* layer, CSSValue* value
     layer->setSizeLength(b);
 }
 
-void CSSToStyleMap::mapFillXPosition(CSSPropertyID, FillLayer* layer, CSSValue* value)
+void CSSToStyleMap::mapFillXPosition(CSSPropertyID propertyID, FillLayer* layer, CSSValue* value)
 {
     if (value->isInitialValue()) {
         layer->setXPosition(FillLayer::initialFillXPosition(layer->type()));
@@ -226,6 +240,12 @@ void CSSToStyleMap::mapFillXPosition(CSSPropertyID, FillLayer* layer, CSSValue* 
     float zoomFactor = style()->effectiveZoom();
 
     CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+    Pair* pair = primitiveValue->getPairValue();
+    if (pair) {
+        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionX || propertyID == CSSPropertyWebkitMaskPositionX);
+        primitiveValue = pair->second();
+    }
+
     Length length;
     if (primitiveValue->isLength())
         length = primitiveValue->computeLength<Length>(style(), rootElementStyle(), zoomFactor);
@@ -237,10 +257,13 @@ void CSSToStyleMap::mapFillXPosition(CSSPropertyID, FillLayer* layer, CSSValue* 
         length = primitiveValue->viewportPercentageLength();
     else
         return;
+
     layer->setXPosition(length);
+    if (pair)
+        layer->setBackgroundXOrigin(*(pair->first()));
 }
 
-void CSSToStyleMap::mapFillYPosition(CSSPropertyID, FillLayer* layer, CSSValue* value)
+void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer* layer, CSSValue* value)
 {
     if (value->isInitialValue()) {
         layer->setYPosition(FillLayer::initialFillYPosition(layer->type()));
@@ -253,6 +276,12 @@ void CSSToStyleMap::mapFillYPosition(CSSPropertyID, FillLayer* layer, CSSValue* 
     float zoomFactor = style()->effectiveZoom();
 
     CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+    Pair* pair = primitiveValue->getPairValue();
+    if (pair) {
+        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionY || propertyID == CSSPropertyWebkitMaskPositionY);
+        primitiveValue = pair->second();
+    }
+
     Length length;
     if (primitiveValue->isLength())
         length = primitiveValue->computeLength<Length>(style(), rootElementStyle(), zoomFactor);
@@ -264,7 +293,10 @@ void CSSToStyleMap::mapFillYPosition(CSSPropertyID, FillLayer* layer, CSSValue* 
         length = primitiveValue->viewportPercentageLength();
     else
         return;
+
     layer->setYPosition(length);
+    if (pair)
+        layer->setBackgroundYOrigin(*(pair->first()));
 }
 
 void CSSToStyleMap::mapAnimationDelay(Animation* animation, CSSValue* value)
@@ -278,7 +310,7 @@ void CSSToStyleMap::mapAnimationDelay(Animation* animation, CSSValue* value)
         return;
 
     CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
-    animation->setDelay(primitiveValue->computeTime<float, CSSPrimitiveValue::Seconds>());
+    animation->setDelay(primitiveValue->computeTime<double, CSSPrimitiveValue::Seconds>());
 }
 
 void CSSToStyleMap::mapAnimationDirection(Animation* layer, CSSValue* value)
@@ -319,7 +351,7 @@ void CSSToStyleMap::mapAnimationDuration(Animation* animation, CSSValue* value)
         return;
 
     CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
-    animation->setDuration(primitiveValue->computeTime<float, CSSPrimitiveValue::Seconds>());
+    animation->setDuration(primitiveValue->computeTime<double, CSSPrimitiveValue::Seconds>());
 }
 
 void CSSToStyleMap::mapAnimationFillMode(Animation* layer, CSSValue* value)
@@ -361,7 +393,7 @@ void CSSToStyleMap::mapAnimationIterationCount(Animation* animation, CSSValue* v
 
     CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
     if (primitiveValue->getIdent() == CSSValueInfinite)
-        animation->setIterationCount(-1);
+        animation->setIterationCount(Animation::IterationCountInfinite);
     else
         animation->setIterationCount(primitiveValue->getFloatValue());
 }
@@ -439,13 +471,13 @@ void CSSToStyleMap::mapAnimationTimingFunction(Animation* animation, CSSValue* v
             animation->setTimingFunction(CubicBezierTimingFunction::create());
             break;
         case CSSValueEaseIn:
-            animation->setTimingFunction(CubicBezierTimingFunction::create(0.42, 0.0, 1.0, 1.0));
+            animation->setTimingFunction(CubicBezierTimingFunction::create(CubicBezierTimingFunction::EaseIn));
             break;
         case CSSValueEaseOut:
-            animation->setTimingFunction(CubicBezierTimingFunction::create(0.0, 0.0, 0.58, 1.0));
+            animation->setTimingFunction(CubicBezierTimingFunction::create(CubicBezierTimingFunction::EaseOut));
             break;
         case CSSValueEaseInOut:
-            animation->setTimingFunction(CubicBezierTimingFunction::create(0.42, 0.0, 0.58, 1.0));
+            animation->setTimingFunction(CubicBezierTimingFunction::create(CubicBezierTimingFunction::EaseInOut));
             break;
         case CSSValueStepStart:
             animation->setTimingFunction(StepsTimingFunction::create(1, true));

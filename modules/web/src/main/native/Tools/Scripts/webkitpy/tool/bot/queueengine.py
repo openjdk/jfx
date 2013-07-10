@@ -27,13 +27,16 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import sys
 import traceback
 
 from datetime import datetime, timedelta
 
 from webkitpy.common.system.executive import ScriptError
-from webkitpy.common.system.deprecated_logging import log, OutputTee
+from webkitpy.common.system.outputtee import OutputTee
+
+_log = logging.getLogger(__name__)
 
 
 # FIXME: This will be caught by "except Exception:" blocks, we should consider
@@ -66,21 +69,20 @@ class QueueEngineDelegate:
 
 
 class QueueEngine:
-    def __init__(self, name, delegate, wakeup_event):
+    def __init__(self, name, delegate, wakeup_event, seconds_to_sleep=120):
         self._name = name
         self._delegate = delegate
         self._wakeup_event = wakeup_event
         self._output_tee = OutputTee()
+        self._seconds_to_sleep = seconds_to_sleep
 
     log_date_format = "%Y-%m-%d %H:%M:%S"
-    sleep_duration_text = "2 mins"  # This could be generated from seconds_to_sleep
-    seconds_to_sleep = 120
     handled_error_code = 2
 
     # Child processes exit with a special code to the parent queue process can detect the error was handled.
     @classmethod
     def exit_after_handled_error(cls, error):
-        log(error)
+        _log.error(error)
         sys.exit(cls.handled_error_code)
 
     def run(self):
@@ -100,7 +102,7 @@ class QueueEngine:
                 self._open_work_log(work_item)
                 try:
                     if not self._delegate.process_work_item(work_item):
-                        log("Unable to process work item.")
+                        _log.warning("Unable to process work item.")
                         continue
                 except ScriptError, e:
                     # Use a special exit code to indicate that the error was already
@@ -123,7 +125,7 @@ class QueueEngine:
         return 0
 
     def _stopping(self, message):
-        log("\n%s" % message)
+        _log.info("\n%s" % message)
         self._delegate.stop_work_queue(message)
         # Be careful to shut down our OutputTee or the unit tests will be unhappy.
         self._ensure_work_log_closed()
@@ -150,10 +152,14 @@ class QueueEngine:
         return datetime.now()
 
     def _sleep_message(self, message):
-        wake_time = self._now() + timedelta(seconds=self.seconds_to_sleep)
-        return "%s Sleeping until %s (%s)." % (message, wake_time.strftime(self.log_date_format), self.sleep_duration_text)
+        wake_time = self._now() + timedelta(seconds=self._seconds_to_sleep)
+        if self._seconds_to_sleep < 3 * 60:
+            sleep_duration_text = str(self._seconds_to_sleep) + ' seconds'
+        else:
+            sleep_duration_text = str(round(self._seconds_to_sleep / 60)) + ' minutes'
+        return "%s Sleeping until %s (%s)." % (message, wake_time.strftime(self.log_date_format), sleep_duration_text)
 
     def _sleep(self, message):
-        log(self._sleep_message(message))
-        self._wakeup_event.wait(self.seconds_to_sleep)
+        _log.info(self._sleep_message(message))
+        self._wakeup_event.wait(self._seconds_to_sleep)
         self._wakeup_event.clear()

@@ -23,11 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module events {
-
-    interface [
-        Conditional=TOUCH_EVENTS
-    ] Touch {
+[
+    Conditional=TOUCH_EVENTS,
+    ImplementationLacksVTable
+] interface Touch {
         readonly attribute long             clientX;
         readonly attribute long             clientY;
         readonly attribute long             screenX;
@@ -36,9 +35,8 @@ module events {
         readonly attribute long             pageY;
         readonly attribute EventTarget      target;
         readonly attribute unsigned long    identifier;
-        readonly attribute int              webkitRadiusX;
-        readonly attribute int              webkitRadiusY;
+    readonly attribute long             webkitRadiusX;
+    readonly attribute long             webkitRadiusY;
         readonly attribute float            webkitRotationAngle;
         readonly attribute float            webkitForce;
     };
-}

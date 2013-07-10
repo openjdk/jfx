@@ -31,14 +31,13 @@
 #ifndef ScriptFunctionCall_h
 #define ScriptFunctionCall_h
 
-#include "PlatformString.h"
 #include "ScriptObject.h"
 #include "ScriptState.h"
 
 #include <runtime/ArgList.h>
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
-    class UString;
     class JSValue;
 }
 
@@ -51,9 +50,8 @@ namespace WebCore {
 
         void appendArgument(const ScriptObject&);
         void appendArgument(const ScriptValue&);
-        void appendArgument(const String&);
         void appendArgument(const char*);
-        void appendArgument(const JSC::UString&);
+        void appendArgument(const String&);
         void appendArgument(JSC::JSValue);
         void appendArgument(long);
         void appendArgument(long long);
@@ -90,7 +88,6 @@ namespace WebCore {
         ScriptCallback(ScriptState*, const ScriptValue&);
 
         ScriptValue call();
-        ScriptValue call(bool& hadException);
 
     private:
         ScriptValue m_function;

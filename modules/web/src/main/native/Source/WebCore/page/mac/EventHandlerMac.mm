@@ -30,7 +30,7 @@
 #include "BlockExceptions.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "ClipboardMac.h"
+#include "Clipboard.h"
 #include "DragController.h"
 #include "EventNames.h"
 #include "FocusController.h"
@@ -48,8 +48,8 @@
 #include "Scrollbar.h"
 #include "Settings.h"
 #include "WebCoreSystemInterface.h"
-#include <objc/objc-runtime.h>
 #include <wtf/MainThread.h>
+#include <wtf/ObjcRuntimeExtras.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -104,7 +104,7 @@ bool EventHandler::wheelEvent(NSEvent *event)
         return false;
 
     CurrentEventScope scope(event);
-    return handleWheelEvent(PlatformEventFactory::createPlatformWheelEvent(event, page->chrome()->platformPageClient()));
+    return handleWheelEvent(PlatformEventFactory::createPlatformWheelEvent(event, page->chrome().platformPageClient()));
 }
 
 bool EventHandler::keyEvent(NSEvent *event)
@@ -129,7 +129,7 @@ void EventHandler::focusDocumentView()
 
     if (FrameView* frameView = m_frame->view()) {
         if (NSView *documentView = frameView->documentView())
-            page->chrome()->focusNSView(documentView);
+            page->chrome().focusNSView(documentView);
     }
 
     page->focusController()->setFocusedFrame(m_frame);
@@ -138,7 +138,7 @@ void EventHandler::focusDocumentView()
 bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestResults& event)
 {
     // Figure out which view to send the event to.
-    RenderObject* target = targetNode(event) ? targetNode(event)->renderer() : 0;
+    RenderObject* target = event.targetNode() ? event.targetNode()->renderer() : 0;
     if (!target || !target->isWidget())
         return false;
     
@@ -203,11 +203,11 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
     if (!page)
         return true;
 
-    if (page->chrome()->client()->firstResponder() != view) {
+    if (page->chrome().client()->firstResponder() != view) {
         // Normally [NSWindow sendEvent:] handles setting the first responder.
         // But in our case, the event was sent to the view representing the entire web page.
         if ([currentNSEvent() clickCount] <= 1 && [view acceptsFirstResponder] && [view needsPanelToBecomeKey])
-            page->chrome()->client()->makeFirstResponder(view);
+            page->chrome().client()->makeFirstResponder(view);
     }
 
     // We need to "defer loading" while tracking the mouse, because tearing down the
@@ -224,9 +224,10 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
     ASSERT(!m_sendingEventToSubview);
     m_sendingEventToSubview = true;
 
-    RenderWidget::suspendWidgetHierarchyUpdates();
+    {
+        WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
     [view mouseDown:currentNSEvent()];
-    RenderWidget::resumeWidgetHierarchyUpdates();
+    }
 
     m_sendingEventToSubview = false;
     
@@ -352,7 +353,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
             return true;
         
         case NSLeftMouseDown: {
-            Node* node = targetNode(event);
+            Node* node = event.targetNode();
             if (!node)
                 return false;
             RenderObject* renderer = node->renderer();
@@ -412,7 +413,7 @@ static void selfRetainingNSScrollViewScrollWheel(NSScrollView *self, SEL selecto
 
     if (shouldRetainSelf)
         [self retain];
-    originalNSScrollViewScrollWheel(self, selector, event);
+    wtfCallIMP<void>(originalNSScrollViewScrollWheel, self, selector, event);
     if (shouldRetainSelf)
         [self release];
 }
@@ -430,7 +431,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, 
         if (!widget->isFrameView())
             return false;
 
-        return static_cast<FrameView*>(widget)->frame()->eventHandler()->handleWheelEvent(wheelEvent);
+        return toFrameView(widget)->frame()->eventHandler()->handleWheelEvent(wheelEvent);
     }
 
     if ([currentNSEvent() type] != NSScrollWheel || m_sendingEventToSubview) 
@@ -659,7 +660,7 @@ PlatformMouseEvent EventHandler::currentPlatformMouseEvent() const
 {
     NSView *windowView = nil;
     if (Page* page = m_frame->page())
-        windowView = page->chrome()->platformPageClient();
+        windowView = page->chrome().platformPageClient();
     return PlatformEventFactory::createPlatformMouseEvent(currentNSEvent(), windowView);
 }
 
@@ -673,10 +674,10 @@ bool EventHandler::eventActivatedView(const PlatformMouseEvent& event) const
 PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
 {
     // Must be done before ondragstart adds types and data to the pboard,
-    // also done for security, as it erases data from the last drag
-    Pasteboard pasteboard(NSDragPboard);
-    pasteboard.clear();
-    return ClipboardMac::create(Clipboard::DragAndDrop, String(NSDragPboard), ClipboardWritable, ClipboardMac::DragAndDropData, m_frame);
+    // also done for security, as it erases data from the last drag.
+    OwnPtr<Pasteboard> pasteboard = Pasteboard::create(NSDragPboard);
+    pasteboard->clear();
+    return Clipboard::createForDragAndDrop();
 }
 
 #endif
@@ -687,7 +688,7 @@ bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
     if (!page)
         return false;
 
-    KeyboardUIMode keyboardUIMode = page->chrome()->client()->keyboardUIMode();
+    KeyboardUIMode keyboardUIMode = page->chrome().client()->keyboardUIMode();
     bool handlingOptionTab = isKeyboardOptionTab(event);
 
     // If tab-to-links is off, option-tab always highlights all controls
@@ -707,11 +708,6 @@ bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
 
 bool EventHandler::needsKeyboardEventDisambiguationQuirks() const
 {
-    Document* document = m_frame->document();
-
-    // RSS view needs arrow key keypress events.
-    if (applicationIsSafari() && (document->url().protocolIs("feed") || document->url().protocolIs("feeds")))
-        return true;
     Settings* settings = m_frame->settings();
     if (!settings)
         return false;

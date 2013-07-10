@@ -30,6 +30,10 @@
 #include <stdbool.h>
 #endif
 
+#ifdef __OBJC__
+#import <Foundation/Foundation.h>
+#endif
+
 /* JavaScript engine interface */
 
 /*! @typedef JSContextGroupRef A group that associates JavaScript contexts with one another. Contexts in the same group may share and exchange JavaScript objects. */
@@ -133,6 +137,11 @@ JS_EXPORT void JSGarbageCollect(JSContextRef ctx);
 
 #ifdef __cplusplus
 }
+#endif
+
+/* Enable the Objective-C API for platforms with a modern runtime. */
+#if !defined(JSC_OBJC_API_ENABLED)
+#define JSC_OBJC_API_ENABLED (defined(__clang__) && defined(__APPLE__) && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090 && !defined(__i386__))
 #endif
 
 #endif /* JSBase_h */

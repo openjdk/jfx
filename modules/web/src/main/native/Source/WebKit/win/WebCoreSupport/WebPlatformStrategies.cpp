@@ -26,9 +26,15 @@
 #include "config.h"
 #include "WebPlatformStrategies.h"
 
+#include "FrameLoader.h"
+#include "WebFrameNetworkingContext.h"
 #include <WebCore/Page.h>
 #include <WebCore/PageGroup.h>
+#include <WebCore/PlatformCookieJar.h>
 #include <WebCore/PluginDatabase.h>
+#if USE(CFNETWORK)
+#include <WebKitSystemInterface/WebKitSystemInterface.h>
+#endif
 
 using namespace WebCore;
 
@@ -47,12 +53,12 @@ CookiesStrategy* WebPlatformStrategies::createCookiesStrategy()
     return this;
 }
 
-PluginStrategy* WebPlatformStrategies::createPluginStrategy()
+DatabaseStrategy* WebPlatformStrategies::createDatabaseStrategy()
 {
     return this;
 }
 
-VisitedLinkStrategy* WebPlatformStrategies::createVisitedLinkStrategy()
+LoaderStrategy* WebPlatformStrategies::createLoaderStrategy()
 {
     return this;
 }
@@ -62,8 +68,54 @@ PasteboardStrategy* WebPlatformStrategies::createPasteboardStrategy()
     return 0;
 }
 
-void WebPlatformStrategies::notifyCookiesChanged()
+PluginStrategy* WebPlatformStrategies::createPluginStrategy()
 {
+    return this;
+}
+
+SharedWorkerStrategy* WebPlatformStrategies::createSharedWorkerStrategy()
+{
+    return this;
+}
+
+StorageStrategy* WebPlatformStrategies::createStorageStrategy()
+{
+    return this;
+}
+
+VisitedLinkStrategy* WebPlatformStrategies::createVisitedLinkStrategy()
+{
+    return this;
+}
+
+String WebPlatformStrategies::cookiesForDOM(const NetworkStorageSession& session, const KURL& firstParty, const KURL& url)
+{
+    return WebCore::cookiesForDOM(session, firstParty, url);
+}
+
+void WebPlatformStrategies::setCookiesFromDOM(const NetworkStorageSession& session, const KURL& firstParty, const KURL& url, const String& cookieString)
+{
+    WebCore::setCookiesFromDOM(session, firstParty, url, cookieString);
+}
+
+bool WebPlatformStrategies::cookiesEnabled(const NetworkStorageSession& session, const KURL& firstParty, const KURL& url)
+{
+    return WebCore::cookiesEnabled(session, firstParty, url);
+}
+
+String WebPlatformStrategies::cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const KURL& firstParty, const KURL& url)
+{
+    return WebCore::cookieRequestHeaderFieldValue(session, firstParty, url);
+}
+
+bool WebPlatformStrategies::getRawCookies(const NetworkStorageSession& session, const KURL& firstParty, const KURL& url, Vector<Cookie>& rawCookies)
+{
+    return WebCore::getRawCookies(session, firstParty, url, rawCookies);
+}
+
+void WebPlatformStrategies::deleteCookie(const NetworkStorageSession& session, const KURL& url, const String& cookieName)
+{
+    WebCore::deleteCookie(session, url, cookieName);
 }
 
 void WebPlatformStrategies::refreshPlugins()
@@ -93,8 +145,8 @@ void WebPlatformStrategies::getPluginInfo(const WebCore::Page*, Vector<WebCore::
         for (MIMEToDescriptionsMap::const_iterator it = mimeToDescriptions.begin(); it != end; ++it) {
             MimeClassInfo mime;
 
-            mime.type = it->first;
-            mime.desc = it->second;
+            mime.type = it->key;
+            mime.desc = it->value;
             mime.extensions = package->mimeToExtensions().get(mime.type);
 
             info.mimes.append(mime);

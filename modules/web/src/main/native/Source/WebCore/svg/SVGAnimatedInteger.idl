@@ -23,14 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
-        Conditional=SVG
-    ] SVGAnimatedInteger {
-        attribute [StrictTypeChecking] long baseVal
+[
+    Conditional=SVG,
+    SkipVTableValidation
+] interface SVGAnimatedInteger {
+    [StrictTypeChecking] attribute long baseVal
             setter raises(DOMException);
         readonly attribute long animVal;
     };
 
-}

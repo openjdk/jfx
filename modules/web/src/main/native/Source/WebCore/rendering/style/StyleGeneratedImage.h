@@ -42,7 +42,7 @@ public:
 
     virtual PassRefPtr<CSSValue> cssValue() const;
 
-    virtual IntSize imageSize(const RenderObject*, float multiplier) const;
+    virtual LayoutSize imageSize(const RenderObject*, float multiplier) const OVERRIDE;
     virtual bool imageHasRelativeWidth() const { return !m_fixedSize; }
     virtual bool imageHasRelativeHeight() const { return !m_fixedSize; }
     virtual void computeIntrinsicDimensions(const RenderObject*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
@@ -51,6 +51,7 @@ public:
     virtual void addClient(RenderObject*);
     virtual void removeClient(RenderObject*);
     virtual PassRefPtr<Image> image(RenderObject*, const IntSize&) const;
+    virtual bool knownToBeOpaque(const RenderObject*) const OVERRIDE;
     
 private:
     StyleGeneratedImage(PassRefPtr<CSSImageGeneratorValue>);

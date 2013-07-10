@@ -20,6 +20,7 @@
 #include "config.h"
 #include "qt_class.h"
 
+#include "APICast.h"
 #include "Identifier.h"
 #include "qt_instance.h"
 #include "qt_runtime.h"
@@ -69,59 +70,61 @@ const char* QtClass::name() const
 JSValue QtClass::fallbackObject(ExecState* exec, Instance* inst, PropertyName identifier)
 {
     QtInstance* qtinst = static_cast<QtInstance*>(inst);
+    JSContextRef context = toRef(exec);
+    JSValueRef exception = 0;
 
-    UString ustring(identifier.publicName());
+    String ustring(identifier.publicName());
     const QByteArray name = QString(reinterpret_cast<const QChar*>(ustring.characters()), ustring.length()).toLatin1();
 
     // First see if we have a cache hit
-    JSObject* val = qtinst->m_methods.value(name).get();
-    if (val)
-        return val;
+    if (QtRuntimeMethod* method = qtinst->m_methods.value(name)) {
+        JSValue obj = toJS(method->jsObjectRef(context, &exception));
+        if (exception)
+            return throwError(exec, toJS(exec, exception));
+        return obj;
+    }
 
     // Nope, create an entry
     const QByteArray normal = QMetaObject::normalizedSignature(name.constData());
 
     // See if there is an exact match
     int index = -1;
+    QMetaMethod metaMethod;
     if (normal.contains('(') && (index = m_metaObject->indexOfMethod(normal)) != -1) {
-        QMetaMethod m = m_metaObject->method(index);
-        if (m.access() != QMetaMethod::Private) {
-            QtRuntimeMetaMethod* val = QtRuntimeMetaMethod::create(exec, ustring, static_cast<QtInstance*>(inst), index, normal, false);
-            qtinst->m_methods.insert(name, val);
-            return val;
-        }
+        metaMethod = m_metaObject->method(index);
+        if (metaMethod.access() == QMetaMethod::Private)
+            index = -1;
     }
 
     // Nope.. try a basename match
+    if (index == -1) {
     const int count = m_metaObject->methodCount();
     for (index = count - 1; index >= 0; --index) {
-        const QMetaMethod m = m_metaObject->method(index);
-        if (m.access() == QMetaMethod::Private)
+            metaMethod = m_metaObject->method(index);
+            if (metaMethod.access() == QMetaMethod::Private)
             continue;
 
-#if !HAVE(QT5)
-        int iter = 0;
-        const char* signature = m.signature();
-        while (signature[iter] && signature[iter] != '(')
-            ++iter;
-
-        if (normal == QByteArray::fromRawData(signature, iter)) {
-#else
-        if (normal == m.name()) {
-#endif
-            QtRuntimeMetaMethod* val = QtRuntimeMetaMethod::create(exec, ustring, static_cast<QtInstance*>(inst), index, normal, false);
-            qtinst->m_methods.insert(name, val);
-            return val;
+            if (metaMethod.name() == normal)
+                break;
         }
     }
 
+    if (index == -1)
     return jsUndefined();
+
+    int flags = metaMethod.methodType() == QMetaMethod::Signal ? QtRuntimeMethod::MethodIsSignal : 0;
+    QtRuntimeMethod* method = new QtRuntimeMethod(context, static_cast<QtInstance*>(inst)->getObject(), normal, index, flags, qtinst);
+    qtinst->m_methods.insert(name, method);
+    JSValue obj = toJS(method->jsObjectRef(context, &exception));
+    if (exception)
+        return throwError(exec, toJS(exec, exception));
+    return obj;
 }
 
 // This functionality is handled by the fallback case above...
-MethodList QtClass::methodsNamed(PropertyName, Instance*) const
+Method* QtClass::methodNamed(PropertyName, Instance*) const
 {
-    return MethodList();
+    return 0;
 }
 
 // ### we may end up with a different search order than QtScript by not
@@ -133,7 +136,7 @@ Field* QtClass::fieldNamed(PropertyName identifier, Instance* instance) const
     QtInstance* qtinst = static_cast<QtInstance*>(instance);
 
     QObject* obj = qtinst->getObject();
-    UString ustring(identifier.publicName());
+    String ustring(identifier.publicName());
     const QString name(reinterpret_cast<const QChar*>(ustring.characters()), ustring.length());
     const QByteArray ascii = name.toLatin1();
 

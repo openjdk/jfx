@@ -23,13 +23,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-    interface [
+[
+    NoInterfaceObject,
         Conditional=WEBGL,
-        JSGenerateIsReachable=ImplContext,
+    GenerateIsReachable=ImplContext,
         OmitConstructor
-    ] WebGLLoseContext {
+] interface WebGLLoseContext {
         [StrictTypeChecking] void loseContext();
         [StrictTypeChecking] void restoreContext();
     };
-}

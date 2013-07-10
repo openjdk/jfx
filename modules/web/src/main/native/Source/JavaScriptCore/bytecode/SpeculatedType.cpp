@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,146 +32,147 @@
 #include "Arguments.h"
 #include "JSArray.h"
 #include "JSFunction.h"
+#include "Operations.h"
+#include "StringObject.h"
 #include "ValueProfile.h"
 #include <wtf/BoundsCheckedPointer.h>
+#include <wtf/StringPrintStream.h>
 
 namespace JSC {
 
-const char* speculationToString(SpeculatedType value)
+void dumpSpeculation(PrintStream& out, SpeculatedType value)
 {
-    if (value == SpecNone)
-        return "None";
+    if (value == SpecNone) {
+        out.print("None");
+        return;
+    }
     
-    static const int size = 256;
-    static char description[size];
-    BoundsCheckedPointer<char> ptr(description, size);
+    StringPrintStream myOut;
     
     bool isTop = true;
     
     if (value & SpecCellOther)
-        ptr.strcat("Othercell");
+        myOut.print("Othercell");
     else
         isTop = false;
     
     if (value & SpecObjectOther)
-        ptr.strcat("Otherobj");
+        myOut.print("Otherobj");
     else
         isTop = false;
     
     if (value & SpecFinalObject)
-        ptr.strcat("Final");
+        myOut.print("Final");
     else
         isTop = false;
 
     if (value & SpecArray)
-        ptr.strcat("Array");
+        myOut.print("Array");
     else
         isTop = false;
     
     if (value & SpecInt8Array)
-        ptr.strcat("Int8array");
+        myOut.print("Int8array");
     else
         isTop = false;
     
     if (value & SpecInt16Array)
-        ptr.strcat("Int16array");
+        myOut.print("Int16array");
     else
         isTop = false;
     
     if (value & SpecInt32Array)
-        ptr.strcat("Int32array");
+        myOut.print("Int32array");
     else
         isTop = false;
     
     if (value & SpecUint8Array)
-        ptr.strcat("Uint8array");
+        myOut.print("Uint8array");
     else
         isTop = false;
 
     if (value & SpecUint8ClampedArray)
-        ptr.strcat("Uint8clampedarray");
+        myOut.print("Uint8clampedarray");
     else
         isTop = false;
     
     if (value & SpecUint16Array)
-        ptr.strcat("Uint16array");
+        myOut.print("Uint16array");
     else
         isTop = false;
     
     if (value & SpecUint32Array)
-        ptr.strcat("Uint32array");
+        myOut.print("Uint32array");
     else
         isTop = false;
     
     if (value & SpecFloat32Array)
-        ptr.strcat("Float32array");
+        myOut.print("Float32array");
     else
         isTop = false;
     
     if (value & SpecFloat64Array)
-        ptr.strcat("Float64array");
+        myOut.print("Float64array");
     else
         isTop = false;
     
     if (value & SpecFunction)
-        ptr.strcat("Function");
+        myOut.print("Function");
     else
         isTop = false;
     
-    if (value & SpecMyArguments)
-        ptr.strcat("Myarguments");
-    else
-        isTop = false;
-    
-    if (value & SpecForeignArguments)
-        ptr.strcat("Foreignarguments");
+    if (value & SpecArguments)
+        myOut.print("Arguments");
     else
         isTop = false;
     
     if (value & SpecString)
-        ptr.strcat("String");
+        myOut.print("String");
+    else
+        isTop = false;
+    
+    if (value & SpecStringObject)
+        myOut.print("Stringobject");
     else
         isTop = false;
     
     if (value & SpecInt32)
-        ptr.strcat("Int");
+        myOut.print("Int");
     else
         isTop = false;
     
     if (value & SpecDoubleReal)
-        ptr.strcat("Doublereal");
+        myOut.print("Doublereal");
     else
         isTop = false;
     
     if (value & SpecDoubleNaN)
-        ptr.strcat("Doublenan");
+        myOut.print("Doublenan");
     else
         isTop = false;
     
     if (value & SpecBoolean)
-        ptr.strcat("Bool");
+        myOut.print("Bool");
     else
         isTop = false;
     
     if (value & SpecOther)
-        ptr.strcat("Other");
+        myOut.print("Other");
     else
         isTop = false;
     
-    if (isTop) {
-        ptr = description;
-        ptr.strcat("Top");
-    }
+    if (isTop)
+        out.print("Top");
+    else
+        out.print(myOut.toCString());
     
     if (value & SpecEmpty)
-        ptr.strcat("Empty");
+        out.print("Empty");
+    }
     
-    *ptr++ = 0;
-    
-    return description;
-}
-
-const char* speculationToAbbreviatedString(SpeculatedType prediction)
+// We don't expose this because we don't want anyone relying on the fact that this method currently
+// just returns string constants.
+static const char* speculationToAbbreviatedString(SpeculatedType prediction)
 {
     if (isFinalObjectSpeculation(prediction))
         return "<Final>";
@@ -197,10 +198,12 @@ const char* speculationToAbbreviatedString(SpeculatedType prediction)
         return "<Float32array>";
     if (isFloat64ArraySpeculation(prediction))
         return "<Float64array>";
-    if (isMyArgumentsSpeculation(prediction))
-        return "<Myarguments>";
     if (isArgumentsSpeculation(prediction))
         return "<Arguments>";
+    if (isStringObjectSpeculation(prediction))
+        return "<StringObject>";
+    if (isStringOrStringObjectSpeculation(prediction))
+        return "<StringOrStringObject>";
     if (isObjectSpeculation(prediction))
         return "<Object>";
     if (isCellSpeculation(prediction))
@@ -218,6 +221,11 @@ const char* speculationToAbbreviatedString(SpeculatedType prediction)
     return "";
 }
 
+void dumpSpeculationAbbreviated(PrintStream& out, SpeculatedType value)
+{
+    out.print(speculationToAbbreviatedString(value));
+}
+
 SpeculatedType speculationFromClassInfo(const ClassInfo* classInfo)
 {
     if (classInfo == &JSFinalObject::s_info)
@@ -226,16 +234,15 @@ SpeculatedType speculationFromClassInfo(const ClassInfo* classInfo)
     if (classInfo == &JSArray::s_info)
         return SpecArray;
     
-    if (classInfo == &JSString::s_info)
-        return SpecString;
-    
     if (classInfo == &Arguments::s_info)
-        return SpecArguments; // Cannot distinguish between MyArguments and ForeignArguments at this stage. That happens in the flow analysis.
+        return SpecArguments;
+    
+    if (classInfo == &StringObject::s_info)
+        return SpecStringObject;
     
     if (classInfo->isSubClassOf(&JSFunction::s_info))
         return SpecFunction;
 
-    
     if (classInfo->typedArrayStorageType != TypedArrayNone) {
         switch (classInfo->typedArrayStorageType) {
         case TypedArrayInt8:
@@ -269,6 +276,8 @@ SpeculatedType speculationFromClassInfo(const ClassInfo* classInfo)
 
 SpeculatedType speculationFromStructure(Structure* structure)
 {
+    if (structure->typeInfo().type() == StringType)
+        return SpecString;
     return speculationFromClassInfo(structure->classInfo());
 }
 

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ScrollbarThemeMac.h"
 
+#include "ColorMac.h"
 #include "ImageBuffer.h"
 #include "GraphicsLayer.h"
 #include "LocalCurrentGraphicsContext.h"
@@ -38,7 +39,6 @@
 #include <wtf/HashMap.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TemporaryChange.h>
-#include <wtf/UnusedParam.h>
 
 // FIXME: There are repainting problems due to Aqua scroll bar buttons' visual overflow.
 
@@ -86,8 +86,8 @@ static ScrollbarPainterMap* scrollbarMap()
         return;
     ScrollbarPainterMap::iterator end = scrollbarMap()->end();
     for (ScrollbarPainterMap::iterator it = scrollbarMap()->begin(); it != end; ++it) {
-        it->first->styleChanged();
-        it->first->invalidate();
+        it->key->styleChanged();
+        it->key->invalidate();
     }
 }
 
@@ -112,13 +112,11 @@ static ScrollbarPainterMap* scrollbarMap()
 
 namespace WebCore {
 
-#if !PLATFORM(CHROMIUM)
 ScrollbarTheme* ScrollbarTheme::nativeTheme()
 {
     DEFINE_STATIC_LOCAL(ScrollbarThemeMac, theme, ());
     return &theme;
 }
-#endif
 
 // FIXME: Get these numbers from CoreUI.
 static int cRealButtonLength[] = { 28, 21 };
@@ -484,13 +482,8 @@ static void scrollbarPainterPaint(ScrollbarPainter scrollbarPainter, bool enable
     [scrollbarPainter setDoubleValue:value];
     [scrollbarPainter setKnobProportion:proportion];
 
-    // The scrollbar's frameRect includes a side inset for overlay scrollers, so we have to use the 
-    // trackWidth for drawKnobSlotInRect
-    NSRect trackRect;
-    if ([scrollbarPainter isHorizontal])
-        trackRect = NSMakeRect(0, 0, frameRect.size.width, [scrollbarPainter trackWidth]);
-    else
-        trackRect = NSMakeRect(0, 0, [scrollbarPainter trackWidth], frameRect.size.height);
+    // Use rectForPart: here; it will take the expansion transition progress into account.
+    NSRect trackRect = [scrollbarPainter rectForPart:NSScrollerKnobSlot];
     [scrollbarPainter drawKnobSlotInRect:trackRect highlight:NO];
 
     // If the scrollbar is not enabled, then there is nothing to scroll to, and we shouldn't
@@ -499,7 +492,6 @@ static void scrollbarPainterPaint(ScrollbarPainter scrollbarPainter, bool enable
         [scrollbarPainter drawKnob];
 }
 
-#if !PLATFORM(CHROMIUM)
 bool ScrollbarThemeMac::paint(ScrollbarThemeClient* scrollbar, GraphicsContext* context, const IntRect& damageRect)
 {
     if (isScrollbarOverlayAPIAvailable()) {
@@ -601,9 +593,8 @@ bool ScrollbarThemeMac::paint(ScrollbarThemeClient* scrollbar, GraphicsContext* 
 
     return true;
 }
-#endif
 
-#if !PLATFORM(CHROMIUM) && USE(ACCELERATED_COMPOSITING) && ENABLE(RUBBER_BANDING)
+#if USE(ACCELERATED_COMPOSITING) && ENABLE(RUBBER_BANDING)
 static RetainPtr<CGColorRef> linenBackgroundColor()
 {
     NSImage *image = [NSColor _linenPatternImage];
@@ -616,13 +607,12 @@ static RetainPtr<CGColorRef> linenBackgroundColor()
     return adoptCF(CGColorCreateWithPattern(colorSpace.get(), pattern.get(), &alpha));
 }
 
-void ScrollbarThemeMac::setUpOverhangAreasLayerContents(GraphicsLayer* graphicsLayer)
+void ScrollbarThemeMac::setUpOverhangAreasLayerContents(GraphicsLayer* graphicsLayer, const Color& backgroundColor)
 {
     static CGColorRef cachedLinenBackgroundColor = linenBackgroundColor().leakRef();
-
     // We operate on the CALayer directly here, since GraphicsLayer doesn't have the concept
     // of pattern images, and we know that WebCore won't touch this layer.
-    graphicsLayer->platformLayer().backgroundColor = cachedLinenBackgroundColor;
+    graphicsLayer->platformLayer().backgroundColor = backgroundColor.isValid() ? cachedCGColor(backgroundColor, ColorSpaceDeviceRGB) : cachedLinenBackgroundColor;
 }
 
 void ScrollbarThemeMac::setUpContentShadowLayer(GraphicsLayer* graphicsLayer)

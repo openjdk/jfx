@@ -33,7 +33,6 @@ class Options(object):
     build = make_option("--build", action="store_true", dest="build", default=False, help="Build and run run-webkit-tests before committing.")
     build_style = make_option("--build-style", action="store", dest="build_style", default=None, help="Whether to build debug, release, or both.")
     cc = make_option("--cc", action="store", type="string", dest="cc", help="Comma-separated list of email addresses to carbon-copy.")
-    check_builders = make_option("--ignore-builders", action="store_false", dest="check_builders", default=True, help="DEPRECATED: Will be removed any time after 11/01/11.")
     check_style = make_option("--ignore-style", action="store_false", dest="check_style", default=True, help="Don't check to see if the patch has proper style before uploading.")
     check_style_filter = make_option("--check-style-filter", action="store", type="string", dest="check_style_filter", default=None, help="Filter style-checker rules (see check-webkit-style --help).")
     clean = make_option("--no-clean", action="store_false", dest="clean", default=True, help="Don't check if the working directory is clean before applying patches")
@@ -57,4 +56,5 @@ class Options(object):
     suggest_reviewers = make_option("--suggest-reviewers", action="store_true", default=False, help="Offer to CC appropriate reviewers.")
     test = make_option("--test", action="store_true", dest="test", default=False, help="Run run-webkit-tests before committing.")
     update = make_option("--no-update", action="store_false", dest="update", default=True, help="Don't update the working directory.")
+    update_changelogs = make_option("--update-changelogs", action="store_true", dest="update_changelogs", default=False, help="Update existing ChangeLog entries with new date, bug description, and touched files/functions.")
     changelog_count = make_option("--changelog-count", action="store", type="int", dest="changelog_count", help="Number of changelogs to parse.")

@@ -28,6 +28,7 @@
 #import "WebStorageManagerInternal.h"
 #import "WebStorageTrackerClient.h"
 
+#import <WebCore/PageGroup.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/StorageTracker.h>
 #import <pthread.h>
@@ -83,7 +84,7 @@ static pthread_once_t registerLocalStoragePath = PTHREAD_ONCE_INIT;
 
 - (void)syncLocalStorage
 {
-    StorageTracker::tracker().syncLocalStorage();
+    PageGroup::syncLocalStorage();
 }
 
 - (void)syncFileSystemAndTrackerDatabase
@@ -100,6 +101,11 @@ static pthread_once_t registerLocalStoragePath = PTHREAD_ONCE_INIT;
 + (void)setStorageDatabaseIdleInterval:(double)interval
 {
     StorageTracker::tracker().setStorageDatabaseIdleInterval(interval);
+}
+
++ (void)closeIdleLocalStorageDatabases
+{
+    PageGroup::closeIdleLocalStorageDatabases();
 }
 
 static void initializeLocalStoragePath()

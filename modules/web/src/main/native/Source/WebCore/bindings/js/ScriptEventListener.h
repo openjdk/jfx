@@ -33,6 +33,7 @@
 
 #include "JSLazyEventListener.h"
 #include "ScriptState.h"
+#include "ScriptValue.h"
 
 #include <wtf/PassRefPtr.h>
 
@@ -43,10 +44,12 @@ namespace WebCore {
     class Frame;
     class Node;
 
-    PassRefPtr<JSLazyEventListener> createAttributeEventListener(Node*, const Attribute&);
-    PassRefPtr<JSLazyEventListener> createAttributeEventListener(Frame*, const Attribute&);
+    PassRefPtr<JSLazyEventListener> createAttributeEventListener(Node*, const QualifiedName&, const AtomicString& value);
+    PassRefPtr<JSLazyEventListener> createAttributeEventListener(Frame*, const QualifiedName&, const AtomicString& value);
     String eventListenerHandlerBody(Document*, EventListener*);
-    bool eventListenerHandlerLocation(Document*, EventListener*, String& sourceName, int& lineNumber);
+    ScriptValue eventListenerHandler(Document*, EventListener*);
+    ScriptState* eventListenerHandlerScriptState(Frame*, EventListener*);
+    bool eventListenerHandlerLocation(Document*, EventListener*, String& sourceName, String& scriptId, int& lineNumber);
 } // namespace WebCore
 
 #endif // ScriptEventListener_h

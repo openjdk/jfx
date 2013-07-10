@@ -25,17 +25,17 @@
 #if USE(GRAPHICS_SURFACE)
 namespace WebCore {
 
-PassRefPtr<GraphicsSurface> GraphicsSurface::create(const IntSize& size, Flags flags, uint32_t token)
+PassRefPtr<GraphicsSurface> GraphicsSurface::create(const IntSize& size, Flags flags, const GraphicsSurfaceToken& token)
 {
     return platformImport(size, flags, token);
 }
 
-PassRefPtr<GraphicsSurface> GraphicsSurface::create(const IntSize& size, GraphicsSurface::Flags flags)
+PassRefPtr<GraphicsSurface> GraphicsSurface::create(const IntSize& size, GraphicsSurface::Flags flags, const PlatformGraphicsContext3D shareContext)
 {
-    return platformCreate(size, flags);
+    return platformCreate(size, flags, shareContext);
 }
 
-uint32_t GraphicsSurface::exportToken()
+GraphicsSurfaceToken GraphicsSurface::exportToken()
 {
     return platformExport();
 }
@@ -58,16 +58,33 @@ void GraphicsSurface::copyToGLTexture(uint32_t target, uint32_t texture, const I
     platformCopyToGLTexture(target, texture, targetRect, offset);
 }
 
-void GraphicsSurface::copyFromFramebuffer(uint32_t fbo, const IntRect& sourceRect)
+void GraphicsSurface::copyFromTexture(uint32_t texture, const IntRect& sourceRect)
 {
-    platformCopyFromFramebuffer(fbo, sourceRect);
+    platformCopyFromTexture(texture, sourceRect);
 }
 
-GraphicsSurface::GraphicsSurface(const IntSize& size, Flags flags)
+void GraphicsSurface::paintToTextureMapper(TextureMapper* textureMapper, const FloatRect& targetRect, const TransformationMatrix& transform, float opacity)
+{
+    platformPaintToTextureMapper(textureMapper, targetRect, transform, opacity);
+}
+
+uint32_t GraphicsSurface::frontBuffer()
+{
+    return platformFrontBuffer();
+}
+
+uint32_t GraphicsSurface::swapBuffers()
+{
+    return platformSwapBuffers();
+}
+
+IntSize GraphicsSurface::size() const
+{
+    return platformSize();
+}
+
+GraphicsSurface::GraphicsSurface(const IntSize&, Flags flags)
     : m_flags(flags)
-    , m_size(size)
-    , m_platformSurface(0)
-    , m_texture(0)
     , m_fbo(0)
     , m_private(0)
 {

@@ -3,6 +3,7 @@
  * Copyright (C) 2010 Igalia S.L.
  * Copyright (C) 2011 ProFUSION Embedded Systems
  * Copyright (C) 2011 Samsung Electronics
+ * Copyright (C) 2012 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +38,7 @@
 #include "PixelDumpSupportCairo.h"
 #include "RefPtrCairo.h"
 #include "WebCoreSupport/DumpRenderTreeSupportEfl.h"
-#include "ewk_view_private.h"
+#include "ewk_view.h"
 
 PassRefPtr<BitmapContext> createBitmapContextFromWebView(bool, bool, bool, bool drawSelectionRect)
 {
@@ -46,15 +47,40 @@ PassRefPtr<BitmapContext> createBitmapContextFromWebView(bool, bool, bool, bool 
     const Evas_Object* mainFrame = browser->mainFrame();
 
     int x, y, width, height;
-    if (!ewk_frame_visible_content_geometry_get(mainFrame, EINA_TRUE, &x, &y, &width, &height))
-        return 0;
+    evas_object_geometry_get(browser->mainFrame(), &x, &y, &width, &height);
+    const Eina_Rectangle rect = { x, y, width, height };
 
-    RefPtr<cairo_surface_t> surface = adoptRef(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height));
+    RefPtr<cairo_surface_t> surface = adoptRef(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, rect.w, rect.h));
     RefPtr<cairo_t> context = adoptRef(cairo_create(surface.get()));
 
-    const Eina_Rectangle rect = { x, y, width, height };
     if (!ewk_view_paint(privateData, context.get(), &rect))
         return 0;
+
+    if (DumpRenderTreeSupportEfl::isTrackingRepaints(mainFrame)) {
+        cairo_push_group(context.get());
+
+        // Paint the gray mask over the original image.
+        cairo_set_source_rgba(context.get(), 0, 0, 0, 0.66);
+        cairo_paint(context.get());
+
+        // Paint transparent rectangles over the mask to show the repainted regions.
+        cairo_set_source_rgba(context.get(), 0, 0, 0, 0);
+        cairo_set_operator(context.get(), CAIRO_OPERATOR_SOURCE);
+
+        Eina_List* repaintRects = DumpRenderTreeSupportEfl::trackedRepaintRects(mainFrame);
+        void* iter = 0;
+        EINA_LIST_FREE(repaintRects, iter) {
+            Eina_Rectangle* rect = static_cast<Eina_Rectangle*>(iter);
+
+            cairo_rectangle(context.get(), rect->x, rect->y, rect->w, rect->h);
+            cairo_fill(context.get());
+
+            eina_rectangle_free(rect);
+        }
+
+        cairo_pop_group_to_source(context.get());
+        cairo_paint(context.get());
+    }
 
     if (drawSelectionRect) {
         const WebCore::IntRect selectionRect = DumpRenderTreeSupportEfl::selectionRectangle(mainFrame);

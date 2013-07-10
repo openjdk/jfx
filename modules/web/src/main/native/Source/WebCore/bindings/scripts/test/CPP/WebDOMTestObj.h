@@ -33,16 +33,14 @@ class TestObj;
 class WebDOMDictionary;
 class WebDOMDocument;
 class WebDOMEventListener;
-class WebDOMIDBKey;
+class WebDOMNode;
+class WebDOMObject;
 class WebDOMSVGPoint;
 class WebDOMString;
+class WebDOMTestEnumType;
+class WebDOMTestNode;
 class WebDOMTestObj;
-class WebDOMa;
-class WebDOMb;
 class WebDOMbool;
-class WebDOMc;
-class WebDOMd;
-class WebDOMe;
 
 class WebDOMTestObj : public WebDOMObject {
 public:
@@ -70,15 +68,15 @@ public:
         WEBDOM_CONST_JAVASCRIPT = 15
     };
 
-    int readOnlyIntAttr() const;
+    int readOnlyLongAttr() const;
     WebDOMString readOnlyStringAttr() const;
     WebDOMTestObj readOnlyTestObjAttr() const;
     short shortAttr() const;
     void setShortAttr(short);
     unsigned short unsignedShortAttr() const;
     void setUnsignedShortAttr(unsigned short);
-    int intAttr() const;
-    void setIntAttr(int);
+    int longAttr() const;
+    void setLongAttr(int);
     long long longLongAttr() const;
     void setLongLongAttr(long long);
     unsigned long long unsignedLongLongAttr() const;
@@ -129,6 +127,8 @@ public:
     int conditionalAttr3() const;
     void setConditionalAttr3(int);
 #endif
+    WebDOMObject anyAttribute() const;
+    void setAnyAttribute(const WebDOMObject&);
     WebDOMDocument contentDocument() const;
     WebDOMSVGPoint mutablePoint() const;
     void setMutablePoint(const WebDOMSVGPoint&);
@@ -143,16 +143,24 @@ public:
     void setId(int);
     WebDOMString hash() const;
     int replaceableAttribute() const;
+    double nullableDoubleAttribute() const;
+    int nullableLongAttribute() const;
+    bool nullableBooleanAttribute() const;
+    WebDOMString nullableStringAttribute() const;
+    int nullableLongSettableAttribute() const;
+    void setNullableLongSettableAttribute(int);
+    int nullableStringValue() const;
+    void setNullableStringValue(int);
 
     void voidMethod();
-    void voidMethodWithArgs(int intArg, const WebDOMString& strArg, const WebDOMTestObj& objArg);
-    int intMethod();
-    int intMethodWithArgs(int intArg, const WebDOMString& strArg, const WebDOMTestObj& objArg);
+    void voidMethodWithArgs(int longArg, const WebDOMString& strArg, const WebDOMTestObj& objArg);
+    int longMethod();
+    int longMethodWithArgs(int longArg, const WebDOMString& strArg, const WebDOMTestObj& objArg);
     WebDOMTestObj objMethod();
-    WebDOMTestObj objMethodWithArgs(int intArg, const WebDOMString& strArg, const WebDOMTestObj& objArg);
+    WebDOMTestObj objMethodWithArgs(int longArg, const WebDOMString& strArg, const WebDOMTestObj& objArg);
+    void methodWithEnumArg(const WebDOMTestEnumType& enumArg);
     WebDOMTestObj methodThatRequiresAllArgsAndThrows(const WebDOMString& strArg, const WebDOMTestObj& objArg);
     void serializedValue(const WebDOMString& serializedArg);
-    void idbKey(const WebDOMIDBKey& key);
     void optionsObject(const WebDOMDictionary& oo, const WebDOMDictionary& ooo);
     void methodWithException();
     void addEventListener(const WebDOMString& type, const WebDOMEventListener& listener, bool useCapture);
@@ -180,15 +188,17 @@ public:
 #if ENABLE(Condition1)
     void overloadedMethod1(const WebDOMString& type);
 #endif
-    void convert1(const WebDOMa& );
-    void convert2(const WebDOMb& );
-    void convert3(const WebDOMc& );
-    void convert4(const WebDOMd& );
-    void convert5(const WebDOMe& );
+    void convert1(const WebDOMTestNode& value);
+    void convert2(const WebDOMTestNode& value);
+    void convert4(const WebDOMTestNode& value);
+    void convert5(const WebDOMTestNode& value);
     WebDOMSVGPoint mutablePointFunction();
     WebDOMSVGPoint immutablePointFunction();
     void banana();
     WebDOMbool strictFunction(const WebDOMString& str, float a, int b);
+    void variadicStringMethod(const WebDOMString& head, const WebDOMString& tail);
+    void variadicDoubleMethod(double head, double tail);
+    void variadicNodeMethod(const WebDOMNode& head, const WebDOMNode& tail);
 
     WebCore::TestObj* impl() const;
 

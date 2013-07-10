@@ -25,10 +25,10 @@
 from optparse import make_option
 import threading
 
-from webkitpy.tool.multicommandtool import AbstractDeclarativeCommand
+from webkitpy.tool.multicommandtool import Command
 
 
-class AbstractLocalServerCommand(AbstractDeclarativeCommand):
+class AbstractLocalServerCommand(Command):
     server = None
     launch_path = "/"
 
@@ -37,7 +37,7 @@ class AbstractLocalServerCommand(AbstractDeclarativeCommand):
             make_option("--httpd-port", action="store", type="int", default=8127, help="Port to use for the HTTP server"),
             make_option("--no-show-results", action="store_false", default=True, dest="show_results", help="Don't launch a browser with the rebaseline server"),
         ]
-        AbstractDeclarativeCommand.__init__(self, options=options)
+        Command.__init__(self, options=options)
 
     def _prepare_config(self, options, args, tool):
         return None
@@ -53,5 +53,5 @@ class AbstractLocalServerCommand(AbstractDeclarativeCommand):
             # FIXME: This seems racy.
             threading.Timer(0.1, lambda: self._tool.user.open_url(server_url)).start()
 
-        httpd = self.server(httpd_port=options.httpd_port, config=config)
+        httpd = self.server(httpd_port=options.httpd_port, config=config)  # pylint: disable=E1102
         httpd.serve_forever()

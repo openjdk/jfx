@@ -26,8 +26,8 @@
 #ifndef UserContentURLPattern_h
 #define UserContentURLPattern_h
 
-#include "PlatformString.h"
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -53,7 +53,7 @@ public:
 
     bool matchSubdomains() const { return m_matchSubdomains; }
     
-    static bool matchesPatterns(const KURL&, const Vector<String>* whitelist, const Vector<String>* blacklist);
+    static bool matchesPatterns(const KURL&, const Vector<String>& whitelist, const Vector<String>& blacklist);
 
 private:
     bool parse(const String& pattern);

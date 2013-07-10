@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,21 +29,35 @@
 #if ENABLE(VIDEO) && USE(AVFOUNDATION)
 
 #include "MediaPlayerPrivateAVFoundation.h"
+#include <wtf/HashMap.h>
 
-OBJC_CLASS AVAsset;
+OBJC_CLASS AVAssetImageGenerator;
+OBJC_CLASS AVMediaSelectionGroup;
 OBJC_CLASS AVPlayer;
 OBJC_CLASS AVPlayerItem;
+OBJC_CLASS AVPlayerItemLegibleOutput;
+OBJC_CLASS AVPlayerItemTrack;
+OBJC_CLASS AVPlayerItemVideoOutput;
 OBJC_CLASS AVPlayerLayer;
-OBJC_CLASS AVAssetImageGenerator;
+OBJC_CLASS AVURLAsset;
+OBJC_CLASS NSArray;
 OBJC_CLASS WebCoreAVFMovieObserver;
 
-#ifndef __OBJC__
 typedef struct objc_object *id;
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+OBJC_CLASS WebCoreAVFLoaderDelegate;
+OBJC_CLASS AVAssetResourceLoadingRequest;
 #endif
 
 typedef struct CGImage *CGImageRef;
+typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct OpaqueVTPixelTransferSession* VTPixelTransferSessionRef;
 
 namespace WebCore {
+
+class WebCoreAVFResourceLoader;
+class InbandTextTrackPrivateAVFObjC;
 
 class MediaPlayerPrivateAVFoundationObjC : public MediaPlayerPrivateAVFoundation {
 public:
@@ -54,6 +68,24 @@ public:
     void setAsset(id);
     virtual void tracksChanged();
 
+#if HAVE(AVFOUNDATION_MEDIA_SELECTION_GROUP)
+    RetainPtr<AVPlayerItem> playerItem() const { return m_avPlayerItem; }
+    void processCue(NSArray *, double);
+#endif
+    
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    bool shouldWaitForLoadingOfResource(AVAssetResourceLoadingRequest*);
+    void didCancelLoadingRequest(AVAssetResourceLoadingRequest*);
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA_V2)
+    static bool extractKeyURIKeyIDAndCertificateFromInitData(Uint8Array* initData, String& keyURI, String& keyID, RefPtr<Uint8Array>& certificate);
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+    static RetainPtr<AVAssetResourceLoadingRequest> takeRequestForPlayerAndKeyURI(MediaPlayer*, const String&);
+#endif
+
 private:
     MediaPlayerPrivateAVFoundationObjC(MediaPlayer*);
 
@@ -61,6 +93,10 @@ private:
     static PassOwnPtr<MediaPlayerPrivateInterface> create(MediaPlayer*);
     static void getSupportedTypes(HashSet<String>& types);
     static MediaPlayer::SupportsType supportsType(const String& type, const String& codecs, const KURL&);
+#if ENABLE(ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA_V2)
+    static MediaPlayer::SupportsType extendedSupportsType(const String& type, const String& codecs, const String& keySystem, const KURL&);
+#endif
+
     static bool isAvailable();
 
     virtual void cancelLoad();
@@ -88,10 +124,11 @@ private:
     virtual void checkPlayability();
     virtual void updateRate();
     virtual float rate() const;
-    virtual void seekToTime(float time);
+    virtual void seekToTime(double time);
     virtual unsigned totalBytes() const;
     virtual PassRefPtr<TimeRanges> platformBufferedTimeRanges() const;
-    virtual float platformMaxTimeSeekable() const;
+    virtual double platformMinTimeSeekable() const;
+    virtual double platformMaxTimeSeekable() const;
     virtual float platformDuration() const;
     virtual float platformMaxTimeLoaded() const;
     virtual void beginLoadingMetadata();
@@ -110,18 +147,72 @@ private:
 
     virtual bool hasSingleSecurityOrigin() const;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1080
+    void createImageGenerator();
+    void destroyImageGenerator();
     RetainPtr<CGImageRef> createImageForTimeInRect(float, const IntRect&);
+    void paintWithImageGenerator(GraphicsContext*, const IntRect&);
+#else
+    void createVideoOutput();
+    void destroyVideoOutput();
+    RetainPtr<CVPixelBufferRef> createPixelBuffer();
+    void paintWithVideoOutput(GraphicsContext*, const IntRect&);
+#endif
 
-    MediaPlayer* m_player;
-    RetainPtr<AVAsset> m_avAsset;
+#if ENABLE(ENCRYPTED_MEDIA)
+    virtual MediaPlayer::MediaKeyException addKey(const String&, const unsigned char*, unsigned, const unsigned char*, unsigned, const String&);
+    virtual MediaPlayer::MediaKeyException generateKeyRequest(const String&, const unsigned char*, unsigned);
+    virtual MediaPlayer::MediaKeyException cancelKeyRequest(const String&, const String&);
+#endif
+
+    virtual String languageOfPrimaryAudioTrack() const OVERRIDE;
+
+#if HAVE(AVFOUNDATION_MEDIA_SELECTION_GROUP)
+    void processMediaSelectionOptions();
+    AVMediaSelectionGroup* safeMediaSelectionGroupForLegibleMedia();
+#endif
+
+    virtual void setCurrentTrack(InbandTextTrackPrivateAVF*) OVERRIDE;
+    virtual InbandTextTrackPrivateAVF* currentTrack() const OVERRIDE { return m_currentTrack; }
+    void processNewAndRemovedTextTracks(const Vector<RefPtr<InbandTextTrackPrivateAVF> >&);
+    void clearTextTracks();
+
+#if !HAVE(AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT)
+    void processLegacyClosedCaptionsTracks();
+#endif
+
+    RetainPtr<AVURLAsset> m_avAsset;
     RetainPtr<AVPlayer> m_avPlayer;
     RetainPtr<AVPlayerItem> m_avPlayerItem;
     RetainPtr<AVPlayerLayer> m_videoLayer;
     RetainPtr<WebCoreAVFMovieObserver> m_objcObserver;
-    RetainPtr<AVAssetImageGenerator> m_imageGenerator;
     RetainPtr<id> m_timeObserver;
+    mutable String m_languageOfPrimaryAudioTrack;
     bool m_videoFrameHasDrawn;
     bool m_haveCheckedPlayability;
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1080
+    RetainPtr<AVAssetImageGenerator> m_imageGenerator;
+#else
+    RetainPtr<AVPlayerItemVideoOutput> m_videoOutput;
+    RetainPtr<CVPixelBufferRef> m_lastImage;
+#endif
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    RetainPtr<VTPixelTransferSessionRef> m_pixelTransferSession;
+
+    friend class WebCoreAVFResourceLoader;
+    OwnPtr<WebCoreAVFResourceLoader> m_resourceLoader;
+    RetainPtr<WebCoreAVFLoaderDelegate> m_loaderDelegate;
+    HashMap<String, RetainPtr<AVAssetResourceLoadingRequest> > m_keyURIToRequestMap;
+    HashMap<String, RetainPtr<AVAssetResourceLoadingRequest> > m_sessionIDToRequestMap;
+#endif
+
+#if HAVE(AVFOUNDATION_MEDIA_SELECTION_GROUP) && HAVE(AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT)
+    RetainPtr<AVPlayerItemLegibleOutput> m_legibleOutput;
+#endif
+    
+    InbandTextTrackPrivateAVF* m_currentTrack;
 };
 
 }

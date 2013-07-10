@@ -31,10 +31,10 @@
 #define PolicyChecker_h
 
 #include "FrameLoaderTypes.h"
-#include "PlatformString.h"
 #include "PolicyCallback.h"
 #include "ResourceRequest.h"
 #include <wtf/PassRefPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -48,7 +48,7 @@ class ResourceResponse;
 class PolicyChecker {
     WTF_MAKE_NONCOPYABLE(PolicyChecker);
 public:
-    PolicyChecker(Frame*);
+    explicit PolicyChecker(Frame*);
 
     void checkNavigationPolicy(const ResourceRequest&, DocumentLoader*, PassRefPtr<FormState>, NavigationPolicyDecisionFunction, void* argument);
     void checkNavigationPolicy(const ResourceRequest&, NavigationPolicyDecisionFunction, void* argument);

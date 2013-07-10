@@ -23,6 +23,8 @@
 
 #include <wtf/Platform.h>
 #include <algorithm>
+#include <stdint.h>
+
 
 namespace WTF {
 
@@ -36,7 +38,7 @@ namespace WTF {
     #error WTF_ALIGN macros need alignment control.
 #endif
 
-#if COMPILER(GCC) && !COMPILER(INTEL) && (((__GNUC__ * 100) + __GNUC_MINOR__) >= 303)
+#if COMPILER(GCC) && !COMPILER(INTEL)
     typedef char __attribute__((__may_alias__)) AlignedBufferChar; 
 #else
     typedef char AlignedBufferChar; 
@@ -58,6 +60,11 @@ namespace WTF {
             std::swap(a.buffer[i], b.buffer[i]);
     }
 
+    template <uintptr_t mask>
+    inline bool isAlignedTo(const void* pointer)
+    {
+        return !(reinterpret_cast<uintptr_t>(pointer) & mask);
+    }
 }
 
 #endif // WTF_Alignment_h

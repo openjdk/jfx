@@ -24,7 +24,6 @@
 #include "FontOrientation.h"
 #include "FontRenderingMode.h"
 #include "FontWidthVariant.h"
-#include "TextOrientation.h"
 #include <CoreFoundation/CFBase.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -32,10 +31,6 @@
 typedef struct CGFont* CGFontRef;
 typedef UInt32 ATSFontContainerRef;
 typedef UInt32 ATSFontRef;
-
-#if USE(SKIA_ON_MAC_CHROMIUM)
-class SkTypeface;
-#endif
 
 namespace WebCore {
 
@@ -48,23 +43,17 @@ public:
     FontCustomPlatformData(ATSFontContainerRef container, CGFontRef cgFont)
         : m_atsContainer(container)
         , m_cgFont(cgFont)
-#if USE(SKIA_ON_MAC_CHROMIUM)
-        , m_typeface(0)
-#endif
     {
     }
 
     ~FontCustomPlatformData();
 
-    FontPlatformData fontPlatformData(int size, bool bold, bool italic, FontOrientation = Horizontal, TextOrientation = TextOrientationVerticalRight, FontWidthVariant = RegularWidth, FontRenderingMode = NormalRenderingMode);
+    FontPlatformData fontPlatformData(int size, bool bold, bool italic, FontOrientation = Horizontal, FontWidthVariant = RegularWidth, FontRenderingMode = NormalRenderingMode);
 
     static bool supportsFormat(const String&);
 
     ATSFontContainerRef m_atsContainer;
     CGFontRef m_cgFont;
-#if USE(SKIA_ON_MAC_CHROMIUM)
-    SkTypeface* m_typeface;
-#endif
 };
 
 FontCustomPlatformData* createFontCustomPlatformData(SharedBuffer*);

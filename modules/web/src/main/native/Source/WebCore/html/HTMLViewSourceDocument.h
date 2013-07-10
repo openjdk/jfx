@@ -33,7 +33,7 @@ class HTMLTableCellElement;
 class HTMLTableSectionElement;
 class HTMLToken;
 
-class HTMLViewSourceDocument : public HTMLDocument {
+class HTMLViewSourceDocument FINAL : public HTMLDocument {
 public:
     static PassRefPtr<HTMLViewSourceDocument> create(Frame* frame, const KURL& url, const String& mimeType)
     {
@@ -58,7 +58,7 @@ private:
     void addLine(const AtomicString& className);
     void finishLine();
     void addText(const String& text, const AtomicString& className);
-    int addRange(const String& source, int start, int end, const String& className, bool isLink = false, bool isAnchor = false);
+    int addRange(const String& source, int start, int end, const String& className, bool isLink = false, bool isAnchor = false, const String& link = String());
     PassRefPtr<Element> addLink(const AtomicString& url, bool isAnchor);
     PassRefPtr<Element> addBase(const AtomicString& href);
 

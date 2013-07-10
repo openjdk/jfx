@@ -2,25 +2,35 @@
  * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
-#include "NotImplemented.h"
+
 #include "ChromeClientJava.h"
+#if ENABLE(INPUT_TYPE_COLOR)
+#include "ColorChooser.h"
+#endif
+#include "ContextMenu.h"
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+#include "DateTimeChooser.h"
+#endif
+#include "DocumentLoader.h"
 #include "FileChooser.h"
 #include "FileIconLoader.h"
-#include "Icon.h"
-#include "PopupMenuJava.h"
-#include "SearchPopupMenuJava.h"
+#include "FloatRect.h"
 #include "Frame.h"
-#include "DocumentLoader.h"
-#include "FrameLoader.h"
 #include "FrameLoadRequest.h"
+#include "FrameLoader.h"
 #include "FrameView.h"
 #include "HitTestResult.h"
+#include "Icon.h"
+#include "IntRect.h"
 #include "KURL.h"
+#include "NotImplemented.h"
 #include "Page.h"
+#include "PopupMenuJava.h"
+#include "ResourceRequest.h"
+#include "SearchPopupMenuJava.h"
 #include "WebPage.h"
 #include "Widget.h"
 #include "WindowFeatures.h"
-#include "ContextMenu.h"
 
 //MVM -ready initialization
 #define DECLARE_STATIC_CLASS(getFunctionName, sClassPath) \
@@ -168,6 +178,22 @@ void ChromeClientJava::chromeDestroyed()
     delete this;
 }
 
+#if ENABLE(INPUT_TYPE_COLOR)
+PassOwnPtr<ColorChooser> ChromeClientJava::createColorChooser(ColorChooserClient*, const Color&) 
+{
+    return nullptr;
+}
+#endif
+
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+PassRefPtr<DateTimeChooser> ChromeClientJava::openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&)
+{
+    //return nullptr;
+    return NULL;
+}
+#endif
+
+
 FloatRect ChromeClientJava::windowRect()
 {
     JNIEnv* env = WebCore_GetJavaEnv();
@@ -216,12 +242,6 @@ FloatRect ChromeClientJava::pageRect()
     } else {
         return FloatRect(0, 0, 0, 0);
     }
-}
-
-float ChromeClientJava::scaleFactor()
-{
-    notImplemented();
-    return 1;
 }
 
 void ChromeClientJava::focus()
@@ -296,7 +316,7 @@ Page* ChromeClientJava::createWindow(
 
     Page* p = WebPage::pageFromJObject(newWebPage);
     if (!req.isEmpty()) {
-        p->mainFrame()->loader()->load(req.resourceRequest(), false);
+        p->mainFrame()->loader()->load(req);
     }
 
     return p;
@@ -514,8 +534,8 @@ bool ChromeClientJava::canRunBeforeUnloadConfirmPanel()
     return false;
 }
 
-void ChromeClientJava::addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message,
-                                           unsigned int lineNumber, const String& sourceID)
+void ChromeClientJava::addMessageToConsole(MessageSource, MessageLevel, const String& message,
+    unsigned lineNumber, unsigned columnNumber, const String& sourceID) 
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
@@ -608,13 +628,6 @@ void ChromeClientJava::reachedApplicationCacheOriginQuota(SecurityOrigin*, int64
 }
 
 
-
-
-void ChromeClientJava::exceededDatabaseQuota(Frame*, const String& databaseName)
-{
-    notImplemented();
-}
-
 void ChromeClientJava::formStateDidChange(const Node*)
 {
     notImplemented();
@@ -632,37 +645,17 @@ void ChromeClientJava::setNeedsOneShotDrawingSynchronization()
             ->setNeedsOneShotDrawingSynchronization();
 }
 
-void ChromeClientJava::scheduleCompositingLayerSync()
+void ChromeClientJava::scheduleCompositingLayerFlush()
 {
     WebPage::webPageFromJObject(m_webPage)->scheduleCompositingLayerSync();
 }
 #endif // USE(ACCELERATED_COMPOSITING)
 
-//PassOwnPtr<HTMLParserQuirks> ChromeClientJava::createHTMLParserQuirks()
-//{
-//    notImplemented();
-//    return 0;
-//}
-
-void ChromeClientJava::requestGeolocationPermissionForFrame(Frame*, Geolocation*)
-{
-    notImplemented();
-}
-
-void ChromeClientJava::cancelGeolocationPermissionRequestForFrame(Frame*, Geolocation*)
-{
-    notImplemented();
-}
 
 // HostWindow interface
 void ChromeClientJava::scroll(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect)
 {
     WebPage::webPageFromJObject(m_webPage)->scroll(scrollDelta, rectToScroll, clipRect);
-}
-
-void ChromeClientJava::scrollRectIntoView(const IntRect&, const ScrollView*) const
-{
-    // Currently only Mac has a non empty implementation.
 }
 
 IntPoint ChromeClientJava::screenToRootView(const IntPoint& p) const
@@ -772,25 +765,23 @@ PassRefPtr<SearchPopupMenu> ChromeClientJava::createSearchPopupMenu(PopupMenuCli
     return adoptRef(new SearchPopupMenuJava(client));
 }
 
-bool ChromeClientJava::shouldRunModalDialogDuringPageDismissal(const DialogType& dialogType, const String& dialogMessage, FrameLoader::PageDismissalType dismissalType) const
-{
-    //utatodo: goto Chromium for better security log/settings check
-    //const char* kDialogsTypes[] = {"alert", "confirm", "prompt", "showModalDialog"};
-    //const char* kDismissalsTypes[] = {"beforeunload", "pagehide", "unload"};
-    return false;
-}
-
 bool ChromeClientJava::shouldRubberBandInDirection(ScrollDirection direction) const
 {
     //utatodo: goto Chromium for better implementation (history tricks).
     return true;
 }
 
-void ChromeClientJava::numWheelEventHandlersChanged(unsigned numberOfWheelHandlers)
+#if ENABLE(REQUEST_ANIMATION_FRAME) && !USE(REQUEST_ANIMATION_FRAME_TIMER)
+void ChromeClientJava::scheduleAnimation()
 {
-    //utatodo: goto Chromium for better implementation: adjust wheel-counter-changed-per-event-generation
+    notImplemented();
 }
 
+//void ChromeClientJava::serviceScriptedAnimations()
+//{
+//    notImplemented();
+//}
+#endif
 
 // End of HostWindow methods
 

@@ -20,6 +20,7 @@
 #ifndef FontMetrics_h
 #define FontMetrics_h
 
+#include "FontBaseline.h"
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
@@ -35,6 +36,9 @@ public:
         , m_lineGap(0)
         , m_lineSpacing(0)
         , m_xHeight(0)
+        , m_zeroWidth(0)
+        , m_hasXHeight(false)
+        , m_hasZeroWidth(false)
     {
     }
 
@@ -71,7 +75,14 @@ public:
     void setLineSpacing(float lineSpacing) { m_lineSpacing = lineSpacing; }
 
     float xHeight() const { return m_xHeight; }
-    void setXHeight(float xHeight) { m_xHeight = xHeight; }
+    void setXHeight(float xHeight) 
+    { 
+        m_xHeight = xHeight;
+        m_hasXHeight = true;
+    }
+
+    bool hasXHeight() const { return m_hasXHeight && m_xHeight > 0; }
+    void setHasXHeight(bool hasXHeight) { m_hasXHeight = hasXHeight; }
 
     // Integer variants of certain metrics, used for HTML rendering.
     int ascent(FontBaseline baselineType = AlphabeticBaseline) const
@@ -101,6 +112,16 @@ public:
         return ascent() == other.ascent() && descent() == other.descent() && lineGap() == other.lineGap();
     }
 
+    float zeroWidth() const { return m_zeroWidth; }
+    void setZeroWidth(float zeroWidth)
+    {
+        m_zeroWidth = zeroWidth;
+        m_hasZeroWidth = true;
+    }
+
+    bool hasZeroWidth() const { return m_hasZeroWidth; }
+    void setHasZeroWidth(bool hasZeroWidth) { m_hasZeroWidth = hasZeroWidth; }
+
 private:
     friend class SimpleFontData;
 
@@ -112,6 +133,7 @@ private:
         m_lineGap = 0;
         m_lineSpacing = 0;
         m_xHeight = 0;
+        m_hasXHeight = false;
     }
 
     unsigned m_unitsPerEm;
@@ -120,6 +142,9 @@ private:
     float m_lineGap;
     float m_lineSpacing;
     float m_xHeight;
+    float m_zeroWidth;
+    bool m_hasXHeight;
+    bool m_hasZeroWidth;
 };
 
 static inline float scaleEmToUnits(float x, unsigned unitsPerEm)

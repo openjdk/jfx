@@ -27,6 +27,7 @@
 #define FileList_h
 
 #include "File.h"
+#include "ScriptWrappable.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -34,7 +35,7 @@
 
 namespace WebCore {
 
-    class FileList : public RefCounted<FileList> {
+class FileList : public ScriptWrappable, public RefCounted<FileList> {
     public:
         static PassRefPtr<FileList> create()
         {

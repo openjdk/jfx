@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002, 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2002, 2005, 2006, 2008, 2012, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -41,7 +41,7 @@ static SelectorTextCache& selectorTextCache()
 }
 
 CSSStyleRule::CSSStyleRule(StyleRule* styleRule, CSSStyleSheet* parent)
-    : CSSRule(parent, CSSRule::STYLE_RULE)
+    : CSSRule(parent)
     , m_styleRule(styleRule)
 {
 }
@@ -57,10 +57,10 @@ CSSStyleRule::~CSSStyleRule()
     }
 }
 
-CSSStyleDeclaration* CSSStyleRule::style() const
+CSSStyleDeclaration* CSSStyleRule::style()
 {
     if (!m_propertiesCSSOMWrapper) {
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_styleRule->mutableProperties(), const_cast<CSSStyleRule*>(this));
+        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_styleRule->mutableProperties(), this);
     }
     return m_propertiesCSSOMWrapper.get();
 }
@@ -68,10 +68,10 @@ CSSStyleDeclaration* CSSStyleRule::style() const
 String CSSStyleRule::generateSelectorText() const
 {
     StringBuilder builder;
-    for (CSSSelector* s = m_styleRule->selectorList().first(); s; s = CSSSelectorList::next(s)) {
-        if (s != m_styleRule->selectorList().first())
-            builder.append(", ");
-        builder.append(s->selectorText());
+    for (const CSSSelector* selector = m_styleRule->selectorList().first(); selector; selector = CSSSelectorList::next(selector)) {
+        if (selector != m_styleRule->selectorList().first())
+            builder.appendLiteral(", ");
+        builder.append(selector->selectorText());
     }
     return builder.toString();
 }
@@ -95,34 +95,37 @@ void CSSStyleRule::setSelectorText(const String& selectorText)
     CSSParser p(parserContext());
     CSSSelectorList selectorList;
     p.parseSelector(selectorText, selectorList);
-    if (!selectorList.first())
+    if (!selectorList.isValid())
         return;
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
 
-    String oldSelectorText = this->selectorText();
     m_styleRule->wrapperAdoptSelectorList(selectorList);
 
     if (hasCachedSelectorText()) {
-        ASSERT(selectorTextCache().contains(this));
-        selectorTextCache().set(this, generateSelectorText());
+        selectorTextCache().remove(this);
+        setHasCachedSelectorText(false);
     }
 }
 
 String CSSStyleRule::cssText() const
 {
-    String result = selectorText();
-
-    result += " { ";
-    result += m_styleRule->properties()->asText();
-    result += "}";
-
-    return result;
+    StringBuilder result;
+    result.append(selectorText());
+    result.appendLiteral(" { ");
+    String decls = m_styleRule->properties()->asText();
+    result.append(decls);
+    if (!decls.isEmpty())
+        result.append(' ');
+    result.append('}');
+    return result.toString();
 }
 
-void CSSStyleRule::reattach(StyleRule* rule)
+void CSSStyleRule::reattach(StyleRuleBase* rule)
 {
-    m_styleRule = rule;
+    ASSERT(rule);
+    ASSERT_WITH_SECURITY_IMPLICATION(rule->isStyleRule());
+    m_styleRule = static_cast<StyleRule*>(rule);
     if (m_propertiesCSSOMWrapper)
         m_propertiesCSSOMWrapper->reattach(m_styleRule->mutableProperties());
 }

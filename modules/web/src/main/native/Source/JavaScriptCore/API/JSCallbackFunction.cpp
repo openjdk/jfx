@@ -29,30 +29,38 @@
 #include "APIShims.h"
 #include "APICast.h"
 #include "CodeBlock.h"
+#include "Error.h"
 #include "ExceptionHelpers.h"
-#include "JSFunction.h"
 #include "FunctionPrototype.h"
-#include <runtime/JSGlobalObject.h>
-#include <runtime/JSLock.h>
+#include "JSFunction.h"
+#include "JSGlobalObject.h"
+#include "JSLock.h"
+#include "Operations.h"
 #include <wtf/Vector.h>
 
 namespace JSC {
 
-ASSERT_CLASS_FITS_IN_CELL(JSCallbackFunction);
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(JSCallbackFunction);
 
 const ClassInfo JSCallbackFunction::s_info = { "CallbackFunction", &InternalFunction::s_info, 0, 0, CREATE_METHOD_TABLE(JSCallbackFunction) };
 
-JSCallbackFunction::JSCallbackFunction(JSGlobalObject* globalObject, JSObjectCallAsFunctionCallback callback)
-    : InternalFunction(globalObject, globalObject->callbackFunctionStructure())
+JSCallbackFunction::JSCallbackFunction(JSGlobalObject* globalObject, Structure* structure, JSObjectCallAsFunctionCallback callback)
+    : InternalFunction(globalObject, structure)
     , m_callback(callback)
 {
 }
 
-void JSCallbackFunction::finishCreation(JSGlobalData& globalData, const UString& name)
+void JSCallbackFunction::finishCreation(VM& vm, const String& name)
 {
-    Base::finishCreation(globalData, name);
+    Base::finishCreation(vm, name);
     ASSERT(inherits(&s_info));
+}
+
+JSCallbackFunction* JSCallbackFunction::create(ExecState* exec, JSGlobalObject* globalObject, JSObjectCallAsFunctionCallback callback, const String& name)
+{
+    JSCallbackFunction* function = new (NotNull, allocateCell<JSCallbackFunction>(*exec->heap())) JSCallbackFunction(globalObject, globalObject->callbackFunctionStructure(), callback);
+    function->finishCreation(exec->vm(), name);
+    return function;
 }
 
 EncodedJSValue JSCallbackFunction::call(ExecState* exec)
@@ -61,10 +69,11 @@ EncodedJSValue JSCallbackFunction::call(ExecState* exec)
     JSObjectRef functionRef = toRef(exec->callee());
     JSObjectRef thisObjRef = toRef(exec->hostThisValue().toThisObject(exec));
 
-    int argumentCount = static_cast<int>(exec->argumentCount());
-    Vector<JSValueRef, 16> arguments(argumentCount);
-    for (int i = 0; i < argumentCount; i++)
-        arguments[i] = toRef(exec, exec->argument(i));
+    size_t argumentCount = exec->argumentCount();
+    Vector<JSValueRef, 16> arguments;
+    arguments.reserveInitialCapacity(argumentCount);
+    for (size_t i = 0; i < argumentCount; ++i)
+        arguments.uncheckedAppend(toRef(exec, exec->argument(i)));
 
     JSValueRef exception = 0;
     JSValueRef result;

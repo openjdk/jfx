@@ -58,7 +58,7 @@ void AudioParam::setValue(float value)
 {
     // Check against JavaScript giving us bogus floating-point values.
     // Don't ASSERT, since this can happen if somebody writes bad JS.
-    if (!isnan(value) && !isinf(value))
+    if (!std::isnan(value) && !std::isinf(value))
         m_value = value;
 }
 
@@ -94,6 +94,13 @@ bool AudioParam::smooth()
     return false;
 }
 
+float AudioParam::finalValue()
+{
+    float value;
+    calculateFinalValues(&value, 1, false);
+    return value;
+}
+
 void AudioParam::calculateSampleAccurateValues(float* values, unsigned numberOfValues)
 {
     bool isSafe = context() && context()->isAudioThread() && values && numberOfValues;
@@ -101,47 +108,46 @@ void AudioParam::calculateSampleAccurateValues(float* values, unsigned numberOfV
     if (!isSafe)
         return;
 
-    if (numberOfRenderingConnections())
-        calculateAudioRateSignalValues(values, numberOfValues);
-    else
-        calculateTimelineValues(values, numberOfValues);
+    calculateFinalValues(values, numberOfValues, true);
 }
 
-void AudioParam::calculateAudioRateSignalValues(float* values, unsigned numberOfValues)
+void AudioParam::calculateFinalValues(float* values, unsigned numberOfValues, bool sampleAccurate)
 {
-    bool isGood = numberOfRenderingConnections() && numberOfValues;
+    bool isGood = context() && context()->isAudioThread() && values && numberOfValues;
     ASSERT(isGood);
     if (!isGood)
         return;
 
     // The calculated result will be the "intrinsic" value summed with all audio-rate connections.
 
-    if (m_timeline.hasValues()) {
-        // Calculate regular timeline values, if we have any.
+    if (sampleAccurate) {
+        // Calculate sample-accurate (a-rate) intrinsic values.
         calculateTimelineValues(values, numberOfValues);
     } else {
-        // Otherwise set values array to our constant value.
-        float value = m_value; // Cache in local.
+        // Calculate control-rate (k-rate) intrinsic value.
+        bool hasValue;
+        float timelineValue = m_timeline.valueForContextTime(context(), narrowPrecisionToFloat(m_value), hasValue);
 
-        // FIXME: can be optimized if we create a new VectorMath function.
-        for (unsigned i = 0; i < numberOfValues; ++i)
-            values[i] = value;
+        if (hasValue)
+            m_value = timelineValue;
+
+        values[0] = narrowPrecisionToFloat(m_value);
     }
 
     // Now sum all of the audio-rate connections together (unity-gain summing junction).
     // Note that connections would normally be mono, but we mix down to mono if necessary.
-    AudioBus summingBus(1, numberOfValues, false);
-    summingBus.setChannelMemory(0, values, numberOfValues);
+    RefPtr<AudioBus> summingBus = AudioBus::create(1, numberOfValues, false);
+    summingBus->setChannelMemory(0, values, numberOfValues);
 
     for (unsigned i = 0; i < numberOfRenderingConnections(); ++i) {
         AudioNodeOutput* output = renderingOutput(i);
         ASSERT(output);
 
         // Render audio from this output.
-        AudioBus* connectionBus = output->pull(0, numberOfValues);
+        AudioBus* connectionBus = output->pull(0, AudioNode::ProcessingSizeInFrames);
 
         // Sum, with unity-gain.
-        summingBus.sumFrom(*connectionBus);
+        summingBus->sumFrom(*connectionBus);
     }
 }
 
@@ -149,9 +155,9 @@ void AudioParam::calculateTimelineValues(float* values, unsigned numberOfValues)
 {
     // Calculate values for this render quantum.
     // Normally numberOfValues will equal AudioNode::ProcessingSizeInFrames (the render quantum size).
-    float sampleRate = context()->sampleRate();
-    float startTime = narrowPrecisionToFloat(context()->currentTime());
-    float endTime = startTime + numberOfValues / sampleRate;
+    double sampleRate = context()->sampleRate();
+    double startTime = context()->currentTime();
+    double endTime = startTime + numberOfValues / sampleRate;
 
     // Note we're running control rate at the sample-rate.
     // Pass in the current value as default value.

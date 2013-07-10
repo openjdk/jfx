@@ -35,15 +35,17 @@
 #include "Document.h"
 #include "FormData.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
 #include "Page.h"
 #include "ProgressTracker.h"
 #include "ResourceHandle.h"
+#include "ResourceRequest.h"
+#include "ResourceResponse.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include <wtf/OwnPtr.h>
-#include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -56,7 +58,7 @@ void PingLoader::loadImage(Frame* frame, const KURL& url)
     }
 
     ResourceRequest request(url);
-#if PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY)
+#if PLATFORM(BLACKBERRY)
     request.setTargetType(ResourceRequest::TargetIsImage);
 #endif
     request.setHTTPHeaderField("Cache-Control", "max-age=0");
@@ -75,7 +77,7 @@ void PingLoader::loadImage(Frame* frame, const KURL& url)
 void PingLoader::sendPing(Frame* frame, const KURL& pingURL, const KURL& destinationURL)
 {
     ResourceRequest request(pingURL);
-#if PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY)
+#if PLATFORM(BLACKBERRY)
     request.setTargetType(ResourceRequest::TargetIsSubresource);
 #endif
     request.setHTTPMethod("POST");
@@ -103,10 +105,10 @@ void PingLoader::sendPing(Frame* frame, const KURL& pingURL, const KURL& destina
     UNUSED_PARAM(leakedPingLoader);
 }
 
-void PingLoader::reportContentSecurityPolicyViolation(Frame* frame, const KURL& reportURL, PassRefPtr<FormData> report)
+void PingLoader::sendViolationReport(Frame* frame, const KURL& reportURL, PassRefPtr<FormData> report)
 {
     ResourceRequest request(reportURL);
-#if PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY)
+#if PLATFORM(BLACKBERRY)
     request.setTargetType(ResourceRequest::TargetIsSubresource);
 #endif
     request.setHTTPMethod("POST");

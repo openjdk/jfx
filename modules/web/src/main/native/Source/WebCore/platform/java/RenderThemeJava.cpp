@@ -18,10 +18,10 @@
 #include "PaintInfo.h"
 #include "PlatformContextJava.h"
 #include "RenderObject.h"
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 #include "RenderProgress.h"
 #endif
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
 #include "HTMLMeterElement.h"
 #endif
 #include "RenderSlider.h"
@@ -73,7 +73,7 @@ JLObject getJRenderTheme(Page* page)
         //here we can get 0 for synthetic Page object, that is created for processing SVG.
         //NB! dynamic_cast is essential. Returns 0 for SVG ChromeClient on runtime.
         //webnode\Source\WebCore\svg\graphics\SVGImage.cpp::dataChanged(bool allDataReceived)
-        pChromeClientJava = dynamic_cast<ChromeClientJava *>(page->chrome()->client());
+        pChromeClientJava = dynamic_cast<ChromeClientJava *>(page->chrome().client());
     }
 
     if (pChromeClientJava == 0) {
@@ -181,7 +181,7 @@ bool RenderThemeJava::paintWidget(
         data += sizeof(jfloat);
 
         *(jfloat *)data = jfloat(renderProgress->animationStartTime());
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
     } else if (JNI_EXPAND(METER) == widgetIndex) {
         jfloat value = 0;
         jint region = 0;
@@ -189,7 +189,7 @@ bool RenderThemeJava::paintWidget(
             HTMLMeterElement* meter = static_cast<HTMLMeterElement*>(object->node());
             value = meter->valueRatio();
             region = meter->gaugeRegion();
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
         } else if (object->isProgress()) {
             RenderProgress* renderProgress = toRenderProgress(object);
             value = jfloat(renderProgress->position());
@@ -238,7 +238,7 @@ bool RenderThemeJava::paintWidget(
     return false;
 }
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 void RenderThemeJava::adjustProgressBarStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     style->setBoxShadow(nullptr);
@@ -265,10 +265,10 @@ bool RenderThemeJava::paintProgressBar(RenderObject* o, const PaintInfo& i, cons
 }
 #endif
 
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
 bool RenderThemeJava::supportsMeter(ControlPart part) const
 {
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
     if (part == ProgressBarPart) {
         return true;
     }
@@ -433,8 +433,8 @@ void RenderThemeJava::systemFont(int propId, FontDescription& fontDescription) c
     if (fontSize) {
         cachedDesc->setIsAbsoluteSize(true);
         cachedDesc->setGenericFamily(FontDescription::NoFamily);
-        //cachedDesc->firstFamily().setFamily("Lucida Grande");
-        cachedDesc->firstFamily().setFamily("Tahoma");
+        //cachedDesc->setOneFamily("Lucida Grande");
+        cachedDesc->setOneFamily("Tahoma");
         cachedDesc->setSpecifiedSize(fontSize);
         cachedDesc->setWeight(FontWeightNormal);
         cachedDesc->setItalic(false);
@@ -664,15 +664,16 @@ bool RenderThemeJava::paintMediaSliderTrack(RenderObject *o, const PaintInfo& pa
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIA_TIMETRACK
     << (jint)timeRanges->length();
 
+    //utatodo: need [double] support
     ExceptionCode ex;
     for (int i=0; i<timeRanges->length(); i++) {
         paintInfo.context->platformContext()->rq()
-        << timeRanges->start(i, ex) << timeRanges->end(i, ex);
+        << (jfloat)timeRanges->start(i, ex) << (jfloat)timeRanges->end(i, ex);
     }
 
     paintInfo.context->platformContext()->rq()
-    << mediaElement->duration()
-    << mediaElement->currentTime()
+    << (jfloat)mediaElement->duration()
+    << (jfloat)mediaElement->currentTime()
     << (jint)r.x() <<  (jint)r.y() << (jint)r.width() << (jint)r.height();
     return true;
 }
@@ -695,7 +696,7 @@ bool RenderThemeJava::paintMediaVolumeSliderTrack(RenderObject *o, const PaintIn
 
     paintInfo.context->platformContext()->rq().freeSpace(28)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIA_VOLUMETRACK
-    << mediaElement->volume()
+    << (jfloat)mediaElement->volume()
     << (jint)(mediaElement->hasAudio() && !mediaElement->muted() ? 0 : 1)   // muted
     << (jint)r.x() <<  (jint)r.y() << (jint)r.width() << (jint)r.height();
     return true;

@@ -54,22 +54,22 @@ bool HTMLTableColElement::isPresentationAttribute(const QualifiedName& name) con
     return HTMLTablePartElement::isPresentationAttribute(name);
 }
 
-void HTMLTableColElement::collectStyleForAttribute(const Attribute& attribute, StylePropertySet* style)
+void HTMLTableColElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
 {
-    if (attribute.name() == widthAttr)
-        addHTMLLengthToStyle(style, CSSPropertyWidth, attribute.value());
+    if (name == widthAttr)
+        addHTMLLengthToStyle(style, CSSPropertyWidth, value);
     else
-        HTMLTablePartElement::collectStyleForAttribute(attribute, style);
+        HTMLTablePartElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
-void HTMLTableColElement::parseAttribute(const Attribute& attribute)
+void HTMLTableColElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == spanAttr) {
-        m_span = !attribute.isNull() ? attribute.value().toInt() : 1;
+    if (name == spanAttr) {
+        m_span = !value.isNull() ? value.toInt() : 1;
         if (renderer() && renderer()->isRenderTableCol())
             renderer()->updateFromElement();
-    } else if (attribute.name() == widthAttr) {
-        if (!attribute.isEmpty()) {
+    } else if (name == widthAttr) {
+        if (!value.isEmpty()) {
             if (renderer() && renderer()->isRenderTableCol()) {
                 RenderTableCol* col = toRenderTableCol(renderer());
                 int newWidth = width().toInt();
@@ -78,10 +78,10 @@ void HTMLTableColElement::parseAttribute(const Attribute& attribute)
             }
         }
     } else
-        HTMLTablePartElement::parseAttribute(attribute);
+        HTMLTablePartElement::parseAttribute(name, value);
 }
 
-StylePropertySet* HTMLTableColElement::additionalAttributeStyle()
+const StylePropertySet* HTMLTableColElement::additionalPresentationAttributeStyle()
 {
     if (!hasLocalName(colgroupTag))
         return 0;

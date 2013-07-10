@@ -35,6 +35,7 @@
 #include "FrameView.h"
 #include "InspectorInstrumentation.h"
 #include "PlatformScreen.h"
+#include "Settings.h"
 #include "Widget.h"
 
 namespace WebCore {
@@ -42,20 +43,6 @@ namespace WebCore {
 Screen::Screen(Frame* frame)
     : DOMWindowProperty(frame)
 {
-}
-
-unsigned Screen::horizontalDPI() const
-{
-    if (!m_frame)
-        return 0;
-    return static_cast<unsigned>(screenHorizontalDPI(m_frame->view()));
-}
-
-unsigned Screen::verticalDPI() const
-{
-    if (!m_frame)
-        return 0;
-    return static_cast<unsigned>(screenVerticalDPI(m_frame->view()));
 }
 
 unsigned Screen::height() const

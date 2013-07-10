@@ -26,7 +26,8 @@
 #ifndef StyleGridData_h
 #define StyleGridData_h
 
-#include "Length.h"
+#include "GridTrackSize.h"
+#include "RenderStyleConstants.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -40,7 +41,7 @@ public:
 
     bool operator==(const StyleGridData& o) const
     {
-        return m_gridColumns == o.m_gridColumns && m_gridRows == o.m_gridRows;
+        return m_gridColumns == o.m_gridColumns && m_gridRows == o.m_gridRows && m_gridAutoFlow == o.m_gridAutoFlow && m_gridAutoRows == o.m_gridAutoRows && m_gridAutoColumns == o.m_gridAutoColumns;
     }
 
     bool operator!=(const StyleGridData& o) const
@@ -48,10 +49,14 @@ public:
         return !(*this == o);
     }
 
-    // FIXME: For the moment, we only support a subset of the grammar which correspond to:
-    // 'auto' | <length> | <percentage> | 'none'
-    Vector<Length> m_gridColumns;
-    Vector<Length> m_gridRows;
+    // FIXME: Update the naming of the following variables.
+    Vector<GridTrackSize> m_gridColumns;
+    Vector<GridTrackSize> m_gridRows;
+
+    GridAutoFlow m_gridAutoFlow;
+
+    GridTrackSize m_gridAutoRows;
+    GridTrackSize m_gridAutoColumns;
 
 private:
     StyleGridData();

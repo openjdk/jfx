@@ -26,10 +26,11 @@
 #ifndef WebGLRenderingContext_h
 #define WebGLRenderingContext_h
 
+#include "ActiveDOMObject.h"
 #include "CanvasRenderingContext.h"
 #include "DrawingBuffer.h"
 #include "GraphicsContext3D.h"
-#include "PlatformString.h"
+#include "ImageBuffer.h"
 #include "Timer.h"
 #include "WebGLGetInfo.h"
 
@@ -37,9 +38,11 @@
 #include <wtf/Int32Array.h>
 #include <wtf/OwnArrayPtr.h>
 #include <wtf/Uint8Array.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class EXTDrawBuffers;
 class EXTTextureFilterAnisotropic;
 class HTMLImageElement;
 class HTMLVideoElement;
@@ -48,11 +51,15 @@ class ImageData;
 class IntSize;
 class OESStandardDerivatives;
 class OESTextureFloat;
+class OESTextureHalfFloat;
 class OESVertexArrayObject;
+class OESElementIndexUint;
 class WebGLActiveInfo;
 class WebGLBuffer;
 class WebGLContextGroup;
 class WebGLContextObject;
+class WebGLCompressedTextureATC;
+class WebGLCompressedTexturePVRTC;
 class WebGLCompressedTextureS3TC;
 class WebGLContextAttributes;
 class WebGLDebugRendererInfo;
@@ -73,7 +80,7 @@ class WebGLVertexArrayObjectOES;
 
 typedef int ExceptionCode;
 
-class WebGLRenderingContext : public CanvasRenderingContext {
+class WebGLRenderingContext : public CanvasRenderingContext, public ActiveDOMObject {
 public:
     static PassOwnPtr<WebGLRenderingContext> create(HTMLCanvasElement*, WebGLContextAttributes*);
     virtual ~WebGLRenderingContext();
@@ -315,13 +322,21 @@ public:
     
     unsigned getMaxVertexAttribs() const { return m_maxVertexAttribs; }
 
+    // ActiveDOMObject notifications
+    virtual bool hasPendingActivity() const;
+    virtual void stop();
+
   private:
+    friend class EXTDrawBuffers;
     friend class WebGLFramebuffer;
     friend class WebGLObject;
     friend class OESVertexArrayObject;
     friend class WebGLDebugShaders;
+    friend class WebGLCompressedTextureATC;
+    friend class WebGLCompressedTexturePVRTC;
     friend class WebGLCompressedTextureS3TC;
     friend class WebGLRenderingContextErrorMessageCallback;
+    friend class WebGLVertexArrayObjectOES;
 
     WebGLRenderingContext(HTMLCanvasElement*, PassRefPtr<GraphicsContext3D>, GraphicsContext3D::Attributes);
     void initializeNewContext();
@@ -331,6 +346,7 @@ public:
     void addContextObject(WebGLContextObject*);
     void detachAndRemoveAllObjects();
 
+    void destroyGraphicsContext3D();
     void markContextChanged();
     void cleanupAfterGraphicsCall(bool changed)
     {
@@ -357,12 +373,12 @@ public:
     bool validateElementArraySize(GC3Dsizei count, GC3Denum type, GC3Dintptr offset);
 
     // Conservative but quick index validation
-    bool validateIndexArrayConservative(GC3Denum type, int& numElementsRequired);
+    bool validateIndexArrayConservative(GC3Denum type, unsigned& numElementsRequired);
 
     // Precise but slow index validation -- only done if conservative checks fail
-    bool validateIndexArrayPrecise(GC3Dsizei count, GC3Denum type, GC3Dintptr offset, int& numElementsRequired);
+    bool validateIndexArrayPrecise(GC3Dsizei count, GC3Denum type, GC3Dintptr offset, unsigned& numElementsRequired);
     // If numElements <= 0, we only check if each enabled vertex attribute is bound to a buffer.
-    bool validateRenderingState(int numElements);
+    bool validateRenderingState(unsigned numElements);
 
     bool validateWebGLObject(const char*, WebGLObject*);
 
@@ -370,7 +386,7 @@ public:
     void addCompressedTextureFormat(GC3Denum);
 
 #if ENABLE(VIDEO)
-    PassRefPtr<Image> videoFrameToImage(HTMLVideoElement*, ExceptionCode&);
+    PassRefPtr<Image> videoFrameToImage(HTMLVideoElement*, BackingStoreCopy, ExceptionCode&);
 #endif
 
     RefPtr<GraphicsContext3D> m_context;
@@ -467,6 +483,12 @@ public:
     GC3Dint m_maxTextureLevel;
     GC3Dint m_maxCubeMapTextureLevel;
 
+    GC3Dint m_maxDrawBuffers;
+    GC3Dint m_maxColorAttachments;
+    GC3Denum m_backDrawBuffer;
+    bool m_drawBuffersWebGLRequirementsChecked;
+    bool m_drawBuffersSupported;
+
     GC3Dint m_packAlignment;
     GC3Dint m_unpackAlignment;
     bool m_unpackFlipY;
@@ -494,18 +516,24 @@ public:
     bool m_isErrorGeneratedOnOutOfBoundsAccesses;
     bool m_isResourceSafe;
     bool m_isDepthStencilSupported;
+    bool m_isRobustnessEXTSupported;
 
     bool m_synthesizedErrorsToConsole;
     int m_numGLErrorsToConsoleAllowed;
 
     // Enabled extension objects.
+    OwnPtr<EXTDrawBuffers> m_extDrawBuffers;
     OwnPtr<EXTTextureFilterAnisotropic> m_extTextureFilterAnisotropic;
     OwnPtr<OESTextureFloat> m_oesTextureFloat;
+    OwnPtr<OESTextureHalfFloat> m_oesTextureHalfFloat;
     OwnPtr<OESStandardDerivatives> m_oesStandardDerivatives;
     OwnPtr<OESVertexArrayObject> m_oesVertexArrayObject;
+    OwnPtr<OESElementIndexUint> m_oesElementIndexUint;
     OwnPtr<WebGLLoseContext> m_webglLoseContext;
     OwnPtr<WebGLDebugRendererInfo> m_webglDebugRendererInfo;
     OwnPtr<WebGLDebugShaders> m_webglDebugShaders;
+    OwnPtr<WebGLCompressedTextureATC> m_webglCompressedTextureATC;
+    OwnPtr<WebGLCompressedTexturePVRTC> m_webglCompressedTexturePVRTC;
     OwnPtr<WebGLCompressedTextureS3TC> m_webglCompressedTextureS3TC;
     OwnPtr<WebGLDepthTexture> m_webglDepthTexture;
 
@@ -526,20 +554,12 @@ public:
     // Helper to restore state that clearing the framebuffer may destroy.
     void restoreStateAfterClear();
 
-    void texImage2DBase(GC3Denum target, GC3Dint level, GC3Denum internalformat,
-                        GC3Dsizei width, GC3Dsizei height, GC3Dint border,
-                        GC3Denum format, GC3Denum type, void* pixels, ExceptionCode&);
-    void texImage2DImpl(GC3Denum target, GC3Dint level, GC3Denum internalformat,
-                        GC3Denum format, GC3Denum type, Image*,
-                        bool flipY, bool premultiplyAlpha, ExceptionCode&);
-    void texSubImage2DBase(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset,
-                           GC3Dsizei width, GC3Dsizei height,
-                           GC3Denum format, GC3Denum type, void* pixels, ExceptionCode&);
-    void texSubImage2DImpl(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset,
-                           GC3Denum format, GC3Denum type,
-                           Image* image, bool flipY, bool premultiplyAlpha, ExceptionCode&);
+    void texImage2DBase(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dint border, GC3Denum format, GC3Denum type, const void* pixels, ExceptionCode&);
+    void texImage2DImpl(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Denum format, GC3Denum type, Image*, GraphicsContext3D::ImageHtmlDomSource, bool flipY, bool premultiplyAlpha, ExceptionCode&);
+    void texSubImage2DBase(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, const void* pixels, ExceptionCode&);
+    void texSubImage2DImpl(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset, GC3Denum format, GC3Denum type, Image*, GraphicsContext3D::ImageHtmlDomSource, bool flipY, bool premultiplyAlpha, ExceptionCode&);
 
-    void handleNPOTTextures(bool prepareToDraw);
+    void handleNPOTTextures(const char*, bool);
 
     void createFallbackBlackTextures1x1();
 
@@ -582,9 +602,28 @@ public:
     // Generates GL error and returns false if level is invalid.
     bool validateTexFuncLevel(const char* functionName, GC3Denum target, GC3Dint level);
 
+    enum TexFuncValidationFunctionType {
+        NotTexSubImage2D,
+        TexSubImage2D,
+    };
+
+    enum TexFuncValidationSourceType {
+        SourceArrayBufferView,
+        SourceImageData,
+        SourceHTMLImageElement,
+        SourceHTMLCanvasElement,
+        SourceHTMLVideoElement,
+    };
+
+    // Helper function for tex{Sub}Image2D to check if the input format/type/level/target/width/height/border/xoffset/yoffset are valid.
+    // Otherwise, it would return quickly without doing other work.
+    bool validateTexFunc(const char* functionName, TexFuncValidationFunctionType, TexFuncValidationSourceType, GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width,
+        GC3Dsizei height, GC3Dint border, GC3Denum format, GC3Denum type, GC3Dint xoffset, GC3Dint yoffset);
+
     // Helper function to check input parameters for functions {copy}Tex{Sub}Image.
     // Generates GL error and returns false if parameters are invalid.
     bool validateTexFuncParameters(const char* functionName,
+                                   TexFuncValidationFunctionType,
                                    GC3Denum target, GC3Dint level,
                                    GC3Denum internalformat,
                                    GC3Dsizei width, GC3Dsizei height, GC3Dint border,
@@ -672,8 +711,16 @@ public:
     // Return the current bound buffer to target, or 0 if parameters are invalid.
     WebGLBuffer* validateBufferDataParameters(const char* functionName, GC3Denum target, GC3Denum usage);
 
-    // Helper function for tex{Sub}Image2D to make sure image is ready.
-    bool validateHTMLImageElement(const char* functionName, HTMLImageElement*);
+    // Helper function for tex{Sub}Image2D to make sure image is ready and wouldn't taint Origin.
+    bool validateHTMLImageElement(const char* functionName, HTMLImageElement*, ExceptionCode&);
+
+    // Helper function for tex{Sub}Image2D to make sure canvas is ready and wouldn't taint Origin.
+    bool validateHTMLCanvasElement(const char* functionName, HTMLCanvasElement*, ExceptionCode&);
+
+#if ENABLE(VIDEO)
+    // Helper function for tex{Sub}Image2D to make sure video is ready wouldn't taint Origin.
+    bool validateHTMLVideoElement(const char* functionName, HTMLVideoElement*, ExceptionCode&);
+#endif
 
     // Helper functions for vertexAttribNf{v}.
     void vertexAttribfImpl(const char* functionName, GC3Duint index, GC3Dsizei expectedSize, GC3Dfloat, GC3Dfloat, GC3Dfloat, GC3Dfloat);
@@ -702,9 +749,14 @@ public:
     // a Safari or Chrome extension.
     bool allowPrivilegedExtensions() const;
 
+    enum ConsoleDisplayPreference {
+        DisplayInConsole,
+        DontDisplayInConsole
+    };
+
     // Wrapper for GraphicsContext3D::synthesizeGLError that sends a message
     // to the JavaScript console.
-    void synthesizeGLError(GC3Denum, const char* functionName, const char* description);
+    void synthesizeGLError(GC3Denum, const char* functionName, const char* description, ConsoleDisplayPreference = DisplayInConsole);
 
     String ensureNotNull(const String&) const;
 
@@ -714,6 +766,22 @@ public:
 
     // Helper for enabling or disabling a capability.
     void enableOrDisable(GC3Denum capability, bool enable);
+
+    // Clamp the width and height to GL_MAX_VIEWPORT_DIMS.
+    IntSize clampedCanvasSize();
+
+    // First time called, if EXT_draw_buffers is supported, query the value; otherwise return 0.
+    // Later, return the cached value.
+    GC3Dint getMaxDrawBuffers();
+    GC3Dint getMaxColorAttachments();
+
+    void setBackDrawBuffer(GC3Denum);
+
+    void restoreCurrentFramebuffer();
+    void restoreCurrentTexture2D();
+
+    // Check if EXT_draw_buffers extension is supported and if it satisfies the WebGL requirements.
+    bool supportsDrawBuffers();
 
     friend class WebGLStateRestorer;
 };

@@ -137,15 +137,15 @@ static int generateComponents(TextRunComponents* components, const Font &font, c
             start = 1;
         }
         for (int i = 1; i < run.length(); ++i) {
-            uint ch = run[i];
-            if (isHighSurrogate(ch) && isLowSurrogate(run[i-1]))
-                ch = surrogateToUcs4(ch, run[i-1]);
-            if (isLowSurrogate(ch) || category(ch) == Mark_NonSpacing)
+            UChar ch = run[i];
+            if (U16_IS_LEAD(ch) && U16_IS_TRAIL(run[i-1]))
+                ch = U16_GET_SUPPLEMENTARY(ch, run[i-1]);
+            if (U16_IS_TRAIL(ch) || category(ch) == Mark_NonSpacing)
                 continue;
             if (Font::treatAsSpace(run[i])) {
                 int add = 0;
                 if (i - start > 0) {
-                    components->append(TextRunComponent(run.characters() + start, i - start,
+                    components->append(TextRunComponent(run.characters16() + start, i - start,
                                                         run, font, offset));
                     offset += components->last().m_width + letterSpacing;
                 }
@@ -160,7 +160,7 @@ static int generateComponents(TextRunComponents* components, const Font &font, c
                 continue;
             }
             if (i - start > 0) {
-                components->append(TextRunComponent(run.characters() + start, i - start,
+                components->append(TextRunComponent(run.characters16() + start, i - start,
                                                     run,
                                                     font, offset));
                 offset += components->last().m_width + letterSpacing;
@@ -168,7 +168,7 @@ static int generateComponents(TextRunComponents* components, const Font &font, c
             start = i;
         }
         if (run.length() - start > 0) {
-            components->append(TextRunComponent(run.characters() + start, run.length() - start,
+            components->append(TextRunComponent(run.characters16() + start, run.length() - start,
                                                 run,
                                                 font, offset));
             offset += components->last().m_width;
@@ -179,7 +179,7 @@ static int generateComponents(TextRunComponents* components, const Font &font, c
         for (int i = 0; i < run.length(); ++i) {
             if (Font::treatAsSpace(run[i])) {
                 if (i - start > 0) {
-                    components->append(TextRunComponent(run.characters() + start, i - start,
+                    components->append(TextRunComponent(run.characters16() + start, i - start,
                                                         run,
                                                         font, offset));
                     offset += components->last().m_width;
@@ -198,7 +198,7 @@ static int generateComponents(TextRunComponents* components, const Font &font, c
             }
         }
         if (run.length() - start > 0) {
-            components->append(TextRunComponent(run.characters() + start, run.length() - start,
+            components->append(TextRunComponent(run.characters16() + start, run.length() - start,
                                                 run,
                                                 font, offset));
             offset += components->last().m_width;
@@ -313,7 +313,8 @@ static float cursorToX(const Font* font, const TextRunComponents& components, in
             return xs + pos * comp.m_width / comp.m_spaces;
         }
         WidthIterator it(font, comp.m_textRun);
-        it.advance(pos);
+        GlyphBuffer glyphBuffer;
+        it.advance(pos, &glyphBuffer);
         return xs + it.m_runWidthSoFar;
     }
     return width;

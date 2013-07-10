@@ -62,7 +62,7 @@ int SpeechInput::registerListener(SpeechInputListener* listener)
 #if defined(DEBUG)
     // Check if already present.
     for (HashMap<int, SpeechInputListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
-      ASSERT(it->second != listener);
+      ASSERT(it->value != listener);
 #endif
 
     m_listeners.add(m_nextListenerId, listener);
@@ -117,10 +117,9 @@ void SpeechInput::cancelRecognition(int listenerId)
     m_client->cancelRecognition(listenerId);
 }
 
-const AtomicString& SpeechInput::supplementName()
+const char* SpeechInput::supplementName()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("SpeechInput"));
-    return name;
+    return "SpeechInput";
 }
 
 void provideSpeechInputTo(Page* page, SpeechInputClient* client)

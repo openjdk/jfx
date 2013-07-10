@@ -31,18 +31,24 @@
 namespace WebCore {
 
 class WebGLExtension {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     // Extension names are needed to properly wrap instances in JavaScript objects.
     enum ExtensionName {
-        WebKitWebGLLoseContextName, // WEBKIT_ prefix until extension is official
+        WebGLLoseContextName,
+        EXTDrawBuffersName,
         EXTTextureFilterAnisotropicName,
         OESTextureFloatName,
+        OESTextureHalfFloatName,
         OESStandardDerivativesName,
         OESVertexArrayObjectName,
         WebGLDebugRendererInfoName,
         WebGLDebugShadersName,
-        WebKitWebGLCompressedTextureS3TCName, // WEBKIT_ prefix until extension is official
-        WebKitWebGLDepthTextureName, // WEBKIT_ prefix until extension is official
+        WebGLCompressedTextureS3TCName,
+        WebGLDepthTextureName,
+        OESElementIndexUintName,
+        WebGLCompressedTextureATCName,
+        WebGLCompressedTexturePVRTCName,
     };
 
     void ref() { m_context->ref(); }

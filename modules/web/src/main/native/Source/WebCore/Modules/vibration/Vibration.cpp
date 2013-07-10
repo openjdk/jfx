@@ -44,7 +44,7 @@ PassOwnPtr<Vibration> Vibration::create(VibrationClient* client)
     return adoptPtr(new Vibration(client));
 }
 
-void Vibration::vibrate(const unsigned long& time)
+void Vibration::vibrate(const unsigned& time)
 {
     if (!time) {
         cancelVibration();
@@ -58,11 +58,14 @@ void Vibration::vibrate(const VibrationPattern& pattern)
 {
     int length = pattern.size();
 
+    // Cancel the pre-existing instance of vibration patterns, if the pattern is 0 or an empty list.
+    if (!length || (length == 1 && !pattern[0])) {
+        cancelVibration();
+        return;
+    }
+
     if (m_isVibrating)
         cancelVibration();
-
-    if (!length || (length == 1 && !pattern[0]))
-        return;
 
     if (m_timerStart.isActive())
         m_timerStart.stop();
@@ -73,6 +76,7 @@ void Vibration::vibrate(const VibrationPattern& pattern)
 
 void Vibration::cancelVibration()
 {
+    m_pattern.clear();
     if (m_isVibrating) {
         m_vibrationClient->cancelVibration();
         m_isVibrating = false;
@@ -122,10 +126,9 @@ void Vibration::timerStopFired(Timer<Vibration>* timer)
     }
 }
 
-const AtomicString& Vibration::supplementName()
+const char* Vibration::supplementName()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("Vibration"));
-    return name;
+    return "Vibration";
 }
 
 bool Vibration::isActive(Page* page)

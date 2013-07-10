@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-ASSERT_CLASS_FITS_IN_CELL(MathObject);
+ASSERT_HAS_TRIVIAL_DESTRUCTOR(MathObject);
 
 static EncodedJSValue JSC_HOST_CALL mathProtoFuncAbs(ExecState*);
 static EncodedJSValue JSC_HOST_CALL mathProtoFuncACos(ExecState*);
@@ -52,6 +52,7 @@ static EncodedJSValue JSC_HOST_CALL mathProtoFuncRound(ExecState*);
 static EncodedJSValue JSC_HOST_CALL mathProtoFuncSin(ExecState*);
 static EncodedJSValue JSC_HOST_CALL mathProtoFuncSqrt(ExecState*);
 static EncodedJSValue JSC_HOST_CALL mathProtoFuncTan(ExecState*);
+static EncodedJSValue JSC_HOST_CALL mathProtoFuncIMul(ExecState*);
 
 }
 
@@ -59,9 +60,7 @@ static EncodedJSValue JSC_HOST_CALL mathProtoFuncTan(ExecState*);
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(MathObject);
-
-const ClassInfo MathObject::s_info = { "Math", &JSNonFinalObject::s_info, 0, ExecState::mathTable, CREATE_METHOD_TABLE(MathObject) };
+const ClassInfo MathObject::s_info = { "Math", &Base::s_info, 0, ExecState::mathTable, CREATE_METHOD_TABLE(MathObject) };
 
 /* Source for MathObject.lut.h
 @begin mathTable
@@ -83,27 +82,28 @@ const ClassInfo MathObject::s_info = { "Math", &JSNonFinalObject::s_info, 0, Exe
   sin           mathProtoFuncSin               DontEnum|Function 1
   sqrt          mathProtoFuncSqrt              DontEnum|Function 1
   tan           mathProtoFuncTan               DontEnum|Function 1
+  imul          mathProtoFuncIMul              DontEnum|Function 2
 @end
 */
 
 MathObject::MathObject(JSGlobalObject* globalObject, Structure* structure)
-    : JSNonFinalObject(globalObject->globalData(), structure)
+    : JSNonFinalObject(globalObject->vm(), structure)
 {
 }
 
 void MathObject::finishCreation(ExecState* exec, JSGlobalObject* globalObject)
 {
-    Base::finishCreation(globalObject->globalData());
+    Base::finishCreation(globalObject->vm());
     ASSERT(inherits(&s_info));
 
-    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "E"), jsNumber(exp(1.0)), DontDelete | DontEnum | ReadOnly);
-    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "LN2"), jsNumber(log(2.0)), DontDelete | DontEnum | ReadOnly);
-    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "LN10"), jsNumber(log(10.0)), DontDelete | DontEnum | ReadOnly);
-    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "LOG2E"), jsNumber(1.0 / log(2.0)), DontDelete | DontEnum | ReadOnly);
-    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "LOG10E"), jsNumber(0.4342944819032518), DontDelete | DontEnum | ReadOnly); // See ECMA-262 15.8.1.5
-    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "PI"), jsNumber(piDouble), DontDelete | DontEnum | ReadOnly);
-    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "SQRT1_2"), jsNumber(sqrt(0.5)), DontDelete | DontEnum | ReadOnly);
-    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "SQRT2"), jsNumber(sqrt(2.0)), DontDelete | DontEnum | ReadOnly);
+    putDirectWithoutTransition(exec->vm(), Identifier(exec, "E"), jsNumber(exp(1.0)), DontDelete | DontEnum | ReadOnly);
+    putDirectWithoutTransition(exec->vm(), Identifier(exec, "LN2"), jsNumber(log(2.0)), DontDelete | DontEnum | ReadOnly);
+    putDirectWithoutTransition(exec->vm(), Identifier(exec, "LN10"), jsNumber(log(10.0)), DontDelete | DontEnum | ReadOnly);
+    putDirectWithoutTransition(exec->vm(), Identifier(exec, "LOG2E"), jsNumber(1.0 / log(2.0)), DontDelete | DontEnum | ReadOnly);
+    putDirectWithoutTransition(exec->vm(), Identifier(exec, "LOG10E"), jsNumber(0.4342944819032518), DontDelete | DontEnum | ReadOnly); // See ECMA-262 15.8.1.5
+    putDirectWithoutTransition(exec->vm(), Identifier(exec, "PI"), jsNumber(piDouble), DontDelete | DontEnum | ReadOnly);
+    putDirectWithoutTransition(exec->vm(), Identifier(exec, "SQRT1_2"), jsNumber(sqrt(0.5)), DontDelete | DontEnum | ReadOnly);
+    putDirectWithoutTransition(exec->vm(), Identifier(exec, "SQRT2"), jsNumber(sqrt(2.0)), DontDelete | DontEnum | ReadOnly);
 }
 
 bool MathObject::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
@@ -176,11 +176,11 @@ EncodedJSValue JSC_HOST_CALL mathProtoFuncMax(ExecState* exec)
     double result = -std::numeric_limits<double>::infinity();
     for (unsigned k = 0; k < argsCount; ++k) {
         double val = exec->argument(k).toNumber(exec);
-        if (isnan(val)) {
-            result = std::numeric_limits<double>::quiet_NaN();
+        if (std::isnan(val)) {
+            result = QNaN;
             break;
         }
-        if (val > result || (val == 0 && result == 0 && !signbit(val)))
+        if (val > result || (!val && !result && !std::signbit(val)))
             result = val;
     }
     return JSValue::encode(jsNumber(result));
@@ -192,11 +192,11 @@ EncodedJSValue JSC_HOST_CALL mathProtoFuncMin(ExecState* exec)
     double result = +std::numeric_limits<double>::infinity();
     for (unsigned k = 0; k < argsCount; ++k) {
         double val = exec->argument(k).toNumber(exec);
-        if (isnan(val)) {
-            result = std::numeric_limits<double>::quiet_NaN();
+        if (std::isnan(val)) {
+            result = QNaN;
             break;
         }
-        if (val < result || (val == 0 && result == 0 && signbit(val)))
+        if (val < result || (!val && !result && std::signbit(val)))
             result = val;
     }
     return JSValue::encode(jsNumber(result));
@@ -246,9 +246,9 @@ EncodedJSValue JSC_HOST_CALL mathProtoFuncPow(ExecState* exec)
     double arg = exec->argument(0).toNumber(exec);
     double arg2 = exec->argument(1).toNumber(exec);
 
-    if (isnan(arg2))
+    if (std::isnan(arg2))
         return JSValue::encode(jsNaN());
-    if (isinf(arg2) && fabs(arg) == 1)
+    if (std::isinf(arg2) && fabs(arg) == 1)
         return JSValue::encode(jsNaN());
     return JSValue::encode(jsNumber(mathPow(arg, arg2)));
 }
@@ -267,7 +267,7 @@ EncodedJSValue JSC_HOST_CALL mathProtoFuncRound(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncSin(ExecState* exec)
 {
-    return JSValue::encode(exec->globalData().cachedSin(exec->argument(0).toNumber(exec)));
+    return JSValue::encode(exec->vm().cachedSin(exec->argument(0).toNumber(exec)));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncSqrt(ExecState* exec)
@@ -278,6 +278,15 @@ EncodedJSValue JSC_HOST_CALL mathProtoFuncSqrt(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL mathProtoFuncTan(ExecState* exec)
 {
     return JSValue::encode(jsDoubleNumber(tan(exec->argument(0).toNumber(exec))));
+}
+
+EncodedJSValue JSC_HOST_CALL mathProtoFuncIMul(ExecState* exec)
+{
+    int32_t left = exec->argument(0).toInt32(exec);
+    if (exec->hadException())
+        return JSValue::encode(jsNull());
+    int32_t right = exec->argument(1).toInt32(exec);
+    return JSValue::encode(jsNumber(left * right));
 }
 
 #if PLATFORM(IOS) && CPU(ARM_THUMB2)

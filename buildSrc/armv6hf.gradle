@@ -26,12 +26,12 @@
 ext.ARMV6HF = [:]
 
 fetchExternalTools('ARMV6HF', 
-  ["armhf-raspberry-pi-05.tgz", 
+  ["armhf-raspberry-pi-08.tgz",
    "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ], 
   rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
 
 // Define the location of the sdk and toolchain
-def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-05")
+def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-08")
 def compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
 
 // Declare whether this particular target file applies to the current system
@@ -105,11 +105,13 @@ def extraCFlags = [
         "-I$sdk/usr/include",
         "-I$sdk/opt/vc/include",
         "-I$sdk/opt/vc/include/interface/vcos/pthreads",
+        "-I$sdk/opt/vc/include/interface/vmcs_host/linux",
         "-DOMAP3", "-DUSE_DISPMAN"].flatten();
 def extraLFlags = [
         "-I", "-L",
         linkFlags,
         "-L$sdk/lib/arm-linux/gnueabihf",
+        "-L$sdk/usr/lib",
         "-L$sdk/usr/lib/arm-linux-gnueabihf",
         "-L$sdk/opt/vc/lib"].flatten()
 

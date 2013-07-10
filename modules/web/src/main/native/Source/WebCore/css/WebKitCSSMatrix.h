@@ -26,16 +26,17 @@
 #ifndef WebKitCSSMatrix_h
 #define WebKitCSSMatrix_h
 
-#include "PlatformString.h"
+#include "ScriptWrappable.h"
 #include "TransformationMatrix.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 typedef int ExceptionCode;
 
-class WebKitCSSMatrix : public RefCounted<WebKitCSSMatrix> {
+class WebKitCSSMatrix : public ScriptWrappable, public RefCounted<WebKitCSSMatrix> {
 public:
     static PassRefPtr<WebKitCSSMatrix> create(const TransformationMatrix& m)
     {

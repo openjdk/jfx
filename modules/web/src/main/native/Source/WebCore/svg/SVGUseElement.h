@@ -22,7 +22,8 @@
 #define SVGUseElement_h
 
 #if ENABLE(SVG)
-#include "CachedSVGDocument.h"
+#include "CachedResourceHandle.h"
+#include "CachedSVGDocumentClient.h"
 #include "SVGAnimatedBoolean.h"
 #include "SVGAnimatedLength.h"
 #include "SVGExternalResourcesRequired.h"
@@ -36,7 +37,7 @@ namespace WebCore {
 class CachedSVGDocument;
 class SVGElementInstance;
 
-class SVGUseElement : public SVGStyledTransformableElement,
+class SVGUseElement FINAL : public SVGStyledTransformableElement,
                       public SVGTests,
                       public SVGLangSpace,
                       public SVGExternalResourcesRequired,
@@ -50,23 +51,22 @@ public:
     SVGElementInstance* animatedInstanceRoot() const;
     SVGElementInstance* instanceForShadowTreeElement(Node*) const;
     void invalidateShadowTree();
+    void invalidateDependentShadowTrees();
 
     RenderObject* rendererClipChild() const;
 
 private:
     SVGUseElement(const QualifiedName&, Document*, bool wasInsertedByParser);
 
-    void createShadowSubtree();
-
     virtual bool isValid() const { return SVGTests::isValid(); }
-    virtual bool supportsFocus() const { return true; }
+    virtual bool supportsFocus() const OVERRIDE { return true; }
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
     virtual void buildPendingResource();
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual void svgAttributeChanged(const QualifiedName&);
 
     virtual bool willRecalcStyle(StyleChange);
@@ -114,6 +114,7 @@ private:
     bool instanceTreeIsLoading(SVGElementInstance*);
     virtual void notifyFinished(CachedResource*);
     Document* referencedDocument() const;
+    void setCachedDocument(CachedResourceHandle<CachedSVGDocument>);
 
     // SVGTests
     virtual void synchronizeRequiredFeatures() { SVGTests::synchronizeRequiredFeatures(this); }
@@ -124,12 +125,14 @@ private:
     virtual void setHaveFiredLoadEvent(bool haveFiredLoadEvent) { m_haveFiredLoadEvent = haveFiredLoadEvent; }
     virtual bool isParserInserted() const { return m_wasInsertedByParser; }
     virtual bool haveFiredLoadEvent() const { return m_haveFiredLoadEvent; }
+    virtual Timer<SVGElement>* svgLoadEventTimer() OVERRIDE { return &m_svgLoadEventTimer; }
 
     bool m_wasInsertedByParser;
     bool m_haveFiredLoadEvent;
     bool m_needsShadowTreeRecreation;
     RefPtr<SVGElementInstance> m_targetElementInstance;
     CachedResourceHandle<CachedSVGDocument> m_cachedDocument;
+    Timer<SVGElement> m_svgLoadEventTimer;
 };
 
 }

@@ -47,7 +47,10 @@ public:
     typedef X86Assembler::FPRegisterID FPRegisterID;
     typedef X86Assembler::XMMRegisterID XMMRegisterID;
     
-    static const int MaximumCompactPtrAlignedAddressOffset = 127;
+    static bool isCompactPtrAlignedAddressOffset(ptrdiff_t value)
+    {
+        return value >= -128 && value <= 127;
+    }
 
     enum RelationalCondition {
         Equal = X86Assembler::ConditionE,
@@ -65,6 +68,7 @@ public:
     enum ResultCondition {
         Overflow = X86Assembler::ConditionO,
         Signed = X86Assembler::ConditionS,
+        PositiveOrZero = X86Assembler::ConditionNS,
         Zero = X86Assembler::ConditionE,
         NonZero = X86Assembler::ConditionNE
     };
@@ -94,7 +98,10 @@ public:
 #if ENABLE(JIT_CONSTANT_BLINDING)
     static bool shouldBlindForSpecificArch(uint32_t value) { return value >= 0x00ffffff; }
 #if CPU(X86_64)
+    static bool shouldBlindForSpecificArch(uint64_t value) { return value >= 0x00ffffff; }
+#if OS(DARWIN) // On 64-bit systems other than DARWIN uint64_t and uintptr_t are the same type so overload is prohibited.
     static bool shouldBlindForSpecificArch(uintptr_t value) { return value >= 0x00ffffff; }
+#endif
 #endif
 #endif
 
@@ -482,25 +489,27 @@ public:
 
     DataLabel32 load32WithAddressOffsetPatch(Address address, RegisterID dest)
     {
+        padBeforePatch();
         m_assembler.movl_mr_disp32(address.offset, address.base, dest);
         return DataLabel32(this);
     }
     
     DataLabelCompact load32WithCompactAddressOffsetPatch(Address address, RegisterID dest)
     {
+        padBeforePatch();
         m_assembler.movl_mr_disp8(address.offset, address.base, dest);
         return DataLabelCompact(this);
     }
     
     static void repatchCompact(CodeLocationDataLabelCompact dataLabelCompact, int32_t value)
     {
-        ASSERT(value >= 0);
-        ASSERT(value < MaximumCompactPtrAlignedAddressOffset);
+        ASSERT(isCompactPtrAlignedAddressOffset(value));
         AssemblerType_T::repatchCompact(dataLabelCompact.dataLocation(), value);
     }
     
     DataLabelCompact loadCompactWithAddressOffsetPatch(Address address, RegisterID dest)
     {
+        padBeforePatch();
         m_assembler.movl_mr_disp8(address.offset, address.base, dest);
         return DataLabelCompact(this);
     }
@@ -547,6 +556,7 @@ public:
 
     DataLabel32 store32WithAddressOffsetPatch(RegisterID src, Address address)
     {
+        padBeforePatch();
         m_assembler.movl_rm_disp32(src, address.offset, address.base);
         return DataLabel32(this);
     }
@@ -817,11 +827,15 @@ public:
             m_assembler.ucomisd_rr(right, left);
 
         if (cond == DoubleEqual) {
+            if (left == right)
+                return Jump(m_assembler.jnp());
             Jump isUnordered(m_assembler.jp());
             Jump result = Jump(m_assembler.je());
             isUnordered.link(this);
             return result;
         } else if (cond == DoubleNotEqualOrUnordered) {
+            if (left == right)
+                return Jump(m_assembler.jp());
             Jump isUnordered(m_assembler.jp());
             Jump isEqual(m_assembler.je());
             isUnordered.link(this);
@@ -871,12 +885,13 @@ public:
     // If the result is not representable as a 32 bit value, branch.
     // May also branch for some values that are representable in 32 bits
     // (specifically, in this case, 0).
-    void branchConvertDoubleToInt32(FPRegisterID src, RegisterID dest, JumpList& failureCases, FPRegisterID fpTemp)
+    void branchConvertDoubleToInt32(FPRegisterID src, RegisterID dest, JumpList& failureCases, FPRegisterID fpTemp, bool negZeroCheck = true)
     {
         ASSERT(isSSE2Present());
         m_assembler.cvttsd2si_rr(src, dest);
 
         // If the result is zero, it might have been -0.0, and the double comparison won't catch this!
+        if (negZeroCheck)
         failureCases.append(branchTest32(Zero, dest));
 
         // Convert the integer result back to float & compare to the original value - if not equal or unordered (NaN) then jump.
@@ -985,6 +1000,11 @@ public:
     void move(TrustedImmPtr imm, RegisterID dest)
     {
         m_assembler.movq_i64r(imm.asIntptr(), dest);
+    }
+
+    void move(TrustedImm64 imm, RegisterID dest)
+    {
+        m_assembler.movq_i64r(imm.m_value, dest);
     }
 
     void swap(RegisterID reg1, RegisterID reg2)

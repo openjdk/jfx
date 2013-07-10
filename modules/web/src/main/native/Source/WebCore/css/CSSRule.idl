@@ -18,16 +18,14 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module css {
-
     // Introduced in DOM Level 2:
-    interface [
+[
+    JSCustomHeader,
         JSCustomMarkFunction,
-        JSGenerateIsReachable,
+    GenerateIsReachable,
         CustomToJSObject,
         ObjCPolymorphic,
-        V8DependentLifetime
-    ] CSSRule {
+] interface CSSRule {
 
         // RuleType
         const unsigned short UNKNOWN_RULE = 0;
@@ -39,13 +37,25 @@ module css {
         const unsigned short PAGE_RULE = 6;
         const unsigned short WEBKIT_KEYFRAMES_RULE = 7;
         const unsigned short WEBKIT_KEYFRAME_RULE = 8;
+#if defined(ENABLE_CSS3_CONDITIONAL_RULES) && ENABLE_CSS3_CONDITIONAL_RULES
+    const unsigned short SUPPORTS_RULE = 12;
+#endif
+#if defined(ENABLE_CSS_DEVICE_ADAPTATION) && ENABLE_CSS_DEVICE_ADAPTATION
+    const unsigned short WEBKIT_VIEWPORT_RULE = 15;
+#endif
 #if defined(ENABLE_CSS_REGIONS) && ENABLE_CSS_REGIONS
         const unsigned short WEBKIT_REGION_RULE = 16;
+#endif
+#if defined(ENABLE_CSS_SHADERS) && ENABLE_CSS_SHADERS
+    const unsigned short WEBKIT_FILTER_RULE = 17;
+#endif
+#if defined(ENABLE_SHADOW_DOM) && ENABLE_SHADOW_DOM
+    const unsigned short HOST_RULE = 1001;
 #endif
 
         readonly attribute unsigned short   type;
 
-                 attribute [TreatReturnedNullStringAs=Null, TreatNullAs=NullString] DOMString        cssText
+             [TreatReturnedNullStringAs=Null, TreatNullAs=NullString] attribute DOMString        cssText
                      setter raises (DOMException);
 
         readonly attribute CSSStyleSheet    parentStyleSheet;
@@ -53,4 +63,3 @@ module css {
 
     };
 
-}

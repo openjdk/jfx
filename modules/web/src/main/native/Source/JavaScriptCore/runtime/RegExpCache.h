@@ -28,8 +28,8 @@
 #include "RegExp.h"
 #include "RegExpKey.h"
 #include "Strong.h"
-#include "UString.h"
 #include "Weak.h"
+#include "WeakInlines.h"
 #include <wtf/FixedArray.h>
 #include <wtf/HashMap.h>
 
@@ -43,7 +43,7 @@ friend class RegExp;
 typedef HashMap<RegExpKey, Weak<RegExp> > RegExpCacheMap;
 
 public:
-    RegExpCache(JSGlobalData* globalData);
+    RegExpCache(VM* vm);
     void invalidateCode();
 
 private:
@@ -54,12 +54,12 @@ private:
 
     virtual void finalize(Handle<Unknown>, void* context);
 
-    RegExp* lookupOrCreate(const UString& patternString, RegExpFlags);
+    RegExp* lookupOrCreate(const WTF::String& patternString, RegExpFlags);
     void addToStrongCache(RegExp*);
     RegExpCacheMap m_weakCache; // Holds all regular expressions currently live.
     int m_nextEntryInStrongCache;
     WTF::FixedArray<Strong<RegExp>, maxStrongCacheableEntries> m_strongCache; // Holds a select few regular expressions that have compiled and executed
-    JSGlobalData* m_globalData;
+    VM* m_vm;
 };
 
 } // namespace JSC

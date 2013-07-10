@@ -24,11 +24,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG
-    ] SVGStyleElement : SVGElement,
+] interface SVGStyleElement : SVGElement,
                                                   SVGLangSpace {
                  attribute boolean disabled;
                  attribute DOMString type
@@ -39,4 +37,3 @@ module svg {
                      setter raises(DOMException);
     };
 
-}

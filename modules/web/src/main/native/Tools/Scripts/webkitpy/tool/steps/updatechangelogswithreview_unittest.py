@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.tool.mocktool import MockOptions, MockTool
@@ -36,14 +36,14 @@ class UpdateChangeLogsWithReviewerTest(unittest.TestCase):
     def test_guess_reviewer_from_bug(self):
         capture = OutputCapture()
         step = UpdateChangeLogsWithReviewer(MockTool(), MockOptions())
-        expected_stderr = "No reviewed patches on bug 50001, cannot infer reviewer.\n"
-        capture.assert_outputs(self, step._guess_reviewer_from_bug, [50001], expected_stderr=expected_stderr)
+        expected_logs = "No reviewed patches on bug 50001, cannot infer reviewer.\n"
+        capture.assert_outputs(self, step._guess_reviewer_from_bug, [50001], expected_logs=expected_logs)
 
     def test_guess_reviewer_from_multipatch_bug(self):
         capture = OutputCapture()
         step = UpdateChangeLogsWithReviewer(MockTool(), MockOptions())
-        expected_stderr = "Guessing \"Reviewer2\" as reviewer from attachment 10001 on bug 50000.\n"
-        capture.assert_outputs(self, step._guess_reviewer_from_bug, [50000], expected_stderr=expected_stderr)
+        expected_logs = "Guessing \"Reviewer2\" as reviewer from attachment 10001 on bug 50000.\n"
+        capture.assert_outputs(self, step._guess_reviewer_from_bug, [50000], expected_logs=expected_logs)
 
     def test_empty_state(self):
         capture = OutputCapture()

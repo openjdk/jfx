@@ -23,12 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG,
-        SuppressToJSObject
-    ] SVGRenderingIntent {
+    SuppressToJSObject,
+    ImplementationLacksVTable
+] interface SVGRenderingIntent {
         // Rendering Intent Types
         const unsigned short RENDERING_INTENT_UNKNOWN               = 0;
         const unsigned short RENDERING_INTENT_AUTO                  = 1;
@@ -38,4 +37,3 @@ module svg {
         const unsigned short RENDERING_INTENT_ABSOLUTE_COLORIMETRIC = 5;
     };
 
-}

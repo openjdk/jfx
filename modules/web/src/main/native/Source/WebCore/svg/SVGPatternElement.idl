@@ -23,16 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG
-    ] SVGPatternElement : SVGElement,
+] interface SVGPatternElement : SVGStyledElement,
                                                     SVGURIReference,
                                                     SVGTests,
                                                     SVGLangSpace,
                                                     SVGExternalResourcesRequired,
-                                                    SVGStylable,
                                                     SVGFitToViewBox
                                                  /* SVGUnitTypes */ {
         readonly attribute SVGAnimatedEnumeration   patternUnits;
@@ -44,4 +41,3 @@ module svg {
         readonly attribute SVGAnimatedLength        height;
     };
 
-}

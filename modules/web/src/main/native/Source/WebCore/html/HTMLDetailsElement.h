@@ -25,7 +25,7 @@
 
 namespace WebCore {
 
-class HTMLDetailsElement : public HTMLElement {
+class HTMLDetailsElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLDetailsElement> create(const QualifiedName& tagName, Document* document);
     void toggleOpen();
@@ -37,12 +37,11 @@ private:
 
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
     virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const OVERRIDE;
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
-    void createShadowSubtree();
+    virtual void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
 
     bool m_isOpen;
-
 };
 
 } // namespace WebCore

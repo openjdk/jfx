@@ -54,16 +54,16 @@ PassRefPtr<AccessibilityTableCell> AccessibilityTableCell::create(RenderObject* 
     return adoptRef(new AccessibilityTableCell(renderer));
 }
 
-bool AccessibilityTableCell::accessibilityIsIgnored() const
+bool AccessibilityTableCell::computeAccessibilityIsIgnored() const
 {
-    AccessibilityObjectInclusion decision = accessibilityIsIgnoredBase();
+    AccessibilityObjectInclusion decision = defaultObjectInclusion();
     if (decision == IncludeObject)
         return false;
     if (decision == IgnoreObject)
         return true;
     
     if (!isTableCell())
-        return AccessibilityRenderObject::accessibilityIsIgnored();
+        return AccessibilityRenderObject::computeAccessibilityIsIgnored();
     
     return false;
 }
@@ -71,6 +71,10 @@ bool AccessibilityTableCell::accessibilityIsIgnored() const
 AccessibilityObject* AccessibilityTableCell::parentTable() const
 {
     if (!m_renderer || !m_renderer->isTableCell())
+        return 0;
+    
+    // If the document no longer exists, we might not have an axObjectCache.
+    if (!axObjectCache())
         return 0;
     
     // Do not use getOrCreate. parentTable() can be called while the render tree is being modified 
@@ -83,22 +87,22 @@ AccessibilityObject* AccessibilityTableCell::parentTable() const
     
 bool AccessibilityTableCell::isTableCell() const
 {
-    AccessibilityObject* table = parentTable();
-    if (!table || !table->isAccessibilityTable())
+    AccessibilityObject* parent = parentObjectUnignored();
+    if (!parent || !parent->isTableRow())
         return false;
     
     return true;
 }
     
-AccessibilityRole AccessibilityTableCell::roleValue() const
+AccessibilityRole AccessibilityTableCell::determineAccessibilityRole()
 {
     if (!isTableCell())
-        return AccessibilityRenderObject::roleValue();
+        return AccessibilityRenderObject::determineAccessibilityRole();
     
     return CellRole;
 }
     
-void AccessibilityTableCell::rowIndexRange(pair<int, int>& rowRange)
+void AccessibilityTableCell::rowIndexRange(pair<unsigned, unsigned>& rowRange)
 {
     if (!m_renderer || !m_renderer->isTableCell())
         return;
@@ -113,11 +117,7 @@ void AccessibilityTableCell::rowIndexRange(pair<int, int>& rowRange)
     if (!table || !section)
         return;
 
-    // FIXME: This will skip a table with just a tfoot. Should fix by using RenderTable::topSection.
-    RenderTableSection* tableSection = table->header();
-    if (!tableSection)
-        tableSection = table->firstBody();
-    
+    RenderTableSection* tableSection = table->topSection();    
     unsigned rowOffset = 0;
     while (tableSection) {
         if (tableSection == section)
@@ -129,7 +129,7 @@ void AccessibilityTableCell::rowIndexRange(pair<int, int>& rowRange)
     rowRange.first += rowOffset;
 }
     
-void AccessibilityTableCell::columnIndexRange(pair<int, int>& columnRange)
+void AccessibilityTableCell::columnIndexRange(pair<unsigned, unsigned>& columnRange)
 {
     if (!m_renderer || !m_renderer->isTableCell())
         return;

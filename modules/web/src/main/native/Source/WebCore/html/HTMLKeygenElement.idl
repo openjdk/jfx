@@ -28,15 +28,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-
     interface HTMLKeygenElement : HTMLElement {
-        attribute [Reflect] boolean autofocus;
-        attribute [Reflect] DOMString challenge;
-        attribute [Reflect] boolean disabled;
+    [Reflect] attribute boolean autofocus;
+    [Reflect] attribute DOMString challenge;
+    [Reflect] attribute boolean disabled;
         readonly attribute HTMLFormElement form;
-        attribute [Reflect] DOMString keytype;
-        attribute [Reflect] DOMString name;
+    [Reflect] attribute DOMString keytype;
+    [Reflect] attribute DOMString name;
 
         readonly attribute DOMString type;
 
@@ -44,9 +42,8 @@ module html {
         readonly attribute ValidityState validity;
         readonly attribute DOMString validationMessage;
         boolean checkValidity();
-        void setCustomValidity(in [TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString error);
+    void setCustomValidity([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString error);
 
         readonly attribute NodeList labels;
     };
 
-}

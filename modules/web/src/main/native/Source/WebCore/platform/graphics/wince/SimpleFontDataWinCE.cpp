@@ -63,7 +63,7 @@ void SimpleFontData::platformDestroy()
 {
 }
 
-PassOwnPtr<SimpleFontData> SimpleFontData::createScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
+PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
 {
     FontDescription fontDesc(fontDescription);
     fontDesc.setComputedSize(lroundf(scaleFactor * fontDesc.computedSize()));
@@ -71,28 +71,8 @@ PassOwnPtr<SimpleFontData> SimpleFontData::createScaledFontData(const FontDescri
     fontDesc.setKeywordSize(lroundf(scaleFactor * fontDesc.keywordSize()));
     FontPlatformData* result = fontCache()->getCachedFontPlatformData(fontDesc, m_platformData.family());
     if (!result)
-        return nullptr;
-    return adoptPtr(new SimpleFontData(*result));
-}
-
-SimpleFontData* SimpleFontData::smallCapsFontData(const FontDescription& fontDescription) const
-{
-    if (!m_derivedFontData)
-        m_derivedFontData = DerivedFontData::create(isCustomFont());
-    if (!m_derivedFontData->smallCaps)
-        m_derivedFontData->smallCaps = createScaledFontData(fontDescription, .7);
-
-    return m_derivedFontData->smallCaps.get();
-}
-
-SimpleFontData* SimpleFontData::emphasisMarkFontData(const FontDescription& fontDescription) const
-{
-    if (!m_derivedFontData)
-        m_derivedFontData = DerivedFontData::create(isCustomFont());
-    if (!m_derivedFontData->emphasisMark)
-        m_derivedFontData->emphasisMark = createScaledFontData(fontDescription, .5);
-
-    return m_derivedFontData->emphasisMark.get();
+        return 0;
+    return SimpleFontData::create(*result);
 }
 
 DWORD getKnownFontCodePages(const wchar_t* family);
@@ -107,11 +87,7 @@ bool SimpleFontData::containsCharacters(const UChar* characters, int length) con
     // cover a given code page?
 
     // FIXME: in the case that we failed to get the interface, still use the font.
-#if defined(IMLANG_FONT_LINK) && (IMLANG_FONT_LINK == 2)
-    IMLangFontLink2* langFontLink = fontCache()->getFontLinkInterface();
-#else
-    IMLangFontLink* langFontLink = fontCache()->getFontLinkInterface();
-#endif
+    IMLangFontLinkType* langFontLink = fontCache()->getFontLinkInterface();
     if (!langFontLink)
         return true;
 

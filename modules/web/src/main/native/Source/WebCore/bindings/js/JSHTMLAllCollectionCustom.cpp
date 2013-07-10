@@ -32,7 +32,7 @@
 #include "JSNodeList.h"
 #include "Node.h"
 #include "StaticNodeList.h"
-#include <runtime/JSValue.h>
+#include <runtime/JSCJSValue.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomicString.h>
 
@@ -50,9 +50,8 @@ static JSValue getNamedItems(ExecState* exec, JSHTMLAllCollection* collection, P
     if (namedItems.size() == 1)
         return toJS(exec, collection->globalObject(), namedItems[0].get());
 
-    // FIXME: HTML5 specifies that this should be a DynamicNodeList.
-    // FIXME: HTML5 specifies that non-HTMLOptionsCollection collections should return
-    // the first matching item instead of a NodeList.
+    // FIXME: HTML5 specification says this should be a HTMLCollection.
+    // http://www.whatwg.org/specs/web-apps/current-work/multipage/common-dom-interfaces.html#htmlallcollection
     return toJS(exec, collection->globalObject(), StaticNodeList::adopt(namedItems).get());
 }
 
@@ -70,7 +69,7 @@ static EncodedJSValue JSC_HOST_CALL callHTMLAllCollection(ExecState* exec)
 
     if (exec->argumentCount() == 1) {
         // Support for document.all(<index>) etc.
-        UString string = exec->argument(0).toString(exec)->value(exec);
+        String string = exec->argument(0).toString(exec)->value(exec);
         unsigned index = toUInt32FromStringImpl(string.impl());
         if (index != PropertyName::NotAnIndex)
             return JSValue::encode(toJS(exec, jsCollection->globalObject(), collection->item(index)));
@@ -80,10 +79,10 @@ static EncodedJSValue JSC_HOST_CALL callHTMLAllCollection(ExecState* exec)
     }
 
     // The second arg, if set, is the index of the item we want
-    UString string = exec->argument(0).toString(exec)->value(exec);
-    unsigned index = toUInt32FromStringImpl(exec->argument(1).toString(exec)->value(exec).impl());
+    String string = exec->argument(0).toString(exec)->value(exec);
+    unsigned index = toUInt32FromStringImpl(exec->argument(1).toWTFString(exec).impl());
     if (index != PropertyName::NotAnIndex) {
-        if (Node* node = collection->namedItemWithIndex(ustringToAtomicString(string), index))
+        if (Node* node = collection->namedItemWithIndex(string, index))
             return JSValue::encode(toJS(exec, jsCollection->globalObject(), node));
     }
 
@@ -117,7 +116,8 @@ JSValue JSHTMLAllCollection::item(ExecState* exec)
 
 JSValue JSHTMLAllCollection::namedItem(ExecState* exec)
 {
-    return getNamedItems(exec, this, Identifier(exec, exec->argument(0).toString(exec)->value(exec)));
+    JSValue value = getNamedItems(exec, this, Identifier(exec, exec->argument(0).toString(exec)->value(exec)));
+    return value.isUndefined() ? jsNull() : value;
 }
 
 } // namespace WebCore

@@ -26,12 +26,12 @@
 #ifndef CookieStorage_h
 #define CookieStorage_h
 
-#include <wtf/RetainPtr.h>
-
 namespace WebCore {
 
-void setCookieStoragePrivateBrowsingEnabled(bool);
-void startObservingCookieChanges();
+// These are always observing the shared cookie storage, even when in private browsing mode.
+
+typedef void(*CookieChangeCallbackPtr)();
+void startObservingCookieChanges(CookieChangeCallbackPtr);
 void stopObservingCookieChanges();
 
 }

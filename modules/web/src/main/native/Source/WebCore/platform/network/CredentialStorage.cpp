@@ -33,6 +33,7 @@
 #include <wtf/text/StringHash.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -40,12 +41,14 @@ namespace WebCore {
 typedef HashMap<ProtectionSpace, Credential> ProtectionSpaceToCredentialMap;
 static ProtectionSpaceToCredentialMap& protectionSpaceToCredentialMap()
 {
+    ASSERT(isMainThread());
     DEFINE_STATIC_LOCAL(ProtectionSpaceToCredentialMap, map, ());
     return map;
 }
 
 static HashSet<String>& originsWithCredentials()
 {
+    ASSERT(isMainThread());
     DEFINE_STATIC_LOCAL(HashSet<String>, set, ());
     return set;
 }
@@ -53,6 +56,7 @@ static HashSet<String>& originsWithCredentials()
 typedef HashMap<String, ProtectionSpace> PathToDefaultProtectionSpaceMap;
 static PathToDefaultProtectionSpaceMap& pathToDefaultProtectionSpaceMap()
 {
+    ASSERT(isMainThread());
     DEFINE_STATIC_LOCAL(PathToDefaultProtectionSpaceMap, map, ());
     return map;
 }
@@ -147,7 +151,7 @@ bool CredentialStorage::set(const Credential& credential, const KURL& url)
     if (iter == pathToDefaultProtectionSpaceMap().end())
         return false;
     ASSERT(originsWithCredentials().contains(originStringFromURL(url)));
-    protectionSpaceToCredentialMap().set(iter->second, credential);
+    protectionSpaceToCredentialMap().set(iter->value, credential);
     return true;
 }
 
@@ -156,7 +160,7 @@ Credential CredentialStorage::get(const KURL& url)
     PathToDefaultProtectionSpaceMap::iterator iter = findDefaultProtectionSpaceForURL(url);
     if (iter == pathToDefaultProtectionSpaceMap().end())
         return Credential();
-    return protectionSpaceToCredentialMap().get(iter->second);
+    return protectionSpaceToCredentialMap().get(iter->value);
 }
 
 void CredentialStorage::setPrivateMode(bool mode)

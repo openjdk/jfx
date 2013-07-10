@@ -177,6 +177,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getSVGPropertyCSSValue(CSSProp
             ASSERT_NOT_REACHED();
             return 0;
         }
+        case CSSPropertyBufferedRendering:
+            return CSSPrimitiveValue::create(svgStyle->bufferedRendering());
         case CSSPropertyGlyphOrientationHorizontal:
             return glyphOrientationToCSSPrimitiveValue(svgStyle->glyphOrientationHorizontal());
         case CSSPropertyGlyphOrientationVertical: {
@@ -192,6 +194,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getSVGPropertyCSSValue(CSSProp
             return valueForShadow(svgStyle->shadow(), propertyID, style);
         case CSSPropertyVectorEffect:
             return CSSPrimitiveValue::create(svgStyle->vectorEffect());
+        case CSSPropertyMaskType:
+            return CSSPrimitiveValue::create(svgStyle->maskType());
         case CSSPropertyMarker:
         case CSSPropertyEnableBackground:
         case CSSPropertyColorProfile:

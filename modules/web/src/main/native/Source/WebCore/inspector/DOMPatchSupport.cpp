@@ -46,6 +46,7 @@
 #include "HTMLNames.h"
 #include "InspectorHistory.h"
 #include "Node.h"
+#include "XMLDocumentParser.h"
 
 #include <wtf/Deque.h>
 #include <wtf/HashTraits.h>
@@ -89,9 +90,23 @@ DOMPatchSupport::~DOMPatchSupport() { }
 
 void DOMPatchSupport::patchDocument(const String& markup)
 {
-    RefPtr<HTMLDocument> newDocument = HTMLDocument::create(0, KURL());
+    RefPtr<Document> newDocument;
+    if (m_document->isHTMLDocument())
+        newDocument = HTMLDocument::create(0, KURL());
+    else if (m_document->isXHTMLDocument())
+        newDocument = HTMLDocument::createXHTML(0, KURL());
+#if ENABLE(SVG)
+    else if (m_document->isSVGDocument())
+        newDocument = Document::create(0, KURL());
+#endif
+
+    ASSERT(newDocument);
     newDocument->setContextFeatures(m_document->contextFeatures());
-    RefPtr<DocumentParser> parser = HTMLDocumentParser::create(newDocument.get(), false);
+    RefPtr<DocumentParser> parser;
+    if (m_document->isHTMLDocument())
+        parser = HTMLDocumentParser::create(static_cast<HTMLDocument*>(newDocument.get()), false);
+    else
+        parser = XMLDocumentParser::create(newDocument.get(), 0);
     parser->insert(markup); // Use insert() so that the parser will not yield.
     parser->finish();
     parser->detach();
@@ -99,8 +114,7 @@ void DOMPatchSupport::patchDocument(const String& markup)
     OwnPtr<Digest> oldInfo = createDigest(m_document->documentElement(), 0);
     OwnPtr<Digest> newInfo = createDigest(newDocument->documentElement(), &m_unusedNodesMap);
 
-    ExceptionCode ec = 0;
-    if (!innerPatchNode(oldInfo.get(), newInfo.get(), ec)) {
+    if (!innerPatchNode(oldInfo.get(), newInfo.get(), IGNORE_EXCEPTION)) {
         // Fall back to rewrite.
         m_document->write(markup);
         m_document->close();
@@ -118,7 +132,10 @@ Node* DOMPatchSupport::patchNode(Node* node, const String& markup, ExceptionCode
     Node* previousSibling = node->previousSibling();
     // FIXME: This code should use one of createFragment* in markup.h
     RefPtr<DocumentFragment> fragment = DocumentFragment::create(m_document);
+    if (m_document->isHTMLDocument())
     fragment->parseHTML(markup, node->parentElement() ? node->parentElement() : m_document->documentElement());
+    else
+        fragment->parseXML(markup, node->parentElement() ? node->parentElement() : m_document->documentElement());
 
     // Compose the old list.
     ContainerNode* parentNode = node->parentNode();
@@ -171,14 +188,14 @@ bool DOMPatchSupport::innerPatchNode(Digest* oldDigest, Digest* newDigest, Excep
         return true;
 
     // Patch attributes
-    Element* oldElement = static_cast<Element*>(oldNode);
-    Element* newElement = static_cast<Element*>(newNode);
+    Element* oldElement = toElement(oldNode);
+    Element* newElement = toElement(newNode);
     if (oldDigest->m_attrsSHA1 != newDigest->m_attrsSHA1) {
         // FIXME: Create a function in Element for removing all properties. Take in account whether did/willModifyAttribute are important.
         if (oldElement->hasAttributesWithoutUpdate()) {
             while (oldElement->attributeCount()) {
-                Attribute* attr = oldElement->attributeItem(0);
-                if (!m_domEditor->removeAttribute(oldElement, attr->localName(), ec))
+                const Attribute* attribute = oldElement->attributeItem(0);
+                if (!m_domEditor->removeAttribute(oldElement, attribute->localName(), ec))
                     return false;
             }
         }
@@ -237,24 +254,24 @@ DOMPatchSupport::diff(const Vector<OwnPtr<Digest> >& oldList, const Vector<OwnPt
 
     for (size_t i = 0; i < newList.size(); ++i) {
         DiffTable::iterator it = newTable.add(newList[i]->m_sha1, Vector<size_t>()).iterator;
-        it->second.append(i);
+        it->value.append(i);
     }
 
     for (size_t i = 0; i < oldList.size(); ++i) {
         DiffTable::iterator it = oldTable.add(oldList[i]->m_sha1, Vector<size_t>()).iterator;
-        it->second.append(i);
+        it->value.append(i);
     }
 
     for (DiffTable::iterator newIt = newTable.begin(); newIt != newTable.end(); ++newIt) {
-        if (newIt->second.size() != 1)
+        if (newIt->value.size() != 1)
             continue;
 
-        DiffTable::iterator oldIt = oldTable.find(newIt->first);
-        if (oldIt == oldTable.end() || oldIt->second.size() != 1)
+        DiffTable::iterator oldIt = oldTable.find(newIt->key);
+        if (oldIt == oldTable.end() || oldIt->value.size() != 1)
             continue;
 
-        newMap[newIt->second[0]] = make_pair(newList[newIt->second[0]].get(), oldIt->second[0]);
-        oldMap[oldIt->second[0]] = make_pair(oldList[oldIt->second[0]].get(), newIt->second[0]);
+        newMap[newIt->value[0]] = make_pair(newList[newIt->value[0]].get(), oldIt->value[0]);
+        oldMap[oldIt->value[0]] = make_pair(oldList[oldIt->value[0]].get(), newIt->value[0]);
     }
 
     for (size_t i = 0; newList.size() > 0 && i < newList.size() - 1; ++i) {
@@ -364,7 +381,7 @@ bool DOMPatchSupport::innerPatchChildren(ContainerNode* parentNode, const Vector
 
     // 2. Patch nodes marked for merge.
     for (HashMap<Digest*, Digest*>::iterator it = merges.begin(); it != merges.end(); ++it) {
-        if (!innerPatchNode(it->second, it->first, ec))
+        if (!innerPatchNode(it->value, it->key, ec))
             return false;
     }
 
@@ -418,7 +435,7 @@ PassOwnPtr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node* node, Un
             child = child->nextSibling();
             digest->m_children.append(childInfo.release());
         }
-        Element* element = static_cast<Element*>(node);
+        Element* element = toElement(node);
 
         if (element->hasAttributesWithoutUpdate()) {
             size_t numAttrs = element->attributeCount();
@@ -463,7 +480,7 @@ bool DOMPatchSupport::removeChildAndMoveToNew(Digest* oldDigest, ExceptionCode& 
     // high that it will get merged back into the original DOM during the further patching.
     UnusedNodesMap::iterator it = m_unusedNodesMap.find(oldDigest->m_sha1);
     if (it != m_unusedNodesMap.end()) {
-        Digest* newDigest = it->second;
+        Digest* newDigest = it->value;
         Node* newNode = newDigest->m_node;
         if (!m_domEditor->replaceChild(newNode->parentNode(), oldNode, newNode, ec))
             return false;

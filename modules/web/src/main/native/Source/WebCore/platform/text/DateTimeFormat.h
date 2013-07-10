@@ -26,8 +26,8 @@
 #ifndef DateTimeFormat_h
 #define DateTimeFormat_h
 
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
-#include <wtf/text/WTFString.h>
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
@@ -57,8 +57,8 @@ public:
         FieldTypeMonthStandAlone = 'L',
 
         // Week: 42
-        FieldTypeWeekOfYear = 'W',
-        FieldTypeWeekOfMonth = 'w',
+        FieldTypeWeekOfYear = 'w',
+        FieldTypeWeekOfMonth = 'W',
 
         // Day: 12
         FieldTypeDayOfMonth = 'd',
@@ -103,10 +103,10 @@ public:
 
     // Returns true if succeeded, false if failed.
     static bool parse(const String&, TokenHandler&);
+    static void quoteAndAppendLiteral(const String&, StringBuilder&);
 };
 
 } // namespace WebCore
 
 #endif
-
 #endif // DateTimeFormat_h

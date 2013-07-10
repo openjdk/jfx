@@ -275,8 +275,7 @@ static bool isLegalUTF8(const unsigned char* source, int length)
 // Magic values subtracted from a buffer value during UTF8 conversion.
 // This table contains as many values as there might be trailing bytes
 // in a UTF-8 sequence.
-static const UChar32 offsetsFromUTF8[6] = { 0x00000000UL, 0x00003080UL, 0x000E2080UL, 
-            0x03C82080UL, 0xFA082080UL, 0x82082080UL };
+static const UChar32 offsetsFromUTF8[6] = { 0x00000000UL, 0x00003080UL, 0x000E2080UL, 0x03C82080UL, static_cast<UChar32>(0xFA082080UL), static_cast<UChar32>(0x82082080UL) };
 
 static inline UChar32 readUTF8Sequence(const char*& sequence, unsigned length)
 {
@@ -297,11 +296,12 @@ static inline UChar32 readUTF8Sequence(const char*& sequence, unsigned length)
 
 ConversionResult convertUTF8ToUTF16(
     const char** sourceStart, const char* sourceEnd, 
-    UChar** targetStart, UChar* targetEnd, bool strict)
+    UChar** targetStart, UChar* targetEnd, bool* sourceAllASCII, bool strict)
 {
     ConversionResult result = conversionOK;
     const char* source = *sourceStart;
     UChar* target = *targetStart;
+    UChar orAllData = 0;
     while (source < sourceEnd) {
         int utf8SequenceLength = inlineUTF8SequenceLength(*source);
         if (sourceEnd - source < utf8SequenceLength)  {
@@ -329,10 +329,14 @@ ConversionResult convertUTF8ToUTF16(
                     source -= utf8SequenceLength; // return to the illegal value itself
                     result = sourceIllegal;
                     break;
-                } else
+                } else {
                     *target++ = replacementCharacter;
-            } else
+                    orAllData |= replacementCharacter;
+                }
+            } else {
                 *target++ = character; // normal case
+                orAllData |= character;
+            }
         } else if (U_IS_SUPPLEMENTARY(character)) {
             // target is a character in range 0xFFFF - 0x10FFFF
             if (target + 1 >= targetEnd) {
@@ -342,21 +346,28 @@ ConversionResult convertUTF8ToUTF16(
             }
             *target++ = U16_LEAD(character);
             *target++ = U16_TRAIL(character);
+            orAllData = 0xffff;
         } else {
             if (strict) {
                 source -= utf8SequenceLength; // return to the start
                 result = sourceIllegal;
                 break; // Bail out; shouldn't continue
-            } else
+            } else {
                 *target++ = replacementCharacter;
+                orAllData |= replacementCharacter;
+            }
         }
     }
     *sourceStart = source;
     *targetStart = target;
+
+    if (sourceAllASCII)
+        *sourceAllASCII = !(orAllData & ~0x7f);
+
     return result;
 }
 
-unsigned calculateStringHashAndLengthFromUTF8(const char* data, const char* dataEnd, unsigned& dataLength, unsigned& utf16Length)
+unsigned calculateStringHashAndLengthFromUTF8MaskingTop8Bits(const char* data, const char* dataEnd, unsigned& dataLength, unsigned& utf16Length)
 {
     if (!data)
         return 0;
@@ -404,7 +415,7 @@ unsigned calculateStringHashAndLengthFromUTF8(const char* data, const char* data
             return 0;
     }
 
-    return stringHasher.hash();
+    return stringHasher.hashWithTop8BitsMasked();
 }
 
 bool equalUTF16WithUTF8(const UChar* a, const UChar* aEnd, const char* b, const char* bEnd)

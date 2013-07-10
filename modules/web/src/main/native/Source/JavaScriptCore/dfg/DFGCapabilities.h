@@ -39,51 +39,64 @@ namespace JSC { namespace DFG {
 #if ENABLE(DFG_JIT)
 // Fast check functions; if they return true it is still necessary to
 // check opcodes.
-inline bool mightCompileEval(CodeBlock* codeBlock)
-{
-    return codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount();
-}
-inline bool mightCompileProgram(CodeBlock* codeBlock)
-{
-    return codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount();
-}
-inline bool mightCompileFunctionForCall(CodeBlock* codeBlock)
-{
-    return codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount();
-}
-inline bool mightCompileFunctionForConstruct(CodeBlock* codeBlock)
-{
-    return codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount();
-}
-
-inline bool mightInlineFunctionForCall(CodeBlock* codeBlock)
-{
-    return codeBlock->instructionCount() <= Options::maximumFunctionForCallInlineCandidateInstructionCount()
-        && !codeBlock->ownerExecutable()->needsActivation();
-}
-inline bool mightInlineFunctionForConstruct(CodeBlock* codeBlock)
-{
-    return codeBlock->instructionCount() <= Options::maximumFunctionForConstructInlineCandidateInstructionCount()
-        && !codeBlock->ownerExecutable()->needsActivation();
-}
+bool mightCompileEval(CodeBlock*);
+bool mightCompileProgram(CodeBlock*);
+bool mightCompileFunctionForCall(CodeBlock*);
+bool mightCompileFunctionForConstruct(CodeBlock*);
+bool mightInlineFunctionForCall(CodeBlock*);
+bool mightInlineFunctionForClosureCall(CodeBlock*);
+bool mightInlineFunctionForConstruct(CodeBlock*);
 
 // Opcode checking.
+inline bool canInlineResolveOperations(ResolveOperations* operations)
+{
+    for (unsigned i = 0; i < operations->size(); i++) {
+        switch (operations->data()[i].m_operation) {
+        case ResolveOperation::ReturnGlobalObjectAsBase:
+        case ResolveOperation::SetBaseToGlobal:
+        case ResolveOperation::SetBaseToUndefined:
+        case ResolveOperation::GetAndReturnGlobalProperty:
+        case ResolveOperation::GetAndReturnGlobalVar:
+        case ResolveOperation::GetAndReturnGlobalVarWatchable:
+        case ResolveOperation::SkipScopes:
+        case ResolveOperation::SetBaseToScope:
+        case ResolveOperation::ReturnScopeAsBase:
+        case ResolveOperation::GetAndReturnScopedVar:
+            continue;
+
+        case ResolveOperation::Fail:
+            // Fall-back resolves don't know how to deal with the ExecState* having a different
+            // global object (and scope) than the inlined code that is invoking that resolve.
+            return false;
+
+        case ResolveOperation::SkipTopScopeNode:
+            // We don't inline code blocks that create activations. Creation of
+            // activations is the only thing that leads to SkipTopScopeNode.
+            return false;
+
+        case ResolveOperation::CheckForDynamicEntriesBeforeGlobalScope:
+            // This would be easy to support in all cases.
+            return false;
+}
+}
+    return true;
+}
+
 inline CapabilityLevel canCompileOpcode(OpcodeID opcodeID, CodeBlock*, Instruction*)
 {
     switch (opcodeID) {
     case op_enter:
     case op_convert_this:
     case op_create_this:
+    case op_get_callee:
     case op_bitand:
     case op_bitor:
     case op_bitxor:
     case op_rshift:
     case op_lshift:
     case op_urshift:
-    case op_pre_inc:
-    case op_post_inc:
-    case op_pre_dec:
-    case op_post_dec:
+    case op_inc:
+    case op_dec:
     case op_add:
     case op_sub:
     case op_negate:
@@ -115,27 +128,21 @@ inline CapabilityLevel canCompileOpcode(OpcodeID opcodeID, CodeBlock*, Instructi
     case op_nstricteq:
     case op_get_by_val:
     case op_put_by_val:
-    case op_method_check:
-    case op_get_scoped_var:
-    case op_put_scoped_var:
     case op_get_by_id:
     case op_get_by_id_out_of_line:
+    case op_get_array_length:
     case op_put_by_id:
     case op_put_by_id_out_of_line:
     case op_put_by_id_transition_direct:
     case op_put_by_id_transition_direct_out_of_line:
     case op_put_by_id_transition_normal:
     case op_put_by_id_transition_normal_out_of_line:
-    case op_get_global_var:
-    case op_get_global_var_watchable:
-    case op_put_global_var:
-    case op_put_global_var_check:
+    case op_init_global_const_nop:
+    case op_init_global_const:
+    case op_init_global_const_check:
     case op_jmp:
-    case op_loop:
     case op_jtrue:
     case op_jfalse:
-    case op_loop_if_true:
-    case op_loop_if_false:
     case op_jeq_null:
     case op_jneq_null:
     case op_jless:
@@ -147,23 +154,17 @@ inline CapabilityLevel canCompileOpcode(OpcodeID opcodeID, CodeBlock*, Instructi
     case op_jngreater:
     case op_jngreatereq:
     case op_loop_hint:
-    case op_loop_if_less:
-    case op_loop_if_lesseq:
-    case op_loop_if_greater:
-    case op_loop_if_greatereq:
     case op_ret:
     case op_end:
     case op_call_put_result:
-    case op_resolve:
-    case op_resolve_base:
-    case op_resolve_global:
     case op_new_object:
     case op_new_array:
+    case op_new_array_with_size:
     case op_new_array_buffer:
     case op_strcat:
     case op_to_primitive:
     case op_throw:
-    case op_throw_reference_error:
+    case op_throw_static_error:
     case op_call:
     case op_construct:
     case op_new_regexp: 
@@ -177,10 +178,35 @@ inline CapabilityLevel canCompileOpcode(OpcodeID opcodeID, CodeBlock*, Instructi
     case op_get_argument_by_val:
     case op_get_arguments_length:
     case op_jneq_ptr:
+    case op_put_to_base_variable:
+    case op_put_to_base:
+    case op_typeof:
+    case op_to_number:
         return CanCompile;
         
     case op_call_varargs:
-        return ShouldProfile;
+        return MayInline;
+
+    case op_resolve:
+    case op_resolve_global_property:
+    case op_resolve_global_var:
+    case op_resolve_scoped_var:
+    case op_resolve_scoped_var_on_top_scope:
+    case op_resolve_scoped_var_with_top_scope_check:
+        return CanCompile;
+
+    case op_get_scoped_var:
+    case op_put_scoped_var:
+        return CanCompile;
+
+    case op_resolve_base_to_global:
+    case op_resolve_base_to_global_dynamic:
+    case op_resolve_base_to_scope:
+    case op_resolve_base_to_scope_with_top_scope_check:
+    case op_resolve_base:
+    case op_resolve_with_base:
+    case op_resolve_with_this:
+        return CanCompile;
 
     default:
         return CannotCompile;
@@ -190,17 +216,26 @@ inline CapabilityLevel canCompileOpcode(OpcodeID opcodeID, CodeBlock*, Instructi
 inline bool canInlineOpcode(OpcodeID opcodeID, CodeBlock* codeBlock, Instruction* pc)
 {
     switch (opcodeID) {
+    case op_resolve:
+    case op_resolve_global_property:
+    case op_resolve_global_var:
+    case op_resolve_scoped_var:
+    case op_resolve_scoped_var_on_top_scope:
+    case op_resolve_scoped_var_with_top_scope_check:
+        return canInlineResolveOperations(pc[3].u.resolveOperations);
         
-    // These opcodes would be easy to support with inlining, but we currently don't do it.
-    // The issue is that the scope chain will not be set correctly.
+    case op_resolve_base_to_global:
+    case op_resolve_base_to_global_dynamic:
+    case op_resolve_base_to_scope:
+    case op_resolve_base_to_scope_with_top_scope_check:
+    case op_resolve_base:
+    case op_resolve_with_base:
+    case op_resolve_with_this:
+        return canInlineResolveOperations(pc[4].u.resolveOperations);
+
     case op_get_scoped_var:
     case op_put_scoped_var:
-    case op_resolve:
-    case op_resolve_base:
-        
-    // Constant buffers aren't copied correctly. This is easy to fix, but for
-    // now we just disable inlining for functions that use them.
-    case op_new_array_buffer:
+        return !codeBlock->needsFullScopeChain();
         
     // Inlining doesn't correctly remap regular expression operands.
     case op_new_regexp:
@@ -230,6 +265,7 @@ inline bool mightCompileProgram(CodeBlock*) { return false; }
 inline bool mightCompileFunctionForCall(CodeBlock*) { return false; }
 inline bool mightCompileFunctionForConstruct(CodeBlock*) { return false; }
 inline bool mightInlineFunctionForCall(CodeBlock*) { return false; }
+inline bool mightInlineFunctionForClosureCall(CodeBlock*) { return false; }
 inline bool mightInlineFunctionForConstruct(CodeBlock*) { return false; }
 
 inline CapabilityLevel canCompileOpcode(OpcodeID, CodeBlock*, Instruction*) { return CannotCompile; }
@@ -275,6 +311,11 @@ inline bool canInlineFunctionForCall(CodeBlock* codeBlock)
     return mightInlineFunctionForCall(codeBlock) && canInlineOpcodes(codeBlock);
 }
 
+inline bool canInlineFunctionForClosureCall(CodeBlock* codeBlock)
+{
+    return mightInlineFunctionForClosureCall(codeBlock) && canInlineOpcodes(codeBlock);
+}
+
 inline bool canInlineFunctionForConstruct(CodeBlock* codeBlock)
 {
     return mightInlineFunctionForConstruct(codeBlock) && canInlineOpcodes(codeBlock);
@@ -288,8 +329,12 @@ inline bool mightInlineFunctionFor(CodeBlock* codeBlock, CodeSpecializationKind 
     return mightInlineFunctionForConstruct(codeBlock);
 }
 
-inline bool canInlineFunctionFor(CodeBlock* codeBlock, CodeSpecializationKind kind)
+inline bool canInlineFunctionFor(CodeBlock* codeBlock, CodeSpecializationKind kind, bool isClosureCall)
 {
+    if (isClosureCall) {
+        ASSERT(kind == CodeForCall);
+        return canInlineFunctionForClosureCall(codeBlock);
+    }
     if (kind == CodeForCall)
         return canInlineFunctionForCall(codeBlock);
     ASSERT(kind == CodeForConstruct);

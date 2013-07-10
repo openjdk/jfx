@@ -2,17 +2,19 @@
  * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
-#include "Pasteboard.h"
-#include "NotImplemented.h"
 
 #include "ClipboardUtilitiesJava.h"
+#include "CachedImage.h"
 #include "DocumentFragment.h"
 #include "Image.h"
+#include "Editor.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "markup.h"
+#include "Pasteboard.h"
 #include "RenderImage.h"
 #include "Range.h"
+#include "NotImplemented.h"
 
 #include "JavaEnv.h"
 
@@ -41,11 +43,15 @@ Pasteboard::Pasteboard()
 void Pasteboard::writeSelection(
     Range *selectedRange,
     bool canSmartCopyOrDelete,
-    Frame *frame)
+    Frame *frame,
+    ShouldSerializeSelectedTextForClipboard shouldSerializeSelectedTextForClipboard)
 {
     String markup = createMarkup(selectedRange, 0, AnnotateForInterchange, false, ResolveNonLocalURLs);
 
-    String plainText = frame->editor()->selectedText();
+    String plainText = shouldSerializeSelectedTextForClipboard == IncludeImageAltTextForClipboard
+        ? frame->editor().selectedTextForClipboard()
+        : frame->editor().selectedText();
+
 #if OS(WINDOWS)
     replaceNewlinesWithWindowsStyleNewlines(plainText);
 #endif
@@ -177,7 +183,7 @@ String Pasteboard::html() const
     return html ? String(env, html) : String();
 }
 
-void Pasteboard::writePlainText(const String& text)
+void Pasteboard::writePlainText(const String& text, SmartReplaceOption)
 {
     String plainText(text);
 #if OS(WINDOWS)

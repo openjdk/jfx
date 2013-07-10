@@ -23,6 +23,7 @@
 #define ChromeClient_h
 
 #include "AXObjectCache.h"
+#include "ConsoleAPITypes.h"
 #include "ConsoleTypes.h"
 #include "Cursor.h"
 #include "FocusDirection.h"
@@ -37,54 +38,45 @@
 #include "WebCoreKeyboardUIMode.h"
 #include <wtf/Forward.h>
 #include <wtf/PassOwnPtr.h>
-#include <wtf/UnusedParam.h>
 #include <wtf/Vector.h>
 
-#ifndef __OBJC__
-class NSMenu;
-class NSResponder;
+#if ENABLE(SQL_DATABASE)
+#include "DatabaseDetails.h"
 #endif
+
+OBJC_CLASS NSResponder;
 
 namespace WebCore {
 
     class AccessibilityObject;
+class ColorChooser;
+class ColorChooserClient;
+class DateTimeChooser;
+class DateTimeChooserClient;
     class Element;
     class FileChooser;
     class FileIconLoader;
     class FloatRect;
     class Frame;
     class Geolocation;
+class GraphicsContext3D;
     class GraphicsLayer;
+class GraphicsLayerFactory;
+class HitTestResult;
     class HTMLInputElement;
-    class HitTestResult;
     class IntRect;
     class NavigationAction;
     class Node;
     class Page;
-    class PagePopup;
-    class PagePopupClient;
-    class PagePopupDriver;
     class PopupMenuClient;
     class SecurityOrigin;
-    class GraphicsContext3D;
     class Widget;
 
+struct DateTimeChooserParameters;
     struct FrameLoadRequest;
+struct GraphicsDeviceAdapter;
     struct ViewportArguments;
     struct WindowFeatures;
-
-#if USE(ACCELERATED_COMPOSITING)
-    class GraphicsLayer;
-#endif
-
-#if ENABLE(INPUT_TYPE_COLOR)
-    class ColorChooser;
-    class ColorChooserClient;
-#endif
-
-#if PLATFORM(WIN) && USE(AVFOUNDATION)
-    struct GraphicsDeviceAdapter;
-#endif
 
     class ChromeClient {
     public:
@@ -130,10 +122,15 @@ namespace WebCore {
 
         virtual void setResizable(bool) = 0;
         
-        virtual void addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, unsigned int lineNumber, const String& sourceID) = 0;
+    virtual void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) = 0;
+    // FIXME: Remove this MessageType variant once all the clients are updated.
+    virtual void addMessageToConsole(MessageSource source, MessageType, MessageLevel level, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID)
+    {
+        addMessageToConsole(source, level, message, lineNumber, columnNumber, sourceID);
+    }
 
         virtual bool canRunBeforeUnloadConfirmPanel() = 0;
-        virtual bool runBeforeUnloadConfirmPanel(const String& message, Frame* frame) = 0;
+    virtual bool runBeforeUnloadConfirmPanel(const String& message, Frame*) = 0;
 
         virtual void closeWindowSoon() = 0;
         
@@ -144,14 +141,13 @@ namespace WebCore {
         virtual bool shouldInterruptJavaScript() = 0;
         virtual KeyboardUIMode keyboardUIMode() = 0;
 
-        virtual void* webView() const = 0;
-
         virtual IntRect windowResizerRect() const = 0;
 
         // Methods used by HostWindow.
-        virtual void invalidateRootView(const IntRect&, bool) = 0;
-        virtual void invalidateContentsAndRootView(const IntRect&, bool) = 0;
-        virtual void invalidateContentsForSlowScroll(const IntRect&, bool) = 0;
+    virtual bool supportsImmediateInvalidation() { return false; }
+    virtual void invalidateRootView(const IntRect&, bool immediate) = 0;
+    virtual void invalidateContentsAndRootView(const IntRect&, bool immediate) = 0;
+    virtual void invalidateContentsForSlowScroll(const IntRect&, bool immediate) = 0;
         virtual void scroll(const IntSize&, const IntRect&, const IntRect&) = 0;
 #if USE(TILED_BACKING_STORE)
         virtual void delegatedScrollRequested(const IntPoint&) = 0;
@@ -170,6 +166,7 @@ namespace WebCore {
         virtual void dispatchViewportPropertiesDidChange(const ViewportArguments&) const { }
 
         virtual void contentsSizeChanged(Frame*, const IntSize&) const = 0;
+    virtual void deviceOrPageScaleFactorChanged() const { }
         virtual void layoutUpdated(Frame*) const { }
         virtual void scrollRectIntoView(const IntRect&) const { }; // Currently only Mac has a non empty implementation.
        
@@ -182,8 +179,10 @@ namespace WebCore {
         virtual void print(Frame*) = 0;
         virtual bool shouldRubberBandInDirection(ScrollDirection) const = 0;
 
+    virtual Color underlayColor() const { return Color(); }
+
 #if ENABLE(SQL_DATABASE)
-        virtual void exceededDatabaseQuota(Frame*, const String& databaseName) = 0;
+    virtual void exceededDatabaseQuota(Frame*, const String& databaseName, DatabaseDetails) = 0;
 #endif
 
         // Callback invoked when the application cache fails to save a cache object
@@ -203,15 +202,14 @@ namespace WebCore {
         // the new cache.
         virtual void reachedApplicationCacheOriginQuota(SecurityOrigin*, int64_t totalSpaceNeeded) = 0;
 
-#if ENABLE(DASHBOARD_SUPPORT)
-        virtual void dashboardRegionsChanged();
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
+    virtual void annotatedRegionsChanged();
 #endif
 
         virtual void populateVisitedLinks();
 
         virtual FloatRect customHighlightRect(Node*, const AtomicString& type, const FloatRect& lineRect);
-        virtual void paintCustomHighlight(Node*, const AtomicString& type, const FloatRect& boxRect, const FloatRect& lineRect,
-            bool behindText, bool entireLine);
+    virtual void paintCustomHighlight(Node*, const AtomicString& type, const FloatRect& boxRect, const FloatRect& lineRect, bool behindText, bool entireLine);
             
         virtual bool shouldReplaceWithGeneratedFileForUpload(const String& path, String& generatedFilename);
         virtual String generateReplacementFile(const String& path);
@@ -220,6 +218,14 @@ namespace WebCore {
 
 #if ENABLE(INPUT_TYPE_COLOR)
         virtual PassOwnPtr<ColorChooser> createColorChooser(ColorChooserClient*, const Color&) = 0;
+#endif
+
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    // This function is used for:
+    //  - Mandatory date/time choosers if !ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    //  - <datalist> UI for date/time input types regardless of
+    //    ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    virtual PassRefPtr<DateTimeChooser> openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&) = 0;
 #endif
 
         virtual void runOpenPanel(Frame*, PassRefPtr<FileChooser>) = 0;
@@ -239,6 +245,9 @@ namespace WebCore {
         virtual void elementDidBlur(const Node*) { };
 
 #if USE(ACCELERATED_COMPOSITING)
+    // Allows ports to customize the type of graphics layers created by this page.
+    virtual GraphicsLayerFactory* graphicsLayerFactory() const { return 0; }
+
         // Pass 0 as the GraphicsLayer to detatch the root layer.
         virtual void attachRootGraphicsLayer(Frame*, GraphicsLayer*) = 0;
         // Sets a flag to specify that the next time content is drawn to the window,
@@ -246,7 +255,7 @@ namespace WebCore {
         virtual void setNeedsOneShotDrawingSynchronization() = 0;
         // Sets a flag to specify that the view needs to be updated, so we need
         // to do an eager layout before the drawing.
-        virtual void scheduleCompositingLayerSync() = 0;
+    virtual void scheduleCompositingLayerFlush() = 0;
         // Returns whether or not the client can render the composited layer,
         // regardless of the settings.
         virtual bool allowsAcceleratedCompositing() const { return true; }
@@ -258,6 +267,8 @@ namespace WebCore {
             CanvasTrigger = 1 << 3,
             AnimationTrigger = 1 << 4,
             FilterTrigger = 1 << 5,
+        ScrollableInnerFrameTrigger = 1 << 6,
+        AnimatedOpacityTrigger = 1 << 7,
             AllTriggers = 0xFFFFFFFF
         };
         typedef unsigned CompositingTriggerFlags;
@@ -292,8 +303,10 @@ namespace WebCore {
         virtual void makeFirstResponder(NSResponder *) { }
         // Focuses on the containing view associated with this page.
         virtual void makeFirstResponder() { }
-        virtual void willPopUpMenu(NSMenu *) { }
 #endif
+
+    virtual void enableSuddenTermination() { }
+    virtual void disableSuddenTermination() { }
 
 #if PLATFORM(WIN)
         virtual void setLastSetCursorToCurrentCursor() = 0;
@@ -309,22 +322,6 @@ namespace WebCore {
         virtual bool hasOpenedPopup() const = 0;
         virtual PassRefPtr<PopupMenu> createPopupMenu(PopupMenuClient*) const = 0;
         virtual PassRefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient*) const = 0;
-#if ENABLE(PAGE_POPUP)
-        // Creates a PagePopup object, and shows it beside originBoundsInRootView.
-        // The return value can be 0.
-        virtual PagePopup* openPagePopup(PagePopupClient*, const IntRect& originBoundsInRootView) = 0;
-        virtual void closePagePopup(PagePopup*) = 0;
-        // For testing.
-        virtual void setPagePopupDriver(PagePopupDriver*) = 0;
-        virtual void resetPagePopupDriver() = 0;
-#endif
-        // This function is called whenever a text field <input> is
-        // created. The implementation should return true if it wants
-        // to do something in addTextFieldDecorationsTo().
-        // The argument is always non-0.
-        virtual bool willAddTextFieldDecorationsTo(HTMLInputElement*) { return false; }
-        // The argument is always non-0.
-        virtual void addTextFieldDecorationsTo(HTMLInputElement*) { }
 
         virtual void postAccessibilityNotification(AccessibilityObject*, AXObjectCache::AXNotification) { }
         
@@ -340,7 +337,6 @@ namespace WebCore {
         virtual bool shouldRunModalDialogDuringPageDismissal(const DialogType&, const String& dialogMessage, FrameLoader::PageDismissalType) const { UNUSED_PARAM(dialogMessage); return true; }
 
         virtual void numWheelEventHandlersChanged(unsigned) = 0;
-        virtual void numTouchEventHandlersChanged(unsigned) = 0;
         
         virtual bool isSVGImageChromeClient() const { return false; }
 
@@ -349,6 +345,26 @@ namespace WebCore {
         virtual void requestPointerUnlock() { }
         virtual bool isPointerLocked() { return false; }
 #endif
+
+    virtual void logDiagnosticMessage(const String& message, const String& description, const String& status) { UNUSED_PARAM(message); UNUSED_PARAM(description); UNUSED_PARAM(status); }
+
+    virtual FloatSize minimumWindowSize() const { return FloatSize(100, 100); };
+
+    virtual bool isEmptyChromeClient() const { return false; }
+
+    virtual String plugInStartLabelTitle(const String& mimeType) const { UNUSED_PARAM(mimeType); return String(); }
+    virtual String plugInStartLabelSubtitle(const String& mimeType) const { UNUSED_PARAM(mimeType); return String(); }
+    virtual String plugInExtraStyleSheet() const { return String(); }
+    virtual String plugInExtraScript() const { return String(); }
+
+    // FIXME: Port should return true using heuristic based on scrollable(RenderBox).
+    virtual bool shouldAutoscrollForDragAndDrop(RenderBox*) const { return false; }
+
+    virtual void didAssociateFormControls(const Vector<RefPtr<Element> >&) { };
+    virtual bool shouldNotifyOnFormChanges() { return false; };
+
+    virtual void didAddHeaderLayer(GraphicsLayer*) { }
+    virtual void didAddFooterLayer(GraphicsLayer*) { }
 
     protected:
         virtual ~ChromeClient() { }

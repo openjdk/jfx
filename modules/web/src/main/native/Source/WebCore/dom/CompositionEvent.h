@@ -31,16 +31,29 @@
 
 namespace WebCore {
 
+struct CompositionEventInit : UIEventInit {
+    CompositionEventInit();
+
+    String data;
+};
+
     class CompositionEvent : public UIEvent {
     public:
         static PassRefPtr<CompositionEvent> create()
         {
             return adoptRef(new CompositionEvent);
         }
+
         static PassRefPtr<CompositionEvent> create(const AtomicString& type, PassRefPtr<AbstractView> view, const String& data)
         {
           return adoptRef(new CompositionEvent(type, view, data));
         }
+
+    static PassRefPtr<CompositionEvent> create(const AtomicString& type, const CompositionEventInit& initializer)
+    {
+        return adoptRef(new CompositionEvent(type, initializer));
+    }
+
         virtual ~CompositionEvent();
 
         void initCompositionEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<AbstractView>, const String& data);
@@ -51,7 +64,8 @@ namespace WebCore {
 
     private:
         CompositionEvent();
-        CompositionEvent(const AtomicString& type, PassRefPtr<AbstractView> view, const String& data);
+    CompositionEvent(const AtomicString& type, PassRefPtr<AbstractView>, const String&);
+    CompositionEvent(const AtomicString& type, const CompositionEventInit&);
 
         String m_data;
     };

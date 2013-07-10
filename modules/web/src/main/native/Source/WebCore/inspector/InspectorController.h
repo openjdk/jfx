@@ -31,10 +31,13 @@
 #ifndef InspectorController_h
 #define InspectorController_h
 
-#include "PlatformString.h"
+#if ENABLE(INSPECTOR)
+
+#include "InspectorBaseAgent.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -48,16 +51,19 @@ class InspectorBackendDispatcher;
 class InspectorBaseAgentInterface;
 class InspectorClient;
 class InspectorDOMAgent;
+class InspectorDOMDebuggerAgent;
 class InspectorDebuggerAgent;
 class InspectorFrontend;
 class InspectorFrontendChannel;
 class InspectorFrontendClient;
+class InspectorMemoryAgent;
 class InspectorOverlay;
 class InspectorPageAgent;
 class InspectorProfilerAgent;
 class InspectorResourceAgent;
 class InspectorState;
 class InstrumentingAgents;
+class IntSize;
 class Page;
 class PostWorkerNotificationToFrontendTask;
 class Node;
@@ -91,6 +97,7 @@ public:
     void disconnectFrontend();
     void reconnectFrontend(InspectorFrontendChannel*, const String& inspectorStateCookie);
     void setProcessId(long);
+    void webViewResized(const IntSize&);
 
     void inspect(Node*);
     void drawHighlight(GraphicsContext&) const;
@@ -98,6 +105,7 @@ public:
     void hideHighlight();
     Node* highlightedNode() const;
 
+    bool isUnderTest();
     void evaluateForTestInFrontend(long callId, const String& script);
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
@@ -112,23 +120,33 @@ public:
     InspectorClient* inspectorClient() const { return m_inspectorClient; }
     InspectorPageAgent* pageAgent() const { return m_pageAgent; }
 
+    void willProcessTask();
+    void didProcessTask();
+
+    void didBeginFrame();
+    void didCancelFrame();
+    void willComposite();
+    void didComposite();
+
 private:
     InspectorController(Page*, InspectorClient*);
 
     friend class PostWorkerNotificationToFrontendTask;
     friend InstrumentingAgents* instrumentationForPage(Page*);
 
-    OwnPtr<InstrumentingAgents> m_instrumentingAgents;
+    RefPtr<InstrumentingAgents> m_instrumentingAgents;
     OwnPtr<InjectedScriptManager> m_injectedScriptManager;
-    OwnPtr<InspectorState> m_state;
+    OwnPtr<InspectorCompositeState> m_state;
     OwnPtr<InspectorOverlay> m_overlay;
 
     InspectorAgent* m_inspectorAgent;
     InspectorDOMAgent* m_domAgent;
     InspectorResourceAgent* m_resourceAgent;
     InspectorPageAgent* m_pageAgent;
+    InspectorMemoryAgent* m_memoryAgent;
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     InspectorDebuggerAgent* m_debuggerAgent;
+    InspectorDOMDebuggerAgent* m_domDebuggerAgent;
     InspectorProfilerAgent* m_profilerAgent;
 #endif
 
@@ -137,10 +155,12 @@ private:
     OwnPtr<InspectorFrontend> m_inspectorFrontend;
     Page* m_page;
     InspectorClient* m_inspectorClient;
-    typedef Vector<OwnPtr<InspectorBaseAgentInterface> > Agents;
-    Agents m_agents;
+    InspectorAgentRegistry m_agents;
+    bool m_isUnderTest;
 };
 
 }
+
+#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(InspectorController_h)

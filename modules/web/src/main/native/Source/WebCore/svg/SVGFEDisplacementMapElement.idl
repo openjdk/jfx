@@ -23,12 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS,
         DoNotCheckConstants
-    ] SVGFEDisplacementMapElement : SVGElement,
+] interface SVGFEDisplacementMapElement : SVGStyledElement,
                                     SVGFilterPrimitiveStandardAttributes {
         // Channel Selectors
         const unsigned short SVG_CHANNEL_UNKNOWN = 0;
@@ -44,4 +42,3 @@ module svg {
         readonly attribute SVGAnimatedEnumeration yChannelSelector;
     };
 
-}

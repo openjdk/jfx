@@ -28,14 +28,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-    interface [
+[
+    NoInterfaceObject,
         Conditional=FILE_SYSTEM,
         JSGenerateToNativeObject,
         JSGenerateToJSObject,
         JSNoStaticTables
-    ] FileEntrySync : EntrySync {
+] interface FileEntrySync : EntrySync {
         File file() raises (FileException);
         FileWriterSync createWriter() raises (FileException);
     };
-}

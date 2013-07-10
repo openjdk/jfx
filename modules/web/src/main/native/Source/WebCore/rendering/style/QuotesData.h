@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Nokia Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,24 +22,44 @@
 #ifndef QuotesData_h
 #define QuotesData_h
 
+#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
+#include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+#if COMPILER(MSVC)
+#pragma warning(push)
+#pragma warning(disable: 4200) // Disable "zero-sized array in struct/union" warning
+#endif
+
 class QuotesData : public RefCounted<QuotesData> {
 public:
-    virtual ~QuotesData();
-    static QuotesData* create(int stringCount);
-    String* data() { return reinterpret_cast<String*>(this+1); }
-    const String* data() const { return reinterpret_cast<const String*>(this+1); }
-    int length;
-    void operator delete(void* p) { delete[] static_cast<char*>(p); }
-    static bool equal(const QuotesData*, const QuotesData*);
+    static PassRefPtr<QuotesData> create(const Vector<std::pair<String, String> >& quotes);
+    ~QuotesData();
+
+    friend bool operator==(const QuotesData&, const QuotesData&);
+
+    const String& openQuote(unsigned index) const;
+    const String& closeQuote(unsigned index) const;
+
 private:
-    QuotesData(int stringCount) : length(stringCount) {}
+    explicit QuotesData(const Vector<std::pair<String, String> >& quotes);
+
+    unsigned m_quoteCount;
+    std::pair<String, String> m_quotePairs[0];
 };
 
+#if COMPILER(MSVC)
+#pragma warning(pop)
+#endif
+
+inline bool operator!=(const QuotesData& a, const QuotesData& b)
+{
+    return !(a == b);
 }
+
+} // namespace WebCore
+
 #endif // QuotesData_h

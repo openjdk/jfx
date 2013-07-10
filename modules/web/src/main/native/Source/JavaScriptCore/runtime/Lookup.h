@@ -53,7 +53,7 @@ namespace JSC {
             m_attributes = attributes;
             m_u.store.value1 = v1;
             m_u.store.value2 = v2;
-            m_u.function.intrinsic = intrinsic;
+            m_intrinsic = intrinsic;
             m_next = 0;
         }
 
@@ -65,7 +65,7 @@ namespace JSC {
         Intrinsic intrinsic() const
         {
             ASSERT(m_attributes & Function);
-            return m_u.function.intrinsic;
+            return m_intrinsic;
         }
 
         NativeFunction function() const { ASSERT(m_attributes & Function); return m_u.function.functionValue; }
@@ -82,6 +82,7 @@ namespace JSC {
     private:
         StringImpl* m_key;
         unsigned char m_attributes; // JSObject attributes
+        Intrinsic m_intrinsic;
 
         union {
             struct {
@@ -91,7 +92,6 @@ namespace JSC {
             struct {
                 NativeFunction functionValue;
                 intptr_t length; // number of arguments for function
-                Intrinsic intrinsic;
             } function;
             struct {
                 GetFunction get;
@@ -121,24 +121,24 @@ namespace JSC {
             return result;
         }
 
-        ALWAYS_INLINE void initializeIfNeeded(JSGlobalData* globalData) const
+        ALWAYS_INLINE void initializeIfNeeded(VM* vm) const
         {
             if (!table)
-                createTable(globalData);
+                createTable(vm);
         }
 
         ALWAYS_INLINE void initializeIfNeeded(ExecState* exec) const
         {
             if (!table)
-                createTable(&exec->globalData());
+                createTable(&exec->vm());
         }
 
         JS_EXPORT_PRIVATE void deleteTable() const;
 
         // Find an entry in the table, and return the entry.
-        ALWAYS_INLINE const HashEntry* entry(JSGlobalData* globalData, PropertyName identifier) const
+        ALWAYS_INLINE const HashEntry* entry(VM* vm, PropertyName identifier) const
         {
-            initializeIfNeeded(globalData);
+            initializeIfNeeded(vm);
             return entry(identifier);
         }
 
@@ -194,14 +194,14 @@ namespace JSC {
             int m_position;
         };
 
-        ConstIterator begin(JSGlobalData& globalData) const
+        ConstIterator begin(VM& vm) const
         {
-            initializeIfNeeded(&globalData);
+            initializeIfNeeded(&vm);
             return ConstIterator(this, 0);
         }
-        ConstIterator end(JSGlobalData& globalData) const
+        ConstIterator end(VM& vm) const
         {
-            initializeIfNeeded(&globalData);
+            initializeIfNeeded(&vm);
             return ConstIterator(this, compactSize);
         }
 
@@ -229,7 +229,7 @@ namespace JSC {
         }
 
         // Convert the hash table keys to identifiers.
-        JS_EXPORT_PRIVATE void createTable(JSGlobalData*) const;
+        JS_EXPORT_PRIVATE void createTable(VM*) const;
     };
 
     JS_EXPORT_PRIVATE bool setUpStaticFunctionSlot(ExecState*, const HashEntry*, JSObject* thisObject, PropertyName, PropertySlot&);
@@ -353,6 +353,18 @@ namespace JSC {
         return true;
     }
 
+    template <class ThisImp>
+    inline void putEntry(ExecState* exec, const HashEntry* entry, PropertyName propertyName, JSValue value, ThisImp* thisObj, bool shouldThrow = false)
+    {
+        // If this is a function put it as an override property.
+        if (entry->attributes() & Function)
+            thisObj->putDirect(exec->vm(), propertyName, value);
+        else if (!(entry->attributes() & ReadOnly))
+            entry->propertyPutter()(exec, thisObj, value);
+        else if (shouldThrow)
+            throwTypeError(exec, StrictModeReadonlyPropertyWriteError);
+    }
+
     /**
      * This one is for "put".
      * It looks up a hash entry for the property to be set.  If an entry
@@ -366,14 +378,7 @@ namespace JSC {
         if (!entry)
             return false;
 
-        // If this is a function put it as an override property.
-        if (entry->attributes() & Function)
-            thisObj->putDirect(exec->globalData(), propertyName, value);
-        else if (!(entry->attributes() & ReadOnly))
-            entry->propertyPutter()(exec, thisObj, value);
-        else if (shouldThrow)
-            throwTypeError(exec, StrictModeReadonlyPropertyWriteError);
-
+        putEntry<ThisImp>(exec, entry, propertyName, value, thisObj, shouldThrow);
         return true;
     }
 

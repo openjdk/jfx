@@ -30,7 +30,7 @@ namespace WebCore {
 
 class SVGFontData;
 
-class SVGGlyphElement : public SVGStyledElement {
+class SVGGlyphElement FINAL : public SVGStyledElement {
 public:
     static PassRefPtr<SVGGlyphElement> create(const QualifiedName&, Document*);
 
@@ -47,7 +47,7 @@ private:
     SVGGlyphElement(const QualifiedName&, Document*);
 
     // FIXME: svgAttributeChanged missing.
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;

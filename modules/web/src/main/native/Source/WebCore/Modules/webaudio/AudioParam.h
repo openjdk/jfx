@@ -32,11 +32,11 @@
 #include "AudioContext.h"
 #include "AudioParamTimeline.h"
 #include "AudioSummingJunction.h"
-#include "PlatformString.h"
 #include <sys/types.h>
 #include <wtf/Float32Array.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -56,8 +56,13 @@ public:
     virtual bool canUpdateState() OVERRIDE { return true; }
     virtual void didUpdate() OVERRIDE { }
 
+    // Intrinsic value.
     float value();
     void setValue(float);
+
+    // Final value for k-rate parameters, otherwise use calculateSampleAccurateValues() for a-rate.
+    // Must be called in the audio thread.
+    float finalValue();
 
     String name() const { return m_name; }
 
@@ -83,7 +88,7 @@ public:
     void setValueAtTime(float value, float time) { m_timeline.setValueAtTime(value, time); }
     void linearRampToValueAtTime(float value, float time) { m_timeline.linearRampToValueAtTime(value, time); }
     void exponentialRampToValueAtTime(float value, float time) { m_timeline.exponentialRampToValueAtTime(value, time); }
-    void setTargetValueAtTime(float targetValue, float time, float timeConstant) { m_timeline.setTargetValueAtTime(targetValue, time, timeConstant); }
+    void setTargetAtTime(float target, float time, float timeConstant) { m_timeline.setTargetAtTime(target, time, timeConstant); }
     void setValueCurveAtTime(Float32Array* curve, float time, float duration) { m_timeline.setValueCurveAtTime(curve, time, duration); }
     void cancelScheduledValues(float startTime) { m_timeline.cancelScheduledValues(startTime); }
 
@@ -112,7 +117,8 @@ protected:
     }
 
 private:
-    void calculateAudioRateSignalValues(float* values, unsigned numberOfValues);
+    // sampleAccurate corresponds to a-rate (audio rate) vs. k-rate in the Web Audio specification.
+    void calculateFinalValues(float* values, unsigned numberOfValues, bool sampleAccurate);
     void calculateTimelineValues(float* values, unsigned numberOfValues);
 
     String m_name;

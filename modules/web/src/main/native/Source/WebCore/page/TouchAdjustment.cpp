@@ -22,9 +22,12 @@
 #include "TouchAdjustment.h"
 
 #include "ContainerNode.h"
+#include "Editor.h"
 #include "FloatPoint.h"
 #include "FloatQuad.h"
 #include "FrameView.h"
+#include "HTMLFrameOwnerElement.h"
+#include "HTMLInputElement.h"
 #include "HTMLLabelElement.h"
 #include "HTMLNames.h"
 #include "IntPoint.h"
@@ -34,10 +37,16 @@
 #include "RenderBox.h"
 #include "RenderObject.h"
 #include "RenderStyle.h"
+#include "RenderText.h"
+#include "ShadowRoot.h"
+#include "Text.h"
+#include "TextBreakIterator.h"
 
 namespace WebCore {
 
 namespace TouchAdjustment {
+
+const float zeroTolerance = 1e-6f;
 
 // Class for remembering absolute quads of a target node and what node they represent.
 class SubtargetGeometry {
@@ -58,34 +67,24 @@ private:
 
 typedef Vector<SubtargetGeometry> SubtargetGeometryList;
 typedef bool (*NodeFilter)(Node*);
+typedef void (*AppendSubtargetsForNode)(Node*, SubtargetGeometryList&);
 typedef float (*DistanceFunction)(const IntPoint&, const IntRect&, const SubtargetGeometry&);
 
 // Takes non-const Node* because isContentEditable is a non-const function.
 bool nodeRespondsToTapGesture(Node* node)
 {
-    if (node->isLink()
-        || node->isContentEditable()
-        || node->isMouseFocusable())
+    if (node->willRespondToMouseClickEvents() || node->willRespondToMouseMoveEvents())
         return true;
+    // Accept nodes that has a CSS effect when touched.
     if (node->isElementNode()) {
-        Element* element =  static_cast<Element*>(node);
-        if (element->hasTagName(HTMLNames::labelTag) && static_cast<HTMLLabelElement*>(element)->control())
+        Element* element = toElement(node);
+        if (element->isMouseFocusable())
+            return true;
+        if (element->childrenAffectedByActive() || element->childrenAffectedByHover())
             return true;
     }
-    // FIXME: Implement hasDefaultEventHandler and use that instead of all of the above checks.
-    if (node->hasEventListeners()
-        && (node->hasEventListeners(eventNames().clickEvent)
-            || node->hasEventListeners(eventNames().DOMActivateEvent)
-            || node->hasEventListeners(eventNames().mousedownEvent)
-            || node->hasEventListeners(eventNames().mouseupEvent)
-            || node->hasEventListeners(eventNames().mousemoveEvent)
-            // Checking for focus events is not necessary since they can only fire on
-            // focusable elements which have already been captured above.
-        ))
-        return true;
-    if (node->renderStyle()) {
-        // Accept nodes that has a CSS effect when touched.
-        if (node->renderStyle()->affectedByActiveRules() || node->renderStyle()->affectedByHoverRules())
+    if (RenderStyle* renderStyle = node->renderStyle()) {
+        if (renderStyle->affectedByActive() || renderStyle->affectedByHover())
             return true;
     }
     return false;
@@ -100,18 +99,109 @@ bool nodeIsZoomTarget(Node* node)
     return node->renderer()->isBox();
 }
 
-static inline void appendSubtargetsForNodeToList(Node* node, SubtargetGeometryList& subtargets)
+bool providesContextMenuItems(Node* node)
 {
-    // Since the node is a result of a hit test, we are already ensured it has a renderer.
+    // This function tries to match the nodes that receive special context-menu items in
+    // ContextMenuController::populate(), and should be kept uptodate with those.
+    ASSERT(node->renderer() || node->isShadowRoot());
+    if (!node->renderer())
+        return false;
+    if (node->isContentEditable())
+        return true;
+    if (node->isLink())
+        return true;
+    if (node->renderer()->isImage())
+        return true;
+    if (node->renderer()->isMedia())
+        return true;
+    if (node->renderer()->canBeSelectionLeaf()) {
+        // If the context menu gesture will trigger a selection all selectable nodes are valid targets.
+        if (node->renderer()->frame()->editor().behavior().shouldSelectOnContextualMenuClick())
+            return true;
+        // Only the selected part of the renderer is a valid target, but this will be corrected in
+        // appendContextSubtargetsForNode.
+        if (node->renderer()->selectionState() != RenderObject::SelectionNone)
+            return true;
+    }
+    return false;
+}
+
+static inline void appendQuadsToSubtargetList(Vector<FloatQuad>& quads, Node* node, SubtargetGeometryList& subtargets)
+{
+    Vector<FloatQuad>::const_iterator it = quads.begin();
+    const Vector<FloatQuad>::const_iterator end = quads.end();
+    for (; it != end; ++it)
+        subtargets.append(SubtargetGeometry(node, *it));
+}
+
+static inline void appendBasicSubtargetsForNode(Node* node, SubtargetGeometryList& subtargets)
+{
+    // Node guaranteed to have renderer due to check in node filter.
     ASSERT(node->renderer());
 
     Vector<FloatQuad> quads;
     node->renderer()->absoluteQuads(quads);
 
-    Vector<FloatQuad>::const_iterator it = quads.begin();
-    const Vector<FloatQuad>::const_iterator end = quads.end();
-    for (; it != end; ++it)
-        subtargets.append(SubtargetGeometry(node, *it));
+    appendQuadsToSubtargetList(quads, node, subtargets);
+}
+
+static inline void appendContextSubtargetsForNode(Node* node, SubtargetGeometryList& subtargets)
+{
+    // This is a variant of appendBasicSubtargetsForNode that adds special subtargets for
+    // selected or auto-selectable parts of text nodes.
+    ASSERT(node->renderer());
+
+    if (!node->isTextNode())
+        return appendBasicSubtargetsForNode(node, subtargets);
+
+    Text* textNode = static_cast<WebCore::Text*>(node);
+    RenderText* textRenderer = static_cast<RenderText*>(textNode->renderer());
+
+    if (textRenderer->frame()->editor().behavior().shouldSelectOnContextualMenuClick()) {
+        // Make subtargets out of every word.
+        String textValue = textNode->data();
+        TextBreakIterator* wordIterator = wordBreakIterator(textValue.characters(), textValue.length());
+        int lastOffset = textBreakFirst(wordIterator);
+        if (lastOffset == -1)
+            return;
+        int offset;
+        while ((offset = textBreakNext(wordIterator)) != -1) {
+            if (isWordTextBreak(wordIterator)) {
+                Vector<FloatQuad> quads;
+                textRenderer->absoluteQuadsForRange(quads, lastOffset, offset);
+                appendQuadsToSubtargetList(quads, textNode, subtargets);
+            }
+            lastOffset = offset;
+        }
+    } else {
+        if (textRenderer->selectionState() == RenderObject::SelectionNone)
+            return appendBasicSubtargetsForNode(node, subtargets);
+        // If selected, make subtargets out of only the selected part of the text.
+        int startPos, endPos;
+        switch (textRenderer->selectionState()) {
+        case RenderObject::SelectionInside:
+            startPos = 0;
+            endPos = textRenderer->textLength();
+            break;
+        case RenderObject::SelectionStart:
+            textRenderer->selectionStartEnd(startPos, endPos);
+            endPos = textRenderer->textLength();
+            break;
+        case RenderObject::SelectionEnd:
+            textRenderer->selectionStartEnd(startPos, endPos);
+            startPos = 0;
+            break;
+        case RenderObject::SelectionBoth:
+            textRenderer->selectionStartEnd(startPos, endPos);
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+            return;
+        }
+        Vector<FloatQuad> quads;
+        textRenderer->absoluteQuadsForRange(quads, startPos, endPos);
+        appendQuadsToSubtargetList(quads, textNode, subtargets);
+    }
 }
 
 static inline void appendZoomableSubtargets(Node* node, SubtargetGeometryList& subtargets)
@@ -133,23 +223,33 @@ static inline void appendZoomableSubtargets(Node* node, SubtargetGeometryList& s
         subtargets.append(SubtargetGeometry(node, *it));
 }
 
+static inline Node* parentShadowHostOrOwner(const Node* node)
+{
+    if (Node* ancestor = node->parentOrShadowHostNode())
+        return ancestor;
+    if (node->isDocumentNode())
+        return toDocument(node)->ownerElement();
+    return 0;
+}
+
 // Compiles a list of subtargets of all the relevant target nodes.
-void compileSubtargetList(const NodeList& intersectedNodes, SubtargetGeometryList& subtargets, NodeFilter nodeFilter)
+void compileSubtargetList(const NodeListHashSet& intersectedNodes, SubtargetGeometryList& subtargets, NodeFilter nodeFilter, AppendSubtargetsForNode appendSubtargetsForNode)
 {
     // Find candidates responding to tap gesture events in O(n) time.
     HashMap<Node*, Node*> responderMap;
     HashSet<Node*> ancestorsToRespondersSet;
     Vector<Node*> candidates;
+    HashSet<Node*> editableAncestors;
 
     // A node matching the NodeFilter is called a responder. Candidate nodes must either be a
     // responder or have an ancestor that is a responder.
     // This iteration tests all ancestors at most once by caching earlier results.
-    unsigned length = intersectedNodes.length();
-    for (unsigned i = 0; i < length; ++i) {
-        Node* const node = intersectedNodes.item(i);
+    NodeListHashSet::const_iterator end = intersectedNodes.end();
+    for (NodeListHashSet::const_iterator it = intersectedNodes.begin(); it != end; ++it) {
+        Node* const node = it->get();
         Vector<Node*> visitedNodes;
         Node* respondingNode = 0;
-        for (Node* visitedNode = node; visitedNode; visitedNode = visitedNode->parentOrHostNode()) {
+        for (Node* visitedNode = node; visitedNode; visitedNode = visitedNode->parentOrShadowHostNode()) {
             // Check if we already have a result for a common ancestor from another candidate.
             respondingNode = responderMap.get(visitedNode);
             if (respondingNode)
@@ -159,7 +259,7 @@ void compileSubtargetList(const NodeList& intersectedNodes, SubtargetGeometryLis
             if (nodeFilter(visitedNode)) {
                 respondingNode = visitedNode;
                 // Continue the iteration to collect the ancestors of the responder, which we will need later.
-                for (visitedNode = visitedNode->parentOrHostNode(); visitedNode; visitedNode = visitedNode->parentOrHostNode()) {
+                for (visitedNode = parentShadowHostOrOwner(visitedNode); visitedNode; visitedNode = parentShadowHostOrOwner(visitedNode)) {
                     HashSet<Node*>::AddResult addResult = ancestorsToRespondersSet.add(visitedNode);
                     if (!addResult.isNewEntry)
                         break;
@@ -177,7 +277,7 @@ void compileSubtargetList(const NodeList& intersectedNodes, SubtargetGeometryLis
 
     // We compile the list of component absolute quads instead of using the bounding rect
     // to be able to perform better hit-testing on inline links on line-breaks.
-    length = candidates.size();
+    unsigned length = candidates.size();
     for (unsigned i = 0; i < length; i++) {
         Node* candidate = candidates[i];
         // Skip nodes who's responders are ancestors of other responders. This gives preference to
@@ -187,38 +287,38 @@ void compileSubtargetList(const NodeList& intersectedNodes, SubtargetGeometryLis
         ASSERT(respondingNode);
         if (ancestorsToRespondersSet.contains(respondingNode))
             continue;
-        appendSubtargetsForNodeToList(candidate, subtargets);
+        // Consolidate bounds for editable content.
+        if (editableAncestors.contains(candidate))
+            continue;
+        if (candidate->isContentEditable()) {
+            Node* replacement = candidate;
+            Node* parent = candidate->parentOrShadowHostNode();
+            while (parent && parent->isContentEditable()) {
+                replacement = parent;
+                if (editableAncestors.contains(replacement)) {
+                    replacement = 0;
+                    break;
+                }
+                editableAncestors.add(replacement);
+                parent = parent->parentOrShadowHostNode();
+            }
+            candidate = replacement;
+        }
+        if (candidate)
+            appendSubtargetsForNode(candidate, subtargets);
     }
 }
 
 // Compiles a list of zoomable subtargets.
-void compileZoomableSubtargets(const NodeList& intersectedNodes, SubtargetGeometryList& subtargets)
+void compileZoomableSubtargets(const NodeListHashSet& intersectedNodes, SubtargetGeometryList& subtargets)
 {
-    unsigned length = intersectedNodes.length();
-    for (unsigned i = 0; i < length; ++i) {
-        Node* const candidate = intersectedNodes.item(i);
+    NodeListHashSet::const_iterator end = intersectedNodes.end();
+    for (NodeListHashSet::const_iterator it = intersectedNodes.begin(); it != end; ++it) {
+        Node* const candidate = it->get();
         if (nodeIsZoomTarget(candidate))
             appendZoomableSubtargets(candidate, subtargets);
     }
 }
-
-
-float distanceSquaredToTargetCenterLine(const IntPoint& touchHotspot, const IntRect& touchArea, const SubtargetGeometry& subtarget)
-{
-    UNUSED_PARAM(touchArea);
-    // For a better center of a line-box we use the center-line instead of the center-point.
-    // We use the center-line of the bounding box of the quad though, since it is much faster
-    // and gives the same result in all untransformed cases, and in transformed cases still
-    // gives a better distance-function than the distance to the center-point.
-    IntRect rect = subtarget.boundingBox();
-    ASSERT(subtarget.node()->document());
-    ASSERT(subtarget.node()->document()->view());
-    // Convert from frame coordinates to window coordinates.
-    rect = subtarget.node()->document()->view()->contentsToWindow(rect);
-
-    return rect.distanceSquaredFromCenterLineToPoint(touchHotspot);
-}
-
 
 // This returns quotient of the target area and its intersection with the touch area.
 // This will prioritize largest intersection and smallest area, while balancing the two against each other.
@@ -239,12 +339,54 @@ float zoomableIntersectionQuotient(const IntPoint& touchHotspot, const IntRect& 
     return rect.size().area() / (float)intersection.size().area();
 }
 
+// Uses a hybrid of distance to adjust and intersect ratio, normalizing each score between 0 and 1
+// and combining them. The distance to adjust works best for disambiguating clicks on targets such
+// as links, where the width may be significantly larger than the touch width. Using area of overlap
+// in such cases can lead to a bias towards shorter links. Conversely, percentage of overlap can
+// provide strong confidence in tapping on a small target, where the overlap is often quite high,
+// and works well for tightly packed controls.
+float hybridDistanceFunction(const IntPoint& touchHotspot, const IntRect& touchRect, const SubtargetGeometry& subtarget)
+{
+    IntRect rect = subtarget.boundingBox();
+
+    // Convert from frame coordinates to window coordinates.
+    rect = subtarget.node()->document()->view()->contentsToWindow(rect);
+   
+    float radiusSquared = 0.25f * (touchRect.size().diagonalLengthSquared());
+    float distanceToAdjustScore = rect.distanceSquaredToPoint(touchHotspot) / radiusSquared;
+
+    int maxOverlapWidth = std::min(touchRect.width(), rect.width());
+    int maxOverlapHeight = std::min(touchRect.height(), rect.height());
+    float maxOverlapArea = std::max(maxOverlapWidth * maxOverlapHeight, 1);
+    rect.intersect(touchRect);
+    float intersectArea = rect.size().area();
+    float intersectionScore = 1 - intersectArea / maxOverlapArea;
+
+    float hybridScore = intersectionScore + distanceToAdjustScore;
+
+    return hybridScore;
+}
+
 FloatPoint contentsToWindow(FrameView *view, FloatPoint pt)
 {
     int x = static_cast<int>(pt.x() + 0.5f);
     int y = static_cast<int>(pt.y() + 0.5f);
     IntPoint adjusted = view->contentsToWindow(IntPoint(x, y));
     return FloatPoint(adjusted.x(), adjusted.y());
+}
+
+// Adjusts 'point' to the nearest point inside rect, and leaves it unchanged if already inside.
+void adjustPointToRect(FloatPoint& point, const FloatRect& rect)
+{
+    if (point.x() < rect.x())
+        point.setX(rect.x());
+    else if (point.x() > rect.maxX())
+        point.setX(rect.maxX());
+
+    if (point.y() < rect.y())
+        point.setY(rect.y());
+    else if (point.y() > rect.maxY())
+        point.setY(rect.maxY());
 }
 
 bool snapTo(const SubtargetGeometry& geom, const IntPoint& touchPoint, const IntRect& touchArea, IntPoint& adjustedPoint)
@@ -268,7 +410,11 @@ bool snapTo(const SubtargetGeometry& geom, const IntPoint& touchPoint, const Int
         return false;
     }
 
-    // Non-rectilinear element.
+    // The following code tries to adjust the point to place inside a both the touchArea and the non-rectilinear quad.
+    // FIXME: This will return the point inside the touch area that is the closest to the quad center, but does not
+    // guarantee that the point will be inside the quad. Corner-cases exist where the quad will intersect but this
+    // will fail to adjust the point to somewhere in the intersection.
+
     // Convert quad from content to window coordinates.
     FloatPoint p1 = contentsToWindow(view, quad.p1());
     FloatPoint p2 = contentsToWindow(view, quad.p2());
@@ -282,32 +428,12 @@ bool snapTo(const SubtargetGeometry& geom, const IntPoint& touchPoint, const Int
     }
 
     // Pull point towards the center of the element.
-    float cx = 0.25 * (p1.x() + p2.x() + p3.x() + p4.x());
-    float cy = 0.25 * (p1.y() + p2.y() + p3.y() + p4.y());
-    FloatPoint center = FloatPoint(cx, cy);
+    FloatPoint center = quad.center();
 
-    FloatSize pullDirection = center - touchPoint;
-    float distanceToCenter = pullDirection.diagonalLength();
+    adjustPointToRect(center, touchArea);
+    adjustedPoint = roundedIntPoint(center);
 
-    // Use distance from center to corner of touch area to limit adjustment distance.
-    float dx = 0.5f * touchArea.width();
-    float dy = 0.5f * touchArea.height();
-    float touchRadius = sqrt(dx * dx + dy * dy);
-
-    float scaleFactor = touchRadius / distanceToCenter;
-    if (scaleFactor > 1)
-        scaleFactor = 1;
-    pullDirection.scale(scaleFactor);
-
-    int x = static_cast<int>(touchPoint.x() + pullDirection.width());
-    int y = static_cast<int>(touchPoint.y() + pullDirection.height());
-    IntPoint point(x, y);
-
-    if (quad.containsPoint(point)) {
-        adjustedPoint = point;
-        return true;
-    }
-    return false;
+    return quad.containsPoint(adjustedPoint);
 }
 
 // A generic function for finding the target node with the lowest distance metric. A distance metric here is the result
@@ -320,6 +446,7 @@ bool findNodeWithLowestDistanceMetric(Node*& targetNode, IntPoint& targetPoint, 
     SubtargetGeometryList::const_iterator it = subtargets.begin();
     const SubtargetGeometryList::const_iterator end = subtargets.end();
     IntPoint adjustedPoint;
+
     for (; it != end; ++it) {
         Node* node = it->node();
         float distanceMetric = distanceFunction(touchHotspot, touchArea, *it);
@@ -330,14 +457,16 @@ bool findNodeWithLowestDistanceMetric(Node*& targetNode, IntPoint& targetPoint, 
                 targetNode = node;
                 bestDistanceMetric = distanceMetric;
             }
-        } else if (distanceMetric == bestDistanceMetric) {
+        } else if (distanceMetric - bestDistanceMetric < zeroTolerance) {
+            if (snapTo(*it, touchHotspot, touchArea, adjustedPoint)) {
+                if (node->isDescendantOf(targetNode)) {
             // Try to always return the inner-most element.
-            if (node->isDescendantOf(targetNode) && snapTo(*it, touchHotspot, touchArea, adjustedPoint)) {
                 targetPoint = adjustedPoint;
                 targetNode = node;
                 targetArea = it->boundingBox();
             }
         }
+    }
     }
     if (targetNode) {
         targetArea = targetNode->document()->view()->contentsToWindow(targetArea);
@@ -347,15 +476,23 @@ bool findNodeWithLowestDistanceMetric(Node*& targetNode, IntPoint& targetPoint, 
 
 } // namespace TouchAdjustment
 
-bool findBestClickableCandidate(Node*& targetNode, IntPoint &targetPoint, const IntPoint &touchHotspot, const IntRect &touchArea, const NodeList& nodeList)
+bool findBestClickableCandidate(Node*& targetNode, IntPoint &targetPoint, const IntPoint &touchHotspot, const IntRect &touchArea, const NodeListHashSet& nodeList)
 {
     IntRect targetArea;
     TouchAdjustment::SubtargetGeometryList subtargets;
-    TouchAdjustment::compileSubtargetList(nodeList, subtargets, TouchAdjustment::nodeRespondsToTapGesture);
-    return TouchAdjustment::findNodeWithLowestDistanceMetric(targetNode, targetPoint, targetArea, touchHotspot, touchArea, subtargets, TouchAdjustment::distanceSquaredToTargetCenterLine);
+    TouchAdjustment::compileSubtargetList(nodeList, subtargets, TouchAdjustment::nodeRespondsToTapGesture, TouchAdjustment::appendBasicSubtargetsForNode);
+    return TouchAdjustment::findNodeWithLowestDistanceMetric(targetNode, targetPoint, targetArea, touchHotspot, touchArea, subtargets, TouchAdjustment::hybridDistanceFunction);
 }
 
-bool findBestZoomableArea(Node*& targetNode, IntRect& targetArea, const IntPoint& touchHotspot, const IntRect& touchArea, const NodeList& nodeList)
+bool findBestContextMenuCandidate(Node*& targetNode, IntPoint &targetPoint, const IntPoint &touchHotspot, const IntRect &touchArea, const NodeListHashSet& nodeList)
+{
+    IntRect targetArea;
+    TouchAdjustment::SubtargetGeometryList subtargets;
+    TouchAdjustment::compileSubtargetList(nodeList, subtargets, TouchAdjustment::providesContextMenuItems, TouchAdjustment::appendContextSubtargetsForNode);
+    return TouchAdjustment::findNodeWithLowestDistanceMetric(targetNode, targetPoint, targetArea, touchHotspot, touchArea, subtargets, TouchAdjustment::hybridDistanceFunction);
+}
+
+bool findBestZoomableArea(Node*& targetNode, IntRect& targetArea, const IntPoint& touchHotspot, const IntRect& touchArea, const NodeListHashSet& nodeList)
 {
     IntPoint targetPoint;
     TouchAdjustment::SubtargetGeometryList subtargets;

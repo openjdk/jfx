@@ -43,9 +43,8 @@ namespace JSC { namespace DFG {
 // another node.
 class ScoreBoard {
 public:
-    ScoreBoard(Graph& graph, const BitVector& usedVars)
-        : m_graph(graph)
-        , m_highWatermark(0)
+    ScoreBoard(const BitVector& usedVars)
+        : m_highWatermark(0)
     {
         m_used.fill(0, usedVars.size());
         m_free.reserveCapacity(usedVars.size());
@@ -102,18 +101,17 @@ public:
 
     // Increment the usecount for the VirtualRegsiter associated with 'child',
     // if it reaches the node's refcount, free the VirtualRegsiter.
-    void use(NodeIndex child)
+    void use(Node* child)
     {
-        if (child == NoNode)
+        if (!child)
             return;
 
         // Find the virtual register number for this child, increment its use count.
-        Node& node = m_graph[child];
-        uint32_t index = node.virtualRegister();
+        uint32_t index = child->virtualRegister();
         ASSERT(m_used[index] != max());
-        if (node.refCount() == ++m_used[index]) {
+        if (child->refCount() == ++m_used[index]) {
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-            dataLog(" Freeing virtual register %u.", index);
+            dataLogF(" Freeing virtual register %u.", index);
 #endif
             // If the use count in the scoreboard reaches the use count for the node,
             // then this was its last use; the virtual register is now free.
@@ -122,20 +120,20 @@ public:
             m_free.append(index);
         } else {
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-            dataLog(" Virtual register %u is at %u/%u uses.", index, m_used[index], node.refCount());
+            dataLogF(" Virtual register %u is at %u/%u uses.", index, m_used[index], child->refCount());
 #endif
         }
     }
     void use(Edge child)
     {
-        use(child.indexUnchecked());
+        use(child.node());
     }
     
     void useIfHasResult(Edge child)
     {
         if (!child)
             return;
-        if (!m_graph[child].hasResult())
+        if (!child->hasResult())
             return;
         use(child);
     }
@@ -148,35 +146,32 @@ public:
 #ifndef NDEBUG
     void dump()
     {
-        dataLog("    USED: [ ");
+        dataLogF("    USED: [ ");
         for (unsigned i = 0; i < m_used.size(); ++i) {
             if (!m_free.contains(i)) {
-                dataLog("%d:", i);
+                dataLogF("%d:", i);
                 if (m_used[i] == max())
-                    dataLog("local ");
+                    dataLogF("local ");
                 else
-                    dataLog("%d ", m_used[i]);
+                    dataLogF("%d ", m_used[i]);
             }
         }
-        dataLog("]\n");
+        dataLogF("]\n");
 
-        dataLog("    FREE: [ ");
+        dataLogF("    FREE: [ ");
         for (unsigned i = 0; i < m_used.size(); ++i) {
             if (m_free.contains(i) && m_used[i] != max()) {
                 ASSERT(!m_used[i]);
-                dataLog("%d ", i);
+                dataLogF("%d ", i);
             }
         }
-        dataLog("]\n");
+        dataLogF("]\n");
     }
 
 #endif
 
 private:
     static uint32_t max() { return std::numeric_limits<uint32_t>::max(); }
-
-    // The graph, so we can get refCounts for nodes, to determine when values are dead.
-    Graph& m_graph;
 
     // The size of the span of virtual registers that this code block will use.
     unsigned m_highWatermark;

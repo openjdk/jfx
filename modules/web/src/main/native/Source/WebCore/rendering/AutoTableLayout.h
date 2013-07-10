@@ -21,7 +21,7 @@
 #ifndef AutoTableLayout_h
 #define AutoTableLayout_h
 
-#include "LayoutTypes.h"
+#include "LayoutUnit.h"
 #include "Length.h"
 #include "TableLayout.h"
 #include <wtf/Vector.h>
@@ -36,7 +36,8 @@ public:
     AutoTableLayout(RenderTable*);
     ~AutoTableLayout();
 
-    virtual void computePreferredLogicalWidths(LayoutUnit& minWidth, LayoutUnit& maxWidth);
+    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minWidth, LayoutUnit& maxWidth) OVERRIDE;
+    virtual void applyPreferredLogicalWidthQuirks(LayoutUnit& minWidth, LayoutUnit& maxWidth) const OVERRIDE;
     virtual void layout();
 
 private:

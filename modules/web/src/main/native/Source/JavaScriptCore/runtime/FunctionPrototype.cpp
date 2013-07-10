@@ -29,10 +29,10 @@
 #include "JSStringBuilder.h"
 #include "Interpreter.h"
 #include "Lexer.h"
+#include "Operations.h"
 
 namespace JSC {
 
-ASSERT_CLASS_FITS_IN_CELL(FunctionPrototype);
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(FunctionPrototype);
 
 const ClassInfo FunctionPrototype::s_info = { "Function", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(FunctionPrototype) };
@@ -47,25 +47,25 @@ FunctionPrototype::FunctionPrototype(JSGlobalObject* globalObject, Structure* st
 {
 }
 
-void FunctionPrototype::finishCreation(ExecState* exec, const UString& name)
+void FunctionPrototype::finishCreation(ExecState* exec, const String& name)
 {
-    Base::finishCreation(exec->globalData(), name);
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().length, jsNumber(0), DontDelete | ReadOnly | DontEnum);
+    Base::finishCreation(exec->vm(), name);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().length, jsNumber(0), DontDelete | ReadOnly | DontEnum);
 }
 
 void FunctionPrototype::addFunctionProperties(ExecState* exec, JSGlobalObject* globalObject, JSFunction** callFunction, JSFunction** applyFunction)
 {
-    JSFunction* toStringFunction = JSFunction::create(exec, globalObject, 0, exec->propertyNames().toString.ustring(), functionProtoFuncToString);
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().toString, toStringFunction, DontEnum);
+    JSFunction* toStringFunction = JSFunction::create(exec, globalObject, 0, exec->propertyNames().toString.string(), functionProtoFuncToString);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().toString, toStringFunction, DontEnum);
 
-    *applyFunction = JSFunction::create(exec, globalObject, 2, exec->propertyNames().apply.ustring(), functionProtoFuncApply);
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().apply, *applyFunction, DontEnum);
+    *applyFunction = JSFunction::create(exec, globalObject, 2, exec->propertyNames().apply.string(), functionProtoFuncApply);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().apply, *applyFunction, DontEnum);
 
-    *callFunction = JSFunction::create(exec, globalObject, 1, exec->propertyNames().call.ustring(), functionProtoFuncCall);
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().call, *callFunction, DontEnum);
+    *callFunction = JSFunction::create(exec, globalObject, 1, exec->propertyNames().call.string(), functionProtoFuncCall);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().call, *callFunction, DontEnum);
 
-    JSFunction* bindFunction = JSFunction::create(exec, globalObject, 1, exec->propertyNames().bind.ustring(), functionProtoFuncBind);
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().bind, bindFunction, DontEnum);
+    JSFunction* bindFunction = JSFunction::create(exec, globalObject, 1, exec->propertyNames().bind.string(), functionProtoFuncBind);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().bind, bindFunction, DontEnum);
 }
 
 static EncodedJSValue JSC_HOST_CALL callFunctionPrototype(ExecState*)
@@ -83,7 +83,7 @@ CallType FunctionPrototype::getCallData(JSCell*, CallData& callData)
 // Functions
 
 // Compatibility hack for the Optimost JavaScript library. (See <rdar://problem/6595040>.)
-static inline void insertSemicolonIfNeeded(UString& functionBody)
+static inline void insertSemicolonIfNeeded(String& functionBody)
 {
     ASSERT(functionBody[0] == '{');
     ASSERT(functionBody[functionBody.length() - 1] == '}');
@@ -92,7 +92,7 @@ static inline void insertSemicolonIfNeeded(UString& functionBody)
         UChar ch = functionBody[i];
         if (!Lexer<UChar>::isWhiteSpace(ch) && !Lexer<UChar>::isLineTerminator(ch)) {
             if (ch != ';' && ch != '}')
-                functionBody = makeUString(functionBody.substringSharingImpl(0, i + 1), ";", functionBody.substringSharingImpl(i + 1, functionBody.length() - (i + 1)));
+                functionBody = makeString(functionBody.substringSharingImpl(0, i + 1), ";", functionBody.substringSharingImpl(i + 1, functionBody.length() - (i + 1)));
             return;
         }
     }
@@ -106,7 +106,7 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState* exec)
         if (function->isHostFunction())
             return JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(exec), "() {\n    [native code]\n}"));
         FunctionExecutable* executable = function->jsExecutable();
-        UString sourceString = executable->source().toString();
+        String sourceString = executable->source().toString();
         insertSemicolonIfNeeded(sourceString);
         return JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(exec), "(", executable->paramString(), ") ", sourceString));
     }
@@ -187,13 +187,12 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncBind(ExecState* exec)
 
     // Let A be a new (possibly empty) internal list of all of the argument values provided after thisArg (arg1, arg2 etc), in order.
     size_t numBoundArgs = exec->argumentCount() > 1 ? exec->argumentCount() - 1 : 0;
-    JSArray* boundArgs = JSArray::tryCreateUninitialized(exec->globalData(), globalObject->arrayStructure(), numBoundArgs);
+    JSArray* boundArgs = JSArray::tryCreateUninitialized(exec->vm(), globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), numBoundArgs);
     if (!boundArgs)
         return JSValue::encode(throwOutOfMemoryError(exec));
 
     for (size_t i = 0; i < numBoundArgs; ++i)
-        boundArgs->initializeIndex(exec->globalData(), i, exec->argument(i + 1));
-    boundArgs->completeInitialization(numBoundArgs);
+        boundArgs->initializeIndex(exec->vm(), i, exec->argument(i + 1));
 
     // If the [[Class]] internal property of Target is "Function", then ...
     // Else set the length own property of F to 0.

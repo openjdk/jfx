@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2011 Google Inc. All rights reserved.
@@ -26,14 +26,16 @@
 #ifndef EventDispatcher_h
 #define EventDispatcher_h
 
+#include "EventContext.h"
+#include "SimulatedClickOptions.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+#include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class Event;
-class EventContext;
 class EventDispatchMediator;
 class EventTarget;
 class FrameView;
@@ -42,23 +44,11 @@ class PlatformKeyboardEvent;
 class PlatformMouseEvent;
 class ShadowRoot;
 class TreeScope;
+class WindowEventContext;
 
-enum EventDispatchBehavior {
-    RetargetEvent,
-    StayInsideShadowDOM
-};
-
-class EventRelatedTargetAdjuster {
-public:
-    EventRelatedTargetAdjuster(PassRefPtr<Node>, PassRefPtr<Node> relatedTarget);
-    void adjust(Vector<EventContext>&);
-private:
-    typedef HashMap<TreeScope*, EventTarget*> RelatedTargetMap;
-    EventTarget* findRelatedTarget(TreeScope*);
-
-    RefPtr<Node> m_node;
-    RefPtr<Node> m_relatedTarget;
-    RelatedTargetMap m_relatedTargetMap;
+enum EventDispatchContinuation {
+    ContinueDispatching,
+    DoneDispatching
 };
 
 class EventDispatcher {
@@ -66,32 +56,31 @@ public:
     static bool dispatchEvent(Node*, PassRefPtr<EventDispatchMediator>);
     static void dispatchScopedEvent(Node*, PassRefPtr<EventDispatchMediator>);
 
-    static void dispatchSimulatedClick(Node*, PassRefPtr<Event> underlyingEvent, bool sendMouseEvents, bool showPressedLook);
+    static void dispatchSimulatedClick(Element*, Event* underlyingEvent, SimulatedClickMouseEventOptions, SimulatedClickVisualOptions);
 
-    bool dispatchEvent(PassRefPtr<Event>);
-    void adjustRelatedTarget(Event*, PassRefPtr<EventTarget> prpRelatedTarget);
-    Node* node() const;
+    bool dispatch();
+    Node* node() const { return m_node.get(); }
+    Event* event() const { return m_event.get(); }
+    EventPath& eventPath() { return m_eventPath; }
 
 private:
-    EventDispatcher(Node*);
-
-    EventDispatchBehavior determineDispatchBehavior(Event*, ShadowRoot*);
-
-    void ensureEventAncestors(Event*);
+    EventDispatcher(Node*, PassRefPtr<Event>);
     const EventContext* topEventContext();
 
-    Vector<EventContext> m_ancestors;
-    RefPtr<Node> m_node;
-    RefPtr<EventTarget> m_originalTarget;
-    RefPtr<FrameView> m_view;
-    bool m_ancestorsInitialized;
-    bool m_shouldPreventDispatch;
-};
+    EventDispatchContinuation dispatchEventPreProcess(void*& preDispatchEventHandlerResult);
+    EventDispatchContinuation dispatchEventAtCapturing(WindowEventContext&);
+    EventDispatchContinuation dispatchEventAtTarget();
+    void dispatchEventAtBubbling(WindowEventContext&);
+    void dispatchEventPostProcess(void* preDispatchEventHandlerResult);
 
-inline Node* EventDispatcher::node() const
-{
-    return m_node.get();
-}
+    EventPath m_eventPath;
+    RefPtr<Node> m_node;
+    RefPtr<Event> m_event;
+    RefPtr<FrameView> m_view;
+#ifndef NDEBUG
+    bool m_eventDispatched;
+#endif
+};
 
 }
 

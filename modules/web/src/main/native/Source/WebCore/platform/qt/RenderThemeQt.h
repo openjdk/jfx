@@ -25,6 +25,7 @@
 #include "RenderTheme.h"
 
 #include <QBrush>
+#include <QPalette>
 #include <QSharedPointer>
 #include <QString>
 
@@ -34,7 +35,7 @@ QT_END_NAMESPACE
 
 namespace WebCore {
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 class RenderProgress;
 #endif
 class RenderStyle;
@@ -57,7 +58,7 @@ public:
     virtual bool supportsHover(const RenderStyle*) const;
     virtual bool supportsFocusRing(const RenderStyle*) const;
 
-    virtual LayoutUnit baselinePosition(const RenderObject*) const;
+    virtual int baselinePosition(const RenderObject*) const;
 
     // A method asking if the control changes its tint when the window has focus or not.
     virtual bool controlSupportsTints(const RenderObject*) const;
@@ -81,6 +82,11 @@ public:
     virtual int minimumMenuListSize(RenderStyle*) const;
 
     virtual void adjustSliderThumbSize(RenderStyle*, Element*) const;
+
+#if ENABLE(DATALIST_ELEMENT)
+    virtual IntSize sliderTickSize() const OVERRIDE;
+    virtual int sliderTickOffsetFromTrackCenter() const OVERRIDE;
+#endif
 
     virtual double caretBlinkInterval() const;
 
@@ -108,7 +114,7 @@ protected:
 
     virtual void adjustMenuListButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
     virtual void adjustProgressBarStyle(StyleResolver*, RenderStyle*, Element*) const;
     // Returns the repeat interval of the animation for the progress bar.
     virtual double animationRepeatIntervalForProgressBar(RenderProgress*) const;
@@ -159,8 +165,6 @@ protected:
 
     virtual QRect inflateButtonRect(const QRect& originalRect) const;
 
-    void setPaletteFromPageClientIfExists(QPalette&) const;
-
     virtual void setPopupPadding(RenderStyle*) const = 0;
 
     virtual QSharedPointer<StylePainter> getStylePainter(const PaintInfo&) = 0;
@@ -168,6 +172,8 @@ protected:
     bool supportsFocus(ControlPart) const;
 
     IntRect convertToPaintingRect(RenderObject* inputRenderer, const RenderObject* partRenderer, IntRect partRect, const IntRect& localOffset) const;
+
+    virtual QPalette colorPalette() const;
 
     Page* m_page;
 

@@ -41,27 +41,28 @@
 #endif
 
 #include "DumpRenderTreeSupportQt.h"
+#include "TestRunner.h"
 #include <qgraphicsview.h>
 #include <qgraphicswebview.h>
 #include <qwebframe.h>
 #include <qwebinspector.h>
 #include <qwebpage.h>
 #include <qwebview.h>
+#include <wtf/RefPtr.h>
 
 QT_BEGIN_NAMESPACE
 class QUrl;
 class QFile;
 QT_END_NAMESPACE
 
-class QWebFrame;
+class QWebFrameAdapter;
+class QWebPageAdapter;
 
-class LayoutTestController;
+class TestRunnerQt;
 class DumpRenderTreeSupportQt;
 class EventSender;
 class TextInputController;
 class GCController;
-
-namespace WebCore {
 
 class WebPage;
 class NetworkAccessManager;
@@ -73,6 +74,8 @@ public:
     DumpRenderTree();
     virtual ~DumpRenderTree();
 
+    static DumpRenderTree* instance();
+
     // Initialize in single-file mode.
     void open(const QUrl& url);
 
@@ -82,12 +85,11 @@ public:
     void setGraphicsBased(bool flag) { m_graphicsBased = flag; }
     bool isGraphicsBased() { return m_graphicsBased; }
 
-    void setDumpPixels(bool);
-
     void closeRemainingWindows();
     void resetToConsistentStateBeforeTesting(const QUrl&);
 
-    LayoutTestController *layoutTestController() const { return m_controller; }
+    TestRunnerQt *testRunner() const { return m_controller; }
+    TestRunner *jscTestRunner() const { return m_jscController.get(); }
     EventSender *eventSender() const { return m_eventSender; }
     TextInputController *textInputController() const { return m_textInputController; }
     QString persistentStoragePath() const { return m_persistentStoragePath; }
@@ -99,6 +101,9 @@ public:
     void switchFocus(bool focused);
 
     WebPage *webPage() const { return m_page; }
+    QWebPageAdapter *pageAdapter() const;
+    QWebFrameAdapter *mainFrameAdapter() const;
+
     QList<WebPage*> getAllPages() const;
 
     void processArgsLine(const QStringList&);
@@ -107,6 +112,7 @@ public:
 
     void setTimeout(int);
     void setShouldTimeout(bool flag);
+    void setShouldDumpPixelsForAllTests() { m_dumpPixelsForAllTests = true; }
 
 public Q_SLOTS:
     void initJSObjects();
@@ -140,9 +146,11 @@ private:
     QString dumpFramesAsText(QWebFrame* frame);
     QString dumpBackForwardList(QWebPage* page);
     QString dumpFrameScrollPosition(QWebFrame* frame);
-    LayoutTestController *m_controller;
+    TestRunnerQt *m_controller;
+    RefPtr<TestRunner> m_jscController;
 
-    bool m_dumpPixels;
+    bool m_dumpPixelsForCurrentTest;
+    bool m_dumpPixelsForAllTests;
     QString m_expectedHash;
     QStringList m_standAloneModeTestList;
 
@@ -151,7 +159,7 @@ private:
 
     EventSender *m_eventSender;
     TextInputController *m_textInputController;
-    GCController* m_gcController;
+    QScopedPointer<GCController> m_gcController;
     NetworkAccessManager* m_networkAccessManager;
 
     QFile *m_stdin;
@@ -170,7 +178,7 @@ class NetworkAccessManager : public QNetworkAccessManager {
 public:
     NetworkAccessManager(QObject* parent);
 
-private slots:
+private Q_SLOTS:
 #ifndef QT_NO_OPENSSL
     void sslErrorsEncountered(QNetworkReply*, const QList<QSslError>&);
 #endif
@@ -200,8 +208,9 @@ public:
 
     void permissionSet(QWebPage::Feature feature);
 
-public slots:
-    bool shouldInterruptJavaScript() { return false; }
+    virtual bool shouldInterruptJavaScript() { return false; }
+
+public Q_SLOTS:
     void requestPermission(QWebFrame* frame, QWebPage::Feature feature);
     void cancelPermission(QWebFrame* frame, QWebPage::Feature feature);
 
@@ -209,7 +218,7 @@ protected:
     bool acceptNavigationRequest(QWebFrame* frame, const QNetworkRequest& request, NavigationType type);
     bool isTextOutputEnabled() { return m_drt->isTextOutputEnabled(); }
 
-private slots:
+private Q_SLOTS:
     void setViewGeometry(const QRect&);
 
 private:
@@ -229,7 +238,5 @@ public:
 private:
     QGraphicsWebView* m_item;
 };
-
-}
 
 #endif

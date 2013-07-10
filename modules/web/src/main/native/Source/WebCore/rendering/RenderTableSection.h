@@ -62,21 +62,24 @@ class RenderTableRow;
 
 class RenderTableSection : public RenderBox {
 public:
-    RenderTableSection(Node*);
+    RenderTableSection(Element*);
     virtual ~RenderTableSection();
+
+    RenderObject* firstChild() const { ASSERT(children() == virtualChildren()); return children()->firstChild(); }
+    RenderObject* lastChild() const { ASSERT(children() == virtualChildren()); return children()->lastChild(); }
 
     const RenderObjectChildList* children() const { return &m_children; }
     RenderObjectChildList* children() { return &m_children; }
 
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0);
 
-    virtual LayoutUnit firstLineBoxBaseline() const;
+    virtual int firstLineBoxBaseline() const OVERRIDE;
 
     void addCell(RenderTableCell*, RenderTableRow* row);
 
-    void setCellLogicalWidths();
     int calcRowLogicalHeight();
     void layoutRows();
+    void computeOverflowFromCells();
 
     RenderTable* table() const { return toRenderTable(parent()); }
 
@@ -117,14 +120,9 @@ public:
         Length logicalHeight;
     };
 
-    bool hasSameDirectionAsTable() const
-    {
-        return table()->style()->direction() == style()->direction();
-    }
-
     const BorderValue& borderAdjoiningTableStart() const
     {
-        if (hasSameDirectionAsTable())
+        if (hasSameDirectionAs(table()))
             return style()->borderStart();
 
         return style()->borderEnd();
@@ -132,11 +130,14 @@ public:
 
     const BorderValue& borderAdjoiningTableEnd() const
     {
-        if (hasSameDirectionAsTable())
+        if (hasSameDirectionAs(table()))
             return style()->borderEnd();
 
         return style()->borderStart();
     }
+
+    const BorderValue& borderAdjoiningStartCell(const RenderTableCell*) const;
+    const BorderValue& borderAdjoiningEndCell(const RenderTableCell*) const;
 
     const RenderTableCell* firstRowCellAdjoiningTableStart() const;
     const RenderTableCell* firstRowCellAdjoiningTableEnd() const;
@@ -148,6 +149,8 @@ public:
         CellStruct& c = m_grid[row].row[col];
         return c.primaryCell();
     }
+
+    RenderTableRow* rowRendererAt(unsigned row) const { return m_grid[row].rowRenderer; }
 
     void appendColumn(unsigned pos);
     void splitColumn(unsigned pos, unsigned first);
@@ -175,7 +178,7 @@ public:
     bool needsCellRecalc() const { return m_needsCellRecalc; }
     void setNeedsCellRecalc();
 
-    LayoutUnit getBaseline(unsigned row) { return m_grid[row].baseline; }
+    LayoutUnit rowBaseline(unsigned row) { return m_grid[row].baseline; }
 
     void rowLogicalHeightChanged(unsigned rowIndex);
 
@@ -202,22 +205,20 @@ private:
     virtual RenderObjectChildList* virtualChildren() { return children(); }
     virtual const RenderObjectChildList* virtualChildren() const { return children(); }
 
-    virtual const char* renderName() const { return isAnonymous() ? "RenderTableSection (anonymous)" : "RenderTableSection"; }
+    virtual const char* renderName() const { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)" : "RenderTableSection"; }
 
     virtual bool isTableSection() const { return true; }
 
-    virtual void willBeDestroyed();
+    virtual void willBeRemovedFromTree() OVERRIDE;
 
     virtual void layout();
-
-    virtual void removeChild(RenderObject* oldChild);
 
     virtual void paintCell(RenderTableCell*, PaintInfo&, const LayoutPoint&);
     virtual void paintObject(PaintInfo&, const LayoutPoint&);
 
     virtual void imageChanged(WrappedImagePtr, const IntRect* = 0);
 
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
 
     void ensureRows(unsigned);
 
@@ -226,6 +227,7 @@ private:
     void distributeRemainingExtraLogicalHeight(int& extraLogicalHeight);
 
     bool hasOverflowingCell() const { return m_overflowingCells.size() || m_forceSlowPaintPathWithOverflowingCell; }
+    void computeOverflowFromCells(unsigned totalRows, unsigned nEffCols);
 
     CellSpan fullTableRowSpan() const { return CellSpan(0, m_grid.size()); }
     CellSpan fullTableColumnSpan() const { return CellSpan(0, table()->columns().size()); }
@@ -274,13 +276,13 @@ private:
 
 inline RenderTableSection* toRenderTableSection(RenderObject* object)
 {
-    ASSERT(!object || object->isTableSection());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTableSection());
     return static_cast<RenderTableSection*>(object);
 }
 
 inline const RenderTableSection* toRenderTableSection(const RenderObject* object)
 {
-    ASSERT(!object || object->isTableSection());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTableSection());
     return static_cast<const RenderTableSection*>(object);
 }
 

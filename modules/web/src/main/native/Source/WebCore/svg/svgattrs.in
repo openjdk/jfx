@@ -21,6 +21,7 @@ baseProfile
 bbox
 begin
 bias
+buffered-rendering
 by
 calcMode
 cap-height
@@ -73,6 +74,7 @@ format
 from
 fx
 fy
+fr
 g1
 g2
 glyph-name
@@ -115,6 +117,7 @@ markerHeight
 markerUnits
 markerWidth
 mask
+mask-type
 maskContentUnits
 maskUnits
 mathematical
