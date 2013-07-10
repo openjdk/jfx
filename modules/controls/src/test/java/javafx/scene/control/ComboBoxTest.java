@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.css.PseudoClass;
 
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
@@ -54,6 +55,8 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
@@ -1025,5 +1028,33 @@ public class ComboBoxTest {
         comboBox.requestFocus();
         
         new KeyEventFirer(comboBox).doKeyPress(KeyCode.ENTER);
+    }
+
+    @Test public void test_rt31479() {
+        ComboBox<String> comboBox = new ComboBox<String>();
+
+        StageLoader stageLoader = new StageLoader(comboBox);
+        stageLoader.getStage().show();
+
+        final double widthBefore = comboBox.getWidth();
+
+        // add item
+        comboBox.getItems().add("Option 1");
+
+        // open and close combobox
+        comboBox.show();
+        comboBox.hide();
+
+        // set a placeholder
+        comboBox.setPlaceholder(new Circle(12, Color.RED));
+
+        // remove item
+        comboBox.getItems().clear();
+
+        // fire pulse (this allows layout to cause the size to grow)
+        Toolkit.getToolkit().firePulse();
+
+        // test size
+        assertEquals(widthBefore, comboBox.getWidth(), 0.00);
     }
 }

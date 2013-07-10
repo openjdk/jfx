@@ -329,17 +329,16 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         checkState();
 
-        double pw = 0.0;
         if (getItemCount() == 0) {
             if (placeholderRegion == null) {
                 updatePlaceholderRegionVisibility();
             }
             if (placeholderRegion != null) {
-                pw = placeholderRegion.prefWidth(height) + leftInset + rightInset;
+                return placeholderRegion.prefWidth(height) + leftInset + rightInset;
             }
         }
 
-        return Math.max(pw, computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset) * 0.618033987);
+        return computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset) * 0.618033987;
     }
 
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
