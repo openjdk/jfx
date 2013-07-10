@@ -92,6 +92,7 @@ EOF
         usr/include/directfb \
         usr/include/fontconfig \
         usr/include/freetype2 \
+        usr/include/ft2build.h \
         usr/include/gdk-pixbuf-2.0/ \
         usr/include/gio-unix-2.0/ \
         usr/include/glib-2.0 \
@@ -216,7 +217,7 @@ echo Using crosslibs directory $CROSSLIBS
 
 mkdir -p $CROSSLIBS || exit 1
 
-PILIBS=$CROSSLIBS/armhf-raspberry-pi-08
+PILIBS=$CROSSLIBS/armhf-raspberry-pi-09
 
 checkReinstall $PILIBS
 if [[ ! -d $PILIBS ]]; then
