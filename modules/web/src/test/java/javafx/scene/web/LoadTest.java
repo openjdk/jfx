@@ -35,7 +35,7 @@ public class LoadTest extends TestBase {
     }
 
     @Test public void testLoadGoodUrl() {
-        final String FILE = "test/html/ipsum.html";
+        final String FILE = "src/test/resources/html/ipsum.html";
         load(new File(FILE));
         WebEngine web = getEngine();
 
@@ -153,7 +153,7 @@ public class LoadTest extends TestBase {
         });
         
         String scriptUrl =
-                new File("test/html/invoke-alert.js").toURI().toASCIIString();
+                new File("src/test/resources/html/invoke-alert.js").toURI().toASCIIString();
         String html =
                 "<html>\n" +
                 "<head><script src=\"" + scriptUrl + "\"></script></head>\n" +

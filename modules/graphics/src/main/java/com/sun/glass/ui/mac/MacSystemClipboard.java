@@ -30,11 +30,11 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.Pixels;
@@ -48,7 +48,7 @@ class MacSystemClipboard extends SystemClipboard {
     
     // if true we'll synthesize a file list
     static final boolean SUPPORT_10_5_API = true;
-    
+
     // if true we'll force the synthesized file list into 1st item as Plain text,
     // regardless of whether such attribute already exists or not
     static final boolean SUPPORT_10_5_API_FORCE = false;
@@ -101,32 +101,10 @@ class MacSystemClipboard extends SystemClipboard {
                 switch (mime) {
                     case URI_TYPE:
                     {
-                        // synthesize list of urls as seperate pasteboard items (Mac OS 10.6 style)
-                        String split[] = ((String) object).split("\n");
-                        int count = 0;
-                        for (String string : split) {
-                            if (!string.startsWith("#")) {
-                                // exclude comments: http://www.ietf.org/rfc/rfc2483.txt
-                                count++;
-                            }
-                        }
-                        if (count > 0) {
-                            itemList = new HashMap[count];
-                            count = 0;
-                            for (String file : split) {
-                                if (!file.startsWith("#")) {
-                                    // exclude comments: http://www.ietf.org/rfc/rfc2483.txt
-                                    URI uri = createUri(file, MacSystemClipboard.BAD_URI_MSG);
-                                    String utf = MacPasteboard.UtfUrl;
-                                    if (uri.getScheme() == null) {
-                                        utf = MacPasteboard.UtfFileUrl;
-                                        uri = createUri(MacSystemClipboard.FILE_SCHEME, uri.getPath(), MacSystemClipboard.BAD_URI_MSG);
-                                    }
-                                    itemList[count] = new HashMap<>();
-                                    itemList[count].put(utf, uri.toASCIIString());
-                                    count++;
-                                }
-                            }
+                        List<HashMap<String, Object>> items = putToItemList(((String) object).split("\n"), true);
+                        if (!items.isEmpty()) {
+                            itemList = new HashMap[items.size()];
+                            items.toArray(itemList);
                         }
                         break;
                     }
@@ -189,17 +167,10 @@ class MacSystemClipboard extends SystemClipboard {
                         String files[] = (String[]) object;
                         if (data.get(URI_TYPE) == null) {
                             // special case no explicit urls found - synthesize urls (Mac OS 10.6 style)
-                            itemList = new HashMap[files.length];
-                            for (int i = 0; i < files.length; i++) {
-                                String file = files[i];
-                                URI uri = createUri(file, MacSystemClipboard.BAD_URI_MSG);
-                                String utf = MacPasteboard.UtfUrl;
-                                if (uri.getScheme() == null) {
-                                    utf = MacPasteboard.UtfFileUrl;
-                                    uri = createUri(MacSystemClipboard.FILE_SCHEME, uri.getPath(), MacSystemClipboard.BAD_URI_MSG);
-                                }
-                                itemList[i] = new HashMap<>();
-                                itemList[i].put(utf, uri.toASCIIString());
+                            List<HashMap<String, Object>> items = putToItemList(files, true);
+                            if (!items.isEmpty()) {
+                                itemList = new HashMap[items.size()];
+                                items.toArray(itemList);
                             }
                         } else if (MacSystemClipboard.SUPPORT_10_5_API) {
                             // special case urls already exist - synthesize file list (Mac OS 10.5 API compatible)
@@ -209,11 +180,11 @@ class MacSystemClipboard extends SystemClipboard {
                             StringBuilder string = null;
                             for (int i = 0; i < files.length; i++) {
                                 String file = files[i];
-                                URI uri = createUri(file, MacSystemClipboard.BAD_URI_MSG);
+                                String path = FileSystems.getDefault().getPath(file).toUri().toASCIIString();
                                 if (string == null) {
                                     string = new StringBuilder();
                                 }
-                                string.append(uri.getPath());
+                                string.append(path);
                                 if (i < (files.length - 1)) {
                                     string.append("\n");
                                 }
@@ -254,7 +225,7 @@ class MacSystemClipboard extends SystemClipboard {
             this.seed = this.pasteboard.putItems(itemList, supportedActions);
         }
     }
-    
+
     @Override
     protected Object popFromSystem(String mime) {
         String[][] utfs = this.pasteboard.getUTFs();
@@ -302,8 +273,7 @@ class MacSystemClipboard extends SystemClipboard {
                 for (int i = 0; i < utfs.length; i++) {
                     String file = this.pasteboard.getItemStringForUTF(i, MacPasteboard.UtfFileUrl); // explicitly ask for urls
                     if (file != null) {
-                        URL url = createUrl(file, MacSystemClipboard.BAD_URL_MSG);
-                        list.add(url.getPath());
+                        list.add(_convertFileReferencePath(file));
                     }
                 }
                 String[] object = null;
@@ -343,7 +313,7 @@ class MacSystemClipboard extends SystemClipboard {
         }
         return null;
     }
-    
+
     @Override
     protected String[] mimesFromSystem() {
         String[][] all = this.pasteboard.getUTFs();
@@ -425,7 +395,7 @@ class MacSystemClipboard extends SystemClipboard {
         private static native String _convertMIMEtoUTI(String mime);
         private static native String _convertUTItoMIME(String uti);
     }
-    
+
     private URI createUri(String path, String message) {
         URI uri = null;
         try {
@@ -436,27 +406,45 @@ class MacSystemClipboard extends SystemClipboard {
         }
         return uri;
     }
-    
-    private URI createUri(String scheme, String path, String message) {
-        URI uri = null;
-        try {
-            uri = new URI(scheme, null, path, null);
-        } catch (URISyntaxException ex) {
-            System.err.println(message+path);
-            Thread.dumpStack();
+
+    private HashMap<String, Object> getItemFromURIString(String string) {
+        String utf;
+        String path = null;
+        if (string.indexOf(':') == -1) {
+            // Treat a URI without a scheme as a file name
+            utf = MacPasteboard.UtfFileUrl;
+            path = FileSystems.getDefault().getPath(string).toUri().toASCIIString();
+        } else {
+            // Mac OS X file names cannot contain ":", so this means we are dealing with a URI
+            // Only fully-qualified URIs are supported, so semicolon must exist as a scheme separator
+            utf = MacPasteboard.UtfUrl;
+            URI uri = createUri(string, MacSystemClipboard.BAD_URI_MSG);
+            if (uri != null) {
+                path = uri.toASCIIString();
+            } // no else, the error is already reported by createURI
         }
-        return uri;
+        if (path != null) {
+            HashMap<String, Object> item = new HashMap<>();
+            item.put(utf, path);
+            return item;
+        } else {
+            return null;
+        }
     }
-    
-    private URL createUrl(String path, String message) {
-        URL url = null;
-        try {
-            url = new URL(_convertFileReferencePath(path));
-        } catch (MalformedURLException ex) {
-            System.err.println(message+path);
-            Thread.dumpStack();
+
+    private List<HashMap<String, Object>> putToItemList(String[] items, boolean excludeComments) {
+        // synthesize list of urls as seperate pasteboard items (Mac OS 10.6 style)
+        List<HashMap<String, Object>> uriList = new ArrayList<>();
+        for (String file : items) {
+            if (!(excludeComments && file.startsWith("#"))) {
+                // exclude comments: http://www.ietf.org/rfc/rfc2483.txt
+                HashMap<String, Object> entry = getItemFromURIString(file);
+                if (entry != null) {
+                    uriList.add(entry);
+                }
+            }
         }
-        return url;
+        return  uriList;
     }
 
     private static native String _convertFileReferencePath(String path);

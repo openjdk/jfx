@@ -845,6 +845,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     // Parse command line arguments to see if /Debug is there
     szArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
 
+    // [RT-31061] otherwise UI can be left in back of other windows
+    AllowSetForegroundWindow(ASFW_ANY);
+
     enableDebugIfNeeded(argCount, szArgList);
 
     if (isDebug) {

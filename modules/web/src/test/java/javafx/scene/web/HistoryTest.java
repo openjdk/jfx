@@ -51,10 +51,10 @@ public class HistoryTest extends TestBase {
         });        
         
         // [1*]
-        checkLoad(new File("test/html/h1.html"), 1, 0, "1");
+        checkLoad(new File("src/test/resources/html/h1.html"), 1, 0, "1");
                         
         // [1, 2*]
-        checkLoad(new File("test/html/h2.html"), 2, 1, "2");
+        checkLoad(new File("src/test/resources/html/h2.html"), 2, 1, "2");
         
         //
         // check the list update
@@ -70,7 +70,7 @@ public class HistoryTest extends TestBase {
         });        
         
         // [1, 2, 3*]
-        checkLoad(new File("test/html/h3.html"), 3, 2, "3");
+        checkLoad(new File("src/test/resources/html/h3.html"), 3, 2, "3");
         
         ensureValueChanged(entriesChanged, "entries not changed after load");
         
@@ -112,7 +112,7 @@ public class HistoryTest extends TestBase {
             }
         });
         waitLoadFinished();
-        check(new File("test/html/h2.html"), 3, 1, "2");
+        check(new File("src/test/resources/html/h2.html"), 3, 1, "2");
                 
         ensureValueChanged(dateChanged, "date not changed after go(-1)");
         ensureValueChanged(indexChanged, "index not changed after go(-1)");
@@ -128,7 +128,7 @@ public class HistoryTest extends TestBase {
             }
         });
         waitLoadFinished();
-        check(new File("test/html/h3.html"), 3, 2, "3");
+        check(new File("src/test/resources/html/h3.html"), 3, 2, "3");
         
         submit(new Runnable() {
             public void run() {
@@ -137,7 +137,7 @@ public class HistoryTest extends TestBase {
             }
         });
         waitLoadFinished();
-        check(new File("test/html/h1.html"), 3, 0, "1");
+        check(new File("src/test/resources/html/h1.html"), 3, 0, "1");
         
         submit(new Runnable() {
             public void run() {
@@ -163,7 +163,7 @@ public class HistoryTest extends TestBase {
             }
         });
         waitLoadFinished();
-        check(new File("test/html/h3.html"), 3, 2, "3");
+        check(new File("src/test/resources/html/h3.html"), 3, 2, "3");
         
         submit(new Runnable() {
             public void run() {
@@ -186,7 +186,7 @@ public class HistoryTest extends TestBase {
             }
         });
         // [2, 3, 1*]
-        checkLoad(new File("test/html/h1.html"), 3, 2, "1");
+        checkLoad(new File("src/test/resources/html/h1.html"), 3, 2, "1");
         
         submit(new Runnable() {
             public void run() {
@@ -208,9 +208,9 @@ public class HistoryTest extends TestBase {
         waitLoadFinished();
         
         // [2, 1*]
-        checkLoad(new File("test/html/h1.html"), 2, 1, "1");
+        checkLoad(new File("src/test/resources/html/h1.html"), 2, 1, "1");
         // [2, 1, 3*]
-        checkLoad(new File("test/html/h3.html"), 3, 2, "3");
+        checkLoad(new File("src/test/resources/html/h3.html"), 3, 2, "3");
         
         submit(new Runnable() {
             public void run() {
@@ -225,14 +225,14 @@ public class HistoryTest extends TestBase {
         //
         
         // [2, 3*]
-        checkLoad(new File("test/html/h3.html"), 2, 1, "3");
+        checkLoad(new File("src/test/resources/html/h3.html"), 2, 1, "3");
 
         //
         // check the date update on reload
         //
         
         // [2, 3, 4*]
-        load(new File("test/html/h4.html"));
+        load(new File("src/test/resources/html/h4.html"));
         
         history.getEntries().get(history.getCurrentIndex()).lastVisitedDateProperty().addListener(newDateListener());
         

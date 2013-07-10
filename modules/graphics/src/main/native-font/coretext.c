@@ -26,13 +26,20 @@
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 
-#if TARGET_OS_MAC && !(TARGET_OS_IPHONE)
+#if TARGET_OS_MAC
 
 #include <jni.h>
 #include <com_sun_javafx_font_coretext_OS.h>
 
 #import <CoreFoundation/CoreFoundation.h>
+
+#if TARGET_OS_IPHONE
+#import <CoreGraphics/CoreGraphics.h>
+#import <CoreText/CoreText.h>
+#else
 #import <ApplicationServices/ApplicationServices.h>
+#endif
+
 
 #define OS_NATIVE(func) Java_com_sun_javafx_font_coretext_OS_##func
 
@@ -788,21 +795,22 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)
     if (tableData == NULL) return FALSE;
     length = CFDataGetLength(tableData);
     UInt32 offset1 = 0, offset2 = 0;
+    UInt32 index = arg2 & 0xFFFF;
     if (indexToLocFormat) {
         const UInt32 * loca = (const UInt32 *)CFDataGetBytePtr(tableData);
         if (loca != NULL && length / 4 > arg2) {
-            offset1 = CFSwapInt32BigToHost(loca[arg2]);
-            offset2 = CFSwapInt32BigToHost(loca[arg2 + 1]);
+            offset1 = CFSwapInt32BigToHost(loca[index]);
+            offset2 = CFSwapInt32BigToHost(loca[index + 1]);
         }
     } else {
         const UInt16 * loca = (const UInt16 *)CFDataGetBytePtr(tableData);
         if (loca != NULL && length / 2 > arg2) {
-            offset1 = CFSwapInt16BigToHost(loca[arg2]) << 1;
-            offset2 = CFSwapInt16BigToHost(loca[arg2 + 1]) << 1;
+            offset1 = CFSwapInt16BigToHost(loca[index]) << 1;
+            offset2 = CFSwapInt16BigToHost(loca[index + 1]) << 1;
         }
     }
     CFRelease(tableData);
-
+    jboolean result = FALSE;
     if (offset2 > offset1 && (offset2 - offset1) >= 10) {
         tableData = CTFontCopyTable(fontRef, kCTFontTableGlyf, options);
         if (tableData == NULL) return FALSE;
@@ -821,10 +829,11 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)
                 (SInt16)CFSwapInt16BigToHost(glyf[4]),
             };
             (*env)->SetIntArrayRegion(env, arg4, 0, 4, data);
+            result = TRUE;
         }
         CFRelease(tableData);
     }
-    return TRUE;
+    return result;
 }
 
 JNIEXPORT jdouble JNICALL OS_NATIVE(CTFontGetAdvancesForGlyphs)

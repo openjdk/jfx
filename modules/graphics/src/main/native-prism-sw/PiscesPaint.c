@@ -357,6 +357,22 @@ static INLINE void getPointsToInterpolate(jint *pts, jint *data, jint sidx, jint
     pts[2] = (isXin) ? data[sidx2 + 1] : pts[0];
 }
 
+static INLINE void getPointsToInterpolateRepeat(jint *pts, jint *data, jint sidx, jint stride, jint p00,
+    jint tx, jint txMin, jint txMax, jint ty, jint tyMin, jint tyMax)
+{
+    jint txn = tx+1;
+    jint tyn = ty+1;
+    if (txn > txMax) {
+        txn = txMin;
+    }
+    if (tyn > tyMax) {
+        tyn = tyMin;
+    }
+    pts[0] = data[MAX(tyMin, ty) * stride + txn];
+    pts[1] = data[tyn * stride + MAX(txMin, tx)];
+    pts[2] = data[tyn * stride + txn];
+}
+
 void
 genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
     jint j;
@@ -454,8 +470,13 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                         jint sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                         jint p00 = txtData[sidx];
                         if (rdr->_texture_interpolate) {
-                            getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
-                                tx, txMin, txMax, ty, tyMin, tyMax);
+                            if (rdr->_texture_repeat) {
+                                getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                    tx, txMin, txMax, ty, tyMin, tyMax);
+                            } else {
+                                getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                    tx, txMin, txMax, ty, tyMin, tyMax);
+                            }
 
                             if (hfrac && vfrac) {
                                 cval = interpolate4points(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
@@ -513,8 +534,13 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                         jint sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                         jint p00 = txtData[sidx];
                         if (rdr->_texture_interpolate) {
-                            getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
-                                tx, txMin, txMax, ty, tyMin, tyMax);
+                            if (rdr->_texture_repeat) {
+                                getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                    tx, txMin, txMax, ty, tyMin, tyMax);
+                            } else {
+                                getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                    tx, txMin, txMax, ty, tyMin, tyMax);
+                            }
 
                             if (hfrac && vfrac) {
                                 cval = interpolate4pointsNoAlpha(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
@@ -586,8 +612,13 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                         jint sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                         jint p00 = txtData[sidx];
                         if (rdr->_texture_interpolate) {
-                            getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
-                                tx, txMin, txMax, ty, tyMin, tyMax);
+                            if (rdr->_texture_repeat) {
+                                getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                    tx, txMin, txMax, ty, tyMin, tyMax);
+                            } else {
+                                getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                    tx, txMin, txMax, ty, tyMin, tyMax);
+                            }
 
                             if (hfrac && vfrac) {
                                 cval = interpolate4points(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
@@ -651,8 +682,13 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                         jint sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                         jint p00 = txtData[sidx];
                         if (rdr->_texture_interpolate) {
-                            getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
-                                tx, txMin, txMax, ty, tyMin, tyMax);
+                            if (rdr->_texture_repeat) {
+                                getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                    tx, txMin, txMax, ty, tyMin, tyMax);
+                            } else {
+                                getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                    tx, txMin, txMax, ty, tyMin, tyMax);
+                            }
 
                             if (hfrac && vfrac) {
                                 cval = interpolate4pointsNoAlpha(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
