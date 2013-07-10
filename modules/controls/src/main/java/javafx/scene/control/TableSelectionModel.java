@@ -33,35 +33,33 @@ import javafx.beans.property.SimpleBooleanProperty;
  * table-like controls (most notably {@link TableView} and {@link TreeTableView}.
  * 
  * @param <T> The type of the underlying data model for the UI control.
- * @param <TC> The concrete subclass of {@link TableColumnBase} that is used by the
- *      underlying UI control (e.g. {@link TableColumn} or {@link TreeTableColumn}.
  * @since JavaFX 8.0
  */
-public abstract class TableSelectionModel<T, TC extends TableColumnBase<T,?>> extends MultipleSelectionModelBase<T> {
+public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<T> {
     
     /**
      * Convenience function which tests whether the given row and column index
      * is currently selected in this table instance.
      */
-    public abstract boolean isSelected(int row, TC column);
+    public abstract boolean isSelected(int row, TableColumnBase<T,?> column);
 
     /**
      * Selects the cell at the given row/column intersection.
      */
-    public abstract void select(int row, TC column);
+    public abstract void select(int row, TableColumnBase<T,?> column);
 
     /**
      * Clears all selection, and then selects the cell at the given row/column
      * intersection.
      */
-    public abstract void clearAndSelect(int row, TC column);
+    public abstract void clearAndSelect(int row, TableColumnBase<T,?> column);
 
     /**
      * Removes selection from the specified row/column position (in view indexes).
      * If this particular cell (or row if the column value is -1) is not selected,
      * nothing happens.
      */
-    public abstract void clearSelection(int row, TC column);
+    public abstract void clearSelection(int row, TableColumnBase<T,?> column);
 
     /**
      * Selects the cell to the left of the currently selected cell.

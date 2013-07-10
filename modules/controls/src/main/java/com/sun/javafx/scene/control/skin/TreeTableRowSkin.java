@@ -66,6 +66,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private SimpleObjectProperty<ObservableList<TreeItem<T>>> itemsProperty;
     private TreeItem<?> treeItem;
     private boolean disclosureNodeDirty = true;
+    private Node graphic;
+
+    private TreeTableViewSkin treeTableViewSkin;
     
     private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
         @Override public Void call(String p) {
@@ -86,7 +89,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         
         updateTreeItem();
         updateDisclosureNodeRotation(false);
+        updateTableViewSkin();
 
+        registerChangeListener(control.treeTableViewProperty(), "TREE_TABLE_VIEW");
         registerChangeListener(control.indexProperty(), "INDEX");
         registerChangeListener(control.treeItemProperty(), "TREE_ITEM");
         registerChangeListener(control.getTreeTableView().treeColumnProperty(), "TREE_COLUMN");
@@ -95,7 +100,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
 
-        if ("INDEX".equals(p)) {
+        if ("TREE_ABLE_VIEW".equals(p)) {
+            updateTableViewSkin();
+        } else if ("INDEX".equals(p)) {
             updateCells = true;
 //            isDirty = true;
 //            getSkinnable().requestLayout();
@@ -181,9 +188,17 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         
         // check for graphic missing
         ObjectProperty<Node> graphicProperty = graphicProperty();
-        Node graphic = graphicProperty == null ? null : graphicProperty.get();
-        if (graphic != null && ! getChildren().contains(graphic)) {
-            getChildren().add(graphic);
+        Node newGraphic = graphicProperty == null ? null : graphicProperty.get();
+        if (newGraphic != null) {
+            // RT-30466: remove the old graphic
+            if (newGraphic != graphic) {
+                getChildren().remove(graphic);
+            }
+
+            if (! getChildren().contains(newGraphic)) {
+                getChildren().add(newGraphic);
+                graphic = newGraphic;
+            }
         }
         
         // check disclosure node
@@ -302,7 +317,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     @Override protected boolean isColumnPartiallyOrFullyVisible(TableColumnBase tc) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return treeTableViewSkin == null ? false : treeTableViewSkin.isColumnPartiallyOrFullyVisible(tc);
     }
 
     @Override protected TreeTableColumn<T, ?> getTableColumnBase(TreeTableCell cell) {
@@ -324,7 +339,13 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     @Override protected DoubleProperty fixedCellSizeProperty() {
         return getSkinnable().getTreeTableView().fixedCellSizeProperty();
     }
-    
+
+    private void updateTableViewSkin() {
+        TreeTableView tableView = getSkinnable().getTreeTableView();
+        if (tableView.getSkin() instanceof TreeTableViewSkin) {
+            treeTableViewSkin = (TreeTableViewSkin)tableView.getSkin();
+        }
+    }
     
     
     /***************************************************************************

@@ -117,7 +117,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
     }
 
     /** {@inheritDoc}  */
-    @Override protected TableSelectionModel<T, TableColumn<T, ?>> getSelectionModel() {
+    @Override protected TableSelectionModel<T> getSelectionModel() {
         return getControl().getSelectionModel();
     }
 
