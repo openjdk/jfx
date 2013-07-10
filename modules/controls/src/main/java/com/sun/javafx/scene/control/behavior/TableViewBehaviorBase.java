@@ -320,7 +320,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      * Returns the selection model for the underlying UI control (which must extend
      * from TableSelectionModel).
      */
-    protected abstract TableSelectionModel<T,TC> getSelectionModel();
+    protected abstract TableSelectionModel<T> getSelectionModel();
     
     /**
      * Returns an observable list of all cells that are currently selected in
@@ -450,7 +450,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      *************************************************************************/ 
     
     protected void scrollUp() {
-        TableSelectionModel<T,TC> sm = getSelectionModel();
+        TableSelectionModel<T> sm = getSelectionModel();
         if (sm == null || getSelectedCells().isEmpty()) return;
         
         TablePositionBase<TC> selectedCell = getSelectedCells().get(0);
@@ -465,7 +465,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
 
     protected void scrollDown() {
-        TableSelectionModel<T,TC> sm = getSelectionModel();
+        TableSelectionModel<T> sm = getSelectionModel();
         if (sm == null || getSelectedCells().isEmpty()) return;
         
         TablePositionBase<TC> selectedCell = getSelectedCells().get(0);
@@ -587,7 +587,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
     
     protected void clearSelectionOutsideRange(int start, int end) {
-        TableSelectionModel<T,?> sm = getSelectionModel();
+        TableSelectionModel<T> sm = getSelectionModel();
         if (sm == null) return;
         
         int min = Math.min(start, end);

@@ -131,7 +131,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     }
 
     /** {@inheritDoc}  */
-    @Override protected TableSelectionModel<TreeItem<T>, TreeTableColumn<T, ?>> getSelectionModel() {
+    @Override protected TableSelectionModel<TreeItem<T>> getSelectionModel() {
         return getControl().getSelectionModel();
     }
 

@@ -1512,7 +1512,7 @@ public class TableView<S> extends Control {
      * allow for special support for TableView controls.
      * @since JavaFX 2.0
      */
-    public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S, TableColumn<S,?>> {
+    public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S> {
 
         /***********************************************************************
          *                                                                     *
@@ -1564,6 +1564,65 @@ public class TableView<S> extends Control {
 
         /***********************************************************************
          *                                                                     *
+         * Generic (type erasure) bridging                                     *
+         *                                                                     *
+         **********************************************************************/
+
+        // --- isSelected
+        /** {@inheritDoc} */
+        @Override public boolean isSelected(int row, TableColumnBase<S, ?> column) {
+            return isSelected(row, (TableColumn)column);
+        }
+
+        /**
+         * Convenience function which tests whether the given row and column index
+         * is currently selected in this table instance.
+         */
+        public abstract boolean isSelected(int row, TableColumn<S, ?> column);
+
+
+        // --- select
+        /** {@inheritDoc} */
+        @Override public void select(int row, TableColumnBase<S, ?> column) {
+            select(row, (TableColumn)column);
+        }
+
+        /**
+         * Selects the cell at the given row/column intersection.
+         */
+        public abstract void select(int row, TableColumn<S, ?> column);
+
+
+        // --- clearAndSelect
+        /** {@inheritDoc} */
+        @Override public void clearAndSelect(int row, TableColumnBase<S,?> column) {
+            clearAndSelect(row, (TableColumn) column);
+        }
+
+        /**
+         * Clears all selection, and then selects the cell at the given row/column
+         * intersection.
+         */
+        public abstract void clearAndSelect(int row, TableColumn<S,?> column);
+
+
+        // --- clearSelection
+        /** {@inheritDoc} */
+        @Override public void clearSelection(int row, TableColumnBase<S,?> column) {
+            clearSelection(row, (TableColumn) column);
+        }
+
+        /**
+         * Removes selection from the specified row/column position (in view indexes).
+         * If this particular cell (or row if the column value is -1) is not selected,
+         * nothing happens.
+         */
+        public abstract void clearSelection(int row, TableColumn<S, ?> column);
+
+
+
+        /***********************************************************************
+         *                                                                     *
          * Public API                                                          *
          *                                                                     *
          **********************************************************************/
@@ -1579,7 +1638,7 @@ public class TableView<S> extends Control {
          * Convenience method that returns getTableView().getItems().
          * @return The items list of the current TableView.
          */
-        protected ObservableList<S> getTableModel()  {
+        protected List<S> getTableModel()  {
             return tableView.getItems();
         }
 
@@ -1796,7 +1855,7 @@ public class TableView<S> extends Control {
             tableView.itemsProperty().addListener(weakItemsPropertyListener);
             
             // watching for changes to the items list content
-            ObservableList<S> items = getTableModel();
+            ObservableList<S> items = getTableView().getItems();//getTableModel();
             if (items != null) {
                 items.addListener(weakItemsContentListener);
             }

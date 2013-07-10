@@ -66,6 +66,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private SimpleObjectProperty<ObservableList<TreeItem<T>>> itemsProperty;
     private TreeItem<?> treeItem;
     private boolean disclosureNodeDirty = true;
+    private Node graphic;
 
     private TreeTableViewSkin treeTableViewSkin;
     
@@ -187,9 +188,17 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         
         // check for graphic missing
         ObjectProperty<Node> graphicProperty = graphicProperty();
-        Node graphic = graphicProperty == null ? null : graphicProperty.get();
-        if (graphic != null && ! getChildren().contains(graphic)) {
-            getChildren().add(graphic);
+        Node newGraphic = graphicProperty == null ? null : graphicProperty.get();
+        if (newGraphic != null) {
+            // RT-30466: remove the old graphic
+            if (newGraphic != graphic) {
+                getChildren().remove(graphic);
+            }
+
+            if (! getChildren().contains(newGraphic)) {
+                getChildren().add(newGraphic);
+                graphic = newGraphic;
+            }
         }
         
         // check disclosure node
