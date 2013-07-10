@@ -55,7 +55,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
      */
     // FIXME this should not be a StackPane
     private StackPane placeholderRegion;
-    private Label placeholderLabel;
+    private Node placeholderNode;
+//    private Label placeholderLabel;
     private static final String EMPTY_LIST_TEXT = ControlResources.getString("ListView.noContent");
 
     private ObservableList<T> listViewItems;
@@ -237,22 +238,19 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         boolean visible = getItemCount() == 0;
         
         if (visible) {
-            if (placeholderRegion == null) {
-                placeholderRegion = new StackPane();
-                placeholderRegion.getStyleClass().setAll("placeholder");
-                getChildren().add(placeholderRegion);
+            placeholderNode = getSkinnable().getPlaceholder();
+            if (placeholderNode == null && (EMPTY_LIST_TEXT != null && ! EMPTY_LIST_TEXT.isEmpty())) {
+                placeholderNode = new Label();
+                ((Label)placeholderNode).setText(EMPTY_LIST_TEXT);
             }
-            
-            Node placeholderNode = getSkinnable().getPlaceholder();
 
-            if (placeholderNode == null) {
-                if (placeholderLabel == null) {
-                    placeholderLabel = new Label();
+            if (placeholderNode != null) {
+                if (placeholderRegion == null) {
+                    placeholderRegion = new StackPane();
+                    placeholderRegion.getStyleClass().setAll("placeholder");
+                    getChildren().add(placeholderRegion);
                 }
-                placeholderLabel.setText(EMPTY_LIST_TEXT);
 
-                placeholderRegion.getChildren().setAll(placeholderLabel);
-            } else {
                 placeholderRegion.getChildren().setAll(placeholderNode);
             }
         }
@@ -320,7 +318,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         
         if (getItemCount() == 0) {
             // show message overlay instead of empty listview
-            placeholderRegion.resizeRelocate(x, y, w, h);
+            if (placeholderRegion != null) {
+                placeholderRegion.resizeRelocate(x, y, w, h);
+            }
         } else {
             flow.resizeRelocate(x, y, w, h);
         }
