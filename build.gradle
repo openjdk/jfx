@@ -441,7 +441,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
         // check that all the dirs are really there
         def List<String> errors = []
         packages.each { pkgname->
-            def String basename = pkgname.substring(0,pkgname.indexOf("."))
+            def String basename = pkgname.substring(0,pkgname.lastIndexOf("."))
             def File pkgdir = file("$destdir/$basename")
 
             if (!pkgdir.isDirectory()) {
