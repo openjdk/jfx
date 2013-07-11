@@ -89,6 +89,7 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import javafx.util.Callback;
 import javafx.util.Duration;
+
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -102,6 +103,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
 import com.sun.javafx.beans.annotations.Default;
@@ -123,6 +125,7 @@ import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.TKDragGestureListener;
 import com.sun.javafx.tk.TKDragSourceListener;
@@ -133,6 +136,7 @@ import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
@@ -756,7 +760,7 @@ public class Scene implements EventTarget {
         impl_peer.setRoot(getRoot().impl_getPeer());
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
         getEffectiveCamera().impl_updatePeer();
-        impl_peer.setCamera(getEffectiveCamera().impl_getPeer());
+        impl_peer.setCamera((NGCamera) getEffectiveCamera().impl_getPeer());
         impl_peer.markDirty();
         PerformanceTracker.logEvent("Scene.initPeer TKScene initialized");
 
@@ -2316,7 +2320,7 @@ public class Scene implements EventTarget {
             final Camera cam = getEffectiveCamera();
             if (isDirty(DirtyBits.CAMERA_DIRTY)) {
                 cam.impl_updatePeer();
-                impl_peer.setCamera(cam.impl_getPeer());
+                impl_peer.setCamera((NGCamera) cam.impl_getPeer());
             }
 
             clearDirty();
