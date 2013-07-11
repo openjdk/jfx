@@ -46,6 +46,7 @@ public class SkinningMesh extends PolygonMesh {
         this.getPoints().addAll(mesh.getPoints());
         this.getTexCoords().addAll(mesh.getTexCoords());
         this.faces = mesh.faces;
+        this.getFaceSmoothingGroups().addAll(mesh.getFaceSmoothingGroups());
         
         this.weights = weights;
 
