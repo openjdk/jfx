@@ -27,6 +27,7 @@ import javafx.css.*;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -941,15 +942,31 @@ final public class WebView extends Parent {
         if (page == null) {
             return;
         }
-        final Integer id = idMap.get(ev.getEventType());
+
+        // RT-24511
+        EventType<? extends MouseEvent> type = ev.getEventType();
+        double x = ev.getX();
+        double y = ev.getY();
+        double screenX = ev.getScreenX();
+        double screenY = ev.getScreenY();
+        if (type == MouseEvent.MOUSE_EXITED) {
+            type = MouseEvent.MOUSE_MOVED;
+            x = Short.MIN_VALUE;
+            y = Short.MIN_VALUE;
+            Point2D screenPoint = localToScreen(x, y);
+            screenX = screenPoint.getX();
+            screenY = screenPoint.getY();
+        }
+
+        final Integer id = idMap.get(type);
         if (id == null) {
             // not supported by webkit
             return;
         }
         WCMouseEvent mouseEvent =
                 new WCMouseEvent(id, idMap.get(ev.getButton()),
-                    ev.getClickCount(), (int)ev.getX(), (int)ev.getY(),
-                    (int)ev.getScreenX(), (int)ev.getScreenY(),
+                    ev.getClickCount(), (int) x, (int) y,
+                    (int) screenX, (int) screenY,
                     System.currentTimeMillis(),
                     ev.isShiftDown(), ev.isControlDown(), ev.isAltDown(),
                     ev.isMetaDown(), ev.isPopupTrigger());
