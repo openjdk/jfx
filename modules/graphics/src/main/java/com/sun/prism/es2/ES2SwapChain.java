@@ -50,6 +50,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     // a value of zero corresponds to the windowing system-provided
     // framebuffer object
     int nativeDestHandle = 0;
+    private final boolean antiAliasing;
     /**
      * An offscreen surface that acts as a persistent backbuffer, currently
      * only used when dirty region optimizations are enabled in the scenegraph.
@@ -102,6 +103,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         this.pixelScaleFactor = PrismSettings.allowHiDPIScaling
                                 ? pState.getScale() //TODO fix getScale
                                 : 1.0f;
+        this.antiAliasing = pState.isAntiAliasing();
         drawable = null;
         if (pState != null) {
             long nativeWindow = pState.getNativeWindow();
@@ -131,15 +133,26 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                     needsResize = false;
                 }
                 // Copy (not blend) the stableBackbuffer into place.
-                if (clip == null || copyFullBuffer) {
-                    w = getPhysicalWidth();
-                    h = getPhysicalHeight();
-                    drawTexture(g, stableBackbuffer, 0, 0, w, h, 0, 0, w, h);
-                    copyFullBuffer = false;
+                //TODO: Determine why w/h is needed here
+                w = getPhysicalWidth();
+                h = getPhysicalHeight();
+                Rectangle rectDST = new Rectangle(0, 0, w, h);
+                if (clip != null && !copyFullBuffer) {
+                    rectDST.intersectWith(clip);
+                }
+                copyFullBuffer = false;
+                int x0 = rectDST.x;
+                int y0 = rectDST.y;
+                int x1 = x0 + rectDST.width;
+                int y1 = y0 + rectDST.height;
+                if (isAntiAliasing()) {
+                    context.flushVertexBuffer();
+                    // Note must flip the z axis during blit
+                    context.blit(stableBackbuffer, null, x0, y0, x1, y1,
+                            x0, y1, x1, y0);
                 } else {
-                    drawTexture(g, stableBackbuffer,
-                            clip.x, clip.y, clip.x + clip.width, clip.y + clip.height,
-                            clip.x, clip.y, clip.x + clip.width, clip.y + clip.height);
+                    drawTexture(g, stableBackbuffer, x0, y0, x1, y1,
+                            x0, y0, x1, y1);
                 }
                 stableBackbuffer.unlock();
             }
@@ -204,8 +217,9 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             w = getPhysicalWidth();
             h = getPhysicalHeight();
             ResourceFactory factory = context.getResourceFactory();
-            stableBackbuffer =
-                    factory.createRTTexture(w, h, WrapMode.CLAMP_NOT_NEEDED);
+            stableBackbuffer = factory.createRTTexture(w, h,
+                                                       WrapMode.CLAMP_NOT_NEEDED,
+                                                       antiAliasing);
             copyFullBuffer = true;
         }
         ES2Graphics g = ES2Graphics.create(context, stableBackbuffer);
@@ -268,5 +282,10 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             stableBackbuffer.dispose();
             stableBackbuffer = null;
         }
+    }
+
+    public boolean isAntiAliasing() {
+        return stableBackbuffer != null ? stableBackbuffer.isAntiAliasing() :
+                antiAliasing;
     }
 }

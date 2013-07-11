@@ -50,7 +50,7 @@ public class StubStage implements TKStage {
     }
 
     @Override
-    public TKScene createTKScene(boolean depthBuffer) {
+    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing) {
         return new StubScene();
     }
 

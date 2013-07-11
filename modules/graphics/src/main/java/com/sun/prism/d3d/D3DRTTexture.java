@@ -159,4 +159,9 @@ class D3DRTTexture extends D3DTexture
     public boolean isVolatile() {
         return getContext().isRTTVolatile();
     }
+
+    public boolean isAntiAliasing() {
+        //TODO: 3D - Add AA support for D3D
+        return false;
+    }
 }

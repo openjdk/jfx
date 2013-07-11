@@ -200,6 +200,8 @@ public class PresentableState {
         return window;
     }
 
+    public boolean isAntiAliasing() { return false; }
+
     /**
      * @return the underlying View
      *

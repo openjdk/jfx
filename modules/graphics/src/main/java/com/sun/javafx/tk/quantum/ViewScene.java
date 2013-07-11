@@ -45,8 +45,8 @@ class ViewScene extends GlassScene {
 
     private PaintRenderJob paintRenderJob;
 
-    public ViewScene(boolean depthBuffer) {
-        super(depthBuffer);
+    public ViewScene(boolean depthBuffer, boolean antiAliasing) {
+        super(depthBuffer, antiAliasing);
 
         this.platformView = Application.GetApplication().createView();
         this.platformView.setEventHandler(new GlassViewEventHandler(this));

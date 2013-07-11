@@ -1842,7 +1842,7 @@ public abstract class Node implements EventTarget, Styleable {
             Scene s = getScene();
             if (s != null) {
                 params.setCamera(s.getEffectiveCamera());
-                params.setDepthBuffer(s.isDepthBufferInteral());
+                params.setDepthBuffer(s.isDepthBufferInternal());
                 params.setFill(s.getFill());
             }
         }
@@ -1936,7 +1936,7 @@ public abstract class Node implements EventTarget, Styleable {
             Scene s = getScene();
             if (s != null) {
                 params.setCamera(s.getEffectiveCamera());
-                params.setDepthBuffer(s.isDepthBufferInteral());
+                params.setDepthBuffer(s.isDepthBufferInternal());
                 params.setFill(s.getFill());
             }
         } else {

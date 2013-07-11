@@ -151,4 +151,8 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
     public boolean isVolatile() {
         return false;
     }
+
+    @Override public boolean isAntiAliasing() {
+        return false;
+    }
 }

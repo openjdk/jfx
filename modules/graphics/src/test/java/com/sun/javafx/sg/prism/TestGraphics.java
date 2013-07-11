@@ -137,6 +137,9 @@ public class TestGraphics extends BaseGraphics {
     public void setup3DRendering() {
     }
 
+    public void blit(RTTexture srcTex, RTTexture dstTex, int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1) {
+    }
+
     private static class TestContext extends BaseContext {
 
         public TestContext() {
@@ -176,6 +179,9 @@ public class TestGraphics extends BaseGraphics {
         @Override public int getRTTWidth(int w, WrapMode wrapMode) { return w; }
         @Override public int getRTTHeight(int h, WrapMode wrapMode) { return h; }
         @Override public RTTexture createRTTexture(final int width, final int height, Texture.WrapMode wrapMode) {
+            return createRTTexture(width, height, wrapMode, false);
+        }
+        @Override public RTTexture createRTTexture(final int width, final int height, Texture.WrapMode wrapMode, boolean antiAliasing) {
             return new RTTexture() {
                 @Override public int[] getPixels() { return new int[0]; }
                 @Override public boolean readPixels(Buffer pixels, int x, int y, int width, int height) { return false; }
@@ -217,6 +223,7 @@ public class TestGraphics extends BaseGraphics {
                 @Override public void contentsUseful() { }
                 @Override public void contentsNotUseful() { }
                 @Override public void setOpaque(boolean opaque) { }
+                @Override public boolean isAntiAliasing() { return false; }
             };
         }
         @Override public Presentable createPresentable(PresentableState pstate) { return null; }
@@ -273,6 +280,10 @@ public class TestGraphics extends BaseGraphics {
 
         public int getContentHeight() {
             return 0;
+        }
+
+        public boolean isAntiAliasing() {
+            return false;
         }
 
     }

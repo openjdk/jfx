@@ -715,10 +715,14 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
+    abstract public void blit(RTTexture srcRTT, RTTexture dstRTT,
+                          int srcX0, int srcY0, int srcX1, int srcY1,
+                          int dstX0, int dstY0, int dstX1, int dstY1);
+
     @Override
     protected void setRenderTarget(RenderTarget target, PrismCameraImpl camera,
             boolean depthTest, boolean state3D)
-    {        
+    {
         if (target instanceof Texture) {
             ((Texture) target).assertLocked();
         }

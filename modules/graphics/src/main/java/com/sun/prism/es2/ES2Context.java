@@ -31,11 +31,11 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine2D;
-import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Material;
 import com.sun.prism.PixelFormat;
+import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
 import com.sun.prism.camera.PrismCameraImpl;
@@ -211,9 +211,14 @@ class ES2Context extends BaseShaderContext {
         int fboID = ((ES2RenderTarget)target).getFboID();
         glContext.bindFBO(fboID);
 
-        if (depthTest && target instanceof ES2RTTexture) {
+        boolean antiAliasing = false;
+        if (target instanceof ES2RTTexture) {
             // Attach a depth buffer to the currently bound FBO
-            ((ES2RTTexture) target).attachDepthBuffer(this);
+            ES2RTTexture rtTarget = (ES2RTTexture)target;
+            antiAliasing = rtTarget.isAntiAliasing();
+            if (depthTest) {
+                rtTarget.attachDepthBuffer(this);
+            }
         }
 
         // update viewport
@@ -222,6 +227,7 @@ class ES2Context extends BaseShaderContext {
         int w = target.getContentWidth();
         int h = target.getContentHeight();
         glContext.updateViewportAndDepthTest(x, y, w, h, depthTest);
+        glContext.updateMSAAState(antiAliasing);
 
         if (camera instanceof PrismDefaultCamera) {
             // update projection matrix; this will be uploaded to the shader
@@ -458,6 +464,19 @@ class ES2Context extends BaseShaderContext {
 
     void setPointLight(long nativeHandle, int index, float x, float y, float z, float r, float g, float b, float w) {
         glContext.setPointLight(nativeHandle, index, x, y, z, r, g, b, w);
+    }
+
+    @Override
+    public void blit(RTTexture rtt, RTTexture dstRTT,
+                     int srcX0, int srcY0, int srcX1, int srcY1,
+                     int dstX0, int dstY0, int dstX1, int dstY1)
+    {
+        // If dstRTT is null then will blit to currently bound fbo
+        int dstFboID = dstRTT == null ? 0 : ((ES2RTTexture)dstRTT).getFboID();
+        int srcFboID = ((ES2RTTexture)rtt).getFboID();
+        glContext.blitFBO(srcFboID, dstFboID,
+                          srcX0, srcY0, srcX1, srcY1,
+                          dstX0, dstY0, dstX1, dstY1);
     }
 
     void renderMeshView(long nativeHandle, BaseTransform xform, ES2MeshView meshView) {

@@ -113,4 +113,9 @@ class DummySwapChain extends DummyResource implements Presentable {
     public void setOpaque(boolean opaque) {
         this.opaque = opaque;
     }
+
+    @Override
+    public boolean isAntiAliasing() {
+        return false;
+    }
 }

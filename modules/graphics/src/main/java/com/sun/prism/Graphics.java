@@ -146,6 +146,9 @@ public interface Graphics {
     public void drawString(GlyphList gl, FontStrike strike, float x, float y,
                            Color selectColor, int selectStart, int selectEnd);
 
+    public void blit(RTTexture srcTex, RTTexture dstTex,
+                     int srcX0, int srcY0, int srcX1, int srcY1,
+                     int dstX0, int dstY0, int dstX1, int dstY1);
     public void drawTexture(Texture tex, float x, float y, float w, float h);
     public void drawTexture(Texture tex,
                             float dx1, float dy1, float dx2, float dy2,

@@ -58,8 +58,8 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     private final EmbeddedSceneDnD dndDelegate;
 
-    public EmbeddedScene(HostInterface host, boolean depthBuffer) {
-        super(depthBuffer);
+    public EmbeddedScene(HostInterface host, boolean depthBuffer, boolean antiAliasing) {
+        super(depthBuffer, antiAliasing);
         sceneState = new EmbeddedState(this);
 
         this.host = host;

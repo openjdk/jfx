@@ -390,4 +390,4 @@ final public class DummyToolkit extends Toolkit {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-}
+    }

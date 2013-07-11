@@ -35,31 +35,31 @@
 extern char *strJavaToC(JNIEnv *env, jstring str);
 
 void printGLError(GLenum errCode) {
-    fprintf(stderr, "*** GLError Code = ");
+    char const glCString[] = "*** GLError Code = ";
     switch (errCode) {
         case GL_NO_ERROR:
-            fprintf(stderr, "GL_NO_ERROR\n");
+            //fprintf(stderr, "%sGL_NO_ERROR\n", glCString);
             break;
         case GL_INVALID_ENUM:
-            fprintf(stderr, "GL_INVALID_ENUM\n");
+            fprintf(stderr, "%sGL_INVALID_ENUM\n", glCString);
             break;
         case GL_INVALID_VALUE:
-            fprintf(stderr, "GL_INVALID_VALUE\n");
+            fprintf(stderr, "%sGL_INVALID_VALUE\n", glCString);
             break;
         case GL_INVALID_OPERATION:
-            fprintf(stderr, "GL_INVALID_OPERATION\n");
+            fprintf(stderr, "%sGL_INVALID_OPERATION\n", glCString);
             break;
         case GL_STACK_OVERFLOW:
-            fprintf(stderr, "GL_STACK_OVERFLOW\n");
+            fprintf(stderr, "%sGL_STACK_OVERFLOW\n", glCString);
             break;
         case GL_STACK_UNDERFLOW:
-            fprintf(stderr, "GL_STACK_UNDERFLOW\n");
+            fprintf(stderr, "%sGL_STACK_UNDERFLOW\n", glCString);
             break;
         case GL_OUT_OF_MEMORY:
-            fprintf(stderr, "GL_OUT_OF_MEMORY\n");
+            fprintf(stderr, "%sGL_OUT_OF_MEMORY\n", glCString);
             break;
         default:
-            fprintf(stderr, "*** UNKNOWN ERROR CODE ***\n");
+            fprintf(stderr, "%s*** UNKNOWN ERROR CODE ***\n", glCString);
     }
 }
 
@@ -204,6 +204,14 @@ void clearBuffers(ContextInfo *ctxInfo,
     }
 }
 
+void bindFBO(ContextInfo *ctxInfo, GLuint fboId) {
+    if ((ctxInfo == NULL) || (ctxInfo->glBindFramebuffer == NULL)) {
+        return;
+    }
+    ctxInfo->glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+    ctxInfo->state.fbo = fboId;
+}
+
 /*
  * Class:     com_sun_prism_es2_GLContext
  * Method:    nActiveTexture
@@ -226,10 +234,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nActiveTexture
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nBindFBO
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jint fboId) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
-    if ((ctxInfo == NULL) || (ctxInfo->glBindFramebuffer == NULL)) {
-        return;
-    }
-    ctxInfo->glBindFramebuffer(GL_FRAMEBUFFER, (GLuint) fboId);
+    bindFBO(ctxInfo, (GLuint)fboId);
 }
 
 /*
@@ -309,53 +314,165 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nClearBuffers
             clearColor, clearDepth, ignoreScissor);
 }
 
+int checkFramebufferStatus(ContextInfo *ctxInfo) {
+    GLenum status;
+    status = ctxInfo->glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        switch(status) {
+            case GL_FRAMEBUFFER_COMPLETE:
+                return GL_FALSE;
+                break;
+            case GL_FRAMEBUFFER_UNSUPPORTED:
+            //Choose different formats
+                fprintf(stderr, "Framebuffer object format is unsupported by the video hardware. (GL_FRAMEBUFFER_UNSUPPORTED)(FBO - 820)\n");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                fprintf(stderr, "Incomplete attachment. (GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT)(FBO - 820)\n");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                fprintf(stderr, "Incomplete missing attachment. (GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT)(FBO - 820)\n");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
+                fprintf(stderr, "Incomplete dimensions. (GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT)(FBO - 820)\n");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT:
+                fprintf(stderr, "Incomplete formats. (GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT)(FBO - 820)\n");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+                fprintf(stderr, "Incomplete draw buffer. (GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER)(FBO - 820)\n");
+                break; 
+            case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+                fprintf(stderr, "Incomplete read buffer. (GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER)(FBO - 820)\n");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+                fprintf(stderr, "Incomplete multisample buffer. (GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE)(FBO - 820)\n");
+                break;
+            default:
+                //Programming error; will fail on all hardware
+                fprintf(stderr, "Some video driver error or programming error occurred. Framebuffer object status is invalid. (FBO - 823)\n");
+                break;
+        }
+        return GL_TRUE;
+    }
+    return GL_FALSE;
+}
+
 /*
  * Class:     com_sun_prism_es2_GLContext
- * Method:    nCreateDepthBuffer
- * Signature: (JII)I
+ * Method:    nBlit
+ * Signature: (JIIIIIIIIII)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateDepthBuffer
-(JNIEnv *env, jclass class, jlong nativeCtxInfo, jint width, jint height) {
-    GLuint dbID;
-    GLenum status;
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nBlit
+(JNIEnv *env, jclass class, jlong nativeCtxInfo, jint srcFBO, jint dstFBO,
+            int jsrcX0, int jsrcY0, jint srcX1, jint srcY1,
+            int jdstX0, int jdstY0, jint dstX1, jint dstY1) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
+    if ((ctxInfo == NULL) || (ctxInfo->glGenFramebuffers == NULL)
+            || (ctxInfo->glBindFramebuffer == NULL)
+            || (ctxInfo->glBlitFramebuffer == NULL)) {
+        return 0;
+    }
+
+    if (dstFBO == 0) {
+        dstFBO = ctxInfo->state.fbo;
+    }
+    //Bind the FBOs
+    ctxInfo->glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)srcFBO);
+    ctxInfo->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)dstFBO);
+    ctxInfo->glBlitFramebuffer(jsrcX0, jsrcY0, srcX1, srcY1,
+                               jdstX0, jdstY0, dstX1, dstY1,
+                               GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    /* TODO: iOS MSAA support:
+     * We are using glBlitFramebuffer to "resolve" the mutlisample buffer,
+     * to a color destination. iOS does things differently, it uses
+     * glResolveMultisampleFramebufferAPPLE() in place of glBlit...
+     * Problem is glResolve.. does not take arguments so we can't flip
+     * coordinate system.
+     */
+
+    // Restore previous FBO
+    ctxInfo->glBindFramebuffer(GL_FRAMEBUFFER, ctxInfo->state.fbo);
+    return ctxInfo->state.fbo;
+}
+
+GLuint attachRenderbuffer(ContextInfo *ctxInfo, GLuint rbID, GLenum attachment) {
+    //GLenum status;
+    ctxInfo->glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
+            GL_RENDERBUFFER, rbID);
+    ctxInfo->glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    //status = ctxInfo->glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (checkFramebufferStatus(ctxInfo)) {
+        ctxInfo->glDeleteRenderbuffers(1, &rbID);
+        rbID = 0;
+        fprintf(stderr, "Error creating render buffer object %d\n", rbID);
+    } else {
+        // explicitly clear the render buffers, since it may contain
+        // garbage after initialization
+        clearBuffers(ctxInfo, 0, 0, 0, 0, JNI_FALSE, JNI_TRUE, JNI_TRUE);
+    }
+    return rbID;
+}
+
+GLuint createAndAttachRenderBuffer(ContextInfo *ctxInfo, GLsizei width, GLsizei height, GLsizei msaa, GLenum attachment) {
+    GLuint rbID;
+    GLenum internalFormat;
 
     if ((ctxInfo == NULL) || (ctxInfo->glGenRenderbuffers == NULL)
             || (ctxInfo->glBindRenderbuffer == NULL)
             || (ctxInfo->glRenderbufferStorage == NULL)
             || (ctxInfo->glFramebufferRenderbuffer == NULL)
+#ifndef IS_EGL
+            || (ctxInfo->glRenderbufferStorageMultisample == NULL)
+#endif
             || (ctxInfo->glCheckFramebufferStatus == NULL)
             || (ctxInfo->glDeleteRenderbuffers == NULL)) {
         return 0;
     }
 
-    // create a depth buffer
-    ctxInfo->glGenRenderbuffers(1, &dbID);
-    ctxInfo->glBindRenderbuffer(GL_RENDERBUFFER, dbID);
+    if (attachment == GL_DEPTH_ATTACHMENT) {
 #ifdef IS_EGL
-    ctxInfo->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,
-            width, height);
+        internalFormat = GL_DEPTH_COMPONENT16;
 #else
-    ctxInfo->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT,
-            width, height);
+        internalFormat = GL_DEPTH_COMPONENT;
 #endif
-    ctxInfo->glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-            GL_RENDERBUFFER, dbID);
-    ctxInfo->glBindRenderbuffer(GL_RENDERBUFFER, 0);
-    status = ctxInfo->glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-        ctxInfo->glDeleteRenderbuffers(1, &dbID);
-        dbID = 0;
-        fprintf(stderr,
-                "Error creating depth buffer object with size =(%d, %d)",
-                (int) width, (int) height);
+    } else {
+        internalFormat = GL_RGBA8; //TODO verify format on RGBA or RGBA8
     }
+    // create a depth buffer
+    ctxInfo->glGenRenderbuffers(1, &rbID);
+    ctxInfo->glBindRenderbuffer(GL_RENDERBUFFER, rbID);
+#ifdef IS_EGL
+    ctxInfo->glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
+#else
+    if (msaa) {
+        ctxInfo->glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa, internalFormat, width, height);
+    } else {
+        ctxInfo->glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
+    }
+#endif
+    return attachRenderbuffer(ctxInfo, rbID, attachment);
+}
 
-    // explicitly clear the depth buffers, since it may contain
-    // garbage after initialization
-    clearBuffers(ctxInfo, 0, 0, 0, 0, JNI_FALSE, JNI_TRUE, JNI_TRUE);
+/*
+ * Class:     com_sun_prism_es2_GLContext
+ * Method:    nCreateDepthBuffer
+ * Signature: (JIII)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateDepthBuffer
+(JNIEnv *env, jclass class, jlong nativeCtxInfo, jint width, jint height, int msaa) {
+    ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
+    return createAndAttachRenderBuffer(ctxInfo, width, height, msaa, GL_DEPTH_ATTACHMENT);
+}
 
-    return dbID;
+/*
+ * Class:     com_sun_prism_es2_GLContext
+ * Method:    nCreateRenderBuffer
+ * Signature: (JIII)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateRenderBuffer
+(JNIEnv *env, jclass class, jlong nativeCtxInfo, jint width, jint height, int msaa) {
+    ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
+    return createAndAttachRenderBuffer(ctxInfo, width, height, msaa, GL_COLOR_ATTACHMENT0);
 }
 
 /*
@@ -365,47 +482,37 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateDepthBuffer
  */
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateFBO
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jint texID) {
-    GLint savedFboID;
     GLuint fboID;
-    GLenum status;
 
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if ((ctxInfo == NULL) || (ctxInfo->glGenFramebuffers == NULL)
-            || (ctxInfo->glBindFramebuffer == NULL)
             || (ctxInfo->glFramebufferTexture2D == NULL)
             || (ctxInfo->glCheckFramebufferStatus == NULL)
             || (ctxInfo->glDeleteFramebuffers == NULL)) {
         return 0;
     }
 
-    // save current framebuffer object
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *) & savedFboID);
-
     // initialize framebuffer object
     ctxInfo->glGenFramebuffers(1, &fboID);
-    ctxInfo->glBindFramebuffer(GL_FRAMEBUFFER, fboID);
+    bindFBO(ctxInfo, fboID);
 
-    // attach color texture to framebuffer object
-    ctxInfo->glFramebufferTexture2D(GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, (GLuint) texID, 0);
-
-    status = ctxInfo->glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-    // explicitly clear the color buffer, since it may contain garbage
-    // after initialization
-    clearBuffers(ctxInfo, 0, 0, 0, 0, JNI_TRUE, JNI_FALSE, JNI_TRUE);
-
-    // restore previous framebuffer objects
-    ctxInfo->glBindFramebuffer(GL_FRAMEBUFFER, savedFboID);
-
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-        ctxInfo->glDeleteFramebuffers(1, &fboID);
-        fboID = 0;
-        fprintf(stderr,
-                "Error creating framebuffer object with TexID %d)", (int) texID);
+    if (texID) {
+        // Attach color texture to framebuffer object
+        ctxInfo->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                        GL_TEXTURE_2D, (GLuint)texID, 0);
+        // Can't check status of FBO until after a buffer is attached to it
+        if (checkFramebufferStatus(ctxInfo)) {
+            ctxInfo->glDeleteFramebuffers(1, &fboID);
+            fprintf(stderr,
+                    "Error creating framebuffer object with TexID %d)\n", (int) texID);
+            return 0;
+        }
+        // explicitly clear the color buffer, since it may contain garbage
+        // after initialization
+        clearBuffers(ctxInfo, 0, 0, 0, 0, JNI_TRUE, JNI_FALSE, JNI_TRUE);
     }
 
-    return (jint) fboID;
+    return (jint)fboID;
 }
 
 /*
@@ -490,7 +597,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateProgram
                 if (length) {
                     char* msg  =  (char *) malloc((length * sizeof(char)) + 1);
                     ctxInfo->glGetShaderInfoLog ( shaderProgram , length , NULL , msg );
-                    printf("Shader validation log: %s\n",msg);
+                    fprintf(stderr, "Shader validation log: %s\n", msg);
+                    fflush(stderr);
                     free(msg);
                 }
             }
@@ -613,6 +721,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateTexture
     }
     return (jint) texID;
 }
+
 /*
  * Class:     com_sun_prism_es2_GLContext
  * Method:    nDisposeShaders
@@ -747,8 +856,21 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGenAndBindTexture
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetFBO
 (JNIEnv *env, jclass class) {
     GLint param;
+    /* TODO: Should use state.fbo vs Querying GL */
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &param);
     return (jint) param;
+}
+
+/*
+ * Class:     com_sun_prism_es2_GLContext
+ * Method:    nGetMaxSampleSize
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetMaxSampleSize
+(JNIEnv *env, jclass class) {
+    GLint samples;
+    glGetIntegerv(GL_MAX_SAMPLES, &samples);
+    return (jint)samples;
 }
 
 /*
@@ -1100,6 +1222,27 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nUpdateViewport
     }
 
     glViewport((GLint) x, (GLint) y, (GLsizei) w, (GLsizei) h);
+}
+
+/*
+ * Class:     com_sun_prism_es2_GLContext
+ * Method:    nSetMSAA
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetMSAA
+(JNIEnv *env, jclass class, jlong nativeCtxInfo, jboolean msaa) {
+#ifndef IS_EGL
+    ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
+    if (ctxInfo == NULL) {
+        return;
+    }
+
+    if (msaa) {
+        glEnable(GL_MULTISAMPLE);
+    } else {
+        glDisable(GL_MULTISAMPLE);
+    }
+#endif
 }
 
 /*

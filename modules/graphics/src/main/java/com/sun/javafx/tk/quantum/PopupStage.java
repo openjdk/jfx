@@ -56,8 +56,8 @@ final class PopupStage extends WindowStage  {
     }
 
     @Override
-    public TKScene createTKScene(boolean depthBuffer) {
-        return new PopupScene(depthBuffer);
+    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing) {
+        return new PopupScene(depthBuffer, antiAliasing);
     }
 
     public void setResizable(final boolean resizable) {

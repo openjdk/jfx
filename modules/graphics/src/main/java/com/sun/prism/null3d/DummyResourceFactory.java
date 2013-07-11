@@ -79,6 +79,11 @@ class DummyResourceFactory extends BaseShaderFactory {
 
     @Override
     public RTTexture createRTTexture(int width, int height, WrapMode wrapMode) {
+        return createRTTexture(width, height, wrapMode, false);
+    }
+
+    @Override
+    public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean antiAliasing) {
         return new DummyRTTexture(context, wrapMode, width, height);
     }
 

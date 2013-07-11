@@ -174,8 +174,8 @@ class WindowStage extends GlassStage {
         return style;
     }
 
-    @Override public TKScene createTKScene(boolean depthBuffer) {
-        return new ViewScene(depthBuffer);
+    @Override public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing) {
+        return new ViewScene(depthBuffer, antiAliasing);
     }
     
     /**

@@ -53,7 +53,7 @@ public interface TKStage {
      *
      * @return scenePeer The peer of the scene to be displayed
      */
-    public TKScene createTKScene(boolean depthBuffer);
+    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing);
 
     /**
      * Set the scene to be displayed in this stage

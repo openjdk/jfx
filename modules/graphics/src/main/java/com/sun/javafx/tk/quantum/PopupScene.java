@@ -27,8 +27,8 @@ package com.sun.javafx.tk.quantum;
 
 final class PopupScene extends ViewScene {
 
-    public PopupScene(boolean depthBuffer) {
-        super(depthBuffer);
+    public PopupScene(boolean depthBuffer, boolean antiAliasing) {
+        super(depthBuffer, antiAliasing);
     }
 
     private PopupStage getPopupStage() {

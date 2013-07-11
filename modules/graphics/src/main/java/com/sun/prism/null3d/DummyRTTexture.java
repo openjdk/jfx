@@ -102,4 +102,9 @@ class DummyRTTexture extends DummyTexture implements RTTexture {
     public boolean isVolatile() {
         return false;
     }
+
+    @Override
+    public boolean isAntiAliasing() {
+        return false;
+    }
 }

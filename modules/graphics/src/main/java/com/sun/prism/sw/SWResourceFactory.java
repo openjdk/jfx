@@ -49,7 +49,7 @@ import com.sun.prism.shape.ShapeRep;
 final class SWResourceFactory
     extends BaseResourceFactory
         implements ResourceFactory {
-            
+
     private static final ShapeRep theRep = new BasicShapeRep();
     private static final ShapeRep rectRep = new BasicRoundRectRep();
 
@@ -96,12 +96,13 @@ final class SWResourceFactory
     @Override public VertexBuffer createVertexBuffer(int maxQuads) {
         throw new UnsupportedOperationException("createVertexBuffer:unimp");
     }
-            
-    @Override public Presentable createPresentable(PresentableState pstate) {
+
+    
+    @Override public Presentable createPresentable(PresentableState pState) {
         if (PrismSettings.debug) {
             System.out.println("+ SWRF.createPresentable()");
         }
-        return new SWPresentable(pstate, this);
+        return new SWPresentable(pState, this);
     }
 
     public int getRTTWidth(int w, WrapMode wrapMode) {
@@ -110,6 +111,10 @@ final class SWResourceFactory
 
     public int getRTTHeight(int h, WrapMode wrapMode) {
         return h;
+    }
+
+    @Override public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean antiAliasing) {
+        return createRTTexture(width, height, wrapMode);
     }
 
     @Override public RTTexture createRTTexture(int width, int height,
@@ -126,7 +131,7 @@ final class SWResourceFactory
     @Override public int getMaximumTextureSize() {
         return Integer.MAX_VALUE;
     }
-            
+
     @Override public boolean isFormatSupported(PixelFormat format) {
         switch (format) {
             case BYTE_RGB:

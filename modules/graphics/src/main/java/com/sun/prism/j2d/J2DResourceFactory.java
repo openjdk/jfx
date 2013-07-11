@@ -38,7 +38,6 @@ import com.sun.prism.Texture;
 import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.BaseResourceFactory;
-import com.sun.prism.impl.ManagedResource;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.impl.shape.BasicShapeRep;
@@ -88,6 +87,11 @@ class J2DResourceFactory extends BaseResourceFactory
 
     public int getRTTHeight(int h, WrapMode wrapMode) {
         return h;
+    }
+
+    @Override
+    public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean antiAliasing) {
+        return createRTTexture(width, height, wrapMode);
     }
 
     public RTTexture createRTTexture(int width, int height, WrapMode wrapMode) {

@@ -85,6 +85,11 @@ public class NULL3DPipeline extends GraphicsPipeline {
     }
 
     @Override
+    public boolean isAntiAliasingSupported() {
+        return true;
+    }
+
+    @Override
     public boolean isVsyncSupported() {
         return false;
     }

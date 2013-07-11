@@ -238,6 +238,12 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     @Override
+    public boolean isAntiAliasingSupported() {
+        //TODO: 3D - Add AA support for D3D
+        return false;
+    }
+
+    @Override
     public boolean isVsyncSupported() {
         return true;
     }

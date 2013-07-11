@@ -190,7 +190,8 @@ public class Scene implements EventTarget {
     private double widthSetByUser = -1.0;
     private double heightSetByUser = -1.0;
     private boolean sizeInitialized = false;
-    private boolean depthBuffer = false;
+    private final boolean depthBuffer;
+    private final boolean antiAliasing;
 
     private int dirtyBits;
 
@@ -215,7 +216,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      */
     public Scene(Parent root) {
-        this(root, -1, -1, Color.WHITE, false);
+        this(root, -1, -1, Color.WHITE, false, false);
     }
 
 //Public constructor initializing public-init properties
@@ -246,7 +247,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      */
     public Scene(Parent root, double width, double height) {
-        this(root, width, height, Color.WHITE, false);
+        this(root, width, height, Color.WHITE, false, false);
     }
 
     /**
@@ -260,7 +261,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      */
     public Scene(Parent root, @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
-        this(root, -1, -1, fill, false);
+        this(root, -1, -1, fill, false, false);
     }
 
     /**
@@ -277,7 +278,7 @@ public class Scene implements EventTarget {
      */
     public Scene(Parent root, double width, double height,
             @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
-        this(root, width, height, fill, false);
+        this(root, width, height, fill, false, false);
     }
 
     /**
@@ -301,7 +302,7 @@ public class Scene implements EventTarget {
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      */
     public Scene(Parent root, @Default("-1") double width, @Default("-1") double height, boolean depthBuffer) {
-        this(root, width, height, Color.WHITE, depthBuffer);
+        this(root, width, height, Color.WHITE, depthBuffer, false);
     }
 
     /**
@@ -330,33 +331,26 @@ public class Scene implements EventTarget {
     public Scene(Parent root, @Default("-1") double width, @Default("-1") double height,
             boolean depthBuffer, boolean antiAliasing) {
 
-        // TODO: 3D - Support scene anti-aliasing using MSAA.
-        this(root, width, height, Color.WHITE, depthBuffer);
+        this(root, width, height, Color.WHITE, depthBuffer, antiAliasing);
 
-        // NOTE: this block will be removed once implement anti-aliasing
-        if (antiAliasing) {
-            String logname = Scene.class.getName();
-            PlatformLogger.getLogger(logname).warning("3D anti-aliasing is "
-                    + "not supported yet.");
-        }
-
-        if ((depthBuffer || antiAliasing)
-                && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+        if (antiAliasing && !com.sun.prism.GraphicsPipeline.getPipeline().isAntiAliasingSupported())
+        {
             String logname = Scene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
-                    + "ConditionalFeature.SCENE3D");
-            // TODO: 3D - ignore depthBuffer and antiAliasing at rendering time
+                + "antiAliasing");
         }
     }
 
     private Scene(Parent root, double width, double height,
             @Default("javafx.scene.paint.Color.WHITE") Paint fill,
-            boolean depthBuffer) {
+            boolean depthBuffer, boolean antiAliasing) {
+        this.depthBuffer = depthBuffer;
+        this.antiAliasing = antiAliasing;
         if (root == null) {
             throw new NullPointerException("Root cannot be null");
         }
 
-        if (depthBuffer && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+        if ((depthBuffer || antiAliasing) && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = Scene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
@@ -364,7 +358,7 @@ public class Scene implements EventTarget {
 
         Toolkit.getToolkit().checkFxUserThread();
         setRoot(root);
-        init(width, height, depthBuffer);
+        init(width, height);
         setFill(fill);
     }
 
@@ -661,9 +655,13 @@ public class Scene implements EventTarget {
      * Return true if this {@code Scene} is anti-aliased otherwise false.
      * @since JavaFX 8.0
      */
-    public boolean isAntiAliasing() {
-        //TODO: 3D - Implement this method.
-        return false; // For now
+    public final boolean isAntiAliasing() {
+        return antiAliasing;
+    }
+
+    private boolean isAntiAliasingInternal() {
+        return antiAliasing && com.sun.prism.GraphicsPipeline.getPipeline().isAntiAliasingSupported() &&
+                Platform.isSupported(ConditionalFeature.SCENE3D);
     }
 
     /**
@@ -751,7 +749,7 @@ public class Scene implements EventTarget {
         impl_setAllowPGAccess(true);
 
         Toolkit tk = Toolkit.getToolkit();
-        impl_peer = windowPeer.createTKScene(isDepthBufferInteral());
+        impl_peer = windowPeer.createTKScene(isDepthBufferInternal(), isAntiAliasingInternal());
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
         impl_peer.setSecurityContext(acc);
         impl_peer.setTKSceneListener(new ScenePeerListener());
@@ -1296,7 +1294,7 @@ public class Scene implements EventTarget {
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
         return doSnapshot(this, 0, 0, w, h,
-                getRoot(), transform, isDepthBufferInteral(),
+                getRoot(), transform, isDepthBufferInternal(),
                 getFill(), getEffectiveCamera(), img);
     }
 
@@ -1537,14 +1535,14 @@ public class Scene implements EventTarget {
         return depthBuffer;
     }
 
-    boolean isDepthBufferInteral() {
+    boolean isDepthBufferInternal() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             return false;
         }
         return depthBuffer;
     }
 
-    private void init(double width, double height, boolean depthBuffer) {
+    private void init(double width, double height) {
         if (width >= 0) {
             widthSetByUser = width;
             setWidth((float)width);
@@ -1554,7 +1552,6 @@ public class Scene implements EventTarget {
             setHeight((float)height);
         }
         sizeInitialized = (widthSetByUser >= 0 && heightSetByUser >= 0);
-        this.depthBuffer = depthBuffer;
         init();
     }
 

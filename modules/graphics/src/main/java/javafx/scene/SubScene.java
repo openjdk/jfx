@@ -76,9 +76,7 @@ public class SubScene extends Node {
      * @throws NullPointerException if root is null
      */
     public SubScene(Parent root, double width, double height) {
-        setRoot(root);
-        setWidth(width);
-        setHeight(height);
+        this(root, width, height, false, false);
     }
 
     /**
@@ -104,43 +102,53 @@ public class SubScene extends Node {
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      */
     public SubScene(Parent root, double width, double height,
-            boolean depthBuffer, boolean antiAliasing) {
-        this(root, width, height);
+            boolean depthBuffer, boolean antiAliasing)
+    {
         this.depthBuffer = depthBuffer;
+        this.antiAliasing = antiAliasing;
+        setRoot(root);
+        setWidth(width);
+        setHeight(height);
 
-        // NOTE: this block will be removed once implement anti-aliasing
-        if (antiAliasing) {
-            String logname = SubScene.class.getName();
-            PlatformLogger.getLogger(logname).warning("3D anti-aliasing is "
-                    + "not supported yet.");
-        }
-
-        if ((depthBuffer || antiAliasing)
-                && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+        if ((depthBuffer || antiAliasing) && !is3DSupported) {
             String logname = SubScene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
-            // TODO: 3D - ignore depthBuffer and antiAliasing at rendering time
         }
-        //TODO: 3D - verify that depthBuffer is working correctly
-        //TODO: 3D - complete antiAliasing
+        if (antiAliasing && !com.sun.prism.GraphicsPipeline.
+                getPipeline().isAntiAliasingSupported()) {
+            String logname = SubScene.class.getName();
+            PlatformLogger.getLogger(logname).warning("System can't support "
+                    + "antiAliasing");
+        }
     }
+
+    private static boolean is3DSupported =
+            Platform.isSupported(ConditionalFeature.SCENE3D);
+
+    private final boolean antiAliasing;
 
     /**
      * Return true if this {@code SubScene} is anti-aliased otherwise false.
      */
-    public boolean isAntiAliasing() {
-        throw new UnsupportedOperationException("Unsupported --- *** isAntiAliasing method ***");
+    public final boolean isAntiAliasing() {
+        return antiAliasing;
     }
 
-    private boolean depthBuffer = false;
+    private final boolean depthBuffer;
 
-    boolean isDepthBufferInteral() {
-        if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
-            return false;
-        }
+    /**
+     * Retrieves the depth buffer attribute for this SubScene.
+     * @return the depth buffer attribute.
+     */
+    public final boolean isDepthBuffer() {
         return depthBuffer;
     }
+
+    private boolean isDepthBufferInternal() {
+        return is3DSupported ? depthBuffer : false;
+    }
+
     /**
      * Defines the root {@code Node} of the SubScene scene graph.
      * If a {@code Group} is used as the root, the
@@ -263,7 +271,7 @@ public class SubScene extends Node {
                     Camera _value = get();
                     if (_value != null) {
                         if (_value instanceof PerspectiveCamera
-                                && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                                && !SubScene.is3DSupported) {
                             String logname = SubScene.class.getName();
                             PlatformLogger.getLogger(logname).warning("System can't support "
                                     + "ConditionalFeature.SCENE3D");
@@ -305,8 +313,7 @@ public class SubScene extends Node {
     Camera getEffectiveCamera() {
         final Camera cam = getCamera();
         if (cam == null
-                || (cam instanceof PerspectiveCamera
-                && !Platform.isSupported(ConditionalFeature.SCENE3D))) {
+                || (cam instanceof PerspectiveCamera && !is3DSupported)) {
             if (defaultCamera == null) {
                 defaultCamera = new ParallelCamera();
                 defaultCamera.setOwnerSubScene(this);
@@ -487,7 +494,6 @@ public class SubScene extends Node {
                 peer.setFillPaint(platformPaint);
                 contentChanged = true;
             }
-            peer.setDepthBuffer(isDepthBufferInteral());
             if (isDirty(SubSceneDirtyBits.SIZE_DIRTY)) {
                 // Note change in size is a geom change and is handled by peer
                 peer.setWidth((float)getWidth());
@@ -556,7 +562,11 @@ public class SubScene extends Node {
      */
     @Deprecated    @Override
     protected NGNode impl_createPeer() {
-        return new NGSubScene();
+        if (!is3DSupported) {
+            return new NGSubScene(false, false);
+        }
+        return new NGSubScene(depthBuffer, antiAliasing &&
+                com.sun.prism.GraphicsPipeline.getPipeline().isAntiAliasingSupported());
     }
 
     /**
@@ -769,7 +779,7 @@ public class SubScene extends Node {
 
             @Override
             public boolean isDepthBuffer(SubScene subScene) {
-                return subScene.isDepthBufferInteral();
+                return subScene.isDepthBufferInternal();
             };
 
             @Override

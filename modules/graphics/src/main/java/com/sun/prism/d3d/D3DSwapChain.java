@@ -135,4 +135,9 @@ class D3DSwapChain
     public void setOpaque(boolean opaque) {
         texBackBuffer.setOpaque(opaque);
     }
+
+    public boolean isAntiAliasing() {
+        //TODO: 3D - Add AA support for D3D
+        return false;
+    }
 }

@@ -50,8 +50,8 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     // TKStage methods
 
     @Override
-    public TKScene createTKScene(boolean depthBuffer) {
-        return new EmbeddedScene(host, depthBuffer);
+    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing) {
+        return new EmbeddedScene(host, depthBuffer, antiAliasing);
     }
 
     @Override

@@ -282,4 +282,8 @@ public abstract class J2DPresentable implements Presentable {
     public boolean recreateOnResize() {
         return false;
     }
+
+    @Override public boolean isAntiAliasing() {
+        return false;
+    }
 }
