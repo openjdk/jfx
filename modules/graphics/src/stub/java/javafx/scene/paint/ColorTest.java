@@ -25,18 +25,16 @@
 
 package javafx.scene.paint;
 
+import javafx.animation.Interpolatable;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import com.sun.javafx.Utils;
+import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import javafx.animation.Interpolatable;
-
-import org.junit.Test;
-
-import com.sun.javafx.Utils;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 
 public class ColorTest {
     
@@ -956,31 +954,4 @@ public class ColorTest {
     //function testOfTheWayHandlesLargeNumbers() {
         // TODO What should happen for numbers > 1?
     //}
-
-    @Test
-    public void testBuilderDefaultOpacity() {
-        Color color = ColorBuilder.create().red(0.125).green(0.25).blue(0.5).build();
-        assertEquals(0.125, color.getRed(), 0);
-        assertEquals(0.25, color.getGreen(), 0);
-        assertEquals(0.5, color.getBlue(), 0);
-        assertEquals(1, color.getOpacity(), 0);
-    }
-
-    @Test
-    public void testBuilderDefaultEverything() {
-        Color color = ColorBuilder.create().build();
-        assertEquals(0, color.getRed(), 0);
-        assertEquals(0, color.getGreen(), 0);
-        assertEquals(0, color.getBlue(), 0);
-        assertEquals(1, color.getOpacity(), 0);
-    }
-
-    @Test
-    public void testBuilderExplicitEverything() {
-        Color color = ColorBuilder.create().blue(0.5).red(0.75).green(0.875).opacity(0.625).build();
-        assertEquals(0.5, color.getBlue(), 0);
-        assertEquals(0.75, color.getRed(), 0);
-        assertEquals(0.875, color.getGreen(), 0);
-        assertEquals(0.625, color.getOpacity(), 0);
-    }
 }

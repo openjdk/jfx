@@ -25,22 +25,18 @@
 
 package javafx.stage;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertTrue;
-import static junit.framework.Assert.assertSame;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.sun.javafx.pgstub.StubStage;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.tk.Toolkit;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 
 public class StageTest {
 
@@ -165,43 +161,6 @@ public class StageTest {
         pulse();
         assertEquals(100f, peer.x);
         assertEquals(3, peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation);
-    }
-
-    /**
-     * Test that StageBuilder includes all the expected properties (RT-13594, RT-13595).
-     */
-    public @Test void testStageBuilder() {
-        Scene scene = new Scene(new Group());
-        StageBuilder<?> builder = StageBuilder.create();
-        // Usually builder calls are chained but because this is a test we write each one on its own line
-        // so that if one of them fails to compile or throws an exception we can easily see which one it was.
-        builder.focused(false);
-        builder.fullScreen(false);
-        builder.height(100);
-        builder.width(200);
-        builder.iconified(false);
-        builder.icons(new Image[0]);
-        builder.opacity(0.5);
-        builder.resizable(false);
-        builder.title("yes");
-        builder.x(300);
-        builder.y(400);
-        builder.scene(scene);
-
-        Stage stage = builder.build();
-        stage.show();
-        assertFalse(stage.isFocused());
-        assertFalse(stage.isFullScreen());
-        assertEquals(100.0, stage.getHeight(), 0);
-        assertEquals(200.0, stage.getWidth(), 0);
-        assertFalse(stage.isIconified());
-        assertEquals(0, stage.getIcons().size());
-        assertEquals(0.5, stage.getOpacity(), 0);
-        assertEquals(false, stage.isResizable());
-        assertEquals("yes", stage.getTitle());
-        assertEquals(300.0, stage.getX(), 0);
-        assertEquals(400.0, stage.getY(), 0);
-        assertSame(scene, stage.getScene());
     }
 
     @Test

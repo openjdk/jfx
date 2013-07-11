@@ -25,18 +25,16 @@
 
 package javafx.scene.paint;
 
+import java.util.Arrays;
+import java.util.List;
 import com.sun.javafx.tk.Toolkit;
+import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import java.util.Arrays;
-import java.util.List;
-
-import org.junit.Test;
 
 public class LinearGradientTest {
 
@@ -282,22 +280,20 @@ public class LinearGradientTest {
 
     @Test
     public void testValueOfCycleMethod() {
-        LinearGradient actual =
-                LinearGradient.valueOf("linear-gradient(repeat, red  0%, blue  30%,black 100%)");
-        LinearGradientBuilder builder =
-                LinearGradientBuilder.create().startX(0).startY(0).endX(0).endY(1)
-                .proportional(true)
-                .cycleMethod(CycleMethod.REPEAT)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK));
-        LinearGradient expected = builder.build();
+        LinearGradient actual = LinearGradient.valueOf("linear-gradient(repeat, red  0%, blue  30%,black 100%)");
+        LinearGradient expected = new LinearGradient(0, 0, 0, 1,
+                true, CycleMethod.REPEAT,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
         
-        actual =
-                LinearGradient.valueOf("linear-gradient(reflect, red  0%, blue 30%, black 100%)");
-        builder.cycleMethod(CycleMethod.REFLECT);
-        expected = builder.build();
+        actual = LinearGradient.valueOf("linear-gradient(reflect, red  0%, blue 30%, black 100%)");
+        expected = new LinearGradient(0, 0, 0, 1,
+                true, CycleMethod.REFLECT,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -305,20 +301,20 @@ public class LinearGradientTest {
     public void testValueOfFromTo() {
         LinearGradient actual =
                 LinearGradient.valueOf("linear-gradient(from 10% 20% to 30% 40%, red  0%, blue  30%,black 100%)");
-        LinearGradientBuilder builder =
-                LinearGradientBuilder.create().startX(0.1).startY(0.2).endX(0.3).endY(0.4)
-                .proportional(true)
-                .cycleMethod(CycleMethod.NO_CYCLE)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK));
-        LinearGradient expected = builder.build();
+        LinearGradient expected = new LinearGradient(0.1, 0.2, 0.3, 0.4,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
         
         actual =
                 LinearGradient.valueOf("linear-gradient(from 10px 20px to 30px 40px, red  0%, blue 30%, black 100%)");
-        builder.startX(10).startY(20).endX(30).endY(40).proportional(false);
-        expected = builder.build();
+        expected = new LinearGradient(10, 20, 30, 40,
+                false, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -326,44 +322,56 @@ public class LinearGradientTest {
     public void testValueOfTo() {
         LinearGradient actual =
                 LinearGradient.valueOf("linear-gradient(to top, red  0%, blue  30%,black 100%)");
-        LinearGradientBuilder builder =
-                LinearGradientBuilder.create().startX(0).startY(1).endX(0).endY(0)
-                .proportional(true)
-                .cycleMethod(CycleMethod.NO_CYCLE)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK));
-        LinearGradient expected = builder.build();
+        LinearGradient expected = new LinearGradient(0, 1, 0, 0,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
         
         actual =
                 LinearGradient.valueOf("linear-gradient(to bottom, red  0%, blue  30%,black 100%)");
-        builder.startX(0).startY(0).endX(0).endY(1);
-        expected = builder.build();
+        expected = new LinearGradient(0, 0, 0, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
         
         actual =
                 LinearGradient.valueOf("linear-gradient(to left, red  0%, blue  30%,black 100%)");
-        builder.startX(1).startY(0).endX(0).endY(0);
-        expected = builder.build();
+        expected = new LinearGradient(1, 0, 0, 0,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
         
         actual =
                 LinearGradient.valueOf("linear-gradient(to right, red  0%, blue  30%,black 100%)");
-        builder.startX(0).startY(0).endX(1).endY(0);
-        expected = builder.build();
+        expected = new LinearGradient(0, 0, 1, 0,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
         
         actual =
                 LinearGradient.valueOf("linear-gradient(to bottom left, red  0%, blue  30%,black 100%)");
-        builder.startX(1).startY(0).endX(0).endY(1);
-        expected = builder.build();
+        expected = new LinearGradient(1, 0, 0, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
         
         actual =
                 LinearGradient.valueOf("linear-gradient(to right top, red  0%, blue  30%,black 100%)");
-        builder.startX(0).startY(1).endX(1).endY(0);
-        expected = builder.build();
+        expected = new LinearGradient(0, 1, 1, 0,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
     
@@ -371,13 +379,11 @@ public class LinearGradientTest {
     public void testValueOfRelativeValues() {
         LinearGradient actual =
                 LinearGradient.valueOf("linear-gradient(from 0% 0% to 100% 100%, red  0% , blue 30%,  black 100%)");
-        LinearGradient expected =
-                LinearGradientBuilder.create().startX(0).startY(0).endX(1).endY(1)
-                .proportional(true)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        LinearGradient expected = new LinearGradient(0, 0, 1, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
     
@@ -385,13 +391,11 @@ public class LinearGradientTest {
     public void testValueOfAbsoluteValues() {
         LinearGradient actual =
                 LinearGradient.valueOf("linear-gradient(from 100px 0 to 200px 0px, red 0px, blue 50px,  black 100px)");
-        LinearGradient expected =
-                LinearGradientBuilder.create().startX(100).startY(0).endX(200).endY(0)
-                .proportional(false)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.5, Color.BLUE),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        LinearGradient expected = new LinearGradient(100, 0, 200, 0,
+                false, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
     
@@ -399,12 +403,10 @@ public class LinearGradientTest {
     public void testValueOfColor() {
         LinearGradient actual =
                 LinearGradient.valueOf("linear-gradient(rgb(0,0,255), rgb(255, 0, 0))");
-        LinearGradient expected =
-                LinearGradientBuilder.create().startX(0).startY(0).endX(0).endY(1)
-                .proportional(true)
-                .stops(new Stop(0, Color.BLUE),
-                       new Stop(1.0, Color.RED))
-                .build();
+        LinearGradient expected = new LinearGradient(0, 0, 0, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.BLUE),
+                new Stop(1.0, Color.RED));
         assertEquals(expected, actual);
     }
 
@@ -412,13 +414,11 @@ public class LinearGradientTest {
     public void testValueOfDefaultsToBottom() {
         LinearGradient actual =
                 LinearGradient.valueOf("linear-gradient(red  0%, blue 30%, black 100%)");
-        LinearGradient expected =
-                LinearGradientBuilder.create().startX(0).startY(0).endX(0).endY(1)
-                .proportional(true)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        LinearGradient expected = new LinearGradient(0, 0, 0, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -426,14 +426,12 @@ public class LinearGradientTest {
     public void testValueOfStopsNormalizeLargerValues() {
         LinearGradient actual =
                 LinearGradient.valueOf("linear-gradient(red  10%, blue 9%, red 8%, black 100%)");
-        LinearGradient expected =
-                LinearGradientBuilder.create().startX(0).startY(0).endX(0).endY(1)
-                .proportional(true)
-                .stops(new Stop(0.1, Color.RED),
-                       new Stop(0.1, Color.BLUE),
-                       new Stop(0.1, Color.RED),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        LinearGradient expected = new LinearGradient(0, 0, 0, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0.1, Color.RED),
+                new Stop(0.1, Color.BLUE),
+                new Stop(0.1, Color.RED),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 }
