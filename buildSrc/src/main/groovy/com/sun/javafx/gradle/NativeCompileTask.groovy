@@ -42,12 +42,8 @@ class NativeCompileTask extends DefaultTask {
     List<String> params = new ArrayList<String>();
     List sourceRoots = new ArrayList();
     @OutputDirectory File output;
+    @InputFiles List<File> allFiles;
     private final PatternFilterable patternSet = new PatternSet();
-
-    @InputFiles public void setSource(Object source) {
-        sourceRoots.clear();
-        sourceRoots.add(source);
-    }
 
     public NativeCompileTask source(Object... sources) {
         for (Object source : sources) {
@@ -56,6 +52,12 @@ class NativeCompileTask extends DefaultTask {
             } else {
                 sourceRoots.add(source);
             }
+        }
+        // Combine the different source roots into a single FileCollection based on all files in each source root
+        allFiles = []
+        sourceRoots.each {
+            def dir = project.file(it);
+            allFiles += dir.isDirectory() ? dir.listFiles() : dir;
         }
         return this;
     }
@@ -87,12 +89,6 @@ class NativeCompileTask extends DefaultTask {
         }
 
         project.mkdir(output);
-        // Combine the different source roots into a single FileCollection based on all files in each source root
-        def allFiles = [];
-        sourceRoots.each {
-            def dir = project.file(it);
-            allFiles += dir.isDirectory() ? dir.listFiles() : dir;
-        }
         def source = project.files(allFiles);
         final Set<File> files = matches == null ? new HashSet<File>(source.files) : source.filter{it.name.matches(matches)}.files;
         project.logger.info("Compiling native files: $files");
