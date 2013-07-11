@@ -630,6 +630,15 @@ public class SwingNode extends Node {
             int swingModifiers = SwingEvents.fxKeyModsToKeyMods(event);
             int swingKeyCode = event.getCode().impl_getCode();
             char swingChar = event.getCharacter().charAt(0);
+
+            // A workaround. Some swing L&F's process mnemonics on KEY_PRESSED,
+            // for which swing provides a keychar. Extracting it from the text.
+            if (event.getEventType() == javafx.scene.input.KeyEvent.KEY_PRESSED) {
+                String text = event.getText();
+                if (text.length() == 1) {
+                    swingChar = text.charAt(0);
+                }
+            }
             long swingWhen = System.currentTimeMillis();
             java.awt.event.KeyEvent keyEvent = new java.awt.event.KeyEvent(
                     frame, swingID, swingWhen, swingModifiers,
