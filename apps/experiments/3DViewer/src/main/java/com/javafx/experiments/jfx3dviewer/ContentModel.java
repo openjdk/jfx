@@ -36,7 +36,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.scene.AmbientLight;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -44,8 +43,6 @@ import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.PointLight;
 import javafx.scene.SubScene;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
@@ -57,6 +54,9 @@ import javafx.scene.transform.Translate;
 import com.javafx.experiments.shape3d.PolygonMeshView;
 import com.javafx.experiments.shape3d.SubdivisionMesh;
 import javafx.beans.property.ObjectProperty;
+import javafx.event.EventHandler;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 
 /**
  * 3D Content Model for Viewer App. Contains the 3D scene and everything related to it: light, cameras etc.
@@ -148,6 +148,7 @@ public class ContentModel {
         subScene.setFill(Color.ALICEBLUE);
 
         // CAMERA
+        camera.setNearClip(0.0001); // TODO: Workaround as per RT-31255
         camera.getTransforms().addAll(
                 yUpRotate,
                 cameraXRotate,
@@ -157,14 +158,6 @@ public class ContentModel {
                 cameraLookZRotate);
         subScene.setCamera(camera);
         root3D.getChildren().add(camera);
-
-        cameraPosition.zProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                System.out.println("z = " + newValue);
-            }
-        });
-
         root3D.getChildren().add(autoScalingGroup);
 
         // SCENE EVENT HANDLING FOR CAMERA NAV
@@ -200,6 +193,8 @@ public class ContentModel {
         sessionManager.bind(cameraPosition.zProperty(), "cameraPosition.z");
         sessionManager.bind(cameraXRotate.angleProperty(), "cameraXRotate");
         sessionManager.bind(cameraYRotate.angleProperty(), "cameraYRotate");
+        sessionManager.bind(camera.nearClipProperty(), "cameraNearClip");
+        sessionManager.bind(camera.farClipProperty(), "cameraFarClip");
     }
 
     public boolean getAmbientLightEnabled() {
