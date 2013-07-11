@@ -31,18 +31,22 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.RectangularShape;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGShape;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.PrinterGraphics;
 import com.sun.prism.paint.Paint;
 import com.sun.prism.shape.ShapeRep;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.StrokeType;
 
-import static com.sun.prism.shape.ShapeRep.InvalidationType.*;
+import static com.sun.prism.shape.ShapeRep.InvalidationType.LOCATION;
+import static com.sun.prism.shape.ShapeRep.InvalidationType.LOCATION_AND_GEOMETRY;
 
 /**
  */
-public abstract class NGShape extends NGNode implements PGShape {
+public abstract class NGShape extends NGNode {
+    public enum Mode { EMPTY, FILL, STROKE, STROKE_FILL }
 
     protected Paint fillPaint;
     protected Paint drawPaint;

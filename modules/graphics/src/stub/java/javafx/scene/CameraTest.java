@@ -28,15 +28,16 @@ package javafx.scene;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.pgstub.StubParallelCamera;
-import com.sun.javafx.pgstub.StubPerspectiveCamera;
-import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGParallelCamera;
+import com.sun.javafx.sg.prism.NGPerspectiveCamera;
 import com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.stage.Stage;
-import static org.junit.Assert.*;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class CameraTest {
 
@@ -517,21 +518,21 @@ public class CameraTest {
     @Test
     public void perspectiveCameraShouldSyncWhenAssignedToScene() {
         final Scene scene = new Scene(new Group(), 300, 200);
-        PerspectiveCamera camera = new PerspectiveCamera();
+        PerspectiveCamera camera = new StubPerspectiveCamera();
         scene.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
 
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubPerspectiveCamera pc = (StubPerspectiveCamera) camera.impl_getPGNode();
+        StubNGPerspectiveCamera pc = camera.impl_getPeer();
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
 
         TransformHelper.assertMatrix(pc.getProjViewTx(), DEFAULT_PROJVIEW_TX);
-        assertTrue(pc.isVerticalFOV());
+        assertTrue(pc.isVerticalFieldOfView());
         assertEquals(30, pc.getFieldOfView(), 0.00001);
         assertEquals(150.0, pc.getPosition().x, 0.000001);
         assertEquals(100.0, pc.getPosition().y, 0.000001);
@@ -542,21 +543,21 @@ public class CameraTest {
     public void perspectiveCameraShouldSyncWhenAssignedToSubScene() {
         SubScene sub = new SubScene(new Group(), 300, 200);
         final Scene scene = new Scene(new Group(sub), 600, 300);
-        PerspectiveCamera camera = new PerspectiveCamera();
+        PerspectiveCamera camera = new StubPerspectiveCamera();
         sub.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
 
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubPerspectiveCamera pc = (StubPerspectiveCamera) camera.impl_getPGNode();
+        StubNGPerspectiveCamera pc = camera.impl_getPeer();
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
 
         TransformHelper.assertMatrix(pc.getProjViewTx(), DEFAULT_PROJVIEW_TX);
-        assertTrue(pc.isVerticalFOV());
+        assertTrue(pc.isVerticalFieldOfView());
         assertEquals(30, pc.getFieldOfView(), 0.00001);
         assertEquals(150.0, pc.getPosition().x, 0.000001);
         assertEquals(100.0, pc.getPosition().y, 0.000001);
@@ -566,15 +567,15 @@ public class CameraTest {
     @Test
     public void parallelCameraShouldSyncWhenAssignedToScene() {
         final Scene scene = new Scene(new Group(), 300, 200);
-        ParallelCamera camera = new ParallelCamera();
+        ParallelCamera camera = new StubParallelCamera();
         scene.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
 
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubParallelCamera pc = (StubParallelCamera) camera.impl_getPGNode();
+        StubNGParallelCamera pc = camera.impl_getPeer();
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -592,15 +593,15 @@ public class CameraTest {
     public void parallelCameraShouldSyncWhenAssignedToSubScene() {
         SubScene sub = new SubScene(new Group(), 300, 200);
         final Scene scene = new Scene(new Group(sub), 600, 300);
-        ParallelCamera camera = new ParallelCamera();
+        ParallelCamera camera = new StubParallelCamera();
         sub.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
 
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubParallelCamera pc = (StubParallelCamera) camera.impl_getPGNode();
+        StubNGParallelCamera pc = camera.impl_getPeer();
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -617,13 +618,15 @@ public class CameraTest {
     @Test
     public void sceneDefaultCameraShouldSyncInTheBeginning() {
         final Scene scene = new Scene(new Group(), 300, 200);
+        ParallelCamera camera = new StubParallelCamera();
+        scene.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
 
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubParallelCamera pc = (StubParallelCamera) scene.getEffectiveCamera().impl_getPGNode();
+        StubNGParallelCamera pc = scene.getEffectiveCamera().impl_getPeer();
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -641,13 +644,15 @@ public class CameraTest {
     public void subSceneDefaultCameraShouldSyncInTheBeginning() {
         SubScene sub = new SubScene(new Group(), 300, 200);
         final Scene scene = new Scene(new Group(sub), 600, 300);
+        ParallelCamera camera = new StubParallelCamera();
+        sub.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
 
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubParallelCamera pc = (StubParallelCamera) sub.getEffectiveCamera().impl_getPGNode();
+        StubNGParallelCamera pc = sub.getEffectiveCamera().impl_getPeer();
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -665,18 +670,18 @@ public class CameraTest {
     public void resizeShouldTriggerSync() {
         SubScene sub = new SubScene(new Group(), 400, 300);
         final Scene scene = new Scene(new Group(sub), 600, 300);
-        PerspectiveCamera camera = new PerspectiveCamera();
+        PerspectiveCamera camera = new StubPerspectiveCamera();
         sub.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
         sub.setWidth(300);
         sub.setHeight(200);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubPerspectiveCamera pc = (StubPerspectiveCamera) camera.impl_getPGNode();
+        StubNGPerspectiveCamera pc = camera.impl_getPeer();
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -690,17 +695,17 @@ public class CameraTest {
     @Test
     public void clipChangeShouldTriggerSync() {
         final Scene scene = new Scene(new Group(), 300, 200);
-        PerspectiveCamera camera = new PerspectiveCamera();
+        PerspectiveCamera camera = new StubPerspectiveCamera();
         scene.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
         camera.setFarClip(250.0);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubPerspectiveCamera pc = (StubPerspectiveCamera) camera.impl_getPGNode();
+        StubNGPerspectiveCamera pc = camera.impl_getPeer();
 
         GeneralTransform3D expected = new GeneralTransform3D();
         expected.perspective(true, Math.toRadians(30), 1.5, 0.1, 250);
@@ -719,17 +724,17 @@ public class CameraTest {
     @Test
     public void fieldOfViewChangeShouldTriggerSync() {
         final Scene scene = new Scene(new Group(), 300, 200);
-        PerspectiveCamera camera = new PerspectiveCamera();
+        PerspectiveCamera camera = new StubPerspectiveCamera();
         scene.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
         camera.setFieldOfView(45.0);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubPerspectiveCamera pc = (StubPerspectiveCamera) camera.impl_getPGNode();
+        StubNGPerspectiveCamera pc = camera.impl_getPeer();
 
         GeneralTransform3D expected = new GeneralTransform3D();
         expected.perspective(true, Math.toRadians(45), 1.5, 0.1, 100);
@@ -751,17 +756,17 @@ public class CameraTest {
     @Test
     public void verticalFOVChangeShouldTriggerSync() {
         final Scene scene = new Scene(new Group(), 300, 200);
-        PerspectiveCamera camera = new PerspectiveCamera();
+        PerspectiveCamera camera = new StubPerspectiveCamera();
         scene.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
         camera.setVerticalFieldOfView(false);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubPerspectiveCamera pc = (StubPerspectiveCamera) camera.impl_getPGNode();
+        StubNGPerspectiveCamera pc = camera.impl_getPeer();
 
         GeneralTransform3D expected = new GeneralTransform3D();
         expected.perspective(false, Math.toRadians(30), 1.5, 0.1, 100);
@@ -782,18 +787,18 @@ public class CameraTest {
 
     @Test
     public void localToSceneChangeShouldTriggerSync() {
-        PerspectiveCamera camera = new PerspectiveCamera();
+        PerspectiveCamera camera = new StubPerspectiveCamera();
         final Scene scene = new Scene(new Group(new Group(camera)), 300, 200);
         scene.setCamera(camera);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
         camera.getParent().setTranslateX(200);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
-        StubPerspectiveCamera pc = (StubPerspectiveCamera) camera.impl_getPGNode();
+        StubNGPerspectiveCamera pc = camera.impl_getPeer();
 
         GeneralTransform3D expected = new GeneralTransform3D();
         expected.set(DEFAULT_PROJVIEW_TX);
@@ -804,5 +809,75 @@ public class CameraTest {
         assertEquals(100.0, pc.getPosition().y, 0.000001);
         assertEquals(-373.205080, pc.getPosition().z, 0.000001);
         TransformHelper.assertMatrix(pc.getWorldTransform(), Affine3D.getTranslateInstance(200, 0));
+    }
+
+    private class StubPerspectiveCamera extends PerspectiveCamera {
+        @Override
+        protected NGNode impl_createPeer() {
+            return new StubNGPerspectiveCamera(isFixedEyeAtCameraZero());
+        }
+    }
+
+    private class StubNGPerspectiveCamera extends NGPerspectiveCamera {
+        double viewWidth, viewHeight;
+        Vec3d position;
+        GeneralTransform3D projViewTx;
+        Affine3D localToWorldTx;
+        float fieldOfView;
+        boolean verticalFieldOfView;
+
+        public StubNGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
+            super(fixedEyeAtCameraZero);
+        }
+
+        @Override public void setViewWidth(double viewWidth) { this.viewWidth = viewWidth; }
+        public double getViewWidth() { return viewWidth; }
+
+        @Override public void setViewHeight(double viewHeight) { this.viewHeight = viewHeight; }
+        public double getViewHeight() { return viewHeight; }
+
+        @Override public void setPosition(Vec3d position) { this.position = position; }
+        public Vec3d getPosition() { return position; }
+
+        @Override public void setWorldTransform(Affine3D localToWorldTx) { this.localToWorldTx = localToWorldTx; }
+        public Affine3D getWorldTransform() { return localToWorldTx; }
+
+        @Override public void setProjViewTransform(GeneralTransform3D projViewTx) { this.projViewTx = projViewTx; }
+        public GeneralTransform3D getProjViewTx() { return projViewTx; }
+
+        @Override public void setFieldOfView(float fieldOfView) { this.fieldOfView = fieldOfView; }
+        public double getFieldOfView() { return fieldOfView; }
+
+        @Override public void setVerticalFieldOfView(boolean verticalFieldOfView) { this.verticalFieldOfView = verticalFieldOfView; }
+        public boolean isVerticalFieldOfView() { return this.verticalFieldOfView; }
+    }
+
+    private class StubParallelCamera extends ParallelCamera {
+        @Override
+        protected NGNode impl_createPeer() {
+            return new StubNGParallelCamera();
+        }
+    }
+
+    private class StubNGParallelCamera extends NGParallelCamera {
+        double viewWidth, viewHeight;
+        Vec3d position;
+        GeneralTransform3D projViewTx;
+        Affine3D localToWorldTx;
+
+        @Override public void setViewWidth(double viewWidth) { this.viewWidth = viewWidth; }
+        public double getViewWidth() { return viewWidth; }
+
+        @Override public void setViewHeight(double viewHeight) { this.viewHeight = viewHeight; }
+        public double getViewHeight() { return viewHeight; }
+
+        @Override public void setPosition(Vec3d position) { this.position = position; }
+        public Vec3d getPosition() { return position; }
+
+        @Override public void setWorldTransform(Affine3D localToWorldTx) { this.localToWorldTx = localToWorldTx; }
+        public Affine3D getWorldTransform() { return localToWorldTx; }
+
+        @Override public void setProjViewTransform(GeneralTransform3D projViewTx) { this.projViewTx = projViewTx; }
+        public GeneralTransform3D getProjViewTx() { return projViewTx; }
     }
 }

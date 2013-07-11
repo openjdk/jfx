@@ -25,6 +25,13 @@
 
 package javafx.scene;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
+import javafx.scene.transform.Transform;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
@@ -37,14 +44,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGCamera;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.geometry.Point2D;
-import javafx.geometry.Point3D;
-import javafx.scene.transform.Transform;
+import com.sun.javafx.sg.prism.NGCamera;
 import sun.util.logging.PlatformLogger;
 
 
@@ -194,10 +194,6 @@ public abstract class Camera extends Node {
         return farClip;
     }
     
-    PGCamera getPlatformCamera() {
-        return (PGCamera) impl_getPGNode();
-    }
-
     Camera copy() {
         return this;
     }
@@ -208,27 +204,27 @@ public abstract class Camera extends Node {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
-        PGCamera pgCamera = (PGCamera)impl_getPGNode();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
+        NGCamera peer = impl_getPeer();
         if (!impl_isDirtyEmpty()) {
             if (impl_isDirty(DirtyBits.NODE_CAMERA)) {
-                pgCamera.setNearClip((float) getNearClip());
-                pgCamera.setFarClip((float) getFarClip());
-                pgCamera.setViewWidth(getViewWidth());
-                pgCamera.setViewHeight(getViewHeight());
+                peer.setNearClip((float) getNearClip());
+                peer.setFarClip((float) getFarClip());
+                peer.setViewWidth(getViewWidth());
+                peer.setViewHeight(getViewHeight());
             }
             if (impl_isDirty(DirtyBits.NODE_CAMERA_TRANSFORM)) {
                 // TODO: 3D - For now, we are treating the scene as world.
                 // This may need to change for the fixed eye position case.
-                pgCamera.setWorldTransform(getCameraTransform());
+                peer.setWorldTransform(getCameraTransform());
             }
 
-            pgCamera.setProjViewTransform(getProjViewTransform());
+            peer.setProjViewTransform(getProjViewTransform());
 
             position = computePosition(position);
             getCameraTransform().transform(position, position);
-            pgCamera.setPosition(position);
+            peer.setPosition(position);
         }
     }
 

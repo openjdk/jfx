@@ -5,14 +5,14 @@
     <content url="file://$MODULE_DIR$/modules/graphics">
       <sourceFolder url="file://$MODULE_DIR$/modules/graphics/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/graphics/src/main/resources" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/graphics/src/stub/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/graphics/src/stub/resources" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/graphics/build/generated-src/jsl-decora" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/graphics/build/generated-src/jsl-prism" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/graphics/build/resources/jsl-decora" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/graphics/build/resources/jsl-prism" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/graphics/src/test/java" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/modules/graphics/src/test/resources" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/graphics/src/stub/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/graphics/src/stub/resources" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/modules/graphics/build/classes" />
       <excludeFolder url="file://$MODULE_DIR$/modules/graphics/build/dependency-cache" />
       <excludeFolder url="file://$MODULE_DIR$/modules/graphics/build/libs" />

@@ -25,24 +25,26 @@
 
 package com.sun.javafx.sg;
 
+import javafx.scene.CacheHint;
+import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
-import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
-import java.util.List;
-
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
  * BaseNode is the abstract base class implementing PGNode, and forming
@@ -69,7 +71,7 @@ import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
  * clear this dirty flag.
  *
  */
-public abstract class BaseNode<G> implements PGNode {
+public abstract class BaseNode<G> {
     public boolean debug = false;
 
     /**
@@ -299,7 +301,6 @@ public abstract class BaseNode<G> implements PGNode {
     /**
      * Called by the FX scene graph to tell us what our transform matrix is.
      * @param tx must not be null
-     * @param transformed new transformed bounds, base on
      */
     public void setTransformMatrix(BaseTransform tx) {
         // If the transform matrix has changed, then we need to update it,
@@ -350,11 +351,11 @@ public abstract class BaseNode<G> implements PGNode {
      * Note that BaseNode assumes that the PGNode is a BaseNode subclass.
      * @param clipNode can be null if the clip node is being cleared
      */
-    public void setClipNode(PGNode clipNode) {
+    public void setClipNode(NGNode clipNode) {
         // Whenever the clipNode itself has changed (that is, the reference to
         // the clipNode), we need to be sure to mark this node dirty and to
         // invalidate the cache of this node (if there is one) and all parents.
-        BaseNode newClipNode = (BaseNode)clipNode;
+        BaseNode newClipNode = clipNode;
         if (newClipNode != this.clipNode) {
             // Clear the "parent" property of the clip node, if there was one
             if (this.clipNode != null) this.clipNode.setParent(null);
@@ -423,7 +424,7 @@ public abstract class BaseNode<G> implements PGNode {
      * @param cached specifies whether or not this node should be cached
      * @param cacheHint never null, indicates some hint as to how to cache
      */
-    public void setCachedAsBitmap(boolean cached, PGNode.CacheHint cacheHint) {
+    public void setCachedAsBitmap(boolean cached, CacheHint cacheHint) {
         // Validate the arguments
         if (cacheHint == null) {
             throw new IllegalArgumentException("Internal Error: cacheHint must not be null");
@@ -545,7 +546,7 @@ public abstract class BaseNode<G> implements PGNode {
     /**
      * Gets whether this node's visible property is set
      */
-    protected boolean isVisible() { return visible; }
+    public boolean isVisible() { return visible; }
 
     public final BaseTransform getTransform() { return transform; }
     public final float getOpacity() { return opacity; }
@@ -585,8 +586,8 @@ public abstract class BaseNode<G> implements PGNode {
         // this block and use the more general form below, but we need
         // to revisit this and see if we can make it work more optimally.
         // @see RT-12105 http://javafx-jira.kenai.com/browse/RT-12105
-        if (false && this instanceof PGGroup) {
-            List<PGNode> children = ((PGGroup)this).getChildren();
+        if (false && this instanceof NGGroup) {
+            List<NGNode> children = ((NGGroup)this).getChildren();
             BaseBounds tmp = TEMP_BOUNDS;
             for (int i=0; i<children.size(); i++) {
                 float minX = bounds.getMinX();
@@ -808,8 +809,8 @@ public abstract class BaseNode<G> implements PGNode {
         if (getClipNode() != null) {
             getClipNode().clearDirtyTree();
         }
-        if (this instanceof PGGroup) {
-            List<PGNode> children = ((PGGroup) this).getChildren();
+        if (this instanceof NGGroup) {
+            List<NGNode> children = ((NGGroup) this).getChildren();
             for (int i = 0; i < children.size(); ++i) {
                 BaseNode child = ((BaseNode)children.get(i));
                 if (child.dirty != DirtyFlag.CLEAN || child.childDirty) {
@@ -1059,7 +1060,7 @@ public abstract class BaseNode<G> implements PGNode {
 
 
         //Accumulate also removed children to dirty region.
-        List<PGNode> removed = ((PGGroup) this).getRemovedChildren();
+        List<NGNode> removed = ((NGGroup) this).getRemovedChildren();
         if (removed != null) {
             BaseNode removedChild;
             for (int i = removed.size() - 1; i >= 0; --i) {
@@ -1073,7 +1074,7 @@ public abstract class BaseNode<G> implements PGNode {
             }
         }
 
-        List<PGNode> children = ((PGGroup) this).getChildren();
+        List<NGNode> children = ((NGGroup) this).getChildren();
         int num = children.size();
             for (int i=0; i<num && status == DirtyRegionContainer.DTR_OK; i++) {
             BaseNode child = (BaseNode) children.get(i);
@@ -1235,8 +1236,8 @@ public abstract class BaseNode<G> implements PGNode {
       *
       * 32 bits = 15 regions max. * 2 bit each.
       *
-      * @param dirtyRegions The array of dirty regions.
-      * @param cullingRegionsOfParent culling bits of parent. -1 if there's no parent.
+      * @param drc The array of dirty regions.
+      * @param cullingRegionsBitsOfParent culling bits of parent. -1 if there's no parent.
       * @param tx The transform for this render operation.
       * @param pvTx Perspective camera transform.
       */
@@ -1296,7 +1297,7 @@ public abstract class BaseNode<G> implements PGNode {
      *                                                                         *
      **************************************************************************/
 
-    protected abstract BaseCacheFilter createCacheFilter(PGNode.CacheHint cacheHint);
+    protected abstract BaseCacheFilter createCacheFilter(CacheHint cacheHint);
     protected abstract BaseEffectFilter createEffectFilter(Effect effect);
 
     public void release() {

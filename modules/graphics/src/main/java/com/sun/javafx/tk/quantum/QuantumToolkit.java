@@ -25,23 +25,6 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.io.File;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.ConditionalFeature;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
@@ -64,9 +47,29 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.QuadCurveTo;
 import javafx.scene.shape.SVGPath;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
+import java.io.File;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
@@ -87,43 +90,7 @@ import com.sun.javafx.runtime.async.AbstractRemoteResource;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
-import com.sun.javafx.sg.PGArc;
-import com.sun.javafx.sg.PGCanvas;
-import com.sun.javafx.sg.PGCircle;
-import com.sun.javafx.sg.PGCubicCurve;
-import com.sun.javafx.sg.PGEllipse;
-import com.sun.javafx.sg.PGExternalNode;
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.sg.PGImageView;
-import com.sun.javafx.sg.PGLine;
-import com.sun.javafx.sg.PGPath;
-import com.sun.javafx.sg.PGPolygon;
-import com.sun.javafx.sg.PGPolyline;
-import com.sun.javafx.sg.PGQuadCurve;
-import com.sun.javafx.sg.PGRectangle;
-import com.sun.javafx.sg.PGRegion;
-import com.sun.javafx.sg.PGSVGPath;
-import com.sun.javafx.sg.PGShape.StrokeLineCap;
-import com.sun.javafx.sg.PGShape.StrokeLineJoin;
-import com.sun.javafx.sg.PGShape.StrokeType;
-import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.prism.NGArc;
-import com.sun.javafx.sg.prism.NGCanvas;
-import com.sun.javafx.sg.prism.NGCircle;
-import com.sun.javafx.sg.prism.NGCubicCurve;
-import com.sun.javafx.sg.prism.NGEllipse;
-import com.sun.javafx.sg.prism.NGGroup;
-import com.sun.javafx.sg.prism.NGImageView;
-import com.sun.javafx.sg.prism.NGLine;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.NGPath;
-import com.sun.javafx.sg.prism.NGPolygon;
-import com.sun.javafx.sg.prism.NGPolyline;
-import com.sun.javafx.sg.prism.NGQuadCurve;
-import com.sun.javafx.sg.prism.NGRectangle;
-import com.sun.javafx.sg.prism.NGRegion;
-import com.sun.javafx.sg.prism.NGSVGPath;
-import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.tk.AppletWindow;
 import com.sun.javafx.tk.CompletionListener;
 import com.sun.javafx.tk.FileChooserType;
@@ -149,7 +116,6 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.scenario.DelayedRunnable;
@@ -158,31 +124,8 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
-
-import static com.sun.javafx.logging.PulseLogger.*;
-import com.sun.javafx.sg.PGAmbientLight;
-import com.sun.javafx.sg.PGBox;
-import com.sun.javafx.sg.PGCylinder;
-import com.sun.javafx.sg.PGMeshView;
-import com.sun.javafx.sg.PGParallelCamera;
-import com.sun.javafx.sg.PGPerspectiveCamera;
-import com.sun.javafx.sg.PGPhongMaterial;
-import com.sun.javafx.sg.PGPointLight;
-import com.sun.javafx.sg.PGSphere;
-import com.sun.javafx.sg.PGSubScene;
-import com.sun.javafx.sg.PGTriangleMesh;
-import com.sun.javafx.sg.prism.NGAmbientLight;
-import com.sun.javafx.sg.prism.NGBox;
-import com.sun.javafx.sg.prism.NGCylinder;
-import com.sun.javafx.sg.prism.NGMeshView;
-import com.sun.javafx.sg.prism.NGParallelCamera;
-import com.sun.javafx.sg.prism.NGPerspectiveCamera;
-import com.sun.javafx.sg.prism.NGPhongMaterial;
-import com.sun.javafx.sg.prism.NGPointLight;
-import com.sun.javafx.sg.prism.NGSphere;
-import com.sun.javafx.sg.prism.NGSubScene;
-import com.sun.javafx.sg.prism.NGTriangleMesh;
-import com.sun.javafx.sg.prism.NGExternalNode;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 public final class QuantumToolkit extends Toolkit {
 
@@ -1099,78 +1042,6 @@ public final class QuantumToolkit extends Toolkit {
         return com.sun.javafx.text.PrismTextLayoutFactory.getFactory();
     }
 
-    @Override public PGArc createPGArc() {
-        return new NGArc();
-    }
-
-    @Override public PGCircle createPGCircle() {
-        return new NGCircle();
-    }
-
-    @Override public PGCubicCurve createPGCubicCurve() {
-        return new NGCubicCurve();
-    }
-
-    @Override public PGEllipse createPGEllipse() {
-        return new NGEllipse();
-    }
-
-    @Override public PGLine createPGLine() {
-        return new NGLine();
-    }
-
-    @Override public PGPath createPGPath() {
-        return new NGPath();
-    }
-
-    @Override public PGSVGPath createPGSVGPath() {
-        return new NGSVGPath();
-    }
-
-    @Override public PGSubScene createPGSubScene() {
-        return new NGSubScene();
-    }
-
-    @Override public PGPolygon createPGPolygon() {
-        return new NGPolygon();
-    }
-
-    @Override public PGPolyline createPGPolyline() {
-        return new NGPolyline();
-    }
-
-    @Override public PGQuadCurve createPGQuadCurve() {
-        return new NGQuadCurve();
-    }
-
-    @Override public PGRectangle createPGRectangle() {
-        return new NGRectangle();
-    }
-
-    @Override public PGImageView createPGImageView() {
-        return new NGImageView();
-    }
-
-    @Override public PGGroup createPGGroup() {
-        return new NGGroup();
-    }
-
-    @Override public PGRegion createPGRegion() {
-        return new NGRegion();
-    }
-
-    @Override public PGCanvas createPGCanvas() {
-        return new NGCanvas();
-    }
-
-    @Override public PGText createPGText() {
-        return new NGText();
-    }
-
-    @Override public PGExternalNode createPGExternalNode() {
-        return new NGExternalNode();
-    }
-
     @Override public Object createSVGPathObject(SVGPath svgpath) {
         int windingRule = svgpath.getFillRule() == FillRule.NON_ZERO ? PathIterator.WIND_NON_ZERO : PathIterator.WIND_EVEN_ODD;
         Path2D path = new Path2D(windingRule);
@@ -1334,57 +1205,6 @@ public final class QuantumToolkit extends Toolkit {
         view.setInputMethodRequests(requests);
     }
 
-    // 3D API support for FX 8
-    @Override
-    public PGBox createPGBox() {
-        return new NGBox();
-    }
-
-    @Override
-    public PGCylinder createPGCylinder() {
-        return new NGCylinder();
-    }
-
-    @Override
-    public PGSphere createPGSphere() {
-        return new NGSphere();
-    }
-
-    @Override
-    public PGTriangleMesh createPGTriangleMesh() {
-        return new NGTriangleMesh();
-    }
-
-    @Override
-    public PGMeshView createPGMeshView() {
-        return new NGMeshView();
-    }
-
-    @Override
-    public PGPhongMaterial createPGPhongMaterial() {
-        return new NGPhongMaterial();
-    }
-
-    @Override
-    public PGAmbientLight createPGAmbientLight() {
-        return new NGAmbientLight();
-    }
-
-    @Override
-    public PGPointLight createPGPointLight() {
-        return new NGPointLight();
-    }
-
-    @Override
-    public PGParallelCamera createPGParallelCamera() {
-        return new NGParallelCamera();
-    }
-
-    @Override
-    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
-        return new NGPerspectiveCamera(fixedEyeAtCameraZero);
-    }
-
     static class QuantumImage implements com.sun.javafx.tk.ImageLoader, ResourceFactoryListener {
 
         // cache rt here
@@ -1516,11 +1336,10 @@ public final class QuantumToolkit extends Toolkit {
                 }
 
                 if (params.root != null) {
-                    if (params.camera instanceof PrismCameraImpl) {
-                        g.setCamera((PrismCameraImpl)params.camera);
+                    if (params.camera != null) {
+                        g.setCamera(params.camera.getCameraImpl());
                     }
-
-                    NGNode ngNode = (NGNode)params.root;
+                    NGNode ngNode = params.root;
                     ngNode.render(g);
                 }
 

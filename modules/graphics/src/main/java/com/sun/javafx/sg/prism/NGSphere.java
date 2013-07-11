@@ -25,16 +25,14 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.sg.PGSphere;
-import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.prism.Graphics;
 
 /**
  * TODO: 3D - Need documentation
  */
-public class NGSphere extends NGShape3D implements PGSphere {
+public class NGSphere extends NGShape3D {
 
-    private PGTriangleMesh mesh;
+    private NGTriangleMesh mesh;
     
     @Override
     protected void renderMeshView(Graphics g) {
@@ -44,8 +42,7 @@ public class NGSphere extends NGShape3D implements PGSphere {
         super.renderMeshView(g);
     }
 
-    @Override
-    public void updateMesh(PGTriangleMesh mesh) {
+    public void updateMesh(NGTriangleMesh mesh) {
         this.mesh = mesh;
         invalidate();
     }

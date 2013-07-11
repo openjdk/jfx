@@ -25,17 +25,19 @@
 
 package com.sun.javafx.sg;
 
-import com.sun.javafx.geom.transform.Affine2D;
-import javafx.scene.Scene;
-import org.junit.Test;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
-import static org.junit.Assert.*;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * A base class for testing the content bounds methods of BaseNode used
@@ -106,13 +108,13 @@ public class ContentBoundsTest {
         return new Rectangle(x, y, w, h);
     }
 
-    public static PGNode getValidatedPGNode(Node n) {
+    public static NGNode getValidatedPGNode(Node n) {
         if (n instanceof Parent) {
             for (Node child : ((Parent) n).getChildrenUnmodifiable()) {
                 getValidatedPGNode(child);
             }
         }
-        PGNode pgn = n.impl_getPGNode();
+        NGNode pgn = n.impl_getPeer();
         // Eeek, this is gross! I have to use reflection to invoke this
         // method so that bounds are updated...
         try {
@@ -122,15 +124,15 @@ public class ContentBoundsTest {
         } catch (Exception e) {
             throw new RuntimeException("Failed to update bounds", e);
         }
-        n.impl_updatePG();
+        n.impl_updatePeer();
         return pgn;
     }
 
     public static BaseBounds getBounds(Node n, BaseTransform tx) {
         Scene.impl_setAllowPGAccess(true);
-        PGNode pgn = getValidatedPGNode(n);
+        NGNode pgn = getValidatedPGNode(n);
         Scene.impl_setAllowPGAccess(false);
-        return ((BaseNode) pgn).getContentBounds(new RectBounds(), tx);
+        return pgn.getContentBounds(new RectBounds(), tx);
     }
 
     public static class TestPoint {

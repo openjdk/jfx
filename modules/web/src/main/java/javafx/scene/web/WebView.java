@@ -11,55 +11,29 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
-import javafx.css.Styleable;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGWebView;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.webkit.InputMethodClientImpl;
 import com.sun.javafx.webkit.KeyCodeMap;
 import com.sun.webkit.WebPage;
-import com.sun.webkit.event.WCFocusEvent;
-import com.sun.webkit.event.WCInputMethodEvent;
-import com.sun.webkit.event.WCKeyEvent;
-import com.sun.webkit.event.WCMouseEvent;
-import com.sun.webkit.event.WCMouseWheelEvent;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
+import com.sun.webkit.event.*;
+import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.css.CssMetaData;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableProperty;
+import javafx.css.*;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
-import javafx.geometry.Point3D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.input.DataFormat;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.InputMethodEvent;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.TransferMode;
+import javafx.scene.input.*;
 import javafx.scene.text.FontSmoothingType;
+
+import java.util.*;
 
 /**
  * {@code WebView} is a {@link javafx.scene.Node} that manages a
@@ -951,8 +925,8 @@ final public class WebView extends Parent {
         if (reallyVisible) {
             if (page.isDirty()) {
                 Scene.impl_setAllowPGAccess(true);
-
-                getNGWebView().update(); // creates new render queues
+                final NGWebView peer = impl_getPeer();
+                peer.update(); // creates new render queues
                 if (page.isRepaintPending()) {
                     impl_markDirty(DirtyBits.WEBVIEW_VIEW);
                 }
@@ -1209,12 +1183,8 @@ final public class WebView extends Parent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected PGNode impl_createPGNode() {
+    @Override protected NGNode impl_createPeer() {
         return new NGWebView();
-    }
-
-    private NGWebView getNGWebView() {
-        return (NGWebView)impl_getPGNode();
     }
 
     /**
@@ -1243,9 +1213,9 @@ final public class WebView extends Parent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_updatePG() {
-        super.impl_updatePG();
-        NGWebView peer = getNGWebView();
+    @Override public void impl_updatePeer() {
+        super.impl_updatePeer();
+        final NGWebView peer = impl_getPeer();
 
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
             peer.setPage(page);

@@ -32,9 +32,8 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.GrowableDataBuffer;
-import com.sun.javafx.sg.PGCanvas;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGCanvas;
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.geometry.NodeOrientation;
@@ -202,12 +201,8 @@ public class Canvas extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGCanvas();
-    }
-
-    PGCanvas getPGCanvas() {
-        return (PGCanvas) impl_getPGNode();
+    @Override protected NGNode impl_createPeer() {
+        return new NGCanvas();
     }
 
     /**
@@ -216,15 +211,15 @@ public class Canvas extends Node {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            PGCanvas peer = getPGCanvas();
+            NGCanvas peer = impl_getPeer();
             peer.updateBounds((float)getWidth(),
                               (float)getHeight());
         }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
-            PGCanvas peer = getPGCanvas();
+            NGCanvas peer = impl_getPeer();
             if (empty != null && empty.position() > 0) {
                  peer.updateRendering(empty);
                  if (full != null) {

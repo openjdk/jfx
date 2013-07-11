@@ -25,31 +25,27 @@
 
 package javafx.scene;
 
-import com.sun.javafx.scene.SceneHelper;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import com.sun.javafx.runtime.SystemProperties;
-import com.sun.javafx.scene.input.PickResultChooser;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
@@ -57,8 +53,12 @@ import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
+import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
@@ -83,32 +83,47 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.input.ZoomEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import javafx.stage.PopupWindow;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.stage.Window;
+import javafx.util.Callback;
 import javafx.util.Duration;
-
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
 import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
-import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.robot.impl.FXRobotHelper;
+import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.SceneEventDispatcher;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.input.InputEventUtils;
+import com.sun.javafx.scene.input.KeyCodeMap;
+import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.TKDragGestureListener;
 import com.sun.javafx.tk.TKDragSourceListener;
 import com.sun.javafx.tk.TKDropTargetListener;
@@ -118,31 +133,10 @@ import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import javafx.application.Platform;
-import javafx.application.ConditionalFeature;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.geometry.Bounds;
-import javafx.geometry.Orientation;
-import javafx.scene.image.WritableImage;
-import javafx.stage.PopupWindow;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-import javafx.util.Callback;
-
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
-import com.sun.javafx.scene.input.KeyCodeMap;
-import com.sun.javafx.sg.PGLightBase;
-
-import javafx.geometry.NodeOrientation;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
  * The JavaFX {@code Scene} class is the container for all content in a scene graph.
@@ -759,10 +753,10 @@ public class Scene implements EventTarget {
         impl_peer.setTKSceneListener(new ScenePeerListener());
         impl_peer.setTKScenePaintListener(new ScenePeerPaintListener());
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
-        impl_peer.setRoot(getRoot().impl_getPGNode());
+        impl_peer.setRoot(getRoot().impl_getPeer());
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
-        getEffectiveCamera().impl_updatePG();
-        impl_peer.setCamera(getEffectiveCamera().getPlatformCamera());
+        getEffectiveCamera().impl_updatePeer();
+        impl_peer.setCamera(getEffectiveCamera().impl_getPeer());
         impl_peer.markDirty();
         PerformanceTracker.logEvent("Scene.initPeer TKScene initialized");
 
@@ -1245,7 +1239,7 @@ public class Scene implements EventTarget {
         context.height = height;
         context.transform = transform;
         context.depthBuffer = depthBuffer;
-        context.root = root.impl_getPGNode();
+        context.root = root.impl_getPeer();
         context.platformPaint = fill == null ? null : tk.getPaint(fill);
         double cameraViewWidth = 1.0;
         double cameraViewHeight = 1.0;
@@ -1255,8 +1249,8 @@ public class Scene implements EventTarget {
             cameraViewHeight = camera.getViewHeight();
             camera.setViewWidth(width);
             camera.setViewHeight(height);
-            camera.impl_updatePG();
-            context.camera = camera.getPlatformCamera();
+            camera.impl_updatePeer();
+            context.camera = camera.impl_getPeer();
         } else {
             context.camera = null;
         }
@@ -1271,7 +1265,7 @@ public class Scene implements EventTarget {
             impl_setAllowPGAccess(true);
             camera.setViewWidth(cameraViewWidth);
             camera.setViewHeight(cameraViewHeight);
-            camera.impl_updatePG();
+            camera.impl_updatePeer();
             impl_setAllowPGAccess(false);
         }
 
@@ -2217,11 +2211,11 @@ public class Scene implements EventTarget {
                 impl_peer.setLights(null);
             } else {
                 if (peerLights == null || peerLights.length < lights.size()) {
-                    peerLights = new PGLightBase[lights.size()];
+                    peerLights = new NGLightBase[lights.size()];
                 }
                 int i = 0;
                 for (; i < lights.size(); i++) {
-                    peerLights[i] = lights.get(i).impl_getPGNode();
+                    peerLights[i] = lights.get(i).impl_getPeer();
                 }
                 // Clear the rest of the list
                 while (i < peerLights.length && peerLights[i] != null) {
@@ -2270,7 +2264,7 @@ public class Scene implements EventTarget {
                     Node node = dirtyNodes[i];
                     dirtyNodes[i] = null;
                     if (node.getScene() == Scene.this) {
-                            node.impl_syncPGNode();
+                            node.impl_syncPeer();
                         }
                     }
                 dirtyNodesSize = 0;
@@ -2284,7 +2278,7 @@ public class Scene implements EventTarget {
          * The return value is the number of nodes in the graph.
          */
         private int syncAll(Node node) {
-            node.impl_syncPGNode();
+            node.impl_syncPeer();
             int size = 1;
             if (node instanceof Parent) {
                 Parent p = (Parent) node;
@@ -2310,7 +2304,7 @@ public class Scene implements EventTarget {
         private void synchronizeSceneProperties() {
             inSynchronizer = true;
             if (isDirty(DirtyBits.ROOT_DIRTY)) {
-                impl_peer.setRoot(getRoot().impl_getPGNode());
+                impl_peer.setRoot(getRoot().impl_getPeer());
             }
 
             if (isDirty(DirtyBits.FILL_DIRTY)) {
@@ -2321,8 +2315,8 @@ public class Scene implements EventTarget {
             // new camera was set on the scene or old camera changed
             final Camera cam = getEffectiveCamera();
             if (isDirty(DirtyBits.CAMERA_DIRTY)) {
-                cam.impl_updatePG();
-                impl_peer.setCamera(cam.getPlatformCamera());
+                cam.impl_updatePeer();
+                impl_peer.setCamera(cam.impl_getPeer());
             }
 
             clearDirty();

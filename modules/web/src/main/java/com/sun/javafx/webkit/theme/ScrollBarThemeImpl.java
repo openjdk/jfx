@@ -45,8 +45,8 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
             setManaged(false);
         }
 
-        @Override public void impl_updatePG() {
-            super.impl_updatePG();
+        @Override public void impl_updatePeer() {
+            super.impl_updatePeer();
             initializeThickness();
         }
 

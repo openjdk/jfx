@@ -25,11 +25,8 @@
 
 package javafx.scene.transform;
 
-import static javafx.scene.transform.TransformTest.assertTx;
-import static org.junit.Assert.*;
-
-import java.lang.reflect.Method;
-
+import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.test.TransformHelper;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -38,12 +35,14 @@ import javafx.scene.Group;
 import javafx.scene.NodeTest;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
-
+import javafx.scene.shape.RectangleTest;
 import org.junit.Test;
 
-import com.sun.javafx.geom.transform.Affine2D;
-import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.pgstub.StubRectangle;
+import java.lang.reflect.Method;
+
+import static javafx.scene.transform.TransformTest.assertTx;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 public class RotateTest {
 
@@ -224,7 +223,7 @@ public class RotateTest {
     private void checkObjectPropertySynced(String propertyName, Object val)
             throws Exception {
 
-        final Rectangle r = new Rectangle(200, 200, 200, 200);
+        final Rectangle r = new RectangleTest.StubRectangle(200, 200, 200, 200);
         final Rotate rotate = new Rotate(300, 300, 0);
 
         ObjectProperty v = new SimpleObjectProperty(0.0);
@@ -238,7 +237,7 @@ public class RotateTest {
         NodeTest.syncNode(r);
 
         //check
-        StubRectangle pgR = (StubRectangle)r.impl_getPGNode();
+        RectangleTest.StubNGRectangle pgR = r.impl_getPeer();
         assertTx(r, pgR.getTransformMatrix());
     }
 }

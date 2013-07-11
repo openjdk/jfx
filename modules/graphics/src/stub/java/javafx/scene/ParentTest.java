@@ -25,21 +25,18 @@
 
 package javafx.scene;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.tk.Toolkit;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
+import static org.junit.Assert.*;
 
 public class ParentTest {
     private StubToolkit toolkit;
@@ -154,20 +151,21 @@ public class ParentTest {
         // try removing node from the end of the observableArrayList
         g.getChildren().remove(rect6);
         toolkit.fireTestPulse();
+        final NGGroup peer = g.impl_getPeer();
         assertEquals(5, g.getChildren().size());
-        assertEquals(5, g.getPGGroup().getChildren().size());
+        assertEquals(5, peer.getChildren().size());
 
         // try removing node from the beginning of the observableArrayList
         g.getChildren().remove(rect1);
         toolkit.fireTestPulse();
         assertEquals(4, g.getChildren().size());
-        assertEquals(4, g.getPGGroup().getChildren().size());
+        assertEquals(4, peer.getChildren().size());
         
         // try removing node from the middle of the observableArrayList
         g.getChildren().remove(rect3);
         toolkit.fireTestPulse();
         assertEquals(3, g.getChildren().size());
-        assertEquals(3, g.getPGGroup().getChildren().size());
+        assertEquals(3, peer.getChildren().size());
     }
 
     @Test
@@ -188,7 +186,7 @@ public class ParentTest {
         g.getChildren().set(1, rect3);
         toolkit.fireTestPulse();
         assertEquals(2, g.getChildren().size());
-        assertEquals(2, g.getPGGroup().getChildren().size());
+        assertEquals(2, ((NGGroup)g.impl_getPeer()).getChildren().size());
     }
 
     @Test
@@ -209,7 +207,7 @@ public class ParentTest {
         
         toolkit.fireTestPulse();
         assertEquals(2, g.getChildren().size());
-        assertEquals(2, g.getPGGroup().getChildren().size());
+        assertEquals(2, ((NGGroup)g.impl_getPeer()).getChildren().size());
     }
 
     @Test
@@ -235,7 +233,7 @@ public class ParentTest {
         g.getChildren().add(rect6);
         toolkit.fireTestPulse();
         assertEquals(6, g.getChildren().size());
-        assertEquals(6, g.getPGGroup().getChildren().size());
+        assertEquals(6, ((NGGroup)g.impl_getPeer()).getChildren().size());
     }
     
     @Test
@@ -261,7 +259,7 @@ public class ParentTest {
         g.getChildren().add(rect6);
         toolkit.fireTestPulse();
         assertEquals(5, g.getChildren().size());
-        assertEquals(5, g.getPGGroup().getChildren().size());
+        assertEquals(5, ((NGGroup)g.impl_getPeer()).getChildren().size());
     }
 
     @Test

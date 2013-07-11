@@ -8,65 +8,24 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.web.Debugger;
-import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.webkit.Accessor;
-import com.sun.javafx.webkit.CursorManagerImpl;
-import com.sun.javafx.webkit.EventLoopImpl;
-import com.sun.javafx.webkit.PolicyClientImpl;
-import com.sun.javafx.webkit.ThemeClientImpl;
-import com.sun.javafx.webkit.UIClientImpl;
-import com.sun.javafx.webkit.UtilitiesImpl;
-import com.sun.javafx.webkit.WebPageClientImpl;
+import com.sun.javafx.webkit.*;
 import com.sun.javafx.webkit.prism.PrismGraphicsManager;
 import com.sun.javafx.webkit.prism.PrismInvoker;
 import com.sun.javafx.webkit.prism.theme.PrismRenderer;
 import com.sun.javafx.webkit.theme.RenderThemeImpl;
 import com.sun.javafx.webkit.theme.Renderer;
 import com.sun.prism.Graphics;
-import com.sun.prism.paint.Color;
-import com.sun.webkit.CursorManager;
-import com.sun.webkit.Disposer;
-import com.sun.webkit.DisposerRecord;
-import com.sun.webkit.InspectorClient;
-import com.sun.webkit.Invoker;
-import com.sun.webkit.LoadListenerClient;
-import static com.sun.webkit.LoadListenerClient.*;
-import com.sun.webkit.ThemeClient;
-import com.sun.webkit.Timer;
-import com.sun.webkit.Utilities;
-import com.sun.webkit.WebPage;
+import com.sun.webkit.*;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.network.URLs;
 import com.sun.webkit.network.Util;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.lang.ref.WeakReference;
-import java.net.MalformedURLException;
-import java.net.URLConnection;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javafx.animation.AnimationTimer;
 import javafx.beans.InvalidationListener;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectPropertyBase;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.StringProperty;
-import javafx.beans.property.StringPropertyBase;
+import javafx.beans.property.*;
 import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
@@ -75,6 +34,17 @@ import javafx.print.PrinterJob;
 import javafx.scene.Node;
 import javafx.util.Callback;
 import org.w3c.dom.Document;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.net.MalformedURLException;
+import java.net.URLConnection;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
+import static com.sun.webkit.LoadListenerClient.*;
 
 /**
  * {@code WebEngine} is a non-visual object capable of managing one Web page
@@ -1368,13 +1338,13 @@ final public class WebEngine {
     }
     
     final class Printable extends Node {
-        private final PGNode peer;
+        private final NGNode peer;
 
         Printable(int pageIndex) {
             peer = new Peer(pageIndex);
         }
         
-        @Override protected PGNode impl_createPGNode() {
+        @Override protected NGNode impl_createPeer() {
             return peer;
         }
 

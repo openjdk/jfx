@@ -27,18 +27,17 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.sg.PGArc;
 import com.sun.prism.Graphics;
 import com.sun.prism.shape.ShapeRep;
+import javafx.scene.shape.ArcType;
 
 /**
  *
  */
-public class NGArc extends NGShape implements PGArc {
+public class NGArc extends NGShape {
     private Arc2D arc = new Arc2D();
 
-    @Override public Shape getShape() { return arc; }
-    @Override public void updateArc(float cx, float cy, float rx, float ry,
+    public void updateArc(float cx, float cy, float rx, float ry,
                                     float start, float extent, ArcType type) {
         arc.x = cx - rx;
         arc.width = rx * 2f;
@@ -59,8 +58,8 @@ public class NGArc extends NGShape implements PGArc {
         geometryChanged();
     }
 
-    @Override
-    protected ShapeRep createShapeRep(Graphics g, boolean needs3D) {
+    @Override public Shape getShape() { return arc; }
+    @Override protected ShapeRep createShapeRep(Graphics g, boolean needs3D) {
         return g.getResourceFactory().createArcRep(needs3D);
     }
 }

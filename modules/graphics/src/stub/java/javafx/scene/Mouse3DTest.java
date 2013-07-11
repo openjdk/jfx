@@ -65,7 +65,7 @@ public class Mouse3DTest {
     public void shouldComputeCorrectPerspectivePickRay() {
         Camera cam = new PerspectiveCamera();
         scene(group(), cam, true);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
         PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(PERSPECTIVE_CAMERA_X, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(PERSPECTIVE_CAMERA_Y, pickRay.getOriginNoClone().y, 0.00001);
@@ -79,7 +79,7 @@ public class Mouse3DTest {
     public void shouldComputeCorrectPerspectivePickRayWithFixedEye() {
         Camera cam = new PerspectiveCamera(true);
         scene(group(), cam, true);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
         PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(0.0, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(0.0, pickRay.getOriginNoClone().y, 0.00001);
@@ -95,7 +95,7 @@ public class Mouse3DTest {
         cam.setNearClip(100.0);
         cam.setFarClip(200.0);
         scene(group(), cam, true);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
         PickRay pickRay = cam.computePickRay(100, 200, null);
         assertTrue(Double.isInfinite(pickRay.getNearClip()));
         assertTrue(Double.isInfinite(pickRay.getFarClip()));
@@ -110,7 +110,7 @@ public class Mouse3DTest {
         cam.setNearClip(100.0);
         cam.setFarClip(200.0);
         scene(group(), cam, true);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
         PickRay pickRay = cam.computePickRay(100, 200, null);
         assertEquals(0.0, pickRay.getNearClip(), 0.01);
         assertTrue(Double.isInfinite(pickRay.getFarClip()));
@@ -125,7 +125,7 @@ public class Mouse3DTest {
         cam.setNearClip(100.0);
         cam.setFarClip(200.0);
         scene(group(), cam, true);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
         PickRay pickRay = cam.computePickRay(100, 200, null);
         assertEquals(104.39, pickRay.getNearClip(), 0.01);
         assertEquals(208.78, pickRay.getFarClip(), 0.01);
@@ -137,7 +137,7 @@ public class Mouse3DTest {
         scene(group(cam), cam, true);
         cam.setTranslateX(50);
         cam.getParent().setTranslateY(30);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
         PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(50 + PERSPECTIVE_CAMERA_X, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(30 + PERSPECTIVE_CAMERA_Y, pickRay.getOriginNoClone().y, 0.00001);
@@ -166,7 +166,7 @@ public class Mouse3DTest {
         scene(group(cam), cam, true);
         cam.setTranslateX(50);
         cam.getParent().setTranslateY(30);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
         PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(60.0, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(50.0, pickRay.getOriginNoClone().y, 0.00001);
@@ -633,7 +633,7 @@ public class Mouse3DTest {
     public void shouldPickRoughSphere() {
         Sphere sph = sphereWith4Divs().handleMove(me);
         Scene s = scene(group(sph), perspective(), true);
-        sph.impl_updatePG();
+        sph.impl_updatePeer();
         makeParallel(s, 50, 25);
         s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
@@ -648,7 +648,7 @@ public class Mouse3DTest {
     public void shouldNotPickRoughSphereOutsideOfItsTriangles() {
         Sphere sph = sphereWith4Divs().handleMove(me);
         Scene s = scene(group(sph), perspective(), true);
-        sph.impl_updatePG();
+        sph.impl_updatePeer();
         makeParallel(s, 50, 60);
         s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
@@ -662,7 +662,7 @@ public class Mouse3DTest {
         sph.setTranslateZ(-974);
         sph.setCullFace(CullFace.BACK);
         Scene s = scene(group(sph), perspective(), true);
-        sph.impl_updatePG();
+        sph.impl_updatePeer();
         makeParallel(s, 50, 25);
         s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
@@ -679,7 +679,7 @@ public class Mouse3DTest {
         sph.setTranslateZ(-980);
         sph.setCullFace(CullFace.BACK);
         Scene s = scene(group(sph), perspective(), true);
-        sph.impl_updatePG();
+        sph.impl_updatePeer();
         makeParallel(s, 50, 25);
         s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
@@ -1038,7 +1038,7 @@ public class Mouse3DTest {
     public void shouldPickRoughCylinder() {
         Cylinder c = cylinderWith4Divs().handleMove(me);
         Scene s = scene(group(c), perspective(), true);
-        c.impl_updatePG();
+        c.impl_updatePeer();
         makeParallel(s, 10, 20);
         s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
@@ -1053,7 +1053,7 @@ public class Mouse3DTest {
     public void shouldNotPickRoughCylinderOutsideOfItsTriangles() {
         Cylinder c = cylinderWith4Divs().rotate('y', 45).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
-        c.impl_updatePG();
+        c.impl_updatePeer();
         makeParallel(s, 48, 20);
         s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
@@ -1067,7 +1067,7 @@ public class Mouse3DTest {
         c.setTranslateZ(-959);
         c.setCullFace(CullFace.BACK);
         Scene s = scene(group(c), perspective(), true);
-        c.impl_updatePG();
+        c.impl_updatePeer();
         makeParallel(s, 10, 20);
         s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
@@ -1084,7 +1084,7 @@ public class Mouse3DTest {
         c.setTranslateZ(-959);
         c.setCullFace(CullFace.BACK);
         Scene s = scene(group(c), perspective(), true);
-        c.impl_updatePG();
+        c.impl_updatePeer();
         makeParallel(s, 10, 20);
         s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
@@ -2247,10 +2247,10 @@ public class Mouse3DTest {
         Group camGroup = group(cam);
         cam.setTranslateX(-143);
         camGroup.setTranslateX(123);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
         cam.setTranslateX(-43);
         camGroup.setTranslateX(23);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
 
         Scene s = scene(group(b), cam, true);
         s.getRoot().getChildren().add(camGroup);
@@ -2271,10 +2271,10 @@ public class Mouse3DTest {
         Group camGroup = group(cam);
         cam.setTranslateX(-143);
         camGroup.setTranslateX(123);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
         cam.setTranslateX(-43);
         camGroup.setTranslateX(23);
-        cam.impl_updatePG();
+        cam.impl_updatePeer();
 
         Scene s = scene(group(b), cam, true);
         s.getRoot().getChildren().add(camGroup);
@@ -2306,7 +2306,7 @@ public class Mouse3DTest {
         }
         s.getCamera().setTranslateX(x - PERSPECTIVE_CAMERA_X);
         s.getCamera().setTranslateY(y - PERSPECTIVE_CAMERA_Y);
-        s.getCamera().impl_updatePG();
+        s.getCamera().impl_updatePeer();
     }
 
     private Camera perspective() {

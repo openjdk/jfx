@@ -27,14 +27,15 @@ package com.sun.javafx.sg;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
-import junit.framework.Assert;
-import javafx.scene.shape.Rectangle;
-import org.junit.Test;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.shape.Rectangle;
+import junit.framework.Assert;
+import org.junit.Test;
 
 public class CullingTest {
 
@@ -258,8 +259,8 @@ public class CullingTest {
         } catch (Exception e) {
             throw new RuntimeException("Failed to update bounds", e);
         }
-        n.impl_updatePG();
-        BaseNode bn = (BaseNode)n.impl_getPGNode();        
+        n.impl_updatePeer();
+        NGNode bn = n.impl_getPeer();
         Scene.impl_setAllowPGAccess(false);
         return bn;
     }
@@ -270,7 +271,7 @@ public class CullingTest {
     }
 
     public static BaseBounds getBounds(Node n, BaseTransform tx) {
-        PGNode pgn = getBaseNode(n);
-        return ((BaseNode) pgn).getContentBounds(new RectBounds(), tx);
+        BaseNode pgn = getBaseNode(n);
+        return pgn.getContentBounds(new RectBounds(), tx);
     }
 }

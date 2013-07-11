@@ -25,19 +25,24 @@
 
 package com.sun.prism.j2d.print;
 
-import java.util.ArrayList;
-import java.util.Set;
-
-import javafx.scene.*;
-import javafx.scene.shape.*;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GraphicsEnvironment;
-import java.awt.print.Pageable;
-import java.awt.print.PageFormat;
-import java.awt.print.Printable;
-import java.awt.print.PrinterException;
-
+import javafx.print.Collation;
+import javafx.print.JobSettings;
+import javafx.print.PageLayout;
+import javafx.print.PageOrientation;
+import javafx.print.PageRange;
+import javafx.print.Paper;
+import javafx.print.PaperSource;
+import javafx.print.PrintColor;
+import javafx.print.PrintResolution;
+import javafx.print.PrintSides;
+import javafx.print.Printer;
+import javafx.print.Printer.MarginType;
+import javafx.print.PrinterAttributes;
+import javafx.scene.Group;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Window;
 import javax.print.PrintService;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
@@ -45,7 +50,6 @@ import javax.print.attribute.ResolutionSyntax;
 import javax.print.attribute.Size2DSyntax;
 import javax.print.attribute.standard.Chromaticity;
 import javax.print.attribute.standard.Copies;
-import javax.print.attribute.standard.Destination;
 import javax.print.attribute.standard.DialogTypeSelection;
 import javax.print.attribute.standard.Media;
 import javax.print.attribute.standard.MediaPrintableArea;
@@ -58,42 +62,19 @@ import javax.print.attribute.standard.PrintQuality;
 import javax.print.attribute.standard.PrinterResolution;
 import javax.print.attribute.standard.SheetCollate;
 import javax.print.attribute.standard.Sides;
-
-import javafx.stage.Window;
-import javafx.scene.Group;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.tk.Toolkit;
+import java.awt.*;
+import java.awt.print.PageFormat;
+import java.awt.print.Pageable;
+import java.awt.print.Printable;
+import java.util.ArrayList;
+import java.util.Set;
 import com.sun.glass.ui.Application;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
-import javafx.print.JobSettings;
-import javafx.print.PageLayout;
-import javafx.print.PageOrientation;
-import javafx.print.Paper;
-import javafx.print.Printer;
-import javafx.print.Printer.MarginType;
-import javafx.print.PrinterAttributes;
-import javafx.print.Collation;
-import javafx.print.PageOrientation;
-import static javafx.print.PageOrientation.*;
-
-import javafx.print.PageRange;
-import javafx.print.PaperSource;
-import javafx.print.PrintColor;
-import javafx.print.PrintResolution;
-import javafx.print.PrintSides;
-
 import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.PrinterImpl;
 import com.sun.javafx.print.PrinterJobImpl;
-
-import javafx.collections.ObservableList;
-import com.sun.javafx.sg.BaseNode;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.j2d.PrismPrintGraphics;
 
 public class J2DPrinterJob implements PrinterJobImpl {
@@ -996,8 +977,8 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
             PrismPrintGraphics ppg =
                 new PrismPrintGraphics((Graphics2D)g, w, h);
-            PGNode pgNode = node.impl_getPGNode();
-            ((BaseNode)pgNode).render(ppg);
+            NGNode pgNode = node.impl_getPeer();
+            pgNode.render(ppg);
         }
 
         public Printable getPrintable(int pageIndex) {

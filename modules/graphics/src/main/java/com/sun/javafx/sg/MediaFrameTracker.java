@@ -22,9 +22,11 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.javafx.sg;
 
-package com.sun.javafx.pgstub;
-
-public class StubPaint {
-
+/**
+ */
+public interface MediaFrameTracker {
+    public void incrementDecodedFrameCount(int count);
+    public void incrementRenderedFrameCount(int count);
 }

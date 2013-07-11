@@ -26,12 +26,6 @@
 package javafx.scene;
 
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.BooleanExpression;
@@ -58,6 +52,15 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.PseudoClass;
+import javafx.css.StyleConverter;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
@@ -66,6 +69,7 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
@@ -92,7 +96,14 @@ import javafx.scene.input.ZoomEvent;
 import javafx.scene.text.Font;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
+import javafx.stage.Window;
 import javafx.util.Callback;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
@@ -102,16 +113,8 @@ import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.PseudoClassState;
-import javafx.css.ParsedValue;
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.Style;
-import javafx.css.StyleConverter;
-import javafx.css.Styleable;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.CursorConverter;
 import com.sun.javafx.css.converters.EffectConverter;
@@ -122,15 +125,13 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.transform.NoninvertibleTransformException;
-import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CameraHelper;
@@ -144,11 +145,10 @@ import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import javafx.css.StyleableProperty;
-import javafx.geometry.NodeOrientation;
-import javafx.stage.Window;
+import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
  * Base class for scene graph nodes. A scene graph is a set of tree data structures
@@ -474,10 +474,10 @@ public abstract class Node implements EventTarget, Styleable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final void impl_syncPGNode() {
+    public final void impl_syncPeer() {
         // Do not synchronize invisible nodes unless their visibility has changed
         if (!impl_isDirtyEmpty() && (treeVisible || impl_isDirty(DirtyBits.NODE_VISIBLE))) {
-            impl_updatePG();
+            impl_updatePeer();
             clearDirty();
         }
     }
@@ -497,7 +497,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     // Happens before we hold the sync lock
     void updateBounds() {
-        // See impl_syncPGNode()
+        // See impl_syncPeer()
         if (!treeVisible && !impl_isDirty(DirtyBits.NODE_VISIBLE)) {
             return;
         }
@@ -523,14 +523,14 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * This function is called during synchronization to update the state of the
      * PG Node from the FX Node. Subclasses of Node should override this method
-     * and must call super.impl_updatePG()
+     * and must call super.impl_updatePeer()
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_updatePG() {
-        final PGNode peer = impl_getPGNode();
+    public void impl_updatePeer() {
+        final NGNode peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
             peer.setTransformMatrix(localToParentTx);
         }
@@ -548,11 +548,11 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         if (impl_isDirty(DirtyBits.NODE_CACHE)) {
-            peer.setCachedAsBitmap(isCache(), toPGCacheHint(getCacheHint()));
+            peer.setCachedAsBitmap(isCache(), getCacheHint());
         }
 
         if (impl_isDirty(DirtyBits.NODE_CLIP)) {
-            peer.setClipNode(getClip() != null ? getClip().impl_getPGNode() : null);
+            peer.setClipNode(getClip() != null ? getClip().impl_getPeer() : null);
         }
 
         if (impl_isDirty(DirtyBits.EFFECT_EFFECT)) {
@@ -1266,24 +1266,6 @@ public abstract class Node implements EventTarget, Styleable {
         return getMiscProperties().clipProperty();
     }
 
-    private com.sun.javafx.sg.PGNode.CacheHint toPGCacheHint(CacheHint ch) {
-        if (ch == CacheHint.DEFAULT) {
-            return PGNode.CacheHint.DEFAULT;
-        } else if (ch == CacheHint.SCALE) {
-            return PGNode.CacheHint.SCALE;
-        } else if (ch == CacheHint.ROTATE) {
-            return PGNode.CacheHint.ROTATE;
-        } else if (ch == CacheHint.SCALE_AND_ROTATE) {
-            return PGNode.CacheHint.SCALE_AND_ROTATE;
-        } else if (ch == CacheHint.SPEED) {
-            return PGNode.CacheHint.SCALE_AND_ROTATE;
-        } else if (ch == CacheHint.QUALITY) {
-            return PGNode.CacheHint.DEFAULT;
-        } else { // impossible
-            return PGNode.CacheHint.DEFAULT;
-        }
-    }
-
     public final void setCache(boolean value) {
         cacheProperty().set(value);
     }
@@ -1716,7 +1698,7 @@ public abstract class Node implements EventTarget, Styleable {
      * Recursive function for synchronizing a node and all descendents
      */
     private static void syncAll(Node node) {
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
         if (node instanceof Parent) {
             Parent p = (Parent) node;
             final int childrenCount = p.getChildren().size();
@@ -2222,7 +2204,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * The peer node created by the graphics Toolkit/Pipeline implementation
      */
-    private PGNode peer;
+    private NGNode peer;
 
     /**
      * @treatAsPrivate implementation detail
@@ -2230,7 +2212,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     @Deprecated
     @SuppressWarnings("CallToPrintStackTrace")
-    public PGNode impl_getPGNode() {
+    public <P extends NGNode> P impl_getPeer() {
         if (Utils.assertionEnabled()) {
             // Assertion checking code
             if (getScene() != null && !Scene.isPGAccessAllowed()) {
@@ -2242,14 +2224,14 @@ public abstract class Node implements EventTarget, Styleable {
 
         if (peer == null) {
             //if (PerformanceTracker.isLoggingEnabled()) {
-            //    PerformanceTracker.logEvent("Creating PGNode for [{this}, id=\"{id}\"]");
+            //    PerformanceTracker.logEvent("Creating NGNode for [{this}, id=\"{id}\"]");
             //}
-            peer = impl_createPGNode();
+            peer = impl_createPeer();
             //if (PerformanceTracker.isLoggingEnabled()) {
-            //    PerformanceTracker.logEvent("PGNode created");
+            //    PerformanceTracker.logEvent("NGNode created");
             //}
         }
-        return peer;
+        return (P) peer;
     }
 
     /**
@@ -2257,7 +2239,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected abstract PGNode impl_createPGNode();
+    protected abstract NGNode impl_createPeer();
 
     /***************************************************************************
      *                                                                         *

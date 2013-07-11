@@ -37,12 +37,11 @@ import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.sg.PGText;
 import com.sun.javafx.text.TextRun;
 import com.sun.prism.Graphics;
 import com.sun.prism.paint.Color;
 
-public class NGText extends NGShape implements PGText {
+public class NGText extends NGShape {
 
     static final BaseTransform IDENT = BaseTransform.IDENTITY_TRANSFORM;
 
@@ -50,20 +49,20 @@ public class NGText extends NGShape implements PGText {
     }
 
     private GlyphList[] runs;
-    @Override public void setGlyphs(Object[] glyphs) {
+    public void setGlyphs(Object[] glyphs) {
         this.runs = (GlyphList[])glyphs;
         geometryChanged();
     }
 
     private float layoutX, layoutY;
-    @Override public void setLayoutLocation(float x, float y) {
+    public void setLayoutLocation(float x, float y) {
         layoutX = x;
         layoutY = y;
         geometryChanged();
     }
 
     private PGFont font;
-    @Override public void setFont(Object font) {
+    public void setFont(Object font) {
         if (font != null && font.equals(this.font)) {
             return;
         }
@@ -74,19 +73,19 @@ public class NGText extends NGShape implements PGText {
     }
 
     private int fontSmoothingType;
-    @Override public void setFontSmoothingType(int fontSmoothingType) {
+    public void setFontSmoothingType(int fontSmoothingType) {
         this.fontSmoothingType = fontSmoothingType;
         geometryChanged();
     }
 
     private boolean underline;
-    @Override public void setUnderline(boolean underline) {
+    public void setUnderline(boolean underline) {
         this.underline = underline;
         geometryChanged();
     }
 
     private boolean strikethrough;
-    @Override public void setStrikethrough(boolean strikethrough) {
+    public void setStrikethrough(boolean strikethrough) {
         this.strikethrough = strikethrough;
         geometryChanged();
     }
@@ -94,7 +93,7 @@ public class NGText extends NGShape implements PGText {
     private Object selectionPaint;
     private int selectionStart;
     private int selectionEnd;
-    @Override public void setSelection(int start, int end, Object color) {
+    public void setSelection(int start, int end, Object color) {
         selectionPaint = color;
         selectionStart = start;
         selectionEnd = end;

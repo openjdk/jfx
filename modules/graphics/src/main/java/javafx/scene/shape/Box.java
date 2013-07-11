@@ -31,9 +31,8 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.sg.PGBox;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGBox;
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Point2D;
@@ -163,8 +162,8 @@ public class Box extends Shape3D {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGBox();
+    protected NGNode impl_createPeer() {
+        return new NGBox();
     }
 
     /**
@@ -172,22 +171,22 @@ public class Box extends Shape3D {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
         if (impl_isDirty(DirtyBits.MESH_GEOM)) {
-            PGBox pgBox = (PGBox) impl_getPGNode();
+            NGBox peer = impl_getPeer();
             final float w = (float) getWidth();
             final float h = (float) getHeight();
             final float d = (float) getDepth();
             if (w < 0 || h < 0 || d < 0) {
-                pgBox.updateMesh(null);
+                peer.updateMesh(null);
             } else {
                 if (key == 0) {
                     key = generateKey(w, h, d);
                 }
                 mesh = manager.getBoxMesh(w, h, d, key);
                 mesh.impl_updatePG();
-                pgBox.updateMesh(mesh.impl_getPGTriangleMesh());
+                peer.updateMesh(mesh.impl_getPGTriangleMesh());
             }
         }
     }

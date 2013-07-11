@@ -25,8 +25,8 @@
 
 package javafx.scene;
 
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGAmbientLight;
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.paint.Color;
 
 /**
@@ -58,7 +58,7 @@ public class AmbientLight extends LightBase {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGAmbientLight();
+    protected NGNode impl_createPeer() {
+        return new NGAmbientLight();
     }
 }

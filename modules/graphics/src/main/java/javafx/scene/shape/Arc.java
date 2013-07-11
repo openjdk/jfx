@@ -25,16 +25,14 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.geom.Arc2D;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.sg.prism.NGArc;
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
-
-import com.sun.javafx.geom.Arc2D;
-import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGArc;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
 import javafx.scene.paint.Paint;
 
 
@@ -65,17 +63,6 @@ arc.setType(ArcType.ROUND);
 public class Arc extends Shape {
 
     private final Arc2D shape = new Arc2D();
-
-    static com.sun.javafx.sg.PGArc.ArcType toPGArcType(ArcType type) {
-        switch (type) {
-        case OPEN:
-            return PGArc.ArcType.OPEN;
-        case CHORD:
-            return PGArc.ArcType.CHORD;
-        default:
-            return PGArc.ArcType.ROUND;
-        }
-    }
 
     /**
      * Creates an empty instance of Arc.
@@ -385,12 +372,8 @@ public class Arc extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGArc();
-    }
-
-    PGArc getPGArc() {
-        return (PGArc) impl_getPGNode();
+    @Override protected NGNode impl_createPeer() {
+        return new NGArc();
     }
 
     /**
@@ -434,18 +417,18 @@ public class Arc extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_updatePG() {
-        super.impl_updatePG();
+    @Override public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            PGArc peer = getPGArc();
-             peer.updateArc((float)getCenterX(),
+            final NGArc peer = impl_getPeer();
+            peer.updateArc((float)getCenterX(),
                 (float)getCenterY(),
                 (float)getRadiusX(),
                 (float)getRadiusY(),
                 (float)getStartAngle(),
                 (float)getLength(),
-                toPGArcType(getTypeInternal()));
+                getTypeInternal());
         }
     }
 

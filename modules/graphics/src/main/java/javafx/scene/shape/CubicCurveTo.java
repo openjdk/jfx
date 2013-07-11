@@ -25,11 +25,10 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
-
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.sg.PGPath;
 
 
 /**
@@ -343,7 +342,7 @@ public class CubicCurveTo extends PathElement {
      * Adds the curved path element to the specified path.
      */
     @Override
-    void addTo(PGPath pgPath) {
+    void addTo(NGPath pgPath) {
         if (isAbsolute()) {
             pgPath.addCubicTo((float)getControlX1(), (float)getControlY1(),
                               (float)getControlX2(), (float)getControlY2(),

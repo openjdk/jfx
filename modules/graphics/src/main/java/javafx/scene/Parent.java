@@ -25,10 +25,6 @@
 
 package javafx.scene;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -36,6 +32,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
@@ -52,17 +52,17 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-
-import static com.sun.javafx.logging.PulseLogger.*;
+import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
  * The base class for all nodes that have children in the scene graph.
@@ -103,18 +103,18 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_updatePG() {
-        super.impl_updatePG();
+    @Override public void impl_updatePeer() {
+        super.impl_updatePeer();
+        final NGGroup peer = impl_getPeer();
 
         if (Utils.assertionEnabled()) {
-            List<PGNode> pgnodes = getPGGroup().getChildren();
+            List<NGNode> pgnodes = peer.getChildren();
             if (pgnodes.size() != pgChildrenSize) {
                 java.lang.System.err.println("*** pgnodes.size() [" + pgnodes.size() + "] != pgChildrenSize [" + pgChildrenSize + "]");
             }
         }
 
         if (impl_isDirty(DirtyBits.PARENT_CHILDREN)) {
-            PGGroup peer = getPGGroup();
             // Whether a permutation, or children having been added or
             // removed, we'll want to clear out the PG side starting
             // from startIdx. We know that everything up to but not
@@ -122,7 +122,7 @@ public abstract class Parent extends Node {
             // sides, so we only need to update the remaining portion.
             peer.clearFrom(startIdx);
             for (int idx = startIdx; idx < children.size(); idx++) {
-                peer.add(idx, children.get(idx).impl_getPGNode());
+                peer.add(idx, children.get(idx).impl_getPeer());
             }
             if (removedChildrenExceedsThreshold) {
                 peer.markDirty();
@@ -130,7 +130,7 @@ public abstract class Parent extends Node {
             } else {
                 if (removed != null && !removed.isEmpty()) {
                     for(int i = 0; i < removed.size(); i++) {
-                        peer.addToRemoved(removed.get(i).impl_getPGNode());
+                        peer.addToRemoved(removed.get(i).impl_getPeer());
                     }
                 }
             }
@@ -164,7 +164,8 @@ public abstract class Parent extends Node {
 
     void validatePG() {
         boolean assertionFailed = false;
-        List<PGNode> pgnodes = getPGGroup().getChildren();
+        final NGGroup peer = impl_getPeer();
+        List<NGNode> pgnodes = peer.getChildren();
         if (pgnodes.size() != children.size()) {
             java.lang.System.err.println("*** pgnodes.size validatePG() [" + pgnodes.size() + "] != children.size() [" + children.size() + "]");
             assertionFailed = true;
@@ -175,7 +176,7 @@ public abstract class Parent extends Node {
                     java.lang.System.err.println("*** this=" + this + " validatePG children[" + idx + "].parent= " + n.getParent());
                     assertionFailed = true;
                 }
-                if (n.impl_getPGNode() != pgnodes.get(idx)) {
+                if (n.impl_getPeer() != pgnodes.get(idx)) {
                     java.lang.System.err.println("*** pgnodes[" + idx + "] validatePG != children[" + idx + "]");
                     assertionFailed = true;
                 }
@@ -1224,12 +1225,8 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected @Override PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGGroup();
-    }
-
-    PGGroup getPGGroup() {
-        return ((PGGroup) impl_getPGNode());
+    @Override protected NGNode impl_createPeer() {
+        return new NGGroup();
     }
 
     @Override

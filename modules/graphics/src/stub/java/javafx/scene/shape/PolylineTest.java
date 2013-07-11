@@ -25,23 +25,19 @@
 
 package javafx.scene.shape;
 
-import static com.sun.javafx.test.TestHelper.assertBoundsEqual;
-import static com.sun.javafx.test.TestHelper.assertSimilar;
-import static com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGPolyline;
 import javafx.collections.ObservableList;
 import javafx.scene.NodeTest;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
 
-import com.sun.javafx.pgstub.StubPolyline;
+import static com.sun.javafx.test.TestHelper.*;
+import static org.junit.Assert.*;
 
 public final class PolylineTest {
 
     @Test public void testVarargConstructor() {
-        final Polyline polyline = new Polyline(1, 2, 3, 4);
+        final StubPolyline polyline = new StubPolyline(1, 2, 3, 4);
         assertEquals(4, polyline.getPoints().size());
         assertEquals(1, polyline.getPoints().get(0), 0.0001);
         assertEquals(2, polyline.getPoints().get(1), 0.0001);
@@ -50,7 +46,7 @@ public final class PolylineTest {
     }
 
     @Test public void testPropertyPropagation_emptyPoints() {
-        final Polyline polyline = new Polyline();
+        final StubPolyline polyline = new StubPolyline();
         NodeTest.callSyncPGNode(polyline);
         assertPGPolylinePointsEquals(polyline, new double[0]);
     }
@@ -58,7 +54,7 @@ public final class PolylineTest {
     @Test public void testPropertyPropagation_pointsEvenLength() {
         final double[] initialPoints = { 10, 20, 100, 200, 200, 100, 50, 10 };
 
-        final Polyline polyline = new Polyline(initialPoints);
+        final StubPolyline polyline = new StubPolyline(initialPoints);
         NodeTest.callSyncPGNode(polyline);
         assertPGPolylinePointsEquals(polyline, initialPoints);
 
@@ -73,7 +69,7 @@ public final class PolylineTest {
     @Test public void testPropertyPropagation_pointsOddLength() {
         final double[] initialPoints = { 10, 20, 100, 200, 200 };
 
-        final Polyline polyline = new Polyline(initialPoints);
+        final StubPolyline polyline = new StubPolyline(initialPoints);
         NodeTest.callSyncPGNode(polyline);
         assertPGPolylinePointsEquals(polyline, initialPoints);
 
@@ -86,14 +82,14 @@ public final class PolylineTest {
     }
 
     @Test public void testBounds_emptyPoints() {
-        final Polyline polyline = new Polyline();
+        final StubPolyline polyline = new StubPolyline();
         assertBoundsEqual(box(0, 0, -1, -1), polyline.getBoundsInLocal());
     }
 
     @Test public void testBounds_evenPointsLength() {
         final double[] initialPoints = { 100, 100, 200, 100, 200, 200 };
 
-        final Polyline polyline = new Polyline(initialPoints);
+        final StubPolyline polyline = new StubPolyline(initialPoints);
         assertSimilar(box(100, 100, 100, 100), polyline.getBoundsInLocal());
 
         final ObservableList<Double> polylinePoints = polyline.getPoints();
@@ -108,7 +104,7 @@ public final class PolylineTest {
             100, 100, 200, 100, 200, 200, 200, 300
         };
 
-        final Polyline polyline = new Polyline(initialPoints);
+        final StubPolyline polyline = new StubPolyline(initialPoints);
         assertSimilar(box(100, 100, 100, 200), polyline.getBoundsInLocal());
 
         final ObservableList<Double> polylinePoints = polyline.getPoints();
@@ -118,11 +114,10 @@ public final class PolylineTest {
     }
 
     private static void assertPGPolylinePointsEquals(
-            final Polyline polyline,
+            final StubPolyline polyline,
             final double... expectedPoints) {
-        final StubPolyline stubPolyline =
-                (StubPolyline) polyline.getPGPolyline();
-        final float[] pgPoints = stubPolyline.getPoints();
+        final StubNGPolyline stubPolyline = polyline.impl_getPeer();
+        final float[] pgPoints = stubPolyline.points;
 
         final int minLength = expectedPoints.length & ~1;
         final int maxLength = expectedPoints.length;
@@ -142,8 +137,32 @@ public final class PolylineTest {
     }
 
     @Test public void toStringShouldReturnNonEmptyString() {
-        String s = new Polyline().toString();
+        String s = new StubPolyline().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
+    }
+
+    private final class StubPolyline extends Polyline {
+        public StubPolyline(double... initialPoints) {
+            super(initialPoints);
+        }
+
+        public StubPolyline() {
+            super();
+        }
+
+        @Override
+        protected NGNode impl_createPeer() {
+            return new StubNGPolyline();
+        }
+    }
+
+    private final class StubNGPolyline extends NGPolyline {
+        private float[] points;
+        @Override
+        public void updatePolyline(float[] points) {
+            super.updatePolyline(points);
+            this.points = points;
+        }
     }
 }

@@ -25,14 +25,9 @@
 
 package com.sun.javafx.tk.quantum;
 
-import javafx.application.Platform;
-import javafx.scene.input.InputMethodRequests;
-import javafx.stage.StageStyle;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.View;
-import com.sun.javafx.sg.PGCamera;
-import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKClipboard;
@@ -47,6 +42,9 @@ import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
+import javafx.application.Platform;
+import javafx.scene.input.InputMethodRequests;
+import javafx.stage.StageStyle;
 
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -156,8 +154,8 @@ abstract class GlassScene implements TKScene {
     }
 
     @Override
-    public void setRoot(PGNode root) {
-        this.root = (NGNode)root;
+    public void setRoot(NGNode root) {
+        this.root = root;
         entireSceneNeedsRepaint();
     }
 
@@ -177,9 +175,9 @@ abstract class GlassScene implements TKScene {
     public void setLights(Object[] lights) { this.lights = lights; }
 
     @Override
-    public void setCamera(PGCamera camera) {
+    public void setCamera(NGCamera camera) {
         if (camera != null) {
-            this.camera = ((NGCamera) camera).getCameraImpl();
+            this.camera = camera.getCameraImpl();
         } else {
             this.camera = PrismDefaultCamera.getInstance();
         }

@@ -28,18 +28,17 @@ package com.sun.javafx.sg.prism;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.prism.NodeEffectInput;
+import com.sun.scenario.effect.DropShadow;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-
-import com.sun.scenario.effect.DropShadow;
-
-import java.util.*;
 
 /**
  * A series of tests where we are checking for the dirty region on a grid
@@ -117,8 +116,8 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         // Now if I translate the root, none of the child nodes
         // should contribute to the dirty region
         translate(root, TRANSLATE_DELTA, TRANSLATE_DELTA);
-        for (PGNode child : root.getChildren()) {
-            assertDirtyRegionEquals((NGNode) child, new RectBounds());
+        for (NGNode child : root.getChildren()) {
+            assertDirtyRegionEquals(child, new RectBounds());
         }
     }
 
@@ -131,28 +130,28 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         // If I make one of the children dirty, then the child should contribute
         // to the dirty region, but none of the other nodes should. This test just
         // checks this second part -- that none of the other child nodes contribute.
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         polluter.pollute(middleChild);
-        for (PGNode child : root.getChildren()) {
+        for (NGNode child : root.getChildren()) {
             if (child != middleChild) { // skip the dirty node
-                assertDirtyRegionEquals((NGNode) child, new RectBounds());
+                assertDirtyRegionEquals(child, new RectBounds());
             }
         }
     }
 
     @Test public void whenOnlyASingleChildIsDirtyThenParentAndAllChildrenAreAskedToAccumulateDirtyRegions() {
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         polluter.pollute(middleChild);
-        List<PGNode> nodes = new ArrayList<PGNode>((List<PGNode>)root.getChildren());
+        List<NGNode> nodes = new ArrayList<>(root.getChildren());
         nodes.add(root);
         NGNode[] arr = new NGNode[nodes.size()];
-        for (int i=0; i<nodes.size(); i++) arr[i] = (NGNode)nodes.get(i);
+        for (int i=0; i<nodes.size(); i++) arr[i] = nodes.get(i);
         // The middle child should be changed
         assertOnlyTheseNodesAreAskedToAccumulateDirtyRegions(arr);
     }
 
     @Test public void whenOnlyASingleChildIsDirtyThenOnlyParentAndThatChildShouldComputeDirtyRegions() {
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         polluter.pollute(middleChild);
         /*
             Testing discovered a really great thing that happens -- if the dirty node is
@@ -164,13 +163,13 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     }
 
     @Test public void aDirtyChildNodeShouldFormTheDirtyRegionWhenItIsTheOnlyDirtyNode() {
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         assertDirtyRegionEquals(root, polluter.polluteAndGetExpectedBounds(middleChild));
     }
 
     @Test public void theUnionOfTwoDirtyChildNodesDirtyRegionsShouldFormTheDirtyRegionWhenTheyAreTheOnlyDirtyNodes() {
-        NGNode firstChild = (NGNode) root.getChildren().get(0);
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode firstChild = root.getChildren().get(0);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         RectBounds firstChildArea = polluter.polluteAndGetExpectedBounds(firstChild);
         RectBounds middleChildArea = polluter.polluteAndGetExpectedBounds(middleChild);
         RectBounds expected = (RectBounds)firstChildArea.deriveWithUnion(middleChildArea);
@@ -181,15 +180,15 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         BaseBounds original = root.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
         translate(root, TRANSLATE_DELTA, TRANSLATE_DELTA);
         BaseBounds transformed = root.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
-        polluter.pollute((NGNode)root.getChildren().get(0));
-        polluter.pollute((NGNode)root.getChildren().get(root.getChildren().size()/2));
-        polluter.pollute((NGNode)root.getChildren().get(root.getChildren().size()-1));
+        polluter.pollute(root.getChildren().get(0));
+        polluter.pollute(root.getChildren().get(root.getChildren().size()/2));
+        polluter.pollute(root.getChildren().get(root.getChildren().size()-1));
         RectBounds expected = (RectBounds)original.deriveWithUnion(transformed);
         assertDirtyRegionEquals(root, expected);
     }
 
     @Test public void anEffectShouldChangeTheTransformedBoundsOfAChild() {
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         BaseBounds oldTransformedBounds = middleChild.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
         NodeEffectInput input = new NodeEffectInput(middleChild);
         DropShadow shadow = new DropShadow(input);
@@ -203,7 +202,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     }
 
     @Test public void whenAnEffectIsSetTheChildBecomesDirtyAndTheDirtyRegionIncludesTheEffectBounds() {
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         NodeEffectInput input = new NodeEffectInput(middleChild);
         DropShadow shadow = new DropShadow(input);
         shadow.setGaussianWidth(21);
@@ -218,7 +217,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     }
 
     @Test public void whenAnEffectIsChangedOnTheChildTheDirtyRegionIncludesTheOldAndNewEffectBounds() {
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         NodeEffectInput input = new NodeEffectInput(middleChild);
         DropShadow shadow = new DropShadow(input);
         shadow.setGaussianWidth(21);

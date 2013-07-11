@@ -32,8 +32,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.NodePath;
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.sg.PGNode;
 import com.sun.prism.Graphics;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Blend.Mode;
@@ -41,13 +39,14 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
  */
-public class NGGroup extends NGNode implements PGGroup {
+public class NGGroup extends NGNode {
     /**
      * The blend mode to use with this group.
      */
@@ -57,9 +56,9 @@ public class NGGroup extends NGNode implements PGGroup {
     // Actually, if a node is removed, I probably don't have to worry about
     // clearing it because as soon as it is added to another parent it will be set
     // and there is no magic listener foo going on here.
-    private List<PGNode> children = new ArrayList<PGNode>(1);
-    private List<PGNode> unmod = Collections.unmodifiableList(children);
-    private List<PGNode> removed;
+    private List<NGNode> children = new ArrayList<>(1);
+    private List<NGNode> unmod = Collections.unmodifiableList(children);
+    private List<NGNode> removed;
     
     /**
      * This mask has all bits that mark that a region intersects this group.
@@ -76,7 +75,7 @@ public class NGGroup extends NGNode implements PGGroup {
     /**
      * Gets an unmodifiable list of the current children on this group
      */
-    public List<com.sun.javafx.sg.PGNode> getChildren() { return unmod; }
+    public List<NGNode> getChildren() { return unmod; }
 
     /**
      * Adds a node to the given index. An index of -1 means "append", for legacy
@@ -84,7 +83,7 @@ public class NGGroup extends NGNode implements PGGroup {
      * @param index -1, or <= node.size()
      * @param node
      */
-    public void add(int index, PGNode node) {
+    public void add(int index, NGNode node) {
         // Validate the arguments
         if ((index < -1) || (index > children.size())) {
             throw new IndexOutOfBoundsException("invalid index");
@@ -122,7 +121,7 @@ public class NGGroup extends NGNode implements PGGroup {
         geometryChanged();
     }
 
-    @Override public void clearFrom(int fromIndex) {
+    public void clearFrom(int fromIndex) {
         if (fromIndex < children.size()) {
             children.subList(fromIndex, children.size()).clear();
             geometryChanged();
@@ -131,12 +130,12 @@ public class NGGroup extends NGNode implements PGGroup {
         }
     }
 
-    public List<PGNode> getRemovedChildren() {
+    public List<NGNode> getRemovedChildren() {
         return removed;
     }
 
-    public void addToRemoved(PGNode n) {
-        if (removed == null) removed = new ArrayList<PGNode>();
+    public void addToRemoved(NGNode n) {
+        if (removed == null) removed = new ArrayList<>();
         if (dirtyChildrenAccumulated > DIRTY_CHILDREN_ACCUMULATED_THRESHOLD) {
             return;
         }
@@ -155,7 +154,7 @@ public class NGGroup extends NGNode implements PGGroup {
         if (removed != null) removed.clear();
     }
 
-    public void remove(PGNode node) {
+    public void remove(NGNode node) {
         // We just remove the node and mark this group as being dirty. Really, if we
         // supported sub-regions within the group, we'd only have to mark the
         // sub-region that had been occupied by the node as dirty, but we do not

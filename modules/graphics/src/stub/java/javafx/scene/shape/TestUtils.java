@@ -25,15 +25,13 @@
 
 package javafx.scene.shape;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.prism.paint.Color;
+import javafx.scene.Node;
 
 import java.lang.reflect.Method;
 
-import javafx.scene.Node;
-
-import com.sun.javafx.sg.PGNode;
+import static org.junit.Assert.*;
 
 public abstract class TestUtils {
 
@@ -110,11 +108,18 @@ public abstract class TestUtils {
         pgPropertyNameBuilder.setCharAt(0, Character.toUpperCase(pgPropertyName.charAt(0)));
         final String pgGetterName = new StringBuilder(isBool ? "is" : "get").append(pgPropertyNameBuilder).toString();
 
-        final PGNode pgNode = node.impl_getPGNode();
-        final Class<? extends PGNode> impl_class = pgNode.getClass();
+        final NGNode peer = node.impl_getPeer();
+        final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 
-        return impl_getter.invoke(pgNode);
+        Object result =  impl_getter.invoke(peer);
+        // This is a hack workaround because we supply a javafx Color to a call, and pull a prism Color
+        // from the NG node, and need to compare the two. So have to convert back to javafx Color.
+        if (result instanceof Color) {
+            Color prismColor = (Color)result;
+            result = new javafx.scene.paint.Color(prismColor.getRed(), prismColor.getGreen(), prismColor.getBlue(), prismColor.getAlpha());
+        }
+        return result;
     }
 
     public static Object getObjectValue(Node node, String pgPropertyName) throws Exception {

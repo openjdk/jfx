@@ -32,8 +32,7 @@ import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.sg.PGTriangleMesh;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGTriangleMesh;
 import javafx.collections.ArrayChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableArray;
@@ -205,7 +204,7 @@ public class TriangleMesh extends Mesh {
         this.refCount -= 1;
     }
 
-    private PGTriangleMesh peer;
+    private NGTriangleMesh peer;
 
     /**
      * @treatAsPrivate implementation detail
@@ -213,15 +212,15 @@ public class TriangleMesh extends Mesh {
      */
     @Deprecated
     /** The peer node created by the graphics Toolkit/Pipeline implementation */
-    PGTriangleMesh impl_getPGTriangleMesh() {
+    NGTriangleMesh impl_getPGTriangleMesh() {
         if (peer == null) {
-            peer = Toolkit.getToolkit().createPGTriangleMesh();
+            peer = new NGTriangleMesh();
         }
         return peer;
     }
 
     @Override
-    PGTriangleMesh getPGMesh() {
+    NGTriangleMesh getPGMesh() {
         return impl_getPGTriangleMesh();
     }
 
@@ -236,7 +235,7 @@ public class TriangleMesh extends Mesh {
             return;
         }
 
-        PGTriangleMesh pgTriMesh = impl_getPGTriangleMesh();
+        final NGTriangleMesh pgTriMesh = impl_getPGTriangleMesh();
         // sync points 
         if (pointsSyncer.dirty) {
             pgTriMesh.syncPoints(pointsSyncer);

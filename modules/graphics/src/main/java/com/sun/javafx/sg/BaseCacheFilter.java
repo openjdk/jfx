@@ -25,13 +25,13 @@
 
 package com.sun.javafx.sg;
 
+import javafx.scene.CacheHint;
 import com.sun.javafx.geom.Rectangle;
-import com.sun.scenario.effect.FilterContext;
-import com.sun.scenario.effect.ImageData;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
-import com.sun.javafx.sg.PGNode.CacheHint;
+import com.sun.scenario.effect.ImageData;
 
 /*
  * Base implementation of the Node.cache and cacheHint APIs.

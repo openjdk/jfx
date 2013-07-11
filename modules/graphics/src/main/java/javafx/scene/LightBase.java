@@ -33,7 +33,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGLightBase;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
@@ -209,24 +209,24 @@ public abstract class LightBase extends Node {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
-        PGLightBase pgLightBase = (PGLightBase) impl_getPGNode();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
+        NGLightBase peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.NODE_LIGHT)) {
-            pgLightBase.setColor((getColor() == null) ? null
+            peer.setColor((getColor() == null) ? null
                     : Toolkit.getPaintAccessor().getPlatformPaint(getColor()));
-            pgLightBase.setLightOn(isLightOn());
+            peer.setLightOn(isLightOn());
 
             if (scope != null) {
                 if (getScope().isEmpty()) {
-                    pgLightBase.setScope(null);
+                    peer.setScope(null);
                 } else {
                     Object ngList[] = new Object[getScope().size()];
                     for (int i = 0; i < scope.size(); i++) {
                         Node n = scope.get(i);
-                        ngList[i] = n.impl_getPGNode();
+                        ngList[i] = n.impl_getPeer();
                     }
-                    pgLightBase.setScope(ngList);
+                    peer.setScope(ngList);
                 }
             }
         }
@@ -236,7 +236,7 @@ public abstract class LightBase extends Node {
             getLocalToSceneTransform().impl_apply(localToSceneTx);
             // TODO: 3D - For now, we are treating the scene as world. This may need to change
             // for the fixed eye position case.
-            pgLightBase.setWorldTransform(localToSceneTx);
+            peer.setWorldTransform(localToSceneTx);
         }
     }
 

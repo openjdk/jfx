@@ -25,28 +25,22 @@
 
 package com.sun.prism.j2d;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableSet;
+import javafx.print.Printer;
+import javafx.print.PrinterJob;
+import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.TreeSet;
-
-import com.sun.javafx.tk.PrintPipeline;
-import com.sun.javafx.sg.BaseNode;
-import com.sun.javafx.sg.PGNode;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import javax.print.PrintService;
-import javax.print.PrintServiceLookup;
-
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableSet;
-
-import javafx.print.Printer;
-import javafx.print.PrinterJob;
-
 import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.PrinterImpl;
 import com.sun.javafx.print.PrinterJobImpl;
-
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.tk.PrintPipeline;
 import com.sun.prism.j2d.print.J2DPrinter;
 import com.sun.prism.j2d.print.J2DPrinterJob;
 
@@ -56,9 +50,9 @@ public final class PrismPrintPipeline extends PrintPipeline {
         return new PrismPrintPipeline();
     }
 
-    public boolean printNode(PGNode pgNode, int w, int h, Graphics g) {
+    public boolean printNode(NGNode ngNode, int w, int h, Graphics g) {
         PrismPrintGraphics ppg = new PrismPrintGraphics((Graphics2D)g, w, h);
-        ((BaseNode)pgNode).render(ppg);
+        ngNode.render(ppg);
         return true;
     }
 

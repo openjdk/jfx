@@ -27,9 +27,6 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.sg.PGPhongMaterial;
-import com.sun.javafx.sg.PGShape3D;
-import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.prism.Graphics;
 import com.sun.prism.Material;
 import com.sun.prism.MeshView;
@@ -42,7 +39,7 @@ import javafx.scene.shape.DrawMode;
 /**
  * TODO: 3D - Need documentation
  */
-public abstract class NGShape3D extends NGNode implements PGShape3D {
+public abstract class NGShape3D extends NGNode {
     protected NGPhongMaterial material;
     protected DrawMode drawMode;
     protected CullFace cullFace;
@@ -52,8 +49,8 @@ public abstract class NGShape3D extends NGNode implements PGShape3D {
     private NGTriangleMesh mesh;
     private MeshView meshView;
 
-    public void setMaterial(PGPhongMaterial material) {
-        this.material = (NGPhongMaterial) material;
+    public void setMaterial(NGPhongMaterial material) {
+        this.material = material;
         materialDirty = true;
         visualsChanged();
     }
@@ -176,8 +173,8 @@ public abstract class NGShape3D extends NGNode implements PGShape3D {
         return value < 1.0f ? ((value < 0.0f) ? 0.0f : value) : 1.0f;
     }
 
-    protected void setMesh(PGTriangleMesh triangleMesh) {
-        this.mesh = (NGTriangleMesh)triangleMesh;
+    protected void setMesh(NGTriangleMesh triangleMesh) {
+        this.mesh = triangleMesh;
         meshView = null;
         visualsChanged();
     }

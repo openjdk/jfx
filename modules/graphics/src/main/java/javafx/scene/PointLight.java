@@ -25,8 +25,8 @@
 
 package javafx.scene;
 
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGPointLight;
 import javafx.scene.paint.Color;
 
 /**
@@ -59,7 +59,7 @@ public class PointLight extends LightBase {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGPointLight();
+    protected NGNode impl_createPeer() {
+        return new NGPointLight();
     }
 }

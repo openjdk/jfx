@@ -30,45 +30,37 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGExternalNode;
+import com.sun.javafx.sg.prism.NGExternalNode;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
-
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.beans.value.ChangeListener;
-import javafx.geometry.Point2D;
-import javafx.scene.input.KeyCode;
+import javafx.stage.Window;
+import sun.awt.UngrabEvent;
+import sun.swing.JLightweightFrame;
+import sun.swing.LightweightContent;
 
-import javax.swing.JComponent;
-import javax.swing.SwingUtilities;
-import java.awt.AWTEvent;
-import java.awt.EventQueue;
-import java.awt.Toolkit;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
-
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
-
-import javafx.scene.Scene;
-import javafx.stage.Window;
-import sun.awt.UngrabEvent;
-
-import sun.swing.LightweightContent;
-import sun.swing.JLightweightFrame;
 
 /**
  * This class is used to embed a Swing content into a JavaFX application.
@@ -118,7 +110,7 @@ public class SwingNode extends Node {
     private volatile JComponent content;
     private volatile JLightweightFrame lwFrame;
 
-    private volatile PGExternalNode peer;
+    private volatile NGExternalNode peer;
 
     private final ReentrantLock paintLock = new ReentrantLock();
 
@@ -380,8 +372,8 @@ public class SwingNode extends Node {
     }
 
     @Override
-    protected PGNode impl_createPGNode() {
-        peer = com.sun.javafx.tk.Toolkit.getToolkit().createPGExternalNode();
+    protected NGNode impl_createPeer() {
+        peer = new NGExternalNode();
         peer.setLock(paintLock);
         for (Runnable request : peerRequests) {
             request.run();
@@ -414,8 +406,8 @@ public class SwingNode extends Node {
     }
 
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_VISIBLE)) {
             locateLwFrame(); // initialize location

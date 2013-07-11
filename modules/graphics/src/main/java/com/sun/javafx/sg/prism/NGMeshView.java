@@ -25,16 +25,13 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.sg.PGMeshView;
-import com.sun.javafx.sg.PGTriangleMesh;
-
 /**
  * TODO: 3D - Need documentation
  */
-public class NGMeshView extends NGShape3D implements PGMeshView {
+public class NGMeshView extends NGShape3D {
 
     @Override
-    public void setMesh(PGTriangleMesh pgtm) {
+    public void setMesh(NGTriangleMesh pgtm) {
         // NOTE: Implementation has been promopted to NGShape3D so as to
         // share NGTriangleMesh between predefined 3D shapes
         super.setMesh(pgtm);

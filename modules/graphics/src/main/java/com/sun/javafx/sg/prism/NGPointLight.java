@@ -25,12 +25,10 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.sg.PGPointLight;
-
 /**
  * TODO: 3D - Need documentation
  */
-public class NGPointLight extends NGLightBase implements PGPointLight {
+public class NGPointLight extends NGLightBase {
 
     public NGPointLight() {
     }

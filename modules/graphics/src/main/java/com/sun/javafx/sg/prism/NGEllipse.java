@@ -25,23 +25,18 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGEllipse;
 import com.sun.prism.Graphics;
-import com.sun.prism.BasicStroke;
 import com.sun.prism.shape.ShapeRep;
 
 /**
  */
-public class NGEllipse extends NGShape implements PGEllipse {
+public class NGEllipse extends NGShape {
 
     private Ellipse2D ellipse = new Ellipse2D();
 
-    @Override public void updateEllipse(float cx, float cy, float rx, float ry) {
+    public void updateEllipse(float cx, float cy, float rx, float ry) {
         ellipse.x = cx - rx;
         ellipse.width = rx * 2f;
         ellipse.y = cy - ry;

@@ -25,12 +25,10 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.sg.PGAmbientLight;
-
 /**
  * TODO: 3D - Need documentation
  */
-public class NGAmbientLight extends NGLightBase implements PGAmbientLight {
+public class NGAmbientLight extends NGLightBase {
 
     public NGAmbientLight() {
     }

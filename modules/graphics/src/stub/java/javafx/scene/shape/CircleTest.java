@@ -25,64 +25,68 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.sg.prism.NGCircle;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.test.TestHelper;
 import javafx.geometry.Bounds;
 import javafx.scene.NodeTest;
 import javafx.scene.paint.Color;
-import static org.junit.Assert.*;
-import static com.sun.javafx.test.TestHelper.*;
+import javafx.scene.paint.Paint;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
-
 import org.junit.Test;
+
+import static com.sun.javafx.test.TestHelper.assertSimilar;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 
 public class CircleTest {
 
     @Test public void testPropertyPropagation_visible() throws Exception {
-        final Circle node = new Circle();
+        final Circle node = new StubCircle();
         NodeTest.testBooleanPropertyPropagation(node, "visible", false, true);
     }
 
     @Test public void testPropertyPropagation_centerX() throws Exception {
-        final Circle node = new Circle();
+        final Circle node = new StubCircle();
         NodeTest.testDoublePropertyPropagation(node, "centerX", 100, 200);
     }
 
     @Test public void testPropertyPropagation_centerY() throws Exception {
-        final Circle node = new Circle();
+        final Circle node = new StubCircle();
         NodeTest.testDoublePropertyPropagation(node, "centerY", 100, 200);
     }
 
     @Test public void testPropertyPropagation_radius() throws Exception {
-        final Circle node = new Circle();
+        final Circle node = new StubCircle();
         NodeTest.testDoublePropertyPropagation(node, "radius", 100, 200);
     }
     
     @Test public void testBoundPropertySync_centerX() throws Exception {
         NodeTest.assertDoublePropertySynced(
-                new Circle(100, 200, 50),
+                new StubCircle(100, 200, 50),
                 "centerX", "centerX",
                 350.0);
     }
 
     @Test public void testBoundPropertySync_centerY() throws Exception {
         NodeTest.assertDoublePropertySynced(
-                new Circle(100, 200, 50),
+                new StubCircle(100, 200, 50),
                 "centerY", "centerY",
                 250.0);
     }
 
     @Test public void testBoundPropertySync_radius() throws Exception {
         NodeTest.assertDoublePropertySynced(
-                new Circle(100, 200, 50),
+                new StubCircle(100, 200, 50),
                 "radius", "radius",
                 100.0);
     }
 
     @Test
     public void testTransformedBounds_rotation() {
-        Circle c = new Circle(50, 100, 10, Color.RED);
+        Circle c = new StubCircle(50, 100, 10, Color.RED);
         Bounds original = c.getBoundsInParent();
         c.setRotate(15);
         assertSimilar(original, c.getBoundsInParent());
@@ -92,7 +96,7 @@ public class CircleTest {
     public void testTransformedBounds_rotation2() {
         final int centerX = 50;
         final int centerY = 200;
-        Circle c = new Circle(centerX, centerY, 10, Color.RED);
+        Circle c = new StubCircle(centerX, centerY, 10, Color.RED);
         Bounds original = c.getBoundsInParent();
         // Using integer isosceles triangle of (38, 181, 181)
         Rotate r = new Rotate();
@@ -111,7 +115,7 @@ public class CircleTest {
 
     @Test
     public void testTransformedBounds_translate() {
-        Circle c = new Circle(50, 100, 10, Color.RED);
+        Circle c = new StubCircle(50, 100, 10, Color.RED);
         Bounds original = c.getBoundsInParent();
         c.setTranslateX(10);
         c.setTranslateY(20);
@@ -121,7 +125,7 @@ public class CircleTest {
 
 
     @Test public void testTransformedBounds_scale() {
-        Circle c = new Circle(50, 100, 10, Color.RED);
+        Circle c = new StubCircle(50, 100, 10, Color.RED);
         double scalePivotX = (c.getCenterX() + c.getRadius()) / 2;
         double scalePivotY = (c.getCenterY() + c.getRadius()) / 2;
         Bounds original = c.getBoundsInParent();
@@ -132,8 +136,48 @@ public class CircleTest {
     }
 
     @Test public void toStringShouldReturnNonEmptyString() {
-        String s = new Circle().toString();
+        String s = new StubCircle().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
+    }
+
+    public static final class StubCircle extends Circle {
+        public StubCircle() {
+            super();
+        }
+
+        public StubCircle(double radius) {
+            super(radius);
+        }
+
+        public StubCircle(double centerX, double centerY, double radius) {
+            super(centerX, centerY, radius);
+        }
+
+        public StubCircle(double centerX, double centerY, double radius, Paint fill) {
+            super(centerX, centerY, radius, fill);
+        }
+
+        @Override
+        protected NGNode impl_createPeer() {
+            return new StubNGCircle();
+        }
+    }
+
+    public static final class StubNGCircle extends NGCircle {
+        private float centerX;
+        private float centerY;
+        private float radius;
+
+        public float getCenterX() {return centerX;}
+        public float getCenterY() {return centerY;}
+        public float getRadius() {return radius;}
+
+        @Override
+        public void updateCircle(float cx, float cy, float radius) {
+            this.centerX = cx;
+            this.centerY = cy;
+            this.radius = radius;
+        }
     }
 }

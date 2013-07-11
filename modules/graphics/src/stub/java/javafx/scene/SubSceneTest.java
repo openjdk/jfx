@@ -24,13 +24,13 @@
  */
 package javafx.scene;
 
-import com.sun.javafx.pgstub.StubParallelCamera;
-import com.sun.javafx.pgstub.StubSubScene;
-import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.prism.camera.PrismCameraImpl;
 import javafx.stage.Stage;
-import static org.junit.Assert.*;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class SubSceneTest {
 
@@ -145,41 +145,37 @@ public class SubSceneTest {
         stage.show();
 
         sub.setCamera(cam);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
         // verify it has correct owner
         cam.setNearClip(20);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(20, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
-                .getCamera())).getNearClip(), 0.00001);
+        Toolkit.getToolkit().firePulse();
+        NGSubScene peer = sub.impl_getPeer();
+        assertEquals(20, peer.getCamera().getNearClip(), 0.00001);
 
         sub.setCamera(null); // Sets the default camera, which is parallel camera
         ParallelCamera pCam = new ParallelCamera(); // Like default cam
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
         // verify owner was removed
         cam.setNearClip(30);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(pCam.getNearClip(), ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
-                .getCamera())).getNearClip(), 0.00001);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(pCam.getNearClip(), peer.getCamera().getNearClip(), 0.00001);
 
         sub.setCamera(cam);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
         // verify it has correct owner
         cam.setNearClip(40);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(40, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
-                .getCamera())).getNearClip(), 0.00001);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(40, peer.getCamera().getNearClip(), 0.00001);
 
-        StubParallelCamera oldCam =
-                ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode()).getCamera()));
+        PrismCameraImpl oldCam = peer.getCamera();
         sub.setCamera(new ParallelCamera());
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
         // verify owner was removed
         cam.setNearClip(50);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
         assertEquals(40, oldCam.getNearClip(), 0.00001);
-        assertEquals(0.1, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
-                .getCamera())).getNearClip(), 0.00001);
+        assertEquals(0.1, peer.getCamera().getNearClip(), 0.00001);
     }
 
     @Test
@@ -190,13 +186,13 @@ public class SubSceneTest {
         stage.setScene(scene);
         stage.show();
 
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
         Camera cam = sub.getEffectiveCamera();
 
         cam.setNearClip(20);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(20, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
-                .getCamera())).getNearClip(), 0.00001);
+        Toolkit.getToolkit().firePulse();
+        NGSubScene peer = sub.impl_getPeer();
+        assertEquals(20, peer.getCamera().getNearClip(), 0.00001);
     }
 
     @Test(expected=IllegalArgumentException.class)

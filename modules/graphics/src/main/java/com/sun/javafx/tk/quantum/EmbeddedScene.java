@@ -25,21 +25,22 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
-import com.sun.javafx.tk.TKClipboard;
 import javafx.application.Platform;
 import javafx.event.EventType;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-
+import java.nio.IntBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.embed.*;
+import com.sun.javafx.embed.AbstractEvents;
+import com.sun.javafx.embed.EmbeddedSceneDragStartListenerInterface;
+import com.sun.javafx.embed.EmbeddedSceneDropTargetInterface;
+import com.sun.javafx.embed.EmbeddedSceneInterface;
+import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
 
 final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
@@ -95,9 +96,9 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         return false;
     }
 
-    @Override public void setRoot(PGNode root) {
+    @Override public void setRoot(NGNode root) {
         super.setRoot(root);
-        painter.setRoot((NGNode)root);
+        painter.setRoot(root);
     }
 
     @Override

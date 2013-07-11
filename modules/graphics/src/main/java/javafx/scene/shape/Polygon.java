@@ -25,18 +25,16 @@
 
 package javafx.scene.shape;
 
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGPolygon;
-import com.sun.javafx.sg.PGShape.Mode;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGPolygon;
+import com.sun.javafx.sg.prism.NGShape;
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
 import javafx.scene.paint.Paint;
 
 /**
@@ -101,12 +99,8 @@ public  class Polygon extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGPolygon();
-    }
-
-    PGPolygon getPGPolygon() {
-        return (PGPolygon)impl_getPGNode();
+    protected NGNode impl_createPeer() {
+        return new NGPolygon();
     }
 
     /**
@@ -115,12 +109,12 @@ public  class Polygon extends Shape {
      */
     @Deprecated
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        if (impl_mode == Mode.EMPTY || getPoints().size() <= 1) {
+        if (impl_mode == NGShape.Mode.EMPTY || getPoints().size() <= 1) {
             return bounds.makeEmpty();
         }
 
         if (getPoints().size() == 2) {
-            if (impl_mode == Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+            if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
                 return bounds.makeEmpty();
             }
             double upad = getStrokeWidth();
@@ -159,15 +153,16 @@ public  class Polygon extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
             final int numValidPoints = getPoints().size() & ~1;
             float points_array[] = new float[numValidPoints];
             for (int i = 0; i < numValidPoints; i++) {
                 points_array[i] = (float)getPoints().get(i).doubleValue();
             }
-            getPGPolygon().updatePolygon(points_array);
+            final NGPolygon peer = impl_getPeer();
+            peer.updatePolygon(points_array);
         }
     }
 

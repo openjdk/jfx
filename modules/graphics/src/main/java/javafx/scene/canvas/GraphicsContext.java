@@ -30,22 +30,11 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
-import com.sun.javafx.image.BytePixelGetter;
-import com.sun.javafx.image.BytePixelSetter;
-import com.sun.javafx.image.ByteToBytePixelConverter;
-import com.sun.javafx.image.IntPixelGetter;
-import com.sun.javafx.image.IntToBytePixelConverter;
-import com.sun.javafx.image.PixelConverter;
-import com.sun.javafx.image.PixelGetter;
-import com.sun.javafx.image.PixelUtils;
+import com.sun.javafx.image.*;
 import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.sg.GrowableDataBuffer;
-import com.sun.javafx.sg.PGCanvas;
+import com.sun.javafx.sg.prism.NGCanvas;
 import com.sun.javafx.tk.Toolkit;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.util.LinkedList;
 import javafx.geometry.VPos;
 import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
@@ -63,6 +52,11 @@ import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Affine;
+
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.util.LinkedList;
 
 /**
  * This class is used to issue draw calls to a {@code Canvas} using a buffer. 
@@ -206,7 +200,7 @@ public final class GraphicsContext {
             while (ctx.curState.numClipPaths > numClipPaths) {
                 ctx.curState.numClipPaths--;
                 ctx.clipStack.removeLast();
-                buf.putByte(PGCanvas.POP_CLIP);
+                buf.putByte(NGCanvas.POP_CLIP);
             }
             ctx.setFillRule(fillRule);
             ctx.setFont(font);
@@ -222,11 +216,11 @@ public final class GraphicsContext {
 
     private static float coords[] = new float[6];
     private static final byte pgtype[] = {
-        PGCanvas.MOVETO,
-        PGCanvas.LINETO,
-        PGCanvas.QUADTO,
-        PGCanvas.CUBICTO,
-        PGCanvas.CLOSEPATH,
+        NGCanvas.MOVETO,
+        NGCanvas.LINETO,
+        NGCanvas.QUADTO,
+        NGCanvas.CUBICTO,
+        NGCanvas.CLOSEPATH,
     };
     private static final int numsegs[] = { 2, 2, 4, 6, 0, };
 
@@ -238,7 +232,7 @@ public final class GraphicsContext {
         updateTransform();
         GrowableDataBuffer buf = getBuffer();
         if (pathDirty) {
-            buf.putByte(PGCanvas.PATHSTART);
+            buf.putByte(NGCanvas.PATHSTART);
             PathIterator pi = path.getPathIterator(null);
             while (!pi.isDone()) {
                 int pitype = pi.currentSegment(coords);
@@ -248,7 +242,7 @@ public final class GraphicsContext {
                 }
                 pi.next();
             }
-            buf.putByte(PGCanvas.PATHEND);
+            buf.putByte(NGCanvas.PATHEND);
             pathDirty = false;
         }
         buf.putByte(command);
@@ -263,12 +257,12 @@ public final class GraphicsContext {
     private void writeArcType(ArcType closure) {
         byte type;
         switch (closure) {
-            case OPEN:  type = PGCanvas.ARC_OPEN;  break;
-            case CHORD: type = PGCanvas.ARC_CHORD; break;
-            case ROUND: type = PGCanvas.ARC_PIE;   break;
+            case OPEN:  type = NGCanvas.ARC_OPEN;  break;
+            case CHORD: type = NGCanvas.ARC_CHORD; break;
+            case ROUND: type = NGCanvas.ARC_PIE;   break;
             default: return;  // ignored for consistency with other attributes
         }
-        writeParam(type, PGCanvas.ARC_TYPE);
+        writeParam(type, NGCanvas.ARC_TYPE);
     }
 
     private void writeRectParams(GrowableDataBuffer buf,
@@ -310,29 +304,29 @@ public final class GraphicsContext {
             buf.putByte(command);
             buf.putFloat(polybuf[i]);
             buf.putFloat(polybuf[i+1]);
-            command = PGCanvas.LINETO;
+            command = NGCanvas.LINETO;
         }
     }
     private void writePoly(double xPoints[], double yPoints[], int nPoints,
                            boolean close, byte command)
     {
         GrowableDataBuffer buf = getBuffer();
-        buf.putByte(PGCanvas.PATHSTART);
+        buf.putByte(NGCanvas.PATHSTART);
         int pos = 0;
-        byte polycmd = PGCanvas.MOVETO;
+        byte polycmd = NGCanvas.MOVETO;
         for (int i = 0; i < nPoints; i++) {
             if (pos >= polybuf.length) {
                 flushPolyBuf(buf, polybuf, pos, polycmd);
-                polycmd = PGCanvas.LINETO;
+                polycmd = NGCanvas.LINETO;
             }
             polybuf[pos++] = (float) xPoints[i];
             polybuf[pos++] = (float) yPoints[i];
         }
         flushPolyBuf(buf, polybuf, pos, polycmd);
         if (close) {
-            buf.putByte(PGCanvas.CLOSEPATH);
+            buf.putByte(NGCanvas.CLOSEPATH);
         }
-        buf.putByte(PGCanvas.PATHEND);
+        buf.putByte(NGCanvas.PATHEND);
         buf.putByte(command);
         // Now that we have changed the PG layer path, we need to mark our path dirty.
         markPathDirty();
@@ -346,7 +340,7 @@ public final class GraphicsContext {
         if (platformImg == null) return;
         updateTransform();
         GrowableDataBuffer buf = getBuffer();
-        writeRectParams(buf, dx, dy, dw, dh, PGCanvas.DRAW_IMAGE);
+        writeRectParams(buf, dx, dy, dw, dh, NGCanvas.DRAW_IMAGE);
         buf.putObject(platformImg);
     }
 
@@ -359,7 +353,7 @@ public final class GraphicsContext {
         if (platformImg == null) return;
         updateTransform();
         GrowableDataBuffer buf = getBuffer();
-        writeRectParams(buf, dx, dy, dw, dh, PGCanvas.DRAW_SUBIMAGE);
+        writeRectParams(buf, dx, dy, dw, dh, NGCanvas.DRAW_SUBIMAGE);
         buf.putFloat((float) sx);
         buf.putFloat((float) sy);
         buf.putFloat((float) sw);
@@ -396,7 +390,7 @@ public final class GraphicsContext {
         if (txdirty) {
             txdirty = false;
             GrowableDataBuffer buf = getBuffer();
-            buf.putByte(PGCanvas.TRANSFORM);
+            buf.putByte(NGCanvas.TRANSFORM);
             buf.putDouble(curState.transform.getMxx());
             buf.putDouble(curState.transform.getMxy());
             buf.putDouble(curState.transform.getMxt());
@@ -625,7 +619,7 @@ public final class GraphicsContext {
         if (curState.globalAlpha != alpha) {
             curState.globalAlpha = alpha;
             alpha = (alpha > 1.0) ? 1.0 : (alpha < 0.0) ? 0.0 : alpha;
-            writeParam(alpha, PGCanvas.GLOBAL_ALPHA);
+            writeParam(alpha, NGCanvas.GLOBAL_ALPHA);
         }
     }
     
@@ -650,7 +644,7 @@ public final class GraphicsContext {
             curState.blendop = op; 
             TMP_BLEND.setMode(op);
             TMP_BLEND.impl_sync();
-            buf.putByte(PGCanvas.COMP_MODE);
+            buf.putByte(NGCanvas.COMP_MODE);
             buf.putObject(((com.sun.scenario.effect.Blend)TMP_BLEND.impl_getImpl()).getMode());
         }
     }
@@ -673,7 +667,7 @@ public final class GraphicsContext {
     public void setFill(Paint p) {
         if (curState.fill != p) {
             curState.fill = p;
-            writePaint(p, PGCanvas.FILL_PAINT);
+            writePaint(p, NGCanvas.FILL_PAINT);
         }
     }
     
@@ -695,7 +689,7 @@ public final class GraphicsContext {
     public void setStroke(Paint p) {
         if (curState.stroke != p) {
             curState.stroke = p;
-            writePaint(p, PGCanvas.STROKE_PAINT);
+            writePaint(p, NGCanvas.STROKE_PAINT);
         }
     }
     
@@ -720,7 +714,7 @@ public final class GraphicsContext {
         if (lw > 0 && lw < Double.POSITIVE_INFINITY) {
             if (curState.linewidth != lw) {
                 curState.linewidth = lw;
-                writeParam(lw, PGCanvas.LINE_WIDTH);
+                writeParam(lw, NGCanvas.LINE_WIDTH);
             }
         }
     }
@@ -743,13 +737,13 @@ public final class GraphicsContext {
         if (curState.linecap != cap) {
             byte v;
             switch (cap) {
-                case BUTT: v = PGCanvas.CAP_BUTT; break;
-                case ROUND: v = PGCanvas.CAP_ROUND; break;
-                case SQUARE: v = PGCanvas.CAP_SQUARE; break;
+                case BUTT: v = NGCanvas.CAP_BUTT; break;
+                case ROUND: v = NGCanvas.CAP_ROUND; break;
+                case SQUARE: v = NGCanvas.CAP_SQUARE; break;
                 default: return;
             }
             curState.linecap = cap;
-            writeParam(v, PGCanvas.LINE_CAP);
+            writeParam(v, NGCanvas.LINE_CAP);
         }
     }
     
@@ -771,13 +765,13 @@ public final class GraphicsContext {
         if (curState.linejoin != join) {
             byte v;
             switch (join) {
-                case MITER: v = PGCanvas.JOIN_MITER; break;
-                case BEVEL: v = PGCanvas.JOIN_BEVEL; break;
-                case ROUND: v = PGCanvas.JOIN_ROUND; break;
+                case MITER: v = NGCanvas.JOIN_MITER; break;
+                case BEVEL: v = NGCanvas.JOIN_BEVEL; break;
+                case ROUND: v = NGCanvas.JOIN_ROUND; break;
                 default: return;
             }
             curState.linejoin = join;
-            writeParam(v, PGCanvas.LINE_JOIN);
+            writeParam(v, NGCanvas.LINE_JOIN);
         }
     }
     
@@ -802,7 +796,7 @@ public final class GraphicsContext {
         if (ml > 0.0 && ml < Double.POSITIVE_INFINITY) {
             if (curState.miterlimit != ml) {
                 curState.miterlimit = ml;
-                writeParam(ml, PGCanvas.MITER_LIMIT);
+                writeParam(ml, NGCanvas.MITER_LIMIT);
             }
         }
     }
@@ -825,7 +819,7 @@ public final class GraphicsContext {
         if (curState.font != f) {
             curState.font = f;
             GrowableDataBuffer buf = getBuffer();
-            buf.putByte(PGCanvas.FONT);
+            buf.putByte(NGCanvas.FONT);
             buf.putObject(f.impl_getNativeFont());
         }
     }
@@ -864,14 +858,14 @@ public final class GraphicsContext {
         if (curState.textalign != align) {
             byte a;
             switch (align) {
-                case LEFT: a = PGCanvas.ALIGN_LEFT; break;
-                case CENTER: a = PGCanvas.ALIGN_CENTER; break;
-                case RIGHT: a = PGCanvas.ALIGN_RIGHT; break;
-                case JUSTIFY: a = PGCanvas.ALIGN_JUSTIFY; break;
+                case LEFT: a = NGCanvas.ALIGN_LEFT; break;
+                case CENTER: a = NGCanvas.ALIGN_CENTER; break;
+                case RIGHT: a = NGCanvas.ALIGN_RIGHT; break;
+                case JUSTIFY: a = NGCanvas.ALIGN_JUSTIFY; break;
                 default: return;
             }
             curState.textalign = align;
-            writeParam(a, PGCanvas.TEXT_ALIGN);
+            writeParam(a, NGCanvas.TEXT_ALIGN);
         }
     }
     
@@ -894,14 +888,14 @@ public final class GraphicsContext {
         if (curState.textbaseline != baseline) {
             byte b;
             switch (baseline) {
-                case TOP: b = PGCanvas.BASE_TOP; break;
-                case CENTER: b = PGCanvas.BASE_MIDDLE; break;
-                case BASELINE: b = PGCanvas.BASE_ALPHABETIC; break;
-                case BOTTOM: b = PGCanvas.BASE_BOTTOM; break;
+                case TOP: b = NGCanvas.BASE_TOP; break;
+                case CENTER: b = NGCanvas.BASE_MIDDLE; break;
+                case BASELINE: b = NGCanvas.BASE_ALPHABETIC; break;
+                case BOTTOM: b = NGCanvas.BASE_BOTTOM; break;
                 default: return;
             }
             curState.textbaseline = baseline;
-            writeParam(b, PGCanvas.TEXT_BASELINE);
+            writeParam(b, NGCanvas.TEXT_BASELINE);
         }
     }
     
@@ -923,7 +917,7 @@ public final class GraphicsContext {
      * @param y position on the y axis.
      */
     public void fillText(String text, double x, double y) {
-        writeText(text, x, y, 0, PGCanvas.FILL_TEXT);
+        writeText(text, x, y, 0, NGCanvas.FILL_TEXT);
     }
 
     /**
@@ -935,7 +929,7 @@ public final class GraphicsContext {
      * @param y position on the y axis.
      */
     public void strokeText(String text, double x, double y) {
-        writeText(text, x, y, 0, PGCanvas.STROKE_TEXT);
+        writeText(text, x, y, 0, NGCanvas.STROKE_TEXT);
     }
 
     /**
@@ -951,7 +945,7 @@ public final class GraphicsContext {
      */
     public void fillText(String text, double x, double y, double maxWidth) {
         if (maxWidth <= 0) return;
-        writeText(text, x, y, maxWidth, PGCanvas.FILL_TEXT);
+        writeText(text, x, y, maxWidth, NGCanvas.FILL_TEXT);
     }
 
     /**
@@ -967,7 +961,7 @@ public final class GraphicsContext {
      */
     public void strokeText(String text, double x, double y, double maxWidth) {
         if (maxWidth <= 0) return;
-        writeText(text, x, y, maxWidth, PGCanvas.STROKE_TEXT);
+        writeText(text, x, y, maxWidth, NGCanvas.STROKE_TEXT);
     }
 
 
@@ -983,12 +977,12 @@ public final class GraphicsContext {
          if (curState.fillRule != fillRule) {
             byte b;
             if (fillRule == FillRule.EVEN_ODD) {
-                b = PGCanvas.FILL_RULE_EVEN_ODD;
+                b = NGCanvas.FILL_RULE_EVEN_ODD;
             } else { 
-                b = PGCanvas.FILL_RULE_NON_ZERO;
+                b = NGCanvas.FILL_RULE_NON_ZERO;
             }
             curState.fillRule = fillRule;
-            writeParam(b, PGCanvas.FILL_RULE);
+            writeParam(b, NGCanvas.FILL_RULE);
         }
      }
     
@@ -1374,14 +1368,14 @@ public final class GraphicsContext {
      * Fills the path with the current fill paint.
      */
     public void fill() {
-        writePath(PGCanvas.FILL_PATH);
+        writePath(NGCanvas.FILL_PATH);
     }
 
     /**
      * Strokes the path with the current stroke paint.
      */
     public void stroke() {
-        writePath(PGCanvas.STROKE_PATH);
+        writePath(NGCanvas.STROKE_PATH);
     }
 
     /**
@@ -1392,7 +1386,7 @@ public final class GraphicsContext {
         clipStack.addLast(clip);
         curState.numClipPaths++;
         GrowableDataBuffer buf = getBuffer();
-        buf.putByte(PGCanvas.PUSH_CLIP);
+        buf.putByte(NGCanvas.PUSH_CLIP);
         buf.putObject(clip);
     }
 
@@ -1420,7 +1414,7 @@ public final class GraphicsContext {
      */
     public void clearRect(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
-            writeOp4(x, y, w, h, PGCanvas.CLEAR_RECT);
+            writeOp4(x, y, w, h, NGCanvas.CLEAR_RECT);
         }
     }
 
@@ -1434,7 +1428,7 @@ public final class GraphicsContext {
      */
     public void fillRect(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
-            writeOp4(x, y, w, h, PGCanvas.FILL_RECT);
+            writeOp4(x, y, w, h, NGCanvas.FILL_RECT);
         }
     }
 
@@ -1448,7 +1442,7 @@ public final class GraphicsContext {
      */
     public void strokeRect(double x, double y, double w, double h) {
         if (w != 0 || h != 0) {
-            writeOp4(x, y, w, h, PGCanvas.STROKE_RECT);
+            writeOp4(x, y, w, h, NGCanvas.STROKE_RECT);
         }
     }
 
@@ -1462,7 +1456,7 @@ public final class GraphicsContext {
      */
     public void fillOval(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
-            writeOp4(x, y, w, h, PGCanvas.FILL_OVAL);
+            writeOp4(x, y, w, h, NGCanvas.FILL_OVAL);
         }
     }
 
@@ -1476,7 +1470,7 @@ public final class GraphicsContext {
      */
     public void strokeOval(double x, double y, double w, double h) {
         if (w != 0 || h != 0) {
-            writeOp4(x, y, w, h, PGCanvas.STROKE_OVAL);
+            writeOp4(x, y, w, h, NGCanvas.STROKE_OVAL);
         }
     }
 
@@ -1496,7 +1490,7 @@ public final class GraphicsContext {
     {
         if (w != 0 && h != 0) {
             writeArcType(closure);
-            writeOp6(x, y, w, h, startAngle, arcExtent, PGCanvas.FILL_ARC);
+            writeOp6(x, y, w, h, startAngle, arcExtent, NGCanvas.FILL_ARC);
         }
     }
 
@@ -1516,7 +1510,7 @@ public final class GraphicsContext {
     {
         if (w != 0 && h != 0) {
             writeArcType(closure);
-            writeOp6(x, y, w, h, startAngle, arcExtent, PGCanvas.STROKE_ARC);
+            writeOp6(x, y, w, h, startAngle, arcExtent, NGCanvas.STROKE_ARC);
         }
     }
 
@@ -1534,7 +1528,7 @@ public final class GraphicsContext {
                               double arcWidth, double arcHeight)
     {
         if (w != 0 && h != 0) {
-            writeOp6(x, y, w, h, arcWidth, arcHeight, PGCanvas.FILL_ROUND_RECT);
+            writeOp6(x, y, w, h, arcWidth, arcHeight, NGCanvas.FILL_ROUND_RECT);
         }
     }
 
@@ -1552,7 +1546,7 @@ public final class GraphicsContext {
                               double arcWidth, double arcHeight)
     {
         if (w != 0 && h != 0) {
-            writeOp6(x, y, w, h, arcWidth, arcHeight, PGCanvas.STROKE_ROUND_RECT);
+            writeOp6(x, y, w, h, arcWidth, arcHeight, NGCanvas.STROKE_ROUND_RECT);
         }
     }
 
@@ -1565,7 +1559,7 @@ public final class GraphicsContext {
      * @param y2 the Y coordinate of the ending point of the line.
      */
     public void strokeLine(double x1, double y1, double x2, double y2) {
-        writeOp4(x1, y1, x2, y2, PGCanvas.STROKE_LINE);
+        writeOp4(x1, y1, x2, y2, NGCanvas.STROKE_LINE);
     }
 
     /**
@@ -1577,7 +1571,7 @@ public final class GraphicsContext {
      */
     public void fillPolygon(double xPoints[], double yPoints[], int nPoints) {
         if (nPoints >= 3) {
-            writePoly(xPoints, yPoints, nPoints, true, PGCanvas.FILL_PATH);
+            writePoly(xPoints, yPoints, nPoints, true, NGCanvas.FILL_PATH);
         }
     }
 
@@ -1590,7 +1584,7 @@ public final class GraphicsContext {
      */
     public void strokePolygon(double xPoints[], double yPoints[], int nPoints) {
         if (nPoints >= 2) {
-            writePoly(xPoints, yPoints, nPoints, true, PGCanvas.STROKE_PATH);
+            writePoly(xPoints, yPoints, nPoints, true, NGCanvas.STROKE_PATH);
         }
     }
 
@@ -1604,7 +1598,7 @@ public final class GraphicsContext {
      */
     public void strokePolyline(double xPoints[], double yPoints[], int nPoints) {
         if (nPoints >= 2) {
-            writePoly(xPoints, yPoints, nPoints, false, PGCanvas.STROKE_PATH);
+            writePoly(xPoints, yPoints, nPoints, false, NGCanvas.STROKE_PATH);
         }
     }
 
@@ -1683,7 +1677,7 @@ public final class GraphicsContext {
                 @Override
                 public void setArgb(int x, int y, int argb) {
                     GrowableDataBuffer buf = getBuffer();
-                    buf.putByte(PGCanvas.PUT_ARGB);
+                    buf.putByte(NGCanvas.PUT_ARGB);
                     buf.putInt(x);
                     buf.putInt(y);
                     buf.putInt(argb);
@@ -1702,7 +1696,7 @@ public final class GraphicsContext {
                                               byte[] pixels)
                 {
                     GrowableDataBuffer buf = getBuffer();
-                    buf.putByte(PGCanvas.PUT_ARGBPRE_BUF);
+                    buf.putByte(NGCanvas.PUT_ARGBPRE_BUF);
                     buf.putInt(x);
                     buf.putInt(y);
                     buf.putInt(w);
@@ -1881,7 +1875,7 @@ public final class GraphicsContext {
      */
     public void setEffect(Effect e) {
         GrowableDataBuffer buf = getBuffer();
-        buf.putByte(PGCanvas.EFFECT);
+        buf.putByte(NGCanvas.EFFECT);
         if (e == null) {
             curState.effect = null;
             buf.putObject(null);
@@ -1911,7 +1905,7 @@ public final class GraphicsContext {
      */
     public void applyEffect(Effect e) {
         GrowableDataBuffer buf = getBuffer();
-        buf.putByte(PGCanvas.FX_APPLY_EFFECT);
+        buf.putByte(NGCanvas.FX_APPLY_EFFECT);
         Effect effect = e.impl_copy();
         effect.impl_sync();
         buf.putObject(effect.impl_getImpl());

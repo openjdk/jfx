@@ -25,30 +25,27 @@
 package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGCamera;
-import com.sun.javafx.sg.PGSubScene;
-import com.sun.javafx.sg.PGNode;
-import com.sun.prism.RTTexture;
 import com.sun.prism.Graphics;
+import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
+import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
-import com.sun.prism.camera.PrismCameraImpl;
 
 /**
  * @author Thor Johannesson
  */
-public class NGSubScene extends NGNode implements PGSubScene {
+public class NGSubScene extends NGNode {
 
     private int rtWidth, rtHeight;
     private RTTexture rtt;
     private NGNode root = null;
     private boolean renderSG = true;
 
-    public void setRoot(PGNode root) {
-        this.root = (NGNode)root;
+    public void setRoot(NGNode root) {
+        this.root = root;
     }
 
     private Paint fillPaint;
@@ -57,9 +54,9 @@ public class NGSubScene extends NGNode implements PGSubScene {
     }
 
     private PrismCameraImpl camera;
-    public void setCamera(PGCamera camera) {
+    public void setCamera(NGCamera camera) {
         if (camera != null) {
-            this.camera = ((NGCamera) camera).getCameraImpl();
+            this.camera = camera.getCameraImpl();
         } else {
             this.camera = PrismDefaultCamera.getInstance();
         }
@@ -90,7 +87,6 @@ public class NGSubScene extends NGNode implements PGSubScene {
 
     private Object lights[];
 
-    @Override
     public Object[] getLights() { return lights; }
 
     public void setLights(Object[] lights) {
@@ -180,4 +176,7 @@ public class NGSubScene extends NGNode implements PGSubScene {
         rtt.unlock();
     }
 
+    public PrismCameraImpl getCamera() {
+        return camera;
+    }
 }

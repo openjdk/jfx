@@ -26,51 +26,30 @@
 package javafx.scene;
 
 import com.sun.javafx.geom.PickRay;
-import com.sun.javafx.pgstub.StubGroup;
-import com.sun.javafx.pgstub.StubCircle;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-
-import java.lang.reflect.Method;
-import java.util.Comparator;
-
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.test.objects.TestScene;
+import com.sun.javafx.test.objects.TestStage;
+import javafx.beans.property.*;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Effect;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.shape.TestUtils;
+import javafx.scene.shape.*;
+import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.test.objects.TestScene;
-import com.sun.javafx.test.objects.TestStage;
-import javafx.geometry.BoundingBox;
-import javafx.geometry.Bounds;
-import javafx.geometry.Point3D;
-import javafx.scene.shape.Box;
-import javafx.scene.shape.Circle;
-import javafx.scene.transform.Rotate;
+import java.lang.reflect.Method;
+import java.util.Comparator;
+
+import static org.junit.Assert.*;
 /**
  * Tests various aspects of Node.
  *
@@ -304,8 +283,8 @@ public class NodeTest {
         final Method setter = nodeClass.getMethod(setterName, boolean.class);
         final Method getter = nodeClass.getMethod(getterName);
 
-        final PGNode pgNode = node.impl_getPGNode();
-        final Class<? extends PGNode> impl_class = pgNode.getClass();
+        final NGNode peer = node.impl_getPeer();
+        final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(getterName);
 
 
@@ -315,22 +294,22 @@ public class NodeTest {
 
         // 2. Initial setup
         setter.invoke(node, initialValue);
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
         assertEquals(initialValue, getter.invoke(node));
-        assertEquals(initialValue, impl_getter.invoke(pgNode));
+        assertEquals(initialValue, impl_getter.invoke(peer));
 
         // 3. Change value of the property
         setter.invoke(node, newValue);
 
         // 4. Check that the property value has changed but has not propagated to PGNode
         assertEquals(newValue, getter.invoke(node));
-        assertEquals(initialValue, impl_getter.invoke(pgNode));
+        assertEquals(initialValue, impl_getter.invoke(peer));
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
 
         // 6. Check that the value has been propagated to PGNode
-        assertEquals(newValue, impl_getter.invoke(pgNode));
+        assertEquals(newValue, impl_getter.invoke(peer));
     }
 
 
@@ -345,7 +324,7 @@ public class NodeTest {
 
     public static void syncNode(Node node) {
         node.updateBounds();
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
     }
 
     public static void assertBooleanPropertySynced(
@@ -417,7 +396,11 @@ public class NodeTest {
     }
 
     public static boolean numbersEquals(Number expected, Number value, double delta) {
-        return (Math.abs(expected.doubleValue() - value.doubleValue()) < delta);
+        boolean res = (Math.abs(expected.doubleValue() - value.doubleValue()) < delta);
+        if (!res) {
+            System.err.println("expected=" + expected + ", value=" + value);
+        }
+        return res;
     }
 
     public static void assertDoublePropertySynced(
@@ -441,9 +424,9 @@ public class NodeTest {
         DoubleProperty model = (DoubleProperty)modelMethod.invoke(node);
         model.bind(v);
 
-        ((Group)scene.getRoot()).getChildren().add(node);
+        scene.getRoot().getChildren().add(node);
 
-         NodeTest.syncNode(node);
+        NodeTest.syncNode(node);
         assertTrue(numbersEquals(defaultValue,
                 (Number)TestUtils.getObjectValue(node, pgPropertyName)));
 
@@ -520,7 +503,7 @@ public class NodeTest {
         ObjectProperty model = (ObjectProperty)modelMethod.invoke(node);
         model.bind(v);
 
-        ((Group)scene.getRoot()).getChildren().add(node);
+        scene.getRoot().getChildren().add(node);
 
         NodeTest.syncNode(node);
         assertEquals(
@@ -592,8 +575,8 @@ public class NodeTest {
         final Method setter = nodeClass.getMethod(setterName, float.class);
         final Method getter = nodeClass.getMethod(getterName);
 
-        final PGNode pgNode = node.impl_getPGNode();
-        final Class<? extends PGNode> impl_class = pgNode.getClass();
+        final NGNode peer = node.impl_getPeer();
+        final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 
 
@@ -603,22 +586,22 @@ public class NodeTest {
 
         // 2. Initial setup
         setter.invoke(node, initialValue);
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
         assertEquals(initialValue, (Float) getter.invoke(node), 1e-100);
-        assertEquals(initialValue, (Float) impl_getter.invoke(pgNode), 1e-100);
+        assertEquals(initialValue, (Float) impl_getter.invoke(peer), 1e-100);
 
         // 3. Change value of the property
         setter.invoke(node, newValue);
 
         // 4. Check that the property value has changed but has not propagated to PGNode
         assertEquals(newValue, (Float) getter.invoke(node), 1e-100);
-        assertEquals(initialValue, (Float) impl_getter.invoke(pgNode), 1e-100);
+        assertEquals(initialValue, (Float) impl_getter.invoke(peer), 1e-100);
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
 
         // 6. Check that the value has been propagated to PGNode
-        assertEquals(newValue, (Float) impl_getter.invoke(pgNode), 1e-100);
+        assertEquals(newValue, (Float) impl_getter.invoke(peer), 1e-100);
     }
 
     public static void testDoublePropertyPropagation(
@@ -652,8 +635,8 @@ public class NodeTest {
         final Method setter = nodeClass.getMethod(setterName, double.class);
         final Method getter = nodeClass.getMethod(getterName);
 
-        final PGNode pgNode = node.impl_getPGNode();
-        final Class<? extends PGNode> impl_class = pgNode.getClass();
+        final NGNode peer = node.impl_getPeer();
+        final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 
 
@@ -663,22 +646,22 @@ public class NodeTest {
 
         // 2. Initial setup
         setter.invoke(node, initialValue);
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
         assertEquals(initialValue, (Double) getter.invoke(node), 1e-100);
-        assertEquals((float) initialValue, (Float) impl_getter.invoke(pgNode), 1e-100);
+        assertEquals((float) initialValue, (Float) impl_getter.invoke(peer), 1e-100);
 
         // 3. Change value of the property
         setter.invoke(node, newValue);
 
         // 4. Check that the property value has changed but has not propagated to PGNode
         assertEquals(newValue, (Double) getter.invoke(node), 1e-100);
-        assertEquals((float) initialValue, (Float) impl_getter.invoke(pgNode), 1e-100);
+        assertEquals((float) initialValue, (Float) impl_getter.invoke(peer), 1e-100);
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
 
         // 6. Check that the value has been propagated to PGNode
-        assertEquals((float) newValue, (Float) impl_getter.invoke(pgNode), 1e-100);
+        assertEquals((float) newValue, (Float) impl_getter.invoke(peer), 1e-100);
     }
 
     public interface ObjectValueConvertor {
@@ -754,8 +737,8 @@ public class NodeTest {
         final Method getter = nodeClass.getMethod(getterName);
         final Method setter = nodeClass.getMethod(setterName, getter.getReturnType());
 
-        final PGNode pgNode = node.impl_getPGNode();
-        final Class<? extends PGNode> impl_class = pgNode.getClass();
+        final NGNode peer = node.impl_getPeer();
+        final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 
 
@@ -765,10 +748,10 @@ public class NodeTest {
 
         // 2. Initial setup
         setter.invoke(node, initialValue);
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
         assertEquals(initialValue, getter.invoke(node));
         assertEquals(0, comparator.compare(initialValue,
-                                           impl_getter.invoke(pgNode)));
+                                           impl_getter.invoke(peer)));
 
         // 3. Change value of the property
         setter.invoke(node, newValue);
@@ -776,14 +759,14 @@ public class NodeTest {
         // 4. Check that the property value has changed but has not propagated to PGNode
         assertEquals(newValue, getter.invoke(node));
         assertEquals(0, comparator.compare(initialValue,
-                                           impl_getter.invoke(pgNode)));
+                                           impl_getter.invoke(peer)));
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
 
         // 6. Check that the value has been propagated to PGNode
         assertEquals(0, comparator.compare(newValue,
-                                           impl_getter.invoke(pgNode)));
+                                           impl_getter.invoke(peer)));
     }
 
 
@@ -818,8 +801,8 @@ public class NodeTest {
         final Method getter = nodeClass.getMethod(getterName);
         final Method setter = nodeClass.getMethod(setterName, getter.getReturnType());
 
-        final PGNode pgNode = node.impl_getPGNode();
-        final Class<? extends PGNode> impl_class = pgNode.getClass();
+        final NGNode peer = node.impl_getPeer();
+        final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 
 
@@ -830,25 +813,25 @@ public class NodeTest {
         // 2. Initial setup
         setter.invoke(node, initialValue);
         assertEquals(initialValue, getter.invoke(node));
-        node.impl_syncPGNode();
-        assertEquals(initialValue, ((Number) impl_getter.invoke(pgNode)).intValue());
+        node.impl_syncPeer();
+        assertEquals(initialValue, ((Number) impl_getter.invoke(peer)).intValue());
 
         // 3. Change value of the property
         setter.invoke(node, newValue);
 
         // 4. Check that the property value has changed but has not propagated to PGNode
         assertEquals(newValue, getter.invoke(node));
-        assertEquals(initialValue, ((Number) impl_getter.invoke(pgNode)).intValue());
+        assertEquals(initialValue, ((Number) impl_getter.invoke(peer)).intValue());
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
 
         // 6. Check that the value has been propagated to PGNode
-        assertEquals(newValue, ((Number) impl_getter.invoke(pgNode)).intValue());
+        assertEquals(newValue, ((Number) impl_getter.invoke(peer)).intValue());
     }
 
     public static void callSyncPGNode(final Node node) {
-        node.impl_syncPGNode();
+        node.impl_syncPeer();
     }
 
     @Test
@@ -1011,9 +994,9 @@ public class NodeTest {
     @Test
     public void testSynchronizationOfInvisibleNodes() {
         final Group g = new Group();
-        final Circle c = new Circle(50);
-        final StubGroup sg = (StubGroup)g.impl_getPGNode();
-        final StubCircle sc = (StubCircle)c.impl_getPGNode();
+        final Circle c = new CircleTest.StubCircle(50);
+        final NGGroup sg = g.impl_getPeer();
+        final CircleTest.StubNGCircle sc = c.impl_getPeer();
         g.getChildren().add(c);
 
         syncNode(g);

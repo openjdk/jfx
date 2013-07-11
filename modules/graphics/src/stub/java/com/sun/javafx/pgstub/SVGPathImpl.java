@@ -23,55 +23,32 @@
  * questions.
  */
 
-/*
- * StubQuadCurve.fx
- */
-
 package com.sun.javafx.pgstub;
 
-import com.sun.javafx.sg.PGQuadCurve;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.PathConsumer2D;
 
-public class StubQuadCurve extends StubShape implements PGQuadCurve {
-    private float x1, y1, x2, y2, ctrlX, ctrlY;
+/**
+ */
+public class SVGPathImpl extends Path2D implements PathConsumer2D {
+    String content;
+    int windingRule;
 
-    public float getCtrlX() {
-        return ctrlX;
+    public SVGPathImpl(String content, int windingRule) {
+        this.content = content;
+        this.windingRule = windingRule;
     }
 
-    public float getCtrlY() {
-        return ctrlY;
+    public String getContent() {
+        return content;
     }
 
-    public float getX1() {
-        return x1;
+    public void setContent(String content) {
+        this.content = content;
     }
 
-    public float getX2() {
-        return x2;
-    }
-
-    public float getY1() {
-        return y1;
-    }
-
-    public float getY2() {
-        return y2;
-    }
-    
     @Override
-    public void updateQuadCurve(float x1, float y1, float x2, float y2, float ctrlx, float ctrly) {
-    	this.x1 = x1;
-    	this.y1 = y1;
-    	this.x2 = x2;
-    	this.y2 = y2;
-    	this.ctrlX = ctrlx;
-    	this.ctrlY = ctrly;
+    public String toString() {
+        return " content=" + content + ", windingRule=" + windingRule;
     }
-    
-    public void setX1(float x1) {this.x1 = x1; }
-    public void setY1(float y1) {this.y1 = y1;}
-    public void setX2(float x2) {this.x2 = x2; }
-    public void setY2(float y2) {this.y2 = y2; }
-    public void setCtrlX(float ctrlx) {this.ctrlX = ctrlx; }
-    public void setCtrlY(float ctrly) {this.ctrlY = ctrly; }
 }

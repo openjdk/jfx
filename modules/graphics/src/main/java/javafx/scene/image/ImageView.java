@@ -25,35 +25,31 @@
 
 package javafx.scene.image;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javafx.beans.Observable;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.Node;
-
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.css.StyleManager;
-import javafx.css.CssMetaData;
-import javafx.css.StyleableStringProperty;
-import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.css.converters.URLConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGImageView;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NGImageView;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import java.net.MalformedURLException;
-import java.net.URL;
 import javafx.beans.DefaultProperty;
+import javafx.beans.Observable;
 import javafx.beans.property.*;
+import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
 import javafx.geometry.NodeOrientation;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * The {@code ImageView} is a {@code Node} used for painting images loaded with
@@ -650,12 +646,8 @@ public class ImageView extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGImageView();
-    }
-
-    private PGImageView getPGImageView() {
-        return (PGImageView) impl_getPGNode();
+    @Override protected NGNode impl_createPeer() {
+        return new NGImageView();
     }
 
     /**
@@ -843,12 +835,13 @@ public class ImageView extends Node {
         }
 
         Rectangle2D localViewport = getViewport();
+        final NGImageView peer = impl_getPeer();
         if (localViewport != null) {
-            getPGImageView().setViewport((float)localViewport.getMinX(), (float)localViewport.getMinY(),
+            peer.setViewport((float)localViewport.getMinX(), (float)localViewport.getMinY(),
                     (float)localViewport.getWidth(), (float)localViewport.getHeight(),
                     (float)destWidth, (float)destHeight);
         } else {
-            getPGImageView().setViewport(0, 0, 0, 0, (float)destWidth, (float)destHeight);
+            peer.setViewport(0, 0, 0, 0, (float)destWidth, (float)destHeight);
         }
     }
 
@@ -857,19 +850,19 @@ public class ImageView extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_updatePG() {
-        super.impl_updatePG();
+    @Override public void impl_updatePeer() {
+        super.impl_updatePeer();
 
+        final NGImageView peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            PGImageView peer = getPGImageView();
             peer.setX((float)getX());
             peer.setY((float)getY());
         }
         if (impl_isDirty(DirtyBits.NODE_SMOOTH)) {
-            getPGImageView().setSmooth(isSmooth());
+            peer.setSmooth(isSmooth());
         }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
-            getPGImageView().setImage(getImage()!= null? getImage().impl_getPlatformImage():null);
+            peer.setImage(getImage()!= null? getImage().impl_getPlatformImage():null);
         }
         // The NG part expects this to be called when image changes
         if (impl_isDirty(DirtyBits.NODE_VIEWPORT) || impl_isDirty(DirtyBits.NODE_CONTENTS)) {

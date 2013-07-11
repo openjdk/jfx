@@ -25,7 +25,6 @@
 
 package com.sun.javafx.sg.prism;
 
-import java.util.List;
 import javafx.geometry.Insets;
 import javafx.geometry.Side;
 import javafx.scene.layout.Background;
@@ -47,6 +46,7 @@ import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
+import java.util.List;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.geom.Path2D;
@@ -59,8 +59,6 @@ import com.sun.javafx.logging.PulseLogger;
 import com.sun.javafx.sg.BaseEffectFilter;
 import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.NodePath;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
@@ -79,7 +77,7 @@ import com.sun.scenario.effect.Offset;
  * it has children, but like a leaf node, in that it also draws itself if it has
  * a Background or Border which contains non-transparent fills / strokes / images.
  */
-public class NGRegion extends NGGroup implements PGRegion {
+public class NGRegion extends NGGroup {
     /**
      * This scratch transform is used when transforming shapes. Because this is
      * a static variable, it is only intended to be used from a single thread,
@@ -188,8 +186,8 @@ public class NGRegion extends NGGroup implements PGRegion {
      * @param scaleShape whether to scale the shape
      * @param positionShape whether to center the shape
      */
-    @Override public void updateShape(Object shape, boolean scaleShape, boolean positionShape, boolean cacheShape) {
-        this.shape = shape == null ? null : ((NGShape) ((javafx.scene.shape.Shape)shape).impl_getPGNode()).getShape();
+    public void updateShape(Object shape, boolean scaleShape, boolean positionShape, boolean cacheShape) {
+        this.shape = shape == null ? null : ((NGShape) ((javafx.scene.shape.Shape)shape).impl_getPeer()).getShape();
         this.scaleShape = scaleShape;
         this.centerShape = positionShape;
         this.cacheShape = cacheShape;
@@ -203,7 +201,7 @@ public class NGRegion extends NGGroup implements PGRegion {
      * @param width     The width of the region, not including insets or outsets
      * @param height    The height of the region, not including insets or outsets
      */
-    @Override public void setSize(float width, float height) {
+    public void setSize(float width, float height) {
         this.width = width;
         this.height = height;
         invalidateOpaqueRegion();
@@ -216,7 +214,7 @@ public class NGRegion extends NGGroup implements PGRegion {
      *
      * @param b Border, of type javafx.scene.layout.Border
      */
-    @Override public void updateBorder(Object b) {
+    public void updateBorder(Object b) {
         // Make sure that the border instance we store on this NGRegion is never null
         final Border old = border;
         border = b == null ? Border.EMPTY : (Border) b;
@@ -239,7 +237,7 @@ public class NGRegion extends NGGroup implements PGRegion {
      *
      * @param b    Background, of type javafx.scene.layout.Background. Can be null.
      */
-    @Override public void updateBackground(Object b) {
+    public void updateBackground(Object b) {
         // Make sure that the background instance we store on this NGRegion is never null
         final Background old = background;
         background = b == null ? Background.EMPTY : (Background) b;
@@ -315,7 +313,7 @@ public class NGRegion extends NGGroup implements PGRegion {
      * @param bottom    The bottom, must not be NaN or Infinity, etc.
      * @param left      The left, must not be NaN or Infinity, etc.
      */
-    @Override public void setOpaqueInsets(float top, float right, float bottom, float left) {
+    public void setOpaqueInsets(float top, float right, float bottom, float left) {
         opaqueTop = top;
         opaqueRight = right;
         opaqueBottom = bottom;
@@ -347,7 +345,7 @@ public class NGRegion extends NGGroup implements PGRegion {
      *
      * @param clipNode can be null if the clip node is being cleared
      */
-    @Override public void setClipNode(PGNode clipNode) {
+    @Override public void setClipNode(NGNode clipNode) {
         super.setClipNode(clipNode);
         invalidateOpaqueRegion();
     }

@@ -35,6 +35,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
@@ -57,8 +59,6 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.sg.PGNode;
-import javafx.scene.paint.Paint;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -214,7 +214,7 @@ public class CssMetaDataTest {
         Node node = new Node() {
 
             @Override
-            protected PGNode impl_createPGNode() {
+            protected NGNode impl_createPeer() {
                 throw new UnsupportedOperationException("Not supported yet.");
             }
 

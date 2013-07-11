@@ -25,23 +25,19 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Line2D;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGLine;
-import com.sun.prism.Graphics;
 import com.sun.prism.BasicStroke;
+import com.sun.prism.Graphics;
 
 /**
  *
  */
-public class NGLine extends NGShape implements PGLine {
+public class NGLine extends NGShape {
 
     private Line2D line = new Line2D();
 
-    @Override public void updateLine(float x1, float y1, float x2, float y2) {
+    public void updateLine(float x1, float y1, float x2, float y2) {
         line.x1 = x1;
         line.y1 = y1;
         line.x2 = x2;

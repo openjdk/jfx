@@ -25,81 +25,85 @@
 
 package javafx.scene.shape;
 
-import javafx.css.CssMetaData;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.NodeTest;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import org.junit.Assert;
-
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import static org.junit.Assert.*;
 
 public class ShapeTest {
 
     @Test public void testBoundPropertySync_StrokeType() throws Exception {
         NodeTest.assertObjectProperty_AsStringSynced(
-                new Line(0.0 ,0.0, 100.0, 100.0),
+                new StubShape(),
                 "strokeType", "strokeType", StrokeType.CENTERED);
     }
 
     @Test public void testBoundPropertySync_StrokeLineCap() throws Exception {
         NodeTest.assertObjectProperty_AsStringSynced(
-                new Line(0.0 ,0.0, 100.0, 100.0),
+                new StubShape(),
                 "strokeLineCap", "strokeLineCap", StrokeLineCap.SQUARE);
     }
 
     @Test public void testBoundPropertySync_StrokeLineJoin() throws Exception {
         NodeTest.assertObjectProperty_AsStringSynced(
-                new Line(0.0 ,0.0, 100.0, 100.0),
+                new StubShape(),
                 "strokeLineJoin", "strokeLineJoin", StrokeLineJoin.MITER);
     }
 
     @Test public void testBoundPropertySync_StrokeWidth() throws Exception {
         NodeTest.assertDoublePropertySynced(
-                new Line(0.0 ,0.0, 100.0, 100.0),
+                new StubShape(),
                 "strokeWidth", "strokeWidth", 2.0);
     }
 
     @Test public void testBoundPropertySync_StrokeMiterLimit() throws Exception {
         NodeTest.assertDoublePropertySynced(
-                new Line(0.0 ,0.0, 100.0, 100.0),
+                new StubShape(),
                 "strokeMiterLimit", "strokeMiterLimit", 3.0);
     }
 
     @Test public void testBoundPropertySync_DashOffset() throws Exception {
         NodeTest.assertDoublePropertySynced(
-                new Line(0.0 ,0.0, 100.0, 100.0),
+                new StubShape(),
                 "strokeDashOffset", "strokeDashOffset", 15.0);
     }
 
     @Test public void testBoundPropertySync_Stroke() throws Exception {
+        final Shape shape = new StubShape();
+        shape.setStroke(Color.RED);
         NodeTest.assertObjectProperty_AsStringSynced(
-                LineBuilder.create().stroke(Color.RED).build(),
-                "stroke", "stroke", Color.GREEN);
+                shape, "stroke", "stroke", Color.GREEN);
     }
 
     @Test public void testBoundPropertySync_Fill() throws Exception {
+        final Shape shape = new StubShape();
+        shape.setFill(Color.BLUE);
         NodeTest.assertObjectProperty_AsStringSynced(
-                RectangleBuilder.create().x(0).y(0).width(100).height(100).fill(Color.BLUE).build(),
-                "fill", "fill", Color.RED);
+                shape, "fill", "fill", Color.RED);
     }
 
     @Test public void testBoundPropertySync_Smooth() throws Exception {
+        final Shape shape = new StubShape();
+        shape.setSmooth(true);
         NodeTest.assertBooleanPropertySynced(
-                RectangleBuilder.create().smooth(true).build(),
-                "smooth", "smooth", false);
+                shape, "smooth", "smooth", false);
     }
     
     boolean listChangeCalled = false;
@@ -110,8 +114,8 @@ public class ShapeTest {
                 FXCollections.observableArrayList(Double.valueOf(1),
                                                   Double.valueOf(2),
                                                   Double.valueOf(3));
-        Rectangle rect = new Rectangle();
-        ObservableList<Double> actual = rect.getStrokeDashArray();
+        final Shape shape = new StubShape();
+        ObservableList<Double> actual = shape.getStrokeDashArray();
         assertNotNull(actual);
         assertTrue(actual.isEmpty());
 
@@ -125,20 +129,20 @@ public class ShapeTest {
             }
         });
         
-        rect.getStrokeDashArray().addAll(expected);
-        actual = rect.getStrokeDashArray();
+        shape.getStrokeDashArray().addAll(expected);
+        actual = shape.getStrokeDashArray();
         assertEquals(expected, actual);
         
         assertTrue(listChangeCalled);
     }
     
     @Test public void testGetStrokeDashArrayViaCSSPropertyIsNotNull() {
-        Rectangle rect = new Rectangle();
+        final Shape shape = new StubShape();
         Double[] actual = null;
-        List<CssMetaData<? extends Styleable, ?>> styleables = rect.getCssMetaData();
+        List<CssMetaData<? extends Styleable, ?>> styleables = shape.getCssMetaData();
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
-                WritableValue writable = styleable.getStyleableProperty(rect);
+                WritableValue writable = styleable.getStyleableProperty(shape);
                 actual = (Double[])writable.getValue();
                 break;
             }
@@ -147,15 +151,14 @@ public class ShapeTest {
     }
     
     @Test public void testGetStrokeDashArrayViaCSSPropertyIsSame() {
-        
-        Rectangle rect = new Rectangle();
-        rect.getStrokeDashArray().addAll(5d, 7d, 1d, 3d);
+        final Shape shape = new StubShape();
+        shape.getStrokeDashArray().addAll(5d, 7d, 1d, 3d);
         Double[] actuals = null;
-        List<CssMetaData<? extends Styleable, ?>> styleables = rect.getCssMetaData();
+        List<CssMetaData<? extends Styleable, ?>> styleables = shape.getCssMetaData();
         
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
-                WritableValue writable = styleable.getStyleableProperty(rect);
+                WritableValue writable = styleable.getStyleableProperty(shape);
                 actuals = (Double[])writable.getValue();
             }
         }
@@ -165,16 +168,15 @@ public class ShapeTest {
     }
 
     @Test public void testSetStrokeDashArrayViaCSSPropertyIsSame() {
-        
-        Rectangle rect = new Rectangle();
+        final Shape shape = new StubShape();
         List<Double> actual = null;
-        List<CssMetaData<? extends Styleable, ?>> styleables = rect.getCssMetaData();
+        List<CssMetaData<? extends Styleable, ?>> styleables = shape.getCssMetaData();
         
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
-                StyleableProperty styleableProperty = styleable.getStyleableProperty(rect);
+                StyleableProperty styleableProperty = styleable.getStyleableProperty(shape);
                 styleableProperty.applyStyle(null, new Double[] {5d, 7d, 1d, 3d});
-                actual = rect.getStrokeDashArray();
+                actual = shape.getStrokeDashArray();
             }
         }
         
@@ -185,21 +187,85 @@ public class ShapeTest {
     
     // RT-18647: ClassCastException: [Ljava.lang.Double; cannot be cast to javafx.collections.ObservableList
     @Test public void testRT_18647() {
-        
         final Scene scene = new Scene(new Group(), 500, 500);
         
-        Rectangle rect = new Rectangle(100,100);
-        rect.setStyle("-fx-stroke-dash-array: 5 7 1 3;");
+        final Shape shape = new StubShape();
+        shape.setStyle("-fx-stroke-dash-array: 5 7 1 3;");
 
-        ((Group)scene.getRoot()).getChildren().add(rect);
-        rect.impl_processCSS(true);
+        ((Group)scene.getRoot()).getChildren().add(shape);
+        shape.impl_processCSS(true);
 
         final List<Double> expected = new ArrayList();
         Collections.addAll(expected, 5d, 7d, 1d, 3d);
 
-        List<Double> actual = rect.getStrokeDashArray();
+        List<Double> actual = shape.getStrokeDashArray();
         assertEquals(expected, actual);        
         
     }
-    
+
+    public class StubShape extends Shape {
+
+        public StubShape() {
+            setStroke(Color.BLACK);
+        }
+
+        @Override
+        protected NGNode impl_createPeer() {
+            return new StubNGShape();
+        }
+
+        @Override public com.sun.javafx.geom.Shape impl_configShape() {
+            return new com.sun.javafx.geom.RoundRectangle2D(0, 0, 10, 10, 4, 4);
+        }
+    }
+
+    public class StubNGShape extends NGShape {
+        private StrokeType pgStrokeType;
+        private StrokeLineCap pgStrokeLineCap;
+        private StrokeLineJoin pgStrokeLineJoin;
+        private float strokeWidth;
+        private float strokeMiterLimit;
+        private float[] strokeDashArray;
+        private float strokeDashOffset;
+        private Object stroke;
+        private Mode mode;
+        private boolean antialiased;
+        private Object fill;
+
+        public Object getFill() { return fill; }
+        public boolean isSmooth() { return antialiased; }
+        public Mode getMode() { return mode; }
+        public Object getStroke() { return stroke; }
+        public float getStrokeDashOffset() { return strokeDashOffset; }
+        public float getStrokeMiterLimit() { return strokeMiterLimit; }
+        public float getStrokeWidth() { return strokeWidth; }
+        public StrokeType getStrokeType() { return pgStrokeType; }
+        public StrokeLineCap getStrokeLineCap() { return pgStrokeLineCap; }
+        public StrokeLineJoin getStrokeLineJoin() { return pgStrokeLineJoin; }
+        public void setMode(Mode mode) { this.mode = mode; }
+        @Override public void setAntialiased(boolean aa) { this.antialiased = aa; }
+        @Override public void setFillPaint(Object fillPaint) { this.fill = fillPaint; }
+        @Override public void setDrawPaint(Object drawPaint) { this.stroke = drawPaint; }
+        @Override public void setDrawStroke(float strokeWidth,
+                                  StrokeType type,
+                                  StrokeLineCap lineCap,
+                                  StrokeLineJoin lineJoin,
+                                  float strokeMiterLimit,
+                                  float[] strokeDashArray,
+                                  float strokeDashOffset) {
+            this.pgStrokeType = type;
+            this.pgStrokeLineCap = lineCap;
+            this.pgStrokeLineJoin = lineJoin;
+            this.strokeWidth = strokeWidth;
+            this.strokeMiterLimit = strokeMiterLimit;
+            this.strokeDashOffset = strokeDashOffset;
+            this.strokeDashArray = new float[strokeDashArray == null ? 0 : strokeDashArray.length];
+            System.arraycopy(strokeDashArray, 0, this.strokeDashArray, 0, this.strokeDashArray.length);
+        }
+
+        @Override
+        public com.sun.javafx.geom.Shape getShape() {
+            return null;
+        }
+    }
 }

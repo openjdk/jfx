@@ -26,7 +26,6 @@
 package com.sun.javafx.sg.prism;
 
 import com.sun.glass.ui.Screen;
-import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
@@ -41,7 +40,6 @@ import com.sun.javafx.sg.BaseEffectFilter;
 import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.BaseNodeEffectInput;
 import com.sun.javafx.sg.NodePath;
-import com.sun.javafx.sg.PGNode;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
@@ -59,8 +57,12 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
+import javafx.scene.CacheHint;
 
-import static com.sun.javafx.logging.PulseLogger.*;
+import java.util.List;
+
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 
 /**
@@ -722,7 +724,7 @@ public abstract class NGNode extends BaseNode<Graphics> {
      *                                                                         *
      **************************************************************************/
 
-    @Override protected BaseCacheFilter createCacheFilter(PGNode.CacheHint cacheHint) {
+    @Override protected BaseCacheFilter createCacheFilter(CacheHint cacheHint) {
         return new CacheFilter(this, cacheHint);
     }
 
@@ -862,11 +864,11 @@ public abstract class NGNode extends BaseNode<Graphics> {
             if (!(node instanceof NGGroup)) {
                 return false;
             }
-            List<PGNode> children = ((NGGroup)node).getChildren();
+            List<NGNode> children = ((NGGroup)node).getChildren();
             if (children.size() != 1) {
                 return false;
             }
-            NGNode child = (NGNode) children.get(0);
+            NGNode child = children.get(0);
             if (!child.getTransform().is2D()) {
                 return false;
             }
