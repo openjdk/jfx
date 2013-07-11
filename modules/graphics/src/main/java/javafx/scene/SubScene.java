@@ -35,8 +35,10 @@ import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
 import javafx.scene.input.PickResult;
 import javafx.scene.paint.Paint;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -47,10 +49,12 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.SubSceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.TraversalEngine;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.tk.Toolkit;
+
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -490,7 +494,7 @@ public class SubScene extends Node {
                 peer.setHeight((float)getHeight());
             }
             if (isDirty(SubSceneDirtyBits.CAMERA_DIRTY)) {
-                peer.setCamera(cam.impl_getPeer());
+                peer.setCamera((NGCamera) cam.impl_getPeer());
                 contentChanged = true;
             }
             if (isDirty(SubSceneDirtyBits.ROOT_SG_DIRTY)) {
