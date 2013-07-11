@@ -277,7 +277,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             .append("</converter>")
             .append(newline);
         outdent();
-        sbuf.append(spaces()).append("</Value>").append(newline);
+        sbuf.append(spaces()).append("</Value>");
         return sbuf.toString();
     }
 

@@ -35,17 +35,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
-import javafx.css.CssMetaData;
-import javafx.css.FontCssMetaData;
-import javafx.css.PseudoClass;
-import javafx.css.StyleConverter;
-import javafx.css.StyleOrigin;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
+import javafx.css.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
@@ -994,8 +990,8 @@ final class CssStyleHelper {
             ParsedValueImpl parsedValue,
             Set<PseudoClass> states,
             ObjectProperty<StyleOrigin> whence,
-            Set<CascadingStyle> resolves, List<Style> styleList) {
-
+            Set<ParsedValue> resolves,
+            List<Style> styleList) {
 
         //
         // either the value itself is a lookup, or the value contain a lookup
@@ -1014,23 +1010,22 @@ final class CssStyleHelper {
 
                 if (resolved != null) {
 
-                    if (resolves != null) {
+                    if (resolves != null ) {
 
-                        if (resolves.contains(resolved) == false) {
-                            resolves.add(resolved);
-
-                        } else {
+                        if (resolves.contains(resolved.getParsedValueImpl())) {
 
                             if (LOGGER.isLoggable(Level.WARNING)) {
-                                LOGGER.warning("Loop detected while resolving: '" + sval + "'");
+                                LOGGER.warning("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
                             }
-                            throw new IllegalArgumentException(resolved.getRule().toString());
+                            throw new IllegalArgumentException("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
 
+                        } else {
+                            resolves.add(parsedValue);
                         }
 
                     } else {
                         resolves = new HashSet<>();
-                        resolves.add(resolved);
+                        resolves.add(parsedValue);
                     }
 
                     if (styleList != null) {
@@ -1055,7 +1050,14 @@ final class CssStyleHelper {
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    return resolveLookups(styleable, resolved.getParsedValueImpl(), states, whence, resolves, styleList);
+                    ParsedValueImpl pv = resolveLookups(styleable, resolved.getParsedValueImpl(), states, whence, resolves, styleList);
+
+                    if (resolves != null) {
+                        resolves.remove(parsedValue);
+                    }
+
+                    return pv;
+
                 }
             }
         }
