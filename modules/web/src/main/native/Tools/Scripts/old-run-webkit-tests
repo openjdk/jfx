@@ -1516,6 +1516,9 @@ sub openDumpTool()
     # Platform spesifics
     if (isJava()) {
         $CLEAN_ENV{PATH} = $ENV{PATH};
+        if (isCygwin() || isWindows()) {
+            $CLEAN_ENV{TMP} = $ENV{TMP};
+        }
     }
     if (isLinux()) {
         if (defined $ENV{'DISPLAY'}) {
