@@ -136,6 +136,9 @@ class CompileTarget {
  * @param c The closure to call
  */
 void compileTargets(Closure c) {
+    if (COMPILE_TARGETS == "") {
+        return
+    }
     COMPILE_TARGETS.split(",").each { target ->
         CompileTarget ct = new CompileTarget();
         ct.name = target;
@@ -487,6 +490,16 @@ if (COMPILE_TARGETS == "all") {
         logger.info("Applying COMPILE_FLAGS_FILE '$it'")
         apply from: it
     }
+}
+
+if (COMPILE_TARGETS != "") {
+    def tmp = []
+    COMPILE_TARGETS.split(",").each {target ->
+        if (project.ext["${target.toUpperCase()}"].canBuild) {
+            tmp.add(target)
+        }
+    }
+    COMPILE_TARGETS = tmp.collect { "${it.toLowerCase()}"}.join(",")
 }
 
 // Sanity check the expected properties all exist
