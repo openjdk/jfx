@@ -155,6 +155,7 @@ project(":web") {
             dependsOn(project(":graphics").classes, project(":base").classes)
             description = "Task compiles web component for Android."
             classpath = files(
+                project(":controls").sourceSets.main.output.classesDir,
                 project(":graphics").sourceSets.main.output.classesDir,
                 project(":base").sourceSets.main.output.classesDir
             )
