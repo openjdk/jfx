@@ -4392,6 +4392,26 @@ public abstract class Node implements EventTarget, Styleable {
     void updateLocalToParentTransform() {
         if (transformDirty) {
             localToParentTx.setToIdentity();
+
+            boolean mirror = false;
+            double mirroringCenter = 0;
+            if (hasMirroring()) {
+                final Scene sceneValue = getScene();
+                if ((sceneValue != null) && (sceneValue.getRoot() == this)) {
+                    // handle scene mirroring in this branch
+                    // (must be the last transformation)
+                    mirroringCenter = sceneValue.getWidth() / 2;
+
+                    localToParentTx.translate(mirroringCenter, 0, 0);
+                    localToParentTx.scale(-1, 1);
+                    localToParentTx.translate(-mirroringCenter, 0, 0);
+                } else {
+                    // mirror later
+                    mirror = true;
+                    mirroringCenter = impl_getPivotX();
+                }
+            }
+
             if (getScaleX() != 1 || getScaleY() != 1 || getScaleZ() != 1 || getRotate() != 0) {
                 // recompute pivotX, pivotY and pivotZ
                 double pivotX = impl_getPivotX();
@@ -4412,22 +4432,14 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             // Check to see whether the node requires mirroring
-            if (hasMirroring()) {
-                final double xOffset = getMirroringCenter();
-                localToParentTx.translate(xOffset, 0, 0);
+            if (mirror) {
+                localToParentTx.translate(mirroringCenter, 0, 0);
                 localToParentTx.scale(-1, 1);
-                localToParentTx.translate(-xOffset, 0, 0);
+                localToParentTx.translate(-mirroringCenter, 0, 0);
             }
 
             transformDirty = false;
         }
-    }
-
-    private double getMirroringCenter() {
-        final Scene sceneValue = getScene();
-        return ((sceneValue != null) && (sceneValue.getRoot() == this))
-                   ? sceneValue.getWidth() / 2
-                   : impl_getPivotX();
     }
 
     /**

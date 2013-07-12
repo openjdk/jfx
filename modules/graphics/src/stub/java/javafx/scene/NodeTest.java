@@ -35,6 +35,7 @@ import com.sun.javafx.test.objects.TestStage;
 import javafx.beans.property.*;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.effect.DropShadow;
@@ -1272,5 +1273,16 @@ public class NodeTest {
 
         assertNull(rect.screenToLocal(new Point2D(111, 222)));
         assertNull(rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
+    }
+
+    @Test
+    public void testRootMirroringWithTranslate() {
+        final Group rootGroup = new Group();
+        rootGroup.setTranslateX(20);
+        rootGroup.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        final Scene scene = new Scene(rootGroup, 200, 200);
+
+        final Point2D trPoint = scene.getRoot().localToScene(0, 0);
+        assertEquals(180, trPoint.getX(), 0.1);
     }
 }
