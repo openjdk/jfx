@@ -1972,7 +1972,7 @@ project(":web") {
     }
 
     compileJava.enabled = COMPILE_WEBKIT
-    if (BUILD_CLOSED && COMPILE_GSTREAMER) {
+    if (BUILD_CLOSED) {
         compileJava.dependsOn compileMediaJava
         compileJava.classpath += files(
                 "../media/build/classes/main",
