@@ -38,6 +38,7 @@ public class SymbolicSubdivisionBuilder {
         
         texCoords = new float[(oldMesh.getNumEdgesInFaces() * 3 + oldMesh.faces.length) * 2];
         int[][] faces = new int[oldMesh.getNumEdgesInFaces()][8];
+        int[] faceSmoothingGroups = new int[oldMesh.getNumEdgesInFaces()];
         newTexCoordIndex = 0;
         reindex = new int[oldMesh.points.numPoints]; // indexes incremented by 1, 0 reserved for empty
         
@@ -49,6 +50,7 @@ public class SymbolicSubdivisionBuilder {
             for (int p = 0; p < oldFaces.length; p += 2) {
                 faces[newFacesInd][4] = getPointNewIndex(faceInfo);
                 faces[newFacesInd][5] = getTexCoordNewIndex(faceInfo);
+                faceSmoothingGroups[newFacesInd] = oldMesh.faceSmoothingGroups[f];
                 newFacesInd++;
             }
         }
@@ -77,7 +79,7 @@ public class SymbolicSubdivisionBuilder {
             }
         }
         
-        SymbolicPolygonMesh newMesh = new SymbolicPolygonMesh(points, texCoords, faces);
+        SymbolicPolygonMesh newMesh = new SymbolicPolygonMesh(points, texCoords, faces, faceSmoothingGroups);
         return newMesh;
     }
     
