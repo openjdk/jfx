@@ -40,7 +40,6 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.CssError;
 import javafx.css.CssMetaData;
@@ -891,13 +890,4 @@ public abstract class Control extends Region implements Skinnable {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.TRUE;
     }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated public AccessibleProvider impl_getAccessible() {
-        return null; // return a valid value for specific controls accessible objects
-    }
-
 }

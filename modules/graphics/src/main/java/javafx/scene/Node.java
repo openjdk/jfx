@@ -146,6 +146,7 @@ import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.StyleableProperty;
 import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
@@ -8807,6 +8808,14 @@ public abstract class Node implements EventTarget, Styleable {
                 return node.getSubScene();
             }
         });
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated public AccessibleProvider impl_getAccessible() {
+        return null; // return a valid value for specific controls accessible objects
     }
 }
 
