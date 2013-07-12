@@ -3,7 +3,9 @@ package com.javafx.experiments.shape3d;
 
 import com.javafx.experiments.importers.maya.Joint;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ObservableFloatArray;
@@ -92,15 +94,27 @@ public class SkinningMesh extends PolygonMesh {
                 relativePoints[j][3*i+2] = (float) relativePoint.getZ();
             }
         }
-        
-        // Add a listener to all the joints so that we can track when any of their transforms have changed
-        for (Joint joint : joints) {
-            joint.localToParentTransformProperty().addListener(new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    jointsTransformDirty = true;
+
+        // Add a listener to all the joints (and their parents nodes) so that we can track when any of their transforms have changed
+        // Set of joints that already have a listener (so we don't attach a listener to the same node more than once)
+        Set<Node> processedNodes = new HashSet<Node>(joints.size());
+        InvalidationListener invalidationListener = new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                jointsTransformDirty = true;
+            }
+        };
+        for (int j = 0; j < joints.size(); j++) {
+            Node node = joints.get(j);
+            while (!processedNodes.contains(node)) {
+                node.localToParentTransformProperty().addListener(invalidationListener);
+                processedNodes.add(node);
+                // Don't check for nodes above the jointForest
+                if (jointForest.contains(node)) {
+                    break;
                 }
-            });
+                node = node.getParent();
+            }
         }
     }
     
