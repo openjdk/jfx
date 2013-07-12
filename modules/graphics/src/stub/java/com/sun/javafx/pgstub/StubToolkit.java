@@ -702,6 +702,11 @@ public class StubToolkit extends Toolkit {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public boolean isNestedLoopRunning() {
+        return false;
+    }
+
     private KeyCode platformShortcutKey = KeyCode.SHORTCUT;
 
     public void setPlatformShortcutKey(final KeyCode platformShortcutKey) {

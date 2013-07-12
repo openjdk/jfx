@@ -268,6 +268,11 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
+    public boolean isNestedLoopRunning() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public AbstractMasterTimer getMasterTimer() {
         return null;
     }

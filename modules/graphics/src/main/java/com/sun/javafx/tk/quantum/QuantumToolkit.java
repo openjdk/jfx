@@ -592,7 +592,13 @@ public final class QuantumToolkit extends Toolkit {
         EventLoop eventLoop = Application.GetApplication().createEventLoop();
         eventLoopMap.put(key, eventLoop);
 
-        return eventLoop.enter();
+        Object ret = eventLoop.enter();
+
+        if (!isNestedLoopRunning()) {
+            notifyLastNestedLoopExited();
+        }
+        
+        return ret;
     }
 
     @Override public void exitNestedEventLoop(Object key, Object rval) {
@@ -1095,6 +1101,11 @@ public final class QuantumToolkit extends Toolkit {
             }
         }
         return true;
+    }
+
+    @Override
+    public boolean isNestedLoopRunning() {
+        return Application.isNestedLoopRunning();
     }
 
     @Override

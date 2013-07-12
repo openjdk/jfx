@@ -266,6 +266,8 @@ public abstract class Toolkit {
      */
     public abstract void exitNestedEventLoop(Object key, Object rval);
 
+    public abstract boolean isNestedLoopRunning();
+
     public abstract TKStage createTKStage(StageStyle stageStyle, boolean primary,
             Modality modality, TKStage owner, boolean rtl);
 
@@ -399,6 +401,12 @@ public abstract class Toolkit {
     public void notifyWindowListeners(List<TKStage> windows) {
         for (TKListener listener: toolkitListeners.keySet()) {
             listener.changedTopLevelWindows(windows);
+        }
+    }
+
+    public void notifyLastNestedLoopExited() {
+        for (TKListener listener: toolkitListeners.keySet()) {
+            listener.exitedLastNestedLoop();
         }
     }
 
