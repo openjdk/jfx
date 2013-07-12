@@ -23,37 +23,49 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.scenario.effect.Effect;
 
 /**
  */
-public abstract class BaseEffectFilter {
-    private Effect effect;
-    private BaseNodeEffectInput nodeInput;
+public abstract class BaseNodeEffectInput extends Effect {
+    private NGNode node;
+    private BaseBounds tempBounds = new RectBounds();
 
-    protected BaseEffectFilter(Effect effect, BaseNode node) {
-        this.effect = effect;
-        this.nodeInput = createNodeEffectInput(node);
+    public BaseNodeEffectInput() {
+        this(null);
     }
 
-    public Effect getEffect() { return effect; }
-
-    public BaseNodeEffectInput getNodeInput() { return nodeInput; }
-
-    protected void dispose() {
-        effect = null;
-        nodeInput.setNode(null);
-        nodeInput = null;
+    public BaseNodeEffectInput(NGNode node) {
+        setNode(node);
     }
 
-    public BaseBounds getBounds(BaseBounds bounds, BaseTransform xform) {
-        BaseBounds r = getEffect().getBounds(xform, nodeInput);
-        return bounds.deriveWithNewBounds(r);
+    public NGNode getNode() {
+        return node;
     }
 
-    protected abstract BaseNodeEffectInput createNodeEffectInput(BaseNode node);
+    public void setNode(NGNode node) {
+        if (this.node != node) {
+            this.node = node;
+            flush();
+        }
+    }
+
+    @Override
+    public BaseBounds getBounds(BaseTransform transform,
+                              Effect defaultInput)
+    {
+        // TODO: update Effect.getBounds() to take Rectangle2D param so
+        // that we can avoid creating garbage here? (RT-23958)
+        BaseTransform t = transform == null ? 
+                BaseTransform.IDENTITY_TRANSFORM : transform;
+        tempBounds = node.getContentBounds(tempBounds, t);
+        return tempBounds.copy();
+    }
+
+    public abstract void flush();
 }

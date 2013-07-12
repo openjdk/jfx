@@ -25,16 +25,16 @@
 
 package com.sun.javafx.sg.prism;
 
+import java.util.Vector;
 import com.sun.javafx.geom.FlatteningPathIterator;
-import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.IllegalPathStateException;
+import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.Point2D;
-import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
-import java.util.Vector;
 
 /**
  * A {@link KeyFrame} {@link Evaluator} for {@link Shape} objects.

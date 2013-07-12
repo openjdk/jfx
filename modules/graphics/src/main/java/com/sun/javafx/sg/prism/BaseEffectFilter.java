@@ -23,22 +23,37 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.sg.prism;
 
-import java.util.EnumSet;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.Effect;
 
-/*
- * Dirty bounds hints
+/**
  */
-public final class DirtyHint {
-    
-    double translateXDelta, translateYDelta;
+public abstract class BaseEffectFilter {
+    private Effect effect;
+    private BaseNodeEffectInput nodeInput;
 
-    public double getTranslateXDelta() {
-        return translateXDelta;
+    protected BaseEffectFilter(Effect effect, NGNode node) {
+        this.effect = effect;
+        this.nodeInput = createNodeEffectInput(node);
     }
 
-    public double getTranslateYDelta() {
-        return translateYDelta;
+    public Effect getEffect() { return effect; }
+
+    public BaseNodeEffectInput getNodeInput() { return nodeInput; }
+
+    protected void dispose() {
+        effect = null;
+        nodeInput.setNode(null);
+        nodeInput = null;
     }
+
+    public BaseBounds getBounds(BaseBounds bounds, BaseTransform xform) {
+        BaseBounds r = getEffect().getBounds(xform, nodeInput);
+        return bounds.deriveWithNewBounds(r);
+    }
+
+    protected abstract BaseNodeEffectInput createNodeEffectInput(NGNode node);
 }

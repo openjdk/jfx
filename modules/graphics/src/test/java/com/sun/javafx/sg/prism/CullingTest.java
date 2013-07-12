@@ -23,17 +23,16 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.DirtyRegionContainer;
-import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.DirtyRegionContainer;
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
 import junit.framework.Assert;
 import org.junit.Test;
 
@@ -41,7 +40,7 @@ public class CullingTest {
 
     @Test
     public void test_setCullBits_intersect() {
-        BaseNode bn = getBaseNode(new Rectangle(0, 0, 100, 100));
+        NGNode bn = getPeerNode(new Rectangle(0, 0, 100, 100));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
@@ -54,7 +53,7 @@ public class CullingTest {
 
     @Test
     public void test_setCullBits_disjoint() {
-        BaseNode bn = getBaseNode(new Rectangle(0, 0, 100, 100));
+        NGNode bn = getPeerNode(new Rectangle(0, 0, 100, 100));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
@@ -67,7 +66,7 @@ public class CullingTest {
 
     @Test
     public void test_setCullBits_within() {
-        BaseNode bn = getBaseNode(new Rectangle(50, 50, 100, 100));
+        NGNode bn = getPeerNode(new Rectangle(50, 50, 100, 100));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
@@ -80,7 +79,7 @@ public class CullingTest {
     
     @Test
     public void test_setCullBits_region_within() {
-        BaseNode bn = getBaseNode(new Rectangle(0, 0, 100, 100));
+        NGNode bn = getPeerNode(new Rectangle(0, 0, 100, 100));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
@@ -93,7 +92,7 @@ public class CullingTest {
 
     @Test
     public void test_setCullBits_empty() {
-        BaseNode bn = getBaseNode(new Rectangle(50, 50, 100, 100));
+        NGNode bn = getPeerNode(new Rectangle(50, 50, 100, 100));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
@@ -106,7 +105,7 @@ public class CullingTest {
 
     @Test
     public void test_setCullBits_null() {
-        BaseNode bn = getBaseNode(new Rectangle(50, 50, 100, 100));
+        NGNode bn = getPeerNode(new Rectangle(50, 50, 100, 100));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
@@ -119,7 +118,7 @@ public class CullingTest {
 
     @Test
     public void test_setCullBits_empty_regions() {
-        BaseNode bn = getBaseNode(new Rectangle(50, 50, 100, 100));
+        NGNode bn = getPeerNode(new Rectangle(50, 50, 100, 100));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{});
         bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
@@ -131,15 +130,15 @@ public class CullingTest {
         Node g = group(new Rectangle(150, 0, 50, 50), new Rectangle(150, 60, 50, 50));
         g.setTranslateX(10);
         g.setTranslateY(10);
-        BaseNode gbn = getBaseNode(g);
-        BaseNode bn1 = getBaseNode(((Group)g).getChildren().get(0));
-        BaseNode bn2 = getBaseNode(((Group)g).getChildren().get(1));
+        NGNode gbn = getPeerNode(g);
+        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
+        NGNode bn2 = getPeerNode(((Group) g).getChildren().get(1));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 100, 100), new RectBounds(0, 110, 100, 210)});
         gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
         Assert.assertEquals(0, gbn.cullingBits);
         for(Node n:((Group)g).getChildren()) {
-            Assert.assertEquals(0, getBaseNode(n).cullingBits);
+            Assert.assertEquals(0, getPeerNode(n).cullingBits);
         }
     }
 
@@ -148,9 +147,9 @@ public class CullingTest {
         Node g = group(new Rectangle(50, 50, 30, 30), new Rectangle(50, 120, 30, 30));
         g.setTranslateX(10);
         g.setTranslateY(10);
-        BaseNode gbn = getBaseNode(g);
-        BaseNode bn1 = getBaseNode(((Group)g).getChildren().get(0));
-        BaseNode bn2 = getBaseNode(((Group)g).getChildren().get(1));
+        NGNode gbn = getPeerNode(g);
+        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
+        NGNode bn2 = getPeerNode(((Group) g).getChildren().get(1));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 100, 100), new RectBounds(0, 110, 100, 210)});
         gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
@@ -168,9 +167,9 @@ public class CullingTest {
         Node g = group(new Rectangle(50, 50, 30, 30), new Rectangle(50, 10, 30, 30));
         g.setTranslateX(10);
         g.setTranslateY(10);
-        BaseNode gbn = getBaseNode(g);
-        BaseNode bn1 = getBaseNode(((Group)g).getChildren().get(0));
-        BaseNode bn2 = getBaseNode(((Group)g).getChildren().get(1));
+        NGNode gbn = getPeerNode(g);
+        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
+        NGNode bn2 = getPeerNode(((Group) g).getChildren().get(1));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 100, 100), new RectBounds(0, 110, 100, 210)});
         gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
@@ -188,9 +187,9 @@ public class CullingTest {
         Node g = group(new Rectangle(50, 10, 100, 100), new Rectangle(50, 120, 100, 100));
         g.setTranslateX(5);
         g.setTranslateY(5);
-        BaseNode gbn = getBaseNode(g);
-        BaseNode bn1 = getBaseNode(((Group)g).getChildren().get(0));
-        BaseNode bn2 = getBaseNode(((Group)g).getChildren().get(1));
+        NGNode gbn = getPeerNode(g);
+        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
+        NGNode bn2 = getPeerNode(((Group) g).getChildren().get(1));
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(70, 20, 100, 105), new RectBounds(70, 130, 100, 200)});
         gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
@@ -208,15 +207,15 @@ public class CullingTest {
         Node g1 = group(new Rectangle(50, 10, 100, 100), new Rectangle(50, 120, 100, 100));
         g1.setTranslateX(5);
         g1.setTranslateY(5);
-        BaseNode g1bn = getBaseNode(g1);
-        BaseNode bn1 = getBaseNode(((Group)g1).getChildren().get(0));
-        BaseNode bn2 = getBaseNode(((Group)g1).getChildren().get(1));
+        NGNode g1bn = getPeerNode(g1);
+        NGNode bn1 = getPeerNode(((Group) g1).getChildren().get(0));
+        NGNode bn2 = getPeerNode(((Group) g1).getChildren().get(1));
 
         Node g = group(g1, new Rectangle(200, 200, 100, 100));
         g.setTranslateX(5);
         g.setTranslateY(5);
-        BaseNode gbn = getBaseNode(g);
-        BaseNode bn3 = getBaseNode(((Group)g).getChildren().get(1));
+        NGNode gbn = getPeerNode(g);
+        NGNode bn3 = getPeerNode(((Group) g).getChildren().get(1));
 
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(70, 25, 100, 105), new RectBounds(70, 130, 100, 200)});
@@ -237,8 +236,8 @@ public class CullingTest {
     @Test
     public void test_region_group_full_withing_then_partial() {
         Node g = group(new Rectangle(50, 50, 100, 100));
-        BaseNode gbn = getBaseNode(g);
-        BaseNode bn1 = getBaseNode(((Group)g).getChildren().get(0));
+        NGNode gbn = getPeerNode(g);
+        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
 
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 160, 160), new RectBounds(80, 80, 100, 100)});
@@ -248,7 +247,7 @@ public class CullingTest {
         Assert.assertEquals(1 << 2, bn1.cullingBits);
     }
 
-    public static BaseNode getBaseNode(Node n) {
+    public static NGNode getPeerNode(Node n) {
         Scene.impl_setAllowPGAccess(true);
         // Eeek, this is gross! I have to use reflection to invoke this
         // method so that bounds are updated...
@@ -271,7 +270,7 @@ public class CullingTest {
     }
 
     public static BaseBounds getBounds(Node n, BaseTransform tx) {
-        BaseNode pgn = getBaseNode(n);
+        NGNode pgn = getPeerNode(n);
         return pgn.getContentBounds(new RectBounds(), tx);
     }
 }

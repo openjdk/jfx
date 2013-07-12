@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;

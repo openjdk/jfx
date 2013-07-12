@@ -32,7 +32,7 @@ import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.image.*;
 import com.sun.javafx.image.impl.ByteBgraPre;
-import com.sun.javafx.sg.GrowableDataBuffer;
+import com.sun.javafx.sg.prism.GrowableDataBuffer;
 import com.sun.javafx.sg.prism.NGCanvas;
 import com.sun.javafx.tk.Toolkit;
 import javafx.geometry.VPos;

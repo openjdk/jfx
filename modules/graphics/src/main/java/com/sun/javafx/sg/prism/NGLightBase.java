@@ -27,7 +27,6 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.BaseNode;
 import com.sun.prism.Graphics;
 import com.sun.prism.paint.Color;
 
@@ -115,7 +114,7 @@ public class NGLightBase extends NGNode {
             for (int i = 0; i < scopedNodes.length; i++) {
                 Object scopedNode = scopedNodes[i];
                 if (scopedNode instanceof NGGroup) {
-                    BaseNode parent = n3d.getParent();
+                    NGNode parent = n3d.getParent();
                     while (parent != null) {
                         if (scopedNode == parent) {
                             return true;

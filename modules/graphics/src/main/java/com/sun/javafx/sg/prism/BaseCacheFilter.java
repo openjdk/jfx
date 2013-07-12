@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.sg.prism;
 
 import javafx.scene.CacheHint;
 import com.sun.javafx.geom.Rectangle;
@@ -100,7 +100,7 @@ public abstract class BaseCacheFilter {
 
     protected double cachedX;
     protected double cachedY;
-    protected BaseNode node;
+    protected NGNode node;
 
     // Used to draw the cached image to the screen
     protected Affine2D screenXform = new Affine2D();
@@ -118,7 +118,7 @@ public abstract class BaseCacheFilter {
     // Fun with floating point
     private static final double EPSILON = 0.0000001;
 
-    protected BaseCacheFilter(BaseNode node, CacheHint cacheHint) {
+    protected BaseCacheFilter(NGNode node, CacheHint cacheHint) {
         this.node = node;
         this.scrollCacheState = ScrollCacheState.CHECKING_PRECONDITIONS;
         setHint(cacheHint);

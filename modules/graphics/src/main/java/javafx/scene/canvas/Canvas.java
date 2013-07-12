@@ -25,19 +25,19 @@
 
 package javafx.scene.canvas;
 
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.geometry.NodeOrientation;
+import javafx.scene.Node;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.GrowableDataBuffer;
+import com.sun.javafx.sg.prism.GrowableDataBuffer;
 import com.sun.javafx.sg.prism.NGCanvas;
 import com.sun.javafx.sg.prism.NGNode;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.geometry.NodeOrientation;
-import javafx.scene.Node;
 
 /**
  * {@code Canvas} is an image that can be drawn on using a set of graphics 

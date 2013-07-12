@@ -25,11 +25,11 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.scene.shape.ArcType;
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.prism.Graphics;
 import com.sun.prism.shape.ShapeRep;
-import javafx.scene.shape.ArcType;
 
 /**
  *

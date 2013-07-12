@@ -23,19 +23,33 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.sg.prism;
 
+import javafx.scene.Group;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.shape.Rectangle;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.scenario.effect.*;
-import javafx.scene.Group;
-import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.shape.Rectangle;
+import com.sun.scenario.effect.Blend;
+import com.sun.scenario.effect.Bloom;
+import com.sun.scenario.effect.BoxBlur;
+import com.sun.scenario.effect.BoxShadow;
+import com.sun.scenario.effect.ColorAdjust;
+import com.sun.scenario.effect.Crop;
+import com.sun.scenario.effect.DropShadow;
+import com.sun.scenario.effect.Effect;
+import com.sun.scenario.effect.GaussianBlur;
+import com.sun.scenario.effect.GeneralShadow;
+import com.sun.scenario.effect.Glow;
+import com.sun.scenario.effect.InnerShadow;
+import com.sun.scenario.effect.MotionBlur;
+import com.sun.scenario.effect.Offset;
+import com.sun.scenario.effect.SepiaTone;
 import junit.framework.Assert;
 import org.junit.Test;
 
@@ -45,8 +59,8 @@ public class EffectDirtyRegionTest {
     DirtyRegionContainer drcExpected;
     DirtyRegionPool drp;
     Effect effect;
-    BaseNode g1bn;
-    BaseNode gbn;
+    NGNode g1bn;
+    NGNode gbn;
 
     @Test
     public void dropShadowTest() {
@@ -468,7 +482,7 @@ public class EffectDirtyRegionTest {
         }
     }
 
-    public static BaseNode getBaseNode(Node n) {
+    public static NGNode getBaseNode(Node n) {
         Scene.impl_setAllowPGAccess(true);
         // Eeek, this is gross! I have to use reflection to invoke this
         // method so that bounds are updated...
@@ -491,7 +505,7 @@ public class EffectDirtyRegionTest {
     }
 
     public static BaseBounds getBounds(Node n, BaseTransform tx) {
-        BaseNode pgn = getBaseNode(n);
+        NGNode pgn = getBaseNode(n);
         return pgn.getContentBounds(new RectBounds(), tx);
     }
 }

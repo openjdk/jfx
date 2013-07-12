@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.sg.prism;
 
 import java.nio.BufferOverflowException;
 import java.util.Arrays;

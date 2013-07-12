@@ -23,49 +23,20 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.sg.prism;
 
-import com.sun.scenario.effect.Effect;
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.geom.transform.BaseTransform;
-
-/**
+/*
+ * Dirty bounds hints
  */
-public abstract class BaseNodeEffectInput extends Effect {
-    private BaseNode node;
-    private BaseBounds tempBounds = new RectBounds();
+public final class DirtyHint {
+    
+    double translateXDelta, translateYDelta;
 
-    public BaseNodeEffectInput() {
-        this(null);
+    public double getTranslateXDelta() {
+        return translateXDelta;
     }
 
-    public BaseNodeEffectInput(BaseNode node) {
-        setNode(node);
+    public double getTranslateYDelta() {
+        return translateYDelta;
     }
-
-    public BaseNode getNode() {
-        return node;
-    }
-
-    public void setNode(BaseNode node) {
-        if (this.node != node) {
-            this.node = node;
-            flush();
-        }
-    }
-
-    @Override
-    public BaseBounds getBounds(BaseTransform transform,
-                              Effect defaultInput)
-    {
-        // TODO: update Effect.getBounds() to take Rectangle2D param so
-        // that we can avoid creating garbage here? (RT-23958)
-        BaseTransform t = transform == null ? 
-                BaseTransform.IDENTITY_TRANSFORM : transform;
-        tempBounds = node.getContentBounds(tempBounds, t);
-        return tempBounds.copy();
-    }
-
-    public abstract void flush();
 }

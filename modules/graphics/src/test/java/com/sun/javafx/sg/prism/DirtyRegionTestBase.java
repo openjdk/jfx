@@ -25,25 +25,27 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.geometry.Insets;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.prism.NodeTestUtils.TestNGGroup;
 import com.sun.prism.paint.Color;
 import com.sun.scenario.effect.Effect;
-import javafx.geometry.Insets;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.CornerRadii;
 import org.junit.runners.Parameterized;
-
-import java.lang.reflect.Field;
-import java.util.*;
-
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -90,7 +92,7 @@ public class DirtyRegionTestBase {
                 // This simulates making it invisible, painting, and then
                 // making it visible again.
                 node.setOpacity(0f);
-                BaseNode parent = node;
+                NGNode parent = node;
                 while(parent.getParent() != null) parent = parent.getParent();
                 parent.render(TestGraphics.TEST_GRAPHICS);
                 // Now we can go ahead and set the opacity
@@ -184,7 +186,7 @@ public class DirtyRegionTestBase {
                 // This simulates making it invisible, painting, and then
                 // making it visible again.
                 node.setVisible(false);
-                BaseNode parent = node;
+                NGNode parent = node;
                 while(parent.getParent() != null) parent = parent.getParent();
                 parent.render(TestGraphics.TEST_GRAPHICS);
                 // Now we can go ahead and set the opacity

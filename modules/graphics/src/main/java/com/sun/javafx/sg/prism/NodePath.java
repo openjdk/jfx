@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.sg.prism;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,8 +32,8 @@ import java.util.List;
  * Simple a reusable storage for root-to-node path.
  * 
  */
-public class NodePath<N extends BaseNode> {
-    private List<N> path = new ArrayList<N>();
+public class NodePath<N extends NGNode> {
+    private List<N> path = new ArrayList<>();
     private int position;
     
     public NodePath() {

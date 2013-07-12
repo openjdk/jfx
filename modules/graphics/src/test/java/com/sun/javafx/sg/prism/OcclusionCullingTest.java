@@ -27,7 +27,7 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.NodePath;
+import com.sun.javafx.sg.prism.NodePath;
 import org.junit.Test;
 
 import static com.sun.javafx.sg.prism.NodeTestUtils.*;

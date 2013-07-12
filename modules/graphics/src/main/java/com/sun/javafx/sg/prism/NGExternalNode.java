@@ -25,16 +25,15 @@
 
 package com.sun.javafx.sg.prism;
 
+import java.nio.Buffer;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.UnaryOperator;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.prism.Graphics;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
-
-import java.nio.Buffer;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.UnaryOperator;
 
 public class NGExternalNode extends NGNode {
     

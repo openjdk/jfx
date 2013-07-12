@@ -25,6 +25,10 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.geometry.VPos;
+import javafx.scene.text.Font;
+import java.nio.IntBuffer;
+import java.util.LinkedList;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.BaseBounds;
@@ -38,7 +42,6 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
-import com.sun.javafx.sg.GrowableDataBuffer;
 import com.sun.javafx.text.PrismTextLayout;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
@@ -59,10 +62,6 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrTexture;
-import java.nio.IntBuffer;
-import java.util.LinkedList;
-import javafx.geometry.VPos;
-import javafx.scene.text.Font;
 
 /**
  */

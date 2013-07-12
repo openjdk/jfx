@@ -25,12 +25,12 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.scene.shape.FillRule;
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
-import javafx.scene.shape.FillRule;
 
 /**
  */

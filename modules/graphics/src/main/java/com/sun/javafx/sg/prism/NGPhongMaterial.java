@@ -29,7 +29,6 @@ import com.sun.prism.Image;
 import com.sun.prism.Material;
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.ResourceFactory;
-import com.sun.prism.Texture;
 import com.sun.prism.TextureMap;
 import com.sun.prism.paint.Color;
 

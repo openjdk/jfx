@@ -25,16 +25,16 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.DrawMode;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.prism.Graphics;
 import com.sun.prism.Material;
 import com.sun.prism.MeshView;
 import com.sun.prism.ResourceFactory;
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
-import javafx.scene.shape.CullFace;
-import javafx.scene.shape.DrawMode;
 
 /**
  * TODO: 3D - Need documentation

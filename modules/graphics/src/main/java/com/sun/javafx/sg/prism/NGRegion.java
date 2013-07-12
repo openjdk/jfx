@@ -56,9 +56,6 @@ import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.logging.PulseLogger;
-import com.sun.javafx.sg.BaseEffectFilter;
-import com.sun.javafx.sg.BaseNode;
-import com.sun.javafx.sg.NodePath;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
@@ -387,7 +384,7 @@ public class NGRegion extends NGGroup {
      * @return
      */
     @Override protected RectBounds computeOpaqueRegion(RectBounds opaqueRegion) {
-        final BaseNode clip = getClipNode();
+        final NGNode clip = getClipNode();
         final Effect effect = getEffect();
         // compute opaque region
         if ((effect == null || !effect.reducesOpaquePixels()) &&

@@ -25,13 +25,14 @@
 
 package com.sun.javafx.sg.prism;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.sg.BaseNode;
-import com.sun.javafx.sg.NodePath;
 import com.sun.prism.Graphics;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Blend.Mode;
@@ -39,10 +40,6 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  */
@@ -94,7 +91,7 @@ public class NGGroup extends NGNode {
         // a waste of processing because the FX side should be doing this
         // work. TODO We should only do this when assertions are enabled
         // (RT-26980)
-        BaseNode child = (BaseNode)node;
+        NGNode child = node;
         // NOTE: We used to do checks here to make sure that a node
         // being added didn't already have another parent listed as
         // its parent. Now we just silently accept them. The FX side
