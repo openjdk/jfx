@@ -1079,6 +1079,12 @@ public class ObservableArrayTest  {
         }
     }
 
+    @Test public void testAddAllAManyPoints() {
+        for (int i = 0; i < 65_000; i++) {
+            wrapper.addAllA(wrapper.createPrimitiveArray(3));
+        }
+    }
+
     // ========== addAll(ObservableArray) tests ==========
 
     private void testAddAllT(int srcSize) {
@@ -1167,6 +1173,12 @@ public class ObservableArrayTest  {
         Object actual = wrapper.toArray(null);
         assertEquals(0, array.size());
         assertEquals(0, wrapper.arrayLength(actual));
+    }
+
+    @Test public void testAddAllTManyPoints() {
+        for (int i = 0; i < 65_000; i++) {
+            wrapper.addAllT(wrapper.createNotEmptyArray(wrapper.createPrimitiveArray(3)));
+        }
     }
 
     // ========== addAll(primitive array, range) tests ==========
