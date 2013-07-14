@@ -74,6 +74,7 @@ public class FireworksApp extends Application {
         primaryStage.setResizable(false);
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
+        play();
     }
 
     /**

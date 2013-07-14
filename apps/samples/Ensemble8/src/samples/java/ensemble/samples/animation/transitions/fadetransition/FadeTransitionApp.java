@@ -103,6 +103,7 @@ public class FadeTransitionApp extends Application {
         primaryStage.setResizable(false);
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
+        play();
     }
 
     /**

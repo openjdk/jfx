@@ -277,8 +277,7 @@ public class XylophoneApp extends Application {
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
-        animation.play();
-        animation2.play();
+        play();
     }
 
     /**
