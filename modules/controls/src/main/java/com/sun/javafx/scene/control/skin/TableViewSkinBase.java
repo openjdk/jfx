@@ -179,15 +179,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         columnReorderOverlay.setManaged(false);
 
         tableHeaderRow = createTableHeaderRow();
-        tableHeaderRow.setColumnReorderLine(columnReorderLine);
-        tableHeaderRow.setTablePadding(getSkinnable().getInsets());
+//        tableHeaderRow.setColumnReorderLine(columnReorderLine);
         tableHeaderRow.setFocusTraversable(false);
-        control.paddingProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                C c = getSkinnable();
-                tableHeaderRow.setTablePadding(c == null ? Insets.EMPTY : c.getInsets());
-            }
-        });
 
         getChildren().addAll(tableHeaderRow, flow, columnReorderOverlay, columnReorderLine);
 
@@ -391,8 +384,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
             updatePlaceholderRegionVisibility();
         } else if ("FOCUS_TRAVERSABLE".equals(p)) {
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        } else if ("WIDTH".equals(p)) {
-            tableHeaderRow.setTablePadding(getSkinnable().getInsets());
+//        } else if ("WIDTH".equals(p)) {
+//            tableHeaderRow.setTablePadding(getSkinnable().getInsets());
         }
     }
 
@@ -405,6 +398,10 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      */
     public TableHeaderRow getTableHeaderRow() {
         return tableHeaderRow;
+    }
+
+    public Region getColumnReorderLine() {
+        return columnReorderLine;
     }
     
     /**

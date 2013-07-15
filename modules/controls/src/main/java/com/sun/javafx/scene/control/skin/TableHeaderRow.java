@@ -86,10 +86,8 @@ public class TableHeaderRow extends StackPane {
 
     private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<TableColumnBase, CheckMenuItem>();
 
-    private Insets tablePadding;
-
     // Vertical line that is shown when columns are being reordered
-    private Region columnReorderLine;
+//    private Region columnReorderLine;
 
     private double scrollX;
 
@@ -169,6 +167,7 @@ public class TableHeaderRow extends StackPane {
         // listen to table width to keep header in sync
         updateTableWidth();
         tableSkin.getSkinnable().widthProperty().addListener(weakTableWidthListener);
+        tableSkin.getSkinnable().paddingProperty().addListener(weakTablePaddingListener);
         skin.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
 
         // popup menu for hiding/showing columns
@@ -252,6 +251,12 @@ public class TableHeaderRow extends StackPane {
             updateTableWidth();
         }
     };
+
+    private InvalidationListener tablePaddingListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            updateTableWidth();
+        }
+    };
     
     private ListChangeListener visibleLeafColumnsListener = new ListChangeListener<TableColumn<?,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TableColumn<?,?>> c) {
@@ -280,7 +285,10 @@ public class TableHeaderRow extends StackPane {
     
     private final WeakInvalidationListener weakTableWidthListener = 
             new WeakInvalidationListener(tableWidthListener);
-    
+
+    private final WeakInvalidationListener weakTablePaddingListener =
+            new WeakInvalidationListener(tablePaddingListener);
+
     private final WeakListChangeListener weakVisibleLeafColumnsListener =
             new WeakListChangeListener(visibleLeafColumnsListener);
     
@@ -352,23 +360,6 @@ public class TableHeaderRow extends StackPane {
         requestLayout();
     }
 
-    public void setTablePadding(Insets tablePadding) {
-        this.tablePadding = tablePadding;
-        updateTableWidth();
-    }
-
-    public Insets getTablePadding() {
-        return tablePadding == null ? Insets.EMPTY : tablePadding;
-    }
-
-    public Region getColumnReorderLine() {
-        return columnReorderLine;
-    }
-
-    public void setColumnReorderLine(Region value) {
-        this.columnReorderLine = value;
-    }
-
     public final void setReordering(boolean value) {
         this.reordering.set(value);
     }
@@ -404,6 +395,24 @@ public class TableHeaderRow extends StackPane {
     public NestedTableColumnHeader getRootHeader() {
         return header;
     }
+
+    // protected to allow subclass to customise the width, to allow for features
+    // such as row headers
+    protected void updateTableWidth() {
+        // snapping added for RT-19428
+        final Control c = tableSkin.getSkinnable();
+        if (c == null) {
+            this.tableWidth = 0;
+        } else {
+            Insets insets = c.getInsets() == null ? Insets.EMPTY : c.getInsets();
+            double padding = snapSize(insets.getLeft()) + snapSize(insets.getRight());
+            this.tableWidth = snapSize(c.getWidth()) - padding;
+        }
+
+        clip.setWidth(tableWidth);
+    }
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -497,15 +506,5 @@ public class TableHeaderRow extends StackPane {
         }
         
         return false;
-    }
-
-    private void updateTableWidth() {
-        // snapping added for RT-19428
-        double padding = snapSize(getTablePadding().getLeft()) + snapSize(getTablePadding().getRight());
-
-        Control c = tableSkin.getSkinnable();
-        this.tableWidth = c == null ? 0 : snapSize(c.getWidth()) - padding;
-
-        clip.setWidth(tableWidth);
     }
 }
