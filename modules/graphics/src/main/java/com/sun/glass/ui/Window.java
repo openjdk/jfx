@@ -288,7 +288,9 @@ public abstract class Window {
     public void close() {
         Application.checkEventThread();
         if (this.view != null) {
-            _setView(this.ptr, null);
+            if (this.ptr != 0L) {
+                _setView(this.ptr, null);
+            }
             this.view.setWindow(null);
             this.view.close();
             this.view = null;
