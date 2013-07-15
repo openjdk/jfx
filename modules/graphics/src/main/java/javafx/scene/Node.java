@@ -138,6 +138,7 @@ import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.EventHandlerProperties;
+import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeEventDispatcher;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
@@ -4812,7 +4813,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         return tmin;
     }
-
+    
 
     // Good to find a home for commonly use util. code such as EPS.
     // and almostZero. This code currently defined in multiple places,
@@ -8380,14 +8381,14 @@ public abstract class Node implements EventTarget, Styleable {
              styleHelper.setObservableStyleMap(styleMap);
          }
      }
-
+     
     /**
      * Flags used to indicate in which way this node is dirty (or whether it
      * is clean) and what must happen during the next CSS cycle on the
      * scenegraph.
      */
     CssFlags cssFlag = CssFlags.CLEAN;
-
+    
     /**
      * Needed for testing.
      */

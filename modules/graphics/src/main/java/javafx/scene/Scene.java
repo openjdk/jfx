@@ -136,6 +136,7 @@ import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.scene.LayoutFlags;
 
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
@@ -538,79 +539,10 @@ public class Scene implements EventTarget {
         }
     }
 
-    /**
-     * List of dirty layout roots.
-     * When a parent is either marked as a layout root or is unmanaged and it
-     * has its needsLayout flag set to true, then that node is added to this set
-     * so that it can be laid out on the next pulse without requiring its
-     * ancestors to be laid out.
-     */
-    private Set<Parent> dirtyLayoutRootsA = new LinkedHashSet<Parent>(10);
-    private Set<Parent> dirtyLayoutRootsB = new LinkedHashSet<Parent>(10);
-    private Set<Parent> dirtyLayoutRoots = dirtyLayoutRootsA;
-
-    /**
-     * Add the specified parent to this scene's dirty layout list.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void addToDirtyLayoutList(Parent p) {
-        // If the current size of the list is 0 then we will need to schedule
-        // a pulse event because a layout pass is needed.
-        if (dirtyLayoutRoots.isEmpty()) {
-            Toolkit.getToolkit().requestNextPulse();
-        }
-        // Add the node.
-        dirtyLayoutRoots.add(p);
-    }
-
-    /**
-     * Remove the specified parent from this scene's dirty layout list.
-     */
-    void removeFromDirtyLayoutList(Parent p) {
-        dirtyLayoutRoots.remove(p);
-    }
-
     private void doLayoutPass() {
-        // sometimes a layout pass with cause scene-graph changes (bounds/structure)
-        // that leave some branches needing further layout, so pass through roots twice
-        layoutDirtyRoots();
-        layoutDirtyRoots();
-
-        // we don't want to spin too long in layout, so if there are still dirty
-        // roots, we'll leave those for next pulse.
-        if (dirtyLayoutRoots.size() > 0) {
-            PlatformLogger logger = Logging.getLayoutLogger();
-            if (logger.isLoggable(Level.FINER)) {
-                logger.finer("after layout pass, "+dirtyLayoutRoots.size()+" layout root nodes still dirty");
-            }
-            Toolkit.getToolkit().requestNextPulse();
-        }
-    }
-
-    private void layoutDirtyRoots() {
-        if (dirtyLayoutRoots.size() > 0) {
-            PlatformLogger logger = Logging.getLayoutLogger();
-            Set<Parent> temp = dirtyLayoutRoots;
-            if (dirtyLayoutRoots == dirtyLayoutRootsA) {
-                dirtyLayoutRoots = dirtyLayoutRootsB;
-            } else {
-                dirtyLayoutRoots = dirtyLayoutRootsA;
-            }
-
-            for (Parent parent : temp) {
-                if (parent.getScene() == this && parent.isNeedsLayout()) {
-                    if (logger.isLoggable(Level.FINE)) {
-                        logger.fine("<<< START >>> root = "+parent.toString());
-                    }
-                    parent.layout();
-                    if (logger.isLoggable(Level.FINE)) {
-                        logger.fine("<<<  END  >>> root = "+parent.toString());
-                    }
-                }
-            }
-            temp.clear();
+        final Parent r = getRoot();
+        if (r != null) {
+            r.layout();
         }
     }
 
@@ -1178,12 +1110,6 @@ public class Scene implements EventTarget {
         return root;
     }
 
-    private void doLayoutPassWithoutPulse(int maxAttempts) {
-        for (int i = 0; dirtyLayoutRoots.size() > 0 && i != maxAttempts; ++i) {
-            layoutDirtyRoots();
-        }
-    }
-
     void setNeedsRepaint() {
         if (this.impl_peer != null) {
             impl_peer.entireSceneNeedsRepaint();
@@ -1202,7 +1128,7 @@ public class Scene implements EventTarget {
 
         // we do not need pulse in the snapshot code
         // because this scene can be stage-less
-        doLayoutPassWithoutPulse(3);
+        doLayoutPass();
 
         if (!paused) {
             getRoot().updateBounds();
@@ -2116,9 +2042,10 @@ public class Scene implements EventTarget {
      * @return boolean indicating whether the scene is quiescent
      */
     boolean isQuiescent() {
+        final Parent r = getRoot();
         return !isFocusDirty()
-               && (getRoot().cssFlag == CssFlags.CLEAN)
-               && dirtyLayoutRoots.isEmpty();
+               && (r == null || (r.cssFlag == CssFlags.CLEAN &&
+                r.layoutFlag == LayoutFlags.CLEAN));
     }
 
     /**
