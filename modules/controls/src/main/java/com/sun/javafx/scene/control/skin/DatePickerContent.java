@@ -666,6 +666,7 @@ yearSpinner.setFillHeight(false);
                     // previous or next month
                     goToDate(date);
                 }
+                lastFocusedDayCell = dayCell;
             }
         };
 
