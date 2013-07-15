@@ -657,15 +657,7 @@ yearSpinner.setFillHeight(false);
                 }
 
                 DateCell dayCell = (DateCell)ev.getSource();
-                LocalDate date = dayCellDate(dayCell);
-                YearMonth yearMonth = YearMonth.from(date);
-
-                if (yearMonth.equals(displayedYearMonth.get())) {
-                    selectDayCell(dayCell);
-                } else {
-                    // previous or next month
-                    goToDate(date);
-                }
+                selectDayCell(dayCell);
                 lastFocusedDayCell = dayCell;
             }
         };
