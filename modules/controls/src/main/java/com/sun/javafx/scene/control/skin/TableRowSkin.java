@@ -72,8 +72,6 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
             }
             
             this.tableView = getSkinnable().getTableView();
-//            spanModel = tableView.getSpanModel();
-//            registerChangeListener(tableView.spanModelProperty(), "SPAN_MODEL");
         }
     }
     
@@ -92,10 +90,6 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
     @Override protected ObservableList<TableColumn<T, ?>> getVisibleLeafColumns() {
         return tableView.getVisibleLeafColumns();
     }
-
-//    @Override protected ObjectProperty<SpanModel<T>> spanModelProperty() {
-//        return tableView.spanModelProperty();
-//    }
 
     @Override protected void updateCell(TableCell<T, ?> cell, TableRow<T> row) {
         cell.updateTableRow(row);

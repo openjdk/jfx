@@ -34,7 +34,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
@@ -43,6 +43,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.Node;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
@@ -61,95 +62,42 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  * Region responsible for painting the entire row of column headers.
  */
 public class TableHeaderRow extends StackPane {
-    
+
+    /***************************************************************************
+     *                                                                         *
+     * Static Fields                                                           *
+     *                                                                         *
+     **************************************************************************/
+
     private static final String MENU_SEPARATOR = 
             ControlResources.getString("TableView.nestedColumnControlMenuSeparator");
-    
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Private Fields                                                          *
+     *                                                                         *
+     **************************************************************************/
+
     private final VirtualFlow flow;
-    VirtualFlow getVirtualFlow() { return flow; }
-//    private final TableView<?> table;
-    
+
     private final TableViewSkinBase tableSkin;
-    protected TableViewSkinBase getTableSkin() {
-        return this.tableSkin;
-    } 
+
+    private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<TableColumnBase, CheckMenuItem>();
 
     private Insets tablePadding;
-    public void setTablePadding(Insets tablePadding) {
-        this.tablePadding = tablePadding;
-        updateTableWidth();
-    }
-    public Insets getTablePadding() {
-        return tablePadding == null ? Insets.EMPTY : tablePadding;
-    }
 
     // Vertical line that is shown when columns are being reordered
     private Region columnReorderLine;
-    public Region getColumnReorderLine() { return columnReorderLine; }
-    public void setColumnReorderLine(Region value) { this.columnReorderLine = value; }
 
     private double scrollX;
 
     private double tableWidth;
-    public double getTableWidth() { return tableWidth; }
-    private void updateTableWidth() {
-        // snapping added for RT-19428
-        double padding = snapSize(getTablePadding().getLeft()) + snapSize(getTablePadding().getRight());
-        
-        Control c = tableSkin.getSkinnable();
-        this.tableWidth = c == null ? 0 : snapSize(c.getWidth()) - padding;
-        
-        clip.setWidth(tableWidth);
-    }
 
     private Rectangle clip;
 
-    private BooleanProperty reorderingProperty = new BooleanPropertyBase() {
-        @Override protected void invalidated() {
-            TableColumnHeader r = getReorderingRegion();
-            if (r != null) {
-                double dragHeaderHeight = r.getNestedColumnHeader() != null ?
-                    r.getNestedColumnHeader().getHeight() :
-                    getReorderingRegion().getHeight();
-
-                dragHeader.resize(dragHeader.getWidth(), dragHeaderHeight);
-                dragHeader.setTranslateY(getHeight() - dragHeaderHeight);
-            }
-            dragHeader.setVisible(isReordering());
-        }
-
-        @Override
-        public Object getBean() {
-            return TableHeaderRow.this;
-        }
-
-        @Override
-        public String getName() {
-            return "reordering";
-        }
-    };
-    public final void setReordering(boolean value) { reorderingProperty().set(value); }
-    public final boolean isReordering() { return reorderingProperty.get(); }
-    public final BooleanProperty reorderingProperty() { return reorderingProperty; }
-
     private TableColumnHeader reorderingRegion;
-    public TableColumnHeader getReorderingRegion() { return reorderingRegion; }
-
-    public void setReorderingColumn(TableColumnBase rc) {
-        dragHeaderLabel.setText(rc == null ? "" : rc.getText());
-    }
-
-    public void setReorderingRegion(TableColumnHeader reorderingRegion) {
-        this.reorderingRegion = reorderingRegion;
-
-        if (reorderingRegion != null) {
-            dragHeader.resize(reorderingRegion.getWidth(), dragHeader.getHeight());
-        }
-    }
-
-    public void setDragHeaderX(double dragHeaderX) {
-        dragHeader.setTranslateX(dragHeaderX);
-    }
 
     /**
      * This is the ghosted region representing the table column that is being
@@ -167,10 +115,6 @@ public class TableHeaderRow extends StackPane {
      * at that level.
      */
     private final NestedTableColumnHeader header;
-    
-    public NestedTableColumnHeader getRootHeader() {
-        return header;
-    }
 
     private Region filler;
 
@@ -187,7 +131,23 @@ public class TableHeaderRow extends StackPane {
      */
     private ContextMenu columnPopupMenu;
 
-    
+    private BooleanProperty reordering = new SimpleBooleanProperty(this, "reordering", false) {
+        @Override protected void invalidated() {
+            TableColumnHeader r = getReorderingRegion();
+            if (r != null) {
+                double dragHeaderHeight = r.getNestedColumnHeader() != null ?
+                        r.getNestedColumnHeader().getHeight() :
+                        getReorderingRegion().getHeight();
+
+                dragHeader.resize(dragHeader.getWidth(), dragHeaderHeight);
+                dragHeader.setTranslateY(getHeight() - dragHeaderHeight);
+            }
+            dragHeader.setVisible(isReordering());
+        }
+    };
+
+
+
     /***************************************************************************
      *                                                                         *
      * Constructor                                                             *
@@ -195,27 +155,26 @@ public class TableHeaderRow extends StackPane {
      **************************************************************************/
     
     public TableHeaderRow(final TableViewSkinBase skin) {
-//        this.table = table;
         this.tableSkin = skin;
         this.flow = skin.flow;
 
         getStyleClass().setAll("column-header-background");
 
+        // clip the header so it doesn't show outside of the table bounds
         clip = new Rectangle();
         clip.setSmooth(false);
         clip.heightProperty().bind(heightProperty());
         setClip(clip);
 
+        // listen to table width to keep header in sync
         updateTableWidth();
         tableSkin.getSkinnable().widthProperty().addListener(weakTableWidthListener);
         skin.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
 
-        // --- popup menu for hiding/showing columns
+        // popup menu for hiding/showing columns
         columnPopupMenu = new ContextMenu();
-
         updateTableColumnListeners(tableSkin.getColumns(), Collections.<TableColumnBase<?,?>>emptyList());
         tableSkin.getColumns().addListener(weakTableColumnsListener);
-        // --- end of popup menu
 
         // drag header region. Used to indicate the current column being reordered
         dragHeader = new StackPane();
@@ -242,6 +201,7 @@ public class TableHeaderRow extends StackPane {
             }
         });
 
+        // build the corner region button for showing the popup menu
         final StackPane image = new StackPane();
         image.setSnapToPixel(false);
         image.getStyleClass().setAll("show-hide-column-image");
@@ -279,11 +239,8 @@ public class TableHeaderRow extends StackPane {
         getChildren().addAll(filler, header, cornerRegion, dragHeader);
     }
     
-    protected NestedTableColumnHeader createRootHeader() {
-        return new NestedTableColumnHeader(tableSkin, null);
-    } 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Listeners                                                               *
@@ -332,67 +289,16 @@ public class TableHeaderRow extends StackPane {
     
     private final WeakInvalidationListener weakColumnTextListener = 
             new WeakInvalidationListener(columnTextListener);
-    
 
-    private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<TableColumnBase, CheckMenuItem>();
-    private void updateTableColumnListeners(List<? extends TableColumnBase<?,?>> added, List<? extends TableColumnBase<?,?>> removed) {
-        // remove binding from all removed items
-        for (TableColumnBase tc : removed) {
-            remove(tc);
-        }
 
-        // add listeners to all added items
-        for (final TableColumnBase tc : added) {
-            add(tc);
-        }
-    }
-    
-    private void remove(TableColumnBase<?,?> col) {
-        if (col == null) return;
-        
-        CheckMenuItem item = columnMenuItems.remove(col);
-        if (item != null) { 
-            col.textProperty().removeListener(weakColumnTextListener);
-            item.selectedProperty().unbindBidirectional(col.visibleProperty());
-    
-            columnPopupMenu.getItems().remove(item);
-        }
-        
-        if (! col.getColumns().isEmpty()) {
-            for (TableColumnBase tc : col.getColumns()) {
-                remove(tc);
-            }
-        }
-    }
-    
-    private void add(final TableColumnBase<?,?> col) {
-        if (col == null) return;
-        
-        if (col.getColumns().isEmpty()) {
-            CheckMenuItem item = columnMenuItems.get(col);
-            if (item == null) {
-                item = new CheckMenuItem();
-                columnMenuItems.put(col, item);
-            }
-            
-            // bind column text and isVisible so that the menu item is always correct
-            item.setText(getText(col.getText(), col));
-            col.textProperty().addListener(weakColumnTextListener);
-            item.selectedProperty().bindBidirectional(col.visibleProperty());
-            
-            columnPopupMenu.getItems().add(item);
-        } else {
-            for (TableColumnBase tc : col.getColumns()) {
-                add(tc);
-            }
-        }
-    }
-    
-    void updateScrollX() {
-        scrollX = flow.getHbar().isVisible() ? -flow.getHbar().getValue() : 0.0F;
-        requestLayout();
-    }
 
+    /***************************************************************************
+     *                                                                         *
+     * Public Methods                                                          *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
     @Override protected void layoutChildren() {
         double x = scrollX;
         double headerWidth = snapSize(header.prefWidth(-1));
@@ -415,34 +321,148 @@ public class TableHeaderRow extends StackPane {
         cornerRegion.resizeRelocate(tableWidth - cornerWidth, snappedTopInset(), cornerWidth, prefHeight);
     }
 
+    /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height) {
         return header.prefWidth(height);
     }
 
+    /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width) {
         return computePrefHeight(width);
     }
-    
+
+    /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width) {
         return snappedTopInset() + header.prefHeight(width) + snappedBottomInset();
     }
 
-    //    public function isColumnFullyVisible(col:TableColumn):Number {
-    //        if (not col.visible) return 0;
-    //
-    //        // work out where the header is in 0-based coordinates
-    //        var start:Number = scrollX;
-    //        for (c in table.visibleLeafColumns) {
-    //            if (c == col) break;
-    //            start += c.width;
-    //        }
-    //        var end = start + col.width;
-    //
-    //        // determine the width of the header (taking into account any scrolling)
-    //        var headerWidth = /*scrollX +*/ (clip as Rectangle).width;
-    //
-    //        return if (start < 0 or end > headerWidth) then start else 0;
-    //    }
+    // protected to allow subclasses to provide a custom root header
+    protected NestedTableColumnHeader createRootHeader() {
+        return new NestedTableColumnHeader(tableSkin, null);
+    }
+
+    // protected to allow subclasses access to the TableViewSkinBase instance
+    protected TableViewSkinBase getTableSkin() {
+        return this.tableSkin;
+    }
+
+    // protected to allow subclasses to modify the horizontal scrolling
+    protected void updateScrollX() {
+        scrollX = flow.getHbar().isVisible() ? -flow.getHbar().getValue() : 0.0F;
+        requestLayout();
+    }
+
+    public void setTablePadding(Insets tablePadding) {
+        this.tablePadding = tablePadding;
+        updateTableWidth();
+    }
+
+    public Insets getTablePadding() {
+        return tablePadding == null ? Insets.EMPTY : tablePadding;
+    }
+
+    public Region getColumnReorderLine() {
+        return columnReorderLine;
+    }
+
+    public void setColumnReorderLine(Region value) {
+        this.columnReorderLine = value;
+    }
+
+    public final void setReordering(boolean value) {
+        this.reordering.set(value);
+    }
+
+    public final boolean isReordering() {
+        return reordering.get();
+    }
+
+    public final BooleanProperty reorderingProperty() {
+        return reordering;
+    }
+
+    public TableColumnHeader getReorderingRegion() {
+        return reorderingRegion;
+    }
+
+    public void setReorderingColumn(TableColumnBase rc) {
+        dragHeaderLabel.setText(rc == null ? "" : rc.getText());
+    }
+
+    public void setReorderingRegion(TableColumnHeader reorderingRegion) {
+        this.reorderingRegion = reorderingRegion;
+
+        if (reorderingRegion != null) {
+            dragHeader.resize(reorderingRegion.getWidth(), dragHeader.getHeight());
+        }
+    }
+
+    public void setDragHeaderX(double dragHeaderX) {
+        dragHeader.setTranslateX(dragHeaderX);
+    }
+
+    public NestedTableColumnHeader getRootHeader() {
+        return header;
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Private Implementation                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    private void updateTableColumnListeners(List<? extends TableColumnBase<?,?>> added, List<? extends TableColumnBase<?,?>> removed) {
+        // remove binding from all removed items
+        for (TableColumnBase tc : removed) {
+            remove(tc);
+        }
+
+        // add listeners to all added items
+        for (final TableColumnBase tc : added) {
+            add(tc);
+        }
+    }
+
+    private void remove(TableColumnBase<?,?> col) {
+        if (col == null) return;
+
+        CheckMenuItem item = columnMenuItems.remove(col);
+        if (item != null) {
+            col.textProperty().removeListener(weakColumnTextListener);
+            item.selectedProperty().unbindBidirectional(col.visibleProperty());
+
+            columnPopupMenu.getItems().remove(item);
+        }
+
+        if (! col.getColumns().isEmpty()) {
+            for (TableColumnBase tc : col.getColumns()) {
+                remove(tc);
+            }
+        }
+    }
+
+    private void add(final TableColumnBase<?,?> col) {
+        if (col == null) return;
+
+        if (col.getColumns().isEmpty()) {
+            CheckMenuItem item = columnMenuItems.get(col);
+            if (item == null) {
+                item = new CheckMenuItem();
+                columnMenuItems.put(col, item);
+            }
+
+            // bind column text and isVisible so that the menu item is always correct
+            item.setText(getText(col.getText(), col));
+            col.textProperty().addListener(weakColumnTextListener);
+            item.selectedProperty().bindBidirectional(col.visibleProperty());
+
+            columnPopupMenu.getItems().add(item);
+        } else {
+            for (TableColumnBase tc : col.getColumns()) {
+                add(tc);
+            }
+        }
+    }
 
     /*
      * Function used for building the strings in the popup menu
@@ -477,5 +497,15 @@ public class TableHeaderRow extends StackPane {
         }
         
         return false;
+    }
+
+    private void updateTableWidth() {
+        // snapping added for RT-19428
+        double padding = snapSize(getTablePadding().getLeft()) + snapSize(getTablePadding().getRight());
+
+        Control c = tableSkin.getSkinnable();
+        this.tableWidth = c == null ? 0 : snapSize(c.getWidth()) - padding;
+
+        clip.setWidth(tableWidth);
     }
 }
