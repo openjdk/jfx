@@ -121,7 +121,12 @@
     
     <target name="jfx-deployment">
         <!-- Delete the Ensemble8.jar build by netbeans as we will build one with JavaFX packager -->
-        <delete file="${dist.jar}"/>  
+        <delete file="${dist.jar}"/>
+       <!-- tasks for deployment and executable jars -->
+        <taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
+                 uri="javafx:com.sun.javafx.tools.ant"
+                 classpath="${platform.home}/lib/ant-javafx.jar"/>
+         
         <fx:application id="ensemble8"
                         name="${application.title}"
                         mainClass="ensemble.EnsembleApp"/>
