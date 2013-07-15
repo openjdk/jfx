@@ -65,30 +65,77 @@ import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 
 public abstract class TableViewSkinBase<S, C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends VirtualContainerBase<C, B, I> {
-    
+
+    /***************************************************************************
+     *                                                                         *
+     * Static Fields                                                           *
+     *                                                                         *
+     **************************************************************************/
+
     public static final String REFRESH = "tableRefreshKey";
     public static final String RECREATE = "tableRecreateKey";
-    
-//    protected abstract void requestControlFocus(); // tableView.requestFocus();
-    protected abstract TableSelectionModel getSelectionModel(); // tableView.getSelectionModel()
-    protected abstract TableFocusModel getFocusModel(); // tableView.getSelectionModel()
-    protected abstract TablePositionBase getFocusedCell();
-    protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getVisibleLeafColumns();
-    protected abstract int getVisibleLeafIndex(TableColumnBase tc);
-    protected abstract TableColumnBase getVisibleLeafColumn(int col);
-    protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getColumns();
-//    protected abstract ObservableList<S> getItems();
-    protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getSortOrder();
-    
-    protected abstract ObjectProperty<ObservableList<S>> itemsProperty();
-    protected abstract ObjectProperty<Callback<C, I>> rowFactoryProperty();
-    protected abstract ObjectProperty<Node> placeholderProperty();  // tableView.getPlaceholder();
-//    protected abstract BooleanProperty focusTraversableProperty();
-    protected abstract BooleanProperty tableMenuButtonVisibleProperty();
-    protected abstract ObjectProperty<Callback<ResizeFeaturesBase, Boolean>> columnResizePolicyProperty();
-    
-    protected abstract boolean resizeColumn(TableColumnBase tc, double delta);
-    protected abstract void resizeColumnToFitContent(TableColumnBase tc, int maxRows);
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Internal Fields                                                         *
+     *                                                                         *
+     **************************************************************************/
+
+    private boolean contentWidthDirty = true;
+
+    /**
+     * This region is used to overlay atop the table when the user is performing
+     * a column resize operation or a column reordering operation. It is a line
+     * that runs the height of the table to indicate either the final width of
+     * of the selected column, or the position the column will be 'dropped' into
+     * when the reordering operation completes.
+     */
+    private Region columnReorderLine;
+
+    /**
+     * A region which is resized and positioned such that it perfectly matches
+     * the dimensions of any TableColumn that is being reordered by the user.
+     * This is useful, for example, as a semi-transparent overlay to give
+     * feedback to the user as to which column is currently being moved.
+     */
+    private Region columnReorderOverlay;
+
+    /**
+     * The entire header region for all columns. This header region handles
+     * column reordering and resizing. It also handles the positioning and
+     * resizing of thte columnReorderLine and columnReorderOverlay.
+     */
+    private TableHeaderRow tableHeaderRow;
+
+    private Callback<C, I> rowFactory;
+
+    /**
+     * Region placed over the top of the flow (and possibly the header row) if
+     * there is no data and/or there are no columns specified.
+     */
+    private StackPane placeholderRegion;
+    private Label placeholderLabel;
+    private static final String EMPTY_TABLE_TEXT = ControlResources.getString("TableView.noContent");
+    private static final String NO_COLUMNS_TEXT = ControlResources.getString("TableView.noColumns");
+
+    private int visibleColCount;
+
+    protected boolean needCellsRebuilt = true;
+    protected boolean needCellsRecreated = true;
+    protected boolean needCellsReconfigured = false;
+
+    private int itemCount = -1;
+    protected boolean forceCellRecreate = false;
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
 
     public TableViewSkinBase(final C control, final B behavior) {
         super(control, behavior);
@@ -98,7 +145,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         // example, getVisibleLeafColumns() throws a NPE as the control itself
         // is not yet set in subclasses).
     }
-    
+
+    // init isn't a constructor, but it is part of the initialisation routine
     protected void init(final C control) {
         // init the VirtualFlow
         flow.setPannable(false);
@@ -193,30 +241,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         registerChangeListener(control.widthProperty(), "WIDTH");
     }
     
-    @Override protected void handleControlPropertyChanged(String p) {
-        super.handleControlPropertyChanged(p);
 
-        if ("ROW_FACTORY".equals(p)) {
-            Callback<C, I> oldFactory = rowFactory;
-            rowFactory = rowFactoryProperty().get();
-            if (oldFactory != rowFactory) {
-                needCellsRebuilt = true;
-                getSkinnable().requestLayout();
-            }
-        } else if ("PLACEHOLDER".equals(p)) {
-            updatePlaceholderRegionVisibility();
-        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
-            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        } else if ("WIDTH".equals(p)) {
-            tableHeaderRow.setTablePadding(getSkinnable().getInsets());
-        }
-    }
-    
-    protected TableHeaderRow createTableHeaderRow() {
-        return new TableHeaderRow(this);
-    } 
-    
-    
+
     /***************************************************************************
      *                                                                         *
      * Listeners                                                               *
@@ -291,49 +317,57 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     
     /***************************************************************************
      *                                                                         *
-     * Internal Fields                                                         *
+     * Abstract Methods                                                        *
      *                                                                         *
      **************************************************************************/
 
-    private boolean contentWidthDirty = true;
-    
-    /**
-     * This region is used to overlay atop the table when the user is performing
-     * a column resize operation or a column reordering operation. It is a line
-     * that runs the height of the table to indicate either the final width of
-     * of the selected column, or the position the column will be 'dropped' into
-     * when the reordering operation completes.
-     */
-    private Region columnReorderLine;
+    // returns the selection model of the control
+    protected abstract TableSelectionModel getSelectionModel();
 
-    /**
-     * A region which is resized and positioned such that it perfectly matches
-     * the dimensions of any TableColumn that is being reordered by the user.
-     * This is useful, for example, as a semi-transparent overlay to give
-     * feedback to the user as to which column is currently being moved.
-     */
-    private Region columnReorderOverlay;
+    // returns the focus model of the control
+    protected abstract TableFocusModel getFocusModel();
 
-    /**
-     * The entire header region for all columns. This header region handles
-     * column reordering and resizing. It also handles the positioning and
-     * resizing of thte columnReorderLine and columnReorderOverlay.
-     */
-    private TableHeaderRow tableHeaderRow;
-    
-    private Callback<C, I> rowFactory;
+    // returns the currently focused cell in the focus model
+    protected abstract TablePositionBase getFocusedCell();
 
-    /**
-     * Region placed over the top of the flow (and possibly the header row) if
-     * there is no data and/or there are no columns specified.
-     */
-    // FIXME this should not be a StackPane
-    private StackPane placeholderRegion;
-    private Label placeholderLabel;
-    private static final String EMPTY_TABLE_TEXT = ControlResources.getString("TableView.noContent");
-    private static final String NO_COLUMNS_TEXT = ControlResources.getString("TableView.noColumns");
+    // returns an ObservableList of the visible leaf columns of the control
+    protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getVisibleLeafColumns();
 
-    private int visibleColCount;
+    // returns the index of a column in the visible leaf columns
+    protected abstract int getVisibleLeafIndex(TableColumnBase tc);
+
+    // returns the leaf column at the given index
+    protected abstract TableColumnBase getVisibleLeafColumn(int col);
+
+    // returns a list of the root columns
+    protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getColumns();
+
+    // returns the sort order of the control
+    protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getSortOrder();
+
+    // returns a property representing the list of items in the control
+    protected abstract ObjectProperty<ObservableList<S>> itemsProperty();
+
+    // returns a property representing the row factory in the control
+    protected abstract ObjectProperty<Callback<C, I>> rowFactoryProperty();
+
+    // returns the placeholder property for the control
+    protected abstract ObjectProperty<Node> placeholderProperty();
+
+    // returns the property used to represent whether the tableMenuButton should
+    // be visible
+    protected abstract BooleanProperty tableMenuButtonVisibleProperty();
+
+    // returns a property representing the column resize properyt in the control
+    protected abstract ObjectProperty<Callback<ResizeFeaturesBase, Boolean>> columnResizePolicyProperty();
+
+    // Method to resize the given column by the given delta, returning a boolean
+    // to indicate success or failure
+    protected abstract boolean resizeColumn(TableColumnBase tc, double delta);
+
+    // Method to resize the column based on the content in that column, based on
+    // the maxRows number of rows
+    protected abstract void resizeColumnToFitContent(TableColumnBase tc, int maxRows);
     
     
     
@@ -341,8 +375,31 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/  
-    
+     **************************************************************************/
+
+    @Override protected void handleControlPropertyChanged(String p) {
+        super.handleControlPropertyChanged(p);
+
+        if ("ROW_FACTORY".equals(p)) {
+            Callback<C, I> oldFactory = rowFactory;
+            rowFactory = rowFactoryProperty().get();
+            if (oldFactory != rowFactory) {
+                needCellsRebuilt = true;
+                getSkinnable().requestLayout();
+            }
+        } else if ("PLACEHOLDER".equals(p)) {
+            updatePlaceholderRegionVisibility();
+        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
+            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
+        } else if ("WIDTH".equals(p)) {
+            tableHeaderRow.setTablePadding(getSkinnable().getInsets());
+        }
+    }
+
+    protected TableHeaderRow createTableHeaderRow() {
+        return new TableHeaderRow(this);
+    }
+
     /**
      * 
      */
@@ -429,8 +486,95 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     protected void horizontalScroll() {
         tableHeaderRow.updateScrollX();
     }
-    
-    
+
+    @Override protected void updateRowCount() {
+        updatePlaceholderRegionVisibility();
+
+        int oldCount = itemCount;
+        int newCount = getItemCount();
+
+        itemCount = newCount;
+
+        // if this is not called even when the count is the same, we get a
+        // memory leak in VirtualFlow.sheet.children. This can probably be
+        // optimised in the future when time permits.
+        flow.setCellCount(newCount);
+
+        if (forceCellRecreate) {
+            needCellsRecreated = true;
+            forceCellRecreate = false;
+        } else if (newCount != oldCount) {
+            // FIXME updateRowCount is called _a lot_. Perhaps we can make rebuildCells
+            // smarter. Imagine if items has one million items added - do we really
+            // need to rebuildCells a million times? Maybe this is better now that
+            // we do rebuildCells instead of recreateCells.
+            needCellsRebuilt = true;
+        } else {
+            needCellsReconfigured = true;
+        }
+    }
+
+    protected void onFocusPreviousCell() {
+        TableFocusModel fm = getFocusModel();
+        if (fm == null) return;
+
+        flow.show(fm.getFocusedIndex());
+    }
+
+    protected void onFocusNextCell() {
+        TableFocusModel fm = getFocusModel();
+        if (fm == null) return;
+
+        flow.show(fm.getFocusedIndex());
+    }
+
+    protected void onSelectPreviousCell() {
+        SelectionModel sm = getSelectionModel();
+        if (sm == null) return;
+
+        flow.show(sm.getSelectedIndex());
+    }
+
+    protected void onSelectNextCell() {
+        SelectionModel sm = getSelectionModel();
+        if (sm == null) return;
+
+        flow.show(sm.getSelectedIndex());
+    }
+
+    protected void onSelectLeftCell() {
+        scrollHorizontally();
+    }
+
+    protected void onSelectRightCell() {
+        scrollHorizontally();
+    }
+
+    protected void onMoveToFirstCell() {
+        flow.show(0);
+        flow.setPosition(0);
+    }
+
+    protected void onMoveToLastCell() {
+        int endPos = getItemCount();
+        flow.show(endPos);
+        flow.setPosition(1);
+    }
+
+    public void updateTableItems(ObservableList<S> oldList, ObservableList<S> newList) {
+        if (oldList != null) {
+            oldList.removeListener(weakRowCountListener);
+        }
+
+        if (newList != null) {
+            newList.addListener(weakRowCountListener);
+        }
+
+        rowCountDirty = true;
+        getSkinnable().requestLayout();
+    }
+
+
     /***************************************************************************
      *                                                                         *
      * Layout                                                                  *
@@ -460,10 +604,6 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 //        return pw;
         return Math.max(pw, prefHeight * GOLDEN_RATIO_MULTIPLIER);
     }
-    
-    protected boolean needCellsRebuilt = true;
-    protected boolean needCellsRecreated = true;
-    protected boolean needCellsReconfigured = false;
     
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, double y,
@@ -571,19 +711,6 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      *                                                                         *
      **************************************************************************/
     
-    public void updateTableItems(ObservableList<S> oldList, ObservableList<S> newList) {
-        if (oldList != null) {
-            oldList.removeListener(weakRowCountListener);
-        }
-
-        if (newList != null) {
-            newList.addListener(weakRowCountListener);
-        }
-
-        rowCountDirty = true;
-        getSkinnable().requestLayout();
-    }
-
     /**
      * Keeps track of how many leaf columns are currently visible in this table.
      */
@@ -672,72 +799,6 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         }
     }
 
-    private int itemCount = -1;
-    protected boolean forceCellRecreate = false;
-    
-    @Override protected void updateRowCount() {
-        updatePlaceholderRegionVisibility();
-
-        int oldCount = itemCount;
-        int newCount = getItemCount();
-        
-        itemCount = newCount;
-        
-        // if this is not called even when the count is the same, we get a 
-        // memory leak in VirtualFlow.sheet.children. This can probably be 
-        // optimised in the future when time permits.
-        flow.setCellCount(newCount);
-        
-        if (forceCellRecreate) {
-            needCellsRecreated = true;
-            forceCellRecreate = false;
-        } else if (newCount != oldCount) {
-            // FIXME updateRowCount is called _a lot_. Perhaps we can make rebuildCells
-            // smarter. Imagine if items has one million items added - do we really
-            // need to rebuildCells a million times? Maybe this is better now that
-            // we do rebuildCells instead of recreateCells.
-            needCellsRebuilt = true;
-        } else {
-            needCellsReconfigured = true;
-        }
-    }
-
-    protected void onFocusPreviousCell() {
-        TableFocusModel fm = getFocusModel();
-        if (fm == null) return;
-
-        flow.show(fm.getFocusedIndex());
-    }
-
-    protected void onFocusNextCell() {
-        TableFocusModel fm = getFocusModel();
-        if (fm == null) return;
-
-        flow.show(fm.getFocusedIndex());
-    }
-
-    protected void onSelectPreviousCell() {
-        SelectionModel sm = getSelectionModel();
-        if (sm == null) return;
-
-        flow.show(sm.getSelectedIndex());
-    }
-
-    protected void onSelectNextCell() {
-        SelectionModel sm = getSelectionModel();
-        if (sm == null) return;
-
-        flow.show(sm.getSelectedIndex());
-    }
-
-    protected void onSelectLeftCell() {
-        scrollHorizontally();
-    }
-
-    protected void onSelectRightCell() {
-        scrollHorizontally();
-    }
-    
     // Handles the horizontal scrolling when the selection mode is cell-based
     // and the newly selected cell belongs to a column which is not totally
     // visible.
@@ -787,17 +848,6 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         flow.getHbar().setValue(newPos);
     }
 
-    protected void onMoveToFirstCell() {
-        flow.show(0);
-        flow.setPosition(0);
-    }
-
-    protected void onMoveToLastCell() {
-        int endPos = getItemCount();
-        flow.show(endPos);
-        flow.setPosition(1);
-    }
-    
     private boolean isCellSelected(int row) {
         TableSelectionModel sm = getSelectionModel();
         if (sm == null) return false;
