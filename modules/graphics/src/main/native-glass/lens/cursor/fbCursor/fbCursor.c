@@ -121,8 +121,6 @@ static void fbCreateCursor(jbyte *cursorImage, int width, int height, int bpp) {
         GLASS_LOG_SEVERE("Cannot write cursor plane");
         return;
     }
-    cursor.isVisible = 1;
-
 
 }
 
@@ -180,7 +178,6 @@ void fbCursorClose() {
         }
         close(cursor.fd);
         cursor.fd = -1;
-        cursor.isVisible = 0;
     }
 }
 
@@ -192,11 +189,14 @@ void glass_cursor_setVisible(jboolean isVisible) {
 
     if (isVisible) {
         if (!cursor.isVisible && cursor.currentCursor != 0) {
-            glass_cursor_setNativeCursor(cursor.currentCursor);
-        }
+            FBCursorImage *cursorImage = (FBCursorImage *)jlong_to_ptr(cursor.currentCursor);
+            fbCreateCursor(cursorImage->buffer, cursorImage->width, cursorImage->height, cursorImage->bpp);
+        } 
     } else {
         fbCursorClose();
     }
+
+    cursor.isVisible = isVisible;
 }
 
 void glass_cursor_setNativeCursor(jlong nativeCursorPointer) {
@@ -211,9 +211,12 @@ void glass_cursor_setNativeCursor(jlong nativeCursorPointer) {
         return;
     }
 
-    fbCursorClose();
     cursor.currentCursor = nativeCursorPointer;
-    fbCreateCursor(cursorImage->buffer, cursorImage->width, cursorImage->height, cursorImage->bpp);
+
+    if (cursor.isVisible) {
+        fbCursorClose();
+        fbCreateCursor(cursorImage->buffer, cursorImage->width, cursorImage->height, cursorImage->bpp);
+    }
 }
 
 void glass_cursor_releaseNativeCursor(jlong nativeCursorPointer) {
@@ -225,6 +228,11 @@ void glass_cursor_releaseNativeCursor(jlong nativeCursorPointer) {
     if (nativeCursorPointer != 0) {
         FBCursorImage *cursorImage = (FBCursorImage *)jlong_to_ptr(nativeCursorPointer);
         free(cursorImage);
+    }
+
+    if (cursor.currentCursor == nativeCursorPointer) {
+        fbCursorClose();
+        cursor.currentCursor = 0;
     }
 }
 

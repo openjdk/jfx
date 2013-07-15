@@ -68,6 +68,8 @@ final class LensApplication extends Application {
     private static final int DEVICE_MAX = 4;
     /** A running count of the numbers of devices with each device capability */
     private int[] deviceFlags = new int[DEVICE_MAX + 1];
+    /** True if the application wishes to show the cursor */
+    private boolean cursorVisible = true;
 
     Menu windowMenu;
     Menu editMenu;
@@ -629,6 +631,15 @@ final class LensApplication extends Application {
                     } else {
                         deviceFlags[i] --;
                     }
+                }
+            }
+
+            if ((flags & (1 << DEVICE_POINTER)) != 0) {
+                // Turn on/off cursor image
+                if (attach && (deviceFlags[DEVICE_POINTER] == 1) && cursorVisible) {
+                     LensCursor.setVisible_impl(true);
+                } else if (!attach && (deviceFlags[DEVICE_POINTER] == 0)) {
+                    LensCursor.setVisible_impl(false);
                 }
             }
         }
@@ -1415,7 +1426,10 @@ final class LensApplication extends Application {
 
     @Override
     protected void staticCursor_setVisible(boolean visible) {
-        LensCursor.setVisible_impl(visible);
+        cursorVisible = visible;
+        if (deviceFlags[DEVICE_POINTER] >= 1) {
+            LensCursor.setVisible_impl(visible);
+        }     
     }
 
     @Override
