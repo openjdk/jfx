@@ -799,15 +799,15 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     // Handles the horizontal scrolling when the selection mode is cell-based
     // and the newly selected cell belongs to a column which is not totally
     // visible.
-    private void scrollHorizontally() {
+    protected void scrollHorizontally() {
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
         TableColumnBase col = getFocusedCell().getTableColumn();
         scrollHorizontally(col);
     }
-    
-    private void scrollHorizontally(TableColumnBase col) {
+
+    protected void scrollHorizontally(TableColumnBase col) {
         if (col == null || !col.isVisible()) return;
         
         final Control control = getSkinnable();
