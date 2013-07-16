@@ -112,6 +112,11 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
     public int getSize() {
         return size();
     }
+
+    /**
+     * An integer property that represents the size of the list.
+     * @return the property
+     */
     public abstract ReadOnlyIntegerProperty sizeProperty();
 
     /**
