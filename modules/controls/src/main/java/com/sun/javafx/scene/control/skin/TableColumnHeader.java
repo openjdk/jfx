@@ -119,6 +119,11 @@ public class TableColumnHeader extends Region {
 
     private int newColumnPos;
 
+    // the line drawn in the table when a user presses and moves a column header
+    // to indicate where the column will be dropped. This is provided by the
+    // table skin, but manipulated by the header
+    protected final Region columnReorderLine;
+
 
     
     /***************************************************************************
@@ -130,6 +135,7 @@ public class TableColumnHeader extends Region {
     public TableColumnHeader(final TableViewSkinBase skin, final TableColumnBase tc) {
         this.skin = skin;
         this.column = tc;
+        this.columnReorderLine = skin.getColumnReorderLine();
         
         setFocusTraversable(false);
 
@@ -876,13 +882,13 @@ public class TableColumnHeader extends Region {
         lineX = lineX + ((beforeMidPoint) ? (0) : (hoverHeader.getWidth()));
         
         if (lineX >= -0.5 && lineX <= getTableViewSkin().getSkinnable().getWidth()) {
-            getTableHeaderRow().getColumnReorderLine().setTranslateX(lineX);
+            columnReorderLine.setTranslateX(lineX);
 
             // then if this is the first event, we set the property to true
             // so that the line becomes visible until the drop is completed.
             // We also set reordering to true so that the various reordering
             // effects become visible (ghost, transparent overlay, etc).
-            getTableHeaderRow().getColumnReorderLine().setVisible(true);
+            columnReorderLine.setVisible(true);
         }
         
         getTableHeaderRow().setReordering(true);
@@ -901,12 +907,12 @@ public class TableColumnHeader extends Region {
         moveColumn(getTableColumn(), newColumnPos);
         
         // cleanup
-        getTableHeaderRow().getColumnReorderLine().setTranslateX(0.0F);
-        getTableHeaderRow().getColumnReorderLine().setLayoutX(0.0F);
+        columnReorderLine.setTranslateX(0.0F);
+        columnReorderLine.setLayoutX(0.0F);
         newColumnPos = 0;
 
         getTableHeaderRow().setReordering(false);
-        getTableHeaderRow().getColumnReorderLine().setVisible(false);
+        columnReorderLine.setVisible(false);
         getTableHeaderRow().setReorderingColumn(null);
         getTableHeaderRow().setReorderingRegion(null);
         dragOffset = 0.0F;

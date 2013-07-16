@@ -1600,7 +1600,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * which is not associated with any cell, so we have to do a bit of work
      * to use a cell as a helper for computing cell size in some cases.
      */
-    double getCellLength(int index) {
+    protected double getCellLength(int index) {
         if (fixedCellSizeEnabled) return fixedCellSize;
         
         T cell = getCell(index);
@@ -1611,7 +1611,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     /**
      */
-    double getCellBreadth(int index) {
+    protected double getCellBreadth(int index) {
         T cell = getCell(index);
         double b = getCellBreadth(cell);
         releaseCell(cell);
@@ -1621,7 +1621,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Gets the length of a specific cell
      */
-    private double getCellLength(T cell) {
+    protected double getCellLength(T cell) {
         if (cell == null) return 0;
         if (fixedCellSizeEnabled) return fixedCellSize;
 
@@ -1639,7 +1639,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Gets the breadth of a specific cell
      */
-    private double getCellBreadth(Cell cell) {
+    protected double getCellBreadth(Cell cell) {
         return isVertical() ?
             cell.prefWidth(-1)
             : cell.prefHeight(-1);
@@ -1648,7 +1648,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Gets the layout position of the cell along the length axis
      */
-    private double getCellPosition(T cell) {
+    protected double getCellPosition(T cell) {
         if (cell == null) return 0;
 
         return isVertical() ?
@@ -1656,7 +1656,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             : cell.getLayoutX();
     }
 
-    private void positionCell(T cell, double position) {
+    protected void positionCell(T cell, double position) {
         if (isVertical()) {
             cell.setLayoutX(0);
             cell.setLayoutY(snapSize(position));
@@ -1666,7 +1666,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
     }
 
-    private void resizeCellSize(T cell) {
+    protected void resizeCellSize(T cell) {
         if (cell == null) return;
         
         if (isVertical()) {
@@ -1678,7 +1678,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
     }
 
-    private void setCellIndex(T cell, int index) {
+    protected void setCellIndex(T cell, int index) {
         assert cell != null;
 
         cell.updateIndex(index);
@@ -1707,7 +1707,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * cells from the pile where possible, and will create new cells when
      * necessary.
      */
-    private T getAvailableCell(int prefIndex) {
+    protected T getAvailableCell(int prefIndex) {
         T cell = null;
         
         // Fix for RT-12822. We try to retrieve the cell from the pile rather

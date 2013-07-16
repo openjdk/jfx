@@ -525,7 +525,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     }
 
     private void columnResizingStarted(double startX) {
-        getTableHeaderRow().getColumnReorderLine().setLayoutX(startX);
+        columnReorderLine.setLayoutX(startX);
     }
 
     private void columnResizing(TableColumnBase col, MouseEvent me) {
@@ -542,8 +542,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
     private void columnResizingComplete(TableColumnBase col, MouseEvent me) {
 //        getTableHeaderRow().getColumnReorderLine().setVisible(true);
-        getTableHeaderRow().getColumnReorderLine().setTranslateX(0.0F);
-        getTableHeaderRow().getColumnReorderLine().setLayoutX(0.0F);
+        columnReorderLine.setTranslateX(0.0F);
+        columnReorderLine.setLayoutX(0.0F);
         lastX = 0.0F;
     }
 }
