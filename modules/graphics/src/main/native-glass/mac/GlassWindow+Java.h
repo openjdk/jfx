@@ -45,9 +45,6 @@
 - (void)_setAlpha;
 - (NSRect)_constrainFrame:(NSRect)frame;
 - (void)_setFrame;
-- (void)_verifyFrame;
-- (void)_setMinimumSize;
-- (void)_setMaximumSize;
 - (void)_setVisible;
 - (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate;
 - (void)_restorePreZoomedRect;

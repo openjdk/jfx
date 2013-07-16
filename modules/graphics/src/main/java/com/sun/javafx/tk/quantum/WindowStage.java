@@ -31,6 +31,7 @@ import java.security.AccessController;
 import java.security.AllPermission;
 import java.security.Permission;
 import java.security.PrivilegedAction;
+import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -174,8 +175,10 @@ class WindowStage extends GlassStage {
         return style;
     }
 
-    @Override public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing) {
-        return new ViewScene(depthBuffer, antiAliasing);
+    @Override public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing, AccessControlContext acc) {
+        ViewScene scene = new ViewScene(depthBuffer, antiAliasing);
+        scene.setSecurityContext(acc);
+        return scene;
     }
     
     /**

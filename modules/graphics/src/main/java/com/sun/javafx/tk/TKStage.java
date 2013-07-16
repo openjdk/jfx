@@ -35,12 +35,6 @@ import java.security.AccessControlContext;
  *
  */
 public interface TKStage {
-
-    /**
-     * This method is used to set security context of the Stage.
-     */
-    public void setSecurityContext(AccessControlContext ctx);
-
     /**
      * Listener for this stage peer to pass updates and events back to the stage
      *
@@ -53,7 +47,7 @@ public interface TKStage {
      *
      * @return scenePeer The peer of the scene to be displayed
      */
-    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing);
+    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing, AccessControlContext acc);
 
     /**
      * Set the scene to be displayed in this stage

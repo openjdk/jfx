@@ -98,7 +98,7 @@ abstract class GlassScene implements TKScene {
         return accessCtrlCtx;
     }
 
-    @Override public final void setSecurityContext(AccessControlContext ctx) {
+    public final void setSecurityContext(AccessControlContext ctx) {
         if (accessCtrlCtx != null) {
             throw new RuntimeException("Scene security context has been already set!");
         }

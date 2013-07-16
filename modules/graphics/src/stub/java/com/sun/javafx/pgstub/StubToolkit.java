@@ -117,18 +117,18 @@ public class StubToolkit extends Toolkit {
     }
 
     public TKStage createTKStage(StageStyle stageStyle, boolean primary,
-            Modality modality, TKStage owner, boolean rtl) {
+            Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
 
         return new StubStage();
     }
 
     @Override
-    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner) {
+    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner, AccessControlContext acc) {
         return new StubPopupStage();
     }
 
     @Override
-    public TKStage createTKEmbeddedStage(HostInterface host) {
+    public TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc) {
         return new StubStage();
     }
 

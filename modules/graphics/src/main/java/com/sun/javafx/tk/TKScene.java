@@ -41,11 +41,6 @@ public interface TKScene {
       */
     public void dispose();
 
-    /**
-     * This method is used to set security context of the Scene.
-     */
-    public void setSecurityContext(AccessControlContext ctx);
-
     public void waitForRenderingToComplete();
     
     /**

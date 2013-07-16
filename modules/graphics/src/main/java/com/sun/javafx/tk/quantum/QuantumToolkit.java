@@ -57,6 +57,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -568,9 +569,10 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public TKStage createTKStage(StageStyle stageStyle,
-            boolean primary, Modality modality, TKStage owner, boolean rtl) {
+            boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
         assertToolkitRunning();
         WindowStage stage = new WindowStage(stageStyle, primary, modality, owner);
+        stage.setSecurityContext(acc);
         stage.setRTL(rtl);
         stage.init(systemMenu);
         return stage;
@@ -616,14 +618,19 @@ public final class QuantumToolkit extends Toolkit {
         eventLoop.leave(rval);
     }
 
-    @Override public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner) {
+    @Override public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner,
+                                                AccessControlContext acc) {
         assertToolkitRunning();
-        return new PopupStage(owner).init(systemMenu);
+        WindowStage stage = new PopupStage(owner).init(systemMenu);
+        stage.setSecurityContext(acc);
+        return stage;
     }
 
-    @Override public TKStage createTKEmbeddedStage(HostInterface host) {
+    @Override public TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc) {
         assertToolkitRunning();
-        return new EmbeddedStage(host);
+        EmbeddedStage stage = new EmbeddedStage(host);
+        stage.setSecurityContext(acc);
+        return stage;
     }
 
     private static ScreenConfigurationAccessor screenAccessor =

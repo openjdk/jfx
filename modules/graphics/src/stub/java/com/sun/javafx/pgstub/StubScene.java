@@ -46,11 +46,6 @@ public class StubScene implements TKScene {
         // ignore
     }
 
-    @Override
-    public void setSecurityContext(AccessControlContext ctx) {
-        // ignore
-    }
-
     public void waitForRenderingToComplete() {
         // ignore
     }

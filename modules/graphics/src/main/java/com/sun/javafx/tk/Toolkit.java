@@ -55,6 +55,7 @@ import javafx.stage.Window;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -269,10 +270,10 @@ public abstract class Toolkit {
     public abstract boolean isNestedLoopRunning();
 
     public abstract TKStage createTKStage(StageStyle stageStyle, boolean primary,
-            Modality modality, TKStage owner, boolean rtl);
+            Modality modality, TKStage owner, boolean rtl, AccessControlContext acc);
 
-    public abstract TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner);
-    public abstract TKStage createTKEmbeddedStage(HostInterface host);
+    public abstract TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner, AccessControlContext acc);
+    public abstract TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc);
 
     /**
      * Creates an AppletWindow using the provided window pointer as the parent

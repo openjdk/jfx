@@ -50,7 +50,7 @@ public class StubStage implements TKStage {
     }
 
     @Override
-    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing) {
+    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing, AccessControlContext acc) {
         return new StubScene();
     }
 
@@ -185,10 +185,6 @@ public class StubStage implements TKStage {
 
     @Override
     public void setImportant(boolean important) {
-    }
-
-    @Override
-    public void setSecurityContext(AccessControlContext ctx) {
     }
 
     @Override

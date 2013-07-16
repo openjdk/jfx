@@ -292,28 +292,6 @@ static NSWindow *s_grabWindow = nil;
     [self _setFlipFrame:frame display:(self->_setFrameDisplay==JNI_TRUE) animate:(self->_setFrameAnimated==JNI_TRUE)];
 }
 
-- (void)_verifyFrame
-{
-    NSRect flippedFrame = [self _flipFrame];
-    NSRect constrainedFrame = [self _constrainFrame:flippedFrame];
-    if (NSEqualRects(constrainedFrame, flippedFrame) == NO)
-    {
-        [self _setFrame];
-    }
-}
-
-- (void)_setMinimumSize
-{
-    [self->nsWindow setMinSize:NSMakeSize(self->_setMinimumSizeW, self->_setMinimumSizeH)];
-    [self _verifyFrame];
-}
-
-- (void)_setMaximumSize
-{
-    [self->nsWindow setMaxSize:NSMakeSize(self->_setMaximumSizeW, self->_setMaximumSizeH)];
-    [self _verifyFrame];
-}
-
 - (void)_setVisible
 {
     if (self->isFocusable == YES && self->isEnabled == YES)

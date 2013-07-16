@@ -1040,9 +1040,12 @@ public class Stage extends Window {
             Scene scene = getScene();
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
-            impl_peer = toolkit.createTKStage(getStyle(), isPrimary(), getModality(), tkStage, rtl);
+            impl_peer = toolkit.createTKStage(getStyle(), isPrimary(), getModality(), tkStage, rtl, acc);
+            impl_peer.setMinimumSize((int) Math.ceil(getMinWidth()),
+                    (int) Math.ceil(getMinHeight()));
+            impl_peer.setMaximumSize((int) Math.floor(getMaxWidth()),
+                    (int) Math.floor(getMaxHeight()));
             peerListener = new StagePeerListener(this, STAGE_ACCESSOR);
-            
            // Insert this into stages so we have a references to all created stages
             stages.add(this);
         }
@@ -1065,10 +1068,6 @@ public class Stage extends Window {
             impl_peer.setIconified(isIconified());
             impl_peer.setMaximized(isMaximized());
             impl_peer.setTitle(getTitle());
-            impl_peer.setMinimumSize((int) Math.ceil(getMinWidth()),
-                    (int) Math.ceil(getMinHeight()));
-            impl_peer.setMaximumSize((int) Math.floor(getMaxWidth()),
-                    (int) Math.floor(getMaxHeight()));
 
             List<Object> platformImages = new ArrayList<Object>();
             for (Image icon : icons) {

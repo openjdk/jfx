@@ -46,6 +46,7 @@ import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 import java.io.File;
 import java.io.InputStream;
+import java.security.AccessControlContext;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -88,17 +89,17 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
+    public TKStage createTKStage(StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner) {
+    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner, AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public TKStage createTKEmbeddedStage(HostInterface host) {
+    public TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

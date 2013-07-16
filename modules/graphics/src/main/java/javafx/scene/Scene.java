@@ -681,9 +681,8 @@ public class Scene implements EventTarget {
         impl_setAllowPGAccess(true);
 
         Toolkit tk = Toolkit.getToolkit();
-        impl_peer = windowPeer.createTKScene(isDepthBufferInternal(), isAntiAliasingInternal());
+        impl_peer = windowPeer.createTKScene(isDepthBufferInternal(), isAntiAliasingInternal(), acc);
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
-        impl_peer.setSecurityContext(acc);
         impl_peer.setTKSceneListener(new ScenePeerListener());
         impl_peer.setTKScenePaintListener(new ScenePeerPaintListener());
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");

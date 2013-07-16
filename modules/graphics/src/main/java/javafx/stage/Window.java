@@ -99,6 +99,11 @@ public class Window implements EventTarget {
                         window.width.set(width);
                         window.height.set(height);
                     }
+
+                    @Override
+                    public AccessControlContext getAccessControlContext(Window window) {
+                        return window.acc;
+                    }
                 });
     }
 
@@ -119,7 +124,7 @@ public class Window implements EventTarget {
         return (Iterator<Window>) windowQueue.iterator();
     }
 
-    private final AccessControlContext acc = AccessController.getContext();
+    final AccessControlContext acc = AccessController.getContext();
 
     protected Window() {
         // necessary for WindowCloseRequestHandler
@@ -713,8 +718,6 @@ public class Window implements EventTarget {
             Toolkit tk = Toolkit.getToolkit();
             if (impl_peer != null) {
                 if (newVisible) {
-                    impl_peer.setSecurityContext(acc);
-
                     if (peerListener == null) {
                         peerListener = new WindowPeerListener(Window.this);
                     }
