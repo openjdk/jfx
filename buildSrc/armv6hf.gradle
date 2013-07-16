@@ -151,7 +151,7 @@ def webLFlags = [extraLFlags].flatten()
 //  libprism-es2-eglx11.so \
 //  libglass_lens_fb.so \
 
-setupTools("armv6-hf_tools",
+setupTools("armv6hf_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
@@ -216,18 +216,18 @@ gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
 
 def pangoCCFlags = [extraCFlags, "-D_ENABLE_PANGO"];
 def pangoLinkFlags = [extraLFlags];
-setupTools("linux_pango_tools",
+setupTools("armv6hf_pango_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--cflags", "pangoft2"
+            commandLine "$sdk/bin/pkg-config", "--cflags", "pangoft2"
             standardOutput = results
         }
         propFile << "cflags=" << results.toString().trim() << "\n";
 
         results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--libs", "pangoft2"
+            commandLine "$sdk/bin/pkg-config", "--libs", "pangoft2"
             standardOutput = results
         }
         propFile << "libs=" << results.toString().trim();
