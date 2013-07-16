@@ -142,6 +142,10 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
         return size();
     }
 
+    /**
+     * An integer property that represents the size of the map.
+     * @return the property
+     */
     public abstract ReadOnlyIntegerProperty sizeProperty();
 
     /**
