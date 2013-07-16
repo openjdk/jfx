@@ -29,14 +29,5 @@ package com.sun.javafx.sg.prism;
  * Dirty bounds hints
  */
 public final class DirtyHint {
-    
     double translateXDelta, translateYDelta;
-
-    public double getTranslateXDelta() {
-        return translateXDelta;
-    }
-
-    public double getTranslateYDelta() {
-        return translateYDelta;
-    }
 }

@@ -341,9 +341,9 @@ public abstract class NGNode {
         // If the parent is cached, try to check if the transformation is only a translation
         if (parent != null && parent.cacheFilter != null) {
             if (hint == null) {
+                // If there's no hint created yet, this is the first setTransformMatrix
+                // call and we have nothing to compare to yet.
                 hint = new DirtyHint();
-            // If there's no hint created yet, this is the first setTransformMatrix
-            // call and we have nothing to compare to yet.
             } else {
                 if (transform.getMxx() == tx.getMxx()
                         && transform.getMxy() == tx.getMxy()
@@ -734,7 +734,7 @@ public abstract class NGNode {
                 dirty = DirtyFlag.DIRTY_BY_TRANSLATION;
                 parent.childDirty = true;
                 parent.dirtyChildrenAccumulated++;
-                parent.invalidateCacheByTranslation();
+                parent.invalidateCacheByTranslation(hint);
                 parent.markTreeDirty();
             } else {
                 markDirty();
@@ -847,7 +847,7 @@ public abstract class NGNode {
      * Mark the cache as invalid due to a translation of a child. The cache filter
      * might use this information for optimizations.
      */
-    protected final void invalidateCacheByTranslation() {
+    protected final void invalidateCacheByTranslation(DirtyHint hint) {
         if (cacheFilter != null) {
             cacheFilter.invalidateByTranslation(hint.translateXDelta, hint.translateYDelta);
         }
