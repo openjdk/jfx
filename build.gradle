@@ -700,7 +700,6 @@ void addNative(Project project, String name, boolean optional = false) {
             if (IS_WINDOWS && t.name == "win") {
                 def rcTask = project.task("rc$capitalName$capitalVariant", type: CompileResourceTask, dependsOn: javahTask, group: "Build") {
                     description = "Compiles native sources for $name"
-                    source(variantProperties.nativeSource)
                     matches = ".*\\.rc|.*\\.cur"
                     output(file("$nativeRootDir/win"))
                 }
