@@ -29,7 +29,9 @@
 #include "RenderMedia.h"
 
 #include "HTMLMediaElement.h"
+#include "RenderFlowThread.h"
 #include "RenderView.h"
+#include <wtf/StackStats.h>
 
 namespace WebCore {
 
@@ -52,11 +54,12 @@ RenderMedia::~RenderMedia()
 
 HTMLMediaElement* RenderMedia::mediaElement() const
 { 
-    return static_cast<HTMLMediaElement*>(node()); 
+    return toMediaElement(node()); 
 }
 
 void RenderMedia::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     LayoutSize oldSize = contentBoxRect().size();
 
     RenderImage::layout();
@@ -65,8 +68,17 @@ void RenderMedia::layout()
     if (!controlsRenderer)
         return;
 
+    bool controlsNeedLayout = controlsRenderer->needsLayout();
+    // If the region chain has changed we also need to relayout the controls to update the region box info.
+    // FIXME: We can do better once we compute region box info for RenderReplaced, not only for RenderBlock.
+    const RenderFlowThread* flowThread = flowThreadContainingBlock();
+    if (flowThread && !controlsNeedLayout) {
+        if (flowThread->pageLogicalSizeChanged())
+            controlsNeedLayout = true;
+    }
+
     LayoutSize newSize = contentBoxRect().size();
-    if (newSize == oldSize && !controlsRenderer->needsLayout())
+    if (newSize == oldSize && !controlsNeedLayout)
         return;
 
     // When calling layout() on a child node, a parent must either push a LayoutStateMaintainter, or 

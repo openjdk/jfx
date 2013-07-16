@@ -23,12 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS,
         DoNotCheckConstants
-    ] SVGFECompositeElement : SVGElement,
+] interface SVGFECompositeElement : SVGStyledElement,
                               SVGFilterPrimitiveStandardAttributes {
         // Composite Operators
         const unsigned short SVG_FECOMPOSITE_OPERATOR_UNKNOWN    = 0;
@@ -48,4 +46,3 @@ module svg {
         readonly attribute SVGAnimatedNumber      k4;
     };
 
-}

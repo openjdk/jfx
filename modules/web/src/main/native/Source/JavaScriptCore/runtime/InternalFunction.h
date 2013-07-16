@@ -24,26 +24,26 @@
 #ifndef InternalFunction_h
 #define InternalFunction_h
 
-#include "JSObject.h"
 #include "Identifier.h"
+#include "JSDestructibleObject.h"
 
 namespace JSC {
 
     class FunctionPrototype;
 
-    class InternalFunction : public JSNonFinalObject {
+    class InternalFunction : public JSDestructibleObject {
     public:
-        typedef JSNonFinalObject Base;
+        typedef JSDestructibleObject Base;
 
         static JS_EXPORTDATA const ClassInfo s_info;
 
-        JS_EXPORT_PRIVATE const UString& name(ExecState*);
-        const UString displayName(ExecState*);
-        const UString calculatedDisplayName(ExecState*);
+        JS_EXPORT_PRIVATE const String& name(ExecState*);
+        const String displayName(ExecState*);
+        const String calculatedDisplayName(ExecState*);
 
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue proto)
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) 
         {
-            return Structure::create(globalData, globalObject, proto, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), &s_info); 
         }
 
     protected:
@@ -51,7 +51,7 @@ namespace JSC {
 
         JS_EXPORT_PRIVATE InternalFunction(JSGlobalObject*, Structure*);
 
-        JS_EXPORT_PRIVATE void finishCreation(JSGlobalData&, const UString& name);
+        JS_EXPORT_PRIVATE void finishCreation(VM&, const String& name);
 
         static CallType getCallData(JSCell*, CallData&);
     };

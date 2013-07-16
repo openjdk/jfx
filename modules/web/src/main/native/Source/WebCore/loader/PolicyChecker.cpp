@@ -31,12 +31,15 @@
 #include "config.h"
 #include "PolicyChecker.h"
 
+#include "ContentSecurityPolicy.h"
+#include "DOMWindow.h"
 #include "DocumentLoader.h"
 #include "FormState.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "HTMLFormElement.h"
+#include "HTMLFrameOwnerElement.h"
 #include "SecurityOrigin.h"
 
 namespace WebCore {
@@ -80,11 +83,19 @@ void PolicyChecker::checkNavigationPolicy(const ResourceRequest& request, Docume
         return;
     }
     
+    // If we're loading content into a subframe, check against the parent's Content Security Policy
+    // and kill the load if that check fails.
+    if (m_frame->ownerElement() && !m_frame->ownerElement()->document()->contentSecurityPolicy()->allowChildFrameFromSource(request.url())) {
+        function(argument, request, 0, false);
+        return;
+    }
+
     loader->setLastCheckedRequest(request);
 
     m_callback.set(request, formState.get(), function, argument);
 
     m_delegateIsDecidingNavigationPolicy = true;
+
     m_frame->loader()->client()->dispatchDecidePolicyForNavigationAction(&PolicyChecker::continueAfterNavigationPolicy,
         action, request, formState);
     m_delegateIsDecidingNavigationPolicy = false;
@@ -94,6 +105,9 @@ void PolicyChecker::checkNewWindowPolicy(const NavigationAction& action, NewWind
     const ResourceRequest& request, PassRefPtr<FormState> formState, const String& frameName, void* argument)
 {
     if (m_frame->document() && m_frame->document()->isSandboxed(SandboxPopups))
+        return continueAfterNavigationPolicy(PolicyIgnore);
+
+    if (!DOMWindow::allowPopUp(m_frame))
         return continueAfterNavigationPolicy(PolicyIgnore);
 
     m_callback.set(request, formState, frameName, action, function, argument);

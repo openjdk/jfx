@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
- * Copyright (C) 2004, 2005, 2006, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2008, 2009, 2010, 2012 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,6 +28,7 @@
 namespace WebCore {
 
 class MouseEvent;
+class TextRun;
 
 // Renderer for embeds and objects, often, but not always, rendered via plug-ins.
 // For example, <embed src="foo.html"> does not invoke a plug-in.
@@ -39,7 +40,9 @@ public:
     enum PluginUnavailabilityReason {
         PluginMissing,
         PluginCrashed,
-        InsecurePluginVersion
+        PluginBlockedByContentSecurityPolicy,
+        InsecurePluginVersion,
+        PluginInactive,
     };
     void setPluginUnavailabilityReason(PluginUnavailabilityReason);
     bool showsUnavailablePluginIndicator() const;
@@ -54,22 +57,32 @@ public:
     virtual bool allowsAcceleratedCompositing() const;
 #endif
 
+protected:
+    virtual void paintReplaced(PaintInfo&, const LayoutPoint&);
+    virtual void paint(PaintInfo&, const LayoutPoint&);
+
+    virtual CursorDirective getCursor(const LayoutPoint&, Cursor&) const;
+
+    const RenderObjectChildList* children() const { return &m_children; }
+    RenderObjectChildList* children() { return &m_children; }
+
+protected:
+    virtual void layout() OVERRIDE;
+
 private:
     virtual const char* renderName() const { return "RenderEmbeddedObject"; }
     virtual bool isEmbeddedObject() const { return true; }
 
-    virtual void paintReplaced(PaintInfo&, const LayoutPoint&);
-    virtual void paint(PaintInfo&, const LayoutPoint&);
-    virtual CursorDirective getCursor(const LayoutPoint&, Cursor&) const;
+    void paintSnapshotImage(PaintInfo&, const LayoutPoint&, Image*);
+    virtual void paintContents(PaintInfo&, const LayoutPoint&) OVERRIDE;
 
 #if USE(ACCELERATED_COMPOSITING)
     virtual bool requiresLayer() const;
 #endif
 
-    virtual void layout();
     virtual void viewCleared();
 
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
 
     virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier, Node** stopNode);
     virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier, Node** stopNode);
@@ -79,6 +92,12 @@ private:
     bool isInUnavailablePluginIndicator(const LayoutPoint&) const;
     bool getReplacementTextGeometry(const LayoutPoint& accumulatedOffset, FloatRect& contentRect, Path&, FloatRect& replacementTextRect, Font&, TextRun&, float& textWidth) const;
 
+    virtual bool canHaveChildren() const;
+    virtual RenderObjectChildList* virtualChildren() { return children(); }
+    virtual const RenderObjectChildList* virtualChildren() const { return children(); }
+    
+    virtual bool canHaveWidget() const { return true; }
+
     bool m_hasFallbackContent; // FIXME: This belongs on HTMLObjectElement.
 
     bool m_showsUnavailablePluginIndicator;
@@ -86,11 +105,12 @@ private:
     String m_unavailablePluginReplacementText;
     bool m_unavailablePluginIndicatorIsPressed;
     bool m_mouseDownWasInUnavailablePluginIndicator;
+    RenderObjectChildList m_children;
 };
 
 inline RenderEmbeddedObject* toRenderEmbeddedObject(RenderObject* object)
 {
-    ASSERT(!object || !strcmp(object->renderName(), "RenderEmbeddedObject"));
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isEmbeddedObject());
     return static_cast<RenderEmbeddedObject*>(object);
 }
 

@@ -61,6 +61,7 @@ public class PresentableState {
     // the associated View can be closed. This variable allows us
     // to shortcut the queued *Painter task.
     protected boolean isClosed;
+    protected final int pixelFormat = Pixels.getNativeFormat();
 
     /** Create a PresentableState based on a View.
      *
@@ -155,16 +156,6 @@ public class PresentableState {
     }
 
     /**
-     * Updates this object's state to indicate that the underlying View is
-     * closed.
-     *
-     * May be called on any thread.
-     */
-    public void setViewClosed() {
-        this.isClosed = true;
-    }
-
-    /**
      * @return true if the underlying View is closed, false otherwise
      *
      * May be called on any thread.
@@ -210,6 +201,8 @@ public class PresentableState {
         return window;
     }
 
+    public boolean isAntiAliasing() { return false; }
+
     /**
      * @return the underlying View
      *
@@ -217,6 +210,15 @@ public class PresentableState {
      */
     public View getView() {
         return view;
+    }
+
+    /**
+     * @return native pixel format
+     *
+     * May be called on any thread.
+     */
+    public int getPixelFormat() {
+        return pixelFormat;
     }
 
     /**
@@ -288,55 +290,5 @@ public class PresentableState {
             nativeWindowHandle = -1;
             isClosed = true;
         }
-    }
-
-    public boolean isUpToDate() {
-        if (isClosed || view == null) {
-            return true; // the dead do not change
-        }
-
-        if (viewWidth != view.getWidth()) {
-            return false;
-        }
-        if (viewHeight != view.getHeight()) {
-            return false;
-        }
-        if (!view.getWindow().equals(window)) {
-            return false;
-        }
-
-        if (window != null) {
-            if (!hasWindowManager) {
-                if (windowX != window.getX()) {
-                    return false;
-                }
-                if (windowY != window.getY()) {
-                    return false;
-                }
-                if (windowAlpha != window.getAlpha()) {
-                    return false;
-                }
-            }
-            if (nativeView != view.getNativeView()) {
-                return false;
-            }
-            if (nativeWindowHandle != window.getNativeWindow()) {
-                return false;
-            }
-            if (isWindowVisible != window.isVisible()) {
-                return false;
-            }
-            if (isWindowMinimized != window.isMinimized()) {
-                return false;
-            }
-            // really needed ? Would think that Glass would send a
-            // REPAINT request.....
-            if (screenHeight != window.getScreen().getHeight()) {
-                return false;
-            }
-        }
-
-        // we got here, must be current
-        return true;
     }
 }

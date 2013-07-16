@@ -20,11 +20,11 @@
  *
  */
 
-module html {
-
-    interface [
-        OmitConstructor
-    ] ValidityState {
+[
+    NoInterfaceObject,
+    OmitConstructor,
+    ImplementationLacksVTable
+] interface ValidityState {
         readonly attribute boolean         valueMissing;
         readonly attribute boolean         typeMismatch;
         readonly attribute boolean         patternMismatch;
@@ -32,7 +32,7 @@ module html {
         readonly attribute boolean         rangeUnderflow;
         readonly attribute boolean         rangeOverflow;
         readonly attribute boolean         stepMismatch;
+    readonly attribute boolean         badInput;
         readonly attribute boolean         customError;
         readonly attribute boolean         valid;
     };
-}

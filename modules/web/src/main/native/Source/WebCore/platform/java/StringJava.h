@@ -4,9 +4,7 @@
 #ifndef StringJava_h
 #define StringJava_h
 
-#include "config.h"
-
-#include "PlatformString.h"
+#include <wtf/text/WTFString.h>
 #include "Font.h"
 
 namespace WebCore {

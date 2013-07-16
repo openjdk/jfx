@@ -10,12 +10,13 @@
 #include "FrameView.h"
 #include "JavaEnv.h"
 #include "Page.h"
-#include "PlatformString.h"
 #include "PopupMenuJava.h"
 #include "PopupMenuClient.h"
 #include "RenderStyle.h"
 #include "SimpleFontData.h"
 #include "WebPage.h"
+
+#include <wtf/text/WTFString.h>
 
 #include "com_sun_webkit_PopupMenu.h"
 

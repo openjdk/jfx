@@ -78,8 +78,8 @@ PassRefPtr<CSSPrimitiveValue> CSSValuePool::createColorValue(unsigned rgbValue)
     RefPtr<CSSPrimitiveValue> dummyValue;
     ColorValueCache::AddResult entry = m_colorValueCache.add(rgbValue, dummyValue);
     if (entry.isNewEntry)
-        entry.iterator->second = CSSPrimitiveValue::createColor(rgbValue);
-    return entry.iterator->second;
+        entry.iterator->value = CSSPrimitiveValue::createColor(rgbValue);
+    return entry.iterator->value;
 }
 
 PassRefPtr<CSSPrimitiveValue> CSSValuePool::createValue(double value, CSSPrimitiveValue::UnitTypes type)
@@ -113,7 +113,7 @@ PassRefPtr<CSSPrimitiveValue> CSSValuePool::createValue(double value, CSSPrimiti
 
 PassRefPtr<CSSPrimitiveValue> CSSValuePool::createFontFamilyValue(const String& familyName)
 {
-    RefPtr<CSSPrimitiveValue>& value = m_fontFamilyValueCache.add(familyName, 0).iterator->second;
+    RefPtr<CSSPrimitiveValue>& value = m_fontFamilyValueCache.add(familyName, 0).iterator->value;
     if (!value)
         value = CSSPrimitiveValue::create(familyName, CSSPrimitiveValue::CSS_STRING);
     return value;
@@ -126,10 +126,26 @@ PassRefPtr<CSSValueList> CSSValuePool::createFontFaceValue(const AtomicString& s
     if (m_fontFaceValueCache.size() > maximumFontFaceCacheSize)
         m_fontFaceValueCache.clear();
 
-    RefPtr<CSSValueList>& value = m_fontFaceValueCache.add(string, 0).iterator->second;
+    RefPtr<CSSValueList>& value = m_fontFaceValueCache.add(string, 0).iterator->value;
     if (!value)
         value = CSSParser::parseFontFaceValue(string);
     return value;
+}
+
+void CSSValuePool::drain()
+{
+    m_colorValueCache.clear();
+    m_fontFaceValueCache.clear();
+    m_fontFamilyValueCache.clear();
+
+    for (int i = 0; i < numCSSValueKeywords; ++i)
+        m_identifierValueCache[i] = 0;
+
+    for (int i = 0; i < maximumCacheableIntegerValue; ++i) {
+        m_pixelValueCache[i] = 0;
+        m_percentValueCache[i] = 0;
+        m_numberValueCache[i] = 0;
+}
 }
 
 }

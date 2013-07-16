@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from mocktool import MockOptions
 
@@ -53,7 +53,3 @@ class MockOptionsTest(unittest.TestCase):
         # Test that keyword arguments work in the constructor.
         options = MockOptions(foo='bar')
         self.assertEqual(options.foo, 'bar')
-
-
-if __name__ == '__main__':
-    unittest.main()

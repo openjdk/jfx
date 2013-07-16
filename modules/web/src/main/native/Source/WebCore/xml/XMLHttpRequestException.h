@@ -45,13 +45,14 @@ public:
 
     enum XMLHttpRequestExceptionCode {
         NETWORK_ERR = XMLHttpRequestExceptionOffset + 101,
-        ABORT_ERR
+        ABORT_ERR,
+        TIMEOUT_ERR
     };
 
     static bool initializeDescription(ExceptionCode, ExceptionCodeDescription*);
 
 private:
-    XMLHttpRequestException(const ExceptionCodeDescription& description)
+    explicit XMLHttpRequestException(const ExceptionCodeDescription& description)
         : ExceptionBase(description)
     {
     }

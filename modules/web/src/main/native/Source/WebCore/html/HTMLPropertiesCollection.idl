@@ -28,20 +28,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-
-    interface [
+[
         Conditional=MICRODATA,
         JSGenerateToJSObject,
         IndexedGetter,
         NamedGetter
-    ] HTMLPropertiesCollection : HTMLCollection {
+] interface HTMLPropertiesCollection : HTMLCollection {
         readonly attribute unsigned long length;
-        Node item(in unsigned long index);
+    Node item(unsigned long index);
 
         readonly attribute DOMStringList names;
-
-        // FIXME: HTML5 specifies that this should return PropertyNodeList.
-        NodeList namedItem(in DOMString name);
+    [ImplementedAs=propertyNodeList] PropertyNodeList namedItem(DOMString name);
     };
-}

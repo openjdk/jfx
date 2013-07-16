@@ -30,9 +30,8 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.sg.PGMeshView;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGMeshView;
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -113,14 +112,14 @@ public class MeshView extends Shape3D {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_updatePG() {
-        super.impl_updatePG();
-        PGMeshView pgMeshView = (PGMeshView)impl_getPGNode();
+    @Override public void impl_updatePeer() {
+        super.impl_updatePeer();
+        NGMeshView peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.MESH_GEOM) && getMesh() != null) {
             getMesh().impl_updatePG();
         }
         if (impl_isDirty(DirtyBits.MESH)) {
-            pgMeshView.setMesh((getMesh() == null) ? null : getMesh().getPGMesh());
+            peer.setMesh((getMesh() == null) ? null : getMesh().getPGMesh());
         }
     }
 
@@ -130,8 +129,8 @@ public class MeshView extends Shape3D {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGMeshView();
+    protected NGNode impl_createPeer() {
+        return new NGMeshView();
     }
 
     /**

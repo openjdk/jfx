@@ -48,21 +48,17 @@ bool GlyphPage::fill(unsigned offset, unsigned length, UChar* buffer, unsigned b
                     if (!actualCodePages || (actualCodePages & fontCodePages))
                         setGlyphDataForIndex(offset + i, buffer[i], fontData);
                     else
-                        setGlyphDataForIndex(offset + i, buffer[i], 0);
+                        setGlyphDataForIndex(offset + i, 0, 0);
                 }
                 return true;
-#if defined(IMLANG_FONT_LINK) && (IMLANG_FONT_LINK == 2)
-            } else if (IMLangFontLink2* langFontLink = fontCache()->getFontLinkInterface()) {
-#else
-            } else if (IMLangFontLink* langFontLink = fontCache()->getFontLinkInterface()) {
-#endif
+            } else if (IMLangFontLinkType* langFontLink = fontCache()->getFontLinkInterface()) {
                 for (unsigned i = 0; i < bufferLength; ++i) {
                     DWORD actualCodePages;
                     langFontLink->GetCharCodePages(buffer[i], &actualCodePages);
                     if (!actualCodePages || (actualCodePages & fontCodePages))
                         setGlyphDataForIndex(offset + i, buffer[i], fontData);
                     else
-                        setGlyphDataForIndex(offset + i, buffer[i], 0);
+                        setGlyphDataForIndex(offset + i, 0, 0);
                 }
                 return true;
             }

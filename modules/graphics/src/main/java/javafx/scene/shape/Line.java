@@ -25,25 +25,17 @@
 
 package javafx.scene.shape;
 
-import javafx.css.CssMetaData;
-import com.sun.javafx.css.converters.PaintConverter;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.scene.paint.Color;
-
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Line2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGLine;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGShape.Mode;
-import com.sun.javafx.tk.Toolkit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import javafx.beans.value.WritableValue;
+import com.sun.javafx.sg.prism.NGLine;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
 import javafx.css.StyleableProperty;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
 
@@ -249,12 +241,8 @@ public class Line extends Shape {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGLine();
-    }
-
-    PGLine getPGLine() {
-        return (PGLine)impl_getPGNode();
+    protected NGNode impl_createPeer() {
+        return new NGLine();
     }
 
     /**
@@ -267,7 +255,7 @@ public class Line extends Shape {
 
         // Since line's only draw with strokes, if the mode is FILL or EMPTY
         // then we simply return empty bounds
-        if (impl_mode == Mode.FILL || impl_mode == Mode.EMPTY ||
+        if (impl_mode == NGShape.Mode.FILL || impl_mode == NGShape.Mode.EMPTY ||
             getStrokeType() == StrokeType.INSIDE)
         {
             return bounds.makeEmpty();
@@ -377,11 +365,11 @@ public class Line extends Shape {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            PGLine peer = getPGLine();
+            NGLine peer = impl_getPeer();
             peer.updateLine((float)getStartX(),
                 (float)getStartY(),
                 (float)getEndX(),

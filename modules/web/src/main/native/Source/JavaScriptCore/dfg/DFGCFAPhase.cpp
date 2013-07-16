@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "DFGAbstractState.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
+#include "Operations.h"
 
 namespace JSC { namespace DFG {
 
@@ -44,6 +45,10 @@ public:
     
     bool run()
     {
+        ASSERT(m_graph.m_form == ThreadedCPS);
+        ASSERT(m_graph.m_unificationState == GloballyUnified);
+        ASSERT(m_graph.m_refCountState == EverythingIsLive);
+        
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
         m_count = 0;
 #endif
@@ -78,47 +83,45 @@ private:
         if (!block->cfaShouldRevisit)
             return;
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLog("   Block #%u (bc#%u):\n", blockIndex, block->bytecodeBegin);
+        dataLogF("   Block #%u (bc#%u):\n", blockIndex, block->bytecodeBegin);
 #endif
         m_state.beginBasicBlock(block);
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLog("      head vars: ");
+        dataLogF("      head vars: ");
         dumpOperands(block->valuesAtHead, WTF::dataFile());
-        dataLog("\n");
+        dataLogF("\n");
 #endif
         for (unsigned i = 0; i < block->size(); ++i) {
-            NodeIndex nodeIndex = block->at(i);
-            if (!m_graph[nodeIndex].shouldGenerate())
-                continue;
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-            dataLog("      %s @%u: ", Graph::opName(m_graph[nodeIndex].op()), nodeIndex);
+            Node* node = block->at(i);
+            dataLogF("      %s @%u: ", Graph::opName(node->op()), node->index());
             m_state.dump(WTF::dataFile());
-            dataLog("\n");
+            dataLogF("\n");
 #endif
             if (!m_state.execute(i)) {
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-                dataLog("         Expect OSR exit.\n");
+                dataLogF("         Expect OSR exit.\n");
 #endif
                 break;
             }
         }
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLog("      tail regs: ");
+        dataLogF("      tail regs: ");
         m_state.dump(WTF::dataFile());
-        dataLog("\n");
+        dataLogF("\n");
 #endif
         m_changed |= m_state.endBasicBlock(AbstractState::MergeToSuccessors);
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLog("      tail vars: ");
+        dataLogF("      tail vars: ");
         dumpOperands(block->valuesAtTail, WTF::dataFile());
-        dataLog("\n");
+        dataLogF("\n");
 #endif
     }
     
     void performForwardCFA()
     {
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLog("CFA [%u]\n", ++m_count);
+        dataLogF("CFA [%u]\n", ++m_count);
 #endif
         
         for (BlockIndex block = 0; block < m_graph.m_blocks.size(); ++block)

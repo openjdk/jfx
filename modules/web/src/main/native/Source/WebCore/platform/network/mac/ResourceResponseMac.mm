@@ -30,9 +30,8 @@
 #import "WebCoreURLResponse.h"
 #import "WebCoreSystemInterface.h"
 #import <Foundation/Foundation.h>
-#import <wtf/StdLibExtras.h>
 #import <limits>
-#include <wtf/text/CString.h>
+#import <wtf/StdLibExtras.h>
 
 using namespace std;
 
@@ -53,7 +52,7 @@ static const int numCommonHeaderFields = sizeof(commonHeaderFields) / sizeof(Ato
 
 void ResourceResponse::initNSURLResponse() const
 {
-    // Work around a mistake in the NSURLResponse class - <rdar://problem/3346574>.
+    // Work around a mistake in the NSURLResponse class - <rdar://problem/6875219>.
     // The init function takes an NSInteger, even though the accessor returns a long long.
     // For values that won't fit in an NSInteger, pass -1 instead.
     NSInteger expectedContentLength;
@@ -61,7 +60,10 @@ void ResourceResponse::initNSURLResponse() const
         expectedContentLength = -1;
     else
         expectedContentLength = static_cast<NSInteger>(m_expectedContentLength);
-    m_nsResponse.adoptNS([[NSURLResponse alloc] initWithURL:m_url MIMEType:m_mimeType expectedContentLength:expectedContentLength textEncodingName:m_textEncodingName]);
+
+    // FIXME: This creates a very incomplete NSURLResponse, which does not even have a status code.
+
+    m_nsResponse = adoptNS([[NSURLResponse alloc] initWithURL:m_url MIMEType:m_mimeType expectedContentLength:expectedContentLength textEncodingName:m_textEncodingName]);
 }
 
 #if USE(CFNETWORK)
@@ -71,13 +73,14 @@ NSURLResponse *ResourceResponse::nsURLResponse() const
     if (!m_nsResponse && !m_cfResponse && !m_isNull) {
         initNSURLResponse();
         m_cfResponse = [m_nsResponse.get() _CFURLResponse];
+        return m_nsResponse.get();
     }
 
     if (!m_cfResponse)
         return nil;
 
     if (!m_nsResponse)
-        m_nsResponse.adoptNS([[NSURLResponse _responseWithCFURLResponse:m_cfResponse.get()] retain]);
+        m_nsResponse = [NSURLResponse _responseWithCFURLResponse:m_cfResponse.get()];
 
     return m_nsResponse.get();
 }
@@ -86,6 +89,7 @@ ResourceResponse::ResourceResponse(NSURLResponse* nsResponse)
     : m_cfResponse([nsResponse _CFURLResponse])
     , m_nsResponse(nsResponse)
     , m_initLevel(Uninitialized)
+    , m_platformResponseIsUpToDate(true)
 {
     m_isNull = !nsResponse;
 }
@@ -144,7 +148,7 @@ void ResourceResponse::platformLazyInit(InitLevel initLevel)
 
             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)m_nsResponse.get();
 
-            RetainPtr<NSString> httpStatusLine(AdoptNS, wkCopyNSURLResponseStatusLine(m_nsResponse.get()));
+            RetainPtr<NSString> httpStatusLine = adoptNS(wkCopyNSURLResponseStatusLine(m_nsResponse.get()));
             if (httpStatusLine)
                 m_httpStatusText = extractReasonPhraseFromHTTPStatusLine(httpStatusLine.get());
             else
@@ -172,6 +176,24 @@ bool ResourceResponse::platformCompare(const ResourceResponse& a, const Resource
 }
 
 #endif // USE(CFNETWORK)
+
+#if PLATFORM(MAC) || USE(CFNETWORK)
+
+void ResourceResponse::setCertificateChain(CFArrayRef certificateChain)
+{
+    ASSERT(!wkCopyNSURLResponseCertificateChain(nsURLResponse()));
+    m_externalCertificateChain = certificateChain;
+}
+
+RetainPtr<CFArrayRef> ResourceResponse::certificateChain() const
+{
+    if (m_externalCertificateChain)
+        return m_externalCertificateChain;
+
+    return adoptCF(wkCopyNSURLResponseCertificateChain(nsURLResponse()));
+}
+
+#endif // PLATFORM(MAC) || USE(CFNETWORK)
 
 } // namespace WebCore
 

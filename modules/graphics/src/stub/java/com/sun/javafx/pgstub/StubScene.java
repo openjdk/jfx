@@ -25,8 +25,8 @@
 
 package com.sun.javafx.pgstub;
 
-import com.sun.javafx.sg.PGCamera;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
@@ -39,15 +39,10 @@ public class StubScene implements TKScene {
     StubStage stage;
     private TKSceneListener listener;
     private Object cursor;
-    private PGCamera camera;
+    private NGCamera camera;
 
     @Override
     public void dispose() {
-        // ignore
-    }
-
-    @Override
-    public void setSecurityContext(AccessControlContext ctx) {
         // ignore
     }
 
@@ -67,7 +62,7 @@ public class StubScene implements TKScene {
         this.listener = listener;
     }
 
-    public void setRoot(PGNode root) {
+    public void setRoot(NGNode root) {
         // ignore
     }
 
@@ -75,7 +70,7 @@ public class StubScene implements TKScene {
         // ignore
     }
 
-    public void setCamera(PGCamera ci) {
+    public void setCamera(NGCamera ci) {
         camera = ci;
     }
 
@@ -123,7 +118,7 @@ public class StubScene implements TKScene {
         // ignore
     }
 
-    public PGCamera getCamera() {
+    public NGCamera getCamera() {
         return camera;
     }
 }

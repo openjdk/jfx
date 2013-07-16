@@ -20,7 +20,6 @@
 #ifndef FrameTree_h
 #define FrameTree_h
 
-#include <wtf/NotFound.h>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
@@ -31,7 +30,7 @@ namespace WebCore {
     class FrameTree {
         WTF_MAKE_NONCOPYABLE(FrameTree);
     public:
-        const static unsigned invalidCount = static_cast<unsigned>(WTF::notFound);
+        const static unsigned invalidCount = static_cast<unsigned>(-1);
 
         FrameTree(Frame* thisFrame, Frame* parentFrame) 
             : m_thisFrame(thisFrame)
@@ -94,7 +93,6 @@ namespace WebCore {
         AtomicString m_name; // The actual frame name (may be empty).
         AtomicString m_uniqueName;
 
-        // FIXME: use ListRefPtr?
         RefPtr<Frame> m_nextSibling;
         Frame* m_previousSibling;
         RefPtr<Frame> m_firstChild;

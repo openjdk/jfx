@@ -25,13 +25,12 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.sg.PGParallelCamera;
 import com.sun.prism.camera.PrismParallelCameraImpl;
 
 /**
  * TODO: 3D - Need documentation
  */
-public class NGParallelCamera extends NGCamera implements PGParallelCamera {
+public class NGParallelCamera extends NGCamera {
 
     public NGParallelCamera() {
         //TODO: 3D - Need to merge the logic in PrismParallelCameraImpl to NGParallelCamera

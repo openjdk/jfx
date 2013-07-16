@@ -31,6 +31,8 @@
 #define CustomFilterGlobalContext_h
 
 #if ENABLE(CSS_SHADERS) && USE(3D_GRAPHICS)
+#include "ANGLEWebKitBridge.h"
+#include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -45,10 +47,27 @@ public:
     
     GraphicsContext3D* context() const { return m_context.get(); }
     
-    void prepareContextIfNeeded(HostWindow*);
+    // CSS shaders not referenced from the CSS mix function should be validated just like regular WebGL shaders.
+    // This ANGLE validator uses the SH_WEBGL_SPEC flag.
+    ANGLEWebKitBridge* webglShaderValidator();
 
+    // CSS shaders referenced from the CSS mix function should be validated slightly differently than WebGL shaders.
+    // This ANGLE validator uses the SH_CSS_SHADERS_SPEC flag.
+    // Under this flag, most notably:
+    // - The "gl_FragColor" built-in is not available.
+    // - Instead, the "css_MixColor" and "css_ColorMatrix" built-ins are available.
+    // - The "css_" prefix is reserved.
+    // - In the translated source that ANGLE returns, ANGLE renames the author's "main" function to "css_main".
+    // The complete details are documented in ANGLE/ShaderLang.h.
+    ANGLEWebKitBridge* mixShaderValidator();
+    
+    void prepareContextIfNeeded(HostWindow*);
 private:
+    static PassOwnPtr<ANGLEWebKitBridge> createShaderValidator(ShShaderSpec);
+
     RefPtr<GraphicsContext3D> m_context;
+    OwnPtr<ANGLEWebKitBridge> m_webglShaderValidator;
+    OwnPtr<ANGLEWebKitBridge> m_mixShaderValidator;
 };
 
 } // namespace WebCore

@@ -284,6 +284,7 @@ public class PolygonMeshView extends Parent {
                     }
                 }
                 triangleMesh.getFaces().setAll(facesArray);
+                triangleMesh.getFaceSmoothingGroups().clear();
             }
             if (texCoordsDirty) {
                 texCoordsDirty = false;
@@ -334,8 +335,11 @@ public class PolygonMeshView extends Parent {
                 final int numOfFacesBefore = pmesh.faces.length;
                 final int numOfFacesAfter = pmesh.getNumEdgesInFaces() - 2*numOfFacesBefore;
                 int [] facesArray = new int [numOfFacesAfter * NUM_COMPONENTS_PER_FACE];
+                int [] smoothingGroupsArray = new int [pmesh.getNumEdgesInFaces()];
                 int facesInd = 0;
-                for(int[] face: pmesh.faces) {
+                for(int f = 0; f < pmesh.faces.length; f++) {
+                    int[] face = pmesh.faces[f];
+                    int currentSmoothGroup = pmesh.getFaceSmoothingGroups().get(f);
                     if (DEBUG) System.out.println("face.length = " + face.length+"  -- "+Arrays.toString(face));
                     int firstPointIndex = face[0];
                     int firstTexIndex = face[1];
@@ -344,17 +348,20 @@ public class PolygonMeshView extends Parent {
                     for (int p=4;p<face.length;p+=2) {
                         int pointIndex = face[p];
                         int texIndex = face[p+1];
-                        facesArray[facesInd++] = firstPointIndex;
-                        facesArray[facesInd++] = firstTexIndex;
-                        facesArray[facesInd++] = lastPointIndex;
-                        facesArray[facesInd++] = lastTexIndex;
-                        facesArray[facesInd++] = pointIndex;
-                        facesArray[facesInd++] = texIndex;
+                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE] = firstPointIndex;
+                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 1] = firstTexIndex;
+                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 2] = lastPointIndex;
+                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 3] = lastTexIndex;
+                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 4] = pointIndex;
+                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 5] = texIndex;
+                        smoothingGroupsArray[facesInd] = currentSmoothGroup;
+                        facesInd++;
                         lastPointIndex = pointIndex;
                         lastTexIndex = texIndex;
                     }
                 }
                 triangleMesh.getFaces().setAll(facesArray);
+                triangleMesh.getFaceSmoothingGroups().setAll(smoothingGroupsArray);
             }
             if (texCoordsDirty) {
                 texCoordsDirty = false;

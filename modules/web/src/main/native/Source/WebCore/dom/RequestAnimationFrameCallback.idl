@@ -28,16 +28,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module core {
-    interface [
-        Callback,
+[
         Conditional=REQUEST_ANIMATION_FRAME,
-    ] RequestAnimationFrameCallback{
-#if defined(V8_BINDING) && V8_BINDING
-        boolean handleEvent(in DOMTimeStamp time);
-#else
-        [Custom] boolean handleEvent(in DOMTimeStamp time);
-#endif
-        
+] callback interface RequestAnimationFrameCallback{
+    // highResTime is passed as high resolution timestamp, see
+    // http://www.w3.org/TR/hr-time/ for details.
+    [Custom] boolean handleEvent(double highResTime);
     };
-}

@@ -27,6 +27,7 @@
 #include "DebuggerActivation.h"
 
 #include "JSActivation.h"
+#include "Operations.h"
 
 namespace JSC {
 
@@ -34,17 +35,17 @@ ASSERT_HAS_TRIVIAL_DESTRUCTOR(DebuggerActivation);
 
 const ClassInfo DebuggerActivation::s_info = { "DebuggerActivation", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(DebuggerActivation) };
 
-DebuggerActivation::DebuggerActivation(JSGlobalData& globalData)
-    : JSNonFinalObject(globalData, globalData.debuggerActivationStructure.get())
+DebuggerActivation::DebuggerActivation(VM& vm)
+    : JSNonFinalObject(vm, vm.debuggerActivationStructure.get())
 {
 }
 
-void DebuggerActivation::finishCreation(JSGlobalData& globalData, JSObject* activation)
+void DebuggerActivation::finishCreation(VM& vm, JSObject* activation)
 {
-    Base::finishCreation(globalData);
+    Base::finishCreation(vm);
     ASSERT(activation);
     ASSERT(activation->isActivationObject());
-    m_activation.set(globalData, this, jsCast<JSActivation*>(activation));
+    m_activation.set(vm, this, jsCast<JSActivation*>(activation));
 }
 
 void DebuggerActivation::visitChildren(JSCell* cell, SlotVisitor& visitor)
@@ -53,13 +54,12 @@ void DebuggerActivation::visitChildren(JSCell* cell, SlotVisitor& visitor)
     ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-    JSObject::visitChildren(thisObject, visitor);
 
-    if (thisObject->m_activation)
+    JSObject::visitChildren(thisObject, visitor);
         visitor.append(&thisObject->m_activation);
 }
 
-UString DebuggerActivation::className(const JSObject* object)
+String DebuggerActivation::className(const JSObject* object)
 {
     const DebuggerActivation* thisObject = jsCast<const DebuggerActivation*>(object);
     return thisObject->m_activation->methodTable()->className(thisObject->m_activation.get());

@@ -88,6 +88,15 @@ public:
     // from transformed rects.
     bool containsQuad(const FloatQuad&) const;
 
+    // Tests whether any part of the rectangle intersects with this quad.
+    // This only works for convex quads.
+    bool intersectsRect(const FloatRect&) const;
+
+    // Test whether any part of the circle/ellipse intersects with this quad.
+    // Note that these two functions only work for convex quads.
+    bool intersectsCircle(const FloatPoint& center, float radius) const;
+    bool intersectsEllipse(const FloatPoint& center, const FloatSize& radii) const;
+
     // The center of the quad. If the quad is the result of a affine-transformed rectangle this is the same as the original center transformed.
     FloatPoint center() const
     {

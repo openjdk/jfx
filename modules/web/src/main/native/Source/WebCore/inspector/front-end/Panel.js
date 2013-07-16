@@ -33,12 +33,13 @@
 WebInspector.Panel = function(name)
 {
     WebInspector.View.call(this);
+    WebInspector.panels[name] = this;
 
     this.element.addStyleClass("panel");
     this.element.addStyleClass(name);
     this._panelName = name;
 
-    this._shortcuts = {};
+    this._shortcuts = /** !Object.<number, function(Event=):boolean> */ ({});
 
     WebInspector.settings[this._sidebarWidthSettingName()] = WebInspector.settings.createSetting(this._sidebarWidthSettingName(), undefined);
 }
@@ -47,15 +48,6 @@ WebInspector.Panel = function(name)
 WebInspector.Panel.counterRightMargin = 25;
 
 WebInspector.Panel.prototype = {
-    get toolbarItem()
-    {
-        if (this._toolbarItem)
-            return this._toolbarItem;
-
-        this._toolbarItem = WebInspector.Toolbar.createPanelToolbarItem(this);
-        return this._toolbarItem;
-    },
-
     get name()
     {
         return this._panelName;
@@ -68,16 +60,20 @@ WebInspector.Panel.prototype = {
 
     wasShown: function()
     {
+        var panelStatusBar = document.getElementById("panel-status-bar")
+        var drawerViewAnchor = document.getElementById("drawer-view-anchor");
         var statusBarItems = this.statusBarItems;
         if (statusBarItems) {
             this._statusBarItemContainer = document.createElement("div");
             for (var i = 0; i < statusBarItems.length; ++i)
                 this._statusBarItemContainer.appendChild(statusBarItems[i]);
-            document.getElementById("main-status-bar").appendChild(this._statusBarItemContainer);
+            panelStatusBar.insertBefore(this._statusBarItemContainer, drawerViewAnchor);
         }
-
-        if ("_toolbarItem" in this)
-            this._toolbarItem.addStyleClass("toggled-on");
+        var statusBarText = this.statusBarText();
+        if (statusBarText) {
+            this._statusBarTextElement = statusBarText;
+            panelStatusBar.appendChild(statusBarText);
+        }
 
         this.focus();
     },
@@ -87,8 +83,10 @@ WebInspector.Panel.prototype = {
         if (this._statusBarItemContainer && this._statusBarItemContainer.parentNode)
             this._statusBarItemContainer.parentNode.removeChild(this._statusBarItemContainer);
         delete this._statusBarItemContainer;
-        if ("_toolbarItem" in this)
-            this._toolbarItem.removeStyleClass("toggled-on");
+
+        if (this._statusBarTextElement && this._statusBarTextElement.parentNode)
+            this._statusBarTextElement.parentNode.removeChild(this._statusBarTextElement);
+        delete this._statusBarTextElement;
     },
 
     reset: function()
@@ -139,9 +137,25 @@ WebInspector.Panel.prototype = {
     },
 
     /**
+     * @param {string} query
      * @param {string} text
      */
-    replaceAllWith: function(text)
+    replaceAllWith: function(query, text)
+    {
+    },
+
+    /**
+     * @return {boolean}
+     */
+    canFilter: function()
+    {
+        return false;
+    },
+
+    /**
+     * @param {string} query
+     */
+    performFilter: function(query)
     {
     },
 
@@ -149,8 +163,9 @@ WebInspector.Panel.prototype = {
      * @param {Element=} parentElement
      * @param {string=} position
      * @param {number=} defaultWidth
+     * @param {number=} defaultHeight
      */
-    createSplitView: function(parentElement, position, defaultWidth)
+    createSidebarView: function(parentElement, position, defaultWidth, defaultHeight)
     {
         if (this.splitView)
             return;
@@ -158,9 +173,9 @@ WebInspector.Panel.prototype = {
         if (!parentElement)
             parentElement = this.element;
 
-        this.splitView = new WebInspector.SplitView(position || WebInspector.SplitView.SidebarPosition.Left, this._sidebarWidthSettingName(), defaultWidth);
+        this.splitView = new WebInspector.SidebarView(position, this._sidebarWidthSettingName(), defaultWidth, defaultHeight);
         this.splitView.show(parentElement);
-        this.splitView.addEventListener(WebInspector.SplitView.EventTypes.Resized, this.sidebarResized.bind(this));
+        this.splitView.addEventListener(WebInspector.SidebarView.EventTypes.Resized, this.sidebarResized.bind(this));
 
         this.sidebarElement = this.splitView.sidebarElement;
     },
@@ -170,12 +185,12 @@ WebInspector.Panel.prototype = {
      * @param {string=} position
      * @param {number=} defaultWidth
      */
-    createSplitViewWithSidebarTree: function(parentElement, position, defaultWidth)
+    createSidebarViewWithTree: function(parentElement, position, defaultWidth)
     {
         if (this.splitView)
             return;
 
-        this.createSplitView(parentElement, position);
+        this.createSidebarView(parentElement, position);
 
         this.sidebarTreeElement = document.createElement("ol");
         this.sidebarTreeElement.className = "sidebar-tree";
@@ -193,15 +208,14 @@ WebInspector.Panel.prototype = {
 
     // Should be implemented by ancestors.
 
-    get toolbarItemLabel()
-    {
-    },
-
     get statusBarItems()
     {
     },
 
-    sidebarResized: function(width)
+    /**
+     * @param {WebInspector.Event} event
+     */
+    sidebarResized: function(event)
     {
     },
 
@@ -230,25 +244,92 @@ WebInspector.Panel.prototype = {
         return [];
     },
 
+    /**
+     * @param {KeyboardEvent} event
+     */
     handleShortcut: function(event)
     {
         var shortcutKey = WebInspector.KeyboardShortcut.makeKeyFromEvent(event);
         var handler = this._shortcuts[shortcutKey];
-        if (handler) {
-            handler(event);
+        if (handler && handler(event))
             event.handled = true;
-        }
     },
 
-    registerShortcut: function(key, handler)
+    /**
+     * @param {!Array.<!WebInspector.KeyboardShortcut.Descriptor>} keys
+     * @param {function(Event=):boolean} handler
+     */
+    registerShortcuts: function(keys, handler)
     {
-        this._shortcuts[key] = handler;
+        for (var i = 0; i < keys.length; ++i)
+            this._shortcuts[keys[i].key] = handler;
     },
 
-    unregisterShortcut: function(key)
-    {
-        delete this._shortcuts[key];
-    }
+    __proto__: WebInspector.View.prototype
 }
 
-WebInspector.Panel.prototype.__proto__ = WebInspector.View.prototype;
+/**
+ * @constructor
+ * @param {string} name
+ * @param {string} title
+ * @param {string=} className
+ * @param {string=} scriptName
+ * @param {WebInspector.Panel=} panel
+ */
+WebInspector.PanelDescriptor = function(name, title, className, scriptName, panel)
+{
+    this._name = name;
+    this._title = title;
+    this._className = className;
+    this._scriptName = scriptName;
+    this._panel = panel;
+}
+
+WebInspector.PanelDescriptor.prototype = {
+    /**
+     * @return {string}
+     */
+    name: function()
+    {
+        return this._name;
+    },
+
+    /**
+     * @return {string}
+     */
+    title: function()
+    {
+        return this._title;
+    },
+
+    /**
+     * @return {string}
+     */
+    iconURL: function()
+    {
+        return this._iconURL;
+    },
+
+    /**
+     * @param {string} iconURL
+     */
+    setIconURL: function(iconURL)
+    {
+        this._iconURL = iconURL;
+    },
+
+    /**
+     * @return {WebInspector.Panel}
+     */
+    panel: function()
+    {
+        if (this._panel)
+            return this._panel;
+        if (this._scriptName)
+            loadScript(this._scriptName);
+        this._panel = new WebInspector[this._className];
+        return this._panel;
+    },
+
+    registerShortcuts: function() {}
+}

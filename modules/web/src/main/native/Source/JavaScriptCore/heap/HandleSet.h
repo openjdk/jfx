@@ -26,27 +26,51 @@
 #ifndef HandleSet_h
 #define HandleSet_h
 
-#include <wtf/BlockStack.h>
 #include "Handle.h"
+#include "HandleBlock.h"
+#include <wtf/DoublyLinkedList.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/SentinelLinkedList.h>
 #include <wtf/SinglyLinkedList.h>
 
 namespace JSC {
 
+class HandleBlock;
 class HandleSet;
 class HeapRootVisitor;
-class JSGlobalData;
+class VM;
 class JSValue;
 class SlotVisitor;
 
+class HandleNode {
+public:
+    HandleNode(WTF::SentinelTag);
+    HandleNode();
+    
+    HandleSlot slot();
+    HandleSet* handleSet();
+
+    void setPrev(HandleNode*);
+    HandleNode* prev();
+
+    void setNext(HandleNode*);
+    HandleNode* next();
+
+private:
+    JSValue m_value;
+    HandleNode* m_prev;
+    HandleNode* m_next;
+};
+
 class HandleSet {
+    friend class HandleBlock;
 public:
     static HandleSet* heapFor(HandleSlot);
 
-    HandleSet(JSGlobalData*);
+    HandleSet(VM*);
+    ~HandleSet();
     
-    JSGlobalData* globalData();
+    VM* vm();
 
     HandleSlot allocate();
     void deallocate(HandleSlot);
@@ -60,27 +84,7 @@ public:
     template<typename Functor> void forEachStrongHandle(Functor&, const HashCountedSet<JSCell*>& skipSet);
 
 private:
-    class Node {
-    public:
-        Node(WTF::SentinelTag);
-        Node(HandleSet*);
-        
-        HandleSlot slot();
-        HandleSet* handleSet();
-
-        void setPrev(Node*);
-        Node* prev();
-
-        void setNext(Node*);
-        Node* next();
-
-    private:
-        JSValue m_value;
-        HandleSet* m_handleSet;
-        Node* m_prev;
-        Node* m_next;
-    };
-
+    typedef HandleNode Node;
     static HandleSlot toHandle(Node*);
     static Node* toNode(HandleSlot);
 
@@ -90,8 +94,8 @@ private:
     bool isLiveNode(Node*);
 #endif
 
-    JSGlobalData* m_globalData;
-    BlockStack<Node> m_blockStack;
+    VM* m_vm;
+    DoublyLinkedList<HandleBlock> m_blockList;
 
     SentinelLinkedList<Node> m_strongList;
     SentinelLinkedList<Node> m_immediateList;
@@ -104,96 +108,94 @@ inline HandleSet* HandleSet::heapFor(HandleSlot handle)
     return toNode(handle)->handleSet();
 }
 
-inline JSGlobalData* HandleSet::globalData()
+inline VM* HandleSet::vm()
 {
-    return m_globalData;
+    return m_vm;
 }
 
-inline HandleSlot HandleSet::toHandle(Node* node)
+inline HandleSlot HandleSet::toHandle(HandleSet::Node* node)
 {
     return reinterpret_cast<HandleSlot>(node);
 }
 
 inline HandleSet::Node* HandleSet::toNode(HandleSlot handle)
 {
-    return reinterpret_cast<Node*>(handle);
+    return reinterpret_cast<HandleSet::Node*>(handle);
 }
 
 inline HandleSlot HandleSet::allocate()
 {
     // Forbid assignment to handles during the finalization phase, since it would violate many GC invariants.
     // File a bug with stack trace if you hit this.
-    if (m_nextToFinalize)
-        CRASH();
+    RELEASE_ASSERT(!m_nextToFinalize);
+
     if (m_freeList.isEmpty())
         grow();
 
-    Node* node = m_freeList.pop();
-    new (NotNull, node) Node(this);
+    HandleSet::Node* node = m_freeList.pop();
+    new (NotNull, node) HandleSet::Node();
     m_immediateList.push(node);
     return toHandle(node);
 }
 
 inline void HandleSet::deallocate(HandleSlot handle)
 {
-    Node* node = toNode(handle);
+    HandleSet::Node* node = toNode(handle);
     if (node == m_nextToFinalize) {
         ASSERT(m_nextToFinalize->next());
         m_nextToFinalize = m_nextToFinalize->next();
     }
 
-    SentinelLinkedList<Node>::remove(node);
+    SentinelLinkedList<HandleSet::Node>::remove(node);
     m_freeList.push(node);
 }
 
-inline HandleSet::Node::Node(HandleSet* handleSet)
-    : m_handleSet(handleSet)
-    , m_prev(0)
+inline HandleNode::HandleNode()
+    : m_prev(0)
     , m_next(0)
 {
 }
 
-inline HandleSet::Node::Node(WTF::SentinelTag)
-    : m_handleSet(0)
-    , m_prev(0)
+inline HandleNode::HandleNode(WTF::SentinelTag)
+    : m_prev(0)
     , m_next(0)
 {
 }
 
-inline HandleSlot HandleSet::Node::slot()
+inline HandleSlot HandleNode::slot()
 {
     return &m_value;
 }
 
-inline HandleSet* HandleSet::Node::handleSet()
+inline HandleSet* HandleNode::handleSet()
 {
-    return m_handleSet;
+    return HandleBlock::blockFor(this)->handleSet();
 }
 
-inline void HandleSet::Node::setPrev(Node* prev)
+inline void HandleNode::setPrev(HandleNode* prev)
 {
     m_prev = prev;
 }
 
-inline HandleSet::Node* HandleSet::Node::prev()
+inline HandleNode* HandleNode::prev()
 {
     return m_prev;
 }
 
-inline void HandleSet::Node::setNext(Node* next)
+inline void HandleNode::setNext(HandleNode* next)
 {
     m_next = next;
 }
 
-inline HandleSet::Node* HandleSet::Node::next()
+inline HandleNode* HandleNode::next()
 {
     return m_next;
 }
 
 template<typename Functor> void HandleSet::forEachStrongHandle(Functor& functor, const HashCountedSet<JSCell*>& skipSet)
 {
-    Node* end = m_strongList.end();
-    for (Node* node = m_strongList.begin(); node != end; node = node->next()) {
+    HandleSet::Node* end = m_strongList.end();
+    for (HandleSet::Node* node = m_strongList.begin(); node != end; node = node->next()) {
         JSValue value = *node->slot();
         if (!value || !value.isCell())
             continue;

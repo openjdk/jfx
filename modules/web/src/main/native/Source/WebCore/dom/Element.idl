@@ -18,48 +18,52 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module core {
-
-    interface [
+[
         JSGenerateToNativeObject,
-        JSInlineGetOwnPropertySlot
-    ] Element : Node {
+    JSInlineGetOwnPropertySlot,
+] interface Element : Node {
 
         // DOM Level 1 Core
 
-        readonly attribute [TreatReturnedNullStringAs=Null] DOMString tagName;
+    [TreatReturnedNullStringAs=Null] readonly attribute DOMString tagName;
 
-        [TreatReturnedNullStringAs=Null] DOMString getAttribute(in [Optional=DefaultIsUndefined] DOMString name);
-        [ObjCLegacyUnnamedParameters] void setAttribute(in [Optional=DefaultIsUndefined] DOMString name,
-                                         in [Optional=DefaultIsUndefined] DOMString value)
+    [TreatReturnedNullStringAs=Null] DOMString getAttribute([Default=Undefined] optional DOMString name);
+    [ObjCLegacyUnnamedParameters] void setAttribute([Default=Undefined] optional DOMString name,
+                                     [Default=Undefined] optional DOMString value)
             raises(DOMException);
-        void removeAttribute(in [Optional=DefaultIsUndefined] DOMString name);
-        Attr getAttributeNode(in [Optional=DefaultIsUndefined] DOMString name);
-        Attr setAttributeNode(in [Optional=DefaultIsUndefined] Attr newAttr)
+    void removeAttribute([Default=Undefined] optional DOMString name);
+    Attr getAttributeNode([Default=Undefined] optional DOMString name);
+    Attr setAttributeNode([Default=Undefined] optional Attr newAttr)
             raises(DOMException);
-        Attr removeAttributeNode(in [Optional=DefaultIsUndefined] Attr oldAttr)
+    Attr removeAttributeNode([Default=Undefined] optional Attr oldAttr)
             raises(DOMException);
-        NodeList getElementsByTagName(in [Optional=DefaultIsUndefined] DOMString name);
+    NodeList getElementsByTagName([Default=Undefined] optional DOMString name);
+
+#if !defined(LANGUAGE_OBJECTIVE_C)
+    // For ObjC this is defined on Node for legacy support.
+    readonly attribute NamedNodeMap     attributes;
+    boolean            hasAttributes();
+#endif
 
         // DOM Level 2 Core
 
-        [ObjCLegacyUnnamedParameters] DOMString getAttributeNS(in [TreatNullAs=NullString,Optional=DefaultIsUndefined] DOMString namespaceURI,
-                                                in [Optional=DefaultIsUndefined] DOMString localName);
-        [ObjCLegacyUnnamedParameters] void setAttributeNS(in [TreatNullAs=NullString,Optional=DefaultIsUndefined] DOMString namespaceURI,
-                                           in [Optional=DefaultIsUndefined] DOMString qualifiedName, 
-                                           in [Optional=DefaultIsUndefined] DOMString value)
+    [ObjCLegacyUnnamedParameters] DOMString getAttributeNS([TreatNullAs=NullString,Default=Undefined] optional DOMString namespaceURI,
+                                            [Default=Undefined] optional DOMString localName);
+    [ObjCLegacyUnnamedParameters] void setAttributeNS([TreatNullAs=NullString,Default=Undefined] optional DOMString namespaceURI,
+                                       [Default=Undefined] optional DOMString qualifiedName, 
+                                       [Default=Undefined] optional DOMString value)
             raises(DOMException);
-        [ObjCLegacyUnnamedParameters] void removeAttributeNS(in [TreatNullAs=NullString] DOMString namespaceURI,
-                                              in DOMString localName);
-        [ObjCLegacyUnnamedParameters] NodeList getElementsByTagNameNS(in [TreatNullAs=NullString,Optional=DefaultIsUndefined] DOMString namespaceURI,
-                                                       in [Optional=DefaultIsUndefined] DOMString localName);
-        [ObjCLegacyUnnamedParameters] Attr getAttributeNodeNS(in [TreatNullAs=NullString,Optional=DefaultIsUndefined] DOMString namespaceURI,
-                                               in [Optional=DefaultIsUndefined] DOMString localName);
-        Attr setAttributeNodeNS(in [Optional=DefaultIsUndefined] Attr newAttr)
+    [ObjCLegacyUnnamedParameters] void removeAttributeNS([TreatNullAs=NullString] DOMString namespaceURI,
+                                          DOMString localName);
+    [ObjCLegacyUnnamedParameters] NodeList getElementsByTagNameNS([TreatNullAs=NullString,Default=Undefined] optional DOMString namespaceURI,
+                                                   [Default=Undefined] optional DOMString localName);
+    [ObjCLegacyUnnamedParameters] Attr getAttributeNodeNS([TreatNullAs=NullString,Default=Undefined] optional DOMString namespaceURI,
+                                           [Default=Undefined] optional DOMString localName);
+    Attr setAttributeNodeNS([Default=Undefined] optional Attr newAttr)
             raises(DOMException);
-        boolean hasAttribute(in DOMString name);
-        [ObjCLegacyUnnamedParameters] boolean hasAttributeNS(in [TreatNullAs=NullString,Optional=DefaultIsUndefined] DOMString namespaceURI,
-                                              in [Optional=DefaultIsUndefined] DOMString localName);
+    boolean hasAttribute(DOMString name);
+    [ObjCLegacyUnnamedParameters] boolean hasAttributeNS([TreatNullAs=NullString,Default=Undefined] optional DOMString namespaceURI,
+                                          [Default=Undefined] optional DOMString localName);
 
         readonly attribute CSSStyleDeclaration style;
 
@@ -69,7 +73,7 @@ module core {
         readonly attribute long offsetTop;
         readonly attribute long offsetWidth;
         readonly attribute long offsetHeight;
-        readonly attribute Element offsetParent;
+    [ImplementedAs=bindingsOffsetParent] readonly attribute Element offsetParent;
         readonly attribute long clientLeft;
         readonly attribute long clientTop;
         readonly attribute long clientWidth;
@@ -81,33 +85,32 @@ module core {
 
         void focus();
         void blur();
-        void scrollIntoView(in [Optional] boolean alignWithTop);
+    void scrollIntoView(optional boolean alignWithTop);
 
         // WebKit extensions
 
-        void scrollIntoViewIfNeeded(in [Optional] boolean centerIfNeeded);
-        void scrollByLines(in [Optional=DefaultIsUndefined] long lines);
-        void scrollByPages(in [Optional=DefaultIsUndefined] long pages);
-
-#if defined(ENABLE_ANIMATION_API) && ENABLE_ANIMATION_API
-        WebKitAnimationList webkitGetAnimations();
-#endif
+    void scrollIntoViewIfNeeded(optional boolean centerIfNeeded);
+    void scrollByLines([Default=Undefined] optional long lines);
+    void scrollByPages([Default=Undefined] optional long pages);
 
         // HTML 5
-        NodeList getElementsByClassName(in [Optional=DefaultIsUndefined] DOMString name);
+    NodeList getElementsByClassName([Default=Undefined] optional DOMString name);
+
+    [Reflect=class] attribute DOMString className;
+    readonly attribute DOMTokenList classList;
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
         readonly attribute DOMStringMap dataset;
 #endif
 
         // NodeSelector - Selector API
-        Element querySelector(in DOMString selectors)
+    Element querySelector(DOMString selectors)
             raises(DOMException);
-        NodeList querySelectorAll(in DOMString selectors)
+    NodeList querySelectorAll(DOMString selectors)
             raises(DOMException);
 
         // WebKit extension, pending specification.
-        boolean webkitMatchesSelector(in [Optional=DefaultIsUndefined] DOMString selectors)
+    boolean webkitMatchesSelector([Default=Undefined] optional DOMString selectors)
             raises(DOMException);
 
         // ElementTraversal API
@@ -116,6 +119,18 @@ module core {
         readonly attribute Element previousElementSibling;
         readonly attribute Element nextElementSibling;
         readonly attribute unsigned long childElementCount;
+
+    // ShadowAware API
+#if defined(ENABLE_SHADOW_DOM) && ENABLE_SHADOW_DOM && defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
+    [Reflect=pseudo, ImplementedAs=pseudo] attribute DOMString webkitPseudo;
+    [ImplementedAs=createShadowRoot] ShadowRoot webkitCreateShadowRoot() raises(DOMException);
+    [ImplementedAs=authorShadowRoot] readonly attribute ShadowRoot webkitShadowRoot;
+    [ImplementedAs=insertionParentForBinding] readonly attribute Node webkitInsertionParent;
+#endif
+
+    // DOM 4
+    void remove()
+        raises(DOMException);
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
         // CSSOM View Module API
@@ -131,49 +146,52 @@ module core {
 #if defined(ENABLE_FULLSCREEN_API) && ENABLE_FULLSCREEN_API
         // Mozilla version
         const unsigned short ALLOW_KEYBOARD_INPUT = 1;
-        [V8EnabledAtRuntime] void webkitRequestFullScreen(in [Optional=DefaultIsUndefined] unsigned short flags);
+    void webkitRequestFullScreen([Default=Undefined] optional unsigned short flags);
 
         // W3C version
-        [V8EnabledAtRuntime] void webkitRequestFullscreen();
+    void webkitRequestFullscreen();
 #endif
 
-        [Conditional=POINTER_LOCK, V8EnabledAtRuntime=pointerLock] void webkitRequestPointerLock();
+    [Conditional=POINTER_LOCK] void webkitRequestPointerLock();
 
         // CSS Regions API
-        readonly attribute DOMString webkitRegionOverflow;
+    [Conditional=CSS_REGIONS] readonly attribute DOMString webkitRegionOverset;
+    [Conditional=CSS_REGIONS] sequence<Range> webkitGetRegionFlowRanges();
 
 #if !defined(LANGUAGE_OBJECTIVE_C) || !LANGUAGE_OBJECTIVE_C
         // Event handler DOM attributes
-        attribute [NotEnumerable] EventListener onabort;
-        attribute [NotEnumerable] EventListener onblur;
-        attribute [NotEnumerable] EventListener onchange;
-        attribute [NotEnumerable] EventListener onclick;
-        attribute [NotEnumerable] EventListener oncontextmenu;
-        attribute [NotEnumerable] EventListener ondblclick;
-        attribute [NotEnumerable] EventListener ondrag;
-        attribute [NotEnumerable] EventListener ondragend;
-        attribute [NotEnumerable] EventListener ondragenter;
-        attribute [NotEnumerable] EventListener ondragleave;
-        attribute [NotEnumerable] EventListener ondragover;
-        attribute [NotEnumerable] EventListener ondragstart;
-        attribute [NotEnumerable] EventListener ondrop;
-        attribute [NotEnumerable] EventListener onerror;
-        attribute [NotEnumerable] EventListener onfocus;
-        attribute [NotEnumerable] EventListener oninput;
-        attribute [NotEnumerable] EventListener oninvalid;
-        attribute [NotEnumerable] EventListener onkeydown;
-        attribute [NotEnumerable] EventListener onkeypress;
-        attribute [NotEnumerable] EventListener onkeyup;
-        attribute [NotEnumerable] EventListener onload;
-        attribute [NotEnumerable] EventListener onmousedown;
-        attribute [NotEnumerable] EventListener onmousemove;
-        attribute [NotEnumerable] EventListener onmouseout;
-        attribute [NotEnumerable] EventListener onmouseover;
-        attribute [NotEnumerable] EventListener onmouseup;
-        attribute [NotEnumerable] EventListener onmousewheel;
-        attribute [NotEnumerable] EventListener onscroll;
-        attribute [NotEnumerable] EventListener onselect;
-        attribute [NotEnumerable] EventListener onsubmit;
+    [NotEnumerable] attribute EventListener onabort;
+    [NotEnumerable] attribute EventListener onblur;
+    [NotEnumerable] attribute EventListener onchange;
+    [NotEnumerable] attribute EventListener onclick;
+    [NotEnumerable] attribute EventListener oncontextmenu;
+    [NotEnumerable] attribute EventListener ondblclick;
+    [NotEnumerable] attribute EventListener ondrag;
+    [NotEnumerable] attribute EventListener ondragend;
+    [NotEnumerable] attribute EventListener ondragenter;
+    [NotEnumerable] attribute EventListener ondragleave;
+    [NotEnumerable] attribute EventListener ondragover;
+    [NotEnumerable] attribute EventListener ondragstart;
+    [NotEnumerable] attribute EventListener ondrop;
+    [NotEnumerable] attribute EventListener onerror;
+    [NotEnumerable] attribute EventListener onfocus;
+    [NotEnumerable] attribute EventListener oninput;
+    [NotEnumerable] attribute EventListener oninvalid;
+    [NotEnumerable] attribute EventListener onkeydown;
+    [NotEnumerable] attribute EventListener onkeypress;
+    [NotEnumerable] attribute EventListener onkeyup;
+    [NotEnumerable] attribute EventListener onload;
+    [NotEnumerable] attribute EventListener onmousedown;
+    [NotEnumerable] attribute EventListener onmouseenter;
+    [NotEnumerable] attribute EventListener onmouseleave;
+    [NotEnumerable] attribute EventListener onmousemove;
+    [NotEnumerable] attribute EventListener onmouseout;
+    [NotEnumerable] attribute EventListener onmouseover;
+    [NotEnumerable] attribute EventListener onmouseup;
+    [NotEnumerable] attribute EventListener onmousewheel;
+    [NotEnumerable] attribute EventListener onscroll;
+    [NotEnumerable] attribute EventListener onselect;
+    [NotEnumerable] attribute EventListener onsubmit;
 
         // attribute [NotEnumerable] EventListener oncanplay;
         // attribute [NotEnumerable] EventListener oncanplaythrough;
@@ -199,22 +217,21 @@ module core {
         // attribute [NotEnumerable] EventListener onwaiting;
 
         // WebKit extensions
-        attribute [NotEnumerable] EventListener onbeforecut;
-        attribute [NotEnumerable] EventListener oncut;
-        attribute [NotEnumerable] EventListener onbeforecopy;
-        attribute [NotEnumerable] EventListener oncopy;
-        attribute [NotEnumerable] EventListener onbeforepaste;
-        attribute [NotEnumerable] EventListener onpaste;
-        attribute [NotEnumerable] EventListener onreset;
-        attribute [NotEnumerable] EventListener onsearch;
-        attribute [NotEnumerable] EventListener onselectstart;
-        attribute [NotEnumerable,Conditional=TOUCH_EVENTS,V8EnabledAtRuntime] EventListener ontouchstart;
-        attribute [NotEnumerable,Conditional=TOUCH_EVENTS,V8EnabledAtRuntime] EventListener ontouchmove;
-        attribute [NotEnumerable,Conditional=TOUCH_EVENTS,V8EnabledAtRuntime] EventListener ontouchend;
-        attribute [NotEnumerable,Conditional=TOUCH_EVENTS,V8EnabledAtRuntime] EventListener ontouchcancel;
-        attribute [NotEnumerable, Conditional=FULLSCREEN_API] EventListener onwebkitfullscreenchange;
-        attribute [NotEnumerable, Conditional=FULLSCREEN_API] EventListener onwebkitfullscreenerror;
+    [NotEnumerable] attribute EventListener onbeforecut;
+    [NotEnumerable] attribute EventListener oncut;
+    [NotEnumerable] attribute EventListener onbeforecopy;
+    [NotEnumerable] attribute EventListener oncopy;
+    [NotEnumerable] attribute EventListener onbeforepaste;
+    [NotEnumerable] attribute EventListener onpaste;
+    [NotEnumerable] attribute EventListener onreset;
+    [NotEnumerable] attribute EventListener onsearch;
+    [NotEnumerable] attribute EventListener onselectstart;
+    [NotEnumerable,Conditional=TOUCH_EVENTS] attribute EventListener ontouchstart;
+    [NotEnumerable,Conditional=TOUCH_EVENTS] attribute EventListener ontouchmove;
+    [NotEnumerable,Conditional=TOUCH_EVENTS] attribute EventListener ontouchend;
+    [NotEnumerable,Conditional=TOUCH_EVENTS] attribute EventListener ontouchcancel;
+    [NotEnumerable, Conditional=FULLSCREEN_API] attribute EventListener onwebkitfullscreenchange;
+    [NotEnumerable, Conditional=FULLSCREEN_API] attribute EventListener onwebkitfullscreenerror;
 #endif
     };
 
-}

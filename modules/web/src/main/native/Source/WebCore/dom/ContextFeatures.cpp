@@ -39,10 +39,9 @@ ContextFeaturesClient* ContextFeaturesClient::empty()
     return &empty;
 }
 
-const AtomicString& ContextFeatures::supplementName()
+const char* ContextFeatures::supplementName()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("ContextFeatures"));
-    return name;
+    return "ContextFeatures";
 }
 
 ContextFeatures* ContextFeatures::defaultSwitch()
@@ -63,18 +62,6 @@ bool ContextFeatures::dialogElementEnabled(Document* document)
 #endif
 }
 
-bool ContextFeatures::shadowDOMEnabled(Document* document)
-{
-#if ENABLE(SHADOW_DOM)
-    if (!document)
-        return RuntimeEnabledFeatures::shadowDOMEnabled();
-    return document->contextFeatures()->isEnabled(document, ShadowDOM, RuntimeEnabledFeatures::shadowDOMEnabled());
-#else
-    UNUSED_PARAM(document);
-    return false;
-#endif
-}
-
 bool ContextFeatures::styleScopedEnabled(Document* document)
 {
 #if ENABLE(STYLE_SCOPED)
@@ -87,16 +74,29 @@ bool ContextFeatures::styleScopedEnabled(Document* document)
 #endif
 }
 
-bool ContextFeatures::pagePopupEnabled(Document* document)
+bool ContextFeatures::htmlNotificationsEnabled(Document* document)
 {
-#if ENABLE(PAGE_POPUP)
+#if ENABLE(LEGACY_NOTIFICATIONS)
     if (!document)
         return false;
-    return document->contextFeatures()->isEnabled(document, PagePopup, false);
+    return document->contextFeatures()->isEnabled(document, HTMLNotifications, false);
 #else
     UNUSED_PARAM(document);
     return false;
 #endif
+}
+
+bool ContextFeatures::mutationEventsEnabled(Document* document)
+{
+    ASSERT(document);
+    if (!document)
+        return true;
+    return document->contextFeatures()->isEnabled(document, MutationEvents, true);
+}
+
+bool ContextFeatures::pushStateEnabled(Document* document)
+{
+    return document->contextFeatures()->isEnabled(document, PushState, true);
 }
 
 void provideContextFeaturesTo(Page* page, ContextFeaturesClient* client)

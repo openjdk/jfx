@@ -74,7 +74,7 @@ struct SVGPropertyTraits<CompositeOperationType> {
     }
 };
 
-class SVGFECompositeElement : public SVGFilterPrimitiveStandardAttributes {
+class SVGFECompositeElement FINAL : public SVGFilterPrimitiveStandardAttributes {
 public:
     static PassRefPtr<SVGFECompositeElement> create(const QualifiedName&, Document*);
 
@@ -82,7 +82,7 @@ private:
     SVGFECompositeElement(const QualifiedName&, Document*);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&);
     virtual void svgAttributeChanged(const QualifiedName&);
     virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*);

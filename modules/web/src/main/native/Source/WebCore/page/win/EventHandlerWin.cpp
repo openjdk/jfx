@@ -27,6 +27,8 @@
 #include "config.h"
 #include "EventHandler.h"
 
+#include "COMPtr.h"
+#include "Clipboard.h"
 #include "Cursor.h"
 #include "FloatPoint.h"
 #include "FocusController.h"
@@ -43,15 +45,11 @@
 #include "WCDataObject.h"
 #include "NotImplemented.h"
 
-#if OS(WINCE)
-#include "Clipboard.h"
-#else
-#include "ClipboardWin.h"
-#endif
-
 namespace WebCore {
 
+#if ENABLE(DRAG_SUPPORT)
 const double EventHandler::TextDragDelay = 0.0;
+#endif
 
 bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& mev, Frame* subframe)
 {
@@ -61,8 +59,10 @@ bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& m
 
 bool EventHandler::passMouseMoveEventToSubframe(MouseEventWithHitTestResults& mev, Frame* subframe, HitTestResult* hoveredNode)
 {
+#if ENABLE(DRAG_SUPPORT)
     if (m_mouseDownMayStartDrag && !m_mouseDownWasInSubframe)
         return false;
+#endif
     subframe->eventHandler()->handleMouseMoveEvent(mev.event(), hoveredNode);
     return true;
 }
@@ -78,7 +78,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, 
     if (!widget->isFrameView())
         return false;
 
-    return static_cast<FrameView*>(widget)->frame()->eventHandler()->handleWheelEvent(wheelEvent);
+    return toFrameView(widget)->frame()->eventHandler()->handleWheelEvent(wheelEvent);
 }
 
 bool EventHandler::tabsToAllFormControls(KeyboardEvent*) const
@@ -91,16 +91,16 @@ bool EventHandler::eventActivatedView(const PlatformMouseEvent& event) const
     return event.didActivateWebView();
 }
 
+#if ENABLE(DRAG_SUPPORT)
 PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
 {
 #if OS(WINCE)
     return 0;
 #else
-    COMPtr<WCDataObject> dataObject;
-    WCDataObject::createInstance(&dataObject);
-    return ClipboardWin::create(Clipboard::DragAndDrop, dataObject.get(), ClipboardWritable, m_frame);
+    return Clipboard::createForDragAndDrop();
 #endif
 }
+#endif
 
 void EventHandler::focusDocumentView()
 {

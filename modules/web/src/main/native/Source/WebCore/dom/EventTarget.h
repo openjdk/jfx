@@ -41,6 +41,7 @@
 namespace WebCore {
 
     class AudioContext;
+    class AudioTrackList;
     class DedicatedWorkerContext;
     class DOMApplicationCache;
     class DOMWindow;
@@ -52,10 +53,10 @@ namespace WebCore {
     class IDBDatabase;
     class IDBRequest;
     class IDBTransaction;
-    class IDBVersionChangeRequest;
-    class JavaScriptAudioNode;
+    class ScriptProcessorNode;
     class LocalMediaStream;
     class MediaController;
+    class MediaSource;
     class MediaStream;
     class MessagePort;
     class Node;
@@ -64,9 +65,12 @@ namespace WebCore {
     class ScriptExecutionContext;
     class SharedWorker;
     class SharedWorkerContext;
+    class SourceBufferList;
     class TextTrack;
     class TextTrackCue;
+    class VideoTrackList;
     class WebSocket;
+    class WebKitNamedFlow;
     class Worker;
     class XMLHttpRequest;
     class XMLHttpRequestUpload;
@@ -94,7 +98,7 @@ namespace WebCore {
         ~EventTargetData();
 
         EventListenerMap eventListenerMap;
-        FiringEventIteratorVector firingEventIterators;
+        OwnPtr<FiringEventIteratorVector> firingEventIterators;
     };
 
     class EventTarget {
@@ -122,15 +126,14 @@ namespace WebCore {
 
         bool hasEventListeners();
         bool hasEventListeners(const AtomicString& eventType);
+        bool hasCapturingEventListeners(const AtomicString& eventType);
         const EventListenerVector& getEventListeners(const AtomicString& eventType);
 
         bool fireEventListeners(Event*);
         bool isFiringEventListeners();
 
-#if USE(JSC)
         void visitJSEventListeners(JSC::SlotVisitor&);
         void invalidateJSEventListeners(JSC::JSObject*);
-#endif
 
     protected:
         virtual ~EventTarget();
@@ -173,30 +176,19 @@ namespace WebCore {
         EventListener* on##attribute() { return recipient ? recipient->getAttributeEventListener(eventNames().attribute##Event) : 0; } \
         void setOn##attribute(PassRefPtr<EventListener> listener) { if (recipient) recipient->setAttributeEventListener(eventNames().attribute##Event, listener); } \
 
-#ifndef NDEBUG
-    void forbidEventDispatch();
-    void allowEventDispatch();
-    bool eventDispatchForbidden();
-#else
-    inline void forbidEventDispatch() { }
-    inline void allowEventDispatch() { }
-#endif
-
-#if USE(JSC)
     inline void EventTarget::visitJSEventListeners(JSC::SlotVisitor& visitor)
     {
         EventListenerIterator iterator(this);
         while (EventListener* listener = iterator.nextListener())
             listener->visitJSFunction(visitor);
     }
-#endif
 
     inline bool EventTarget::isFiringEventListeners()
     {
         EventTargetData* d = eventTargetData();
         if (!d)
             return false;
-        return d->firingEventIterators.size() != 0;
+        return d->firingEventIterators && !d->firingEventIterators->isEmpty();
     }
 
     inline bool EventTarget::hasEventListeners()
@@ -213,6 +205,14 @@ namespace WebCore {
         if (!d)
             return false;
         return d->eventListenerMap.contains(eventType);
+    }
+
+    inline bool EventTarget::hasCapturingEventListeners(const AtomicString& eventType)
+    {
+        EventTargetData* d = eventTargetData();
+        if (!d)
+            return false;
+        return d->eventListenerMap.containsCapturing(eventType);
     }
 
 } // namespace WebCore

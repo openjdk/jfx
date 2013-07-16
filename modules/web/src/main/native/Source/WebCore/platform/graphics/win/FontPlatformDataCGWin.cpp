@@ -24,13 +24,13 @@
 #include "config.h"
 #include "FontPlatformData.h"
 
-#include "PlatformString.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #include <wtf/HashMap.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 using std::min;
 
@@ -88,14 +88,14 @@ static CFStringRef getPostScriptName(CFStringRef faceName, HDC dc)
             // Pass Big Endian as the encoding.
             if (bufferSize < stringsOffset + nameOffset + length)
                 return NULL;
-            result.adoptCF(CFStringCreateWithBytes(NULL, strings + nameOffset, length, kCFStringEncodingUTF16BE, false));
+            result = adoptCF(CFStringCreateWithBytes(NULL, strings + nameOffset, length, kCFStringEncodingUTF16BE, false));
             break;
         } else if (platformID == 1 && encodingID == 0 && languageID == 0 && nameID == 6) {
             // This is a Mac PostScript name and is therefore ASCII.
             // See http://developer.apple.com/textfonts/TTRefMan/RM06/Chap6name.html
             if (bufferSize < stringsOffset + nameOffset + length)
                 return NULL;
-            result.adoptCF(CFStringCreateWithBytes(NULL, strings + nameOffset, length, kCFStringEncodingASCII, false));
+            result = adoptCF(CFStringCreateWithBytes(NULL, strings + nameOffset, length, kCFStringEncodingASCII, false));
             break;
         }
 
@@ -111,14 +111,13 @@ void FontPlatformData::platformDataInit(HFONT font, float size, HDC hdc, WCHAR* 
 {
     LOGFONT logfont;
     GetObject(font, sizeof(logfont), &logfont);
-    m_cgFont.adoptCF(CGFontCreateWithPlatformFont(&logfont));
+    m_cgFont = adoptCF(CGFontCreateWithPlatformFont(&logfont));
 }
 
 FontPlatformData::FontPlatformData(HFONT hfont, CGFontRef font, float size, bool bold, bool oblique, bool useGDI)
     : m_syntheticBold(bold)
     , m_syntheticOblique(oblique)
     , m_orientation(Horizontal)
-    , m_textOrientation(TextOrientationVerticalRight)
     , m_size(size)
     , m_widthVariant(RegularWidth)
     , m_font(RefCountedGDIHandle<HFONT>::create(hfont))

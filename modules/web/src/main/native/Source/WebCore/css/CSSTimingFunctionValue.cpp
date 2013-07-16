@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2007, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,37 +26,39 @@
 #include "config.h"
 #include "CSSTimingFunctionValue.h"
 
-#include "PlatformString.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 String CSSLinearTimingFunctionValue::customCssText() const
 {
-    return "linear";
+    return ASCIILiteral("linear");
 }
+
 
 String CSSCubicBezierTimingFunctionValue::customCssText() const
 {
-    String text("cubic-bezier(");
-    text += String::number(m_x1);
-    text += ", ";
-    text += String::number(m_y1);
-    text += ", ";
-    text += String::number(m_x2);
-    text += ", ";
-    text += String::number(m_y2);
-    text += ")";
-    return text;
+    return "cubic-bezier("
+        + String::number(m_x1) + ", "
+        + String::number(m_y1) + ", "
+        + String::number(m_x2) + ", "
+        + String::number(m_y2) + ')';
 }
+
+bool CSSCubicBezierTimingFunctionValue::equals(const CSSCubicBezierTimingFunctionValue& other) const
+{
+    return m_x1 == other.m_x1 && m_x2 == other.m_x2 && m_y1 == other.m_y1 && m_y2 == other.m_y2;
+}
+
 
 String CSSStepsTimingFunctionValue::customCssText() const
 {
-    String text("steps(");
-    text += String::number(m_steps);
-    text += ", ";
-    text += m_stepAtStart ? "start" : "end";
-    text += ")";
-    return text;
+    return "steps(" + String::number(m_steps) + ", " + (m_stepAtStart ? "start" : "end") + ')';
+}
+
+bool CSSStepsTimingFunctionValue::equals(const CSSStepsTimingFunctionValue& other) const
+{
+    return m_steps == other.m_steps && m_stepAtStart == other.m_stepAtStart;
 }
 
 } // namespace WebCore

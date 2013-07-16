@@ -33,6 +33,7 @@
 #ifndef InputType_h
 #define InputType_h
 
+#include "FeatureObserver.h"
 #include "HTMLTextFormControlElement.h"
 #include "StepRange.h"
 #include <wtf/Forward.h>
@@ -62,7 +63,6 @@ class RenderArena;
 class RenderObject;
 class RenderStyle;
 class TouchEvent;
-class WheelEvent;
 
 typedef int ExceptionCode;
 
@@ -79,9 +79,11 @@ public:
 // Do not expose instances of InputType and classes derived from it to classes
 // other than HTMLInputElement.
 class InputType {
-    WTF_MAKE_NONCOPYABLE(InputType); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(InputType);
+    WTF_MAKE_FAST_ALLOCATED;
+
 public:
-    static PassOwnPtr<InputType> create(HTMLInputElement*, const String&);
+    static PassOwnPtr<InputType> create(HTMLInputElement*, const AtomicString&);
     static PassOwnPtr<InputType> createText(HTMLInputElement*);
     virtual ~InputType();
 
@@ -155,6 +157,7 @@ public:
     virtual bool typeMismatch() const;
     virtual bool supportsRequired() const;
     virtual bool valueMissing(const String&) const;
+    virtual bool hasBadInput() const;
     virtual bool patternMismatch(const String&) const;
     bool rangeUnderflow(const String&) const;
     bool rangeOverflow(const String&) const;
@@ -169,17 +172,15 @@ public:
     virtual StepRange createStepRange(AnyStepHandling) const;
     virtual void stepUp(int, ExceptionCode&);
     virtual void stepUpFromRenderer(int);
+    virtual String badInputText() const;
     virtual String typeMismatchText() const;
     virtual String valueMissingText() const;
     virtual bool canSetStringValue() const;
     virtual String localizeValue(const String&) const;
     virtual String visibleValue() const;
-    virtual String convertFromVisibleValue(const String&) const;
-    virtual bool isAcceptableValue(const String&);
     // Returing the null string means "use the default value."
     // This function must be called only by HTMLInputElement::sanitizeValue().
     virtual String sanitizeValue(const String&) const;
-    virtual bool hasUnacceptableValue();
 
     // Event handlers
 
@@ -192,7 +193,6 @@ public:
     virtual void handleKeypressEvent(KeyboardEvent*);
     virtual void handleKeyupEvent(KeyboardEvent*);
     virtual void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent*);
-    virtual void handleWheelEvent(WheelEvent*);
 #if ENABLE(TOUCH_EVENTS)
     virtual void handleTouchEvent(TouchEvent*);
 #endif
@@ -200,10 +200,11 @@ public:
     // Helpers for event handlers.
     virtual bool shouldSubmitImplicitly(Event*);
     virtual PassRefPtr<HTMLFormElement> formForSubmission() const;
+    virtual bool hasCustomFocusLogic() const;
     virtual bool isKeyboardFocusable(KeyboardEvent*) const;
     virtual bool isMouseFocusable() const;
     virtual bool shouldUseInputMethod() const;
-    virtual void handleFocusEvent();
+    virtual void handleFocusEvent(Node* oldFocusedNode, FocusDirection);
     virtual void handleBlurEvent();
     virtual void accessKeyAction(bool sendMouseEvents);
     virtual bool canBeSuccessfulSubmitButton();
@@ -211,6 +212,8 @@ public:
 #if ENABLE(TOUCH_EVENTS)
     virtual bool hasTouchEventHandler() const;
 #endif
+
+    virtual void blur();
 
     // Shadow tree handling
 
@@ -226,12 +229,15 @@ public:
 #if ENABLE(INPUT_SPEECH)
     virtual HTMLElement* speechButtonElement() const { return 0; }
 #endif
+    virtual HTMLElement* sliderThumbElement() const { return 0; }
+    virtual HTMLElement* sliderTrackElement() const { return 0; }
     virtual HTMLElement* placeholderElement() const;
 
     // Miscellaneous functions
 
     virtual bool rendererIsNeeded();
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*) const;
+    virtual PassRefPtr<RenderStyle> customStyleForRenderer(PassRefPtr<RenderStyle>);
     virtual void addSearchResult();
     virtual void attach();
     virtual void detach();
@@ -239,7 +245,6 @@ public:
     virtual void stepAttributeChanged();
     virtual void altAttributeChanged();
     virtual void srcAttributeChanged();
-    virtual void willMoveToNewOwnerDocument();
     virtual bool shouldRespectAlignAttribute();
     virtual FileList* files();
     virtual void setFiles(PassRefPtr<FileList>);
@@ -262,19 +267,22 @@ public:
     virtual bool isCheckable();
     virtual bool isSteppable() const;
     virtual bool shouldRespectHeightAndWidthAttributes();
-    // If supportsPlaceholder() && !usesFixedPlaceholder(), it means a type
-    // supports the 'placeholder' attribute.
-    // If supportsPlaceholder() && usesFixedPlaceholder(), it means a type
-    // doesn't support the 'placeholder' attribute, but shows
-    // fixedPlaceholder() string as a placeholder.
     virtual bool supportsPlaceholder() const;
-    virtual bool usesFixedPlaceholder() const;
-    virtual String fixedPlaceholder();
+    virtual bool supportsReadOnly() const;
+    virtual void updateInnerTextValue();
     virtual void updatePlaceholderText();
+    virtual void attributeChanged();
     virtual void multipleAttributeChanged();
     virtual void disabledAttributeChanged();
     virtual void readonlyAttributeChanged();
+    virtual void requiredAttributeChanged();
+    virtual void valueAttributeChanged();
     virtual String defaultToolTip() const;
+#if ENABLE(DATALIST_ELEMENT)
+    virtual void listAttributeTargetChanged();
+    virtual Decimal findClosestTickMarkValue(const Decimal&);
+#endif
+    virtual void updateClearButtonVisibility();
 
     // Parses the specified string for the type, and return
     // the Decimal value for the parsing result if the parsing
@@ -295,17 +303,21 @@ public:
 
     virtual bool supportsIndeterminateAppearance() const;
 
+    virtual bool supportsSelectionAPI() const;
+
     // Gets width and height of the input element if the type of the
     // element is image. It returns 0 if the element is not image type.
     virtual unsigned height() const;
     virtual unsigned width() const;
 
+    void dispatchSimulatedClickIfActive(KeyboardEvent*) const;
+
 protected:
     InputType(HTMLInputElement* element) : m_element(element) { }
     HTMLInputElement* element() const { return m_element; }
-    void dispatchSimulatedClickIfActive(KeyboardEvent*) const;
     Chrome* chrome() const;
     Decimal parseToNumberOrNaN(const String&) const;
+    void observeFeatureIfVisible(FeatureObserver::Feature) const;
 
 private:
     // Helper for stepUp()/stepDown(). Adds step value * count to the current value.
@@ -315,36 +327,5 @@ private:
     HTMLInputElement* m_element;
 };
 
-namespace InputTypeNames {
-
-const AtomicString& button();
-const AtomicString& checkbox();
-#if ENABLE(INPUT_TYPE_COLOR)
-const AtomicString& color();
-#endif
-const AtomicString& date();
-const AtomicString& datetime();
-const AtomicString& datetimelocal();
-const AtomicString& email();
-const AtomicString& file();
-const AtomicString& hidden();
-const AtomicString& image();
-const AtomicString& month();
-const AtomicString& number();
-const AtomicString& password();
-const AtomicString& radio();
-const AtomicString& range();
-const AtomicString& reset();
-const AtomicString& search();
-const AtomicString& submit();
-const AtomicString& telephone();
-const AtomicString& text();
-const AtomicString& time();
-const AtomicString& url();
-const AtomicString& week();
-
-} // namespace WebCore::InputTypeNames
-
 } // namespace WebCore
-
 #endif

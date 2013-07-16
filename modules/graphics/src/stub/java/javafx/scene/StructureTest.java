@@ -25,23 +25,21 @@
 
 package javafx.scene;
 
+import javafx.collections.ObservableList;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.sg.prism.NGNode;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import javafx.collections.ObservableList;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
 
 
 /**
@@ -658,8 +656,8 @@ class StubNode extends Node {
     // * so return a PGGroup.
     // *
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGGroup();
+    protected NGNode impl_createPeer() {
+        return new NGGroup();
     }
 
     @Override
@@ -685,8 +683,8 @@ class StubParent extends Parent {
     // * so return a PGGroup.
     // *
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGGroup();
+    protected NGNode impl_createPeer() {
+        return new NGGroup();
     }
 
     @Override

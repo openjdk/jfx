@@ -24,12 +24,12 @@
 #include "Font.h"
 #include "FontCache.h"
 #include "FontData.h"
-#include "PlatformString.h"
 #include "SimpleFontData.h"
 #include "UnicodeRange.h"
 #include "wtf/OwnPtr.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 #include <windows.h>
 #include <mlang.h>
@@ -54,13 +54,8 @@ public:
     DWORD codePages() const
     {
         if (!m_codePages) {
-#if defined(IMLANG_FONT_LINK) && (IMLANG_FONT_LINK == 2)
-            if (IMLangFontLink2* langFontLink = fontCache()->getFontLinkInterface())
+            if (IMLangFontLinkType* langFontLink = fontCache()->getFontLinkInterface())
                 langFontLink->CodePageToCodePages(m_codePage, &m_codePages);
-#else
-            if (IMLangFontLink* langFontLink = fontCache()->getFontLinkInterface())
-                langFontLink->CodePageToCodePages(m_codePage, &m_codePages);
-#endif
         }
         return m_codePages;
     }
@@ -268,11 +263,7 @@ PassRefPtr<FixedSizeFontData> FixedSizeFontData::create(const AtomicString& fami
 
     GetTextMetrics(g_screenDC, &fontData->m_metrics);
 
-#if defined(IMLANG_FONT_LINK) && (IMLANG_FONT_LINK == 2)
-    if (IMLangFontLink2* langFontLink = fontCache()->getFontLinkInterface()) {
-#else
-    if (IMLangFontLink* langFontLink = fontCache()->getFontLinkInterface()) {
-#endif
+    if (IMLangFontLinkType* langFontLink = fontCache()->getFontLinkInterface()) {
         langFontLink->GetFontCodePages(g_screenDC, fontData->m_hfont.get(), &fontData->m_codePages);
         fontData->m_codePages |= FontPlatformData::getKnownFontCodePages(winFont.lfFaceName);
     }
@@ -287,9 +278,9 @@ static PassRefPtr<FixedSizeFontData> createFixedSizeFontData(const AtomicString&
     FixedSizeFontDataKey key(family, weight, italic);
     FixedSizeFontCache::AddResult result = g_fixedSizeFontCache.add(key, RefPtr<FixedSizeFontData>());
     if (result.isNewEntry)
-        result.iterator->second = FixedSizeFontData::create(family, weight, italic);
+        result.iterator->value = FixedSizeFontData::create(family, weight, italic);
 
-    return result.iterator->second;
+    return result.iterator->value;
 }
 
 static LONG toGDIFontWeight(FontWeight fontWeight)
@@ -461,11 +452,6 @@ const AtomicString& FontPlatformData::family() const
 const LOGFONT& FontPlatformData::logFont() const
 {
     return m_private->m_rootFontData->m_font;
-}
-
-int FontPlatformData::averageCharWidth() const
-{
-    return (m_private->m_rootFontData->m_metrics.tmAveCharWidth * size() + 36) / 72;
 }
 
 bool FontPlatformData::isDisabled() const

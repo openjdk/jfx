@@ -137,22 +137,23 @@ namespace double_conversion {
         return static_cast<int>(length);
     }
     
-    // This is a simplified version of V8's Vector class.
+    // BufferReference abstract a memory buffer. It provides a pointer
+    // to the beginning of the buffer, and the available length. 
     template <typename T>
-    class Vector {
+    class BufferReference {
     public:
-        Vector() : start_(NULL), length_(0) {}
-        Vector(T* data, int length) : start_(data), length_(length) {
+        BufferReference() : start_(NULL), length_(0) {}
+        BufferReference(T* data, int length) : start_(data), length_(length) {
             ASSERT(length == 0 || (length > 0 && data != NULL));
         }
         
         // Returns a vector using the same backing storage as this one,
         // spanning from and including 'from', to but not including 'to'.
-        Vector<T> SubVector(int from, int to) {
+        BufferReference<T> SubBufferReference(int from, int to) {
             ASSERT(to <= length_);
             ASSERT(from < to);
             ASSERT(0 <= from);
-            return Vector<T>(start() + from, to - from);
+            return BufferReference<T>(start() + from, to - from);
         }
         
         // Returns the length of the vector.
@@ -202,7 +203,7 @@ namespace double_conversion {
         void SetPosition(int position)
         {
             ASSERT(!is_finalized());
-            ASSERT(position < size());
+            ASSERT_WITH_SECURITY_IMPLICATION(position < size());
             position_ = position;
         }
         
@@ -228,7 +229,7 @@ namespace double_conversion {
         // builder. The input string must have enough characters.
         void AddSubstring(const char* s, int n) {
             ASSERT(!is_finalized() && position_ + n < buffer_.length());
-            ASSERT(static_cast<size_t>(n) <= strlen(s));
+            ASSERT_WITH_SECURITY_IMPLICATION(static_cast<size_t>(n) <= strlen(s));
             memcpy(&buffer_[position_], s, n * kCharSize);
             position_ += n;
         }
@@ -255,7 +256,7 @@ namespace double_conversion {
         }
         
     private:
-        Vector<char> buffer_;
+        BufferReference<char> buffer_;
         int position_;
         
         bool is_finalized() const { return position_ < 0; }

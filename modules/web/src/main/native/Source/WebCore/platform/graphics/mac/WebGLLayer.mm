@@ -33,9 +33,9 @@
 #import "GraphicsContext3D.h"
 #import "GraphicsLayer.h"
 #import <OpenGL/OpenGL.h>
+#import <OpenGL/gl.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/RetainPtr.h>
-#import <wtf/UnusedParam.h>
 
 using namespace WebCore;
 
@@ -115,7 +115,7 @@ static void freeData(void *, const void *data, size_t /* size */)
 
     RetainPtr<CGColorSpaceRef> imageColorSpace = colorSpace;
     if (!imageColorSpace)
-        imageColorSpace.adoptCF(CGColorSpaceCreateDeviceRGB());
+        imageColorSpace = adoptCF(CGColorSpaceCreateDeviceRGB());
 
     CGRect layerBounds = CGRectIntegral([self bounds]);
     

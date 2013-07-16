@@ -25,14 +25,10 @@
 
 package javafx.scene.shape;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-
+import com.sun.javafx.sg.prism.NGPath;
 import org.junit.Test;
 
-import com.sun.javafx.pgstub.StubPath;
-
+import static org.junit.Assert.*;
 
 public class ClosePathTest {
 
@@ -50,7 +46,7 @@ public class ClosePathTest {
         assertFalse(s.isEmpty());
     }
 
-    private class StubPathImpl extends StubPath {
+    private class StubPathImpl extends NGPath {
 
         boolean closed = false;
 

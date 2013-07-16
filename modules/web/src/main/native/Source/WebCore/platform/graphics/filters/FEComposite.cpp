@@ -25,8 +25,9 @@
 
 #if ENABLE(FILTERS)
 #include "FEComposite.h"
-
+#if !PLATFORM(JAVA) || HAVE(ARM_NEON_INTRINSICS)
 #include "FECompositeArithmeticNEON.h"
+#endif
 #include "Filter.h"
 #include "GraphicsContext.h"
 #include "RenderTreeAsText.h"
@@ -131,9 +132,9 @@ static inline void computeArithmeticPixels(unsigned char* source, unsigned char*
     float scaledK1;
     float scaledK4;
     if (b1)
-        scaledK1 = k1 / 255.f;
+        scaledK1 = k1 / 255.0f;
     if (b4)
-        scaledK4 = k4 * 255.f;
+        scaledK4 = k4 * 255.0f;
 
     while (--pixelArrayLength >= 0) {
         unsigned char i1 = *source;
@@ -155,24 +156,63 @@ static inline void computeArithmeticPixels(unsigned char* source, unsigned char*
     }
 }
 
-static inline void arithmeticSoftware(unsigned char* source, unsigned char* destination, int pixelArrayLength,
-                       float k1, float k2, float k3, float k4)
+// computeArithmeticPixelsUnclamped is a faster version of computeArithmeticPixels for the common case where clamping
+// is not necessary. This enables aggresive compiler optimizations such as auto-vectorization.
+template <int b1, int b4>
+static inline void computeArithmeticPixelsUnclamped(unsigned char* source, unsigned char* destination, int pixelArrayLength, float k1, float k2, float k3, float k4)
 {
-    if (!k4) {
-        if (!k1) {
-            computeArithmeticPixels<0, 0>(source, destination, pixelArrayLength, k1, k2, k3, k4);
+    float scaledK1;
+    float scaledK4;
+    if (b1)
+        scaledK1 = k1 / 255.0f;
+    if (b4)
+        scaledK4 = k4 * 255.0f;
+
+    while (--pixelArrayLength >= 0) {
+        unsigned char i1 = *source;
+        unsigned char i2 = *destination;
+        float result = k2 * i1 + k3 * i2;
+        if (b1)
+            result += scaledK1 * i1 * i2;
+        if (b4)
+            result += scaledK4;
+
+        *destination = result;
+        ++source;
+        ++destination;
+    }
+}
+
+static inline void arithmeticSoftware(unsigned char* source, unsigned char* destination, int pixelArrayLength, float k1, float k2, float k3, float k4)
+{
+    float upperLimit = std::max(0.0f, k1) + std::max(0.0f, k2) + std::max(0.0f, k3) + k4;
+    float lowerLimit = std::min(0.0f, k1) + std::min(0.0f, k2) + std::min(0.0f, k3) + k4;
+    if ((k4 >= 0.0f && k4 <= 1.0f) && (upperLimit >= 0.0f && upperLimit <= 1.0f) && (lowerLimit >= 0.0f && lowerLimit <= 1.0f)) {
+        if (k4) {
+            if (k1)
+                computeArithmeticPixelsUnclamped<1, 1>(source, destination, pixelArrayLength, k1, k2, k3, k4);
+            else
+                computeArithmeticPixelsUnclamped<0, 1>(source, destination, pixelArrayLength, k1, k2, k3, k4);
+        } else {
+            if (k1)
+                computeArithmeticPixelsUnclamped<1, 0>(source, destination, pixelArrayLength, k1, k2, k3, k4);
+            else
+                computeArithmeticPixelsUnclamped<0, 0>(source, destination, pixelArrayLength, k1, k2, k3, k4);
+        }
             return;
         }
 
+    if (k4) {
+        if (k1)
+            computeArithmeticPixels<1, 1>(source, destination, pixelArrayLength, k1, k2, k3, k4);
+        else
+            computeArithmeticPixels<0, 1>(source, destination, pixelArrayLength, k1, k2, k3, k4);
+    } else {
+        if (k1)
         computeArithmeticPixels<1, 0>(source, destination, pixelArrayLength, k1, k2, k3, k4);
-        return;
+        else
+            computeArithmeticPixels<0, 0>(source, destination, pixelArrayLength, k1, k2, k3, k4);
     }
-
-    if (!k1) {
-        computeArithmeticPixels<0, 1>(source, destination, pixelArrayLength, k1, k2, k3, k4);
-        return;
-    }
-    computeArithmeticPixels<1, 1>(source, destination, pixelArrayLength, k1, k2, k3, k4);
 }
 
 inline void FEComposite::platformArithmeticSoftware(Uint8ClampedArray* source, Uint8ClampedArray* destination,
@@ -235,11 +275,15 @@ void FEComposite::platformApplySoftware()
         return;
     GraphicsContext* filterContext = resultImage->context();
 
-    FloatRect srcRect = FloatRect(0, 0, -1, -1);
+    ImageBuffer* imageBuffer = in->asImageBuffer();
+    ImageBuffer* imageBuffer2 = in2->asImageBuffer();
+    ASSERT(imageBuffer);
+    ASSERT(imageBuffer2);
+
     switch (m_type) {
     case FECOMPOSITE_OPERATOR_OVER:
-        filterContext->drawImageBuffer(in2->asImageBuffer(), ColorSpaceDeviceRGB, drawingRegionOfInputImage(in2->absolutePaintRect()));
-        filterContext->drawImageBuffer(in->asImageBuffer(), ColorSpaceDeviceRGB, drawingRegionOfInputImage(in->absolutePaintRect()));
+        filterContext->drawImageBuffer(imageBuffer2, ColorSpaceDeviceRGB, drawingRegionOfInputImage(in2->absolutePaintRect()));
+        filterContext->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, drawingRegionOfInputImage(in->absolutePaintRect()));
         break;
     case FECOMPOSITE_OPERATOR_IN: {
         // Applies only to the intersected region.
@@ -253,21 +297,21 @@ void FEComposite::platformApplySoftware()
                                     destinationRect.y() - in->absolutePaintRect().y()), destinationRect.size());
         IntRect source2Rect(IntPoint(destinationRect.x() - in2->absolutePaintRect().x(),
                                      destinationRect.y() - in2->absolutePaintRect().y()), destinationRect.size());
-        filterContext->drawImageBuffer(in2->asImageBuffer(), ColorSpaceDeviceRGB, destinationPoint, source2Rect);
-        filterContext->drawImageBuffer(in->asImageBuffer(), ColorSpaceDeviceRGB, destinationPoint, sourceRect, CompositeSourceIn);
+        filterContext->drawImageBuffer(imageBuffer2, ColorSpaceDeviceRGB, destinationPoint, source2Rect);
+        filterContext->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, destinationPoint, sourceRect, CompositeSourceIn);
         break;
     }
     case FECOMPOSITE_OPERATOR_OUT:
-        filterContext->drawImageBuffer(in->asImageBuffer(), ColorSpaceDeviceRGB, drawingRegionOfInputImage(in->absolutePaintRect()));
-        filterContext->drawImageBuffer(in2->asImageBuffer(), ColorSpaceDeviceRGB, drawingRegionOfInputImage(in2->absolutePaintRect()), srcRect, CompositeDestinationOut);
+        filterContext->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, drawingRegionOfInputImage(in->absolutePaintRect()));
+        filterContext->drawImageBuffer(imageBuffer2, ColorSpaceDeviceRGB, drawingRegionOfInputImage(in2->absolutePaintRect()), IntRect(IntPoint(), imageBuffer2->logicalSize()), CompositeDestinationOut);
         break;
     case FECOMPOSITE_OPERATOR_ATOP:
-        filterContext->drawImageBuffer(in2->asImageBuffer(), ColorSpaceDeviceRGB, drawingRegionOfInputImage(in2->absolutePaintRect()));
-        filterContext->drawImageBuffer(in->asImageBuffer(), ColorSpaceDeviceRGB, drawingRegionOfInputImage(in->absolutePaintRect()), srcRect, CompositeSourceAtop);
+        filterContext->drawImageBuffer(imageBuffer2, ColorSpaceDeviceRGB, drawingRegionOfInputImage(in2->absolutePaintRect()));
+        filterContext->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, drawingRegionOfInputImage(in->absolutePaintRect()), IntRect(IntPoint(), imageBuffer->logicalSize()), CompositeSourceAtop);
         break;
     case FECOMPOSITE_OPERATOR_XOR:
-        filterContext->drawImageBuffer(in2->asImageBuffer(), ColorSpaceDeviceRGB, drawingRegionOfInputImage(in2->absolutePaintRect()));
-        filterContext->drawImageBuffer(in->asImageBuffer(), ColorSpaceDeviceRGB, drawingRegionOfInputImage(in->absolutePaintRect()), srcRect, CompositeXOR);
+        filterContext->drawImageBuffer(imageBuffer2, ColorSpaceDeviceRGB, drawingRegionOfInputImage(in2->absolutePaintRect()));
+        filterContext->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, drawingRegionOfInputImage(in->absolutePaintRect()), IntRect(IntPoint(), imageBuffer->logicalSize()), CompositeXOR);
         break;
     default:
         break;

@@ -95,7 +95,7 @@ public:
     }
 
     virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom);
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom);
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom);
 
     // Overloaded new operator.
     void* operator new(size_t, RenderArena*);
@@ -246,7 +246,7 @@ public:
 
     FloatRect logicalFrameRect() const { return isHorizontal() ? FloatRect(m_topLeft.x(), m_topLeft.y(), m_logicalWidth, logicalHeight()) : FloatRect(m_topLeft.y(), m_topLeft.x(), m_logicalWidth, logicalHeight()); }
 
-    virtual LayoutUnit baselinePosition(FontBaseline baselineType) const;
+    virtual int baselinePosition(FontBaseline baselineType) const;
     virtual LayoutUnit lineHeight() const;
 
     virtual int caretMinOffset() const;
@@ -262,7 +262,7 @@ public:
     virtual void clearTruncation() { }
 
     bool isDirty() const { return m_bitfields.dirty(); }
-    void markDirty(bool dirty = true) { m_bitfields.setDirty(dirty); }
+    virtual void markDirty(bool dirty = true) { m_bitfields.setDirty(dirty); }
 
     virtual void dirtyLineBoxes();
     

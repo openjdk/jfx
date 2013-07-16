@@ -38,7 +38,7 @@
 #include <wtf/text/StringHash.h>
 
 // Enable this to add a light red wash over the visible portion of Tiled Layers, as computed
-// by syncCompositingState().
+// by flushCompositingState().
 // #define VISIBLE_TILE_WASH
 
 namespace WebCore {
@@ -89,7 +89,6 @@ public:
     virtual void setAcceleratesDrawing(bool);
 
     virtual void setBackgroundColor(const Color&);
-    virtual void clearBackgroundColor();
 
     virtual void setContentsOpaque(bool);
     virtual void setBackfaceVisibility(bool);
@@ -117,10 +116,13 @@ public:
     virtual void setContentsToImage(Image*);
     virtual void setContentsToMedia(PlatformLayer*);
     virtual void setContentsToCanvas(PlatformLayer*);
-    virtual void setContentsToBackgroundColor(const Color&);
+    virtual void setContentsToSolidColor(const Color&);
 
     virtual bool hasContentsLayer() const { return m_contentsLayer; }
     
+    virtual void setShowDebugBorder(bool) OVERRIDE;
+    virtual void setShowRepaintCounter(bool) OVERRIDE;
+
     virtual void setDebugBackgroundColor(const Color&);
     virtual void setDebugBorder(const Color&, float borderWidth);
 
@@ -129,12 +131,22 @@ public:
     virtual void setMaintainsPixelAlignment(bool);
     virtual void deviceOrPageScaleFactorChanged();
 
-    void recursiveCommitChanges(const TransformState&, float pageScaleFactor = 1, const FloatPoint& positionRelativeToBase = FloatPoint(), bool affectedByPageScale = false);
+    struct CommitState {
+        bool ancestorHasTransformAnimation;
+        int treeDepth;
+        CommitState()
+            : ancestorHasTransformAnimation(false)
+            , treeDepth(0)
+        { }
+    };
+    void recursiveCommitChanges(const CommitState&, const TransformState&, float pageScaleFactor = 1, const FloatPoint& positionRelativeToBase = FloatPoint(), bool affectedByPageScale = false);
 
-    virtual void syncCompositingState(const FloatRect&);
-    virtual void syncCompositingStateForThisLayerOnly();
+    virtual void flushCompositingState(const FloatRect&);
+    virtual void flushCompositingStateForThisLayerOnly();
 
-    virtual TiledBacking* tiledBacking() OVERRIDE;
+    virtual bool visibleRectChangeRequiresFlush(const FloatRect& visibleRect) const OVERRIDE;
+
+    virtual TiledBacking* tiledBacking() const OVERRIDE;
 
     bool allowTiledLayer() const { return m_allowTiledLayer; }
     virtual void setAllowTiledLayer(bool b);
@@ -152,8 +164,8 @@ private:
     virtual void platformCALayerAnimationStarted(CFTimeInterval beginTime);
     virtual CompositingCoordinatesOrientation platformCALayerContentsOrientation() const { return contentsOrientation(); }
     virtual void platformCALayerPaintContents(GraphicsContext&, const IntRect& clip);
-    virtual bool platformCALayerShowDebugBorders() const { return showDebugBorders(); }
-    virtual bool platformCALayerShowRepaintCounter() const { return showRepaintCounter(); }
+    virtual bool platformCALayerShowDebugBorders() const { return isShowingDebugBorder(); }
+    virtual bool platformCALayerShowRepaintCounter(PlatformCALayer*) const;
     virtual int platformCALayerIncrementRepaintCount() { return incrementRepaintCount(); }
 
     virtual bool platformCALayerContentsOpaque() const { return contentsOpaque(); }
@@ -193,7 +205,7 @@ private:
     PassRefPtr<PlatformCAAnimation> createKeyframeAnimation(const Animation*, const String&, bool additive);
     void setupAnimation(PlatformCAAnimation*, const Animation*, bool additive);
     
-    const TimingFunction* timingFunctionForAnimationValue(const AnimationValue*, const Animation*);
+    const TimingFunction* timingFunctionForAnimationValue(const AnimationValue&, const Animation&);
     
     bool setAnimationEndpoints(const KeyframeValueList&, const Animation*, PlatformCAAnimation*);
     bool setAnimationKeyframes(const KeyframeValueList&, const Animation*, PlatformCAAnimation*);
@@ -206,20 +218,20 @@ private:
     bool setFilterAnimationKeyframes(const KeyframeValueList&, const Animation*, PlatformCAAnimation*, int functionIndex, int internalFilterPropertyIndex, FilterOperation::OperationType);
 #endif
 
+    bool isRunningTransformAnimation() const;
+
     bool animationIsRunning(const String& animationName) const
     {
         return m_runningAnimations.find(animationName) != m_runningAnimations.end();
     }
 
-    void commitLayerChangesBeforeSublayers(float pageScaleFactor, const FloatPoint& positionRelativeToBase);
-    void commitLayerChangesAfterSublayers();
+    void commitLayerChangesBeforeSublayers(CommitState&, float pageScaleFactor, const FloatPoint& positionRelativeToBase, const FloatRect& oldVisibleRect);
+    void commitLayerChangesAfterSublayers(CommitState&);
 
     FloatPoint computePositionRelativeToBase(float& pageScale) const;
 
-    FloatSize constrainedSize() const;
-
     bool requiresTiledLayer(float pageScaleFactor) const;
-    void swapFromOrToTiledLayer(bool useTiledLayer, float pageScaleFactor, const FloatPoint& positionRelativeToBase);
+    void swapFromOrToTiledLayer(bool useTiledLayer);
 
     CompositingCoordinatesOrientation defaultContentsOrientation() const;
     
@@ -228,8 +240,21 @@ private:
 
     virtual void setReplicatedByLayer(GraphicsLayer*);
 
+    virtual void getDebugBorderInfo(Color&, float& width) const;
+    virtual void dumpAdditionalProperties(TextStream&, int indent, LayerTreeAsTextBehavior) const;
+
     void computePixelAlignment(float pixelAlignmentScale, const FloatPoint& positionRelativeToBase,
         FloatPoint& position, FloatSize&, FloatPoint3D& anchorPoint, FloatSize& alignmentOffset) const;
+    enum ComputeVisibleRectFlag { RespectAnimatingTransforms = 1 << 0 };
+    typedef unsigned ComputeVisibleRectFlags;
+    FloatRect computeVisibleRect(TransformState&, ComputeVisibleRectFlags = RespectAnimatingTransforms) const;
+    const FloatRect& visibleRect() const { return m_visibleRect; }
+    
+    static FloatRect adjustTiledLayerVisibleRect(TiledBacking*, const FloatRect& oldVisibleRect, const FloatRect& newVisibleRect, const FloatSize& oldSize, const FloatSize& newSize);
+
+    bool recursiveVisibleRectChangeRequiresFlush(const TransformState&) const;
+
+    virtual bool canThrottleLayerFlush() const;
 
     // Used to track the path down the tree for replica layers.
     struct ReplicaState {
@@ -297,7 +322,7 @@ private:
     
     // All these "update" methods will be called inside a BEGIN_BLOCK_OBJC_EXCEPTIONS/END_BLOCK_OBJC_EXCEPTIONS block.
     void updateLayerNames();
-    void updateSublayerList();
+    void updateSublayerList(bool maxLayerDepthReached = false);
     void updateGeometry(float pixelAlignmentScale, const FloatPoint& positionRelativeToBase);
     void updateTransform();
     void updateChildrenTransform();
@@ -305,33 +330,36 @@ private:
     void updateContentsVisibility();
     void updateContentsOpaque();
     void updateBackfaceVisibility();
-    void updateStructuralLayer(float pixelAlignmentScale, const FloatPoint& positionRelativeToBase);
-    void updateLayerDrawsContent(float pixelAlignmentScale, const FloatPoint& positionRelativeToBase);
-    void updateLayerBackgroundColor();
+    void updateStructuralLayer();
+    void updateLayerDrawsContent();
+    void updateBackgroundColor();
 
     void updateContentsImage();
     void updateContentsMediaLayer();
     void updateContentsCanvasLayer();
+    void updateContentsColorLayer();
     void updateContentsRect();
     void updateMaskLayer();
     void updateReplicatedLayers();
 
-    void updateLayerAnimations();
+    void updateAnimations();
     void updateContentsNeedsDisplay();
     void updateAcceleratesDrawing();
-    void updateContentsScale(float pixelAlignmentScale, const FloatPoint& positionRelativeToBase);
+    void updateDebugBorder();
+    void updateVisibleRect(const FloatRect& oldVisibleRect);
+    void updateContentsScale(float pageScaleFactor);
     
     enum StructuralLayerPurpose {
         NoStructuralLayer = 0,
         StructuralLayerForPreserves3D,
         StructuralLayerForReplicaFlattening
     };
-    void ensureStructuralLayer(StructuralLayerPurpose, float pixelAlignmentScale, const FloatPoint& positionRelativeToBase);
+    void ensureStructuralLayer(StructuralLayerPurpose);
     StructuralLayerPurpose structuralLayerPurpose() const;
 
-    void setAnimationOnLayer(PlatformCAAnimation*, AnimatedPropertyID, const String& animationName, int index, double timeOffset);
-    bool removeCAAnimationFromLayer(AnimatedPropertyID, const String& animationName, int index);
-    void pauseCAAnimationOnLayer(AnimatedPropertyID, const String& animationName, int index, double timeOffset);
+    void setAnimationOnLayer(PlatformCAAnimation*, AnimatedPropertyID, const String& animationName, int index, int subIndex, double timeOffset);
+    bool removeCAAnimationFromLayer(AnimatedPropertyID, const String& animationName, int index, int subINdex);
+    void pauseCAAnimationOnLayer(AnimatedPropertyID, const String& animationName, int index, int subIndex, double timeOffset);
 
     enum MoveOrCopy { Move, Copy };
     static void moveOrCopyLayerAnimation(MoveOrCopy, const String& animationIdentifier, PlatformCALayer *fromLayer, PlatformCALayer *toLayer);
@@ -361,16 +389,18 @@ private:
         ContentsImageChanged = 1 << 15,
         ContentsMediaLayerChanged = 1 << 16,
         ContentsCanvasLayerChanged = 1 << 17,
-        ContentsRectChanged = 1 << 18,
-        MaskLayerChanged = 1 << 19,
-        ReplicatedLayerChanged = 1 << 20,
-        ContentsNeedsDisplay = 1 << 21,
-        AcceleratesDrawingChanged = 1 << 22,
-        ContentsScaleChanged = 1 << 23,
-        ContentsVisibilityChanged = 1 << 24,
-#if ENABLE(CSS_FILTERS)
-        FiltersChanged = 1 << 25,
-#endif
+        ContentsColorLayerChanged = 1 << 18,
+        ContentsRectChanged = 1 << 19,
+        MaskLayerChanged = 1 << 20,
+        ReplicatedLayerChanged = 1 << 21,
+        ContentsNeedsDisplay = 1 << 22,
+        AcceleratesDrawingChanged = 1 << 23,
+        ContentsScaleChanged = 1 << 24,
+        ContentsVisibilityChanged = 1 << 25,
+        VisibleRectChanged = 1 << 26,
+        FiltersChanged = 1 << 27,
+        TilesAdded = 1 < 28,
+        DebugIndicatorsChanged = 1 << 29
     };
     typedef unsigned LayerChangeFlags;
     void noteLayerPropertyChanged(LayerChangeFlags flags);
@@ -391,6 +421,8 @@ private:
 #ifdef VISIBLE_TILE_WASH
     RefPtr<PlatformCALayer> m_visibleTileWashLayer;
 #endif
+    FloatRect m_visibleRect;
+    FloatSize m_sizeAtLastVisibleRectUpdate;
     
     enum ContentsLayerPurpose {
         NoContentsLayer = 0,
@@ -401,8 +433,10 @@ private:
     };
     
     ContentsLayerPurpose m_contentsLayerPurpose;
-    bool m_contentsLayerHasBackgroundColor : 1;
     bool m_allowTiledLayer : 1;
+    bool m_isPageTiledBackingLayer : 1;
+    
+    Color m_contentsSolidColor;
 
     RetainPtr<CGImageRef> m_uncorrectedContentsImage;
     RetainPtr<CGImageRef> m_pendingContentsImage;
@@ -410,11 +444,12 @@ private:
     // This represents the animation of a single property. There may be multiple transform animations for
     // a single transition or keyframe animation, so index is used to distinguish these.
     struct LayerPropertyAnimation {
-        LayerPropertyAnimation(PassRefPtr<PlatformCAAnimation> caAnimation, const String& animationName, AnimatedPropertyID property, int index, double timeOffset)
+        LayerPropertyAnimation(PassRefPtr<PlatformCAAnimation> caAnimation, const String& animationName, AnimatedPropertyID property, int index, int subIndex, double timeOffset)
         : m_animation(caAnimation)
         , m_name(animationName)
         , m_property(property)
         , m_index(index)
+        , m_subIndex(subIndex)
         , m_timeOffset(timeOffset)
         { }
 
@@ -422,6 +457,7 @@ private:
         String m_name;
         AnimatedPropertyID m_property;
         int m_index;
+        int m_subIndex;
         double m_timeOffset;
     };
     

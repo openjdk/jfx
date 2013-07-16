@@ -31,6 +31,7 @@
 #include "config.h"
 #include "HTMLOutputElement.h"
 
+#include "ExceptionCodePlaceholder.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 
@@ -52,21 +53,21 @@ PassRefPtr<HTMLOutputElement> HTMLOutputElement::create(const QualifiedName& tag
 
 const AtomicString& HTMLOutputElement::formControlType() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, output, ("output"));
+    DEFINE_STATIC_LOCAL(const AtomicString, output, ("output", AtomicString::ConstructFromLiteral));
     return output;
 }
 
 bool HTMLOutputElement::supportsFocus() const
 {
-    return Node::supportsFocus() && !disabled();
+    return HTMLElement::supportsFocus();
 }
 
-void HTMLOutputElement::parseAttribute(const Attribute& attribute)
+void HTMLOutputElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == HTMLNames::forAttr)
-        setFor(attribute.value());
+    if (name == HTMLNames::forAttr)
+        setFor(value);
     else
-        HTMLFormControlElement::parseAttribute(attribute);
+        HTMLFormControlElement::parseAttribute(name, value);
 }
 
 DOMSettableTokenList* HTMLOutputElement::htmlFor() const
@@ -136,9 +137,8 @@ void HTMLOutputElement::setDefaultValue(const String& value)
 void HTMLOutputElement::setTextContentInternal(const String& value)
 {
     ASSERT(!m_isSetTextContentInProgress);
-    ExceptionCode ec;
     m_isSetTextContentInProgress = true;
-    setTextContent(value, ec);
+    setTextContent(value, IGNORE_EXCEPTION);
 }
 
 } // namespace

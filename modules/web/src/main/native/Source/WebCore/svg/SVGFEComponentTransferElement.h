@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-class SVGFEComponentTransferElement : public SVGFilterPrimitiveStandardAttributes {
+class SVGFEComponentTransferElement FINAL : public SVGFilterPrimitiveStandardAttributes {
 public:
     static PassRefPtr<SVGFEComponentTransferElement> create(const QualifiedName&, Document*);
 
@@ -36,7 +36,7 @@ private:
 
     // FIXME: svgAttributeChanged missing.
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*);
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFEComponentTransferElement)

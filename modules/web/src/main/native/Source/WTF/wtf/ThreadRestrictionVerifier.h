@@ -47,6 +47,12 @@ namespace WTF {
 // The default mode is to verify that the object will only be used on a single thread. The
 // thread gets captured when setShared(true) is called.
 // The mode may be changed by calling useMutexMode (or turnOffVerification).
+
+// FIXME: This verifier is switched off because it fires false positives for
+// objects that are used on multiple threads. Instead of an opt-out verifier,
+// we probably need an opt-in verifier that marks select objects as being
+// tied to select threads.
+#if 0
 class ThreadRestrictionVerifier {
 public:
     ThreadRestrictionVerifier()
@@ -70,7 +76,6 @@ public:
 
     void setMutexMode(Mutex& mutex)
     {
-        ASSERT(m_mode == SingleThreadVerificationMode || (m_mode == MutexVerificationMode && &mutex == m_mutex));
         m_mode = MutexVerificationMode;
         m_mutex = &mutex;
     }
@@ -78,7 +83,6 @@ public:
 #if HAVE(DISPATCH_H)
     void setDispatchQueueMode(dispatch_queue_t queue)
     {
-        ASSERT(m_mode == SingleThreadVerificationMode);
         m_mode = SingleDispatchQueueVerificationMode;
         m_owningQueue = queue;
         dispatch_retain(m_owningQueue);
@@ -87,7 +91,6 @@ public:
 
     void turnOffVerification()
     {
-        ASSERT(m_mode == SingleThreadVerificationMode);
         m_mode = NoVerificationMode;
     }
 
@@ -171,6 +174,39 @@ private:
     dispatch_queue_t m_owningQueue;
 #endif
 };
+#else
+class ThreadRestrictionVerifier {
+public:
+    ThreadRestrictionVerifier()
+    {
+    }
+
+    void setMutexMode(Mutex&)
+    {
+    }
+
+#if HAVE(DISPATCH_H)
+    void setDispatchQueueMode(dispatch_queue_t)
+    {
+    }
+#endif
+
+    void turnOffVerification()
+    {
+    }
+
+    // Indicates that the object may (or may not) be owned by more than one place.
+    void setShared(bool)
+    {
+    }
+
+    // Is it OK to use the object at this moment on the current thread?
+    bool isSafeToUse() const
+    {
+        return true;
+    }
+};
+#endif
 
 }
 

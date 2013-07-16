@@ -8,7 +8,7 @@
 
 #include "SharedBuffer.h"
 #include "StringHash.h"
-#include <wtf/HashSet.h>
+#include <wtf/ListHashSet.h>
 #include <wtf/Vector.h>
 #include <KURL.h>
 
@@ -105,7 +105,7 @@ namespace WebCore {
 
         //getters
         //URL
-        HashSet<String> types(){
+        ListHashSet<String> types(){
             //returns MIME Types available in clipboard.
             return availMimeTypes;
         }
@@ -184,7 +184,7 @@ namespace WebCore {
         }
 
     private:
-        HashSet<String> availMimeTypes;
+        ListHashSet<String> availMimeTypes;
 
         //URL
         KURL url;

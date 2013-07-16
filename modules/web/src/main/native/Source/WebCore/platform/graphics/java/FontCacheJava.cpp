@@ -23,30 +23,36 @@ void FontCache::platformInit()
     }*/
 }
 
-const SimpleFontData* FontCache::getFontDataForCharacters(const Font& font, const UChar* characters, int length)
-{
-    /* utaTODO: choose the right subst here
-    Look at WebCore\platform\graphics\wince\FontCacheWince.cpp
-    */
-    //SimpleFontData* fontData = 0;
-    //fontData = new SimpleFontData(FontPlatformData(font.fontDescription(), font.family().family()));
-    //return fontData;
-    FontPlatformData fontData(font.fontDescription(), font.family().family());
-    if (!fontData.nativeFontData()) {
-        return 0; // requested font does not exist
-    }
-    return getCachedFontData(&fontData);
-}
-
-SimpleFontData* FontCache::getSimilarFontPlatformData(const Font& font)
+PassRefPtr<SimpleFontData> FontCache::systemFallbackForCharacters(const FontDescription& fontDescription, const SimpleFontData*, bool, const UChar* characters, int length)
 {
     return 0;
 }
 
-FontPlatformData* FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
+
+//const SimpleFontData* FontCache::getFontDataForCharacters(const Font& font, const UChar* characters, int length)
+//{
+//    /* utaTODO: choose the right subst here
+//    Look at WebCore\platform\graphics\wince\FontCacheWince.cpp
+//    */
+//    //SimpleFontData* fontData = 0;
+//    //fontData = new SimpleFontData(FontPlatformData(font.fontDescription(), font.family().family()));
+//    //return fontData;
+//    FontPlatformData fontData(font.fontDescription(), font.family().family());
+//    if (!fontData.nativeFontData()) {
+//        return 0; // requested font does not exist
+//    }
+//    return getCachedFontData(&fontData);
+//}
+
+//SimpleFontData* FontCache::getSimilarFontPlatformData(const Font& font)
+//{
+//    return 0;
+//}
+
+PassOwnPtr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
 {
     PassRefPtr<RQRef> font = FontPlatformData::getJavaFont(fontDescription, family);
-    return !font ? 0 : new FontPlatformData(font, fontDescription.computedSize());
+    return !font ? nullptr : adoptPtr(new FontPlatformData(font, fontDescription.computedSize()));
 }
 
 void FontCache::getTraitsInFamily(AtomicString const&, WTF::Vector<unsigned int,0>&)
@@ -54,7 +60,7 @@ void FontCache::getTraitsInFamily(AtomicString const&, WTF::Vector<unsigned int,
     notImplemented();
 }
 
-SimpleFontData* FontCache::getLastResortFallbackFont(const FontDescription& description, ShouldRetain shouldRetain)
+PassRefPtr<SimpleFontData> FontCache::getLastResortFallbackFont(const FontDescription& description, ShouldRetain shouldRetain)
 {
     // FIXME: Would be even better to somehow get the user's default font here.
     // For now we'll pick the default that the user would get without changing any prefs.

@@ -29,19 +29,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module window {
-
-    interface [
+[
         ActiveDOMObject,
-        Constructor(in DOMString scriptUrl),
+    Constructor(DOMString url, optional Dictionary eventSourceInit),
         CallWith=ScriptExecutionContext,
         ConstructorRaisesException,
         EventTarget,
         JSNoStaticTables
-    ] EventSource {
+] interface EventSource {
 
         readonly attribute DOMString URL; // Lowercased .url is the one in the spec, but leaving .URL for compatibility reasons.
         readonly attribute DOMString url;
+    readonly attribute boolean withCredentials;
 
         // ready state
         const unsigned short CONNECTING = 0;
@@ -56,14 +55,13 @@ module window {
         void close();
 
         // EventTarget interface
-        void addEventListener(in DOMString type,
-                              in EventListener listener,
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type,
-                                 in EventListener listener,
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type,
+                          EventListener listener,
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type,
+                             EventListener listener,
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
 
     };
-}

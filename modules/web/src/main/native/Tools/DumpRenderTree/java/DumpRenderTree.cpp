@@ -4,14 +4,14 @@
 #include "config.h"
 
 #include "JavaEnv.h"
-#include "LayoutTestController.h"
+#include "TestRunner.h"
 #include "EventSender.h"
 #include "WorkQueue.h"
 
 #include <wtf/RefPtr.h>
 #include <API/JavaScript.h>
 
-RefPtr<LayoutTestController> gLayoutTestController;
+RefPtr<TestRunner> gTestRunner;
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,8 +23,8 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_init
     const char* testPathChars = env->GetStringUTFChars(testPath, NULL);
     const char* pixelsHashChars = env->GetStringUTFChars(pixelsHash, NULL);
 
-    ASSERT(!gLayoutTestController);
-    gLayoutTestController = LayoutTestController::create(testPathChars, pixelsHashChars);
+    ASSERT(!gTestRunner);
+    gTestRunner = TestRunner::create(testPathChars, pixelsHashChars);
 
     WorkQueue::shared()->clear();
 
@@ -36,7 +36,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
     (JNIEnv* env, jclass cls, jlong pContext, jlong pWindowObject,
     jobject eventSender)
 {
-    ASSERT(gLayoutTestController);
+    ASSERT(gTestRunner);
     ASSERT(pContext);
     ASSERT(pWindowObject);
     ASSERT(eventSender);
@@ -48,7 +48,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
     
     JSValueRef exception = 0;
     
-    gLayoutTestController->makeWindowObject(context, windowObject, &exception);
+    gTestRunner->makeWindowObject(context, windowObject, &exception);
     ASSERT(!exception);
 
     JLObject jlEventSender(eventSender, true);
@@ -59,36 +59,36 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
 JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dispose
     (JNIEnv* env, jclass cls)
 {
-    ASSERT(gLayoutTestController);
-    gLayoutTestController.clear();
+    ASSERT(gTestRunner);
+    gTestRunner.clear();
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dumpAsText
     (JNIEnv* env, jclass cls)
 {
-    ASSERT(gLayoutTestController);
-    return bool_to_jbool(gLayoutTestController->dumpAsText());
+    ASSERT(gTestRunner);
+    return bool_to_jbool(gTestRunner->dumpAsText());
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dumpChildFramesAsText
     (JNIEnv* env, jclass cls)
 {
-    ASSERT(gLayoutTestController);
-    return bool_to_jbool(gLayoutTestController->dumpChildFramesAsText());
+    ASSERT(gTestRunner);
+    return bool_to_jbool(gTestRunner->dumpChildFramesAsText());
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didFinishLoad
     (JNIEnv* env, jclass cls)
 {
-    ASSERT(gLayoutTestController);
+    ASSERT(gTestRunner);
     return bool_to_jbool(WorkQueue::shared()->processWork());
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dumpBackForwardList
     (JNIEnv* env, jclass cls)
 {
-    ASSERT(gLayoutTestController);
-    return bool_to_jbool(gLayoutTestController->dumpBackForwardList());
+    ASSERT(gTestRunner);
+    return bool_to_jbool(gTestRunner->dumpBackForwardList());
 }
 
 #ifdef __cplusplus

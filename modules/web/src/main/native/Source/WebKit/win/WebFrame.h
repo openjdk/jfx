@@ -37,12 +37,12 @@
 #include <WebCore/FrameWin.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/KURL.h>
-#include <WebCore/PlatformString.h>
 #include <WebCore/ResourceHandleClient.h>
 
 #include <WTF/RefPtr.h>
 #include <WTF/HashMap.h>
 #include <WTF/OwnPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
     class AuthenticationChallenge;
@@ -280,6 +280,12 @@ public:
 
     virtual HRESULT STDMETHODCALLTYPE setTextDirection(BSTR);
 
+    virtual HRESULT STDMETHODCALLTYPE unused3(BSTR, BSTR*) { return E_NOTIMPL; }
+
+    virtual HRESULT STDMETHODCALLTYPE resumeAnimations();
+
+    virtual HRESULT STDMETHODCALLTYPE suspendAnimations();
+
     // IWebDocumentText
     virtual HRESULT STDMETHODCALLTYPE supportsTextEncoding( 
         /* [retval][out] */ BOOL* result);
@@ -332,7 +338,7 @@ public:
     virtual void dispatchDecidePolicyForNewWindowAction(WebCore::FramePolicyFunction, const WebCore::NavigationAction&, const WebCore::ResourceRequest&, PassRefPtr<WebCore::FormState>, const WTF::String& frameName);
     virtual void dispatchDecidePolicyForNavigationAction(WebCore::FramePolicyFunction, const WebCore::NavigationAction&, const WebCore::ResourceRequest&, PassRefPtr<WebCore::FormState>);
     virtual void dispatchUnableToImplementPolicy(const WebCore::ResourceError&);
-    virtual void download(WebCore::ResourceHandle*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&);
+    virtual void convertMainResourceLoadToDownload(WebCore::DocumentLoader*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&);
 
     virtual bool dispatchDidLoadResourceFromMemoryCache(WebCore::DocumentLoader*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&, int length);
     virtual void dispatchDidFailProvisionalLoad(const WebCore::ResourceError&);

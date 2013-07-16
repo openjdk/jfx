@@ -25,9 +25,6 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.scenario.effect.Effect;
-import com.sun.scenario.effect.FilterContext;
-import com.sun.scenario.effect.ImageData;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
@@ -35,9 +32,11 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.Graphics;
+import com.sun.scenario.effect.Effect;
+import com.sun.scenario.effect.FilterContext;
+import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrRenderInfo;
-import com.sun.javafx.sg.BaseNodeEffectInput;
 
 /**
  */

@@ -26,7 +26,9 @@
 #ifndef CallLinkInfo_h
 #define CallLinkInfo_h
 
+#include "ClosureCallStubRoutine.h"
 #include "CodeLocation.h"
+#include "CodeSpecializationKind.h"
 #include "JITWriteBarrier.h"
 #include "JSFunction.h"
 #include "Opcode.h"
@@ -55,6 +57,7 @@ struct CallLinkInfo : public BasicRawSentinelNode<CallLinkInfo> {
     CallLinkInfo()
         : hasSeenShouldRepatch(false)
         , isDFG(false)
+        , hasSeenClosure(false)
         , callType(None)
     {
     }
@@ -65,18 +68,26 @@ struct CallLinkInfo : public BasicRawSentinelNode<CallLinkInfo> {
             remove();
     }
 
+    CodeSpecializationKind specializationKind() const
+    {
+        return specializationFromIsConstruct(callType == Construct);
+    }
+
     CodeLocationNearCall callReturnLocation;
     CodeLocationDataLabelPtr hotPathBegin;
     CodeLocationNearCall hotPathOther;
     JITWriteBarrier<JSFunction> callee;
     WriteBarrier<JSFunction> lastSeenCallee;
+    RefPtr<ClosureCallStubRoutine> stub;
     bool hasSeenShouldRepatch : 1;
     bool isDFG : 1;
-    CallType callType : 6;
-    unsigned bytecodeIndex;
+    bool hasSeenClosure : 1;
+    CallType callType : 5;
+    unsigned calleeGPR : 8;
+    CodeOrigin codeOrigin;
 
-    bool isLinked() { return callee; }
-    void unlink(JSGlobalData&, RepatchBuffer&);
+    bool isLinked() { return stub || callee; }
+    void unlink(VM&, RepatchBuffer&);
 
     bool seenOnce()
     {
@@ -96,7 +107,7 @@ inline void* getCallLinkInfoReturnLocation(CallLinkInfo* callLinkInfo)
 
 inline unsigned getCallLinkInfoBytecodeIndex(CallLinkInfo* callLinkInfo)
 {
-    return callLinkInfo->bytecodeIndex;
+    return callLinkInfo->codeOrigin.bytecodeIndex;
 }
 #endif // ENABLE(JIT)
 

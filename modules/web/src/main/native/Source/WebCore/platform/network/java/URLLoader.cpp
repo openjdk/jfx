@@ -8,7 +8,10 @@
 #include "HTTPParsers.h"
 #include "JavaEnv.h"
 #include "MIMETypeRegistry.h"
+#include "ResourceError.h"
 #include "ResourceHandle.h"
+#include "ResourceRequest.h"
+#include "ResourceResponse.h"
 #include "ResourceHandleClient.h"
 #include "WebPage.h"
 #include "com_sun_webkit_LoadListenerClient.h"
@@ -148,9 +151,9 @@ JLObject URLLoader::load(bool asynchronous,
         headerMap.end() != it;
         ++it)
     {
-        headerString.append(it->first);
+        headerString.append(it->key);
         headerString.append(": ");
-        headerString.append(it->second);
+        headerString.append(it->value);
         headerString.append("\n");
     }
 

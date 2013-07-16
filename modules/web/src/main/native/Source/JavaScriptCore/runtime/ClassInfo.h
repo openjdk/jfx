@@ -39,6 +39,9 @@ namespace JSC {
         typedef void (*VisitChildrenFunctionPtr)(JSCell*, SlotVisitor&);
         VisitChildrenFunctionPtr visitChildren;
 
+    typedef void (*CopyBackingStoreFunctionPtr)(JSCell*, CopyVisitor&);
+    CopyBackingStoreFunctionPtr copyBackingStore;
+
         typedef CallType (*GetCallDataFunctionPtr)(JSCell*, CallData&);
         GetCallDataFunctionPtr getCallData;
 
@@ -72,14 +75,17 @@ namespace JSC {
         typedef void (*GetOwnPropertyNamesFunctionPtr)(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
         GetOwnPropertyNamesFunctionPtr getOwnPropertyNames;
 
+    typedef void (*GetOwnNonIndexPropertyNamesFunctionPtr)(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
+    GetOwnNonIndexPropertyNamesFunctionPtr getOwnNonIndexPropertyNames;
+
         typedef void (*GetPropertyNamesFunctionPtr)(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
         GetPropertyNamesFunctionPtr getPropertyNames;
 
-        typedef UString (*ClassNameFunctionPtr)(const JSObject*);
+    typedef String (*ClassNameFunctionPtr)(const JSObject*);
         ClassNameFunctionPtr className;
 
-        typedef bool (*HasInstanceFunctionPtr)(JSObject*, ExecState*, JSValue, JSValue);
-        HasInstanceFunctionPtr hasInstance;
+    typedef bool (*CustomHasInstanceFunctionPtr)(JSObject*, ExecState*, JSValue);
+    CustomHasInstanceFunctionPtr customHasInstance;
 
         typedef void (*PutWithAttributesFunctionPtr)(JSObject*, ExecState*, PropertyName propertyName, JSValue, unsigned attributes);
         PutWithAttributesFunctionPtr putDirectVirtual;
@@ -113,6 +119,7 @@ struct MemberCheck##member { \
 #define CREATE_METHOD_TABLE(ClassName) { \
         &ClassName::destroy, \
         &ClassName::visitChildren, \
+        &ClassName::copyBackingStore, \
         &ClassName::getCallData, \
         &ClassName::getConstructData, \
         &ClassName::put, \
@@ -124,9 +131,10 @@ struct MemberCheck##member { \
         &ClassName::toThisObject, \
         &ClassName::defaultValue, \
         &ClassName::getOwnPropertyNames, \
+        &ClassName::getOwnNonIndexPropertyNames, \
         &ClassName::getPropertyNames, \
         &ClassName::className, \
-        &ClassName::hasInstance, \
+        &ClassName::customHasInstance, \
         &ClassName::putDirectVirtual, \
         &ClassName::defineOwnProperty, \
         &ClassName::getOwnPropertyDescriptor, \

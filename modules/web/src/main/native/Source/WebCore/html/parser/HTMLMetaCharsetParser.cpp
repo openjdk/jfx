@@ -28,10 +28,11 @@
 
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLParserOptions.h"
 #include "HTMLTokenizer.h"
-#include "PlatformString.h"
 #include "TextCodec.h"
 #include "TextEncodingRegistry.h"
+#include <wtf/text/WTFString.h>
 
 using namespace WTF;
 
@@ -40,7 +41,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 HTMLMetaCharsetParser::HTMLMetaCharsetParser()
-    : m_tokenizer(HTMLTokenizer::create(false)) // No pre-HTML5 parser quirks.
+    : m_tokenizer(HTMLTokenizer::create(HTMLParserOptions(0)))
     , m_assumedCodec(newTextCodec(Latin1Encoding()))
     , m_inHeadSection(true)
     , m_doneChecking(false)
@@ -105,8 +106,8 @@ bool HTMLMetaCharsetParser::processMeta()
     const HTMLToken::AttributeList& tokenAttributes = m_token.attributes();
     AttributeList attributes;
     for (HTMLToken::AttributeList::const_iterator iter = tokenAttributes.begin(); iter != tokenAttributes.end(); ++iter) {
-        String attributeName(iter->m_name.data(), iter->m_name.size());
-        String attributeValue(iter->m_value.data(), iter->m_value.size());
+        String attributeName = StringImpl::create8BitIfPossible(iter->name);
+        String attributeValue = StringImpl::create8BitIfPossible(iter->value);
         attributes.append(std::make_pair(attributeName, attributeValue));
     }
 
@@ -175,11 +176,11 @@ bool HTMLMetaCharsetParser::checkForMetaCharset(const char* data, size_t length)
     m_input.append(SegmentedString(m_assumedCodec->decode(data, length)));
 
     while (m_tokenizer->nextToken(m_input, m_token)) {
-        bool end = m_token.type() == HTMLTokenTypes::EndTag;
-        if (end || m_token.type() == HTMLTokenTypes::StartTag) {
-            AtomicString tagName(m_token.name().data(), m_token.name().size());
+        bool end = m_token.type() == HTMLToken::EndTag;
+        if (end || m_token.type() == HTMLToken::StartTag) {
+            AtomicString tagName(m_token.name());
             if (!end) {
-                m_tokenizer->updateStateFor(tagName, 0);
+                m_tokenizer->updateStateFor(tagName);
                 if (tagName == metaTag && processMeta()) {
                     m_doneChecking = true;
                     return true;

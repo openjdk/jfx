@@ -26,15 +26,8 @@
 #include "config.h"
 #include "ScrollbarThemeComposite.h"
 
-#include "Chrome.h"
-#include "ChromeClient.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "GraphicsContext.h"
-#include "Page.h"
-#include "PlatformMouseEvent.h"
 #include "ScrollbarThemeClient.h"
-#include "Settings.h"
 
 using namespace std;
 
@@ -115,41 +108,41 @@ bool ScrollbarThemeComposite::paint(ScrollbarThemeClient* scrollbar, GraphicsCon
     return true;
 }
 
-ScrollbarPart ScrollbarThemeComposite::hitTest(ScrollbarThemeClient* scrollbar, const PlatformMouseEvent& evt)
+ScrollbarPart ScrollbarThemeComposite::hitTest(ScrollbarThemeClient* scrollbar, const IntPoint& position)
 {
     ScrollbarPart result = NoPart;
     if (!scrollbar->enabled())
         return result;
 
-    IntPoint mousePosition = scrollbar->convertFromContainingWindow(evt.position());
-    mousePosition.move(scrollbar->x(), scrollbar->y());
+    IntPoint testPosition = scrollbar->convertFromContainingWindow(position);
+    testPosition.move(scrollbar->x(), scrollbar->y());
     
-    if (!scrollbar->frameRect().contains(mousePosition))
+    if (!scrollbar->frameRect().contains(testPosition))
         return NoPart;
 
     result = ScrollbarBGPart;
 
     IntRect track = trackRect(scrollbar);
-    if (track.contains(mousePosition)) {
+    if (track.contains(testPosition)) {
         IntRect beforeThumbRect;
         IntRect thumbRect;
         IntRect afterThumbRect;
         splitTrack(scrollbar, track, beforeThumbRect, thumbRect, afterThumbRect);
-        if (thumbRect.contains(mousePosition))
+        if (thumbRect.contains(testPosition))
             result = ThumbPart;
-        else if (beforeThumbRect.contains(mousePosition))
+        else if (beforeThumbRect.contains(testPosition))
             result = BackTrackPart;
-        else if (afterThumbRect.contains(mousePosition))
+        else if (afterThumbRect.contains(testPosition))
             result = ForwardTrackPart;
         else
             result = TrackBGPart;
-    } else if (backButtonRect(scrollbar, BackButtonStartPart).contains(mousePosition))
+    } else if (backButtonRect(scrollbar, BackButtonStartPart).contains(testPosition))
         result = BackButtonStartPart;
-    else if (backButtonRect(scrollbar, BackButtonEndPart).contains(mousePosition))
+    else if (backButtonRect(scrollbar, BackButtonEndPart).contains(testPosition))
         result = BackButtonEndPart;
-    else if (forwardButtonRect(scrollbar, ForwardButtonStartPart).contains(mousePosition))
+    else if (forwardButtonRect(scrollbar, ForwardButtonStartPart).contains(testPosition))
         result = ForwardButtonStartPart;
-    else if (forwardButtonRect(scrollbar, ForwardButtonEndPart).contains(mousePosition))
+    else if (forwardButtonRect(scrollbar, ForwardButtonEndPart).contains(testPosition))
         result = ForwardButtonEndPart;
     return result;
 }

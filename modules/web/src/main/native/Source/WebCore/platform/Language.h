@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2006, 2010, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,9 @@ namespace WebCore {
 
 String defaultLanguage();
 Vector<String> userPreferredLanguages();
+Vector<String> userPreferredLanguagesOverride();
 void overrideUserPreferredLanguages(const Vector<String>&);
-String preferredLanguageFromList(const Vector<String>&);
+size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<String>& languageList);
 
 // The observer function will be called when system language changes.
 typedef void (*LanguageChangeObserverFunction)(void* context);
@@ -42,6 +43,8 @@ void addLanguageChangeObserver(void* context, LanguageChangeObserverFunction);
 void removeLanguageChangeObserver(void* context);
 
 Vector<String> platformUserPreferredLanguages();
+
+String displayNameForLanguageLocale(const String&);
 
 // Called from platform specific code when the user's preferred language(s) change.
 void languageDidChange();

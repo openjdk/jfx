@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +28,11 @@
 #define InternalSettings_h
 
 #include "EditingBehaviorTypes.h"
-#include "RefCountedSupplement.h"
+#include "IntSize.h"
+#include "InternalSettingsGenerated.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
-
-#if ENABLE(TEXT_AUTOSIZING)
-#include "IntSize.h"
-#endif
 
 namespace WebCore {
 
@@ -42,68 +40,67 @@ typedef int ExceptionCode;
 
 class Frame;
 class Document;
-class MockPagePopupDriver;
 class Page;
-class PagePopupController;
 class Settings;
 
-class InternalSettings : public RefCountedSupplement<Page, InternalSettings> {
+class InternalSettings : public InternalSettingsGenerated {
 public:
     class Backup {
     public:
-        Backup(Page*, Settings*);
-        void restoreTo(Page*, Settings*);
+        explicit Backup(Settings*);
+        void restoreTo(Settings*);
 
-        double m_originalPasswordEchoDurationInSeconds;
-        bool m_originalPasswordEchoEnabled;
         bool m_originalCSSExclusionsEnabled;
+        bool m_originalCSSVariablesEnabled;
 #if ENABLE(SHADOW_DOM)
         bool m_originalShadowDOMEnabled;
+        bool m_originalAuthorShadowDOMForAnyElementEnabled;
+#endif
+#if ENABLE(STYLE_SCOPED)
+        bool m_originalStyleScoped;
 #endif
         EditingBehaviorType m_originalEditingBehavior;
-        bool m_originalFixedPositionCreatesStackingContext;
-        bool m_originalSyncXHRInDocumentsEnabled;
-#if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
-        bool m_originalJavaScriptProfilingEnabled;
-#endif
-        bool m_originalWindowFocusRestricted;
-        bool m_originalDeviceSupportsTouch;
-        bool m_originalDeviceSupportsMouse;
 #if ENABLE(TEXT_AUTOSIZING)
         bool m_originalTextAutosizingEnabled;
         IntSize m_originalTextAutosizingWindowSizeOverride;
+        float m_originalTextAutosizingFontScaleFactor;
 #endif
+        String m_originalMediaTypeOverride;
 #if ENABLE(DIALOG_ELEMENT)
         bool m_originalDialogElementEnabled;
 #endif
+        bool m_originalCanvasUsesAcceleratedDrawing;
+        bool m_originalMockScrollbarsEnabled;
+        bool m_originalUsesOverlayScrollbars;
+        bool m_langAttributeAwareFormControlUIEnabled;
+        bool m_imagesEnabled;
+        double m_minimumTimerInterval;
+#if ENABLE(VIDEO_TRACK)
+        bool m_shouldDisplaySubtitles;
+        bool m_shouldDisplayCaptions;
+        bool m_shouldDisplayTextDescriptions;
+#endif
+        String m_defaultVideoPosterURL;
+        bool m_originalTimeWithoutMouseMovementBeforeHidingControls;
+        bool m_useLegacyBackgroundSizeShorthandBehavior;
     };
 
-    typedef RefCountedSupplement<Page, InternalSettings> SuperType;
+    static PassRefPtr<InternalSettings> create(Page* page)
+    {
+        return adoptRef(new InternalSettings(page));
+    }
     static InternalSettings* from(Page*);
+    void hostDestroyed() { m_page = 0; }
 
     virtual ~InternalSettings();
-#if ENABLE(PAGE_POPUP)
-    PagePopupController* pagePopupController();
-#endif
-    void reset();
+    void resetToConsistentState();
 
-    void setInspectorResourcesDataSizeLimits(int maximumResourcesContentSize, int maximumSingleResourceContentSize, ExceptionCode&);
-    void setForceCompositingMode(bool enabled, ExceptionCode&);
-    void setEnableCompositingForFixedPosition(bool enabled, ExceptionCode&);
-    void setEnableCompositingForScrollableFrames(bool enabled, ExceptionCode&);
-    void setAcceleratedDrawingEnabled(bool enabled, ExceptionCode&);
-    void setAcceleratedFiltersEnabled(bool enabled, ExceptionCode&);
     void setMockScrollbarsEnabled(bool enabled, ExceptionCode&);
-    void setPasswordEchoEnabled(bool enabled, ExceptionCode&);
-    void setPasswordEchoDurationInSeconds(double durationInSeconds, ExceptionCode&);
-    void setFixedElementsLayoutRelativeToFrame(bool, ExceptionCode&);
-    void setUnifiedTextCheckingEnabled(bool, ExceptionCode&);
-    bool unifiedTextCheckingEnabled(ExceptionCode&);
-    void setPageScaleFactor(float scaleFactor, int x, int y, ExceptionCode&);
+    void setUsesOverlayScrollbars(bool enabled, ExceptionCode&);
     void setTouchEventEmulationEnabled(bool enabled, ExceptionCode&);
-    void setDeviceSupportsTouch(bool enabled, ExceptionCode&);
-    void setDeviceSupportsMouse(bool enabled, ExceptionCode&);
     void setShadowDOMEnabled(bool enabled, ExceptionCode&);
+    void setAuthorShadowDOMForAnyElementEnabled(bool);
+    void setStyleScopedEnabled(bool);
     void setStandardFontFamily(const String& family, const String& script, ExceptionCode&);
     void setSerifFontFamily(const String& family, const String& script, ExceptionCode&);
     void setSansSerifFontFamily(const String& family, const String& script, ExceptionCode&);
@@ -113,39 +110,33 @@ public:
     void setPictographFontFamily(const String& family, const String& script, ExceptionCode&);
     void setTextAutosizingEnabled(bool enabled, ExceptionCode&);
     void setTextAutosizingWindowSizeOverride(int width, int height, ExceptionCode&);
-    void setEnableScrollAnimator(bool enabled, ExceptionCode&);
-    bool scrollAnimatorEnabled(ExceptionCode&);
+    void setTextAutosizingFontScaleFactor(float fontScaleFactor, ExceptionCode&);
+    void setMediaTypeOverride(const String& mediaType, ExceptionCode&);
     void setCSSExclusionsEnabled(bool enabled, ExceptionCode&);
     void setCSSVariablesEnabled(bool enabled, ExceptionCode&);
     bool cssVariablesEnabled(ExceptionCode&);
-    void setMediaPlaybackRequiresUserGesture(bool, ExceptionCode&);
+    void setCanStartMedia(bool, ExceptionCode&);
     void setEditingBehavior(const String&, ExceptionCode&);
-    void setFixedPositionCreatesStackingContext(bool, ExceptionCode&);
-    void setSyncXHRInDocumentsEnabled(bool, ExceptionCode&);
-    void setWindowFocusRestricted(bool, ExceptionCode&);
     void setDialogElementEnabled(bool, ExceptionCode&);
-    void setJavaScriptProfilingEnabled(bool enabled, ExceptionCode&);
-    Vector<String> userPreferredLanguages() const;
-    void setUserPreferredLanguages(const Vector<String>&);
-    void setPagination(const String& mode, int gap, ExceptionCode& ec) { setPagination(mode, gap, 0, ec); }
-    void setPagination(const String& mode, int gap, int pageLength, ExceptionCode&);
-    void allowRoundingHacks() const;
     void setShouldDisplayTrackKind(const String& kind, bool enabled, ExceptionCode&);
     bool shouldDisplayTrackKind(const String& kind, ExceptionCode&);
-    void setEnableMockPagePopup(bool, ExceptionCode&);
-    String configurationForViewport(float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode&);
+    void setStorageBlockingPolicy(const String&, ExceptionCode&);
+    void setLangAttributeAwareFormControlUIEnabled(bool);
+    void setImagesEnabled(bool enabled, ExceptionCode&);
+    void setMinimumTimerInterval(double intervalInSeconds, ExceptionCode&);
+    void setDefaultVideoPosterURL(const String& url, ExceptionCode&);
+    void setTimeWithoutMouseMovementBeforeHidingControls(double time, ExceptionCode&);
+    void setUseLegacyBackgroundSizeShorthandBehavior(bool enabled, ExceptionCode&);
+
 private:
     explicit InternalSettings(Page*);
-    virtual void hostDestroyed() OVERRIDE { m_page = 0; }
 
     Settings* settings() const;
     Page* page() const { return m_page; }
+    static const char* supplementName();
 
     Page* m_page;
     Backup m_backup;
-#if ENABLE(PAGE_POPUP)
-    OwnPtr<MockPagePopupDriver> m_pagePopupDriver;
-#endif
 };
 
 } // namespace WebCore

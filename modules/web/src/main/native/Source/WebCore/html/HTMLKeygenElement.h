@@ -30,7 +30,7 @@ namespace WebCore {
 
 class HTMLSelectElement;
 
-class HTMLKeygenElement : public HTMLFormControlElementWithState {
+class HTMLKeygenElement FINAL : public HTMLFormControlElementWithState {
 public:
     static PassRefPtr<HTMLKeygenElement> create(const QualifiedName&, Document*, HTMLFormElement*);
 
@@ -39,9 +39,11 @@ public:
 private:
     HTMLKeygenElement(const QualifiedName&, Document*, HTMLFormElement*);
 
+    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
+
     virtual bool canStartSelection() const { return false; }
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
     virtual bool appendFormData(FormDataList&, bool);
     virtual const AtomicString& formControlType() const;

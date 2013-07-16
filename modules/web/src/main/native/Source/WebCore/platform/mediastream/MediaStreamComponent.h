@@ -34,31 +34,55 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "MediaStreamSource.h"
+#include "UUID.h"
 
 namespace WebCore {
+
+class MediaStreamDescriptor;
 
 class MediaStreamComponent : public RefCounted<MediaStreamComponent> {
 public:
     static PassRefPtr<MediaStreamComponent> create(PassRefPtr<MediaStreamSource> source)
     {
-        return adoptRef(new MediaStreamComponent(source));
+        return adoptRef(new MediaStreamComponent(createCanonicalUUIDString(), 0, source));
     }
+
+    static PassRefPtr<MediaStreamComponent> create(const String& id, PassRefPtr<MediaStreamSource> source)
+    {
+        return adoptRef(new MediaStreamComponent(id, 0, source));
+    }
+
+    static PassRefPtr<MediaStreamComponent> create(MediaStreamDescriptor* stream, PassRefPtr<MediaStreamSource> source)
+    {
+        return adoptRef(new MediaStreamComponent(createCanonicalUUIDString(), stream, source));
+    }
+
+    MediaStreamDescriptor* stream() const { return m_stream; }
+    void setStream(MediaStreamDescriptor* stream) { ASSERT(!m_stream && stream); m_stream = stream; }
 
     MediaStreamSource* source() const { return m_source.get(); }
 
+    String id() const { return m_id; }
     bool enabled() const { return m_enabled; }
     void setEnabled(bool enabled) { m_enabled = enabled; }
 
 private:
-    MediaStreamComponent(PassRefPtr<MediaStreamSource> source)
-        : m_source(source)
+    MediaStreamComponent(const String& id, MediaStreamDescriptor* stream, PassRefPtr<MediaStreamSource> source)
+        : m_stream(stream)
+        , m_source(source)
+        , m_id(id)
         , m_enabled(true)
     {
+        ASSERT(m_id.length());
     }
 
+    MediaStreamDescriptor* m_stream;
     RefPtr<MediaStreamSource> m_source;
+    String m_id;
     bool m_enabled;
 };
+
+typedef Vector<RefPtr<MediaStreamComponent> > MediaStreamComponentVector;
 
 } // namespace WebCore
 

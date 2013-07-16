@@ -38,6 +38,7 @@
 #include "FrameDestructionObserver.h"
 #include "FrameSelection.h"
 #include "TextChecking.h"
+#include "TextIterator.h"
 #include "VisibleSelection.h"
 #include "WritingDirection.h"
 
@@ -50,7 +51,9 @@ namespace WebCore {
 
 class Clipboard;
 class CompositeEditCommand;
+#if ENABLE(DELETION_UI)
 class DeleteButtonController;
+#endif
 class EditCommand;
 class EditCommandComposition;
 class EditorClient;
@@ -64,6 +67,7 @@ class SimpleFontData;
 class SpellChecker;
 class SpellCheckRequest;
 class AlternativeTextController;
+class SharedBuffer;
 class StylePropertySet;
 class Text;
 class TextCheckerClient;
@@ -86,14 +90,23 @@ enum EditorParagraphSeparator { EditorParagraphSeparatorIsDiv, EditorParagraphSe
 
 class Editor : public FrameDestructionObserver {
 public:
-    Editor(Frame*);
+    explicit Editor(Frame*);
     ~Editor();
 
     EditorClient* client() const;
     TextCheckerClient* textChecker() const;
 
     Frame* frame() const { return m_frame; }
+
+#if ENABLE(DELETION_UI)
     DeleteButtonController* deleteButtonController() const { return m_deleteButtonController.get(); }
+    PassRefPtr<Range> avoidIntersectionWithDeleteButtonController(const Range*) const;
+    VisibleSelection avoidIntersectionWithDeleteButtonController(const VisibleSelection&) const;
+#else
+    PassRefPtr<Range> avoidIntersectionWithDeleteButtonController(Range* range) const { return range; }
+    VisibleSelection avoidIntersectionWithDeleteButtonController(const VisibleSelection& selection) const { return selection; }
+#endif
+
     CompositeEditCommand* lastEditCommand() { return m_lastEditCommand.get(); }
 
     void handleKeyboardEvent(KeyboardEvent*);
@@ -131,7 +144,6 @@ public:
 
     bool shouldInsertFragment(PassRefPtr<DocumentFragment>, PassRefPtr<Range>, EditorInsertAction);
     bool shouldInsertText(const String&, Range*, EditorInsertAction) const;
-    bool shouldShowDeleteInterface(HTMLElement*) const;
     bool shouldDeleteRange(Range*) const;
     bool shouldApplyStyle(StylePropertySet*, Range*);
 
@@ -212,7 +224,7 @@ public:
     bool insertParagraphSeparatorInQuotedContent();
 #endif
     
-    bool isContinuousSpellCheckingEnabled();
+    bool isContinuousSpellCheckingEnabled() const;
     void toggleContinuousSpellChecking();
     bool isGrammarCheckingEnabled();
     void toggleGrammarChecking();
@@ -220,10 +232,11 @@ public:
     void learnSpelling();
     int spellCheckerDocumentTag();
     bool isSelectionUngrammatical();
-    bool isSelectionMisspelled();
-    Vector<String> guessesForMisspelledSelection();
+    String misspelledSelectionString() const;
+    String misspelledWordAtCaretOrRange(Node* clickedNode) const;
+    Vector<String> guessesForMisspelledWord(const String&) const;
     Vector<String> guessesForUngrammaticalSelection();
-    Vector<String> guessesForMisspelledOrUngrammaticalSelection(bool& misspelled, bool& ungrammatical);
+    Vector<String> guessesForMisspelledOrUngrammatical(bool& misspelled, bool& ungrammatical);
     bool isSpellCheckingEnabledInFocusedNode() const;
     bool isSpellCheckingEnabledFor(Node*) const;
     void markMisspellingsAfterTypingToWord(const VisiblePosition &wordStart, const VisibleSelection& selectionAfterTyping, bool doReplacement);
@@ -231,6 +244,9 @@ public:
     void markBadGrammar(const VisibleSelection&);
     void markMisspellingsAndBadGrammar(const VisibleSelection& spellingSelection, bool markGrammar, const VisibleSelection& grammarSelection);
     void markAndReplaceFor(PassRefPtr<SpellCheckRequest>, const Vector<TextCheckingResult>&);
+
+    bool isOverwriteModeEnabled() const { return m_overwriteModeEnabled; }
+    void toggleOverwriteModeEnabled();
 
 #if USE(APPKIT)
     void uppercaseWord();
@@ -271,6 +287,7 @@ public:
 
     void didBeginEditing();
     void didEndEditing();
+    void willWriteSelectionToPasteboard(PassRefPtr<Range>);
     void didWriteSelectionToPasteboard();
     
     void showFontPanel();
@@ -293,9 +310,9 @@ public:
     void confirmComposition();
     void confirmComposition(const String&); // if no existing composition, replaces selection
     void cancelComposition();
+    bool cancelCompositionIfSelectionIsInvalid();
     PassRefPtr<Range> compositionRange() const;
     bool getCompositionSelection(unsigned& selectionStart, unsigned& selectionEnd) const;
-    bool setSelectionOffsets(int selectionStart, int selectionEnd);
 
     // getting international text input composition state (for use by InlineTextBox)
     Text* compositionNode() const { return m_compositionNode.get(); }
@@ -341,6 +358,7 @@ public:
     Node* findEventTargetFrom(const VisibleSelection& selection) const;
 
     String selectedText() const;
+    String selectedTextForClipboard() const;
     bool findString(const String&, FindOptions);
     // FIXME: Switch callers over to the FindOptions version and retire this one.
     bool findString(const String&, bool forward, bool caseFlag, bool wrapFlag, bool startInSelection);
@@ -359,8 +377,7 @@ public:
 
     void respondToChangedSelection(const VisibleSelection& oldSelection, FrameSelection::SetSelectionOptions);
     bool shouldChangeSelection(const VisibleSelection& oldSelection, const VisibleSelection& newSelection, EAffinity, bool stillSelecting) const;
-    unsigned countMatchesForText(const String&, FindOptions, unsigned limit, bool markMatches);
-    unsigned countMatchesForText(const String&, Range*, FindOptions, unsigned limit, bool markMatches);
+    unsigned countMatchesForText(const String&, Range*, FindOptions, unsigned limit, bool markMatches, Vector<RefPtr<Range> >*);
     bool markedTextMatchesAreHighlighted() const;
     void setMarkedTextMatchesAreHighlighted(bool);
 
@@ -370,11 +387,11 @@ public:
     bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*);
     void textWillBeDeletedInTextField(Element* input);
     void textDidChangeInTextArea(Element*);
+    WritingDirection baseWritingDirectionForSelectionStart() const;
 
 #if PLATFORM(MAC)
     const SimpleFontData* fontForSelection(bool&) const;
     NSDictionary* fontAttributesForSelectionStart() const;
-    NSWritingDirection baseWritingDirectionForSelectionStart() const;
     bool canCopyExcludingStandaloneImages();
     void takeFindStringFromSelection();
     void writeSelectionToPasteboard(const String& pasteboardName, const Vector<String>& pasteboardTypes);
@@ -400,7 +417,9 @@ public:
 private:
     virtual void willDetachPage() OVERRIDE;
 
+#if ENABLE(DELETION_UI)
     OwnPtr<DeleteButtonController> m_deleteButtonController;
+#endif
     RefPtr<CompositeEditCommand> m_lastEditCommand;
     RefPtr<Node> m_removedAnchor;
     RefPtr<Text> m_compositionNode;
@@ -416,6 +435,7 @@ private:
     VisibleSelection m_mark;
     bool m_areMarkedTextMatchesHighlighted;
     EditorParagraphSeparator m_defaultParagraphSeparator;
+    bool m_overwriteModeEnabled;
 
     bool canDeleteRange(Range*) const;
     bool canSmartReplaceWithPasteboard(Pasteboard*);
@@ -426,6 +446,8 @@ private:
     void revealSelectionAfterEditingOperation(const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = DoNotRevealExtent);
     void markMisspellingsOrBadGrammar(const VisibleSelection&, bool checkSpelling, RefPtr<Range>& firstMisspellingRange);
     TextCheckingTypeMask resolveTextCheckingTypeMask(TextCheckingTypeMask);
+
+    String selectedText(TextIteratorBehavior) const;
 
     void selectComposition();
     enum SetCompositionMode { ConfirmComposition, CancelComposition };

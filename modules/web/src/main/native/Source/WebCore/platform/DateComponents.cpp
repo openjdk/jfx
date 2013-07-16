@@ -31,22 +31,22 @@
 #include "config.h"
 #include "DateComponents.h"
 
-#include "PlatformString.h"
 #include <limits.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/DateMath.h>
 #include <wtf/MathExtras.h>
+#include <wtf/text/WTFString.h>
 
 using namespace std;
 
 namespace WebCore {
 
-// HTML5 uses ISO-8601 format with year >= 1. Gregorian calendar started in
-// 1582. However, we need to support 0001-01-01 in Gregorian calendar rule.
-static const int minimumYear = 1;
-// Date in ECMAScript can't represent dates later than 275760-09-13T00:00Z.
-// So, we have the same upper limit in HTML5 dates.
-static const int maximumYear = 275760;
+// HTML5 specification defines minimum week of year is one.
+const int DateComponents::minimumWeekNumber = 1;
+
+// HTML5 specification defines maximum week of year is 53.
+const int DateComponents::maximumWeekNumber = 53;
+
 static const int maximumMonthInMaximumYear = 8; // This is September, since months are 0 based.
 static const int maximumDayInMaximumMonth = 13;
 static const int maximumWeekInMaximumYear = 37; // The week of 275760-09-13
@@ -95,7 +95,7 @@ static int dayOfWeek(int year, int month, int day)
 int DateComponents::maxWeekNumberInYear() const
 {
     int day = dayOfWeek(m_year, 0, 1); // January 1.
-    return day == Thursday || (day == Wednesday && isLeapYear(m_year)) ? 53 : 52;
+    return day == Thursday || (day == Wednesday && isLeapYear(m_year)) ? maximumWeekNumber : maximumWeekNumber - 1;
 }
 
 static unsigned countDigits(const UChar* src, unsigned length, unsigned start)
@@ -139,7 +139,7 @@ bool DateComponents::parseYear(const UChar* src, unsigned length, unsigned start
     int year;
     if (!toInt(src, length, start, digitsLength, year))
         return false;
-    if (year < minimumYear || year > maximumYear)
+    if (year < minimumYear() || year > maximumYear())
         return false;
     m_year = year;
     end = start + digitsLength;
@@ -148,18 +148,18 @@ bool DateComponents::parseYear(const UChar* src, unsigned length, unsigned start
 
 static bool withinHTMLDateLimits(int year, int month)
 {
-    if (year < minimumYear)
+    if (year < DateComponents::minimumYear())
         return false;
-    if (year < maximumYear)
+    if (year < DateComponents::maximumYear())
         return true;
     return month <= maximumMonthInMaximumYear;
 }
 
 static bool withinHTMLDateLimits(int year, int month, int monthDay)
 {
-    if (year < minimumYear)
+    if (year < DateComponents::minimumYear())
         return false;
-    if (year < maximumYear)
+    if (year < DateComponents::maximumYear())
         return true;
     if (month < maximumMonthInMaximumYear)
         return true;
@@ -168,9 +168,9 @@ static bool withinHTMLDateLimits(int year, int month, int monthDay)
 
 static bool withinHTMLDateLimits(int year, int month, int monthDay, int hour, int minute, int second, int millisecond)
 {
-    if (year < minimumYear)
+    if (year < DateComponents::minimumYear())
         return false;
-    if (year < maximumYear)
+    if (year < DateComponents::maximumYear())
         return true;
     if (month < maximumMonthInMaximumYear)
         return true;
@@ -247,8 +247,8 @@ bool DateComponents::addMinute(int minute)
     if (minute > 59) {
         carry = minute / 60;
         minute = minute % 60;
-    } else if (m_minute < 0) {
-        carry = (59 - m_minute) / 60;
+    } else if (minute < 0) {
+        carry = (59 - minute) / 60;
         minute += carry * 60;
         carry = -carry;
         ASSERT(minute >= 0 && minute <= 59);
@@ -394,9 +394,9 @@ bool DateComponents::parseWeek(const UChar* src, unsigned length, unsigned start
     ++index;
 
     int week;
-    if (!toInt(src, length, index, 2, week) || week < 1 || week > maxWeekNumberInYear())
+    if (!toInt(src, length, index, 2, week) || week < minimumWeekNumber || week > maxWeekNumberInYear())
         return false;
-    if (m_year == maximumYear && week > maximumWeekInMaximumYear)
+    if (m_year == maximumYear() && week > maximumWeekInMaximumYear)
         return false;
     m_week = week;
     end = index + 2;
@@ -528,7 +528,7 @@ bool DateComponents::setMillisecondsSinceEpochForDateInternal(double ms)
 bool DateComponents::setMillisecondsSinceEpochForDate(double ms)
 {
     m_type = Invalid;
-    if (!isfinite(ms))
+    if (!std::isfinite(ms))
         return false;
     if (!setMillisecondsSinceEpochForDateInternal(round(ms)))
         return false;
@@ -541,7 +541,7 @@ bool DateComponents::setMillisecondsSinceEpochForDate(double ms)
 bool DateComponents::setMillisecondsSinceEpochForDateTime(double ms)
 {
     m_type = Invalid;
-    if (!isfinite(ms))
+    if (!std::isfinite(ms))
         return false;
     ms = round(ms);
     setMillisecondsSinceMidnightInternal(positiveFmod(ms, msPerDay));
@@ -565,7 +565,7 @@ bool DateComponents::setMillisecondsSinceEpochForDateTimeLocal(double ms)
 bool DateComponents::setMillisecondsSinceEpochForMonth(double ms)
 {
     m_type = Invalid;
-    if (!isfinite(ms))
+    if (!std::isfinite(ms))
         return false;
     if (!setMillisecondsSinceEpochForDateInternal(round(ms)))
         return false;
@@ -578,7 +578,7 @@ bool DateComponents::setMillisecondsSinceEpochForMonth(double ms)
 bool DateComponents::setMillisecondsSinceMidnight(double ms)
 {
     m_type = Invalid;
-    if (!isfinite(ms))
+    if (!std::isfinite(ms))
         return false;
     setMillisecondsSinceMidnightInternal(positiveFmod(round(ms), msPerDay));
     m_type = Time;
@@ -587,12 +587,12 @@ bool DateComponents::setMillisecondsSinceMidnight(double ms)
 
 bool DateComponents::setMonthsSinceEpoch(double months)
 {
-    if (!isfinite(months))
+    if (!std::isfinite(months))
         return false;
     months = round(months);
     double doubleMonth = positiveFmod(months, 12);
     double doubleYear = 1970 + (months - doubleMonth) / 12;
-    if (doubleYear < minimumYear || maximumYear < doubleYear)
+    if (doubleYear < minimumYear() || maximumYear() < doubleYear)
         return false;
     int year = static_cast<int>(doubleYear);
     int month = static_cast<int>(doubleMonth);
@@ -617,12 +617,12 @@ static int offsetTo1stWeekStart(int year)
 bool DateComponents::setMillisecondsSinceEpochForWeek(double ms)
 {
     m_type = Invalid;
-    if (!isfinite(ms))
+    if (!std::isfinite(ms))
         return false;
     ms = round(ms);
 
     m_year = msToYear(ms);
-    if (m_year < minimumYear || m_year > maximumYear)
+    if (m_year < minimumYear() || m_year > maximumYear())
         return false;
 
     int yearDay = dayInYear(ms, m_year);
@@ -630,7 +630,7 @@ bool DateComponents::setMillisecondsSinceEpochForWeek(double ms)
     if (yearDay < offset) {
         // The day belongs to the last week of the previous year.
         m_year--;
-        if (m_year <= minimumYear)
+        if (m_year <= minimumYear())
             return false;
         m_week = maxWeekNumberInYear();
     } else {
@@ -639,7 +639,7 @@ bool DateComponents::setMillisecondsSinceEpochForWeek(double ms)
             m_year++;
             m_week = 1;
         }
-        if (m_year > maximumYear || (m_year == maximumYear && m_week > maximumWeekInMaximumYear))
+        if (m_year > maximumYear() || (m_year == maximumYear() && m_week > maximumWeekInMaximumYear))
             return false;
     }
     m_type = Week;

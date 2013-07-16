@@ -47,13 +47,17 @@ DOMWindowIndexedDatabase::~DOMWindowIndexedDatabase()
 {
 }
 
+const char* DOMWindowIndexedDatabase::supplementName()
+{
+    return "DOMWindowIndexedDatabase";
+}
+
 DOMWindowIndexedDatabase* DOMWindowIndexedDatabase::from(DOMWindow* window)
 {
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("DOMWindowIndexedDatabase"));
-    DOMWindowIndexedDatabase* supplement = static_cast<DOMWindowIndexedDatabase*>(Supplement<DOMWindow>::from(window, name));
+    DOMWindowIndexedDatabase* supplement = static_cast<DOMWindowIndexedDatabase*>(Supplement<DOMWindow>::from(window, supplementName()));
     if (!supplement) {
         supplement = new DOMWindowIndexedDatabase(window);
-        provideTo(window, name, adoptPtr(supplement));
+        provideTo(window, supplementName(), adoptPtr(supplement));
     }
     return supplement;
 }
@@ -88,12 +92,12 @@ void DOMWindowIndexedDatabase::willDetachGlobalObjectFromFrame()
     DOMWindowProperty::willDetachGlobalObjectFromFrame();
 }
 
-IDBFactory* DOMWindowIndexedDatabase::webkitIndexedDB(DOMWindow* window)
+IDBFactory* DOMWindowIndexedDatabase::indexedDB(DOMWindow* window)
 {
-    return from(window)->webkitIndexedDB();
+    return from(window)->indexedDB();
 }
 
-IDBFactory* DOMWindowIndexedDatabase::webkitIndexedDB()
+IDBFactory* DOMWindowIndexedDatabase::indexedDB()
 {
     Document* document = m_window->document();
     if (!document)
@@ -101,9 +105,6 @@ IDBFactory* DOMWindowIndexedDatabase::webkitIndexedDB()
 
     Page* page = document->page();
     if (!page)
-        return 0;
-
-    if (!document->securityOrigin()->canAccessDatabase())
         return 0;
 
     if (!m_window->isCurrentlyDisplayedInFrame())

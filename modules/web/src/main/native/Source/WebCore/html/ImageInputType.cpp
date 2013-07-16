@@ -23,12 +23,14 @@
 #include "config.h"
 #include "ImageInputType.h"
 
+#include "CachedImage.h"
 #include "FormDataList.h"
 #include "HTMLFormElement.h"
 #include "HTMLImageLoader.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "InputTypeNames.h"
 #include "MouseEvent.h"
 #include "RenderImage.h"
 #include <wtf/PassOwnPtr.h>
@@ -68,8 +70,8 @@ bool ImageInputType::appendFormData(FormDataList& encoding, bool) const
         return true;
     }
 
-    DEFINE_STATIC_LOCAL(String, dotXString, (".x"));
-    DEFINE_STATIC_LOCAL(String, dotYString, (".y"));
+    DEFINE_STATIC_LOCAL(String, dotXString, (ASCIILiteral(".x")));
+    DEFINE_STATIC_LOCAL(String, dotYString, (ASCIILiteral(".y")));
     encoding.appendData(name + dotXString, m_clickLocation.x());
     encoding.appendData(name + dotYString, m_clickLocation.y());
 
@@ -86,7 +88,7 @@ bool ImageInputType::supportsValidation() const
 void ImageInputType::handleDOMActivateEvent(Event* event)
 {
     RefPtr<HTMLInputElement> element = this->element();
-    if (element->disabled() || !element->form())
+    if (element->isDisabledFormControl() || !element->form())
         return;
     element->setActivatedSubmit(true);
     if (event->underlyingEvent() && event->underlyingEvent()->isMouseEvent()) {
@@ -118,40 +120,30 @@ void ImageInputType::srcAttributeChanged()
 {
     if (!element()->renderer())
         return;
-    if (!m_imageLoader)
-        m_imageLoader = adoptPtr(new HTMLImageLoader(element()));
-    m_imageLoader->updateFromElementIgnoringPreviousError();
+    element()->imageLoader()->updateFromElementIgnoringPreviousError();
 }
 
 void ImageInputType::attach()
 {
     BaseButtonInputType::attach();
 
-    if (!m_imageLoader)
-        m_imageLoader = adoptPtr(new HTMLImageLoader(element()));
-    m_imageLoader->updateFromElement();
+    HTMLImageLoader* imageLoader = element()->imageLoader();
+    imageLoader->updateFromElement();
 
     RenderImage* renderer = toRenderImage(element()->renderer());
     if (!renderer)
         return;
 
-    if (m_imageLoader->hasPendingBeforeLoadEvent())
+    if (imageLoader->hasPendingBeforeLoadEvent())
         return;
 
     RenderImageResource* imageResource = renderer->imageResource();
-    imageResource->setCachedImage(m_imageLoader->image()); 
+    imageResource->setCachedImage(imageLoader->image()); 
 
     // If we have no image at all because we have no src attribute, set
     // image height and width for the alt text instead.
-    if (!m_imageLoader->image() && !imageResource->cachedImage())
+    if (!imageLoader->image() && !imageResource->cachedImage())
         renderer->setImageSizeForAltText();
-}
-
-void ImageInputType::willMoveToNewOwnerDocument()
-{
-    BaseButtonInputType::willMoveToNewOwnerDocument();
-    if (m_imageLoader)
-        m_imageLoader->elementDidMoveToNewDocument();
 }
 
 bool ImageInputType::shouldRespectAlignAttribute()
@@ -190,8 +182,11 @@ unsigned ImageInputType::height() const
             return height;
 
         // If the image is available, use its height.
-        if (m_imageLoader && m_imageLoader->image())
-            return m_imageLoader->image()->imageSizeForRenderer(element->renderer(), 1).height();
+        if (element->hasImageLoader()) {
+            HTMLImageLoader* imageLoader = element->imageLoader();
+            if (imageLoader->image())
+                return imageLoader->image()->imageSizeForRenderer(element->renderer(), 1).height();
+        }
     }
 
     element->document()->updateLayout();
@@ -211,8 +206,11 @@ unsigned ImageInputType::width() const
             return width;
 
         // If the image is available, use its width.
-        if (m_imageLoader && m_imageLoader->image())
-            return m_imageLoader->image()->imageSizeForRenderer(element->renderer(), 1).width();
+        if (element->hasImageLoader()) {
+            HTMLImageLoader* imageLoader = element->imageLoader();
+            if (imageLoader->image())
+                return imageLoader->image()->imageSizeForRenderer(element->renderer(), 1).width();
+        }
     }
 
     element->document()->updateLayout();

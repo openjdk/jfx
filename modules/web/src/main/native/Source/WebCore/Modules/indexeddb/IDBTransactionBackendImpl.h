@@ -28,10 +28,9 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
-#include "DOMStringList.h"
 #include "IDBBackingStore.h"
-#include "IDBTransactionBackendInterface.h"
-#include "IDBTransactionCallbacks.h"
+#include "IDBDatabaseBackendInterface.h"
+#include "IDBDatabaseError.h"
 #include "Timer.h"
 #include <wtf/Deque.h>
 #include <wtf/HashSet.h>
@@ -40,58 +39,75 @@
 namespace WebCore {
 
 class IDBDatabaseBackendImpl;
+class IDBCursorBackendImpl;
+class IDBDatabaseCallbacks;
 
-class IDBTransactionBackendImpl : public IDBTransactionBackendInterface {
+class IDBTransactionBackendImpl : public RefCounted<IDBTransactionBackendImpl> {
 public:
-    static PassRefPtr<IDBTransactionBackendImpl> create(DOMStringList* objectStores, unsigned short mode, IDBDatabaseBackendImpl*);
+    static PassRefPtr<IDBTransactionBackendImpl> create(int64_t transactionId, PassRefPtr<IDBDatabaseCallbacks>, const Vector<int64_t>&, IndexedDB::TransactionMode, IDBDatabaseBackendImpl*);
     virtual ~IDBTransactionBackendImpl();
 
-    virtual PassRefPtr<IDBObjectStoreBackendInterface> objectStore(const String& name, ExceptionCode&);
-    virtual unsigned short mode() const { return m_mode; }
-    virtual bool scheduleTask(PassOwnPtr<ScriptExecutionContext::Task> task, PassOwnPtr<ScriptExecutionContext::Task> abortTask);
-    virtual void didCompleteTaskEvents();
     virtual void abort();
-    virtual void setCallbacks(IDBTransactionCallbacks* callbacks) { m_callbacks = callbacks; }
-    virtual void registerOpenCursor(IDBCursorBackendImpl*);
-    virtual void unregisterOpenCursor(IDBCursorBackendImpl*);
-    virtual void addPendingEvents(int);
+    void commit();
 
+    class Operation {
+    public:
+        virtual ~Operation() { }
+        virtual void perform(IDBTransactionBackendImpl*) = 0;
+    };
+
+    void abort(PassRefPtr<IDBDatabaseError>);
     void run();
+    IndexedDB::TransactionMode mode() const { return m_mode; }
+    const HashSet<int64_t>& scope() const { return m_objectStoreIds; }
+    void scheduleTask(PassOwnPtr<Operation> task, PassOwnPtr<Operation> abortTask = nullptr) { scheduleTask(IDBDatabaseBackendInterface::NormalTask, task, abortTask); }
+    void scheduleTask(IDBDatabaseBackendInterface::TaskType, PassOwnPtr<Operation>, PassOwnPtr<Operation> abortTask = nullptr);
+    void registerOpenCursor(IDBCursorBackendImpl*);
+    void unregisterOpenCursor(IDBCursorBackendImpl*);
+    void addPreemptiveEvent() { m_pendingPreemptiveEvents++; }
+    void didCompletePreemptiveEvent() { m_pendingPreemptiveEvents--; ASSERT(m_pendingPreemptiveEvents >= 0); }
+    IDBBackingStore::Transaction* backingStoreTransaction() { return &m_transaction; }
+    int64_t id() const { return m_id; }
+
+    IDBDatabaseBackendImpl* database() const { return m_database.get(); }
 
 private:
-    IDBTransactionBackendImpl(DOMStringList* objectStores, unsigned short mode, IDBDatabaseBackendImpl*);
+    IDBTransactionBackendImpl(int64_t id, PassRefPtr<IDBDatabaseCallbacks>, const HashSet<int64_t>& objectStoreIds, IndexedDB::TransactionMode, IDBDatabaseBackendImpl*);
 
     enum State {
         Unused, // Created, but no tasks yet.
-        StartPending, // Enqueued tasks, but SQLite transaction not yet started.
-        Running, // SQLite transaction started but not yet finished.
+        StartPending, // Enqueued tasks, but backing store transaction not yet started.
+        Running, // Backing store transaction started but not yet finished.
         Finished, // Either aborted or committed.
     };
 
     void start();
-    void commit();
+
+    bool isTaskQueueEmpty() const;
+    bool hasPendingTasks() const;
 
     void taskTimerFired(Timer<IDBTransactionBackendImpl>*);
-    void taskEventTimerFired(Timer<IDBTransactionBackendImpl>*);
     void closeOpenCursors();
 
-    RefPtr<DOMStringList> m_objectStoreNames;
-    const unsigned short m_mode;
+    const int64_t m_id;
+    const HashSet<int64_t> m_objectStoreIds;
+    const IndexedDB::TransactionMode m_mode;
 
     State m_state;
-    RefPtr<IDBTransactionCallbacks> m_callbacks;
+    bool m_commitPending;
+    RefPtr<IDBDatabaseCallbacks> m_callbacks;
     RefPtr<IDBDatabaseBackendImpl> m_database;
 
-    typedef Deque<OwnPtr<ScriptExecutionContext::Task> > TaskQueue;
+    typedef Deque<OwnPtr<Operation> > TaskQueue;
     TaskQueue m_taskQueue;
+    TaskQueue m_preemptiveTaskQueue;
     TaskQueue m_abortTaskQueue;
 
-    RefPtr<IDBBackingStore::Transaction> m_transaction;
+    IDBBackingStore::Transaction m_transaction;
 
     // FIXME: delete the timer once we have threads instead.
     Timer<IDBTransactionBackendImpl> m_taskTimer;
-    Timer<IDBTransactionBackendImpl> m_taskEventTimer;
-    int m_pendingEvents;
+    int m_pendingPreemptiveEvents;
 
     HashSet<IDBCursorBackendImpl*> m_openCursors;
 };

@@ -25,16 +25,16 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.scene.shape.FillRule;
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGPath;
 
 /**
  */
-public class NGPath extends NGShape implements PGPath {
+public class NGPath extends NGShape {
 
     private Path2D p = new Path2D();
 
@@ -104,7 +104,7 @@ public class NGPath extends NGShape implements PGPath {
         p.append(pi, true);
     }
 
-    public Object getGeometry() {
+    public Path2D getGeometry() {
         return p;
     }
 

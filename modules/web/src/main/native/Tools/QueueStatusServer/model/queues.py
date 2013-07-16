@@ -29,38 +29,25 @@
 
 import re
 
+from config.queues import all_queue_names
 from model.activeworkitems import ActiveWorkItems
 from model.workitems import WorkItems
 
 
 class Queue(object):
-
-    # Eventually the list of queues may be stored in the data store.
-    _all_queue_names = [
-        "commit-queue",
-        "style-queue",
-        "chromium-ews",  # aka cr-linux-ews
-        "qt-ews",
-        "qt-wk2-ews",
-        "gtk-ews",
-        "mac-ews",
-        "win-ews",
-        "efl-ews",
-    ]
-
     def __init__(self, name):
-        assert(name in self._all_queue_names)
+        assert(name in all_queue_names)
         self._name = name
 
     @classmethod
     def queue_with_name(cls, queue_name):
-        if queue_name not in cls._all_queue_names:
+        if queue_name not in all_queue_names:
             return None
         return Queue(queue_name)
 
     @classmethod
     def all(cls):
-        return [Queue(name) for name in cls._all_queue_names]
+        return [Queue(name) for name in all_queue_names]
 
     @classmethod
     def all_ews(cls):
@@ -81,19 +68,14 @@ class Queue(object):
 
     # For use in status bubbles or table headers
     def short_name(self):
-        # HACK: chromium-ews is incorrectly named.
-        short_name = self._name.replace("chromium-ews", "Cr-Linux-ews")
-        short_name = short_name.replace("-ews", "")
+        short_name = self._name.replace("-ews", "")
         short_name = short_name.replace("-queue", "")
         return self._caplitalize_after_dash(short_name.capitalize())
 
     def display_name(self):
-        # HACK: chromium-ews is incorrectly named.
-        display_name = self._name.replace("chromium-ews", "cr-linux-ews")
-
-        display_name = display_name.replace("-", " ")
-        display_name = display_name.replace("cr", "chromium")
+        display_name = self._name.replace("-", " ")
         display_name = display_name.title()
+        display_name = display_name.replace("Wk2", "WK2")
         display_name = display_name.replace("Ews", "EWS")
         return display_name
 

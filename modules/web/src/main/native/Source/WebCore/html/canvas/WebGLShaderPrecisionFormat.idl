@@ -24,14 +24,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-
-    interface [
+[
         Conditional=WEBGL,
-    ] WebGLShaderPrecisionFormat {
-        readonly attribute int rangeMin;
-        readonly attribute int rangeMax;
-        readonly attribute int precision;
+    ImplementationLacksVTable
+] interface WebGLShaderPrecisionFormat {
+    readonly attribute long rangeMin;
+    readonly attribute long rangeMax;
+    readonly attribute long precision;
     };
 
-}

@@ -25,7 +25,7 @@
 
 package com.sun.javafx.tk.quantum;
 
-import com.sun.javafx.sg.NodePath;
+import com.sun.javafx.sg.prism.NodePath;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.prism.Graphics;
 import com.sun.prism.impl.PrismSettings;

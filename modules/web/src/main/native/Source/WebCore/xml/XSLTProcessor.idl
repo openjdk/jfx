@@ -26,28 +26,26 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module xml {
-
     // Eventually we should implement XSLTException:
     // http://lxr.mozilla.org/seamonkey/source/content/xsl/public/nsIXSLTException.idl
     // http://bugs.webkit.org/show_bug.cgi?id=5446
 
-    interface [
+[
         Conditional=XSLT,
-        Constructor
-    ] XSLTProcessor {
+    Constructor,
+    ImplementationLacksVTable
+] interface XSLTProcessor {
         
-        [Custom] void importStylesheet(in Node stylesheet);
-        [Custom] DocumentFragment transformToFragment(in Node source, in Document docVal);
-        [Custom] Document transformToDocument(in Node source);
+    void importStylesheet([Default=Undefined] optional Node stylesheet);
+    DocumentFragment transformToFragment([Default=Undefined] optional Node source, [Default=Undefined] optional Document docVal);
+    Document transformToDocument([Default=Undefined] optional Node source);
 
-        [Custom] void setParameter(in DOMString namespaceURI, in DOMString localName, in DOMString value);
-        [Custom, TreatReturnedNullStringAs=Undefined] DOMString getParameter(in DOMString namespaceURI, in DOMString localName);
-        [Custom] void removeParameter(in DOMString namespaceURI, in DOMString localName);
+    [Custom] void setParameter(DOMString namespaceURI, DOMString localName, DOMString value);
+    [Custom, TreatReturnedNullStringAs=Undefined] DOMString getParameter(DOMString namespaceURI, DOMString localName);
+    [Custom] void removeParameter(DOMString namespaceURI, DOMString localName);
         void clearParameters();
 
         void reset();
 
     };
 
-}

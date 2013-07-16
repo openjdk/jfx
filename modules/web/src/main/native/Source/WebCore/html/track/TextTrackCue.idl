@@ -23,23 +23,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module html {
-
-    interface [
+[
         Conditional=VIDEO_TRACK,
-        V8EnabledAtRuntime=webkitVideoTrack,
         JSGenerateToNativeObject,
-        Constructor(in DOMString id, in double startTime, in double endTime, in DOMString text, in [Optional=DefaultIsUndefined] DOMString settings, in [Optional=DefaultIsUndefined] boolean pauseOnExit),
+    Constructor(double startTime, double endTime, DOMString text),
         CallWith=ScriptExecutionContext,
         EventTarget,
         JSCustomMarkFunction,
-        JSCustomIsReachable
-    ] TextTrackCue {
+    CustomIsReachable,
+    SkipVTableValidation
+] interface TextTrackCue {
         readonly attribute TextTrack track;
 
         attribute DOMString id;
-        attribute double startTime;
-        attribute double endTime;
+    attribute double startTime
+        setter raises (DOMException);
+    attribute double endTime
+        setter raises (DOMException);
         attribute boolean pauseOnExit;
 
         attribute DOMString vertical
@@ -61,14 +61,17 @@ module html {
         attribute EventListener onexit;
         
         // EventTarget interface
-        void addEventListener(in DOMString type, 
-                              in EventListener listener, 
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type, 
-                                 in EventListener listener, 
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type, 
+                          EventListener listener, 
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type, 
+                             EventListener listener, 
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
+
+#if defined(ENABLE_WEBVTT_REGIONS) && ENABLE_WEBVTT_REGIONS
+    attribute DOMString regionId;
+#endif
     };
 
-}

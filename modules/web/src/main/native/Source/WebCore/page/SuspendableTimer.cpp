@@ -32,7 +32,7 @@
 namespace WebCore {
 
 SuspendableTimer::SuspendableTimer(ScriptExecutionContext* context)
-    : ActiveDOMObject(context, this)
+    : ActiveDOMObject(context)
     , m_nextFireInterval(0)
     , m_repeatInterval(0)
     , m_active(false)
@@ -64,7 +64,7 @@ void SuspendableTimer::suspend(ReasonForSuspension)
 #endif
     m_active = isActive();
     if (m_active) {
-        m_nextFireInterval = nextFireInterval();
+        m_nextFireInterval = nextUnalignedFireInterval();
         m_repeatInterval = repeatInterval();
         TimerBase::stop();
     }

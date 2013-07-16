@@ -61,7 +61,13 @@ WebInspector.DatabaseQueryView.prototype = {
             this.prompt.moveCaretToEndOfPrompt();
     },
     
-    completions: function(textPrompt, wordRange, force, completionsReadyCallback)
+    /**
+     * @param {Element} proxyElement
+     * @param {Range} wordRange
+     * @param {boolean} force
+     * @param {function(!Array.<string>, number=)} completionsReadyCallback
+     */
+    completions: function(proxyElement, wordRange, force, completionsReadyCallback)
     {
         var prefix = wordRange.toString().toLowerCase();
         if (!prefix.length && !force)
@@ -139,7 +145,7 @@ WebInspector.DatabaseQueryView.prototype = {
         var trimmedQuery = query.trim();
 
         if (dataGrid) {
-            dataGrid.element.addStyleClass("inline");
+            dataGrid.renderInline();
             this._appendViewQueryResult(trimmedQuery, dataGrid);
             dataGrid.autoSizeColumns(5);
         }
@@ -148,18 +154,9 @@ WebInspector.DatabaseQueryView.prototype = {
             this.dispatchEventToListeners(WebInspector.DatabaseQueryView.Events.SchemaUpdated, this.database);
     },
 
-    _queryError: function(query, error)
+    _queryError: function(query, errorMessage)
     {
-        if (typeof error === "string")
-            var message = error;
-        else if (error.message)
-            var message = error.message;
-        else if (error.code == 2)
-            var message = WebInspector.UIString("Database no longer has expected version.");
-        else
-            var message = WebInspector.UIString("An unexpected error %s occurred.", error.code);
-
-        this._appendErrorQueryResult(query, message);
+        this._appendErrorQueryResult(query, errorMessage);
     },
 
     /**
@@ -202,7 +199,7 @@ WebInspector.DatabaseQueryView.prototype = {
         resultElement.className = "database-query-result";
         element.appendChild(resultElement);
         return resultElement;
-    }
-}
+    },
 
-WebInspector.DatabaseQueryView.prototype.__proto__ = WebInspector.View.prototype;
+    __proto__: WebInspector.View.prototype
+    }

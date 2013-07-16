@@ -57,8 +57,7 @@ void PluginPackage::determineQuirks(const String& mimeType)
     }
 
     if (mimeType == "application/x-shockwave-flash") {
-        // The flash plugin only requests windowless plugins if we return a mozilla user agent
-        m_quirks.add(PluginQuirkWantsMozillaUserAgent);
+        m_quirks.add(PluginQuirkWantsChromeUserAgent);
         m_quirks.add(PluginQuirkThrottleInvalidate);
         m_quirks.add(PluginQuirkThrottleWMUserPlusOneMessages);
         m_quirks.add(PluginQuirkFlashURLNotifyBug);
@@ -120,7 +119,7 @@ static Vector<String> stringListFromResourceId(SInt16 id)
 
     for (SInt16 i = 0; i < count; ++i) {
         unsigned char length = *p;
-        WTF::RetainPtr<CFStringRef> str(AdoptCF, CFStringCreateWithPascalString(0, p, encoding));
+        WTF::RetainPtr<CFStringRef> str = adoptCF(CFStringCreateWithPascalString(0, p, encoding));
         list.append(str.get());
         p += 1 + length;
     }
@@ -140,7 +139,7 @@ bool PluginPackage::fetchInfo()
 
         WTF::RetainPtr<CFStringRef> fileName = (CFStringRef)mimeTypesFileName.get();
         WTF::RetainPtr<CFStringRef> homeDir = adoptCF(homeDirectoryPath().createCFString());
-        WTF::RetainPtr<CFStringRef> path(AdoptCF, CFStringCreateWithFormat(0, 0, CFSTR("%@/Library/Preferences/%@"), homeDir.get(), fileName.get()));
+        WTF::RetainPtr<CFStringRef> path = adoptCF(CFStringCreateWithFormat(0, 0, CFSTR("%@/Library/Preferences/%@"), homeDir.get(), fileName.get()));
 
         WTF::RetainPtr<CFDictionaryRef> plist = readPListFile(path.get(), /*createFile*/ false, m_module);
         if (plist) {
@@ -196,6 +195,7 @@ bool PluginPackage::fetchInfo()
 
             String description = (CFStringRef)CFDictionaryGetValue(extensionsDict.get(), CFSTR("WebPluginTypeDescription"));
             m_mimeToDescriptions.set(mimeType, description);
+            determineQuirks(mimeType);
         }
 
         m_name = (CFStringRef)CFBundleGetValueForInfoDictionaryKey(m_module, CFSTR("WebPluginName"));
@@ -255,8 +255,8 @@ bool PluginPackage::load()
         return true;
     }
 
-    WTF::RetainPtr<CFStringRef> path(AdoptCF, m_path.createCFString());
-    WTF::RetainPtr<CFURLRef> url(AdoptCF, CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path.get(),
+    WTF::RetainPtr<CFStringRef> path = adoptCF(m_path.createCFString());
+    WTF::RetainPtr<CFURLRef> url = adoptCF(CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path.get(),
                                                                         kCFURLPOSIXPathStyle, false));
     m_module = CFBundleCreate(NULL, url.get());
     if (!m_module || !CFBundleLoadExecutable(m_module)) {

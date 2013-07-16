@@ -28,11 +28,13 @@
 
 #if USE(LEVELDB)
 
+#include "HistogramSupport.h"
 #include "LevelDBComparator.h"
 #include "LevelDBIterator.h"
 #include "LevelDBSlice.h"
 #include "LevelDBWriteBatch.h"
 #include "Logging.h"
+#include "NotImplemented.h"
 #include <helpers/memenv/memenv.h>
 #include <leveldb/comparator.h>
 #include <leveldb/db.h>
@@ -42,6 +44,15 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
+
+namespace leveldb {
+
+static Env* IDBEnv()
+{
+    return leveldb::Env::Default();
+}
+
+}
 
 namespace WebCore {
 
@@ -60,13 +71,6 @@ static LevelDBSlice makeLevelDBSlice(const leveldb::Slice& s)
     return LevelDBSlice(s.data(), s.data() + s.size());
 }
 
-static Vector<char> makeVector(const std::string& s)
-{
-    Vector<char> res;
-    res.append(s.c_str(), s.length());
-    return res;
-}
-
 class ComparatorAdapter : public leveldb::Comparator {
 public:
     ComparatorAdapter(const LevelDBComparator* comparator)
@@ -82,12 +86,23 @@ public:
     virtual const char* Name() const { return m_comparator->name(); }
 
     // FIXME: Support the methods below in the future.
-    virtual void FindShortestSeparator(std::string* start, const leveldb::Slice& limit) const { }
-    virtual void FindShortSuccessor(std::string* key) const { }
+    virtual void FindShortestSeparator(std::string* /* start */, const leveldb::Slice& /* limit */) const { }
+    virtual void FindShortSuccessor(std::string* /* key */) const { }
 
 private:
     const LevelDBComparator* m_comparator;
 };
+
+LevelDBSnapshot::LevelDBSnapshot(LevelDBDatabase* db)
+    : m_db(db->m_db.get())
+    , m_snapshot(m_db->GetSnapshot())
+{
+}
+
+LevelDBSnapshot::~LevelDBSnapshot()
+{
+    m_db->ReleaseSnapshot(m_snapshot);
+}
 
 LevelDBDatabase::LevelDBDatabase()
 {
@@ -107,6 +122,8 @@ static leveldb::Status openDB(leveldb::Comparator* comparator, leveldb::Env* env
     options.comparator = comparator;
     options.create_if_missing = true;
     options.paranoid_checks = true;
+    // 20 max_open_files is the minimum LevelDB allows.
+    options.max_open_files = 20;
     options.env = env;
 
     return leveldb::DB::Open(options, path.utf8().data(), db);
@@ -115,8 +132,29 @@ static leveldb::Status openDB(leveldb::Comparator* comparator, leveldb::Env* env
 bool LevelDBDatabase::destroy(const String& fileName)
 {
     leveldb::Options options;
+    options.env = leveldb::IDBEnv();
     const leveldb::Status s = leveldb::DestroyDB(fileName.utf8().data(), options);
     return s.ok();
+}
+
+static void histogramLevelDBError(const char* histogramName, const leveldb::Status& s)
+{
+    ASSERT(!s.ok());
+    enum {
+        LevelDBNotFound,
+        LevelDBCorruption,
+        LevelDBIOError,
+        LevelDBOther,
+        LevelDBMaxError
+    };
+    int levelDBError = LevelDBOther;
+    if (s.IsNotFound())
+        levelDBError = LevelDBNotFound;
+    else if (s.IsCorruption())
+        levelDBError = LevelDBCorruption;
+    else if (s.IsIOError())
+        levelDBError = LevelDBIOError;
+    HistogramSupport::histogramEnumeration(histogramName, levelDBError, LevelDBMaxError);
 }
 
 PassOwnPtr<LevelDBDatabase> LevelDBDatabase::open(const String& fileName, const LevelDBComparator* comparator)
@@ -124,9 +162,11 @@ PassOwnPtr<LevelDBDatabase> LevelDBDatabase::open(const String& fileName, const 
     OwnPtr<ComparatorAdapter> comparatorAdapter = adoptPtr(new ComparatorAdapter(comparator));
 
     leveldb::DB* db;
-    const leveldb::Status s = openDB(comparatorAdapter.get(), leveldb::Env::Default(), fileName, &db);
+    const leveldb::Status s = openDB(comparatorAdapter.get(), leveldb::IDBEnv(), fileName, &db);
 
     if (!s.ok()) {
+        histogramLevelDBError("WebCore.IndexedDB.LevelDBOpenErrors", s);
+
         LOG_ERROR("Failed to open LevelDB database from %s: %s", fileName.ascii().data(), s.ToString().c_str());
         return nullptr;
     }
@@ -142,7 +182,7 @@ PassOwnPtr<LevelDBDatabase> LevelDBDatabase::open(const String& fileName, const 
 PassOwnPtr<LevelDBDatabase> LevelDBDatabase::openInMemory(const LevelDBComparator* comparator)
 {
     OwnPtr<ComparatorAdapter> comparatorAdapter = adoptPtr(new ComparatorAdapter(comparator));
-    OwnPtr<leveldb::Env> inMemoryEnv = adoptPtr(leveldb::NewMemEnv(leveldb::Env::Default()));
+    OwnPtr<leveldb::Env> inMemoryEnv = adoptPtr(leveldb::NewMemEnv(leveldb::IDBEnv()));
 
     leveldb::DB* db;
     const leveldb::Status s = openDB(comparatorAdapter.get(), inMemoryEnv.get(), String(), &db);
@@ -187,19 +227,23 @@ bool LevelDBDatabase::remove(const LevelDBSlice& key)
     return false;
 }
 
-bool LevelDBDatabase::get(const LevelDBSlice& key, Vector<char>& value)
+bool LevelDBDatabase::safeGet(const LevelDBSlice& key, Vector<char>& value, bool& found, const LevelDBSnapshot* snapshot)
 {
+    found = false;
     std::string result;
     leveldb::ReadOptions readOptions;
     readOptions.verify_checksums = true; // FIXME: Disable this if the performance impact is too great.
+    readOptions.snapshot = snapshot ? snapshot->m_snapshot : 0;
 
     const leveldb::Status s = m_db->Get(readOptions, makeSlice(key), &result);
     if (s.ok()) {
-        value = makeVector(result);
+        found = true;
+        value.clear();
+        value.append(result.c_str(), result.length());
         return true;
     }
     if (s.IsNotFound())
-        return false;
+        return true;
     LOG_ERROR("LevelDB get failed: %s", s.ToString().c_str());
     return false;
 }
@@ -212,6 +256,7 @@ bool LevelDBDatabase::write(LevelDBWriteBatch& writeBatch)
     const leveldb::Status s = m_db->Write(writeOptions, writeBatch.m_writeBatch.get());
     if (s.ok())
         return true;
+    histogramLevelDBError("WebCore.IndexedDB.LevelDBWriteErrors", s);
     LOG_ERROR("LevelDB write failed: %s", s.ToString().c_str());
     return false;
 }
@@ -293,10 +338,11 @@ LevelDBSlice IteratorImpl::value() const
     return makeLevelDBSlice(m_iterator->value());
 }
 
-PassOwnPtr<LevelDBIterator> LevelDBDatabase::createIterator()
+PassOwnPtr<LevelDBIterator> LevelDBDatabase::createIterator(const LevelDBSnapshot* snapshot)
 {
     leveldb::ReadOptions readOptions;
     readOptions.verify_checksums = true; // FIXME: Disable this if the performance impact is too great.
+    readOptions.snapshot = snapshot ? snapshot->m_snapshot : 0;
     OwnPtr<leveldb::Iterator> i = adoptPtr(m_db->NewIterator(readOptions));
     if (!i) // FIXME: Double check if we actually need to check this.
         return nullptr;

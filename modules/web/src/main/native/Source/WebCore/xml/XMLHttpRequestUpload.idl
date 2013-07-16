@@ -26,13 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module xml {
-
-    interface [
-        JSGenerateIsReachable=Impl,
+[
+    GenerateIsReachable=Impl,
         EventTarget,
         JSNoStaticTables
-    ] XMLHttpRequestUpload {
+] interface XMLHttpRequestUpload {
         // From XMLHttpRequestEventTarget
         // event handler attributes
         attribute EventListener onabort;
@@ -43,14 +41,13 @@ module xml {
         attribute EventListener onprogress;
 
         // EventTarget interface
-        void addEventListener(in DOMString type, 
-                              in EventListener listener, 
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type, 
-                                 in EventListener listener, 
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type, 
+                          EventListener listener, 
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type, 
+                             EventListener listener, 
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
     };
 
-}

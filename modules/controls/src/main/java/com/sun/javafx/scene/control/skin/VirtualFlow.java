@@ -793,10 +793,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // isNeedsLayout() is commented out due to RT-21417. This does not
         // appear to impact performance (indeed, it may help), and resolves the
         // issue identified in RT-21417.
-        if (getScene() != null/* && !isNeedsLayout()*/) {
-            getScene().addToDirtyLayoutList(this);
-            setNeedsLayout(true);
-        }
+        setNeedsLayout(true);
     }
     
     @Override protected void layoutChildren() {

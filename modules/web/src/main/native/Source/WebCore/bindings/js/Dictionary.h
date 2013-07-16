@@ -60,7 +60,8 @@ public:
 
     bool isObject() const { return m_dictionary.isValid(); }
     bool isUndefinedOrNull() const { return !m_dictionary.isValid(); }
-    bool getOwnPropertiesAsStringHashMap(WTF::HashMap<String, String>&) const;
+    bool getOwnPropertiesAsStringHashMap(HashMap<String, String>&) const;
+    bool getOwnPropertyNames(Vector<String>&) const;
     bool getWithUndefinedOrNullCheck(const String& propertyName, String& value) const;
 
 private:
@@ -95,6 +96,8 @@ PassRefPtr<EventListener> Dictionary::getEventListener(const char* propertyName,
     if (!m_dictionary.tryGetProperty(propertyName, eventListener))
         return 0;
     if (eventListener.hasNoValue())
+        return 0;
+    if (!eventListener.isObject())
         return 0;
     
     return JSEventListener::create(asObject(eventListener.jsValue()), asJSObject(target), true, currentWorld(m_dictionary.execState()));

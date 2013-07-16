@@ -31,8 +31,10 @@
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "EditCommand.h"
+#include "Editor.h"
 #include "EditorClient.h"
 #include "Event.h"
+#include "ExceptionCodePlaceholder.h"
 #include "FloatQuad.h"
 #include "Frame.h"
 #include "FrameView.h"
@@ -43,9 +45,9 @@
 #include "TextEvent.h"
 #include "TextIterator.h"
 #include "VisibleSelection.h"
+#include "VisibleUnits.h"
 #include "htmlediting.h"
 #include "markup.h"
-#include "visible_units.h"
 
 namespace WebCore {
 
@@ -337,7 +339,7 @@ void AlternativeTextController::timerFired(Timer<AlternativeTextController>*)
         VisiblePosition start(selection.start(), selection.affinity());
         VisiblePosition p = startOfWord(start, LeftWordIfOnBoundary);
         VisibleSelection adjacentWords = VisibleSelection(p, start);
-        m_frame->editor()->markAllMisspellingsAndBadGrammarInRanges(TextCheckingTypeSpelling | TextCheckingTypeShowCorrectionPanel, adjacentWords.toNormalizedRange().get(), 0);
+        m_frame->editor().markAllMisspellingsAndBadGrammarInRanges(TextCheckingTypeSpelling | TextCheckingTypeReplacement | TextCheckingTypeShowCorrectionPanel, adjacentWords.toNormalizedRange().get(), 0);
     }
         break;
     case AlternativeTextTypeReversion: {
@@ -452,7 +454,7 @@ void AlternativeTextController::respondToChangedSelection(const VisibleSelection
     // containing the original pre-correction word so that user can quickly revert the
     // undesired autocorrection. Here, we start correction panel timer once we confirm that
     // the new caret position is at the end of a word.
-    if (!currentSelection.isCaret() || currentSelection == oldSelection)
+    if (!currentSelection.isCaret() || currentSelection == oldSelection || !currentSelection.isContentEditable())
         return;
 
     VisiblePosition selectionPosition = currentSelection.start();
@@ -704,11 +706,10 @@ bool AlternativeTextController::insertDictatedText(const String& text, const Vec
     if (FrameView* view = m_frame->view())
         view->resetDeferredRepaintDelay();
 
-    RefPtr<TextEvent> event = TextEvent::createForDictation(m_frame->domWindow(), text, dictationAlternatives);
+    RefPtr<TextEvent> event = TextEvent::createForDictation(m_frame->document()->domWindow(), text, dictationAlternatives);
     event->setUnderlyingEvent(triggeringEvent);
 
-    ExceptionCode ec;
-    target->dispatchEvent(event, ec);
+    target->dispatchEvent(event, IGNORE_EXCEPTION);
     return event->defaultHandled();
 }
 
@@ -741,9 +742,9 @@ Vector<String> AlternativeTextController::dictationAlternativesForMarker(const D
 void AlternativeTextController::applyDictationAlternative(const String& alternativeString)
 {
 #if USE(DICTATION_ALTERNATIVES)
-    Editor* editor = m_frame->editor();
-    RefPtr<Range> selection = editor->selectedRange();
-    if (!selection || !editor->shouldInsertText(alternativeString, selection.get(), EditorInsertActionPasted))
+    Editor& editor = m_frame->editor();
+    RefPtr<Range> selection = editor.selectedRange();
+    if (!selection || !editor.shouldInsertText(alternativeString, selection.get(), EditorInsertActionPasted))
         return;
     DocumentMarkerController* markers = selection->startContainer()->document()->markers();
     Vector<DocumentMarker*> dictationAlternativesMarkers = markers->markersInRange(selection.get(), DocumentMarker::DictationAlternatives);

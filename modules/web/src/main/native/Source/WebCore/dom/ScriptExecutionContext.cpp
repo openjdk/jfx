@@ -28,27 +28,22 @@
 #include "config.h"
 #include "ScriptExecutionContext.h"
 
-#include "ActiveDOMObject.h"
-#include "ContentSecurityPolicy.h"
+#include "CachedScript.h"
 #include "DOMTimer.h"
 #include "ErrorEvent.h"
-#include "EventListener.h"
-#include "EventTarget.h"
-#include "FileThread.h"
 #include "MessagePort.h"
 #include "PublicURLManager.h"
 #include "ScriptCallStack.h"
-#include "SecurityOrigin.h"
 #include "Settings.h"
 #include "WorkerContext.h"
 #include "WorkerThread.h"
 #include <wtf/MainThread.h>
-#include <wtf/PassRefPtr.h>
-#include <wtf/Vector.h>
 
-#if USE(JSC)
 // FIXME: This is a layering violation.
 #include "JSDOMWindow.h"
+
+#if ENABLE(SQL_DATABASE)
+#include "DatabaseContext.h"
 #endif
 
 namespace WebCore {
@@ -69,27 +64,30 @@ public:
 class ScriptExecutionContext::PendingException {
     WTF_MAKE_NONCOPYABLE(PendingException);
 public:
-    PendingException(const String& errorMessage, int lineNumber, const String& sourceURL, PassRefPtr<ScriptCallStack> callStack)
+    PendingException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, PassRefPtr<ScriptCallStack> callStack)
         : m_errorMessage(errorMessage)
         , m_lineNumber(lineNumber)
+        , m_columnNumber(columnNumber)
         , m_sourceURL(sourceURL)
         , m_callStack(callStack)
     {
     }
     String m_errorMessage;
     int m_lineNumber;
+    int m_columnNumber;
     String m_sourceURL;
     RefPtr<ScriptCallStack> m_callStack;
 };
 
 void ScriptExecutionContext::AddConsoleMessageTask::performTask(ScriptExecutionContext* context)
 {
-    context->addConsoleMessage(m_source, m_type, m_level, m_message);
+    context->addConsoleMessage(m_source, m_level, m_message);
 }
 
 ScriptExecutionContext::ScriptExecutionContext()
     : m_iteratingActiveDOMObjects(false)
     , m_inDestructor(false)
+    , m_circularSequentialID(0)
     , m_inDispatchErrorEvent(false)
     , m_activeDOMObjectsAreSuspended(false)
     , m_reasonForSuspendingActiveDOMObjects(static_cast<ActiveDOMObject::ReasonForSuspension>(-1))
@@ -113,10 +111,6 @@ ScriptExecutionContext::~ScriptExecutionContext()
         (*iter)->contextDestroyed();
     }
 #if ENABLE(BLOB)
-    if (m_fileThread) {
-        m_fileThread->stop();
-        m_fileThread = 0;
-    }
     if (m_publicURLManager)
         m_publicURLManager->contextDestroyed();
 #endif
@@ -171,11 +165,11 @@ bool ScriptExecutionContext::canSuspendActiveDOMObjects()
 {
     // No protection against m_activeDOMObjects changing during iteration: canSuspend() shouldn't execute arbitrary JS.
     m_iteratingActiveDOMObjects = true;
-    HashMap<ActiveDOMObject*, void*>::iterator activeObjectsEnd = m_activeDOMObjects.end();
-    for (HashMap<ActiveDOMObject*, void*>::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
-        ASSERT(iter->first->scriptExecutionContext() == this);
-        ASSERT(iter->first->suspendIfNeededCalled());
-        if (!iter->first->canSuspend()) {
+    ActiveDOMObjectsSet::iterator activeObjectsEnd = m_activeDOMObjects.end();
+    for (ActiveDOMObjectsSet::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
+        ASSERT((*iter)->scriptExecutionContext() == this);
+        ASSERT((*iter)->suspendIfNeededCalled());
+        if (!(*iter)->canSuspend()) {
             m_iteratingActiveDOMObjects = false;
             return false;
         }
@@ -188,41 +182,46 @@ void ScriptExecutionContext::suspendActiveDOMObjects(ActiveDOMObject::ReasonForS
 {
     // No protection against m_activeDOMObjects changing during iteration: suspend() shouldn't execute arbitrary JS.
     m_iteratingActiveDOMObjects = true;
-    HashMap<ActiveDOMObject*, void*>::iterator activeObjectsEnd = m_activeDOMObjects.end();
-    for (HashMap<ActiveDOMObject*, void*>::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
-        ASSERT(iter->first->scriptExecutionContext() == this);
-        ASSERT(iter->first->suspendIfNeededCalled());
-        iter->first->suspend(why);
+    ActiveDOMObjectsSet::iterator activeObjectsEnd = m_activeDOMObjects.end();
+    for (ActiveDOMObjectsSet::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
+        ASSERT((*iter)->scriptExecutionContext() == this);
+        ASSERT((*iter)->suspendIfNeededCalled());
+        (*iter)->suspend(why);
     }
     m_iteratingActiveDOMObjects = false;
     m_activeDOMObjectsAreSuspended = true;
     m_reasonForSuspendingActiveDOMObjects = why;
 }
 
-void ScriptExecutionContext::resumeActiveDOMObjects()
+void ScriptExecutionContext::resumeActiveDOMObjects(ActiveDOMObject::ReasonForSuspension why)
 {
+    if (m_reasonForSuspendingActiveDOMObjects != why)
+        return;
+
     m_activeDOMObjectsAreSuspended = false;
     // No protection against m_activeDOMObjects changing during iteration: resume() shouldn't execute arbitrary JS.
     m_iteratingActiveDOMObjects = true;
-    HashMap<ActiveDOMObject*, void*>::iterator activeObjectsEnd = m_activeDOMObjects.end();
-    for (HashMap<ActiveDOMObject*, void*>::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
-        ASSERT(iter->first->scriptExecutionContext() == this);
-        ASSERT(iter->first->suspendIfNeededCalled());
-        iter->first->resume();
+    ActiveDOMObjectsSet::iterator activeObjectsEnd = m_activeDOMObjects.end();
+    for (ActiveDOMObjectsSet::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
+        ASSERT((*iter)->scriptExecutionContext() == this);
+        ASSERT((*iter)->suspendIfNeededCalled());
+        (*iter)->resume();
     }
     m_iteratingActiveDOMObjects = false;
 }
 
 void ScriptExecutionContext::stopActiveDOMObjects()
 {
+    if (m_activeDOMObjectsAreStopped)
+        return;
     m_activeDOMObjectsAreStopped = true;
     // No protection against m_activeDOMObjects changing during iteration: stop() shouldn't execute arbitrary JS.
     m_iteratingActiveDOMObjects = true;
-    HashMap<ActiveDOMObject*, void*>::iterator activeObjectsEnd = m_activeDOMObjects.end();
-    for (HashMap<ActiveDOMObject*, void*>::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
-        ASSERT(iter->first->scriptExecutionContext() == this);
-        ASSERT(iter->first->suspendIfNeededCalled());
-        iter->first->stop();
+    ActiveDOMObjectsSet::iterator activeObjectsEnd = m_activeDOMObjects.end();
+    for (ActiveDOMObjectsSet::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
+        ASSERT((*iter)->scriptExecutionContext() == this);
+        ASSERT((*iter)->suspendIfNeededCalled());
+        (*iter)->stop();
     }
     m_iteratingActiveDOMObjects = false;
 
@@ -236,16 +235,17 @@ void ScriptExecutionContext::suspendActiveDOMObjectIfNeeded(ActiveDOMObject* obj
     // Ensure all ActiveDOMObjects are suspended also newly created ones.
     if (m_activeDOMObjectsAreSuspended)
         object->suspend(m_reasonForSuspendingActiveDOMObjects);
+    if (m_activeDOMObjectsAreStopped)
+        object->stop();
 }
 
-void ScriptExecutionContext::didCreateActiveDOMObject(ActiveDOMObject* object, void* upcastPointer)
+void ScriptExecutionContext::didCreateActiveDOMObject(ActiveDOMObject* object)
 {
     ASSERT(object);
-    ASSERT(upcastPointer);
     ASSERT(!m_inDestructor);
     if (m_iteratingActiveDOMObjects)
         CRASH();
-    m_activeDOMObjects.add(object, upcastPointer);
+    m_activeDOMObjects.add(object);
 }
 
 void ScriptExecutionContext::willDestroyActiveDOMObject(ActiveDOMObject* object)
@@ -277,10 +277,10 @@ void ScriptExecutionContext::closeMessagePorts() {
     }
 }
 
-bool ScriptExecutionContext::sanitizeScriptError(String& errorMessage, int& lineNumber, String& sourceURL)
+bool ScriptExecutionContext::sanitizeScriptError(String& errorMessage, int& lineNumber, String& sourceURL, CachedScript* cachedScript)
 {
     KURL targetURL = completeURL(sourceURL);
-    if (securityOrigin()->canRequest(targetURL))
+    if (securityOrigin()->canRequest(targetURL) || (cachedScript && cachedScript->passesAccessControlCheck(securityOrigin())))
         return false;
     errorMessage = "Script error.";
     sourceURL = String();
@@ -288,41 +288,35 @@ bool ScriptExecutionContext::sanitizeScriptError(String& errorMessage, int& line
     return true;
 }
 
-void ScriptExecutionContext::reportException(const String& errorMessage, int lineNumber, const String& sourceURL, PassRefPtr<ScriptCallStack> callStack)
+void ScriptExecutionContext::reportException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, PassRefPtr<ScriptCallStack> callStack, CachedScript* cachedScript)
 {
     if (m_inDispatchErrorEvent) {
         if (!m_pendingExceptions)
             m_pendingExceptions = adoptPtr(new Vector<OwnPtr<PendingException> >());
-        m_pendingExceptions->append(adoptPtr(new PendingException(errorMessage, lineNumber, sourceURL, callStack)));
+        m_pendingExceptions->append(adoptPtr(new PendingException(errorMessage, lineNumber, columnNumber, sourceURL, callStack)));
         return;
     }
 
     // First report the original exception and only then all the nested ones.
-    if (!dispatchErrorEvent(errorMessage, lineNumber, sourceURL))
-        logExceptionToConsole(errorMessage, sourceURL, lineNumber, callStack);
+    if (!dispatchErrorEvent(errorMessage, lineNumber, sourceURL, cachedScript))
+        logExceptionToConsole(errorMessage, sourceURL, lineNumber, columnNumber, callStack);
 
     if (!m_pendingExceptions)
         return;
 
     for (size_t i = 0; i < m_pendingExceptions->size(); i++) {
         PendingException* e = m_pendingExceptions->at(i).get();
-        logExceptionToConsole(e->m_errorMessage, e->m_sourceURL, e->m_lineNumber, e->m_callStack);
+        logExceptionToConsole(e->m_errorMessage, e->m_sourceURL, e->m_lineNumber, e->m_columnNumber, e->m_callStack);
     }
     m_pendingExceptions.clear();
 }
 
-void ScriptExecutionContext::addConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack> callStack)
+void ScriptExecutionContext::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, ScriptState* state, unsigned long requestIdentifier)
 {
-    addMessage(source, type, level, message, sourceURL, lineNumber, callStack);
+    addMessage(source, level, message, sourceURL, lineNumber, columnNumber, 0, state, requestIdentifier);
 }
 
-void ScriptExecutionContext::addConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptCallStack> callStack)
-{
-    addMessage(source, type, level, message, String(), 0, callStack);
-}
-
-
-bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int lineNumber, const String& sourceURL)
+bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int lineNumber, const String& sourceURL, CachedScript* cachedScript)
 {
     EventTarget* target = errorEventTarget();
     if (!target)
@@ -331,7 +325,7 @@ bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int 
     String message = errorMessage;
     int line = lineNumber;
     String sourceName = sourceURL;
-    sanitizeScriptError(message, line, sourceName);
+    sanitizeScriptError(message, line, sourceName, cachedScript);
 
     ASSERT(!m_inDispatchErrorEvent);
     m_inDispatchErrorEvent = true;
@@ -341,33 +335,15 @@ bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int 
     return errorEvent->defaultPrevented();
 }
 
-void ScriptExecutionContext::addTimeout(int timeoutId, DOMTimer* timer)
+int ScriptExecutionContext::circularSequentialID()
 {
-    ASSERT(!m_timeouts.contains(timeoutId));
-    m_timeouts.set(timeoutId, timer);
-}
-
-void ScriptExecutionContext::removeTimeout(int timeoutId)
-{
-    m_timeouts.remove(timeoutId);
-}
-
-DOMTimer* ScriptExecutionContext::findTimeout(int timeoutId)
-{
-    return m_timeouts.get(timeoutId);
+    ++m_circularSequentialID;
+    if (m_circularSequentialID <= 0)
+        m_circularSequentialID = 1;
+    return m_circularSequentialID;
 }
 
 #if ENABLE(BLOB)
-FileThread* ScriptExecutionContext::fileThread()
-{
-    if (!m_fileThread) {
-        m_fileThread = FileThread::create();
-        if (!m_fileThread->start())
-            m_fileThread = 0;
-    }
-    return m_fileThread.get();
-}
-
 PublicURLManager& ScriptExecutionContext::publicURLManager()
 {
     if (!m_publicURLManager)
@@ -380,7 +356,7 @@ void ScriptExecutionContext::adjustMinimumTimerInterval(double oldMinimumTimerIn
 {
     if (minimumTimerInterval() != oldMinimumTimerInterval) {
         for (TimeoutMap::iterator iter = m_timeouts.begin(); iter != m_timeouts.end(); ++iter) {
-            DOMTimer* timer = iter->second;
+            DOMTimer* timer = iter->value;
             timer->adjustMinimumTimerInterval(oldMinimumTimerInterval);
         }
     }
@@ -396,23 +372,42 @@ double ScriptExecutionContext::minimumTimerInterval() const
     return Settings::defaultMinDOMTimerInterval();
 }
 
+void ScriptExecutionContext::didChangeTimerAlignmentInterval()
+{
+    for (TimeoutMap::iterator iter = m_timeouts.begin(); iter != m_timeouts.end(); ++iter) {
+        DOMTimer* timer = iter->value;
+        timer->didChangeAlignmentInterval();
+    }
+}
+
+double ScriptExecutionContext::timerAlignmentInterval() const
+{
+    return Settings::defaultDOMTimerAlignmentInterval();
+}
+
 ScriptExecutionContext::Task::~Task()
 {
 }
 
-#if USE(JSC)
-JSC::JSGlobalData* ScriptExecutionContext::globalData()
+JSC::VM* ScriptExecutionContext::vm()
 {
      if (isDocument())
-        return JSDOMWindow::commonJSGlobalData();
+        return JSDOMWindow::commonVM();
 
 #if ENABLE(WORKERS)
     if (isWorkerContext())
-        return static_cast<WorkerContext*>(this)->script()->globalData();
+        return static_cast<WorkerContext*>(this)->script()->vm();
 #endif
 
     ASSERT_NOT_REACHED();
     return 0;
+}
+
+#if ENABLE(SQL_DATABASE)
+void ScriptExecutionContext::setDatabaseContext(DatabaseContext* databaseContext)
+{
+    ASSERT(!m_databaseContext);
+    m_databaseContext = databaseContext;
 }
 #endif
 

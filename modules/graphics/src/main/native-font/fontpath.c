@@ -698,10 +698,10 @@ static BOOL getSysParams(NONCLIENTMETRICSW* ncmetrics) {
 
 /*
  * Class:     Java_com_sun_javafx_font_PrismFontFactory
- * Method:    getLCDContrast
+ * Method:    getLCDContrastWin32
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_com_sun_javafx_font_PrismFontFactory_getLCDContrast
+JNIEXPORT jint JNICALL Java_com_sun_javafx_font_PrismFontFactory_getLCDContrastWin32
   (JNIEnv *env, jobject klass) {
 
     unsigned int fontSmoothingContrast;

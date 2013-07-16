@@ -34,7 +34,10 @@ static const unsigned maxRowIndex = 0x7FFFFFFE; // 2,147,483,646
 
 class RenderTableRow : public RenderBox {
 public:
-    explicit RenderTableRow(Node*);
+    explicit RenderTableRow(Element*);
+
+    RenderObject* firstChild() const { ASSERT(children() == virtualChildren()); return children()->firstChild(); }
+    RenderObject* lastChild() const { ASSERT(children() == virtualChildren()); return children()->lastChild(); }
 
     const RenderObjectChildList* children() const { return &m_children; }
     RenderObjectChildList* children() { return &m_children; }
@@ -42,9 +45,9 @@ public:
     RenderTableSection* section() const { return toRenderTableSection(parent()); }
     RenderTable* table() const { return toRenderTable(parent()->parent()); }
 
-    void updateBeforeAndAfterContent();
     void paintOutlineForRowIfNeeded(PaintInfo&, const LayoutPoint&);
 
+    static RenderTableRow* createAnonymous(Document*);
     static RenderTableRow* createAnonymousWithParentRenderer(const RenderObject*);
     virtual RenderBox* createAnonymousBoxWithSameTypeAs(const RenderObject* parent) const OVERRIDE
     {
@@ -68,7 +71,7 @@ public:
 
     const BorderValue& borderAdjoiningTableStart() const
     {
-        if (section()->hasSameDirectionAsTable())
+        if (section()->hasSameDirectionAs(table()))
             return style()->borderStart();
 
         return style()->borderEnd();
@@ -76,28 +79,31 @@ public:
 
     const BorderValue& borderAdjoiningTableEnd() const
     {
-        if (section()->hasSameDirectionAsTable())
+        if (section()->hasSameDirectionAs(table()))
             return style()->borderEnd();
 
         return style()->borderStart();
     }
 
+    const BorderValue& borderAdjoiningStartCell(const RenderTableCell*) const;
+    const BorderValue& borderAdjoiningEndCell(const RenderTableCell*) const;
+
 private:
     virtual RenderObjectChildList* virtualChildren() { return children(); }
     virtual const RenderObjectChildList* virtualChildren() const { return children(); }
 
-    virtual const char* renderName() const { return isAnonymous() ? "RenderTableRow (anonymous)" : "RenderTableRow"; }
+    virtual const char* renderName() const { return (isAnonymous() || isPseudoElement()) ? "RenderTableRow (anonymous)" : "RenderTableRow"; }
 
     virtual bool isTableRow() const { return true; }
 
-    virtual void willBeDestroyed();
+    virtual void willBeRemovedFromTree() OVERRIDE;
 
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0);
     virtual void layout();
-    virtual LayoutRect clippedOverflowRectForRepaint(RenderBoxModelObject* repaintContainer) const;
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
 
-    virtual bool requiresLayer() const OVERRIDE { return isTransparent() || hasOverflowClip() || hasTransform() || hasHiddenBackface() || hasMask() || hasFilter(); }
+    virtual bool requiresLayer() const OVERRIDE { return hasOverflowClip() || hasTransform() || hasHiddenBackface() || hasClipPath() || createsGroup(); }
 
     virtual void paint(PaintInfo&, const LayoutPoint&);
 
@@ -111,13 +117,13 @@ private:
 
 inline RenderTableRow* toRenderTableRow(RenderObject* object)
 {
-    ASSERT(!object || object->isTableRow());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTableRow());
     return static_cast<RenderTableRow*>(object);
 }
 
 inline const RenderTableRow* toRenderTableRow(const RenderObject* object)
 {
-    ASSERT(!object || object->isTableRow());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTableRow());
     return static_cast<const RenderTableRow*>(object);
 }
 

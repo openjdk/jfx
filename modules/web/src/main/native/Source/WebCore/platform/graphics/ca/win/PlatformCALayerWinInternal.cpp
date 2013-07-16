@@ -51,7 +51,7 @@ PlatformCALayerWinInternal::PlatformCALayerWinInternal(PlatformCALayer* owner)
 {
     if (m_owner->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
         // Tiled layers are placed in a child layer that is always the first child of the TiledLayer
-        m_tileParent.adoptCF(CACFLayerCreate(kCACFLayer));
+        m_tileParent = adoptCF(CACFLayerCreate(kCACFLayer));
         CACFLayerInsertSublayer(m_owner->platformLayer(), m_tileParent.get(), 0);
         updateTiles();
     }
@@ -96,7 +96,7 @@ void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContext
     }
 #endif
 
-    if (owner()->owner()->platformCALayerShowRepaintCounter()) {
+    if (owner()->owner()->platformCALayerShowRepaintCounter(owner())) {
         FontCachePurgePreventer fontCachePurgePreventer;
 
         String text = String::number(owner()->owner()->platformCALayerIncrementRepaintCount());
@@ -124,9 +124,7 @@ void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContext
         NONCLIENTMETRICS metrics;
         metrics.cbSize = sizeof(metrics);
         SystemParametersInfo(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0);
-        FontFamily family;
-        family.setFamily(metrics.lfSmCaptionFont.lfFaceName);
-        desc.setFamily(family);
+        desc.setOneFamily(metrics.lfSmCaptionFont.lfFaceName);
 
         desc.setComputedSize(18);
         
@@ -165,14 +163,14 @@ void PlatformCALayerWinInternal::setNeedsDisplay(const FloatRect* dirtyRect)
         for (int i = 0; i < numTileLayers; ++i)
             CACFLayerSetNeedsDisplay(tileAtIndex(i), dirtyRect ? &rect : 0);
 
-        if (m_owner->owner() && m_owner->owner()->platformCALayerShowRepaintCounter()) {
+        if (m_owner->owner() && m_owner->owner()->platformCALayerShowRepaintCounter(m_owner)) {
             CGRect layerBounds = m_owner->bounds();
             CGRect indicatorRect = CGRectMake(layerBounds.origin.x, layerBounds.origin.y, 80, 25);
             CACFLayerSetNeedsDisplay(tileAtIndex(0), &indicatorRect);
         }
     } else if (owner()->layerType() == PlatformCALayer::LayerTypeWebLayer) {
         if (owner() && owner()->owner()) {
-            if (owner()->owner()->platformCALayerShowRepaintCounter()) {
+            if (owner()->owner()->platformCALayerShowRepaintCounter(owner())) {
                 FloatRect layerBounds = owner()->bounds();
                 FloatRect repaintCounterRect = layerBounds;
 
@@ -384,7 +382,7 @@ void PlatformCALayerWinInternal::tileDisplayCallback(CACFLayerRef layer, CGConte
 
 void PlatformCALayerWinInternal::addTile()
 {
-    RetainPtr<CACFLayerRef> newLayer(AdoptCF, CACFLayerCreate(kCACFLayer));
+    RetainPtr<CACFLayerRef> newLayer = adoptCF(CACFLayerCreate(kCACFLayer));
     CACFLayerSetAnchorPoint(newLayer.get(), CGPointMake(0, 1));
     CACFLayerSetUserData(newLayer.get(), this);
     CACFLayerSetDisplayCallback(newLayer.get(), tileDisplayCallback);
@@ -459,7 +457,7 @@ void PlatformCALayerWinInternal::updateTiles()
 
 #ifndef NDEBUG
             String name = "Tile (" + String::number(i) + "," + String::number(j) + ")";
-            CACFLayerSetName(tile, RetainPtr<CFStringRef>(AdoptCF, name.createCFString()).get());
+            CACFLayerSetName(tile, name.createCFString().get());
 #endif
         }
     }

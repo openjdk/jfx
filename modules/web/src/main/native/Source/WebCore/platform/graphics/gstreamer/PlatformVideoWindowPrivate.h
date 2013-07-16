@@ -19,41 +19,32 @@
 
 #ifndef PlatformVideoWindowPrivate_h
 #define PlatformVideoWindowPrivate_h
+#if ENABLE(VIDEO) && USE(GSTREAMER) && USE(NATIVE_FULLSCREEN_VIDEO)
 
 #include <QEvent>
 #include <QTimer>
 
-#if defined(HAVE_QT5) && HAVE_QT5
 #include <QWindow>
-#else
-#include <QWidget>
-#endif
 
 namespace WebCore {
 
 class HTMLVideoElement;
 
-#if defined(HAVE_QT5) && HAVE_QT5
-typedef QWindow Base;
-#else
-typedef QWidget Base;
-#endif
-
-class FullScreenVideoWindow: public Base {
+class FullScreenVideoWindow: public QWindow {
 Q_OBJECT
 public:
     FullScreenVideoWindow();
     void setVideoElement(HTMLVideoElement*);
-signals:
+Q_SIGNALS:
     void closed();
 protected:
     void keyPressEvent(QKeyEvent*);
     bool event(QEvent*);
 
-public slots:
+public Q_SLOTS:
     void showFullScreen();
 
-private slots:
+private Q_SLOTS:
     void hideCursor();
 
 private:
@@ -65,5 +56,5 @@ private:
 
 } // namespace WebCore
 
-
+#endif // ENABLE(VIDEO) && USE(GSTREAMER) && USE(NATIVE_FULLSCREEN_VIDEO)
 #endif // PlatformVideoWindowPrivate_h

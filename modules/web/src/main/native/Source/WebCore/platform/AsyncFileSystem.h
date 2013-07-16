@@ -35,9 +35,9 @@
 
 #include "FileSystemType.h"
 #include "KURL.h"
-#include "PlatformString.h"
 #include "Timer.h"
 #include <wtf/PassOwnPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -64,7 +64,10 @@ public:
     static PassOwnPtr<AsyncFileSystem> create();
 
     // Opens a new file system. The create parameter specifies whether or not to create the path if it does not already exists.
-    static void openFileSystem(const String& basePath, const String& storageIdentifier, bool create, PassOwnPtr<AsyncFileSystemCallbacks>);
+    static void openFileSystem(const String& basePath, const String& storageIdentifier, FileSystemType, bool create, PassOwnPtr<AsyncFileSystemCallbacks>);
+
+    // Deletes the file system.
+    static void deleteFileSystem(const String& basePath, const String& storageIdentifier, FileSystemType, PassOwnPtr<AsyncFileSystemCallbacks>);
 
     // Moves a file or directory from srcPath to destPath.
     // AsyncFileSystemCallbacks::didSucceed() is called when the operation is completed successfully.

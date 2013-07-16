@@ -31,6 +31,10 @@
 
 namespace WebCore {
 
+SpeechRecognitionResult::~SpeechRecognitionResult()
+{
+}
+
 PassRefPtr<SpeechRecognitionResult> SpeechRecognitionResult::create(const Vector<RefPtr<SpeechRecognitionAlternative> >& alternatives, bool final)
 {
     return adoptRef(new SpeechRecognitionResult(alternatives, final));

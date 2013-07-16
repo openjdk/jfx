@@ -31,11 +31,11 @@
 #define InspectorAgent_h
 
 #include "InspectorBaseAgent.h"
-#include "PlatformString.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -45,7 +45,6 @@ class Frame;
 class InjectedScriptManager;
 class InspectorFrontend;
 class InspectorObject;
-class InspectorWorkerResource;
 class InstrumentingAgents;
 class KURL;
 class Page;
@@ -55,7 +54,7 @@ typedef String ErrorString;
 class InspectorAgent : public InspectorBaseAgent<InspectorAgent>, public InspectorBackendDispatcher::InspectorCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorAgent);
 public:
-    static PassOwnPtr<InspectorAgent> create(Page* page, InjectedScriptManager* injectedScriptManager, InstrumentingAgents* instrumentingAgents, InspectorState* state)
+    static PassOwnPtr<InspectorAgent> create(Page* page, InjectedScriptManager* injectedScriptManager, InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state)
     {
         return adoptPtr(new InspectorAgent(page, injectedScriptManager, instrumentingAgents, state));
     }
@@ -80,12 +79,6 @@ public:
 
     void didCommitLoad();
     void domContentLoadedEventFired();
-    bool didCommitLoadFired() { return m_didCommitLoadFired; }
-
-#if ENABLE(WORKERS)
-    void didCreateWorker(intptr_t, const String& url, bool isSharedWorker);
-    void didDestroyWorker(intptr_t);
-#endif
 
     bool hasFrontend() const { return m_frontend; }
 
@@ -97,7 +90,7 @@ public:
     void inspect(PassRefPtr<TypeBuilder::Runtime::RemoteObject> objectToInspect, PassRefPtr<InspectorObject> hints);
 
 private:
-    InspectorAgent(Page*, InjectedScriptManager*, InstrumentingAgents*, InspectorState*);
+    InspectorAgent(Page*, InjectedScriptManager*, InstrumentingAgents*, InspectorCompositeState*);
 
     void unbindAllResources();
 
@@ -115,11 +108,6 @@ private:
     pair<RefPtr<TypeBuilder::Runtime::RemoteObject>, RefPtr<InspectorObject> > m_pendingInspectData;
     typedef HashMap<String, String> InjectedScriptForOriginMap;
     InjectedScriptForOriginMap m_injectedScriptForOrigin;
-#if ENABLE(WORKERS)
-    typedef HashMap<intptr_t, RefPtr<InspectorWorkerResource> > WorkersMap;
-    WorkersMap m_workers;
-#endif
-    bool m_didCommitLoadFired;
 };
 
 } // namespace WebCore

@@ -37,22 +37,8 @@
 
 namespace WebCore {
 
-#define WTF_USE_GRAMMAR_CHECKING 1
-
-#if PLATFORM(MAC) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
-#define WTF_USE_UNIFIED_TEXT_CHECKING 1
-#define WTF_USE_AUTOMATIC_TEXT_REPLACEMENT 1
-#endif
-
-#if PLATFORM(MAC) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
-// Some platforms provide UI for suggesting autocorrection.
-#define WTF_USE_AUTOCORRECTION_PANEL 1
-// Some platforms use spelling and autocorrection markers to provide visual cue.
-// On such platform, if word with marker is edited, we need to remove the marker.
-#define WTF_USE_MARKER_REMOVAL_UPON_EDITING 1
-#endif // #if PLATFORM(MAC) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
-
 enum TextCheckingType {
+    TextCheckingTypeNone        = 0,
     TextCheckingTypeSpelling    = 1 << 1,
     TextCheckingTypeGrammar     = 1 << 2,
     TextCheckingTypeLink        = 1 << 5,
@@ -85,29 +71,42 @@ struct TextCheckingResult {
     String replacement;
 };
 
-class TextCheckingRequest : public RefCounted<TextCheckingRequest> {
+const int unrequestedTextCheckingSequence = -1;
+
+class TextCheckingRequestData {
+    friend class SpellCheckRequest; // For access to m_sequence.
 public:
-    TextCheckingRequest(int sequence, const String& text, TextCheckingTypeMask mask, TextCheckingProcessType processType)
+    TextCheckingRequestData()
+        : m_sequence(unrequestedTextCheckingSequence)
+        , m_mask(TextCheckingTypeNone)
+        , m_processType(TextCheckingProcessIncremental)
+    { }
+    TextCheckingRequestData(int sequence, const String& text, TextCheckingTypeMask mask, TextCheckingProcessType processType)
         : m_sequence(sequence)
         , m_text(text)
         , m_mask(mask)
         , m_processType(processType)
     { }
 
-    virtual ~TextCheckingRequest() { }
-    virtual void didSucceed(const Vector<TextCheckingResult>&) = 0;
-    virtual void didCancel() = 0;
-
     int sequence() const { return m_sequence; }
     String text() const { return m_text; }
     TextCheckingTypeMask mask() const { return m_mask; }
     TextCheckingProcessType processType() const { return m_processType; }
 
-protected:
+private:
     int m_sequence;
     String m_text;
     TextCheckingTypeMask m_mask;
     TextCheckingProcessType m_processType;
+};
+
+class TextCheckingRequest : public RefCounted<TextCheckingRequest> {
+public:
+    virtual ~TextCheckingRequest() { }
+
+    virtual const TextCheckingRequestData& data() const = 0;
+    virtual void didSucceed(const Vector<TextCheckingResult>&) = 0;
+    virtual void didCancel() = 0;
 };
 
 }

@@ -29,11 +29,17 @@
 #if ENABLE(CSS_FILTERS)
 
 #include "Color.h"
+#include "FilterEffect.h"
+#include "LayoutSize.h"
 #include "Length.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
+
+#if PLATFORM(BLACKBERRY)
+#include <wtf/ThreadSafeRefCounted.h>
+#endif
 
 // Annoyingly, wingdi.h #defines this.
 #ifdef PASSTHROUGH
@@ -44,7 +50,15 @@ namespace WebCore {
 
 // CSS Filters
 
+#if ENABLE(SVG)
+class CachedSVGDocumentReference;
+#endif
+
+#if PLATFORM(BLACKBERRY)
+class FilterOperation : public ThreadSafeRefCounted<FilterOperation> {
+#else
 class FilterOperation : public RefCounted<FilterOperation> {
+#endif
 public:
     enum OperationType {
         REFERENCE, // url(#somefilter)
@@ -60,6 +74,7 @@ public:
         DROP_SHADOW,
 #if ENABLE(CSS_SHADERS)
         CUSTOM,
+        VALIDATED_CUSTOM,
 #endif
         PASSTHROUGH,
         NONE
@@ -70,7 +85,17 @@ public:
     virtual bool operator==(const FilterOperation&) const = 0;
     bool operator!=(const FilterOperation& o) const { return !(*this == o); }
 
-    virtual PassRefPtr<FilterOperation> blend(const FilterOperation* /*from*/, double /*progress*/, bool /*blendToPassthrough*/ = false) { return 0; }
+    virtual PassRefPtr<FilterOperation> blend(const FilterOperation* /*from*/, double /*progress*/, bool /*blendToPassthrough*/ = false)
+    { 
+        ASSERT(!blendingNeedsRendererSize());
+        return 0; 
+    }
+
+    virtual PassRefPtr<FilterOperation> blend(const FilterOperation* /*from*/, double /*progress*/, const LayoutSize&, bool /*blendToPassthrough*/ = false)
+    { 
+        ASSERT(blendingNeedsRendererSize());
+        return 0; 
+    }
 
     virtual OperationType getOperationType() const { return m_type; }
     virtual bool isSameType(const FilterOperation& o) const { return o.getOperationType() == m_type; }
@@ -81,8 +106,8 @@ public:
     virtual bool affectsOpacity() const { return false; }
     // True if the the value of one pixel can affect the value of another pixel under this operation, such as blur.
     virtual bool movesPixels() const { return false; }
-
-    virtual PassRefPtr<FilterOperation> clone() const = 0;
+    // True if the filter needs the size of the box in order to calculate the animations.
+    virtual bool blendingNeedsRendererSize() const { return false; }
 
 protected:
     FilterOperation(OperationType type)
@@ -98,11 +123,6 @@ public:
     static PassRefPtr<DefaultFilterOperation> create(OperationType type)
     {
         return adoptRef(new DefaultFilterOperation(type));
-    }
-
-    virtual PassRefPtr<FilterOperation> clone() const
-    {
-        return adoptRef(new DefaultFilterOperation(m_type));
     }
 
 private:
@@ -127,11 +147,6 @@ public:
         return adoptRef(new PassthroughFilterOperation());
     }
 
-    virtual PassRefPtr<FilterOperation> clone() const
-    {
-        return adoptRef(new PassthroughFilterOperation());
-    }
-
 private:
 
     virtual bool operator==(const FilterOperation& o) const
@@ -151,12 +166,7 @@ public:
     {
         return adoptRef(new ReferenceFilterOperation(url, fragment, type));
     }
-
-    virtual PassRefPtr<FilterOperation> clone() const
-    {
-        // Unimplemented
-        return 0;
-    }
+    ~ReferenceFilterOperation();
 
     virtual bool affectsOpacity() const { return true; }
     virtual bool movesPixels() const { return true; }
@@ -164,10 +174,16 @@ public:
     const String& url() const { return m_url; }
     const String& fragment() const { return m_fragment; }
 
-    void* data() const { return m_data; }
-    void setData(void* data) { m_data = data; }
+#if ENABLE(SVG)
+    CachedSVGDocumentReference* cachedSVGDocumentReference() const { return m_cachedSVGDocumentReference.get(); }
+    void setCachedSVGDocumentReference(PassOwnPtr<CachedSVGDocumentReference>);
+#endif
+
+    FilterEffect* filterEffect() const { return m_filterEffect.get(); }
+    void setFilterEffect(PassRefPtr<FilterEffect> filterEffect) { m_filterEffect = filterEffect; }
 
 private:
+    ReferenceFilterOperation(const String& url, const String& fragment, OperationType);
 
     virtual bool operator==(const FilterOperation& o) const
     {
@@ -177,17 +193,12 @@ private:
         return m_url == other->m_url;
     }
 
-    ReferenceFilterOperation(const String& url, const String& fragment, OperationType type)
-        : FilterOperation(type)
-        , m_url(url)
-        , m_fragment(fragment)
-        , m_data(0)
-    {
-    }
-
     String m_url;
     String m_fragment;
-    void* m_data;
+#if ENABLE(SVG)
+    OwnPtr<CachedSVGDocumentReference> m_cachedSVGDocumentReference;
+#endif
+    RefPtr<FilterEffect> m_filterEffect;
 };
 
 // GRAYSCALE, SEPIA, SATURATE and HUE_ROTATE are variations on a basic color matrix effect.
@@ -197,11 +208,6 @@ public:
     static PassRefPtr<BasicColorMatrixFilterOperation> create(double amount, OperationType type)
     {
         return adoptRef(new BasicColorMatrixFilterOperation(amount, type));
-    }
-
-    virtual PassRefPtr<FilterOperation> clone() const
-    {
-        return adoptRef(new BasicColorMatrixFilterOperation(m_amount, m_type));
     }
 
     double amount() const { return m_amount; }
@@ -236,11 +242,6 @@ public:
         return adoptRef(new BasicComponentTransferFilterOperation(amount, type));
     }
 
-    virtual PassRefPtr<FilterOperation> clone() const
-    {
-        return adoptRef(new BasicComponentTransferFilterOperation(m_amount, m_type));
-    }
-
     double amount() const { return m_amount; }
 
     virtual bool affectsOpacity() const { return m_type == OPACITY; }
@@ -272,11 +273,6 @@ public:
     static PassRefPtr<GammaFilterOperation> create(double amplitude, double exponent, double offset, OperationType type)
     {
         return adoptRef(new GammaFilterOperation(amplitude, exponent, offset, type));
-    }
-
-    virtual PassRefPtr<FilterOperation> clone() const
-    {
-        return adoptRef(new GammaFilterOperation(m_amplitude, m_exponent, m_offset, m_type));
     }
 
     double amplitude() const { return m_amplitude; }
@@ -314,11 +310,6 @@ public:
         return adoptRef(new BlurFilterOperation(stdDeviation, type));
     }
 
-    virtual PassRefPtr<FilterOperation> clone() const
-    {
-        return adoptRef(new BlurFilterOperation(m_stdDeviation, m_type));
-    }
-
     Length stdDeviation() const { return m_stdDeviation; }
 
     virtual bool affectsOpacity() const { return true; }
@@ -349,11 +340,6 @@ public:
     static PassRefPtr<DropShadowFilterOperation> create(const IntPoint& location, int stdDeviation, Color color, OperationType type)
     {
         return adoptRef(new DropShadowFilterOperation(location, stdDeviation, color, type));
-    }
-
-    virtual PassRefPtr<FilterOperation> clone() const
-    {
-        return adoptRef(new DropShadowFilterOperation(m_location, m_stdDeviation, m_color, m_type));
     }
 
     int x() const { return m_location.x(); }

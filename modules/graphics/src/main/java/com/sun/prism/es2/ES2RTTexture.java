@@ -66,12 +66,33 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         if (dbID != 0) {
             return;
         }
+        int msaaSamples = isAntiAliasing() ? context.getGLContext().getSampleSize() : 0;
         dbID = context.getGLContext().createDepthBuffer(getPhysicalWidth(),
-                getPhysicalHeight());
+                getPhysicalHeight(), msaaSamples);
 
         // Add to disposer record so that we can cleanup the depth buffer when
         // this RTT is destroyed.
         texData.setDepthBufferID(dbID);
+    }
+
+    /**
+     * Create and attach a color multisample render buffer to current FBO
+     * @param context current context
+     */
+    private void createAndAttachMSAABuffer(ES2Context context) {
+        // Assert isAntiAliasing() must be true
+        ES2RTTextureData texData = resource.getResource();
+        int rbID = texData.getMSAARenderBufferID();
+        if (rbID != 0) {
+            return;
+        }
+        GLContext glContext = context.getGLContext();
+        rbID = glContext.createRenderBuffer(getPhysicalWidth(), 
+                getPhysicalHeight(), glContext.getSampleSize());
+
+        // TODO: 3D - Add to disposer record so that we can cleanup the
+        // render buffer when this RTT is destroyed.
+        texData.setMSAARenderBufferID(rbID);
     }
 
     static int getCompatibleDimension(ES2Context context, int dim, WrapMode wrapMode) {
@@ -129,7 +150,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         return pad ? texDim - 2 : texDim;
     }
 
-    static ES2RTTexture create(ES2Context context, int w, int h, WrapMode wrapMode) {
+    static ES2RTTexture create(ES2Context context, int w, int h, WrapMode wrapMode, boolean msaa) {
         // Normally we would use GL_CLAMP_TO_BORDER with a transparent border
         // color to implement our CLAMP_TO_ZERO edge mode, but unfortunately
         // that mode is not available in OpenGL ES.  The workaround is to pad
@@ -231,14 +252,22 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
 
         // save current texture
         glContext.setActiveTextureUnit(0);
+        int savedFBO = glContext.getBoundFBO();
         int savedTex = glContext.getBoundTexture();
 
-        int nativeTexID = glContext.createTexture(texWidth, texHeight);
+        int nativeTexID = 0;
+        if (!msaa) {
+            // TODO Mac and some other platforms do not support multisample texture
+            // thus forced to skip texture creation below, and rather create a
+            // msaa render buffer
+            nativeTexID = glContext.createTexture(texWidth, texHeight);
+        }
 
         int nativeFBOID = 0;
-        if (nativeTexID != 0) {
-            // Create FBO (this method will save and restore the previous bound FBO)
-            nativeFBOID = glContext.createFBO(nativeTexID, texWidth, texHeight);
+        if (nativeTexID != 0 || msaa) {
+            // Create FBO (this method will generate and bind a new FBO,
+            // and if texture is valid, attach texture as color attribute)
+            nativeFBOID = glContext.createFBO(nativeTexID);
             if (nativeFBOID == 0) {
                 glContext.deleteTexture(nativeTexID);
                 nativeTexID = 0;
@@ -246,16 +275,20 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         }
         ES2RTTextureData texData =
             new ES2RTTextureData(context, nativeTexID, nativeFBOID, size);
-        ES2TextureResource<ES2RTTextureData> texRes =
-            new ES2TextureResource<ES2RTTextureData>(texData);
+        ES2TextureResource<ES2RTTextureData> texRes = new ES2TextureResource<ES2RTTextureData>(texData);
 
-        // restore previous texture
-        glContext.setBoundTexture(savedTex);
-
-        return new ES2RTTexture(context, texRes, wrapMode,
+        ES2RTTexture es2RTT = new ES2RTTexture(context, texRes, wrapMode,
                                 texWidth, texHeight,
                                 contentX, contentY,
                                 contentW, contentH);
+        if (msaa) {
+            es2RTT.createAndAttachMSAABuffer(context);
+        }
+        // Restore previous FBO
+        glContext.bindFBO(savedFBO);
+        // restore previous texture
+        glContext.setBoundTexture(savedTex);
+        return es2RTT;
     }
 
     public Texture getBackBuffer() {
@@ -273,24 +306,22 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
     public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
         context.flushVertexBuffer();
         GLContext glContext = context.getGLContext();
-        return glContext.readPixels(pixels, x, y, width, height);
-    }
-
-    public boolean readPixels(Buffer pixels) {
-        context.flushVertexBuffer();
-        GLContext glContext = context.getGLContext();
         int id = glContext.getBoundFBO();
         int fboID = getFboID();
         boolean changeBoundFBO = id != fboID;
         if (changeBoundFBO) {
             glContext.bindFBO(fboID);
         }
-        boolean result = glContext.readPixels(pixels, getContentX(), getContentY(),
-                 getContentWidth(), getContentHeight());                
+        boolean result = glContext.readPixels(pixels, x, y, width, height);
         if (changeBoundFBO) {
             glContext.bindFBO(id);
         }
         return result;
+    }
+
+    public boolean readPixels(Buffer pixels) {
+        return readPixels(pixels, getContentX(), getContentY(),
+                 getContentWidth(), getContentHeight());
     }
 
     public int getFboID() {
@@ -339,5 +370,9 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
 
     public boolean isVolatile() {
         return false;
+    }
+
+    public boolean isAntiAliasing() {
+        return resource.getResource().getMSAARenderBufferID() != 0;
     }
 }

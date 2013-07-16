@@ -25,18 +25,18 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Node;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.sg.PGNode;
 
 
 public class MockNode extends Node {
     public MockNode() {}
-    protected PGNode impl_createPGNode() { return null; }
+    protected NGNode impl_createPeer() { return null; }
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) { return null; }
     protected boolean impl_computeContains(double localX, double localY) { return false; }
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) { return null; }

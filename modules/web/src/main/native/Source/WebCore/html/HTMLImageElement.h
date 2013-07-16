@@ -27,30 +27,19 @@
 #include "GraphicsTypes.h"
 #include "HTMLElement.h"
 #include "HTMLImageLoader.h"
-#include "ImageLoaderClient.h"
 
 namespace WebCore {
 
 class HTMLFormElement;
-class ImageInnerElement;
 
-class ImageElement {
-protected:
-    void setImageIfNecessary(RenderObject*, ImageLoader*);
-    RenderObject* createRendererForImage(HTMLElement*, RenderArena*);
-};
-
-class HTMLImageElement : public HTMLElement, public ImageElement, public ImageLoaderClient {
+class HTMLImageElement : public HTMLElement {
     friend class HTMLFormElement;
-    friend class ImageInnerElement;
 public:
     static PassRefPtr<HTMLImageElement> create(Document*);
     static PassRefPtr<HTMLImageElement> create(const QualifiedName&, Document*, HTMLFormElement*);
     static PassRefPtr<HTMLImageElement> createForJSConstructor(Document*, const int* optionalWidth, const int* optionalHeight);
 
     virtual ~HTMLImageElement();
-
-    virtual void willAddAuthorShadowRoot() OVERRIDE;
 
     int width(bool ignorePendingStylesheets = false);
     int height(bool ignorePendingStylesheets = false);
@@ -83,9 +72,7 @@ public:
 
     bool complete() const;
 
-    // FIXME: Why do we have two names for the same thing?
-    bool hasPendingLoadEvent() const { return m_imageLoader.hasPendingLoadEvent(); }
-    bool hasPendingActivity() const { return m_imageLoader.hasPendingLoadEvent(); }
+    bool hasPendingActivity() const { return m_imageLoader.hasPendingActivity(); }
 
     virtual bool canContainRangeEndPoint() const { return false; }
 
@@ -95,22 +82,16 @@ protected:
     virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
 
 private:
-    virtual void createShadowSubtree();
+    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
 
-    // Implementation of ImageLoaderClient
-    Element* sourceElement() { return this; }
-    Element* imageElement();
-    void refSourceElement() { ref(); }
-    void derefSourceElement() { deref(); }
-
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
     virtual void attach();
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
 
-    virtual bool canStartSelection() const { return false; }
+    virtual bool canStartSelection() const;
 
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
 
@@ -120,33 +101,16 @@ private:
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
-    virtual bool shouldRegisterAsNamedItem() const OVERRIDE { return true; }
-    virtual bool shouldRegisterAsExtraNamedItem() const OVERRIDE { return true; }
 
 #if ENABLE(MICRODATA)
     virtual String itemValueText() const OVERRIDE;
     virtual void setItemValueText(const String&, ExceptionCode&) OVERRIDE;
 #endif
 
-    RenderObject* imageRenderer() const { return HTMLElement::renderer(); }
-    HTMLImageLoader* imageLoader() { return &m_imageLoader; }
-    ImageInnerElement* innerElement() const;
-
     HTMLImageLoader m_imageLoader;
     HTMLFormElement* m_form;
     CompositeOperator m_compositeOperator;
 };
-
-inline bool isHTMLImageElement(Node* node)
-{
-    return node->hasTagName(HTMLNames::imgTag);
-}
-
-inline HTMLImageElement* toHTMLImageElement(Node* node)
-{
-    ASSERT(!node || isHTMLImageElement(node));
-    return static_cast<HTMLImageElement*>(node);
-}
 
 } //namespace
 

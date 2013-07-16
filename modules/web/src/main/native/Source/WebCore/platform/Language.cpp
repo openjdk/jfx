@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,13 @@
 #include "config.h"
 #include "Language.h"
 
-#include "PlatformString.h"
 #include <wtf/HashMap.h>
+#include <wtf/RetainPtr.h>
+#include <wtf/text/WTFString.h>
+
+#if PLATFORM(MAC)
+#include <CoreFoundation/CoreFoundation.h>
+#endif
 
 namespace WebCore {
 
@@ -53,7 +58,7 @@ void languageDidChange()
 {
     ObserverMap::iterator end = observerMap().end();
     for (ObserverMap::iterator iter = observerMap().begin(); iter != end; ++iter)
-        iter->second(iter->first);
+        iter->value(iter->key);
 }
 
 String defaultLanguage()
@@ -69,6 +74,11 @@ static Vector<String>& preferredLanguagesOverride()
 {
     DEFINE_STATIC_LOCAL(Vector<String>, override, ());
     return override;
+}
+
+Vector<String> userPreferredLanguagesOverride()
+{
+    return preferredLanguagesOverride();
 }
 
 void overrideUserPreferredLanguages(const Vector<String>& override)
@@ -95,24 +105,30 @@ static String canonicalLanguageIdentifier(const String& languageCode)
     return lowercaseLanguageCode;
 }
 
-static String bestMatchingLanguage(const String& language, const Vector<String>& languageList)
+size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<String>& languageList)
 {
-    bool canMatchLanguageOnly = (language.length() == 2 || (language.length() >= 3 && language[2] == '-'));
     String languageWithoutLocaleMatch;
     String languageMatchButNotLocale;
+    size_t languageWithoutLocaleMatchIndex = 0;
+    size_t languageMatchButNotLocaleMatchIndex = 0;
+    bool canMatchLanguageOnly = (language.length() == 2 || (language.length() >= 3 && language[2] == '-'));
 
     for (size_t i = 0; i < languageList.size(); ++i) {
         String canonicalizedLanguageFromList = canonicalLanguageIdentifier(languageList[i]);
 
         if (language == canonicalizedLanguageFromList)
-            return languageList[i];
+            return i;
 
         if (canMatchLanguageOnly && canonicalizedLanguageFromList.length() >= 2) {
             if (language[0] == canonicalizedLanguageFromList[0] && language[1] == canonicalizedLanguageFromList[1]) {
-                if (!languageWithoutLocaleMatch.length() && canonicalizedLanguageFromList.length() == 2)
+                if (!languageWithoutLocaleMatch.length() && canonicalizedLanguageFromList.length() == 2) {
                     languageWithoutLocaleMatch = languageList[i];
-                if (!languageMatchButNotLocale.length() && canonicalizedLanguageFromList.length() >= 3)
+                    languageWithoutLocaleMatchIndex = i;
+                }
+                if (!languageMatchButNotLocale.length() && canonicalizedLanguageFromList.length() >= 3) {
                     languageMatchButNotLocale = languageList[i];
+                    languageMatchButNotLocaleMatchIndex = i;
+                }
             }
         }
     }
@@ -121,26 +137,23 @@ static String bestMatchingLanguage(const String& language, const Vector<String>&
     // languge-only match as is considered a "better" match. For example, if the list
     // provided has both "en-GB" and "en" and the user prefers "en-US" we will return "en".
     if (languageWithoutLocaleMatch.length())
-        return languageWithoutLocaleMatch;
+        return languageWithoutLocaleMatchIndex;
 
     if (languageMatchButNotLocale.length())
-        return languageMatchButNotLocale;
+        return languageMatchButNotLocaleMatchIndex;
     
-    return emptyString();
+    return languageList.size();
 }
 
-String preferredLanguageFromList(const Vector<String>& languageList)
+String displayNameForLanguageLocale(const String& localeName)
 {
-    Vector<String> preferredLanguages = userPreferredLanguages();
-
-    for (size_t i = 0; i < preferredLanguages.size(); ++i) {
-        String bestMatch = bestMatchingLanguage(canonicalLanguageIdentifier(preferredLanguages[i]), languageList);
-
-        if (bestMatch.length())
-            return bestMatch;
+#if PLATFORM(MAC)
+    if (!localeName.isNull() && !localeName.isEmpty()) {
+        RetainPtr<CFLocaleRef> currentLocale = adoptCF(CFLocaleCopyCurrent());
+        return CFLocaleCopyDisplayNameForPropertyValue(currentLocale.get(), kCFLocaleIdentifier, localeName.createCFString().get());
     }
-
-    return emptyString();
+#endif
+    return localeName;
 }
     
 }

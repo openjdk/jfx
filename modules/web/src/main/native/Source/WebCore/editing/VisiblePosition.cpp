@@ -37,8 +37,8 @@
 #include "RenderBlock.h"
 #include "RootInlineBox.h"
 #include "Text.h"
+#include "VisibleUnits.h"
 #include "htmlediting.h"
-#include "visible_units.h"
 #include <stdio.h>
 #include <wtf/text/CString.h>
 
@@ -145,7 +145,7 @@ Position VisiblePosition::leftVisuallyDistinctCandidate() const
 
             if (box->isLeftToRightDirection() ? offset < caretMinOffset : offset > caretMaxOffset) {
                 // Overshot to the left.
-                InlineBox* prevBox = box->prevLeafChild();
+                InlineBox* prevBox = box->prevLeafChildIgnoringLineBreak();
                 if (!prevBox) {
                     Position positionOnLeft = primaryDirection == LTR ? previousVisuallyDistinctCandidate(m_deepPosition) : nextVisuallyDistinctCandidate(m_deepPosition);
                     if (positionOnLeft.isNull())
@@ -310,7 +310,7 @@ Position VisiblePosition::rightVisuallyDistinctCandidate() const
 
             if (box->isLeftToRightDirection() ? offset > caretMaxOffset : offset < caretMinOffset) {
                 // Overshot to the right.
-                InlineBox* nextBox = box->nextLeafChild();
+                InlineBox* nextBox = box->nextLeafChildIgnoringLineBreak();
                 if (!nextBox) {
                     Position positionOnRight = primaryDirection == LTR ? nextVisuallyDistinctCandidate(m_deepPosition) : previousVisuallyDistinctCandidate(m_deepPosition);
                     if (positionOnRight.isNull())
@@ -558,7 +558,7 @@ Position VisiblePosition::canonicalPosition(const Position& passedPosition)
         return Position();
 
     // The new position should be in the same block flow element. Favor that.
-    Node* originalBlock = node ? node->enclosingBlockFlowElement() : 0;
+    Element* originalBlock = deprecatedEnclosingBlockFlowElement(node);
     bool nextIsOutsideOriginalBlock = !nextNode->isDescendantOf(originalBlock) && nextNode != originalBlock;
     bool prevIsOutsideOriginalBlock = !prevNode->isDescendantOf(originalBlock) && prevNode != originalBlock;
     if (nextIsOutsideOriginalBlock && !prevIsOutsideOriginalBlock)
@@ -711,12 +711,13 @@ bool setEnd(Range *r, const VisiblePosition &visiblePosition)
     return code == 0;
 }
 
+// FIXME: Maybe this should be deprecated too, like the underlying function?
 Element* enclosingBlockFlowElement(const VisiblePosition &visiblePosition)
 {
     if (visiblePosition.isNull())
         return NULL;
 
-    return visiblePosition.deepEquivalent().deprecatedNode()->enclosingBlockFlowElement();
+    return deprecatedEnclosingBlockFlowElement(visiblePosition.deepEquivalent().deprecatedNode());
 }
 
 bool isFirstVisiblePositionInNode(const VisiblePosition &visiblePosition, const Node *node)

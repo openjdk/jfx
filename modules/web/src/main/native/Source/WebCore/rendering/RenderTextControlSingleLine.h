@@ -32,7 +32,7 @@ class HTMLInputElement;
 
 class RenderTextControlSingleLine : public RenderTextControl {
 public:
-    RenderTextControlSingleLine(Node*);
+    RenderTextControlSingleLine(Element*);
     virtual ~RenderTextControlSingleLine();
     // FIXME: Move create*Style() to their classes.
     virtual PassRefPtr<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const;
@@ -42,7 +42,7 @@ public:
 
 protected:
     virtual void centerContainerIfNeeded(RenderBox*) const { }
-    virtual LayoutUnit computeHeightLimit() const;
+    virtual LayoutUnit computeLogicalHeightLimit() const;
     HTMLElement* containerElement() const;
     HTMLElement* innerBlockElement() const;
     HTMLInputElement* inputElement() const;
@@ -56,9 +56,9 @@ private:
     virtual void paint(PaintInfo&, const LayoutPoint&);
     virtual void layout();
 
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
 
-    virtual void autoscroll();
+    virtual void autoscroll(const IntPoint&);
 
     // Subclassed to forward to our inner div.
     virtual int scrollLeft() const;
@@ -72,8 +72,8 @@ private:
 
     int textBlockWidth() const;
     virtual float getAvgCharWidth(AtomicString family);
-    virtual LayoutUnit preferredContentWidth(float charWidth) const;
-    virtual LayoutUnit computeControlHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const OVERRIDE;
+    virtual LayoutUnit preferredContentLogicalWidth(float charWidth) const;
+    virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const OVERRIDE;
     
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
 
@@ -84,7 +84,7 @@ private:
     HTMLElement* innerSpinButtonElement() const;
 
     bool m_shouldDrawCapsLockIndicator;
-    LayoutUnit m_desiredInnerTextHeight;
+    LayoutUnit m_desiredInnerTextLogicalHeight;
 };
 
 inline HTMLElement* RenderTextControlSingleLine::containerElement() const
@@ -99,7 +99,7 @@ inline HTMLElement* RenderTextControlSingleLine::innerBlockElement() const
 
 inline RenderTextControlSingleLine* toRenderTextControlSingleLine(RenderObject* object)
 {
-    ASSERT(!object || object->isTextField());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTextField());
     return static_cast<RenderTextControlSingleLine*>(object);
 }
 
@@ -110,13 +110,10 @@ void toRenderTextControlSingleLine(const RenderTextControlSingleLine*);
 
 class RenderTextControlInnerBlock : public RenderBlock {
 public:
-    RenderTextControlInnerBlock(Node* node, bool isMultiLine) : RenderBlock(node), m_multiLine(isMultiLine) { }
+    RenderTextControlInnerBlock(Element* element) : RenderBlock(element) { }
 
 private:
     virtual bool hasLineIfEmpty() const { return true; }
-    virtual VisiblePosition positionForPoint(const LayoutPoint&);
-
-    bool m_multiLine;
 };
 
 }

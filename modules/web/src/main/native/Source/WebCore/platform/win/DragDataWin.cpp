@@ -31,8 +31,8 @@
 #include "ClipboardUtilitiesWin.h"
 #include "Frame.h"
 #include "DocumentFragment.h"
-#include "PlatformString.h"
 #include "Markup.h"
+#include "Range.h"
 #include "TextEncoding.h"
 #include <objidl.h>
 #include <shlwapi.h>
@@ -41,6 +41,7 @@
 #include <wtf/Hashmap.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -107,11 +108,16 @@ String DragData::asURL(Frame*, FilenameConversionPolicy filenamePolicy, String* 
 
 bool DragData::containsFiles() const
 {
+#if USE(CF)
     return (m_platformDragData) ? SUCCEEDED(m_platformDragData->QueryGetData(cfHDropFormat())) : m_dragDataMap.contains(cfHDropFormat()->cfFormat);
+#else
+    return false;
+#endif
 }
 
 unsigned DragData::numberOfFiles() const
 {
+#if USE(CF)
     if (!m_platformDragData)
         return 0;
 
@@ -130,10 +136,14 @@ unsigned DragData::numberOfFiles() const
     GlobalUnlock(medium.hGlobal);
 
     return numFiles;
+#else
+    return 0;
+#endif
 }
 
 void DragData::asFilenames(Vector<String>& result) const
 {
+#if USE(CF)
     if (m_platformDragData) {
         WCHAR filename[MAX_PATH];
         
@@ -160,6 +170,7 @@ void DragData::asFilenames(Vector<String>& result) const
         return;
     }
     result = m_dragDataMap.get(cfHDropFormat()->cfFormat);
+#endif
 }
 
 bool DragData::containsPlainText() const

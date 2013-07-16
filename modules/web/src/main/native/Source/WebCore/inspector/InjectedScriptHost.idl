@@ -30,28 +30,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module core {
-    interface [
-        Conditional=INSPECTOR
-    ] InjectedScriptHost {
+[
+    NoInterfaceObject,
+    Conditional=INSPECTOR,
+    ImplementationLacksVTable
+] interface InjectedScriptHost {
         void clearConsoleMessages();
 
-        void copyText(in DOMString text);
-        [Custom] void inspect(in DOMObject objectId, in DOMObject hints);
-        [Custom] DOMObject inspectedObject(in int num);
-        [Custom] DOMObject internalConstructorName(in DOMObject object);
-        [Custom] boolean isHTMLAllCollection(in DOMObject object);
-        [Custom] DOMString type(in DOMObject object);
-        [Custom] DOMObject functionDetails(in DOMObject object);
-        [Custom] Array getEventListeners(in Node node);
+    void copyText(DOMString text);
+    [Custom] void inspect(any objectId, any hints);
+    [Custom] any inspectedObject(int num);
+    [Custom] any internalConstructorName(any object);
+    [Custom] boolean isHTMLAllCollection(any object);
+    [Custom] DOMString type(any object);
+    [Custom] any functionDetails(any object);
+    [Custom] Array getInternalProperties(any object);
+    [Custom] Array getEventListeners(Node node);
 
-        [Custom] DOMString databaseId(in DOMObject database);
-        [Custom] DOMString storageId(in DOMObject storage);
+    [Custom] readonly attribute any evaluate;
 
-#if defined(ENABLE_WORKERS) && ENABLE_WORKERS
-        void didCreateWorker(in long id, in DOMString url, in boolean isFakeWorker);
-        void didDestroyWorker(in long id);
-        long nextWorkerId();
-#endif
+    [Custom] DOMString databaseId(any database);
+    [Custom] DOMString storageId(any storage);
+
+    // Only declarative scope (local, with and catch) is accepted. Returns undefined. 
+    [Custom] any setFunctionVariableValue(any functionObject, int scopeIndex, DOMString variableName, any newValue);
     };
-}

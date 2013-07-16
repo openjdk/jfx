@@ -24,25 +24,32 @@
 
 namespace WebCore {
 
+class RenderTable;
+
 class RenderTableCaption : public RenderBlock {
 public:
-    explicit RenderTableCaption(Node*);
+    explicit RenderTableCaption(Element*);
     virtual ~RenderTableCaption();
     virtual LayoutUnit containingBlockLogicalWidthForContent() const OVERRIDE;
     
 private:
     virtual bool isTableCaption() const OVERRIDE { return true; }
+
+    virtual void insertedIntoTree() OVERRIDE;
+    virtual void willBeRemovedFromTree() OVERRIDE;
+
+    RenderTable* table() const;
 };
 
 inline RenderTableCaption* toRenderTableCaption(RenderObject* object)
 {
-    ASSERT(!object || object->isTableCaption());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTableCaption());
     return static_cast<RenderTableCaption*>(object);
 }
 
 inline const RenderTableCaption* toRenderTableCaption(const RenderObject* object)
 {
-    ASSERT(!object || object->isTableCaption());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTableCaption());
     return static_cast<const RenderTableCaption*>(object);
 }
 

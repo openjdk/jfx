@@ -5,58 +5,33 @@ package com.sun.javafx.webkit.prism;
 
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
-import com.sun.javafx.geom.Arc2D;
-import com.sun.javafx.geom.DirtyRegionContainer;
-import com.sun.javafx.geom.DirtyRegionPool;
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.geom.Rectangle;
-import com.sun.javafx.geom.Shape;
+import com.sun.javafx.geom.*;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
-import com.sun.javafx.sg.PGImageView;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGPath;
-import com.sun.javafx.sg.PGRectangle;
-import com.sun.javafx.sg.PGShape.Mode;
-import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.NGShape;
-import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutWidth;
-import com.sun.prism.BasicStroke;
-import com.sun.prism.CompositeMode;
-import com.sun.prism.Graphics;
-import com.sun.prism.Image;
-import com.sun.prism.MaskTextureGraphics;
-import com.sun.prism.RTTexture;
-import com.sun.prism.ReadbackGraphics;
-import com.sun.prism.ResourceFactory;
-import com.sun.prism.Texture;
+import com.sun.javafx.sg.prism.*;
+import com.sun.prism.*;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
 import com.sun.prism.paint.ImagePattern;
 import com.sun.prism.paint.Paint;
-import com.sun.scenario.effect.Blend;
-import static com.sun.scenario.effect.Blend.Mode.*;
-import com.sun.scenario.effect.Color4f;
-import com.sun.scenario.effect.DropShadow;
-import com.sun.scenario.effect.Effect;
-import com.sun.scenario.effect.FilterContext;
-import com.sun.scenario.effect.ImageData;
+import com.sun.scenario.effect.*;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.webkit.graphics.*;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutWidth;
+import static com.sun.scenario.effect.Blend.Mode.*;
 
 class WCGraphicsPrismContext extends WCGraphicsContext {
 
@@ -409,7 +384,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 Paint paint = (rgba != null) ? createColor(rgba) : state.getPaintNoClone();
                 DropShadow shadow = state.getShadowNoClone();
                 if (shadow != null) {
-                    PGRectangle node = Toolkit.getToolkit().createPGRectangle();
+                    final NGRectangle node = new NGRectangle();
                     node.updateRectangle(x, y, w, h, 0, 0);
                     render(g, shadow, paint, null, node);
                 } else {
@@ -442,7 +417,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 Paint paint = createColor(rgba);
                 DropShadow shadow = state.getShadowNoClone();
                 if (shadow != null) {
-                    PGRectangle node = Toolkit.getToolkit().createPGRectangle();
+                    final NGRectangle node = new NGRectangle();
                     node.updateRectangle(x, y, w, h, arcW, arcH);
                     render(g, shadow, paint, null, node);
                 } else {
@@ -710,7 +685,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     PrismImage pi = (PrismImage) img;
                     DropShadow shadow = state.getShadowNoClone();
                     if (shadow != null) {
-                        PGImageView node = Toolkit.getToolkit().createPGImageView();
+                        NGImageView node = new NGImageView();
                         node.setImage(pi.getImage());
                         node.setX(dstx);
                         node.setY(dsty);
@@ -792,7 +767,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                         : null;
                 DropShadow shadow = state.getShadowNoClone();
                 if (shadow != null) {
-                    PGText span = Toolkit.getToolkit().createPGText();
+                    final NGText span = new NGText();
                     span.setGlyphs(new GlyphList[] {gl});
                     span.setFont(font);
                     span.setFontSmoothingType(fontSmoothingType);
@@ -990,7 +965,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         return shadow;
     }
 
-    private void render(Graphics g, Effect effect, Paint paint, BasicStroke stroke, PGNode node) {
+    private void render(Graphics g, Effect effect, Paint paint, BasicStroke stroke, NGNode node) {
         if (node instanceof NGShape) {
             NGShape shape = (NGShape) node;
             Shape realShape = shape.getShape();
@@ -999,9 +974,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 realShape = stroke.createStrokedShape(realShape);
                 shape.setDrawStroke(stroke);
                 shape.setDrawPaint(strokePaint);
-                shape.setMode((paint == null) ? Mode.STROKE : Mode.STROKE_FILL);
+                shape.setMode((paint == null) ? NGShape.Mode.STROKE : NGShape.Mode.STROKE_FILL);
             } else {
-                shape.setMode((paint == null) ? Mode.EMPTY : Mode.FILL);
+                shape.setMode((paint == null) ? NGShape.Mode.EMPTY : NGShape.Mode.FILL);
             }
             shape.setFillPaint(paint);
             shape.setContentBounds(realShape.getBounds());
@@ -1009,7 +984,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         boolean culling = g.hasPreCullingBits();
         g.setHasPreCullingBits(false);
         node.setEffect(effect);
-        ((NGNode) node).render(g);
+        node.render(g);
         g.setHasPreCullingBits(culling);
     }
 
@@ -1527,7 +1502,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     BasicStroke stroke = state.getStrokeNoClone().getPlatformStroke();
                     DropShadow shadow = state.getShadowNoClone();
                     if (shadow != null) {
-                        PGPath node = Toolkit.getToolkit().createPGPath();
+                        final NGPath node = new NGPath();
                         node.updateWithPath2d(p2d);
                         render(g, shadow, null, stroke, node);
                     } else if (stroke != null) {
@@ -1553,7 +1528,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     Paint paint = state.getPaintNoClone();
                     DropShadow shadow = state.getShadowNoClone();
                     if (shadow != null) {
-                        PGPath node = Toolkit.getToolkit().createPGPath();
+                        final NGPath node = new NGPath();
                         node.updateWithPath2d(p2d);
                         render(g, shadow, paint, null, node);
                     } else {

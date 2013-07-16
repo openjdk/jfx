@@ -106,6 +106,7 @@ sub openWebSocketServerIfNeeded();
 sub pathcmp($$);
 sub printFailureMessageForTest($$);
 sub processIgnoreTests($$);
+sub processSkippedFileEntry($$$);
 sub readChecksumFromPng($);
 sub readFromDumpToolWithTimer(**);
 sub readSkippedFiles($);
@@ -115,6 +116,7 @@ sub setFileHandleNonBlocking(*$);
 sub setUpWindowsCrashLogSaving();
 sub slowestcmp($$);
 sub splitpath($);
+sub startsWith($$);
 sub stopRunningTestsEarlyIfNeeded();
 sub stripExtension($);
 sub stripMetrics($$);
@@ -187,18 +189,17 @@ my $testResultsServer = '';
 
 my @leaksFilenames;
 
-if (isWindows() || isMsys()) {
+if (isWindows()) {
     print "This script has to be run under Cygwin to function correctly.\n";
     exit 1;
 }
-
-# Default to --no-http for wx for now.
-$testHTTP = 0 if (isWx());
 
 my $perlInterpreter = "perl";
 
 my $expectedTag = "expected";
 my $mismatchTag = "mismatch";
+my $refTag = "ref";
+my $notrefTag = "notref";
 my $actualTag = "actual";
 my $prettyDiffTag = "pretty-diff";
 my $diffsTag = "diffs";
@@ -242,8 +243,6 @@ if (isJava()) {
     $platform = "qt";
 } elsif (isGtk()) {
     $platform = "gtk";
-} elsif (isWx()) {
-    $platform = "wx";
 } elsif (isWinCairo()) {
     $platform = "wincairo";
 } elsif (isCygwin() || isWindows()) {
@@ -301,6 +300,7 @@ Usage: $programName [options] [testdir|testpath ...]
   -i|--ignore-tests               Comma-separated list of directories or tests to ignore
   --iterations n                  Number of times to run the set of tests (e.g. ABCABCABC)
   --[no-]launch-safari            Launch (or do not launch) Safari to display test results (default: $launchSafariDefault)
+  --[no-]show-results             Same as --[no-]launch-safari
   -l|--leaks                      Enable leaks checking
   --[no-]new-test-results         Generate results for new tests
   --nthly n                       Restart DumpRenderTree every n tests (default: $testsPerDumpTool)
@@ -366,6 +366,7 @@ my $getOptionsResult = GetOptions(
     'reverse' => \$reverseTests,
     'root=s' => \$root,
     'sample-on-timeout!' => \$runSample,
+    'show-results!' => \$launchSafari,
     'singly|1' => sub { $testsPerDumpTool = 1; },
     'skipped=s' => \&validateSkippedArg,
     'slowest' => \$report10Slowest,
@@ -431,6 +432,8 @@ my $productDir = productDir();
 $productDir .= "/bin" if isQt();
 $productDir .= "/Programs" if isGtk();
 
+# Save the current directory before chaging it via chdirWebKit
+my $currentDir = cwd();
 chdirWebKit();
 
 if (!defined($root) && !$noBuildDumpTool) {
@@ -457,7 +460,7 @@ if (isJava()) {
     my $javaHome = $ENV{'JAVA_HOME'};
     die "JAVA_HOME is undefined" if !defined($javaHome);
 
-    my $baseDir = "$productDir/../../../../../artifacts";
+    my $baseDir = "$productDir/../../../../../../../../artifacts";
     if (isCygwin()) {
         chomp($baseDir = `cygpath -m \"$baseDir\"`);
     }
@@ -514,7 +517,7 @@ my @platformTestHierarchy = buildPlatformTestHierarchy(@platformResultHierarchy)
 
 $expectedDirectory = $ENV{"WebKitExpectedTestResultsDirectory"} if $ENV{"WebKitExpectedTestResultsDirectory"};
 
-$testResultsDirectory = File::Spec->rel2abs($testResultsDirectory);
+$testResultsDirectory = File::Spec->catfile($currentDir, $testResultsDirectory);
 # $testResultsDirectory must be empty before testing.
 rmtree $testResultsDirectory;
 my $testResults = File::Spec->catfile($testResultsDirectory, "results.html");
@@ -797,12 +800,16 @@ for my $test (@tests) {
     print $tests_run_fh "$test\n";
 
     # Try to read expected hash file for pixel tests
-    my $suffixExpectedHash = "";
-    if ($pixelTests && !$resetResults) {
-        my $expectedPixelDir = expectedDirectoryForTest($base, 0, "png");
-        if (my $expectedHash = readChecksumFromPng(File::Spec->catfile($expectedPixelDir, "$base-$expectedTag.png"))) {
-            # Format expected hash into a suffix string that is appended to the path / URL passed to DRT.
-            $suffixExpectedHash = "'$expectedHash";
+    my $suffixPixelTest = "";
+    if ($pixelTests) {
+        # ' is the separator between arguments.
+        $suffixPixelTest = "'--pixel-test";
+        if (!$resetResults) {
+            my $expectedPixelDir = expectedDirectoryForTest($base, 0, "png");
+            if (my $expectedHash = readChecksumFromPng(File::Spec->catfile($expectedPixelDir, "$base-$expectedTag.png"))) {
+                # Format expected hash into a suffix string that is appended to the path / URL passed to DRT.
+                $suffixPixelTest = "'--pixel-test'$expectedHash";
+            }
         }
     }
 
@@ -838,11 +845,11 @@ for my $test (@tests) {
         } elsif ($test !~ /^http\/tests\/local\// && $test !~ /^http\/tests\/ssl\//) {
             my $path = canonpath($test);
             $path =~ s/^http\/tests\///;
-            print OUT "http://127.0.0.1:$httpdPort/$path$suffixExpectedHash\n";
+            print OUT "http://127.0.0.1:$httpdPort/$path$suffixPixelTest\n";
         } elsif ($test =~ /^http\/tests\/ssl\//) {
             my $path = canonpath($test);
             $path =~ s/^http\/tests\///;
-            print OUT "https://127.0.0.1:$httpdSSLPort/$path$suffixExpectedHash\n";
+            print OUT "https://127.0.0.1:$httpdSSLPort/$path$suffixPixelTest\n";
         } else {
             my $testPath = "$testDirectory/$test";
             if (isCygwin()) {
@@ -850,7 +857,7 @@ for my $test (@tests) {
             } else {
                 $testPath = canonpath($testPath);
             }
-            print OUT "$testPath$suffixExpectedHash\n";
+            print OUT "$testPath$suffixPixelTest\n";
         }
     } else {
         my $testPath = "$testDirectory/$test";
@@ -859,7 +866,7 @@ for my $test (@tests) {
         } else {
             $testPath = canonpath($testPath);
         }
-        print OUT "$testPath$suffixExpectedHash\n" if defined $testPath;
+        print OUT "$testPath$suffixPixelTest\n" if defined $testPath;
     }
 
     # DumpRenderTree is expected to dump two "blocks" to stdout for each test.
@@ -1509,6 +1516,9 @@ sub openDumpTool()
     # Platform spesifics
     if (isJava()) {
         $CLEAN_ENV{PATH} = $ENV{PATH};
+        if (isCygwin() || isWindows()) {
+            $CLEAN_ENV{TMP} = $ENV{TMP};
+        }
     }
     if (isLinux()) {
         if (defined $ENV{'DISPLAY'}) {
@@ -1602,7 +1612,7 @@ sub closeDumpTool()
 
     close IN;
     close OUT;
-    waitpid $dumpToolPID, WNOHANG;
+    waitpid $dumpToolPID, 0;
     
     # check for WebCore counter leaks.
     if ($shouldCheckLeaks) {
@@ -2430,6 +2440,8 @@ sub readFromDumpToolWithTimer(**)
             } elsif (!$haveSeenContentTransferEncoding && $lineIn =~ /^Content-Transfer-Encoding: (\S+)$/) {
                 $encoding = $1;
                 $haveSeenContentTransferEncoding = 1;
+            } elsif ($lineIn =~ /^DumpMalloc|^DumpJSHeap: (\S+)$/) {
+                    # Ignored. Only used in performance tests.
             } elsif ($lineIn =~ /(.*)#EOF$/) {
                 if ($1 ne "") {
                     push @output, $1;
@@ -2516,12 +2528,14 @@ sub stripMetrics($$)
         $result =~ s/\([0-9]+px/px/g;
         $result =~ s/ *" *\n +" */ /g;
         $result =~ s/" +$/"/g;
-
         $result =~ s/- /-/g;
         $result =~ s/\n( *)"\s+/\n$1"/g;
         $result =~ s/\s+"\n/"\n/g;
         $result =~ s/scrollWidth [0-9]+/scrollWidth/g;
         $result =~ s/scrollHeight [0-9]+/scrollHeight/g;
+        $result =~ s/scrollX [0-9]+/scrollX/g;
+        $result =~ s/scrollY [0-9]+/scrollY/g;
+        $result =~ s/scrolled to [0-9]+,[0-9]+/scrolled/g;
     }
 
     return ($actual, $expected);
@@ -2556,6 +2570,8 @@ sub readSkippedFiles($)
     }
 
     foreach my $level (@skippedFileDirectories) {
+        # If a Skipped file exists in the directory, use that and ignore the TestExpectations file,
+        # but if it doesn't, treat every entry in the TestExpectations file as if it should be Skipped.
         if (open SKIPPED, "<", "$level/Skipped") {
             if ($verbose) {
                 my ($dir, $name) = splitpath($level);
@@ -2568,36 +2584,94 @@ sub readSkippedFiles($)
                 $skipped =~ s/^[ \n\r]+//;
                 $skipped =~ s/[ \n\r]+$//;
                 if ($skipped && $skipped !~ /^#/) {
-                    if ($skippedOnly) {
-                        if (!fileShouldBeIgnored($skipped)) {
-                            if (!$constraintPath) {
-                                # Always add $skipped since no constraint path was specified on the command line.
-                                push(@ARGV, $skipped);
-                            } elsif ($skipped =~ /^($constraintPath)/ || ("LayoutTests/".$skipped) =~ /^($constraintPath)/ ) {
-                                # Add $skipped only if it matches the current path constraint, e.g.,
-                                # "--skipped=only dir1" with "dir1/file1.html" on the skipped list or
-                                # "--skipped=only LayoutTests/dir1" with "dir1/file1.html" on the skipped list
-                                push(@ARGV, $skipped);
-                            } elsif ($constraintPath =~ /^("LayoutTests\/".$skipped)/ || $constraintPath =~ /^($skipped)/) {
-                                # Add current path constraint if it is more specific than the skip list entry,
-                                # e.g., "--skipped=only dir1/dir2/dir3" with "dir1" on the skipped list or
-                                # e.g., "--skipped=only LayoutTests/dir1/dir2/dir3" with "dir1" on the skipped list.
-                                push(@ARGV, $constraintPath);
-                            }
-                        } elsif ($verbose) {
-                            print "    $skipped\n";
-                        }
-                    } else {
-                        if ($verbose) {
-                            print "    $skipped\n";
-                        }
-                        processIgnoreTests($skipped, "Skipped");
-                    }
+                    processSkippedFileEntry($skipped, "Skipped", $constraintPath);
                 }
             }
             close SKIPPED;
+        } elsif (open EXPECTATIONS, "<", "$level/TestExpectations") {
+            if ($verbose) {
+                my ($dir, $name) = splitpath($level);
+                print "Skipping tests from $name:\n";
+            }
+            LINE: while (<EXPECTATIONS>) {
+                my $line = $_;
+                chomp $line;
+                $line =~ s/^[ \n\r]+//;
+                $line =~ s/[ \n\r]+$//;
+                $line =~ s/#.*$//;
+
+                # This logic roughly mirrors the logic in test_expectations.py _tokenize_line() but we
+                # don't bother to look at any of the modifiers or expectations and just skip everything.
+
+                my $state = "start";
+                my $skipped = "";
+                TOKEN: foreach my $token (split(/\s+/, $line)) {
+                    if (startsWith($token, "BUG") || startsWith($token, "//")) {
+                        # Ignore any lines with the old-style syntax.
+                        next LINE;
+                    }
+                    if (startsWith($token, "webkit.org/b/") || startsWith($token, "Bug(")) {
+                        # Skip over bug identifiers; note that we don't bother looking for
+                        # Chromium or V8 URLs since ORWT doesn't work with Chromium.
+                        next TOKEN;
+                    } elsif ($token eq "[") {
+                        if ($state eq 'start') {
+                            $state = 'configuration';
+                        }
+                    } elsif ($token eq "]") {
+                        if ($state eq 'configuration') {
+                            $state = 'name';
+                        }
+                    } elsif (($state eq "name") || ($state eq "start")) {
+                        $skipped = $token;
+                        # Skip over the rest of the line.
+                        last TOKEN;
+                    }
+                }
+                if ($skipped) {
+                    processSkippedFileEntry($skipped, "TestExpectations", $constraintPath);
+                }
+            }
+            close EXPECTATIONS;
         }
     }
+}
+
+sub processSkippedFileEntry($$$)
+{
+    my ($skipped, $listname, $constraintPath) = @_;
+
+    if ($skippedOnly) {
+        if (!fileShouldBeIgnored($skipped)) {
+            if (!$constraintPath) {
+                # Always add $skipped since no constraint path was specified on the command line.
+                push(@ARGV, $skipped);
+            } elsif ($skipped =~ /^($constraintPath)/ || ("LayoutTests/".$skipped) =~ /^($constraintPath)/ ) {
+                # Add $skipped only if it matches the current path constraint, e.g.,
+                # "--skipped=only dir1" with "dir1/file1.html" on the skipped list or
+                # "--skipped=only LayoutTests/dir1" with "dir1/file1.html" on the skipped list
+                push(@ARGV, $skipped);
+            } elsif ($constraintPath =~ /^("LayoutTests\/".$skipped)/ || $constraintPath =~ /^($skipped)/) {
+                # Add current path constraint if it is more specific than the skip list entry,
+                # e.g., "--skipped=only dir1/dir2/dir3" with "dir1" on the skipped list or
+                # e.g., "--skipped=only LayoutTests/dir1/dir2/dir3" with "dir1" on the skipped list.
+                push(@ARGV, $constraintPath);
+            }
+        } elsif ($verbose) {
+            print "    $skipped\n";
+        }
+    } else {
+        if ($verbose) {
+            print "    $skipped\n";
+        }
+        processIgnoreTests($skipped, $listname);
+    }
+}
+
+sub startsWith($$)
+{
+    my ($string, $substring) = @_;
+    return index($string, $substring) == 0;
 }
 
 sub readChecksumFromPng($)
@@ -2614,11 +2688,24 @@ my @testsFound;
 sub isUsedInReftest($)
 {
     my $filename = $_[0];
-    if ($filename =~ /-$expectedTag(-$mismatchTag)?\.html$/) {
+    my @extensions = ('html','shtml','xml','xhtml','htm','php','svg','mht','pl');
+    my $extensionsJoined = join("|", @extensions);
+    my $suffixExtensionExpression = "-($expectedTag|$refTag|$notrefTag)(-$mismatchTag)?\\.(".$extensionsJoined.")\$";
+    my $prefixExtensionExpression = "^($refTag|$notrefTag)-";
+    if ($filename =~ /$suffixExtensionExpression/ || $filename =~ /$prefixExtensionExpression/) {
         return 1;
     }
     my $base = stripExtension($filename);
-    return (-f "$base-$expectedTag.html" || -f "$base-$expectedTag-$mismatchTag.html");
+
+    foreach my $extension (@extensions) {
+        if (-f "$base-$expectedTag.$extension" || 
+            -f "$base-$refTag.$extension" || -f "$base-$notrefTag.$extension" ||
+            -f "$base-$expectedTag-$mismatchTag.$extension" ||
+            -f "$refTag-$base.$extension" || -f "$notrefTag-$base.$extension") {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 sub directoryFilter
@@ -2724,9 +2811,9 @@ sub printResults
         my $message;
         if ($typeCount == 1) {
             $typeText =~ s/were/was/;
-            $message = sprintf "1 test case (%d%%) %s\n", 1 * 100 / $count, $typeText;
+            $message = sprintf "1 test case %s\n", $typeText;
         } else {
-            $message = sprintf "%d test cases (%d%%) %s\n", $typeCount, $typeCount * 100 / $count, $typeText;
+            $message = sprintf "%d test cases %s\n", $typeCount, $typeText;
         }
         $message =~ s-\(0%\)-(<1%)-;
         print $message;
@@ -2801,16 +2888,23 @@ sub setUpWindowsCrashLogSaving()
         return;
     }
 
-    my $ntsdPath = File::Spec->catfile(toCygwinPath($ENV{PROGRAMFILES}), "Debugging Tools for Windows (x86)", "ntsd.exe");
-    unless (-f $ntsdPath) {
-        $ntsdPath = File::Spec->catfile(toCygwinPath($ENV{ProgramW6432}), "Debugging Tools for Windows (x64)", "ntsd.exe");
-        unless (-f $ntsdPath) {
-            $ntsdPath = File::Spec->catfile(toCygwinPath($ENV{SYSTEMROOT}), "system32", "ntsd.exe");
-            unless (-f $ntsdPath) {
-                print STDERR "Can't find ntsd.exe. Crash logs will not be saved.\nSee <http://trac.webkit.org/wiki/BuildingOnWindows#GettingCrashLogs>.\n";
-                return;
-            }
+    my @possiblePaths = (
+        File::Spec->catfile(toCygwinPath($ENV{PROGRAMFILES}), "Windows Kits", "8.0", "Debuggers", "x64", "ntsd.exe"),
+        File::Spec->catfile(toCygwinPath($ENV{PROGRAMFILES}), "Windows Kits", "8.0", "Debuggers", "x86", "ntsd.exe"),
+        File::Spec->catfile(toCygwinPath($ENV{PROGRAMFILES}), "Debugging Tools for Windows (x86)", "ntsd.exe"),
+        File::Spec->catfile(toCygwinPath($ENV{ProgramW6432}), "Debugging Tools for Windows (x64)", "ntsd.exe"),
+        File::Spec->catfile(toCygwinPath($ENV{SYSTEMROOT}), "system32", "ntsd.exe"),
+    );
+
+    my $ntsdPath = shift @possiblePaths;
+
+    while (not -f $ntsdPath) {
+        if (!@possiblePaths) {
+            print STDERR "Can't find ntsd.exe. Crash logs will not be saved.\nSee <http://trac.webkit.org/wiki/BuildingOnWindows#GettingCrashLogs>.\n";
+            return;
         }
+
+        $ntsdPath = shift @possiblePaths;
     }
 
     # If we used -c (instead of -cf) we could pass the commands directly on the command line. But

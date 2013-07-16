@@ -71,13 +71,13 @@ PassRefPtr<SVGFESpecularLightingElement> SVGFESpecularLightingElement::create(co
 
 const AtomicString& SVGFESpecularLightingElement::kernelUnitLengthXIdentifier()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGKernelUnitLengthX"));
+    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGKernelUnitLengthX", AtomicString::ConstructFromLiteral));
     return s_identifier;
 }
 
 const AtomicString& SVGFESpecularLightingElement::kernelUnitLengthYIdentifier()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGKernelUnitLengthY"));
+    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGKernelUnitLengthY", AtomicString::ConstructFromLiteral));
     return s_identifier;
 }
 
@@ -94,35 +94,34 @@ bool SVGFESpecularLightingElement::isSupportedAttribute(const QualifiedName& att
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGFESpecularLightingElement::parseAttribute(const Attribute& attribute)
+void SVGFESpecularLightingElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(attribute.name())) {
-        SVGFilterPrimitiveStandardAttributes::parseAttribute(attribute);
+    if (!isSupportedAttribute(name)) {
+        SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
         return;
     }
 
-    const AtomicString& value = attribute.value();
-    if (attribute.name() == SVGNames::inAttr) {
+    if (name == SVGNames::inAttr) {
         setIn1BaseValue(value);
         return;
     }
 
-    if (attribute.name() == SVGNames::surfaceScaleAttr) {
+    if (name == SVGNames::surfaceScaleAttr) {
         setSurfaceScaleBaseValue(value.toFloat());
         return;
     }
 
-    if (attribute.name() == SVGNames::specularConstantAttr) {
+    if (name == SVGNames::specularConstantAttr) {
         setSpecularConstantBaseValue(value.toFloat());
         return;
     }
 
-    if (attribute.name() == SVGNames::specularExponentAttr) {
+    if (name == SVGNames::specularExponentAttr) {
         setSpecularExponentBaseValue(value.toFloat());
         return;
     }
 
-    if (attribute.name() == SVGNames::kernelUnitLengthAttr) {
+    if (name == SVGNames::kernelUnitLengthAttr) {
         float x, y;
         if (parseNumberOptionalNumber(value, x, y)) {
             setKernelUnitLengthXBaseValue(x);

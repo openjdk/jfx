@@ -29,7 +29,7 @@
 
 #include "LayerFlushScheduler.h"
 
-#include "AutodrainedPool.h"
+#include <wtf/AutodrainedPool.h>
 
 namespace WebCore {
 
@@ -77,7 +77,7 @@ void LayerFlushScheduler::schedule()
         return;
 
     CFRunLoopObserverContext context = { 0, this, 0, 0, 0 };
-    m_runLoopObserver.adoptCF(CFRunLoopObserverCreate(0, kCFRunLoopBeforeWaiting | kCFRunLoopExit, true, LayerFlushRunLoopOrder, runLoopObserverCallback, &context));
+    m_runLoopObserver = adoptCF(CFRunLoopObserverCreate(0, kCFRunLoopBeforeWaiting | kCFRunLoopExit, true, LayerFlushRunLoopOrder, runLoopObserverCallback, &context));
 
     CFRunLoopAddObserver(currentRunLoop, m_runLoopObserver.get(), kCFRunLoopCommonModes);
 }

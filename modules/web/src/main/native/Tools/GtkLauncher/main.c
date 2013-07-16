@@ -25,8 +25,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "autotoolsconfig.h"
 #include "LauncherInspectorWindow.h"
 #include <errno.h>
+#include <gdk/gdkkeysyms.h>
+#ifdef WTF_USE_GSTREAMER
+#include <gst/gst.h>
+#endif
 #include <gtk/gtk.h>
 #include <stdlib.h>
 #include <string.h>
@@ -101,6 +106,11 @@ static void goBackCb(GtkWidget* widget,  WebKitWebView* webView)
 static void goForwardCb(GtkWidget* widget, WebKitWebView* webView)
 {
     webkit_web_view_go_forward(webView);
+}
+
+static void reloadCb(GtkWidget* widget, WebKitWebView* webView)
+{
+    webkit_web_view_reload(webView);
 }
 
 static WebKitWebView*
@@ -250,18 +260,18 @@ static GtkWidget* createStatusbar()
     return GTK_WIDGET(statusbar);
 }
 
-static GtkWidget* createToolbar(GtkWidget* uriEntry, WebKitWebView* webView)
+static GtkWidget* createToolbar(GtkWidget* window, GtkWidget* uriEntry, WebKitWebView* webView)
 {
     GtkWidget *toolbar = gtk_toolbar_new();
 
-#if GTK_CHECK_VERSION(2, 15, 0)
     gtk_orientable_set_orientation(GTK_ORIENTABLE(toolbar), GTK_ORIENTATION_HORIZONTAL);
-#else
-    gtk_toolbar_set_orientation(GTK_TOOLBAR(toolbar), GTK_ORIENTATION_HORIZONTAL);
-#endif
     gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH_HORIZ);
 
     GtkToolItem *item;
+
+    /* Keyboard accelerators */
+    GtkAccelGroup *accelGroup = gtk_accel_group_new();
+    gtk_window_add_accel_group(GTK_WINDOW(window), accelGroup);
 
     /* the back button */
     item = gtk_tool_button_new_from_stock(GTK_STOCK_GO_BACK);
@@ -272,6 +282,12 @@ static GtkWidget* createToolbar(GtkWidget* uriEntry, WebKitWebView* webView)
     item = gtk_tool_button_new_from_stock(GTK_STOCK_GO_FORWARD);
     g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(goForwardCb), webView);
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), item, -1);
+
+    /* The reload button */
+    item = gtk_tool_button_new_from_stock(GTK_STOCK_REFRESH);
+    g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(reloadCb), webView);
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), item, -1);
+    gtk_widget_add_accelerator(GTK_WIDGET(item), "clicked", accelGroup, GDK_KEY_F5, 0, GTK_ACCEL_VISIBLE);
 
     /* The URL entry */
     item = gtk_tool_item_new();
@@ -312,7 +328,7 @@ static GtkWidget* createWindow(WebKitWebView** outWebView)
     vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 #endif
     statusbar = createStatusbar(webView);
-    gtk_box_pack_start(GTK_BOX(vbox), createToolbar(uriEntry, webView), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), createToolbar(window, uriEntry, webView), FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), createBrowser(window, uriEntry, statusbar, webView, vbox), TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), statusbar, FALSE, FALSE, 0);
 
@@ -487,8 +503,11 @@ int main(int argc, char* argv[])
     GOptionContext *context = g_option_context_new(0);
     g_option_context_add_main_entries(context, commandLineOptions, 0);
     g_option_context_add_group(context, gtk_get_option_group(TRUE));
-
+#ifdef WTF_USE_GSTREAMER
+    g_option_context_add_group(context, gst_init_get_option_group());
+#endif
     webkitSettings = webkit_web_settings_new();
+    g_object_set(webkitSettings, "enable-developer-extras", TRUE, NULL);
     if (!addWebSettingsGroupToContext(context, webkitSettings)) {
         g_object_unref(webkitSettings);
         webkitSettings = 0;
@@ -514,6 +533,10 @@ int main(int argc, char* argv[])
         soup_uri_free(proxyUri);
     }
 #endif
+
+#ifdef WEBKIT_EXEC_PATH
+    g_setenv("WEBKIT_INSPECTOR_PATH", WEBKIT_EXEC_PATH "resources/inspector", FALSE);
+#endif /* WEBKIT_EXEC_PATH */
 
     WebKitWebView *webView;
     GtkWidget *main_window = createWindow(&webView);

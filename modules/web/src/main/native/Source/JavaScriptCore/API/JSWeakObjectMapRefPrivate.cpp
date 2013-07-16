@@ -28,9 +28,11 @@
 
 #include "APICast.h"
 #include "APIShims.h"
+#include "JSCJSValue.h"
 #include "JSCallbackObject.h"
-#include "JSValue.h"
 #include "JSWeakObjectMapRefInternal.h"
+#include "Operations.h"
+#include "Weak.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
 
@@ -52,17 +54,25 @@ JSWeakObjectMapRef JSWeakObjectMapCreate(JSContextRef context, void* privateData
 
 void JSWeakObjectMapSet(JSContextRef ctx, JSWeakObjectMapRef map, void* key, JSObjectRef object)
 {
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
     ExecState* exec = toJS(ctx);
     APIEntryShim entryShim(exec);
     JSObject* obj = toJS(object);
     if (!obj)
         return;
-    ASSERT(obj->inherits(&JSCallbackObject<JSGlobalObject>::s_info) || obj->inherits(&JSCallbackObject<JSNonFinalObject>::s_info));
-    map->map().set(exec->globalData(), key, obj);
+    ASSERT(obj->inherits(&JSCallbackObject<JSGlobalObject>::s_info) || obj->inherits(&JSCallbackObject<JSDestructibleObject>::s_info));
+    map->map().set(key, obj);
 }
 
 JSObjectRef JSWeakObjectMapGet(JSContextRef ctx, JSWeakObjectMapRef map, void* key)
 {
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return 0;
+    }
     ExecState* exec = toJS(ctx);
     APIEntryShim entryShim(exec);
     return toRef(jsCast<JSObject*>(map->map().get(key)));
@@ -70,6 +80,10 @@ JSObjectRef JSWeakObjectMapGet(JSContextRef ctx, JSWeakObjectMapRef map, void* k
 
 void JSWeakObjectMapRemove(JSContextRef ctx, JSWeakObjectMapRef map, void* key)
 {
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
     ExecState* exec = toJS(ctx);
     APIEntryShim entryShim(exec);
     map->map().remove(key);

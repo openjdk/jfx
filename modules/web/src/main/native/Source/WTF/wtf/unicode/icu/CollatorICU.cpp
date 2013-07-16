@@ -32,6 +32,7 @@
 #if USE(ICU_UNICODE) && !UCONFIG_NO_COLLATION
 
 #include <wtf/Assertions.h>
+#include <wtf/StringExtras.h>
 #include <wtf/Threading.h>
 #include <unicode/ucol.h>
 #include <string.h>
@@ -61,11 +62,11 @@ PassOwnPtr<Collator> Collator::userDefault()
 {
 #if OS(DARWIN) && USE(CF)
     // Mac OS X doesn't set UNIX locale to match user-selected one, so ICU default doesn't work.
-#if !OS(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
-    RetainPtr<CFLocaleRef> currentLocale(AdoptCF, CFLocaleCopyCurrent());
+#if !OS(IOS)
+    RetainPtr<CFLocaleRef> currentLocale = adoptCF(CFLocaleCopyCurrent());
     CFStringRef collationOrder = (CFStringRef)CFLocaleGetValue(currentLocale.get(), kCFLocaleCollatorIdentifier);
 #else
-    RetainPtr<CFStringRef> collationOrderRetainer(AdoptCF, (CFStringRef)CFPreferencesCopyValue(CFSTR("AppleCollationOrder"), kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
+    RetainPtr<CFStringRef> collationOrderRetainer = adoptCF((CFStringRef)CFPreferencesCopyValue(CFSTR("AppleCollationOrder"), kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
     CFStringRef collationOrder = collationOrderRetainer.get();
 #endif
     char buf[256];
@@ -131,6 +132,9 @@ void Collator::createCollator() const
 
     ucol_setAttribute(m_collator, UCOL_CASE_FIRST, m_lowerFirst ? UCOL_LOWER_FIRST : UCOL_UPPER_FIRST, &status);
     ASSERT(U_SUCCESS(status));
+
+    ucol_setAttribute(m_collator, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
+    ASSERT(U_SUCCESS(status));
 }
 
 void Collator::releaseCollator()
@@ -144,6 +148,6 @@ void Collator::releaseCollator()
     }
 }
 
-}
+} // namespace WTF
 
-#endif
+#endif // USE(ICU_UNICODE) && !UCONFIG_NO_COLLATION

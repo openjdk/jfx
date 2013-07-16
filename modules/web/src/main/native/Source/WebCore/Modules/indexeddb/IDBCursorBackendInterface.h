@@ -30,34 +30,19 @@
 
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Threading.h>
 
 namespace WebCore {
 
-class IDBAny;
 class IDBCallbacks;
 class IDBKey;
 class IDBRequest;
-class SerializedScriptValue;
 
 typedef int ExceptionCode;
 
-class IDBCursorBackendInterface : public ThreadSafeRefCounted<IDBCursorBackendInterface> {
+class IDBCursorBackendInterface : public RefCounted<IDBCursorBackendInterface> {
 public:
     virtual ~IDBCursorBackendInterface() {}
 
-    enum CursorType {
-        InvalidCursorType = 0,
-        IndexCursor,
-        IndexKeyCursor,
-        ObjectStoreCursor
-    };
-
-    virtual PassRefPtr<IDBKey> key() const = 0;
-    virtual PassRefPtr<IDBKey> primaryKey() const = 0;
-    virtual PassRefPtr<SerializedScriptValue> value() const = 0;
-
-    virtual void update(PassRefPtr<SerializedScriptValue>, PassRefPtr<IDBCallbacks>, ExceptionCode&) = 0;
     virtual void advance(unsigned long count, PassRefPtr<IDBCallbacks>, ExceptionCode&) = 0;
     virtual void continueFunction(PassRefPtr<IDBKey> key, PassRefPtr<IDBCallbacks>, ExceptionCode&) = 0;
     virtual void deleteFunction(PassRefPtr<IDBCallbacks>, ExceptionCode&) = 0;

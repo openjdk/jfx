@@ -23,22 +23,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module storage {
-
-    interface [
+[
         NamedGetter,
-        JSGenerateIsReachable=ImplFrame,
+    GenerateIsReachable=ImplFrame,
         CustomDeleteProperty,
         CustomEnumerateProperty,
         CustomNamedSetter,
-    ] Storage {
-        readonly attribute [NotEnumerable] unsigned long length;
-        [NotEnumerable, TreatReturnedNullStringAs=Null] DOMString key(in unsigned long index);
-        [NotEnumerable, TreatReturnedNullStringAs=Null] DOMString getItem(in DOMString key);
-        [NotEnumerable] void setItem(in DOMString key, in DOMString data) 
+    SkipVTableValidation
+] interface Storage {
+    [NotEnumerable] readonly attribute unsigned long length getter raises(DOMException);
+    [NotEnumerable, TreatReturnedNullStringAs=Null] DOMString key(unsigned long index)
             raises(DOMException);
-        [NotEnumerable] void removeItem(in DOMString key);
-        [NotEnumerable] void clear();
+    [NotEnumerable, TreatReturnedNullStringAs=Null] DOMString getItem(DOMString key)
+        raises(DOMException);
+    [NotEnumerable] void setItem(DOMString key, DOMString data) 
+        raises(DOMException);
+    [NotEnumerable] void removeItem(DOMString key)
+        raises(DOMException);
+    [NotEnumerable] void clear()
+        raises(DOMException);
     };
 
-}

@@ -29,13 +29,12 @@
 #include "CachedResourceClient.h"
 #include "CachedResourceHandle.h"
 #include "CachedScript.h"
-#include "JSDOMBinding.h" // for stringToUString
-#include "ScriptSourceProvider.h"
 #include <parser/SourceCode.h>
+#include <parser/SourceProvider.h>
 
 namespace WebCore {
 
-    class CachedScriptSourceProvider : public ScriptSourceProvider, public CachedResourceClient {
+class CachedScriptSourceProvider : public JSC::SourceProvider, public CachedResourceClient {
         WTF_MAKE_FAST_ALLOCATED;
     public:
         static PassRefPtr<CachedScriptSourceProvider> create(CachedScript* cachedScript) { return adoptRef(new CachedScriptSourceProvider(cachedScript)); }
@@ -45,28 +44,11 @@ namespace WebCore {
             m_cachedScript->removeClient(this);
         }
 
-        virtual JSC::UString getRange(int start, int end) const OVERRIDE
-        {
-            int length = end - start;
-            ASSERT(length >= 0);
-            ASSERT(start + length <= this->length());
-
-            String script = m_cachedScript->script();
-            return JSC::UString(StringImpl::create(script.impl(), start, length));
-        }
-
-        const StringImpl* data() const { return m_cachedScript->script().impl(); }
-        int length() const { return m_cachedScript->script().length(); }
         const String& source() const { return m_cachedScript->script(); }
-
-        virtual void cacheSizeChanged(int delta) 
-        { 
-            m_cachedScript->sourceProviderCacheSizeChanged(delta);
-        }
 
     private:
         CachedScriptSourceProvider(CachedScript* cachedScript)
-            : ScriptSourceProvider(stringToUString(cachedScript->response().url()), TextPosition::minimumPosition(), cachedScript->sourceProviderCache())
+        : SourceProvider(cachedScript->response().url(), TextPosition::minimumPosition())
             , m_cachedScript(cachedScript)
         {
             m_cachedScript->addClient(this);

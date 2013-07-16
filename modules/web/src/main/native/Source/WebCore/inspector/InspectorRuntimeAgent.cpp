@@ -37,17 +37,18 @@
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
 #include "InspectorValues.h"
-#include "InstrumentingAgents.h"
-#include "WorkerContext.h"
-#include "WorkerDebuggerAgent.h"
-#include "WorkerRunLoop.h"
-#include "WorkerThread.h"
+#include "JSDOMWindowBase.h"
+#include <parser/ParserError.h>
+#include <parser/SourceCode.h>
+#include <runtime/Completion.h>
+#include <runtime/JSLock.h>
 #include <wtf/PassRefPtr.h>
-
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
 #include "ScriptDebugServer.h"
 #endif
+
+using namespace JSC;
 
 namespace WebCore {
 
@@ -56,20 +57,18 @@ static bool asBool(const bool* const b)
     return b ? *b : false;
 }
 
-InspectorRuntimeAgent::InspectorRuntimeAgent(InstrumentingAgents* instrumentingAgents, InspectorState* state, InjectedScriptManager* injectedScriptManager)
+InspectorRuntimeAgent::InspectorRuntimeAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, InjectedScriptManager* injectedScriptManager)
     : InspectorBaseAgent<InspectorRuntimeAgent>("Runtime", instrumentingAgents, state)
+    , m_enabled(false)
     , m_injectedScriptManager(injectedScriptManager)
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     , m_scriptDebugServer(0)
 #endif
-    , m_paused(false)
 {
-    m_instrumentingAgents->setInspectorRuntimeAgent(this);
 }
 
 InspectorRuntimeAgent::~InspectorRuntimeAgent()
 {
-    m_instrumentingAgents->setInspectorRuntimeAgent(0);
 }
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
@@ -83,7 +82,44 @@ static ScriptDebugServer::PauseOnExceptionsState setPauseOnExceptionsState(Scrip
 }
 #endif
 
-void InspectorRuntimeAgent::evaluate(ErrorString* errorString, const String& expression, const String* const objectGroup, const bool* const includeCommandLineAPI, const bool* const doNotPauseOnExceptionsAndMuteConsole, const int* executionContextId, const bool* const returnByValue, RefPtr<TypeBuilder::Runtime::RemoteObject>& result, TypeBuilder::OptOutput<bool>* wasThrown)
+static PassRefPtr<TypeBuilder::Runtime::ErrorRange> buildErrorRangeObject(const JSTokenLocation& tokenLocation)
+{
+    RefPtr<TypeBuilder::Runtime::ErrorRange> result = TypeBuilder::Runtime::ErrorRange::create()
+        .setStartOffset(tokenLocation.startOffset)
+        .setEndOffset(tokenLocation.endOffset);
+    return result.release();
+}
+
+void InspectorRuntimeAgent::parse(ErrorString*, const String& expression, TypeBuilder::Runtime::SyntaxErrorType::Enum* result, TypeBuilder::OptOutput<String>* message, RefPtr<TypeBuilder::Runtime::ErrorRange>& range)
+{
+    VM* vm = JSDOMWindowBase::commonVM();
+    JSLockHolder lock(vm);
+
+    ParserError error;
+    checkSyntax(*vm, JSC::makeSource(expression), error);
+
+    switch (error.m_syntaxErrorType) {
+    case ParserError::SyntaxErrorNone:
+        *result = TypeBuilder::Runtime::SyntaxErrorType::None;
+        break;
+    case ParserError::SyntaxErrorIrrecoverable:
+        *result = TypeBuilder::Runtime::SyntaxErrorType::Irrecoverable;
+        break;
+    case ParserError::SyntaxErrorUnterminatedLiteral:
+        *result = TypeBuilder::Runtime::SyntaxErrorType::Unterminated_literal;
+        break;
+    case ParserError::SyntaxErrorRecoverable:
+        *result = TypeBuilder::Runtime::SyntaxErrorType::Recoverable;
+        break;
+    }
+
+    if (error.m_syntaxErrorType != ParserError::SyntaxErrorNone) {
+        *message = error.m_message;
+        range = buildErrorRangeObject(error.m_token.m_location);
+    }
+}
+
+void InspectorRuntimeAgent::evaluate(ErrorString* errorString, const String& expression, const String* const objectGroup, const bool* const includeCommandLineAPI, const bool* const doNotPauseOnExceptionsAndMuteConsole, const int* executionContextId, const bool* const returnByValue, const bool* generatePreview, RefPtr<TypeBuilder::Runtime::RemoteObject>& result, TypeBuilder::OptOutput<bool>* wasThrown)
 {
     InjectedScript injectedScript = injectedScriptForEval(errorString, executionContextId);
     if (injectedScript.hasNoValue())
@@ -96,7 +132,7 @@ void InspectorRuntimeAgent::evaluate(ErrorString* errorString, const String& exp
     if (asBool(doNotPauseOnExceptionsAndMuteConsole))
         muteConsole();
 
-    injectedScript.evaluate(errorString, expression, objectGroup ? *objectGroup : "", asBool(includeCommandLineAPI), asBool(returnByValue), &result, wasThrown);
+    injectedScript.evaluate(errorString, expression, objectGroup ? *objectGroup : "", asBool(includeCommandLineAPI), asBool(returnByValue), asBool(generatePreview), &result, wasThrown);
 
     if (asBool(doNotPauseOnExceptionsAndMuteConsole)) {
         unmuteConsole();
@@ -106,7 +142,7 @@ void InspectorRuntimeAgent::evaluate(ErrorString* errorString, const String& exp
     }
 }
 
-void InspectorRuntimeAgent::callFunctionOn(ErrorString* errorString, const String& objectId, const String& expression, const RefPtr<InspectorArray>* const optionalArguments, const bool* const doNotPauseOnExceptionsAndMuteConsole, const bool* const returnByValue, RefPtr<TypeBuilder::Runtime::RemoteObject>& result, TypeBuilder::OptOutput<bool>* wasThrown)
+void InspectorRuntimeAgent::callFunctionOn(ErrorString* errorString, const String& objectId, const String& expression, const RefPtr<InspectorArray>* const optionalArguments, const bool* const doNotPauseOnExceptionsAndMuteConsole, const bool* const returnByValue, const bool* generatePreview, RefPtr<TypeBuilder::Runtime::RemoteObject>& result, TypeBuilder::OptOutput<bool>* wasThrown)
 {
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptForObjectId(objectId);
     if (injectedScript.hasNoValue()) {
@@ -125,7 +161,7 @@ void InspectorRuntimeAgent::callFunctionOn(ErrorString* errorString, const Strin
     if (asBool(doNotPauseOnExceptionsAndMuteConsole))
         muteConsole();
 
-    injectedScript.callFunctionOn(errorString, objectId, expression, arguments, asBool(returnByValue), &result, wasThrown);
+    injectedScript.callFunctionOn(errorString, objectId, expression, arguments, asBool(returnByValue), asBool(generatePreview), &result, wasThrown);
 
     if (asBool(doNotPauseOnExceptionsAndMuteConsole)) {
         unmuteConsole();
@@ -135,7 +171,7 @@ void InspectorRuntimeAgent::callFunctionOn(ErrorString* errorString, const Strin
     }
 }
 
-void InspectorRuntimeAgent::getProperties(ErrorString* errorString, const String& objectId, const bool* const ownProperties, RefPtr<TypeBuilder::Array<TypeBuilder::Runtime::PropertyDescriptor> >& result)
+void InspectorRuntimeAgent::getProperties(ErrorString* errorString, const String& objectId, const bool* const ownProperties, RefPtr<TypeBuilder::Array<TypeBuilder::Runtime::PropertyDescriptor> >& result, RefPtr<TypeBuilder::Array<TypeBuilder::Runtime::InternalPropertyDescriptor> >& internalProperties)
 {
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptForObjectId(objectId);
     if (injectedScript.hasNoValue()) {
@@ -149,6 +185,7 @@ void InspectorRuntimeAgent::getProperties(ErrorString* errorString, const String
     muteConsole();
 
     injectedScript.getProperties(errorString, objectId, ownProperties ? *ownProperties : false, &result);
+    injectedScript.getInternalProperties(errorString, objectId, &internalProperties);
 
     unmuteConsole();
 #if ENABLE(JAVASCRIPT_DEBUGGER)
@@ -170,7 +207,6 @@ void InspectorRuntimeAgent::releaseObjectGroup(ErrorString*, const String& objec
 
 void InspectorRuntimeAgent::run(ErrorString*)
 {
-    m_paused = false;
 }
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
@@ -178,18 +214,6 @@ void InspectorRuntimeAgent::setScriptDebugServer(ScriptDebugServer* scriptDebugS
 {
     m_scriptDebugServer = scriptDebugServer;
 }
-
-#if ENABLE(WORKERS)
-void InspectorRuntimeAgent::pauseWorkerContext(WorkerContext* context)
-{
-    m_paused = true;
-    MessageQueueWaitResult result;
-    do {
-        result = context->thread()->runLoop().runInMode(context, WorkerDebuggerAgent::debuggerTaskMode);
-    // Keep waiting until execution is resumed.
-    } while (result == MessageQueueMessageReceived && m_paused);
-}
-#endif // ENABLE(WORKERS)
 #endif // ENABLE(JAVASCRIPT_DEBUGGER)
 
 } // namespace WebCore

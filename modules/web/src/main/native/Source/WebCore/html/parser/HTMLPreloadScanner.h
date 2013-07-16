@@ -28,37 +28,118 @@
 #define HTMLPreloadScanner_h
 
 #include "CSSPreloadScanner.h"
+#include "CompactHTMLToken.h"
 #include "HTMLToken.h"
 #include "SegmentedString.h"
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
-class Document;
-class HTMLToken;
+typedef size_t TokenPreloadScannerCheckpoint;
+
+class HTMLParserOptions;
 class HTMLTokenizer;
 class SegmentedString;
+
+class TokenPreloadScanner {
+    WTF_MAKE_NONCOPYABLE(TokenPreloadScanner); WTF_MAKE_FAST_ALLOCATED;
+public:
+    explicit TokenPreloadScanner(const KURL& documentURL);
+    ~TokenPreloadScanner();
+
+    void scan(const HTMLToken&, PreloadRequestStream& requests);
+#if ENABLE(THREADED_HTML_PARSER)
+    void scan(const CompactHTMLToken&, PreloadRequestStream& requests);
+#endif
+
+    void setPredictedBaseElementURL(const KURL& url) { m_predictedBaseElementURL = url; }
+
+    // A TokenPreloadScannerCheckpoint is valid until the next call to rewindTo,
+    // at which point all outstanding checkpoints are invalidated.
+    TokenPreloadScannerCheckpoint createCheckpoint();
+    void rewindTo(TokenPreloadScannerCheckpoint);
+
+    bool isSafeToSendToAnotherThread()
+    {
+        return m_documentURL.isSafeToSendToAnotherThread()
+            && m_predictedBaseElementURL.isSafeToSendToAnotherThread();
+    }
+
+private:
+    enum TagId {
+        // These tags are scanned by the StartTagScanner.
+        ImgTagId,
+        InputTagId,
+        LinkTagId,
+        ScriptTagId,
+
+        // These tags are not scanned by the StartTagScanner.
+        UnknownTagId,
+        StyleTagId,
+        BaseTagId,
+        TemplateTagId,
+    };
+
+    class StartTagScanner;
+
+    template<typename Token>
+    inline void scanCommon(const Token&, PreloadRequestStream& requests);
+
+    static TagId tagIdFor(const HTMLToken::DataVector&);
+    static TagId tagIdFor(const HTMLIdentifier&);
+
+    static String initiatorFor(TagId);
+
+    template<typename Token>
+    void updatePredictedBaseURL(const Token&);
+
+    struct Checkpoint {
+        Checkpoint(const KURL& predictedBaseElementURL, bool inStyle
+#if ENABLE(TEMPLATE_ELEMENT)
+            , size_t templateCount
+#endif
+            )
+            : predictedBaseElementURL(predictedBaseElementURL)
+            , inStyle(inStyle)
+#if ENABLE(TEMPLATE_ELEMENT)
+            , templateCount(templateCount)
+#endif
+        {
+        }
+
+        KURL predictedBaseElementURL;
+        bool inStyle;
+#if ENABLE(TEMPLATE_ELEMENT)
+        size_t templateCount;
+#endif
+    };
+
+    CSSPreloadScanner m_cssScanner;
+    const KURL m_documentURL;
+    KURL m_predictedBaseElementURL;
+    bool m_inStyle;
+
+#if ENABLE(TEMPLATE_ELEMENT)
+    size_t m_templateCount;
+#endif
+
+    Vector<Checkpoint> m_checkpoints;
+};
 
 class HTMLPreloadScanner {
     WTF_MAKE_NONCOPYABLE(HTMLPreloadScanner); WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit HTMLPreloadScanner(Document*);
+    HTMLPreloadScanner(const HTMLParserOptions&, const KURL& documentURL);
+    ~HTMLPreloadScanner();
 
     void appendToEnd(const SegmentedString&);
-    void scan();
+    void scan(HTMLResourcePreloader*, const KURL& documentBaseElementURL);
 
 private:
-    void processToken();
-    bool scanningBody() const;
-    void updatePredictedBaseElementURL(const KURL& baseElementURL);
-
-    Document* m_document;
+    TokenPreloadScanner m_scanner;
     SegmentedString m_source;
-    CSSPreloadScanner m_cssScanner;
-    OwnPtr<HTMLTokenizer> m_tokenizer;
     HTMLToken m_token;
-    bool m_bodySeen;
-    bool m_inStyle;
-    KURL m_predictedBaseElementURL;
+    OwnPtr<HTMLTokenizer> m_tokenizer;
 };
 
 }

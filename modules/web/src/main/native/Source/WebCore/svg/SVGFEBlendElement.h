@@ -69,7 +69,7 @@ struct SVGPropertyTraits<BlendModeType> {
     }
 };
 
-class SVGFEBlendElement : public SVGFilterPrimitiveStandardAttributes {
+class SVGFEBlendElement FINAL : public SVGFilterPrimitiveStandardAttributes {
 public:
     static PassRefPtr<SVGFEBlendElement> create(const QualifiedName&, Document*);
 
@@ -77,7 +77,7 @@ private:
     SVGFEBlendElement(const QualifiedName&, Document*);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName);
     virtual void svgAttributeChanged(const QualifiedName&);
     virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*);

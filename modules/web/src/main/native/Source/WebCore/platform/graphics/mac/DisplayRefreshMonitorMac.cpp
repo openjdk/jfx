@@ -92,8 +92,10 @@ void DisplayRefreshMonitor::displayLinkFired(double nowSeconds, double outputTim
 
     m_previousFrameDone = false;
 
-    double webKitNow = currentTime();
-    m_timestamp = webKitNow - nowSeconds + outputTimeSeconds;
+    double webKitMonotonicNow = monotonicallyIncreasingTime();
+    double timeUntilOutput = outputTimeSeconds - nowSeconds;
+    // FIXME: Should this be using webKitMonotonicNow?
+    m_monotonicAnimationStartTime = webKitMonotonicNow + timeUntilOutput;
     
     callOnMainThread(handleDisplayRefreshedNotificationOnMainThread, this);
 }

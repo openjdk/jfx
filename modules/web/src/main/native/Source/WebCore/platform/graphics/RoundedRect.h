@@ -27,6 +27,7 @@
 #ifndef RoundedRect_h
 #define RoundedRect_h
 
+#include "FloatQuad.h"
 #include "IntRect.h"
 
 namespace WebCore {
@@ -94,6 +95,11 @@ public:
     void excludeLogicalEdges(bool isHorizontal, bool excludeLogicalLeftEdge, bool excludeLogicalRightEdge);
 
     bool isRenderable() const;
+    void adjustRadii();
+
+    // Tests whether the quad intersects any part of this rounded rectangle.
+    // This only works for convex quads.
+    bool intersectsQuad(const FloatQuad&) const;
 
 private:
     IntRect m_rect;

@@ -1,5 +1,6 @@
 package com.javafx.experiments.importers.maya;
 
+import com.javafx.experiments.importers.SmoothingGroups;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -49,6 +50,7 @@ import com.javafx.experiments.shape3d.SkinningMesh;
 import com.sun.javafx.geom.Vec3f;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Arrays;
 import javafx.animation.AnimationTimer;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -1617,8 +1619,6 @@ class Loader {
         // copy UV as-is (if any)
         float[] texCoords = getTexCoords(uvChannel);
 
-        int[] smGroups = SmoothGroups.calcSmoothGroups(faces, normals);
-
         if (asPolygonMesh) {
             List<int[]> ff = new ArrayList<int[]>();
             for (int f = 0; f < faces.size(); f++) {
@@ -1637,13 +1637,37 @@ class Loader {
                     ff.add(polyFace);
                 }
             }
-            PolygonMesh mesh = new PolygonMesh(points, texCoords, ff.toArray(new int[ff.size()][]));
+            int[][] facesArray = ff.toArray(new int[ff.size()][]);
+            
+            int[][] faceNormals = new int[facesArray.length][];
+            int normalInd = 0;
+            for (int f = 0; f < faceNormals.length; f++) {
+                faceNormals[f] = new int[facesArray[f].length/2];
+                for (int e = 0; e < faceNormals[f].length; e++) {
+                    faceNormals[f][e] = normalInd++;
+                }
+            }
+            int[] smGroups;
+            // we can only figure out faces' normal indices if the faces' normal indices have a one-to-one ordered correspondence with the normals
+            if (normalInd == normals.getSize()) {
+                smGroups = SmoothingGroups.calcSmoothGroups(facesArray, faceNormals, normals.get());
+            } else {
+                smGroups = new int[facesArray.length];
+                Arrays.fill(smGroups, 1);
+            }
+
+            PolygonMesh mesh = new PolygonMesh();
+            mesh.getPoints().setAll(points);
+            mesh.getTexCoords().setAll(texCoords);
+            mesh.faces = facesArray;
+            mesh.getFaceSmoothingGroups().setAll(smGroups);
             return mesh;
         } else {
             // Split the polygonal faces into triangle faces
             List<Integer> ff = new ArrayList<Integer>();
-            List<Integer> sg = new ArrayList<Integer>();
-
+            List<Integer> nn = new ArrayList<Integer>();
+            int nIndex = 0;
+            
             for (int f = 0; f < faces.size(); f++) {
                 MPolyFace.FaceData faceData = faces.get(f);
                 int[] faceEdges = faceData.getFaceEdges();
@@ -1654,13 +1678,16 @@ class Loader {
                     // Generate triangle fan about the first vertex
                     int vIndex0 = edgeStart(faceEdges[0]);
                     int uvIndex0 = uvIndices == null ? 0 : uvIndices[0];
+                    int nIndex0 = nIndex++;
 
                     int vIndex1 = edgeStart(faceEdges[1]);
                     int uvIndex1 = uvIndices == null ? 0 : uvIndices[1];
+                    int nIndex1 = nIndex++;
 
                     for (int i = 2; i < faceEdges.length; i++) {
                         int vIndex2 = edgeStart(faceEdges[i]);
                         int uvIndex2 = uvIndices == null ? 0 : uvIndices[i];
+                        int nIndex2 = nIndex++;
 
                         ff.add(vIndex0);
                         ff.add(uvIndex0);
@@ -1668,7 +1695,9 @@ class Loader {
                         ff.add(uvIndex1);
                         ff.add(vIndex2);
                         ff.add(uvIndex2);
-                        sg.add(smGroups[f]);
+                        nn.add(nIndex0);
+                        nn.add(nIndex1);
+                        nn.add(nIndex2);
 
                         vIndex1 = vIndex2;
                         uvIndex1 = uvIndex2;
@@ -1679,16 +1708,25 @@ class Loader {
             for (int i = 0; i < fff.length; i++) {
                 fff[i] = ff.get(i);
             }
-            int[] sgsg = new int[sg.size()];
-            for (int i = 0; i < sgsg.length; i++) {
-                sgsg[i] = sg.get(i);
+            
+            int[] smGroups;
+            // we can only figure out faces' normal indices if the faces' normal indices have a one-to-one ordered correspondence with the normals
+            if (nIndex == normals.getSize()) {
+                int[] faceNormals = new int[nn.size()];
+                for (int i = 0; i < faceNormals.length; i++) {
+                    faceNormals[i] = nn.get(i);
+                }
+                smGroups = SmoothingGroups.calcSmoothGroups(fff, faceNormals, normals.get());
+            } else {
+                smGroups = new int[fff.length];
+                Arrays.fill(smGroups, 1);
             }
-
+            
             TriangleMesh mesh = new TriangleMesh();
             mesh.getPoints().setAll(points);
             mesh.getTexCoords().setAll(texCoords);
             mesh.getFaces().setAll(fff);
-            mesh.getFaceSmoothingGroups().setAll(sgsg);
+            mesh.getFaceSmoothingGroups().setAll(smGroups);
             return mesh;
         }
     }

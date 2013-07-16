@@ -28,11 +28,13 @@
 #include "RemoveFormatCommand.h"
 
 #include "ApplyStyleCommand.h"
+#include "CSSValueKeywords.h"
 #include "EditingStyle.h"
 #include "Element.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "HTMLNames.h"
+#include "StylePropertySet.h"
 
 namespace WebCore {
 
@@ -86,6 +88,10 @@ void RemoveFormatCommand::doApply()
     // content that we're operating on.
     Node* root = frame->selection()->rootEditableElement();
     RefPtr<EditingStyle> defaultStyle = EditingStyle::create(root);
+
+    // We want to remove everything but transparent background.
+    // FIXME: We shouldn't access style().
+    defaultStyle->style()->setProperty(CSSPropertyBackgroundColor, CSSValueTransparent);
 
     applyCommandToComposite(ApplyStyleCommand::create(document(), defaultStyle.get(), isElementForRemoveFormatCommand, editingAction()));
 }

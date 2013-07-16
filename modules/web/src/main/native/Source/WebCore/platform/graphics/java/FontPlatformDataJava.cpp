@@ -7,9 +7,9 @@
 #include "FontPlatformData.h"
 #include "GraphicsContextJava.h"
 #include "NotImplemented.h"
-#include "PlatformString.h"
 
-#include "wtf/Assertions.h"
+#include <wtf/Assertions.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 

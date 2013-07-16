@@ -29,7 +29,7 @@
 
 #include "CachedResourceClientWalker.h"
 #include "CachedStyleSheetClient.h"
-#include "SharedBuffer.h"
+#include "ResourceBuffer.h"
 #include "TextResourceDecoder.h"
 #include <wtf/Vector.h>
 
@@ -63,7 +63,7 @@ String CachedXSLStyleSheet::encoding() const
     return m_decoder->encoding().name();
 }
 
-void CachedXSLStyleSheet::data(PassRefPtr<SharedBuffer> data, bool allDataReceived)
+void CachedXSLStyleSheet::data(PassRefPtr<ResourceBuffer> data, bool allDataReceived)
 {
     if (!allDataReceived)
         return;
@@ -71,8 +71,8 @@ void CachedXSLStyleSheet::data(PassRefPtr<SharedBuffer> data, bool allDataReceiv
     m_data = data;     
     setEncodedSize(m_data.get() ? m_data->size() : 0);
     if (m_data.get()) {
-        m_sheet = String(m_decoder->decode(m_data->data(), encodedSize()));
-        m_sheet += m_decoder->flush();
+        m_sheet = m_decoder->decode(m_data->data(), encodedSize());
+        m_sheet.append(m_decoder->flush());
     }
     setLoading(false);
     checkNotify();
@@ -86,14 +86,6 @@ void CachedXSLStyleSheet::checkNotify()
     CachedResourceClientWalker<CachedStyleSheetClient> w(m_clients);
     while (CachedStyleSheetClient* c = w.next())
         c->setXSLStyleSheet(m_resourceRequest.url(), m_response.url(), m_sheet);
-}
-
-void CachedXSLStyleSheet::error(CachedResource::Status status)
-{
-    setStatus(status);
-    ASSERT(errorOccurred());
-    setLoading(false);
-    checkNotify();
 }
 
 #endif

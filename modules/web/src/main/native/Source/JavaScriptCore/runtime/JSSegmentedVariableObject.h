@@ -35,7 +35,6 @@
 #include "SymbolTable.h"
 #include <wtf/OwnArrayPtr.h>
 #include <wtf/SegmentedVector.h>
-#include <wtf/UnusedParam.h>
 
 namespace JSC {
 
@@ -82,14 +81,14 @@ public:
 protected:
     static const unsigned StructureFlags = OverridesVisitChildren | JSSymbolTableObject::StructureFlags;
 
-    JSSegmentedVariableObject(JSGlobalData& globalData, Structure* structure, SymbolTable* symbolTable)
-        : JSSymbolTableObject(globalData, structure, symbolTable)
+    JSSegmentedVariableObject(VM& vm, Structure* structure, JSScope* scope)
+        : JSSymbolTableObject(vm, structure, scope)
     {
     }
 
-    void finishCreation(JSGlobalData& globalData)
+    void finishCreation(VM& vm)
     {
-        Base::finishCreation(globalData);
+        Base::finishCreation(vm);
     }
 
     SegmentedVector<WriteBarrier<Unknown>, 16> m_registers;

@@ -25,24 +25,20 @@
 
 package javafx.scene.shape;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertFalse;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.PathIterator;
+import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Group;
 import javafx.scene.NodeTest;
 import javafx.scene.Scene;
-
 import org.junit.Test;
 
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.PathIterator;
-import com.sun.javafx.pgstub.StubPath;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.Assert.*;
 
 
 public class PathTest {
@@ -83,7 +79,7 @@ public class PathTest {
         NodeTest.syncNode(path);
 
         //check
-        Path2D geometry = (Path2D) ((StubPath)path.impl_getPGPath()).getGeometry();
+        Path2D geometry = ((NGPath)path.impl_getPeer()).getGeometry();
         assertEquals(geometry.getWindingRule(), FillRule.NON_ZERO.ordinal());
     }
 
@@ -93,7 +89,7 @@ public class PathTest {
         moveTo.setAbsolute(false);
         path.getElements().add(moveTo);
         path.getElements().add(new LineTo(100, 100));
-        Path2D geometry = (Path2D) ((StubPath)path.impl_getPGPath()).getGeometry();
+        Path2D geometry = ((NGPath)path.impl_getPeer()).getGeometry();
         PathIterator piterator = geometry.getPathIterator(null);
         assertTrue(piterator.isDone());//path is empty
     }
@@ -111,7 +107,7 @@ public class PathTest {
         Path path = new Path();
         path.getElements().add(new LineTo(10, 10));
         path.getElements().add(new LineTo(100, 100));
-        Path2D geometry = (Path2D) ((StubPath)path.impl_getPGPath()).getGeometry();
+        Path2D geometry = ((NGPath)path.impl_getPeer()).getGeometry();
         PathIterator piterator = geometry.getPathIterator(null);
         assertTrue(piterator.isDone());//path is empty
     }
@@ -130,13 +126,13 @@ public class PathTest {
         path.getElements().add(new LineTo(100, 100));
         path.setFillRule(FillRule.EVEN_ODD);
         NodeTest.syncNode(path);
-        Path2D geometry = (Path2D) ((StubPath)path.impl_getPGPath()).getGeometry();
+        Path2D geometry = ((NGPath)path.impl_getPeer()).getGeometry();
         assertEquals(Path2D.WIND_EVEN_ODD, geometry.getWindingRule());
 
         path.setFillRule(FillRule.NON_ZERO);
         NodeTest.syncNode(path);
         // internal shape might have changed, getting it again
-        geometry = (Path2D) ((StubPath)path.impl_getPGPath()).getGeometry();
+        geometry = ((NGPath)path.impl_getPeer()).getGeometry();
         assertEquals(Path2D.WIND_NON_ZERO, geometry.getWindingRule());
     }
 

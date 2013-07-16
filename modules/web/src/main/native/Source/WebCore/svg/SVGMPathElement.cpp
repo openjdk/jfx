@@ -23,6 +23,7 @@
 #include "SVGMPathElement.h"
 
 #include "Document.h"
+#include "SVGAnimateMotionElement.h"
 #include "SVGNames.h"
 #include "SVGPathElement.h"
 
@@ -49,6 +50,59 @@ PassRefPtr<SVGMPathElement> SVGMPathElement::create(const QualifiedName& tagName
     return adoptRef(new SVGMPathElement(tagName, document));
 }
 
+SVGMPathElement::~SVGMPathElement()
+{
+    clearResourceReferences();
+}
+
+void SVGMPathElement::buildPendingResource()
+{
+    clearResourceReferences();
+    if (!inDocument())
+        return;
+
+    String id;
+    Element* target = SVGURIReference::targetElementFromIRIString(href(), document(), &id);
+    if (!target) {
+        // Do not register as pending if we are already pending this resource.
+        if (document()->accessSVGExtensions()->isElementPendingResource(this, id))
+            return;
+
+        if (!id.isEmpty()) {
+            document()->accessSVGExtensions()->addPendingResource(id, this);
+            ASSERT(hasPendingResources());
+        }
+    } else if (target->isSVGElement()) {
+        // Register us with the target in the dependencies map. Any change of hrefElement
+        // that leads to relayout/repainting now informs us, so we can react to it.
+        document()->accessSVGExtensions()->addElementReferencingTarget(this, toSVGElement(target));
+    }
+
+    targetPathChanged();
+}
+
+void SVGMPathElement::clearResourceReferences()
+{
+    ASSERT(document());
+    document()->accessSVGExtensions()->removeAllTargetReferencesForElement(this);
+}
+
+Node::InsertionNotificationRequest SVGMPathElement::insertedInto(ContainerNode* rootParent)
+{
+    SVGElement::insertedInto(rootParent);
+    if (rootParent->inDocument())
+        buildPendingResource();
+    return InsertionDone;
+}
+
+void SVGMPathElement::removedFrom(ContainerNode* rootParent)
+{
+    SVGElement::removedFrom(rootParent);
+    notifyParentOfPathChange(rootParent);
+    if (rootParent->inDocument())
+        clearResourceReferences();
+}
+
 bool SVGMPathElement::isSupportedAttribute(const QualifiedName& attrName)
 {
     DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
@@ -59,16 +113,36 @@ bool SVGMPathElement::isSupportedAttribute(const QualifiedName& attrName)
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGMPathElement::parseAttribute(const Attribute& attribute)
+void SVGMPathElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(attribute.name())) {
-        SVGElement::parseAttribute(attribute);
+    if (!isSupportedAttribute(name)) {
+        SVGElement::parseAttribute(name, value);
         return;
     }
 
-    if (SVGURIReference::parseAttribute(attribute))
+    if (SVGURIReference::parseAttribute(name, value))
         return;
-    if (SVGExternalResourcesRequired::parseAttribute(attribute))
+    if (SVGExternalResourcesRequired::parseAttribute(name, value))
+        return;
+
+    ASSERT_NOT_REACHED();
+}
+
+void SVGMPathElement::svgAttributeChanged(const QualifiedName& attrName)
+{
+    if (!isSupportedAttribute(attrName)) {
+        SVGElement::svgAttributeChanged(attrName);
+        return;
+    }
+
+    SVGElementInstance::InvalidationGuard invalidationGuard(this);
+
+    if (SVGURIReference::isKnownAttribute(attrName)) {
+        buildPendingResource();
+        return;
+    }
+
+    if (SVGExternalResourcesRequired::isKnownAttribute(attrName))
         return;
 
     ASSERT_NOT_REACHED();
@@ -80,6 +154,17 @@ SVGPathElement* SVGMPathElement::pathElement()
     if (target && target->hasTagName(SVGNames::pathTag))
         return static_cast<SVGPathElement*>(target);
     return 0;
+}
+
+void SVGMPathElement::targetPathChanged()
+{
+    notifyParentOfPathChange(parentNode());
+}
+
+void SVGMPathElement::notifyParentOfPathChange(ContainerNode* parent)
+{
+    if (parent && parent->hasTagName(SVGNames::animateMotionTag))
+        static_cast<SVGAnimateMotionElement*>(parent)->updateAnimationPath();
 }
 
 } // namespace WebCore

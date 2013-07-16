@@ -25,19 +25,17 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.sg.PGPhongMaterial;
 import com.sun.prism.Image;
 import com.sun.prism.Material;
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.ResourceFactory;
-import com.sun.prism.Texture;
 import com.sun.prism.TextureMap;
 import com.sun.prism.paint.Color;
 
 /**
  * TODO: 3D - Need documentation
  */
-public class NGPhongMaterial implements PGPhongMaterial {
+public class NGPhongMaterial {
 
     private static final Image WHITE_1X1 = Image.fromIntArgbPreData(new int[]{0xffffffff}, 1, 1);
     private PhongMaterial material;

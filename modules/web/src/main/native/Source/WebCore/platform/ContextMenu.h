@@ -33,7 +33,8 @@
 #include "ContextMenuItem.h"
 #include "ContextMenuController.h"
 #include "PlatformMenuDescription.h"
-#include "PlatformString.h"
+#include <wtf/text/WTFString.h>
+
 #if PLATFORM(MAC)
 #include <wtf/RetainPtr.h>
 #elif PLATFORM(WIN)
@@ -52,17 +53,12 @@ namespace WebCore {
         ContextMenuItem* itemWithAction(unsigned);
 
 #if USE(CROSS_PLATFORM_CONTEXT_MENUS)
-#if PLATFORM(WIN)
-        typedef HMENU NativeMenu;
-#elif PLATFORM(EFL)
-        typedef void* NativeMenu;
-#endif
-        explicit ContextMenu(NativeMenu);
+        explicit ContextMenu(PlatformContextMenu);
 
-        NativeMenu nativeMenu() const;
+        PlatformContextMenu platformContextMenu() const;
 
-        static NativeMenu createNativeMenuFromItems(const Vector<ContextMenuItem>&);
-        static void getContextMenuItems(NativeMenu, Vector<ContextMenuItem>&);
+        static PlatformContextMenu createPlatformContextMenuFromItems(const Vector<ContextMenuItem>&);
+        static void getContextMenuItems(PlatformContextMenu, Vector<ContextMenuItem>&);
 
         // FIXME: When more platforms switch over, this should return const ContextMenuItem*'s.
         ContextMenuItem* itemAtIndex(unsigned index) { return &m_items[index]; }
@@ -72,7 +68,7 @@ namespace WebCore {
 
         void appendItem(const ContextMenuItem& item) { m_items.append(item); } 
 #else
-        ContextMenu(const PlatformMenuDescription);
+        explicit ContextMenu(const PlatformMenuDescription);
         ~ContextMenu();
 
         void insertItem(unsigned position, ContextMenuItem&);
@@ -86,11 +82,6 @@ namespace WebCore {
         void setPlatformDescription(PlatformMenuDescription);
 
         PlatformMenuDescription releasePlatformDescription();
-
-#if PLATFORM(WX)
-        static ContextMenuItem* itemWithId(int);
-#endif
-
 #endif // USE(CROSS_PLATFORM_CONTEXT_MENUS)
 
 #if PLATFORM(JAVA)
@@ -104,10 +95,6 @@ namespace WebCore {
 #if PLATFORM(MAC)
         // Keep this in sync with the PlatformMenuDescription typedef
         RetainPtr<NSMutableArray> m_platformDescription;
-#elif PLATFORM(QT)
-        QList<ContextMenuItem> m_items;
-#elif PLATFORM(CHROMIUM) || PLATFORM(EFL)
-        Vector<ContextMenuItem> m_items;
 #else
         PlatformMenuDescription m_platformDescription;
 #if OS(WINCE)

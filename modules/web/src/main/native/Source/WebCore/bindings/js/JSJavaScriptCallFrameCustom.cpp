@@ -63,9 +63,9 @@ JSValue JSJavaScriptCallFrame::type(ExecState* exec) const
 {
     switch (impl()->type()) {
         case DebuggerCallFrame::FunctionType:
-            return jsString(exec, UString("function"));
+            return jsString(exec, ASCIILiteral("function"));
         case DebuggerCallFrame::ProgramType:
-            return jsString(exec, UString("program"));
+            return jsString(exec, ASCIILiteral("program"));
     }
 
     ASSERT_NOT_REACHED();
@@ -77,7 +77,7 @@ JSValue JSJavaScriptCallFrame::scopeChain(ExecState* exec) const
     if (!impl()->scopeChain())
         return jsNull();
 
-    ScopeChainNode* scopeChain = impl()->scopeChain();
+    JSScope* scopeChain = impl()->scopeChain();
     ScopeChainIterator iter = scopeChain->begin();
     ScopeChainIterator end = scopeChain->end();
 
@@ -86,11 +86,11 @@ JSValue JSJavaScriptCallFrame::scopeChain(ExecState* exec) const
 
     MarkedArgumentBuffer list;
     do {
-        list.append(iter->get());
+        list.append(iter.get());
         ++iter;
     } while (iter != end);
 
-    return constructArray(exec, globalObject(), list);
+    return constructArray(exec, 0, globalObject(), list);
 }
 
 JSValue JSJavaScriptCallFrame::scopeType(ExecState* exec)
@@ -102,12 +102,12 @@ JSValue JSJavaScriptCallFrame::scopeType(ExecState* exec)
         return jsUndefined();
     int index = exec->argument(0).asInt32();
 
-    ScopeChainNode* scopeChain = impl()->scopeChain();
+    JSScope* scopeChain = impl()->scopeChain();
     ScopeChainIterator end = scopeChain->end();
 
     bool foundLocalScope = false;
     for (ScopeChainIterator iter = scopeChain->begin(); iter != end; ++iter) {
-        JSObject* scope = iter->get();
+        JSObject* scope = iter.get();
         if (scope->isActivationObject()) {
             if (!foundLocalScope) {
                 // First activation object is local scope, each successive activation object is closure.
@@ -127,6 +127,13 @@ JSValue JSJavaScriptCallFrame::scopeType(ExecState* exec)
 
         --index;
     }
+    return jsUndefined();
+}
+
+JSValue JSJavaScriptCallFrame::setVariableValue(JSC::ExecState* exec)
+{
+    // FIXME: implement this. https://bugs.webkit.org/show_bug.cgi?id=107830
+    throwError(exec, createTypeError(exec, "Variable value mutation is not supported"));
     return jsUndefined();
 }
 

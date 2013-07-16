@@ -31,26 +31,22 @@
 #include "FrameLoader.h"
 #include "InspectorInstrumentation.h"
 #include "KURL.h"
+#include "LoaderStrategy.h"
 #include "Logging.h"
 #include "NetscapePlugInStreamLoader.h"
+#include "PlatformStrategies.h"
 #include "ResourceLoader.h"
 #include "ResourceRequest.h"
 #include "SubresourceLoader.h"
 #include <wtf/MainThread.h>
+#include <wtf/TemporaryChange.h>
 #include <wtf/text/CString.h>
-
-#define REQUEST_MANAGEMENT_ENABLED 1
 
 namespace WebCore {
 
-#if REQUEST_MANAGEMENT_ENABLED
 static const unsigned maxRequestsInFlightForNonHTTPProtocols = 20;
 // Match the parallel connection count used by the networking layer.
 static unsigned maxRequestsInFlightPerHost;
-#else
-static const unsigned maxRequestsInFlightForNonHTTPProtocols = 10000;
-static const unsigned maxRequestsInFlightPerHost = 10000;
-#endif
 
 ResourceLoadScheduler::HostInformation* ResourceLoadScheduler::hostForURL(const KURL& url, CreateHostPolicy createHostPolicy)
 {
@@ -70,8 +66,24 @@ ResourceLoadScheduler::HostInformation* ResourceLoadScheduler::hostForURL(const 
 ResourceLoadScheduler* resourceLoadScheduler()
 {
     ASSERT(isMainThread());
-    DEFINE_STATIC_LOCAL(ResourceLoadScheduler, resourceLoadScheduler, ());
-    return &resourceLoadScheduler;
+    static ResourceLoadScheduler* globalScheduler = 0;
+    
+    if (!globalScheduler) {
+        static bool isCallingOutToStrategy = false;
+        
+        // If we're re-entering resourceLoadScheduler() while calling out to the LoaderStrategy,
+        // then the LoaderStrategy is trying to use the default resourceLoadScheduler.
+        // So we'll create it here and start using it.
+        if (isCallingOutToStrategy) {
+            globalScheduler = new ResourceLoadScheduler;
+            return globalScheduler;
+        }
+        
+        TemporaryChange<bool> recursionGuard(isCallingOutToStrategy, true);
+        globalScheduler = platformStrategies()->loaderStrategy()->resourceLoadScheduler();
+    }
+
+    return globalScheduler;
 }
 
 ResourceLoadScheduler::ResourceLoadScheduler()
@@ -80,9 +92,11 @@ ResourceLoadScheduler::ResourceLoadScheduler()
     , m_suspendPendingRequestsCount(0)
     , m_isSerialLoadingEnabled(false)
 {
-#if REQUEST_MANAGEMENT_ENABLED
     maxRequestsInFlightPerHost = initializeMaximumHTTPConnectionCountPerHost();
-#endif
+}
+
+ResourceLoadScheduler::~ResourceLoadScheduler()
+{
 }
 
 PassRefPtr<SubresourceLoader> ResourceLoadScheduler::scheduleSubresourceLoad(Frame* frame, CachedResource* resource, const ResourceRequest& request, ResourceLoadPriority priority, const ResourceLoaderOptions& options)
@@ -101,18 +115,10 @@ PassRefPtr<NetscapePlugInStreamLoader> ResourceLoadScheduler::schedulePluginStre
     return loader;
 }
 
-void ResourceLoadScheduler::addMainResourceLoad(ResourceLoader* resourceLoader)
-{
-    hostForURL(resourceLoader->url(), CreateIfNotFound)->addLoadInProgress(resourceLoader);
-}
-
 void ResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader, ResourceLoadPriority priority)
 {
     ASSERT(resourceLoader);
     ASSERT(priority != ResourceLoadPriorityUnresolved);
-#if !REQUEST_MANAGEMENT_ENABLED
-    priority = ResourceLoadPriorityHighest;
-#endif
 
     LOG(ResourceLoading, "ResourceLoadScheduler::load resource %p '%s'", resourceLoader, resourceLoader->url().string().latin1().data());
 
@@ -132,9 +138,16 @@ void ResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader, Resourc
         return;
     }
 
-    // Handle asynchronously so early low priority requests don't get scheduled before later high priority ones.
-    InspectorInstrumentation::didScheduleResourceRequest(resourceLoader->frameLoader() ? resourceLoader->frameLoader()->frame()->document() : 0, resourceLoader->url());
+    notifyDidScheduleResourceRequest(resourceLoader);
+
+    // Handle asynchronously so early low priority requests don't
+    // get scheduled before later high priority ones.
     scheduleServePendingRequests();
+}
+
+void ResourceLoadScheduler::notifyDidScheduleResourceRequest(ResourceLoader* loader)
+{
+    InspectorInstrumentation::didScheduleResourceRequest(loader->frameLoader() ? loader->frameLoader()->frame()->document() : 0, loader->url());
 }
 
 void ResourceLoadScheduler::remove(ResourceLoader* resourceLoader)
@@ -174,7 +187,7 @@ void ResourceLoadScheduler::servePendingRequests(ResourceLoadPriority minimumPri
     m_hosts.checkConsistency();
     HostMap::iterator end = m_hosts.end();
     for (HostMap::iterator iter = m_hosts.begin(); iter != end; ++iter)
-        hostsToServe.append(iter->second);
+        hostsToServe.append(iter->value);
 
     int size = hostsToServe.size();
     for (int i = 0; i < size; ++i) {

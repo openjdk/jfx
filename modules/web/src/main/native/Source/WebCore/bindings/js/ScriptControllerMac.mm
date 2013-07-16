@@ -41,16 +41,13 @@
 #import "objc_instance.h"
 #import "runtime_root.h"
 #import <JavaScriptCore/APICast.h>
+#import <JavaScriptCore/JSContextInternal.h>
 #import <runtime/JSLock.h>
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
 #import "c_instance.h"
 #import "NP_jsobject.h"
 #import "npruntime_impl.h"
-#endif
-
-#if ENABLE(JAVA_BRIDGE)
-#import "JavaInstanceJSC.h"
 #endif
 
 @interface NSObject (WebPlugin)
@@ -63,7 +60,7 @@ using namespace JSC::Bindings;
 
 namespace WebCore {
 
-PassScriptInstance ScriptController::createScriptInstanceForWidget(Widget* widget)
+PassRefPtr<JSC::Bindings::Instance> ScriptController::createScriptInstanceForWidget(Widget* widget)
 {
     NSView* widgetView = widget->platformWidget();
     if (!widgetView)
@@ -95,14 +92,7 @@ PassScriptInstance ScriptController::createScriptInstanceForWidget(Widget* widge
 #endif
     }
 
-#if ENABLE(JAVA_BRIDGE)
-    jobject applet = m_frame->loader()->client()->javaApplet(widgetView);
-    if (!applet)
         return 0;
-    return JSC::Bindings::JavaInstance::create(applet, rootObject.release());
-#else
-    return 0;
-#endif
 }
 
 WebScriptObject* ScriptController::windowScriptObject()
@@ -111,13 +101,25 @@ WebScriptObject* ScriptController::windowScriptObject()
         return 0;
 
     if (!m_windowScriptObject) {
-        JSC::JSLockHolder lock(JSDOMWindowBase::commonJSGlobalData());
+        JSC::JSLockHolder lock(JSDOMWindowBase::commonVM());
         JSC::Bindings::RootObject* root = bindingRootObject();
         m_windowScriptObject = [WebScriptObject scriptObjectForJSObject:toRef(windowShell(pluginWorld())) originRootObject:root rootObject:root];
     }
 
     ASSERT([m_windowScriptObject.get() isKindOfClass:[DOMAbstractView class]]);
     return m_windowScriptObject.get();
+}
+
+JSContext *ScriptController::javaScriptContext()
+{
+#if JSC_OBJC_API_ENABLED
+    if (!canExecuteScripts(NotAboutToExecuteScript))
+        return 0;
+    JSContext *context = [JSContext contextWithJSGlobalContextRef:toGlobalRef(bindingRootObject()->globalObject()->globalExec())];
+    return context;
+#else
+    return 0;
+#endif
 }
 
 void ScriptController::updatePlatformScriptObjects()
@@ -135,37 +137,5 @@ void ScriptController::disconnectPlatformScriptObjects()
         [(DOMAbstractView *)m_windowScriptObject.get() _disconnectFrame];
     }
 }
-
-#if ENABLE(JAVA_BRIDGE)
-
-static pthread_t mainThread;
-
-static void updateStyleIfNeededForBindings(JSC::ExecState*, JSC::JSObject* rootObject)
-{
-    if (pthread_self() != mainThread)
-        return;
-
-    if (!rootObject)
-        return;
-
-    JSDOMWindow* window = JSC::jsCast<JSDOMWindow*>(rootObject);
-    if (!window)
-        return;
-
-    Frame* frame = window->impl()->frame();
-    if (!frame)
-        return;
-
-    frame->document()->updateStyleIfNeeded();
-}
-
-void ScriptController::initJavaJSBindings()
-{
-    mainThread = pthread_self();
-    JSC::Bindings::JavaJSObject::initializeJNIThreading();
-    JSC::Bindings::Instance::setDidExecuteFunction(updateStyleIfNeededForBindings);
-}
-
-#endif
 
 }

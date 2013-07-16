@@ -24,25 +24,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-    interface [
-        CustomConstructor,
-        ConstructorParameters=1,
+[
+    ConstructorTemplate=TypedArray,
         NumericIndexedGetter,
         CustomIndexedSetter,
         JSGenerateToNativeObject,
         JSNoStaticTables,
         CustomToJSObject,
-        DoNotCheckConstants
-    ] Uint8ClampedArray : Uint8Array {
+    DoNotCheckConstants,
+    TypedArray=unsigned char,
+    ImplementationNamespace=WTF
+] interface Uint8ClampedArray : Uint8Array {
         const unsigned long BYTES_PER_ELEMENT = 1;
 
         readonly attribute unsigned long length;
-        Uint8ClampedArray subarray(in [Optional=DefaultIsUndefined] long start, in [Optional] long end);
+    Uint8ClampedArray subarray([Default=Undefined] optional long start, optional long end);
 
         // FIXME: Missing other setters!
-        // void set(in Uint8ClampedArray array, [Optional] in unsigned long offset);
-        // void set(in sequence<long> array, [Optional] in unsigned long offset);
-        [Custom] void set();
+    // void set(Uint8ClampedArray array, optional unsigned long offset);
+    // void set(sequence<long> array, optional unsigned long offset);
+    void set();
     };
-}

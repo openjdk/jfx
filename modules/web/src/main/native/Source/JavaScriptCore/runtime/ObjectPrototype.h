@@ -29,35 +29,20 @@ namespace JSC {
     public:
         typedef JSNonFinalObject Base;
 
-        static ObjectPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
-        {
-            ObjectPrototype* prototype = new (NotNull, allocateCell<ObjectPrototype>(*exec->heap())) ObjectPrototype(exec, structure);
-            prototype->finishCreation(exec->globalData(), globalObject);
-            return prototype;
-        }
+        static ObjectPrototype* create(ExecState*, JSGlobalObject*, Structure*);
 
         static const ClassInfo s_info;
 
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
         }
 
     protected:
-        static const unsigned StructureFlags = OverridesGetOwnPropertySlot | JSNonFinalObject::StructureFlags;
-
-        void finishCreation(JSGlobalData&, JSGlobalObject*);
+        void finishCreation(ExecState*, JSGlobalObject*);
 
     private:
         ObjectPrototype(ExecState*, Structure*);
-        static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
-        static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, PropertyDescriptor&, bool shouldThrow);
-
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertySlotByIndex(JSCell*, ExecState*, unsigned propertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
-
-        bool m_hasNoPropertiesWithUInt32Names;
     };
 
     JS_EXPORT_PRIVATE EncodedJSValue JSC_HOST_CALL objectProtoFuncToString(ExecState*);

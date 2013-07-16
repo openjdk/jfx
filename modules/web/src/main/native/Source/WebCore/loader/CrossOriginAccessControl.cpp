@@ -28,6 +28,7 @@
 #include "CrossOriginAccessControl.h"
 
 #include "HTTPParsers.h"
+#include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
 #include <wtf/Threading.h>
@@ -68,7 +69,7 @@ bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap&
 
     HTTPHeaderMap::const_iterator end = headerMap.end();
     for (HTTPHeaderMap::const_iterator it = headerMap.begin(); it != end; ++it) {
-        if (!isOnAccessControlSimpleRequestHeaderWhitelist(it->first, it->second))
+        if (!isOnAccessControlSimpleRequestHeaderWhitelist(it->key, it->value))
             return false;
     }
 
@@ -116,14 +117,14 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
     if (requestHeaderFields.size() > 0) {
         StringBuilder headerBuffer;
         HTTPHeaderMap::const_iterator it = requestHeaderFields.begin();
-        headerBuffer.append(it->first);
+        headerBuffer.append(it->key);
         ++it;
 
         HTTPHeaderMap::const_iterator end = requestHeaderFields.end();
         for (; it != end; ++it) {
             headerBuffer.append(',');
             headerBuffer.append(' ');
-            headerBuffer.append(it->first);
+            headerBuffer.append(it->key);
         }
 
         preflightRequest.setHTTPHeaderField("Access-Control-Request-Headers", headerBuffer.toString().lower());
@@ -134,8 +135,8 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
 
 bool passesAccessControlCheck(const ResourceResponse& response, StoredCredentials includeCredentials, SecurityOrigin* securityOrigin, String& errorDescription)
 {
-    AtomicallyInitializedStatic(AtomicString&, accessControlAllowOrigin = *new AtomicString("access-control-allow-origin"));
-    AtomicallyInitializedStatic(AtomicString&, accessControlAllowCredentials = *new AtomicString("access-control-allow-credentials"));
+    AtomicallyInitializedStatic(AtomicString&, accessControlAllowOrigin = *new AtomicString("access-control-allow-origin", AtomicString::ConstructFromLiteral));
+    AtomicallyInitializedStatic(AtomicString&, accessControlAllowCredentials = *new AtomicString("access-control-allow-credentials", AtomicString::ConstructFromLiteral));
 
     // A wildcard Access-Control-Allow-Origin can not be used if credentials are to be sent,
     // even with Access-Control-Allow-Credentials set to true.

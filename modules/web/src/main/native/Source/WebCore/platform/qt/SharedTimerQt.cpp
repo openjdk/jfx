@@ -33,7 +33,7 @@
 #include <QBasicTimer>
 #include <QCoreApplication>
 #include <QDebug>
-#include <QWeakPointer>
+#include <QPointer>
 #include <wtf/CurrentTime.h>
 
 namespace WebCore {
@@ -51,7 +51,7 @@ public:
 protected:
     void timerEvent(QTimerEvent* ev);
 
-private slots:
+private Q_SLOTS:
     void destroy();
 
 private:
@@ -83,7 +83,7 @@ void SharedTimerQt::destroy()
 
 SharedTimerQt* SharedTimerQt::inst()
 {
-    static QWeakPointer<SharedTimerQt> timer;
+    static QPointer<SharedTimerQt> timer;
     if (!timer) {
         timer = new SharedTimerQt();
         timer.data()->connect(QCoreApplication::instance(), SIGNAL(aboutToQuit()), SLOT(destroy()));

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Copyright (C) 2010 Apple Inc. All rights reserved.
 # Copyright (C) 2011 Google Inc. All rights reserved.
 #
@@ -33,7 +31,7 @@
 '''Unit tests for watchlist.py.'''
 
 
-import unittest
+import unittest2 as unittest
 
 
 import watchlist
@@ -56,8 +54,8 @@ class WatchListTest(unittest.TestCase):
     def test_basic_error_message(self):
         def handle_style_error(mock_error_handler, line_number, category, confidence, message):
             mock_error_handler.had_error = True
-            self.assertEquals(0, line_number)
-            self.assertEquals('watchlist/general', category)
+            self.assertEqual(0, line_number)
+            self.assertEqual('watchlist/general', category)
 
         error_handler = MockErrorHandler(handle_style_error)
         error_handler.had_error = False

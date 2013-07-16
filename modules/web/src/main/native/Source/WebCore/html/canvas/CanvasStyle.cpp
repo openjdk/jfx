@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
@@ -35,6 +35,7 @@
 #include "CanvasPattern.h"
 #include "GraphicsContext.h"
 #include "HTMLCanvasElement.h"
+#include "StylePropertySet.h"
 #include <wtf/Assertions.h>
 #include <wtf/PassRefPtr.h>
 
@@ -66,10 +67,10 @@ static ColorParseResult parseColor(RGBA32& parsedColor, const String& colorStrin
 
 RGBA32 currentColor(HTMLCanvasElement* canvas)
 {
-    if (!canvas || !canvas->inDocument())
+    if (!canvas || !canvas->inDocument() || !canvas->inlineStyle())
         return Color::black;
     RGBA32 rgba = Color::black;
-    CSSParser::parseColor(rgba, canvas->ensureInlineStyle()->getPropertyValue(CSSPropertyColor));
+    CSSParser::parseColor(rgba, canvas->inlineStyle()->getPropertyValue(CSSPropertyColor));
     return rgba;
 }
 
@@ -91,95 +92,89 @@ bool parseColorOrCurrentColor(RGBA32& parsedColor, const String& colorString, HT
     }
 }
 
-CanvasStyle::CanvasStyle(Type type, float overrideAlpha)
-    : m_type(type)
-    , m_overrideAlpha(overrideAlpha)
-{
-}
-
 CanvasStyle::CanvasStyle(RGBA32 rgba)
-    : m_type(RGBA)
-    , m_rgba(rgba)
+    : m_rgba(rgba)
+    , m_type(RGBA)
 {
 }
 
 CanvasStyle::CanvasStyle(float grayLevel, float alpha)
-    : m_type(RGBA)
-    , m_rgba(makeRGBA32FromFloats(grayLevel, grayLevel, grayLevel, alpha))
+    : m_rgba(makeRGBA32FromFloats(grayLevel, grayLevel, grayLevel, alpha))
+    , m_type(RGBA)
 {
 }
 
 CanvasStyle::CanvasStyle(float r, float g, float b, float a)
-    : m_type(RGBA)
-    , m_rgba(makeRGBA32FromFloats(r, g, b, a))
+    : m_rgba(makeRGBA32FromFloats(r, g, b, a))
+    , m_type(RGBA)
 {
 }
 
 CanvasStyle::CanvasStyle(float c, float m, float y, float k, float a)
-    : m_type(CMYKA)
-    , m_rgba(makeRGBAFromCMYKA(c, m, y, k, a))
-    , m_cmyka(c, m, y, k, a)
+    : m_cmyka(new CMYKAValues(makeRGBAFromCMYKA(c, m, y, k, a), c, m, y, k, a))
+    , m_type(CMYKA)
 {
 }
 
 CanvasStyle::CanvasStyle(PassRefPtr<CanvasGradient> gradient)
-    : m_type(Gradient)
-    , m_gradient(gradient)
+    : m_gradient(gradient.leakRef())
+    , m_type(Gradient)
 {
+    if (!m_gradient)
+        m_type = Invalid;
 }
 
 CanvasStyle::CanvasStyle(PassRefPtr<CanvasPattern> pattern)
-    : m_type(ImagePattern)
-    , m_pattern(pattern)
+    : m_pattern(pattern.leakRef())
+    , m_type(ImagePattern)
 {
+    if (!m_pattern)
+        m_type = Invalid;
 }
 
-PassRefPtr<CanvasStyle> CanvasStyle::createFromString(const String& color, Document* document)
+CanvasStyle::~CanvasStyle()
+{
+    if (m_type == Gradient)
+        m_gradient->deref();
+    else if (m_type == ImagePattern)
+        m_pattern->deref();
+    else if (m_type == CMYKA)
+        delete m_cmyka;
+}
+
+CanvasStyle CanvasStyle::createFromString(const String& color, Document* document)
 {
     RGBA32 rgba;
     ColorParseResult parseResult = parseColor(rgba, color, document);
     switch (parseResult) {
     case ParsedRGBA:
     case ParsedSystemColor:
-        return adoptRef(new CanvasStyle(rgba));
+        return CanvasStyle(rgba);
     case ParsedCurrentColor:
-        return adoptRef(new CanvasStyle(CurrentColor));
+        return CanvasStyle(ConstructCurrentColor);
     case ParseFailed:
-        return 0;
+        return CanvasStyle();
     default:
         ASSERT_NOT_REACHED();
-        return 0;
+        return CanvasStyle();
     }
 }
 
-PassRefPtr<CanvasStyle> CanvasStyle::createFromStringWithOverrideAlpha(const String& color, float alpha)
+CanvasStyle CanvasStyle::createFromStringWithOverrideAlpha(const String& color, float alpha)
 {
     RGBA32 rgba;
     ColorParseResult parseResult = parseColor(rgba, color);
     switch (parseResult) {
     case ParsedRGBA:
-        return adoptRef(new CanvasStyle(colorWithOverrideAlpha(rgba, alpha)));
+        return CanvasStyle(colorWithOverrideAlpha(rgba, alpha));
     case ParsedCurrentColor:
-        return adoptRef(new CanvasStyle(CurrentColorWithOverrideAlpha, alpha));
+        return CanvasStyle(CurrentColorWithOverrideAlpha, alpha);
     case ParseFailed:
-        return 0;
+        return CanvasStyle();
     default:
         ASSERT_NOT_REACHED();
-        return 0;
+        return CanvasStyle();
     }
-}
-
-PassRefPtr<CanvasStyle> CanvasStyle::createFromGradient(PassRefPtr<CanvasGradient> gradient)
-{
-    if (!gradient)
-        return 0;
-    return adoptRef(new CanvasStyle(gradient));
-}
-PassRefPtr<CanvasStyle> CanvasStyle::createFromPattern(PassRefPtr<CanvasPattern> pattern)
-{
-    if (!pattern)
-        return 0;
-    return adoptRef(new CanvasStyle(pattern));
 }
 
 bool CanvasStyle::isEquivalentColor(const CanvasStyle& other) const
@@ -191,16 +186,18 @@ bool CanvasStyle::isEquivalentColor(const CanvasStyle& other) const
     case RGBA:
         return m_rgba == other.m_rgba;
     case CMYKA:
-        return m_cmyka.c == other.m_cmyka.c
-            && m_cmyka.m == other.m_cmyka.m
-            && m_cmyka.y == other.m_cmyka.y
-            && m_cmyka.k == other.m_cmyka.k
-            && m_cmyka.a == other.m_cmyka.a;
+        return m_cmyka->c == other.m_cmyka->c
+            && m_cmyka->m == other.m_cmyka->m
+            && m_cmyka->y == other.m_cmyka->y
+            && m_cmyka->k == other.m_cmyka->k
+            && m_cmyka->a == other.m_cmyka->a;
     case Gradient:
     case ImagePattern:
     case CurrentColor:
     case CurrentColorWithOverrideAlpha:
         return false;
+    case Invalid:
+        break;
     }
 
     ASSERT_NOT_REACHED();
@@ -220,14 +217,39 @@ bool CanvasStyle::isEquivalentCMYKA(float c, float m, float y, float k, float a)
     if (m_type != CMYKA)
         return false;
 
-    return c == m_cmyka.c
-        && m == m_cmyka.m
-        && y == m_cmyka.y
-        && k == m_cmyka.k
-        && a == m_cmyka.a;
+    return c == m_cmyka->c
+        && m == m_cmyka->m
+        && y == m_cmyka->y
+        && k == m_cmyka->k
+        && a == m_cmyka->a;
 }
 
-void CanvasStyle::applyStrokeColor(GraphicsContext* context)
+CanvasStyle::CanvasStyle(const CanvasStyle& other)
+{
+    memcpy(this, &other, sizeof(CanvasStyle));
+    if (m_type == Gradient)
+        m_gradient->ref();
+    else if (m_type == ImagePattern)
+        m_pattern->ref();
+    else if (m_type == CMYKA)
+        m_cmyka = new CMYKAValues(other.m_cmyka->rgba, other.m_cmyka->c, other.m_cmyka->m, other.m_cmyka->y, other.m_cmyka->k, other.m_cmyka->a);
+}
+
+CanvasStyle& CanvasStyle::operator=(const CanvasStyle& other)
+{
+    if (this != &other) {
+        memcpy(this, &other, sizeof(CanvasStyle));
+        if (m_type == Gradient)
+            m_gradient->ref();
+        else if (m_type == ImagePattern)
+            m_pattern->ref();
+        else if (m_type == CMYKA)
+            m_cmyka = new CMYKAValues(other.m_cmyka->rgba, other.m_cmyka->c, other.m_cmyka->m, other.m_cmyka->y, other.m_cmyka->k, other.m_cmyka->a);
+    }
+    return *this;
+}
+
+void CanvasStyle::applyStrokeColor(GraphicsContext* context) const
 {
     if (!context)
         return;
@@ -239,15 +261,15 @@ void CanvasStyle::applyStrokeColor(GraphicsContext* context)
         // FIXME: Do this through platform-independent GraphicsContext API.
         // We'll need a fancier Color abstraction to support CMYKA correctly
 #if USE(CG)
-        CGContextSetCMYKStrokeColor(context->platformContext(), m_cmyka.c, m_cmyka.m, m_cmyka.y, m_cmyka.k, m_cmyka.a);
+        CGContextSetCMYKStrokeColor(context->platformContext(), m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
 #elif PLATFORM(QT)
         QPen currentPen = context->platformContext()->pen();
         QColor clr;
-        clr.setCmykF(m_cmyka.c, m_cmyka.m, m_cmyka.y, m_cmyka.k, m_cmyka.a);
+        clr.setCmykF(m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
         currentPen.setColor(clr);
         context->platformContext()->setPen(currentPen);
 #else
-        context->setStrokeColor(m_rgba, ColorSpaceDeviceRGB);
+        context->setStrokeColor(m_cmyka->rgba, ColorSpaceDeviceRGB);
 #endif
         break;
     }
@@ -259,12 +281,13 @@ void CanvasStyle::applyStrokeColor(GraphicsContext* context)
         break;
     case CurrentColor:
     case CurrentColorWithOverrideAlpha:
+    case Invalid:
         ASSERT_NOT_REACHED();
         break;
     }
 }
 
-void CanvasStyle::applyFillColor(GraphicsContext* context)
+void CanvasStyle::applyFillColor(GraphicsContext* context) const
 {
     if (!context)
         return;
@@ -276,15 +299,15 @@ void CanvasStyle::applyFillColor(GraphicsContext* context)
         // FIXME: Do this through platform-independent GraphicsContext API.
         // We'll need a fancier Color abstraction to support CMYKA correctly
 #if USE(CG)
-        CGContextSetCMYKFillColor(context->platformContext(), m_cmyka.c, m_cmyka.m, m_cmyka.y, m_cmyka.k, m_cmyka.a);
+        CGContextSetCMYKFillColor(context->platformContext(), m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
 #elif PLATFORM(QT)
         QBrush currentBrush = context->platformContext()->brush();
         QColor clr;
-        clr.setCmykF(m_cmyka.c, m_cmyka.m, m_cmyka.y, m_cmyka.k, m_cmyka.a);
+        clr.setCmykF(m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
         currentBrush.setColor(clr);
         context->platformContext()->setBrush(currentBrush);
 #else
-        context->setFillColor(m_rgba, ColorSpaceDeviceRGB);
+        context->setFillColor(m_cmyka->rgba, ColorSpaceDeviceRGB);
 #endif
         break;
     }
@@ -296,6 +319,7 @@ void CanvasStyle::applyFillColor(GraphicsContext* context)
         break;
     case CurrentColor:
     case CurrentColorWithOverrideAlpha:
+    case Invalid:
         ASSERT_NOT_REACHED();
         break;
     }

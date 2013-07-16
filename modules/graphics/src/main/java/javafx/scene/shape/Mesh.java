@@ -28,7 +28,7 @@ package javafx.scene.shape;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.sg.PGTriangleMesh;
+import com.sun.javafx.sg.prism.NGTriangleMesh;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -77,7 +77,7 @@ public abstract class Mesh {
     }
 
     // We only support one type of mesh for FX 8.
-    abstract PGTriangleMesh getPGMesh();
+    abstract NGTriangleMesh getPGMesh();
     abstract void impl_updatePG();
 
     abstract BaseBounds computeBounds(BaseBounds b);

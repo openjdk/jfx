@@ -34,6 +34,10 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
+#if ENABLE(INSPECTOR)
+#include "InspectorTypeBuilder.h"
+#endif
+
 namespace JSC {
 class Profile;
 }
@@ -50,11 +54,11 @@ public:
     String title() const;
     unsigned int uid() const;
     ScriptProfileNode* head() const;
-    PassRefPtr<ScriptProfileNode> bottomUpHead() const;
+    double idleTime() const;
 
 #if ENABLE(INSPECTOR)
-    PassRefPtr<InspectorObject> buildInspectorObjectForHead() const;
-    PassRefPtr<InspectorObject> buildInspectorObjectForBottomUpHead() const;
+    PassRefPtr<TypeBuilder::Profiler::CPUProfileNode> buildInspectorObjectForHead() const;
+    PassRefPtr<TypeBuilder::Profiler::CPUProfileNode> buildInspectorObjectForBottomUpHead() const;
 #endif
 
 private:

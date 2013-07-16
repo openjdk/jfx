@@ -34,21 +34,23 @@
 
 #include "PageDebuggerAgent.h"
 
-#include "Console.h"
-#include "DOMNodeHighlighter.h"
+#include "InspectorOverlay.h"
+#include "InspectorPageAgent.h"
+#include "InstrumentingAgents.h"
 #include "Page.h"
+#include "PageConsole.h"
 #include "PageScriptDebugServer.h"
 
 namespace WebCore {
 
-PassOwnPtr<PageDebuggerAgent> PageDebuggerAgent::create(InstrumentingAgents* instrumentingAgents, InspectorState* inspectorState, Page* inspectedPage, InjectedScriptManager* injectedScriptManager, InspectorOverlay* overlay)
+PassOwnPtr<PageDebuggerAgent> PageDebuggerAgent::create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* inspectorState, InspectorPageAgent* pageAgent, InjectedScriptManager* injectedScriptManager, InspectorOverlay* overlay)
 {
-    return adoptPtr(new PageDebuggerAgent(instrumentingAgents, inspectorState, inspectedPage, injectedScriptManager, overlay));
+    return adoptPtr(new PageDebuggerAgent(instrumentingAgents, inspectorState, pageAgent, injectedScriptManager, overlay));
 }
 
-PageDebuggerAgent::PageDebuggerAgent(InstrumentingAgents* instrumentingAgents, InspectorState* inspectorState, Page* inspectedPage, InjectedScriptManager* injectedScriptManager, InspectorOverlay* overlay)
+PageDebuggerAgent::PageDebuggerAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* inspectorState, InspectorPageAgent* pageAgent, InjectedScriptManager* injectedScriptManager, InspectorOverlay* overlay)
     : InspectorDebuggerAgent(instrumentingAgents, inspectorState, injectedScriptManager)
-    , m_inspectedPage(inspectedPage)
+    , m_pageAgent(pageAgent)
     , m_overlay(overlay)
 {
 }
@@ -57,14 +59,26 @@ PageDebuggerAgent::~PageDebuggerAgent()
 {
 }
 
+void PageDebuggerAgent::enable()
+{
+    InspectorDebuggerAgent::enable();
+    m_instrumentingAgents->setPageDebuggerAgent(this);
+}
+
+void PageDebuggerAgent::disable()
+{
+    InspectorDebuggerAgent::disable();
+    m_instrumentingAgents->setPageDebuggerAgent(0);
+}
+
 void PageDebuggerAgent::startListeningScriptDebugServer()
 {
-    scriptDebugServer().addListener(this, m_inspectedPage);
+    scriptDebugServer().addListener(this, m_pageAgent->page());
 }
 
 void PageDebuggerAgent::stopListeningScriptDebugServer()
 {
-    scriptDebugServer().removeListener(this, m_inspectedPage);
+    scriptDebugServer().removeListener(this, m_pageAgent->page());
 }
 
 PageScriptDebugServer& PageDebuggerAgent::scriptDebugServer()
@@ -74,18 +88,18 @@ PageScriptDebugServer& PageDebuggerAgent::scriptDebugServer()
 
 void PageDebuggerAgent::muteConsole()
 {
-    Console::mute();
+    PageConsole::mute();
 }
 
 void PageDebuggerAgent::unmuteConsole()
 {
-    Console::unmute();
+    PageConsole::unmute();
 }
 
 InjectedScript PageDebuggerAgent::injectedScriptForEval(ErrorString* errorString, const int* executionContextId)
 {
     if (!executionContextId) {
-        ScriptState* scriptState = mainWorldScriptState(m_inspectedPage->mainFrame());
+        ScriptState* scriptState = mainWorldScriptState(m_pageAgent->mainFrame());
         return injectedScriptManager()->injectedScriptFor(scriptState);
     }
     InjectedScript injectedScript = injectedScriptManager()->injectedScriptForId(*executionContextId);
@@ -97,6 +111,12 @@ InjectedScript PageDebuggerAgent::injectedScriptForEval(ErrorString* errorString
 void PageDebuggerAgent::setOverlayMessage(ErrorString*, const String* message)
 {
     m_overlay->setPausedInDebuggerMessage(message);
+}
+
+void PageDebuggerAgent::didClearMainFrameWindowObject()
+{
+    reset();
+    scriptDebugServer().setScriptPreprocessor(m_pageAgent->scriptPreprocessor());
 }
 
 } // namespace WebCore

@@ -30,8 +30,8 @@
 #define ExceptionBase_h
 
 #include "ExceptionCode.h"
-#include "PlatformString.h"
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -47,7 +47,7 @@ public:
     String toString() const;
 
 protected:
-    ExceptionBase(const ExceptionCodeDescription&);
+    explicit ExceptionBase(const ExceptionCodeDescription&);
 
 private:
     unsigned short m_code;

@@ -561,21 +561,20 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             if (fxvk != secondaryVK && secondaryPopup != null && secondaryPopup.isShowing()) {
                 return;
             }
-            Node target = fxvk.getAttachedNode();
-            if (target instanceof EventTarget) {
-                target.fireEvent(event(KeyEvent.KEY_PRESSED));
-                target.fireEvent(event(KeyEvent.KEY_TYPED));
-                target.fireEvent(event(KeyEvent.KEY_RELEASED));
-            }
+            sendKeyEvents();
             if (fxvk == secondaryVK) {
                 showSecondaryVK(null);
             }
-          
             super.release();
         }
 
-        protected KeyEvent event(EventType<KeyEvent> type) {
-            return new KeyEvent(type, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false); 
+        protected void sendKeyEvents() {
+            Node target = fxvk.getAttachedNode();
+            if (target instanceof EventTarget) {
+                if (chars != null) {
+                    target.fireEvent(new KeyEvent(KeyEvent.KEY_TYPED, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false));
+                }
+            }
         }
     }
 
@@ -660,11 +659,12 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             setId(letter);
         }
 
-        protected KeyEvent event(EventType<KeyEvent> type) {
-            if (type == KeyEvent.KEY_PRESSED || type == KeyEvent.KEY_RELEASED) {
-                return new KeyEvent(type, chars, chars, code, shiftDown, false, false, false);                                          
-            } else {
-                return super.event(type);
+        protected void sendKeyEvents() {
+            Node target = fxvk.getAttachedNode();
+            if (target instanceof EventTarget) {               
+                target.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, KeyEvent.CHAR_UNDEFINED, chars, code, shiftDown, false, false, false));
+                target.fireEvent(new KeyEvent(KeyEvent.KEY_TYPED, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false));
+                target.fireEvent(new KeyEvent(KeyEvent.KEY_RELEASED, KeyEvent.CHAR_UNDEFINED, chars, code, shiftDown, false, false, false));
             }
         }
     }
@@ -908,7 +908,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                             } else if ("$tab".equals(chars)) {
                                 key = new KeyCodeKey("tab", "\t", KeyCode.TAB);
                             } else if ("$space".equals(chars)) {
-                                key = new CharKey(" ", null, null);
+                                key = new CharKey(" ", " ", null);
                             } else if ("$clear".equals(chars)) {
                                 key = new SuperKey("clear", "");
                             } else if ("$.org".equals(chars)) {

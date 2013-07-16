@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-class SVGForeignObjectElement : public SVGStyledTransformableElement,
+class SVGForeignObjectElement FINAL : public SVGStyledTransformableElement,
                                 public SVGTests,
                                 public SVGLangSpace,
                                 public SVGExternalResourcesRequired {
@@ -43,9 +43,10 @@ private:
 
     virtual bool isValid() const { return SVGTests::isValid(); }
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual void svgAttributeChanged(const QualifiedName&);
 
+    virtual bool rendererIsNeeded(const NodeRenderingContext&) OVERRIDE;
     virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const;
     virtual RenderObject* createRenderer(RenderArena* arena, RenderStyle* style);
 

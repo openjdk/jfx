@@ -97,7 +97,7 @@ struct SVGPropertyTraits<SVGTextPathSpacingType> {
     }
 };
 
-class SVGTextPathElement : public SVGTextContentElement,
+class SVGTextPathElement FINAL : public SVGTextContentElement,
                            public SVGURIReference {
 public:
     // Forward declare enumerations in the W3C naming scheme, for IDL generation.
@@ -124,7 +124,7 @@ private:
     virtual void removedFrom(ContainerNode*) OVERRIDE;
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual void svgAttributeChanged(const QualifiedName&);
 
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);

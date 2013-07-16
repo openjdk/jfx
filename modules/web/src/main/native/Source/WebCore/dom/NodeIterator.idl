@@ -18,12 +18,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module traversal {
-
     // Introduced in DOM Level 2:
-    interface [
-        JSCustomMarkFunction
-    ] NodeIterator {
+[
+    NoInterfaceObject,
+    JSCustomMarkFunction,
+    ImplementationLacksVTable
+] interface NodeIterator {
         readonly attribute Node root;
         readonly attribute unsigned long whatToShow;
         readonly attribute NodeFilter filter;
@@ -38,4 +38,3 @@ module traversal {
         void detach();
     };
 
-}

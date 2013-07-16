@@ -17,10 +17,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module html {
-    interface [
-        Conditional=METER_TAG
-    ] HTMLMeterElement : HTMLElement {
+[
+    Conditional=METER_ELEMENT
+] interface HTMLMeterElement : HTMLElement {
                  attribute double value
                      setter raises(DOMException);
                  attribute double min
@@ -35,5 +34,3 @@ module html {
                      setter raises(DOMException);
         readonly attribute NodeList labels;
     };
-}
-

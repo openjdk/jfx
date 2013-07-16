@@ -32,18 +32,21 @@
 #define InspectorBaseAgent_h
 
 #include "InspectorBackendDispatcher.h"
+#include <wtf/Forward.h>
+#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class InspectorFrontend;
+class InspectorCompositeState;
 class InspectorState;
 class InstrumentingAgents;
 
 class InspectorBaseAgentInterface {
 public:
-    explicit InspectorBaseAgentInterface(const String& name);
+    InspectorBaseAgentInterface(const String&, InstrumentingAgents*, InspectorCompositeState*);
     virtual ~InspectorBaseAgentInterface();
 
     virtual void setFrontend(InspectorFrontend*) { }
@@ -53,8 +56,27 @@ public:
     virtual void discardAgent() { }
 
     String name() { return m_name; }
+
+protected:
+    InstrumentingAgents* m_instrumentingAgents;
+    InspectorState* m_state;
+
 private:
     String m_name;
+};
+
+class InspectorAgentRegistry {
+public:
+    void append(PassOwnPtr<InspectorBaseAgentInterface>);
+
+    void setFrontend(InspectorFrontend*);
+    void clearFrontend();
+    void restore();
+    void registerInDispatcher(InspectorBackendDispatcher*);
+    void discardAgents();
+
+private:
+    Vector<OwnPtr<InspectorBaseAgentInterface> > m_agents;
 };
 
 template<typename T>
@@ -68,15 +90,10 @@ public:
     }
 
 protected:
-    InspectorBaseAgent(const String& name, InstrumentingAgents* instrumentingAgents, InspectorState* inspectorState)
-        : InspectorBaseAgentInterface(name)
-        , m_instrumentingAgents(instrumentingAgents)
-        , m_state(inspectorState)
+    InspectorBaseAgent(const String& name, InstrumentingAgents* instrumentingAgents, InspectorCompositeState* inspectorState)
+        : InspectorBaseAgentInterface(name, instrumentingAgents, inspectorState)
     {
     }
-
-    InstrumentingAgents* m_instrumentingAgents;
-    InspectorState* m_state;
 };
 
 } // namespace WebCore

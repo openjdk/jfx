@@ -39,13 +39,13 @@
 #include "PlaceholderDocument.h"
 #include "PluginDocument.h"
 #include "RawDataDocumentParser.h"
+#include "ScriptController.h"
 #include "ScriptableDocumentParser.h"
 #include "SecurityOrigin.h"
 #include "SegmentedString.h"
 #include "Settings.h"
 #include "SinkDocument.h"
 #include "TextResourceDecoder.h"
-
 
 namespace WebCore {
 
@@ -78,8 +78,12 @@ void DocumentWriter::replaceDocument(const String& source, Document* ownerDocume
 
         // FIXME: This should call DocumentParser::appendBytes instead of append
         // to support RawDataDocumentParsers.
-        if (DocumentParser* parser = m_frame->document()->parser())
-            parser->append(source);
+        if (DocumentParser* parser = m_frame->document()->parser()) {
+            parser->pinToMainThread();
+            // Because we're pinned to the main thread we don't need to worry about
+            // passing ownership of the source string.
+            parser->append(source.impl());
+        }
     }
 
     end();
@@ -100,7 +104,7 @@ void DocumentWriter::begin()
 
 PassRefPtr<Document> DocumentWriter::createDocument(const KURL& url)
 {
-    if (!m_frame->loader()->stateMachine()->isDisplayingInitialEmptyDocument() && m_frame->loader()->client()->shouldUsePluginDocument(m_mimeType))
+    if (!m_frame->loader()->stateMachine()->isDisplayingInitialEmptyDocument() && m_frame->loader()->client()->shouldAlwaysUsePluginDocument(m_mimeType))
         return PluginDocument::create(m_frame, url);
     if (!m_frame->loader()->client()->hasHTMLView())
         return PlaceholderDocument::create(m_frame, url);
@@ -125,10 +129,16 @@ void DocumentWriter::begin(const KURL& urlReference, bool dispatch, Document* ow
 
     // FIXME: Do we need to consult the content security policy here about blocked plug-ins?
 
-    bool resetScripting = !(m_frame->loader()->stateMachine()->isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url));
-    m_frame->loader()->clear(resetScripting, resetScripting);
+    bool shouldReuseDefaultView = m_frame->loader()->stateMachine()->isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url);
+    if (shouldReuseDefaultView)
+        document->takeDOMWindowFrom(m_frame->document());
+    else
+        document->createDOMWindow();
+
+    m_frame->loader()->clear(document.get(), !shouldReuseDefaultView, !shouldReuseDefaultView);
     clear();
-    if (resetScripting)
+
+    if (!shouldReuseDefaultView)
         m_frame->script()->updatePlatformScriptObjects();
 
     m_frame->loader()->setOutgoingReferrer(url);
@@ -140,9 +150,6 @@ void DocumentWriter::begin(const KURL& urlReference, bool dispatch, Document* ow
         document->setCookieURL(ownerDocument->cookieURL());
         document->setSecurityOrigin(ownerDocument->securityOrigin());
     }
-
-    m_frame->domWindow()->setURL(document->url());
-    m_frame->domWindow()->setSecurityOrigin(document->securityOrigin());
 
     m_frame->loader()->didBeginDocument(dispatch);
 

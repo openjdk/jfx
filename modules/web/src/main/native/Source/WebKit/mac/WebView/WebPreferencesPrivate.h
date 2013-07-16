@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2007, 2011 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005, 2007, 2011, 2012 Apple Computer, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,12 @@ typedef enum {
     WebTextDirectionSubmenuAutomaticallyIncluded,
     WebTextDirectionSubmenuAlwaysIncluded
 } WebTextDirectionSubmenuInclusionBehavior;
+
+typedef enum {
+    WebAllowAllStorage = 0,
+    WebBlockThirdPartyStorage,
+    WebBlockAllStorage
+} WebStorageBlockingPolicy;
 
 extern NSString *WebPreferencesChangedNotification;
 extern NSString *WebPreferencesRemovedNotification;
@@ -187,6 +193,9 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)cssRegionsEnabled;
 - (void)setCSSRegionsEnabled:(BOOL)enabled;
 
+- (BOOL)cssCompositingEnabled;
+- (void)setCSSCompositingEnabled:(BOOL)enabled;
+
 - (BOOL)cssGridLayoutEnabled;
 - (void)setCSSGridLayoutEnabled:(BOOL)enabled;
 
@@ -230,6 +239,10 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)mockScrollbarsEnabled;
 - (void)setMockScrollbarsEnabled:(BOOL)flag;
 
+// This is a global setting.
+- (BOOL)seamlessIFramesEnabled;
+- (void)setSeamlessIFramesEnabled:(BOOL)enabled;
+
 // Other private methods
 - (void)_postPreferencesChangedNotification;
 - (void)_postPreferencesChangedAPINotification;
@@ -240,6 +253,8 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 + (CFStringEncoding)_systemCFStringEncoding;
 + (void)_setInitialDefaultTextEncodingToSystemEncoding;
 + (void)_setIBCreatorID:(NSString *)string;
+
+// For DumpRenderTree use only.
 + (void)_switchNetworkLoaderToNewTestingSession;
 + (void)_setCurrentNetworkLoaderSessionCookieAcceptPolicy:(NSHTTPCookieAcceptPolicy)cookieAcceptPolicy;
 
@@ -267,6 +282,9 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 // compiled with USE_AVFOUNDATION.
 - (void)setAVFoundationEnabled:(BOOL)flag;
 - (BOOL)isAVFoundationEnabled;
+
+- (void)setQTKitEnabled:(BOOL)flag;
+- (BOOL)isQTKitEnabled;
 
 // WebSocket support depends on ENABLE(WEB_SOCKETS).
 - (void)setHixie76WebSocketProtocolEnabled:(BOOL)flag;
@@ -301,5 +319,23 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 
 - (void)setIncrementalRenderingSuppressionTimeoutInSeconds:(NSTimeInterval)timeout;
 - (NSTimeInterval)incrementalRenderingSuppressionTimeoutInSeconds;
+
+- (BOOL)diagnosticLoggingEnabled;
+- (void)setDiagnosticLoggingEnabled:(BOOL)enabled;
+
+- (BOOL)screenFontSubstitutionEnabled;
+- (void)setScreenFontSubstitutionEnabled:(BOOL)enabled;
+
+- (void)setStorageBlockingPolicy:(WebStorageBlockingPolicy)storageBlockingPolicy;
+- (WebStorageBlockingPolicy)storageBlockingPolicy;
+
+- (BOOL)plugInSnapshottingEnabled;
+- (void)setPlugInSnapshottingEnabled:(BOOL)enabled;
+
+- (BOOL)hiddenPageDOMTimerThrottlingEnabled;
+- (void)setHiddenPageDOMTimerThrottlingEnabled:(BOOL)flag;
+
+- (BOOL)hiddenPageCSSAnimationSuspensionEnabled;
+- (void)setHiddenPageCSSAnimationSuspensionEnabled:(BOOL)flag;
 
 @end

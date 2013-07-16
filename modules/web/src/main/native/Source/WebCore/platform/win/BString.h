@@ -34,10 +34,6 @@ typedef const struct __CFString * CFStringRef;
 
 typedef wchar_t* BSTR;
 
-namespace JSC {
-    class UString;
-}
-
 namespace WebCore {
 
     class KURL;
@@ -50,18 +46,19 @@ namespace WebCore {
         BString(const String&);
         BString(const AtomicString&);
         BString(const KURL&);
-        BString(const JSC::UString&);
 #if USE(CF)
         BString(CFStringRef);
 #endif
         ~BString();
 
         void adoptBSTR(BSTR);
+        void clear();
 
         BString(const BString&);
         BString& operator=(const BString&);
         BString& operator=(const BSTR&);
 
+        BSTR* operator&() { ASSERT(!m_bstr); return &m_bstr; }
         operator BSTR() const { return m_bstr; }
 
         BSTR release() { BSTR result = m_bstr; m_bstr = 0; return result; }

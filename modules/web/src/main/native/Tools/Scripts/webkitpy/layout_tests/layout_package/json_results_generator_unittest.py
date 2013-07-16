@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 import json
 import optparse
 import random
@@ -34,7 +34,7 @@ import random
 from webkitpy.common.host_mock import MockHost
 from webkitpy.layout_tests.layout_package import json_results_generator
 from webkitpy.layout_tests.models import test_expectations
-from webkitpy.layout_tests.port import test
+from webkitpy.port import test
 from webkitpy.thirdparty.mock import Mock
 
 
@@ -91,7 +91,7 @@ class JSONGeneratorTest(unittest.TestCase):
         host = MockHost()
         port = Mock()
         port._filesystem = host.filesystem
-        generator = json_results_generator.JSONResultsGeneratorBase(port,
+        generator = json_results_generator.JSONResultsGenerator(port,
             self.builder_name, self.build_name, self.build_number,
             '',
             None,   # don't fetch past json results archive
@@ -121,14 +121,14 @@ class JSONGeneratorTest(unittest.TestCase):
                              fixable_count,
                              json, num_runs):
         # Aliasing to a short name for better access to its constants.
-        JRG = json_results_generator.JSONResultsGeneratorBase
+        JRG = json_results_generator.JSONResultsGenerator
 
-        self.assertTrue(JRG.VERSION_KEY in json)
-        self.assertTrue(self.builder_name in json)
+        self.assertIn(JRG.VERSION_KEY, json)
+        self.assertIn(self.builder_name, json)
 
         buildinfo = json[self.builder_name]
-        self.assertTrue(JRG.FIXABLE in buildinfo)
-        self.assertTrue(JRG.TESTS in buildinfo)
+        self.assertIn(JRG.FIXABLE, buildinfo)
+        self.assertIn(JRG.TESTS, buildinfo)
         self.assertEqual(len(buildinfo[JRG.BUILD_NUMBERS]), num_runs)
         self.assertEqual(buildinfo[JRG.BUILD_NUMBERS][0], self.build_number)
 
@@ -181,7 +181,7 @@ class JSONGeneratorTest(unittest.TestCase):
         nodes = path.split("/")
         sub_trie = trie
         for node in nodes:
-            self.assertTrue(node in sub_trie)
+            self.assertIn(node, sub_trie)
             sub_trie = sub_trie[node]
         return sub_trie
 
@@ -229,7 +229,3 @@ class JSONGeneratorTest(unittest.TestCase):
         }
 
         self.assertEqual(json.dumps(trie), json.dumps(expected_trie))
-
-
-if __name__ == '__main__':
-    unittest.main()

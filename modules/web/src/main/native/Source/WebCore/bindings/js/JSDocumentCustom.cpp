@@ -34,6 +34,7 @@
 #include "JSTouch.h"
 #include "JSTouchList.h"
 #include "Location.h"
+#include "NodeTraversal.h"
 #include "ScriptController.h"
 #include "TouchList.h"
 
@@ -54,7 +55,7 @@ JSValue JSDocument::location(ExecState* exec) const
     if (!frame)
         return jsNull();
 
-    Location* location = frame->domWindow()->location();
+    Location* location = frame->document()->domWindow()->location();
     if (JSDOMWrapper* wrapper = getCachedWrapper(currentWorld(exec), location))
         return wrapper;
 
@@ -69,12 +70,12 @@ void JSDocument::setLocation(ExecState* exec, JSValue value)
     if (!frame)
         return;
 
-    UString locationString = value.toString(exec)->value(exec);
+    String locationString = value.toString(exec)->value(exec);
     if (exec->hadException())
         return;
 
-    if (Location* location = frame->domWindow()->location())
-        location->setHref(ustringToString(locationString), activeDOMWindow(exec), firstDOMWindow(exec));
+    if (Location* location = frame->document()->domWindow()->location())
+        location->setHref(locationString, activeDOMWindow(exec), firstDOMWindow(exec));
 }
 
 JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* document)
@@ -85,6 +86,14 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* documen
     JSDOMWrapper* wrapper = getCachedWrapper(currentWorld(exec), document);
     if (wrapper)
         return wrapper;
+
+    if (DOMWindow* domWindow = document->domWindow()) {
+        globalObject = toJSDOMWindow(toJS(exec, domWindow));
+        // Creating a wrapper for domWindow might have created a wrapper for document as well.
+        wrapper = getCachedWrapper(currentWorld(exec), document);
+        if (wrapper)
+            return wrapper;
+    }
 
     if (document->isHTMLDocument())
         wrapper = CREATE_DOM_WRAPPER(exec, globalObject, HTMLDocument, document);
@@ -99,7 +108,7 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* documen
     // back/forward cache.
     if (!document->frame()) {
         size_t nodeCount = 0;
-        for (Node* n = document; n; n = n->traverseNextNode())
+        for (Node* n = document; n; n = NodeTraversal::next(n))
             nodeCount++;
         
         exec->heap()->reportExtraMemoryCost(nodeCount * sizeof(Node));

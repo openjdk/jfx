@@ -28,7 +28,7 @@
 
 #include "AccessibilityMockObject.h"
 
-#include "TextControlInnerElements.h"
+#include "SpinButtonElement.h"
 
 namespace WebCore {
     
@@ -48,8 +48,8 @@ private:
     AccessibilitySpinButton();
 
     virtual AccessibilityRole roleValue() const { return SpinButtonRole; }
-    virtual bool accessibilityIsIgnored() const { return false; }
     virtual bool isSpinButton() const { return true; }
+    virtual bool isNativeSpinButton() const { return true; }
     virtual void addChildren();
     virtual LayoutRect elementRect() const;
     
@@ -72,18 +72,17 @@ private:
     virtual AccessibilityRole roleValue() const { return ButtonRole; }
     virtual bool isSpinButtonPart() const { return true; }
     virtual LayoutRect elementRect() const;
-    virtual bool accessibilityIsIgnored() const { return false; }
 };
     
 inline AccessibilitySpinButton* toAccessibilitySpinButton(AccessibilityObject* object)
 {
-    ASSERT(!object || object->isSpinButton());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isNativeSpinButton());
     return static_cast<AccessibilitySpinButton*>(object);
 }
     
 inline AccessibilitySpinButtonPart* toAccessibilitySpinButtonPart(AccessibilityObject* object)
 {
-    ASSERT(!object || object->isSpinButtonPart());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSpinButtonPart());
     return static_cast<AccessibilitySpinButtonPart*>(object);
 }
     

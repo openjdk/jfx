@@ -29,16 +29,16 @@
 #include "config.h"
 #include "FormDataStreamCFNet.h"
 
-#include "BlobRegistryImpl.h"
+#include "BlobData.h"
 #include "FileSystem.h"
 #include "FormData.h"
-#include "SchedulePair.h"
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <wtf/Assertions.h>
 #include <wtf/HashMap.h>
 #include <wtf/MainThread.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/SchedulePair.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Threading.h>
 
@@ -52,7 +52,6 @@
 extern "C" void CFURLRequestSetHTTPRequestBody(CFMutableURLRequestRef mutableHTTPRequest, CFDataRef httpBody);
 extern "C" void CFURLRequestSetHTTPHeaderFieldValue(CFMutableURLRequestRef mutableHTTPRequest, CFStringRef httpHeaderField, CFStringRef httpHeaderFieldValue);
 extern "C" void CFURLRequestSetHTTPRequestBodyStream(CFMutableURLRequestRef req, CFReadStreamRef bodyStream);
-extern "C" CFReadStreamRef CFURLRequestCopyHTTPRequestBodyStream(CFURLRequestRef request);
 #elif PLATFORM(WIN)
 #include <CFNetwork/CFURLRequest.h>
 #endif
@@ -86,15 +85,16 @@ EXTERN CFReadStreamRef CFReadStreamCreate(CFAllocatorRef alloc, const void *call
 
 namespace WebCore {
 
-static Mutex& streamFieldsMapMutex()
-{
-    DEFINE_STATIC_LOCAL(Mutex, staticMutex, ());
-    return staticMutex;
-}
-
 static void formEventCallback(CFReadStreamRef stream, CFStreamEventType type, void* context);
 
-struct FormContext {
+static CFStringRef formDataPointerPropertyName = CFSTR("WebKitFormDataPointer");
+
+CFStringRef formDataStreamLengthPropertyName()
+{
+    return CFSTR("WebKitFormDataStreamLength");
+}
+
+struct FormCreationContext {
     RefPtr<FormData> formData;
     unsigned long long streamLength;
 };
@@ -112,13 +112,6 @@ struct FormStreamFields {
     unsigned long long streamLength;
     unsigned long long bytesSent;
 };
-
-typedef HashMap<CFReadStreamRef, FormStreamFields*> StreamFieldsMap;
-static StreamFieldsMap& streamFieldsMap()
-{
-    DEFINE_STATIC_LOCAL(StreamFieldsMap, streamFieldsMap, ());
-    return streamFieldsMap;
-}
 
 static void closeCurrentStream(FormStreamFields *form)
 {
@@ -170,7 +163,7 @@ static bool advanceCurrentStream(FormStreamFields* form)
         }
 #if ENABLE(BLOB)
         if (nextInput.m_fileStart > 0) {
-            RetainPtr<CFNumberRef> position(AdoptCF, CFNumberCreate(0, kCFNumberLongLongType, &nextInput.m_fileStart));
+            RetainPtr<CFNumberRef> position = adoptCF(CFNumberCreate(0, kCFNumberLongLongType, &nextInput.m_fileStart));
             CFReadStreamSetProperty(form->currentStream, kCFStreamPropertyFileCurrentOffset, position.get());
         }
         form->currentStreamRangeLength = nextInput.m_fileLength;
@@ -205,7 +198,7 @@ static bool openNextStream(FormStreamFields* form)
 
 static void* formCreate(CFReadStreamRef stream, void* context)
 {
-    FormContext* formContext = static_cast<FormContext*>(context);
+    FormCreationContext* formContext = static_cast<FormCreationContext*>(context);
 
     FormStreamFields* newInfo = new FormStreamFields;
     newInfo->formData = formContext->formData.release();
@@ -224,10 +217,6 @@ static void* formCreate(CFReadStreamRef stream, void* context)
     for (size_t i = 0; i < size; ++i)
         newInfo->remainingElements.append(newInfo->formData->elements()[size - i - 1]);
 
-    MutexLocker locker(streamFieldsMapMutex());
-    ASSERT(!streamFieldsMap().contains(stream));
-    streamFieldsMap().add(stream, newInfo);
-
     return newInfo;
 }
 
@@ -241,17 +230,7 @@ static void formFinishFinalizationOnMainThread(void* context)
 static void formFinalize(CFReadStreamRef stream, void* context)
 {
     FormStreamFields* form = static_cast<FormStreamFields*>(context);
-
-    MutexLocker locker(streamFieldsMapMutex());
-
-    ASSERT(form->formStream == stream);
-    ASSERT(streamFieldsMap().get(stream) == context);
-
-    // Do this right away because the CFReadStreamRef is being deallocated.
-    // We can't wait to remove this from the map until we finish finalizing
-    // on the main thread because in theory the freed memory could be reused
-    // for a new CFReadStream before that runs.
-    streamFieldsMap().remove(stream);
+    ASSERT_UNUSED(stream, form->formStream == stream);
 
     callOnMainThread(formFinishFinalizationOnMainThread, form);
 }
@@ -327,6 +306,21 @@ static void formClose(CFReadStreamRef, void* context)
     closeCurrentStream(form);
 }
 
+static CFTypeRef formCopyProperty(CFReadStreamRef, CFStringRef propertyName, void *context)
+{
+    FormStreamFields* form = static_cast<FormStreamFields*>(context);
+
+    if (kCFCompareEqualTo == CFStringCompare(propertyName, formDataPointerPropertyName, 0)) {
+        long formDataAsNumber = static_cast<long>(reinterpret_cast<intptr_t>(form->formData.get()));
+        return CFNumberCreate(0, kCFNumberLongType, &formDataAsNumber);
+    }
+
+    if (kCFCompareEqualTo == CFStringCompare(propertyName, formDataStreamLengthPropertyName(), 0))
+        return CFStringCreateWithFormat(0, 0, CFSTR("%llu"), form->streamLength);
+
+    return 0;
+}
+
 static void formSchedule(CFReadStreamRef, CFRunLoopRef runLoop, CFStringRef runLoopMode, void* context)
 {
     FormStreamFields* form = static_cast<FormStreamFields*>(context);
@@ -395,50 +389,12 @@ void setHTTPBody(CFMutableURLRequestRef request, PassRefPtr<FormData> prpFormDat
     }
 
 #if ENABLE(BLOB)
-    // Check if there is a blob in the form data.
-    bool hasBlob = false;
-    for (size_t i = 0; i < count; ++i) {
-        const FormDataElement& element = formData->elements()[i];
-        if (element.m_type == FormDataElement::encodedBlob) {
-            hasBlob = true;
-            break;
-        }
-    }
-
-    // If yes, we have to resolve all the blob references and regenerate the form data with only data and file types.
-    if (hasBlob) {
-        RefPtr<FormData> newFormData = FormData::create();
-        newFormData->setAlwaysStream(formData->alwaysStream());
-        newFormData->setIdentifier(formData->identifier());
-        for (size_t i = 0; i < count; ++i) {
-            const FormDataElement& element = formData->elements()[i];
-            if (element.m_type == FormDataElement::data)
-                newFormData->appendData(element.m_data.data(), element.m_data.size());
-            else if (element.m_type == FormDataElement::encodedFile)
-                newFormData->appendFile(element.m_filename, element.m_shouldGenerateFile);
-            else {
-                ASSERT(element.m_type == FormDataElement::encodedBlob);
-                RefPtr<BlobStorageData> blobData = static_cast<BlobRegistryImpl&>(blobRegistry()).getBlobDataFromURL(KURL(ParsedURLString, element.m_blobURL));
-                if (blobData) {
-                    for (size_t j = 0; j < blobData->items().size(); ++j) {
-                        const BlobDataItem& blobItem = blobData->items()[j];
-                        if (blobItem.type == BlobDataItem::Data)
-                            newFormData->appendData(blobItem.data->data() + static_cast<int>(blobItem.offset), static_cast<int>(blobItem.length));
-                        else {
-                            ASSERT(blobItem.type == BlobDataItem::File);
-                            newFormData->appendFileRange(blobItem.path, blobItem.offset, blobItem.length, blobItem.expectedModificationTime);
-                        }
-                    }
-                }
-            }
-        }
-        formData = newFormData.release();
+    formData = formData->resolveBlobReferences();
         count = formData->elements().size();
-    }
 #endif
 
     // Precompute the content length so NSURLConnection doesn't use chunked mode.
-    long long length = 0;
+    unsigned long long length = 0;
     for (size_t i = 0; i < count; ++i) {
         const FormDataElement& element = formData->elements()[i];
         if (element.m_type == FormDataElement::data)
@@ -457,16 +413,12 @@ void setHTTPBody(CFMutableURLRequestRef request, PassRefPtr<FormData> prpFormDat
         }
     }
 
-    // Set the length.
-    RetainPtr<CFStringRef> lengthString = adoptCF(CFStringCreateWithFormat(0, 0, CFSTR("%lld"), length));
-    CFURLRequestSetHTTPHeaderFieldValue(request, CFSTR("Content-Length"), lengthString.get());
-
     // Create and set the stream.
 
     // Pass the length along with the formData so it does not have to be recomputed.
-    FormContext formContext = { formData.release(), length };
+    FormCreationContext formContext = { formData.release(), length };
 
-    CFReadStreamCallBacksV1 callBacks = { 1, formCreate, formFinalize, 0, formOpen, 0, formRead, 0, formCanRead, formClose, 0, 0, 0, formSchedule, formUnschedule
+    CFReadStreamCallBacksV1 callBacks = { 1, formCreate, formFinalize, 0, formOpen, 0, formRead, 0, formCanRead, formClose, formCopyProperty, 0, 0, formSchedule, formUnschedule
     };
     RetainPtr<CFReadStreamRef> stream = adoptCF(CFReadStreamCreate(0, static_cast<const void*>(&callBacks), &formContext));
 
@@ -478,17 +430,20 @@ FormData* httpBodyFromStream(CFReadStreamRef stream)
     if (!stream)
         return 0;
 
-    MutexLocker locker(streamFieldsMapMutex());
-    FormStreamFields* formStream = streamFieldsMap().get(stream);
-    if (!formStream)
-        return 0;
-    return formStream->formData.get();
-}
+    // Passing the pointer as property appears to be the only way to associate a stream with FormData.
+    // A new stream is always created in CFURLRequestCopyHTTPRequestBodyStream (or -[NSURLRequest HTTPBodyStream]),
+    // so a side HashMap wouldn't work.
+    // Even the stream's context pointer is different from the one we returned from formCreate().
 
-PassRefPtr<FormData> httpBodyFromRequest(CFURLRequestRef request)
-{
-    RetainPtr<CFReadStreamRef> bodyStream = adoptCF(CFURLRequestCopyHTTPRequestBodyStream(request));
-    return httpBodyFromStream(bodyStream.get());
+    RetainPtr<CFNumberRef> formDataPointerAsCFNumber = adoptCF(static_cast<CFNumberRef>(CFReadStreamCopyProperty(stream, formDataPointerPropertyName)));
+    if (!formDataPointerAsCFNumber)
+        return 0;
+
+    long formDataPointerAsNumber;
+    if (!CFNumberGetValue(formDataPointerAsCFNumber.get(), kCFNumberLongType, &formDataPointerAsNumber))
+        return 0;
+
+    return reinterpret_cast<FormData*>(static_cast<intptr_t>(formDataPointerAsNumber));
 }
 
 } // namespace WebCore

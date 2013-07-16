@@ -24,12 +24,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=SVG,
         ObjCProtocol
-    ] SVGFilterPrimitiveStandardAttributes : SVGStylable {
+] interface SVGFilterPrimitiveStandardAttributes {
         readonly attribute SVGAnimatedLength x;
         readonly attribute SVGAnimatedLength y;
         readonly attribute SVGAnimatedLength width;
@@ -37,4 +36,3 @@ module svg {
         readonly attribute SVGAnimatedString result;
     };
 
-}

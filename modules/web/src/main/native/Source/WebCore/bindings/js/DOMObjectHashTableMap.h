@@ -26,7 +26,7 @@
 #include <wtf/HashMap.h>
 
 namespace JSC {
-    class JSGlobalData;
+    class VM;
 }
 
 namespace WebCore {
@@ -34,20 +34,20 @@ namespace WebCore {
 // Map from static HashTable instances to per-GlobalData ones.
 class DOMObjectHashTableMap {
 public:
-    static DOMObjectHashTableMap& mapFor(JSC::JSGlobalData&);
+    static DOMObjectHashTableMap& mapFor(JSC::VM&);
 
     ~DOMObjectHashTableMap()
     {
         for (HashMap<const JSC::HashTable*, JSC::HashTable>::iterator iter = m_map.begin(); iter != m_map.end(); ++iter)
-            iter->second.deleteTable();
+            iter->value.deleteTable();
     }
 
     const JSC::HashTable* get(const JSC::HashTable* staticTable)
     {
         HashMap<const JSC::HashTable*, JSC::HashTable>::iterator iter = m_map.find(staticTable);
         if (iter != m_map.end())
-            return &iter->second;
-        return &m_map.set(staticTable, staticTable->copy()).iterator->second;
+            return &iter->value;
+        return &m_map.set(staticTable, staticTable->copy()).iterator->value;
     }
 
 private:

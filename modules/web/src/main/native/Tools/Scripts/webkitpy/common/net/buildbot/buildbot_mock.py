@@ -26,6 +26,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
+_log = logging.getLogger(__name__)
+
 
 class MockBuild(object):
     def __init__(self, build_number, revision, is_green):
@@ -53,7 +57,7 @@ class MockBuilder(object):
         return self.accumulated_results_url()
 
     def force_build(self, username, comments):
-        log("MOCK: force_build: name=%s, username=%s, comments=%s" % (
+        _log.info("MOCK: force_build: name=%s, username=%s, comments=%s" % (
             self._name, username, comments))
 
 

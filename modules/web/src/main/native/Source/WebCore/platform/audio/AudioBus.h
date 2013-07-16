@@ -32,6 +32,7 @@
 #include "AudioChannel.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -39,7 +40,7 @@ namespace WebCore {
 // An AudioBus represents a collection of one or more AudioChannels.
 // The data layout is "planar" as opposed to "interleaved".
 // An AudioBus with one channel is mono, an AudioBus with two channels is stereo, etc.
-class AudioBus {
+class AudioBus : public ThreadSafeRefCounted<AudioBus> {
     WTF_MAKE_NONCOPYABLE(AudioBus);
 public:
     enum {
@@ -57,10 +58,15 @@ public:
         // Can define non-standard layouts here
     };
 
+    enum ChannelInterpretation {
+        Speakers,
+        Discrete,
+    };
+
     // allocate indicates whether or not to initially have the AudioChannels created with managed storage.
     // Normal usage is to pass true here, in which case the AudioChannels will memory-manage their own storage.
     // If allocate is false then setChannelMemory() has to be called later on for each channel before the AudioBus is useable...
-    AudioBus(unsigned numberOfChannels, size_t length, bool allocate = true);
+    static PassRefPtr<AudioBus> create(unsigned numberOfChannels, size_t length, bool allocate = true);
 
     // Tells the given channel to use an externally allocated buffer.
     void setChannelMemory(unsigned channelIndex, float* storage, size_t length);
@@ -75,6 +81,10 @@ public:
 
     // Number of sample-frames
     size_t length() const { return m_length; }
+
+    // resizeSmaller() can only be called with a new length <= the current length.
+    // The data stored in the bus will remain undisturbed.
+    void resizeSmaller(size_t newLength);
 
     // Sample-rate : 0.0 if unknown or "don't care"
     float sampleRate() const { return m_sampleRate; }
@@ -94,29 +104,30 @@ public:
 
     // Creates a new buffer from a range in the source buffer.
     // 0 may be returned if the range does not fit in the sourceBuffer
-    static PassOwnPtr<AudioBus> createBufferFromRange(const AudioBus* sourceBuffer, unsigned startFrame, unsigned endFrame);
+    static PassRefPtr<AudioBus> createBufferFromRange(const AudioBus* sourceBuffer, unsigned startFrame, unsigned endFrame);
 
 
     // Creates a new AudioBus by sample-rate converting sourceBus to the newSampleRate.
     // setSampleRate() must have been previously called on sourceBus.
     // Note: sample-rate conversion is already handled in the file-reading code for the mac port, so we don't need this.
-    static PassOwnPtr<AudioBus> createBySampleRateConverting(const AudioBus* sourceBus, bool mixToMono, double newSampleRate);
+    static PassRefPtr<AudioBus> createBySampleRateConverting(const AudioBus* sourceBus, bool mixToMono, double newSampleRate);
 
     // Creates a new AudioBus by mixing all the channels down to mono.
     // If sourceBus is already mono, then the returned AudioBus will simply be a copy.
-    static PassOwnPtr<AudioBus> createByMixingToMono(const AudioBus* sourceBus);
+    static PassRefPtr<AudioBus> createByMixingToMono(const AudioBus* sourceBus);
 
     // Scales all samples by the same amount.
     void scale(float scale);
 
     void reset() { m_isFirstTime = true; } // for de-zippering
 
-    // Assuming sourceBus has the same topology, copies sample data from each channel of sourceBus to our corresponding channel.
-    void copyFrom(const AudioBus &sourceBus);
+    // Copies the samples from the source bus to this one.
+    // This is just a simple per-channel copy if the number of channels match, otherwise an up-mix or down-mix is done.
+    void copyFrom(const AudioBus& sourceBus, ChannelInterpretation = Speakers);
 
-    // Sums the sourceBus into our bus with unity gain.
-    // Our own internal gain m_busGain is ignored.
-    void sumFrom(const AudioBus &sourceBus);
+    // Sums the samples from the source bus to this one.
+    // This is just a simple per-channel summing if the number of channels match, otherwise an up-mix or down-mix is done.
+    void sumFrom(const AudioBus& sourceBus, ChannelInterpretation = Speakers);
 
     // Copy each channel from sourceBus into our corresponding channel.
     // We scale by targetGain (and our own internal gain m_busGain), performing "de-zippering" to smoothly change from *lastMixGain to (targetGain*m_busGain).
@@ -133,10 +144,18 @@ public:
     // Makes maximum absolute value == 1.0 (if possible).
     void normalize();
 
-    static PassOwnPtr<AudioBus> loadPlatformResource(const char* name, float sampleRate);
+    static PassRefPtr<AudioBus> loadPlatformResource(const char* name, float sampleRate);
 
 protected:
     AudioBus() { };
+
+    AudioBus(unsigned numberOfChannels, size_t length, bool allocate);
+
+    void speakersCopyFrom(const AudioBus&);
+    void discreteCopyFrom(const AudioBus&);
+    void speakersSumFrom(const AudioBus&);
+    void discreteSumFrom(const AudioBus&);
+    void speakersSumFrom5_1_ToMono(const AudioBus&);
 
     size_t m_length;
     Vector<OwnPtr<AudioChannel> > m_channels;

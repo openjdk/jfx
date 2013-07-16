@@ -27,13 +27,13 @@
 #define JSCallbackConstructor_h
 
 #include "JSObjectRef.h"
-#include <runtime/JSObject.h>
+#include "runtime/JSDestructibleObject.h"
 
 namespace JSC {
 
-class JSCallbackConstructor : public JSNonFinalObject {
+class JSCallbackConstructor : public JSDestructibleObject {
 public:
-    typedef JSNonFinalObject Base;
+    typedef JSDestructibleObject Base;
 
     static JSCallbackConstructor* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, JSClassRef classRef, JSObjectCallAsConstructorCallback callback)
     {
@@ -48,9 +48,9 @@ public:
     JSObjectCallAsConstructorCallback callback() const { return m_callback; }
     static const ClassInfo s_info;
 
-    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue proto)
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) 
     {
-        return Structure::create(globalData, globalObject, proto, TypeInfo(ObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), &s_info);
     }
 
 protected:

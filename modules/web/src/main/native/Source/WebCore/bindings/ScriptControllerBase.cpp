@@ -25,6 +25,7 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "Page.h"
 #include "ScriptSourceCode.h"
@@ -38,8 +39,12 @@ namespace WebCore {
 
 bool ScriptController::canExecuteScripts(ReasonForCallingCanExecuteScripts reason)
 {
-    if (m_frame->document() && m_frame->document()->isSandboxed(SandboxScripts))
+    if (m_frame->document() && m_frame->document()->isSandboxed(SandboxScripts)) {
+        // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
+        if (reason == AboutToExecuteScript)
+            m_frame->document()->addConsoleMessage(SecurityMessageSource, ErrorMessageLevel, "Blocked script execution in '" + m_frame->document()->url().elidedString() + "' because the document's frame is sandboxed and the 'allow-scripts' permission is not set.");
         return false;
+    }
 
     if (m_frame->document() && m_frame->document()->isViewSource()) {
         ASSERT(m_frame->document()->securityOrigin()->isUnique());
@@ -55,7 +60,7 @@ bool ScriptController::canExecuteScripts(ReasonForCallingCanExecuteScripts reaso
 
 ScriptValue ScriptController::executeScript(const String& script, bool forceUserGesture)
 {
-    UserGestureIndicator gestureIndicator(forceUserGesture ? DefinitelyProcessingUserGesture : PossiblyProcessingUserGesture);
+    UserGestureIndicator gestureIndicator(forceUserGesture ? DefinitelyProcessingNewUserGesture : PossiblyProcessingUserGesture);
     return executeScript(ScriptSourceCode(script, m_frame->document()->url()));
 }
 
@@ -75,9 +80,7 @@ bool ScriptController::executeIfJavaScriptURL(const KURL& url, ShouldReplaceDocu
         return false;
 
     if (!m_frame->page()
-        || !m_frame->page()->javaScriptURLsAreAllowed()
-        || !m_frame->document()->contentSecurityPolicy()->allowJavaScriptURLs(m_frame->document()->url(), eventHandlerPosition().m_line)
-        || m_frame->inViewSourceMode())
+        || !m_frame->document()->contentSecurityPolicy()->allowJavaScriptURLs(m_frame->document()->url(), eventHandlerPosition().m_line))
         return true;
 
     // We need to hold onto the Frame here because executing script can
@@ -96,15 +99,10 @@ bool ScriptController::executeIfJavaScriptURL(const KURL& url, ShouldReplaceDocu
         return true;
 
     String scriptResult;
-#if USE(JSC)
     JSDOMWindowShell* shell = windowShell(mainThreadNormalWorld());
     JSC::ExecState* exec = shell->window()->globalExec();
     if (!result.getString(exec, scriptResult))
         return true;
-#else
-    if (!result.getString(scriptResult))
-        return true;
-#endif
 
     // FIXME: We should always replace the document, but doing so
     //        synchronously can cause crashes:

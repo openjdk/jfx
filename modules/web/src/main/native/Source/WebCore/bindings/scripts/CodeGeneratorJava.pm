@@ -13,6 +13,10 @@ my %domExtension = (
     DOMSelection => 1,
 );
 
+my %ambiguousType = (
+    Rect => 1, # conflict with MAC base type 
+);
+
 my %class2pkg = (
     Map => "java.util",
     HashMap => "java.util",
@@ -210,6 +214,8 @@ my %classData = (
             "DocumentView getDocument()"
         ],
         skip => {
+            "requestAnimationFrame" => 1,
+            "webkitRequestAnimationFrame" => 1, 
             "webkitRequestFileSystem" => 1,
             "webkitResolveLocalFileSystemURL" => 1
         },
@@ -401,6 +407,11 @@ my %classData = (
                 "        , JavaException(env, JavaDOMException));\n"
         }
     },
+    CSSStyleDeclaration => {
+        nativeCPPBody => {
+            "getPropertyCSSValue" => "<ordinal>"
+        }
+    },
     StyleSheet => {
         checkDynamicType => [
 # children first (RTTI sequence)!
@@ -430,6 +441,7 @@ my %classData = (
     },
     HTMLDocument => {
         nativeCPPBody => {
+            "open" => "<ordinal>",
             "write" => "<ordinal>",
             "writeln" => "<ordinal>"
         }
@@ -481,7 +493,6 @@ my @contentCPP = ();
 
 
 my $module = "";
-my $outputDir = "";
 
 # Default constructor
 sub new
@@ -490,8 +501,6 @@ sub new
     my $reference = { };
 
     $codeGenerator = shift;
-    $outputDir = shift;
-    shift; # $outputHeadersDir
     shift; # $useLayerOnTop
     shift; # $preprocessor
     shift; # $writeDependencies
@@ -513,21 +522,21 @@ sub GenerateModule
 sub GenerateInterface
 {
     my $object = shift;
-    my $dataNode = shift;
+    my $interface = shift;
     my $defines = shift;
 
-    my $name = $dataNode->name;
+    $codeGenerator->LinkOverloadedFunctions($interface);
 
+    # Start actual generation
+    # if (!$interface->isCallback) {
     # Start actual generation.
-    $object->Generate($dataNode, $defines);
-
-    # Write changes.
-    $object->WriteData($name);
+        $object->Generate($interface, $defines);
+    # }
 }
 
 sub GetTransferTypeName
 {
-    my $name = $codeGenerator->StripModule(shift);
+    my $name = shift;
 
     # special cases
     return "String" if $codeGenerator->IsStringType($name) or $name eq "SerializedScriptValue";
@@ -559,7 +568,7 @@ sub GetCPPInterface
 
 sub ForbiddenTransferTypeName
 {
-    my $name = $codeGenerator->StripModule(shift);
+    my $name = shift;
 
     # special cases
     return 0 if $codeGenerator->IsStringType($name) or $name eq "SerializedScriptValue";
@@ -573,6 +582,12 @@ sub ForbiddenTransferTypeName
 }
 
 
+sub IsReadonly
+{
+    my $attribute = shift;
+    return $attribute->isReadOnly && !$attribute->signature->extendedAttributes->{"Replaceable"};
+}
+
 sub IsJavaPimitive
 {
     my $type = shift;
@@ -582,7 +597,7 @@ sub IsJavaPimitive
 
 sub GetJavaParamClassName
 {
-    my $name = $codeGenerator->StripModule(shift);
+    my $name = shift;
 
     # special cases
     $name = "boolean" if $name eq "boolean";
@@ -620,11 +635,11 @@ sub GetParent
     if ($numParents eq 0) {
         $parent = "";
     } elsif ($numParents eq 1) {
-        my $parentName = $codeGenerator->StripModule($dataNode->parents(0));
+        my $parentName = $dataNode->parents(0);
         $parent = $parentName;
     } else {
         my @parents = @{$dataNode->parents};
-        my $firstParent = $codeGenerator->StripModule(shift(@parents));
+        my $firstParent = shift(@parents);
         $parent = $firstParent;
     }
     return "$parent";
@@ -803,7 +818,7 @@ sub IsDefinedInCommandLine
                     . '$hash_def{\"ENABLE_',
                     sort keys %conditions)
                 . '\"}';
-            print $exeCond;
+            print "eval: ${exeCond}";
             return eval($exeCond);
         }
         if (!$hash_def{"ENABLE_${conditional}"}) {
@@ -907,10 +922,7 @@ sub Generate
         if ($isBaseEventTarget) {
             map { $includesCPP{$_} = 1; } @{[
                 "APICast.h",
-                "BridgeUtils.h",
                 "com_sun_webkit_dom_JSObject.h"
-                # "Frame.h",
-                # "runtime_root.h"
            ]};
 
             push(@contentJava, "    // We use a custom hash-table rather than java.util.HashMap,\n");
@@ -1152,7 +1164,7 @@ sub Generate
             my $attributeName = $attribute->signature->name;
             my $attributeType = GetJavaParamClassName($attribute->signature->type);
 
-            my $attributeIsReadonly = ($attribute->type =~ /^readonly/);
+            my $attributeIsReadonly = IsReadonly($attribute);
             my $isStringAttr = isStringAttribute($interfaceName, $attributeName);
 
             my $camelName = ucfirst($attributeName);
@@ -1179,6 +1191,10 @@ sub Generate
             my ($functionName, @arguments) = $codeGenerator->GetterExpression(\%includesCPP, $interfaceName, $attribute);
             my $getterExceptionCPPParam = GetExceptionCPPParam($attribute->getterExceptions);
             push(@arguments, $getterExceptionCPPParam) if $getterExceptionCPPParam;
+
+            my $functionCPPAltName = $attribute->signature->extendedAttributes->{"ImplementedAs"};
+            my $functionCPPName = $functionCPPAltName ? $functionCPPAltName : $functionName;
+
             my $cppBody = "${functionExportPrefix} "
                 . GetJavaCPPNativeType($attributeType)
                 . " ${functionNamePrefix}${javaClassName}_"
@@ -1188,7 +1204,7 @@ sub Generate
                 . GetJavaCPPNativeReturnValue(
                     $attributeType,
                     GetJavaCPPNativeArgValue($interfaceName, "peer")
-                    . "->${functionName}("
+                    . "->${functionCPPName}("
                     . join(", ", @arguments)
                     .")")
                 . ";\n";
@@ -1218,6 +1234,10 @@ sub Generate
                 my $setterExceptionCPPParam = GetExceptionCPPParam($attribute->setterExceptions);
                 push(@arguments, GetJavaCPPNativeArgValue($attributeType, "value"));
                 push(@arguments, $setterExceptionCPPParam) if $setterExceptionCPPParam;
+
+                my $functionCPPAltName = $attribute->signature->extendedAttributes->{"ImplementedAs"};
+                my $functionCPPName = $functionCPPAltName ? $functionCPPAltName : $functionName;
+
                 $cppBody .= "${functionExportPrefix} void "
                     . "${functionNamePrefix}${javaClassName}_"
                     . GetJavaTWKCallName(${javaSetterName})
@@ -1225,7 +1245,7 @@ sub Generate
                     . GetJavaCPPNativeType($attributeType)
                     . " value) {\n    "
                     . GetJavaCPPNativeArgValue($interfaceName, "peer")
-                    . "->${functionName}("
+                    . "->${functionCPPName}("
                     . join(", ", @arguments)
                     . ");\n";
                 $cppBody .= "}\n";
@@ -1251,7 +1271,7 @@ sub Generate
         my @headerFunctions = ();
         my @cppFunctions = ();
         foreach my $function (@{$dataNode->functions}) {
-            next if ShouldSkipType($interfaceName, $function);
+            next if ShouldSkipType($interfaceName, $function) or !IsDefinedInCommandLine($function->signature->extendedAttributes->{"Conditional"});
             my $functionName = $function->signature->name;
             my $javaFunctionName = GetJavaMethodName($interfaceName, $functionName);
             my $returnType = GetJavaParamClassName($function->signature->type);
@@ -1272,8 +1292,12 @@ sub Generate
                 . " ${functionNamePrefix}${javaClassName}_"
                 . GetJavaTWKCallName($javaFunctionName)
                 ."(${functionStdParams}";
+
+            my $functionCPPAltName = $function->signature->extendedAttributes->{"ImplementedAs"};
+            my $functionCPPName =$functionCPPAltName ? $functionCPPAltName : $functionName;
+
             my $CPPInterfaceCall  = GetJavaCPPNativeArgValue($interfaceName, "peer")
-                . "->\n        ${functionName}(";
+                . "->\n        ${functionCPPName}(";
 
             my $parameterIndex = 0;
             foreach my $param (@{$function->parameters}) {
@@ -1354,6 +1378,10 @@ sub Generate
     }
     foreach my $incl (sort keys(%includesCPP)) {
         push(@headerCPP, "#include \"${incl}\"\n");
+	my $CPPtype = $incl;
+	$CPPtype =~ s{.*/}{};      # removes path  
+	$CPPtype =~ s{\.[^.]+$}{}; # removes extension
+        push(@headerCPP, "#define ${CPPtype} WebCore::${CPPtype}\n") if $ambiguousType{$CPPtype};
     }
 
     push(@headerJava, "\n");
@@ -1363,7 +1391,10 @@ sub Generate
 sub WriteData
 {
     my $object = shift;
-    my $name = shift;
+    my $interface = shift;
+    my $outputDir = shift;
+
+    my $name = $interface->name;
 
     my $javapath = "${outputDir}/java/com/sun/webkit/dom";
     mkpath($javapath);

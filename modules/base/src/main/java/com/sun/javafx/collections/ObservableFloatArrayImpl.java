@@ -71,14 +71,14 @@ public final class ObservableFloatArrayImpl extends ObservableArrayBase<Observab
     }
 
     private void addAllInternal(ObservableFloatArray src, int srcIndex, int length) {
-        ensureCapacity(size + length);
+        growCapacity(length);
         src.copyTo(srcIndex, array, size, length);
         size += length;
         fireChange(length != 0, size - length, size);
     }
 
     private void addAllInternal(float[] src, int srcIndex, int length) {
-        ensureCapacity(size + length);
+        growCapacity(length);
         System.arraycopy(src, srcIndex, array, size, length);
         size += length;
         fireChange(length != 0, size - length, size);
@@ -227,13 +227,40 @@ public final class ObservableFloatArrayImpl extends ObservableArrayBase<Observab
         fireChange(sizeChanged, minSize, newSize);
     }
 
+    /**
+     * The maximum size of array to allocate.
+     * Some VMs reserve some header words in an array.
+     * Attempts to allocate larger arrays may result in
+     * OutOfMemoryError: Requested array size exceeds VM limit
+     */
+    private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
+
+    private void growCapacity(int length) {
+        int minCapacity = size + length;
+        int oldCapacity = array.length;
+        if (minCapacity > array.length) {
+            int newCapacity = oldCapacity + (oldCapacity >> 1);
+            if (newCapacity < minCapacity) newCapacity = minCapacity;
+            if (newCapacity > MAX_ARRAY_SIZE) newCapacity = hugeCapacity(minCapacity);
+            ensureCapacity(newCapacity);
+        } else if (length > 0 && minCapacity < 0) {
+            throw new OutOfMemoryError(); // overflow
+        }
+    }
+
     @Override
     public void ensureCapacity(int capacity) {
         if (array.length < capacity) {
-            float[] newArray = new float[capacity];
-            System.arraycopy(array, 0, newArray, 0, size);
-            array = newArray;
+            array = Arrays.copyOf(array, capacity);
         }
+    }
+
+    private static int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0) // overflow
+            throw new OutOfMemoryError();
+        return (minCapacity > MAX_ARRAY_SIZE) ?
+            Integer.MAX_VALUE :
+            MAX_ARRAY_SIZE;
     }
 
     @Override

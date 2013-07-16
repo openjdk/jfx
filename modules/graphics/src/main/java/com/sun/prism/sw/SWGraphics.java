@@ -30,7 +30,7 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Glyph;
 import com.sun.javafx.font.Metrics;
-import com.sun.javafx.font.PrismFontUtils;
+import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.Line2D;
@@ -756,7 +756,7 @@ final class SWGraphics implements ReadbackGraphics {
                     tx.is2D();
 
             if (doLCDText) {
-                this.pr.setLCDGammaCorrection(1f / PrismFontUtils.getLCDContrast());
+                this.pr.setLCDGammaCorrection(1f / PrismFontFactory.getLCDContrast());
             } else {
                 final FontResource fr = strike.getFontResource();
                 final float origSize = strike.getSize();
@@ -1029,5 +1029,12 @@ final class SWGraphics implements ReadbackGraphics {
     public Object[] getLights() {
         // Light are not supported by SW pipeline
         return null;
+    }
+
+    @Override
+    public void blit(RTTexture srcTex, RTTexture dstTex,
+                    int srcX0, int srcY0, int srcX1, int srcY1,
+                    int dstX0, int dstY0, int dstX1, int dstY1) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

@@ -32,6 +32,7 @@ import java.nio.IntBuffer;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Size;
+import com.sun.glass.ui.Application;
 
 final class LensCursor extends Cursor {
 
@@ -97,7 +98,9 @@ final class LensCursor extends Cursor {
 
         int type = getType();
         if (type == CURSOR_DISAPPEAR) {
-            _setVisible(false);
+            // CURSOR_DISAPPEAR is mapped to setVisible(false) and will be registered 
+            // in LensApplication as a user preference to not show the cursor.
+            ((LensApplication)Application.GetApplication()).staticCursor_setVisible(false);
         }
     }
 

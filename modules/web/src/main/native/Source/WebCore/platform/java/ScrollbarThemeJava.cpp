@@ -9,6 +9,7 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "HostWindow.h"
+#include "Page.h"
 #include "PlatformContextJava.h"
 #include "PlatformMouseEvent.h"
 #include "Scrollbar.h"
@@ -50,7 +51,7 @@ JLObject getJScrollBarTheme(ScrollbarThemeClient* sb)
     ASSERT(fv->frame());
     Page* page = fv->frame()->page();
     ASSERT(page);
-    JLObject jWebPage = ((ChromeClientJava*)page->chrome()->client())->platformPage();
+    JLObject jWebPage = ((ChromeClientJava*)page->chrome().client())->platformPage();
 
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -111,7 +112,7 @@ bool ScrollbarThemeJava::paint(ScrollbarThemeClient* scrollbar, GraphicsContext*
     return false;
 }
 
-ScrollbarPart ScrollbarThemeJava::hitTest(ScrollbarThemeClient* scrollbar, const PlatformMouseEvent& evt)
+ScrollbarPart ScrollbarThemeJava::hitTest(ScrollbarThemeClient* scrollbar, const IntPoint& pos)
 {
     JLObject jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
@@ -125,7 +126,7 @@ ScrollbarPart ScrollbarThemeJava::hitTest(ScrollbarThemeClient* scrollbar, const
         "(IIIIIIII)I");
     ASSERT(mid);
 
-    IntPoint p = scrollbar->convertFromContainingWindow(evt.position());
+    IntPoint p = scrollbar->convertFromContainingWindow(pos);
     int part = env->CallIntMethod(
         jtheme,
         mid,

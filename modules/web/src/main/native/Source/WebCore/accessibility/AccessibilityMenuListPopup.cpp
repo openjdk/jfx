@@ -62,9 +62,9 @@ bool AccessibilityMenuListPopup::isEnabled() const
     return m_parent->isEnabled();
 }
 
-bool AccessibilityMenuListPopup::accessibilityIsIgnored() const
+bool AccessibilityMenuListPopup::computeAccessibilityIsIgnored() const
 {
-    return accessibilityPlatformIncludesObject() != IncludeObject;
+    return accessibilityIsIgnoredByDefault();
 }
 
 AccessibilityMenuListOption* AccessibilityMenuListPopup::menuListOptionAccessibilityObject(HTMLElement* element) const
@@ -73,7 +73,7 @@ AccessibilityMenuListOption* AccessibilityMenuListPopup::menuListOptionAccessibi
         return 0;
 
     AccessibilityObject* object = document()->axObjectCache()->getOrCreate(MenuListOptionRole);
-    ASSERT(object->isMenuListOption());
+    ASSERT_WITH_SECURITY_IMPLICATION(object->isMenuListOption());
 
     AccessibilityMenuListOption* option = static_cast<AccessibilityMenuListOption*>(object);
     option->setElement(element);

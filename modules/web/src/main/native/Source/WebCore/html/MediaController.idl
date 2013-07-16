@@ -23,14 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module html {
-    interface [
+[
         Conditional=VIDEO,
         Constructor,
         CallWith=ScriptExecutionContext,
         JSGenerateToJSObject,
         EventTarget
-    ] MediaController {
+] interface MediaController {
         readonly attribute TimeRanges buffered;
         readonly attribute TimeRanges seekable;
 
@@ -40,8 +39,10 @@ module html {
 
         readonly attribute boolean paused;
         readonly attribute TimeRanges played;
+    readonly attribute DOMString playbackState;
         void play();
         void pause();
+    void unpause();
 
         attribute double defaultPlaybackRate;
         attribute double playbackRate;
@@ -51,13 +52,12 @@ module html {
         attribute boolean muted;
 
         // EventTarget interface
-        void addEventListener(in DOMString type, 
-                              in EventListener listener, 
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type, 
-                                 in EventListener listener, 
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type, 
+                          EventListener listener, 
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type, 
+                             EventListener listener, 
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
     };
-}

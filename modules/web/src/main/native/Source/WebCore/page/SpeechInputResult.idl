@@ -23,13 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module core {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=INPUT_SPEECH,
-    ] SpeechInputResult {
+    ImplementationLacksVTable
+] interface SpeechInputResult {
         readonly attribute DOMString utterance;
         readonly attribute float confidence;
     };
 
-}

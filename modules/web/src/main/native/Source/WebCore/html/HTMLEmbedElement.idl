@@ -18,13 +18,11 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module html {
-
-    interface [
+[
         CustomNamedSetter,
         JSCustomGetOwnPropertySlotAndDescriptor,
-        CustomCall
-    ] HTMLEmbedElement : HTMLElement {
+    CustomCall,
+] interface HTMLEmbedElement : HTMLElement {
     attribute [Reflect] DOMString align;
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
     attribute [Reflect] DOMString height;
@@ -41,10 +39,9 @@ module html {
 #endif
 
 #if defined(ENABLE_SVG) && ENABLE_SVG
-#if !defined(LANGUAGE_OBJECTIVE_C) || !LANGUAGE_OBJECTIVE_C || defined(ENABLE_SVG_DOM_OBJC_BINDINGS) && ENABLE_SVG_DOM_OBJC_BINDINGS
+#if !defined(LANGUAGE_OBJECTIVE_C) || !LANGUAGE_OBJECTIVE_C
     [CheckSecurityForNode] SVGDocument getSVGDocument() raises(DOMException);
 #endif
 #endif
     };
 
-}

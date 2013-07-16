@@ -30,7 +30,6 @@
 #include "FileSystem.h"
 
 #include "FileMetadata.h"
-#include "PlatformString.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -41,6 +40,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -138,6 +138,23 @@ int readFromFile(PlatformFileHandle handle, char* data, int length)
     } while (errno == EINTR);
     return -1;
 }
+
+#if USE(FILE_LOCK)
+bool lockFile(PlatformFileHandle handle, FileLockMode lockMode)
+{
+    COMPILE_ASSERT(LOCK_SH == LockShared, LockSharedEncodingIsAsExpected);
+    COMPILE_ASSERT(LOCK_EX == LockExclusive, LockExclusiveEncodingIsAsExpected);
+    COMPILE_ASSERT(LOCK_NB == LockNonBlocking, LockNonBlockingEncodingIsAsExpected);
+    int result = flock(handle, lockMode);
+    return (result != -1);
+}
+
+bool unlockFile(PlatformFileHandle handle)
+{
+    int result = flock(handle, LOCK_UN);
+    return (result != -1);
+}
+#endif
 
 bool deleteEmptyDirectory(const String& path)
 {

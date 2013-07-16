@@ -30,19 +30,17 @@
 
 @class DOMDictionary;
 @class DOMDocument;
-@class DOMIDBKey;
+@class DOMNode;
 @class DOMSVGDocument;
 @class DOMSVGPoint;
+@class DOMTestEnumType;
+@class DOMTestNode;
 @class DOMTestObj;
 @class DOMTestObjectAConstructor;
 @class DOMTestObjectBConstructor;
 @class DOMTestObjectCConstructor;
-@class DOMa;
-@class DOMb;
+@class DOMany;
 @class DOMbool;
-@class DOMc;
-@class DOMd;
-@class DOMe;
 @class NSString;
 @protocol DOMEventListener;
 
@@ -65,123 +63,76 @@ enum {
 };
 
 @interface DOMTestObj : DOMObject
-- (int)readOnlyIntAttr;
-- (NSString *)readOnlyStringAttr;
-- (DOMTestObj *)readOnlyTestObjAttr;
-- (short)shortAttr;
-- (void)setShortAttr:(short)newShortAttr;
-- (unsigned short)unsignedShortAttr;
-- (void)setUnsignedShortAttr:(unsigned short)newUnsignedShortAttr;
-- (int)intAttr;
-- (void)setIntAttr:(int)newIntAttr;
-- (long long)longLongAttr;
-- (void)setLongLongAttr:(long long)newLongLongAttr;
-- (unsigned long long)unsignedLongLongAttr;
-- (void)setUnsignedLongLongAttr:(unsigned long long)newUnsignedLongLongAttr;
-- (NSString *)stringAttr;
-- (void)setStringAttr:(NSString *)newStringAttr;
-- (DOMTestObj *)testObjAttr;
-- (void)setTestObjAttr:(DOMTestObj *)newTestObjAttr;
-- (DOMTestObj *)XMLObjAttr;
-- (void)setXMLObjAttr:(DOMTestObj *)newXMLObjAttr;
-- (BOOL)create;
-- (void)setCreate:(BOOL)newCreate;
-- (NSString *)reflectedStringAttr;
-- (void)setReflectedStringAttr:(NSString *)newReflectedStringAttr;
-- (int)reflectedIntegralAttr;
-- (void)setReflectedIntegralAttr:(int)newReflectedIntegralAttr;
-- (unsigned)reflectedUnsignedIntegralAttr;
-- (void)setReflectedUnsignedIntegralAttr:(unsigned)newReflectedUnsignedIntegralAttr;
-- (BOOL)reflectedBooleanAttr;
-- (void)setReflectedBooleanAttr:(BOOL)newReflectedBooleanAttr;
-- (NSString *)reflectedURLAttr;
-- (void)setReflectedURLAttr:(NSString *)newReflectedURLAttr;
-- (NSString *)reflectedStringAttr;
-- (void)setReflectedStringAttr:(NSString *)newReflectedStringAttr;
-- (int)reflectedCustomIntegralAttr;
-- (void)setReflectedCustomIntegralAttr:(int)newReflectedCustomIntegralAttr;
-- (BOOL)reflectedCustomBooleanAttr;
-- (void)setReflectedCustomBooleanAttr:(BOOL)newReflectedCustomBooleanAttr;
-- (NSString *)reflectedCustomURLAttr;
-- (void)setReflectedCustomURLAttr:(NSString *)newReflectedCustomURLAttr;
-- (int)attrWithGetterException;
-- (void)setAttrWithGetterException:(int)newAttrWithGetterException;
-- (int)attrWithSetterException;
-- (void)setAttrWithSetterException:(int)newAttrWithSetterException;
-- (NSString *)stringAttrWithGetterException;
-- (void)setStringAttrWithGetterException:(NSString *)newStringAttrWithGetterException;
-- (NSString *)stringAttrWithSetterException;
-- (void)setStringAttrWithSetterException:(NSString *)newStringAttrWithSetterException;
-- (int)customAttr;
-- (void)setCustomAttr:(int)newCustomAttr;
-- (int)withScriptStateAttribute;
-- (void)setWithScriptStateAttribute:(int)newWithScriptStateAttribute;
-- (DOMTestObj *)withScriptExecutionContextAttribute;
-- (void)setWithScriptExecutionContextAttribute:(DOMTestObj *)newWithScriptExecutionContextAttribute;
-- (DOMTestObj *)withScriptStateAttributeRaises;
-- (void)setWithScriptStateAttributeRaises:(DOMTestObj *)newWithScriptStateAttributeRaises;
-- (DOMTestObj *)withScriptExecutionContextAttributeRaises;
-- (void)setWithScriptExecutionContextAttributeRaises:(DOMTestObj *)newWithScriptExecutionContextAttributeRaises;
-- (DOMTestObj *)withScriptExecutionContextAndScriptStateAttribute;
-- (void)setWithScriptExecutionContextAndScriptStateAttribute:(DOMTestObj *)newWithScriptExecutionContextAndScriptStateAttribute;
-- (DOMTestObj *)withScriptExecutionContextAndScriptStateAttributeRaises;
-- (void)setWithScriptExecutionContextAndScriptStateAttributeRaises:(DOMTestObj *)newWithScriptExecutionContextAndScriptStateAttributeRaises;
-- (DOMTestObj *)withScriptExecutionContextAndScriptStateWithSpacesAttribute;
-- (void)setWithScriptExecutionContextAndScriptStateWithSpacesAttribute:(DOMTestObj *)newWithScriptExecutionContextAndScriptStateWithSpacesAttribute;
-- (DOMTestObj *)withScriptArgumentsAndCallStackAttribute;
-- (void)setWithScriptArgumentsAndCallStackAttribute:(DOMTestObj *)newWithScriptArgumentsAndCallStackAttribute;
-#if ENABLE(Condition1)
-- (int)conditionalAttr1;
-- (void)setConditionalAttr1:(int)newConditionalAttr1;
-#endif
-#if ENABLE(Condition1) && ENABLE(Condition2)
-- (int)conditionalAttr2;
-- (void)setConditionalAttr2:(int)newConditionalAttr2;
-#endif
-#if ENABLE(Condition1) || ENABLE(Condition2)
-- (int)conditionalAttr3;
-- (void)setConditionalAttr3:(int)newConditionalAttr3;
-#endif
-#if ENABLE(Condition1)
-- (DOMTestObjectAConstructor *)conditionalAttr4;
-- (void)setConditionalAttr4:(DOMTestObjectAConstructor *)newConditionalAttr4;
-#endif
-#if ENABLE(Condition1) && ENABLE(Condition2)
-- (DOMTestObjectBConstructor *)conditionalAttr5;
-- (void)setConditionalAttr5:(DOMTestObjectBConstructor *)newConditionalAttr5;
-#endif
-#if ENABLE(Condition1) || ENABLE(Condition2)
-- (DOMTestObjectCConstructor *)conditionalAttr6;
-- (void)setConditionalAttr6:(DOMTestObjectCConstructor *)newConditionalAttr6;
-#endif
-- (DOMDocument *)contentDocument;
-- (DOMSVGPoint *)mutablePoint;
-- (void)setMutablePoint:(DOMSVGPoint *)newMutablePoint;
-- (DOMSVGPoint *)immutablePoint;
-- (void)setImmutablePoint:(DOMSVGPoint *)newImmutablePoint;
-- (int)strawberry;
-- (void)setStrawberry:(int)newStrawberry;
-- (float)strictFloat;
-- (void)setStrictFloat:(float)newStrictFloat;
-- (int)descriptionName;
-- (int)idName;
-- (void)setIdName:(int)newIdName;
-- (NSString *)hashName;
-- (int)replaceableAttribute;
-- (void)setReplaceableAttribute:(int)newReplaceableAttribute;
+@property(readonly) int readOnlyLongAttr;
+@property(readonly, copy) NSString *readOnlyStringAttr;
+@property(readonly, retain) DOMTestObj *readOnlyTestObjAttr;
+@property short shortAttr;
+@property unsigned short unsignedShortAttr;
+@property int longAttr;
+@property long long longLongAttr;
+@property unsigned long long unsignedLongLongAttr;
+@property(copy) NSString *stringAttr;
+@property(retain) DOMTestObj *testObjAttr;
+@property(retain) DOMTestObj *XMLObjAttr;
+@property BOOL create;
+@property(copy) NSString *reflectedStringAttr;
+@property int reflectedIntegralAttr;
+@property unsigned reflectedUnsignedIntegralAttr;
+@property BOOL reflectedBooleanAttr;
+@property(copy) NSString *reflectedURLAttr;
+@property(copy) NSString *reflectedStringAttr;
+@property int reflectedCustomIntegralAttr;
+@property BOOL reflectedCustomBooleanAttr;
+@property(copy) NSString *reflectedCustomURLAttr;
+@property int attrWithGetterException;
+@property int attrWithSetterException;
+@property(copy) NSString *stringAttrWithGetterException;
+@property(copy) NSString *stringAttrWithSetterException;
+@property int customAttr;
+@property int withScriptStateAttribute;
+@property(retain) DOMTestObj *withScriptExecutionContextAttribute;
+@property(retain) DOMTestObj *withScriptStateAttributeRaises;
+@property(retain) DOMTestObj *withScriptExecutionContextAttributeRaises;
+@property(retain) DOMTestObj *withScriptExecutionContextAndScriptStateAttribute;
+@property(retain) DOMTestObj *withScriptExecutionContextAndScriptStateAttributeRaises;
+@property(retain) DOMTestObj *withScriptExecutionContextAndScriptStateWithSpacesAttribute;
+@property(retain) DOMTestObj *withScriptArgumentsAndCallStackAttribute;
+@property int conditionalAttr1;
+@property int conditionalAttr2;
+@property int conditionalAttr3;
+@property(retain) DOMTestObjectAConstructor *conditionalAttr4;
+@property(retain) DOMTestObjectBConstructor *conditionalAttr5;
+@property(retain) DOMTestObjectCConstructor *conditionalAttr6;
+@property(retain) DOMany *anyAttribute;
+@property(readonly, retain) DOMDocument *contentDocument;
+@property(retain) DOMSVGPoint *mutablePoint;
+@property(retain) DOMSVGPoint *immutablePoint;
+@property int strawberry;
+@property float strictFloat;
+@property(readonly) int descriptionName;
+@property int idName;
+@property(readonly, copy) NSString *hashName;
+@property(readonly) int replaceableAttribute;
+@property(readonly) double nullableDoubleAttribute;
+@property(readonly) int nullableLongAttribute;
+@property(readonly) BOOL nullableBooleanAttribute;
+@property(readonly, copy) NSString *nullableStringAttribute;
+@property int nullableLongSettableAttribute;
+@property int nullableStringValue;
+
 - (void)voidMethod;
-- (void)voidMethodWithArgs:(int)intArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg;
-- (int)intMethod;
-- (int)intMethodWithArgs:(int)intArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg;
+- (void)voidMethodWithArgs:(int)longArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg;
+- (int)longMethod;
+- (int)longMethodWithArgs:(int)longArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg;
 - (DOMTestObj *)objMethod;
-- (DOMTestObj *)objMethodWithArgs:(int)intArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg;
+- (DOMTestObj *)objMethodWithArgs:(int)longArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg;
+- (void)methodWithEnumArg:(DOMTestEnumType *)enumArg;
 - (DOMTestObj *)methodThatRequiresAllArgsAndThrows:(NSString *)strArg objArg:(DOMTestObj *)objArg;
 - (void)serializedValue:(NSString *)serializedArg;
-- (void)idbKey:(DOMIDBKey *)key;
 - (void)optionsObject:(DOMDictionary *)oo ooo:(DOMDictionary *)ooo;
 - (void)methodWithException;
 - (void)customMethod;
-- (void)customMethodWithArgs:(int)intArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg;
+- (void)customMethodWithArgs:(int)longArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg;
 - (void)addEventListener:(NSString *)type listener:(id <DOMEventListener>)listener useCapture:(BOOL)useCapture;
 - (void)removeEventListener:(NSString *)type listener:(id <DOMEventListener>)listener useCapture:(BOOL)useCapture;
 - (void)withScriptStateVoid;
@@ -218,15 +169,17 @@ enum {
 - (void)overloadedMethod1:(NSString *)type;
 #endif
 - (DOMSVGDocument *)getSVGDocument;
-- (void)convert1:(DOMa *);
-- (void)convert2:(DOMb *);
-- (void)convert3:(DOMc *);
-- (void)convert4:(DOMd *);
-- (void)convert5:(DOMe *);
+- (void)convert1:(DOMTestNode *)value;
+- (void)convert2:(DOMTestNode *)value;
+- (void)convert4:(DOMTestNode *)value;
+- (void)convert5:(DOMTestNode *)value;
 - (DOMSVGPoint *)mutablePointFunction;
 - (DOMSVGPoint *)immutablePointFunction;
 - (void)orange;
 - (DOMbool *)strictFunction:(NSString *)str a:(float)a b:(int)b;
+- (void)variadicStringMethod:(NSString *)head tail:(NSString *)tail;
+- (void)variadicDoubleMethod:(double)head tail:(double)tail;
+- (void)variadicNodeMethod:(DOMNode *)head tail:(DOMNode *)tail;
 @end
 
 #endif

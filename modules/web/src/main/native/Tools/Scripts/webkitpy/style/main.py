@@ -68,7 +68,7 @@ def change_directory(filesystem, checkout_root, paths):
         rel_paths = []
         for path in paths:
             rel_path = filesystem.relpath(path, checkout_root)
-            if rel_path is None:
+            if rel_path.startswith(filesystem.pardir):
                 # Then the path is not below the checkout root.  Since all
                 # paths should be interpreted relative to the same root,
                 # do not interpret any of the paths as relative to the
@@ -124,7 +124,7 @@ class CheckWebKitStyle(object):
         args = sys.argv[1:]
 
         host = Host()
-        host._initialize_scm()
+        host.initialize_scm()
 
         stderr = self._engage_awesome_stderr_hacks()
 

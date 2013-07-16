@@ -299,7 +299,7 @@ void Function::setArguments(const Vector<Expression*>& args)
         setIsContextNodeSensitive(false);
 
     Vector<Expression*>::const_iterator end = args.end();
-    for (Vector<Expression*>::const_iterator it = args.begin(); it != end; it++)
+    for (Vector<Expression*>::const_iterator it = args.begin(); it != end; ++it)
         addSubExpression(*it);
 }
 
@@ -500,14 +500,14 @@ Value FunSubstring::evaluate() const
 {
     String s = arg(0)->evaluate().toString();
     double doublePos = arg(1)->evaluate().toNumber();
-    if (isnan(doublePos))
+    if (std::isnan(doublePos))
         return "";
     long pos = static_cast<long>(FunRound::round(doublePos));
     bool haveLength = argCount() == 3;
     long len = -1;
     if (haveLength) {
         double doubleLen = arg(2)->evaluate().toNumber();
-        if (isnan(doubleLen))
+        if (std::isnan(doubleLen))
             return "";
         len = static_cast<long>(FunRound::round(doubleLen));
     }
@@ -550,22 +550,19 @@ Value FunTranslate::evaluate() const
     String s1 = arg(0)->evaluate().toString();
     String s2 = arg(1)->evaluate().toString();
     String s3 = arg(2)->evaluate().toString();
-    String newString;
+    StringBuilder result;
 
-    // FIXME: Building a String a character at a time is quite slow.
     for (unsigned i1 = 0; i1 < s1.length(); ++i1) {
         UChar ch = s1[i1];
         size_t i2 = s2.find(ch);
         
         if (i2 == notFound)
-            newString += String(&ch, 1);
-        else if (i2 < s3.length()) {
-            UChar c2 = s3[i2];
-            newString += String(&c2, 1);
-        }
+            result.append(ch);
+        else if (i2 < s3.length())
+            result.append(s3[i2]);
     }
 
-    return newString;
+    return result.toString();
 }
 
 Value FunBoolean::evaluate() const
@@ -587,7 +584,7 @@ Value FunLang::evaluate() const
 {
     String lang = arg(0)->evaluate().toString();
 
-    Attribute* languageAttribute = 0;
+    const Attribute* languageAttribute = 0;
     Node* node = evaluationContext().node.get();
     while (node) {
         if (node->isElementNode()) {
@@ -659,8 +656,8 @@ Value FunCeiling::evaluate() const
 
 double FunRound::round(double val)
 {
-    if (!isnan(val) && !isinf(val)) {
-        if (signbit(val) && val >= -0.5)
+    if (!std::isnan(val) && !std::isinf(val)) {
+        if (std::signbit(val) && val >= -0.5)
             val *= 0; // negative zero
         else
             val = floor(val + 0.5);
@@ -723,7 +720,7 @@ Function* createFunction(const String& name, const Vector<Expression*>& args)
     HashMap<String, FunctionRec>::iterator functionMapIter = functionMap->find(name);
     FunctionRec* functionRec = 0;
 
-    if (functionMapIter == functionMap->end() || !(functionRec = &functionMapIter->second)->args.contains(args.size()))
+    if (functionMapIter == functionMap->end() || !(functionRec = &functionMapIter->value)->args.contains(args.size()))
         return 0;
 
     Function* function = functionRec->factoryFn();

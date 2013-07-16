@@ -27,7 +27,7 @@
 #include "CSSReflectValue.h"
 
 #include "CSSPrimitiveValue.h"
-#include "PlatformString.h"
+#include <wtf/text/StringBuilder.h>
 
 using namespace std;
 
@@ -35,34 +35,31 @@ namespace WebCore {
 
 String CSSReflectValue::customCssText() const
 {
-    String result;
-    switch (m_direction) {
-        case ReflectionBelow:
-            result += "below ";
-            break;
-        case ReflectionAbove:
-            result += "above ";
-            break;
-        case ReflectionLeft:
-            result += "left ";
-            break;
-        case ReflectionRight:
-            result += "right ";
-            break;
-        default:
-            break;
+    if (m_mask)
+        return m_direction->cssText() + ' ' + m_offset->cssText() + ' ' + m_mask->cssText();
+    return m_direction->cssText() + ' ' + m_offset->cssText();
     }
 
-    result += m_offset->cssText() + " ";
+#if ENABLE(CSS_VARIABLES)
+String CSSReflectValue::customSerializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
+{
     if (m_mask)
-        result += m_mask->cssText();
-    return result;
+        return m_direction->customSerializeResolvingVariables(variables) + ' ' + m_offset->customSerializeResolvingVariables(variables) + ' ' + m_mask->serializeResolvingVariables(variables);
+    return m_direction->customSerializeResolvingVariables(variables) + ' ' + m_offset->customSerializeResolvingVariables(variables);
 }
+#endif
 
 void CSSReflectValue::addSubresourceStyleURLs(ListHashSet<KURL>& urls, const StyleSheetContents* styleSheet) const
 {
     if (m_mask)
         m_mask->addSubresourceStyleURLs(urls, styleSheet);
+}
+
+bool CSSReflectValue::equals(const CSSReflectValue& other) const
+{
+    return m_direction == other.m_direction
+        && compareCSSValuePtr(m_offset, other.m_offset)
+        && compareCSSValuePtr(m_mask, other.m_mask);
 }
 
 } // namespace WebCore

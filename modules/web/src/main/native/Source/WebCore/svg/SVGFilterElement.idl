@@ -24,15 +24,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS
-    ] SVGFilterElement : SVGElement,
+] interface SVGFilterElement : SVGStyledElement,
                                                    SVGURIReference,
                                                    SVGLangSpace,
-                                                   SVGExternalResourcesRequired,
-                                                   SVGStylable
+                                               SVGExternalResourcesRequired
                                                 /* SVGUnitTypes */ {  
         readonly attribute SVGAnimatedEnumeration filterUnits;
         readonly attribute SVGAnimatedEnumeration primitiveUnits;
@@ -43,8 +40,7 @@ module svg {
         readonly attribute SVGAnimatedInteger     filterResX;
         readonly attribute SVGAnimatedInteger     filterResY;
 
-        void setFilterRes(in [Optional=DefaultIsUndefined] unsigned long filterResX, 
-                          in [Optional=DefaultIsUndefined] unsigned long filterResY);
+    void setFilterRes([Default=Undefined] optional unsigned long filterResX, 
+                      [Default=Undefined] optional unsigned long filterResY);
     };
 
-}

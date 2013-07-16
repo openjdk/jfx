@@ -56,19 +56,19 @@ bool HTMLParagraphElement::isPresentationAttribute(const QualifiedName& name) co
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLParagraphElement::collectStyleForAttribute(const Attribute& attribute, StylePropertySet* style)
+void HTMLParagraphElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
 {
-    if (attribute.name() == alignAttr) {
-        if (equalIgnoringCase(attribute.value(), "middle") || equalIgnoringCase(attribute.value(), "center"))
-            addPropertyToAttributeStyle(style, CSSPropertyTextAlign, CSSValueWebkitCenter);
-        else if (equalIgnoringCase(attribute.value(), "left"))
-            addPropertyToAttributeStyle(style, CSSPropertyTextAlign, CSSValueWebkitLeft);
-        else if (equalIgnoringCase(attribute.value(), "right"))
-            addPropertyToAttributeStyle(style, CSSPropertyTextAlign, CSSValueWebkitRight);
+    if (name == alignAttr) {
+        if (equalIgnoringCase(value, "middle") || equalIgnoringCase(value, "center"))
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyTextAlign, CSSValueWebkitCenter);
+        else if (equalIgnoringCase(value, "left"))
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyTextAlign, CSSValueWebkitLeft);
+        else if (equalIgnoringCase(value, "right"))
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyTextAlign, CSSValueWebkitRight);
         else
-            addPropertyToAttributeStyle(style, CSSPropertyTextAlign, attribute.value());
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyTextAlign, value);
     } else
-        HTMLElement::collectStyleForAttribute(attribute, style);
+        HTMLElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
 }

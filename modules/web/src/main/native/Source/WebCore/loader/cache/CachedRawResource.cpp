@@ -26,57 +26,77 @@
 #include "config.h"
 #include "CachedRawResource.h"
 
-#include "CachedResourceClient.h"
+#include "CachedRawResourceClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceLoader.h"
-#include "SharedBuffer.h"
+#include "ResourceBuffer.h"
 #include "SubresourceLoader.h"
 #include <wtf/PassRefPtr.h>
 
 namespace WebCore {
 
-CachedRawResource::CachedRawResource(ResourceRequest& resourceRequest)
-    : CachedResource(resourceRequest, RawResource)
+CachedRawResource::CachedRawResource(ResourceRequest& resourceRequest, Type type)
+    : CachedResource(resourceRequest, type)
     , m_identifier(0)
 {
 }
 
-void CachedRawResource::data(PassRefPtr<SharedBuffer> data, bool allDataReceived)
+void CachedRawResource::data(PassRefPtr<ResourceBuffer> data, bool allDataReceived)
 {
     CachedResourceHandle<CachedRawResource> protect(this);
+    const char* incrementalData = 0;
+    size_t incrementalDataLength = 0;
     if (data) {
         // If we are buffering data, then we are saving the buffer in m_data and need to manually
         // calculate the incremental data. If we are not buffering, then m_data will be null and
         // the buffer contains only the incremental data.
-        size_t previousDataLength = (m_options.shouldBufferData == BufferData) ? encodedSize() : 0;
+        size_t previousDataLength = (m_options.dataBufferingPolicy == BufferData) ? encodedSize() : 0;
         ASSERT(data->size() >= previousDataLength);
-        const char* incrementalData = data->data() + previousDataLength;
-        size_t incrementalDataLength = data->size() - previousDataLength;
+        incrementalData = data->data() + previousDataLength;
+        incrementalDataLength = data->size() - previousDataLength;
+    }
 
+    if (m_options.dataBufferingPolicy == BufferData) {
+        if (data)
+            setEncodedSize(data->size());
+        m_data = data;
+    }
+
+    DataBufferingPolicy dataBufferingPolicy = m_options.dataBufferingPolicy;
         if (incrementalDataLength) {
             CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
             while (CachedRawResourceClient* c = w.next())
                 c->dataReceived(this, incrementalData, incrementalDataLength);
         }
-    }
-    
-    if (m_options.shouldBufferData == BufferData) {
-        if (data)
-            setEncodedSize(data->size());
-        m_data = data;
-    }
     CachedResource::data(m_data, allDataReceived);
+
+    if (dataBufferingPolicy == BufferData && m_options.dataBufferingPolicy == DoNotBufferData) {
+        if (m_loader)
+            m_loader->setDataBufferingPolicy(DoNotBufferData);
+        clear();
+    }
 }
 
 void CachedRawResource::didAddClient(CachedResourceClient* c)
 {
-    if (m_response.isNull() || !hasClient(c))
+    if (!hasClient(c))
         return;
     // The calls to the client can result in events running, potentially causing
     // this resource to be evicted from the cache and all clients to be removed,
     // so a protector is necessary.
     CachedResourceHandle<CachedRawResource> protect(this);
     CachedRawResourceClient* client = static_cast<CachedRawResourceClient*>(c);
+    size_t redirectCount = m_redirectChain.size();
+    for (size_t i = 0; i < redirectCount; i++) {
+        RedirectPair redirect = m_redirectChain[i];
+        ResourceRequest request(redirect.m_request);
+        client->redirectReceived(this, request, redirect.m_redirectResponse);
+        if (!hasClient(c))
+            return;
+    }
+    ASSERT(redirectCount == m_redirectChain.size());
+
+    if (!m_response.isNull())
     client->responseReceived(this, m_response);
     if (!hasClient(c))
         return;
@@ -95,19 +115,22 @@ void CachedRawResource::allClientsRemoved()
 
 void CachedRawResource::willSendRequest(ResourceRequest& request, const ResourceResponse& response)
 {
+    CachedResourceHandle<CachedRawResource> protect(this);
     if (!response.isNull()) {
         CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
         while (CachedRawResourceClient* c = w.next())
             c->redirectReceived(this, request, response);
+        m_redirectChain.append(RedirectPair(request, response));
     }
     CachedResource::willSendRequest(request, response);
 }
 
-void CachedRawResource::setResponse(const ResourceResponse& response)
+void CachedRawResource::responseReceived(const ResourceResponse& response)
 {
+    CachedResourceHandle<CachedRawResource> protect(this);
     if (!m_identifier)
         m_identifier = m_loader->identifier();
-    CachedResource::setResponse(response);
+    CachedResource::responseReceived(response);
     CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
     while (CachedRawResourceClient* c = w.next())
         c->responseReceived(this, m_response);
@@ -120,15 +143,47 @@ void CachedRawResource::didSendData(unsigned long long bytesSent, unsigned long 
         c->dataSent(this, bytesSent, totalBytesToBeSent);
 }
 
+void CachedRawResource::switchClientsToRevalidatedResource()
+{
+    ASSERT(m_loader);
+    // If we're in the middle of a successful revalidation, responseReceived() hasn't been called, so we haven't set m_identifier.
+    ASSERT(!m_identifier);
+    static_cast<CachedRawResource*>(resourceToRevalidate())->m_identifier = m_loader->identifier();
+    CachedResource::switchClientsToRevalidatedResource();
+}
+
 void CachedRawResource::setDefersLoading(bool defers)
 {
     if (m_loader)
         m_loader->setDefersLoading(defers);
 }
 
+void CachedRawResource::setDataBufferingPolicy(DataBufferingPolicy dataBufferingPolicy)
+{
+    m_options.dataBufferingPolicy = dataBufferingPolicy;
+}
+
+static bool shouldIgnoreHeaderForCacheReuse(AtomicString headerName)
+{
+    // FIXME: This list of headers that don't affect cache policy almost certainly isn't complete.
+    DEFINE_STATIC_LOCAL(HashSet<AtomicString>, m_headers, ());
+    if (m_headers.isEmpty()) {
+        m_headers.add("Accept");
+        m_headers.add("Cache-Control");
+        m_headers.add("If-Modified-Since");
+        m_headers.add("If-None-Match");
+        m_headers.add("Origin");
+        m_headers.add("Pragma");
+        m_headers.add("Purpose");
+        m_headers.add("Referer");
+        m_headers.add("User-Agent");
+    }
+    return m_headers.contains(headerName);
+}
+
 bool CachedRawResource::canReuse(const ResourceRequest& newRequest) const
 {
-    if (m_options.shouldBufferData == DoNotBufferData)
+    if (m_options.dataBufferingPolicy == DoNotBufferData)
         return false;
 
     if (m_resourceRequest.httpMethod() != newRequest.httpMethod())
@@ -140,23 +195,41 @@ bool CachedRawResource::canReuse(const ResourceRequest& newRequest) const
     if (m_resourceRequest.allowCookies() != newRequest.allowCookies())
         return false;
 
-    // Ensure all headers match the existing headers before continuing.
-    // Note that only headers set by our client will be present in either
-    // ResourceRequest, since SubresourceLoader creates a separate copy
-    // for its purposes.
-    // FIXME: There might be some headers that shouldn't block reuse.
+    // Ensure most headers match the existing headers before continuing.
+    // Note that the list of ignored headers includes some headers explicitly related to caching.
+    // A more detailed check of caching policy will be performed later, this is simply a list of
+    // headers that we might permit to be different and still reuse the existing CachedResource.
     const HTTPHeaderMap& newHeaders = newRequest.httpHeaderFields();
     const HTTPHeaderMap& oldHeaders = m_resourceRequest.httpHeaderFields();
-    if (newHeaders.size() != oldHeaders.size())
-        return false;
 
     HTTPHeaderMap::const_iterator end = newHeaders.end();
     for (HTTPHeaderMap::const_iterator i = newHeaders.begin(); i != end; ++i) {
-        AtomicString headerName = i->first;
-        if (i->second != oldHeaders.get(headerName))
+        AtomicString headerName = i->key;
+        if (!shouldIgnoreHeaderForCacheReuse(headerName) && i->value != oldHeaders.get(headerName))
             return false;
     }
+
+    end = oldHeaders.end();
+    for (HTTPHeaderMap::const_iterator i = oldHeaders.begin(); i != end; ++i) {
+        AtomicString headerName = i->key;
+        if (!shouldIgnoreHeaderForCacheReuse(headerName) && i->value != newHeaders.get(headerName))
+            return false;
+    }
+
+    for (size_t i = 0; i < m_redirectChain.size(); i++) {
+        if (m_redirectChain[i].m_redirectResponse.cacheControlContainsNoStore())
+            return false;
+    }
+
     return true;
+}
+
+void CachedRawResource::clear()
+{
+    m_data.clear();
+    setEncodedSize(0);
+    if (m_loader)
+        m_loader->clearResourceData();
 }
 
 } // namespace WebCore

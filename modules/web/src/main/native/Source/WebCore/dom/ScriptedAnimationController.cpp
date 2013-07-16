@@ -29,6 +29,7 @@
 #if ENABLE(REQUEST_ANIMATION_FRAME)
 
 #include "Document.h"
+#include "DocumentLoader.h"
 #include "FrameView.h"
 #include "InspectorInstrumentation.h"
 #include "RequestAnimationFrameCallback.h"
@@ -42,6 +43,7 @@ using namespace std;
 
 // Allow a little more than 60fps to make sure we can at least hit that frame rate.
 #define MinimumAnimationInterval 0.015
+#define MinimumThrottledAnimationInterval 10
 #endif
 
 namespace WebCore {
@@ -52,9 +54,10 @@ ScriptedAnimationController::ScriptedAnimationController(Document* document, Pla
     , m_suspendCount(0)
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
     , m_animationTimer(this, &ScriptedAnimationController::animationTimerFired)
-    , m_lastAnimationFrameTime(0)
+    , m_lastAnimationFrameTimeMonotonic(0)
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-    , m_useTimer(false)
+    , m_isUsingTimer(false)
+    , m_isThrottled(false)
 #endif
 #endif
 {
@@ -81,9 +84,23 @@ void ScriptedAnimationController::resume()
         scheduleAnimation();
 }
 
+void ScriptedAnimationController::setThrottled(bool isThrottled)
+{
+#if USE(REQUEST_ANIMATION_FRAME_TIMER) && USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+    if (m_isThrottled == isThrottled)
+        return;
+
+    m_isThrottled = isThrottled;
+    if (m_animationTimer.isActive()) {
+        m_animationTimer.stop();
+        scheduleAnimation();
+    }
+#endif
+}
+
 ScriptedAnimationController::CallbackId ScriptedAnimationController::registerCallback(PassRefPtr<RequestAnimationFrameCallback> callback)
 {
-    ScriptedAnimationController::CallbackId id = m_nextCallbackId++;
+    ScriptedAnimationController::CallbackId id = ++m_nextCallbackId;
     callback->m_firedOrCancelled = false;
     callback->m_id = id;
     m_callbacks.append(callback);
@@ -107,10 +124,13 @@ void ScriptedAnimationController::cancelCallback(CallbackId id)
     }
 }
 
-void ScriptedAnimationController::serviceScriptedAnimations(DOMTimeStamp time)
+void ScriptedAnimationController::serviceScriptedAnimations(double monotonicTimeNow)
 {
     if (!m_callbacks.size() || m_suspendCount || (m_document->settings() && !m_document->settings()->requestAnimationFrameEnabled()))
         return;
+
+    double highResNowMs = 1000.0 * m_document->loader()->timing()->monotonicTimeToZeroBasedDocumentTime(monotonicTimeNow);
+    double legacyHighResNowMs = 1000.0 * m_document->loader()->timing()->monotonicTimeToPseudoWallTime(monotonicTimeNow);
 
     // First, generate a list of callbacks to consider.  Callbacks registered from this point
     // on are considered only for the "next" frame, not this one.
@@ -125,7 +145,10 @@ void ScriptedAnimationController::serviceScriptedAnimations(DOMTimeStamp time)
         if (!callback->m_firedOrCancelled) {
             callback->m_firedOrCancelled = true;
             InspectorInstrumentationCookie cookie = InspectorInstrumentation::willFireAnimationFrame(m_document, callback->m_id);
-            callback->handleEvent(time);
+            if (callback->m_useLegacyTimeBase)
+                callback->handleEvent(legacyHighResNowMs);
+            else
+                callback->handleEvent(highResNowMs);
             InspectorInstrumentation::didFireAnimationFrame(cookie);
         }
     }
@@ -160,17 +183,23 @@ void ScriptedAnimationController::scheduleAnimation()
 
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-    if (!m_useTimer) {
+    if (!m_isUsingTimer && !m_isThrottled) {
         if (DisplayRefreshMonitorManager::sharedManager()->scheduleAnimation(this))
             return;
             
-        m_useTimer = true;
+        m_isUsingTimer = true;
     }
 #endif
     if (m_animationTimer.isActive())
         return;
         
-    double scheduleDelay = max<double>(MinimumAnimationInterval - (currentTime() - m_lastAnimationFrameTime), 0);
+    double animationInterval = MinimumAnimationInterval;
+#if USE(REQUEST_ANIMATION_FRAME_TIMER) && USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+    if (m_isThrottled)
+        animationInterval = MinimumThrottledAnimationInterval;
+#endif
+
+    double scheduleDelay = max<double>(animationInterval - (monotonicallyIncreasingTime() - m_lastAnimationFrameTimeMonotonic), 0);
     m_animationTimer.startOneShot(scheduleDelay);
 #else
     if (FrameView* frameView = m_document->view())
@@ -181,12 +210,19 @@ void ScriptedAnimationController::scheduleAnimation()
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
 void ScriptedAnimationController::animationTimerFired(Timer<ScriptedAnimationController>*)
 {
-    m_lastAnimationFrameTime = currentTime();
-    serviceScriptedAnimations(convertSecondsToDOMTimeStamp(m_lastAnimationFrameTime));
+    m_lastAnimationFrameTimeMonotonic = monotonicallyIncreasingTime();
+    serviceScriptedAnimations(m_lastAnimationFrameTimeMonotonic);
+}
+#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+void ScriptedAnimationController::displayRefreshFired(double monotonicTimeNow)
+{
+    serviceScriptedAnimations(monotonicTimeNow);
 }
 #endif
+#endif
+
+
 
 }
 
 #endif
-

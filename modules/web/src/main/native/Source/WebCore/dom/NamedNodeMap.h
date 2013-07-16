@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Peter Kelly (pmk@post.com)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2004, 2005, 2006, 2008, 2010, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,9 +25,10 @@
 #ifndef NamedNodeMap_h
 #define NamedNodeMap_h
 
+#include "ScriptWrappable.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/text/AtomicString.h>
 
 namespace WebCore {
 
@@ -36,7 +37,8 @@ class Element;
 
 typedef int ExceptionCode;
 
-class NamedNodeMap {
+class NamedNodeMap : public ScriptWrappable {
+    WTF_MAKE_FAST_ALLOCATED;
     friend class Element;
 public:
     static PassOwnPtr<NamedNodeMap> create(Element* element)
@@ -49,22 +51,22 @@ public:
 
     // Public DOM interface.
 
-    PassRefPtr<Node> getNamedItem(const String& name) const;
-    PassRefPtr<Node> removeNamedItem(const String& name, ExceptionCode&);
+    PassRefPtr<Node> getNamedItem(const AtomicString&) const;
+    PassRefPtr<Node> removeNamedItem(const AtomicString& name, ExceptionCode&);
 
-    PassRefPtr<Node> getNamedItemNS(const String& namespaceURI, const String& localName) const;
-    PassRefPtr<Node> removeNamedItemNS(const String& namespaceURI, const String& localName, ExceptionCode&);
+    PassRefPtr<Node> getNamedItemNS(const AtomicString& namespaceURI, const AtomicString& localName) const;
+    PassRefPtr<Node> removeNamedItemNS(const AtomicString& namespaceURI, const AtomicString& localName, ExceptionCode&);
 
     PassRefPtr<Node> setNamedItem(Node*, ExceptionCode&);
     PassRefPtr<Node> setNamedItemNS(Node*, ExceptionCode&);
 
     PassRefPtr<Node> item(unsigned index) const;
-    size_t length() const;
+    unsigned length() const;
 
     Element* element() const { return m_element; }
 
 private:
-    NamedNodeMap(Element* element)
+    explicit NamedNodeMap(Element* element)
         : m_element(element)
     {
         // Only supports NamedNodeMaps with Element associated, DocumentType.entities and DocumentType.notations are not supported yet.

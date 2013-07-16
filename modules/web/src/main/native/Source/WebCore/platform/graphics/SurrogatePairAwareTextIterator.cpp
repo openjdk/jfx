@@ -40,17 +40,8 @@ SurrogatePairAwareTextIterator::SurrogatePairAwareTextIterator(const UChar* char
 {
 }
 
-bool SurrogatePairAwareTextIterator::consume(UChar32& character, unsigned& clusterLength)
+bool SurrogatePairAwareTextIterator::consumeSlowCase(UChar32& character, unsigned& clusterLength)
 {
-    if (m_currentCharacter >= m_lastCharacter)
-        return false;
-
-    character = *m_characters;
-    clusterLength = 1;
-
-    if (character < 0x3041)
-        return true;
-
     if (character <= 0x30FE) {
         // Deal with Hiragana and Katakana voiced and semi-voiced syllables.
         // Normalize into composed form, and then look for glyph with base + combined mark.
@@ -83,12 +74,6 @@ bool SurrogatePairAwareTextIterator::consume(UChar32& character, unsigned& clust
     return true;
 }
 
-void SurrogatePairAwareTextIterator::advance(unsigned advanceLength)
-{
-    m_characters += advanceLength;
-    m_currentCharacter += advanceLength;
-}
-
 UChar32 SurrogatePairAwareTextIterator::normalizeVoicingMarks()
 {
     // According to http://www.unicode.org/Public/UNIDATA/UCD.html#Canonical_Combining_Class_Values
@@ -105,11 +90,6 @@ UChar32 SurrogatePairAwareTextIterator::normalizeVoicingMarks()
         int32_t resultLength = unorm_normalize(m_characters, 2, UNORM_NFC, UNORM_UNICODE_3_2, &normalizedCharacters[0], 2, &uStatus);
         if (resultLength == 1 && !uStatus)
             return normalizedCharacters[0];
-#elif USE(QT4_UNICODE)
-        QString tmp(reinterpret_cast<const QChar*>(m_characters), 2);
-        QString res = tmp.normalized(QString::NormalizationForm_C, QChar::Unicode_3_2);
-        if (res.length() == 1)
-            return res.at(0).unicode();
 #endif
     }
 

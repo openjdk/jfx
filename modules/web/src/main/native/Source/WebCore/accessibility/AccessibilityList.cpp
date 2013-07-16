@@ -53,20 +53,9 @@ PassRefPtr<AccessibilityList> AccessibilityList::create(RenderObject* renderer)
     return adoptRef(new AccessibilityList(renderer));
 }
 
-bool AccessibilityList::accessibilityIsIgnored() const
+bool AccessibilityList::computeAccessibilityIsIgnored() const
 {
-    AccessibilityObjectInclusion decision = accessibilityIsIgnoredBase();
-    if (decision == IncludeObject)
-        return false;
-    if (decision == IgnoreObject)
-        return true;
-    
-    // lists don't appear on tiger/leopard on the mac
-#if ACCESSIBILITY_LISTS
-    return false;
-#else
-    return true;
-#endif
+    return accessibilityIsIgnoredByDefault();
 }    
     
 bool AccessibilityList::isUnorderedList() const
@@ -98,7 +87,7 @@ bool AccessibilityList::isOrderedList() const
     return node && node->hasTagName(olTag);    
 }
 
-bool AccessibilityList::isDefinitionList() const
+bool AccessibilityList::isDescriptionList() const
 {
     if (!m_renderer)
         return false;

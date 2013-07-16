@@ -29,110 +29,42 @@
 
 package com.sun.javafx.pgstub;
 
-import java.io.File;
-import java.io.InputStream;
-import java.security.AccessControlContext;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-
-import com.sun.javafx.tk.RenderJob;
-import javafx.geometry.Dimension2D;
-import javafx.scene.image.Image;
-import javafx.scene.input.DataFormat;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.InputMethodRequests;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.TransferMode;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.ImagePattern;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.RadialGradient;
-import javafx.scene.shape.FillRule;
-import javafx.scene.shape.PathElement;
-import javafx.scene.shape.SVGPath;
-import javafx.stage.FileChooser.ExtensionFilter;
-import javafx.stage.Modality;
-import javafx.stage.StageStyle;
-import javafx.util.Pair;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
-import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
-import com.sun.javafx.sg.PGAmbientLight;
-import com.sun.javafx.sg.PGArc;
-import com.sun.javafx.sg.PGBox;
-import com.sun.javafx.sg.PGCamera;
-import com.sun.javafx.sg.PGCanvas;
-import com.sun.javafx.sg.PGCircle;
-import com.sun.javafx.sg.PGCubicCurve;
-import com.sun.javafx.sg.PGCylinder;
-import com.sun.javafx.sg.PGEllipse;
-import com.sun.javafx.sg.PGExternalNode;
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.sg.PGImageView;
-import com.sun.javafx.sg.PGLightBase;
-import com.sun.javafx.sg.PGLine;
-import com.sun.javafx.sg.PGMeshView;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGParallelCamera;
-import com.sun.javafx.sg.PGPath;
-import com.sun.javafx.sg.PGPerspectiveCamera;
-import com.sun.javafx.sg.PGPhongMaterial;
-import com.sun.javafx.sg.PGPointLight;
-import com.sun.javafx.sg.PGPolygon;
-import com.sun.javafx.sg.PGPolyline;
-import com.sun.javafx.sg.PGQuadCurve;
-import com.sun.javafx.sg.PGRectangle;
-import com.sun.javafx.sg.PGRegion;
-import com.sun.javafx.sg.PGSubScene;
-import com.sun.javafx.sg.PGSVGPath;
-import com.sun.javafx.sg.PGShape.StrokeLineCap;
-import com.sun.javafx.sg.PGShape.StrokeLineJoin;
-import com.sun.javafx.sg.PGShape.StrokeType;
-import com.sun.javafx.sg.PGSphere;
-import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.PGTriangleMesh;
-import com.sun.javafx.tk.AppletWindow;
-import com.sun.javafx.tk.FileChooserType;
-import com.sun.javafx.tk.FontLoader;
-import com.sun.javafx.tk.ImageLoader;
-import com.sun.javafx.tk.PlatformImage;
-import com.sun.javafx.tk.ScreenConfigurationAccessor;
-import com.sun.javafx.tk.TKClipboard;
-import com.sun.javafx.tk.TKDragGestureListener;
-import com.sun.javafx.tk.TKDragSourceListener;
-import com.sun.javafx.tk.TKDropTargetListener;
-import com.sun.javafx.tk.TKScene;
-import com.sun.javafx.tk.TKScreenConfigurationListener;
-import com.sun.javafx.tk.TKStage;
-import com.sun.javafx.tk.TKSystemMenu;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.tk.*;
 import com.sun.prism.BasicStroke;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
-import com.sun.scenario.effect.Blend.Mode;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import javafx.application.ConditionalFeature;
+import javafx.geometry.Dimension2D;
+import javafx.scene.image.Image;
+import javafx.scene.input.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.shape.*;
+import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Modality;
+import javafx.stage.StageStyle;
+import javafx.util.Pair;
+
+import java.io.File;
+import java.io.InputStream;
+import java.security.AccessControlContext;
+import java.util.*;
+import java.util.concurrent.Future;
 
 /**
  * A Toolkit implementation for use with Testing.
@@ -185,18 +117,18 @@ public class StubToolkit extends Toolkit {
     }
 
     public TKStage createTKStage(StageStyle stageStyle, boolean primary,
-            Modality modality, TKStage owner, boolean rtl) {
+            Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
 
         return new StubStage();
     }
 
     @Override
-    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner) {
+    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner, AccessControlContext acc) {
         return new StubPopupStage();
     }
 
     @Override
-    public TKStage createTKEmbeddedStage(HostInterface host) {
+    public TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc) {
         return new StubStage();
     }
 
@@ -268,26 +200,28 @@ public class StubToolkit extends Toolkit {
 
     @Override
     protected Object createColorPaint(Color paint) {
-        StubColor c = new StubColor(paint.getRed(),
-                    paint.getGreen(),
-                    paint.getBlue(),
-                    paint.getOpacity());
-        return c;
+        return new com.sun.prism.paint.Color((float) paint.getRed(),
+                    (float) paint.getGreen(),
+                    (float) paint.getBlue(),
+                    (float) paint.getOpacity());
     }
 
     @Override
     protected Object createLinearGradientPaint(LinearGradient paint) {
-        return new StubPaint();
+        // Non functioning but compiles
+        return new com.sun.prism.paint.Color(1, 1, 1, 1);
     }
 
     @Override
     protected Object createRadialGradientPaint(RadialGradient paint) {
-        return new StubPaint();
+        // Non functioning but compiles
+        return new com.sun.prism.paint.Color(1, 1, 1, 1);
     }
 
     @Override
     protected Object createImagePatternPaint(ImagePattern paint) {
-        return new StubPaint();
+        // Non functioning but compiles
+        return new com.sun.prism.paint.Color(1, 1, 1, 1);
     }
 
     static BasicStroke tmpStroke = new BasicStroke();
@@ -403,62 +337,6 @@ public class StubToolkit extends Toolkit {
     @Override
     public TextLayoutFactory getTextLayoutFactory() {
         return new StubTextLayoutFactory();
-    }
-
-    @Override public PGArc createPGArc() {
-        return new StubArc();
-    }
-
-    @Override public PGCircle createPGCircle() {
-        return new StubCircle();
-    }
-
-    @Override public PGCubicCurve createPGCubicCurve() {
-        return new StubCubicCurve();
-    }
-
-    @Override public PGEllipse createPGEllipse() {
-        return new StubEllipse();
-    }
-
-    @Override public PGLine createPGLine() {
-        return new StubLine();
-    }
-
-    @Override public PGPath createPGPath() {
-        return new StubPath();
-    }
-
-    @Override public PGPolygon createPGPolygon() {
-        return new StubPolygon();
-    }
-
-    @Override public PGPolyline createPGPolyline() {
-        return new StubPolyline();
-    }
-
-    @Override public PGQuadCurve createPGQuadCurve() {
-        return new StubQuadCurve();
-    }
-
-    @Override public PGRectangle createPGRectangle() {
-        return new StubRectangle();
-    }
-
-    @Override public PGImageView createPGImageView() {
-        return new StubImageView();
-    }
-
-    @Override public PGGroup createPGGroup() {
-        return new StubGroup();
-    }
-
-    @Override public PGText createPGText() {
-        return new StubText();
-    }
-
-    @Override public PGExternalNode createPGExternalNode() {
-        return new StubExternalNode();
     }
 
     @Override public boolean isSupported(ConditionalFeature feature) {
@@ -755,21 +633,11 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public PGSVGPath createPGSVGPath() {
-        return new StubSVGPath();
-    }
-
-    @Override
-    public PGRegion createPGRegion() {
-        return new StubRegion();
-    }
-
-    @Override
     public Object createSVGPathObject(SVGPath svgpath) {
         int windingRule = (svgpath.getFillRule() == FillRule.NON_ZERO) ?
                            Path2D.WIND_NON_ZERO : Path2D.WIND_EVEN_ODD;
 
-        return new StubSVGPath.SVGPathImpl(svgpath.getContent(), windingRule);
+        return new SVGPathImpl(svgpath.getContent(), windingRule);
     }
 
     @Override
@@ -777,7 +645,7 @@ public class StubToolkit extends Toolkit {
         int windingRule = (svgpath.getFillRule() == FillRule.NON_ZERO) ?
                            Path2D.WIND_NON_ZERO : Path2D.WIND_EVEN_ODD;
 
-        return new StubSVGPath.SVGPathImpl(svgpath.getContent(), windingRule);
+        return new SVGPathImpl(svgpath.getContent(), windingRule);
     }
 
     @Override
@@ -834,6 +702,11 @@ public class StubToolkit extends Toolkit {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public boolean isNestedLoopRunning() {
+        return false;
+    }
+
     private KeyCode platformShortcutKey = KeyCode.SHORTCUT;
 
     public void setPlatformShortcutKey(final KeyCode platformShortcutKey) {
@@ -849,66 +722,6 @@ public class StubToolkit extends Toolkit {
         this.dndDelegate = dndDelegate;
     }
 
-    @Override
-    public PGCanvas createPGCanvas() {
-        return new StubCanvas();
-    }
-
-    @Override
-    public PGBox createPGBox() {
-        return new StubBox();
-    }
-
-    @Override
-    public PGCylinder createPGCylinder() {
-        return new StubCylinder();
-    }
-
-    @Override
-    public PGSphere createPGSphere() {
-        return new StubSphere();
-    }
-
-    @Override
-    public PGTriangleMesh createPGTriangleMesh() {
-        return new StubTriangleMesh();
-    }
-
-    @Override
-    public PGMeshView createPGMeshView() {
-        return new StubMeshView();
-    }
-
-    @Override
-    public PGPhongMaterial createPGPhongMaterial() {
-        return new StubPhongMaterial();
-    }
-
-    @Override
-    public PGAmbientLight createPGAmbientLight() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGPointLight createPGPointLight() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGParallelCamera createPGParallelCamera() {
-        return new StubParallelCamera();
-    }
-
-    @Override
-    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
-        return new StubPerspectiveCamera();
-    }
-
-
-    @Override
-    public PGSubScene createPGSubScene() {
-        return new StubSubScene();
-    }
 
     public interface DndDelegate {
         void startDrag(TKScene scene, Set<TransferMode> tm,

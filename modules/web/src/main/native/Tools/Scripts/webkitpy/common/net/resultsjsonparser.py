@@ -26,14 +26,16 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 import json
+import logging
 
 from webkitpy.common.memoized import memoized
-from webkitpy.common.system.deprecated_logging import log
 # FIXME: common should never import from new-run-webkit-tests, one of these files needs to move.
 from webkitpy.layout_tests.layout_package import json_results_generator
 from webkitpy.layout_tests.models import test_expectations, test_results, test_failures
+from webkitpy.layout_tests.models.test_expectations import TestExpectations
+
+_log = logging.getLogger(__name__)
 
 
 # These are helper functions for navigating the results json structure.
@@ -72,17 +74,17 @@ class JSONTestResult(object):
         expected_results = self._expected_as_tokens()
         # FIXME: We should only call remove_pixel_failures when this JSONResult
         # came from a test run without pixel tests!
-        if not test_expectations.has_pixel_failures(actual_results):
-            expected_results = test_expectations.remove_pixel_failures(expected_results)
+        if not TestExpectations.has_pixel_failures(actual_results):
+            expected_results = TestExpectations.remove_pixel_failures(expected_results)
         for actual_result in actual_results:
-            if not test_expectations.result_was_expected(actual_result, expected_results, False, False):
+            if not TestExpectations.result_was_expected(actual_result, expected_results, False, False):
                 return False
         return True
 
     def _tokenize(self, results_string):
-        tokens = map(test_expectations.TestExpectations.expectation_from_string, results_string.split(' '))
+        tokens = map(TestExpectations.expectation_from_string, results_string.split(' '))
         if None in tokens:
-            log("Unrecognized result in %s" % results_string)
+            _log.warning("Unrecognized result in %s" % results_string)
         return set(tokens)
 
     @memoized
@@ -99,8 +101,13 @@ class JSONTestResult(object):
         # FIXME: There doesn't seem to be a full list of all possible values of
         # 'actual' anywhere.  However JSONLayoutResultsGenerator.FAILURE_TO_CHAR
         # is a useful reference as that's for "old" style results.json files
+        #
+        # FIXME: TEXT, IMAGE_PLUS_TEXT, and AUDIO are obsolete but we keep them for
+        # now so that we can parse old results.json files.
         if actual == test_expectations.PASS:
             return []
+        elif actual == test_expectations.FAIL:
+            return [test_failures.FailureTextMismatch(), test_failures.FailureImageHashMismatch(), test_failures.FailureAudioMismatch()]
         elif actual == test_expectations.TEXT:
             return [test_failures.FailureTextMismatch()]
         elif actual == test_expectations.IMAGE:
@@ -117,7 +124,7 @@ class JSONTestResult(object):
         elif actual == test_expectations.MISSING:
             return [test_failures.FailureMissingResult(), test_failures.FailureMissingImageHash(), test_failures.FailureMissingImage()]
         else:
-            log("Failed to handle: %s" % self._result_dict['actual'])
+            _log.warning("Failed to handle: %s" % self._result_dict['actual'])
             return []
 
     def _failures(self):

@@ -28,13 +28,14 @@
 
 #include "HTMLDocumentParser.h"
 #include "HTMLNames.h"
+#include "HTMLParserOptions.h"
 #include "HTMLViewSourceDocument.h"
 
 namespace WebCore {
 
 HTMLViewSourceParser::HTMLViewSourceParser(HTMLViewSourceDocument* document)
     : DecodedDataDocumentParser(document)
-    , m_tokenizer(HTMLTokenizer::create(HTMLDocumentParser::usePreHTML5ParserQuirks(document)))
+    , m_tokenizer(HTMLTokenizer::create(HTMLParserOptions(document)))
 {
 }
 
@@ -50,10 +51,10 @@ void HTMLViewSourceParser::insert(const SegmentedString&)
 void HTMLViewSourceParser::pumpTokenizer()
 {
     while (true) {
-        m_sourceTracker.start(m_input, m_tokenizer.get(), m_token);
+        m_sourceTracker.start(m_input.current(), m_tokenizer.get(), m_token);
         if (!m_tokenizer->nextToken(m_input.current(), m_token))
             break;
-        m_sourceTracker.end(m_input, m_tokenizer.get(), m_token);
+        m_sourceTracker.end(m_input.current(), m_tokenizer.get(), m_token);
 
         document()->addSource(sourceForToken(), m_token);
         updateTokenizerState();
@@ -61,9 +62,9 @@ void HTMLViewSourceParser::pumpTokenizer()
     }
 }
 
-void HTMLViewSourceParser::append(const SegmentedString& input)
+void HTMLViewSourceParser::append(PassRefPtr<StringImpl> input)
 {
-    m_input.appendToEnd(input);
+    m_input.appendToEnd(String(input));
     pumpTokenizer();
 }
 
@@ -75,11 +76,9 @@ String HTMLViewSourceParser::sourceForToken()
 void HTMLViewSourceParser::updateTokenizerState()
 {
     // FIXME: The tokenizer should do this work for us.
-    if (m_token.type() != HTMLTokenTypes::StartTag)
+    if (m_token.type() != HTMLToken::StartTag)
         return;
-
-    AtomicString tagName(m_token.name().data(), m_token.name().size());
-    m_tokenizer->updateStateFor(tagName, document()->frame());
+    m_tokenizer->updateStateFor(AtomicString(m_token.name()));
 }
 
 void HTMLViewSourceParser::finish()
@@ -88,11 +87,6 @@ void HTMLViewSourceParser::finish()
         m_input.markEndOfFile();
     pumpTokenizer();
     document()->finishedParsing();
-}
-
-bool HTMLViewSourceParser::finishWasCalled()
-{
-    return m_input.haveSeenEndOfFile();
 }
 
 }

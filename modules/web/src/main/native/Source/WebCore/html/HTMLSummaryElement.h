@@ -27,10 +27,11 @@ namespace WebCore {
 
 class HTMLDetailsElement;
 
-class HTMLSummaryElement : public HTMLElement {
+class HTMLSummaryElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLSummaryElement> create(const QualifiedName&, Document*);
     bool isMainSummary() const;
+    virtual bool willRespondToMouseClickEvents() OVERRIDE;
 
 private:
     HTMLSummaryElement(const QualifiedName&, Document*);
@@ -39,7 +40,7 @@ private:
     virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const OVERRIDE;
     virtual void defaultEventHandler(Event*);
 
-    void createShadowSubtree();
+    virtual void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
     HTMLDetailsElement* detailsElement() const;
 
     bool supportsFocus() const OVERRIDE;

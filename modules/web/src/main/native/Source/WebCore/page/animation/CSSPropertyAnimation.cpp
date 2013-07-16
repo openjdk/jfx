@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2012 Adobe Systems Incorporated. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +36,8 @@
 #include "CSSImageValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyNames.h"
+#include "CachedImage.h"
+#include "ClipPathOperation.h"
 #include "FloatConversion.h"
 #include "IdentityTransformOperation.h"
 #include "Matrix3DTransformOperation.h"
@@ -111,7 +114,7 @@ static inline PassOwnPtr<ShadowData> blendFunc(const AnimationBase* anim, const 
         return adoptPtr(new ShadowData(*to));
 
     return adoptPtr(new ShadowData(blend(from->location(), to->location(), progress),
-                                   blend(from->blur(), to->blur(), progress),
+                                   blend(from->radius(), to->radius(), progress),
                                    blend(from->spread(), to->spread(), progress),
                                    blendFunc(anim, from->style(), to->style(), progress),
                                    from->isWebkitBoxShadow(),
@@ -120,44 +123,54 @@ static inline PassOwnPtr<ShadowData> blendFunc(const AnimationBase* anim, const 
 
 static inline TransformOperations blendFunc(const AnimationBase* anim, const TransformOperations& from, const TransformOperations& to, double progress)
 {
-    TransformOperations result;
-
-    // If we have a transform function list, use that to do a per-function animation. Otherwise do a Matrix animation
-    if (anim->isTransformFunctionListValid()) {
-        unsigned fromSize = from.operations().size();
-        unsigned toSize = to.operations().size();
-        unsigned size = max(fromSize, toSize);
-        for (unsigned i = 0; i < size; i++) {
-            RefPtr<TransformOperation> fromOp = (i < fromSize) ? from.operations()[i].get() : 0;
-            RefPtr<TransformOperation> toOp = (i < toSize) ? to.operations()[i].get() : 0;
-            RefPtr<TransformOperation> blendedOp = toOp ? toOp->blend(fromOp.get(), progress) : (fromOp ? fromOp->blend(0, progress, true) : PassRefPtr<TransformOperation>(0));
-            if (blendedOp)
-                result.operations().append(blendedOp);
-            else {
-                RefPtr<TransformOperation> identityOp = IdentityTransformOperation::create();
-                if (progress > 0.5)
-                    result.operations().append(toOp ? toOp : identityOp);
-                else
-                    result.operations().append(fromOp ? fromOp : identityOp);
-            }
-        }
-    } else {
-        // Convert the TransformOperations into matrices
-        LayoutSize size = anim->renderer()->isBox() ? toRenderBox(anim->renderer())->borderBoxRect().size() : LayoutSize();
-        TransformationMatrix fromT;
-        TransformationMatrix toT;
-        from.apply(size, fromT);
-        to.apply(size, toT);
-
-        toT.blend(fromT, progress);
-
-        // Append the result
-        result.operations().append(Matrix3DTransformOperation::create(toT));
-    }
-    return result;
+    if (anim->isTransformFunctionListValid())
+        return to.blendByMatchingOperations(from, progress);
+    return to.blendByUsingMatrixInterpolation(from, progress, anim->renderer()->isBox() ? toRenderBox(anim->renderer())->borderBoxRect().size() : LayoutSize());
 }
 
+static inline PassRefPtr<ClipPathOperation> blendFunc(const AnimationBase*, ClipPathOperation* from, ClipPathOperation* to, double progress)
+{
+    // Other clip-path operations than BasicShapes can not be animated.
+    if (from->getOperationType() != ClipPathOperation::SHAPE || to->getOperationType() != ClipPathOperation::SHAPE)
+        return to;
+
+    const BasicShape* fromShape = static_cast<ShapeClipPathOperation*>(from)->basicShape();
+    const BasicShape* toShape = static_cast<ShapeClipPathOperation*>(to)->basicShape();
+
+    if (!fromShape->canBlend(toShape))
+        return to;
+
+    return ShapeClipPathOperation::create(toShape->blend(fromShape, progress));
+}
+
+#if ENABLE(CSS_EXCLUSIONS)
+static inline PassRefPtr<ExclusionShapeValue> blendFunc(const AnimationBase*, ExclusionShapeValue* from, ExclusionShapeValue* to, double progress)
+{
+    // FIXME Bug 102723: Shape-inside should be able to animate a value of 'outside-shape' when shape-outside is set to a BasicShape
+    if (from->type() != ExclusionShapeValue::Shape || to->type() != ExclusionShapeValue::Shape)
+        return to;
+
+    const BasicShape* fromShape = from->shape();
+    const BasicShape* toShape = to->shape();
+
+    if (!fromShape->canBlend(toShape))
+        return to;
+
+    return ExclusionShapeValue::createShapeValue(toShape->blend(fromShape, progress));
+}
+#endif
+
 #if ENABLE(CSS_FILTERS)
+static inline PassRefPtr<FilterOperation> blendFunc(const AnimationBase* anim, FilterOperation* fromOp, FilterOperation* toOp, double progress, bool blendToPassthrough = false)
+{
+    ASSERT(toOp);
+    if (toOp->blendingNeedsRendererSize()) {
+        LayoutSize size = anim->renderer()->isBox() ? toRenderBox(anim->renderer())->borderBoxRect().size() : LayoutSize();
+        return toOp->blend(fromOp, progress, size, blendToPassthrough);
+    }
+    return toOp->blend(fromOp, progress, blendToPassthrough);
+}
+
 static inline FilterOperations blendFunc(const AnimationBase* anim, const FilterOperations& from, const FilterOperations& to, double progress)
 {
     FilterOperations result;
@@ -170,7 +183,7 @@ static inline FilterOperations blendFunc(const AnimationBase* anim, const Filter
         for (size_t i = 0; i < size; i++) {
             RefPtr<FilterOperation> fromOp = (i < fromSize) ? from.operations()[i].get() : 0;
             RefPtr<FilterOperation> toOp = (i < toSize) ? to.operations()[i].get() : 0;
-            RefPtr<FilterOperation> blendedOp = toOp ? toOp->blend(fromOp.get(), progress) : (fromOp ? fromOp->blend(0, progress, true) : PassRefPtr<FilterOperation>(0));
+            RefPtr<FilterOperation> blendedOp = toOp ? blendFunc(anim, fromOp.get(), toOp.get(), progress) : (fromOp ? blendFunc(anim, 0, fromOp.get(), progress, true) : 0);
             if (blendedOp)
                 result.operations().append(blendedOp);
             else {
@@ -205,13 +218,6 @@ static inline EVisibility blendFunc(const AnimationBase* anim, EVisibility from,
 
 static inline LengthBox blendFunc(const AnimationBase* anim, const LengthBox& from, const LengthBox& to, double progress)
 {
-    // Length types have to match to animate
-    if (from.top().type() != to.top().type()
-        || from.right().type() != to.right().type()
-        || from.bottom().type() != to.bottom().type()
-        || from.left().type() != to.left().type())
-        return to;
-
     LengthBox result(blendFunc(anim, from.top(), to.top(), progress),
                      blendFunc(anim, from.right(), to.right(), progress),
                      blendFunc(anim, from.bottom(), to.bottom(), progress),
@@ -389,6 +395,24 @@ protected:
     void (RenderStyle::*m_setter)(PassRefPtr<T>);
 };
 
+
+class PropertyWrapperClipPath : public RefCountedPropertyWrapper<ClipPathOperation> {
+public:
+    PropertyWrapperClipPath(CSSPropertyID prop, ClipPathOperation* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(PassRefPtr<ClipPathOperation>))
+        : RefCountedPropertyWrapper<ClipPathOperation>(prop, getter, setter)
+    {
+    }
+};
+
+#if ENABLE(CSS_EXCLUSIONS)
+class PropertyWrapperExclusionShape : public RefCountedPropertyWrapper<ExclusionShapeValue> {
+public:
+    PropertyWrapperExclusionShape(CSSPropertyID prop, ExclusionShapeValue* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(PassRefPtr<ExclusionShapeValue>))
+        : RefCountedPropertyWrapper<ExclusionShapeValue>(prop, getter, setter)
+    {
+    }
+};
+#endif
 
 class StyleImagePropertyWrapper : public RefCountedPropertyWrapper<StyleImage> {
 public:
@@ -901,7 +925,6 @@ private:
     Vector<AnimationPropertyWrapperBase*> m_propertyWrappers;
 };
 
-#if ENABLE(CSS3_FLEXBOX)
 class PropertyWrapperFlex : public AnimationPropertyWrapperBase {
 public:
     PropertyWrapperFlex() : AnimationPropertyWrapperBase(CSSPropertyWebkitFlex)
@@ -927,7 +950,6 @@ public:
         dst->setFlexShrink(blendFunc(anim, a->flexShrink(), b->flexShrink(), progress));
     }
 };
-#endif
 
 #if ENABLE(SVG)
 class PropertyWrapperSVGPaint : public AnimationPropertyWrapperBase {
@@ -1046,9 +1068,7 @@ void CSSPropertyAnimation::ensurePropertyMap()
     gPropertyWrappers->append(new PropertyWrapper<Length>(CSSPropertyMinHeight, &RenderStyle::minHeight, &RenderStyle::setMinHeight));
     gPropertyWrappers->append(new PropertyWrapper<Length>(CSSPropertyMaxHeight, &RenderStyle::maxHeight, &RenderStyle::setMaxHeight));
 
-#if ENABLE(CSS3_FLEXBOX)
     gPropertyWrappers->append(new PropertyWrapperFlex());
-#endif
 
     gPropertyWrappers->append(new PropertyWrapper<unsigned>(CSSPropertyBorderLeftWidth, &RenderStyle::borderLeftWidth, &RenderStyle::setBorderLeftWidth));
     gPropertyWrappers->append(new PropertyWrapper<unsigned>(CSSPropertyBorderRightWidth, &RenderStyle::borderRightWidth, &RenderStyle::setBorderRightWidth));
@@ -1087,7 +1107,16 @@ void CSSPropertyAnimation::ensurePropertyMap()
     gPropertyWrappers->append(new FillLayersPropertyWrapper(CSSPropertyWebkitMaskPositionY, &RenderStyle::maskLayers, &RenderStyle::accessMaskLayers));
     gPropertyWrappers->append(new FillLayersPropertyWrapper(CSSPropertyWebkitMaskSize, &RenderStyle::maskLayers, &RenderStyle::accessMaskLayers));
 
-    gPropertyWrappers->append(new PropertyWrapper<int>(CSSPropertyFontSize, &RenderStyle::fontSize, &RenderStyle::setBlendedFontSize));
+    gPropertyWrappers->append(new PropertyWrapper<float>(CSSPropertyFontSize,
+        // Must pass a specified size to setFontSize if Text Autosizing is enabled, but a computed size
+        // if text zoom is enabled (if neither is enabled it's irrelevant as they're probably the same).
+        // FIXME: Find some way to assert that text zoom isn't activated when Text Autosizing is compiled in.
+#if ENABLE(TEXT_AUTOSIZING)
+        &RenderStyle::specifiedFontSize,
+#else
+        &RenderStyle::computedFontSize,
+#endif
+        &RenderStyle::setFontSize));
     gPropertyWrappers->append(new PropertyWrapper<unsigned short>(CSSPropertyWebkitColumnRuleWidth, &RenderStyle::columnRuleWidth, &RenderStyle::setColumnRuleWidth));
     gPropertyWrappers->append(new PropertyWrapper<float>(CSSPropertyWebkitColumnGap, &RenderStyle::columnGap, &RenderStyle::setColumnGap));
     gPropertyWrappers->append(new PropertyWrapper<unsigned short>(CSSPropertyWebkitColumnCount, &RenderStyle::columnCount, &RenderStyle::setColumnCount));
@@ -1095,7 +1124,9 @@ void CSSPropertyAnimation::ensurePropertyMap()
     gPropertyWrappers->append(new PropertyWrapper<short>(CSSPropertyWebkitBorderHorizontalSpacing, &RenderStyle::horizontalBorderSpacing, &RenderStyle::setHorizontalBorderSpacing));
     gPropertyWrappers->append(new PropertyWrapper<short>(CSSPropertyWebkitBorderVerticalSpacing, &RenderStyle::verticalBorderSpacing, &RenderStyle::setVerticalBorderSpacing));
     gPropertyWrappers->append(new PropertyWrapper<int>(CSSPropertyZIndex, &RenderStyle::zIndex, &RenderStyle::setZIndex));
-    gPropertyWrappers->append(new PropertyWrapper<Length>(CSSPropertyLineHeight, &RenderStyle::lineHeight, &RenderStyle::setLineHeight));
+    gPropertyWrappers->append(new PropertyWrapper<short>(CSSPropertyOrphans, &RenderStyle::orphans, &RenderStyle::setOrphans));
+    gPropertyWrappers->append(new PropertyWrapper<short>(CSSPropertyWidows, &RenderStyle::widows, &RenderStyle::setWidows));
+    gPropertyWrappers->append(new PropertyWrapper<Length>(CSSPropertyLineHeight, &RenderStyle::specifiedLineHeight, &RenderStyle::setLineHeight));
     gPropertyWrappers->append(new PropertyWrapper<int>(CSSPropertyOutlineOffset, &RenderStyle::outlineOffset, &RenderStyle::setOutlineOffset));
     gPropertyWrappers->append(new PropertyWrapper<unsigned short>(CSSPropertyOutlineWidth, &RenderStyle::outlineWidth, &RenderStyle::setOutlineWidth));
     gPropertyWrappers->append(new PropertyWrapper<int>(CSSPropertyLetterSpacing, &RenderStyle::letterSpacing, &RenderStyle::setLetterSpacing));
@@ -1129,6 +1160,12 @@ void CSSPropertyAnimation::ensurePropertyMap()
 #if ENABLE(CSS_FILTERS)
     gPropertyWrappers->append(new PropertyWrapper<const FilterOperations&>(CSSPropertyWebkitFilter, &RenderStyle::filter, &RenderStyle::setFilter));
 #endif
+#endif
+
+    gPropertyWrappers->append(new PropertyWrapperClipPath(CSSPropertyWebkitClipPath, &RenderStyle::clipPath, &RenderStyle::setClipPath));
+
+#if ENABLE(CSS_EXCLUSIONS)
+    gPropertyWrappers->append(new PropertyWrapperExclusionShape(CSSPropertyWebkitShapeInside, &RenderStyle::shapeInside, &RenderStyle::setShapeInside));
 #endif
 
     gPropertyWrappers->append(new PropertyWrapperVisitedAffectedColor(CSSPropertyWebkitColumnRuleColor, MaybeInvalidColor, &RenderStyle::columnRuleColor, &RenderStyle::setColumnRuleColor, &RenderStyle::visitedLinkColumnRuleColor, &RenderStyle::setVisitedLinkColumnRuleColor));

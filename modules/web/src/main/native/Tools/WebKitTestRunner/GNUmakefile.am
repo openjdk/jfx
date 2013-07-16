@@ -1,9 +1,9 @@
-BUILT_SOURCES += \
-	generate-webkittestrunner-forwarding-headers
 
-generate-webkittestrunner-forwarding-headers: $(WebKit2)/Scripts/generate-forwarding-headers.pl $(Programs_WebKitTestRunner_SOURCES)
-	$(AM_V_GEN)$(PERL) $< $(srcdir)/Tools/WebKitTestRunner $(GENSOURCES_WEBKIT2)/include gtk
-	$(AM_V_GEN)$(PERL) $< $(srcdir)/Tools/WebKitTestRunner $(GENSOURCES_WEBKIT2)/include soup
+stamp-webkittestrunner-forwarding-headers: $(WebKit2)/Scripts/generate-forwarding-headers.pl $(Programs_WebKitTestRunner_SOURCES)
+	$(AM_V_GEN)$(PERL) $< $(srcdir)/Tools/WebKitTestRunner $(GENSOURCES_WEBKIT2)/include gtk \
+	&& echo timestamp > $(@F)
+
+BUILT_SOURCES += $(top_builddir)/stamp-webkittestrunner-forwarding-headers
 
 if ENABLE_WEBKIT2
 noinst_PROGRAMS += \
@@ -19,6 +19,8 @@ Programs_WebKitTestRunner_SOURCES = \
 	Tools/WebKitTestRunner/cairo/TestInvocationCairo.cpp \
 	Tools/WebKitTestRunner/CyclicRedundancyCheck.cpp \
 	Tools/WebKitTestRunner/CyclicRedundancyCheck.h \
+	Tools/WebKitTestRunner/GeolocationProviderMock.cpp \
+	Tools/WebKitTestRunner/GeolocationProviderMock.h \
 	Tools/WebKitTestRunner/PixelDumpSupport.cpp \
 	Tools/WebKitTestRunner/PixelDumpSupport.h \
 	Tools/WebKitTestRunner/PlatformWebView.h \
@@ -27,7 +29,11 @@ Programs_WebKitTestRunner_SOURCES = \
 	Tools/WebKitTestRunner/TestController.h \
 	Tools/WebKitTestRunner/TestInvocation.cpp \
 	Tools/WebKitTestRunner/TestInvocation.h \
-	Tools/WebKitTestRunner/WebKitTestRunnerPrefix.h
+	Tools/WebKitTestRunner/WebNotificationProvider.cpp \
+	Tools/WebKitTestRunner/WebNotificationProvider.h \
+	Tools/WebKitTestRunner/WebKitTestRunnerPrefix.h \
+	Tools/WebKitTestRunner/WorkQueueManager.cpp \
+	Tools/WebKitTestRunner/WorkQueueManager.h
 
 Programs_WebKitTestRunner_CPPFLAGS = \
 	-include Tools/WebKitTestRunner/WebKitTestRunnerPrefix.h \
@@ -36,6 +42,7 @@ Programs_WebKitTestRunner_CPPFLAGS = \
 	-I$(top_builddir)/DerivedSources/WebKit2/include \
 	$(global_cppflags) \
 	$(javascriptcore_cppflags) \
+	$(webcore_cppflags) \
 	$(GLOBALDEPS_CFLAGS) \
 	$(CAIRO_CFLAGS) \
 	$(GTK_CFLAGS) \
@@ -72,7 +79,7 @@ webkittestrunner_built_sources += \
 	DerivedSources/InjectedBundle/JSAccessibilityUIElement.cpp \
 	DerivedSources/InjectedBundle/JSEventSendingController.cpp \
 	DerivedSources/InjectedBundle/JSGCController.cpp \
-	DerivedSources/InjectedBundle/JSLayoutTestController.cpp \
+	DerivedSources/InjectedBundle/JSTestRunner.cpp \
 	DerivedSources/InjectedBundle/JSTextInputController.cpp
 nodist_Libraries_libTestRunnerInjectedBundle_la_SOURCES = $(webkittestrunner_built_sources)
 BUILT_SOURCES += $(webkittestrunner_built_sources)
@@ -87,6 +94,8 @@ Libraries_libTestRunnerInjectedBundle_la_SOURCES = \
 	Tools/WebKitTestRunner/InjectedBundle/AccessibilityUIElement.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/AccessibilityUIElement.h \
 	Tools/WebKitTestRunner/InjectedBundle/ActivateFonts.h \
+	Tools/WebKitTestRunner/InjectedBundle/atk/AccessibilityControllerAtk.cpp \
+	Tools/WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/Bindings/JSWrappable.h \
 	Tools/WebKitTestRunner/InjectedBundle/Bindings/JSWrapper.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/Bindings/JSWrapper.h \
@@ -94,17 +103,18 @@ Libraries_libTestRunnerInjectedBundle_la_SOURCES = \
 	Tools/WebKitTestRunner/InjectedBundle/EventSendingController.h \
 	Tools/WebKitTestRunner/InjectedBundle/GCController.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/GCController.h \
-	Tools/WebKitTestRunner/InjectedBundle/gtk/AccessibilityUIElementGtk.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/gtk/ActivateFontsGtk.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/gtk/InjectedBundleGtk.cpp \
-	Tools/WebKitTestRunner/InjectedBundle/gtk/LayoutTestControllerGtk.cpp \
+	Tools/WebKitTestRunner/InjectedBundle/gtk/InjectedBundleUtilities.cpp \
+	Tools/WebKitTestRunner/InjectedBundle/gtk/InjectedBundleUtilities.h \
+	Tools/WebKitTestRunner/InjectedBundle/gtk/TestRunnerGtk.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/InjectedBundle.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/InjectedBundle.h \
 	Tools/WebKitTestRunner/InjectedBundle/InjectedBundleMain.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/InjectedBundlePage.h \
-	Tools/WebKitTestRunner/InjectedBundle/LayoutTestController.cpp \
-	Tools/WebKitTestRunner/InjectedBundle/LayoutTestController.h \
+	Tools/WebKitTestRunner/InjectedBundle/TestRunner.cpp \
+	Tools/WebKitTestRunner/InjectedBundle/TestRunner.h \
 	Tools/WebKitTestRunner/InjectedBundle/TextInputController.cpp \
 	Tools/WebKitTestRunner/InjectedBundle/TextInputController.h
 
@@ -129,6 +139,7 @@ Libraries_libTestRunnerInjectedBundle_la_CPPFLAGS = \
 	-I$(top_builddir)/DerivedSources/WebKit2/include \
 	$(global_cppflags) \
 	$(javascriptcore_cppflags) \
+	$(webcore_cppflags) \
 	$(GLOBALDEPS_CFLAGS) \
 	$(CAIRO_CFLAGS) \
 	$(GLIB_CFLAGS) \
@@ -141,7 +152,6 @@ code_generation_dependencies = \
 	Tools/WebKitTestRunner/InjectedBundle/Bindings/CodeGeneratorTestRunner.pm \
 	Source/WebCore/bindings/scripts/CodeGenerator.pm \
 	Source/WebCore/bindings/scripts/IDLParser.pm \
-	Source/WebCore/bindings/scripts/IDLStructure.pm \
 	Source/WebCore/bindings/scripts/InFilesParser.pm \
 	Source/WebCore/bindings/scripts/generate-bindings.pl
 
@@ -159,7 +169,6 @@ EXTRA_DIST += \
 	$(srcdir)/Tools/WebKitTestRunner/InjectedBundle/Bindings/CodeGeneratorTestRunner.pm \
 	$(srcdir)/Source/WebCore/bindings/scripts/CodeGenerator.pm \
 	$(srcdir)/Source/WebCore/bindings/scripts/IDLParser.pm \
-	$(srcdir)/Source/WebCore/bindings/scripts/IDLStructure.pm \
 	$(srcdir)/Source/WebCore/bindings/scripts/InFilesParser.pm \
 	$(srcdir)/Source/WebCore/bindings/scripts/generate-bindings.pl \
 	$(shell ls $(srcdir)/Tools/WebKitTestRunner/InjectedBundle/Bindings/*.idl)

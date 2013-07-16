@@ -485,6 +485,11 @@ public abstract class Application {
         GetApplication()._leaveNestedEventLoop(retValue);
     }
 
+    public static boolean isNestedLoopRunning() {
+        checkEventThread();
+        return nestedEventLoopCounter > 0;
+    }
+
     //TODO: move to the EventHandler
     public void menuAboutAction() {
         System.err.println("about");

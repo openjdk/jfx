@@ -58,13 +58,13 @@ PassRefPtr<SVGFEGaussianBlurElement> SVGFEGaussianBlurElement::create(const Qual
 
 const AtomicString& SVGFEGaussianBlurElement::stdDeviationXIdentifier()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGStdDeviationX"));
+    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGStdDeviationX", AtomicString::ConstructFromLiteral));
     return s_identifier;
 }
 
 const AtomicString& SVGFEGaussianBlurElement::stdDeviationYIdentifier()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGStdDeviationY"));
+    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGStdDeviationY", AtomicString::ConstructFromLiteral));
     return s_identifier;
 }
 
@@ -85,15 +85,14 @@ bool SVGFEGaussianBlurElement::isSupportedAttribute(const QualifiedName& attrNam
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGFEGaussianBlurElement::parseAttribute(const Attribute& attribute)
+void SVGFEGaussianBlurElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(attribute.name())) {
-        SVGFilterPrimitiveStandardAttributes::parseAttribute(attribute);
+    if (!isSupportedAttribute(name)) {
+        SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
         return;
     }
 
-    const AtomicString& value = attribute.value();
-    if (attribute.name() == SVGNames::stdDeviationAttr) {
+    if (name == SVGNames::stdDeviationAttr) {
         float x, y;
         if (parseNumberOptionalNumber(value, x, y)) {
             setStdDeviationXBaseValue(x);
@@ -102,7 +101,7 @@ void SVGFEGaussianBlurElement::parseAttribute(const Attribute& attribute)
         return;
     }
 
-    if (attribute.name() == SVGNames::inAttr) {
+    if (name == SVGNames::inAttr) {
         setIn1BaseValue(value);
         return;
     }
@@ -132,6 +131,9 @@ PassRefPtr<FilterEffect> SVGFEGaussianBlurElement::build(SVGFilterBuilder* filte
     FilterEffect* input1 = filterBuilder->getEffectById(in1());
 
     if (!input1)
+        return 0;
+
+    if (stdDeviationX() < 0 || stdDeviationY() < 0)
         return 0;
 
     RefPtr<FilterEffect> effect = FEGaussianBlur::create(filter, stdDeviationX(), stdDeviationY());

@@ -28,7 +28,7 @@ namespace WebCore {
 class EditingBehavior {
 
 public:
-    EditingBehavior(EditingBehaviorType type)
+    explicit EditingBehavior(EditingBehaviorType type)
         : m_type(type)
     {
     }
@@ -39,7 +39,10 @@ public:
     // When extending a selection beyond the top or bottom boundary of an editable area,
     // maintain the horizontal position on Windows but extend it to the boundary of the editable
     // content on Mac.
-    bool shouldMoveCaretToHorizontalBoundaryWhenPastTopOrBottom() const { return m_type != EditingWindowsBehavior; }
+    bool shouldMoveCaretToHorizontalBoundaryWhenPastTopOrBottom() const
+    {
+        return m_type != EditingWindowsBehavior;
+    }
 
     // On Windows, selections should always be considered as directional, regardless if it is
     // mouse-based or keyboard-based.
@@ -60,8 +63,17 @@ public:
     // On Mac, when processing a contextual click, the object being clicked upon should be selected.
     bool shouldSelectOnContextualMenuClick() const { return m_type == EditingMacBehavior; }
     
+    // On Linux, should be able to get and insert spelling suggestions without selecting the misspelled word.
+    bool shouldAllowSpellingSuggestionsWithoutSelection() const
+    {
+        return m_type == EditingUnixBehavior;
+    }
+    
     // On Mac and Windows, pressing backspace (when it isn't handled otherwise) should navigate back.
-    bool shouldNavigateBackOnBackspace() const { return m_type != EditingUnixBehavior; }
+    bool shouldNavigateBackOnBackspace() const
+    {
+        return m_type != EditingUnixBehavior;
+    }
 
     // On Mac, selecting backwards by word/line from the middle of a word/line, and then going
     // forward leaves the caret back in the middle with no selection, instead of directly selecting

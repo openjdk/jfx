@@ -25,8 +25,9 @@
 
 package com.sun.javafx.tk;
 
-import com.sun.javafx.sg.PGCamera;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGNode;
+
 import java.security.AccessControlContext;
 
 /**
@@ -39,11 +40,6 @@ public interface TKScene {
       * This method is called from Scene, when it is being destroyed.
       */
     public void dispose();
-
-    /**
-     * This method is used to set security context of the Scene.
-     */
-    public void setSecurityContext(AccessControlContext ctx);
 
     public void waitForRenderingToComplete();
     
@@ -63,11 +59,11 @@ public interface TKScene {
     public void setTKSceneListener(TKSceneListener listener);
     public void setTKScenePaintListener(final TKScenePaintListener listener);
 
-    public void setRoot(PGNode root);
+    public void setRoot(NGNode root);
 
     public void markDirty();
 
-    public void setCamera(PGCamera camera);
+    public void setCamera(NGCamera camera);
 
     Object[] getLights();
     public void setLights(Object lights[]);

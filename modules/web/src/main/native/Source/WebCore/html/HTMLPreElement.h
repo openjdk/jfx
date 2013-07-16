@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-class HTMLPreElement : public HTMLElement {
+class HTMLPreElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLPreElement> create(const QualifiedName&, Document*);
 
@@ -35,7 +35,7 @@ private:
     HTMLPreElement(const QualifiedName&, Document*);
 
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 };
 
 } // namespace WebCore

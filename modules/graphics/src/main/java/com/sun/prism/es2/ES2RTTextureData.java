@@ -30,6 +30,7 @@ import com.sun.prism.impl.PrismTrace;
 class ES2RTTextureData extends ES2TextureData {
     private int fboID;
     private int dbID;
+    private int rbID;
 
     ES2RTTextureData(ES2Context context, int texID, int fboID, long size) {
         super(context, texID, size);
@@ -38,6 +39,16 @@ class ES2RTTextureData extends ES2TextureData {
 
     public int getFboID() {
         return fboID;
+    }
+
+    public int getMSAARenderBufferID() {
+        return this.rbID;
+    }
+
+    void setMSAARenderBufferID(int rbID) {
+        // Texture ID and multisample render buffer are mutually excusive
+        assert getTexID() == 0;
+        this.rbID = rbID;
     }
 
     public int getDepthBufferID() {

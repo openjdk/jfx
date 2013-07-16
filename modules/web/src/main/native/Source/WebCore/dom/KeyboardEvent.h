@@ -37,7 +37,7 @@ namespace WebCore {
 #if PLATFORM(MAC)
     struct KeypressCommand {
         KeypressCommand() { }
-        KeypressCommand(const String& commandName) : commandName(commandName) { ASSERT(isASCIILower(commandName[0U])); }
+    explicit KeypressCommand(const String& commandName) : commandName(commandName) { ASSERT(isASCIILower(commandName[0U])); }
         KeypressCommand(const String& commandName, const String& text) : commandName(commandName), text(text) { ASSERT(commandName == "insertText:"); }
 
         String commandName; // Actually, a selector name - it may have a trailing colon, and a name that can be different from an editor command name.
@@ -45,24 +45,41 @@ namespace WebCore {
     };
 #endif
     
-    // Introduced in DOM Level 3
+struct KeyboardEventInit : public UIEventInit {
+    KeyboardEventInit();
+
+    String keyIdentifier;
+    unsigned keyLocation;
+    bool ctrlKey;
+    bool altKey;
+    bool shiftKey;
+    bool metaKey;
+};
+
     class KeyboardEvent : public UIEventWithKeyState {
     public:
         enum KeyLocationCode {
-            DOM_KEY_LOCATION_STANDARD      = 0x00,
-            DOM_KEY_LOCATION_LEFT          = 0x01,
-            DOM_KEY_LOCATION_RIGHT         = 0x02,
-            DOM_KEY_LOCATION_NUMPAD        = 0x03
+        DOMKeyLocationStandard      = 0x00,
+        DOMKeyLocationLeft          = 0x01,
+        DOMKeyLocationRight         = 0x02,
+        DOMKeyLocationNumpad        = 0x03
         };
         
         static PassRefPtr<KeyboardEvent> create()
         {
             return adoptRef(new KeyboardEvent);
         }
+
         static PassRefPtr<KeyboardEvent> create(const PlatformKeyboardEvent& platformEvent, AbstractView* view)
         {
             return adoptRef(new KeyboardEvent(platformEvent, view));
         }
+
+    static PassRefPtr<KeyboardEvent> create(const AtomicString& type, const KeyboardEventInit& initializer)
+    {
+        return adoptRef(new KeyboardEvent(type, initializer));
+    }
+
         static PassRefPtr<KeyboardEvent> create(const AtomicString& type, bool canBubble, bool cancelable, AbstractView* view,
             const String& keyIdentifier, unsigned keyLocation,
             bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
@@ -70,6 +87,7 @@ namespace WebCore {
             return adoptRef(new KeyboardEvent(type, canBubble, cancelable, view, keyIdentifier, keyLocation,
                 ctrlKey, altKey, shiftKey, metaKey, altGraphKey));
         }
+
         virtual ~KeyboardEvent();
     
         void initKeyboardEvent(const AtomicString& type, bool canBubble, bool cancelable, AbstractView*,
@@ -100,6 +118,7 @@ namespace WebCore {
     private:
         KeyboardEvent();
         KeyboardEvent(const PlatformKeyboardEvent&, AbstractView*);
+    KeyboardEvent(const AtomicString&, const KeyboardEventInit&);
         KeyboardEvent(const AtomicString& type, bool canBubble, bool cancelable, AbstractView*,
                       const String& keyIdentifier, unsigned keyLocation,
                       bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey);
@@ -122,7 +141,7 @@ public:
     static PassRefPtr<KeyboardEventDispatchMediator> create(PassRefPtr<KeyboardEvent>);
 private:
     explicit KeyboardEventDispatchMediator(PassRefPtr<KeyboardEvent>);
-    virtual bool dispatchEvent(EventDispatcher*) const;
+    virtual bool dispatchEvent(EventDispatcher*) const OVERRIDE;
 };
 
 } // namespace WebCore

@@ -28,7 +28,7 @@
 
 import os
 import re
-import unittest
+import unittest2 as unittest
 
 
 from webkitpy.common.system import filesystem_mock
@@ -52,7 +52,7 @@ class MockFileSystemTest(unittest.TestCase, filesystem_unittest.GenericFileSyste
             else:
                 expected = good_fn(test)
                 actual = test_fn(test)
-            self.assertEquals(expected, actual, 'given %s, expected %s, got %s' % (repr(test), repr(expected), repr(actual)))
+            self.assertEqual(expected, actual, 'given %s, expected %s, got %s' % (repr(test), repr(expected), repr(actual)))
 
     def test_join(self):
         self.quick_check(self.fs.join,
@@ -82,7 +82,3 @@ class MockFileSystemTest(unittest.TestCase, filesystem_unittest.GenericFileSyste
                          'foo/../bar',
                          'foo/../bar/baz',
                          '../foo')
-
-
-if __name__ == '__main__':
-    unittest.main()

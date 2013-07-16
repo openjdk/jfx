@@ -27,9 +27,9 @@
 #define File_h
 
 #include "Blob.h"
-#include "PlatformString.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -38,9 +38,16 @@ class KURL;
 
 class File : public Blob {
 public:
-    static PassRefPtr<File> create(const String& path)
+    // AllContentTypes should only be used when the full path/name are trusted; otherwise, it could
+    // allow arbitrary pages to determine what applications an user has installed.
+    enum ContentTypeLookupPolicy {
+        WellKnownContentTypes,
+        AllContentTypes,
+    };
+
+    static PassRefPtr<File> create(const String& path, ContentTypeLookupPolicy policy = WellKnownContentTypes)
     {
-        return adoptRef(new File(path));
+        return adoptRef(new File(path, policy));
     }
 
     // For deserialization.
@@ -61,14 +68,21 @@ public:
     {
         return adoptRef(new File(name, metadata));
     }
+
+    static PassRefPtr<File> createForFileSystemFile(const KURL& url, const FileMetadata& metadata)
+    {
+        return adoptRef(new File(url, metadata));
+    }
+
+    KURL fileSystemURL() const { return m_fileSystemURL; }
 #endif
 
     // Create a file with a name exposed to the author (via File.name and associated DOM properties) that differs from the one provided in the path.
-    static PassRefPtr<File> createWithName(const String& path, const String& name)
+    static PassRefPtr<File> createWithName(const String& path, const String& name, ContentTypeLookupPolicy policy = WellKnownContentTypes)
     {
         if (name.isEmpty())
-            return adoptRef(new File(path));
-        return adoptRef(new File(path, name));
+            return adoptRef(new File(path, policy));
+        return adoptRef(new File(path, name, policy));
     }
 
     virtual unsigned long long size() const;
@@ -77,7 +91,7 @@ public:
     const String& path() const { return m_path; }
     const String& name() const { return m_name; }
 
-    // This may return NaN (which is converted to null Date in javascript layer) if getFileModificationTime() platform call has failed or the information is not available.
+    // This returns the current date and time if the file's last modifiecation date is not known (per spec: http://www.w3.org/TR/FileAPI/#dfn-lastModifiedDate).
     double lastModifiedDate() const;
 
 #if ENABLE(DIRECTORY_UPLOAD)
@@ -89,14 +103,15 @@ public:
     void captureSnapshot(long long& snapshotSize, double& snapshotModificationTime) const;
 
 private:
-    File(const String& path);
+    File(const String& path, ContentTypeLookupPolicy);
 
     // For deserialization.
     File(const String& path, const KURL& srcURL, const String& type);
-    File(const String& path, const String& name);
+    File(const String& path, const String& name, ContentTypeLookupPolicy);
 
 # if ENABLE(FILE_SYSTEM)
     File(const String& name, const FileMetadata&);
+    File(const KURL& fileSystemURL, const FileMetadata&);
 
     // Returns true if this has a valid snapshot metadata (i.e. m_snapshotSize >= 0).
     bool hasValidSnapshotMetadata() const { return m_snapshotSize >= 0; }
@@ -106,7 +121,9 @@ private:
     String m_name;
 
 #if ENABLE(FILE_SYSTEM)
-    // If m_snapshotSize is negative (initialized to -1 by default), the snapshot metadata is invalid and we retrieve the latest metadata synchronously in size(), lastModifiedTime() and webkitSlice().
+    KURL m_fileSystemURL;
+
+    // If m_snapshotSize is negative (initialized to -1 by default), the snapshot metadata is invalid and we retrieve the latest metadata synchronously in size(), lastModifiedTime() and slice().
     // Otherwise, the snapshot metadata are used directly in those methods.
     const long long m_snapshotSize;
     const double m_snapshotModificationTime;
@@ -119,13 +136,13 @@ private:
 
 inline File* toFile(Blob* blob)
 {
-    ASSERT(!blob || blob->isFile());
+    ASSERT_WITH_SECURITY_IMPLICATION(!blob || blob->isFile());
     return static_cast<File*>(blob);
 }
 
 inline const File* toFile(const Blob* blob)
 {
-    ASSERT(!blob || blob->isFile());
+    ASSERT_WITH_SECURITY_IMPLICATION(!blob || blob->isFile());
     return static_cast<const File*>(blob);
 }
 

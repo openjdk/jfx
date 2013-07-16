@@ -27,27 +27,24 @@ package javafx.scene.shape;
 
 
 
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
+import javafx.scene.paint.Paint;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.scene.paint.Paint;
-
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGRectangle;
-import com.sun.javafx.sg.PGShape.Mode;
-import com.sun.javafx.tk.Toolkit;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGRectangle;
+import com.sun.javafx.sg.prism.NGShape;
 
 
 /**
@@ -379,12 +376,8 @@ public  class Rectangle extends Shape {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGRectangle();
-    }
-
-    PGRectangle getPGRect() {
-        return (PGRectangle) impl_getPGNode();
+    protected NGNode impl_createPeer() {
+        return new NGRectangle();
     }
 
     /***************************************************************************
@@ -462,12 +455,8 @@ public  class Rectangle extends Shape {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    @Override
-    protected com.sun.javafx.sg.PGShape.StrokeLineJoin toPGLineJoin(StrokeLineJoin t) {
+    @Override StrokeLineJoin convertLineJoin(StrokeLineJoin t) {
         // If we are a round rectangle then MITER can produce anomalous
         // results for very thin or very wide corner arcs when the bezier
         // curves that approximate the arcs become so distorted that they
@@ -483,9 +472,9 @@ public  class Rectangle extends Shape {
         // the computations are both simple and non-problematic so we pass on
         // the join style unmodified to the PG layer.
         if ((getArcWidth() > 0) && (getArcHeight() > 0)) {
-            return com.sun.javafx.sg.PGShape.StrokeLineJoin.BEVEL;
+            return StrokeLineJoin.BEVEL;
         }
-        return super.toPGLineJoin(t);
+        return t;
     }
 
     /**
@@ -498,7 +487,7 @@ public  class Rectangle extends Shape {
         // if there is no fill or stroke, then there are no bounds. The bounds
         // must be marked empty in this case to distinguish it from 0,0,0,0
         // which would actually contribute to the bounds of a group.
-        if (impl_mode == Mode.EMPTY) {
+        if (impl_mode == NGShape.Mode.EMPTY) {
             return bounds.makeEmpty();
         }
         if ((getArcWidth() > 0) && (getArcHeight() > 0)
@@ -507,7 +496,7 @@ public  class Rectangle extends Shape {
         }
         double upad;
         double dpad;
-        if ((impl_mode == Mode.FILL) || (getStrokeType() == StrokeType.INSIDE)) {
+        if ((impl_mode == NGShape.Mode.FILL) || (getStrokeType() == StrokeType.INSIDE)) {
             upad = dpad = 0;
         } else {
             upad = getStrokeWidth();
@@ -544,10 +533,10 @@ public  class Rectangle extends Shape {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            PGRectangle peer = getPGRect();
+            final NGRectangle peer = impl_getPeer();
             peer.updateRectangle((float)getX(),
                 (float)getY(),
                 (float)getWidth(),

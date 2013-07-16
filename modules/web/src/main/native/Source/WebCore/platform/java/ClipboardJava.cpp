@@ -9,6 +9,7 @@
 #include "ClipboardJava.h"
 #include "ClipboardUtilitiesJava.h"
 #include "DragData.h"
+#include "Editor.h"
 #include "FileList.h"
 #include "StringHash.h"
 #include "CachedImage.h"
@@ -21,12 +22,12 @@
 #include "MIMETypeRegistry.h"
 #include "markup.h"
 #include "NamedNodeMap.h"
-#include "PlatformString.h"
 #include "Range.h"
 #include "RenderImage.h"
 #include "StringBuilder.h"
 
 #include <wtf/HashSet.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 using namespace HTMLNames;
@@ -128,7 +129,7 @@ void ClipboardJava::clearData(const String& type)
     }
 }
 
-void ClipboardJava::clearAllData()
+void ClipboardJava::clearData()
 {
     if ( m_dataObject && policy() == ClipboardWritable){
         m_dataObject->clear();
@@ -151,23 +152,23 @@ bool ClipboardJava::setData(const String& type, const String& data)
     return false;
 }
 
-HashSet<String> ClipboardJava::typesPrivate() const
+ListHashSet<String> ClipboardJava::typesPrivate() const
 {
     if ( m_dataObject ){
         //TODO: returns the types that have the data entries
         //as mime-strings  ("text/uri-list", "text/plain")
         return m_dataObject->types();
     }
-    return HashSet<String>();
+    return ListHashSet<String>();
 }
 
-HashSet<String> ClipboardJava::types() const
+ListHashSet<String> ClipboardJava::types() const
 {
     ClipboardAccessPolicy ap = policy();
     if ( ap == ClipboardReadable || ap == ClipboardTypesReadable ){
         return typesPrivate();
     }
-    return HashSet<String>();
+    return ListHashSet<String>();
 }
 
 PassRefPtr<FileList> ClipboardJava::files() const
@@ -276,7 +277,7 @@ void ClipboardJava::writeRange(Range* selectedRange, Frame* frame)
         createMarkup(selectedRange, 0, AnnotateForInterchange, false, ResolveAllURLs),
         frame->document()->url());
 
-    String str = frame->editor()->selectedText();
+    String str = frame->editor().selectedText();
 #if OS(WINDOWS)
     replaceNewlinesWithWindowsStyleNewlines(str);
 #endif

@@ -25,14 +25,11 @@
 
 package com.sun.javafx.font;
 
-import com.sun.javafx.PlatformUtil;
 import javafx.scene.text.*;
 import com.sun.javafx.tk.*;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.io.InputStream;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
@@ -41,28 +38,6 @@ import java.util.Properties;
 public class PrismFontLoader extends FontLoader {
     private static PrismFontLoader theInstance = new PrismFontLoader();
     public static PrismFontLoader getInstance() { return theInstance; }
-
-    private static boolean lcdEnabled;
-    static {
-        //property used for now.
-        AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
-                // Turn LCD text off on Mac unless native glyph rasterizer is
-                // enabled.
-                // LCD text should also be turned off by default for iOS and
-                // embedded.
-                boolean lcdTextOff = (PlatformUtil.isMac() &&
-                                      !PrismFontFactory.doCoreText) ||
-                                     PlatformUtil.isIOS() ||
-                                     PlatformUtil.isAndroid() ||
-                                     PlatformUtil.isEmbedded();
-                String defLCDProp = lcdTextOff ? "false" : "true";
-                String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
-                lcdEnabled = lcdProp.equals("true");
-               return null;
-            }
-        });
-    }
 
     /**
      * Flag to keep track whether the fontCache map has been initialized with
@@ -253,12 +228,6 @@ public class PrismFontLoader extends FontLoader {
         // PrismFontFactory is what loads the DLL, so we may as
         // well place the required native method there.
         return PrismFontFactory.getSystemFontSize();
-    }
-
-    // Called only from font code which means we must have already
-    // called getFontFactoryFromPipeline();
-    public static boolean isLCDTextSupported() {
-        return lcdEnabled;
     }
 
     FontFactory installedFontFactory = null;

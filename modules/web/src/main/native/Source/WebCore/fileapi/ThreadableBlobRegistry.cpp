@@ -47,6 +47,8 @@ using WTF::ThreadSpecific;
 namespace WebCore {
 
 struct BlobRegistryContext {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
     BlobRegistryContext(const KURL& url, PassOwnPtr<BlobData> blobData)
         : url(url.copy())
         , blobData(blobData)
@@ -153,7 +155,7 @@ void ThreadableBlobRegistry::unregisterBlobURL(const KURL&)
 {
 }
 
-PassRefPtr<SecurityOrigin> ThreadableBlobRegistry::getCachedOrigin(const KURL& url)
+PassRefPtr<SecurityOrigin> ThreadableBlobRegistry::getCachedOrigin(const KURL&)
 {
     return 0;
 }

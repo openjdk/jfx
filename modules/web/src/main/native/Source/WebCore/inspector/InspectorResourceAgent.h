@@ -33,11 +33,11 @@
 
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
-#include "PlatformString.h"
 
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 #if ENABLE(INSPECTOR)
 
@@ -50,7 +50,9 @@ namespace WebCore {
 class CachedResource;
 class Document;
 class DocumentLoader;
+class FormData;
 class Frame;
+class HTTPHeaderMap;
 class InspectorArray;
 class InspectorClient;
 class InspectorFrontend;
@@ -62,21 +64,23 @@ class KURL;
 class NetworkResourcesData;
 class Page;
 class ResourceError;
+class ResourceLoader;
 class ResourceRequest;
 class ResourceResponse;
 class SharedBuffer;
+class ThreadableLoaderClient;
+class XHRReplayData;
+class XMLHttpRequest;
 
 #if ENABLE(WEB_SOCKETS)
 struct WebSocketFrame;
-class WebSocketHandshakeRequest;
-class WebSocketHandshakeResponse;
 #endif
 
 typedef String ErrorString;
 
 class InspectorResourceAgent : public InspectorBaseAgent<InspectorResourceAgent>, public InspectorBackendDispatcher::NetworkCommandHandler {
 public:
-    static PassOwnPtr<InspectorResourceAgent> create(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent, InspectorClient* client, InspectorState* state)
+    static PassOwnPtr<InspectorResourceAgent> create(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent, InspectorClient* client, InspectorCompositeState* state)
     {
         return adoptPtr(new InspectorResourceAgent(instrumentingAgents, pageAgent, client, state));
     }
@@ -85,13 +89,13 @@ public:
     virtual void clearFrontend();
     virtual void restore();
 
-    static PassRefPtr<InspectorResourceAgent> restore(Page*, InspectorState*, InspectorFrontend*);
+    static PassRefPtr<InspectorResourceAgent> restore(Page*, InspectorCompositeState*, InspectorFrontend*);
 
     ~InspectorResourceAgent();
 
     void willSendRequest(unsigned long identifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse);
     void markResourceAsCached(unsigned long identifier);
-    void didReceiveResponse(unsigned long identifier, DocumentLoader* laoder, const ResourceResponse&);
+    void didReceiveResponse(unsigned long identifier, DocumentLoader* laoder, const ResourceResponse&, ResourceLoader*);
     void didReceiveData(unsigned long identifier, const char* data, int dataLength, int encodedDataLength);
     void didFinishLoading(unsigned long identifier, DocumentLoader*, double finishTime);
     void didFailLoading(unsigned long identifier, DocumentLoader*, const ResourceError&);
@@ -99,10 +103,16 @@ public:
     void mainFrameNavigated(DocumentLoader*);
     void setInitialScriptContent(unsigned long identifier, const String& sourceString);
     void didReceiveScriptResponse(unsigned long identifier);
-    void setInitialXHRContent(unsigned long identifier, const String& sourceString);
+
+    void documentThreadableLoaderStartedLoadingForClient(unsigned long identifier, ThreadableLoaderClient*);
+    void willLoadXHR(ThreadableLoaderClient*, const String& method, const KURL&, bool async, PassRefPtr<FormData> body, const HTTPHeaderMap& headers, bool includeCrendentials);
+    void didFailXHRLoading(ThreadableLoaderClient*);
+    void didFinishXHRLoading(ThreadableLoaderClient*, unsigned long identifier, const String& sourceString);
     void didReceiveXHRResponse(unsigned long identifier);
     void willLoadXHRSynchronously();
     void didLoadXHRSynchronously();
+
+    void willDestroyCachedResource(CachedResource*);
 
     void applyUserAgentOverride(String* userAgent);
 
@@ -115,8 +125,8 @@ public:
 
 #if ENABLE(WEB_SOCKETS)
     void didCreateWebSocket(unsigned long identifier, const KURL& requestURL);
-    void willSendWebSocketHandshakeRequest(unsigned long identifier, const WebSocketHandshakeRequest&);
-    void didReceiveWebSocketHandshakeResponse(unsigned long identifier, const WebSocketHandshakeResponse&);
+    void willSendWebSocketHandshakeRequest(unsigned long identifier, const ResourceRequest&);
+    void didReceiveWebSocketHandshakeResponse(unsigned long identifier, const ResourceResponse&);
     void didCloseWebSocket(unsigned long identifier);
     void didReceiveWebSocketFrame(unsigned long identifier, const WebSocketFrame&);
     void didSendWebSocketFrame(unsigned long identifier, const WebSocketFrame&);
@@ -132,8 +142,8 @@ public:
     virtual void setUserAgentOverride(ErrorString*, const String& userAgent);
     virtual void setExtraHTTPHeaders(ErrorString*, const RefPtr<InspectorObject>&);
     virtual void getResponseBody(ErrorString*, const String& requestId, String* content, bool* base64Encoded);
-    // FIXME: this seems to be unsued.
-    void clearCache(ErrorString*, const String* const optionalPreservedLoaderId);
+
+    virtual void replayXHR(ErrorString*, const String& requestId);
 
     virtual void canClearBrowserCache(ErrorString*, bool*);
     virtual void clearBrowserCache(ErrorString*);
@@ -142,7 +152,7 @@ public:
     virtual void setCacheDisabled(ErrorString*, bool cacheDisabled);
 
 private:
-    InspectorResourceAgent(InstrumentingAgents*, InspectorPageAgent*, InspectorClient*, InspectorState*);
+    InspectorResourceAgent(InstrumentingAgents*, InspectorPageAgent*, InspectorClient*, InspectorCompositeState*);
 
     void enable();
 
@@ -153,6 +163,8 @@ private:
     OwnPtr<NetworkResourcesData> m_resourcesData;
     bool m_loadingXHRSynchronously;
 
+    typedef HashMap<ThreadableLoaderClient*, RefPtr<XHRReplayData> > PendingXHRReplayDataMap;
+    PendingXHRReplayDataMap m_pendingXHRReplayData;
     // FIXME: InspectorResourceAgent should now be aware of style recalculation.
     RefPtr<TypeBuilder::Network::Initiator> m_styleRecalculationInitiator;
     bool m_isRecalculatingStyle;

@@ -23,6 +23,7 @@
 #define RenderSVGInlineText_h
 
 #if ENABLE(SVG)
+#include "Font.h"
 #include "RenderText.h"
 #include "SVGTextLayoutAttributes.h"
 
@@ -68,13 +69,13 @@ private:
 
 inline RenderSVGInlineText* toRenderSVGInlineText(RenderObject* object)
 {
-    ASSERT(!object || object->isSVGInlineText());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGInlineText());
     return static_cast<RenderSVGInlineText*>(object);
 }
 
 inline const RenderSVGInlineText* toRenderSVGInlineText(const RenderObject* object)
 {
-    ASSERT(!object || object->isSVGInlineText());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGInlineText());
     return static_cast<const RenderSVGInlineText*>(object);
 }
 

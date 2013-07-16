@@ -45,7 +45,7 @@
 #include "FrameTree.h"
 #include "FrameView.h"
 #include "HTMLFormElement.h"
-#include "IntentRequest.h"
+#include "HTTPStatusCodes.h"
 #include "MIMETypeRegistry.h"
 #include "NotImplemented.h"
 #include "Page.h"
@@ -54,11 +54,12 @@
 #include "RenderPart.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "ScriptController.h"
 #include "Settings.h"
 #include "WebKitVersion.h"
 #include "ewk_frame_private.h"
-#include "ewk_intent_private.h"
 #include "ewk_private.h"
+#include "ewk_settings.h"
 #include "ewk_settings_private.h"
 #include "ewk_view_private.h"
 #include <Ecore_Evas.h>
@@ -162,12 +163,12 @@ void FrameLoaderClientEfl::dispatchDidPopStateWithinPage()
     notImplemented();
 }
 
-void FrameLoaderClientEfl::dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge&)
+void FrameLoaderClientEfl::dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long /*identifier*/, const AuthenticationChallenge&)
 {
     notImplemented();
 }
 
-void FrameLoaderClientEfl::dispatchDidCancelAuthenticationChallenge(DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge&)
+void FrameLoaderClientEfl::dispatchDidCancelAuthenticationChallenge(DocumentLoader*, unsigned long /*identifier*/, const AuthenticationChallenge&)
 {
     notImplemented();
 }
@@ -297,13 +298,19 @@ void FrameLoaderClientEfl::dispatchDecidePolicyForResponse(FramePolicyFunction f
         return;
     }
 
+    // Ignore responses with an HTTP status code of 204 (No Content)
+    if (response.httpStatusCode() == HTTPNoContent) {
+        callPolicyFunction(function, PolicyIgnore);
+        return;
+    }
+
     if (canShowMIMEType(response.mimeType()))
         callPolicyFunction(function, PolicyUse);
     else
         callPolicyFunction(function, PolicyDownload);
 }
 
-void FrameLoaderClientEfl::dispatchDecidePolicyForNewWindowAction(FramePolicyFunction function, const NavigationAction& action, const ResourceRequest& resourceRequest, PassRefPtr<FormState>, const String&)
+void FrameLoaderClientEfl::dispatchDecidePolicyForNewWindowAction(FramePolicyFunction function, const NavigationAction&, const ResourceRequest& resourceRequest, PassRefPtr<FormState>, const String&)
 {
     ASSERT(function);
     ASSERT(m_frame);
@@ -361,7 +368,7 @@ PassRefPtr<Widget> FrameLoaderClientEfl::createPlugin(const IntSize& pluginSize,
                                   mimeType, loadManually);
 }
 
-PassRefPtr<Frame> FrameLoaderClientEfl::createFrame(const KURL& url, const String& name, HTMLFrameOwnerElement* ownerElement, const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight)
+PassRefPtr<Frame> FrameLoaderClientEfl::createFrame(const KURL& url, const String& name, HTMLFrameOwnerElement* ownerElement, const String& referrer, bool /*allowsScrolling*/, int /*marginWidth*/, int /*marginHeight*/)
 {
     ASSERT(m_frame);
     ASSERT(m_view);
@@ -371,13 +378,13 @@ PassRefPtr<Frame> FrameLoaderClientEfl::createFrame(const KURL& url, const Strin
 
 void FrameLoaderClientEfl::redirectDataToPlugin(Widget* pluginWidget)
 {
-    ASSERT(!m_pluginView);
-    m_pluginView = static_cast<PluginView*>(pluginWidget);
+    m_pluginView = toPluginView(pluginWidget);
+    if (pluginWidget)
     m_hasSentResponseToPlugin = false;
 }
 
-PassRefPtr<Widget> FrameLoaderClientEfl::createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const KURL& baseURL,
-                                                                const Vector<String>& paramNames, const Vector<String>& paramValues)
+PassRefPtr<Widget> FrameLoaderClientEfl::createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const KURL&,
+                                                                const Vector<String>& /*paramNames*/, const Vector<String>& /*paramValues*/)
 {
     notImplemented();
     return 0;
@@ -419,8 +426,7 @@ ObjectContentType FrameLoaderClientEfl::objectContentType(const KURL& url, const
 
 String FrameLoaderClientEfl::overrideMediaType() const
 {
-    notImplemented();
-    return String();
+    return String::fromUTF8(ewk_settings_css_media_type_get());
 }
 
 void FrameLoaderClientEfl::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* world)
@@ -537,7 +543,7 @@ bool FrameLoaderClientEfl::shouldGoToHistoryItem(HistoryItem* item) const
     return item;
 }
 
-bool FrameLoaderClientEfl::shouldStopLoadingForHistoryItem(HistoryItem* item) const
+bool FrameLoaderClientEfl::shouldStopLoadingForHistoryItem(HistoryItem*) const
 {
     return true;
 }
@@ -611,7 +617,7 @@ void FrameLoaderClientEfl::dispatchDidChangeLocationWithinPage()
 {
     ewk_frame_uri_changed(m_frame);
 
-    if (ewk_view_frame_main_get(m_view) != m_frame)
+    if (!isLoadingMainFrame())
         return;
     ewk_view_uri_changed(m_view);
 }
@@ -624,7 +630,7 @@ void FrameLoaderClientEfl::dispatchWillClose()
 void FrameLoaderClientEfl::dispatchDidReceiveIcon()
 {
     // IconController loads icons only for the main frame.
-    ASSERT(ewk_view_frame_main_get(m_view) == m_frame);
+    ASSERT(isLoadingMainFrame());
 
     ewk_view_frame_main_icon_received(m_view);
 }
@@ -632,7 +638,7 @@ void FrameLoaderClientEfl::dispatchDidReceiveIcon()
 void FrameLoaderClientEfl::dispatchDidStartProvisionalLoad()
 {
     ewk_frame_load_provisional(m_frame);
-    if (ewk_view_frame_main_get(m_view) == m_frame)
+    if (isLoadingMainFrame())
         ewk_view_load_provisional(m_view);
 }
 
@@ -644,7 +650,7 @@ void FrameLoaderClientEfl::dispatchDidReceiveTitle(const StringWithDirection& ti
     ewkTitle.direction = (title.direction() == LTR) ? EWK_TEXT_DIRECTION_LEFT_TO_RIGHT : EWK_TEXT_DIRECTION_RIGHT_TO_LEFT;
     ewk_frame_title_set(m_frame, &ewkTitle);
 
-    if (ewk_view_frame_main_get(m_view) != m_frame)
+    if (!isLoadingMainFrame())
         return;
     ewk_view_title_set(m_view, &ewkTitle);
 }
@@ -652,7 +658,7 @@ void FrameLoaderClientEfl::dispatchDidReceiveTitle(const StringWithDirection& ti
 void FrameLoaderClientEfl::dispatchDidChangeIcons(WebCore::IconType iconType)
 {
     // Other touch types are apple-specific
-    ASSERT(iconType == WebCore::Favicon);
+    ASSERT_UNUSED(iconType, iconType == WebCore::Favicon);
     ewk_frame_icon_changed(m_frame);
 }
 
@@ -660,7 +666,7 @@ void FrameLoaderClientEfl::dispatchDidCommitLoad()
 {
     ewk_frame_uri_changed(m_frame);
     ewk_frame_load_committed(m_frame);
-    if (ewk_view_frame_main_get(m_view) != m_frame)
+    if (!isLoadingMainFrame())
         return;
     ewk_view_title_set(m_view, 0);
     ewk_view_uri_changed(m_view);
@@ -671,13 +677,11 @@ void FrameLoaderClientEfl::dispatchDidFinishDocumentLoad()
     ewk_frame_load_document_finished(m_frame);
 }
 
-void FrameLoaderClientEfl::dispatchDidFirstLayout()
+void FrameLoaderClientEfl::dispatchDidLayout(LayoutMilestones milestones)
 {
+    if (milestones & DidFirstLayout)
     ewk_frame_load_firstlayout_finished(m_frame);
-}
-
-void FrameLoaderClientEfl::dispatchDidFirstVisuallyNonEmptyLayout()
-{
+    if (milestones & DidFirstVisuallyNonEmptyLayout)
     ewk_frame_load_firstlayout_nonempty_finished(m_frame);
 }
 
@@ -707,7 +711,7 @@ bool FrameLoaderClientEfl::canHandleRequest(const ResourceRequest&) const
     return true;
 }
 
-bool FrameLoaderClientEfl::canShowMIMETypeAsHTML(const String& MIMEType) const
+bool FrameLoaderClientEfl::canShowMIMETypeAsHTML(const String& /*MIMEType*/) const
 {
     notImplemented();
     return false;
@@ -715,9 +719,7 @@ bool FrameLoaderClientEfl::canShowMIMETypeAsHTML(const String& MIMEType) const
 
 bool FrameLoaderClientEfl::canShowMIMEType(const String& MIMEType) const
 {
-    if (MIMETypeRegistry::isSupportedImageMIMEType(MIMEType)
-        || MIMETypeRegistry::isSupportedNonImageMIMEType(MIMEType)
-        || MIMETypeRegistry::isSupportedMediaMIMEType(MIMEType))
+    if (MIMETypeRegistry::canShowMIMEType(MIMEType))
         return true;
 
 #if 0 // PluginDatabase is disabled until we have Plugin system done.
@@ -764,12 +766,12 @@ void FrameLoaderClientEfl::prepareForDataSourceReplacement()
     notImplemented();
 }
 
-void FrameLoaderClientEfl::setTitle(const StringWithDirection& title, const KURL& url)
+void FrameLoaderClientEfl::setTitle(const StringWithDirection&, const KURL&)
 {
     // no need for, dispatchDidReceiveTitle is the right callback
 }
 
-void FrameLoaderClientEfl::dispatchDidReceiveContentLength(DocumentLoader*, unsigned long identifier, int dataLength)
+void FrameLoaderClientEfl::dispatchDidReceiveContentLength(DocumentLoader*, unsigned long /*identifier*/, int /*dataLength*/)
 {
     notImplemented();
 }
@@ -803,7 +805,7 @@ void FrameLoaderClientEfl::dispatchDidFailLoading(DocumentLoader*, unsigned long
     evas_object_smart_callback_call(m_view, "load,resource,failed", &error);
 }
 
-bool FrameLoaderClientEfl::dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int length)
+bool FrameLoaderClientEfl::dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int /*length*/)
 {
     notImplemented();
     return false;
@@ -834,7 +836,7 @@ void FrameLoaderClientEfl::dispatchDidFailProvisionalLoad(const ResourceError& e
     error.frame = m_frame;
 
     ewk_frame_load_provisional_failed(m_frame, &error);
-    if (ewk_view_frame_main_get(m_view) == m_frame)
+    if (isLoadingMainFrame())
         ewk_view_load_provisional_failed(m_view, &error);
 
     dispatchDidFailLoad(err);
@@ -856,7 +858,7 @@ void FrameLoaderClientEfl::dispatchDidFailLoad(const ResourceError& err)
                             err.failingURL().utf8().data());
 }
 
-void FrameLoaderClientEfl::download(ResourceHandle*, const ResourceRequest& request, const ResourceResponse&)
+void FrameLoaderClientEfl::convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest& request, const ResourceResponse&)
 {
     if (!m_view)
         return;
@@ -865,6 +867,7 @@ void FrameLoaderClientEfl::download(ResourceHandle*, const ResourceRequest& requ
     Ewk_Download download;
 
     download.url = url.data();
+    download.suggested_name = 0;
     ewk_view_download_request(m_view, &download);
 }
 
@@ -933,7 +936,7 @@ void FrameLoaderClientEfl::dispatchUnableToImplementPolicy(const ResourceError&)
     notImplemented();
 }
 
-void FrameLoaderClientEfl::setMainDocumentError(DocumentLoader* loader, const ResourceError& error)
+void FrameLoaderClientEfl::setMainDocumentError(DocumentLoader*, const ResourceError& error)
 {
     if (!m_pluginView)
         return;
@@ -942,15 +945,17 @@ void FrameLoaderClientEfl::setMainDocumentError(DocumentLoader* loader, const Re
     m_hasSentResponseToPlugin = false;
 }
 
-void FrameLoaderClientEfl::startDownload(const ResourceRequest& request, const String& /* suggestedName */)
+void FrameLoaderClientEfl::startDownload(const ResourceRequest& request, const String& suggestedName)
 {
     if (!m_view)
         return;
 
     CString url = request.url().string().utf8();
+    CString suggestedNameString = suggestedName.utf8();
     Ewk_Download download;
 
     download.url = url.data();
+    download.suggested_name = suggestedNameString.data();
     ewk_view_download_request(m_view, &download);
 }
 
@@ -1000,7 +1005,7 @@ void FrameLoaderClientEfl::transitionToCommittedForNewPage()
 
     ewk_frame_view_create_for_view(m_frame, m_view);
 
-    if (m_frame == ewk_view_frame_main_get(m_view)) {
+    if (isLoadingMainFrame()) {
         ewk_view_frame_view_creation_notify(m_view);
         ewk_view_frame_main_cleared(m_view);
     }
@@ -1017,30 +1022,6 @@ void FrameLoaderClientEfl::didRestoreFromPageCache()
 void FrameLoaderClientEfl::dispatchDidBecomeFrameset(bool)
 {
 }
-
-#if ENABLE(WEB_INTENTS)
-void FrameLoaderClientEfl::dispatchIntent(PassRefPtr<WebCore::IntentRequest> intentRequest)
-{
-    Ewk_Intent_Request* ewkRequest = ewk_intent_request_new(intentRequest);
-    ewk_frame_intent_new(m_frame, ewkRequest);
-    ewk_intent_request_unref(ewkRequest);
-}
-#endif
-
-#if ENABLE(WEB_INTENTS_TAG)
-void FrameLoaderClientEfl::registerIntentService(const String& action, const String& type, const KURL& href, const String& title, const String& disposition)
-{
-    CString actionStr = action.utf8();
-    CString typeStr = type.utf8();
-    CString hrefStr = href.string().utf8();
-    CString titleStr = title.utf8();
-    CString dispositionStr = disposition.utf8();
-
-    Ewk_Intent_Service_Info serviceInfo = { actionStr.data(), typeStr.data(), hrefStr.data(), titleStr.data(), dispositionStr.data() };
-
-    ewk_frame_intent_service_register(m_frame, &serviceInfo);
-}
-#endif
 
 PassRefPtr<FrameNetworkingContext> FrameLoaderClientEfl::createNetworkingContext()
 {

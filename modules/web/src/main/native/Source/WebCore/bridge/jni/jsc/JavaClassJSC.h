@@ -41,20 +41,18 @@ public:
     JavaClass(jobject, RootObject*, jobject accessControlContext);
     ~JavaClass();
 
-    virtual MethodList methodsNamed(PropertyName, Instance*) const;
+    virtual Method* methodNamed(PropertyName, Instance*) const;
     virtual Field* fieldNamed(PropertyName, Instance*) const;
 
     bool isNumberClass() const;
     bool isBooleanClass() const;
-#if ENABLE(JAVA_JSC)
     bool isCharacterClass() const;
-#endif
     bool isStringClass() const;
 
 private:
     const char* m_name;
-    FieldMap m_fields;
-    MethodListMap m_methods;
+    mutable FieldMap m_fields;
+    mutable MethodListMap m_methods;
 };
 
 } // namespace Bindings

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,11 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "CodeBlockWithJITType.h"
 #include <wtf/Assertions.h>
 #include <wtf/BitVector.h>
 
 namespace JSC { namespace DFG {
-
-#if DFG_ENABLE(VALIDATION)
 
 class Validate {
 public:
@@ -45,9 +44,9 @@ public:
     
     #define VALIDATE(context, assertion) do { \
         if (!(assertion)) { \
-            dataLog("\n\n\nAt "); \
+            dataLogF("\n\n\nAt "); \
             reportValidationContext context; \
-            dataLog(": validation %s (%s:%d) failed.\n", #assertion, __FILE__, __LINE__); \
+            dataLogF(": validation %s (%s:%d) failed.\n", #assertion, __FILE__, __LINE__); \
             dumpGraphIfAppropriate(); \
             WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #assertion); \
             CRASH(); \
@@ -56,13 +55,13 @@ public:
     
     #define V_EQUAL(context, left, right) do { \
         if (left != right) { \
-            dataLog("\n\n\nAt "); \
+            dataLogF("\n\n\nAt "); \
             reportValidationContext context; \
-            dataLog(": validation (%s = ", #left); \
-            dumpData(left); \
-            dataLog(") == (%s = ", #right); \
-            dumpData(right); \
-            dataLog(") (%s:%d) failed.\n", __FILE__, __LINE__); \
+            dataLogF(": validation (%s = ", #left); \
+            dataLog(left); \
+            dataLogF(") == (%s = ", #right); \
+            dataLog(right); \
+            dataLogF(") (%s:%d) failed.\n", __FILE__, __LINE__); \
             dumpGraphIfAppropriate(); \
             WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #left " == " #right); \
             CRASH(); \
@@ -76,38 +75,83 @@ public:
         // NB. This code is not written for performance, since it is not intended to run
         // in release builds.
         
+        // Validate that all local variables at the head of the root block are dead.
+        BasicBlock* root = m_graph.m_blocks[0].get();
+        for (unsigned i = 0; i < root->variablesAtHead.numberOfLocals(); ++i)
+            V_EQUAL((static_cast<VirtualRegister>(i), 0), static_cast<Node*>(0), root->variablesAtHead.local(i));
+        
         // Validate ref counts and uses.
-        Vector<unsigned> myRefCounts;
-        myRefCounts.fill(0, m_graph.size());
-        BitVector acceptableNodeIndices;
+        HashMap<Node*, unsigned> myRefCounts;
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.m_blocks.size(); ++blockIndex) {
             BasicBlock* block = m_graph.m_blocks[blockIndex].get();
-            if (!block)
+            if (!block || !block->isReachable)
                 continue;
-            if (!block->isReachable)
+            for (size_t i = 0; i < block->numNodes(); ++i)
+                myRefCounts.add(block->node(i), 0);
+        }
+        HashSet<Node*> acceptableNodes;
+        for (BlockIndex blockIndex = 0; blockIndex < m_graph.m_blocks.size(); ++blockIndex) {
+            BasicBlock* block = m_graph.m_blocks[blockIndex].get();
+            if (!block || !block->isReachable)
                 continue;
             for (size_t i = 0; i < block->numNodes(); ++i) {
-                NodeIndex nodeIndex = block->nodeIndex(i);
-                acceptableNodeIndices.set(nodeIndex);
-                Node& node = m_graph[nodeIndex];
-                if (!node.shouldGenerate())
+                Node* node = block->node(i);
+                acceptableNodes.add(node);
+                if (!node->shouldGenerate())
                     continue;
                 for (unsigned j = 0; j < m_graph.numChildren(node); ++j) {
+                    // Phi children in LoadStore form are invalid.
+                    if (m_graph.m_form == LoadStore && block->isPhiIndex(i))
+                        continue;
+                    
                     Edge edge = m_graph.child(node, j);
                     if (!edge)
                         continue;
                     
-                    myRefCounts[edge.index()]++;
+                    myRefCounts.find(edge.node())->value++;
                     
                     // Unless I'm a Flush, Phantom, GetLocal, or Phi, my children should hasResult().
-                    switch (node.op()) {
+                    switch (node->op()) {
                     case Flush:
-                    case Phantom:
                     case GetLocal:
+                        VALIDATE((node, edge), edge->hasVariableAccessData());
+                        VALIDATE((node, edge), edge->variableAccessData() == node->variableAccessData());
+                        break;
+                    case PhantomLocal:
+                        VALIDATE((node, edge), edge->hasVariableAccessData());
+                        VALIDATE((node, edge), edge->variableAccessData() == node->variableAccessData());
+                        VALIDATE((node, edge), edge->op() != SetLocal);
+                        break;
                     case Phi:
+                        VALIDATE((node, edge), edge->hasVariableAccessData());
+                        if (m_graph.m_unificationState == LocallyUnified)
+                            break;
+                        VALIDATE((node, edge), edge->variableAccessData() == node->variableAccessData());
+                        break;
+                    case Phantom:
+                        switch (m_graph.m_form) {
+                        case LoadStore:
+                            if (j) {
+                                VALIDATE((node, edge), edge->hasResult());
+                                break;
+                            }
+                            switch (edge->op()) {
+                            case Phi:
+                            case SetArgument:
+                            case SetLocal:
+                                break;
+                            default:
+                                VALIDATE((node, edge), edge->hasResult());
+                                break;
+                            }
+                            break;
+                        case ThreadedCPS:
+                            VALIDATE((node, edge), edge->hasResult());
+                            break;
+                        }
                         break;
                     default:
-                        VALIDATE((nodeIndex, edge), m_graph[edge].hasResult());
+                        VALIDATE((node, edge), edge->hasResult());
                         break;
                     }
                 }
@@ -115,54 +159,65 @@ public:
         }
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.m_blocks.size(); ++blockIndex) {
             BasicBlock* block = m_graph.m_blocks[blockIndex].get();
-            if (!block)
-                continue;
-            if (!block->isReachable)
+            if (!block || !block->isReachable)
                 continue;
             
-            BitVector phisInThisBlock;
-            BitVector nodesInThisBlock;
+            HashSet<Node*> phisInThisBlock;
+            HashSet<Node*> nodesInThisBlock;
             
             for (size_t i = 0; i < block->numNodes(); ++i) {
-                NodeIndex nodeIndex = block->nodeIndex(i);
-                Node& node = m_graph[nodeIndex];
-                nodesInThisBlock.set(nodeIndex);
+                Node* node = block->node(i);
+                nodesInThisBlock.add(node);
                 if (block->isPhiIndex(i))
-                    phisInThisBlock.set(nodeIndex);
-                V_EQUAL((nodeIndex), myRefCounts[nodeIndex], node.adjustedRefCount());
+                    phisInThisBlock.add(node);
+                if (m_graph.m_refCountState == ExactRefCount)
+                    V_EQUAL((node), myRefCounts.get(node), node->adjustedRefCount());
+                else
+                    V_EQUAL((node), node->refCount(), 1);
                 for (unsigned j = 0; j < m_graph.numChildren(node); ++j) {
                     Edge edge = m_graph.child(node, j);
                     if (!edge)
                         continue;
-                    VALIDATE((nodeIndex, edge), acceptableNodeIndices.get(edge.index()));
+                    VALIDATE((node, edge), acceptableNodes.contains(edge.node()));
                 }
             }
             
             for (size_t i = 0; i < block->phis.size(); ++i) {
-                NodeIndex nodeIndex = block->phis[i];
-                Node& node = m_graph[nodeIndex];
-                ASSERT(phisInThisBlock.get(nodeIndex));
-                VALIDATE((nodeIndex), node.op() == Phi);
-                VirtualRegister local = node.local();
+                Node* node = block->phis[i];
+                ASSERT(phisInThisBlock.contains(node));
+                VALIDATE((node), node->op() == Phi);
+                VirtualRegister local = node->local();
                 for (unsigned j = 0; j < m_graph.numChildren(node); ++j) {
+                    // Phi children in LoadStore form are invalid.
+                    if (m_graph.m_form == LoadStore && block->isPhiIndex(i))
+                        continue;
+                    
                     Edge edge = m_graph.child(node, j);
                     if (!edge)
                         continue;
                     
-                    VALIDATE((nodeIndex, edge),
-                             m_graph[edge].op() == SetLocal
-                             || m_graph[edge].op() == SetArgument
-                             || m_graph[edge].op() == Flush
-                             || m_graph[edge].op() == Phi);
+                    VALIDATE(
+                        (node, edge),
+                        edge->op() == SetLocal
+                        || edge->op() == SetArgument
+                        || edge->op() == Flush
+                        || edge->op() == Phi
+                        || edge->op() == ZombieHint
+                        || edge->op() == MovHint
+                        || edge->op() == MovHintAndCheck);
                     
-                    if (phisInThisBlock.get(edge.index()))
+                    if (phisInThisBlock.contains(edge.node()))
                         continue;
                     
-                    if (nodesInThisBlock.get(edge.index())) {
-                        VALIDATE((nodeIndex, edge),
-                                 m_graph[edge].op() == SetLocal
-                                 || m_graph[edge].op() == SetArgument
-                                 || m_graph[edge].op() == Flush);
+                    if (nodesInThisBlock.contains(edge.node())) {
+                        VALIDATE(
+                            (node, edge),
+                            edge->op() == SetLocal
+                            || edge->op() == ZombieHint
+                            || edge->op() == MovHint
+                            || edge->op() == MovHintAndCheck
+                            || edge->op() == SetArgument
+                            || edge->op() == Flush);
                         
                         continue;
                     }
@@ -174,33 +229,40 @@ public:
                         BasicBlock* prevBlock = m_graph.m_blocks[block->m_predecessors[k]].get();
                         VALIDATE((Block, block->m_predecessors[k]), prevBlock);
                         VALIDATE((Block, block->m_predecessors[k]), prevBlock->isReachable);
-                        NodeIndex prevNodeIndex = prevBlock->variablesAtTail.operand(local);
+                        Node* prevNode = prevBlock->variablesAtTail.operand(local);
                         // If we have a Phi that is not referring to *this* block then all predecessors
                         // must have that local available.
-                        VALIDATE((local, blockIndex, Block, block->m_predecessors[k]), prevNodeIndex != NoNode);
-                        Node* prevNode = &m_graph[prevNodeIndex];
-                        if (prevNode->op() == GetLocal) {
-                            prevNodeIndex = prevNode->child1().index();
-                            prevNode = &m_graph[prevNodeIndex];
+                        VALIDATE((local, blockIndex, Block, block->m_predecessors[k]), prevNode);
+                        switch (prevNode->op()) {
+                        case GetLocal:
+                        case Flush:
+                        case PhantomLocal:
+                            prevNode = prevNode->child1().node();
+                            break;
+                        default:
+                            break;
                         }
-                        if (node.shouldGenerate()) {
-                            VALIDATE((local, block->m_predecessors[k], prevNodeIndex),
+                        if (node->shouldGenerate()) {
+                            VALIDATE((local, block->m_predecessors[k], prevNode),
                                      prevNode->shouldGenerate());
                         }
-                        VALIDATE((local, block->m_predecessors[k], prevNodeIndex),
+                        VALIDATE(
+                            (local, block->m_predecessors[k], prevNode),
                                  prevNode->op() == SetLocal
+                            || prevNode->op() == MovHint
+                            || prevNode->op() == MovHintAndCheck
+                            || prevNode->op() == ZombieHint
                                  || prevNode->op() == SetArgument
-                                 || prevNode->op() == Flush
                                  || prevNode->op() == Phi);
-                        if (prevNodeIndex == edge.index()) {
+                        if (prevNode == edge.node()) {
                             found = true;
                             break;
                         }
                         // At this point it cannot refer into this block.
-                        VALIDATE((local, block->m_predecessors[k], prevNodeIndex), !prevBlock->isInBlock(edge.index()));
+                        VALIDATE((local, block->m_predecessors[k], prevNode), !prevBlock->isInBlock(edge.node()));
                     }
                     
-                    VALIDATE((nodeIndex, edge), found);
+                    VALIDATE((node, edge), found);
                 }
             }
             
@@ -212,48 +274,75 @@ public:
                 block->variablesAtHead.numberOfLocals());
             
             for (size_t i = 0; i < block->variablesAtHead.numberOfArguments(); ++i) {
+                VALIDATE((static_cast<VirtualRegister>(argumentToOperand(i)), blockIndex), !block->variablesAtHead.argument(i) || block->variablesAtHead.argument(i)->hasVariableAccessData());
+                if (m_graph.m_form == ThreadedCPS)
+                    VALIDATE((static_cast<VirtualRegister>(argumentToOperand(i)), blockIndex), !block->variablesAtTail.argument(i) || block->variablesAtTail.argument(i)->hasVariableAccessData());
+                
                 getLocalPositions.argument(i) = notSet;
                 setLocalPositions.argument(i) = notSet;
             }
             for (size_t i = 0; i < block->variablesAtHead.numberOfLocals(); ++i) {
+                VALIDATE((static_cast<VirtualRegister>(i), blockIndex), !block->variablesAtHead.local(i) || block->variablesAtHead.local(i)->hasVariableAccessData());
+                if (m_graph.m_form == ThreadedCPS)
+                    VALIDATE((static_cast<VirtualRegister>(i), blockIndex), !block->variablesAtTail.local(i) || block->variablesAtTail.local(i)->hasVariableAccessData());
+
                 getLocalPositions.local(i) = notSet;
                 setLocalPositions.local(i) = notSet;
             }
             
             for (size_t i = 0; i < block->size(); ++i) {
-                NodeIndex nodeIndex = block->at(i);
-                Node& node = m_graph[nodeIndex];
-                ASSERT(nodesInThisBlock.get(nodeIndex));
-                VALIDATE((nodeIndex), node.op() != Phi);
+                Node* node = block->at(i);
+                ASSERT(nodesInThisBlock.contains(node));
+                VALIDATE((node), node->op() != Phi);
                 for (unsigned j = 0; j < m_graph.numChildren(node); ++j) {
                     Edge edge = m_graph.child(node, j);
                     if (!edge)
                         continue;
-                    VALIDATE((nodeIndex, edge), nodesInThisBlock.get(nodeIndex));
+                    VALIDATE((node, edge), nodesInThisBlock.contains(edge.node()));
+                    switch (node->op()) {
+                    case PhantomLocal:
+                    case GetLocal:
+                    case Flush:
+                        break;
+                    case Phantom:
+                        if (m_graph.m_form == LoadStore && !j)
+                            break;
+                    default:
+                        VALIDATE((node, edge), !phisInThisBlock.contains(edge.node()));
+                        break;
+                    }
                 }
                 
-                if (!node.shouldGenerate())
+                if (!node->shouldGenerate())
                     continue;
-                switch (node.op()) {
+                switch (node->op()) {
                 case GetLocal:
-                    if (node.variableAccessData()->isCaptured())
+                    if (node->variableAccessData()->isCaptured())
                         break;
-                    VALIDATE((nodeIndex, blockIndex), getLocalPositions.operand(node.local()) == notSet);
-                    getLocalPositions.operand(node.local()) = i;
+                    // Ignore GetLocal's that we know to be dead, but that the graph
+                    // doesn't yet know to be dead.
+                    if (!myRefCounts.get(node))
+                        break;
+                    if (m_graph.m_form == ThreadedCPS)
+                        VALIDATE((node, blockIndex), getLocalPositions.operand(node->local()) == notSet);
+                    getLocalPositions.operand(node->local()) = i;
                     break;
                 case SetLocal:
-                    if (node.variableAccessData()->isCaptured())
+                    if (node->variableAccessData()->isCaptured())
                         break;
                     // Only record the first SetLocal. There may be multiple SetLocals
                     // because of flushing.
-                    if (setLocalPositions.operand(node.local()) != notSet)
+                    if (setLocalPositions.operand(node->local()) != notSet)
                         break;
-                    setLocalPositions.operand(node.local()) = i;
+                    setLocalPositions.operand(node->local()) = i;
                     break;
                 default:
                     break;
                 }
             }
+            
+            if (m_graph.m_form == LoadStore)
+                continue;
             
             for (size_t i = 0; i < block->variablesAtHead.numberOfArguments(); ++i) {
                 checkOperand(
@@ -288,62 +377,62 @@ private:
             getLocalPositions.operand(operand) < setLocalPositions.operand(operand));
     }
     
-    void reportValidationContext(NodeIndex nodeIndex)
+    void reportValidationContext(Node* node)
     {
-        dataLog("@%u", nodeIndex);
+        dataLogF("@%u", node->index());
     }
     
     enum BlockTag { Block };
     void reportValidationContext(BlockTag, BlockIndex blockIndex)
     {
-        dataLog("Block #%u", blockIndex);
+        dataLogF("Block #%u", blockIndex);
     }
     
-    void reportValidationContext(NodeIndex nodeIndex, Edge edge)
+    void reportValidationContext(Node* node, Edge edge)
     {
-        dataLog("@%u -> %s@%u", nodeIndex, useKindToString(edge.useKind()), edge.index());
+        dataLog(node, " -> ", edge);
+    }
+    
+    void reportValidationContext(VirtualRegister local, BlockIndex blockIndex)
+    {
+        dataLogF("r%d in Block #%u", local, blockIndex);
     }
     
     void reportValidationContext(
         VirtualRegister local, BlockIndex sourceBlockIndex, BlockTag, BlockIndex destinationBlockIndex)
     {
-        dataLog("r%d in Block #%u -> #%u", local, sourceBlockIndex, destinationBlockIndex);
+        dataLogF("r%d in Block #%u -> #%u", local, sourceBlockIndex, destinationBlockIndex);
     }
     
     void reportValidationContext(
-        VirtualRegister local, BlockIndex sourceBlockIndex, NodeIndex prevNodeIndex)
+        VirtualRegister local, BlockIndex sourceBlockIndex, Node* prevNode)
     {
-        dataLog("@%u for r%d in Block #%u", prevNodeIndex, local, sourceBlockIndex);
+        dataLogF("@%u for r%d in Block #%u", prevNode->index(), local, sourceBlockIndex);
     }
     
     void reportValidationContext(
-        NodeIndex nodeIndex, BlockIndex blockIndex)
+        Node* node, BlockIndex blockIndex)
     {
-        dataLog("@%u in Block #%u", nodeIndex, blockIndex);
+        dataLogF("@%u in Block #%u", node->index(), blockIndex);
     }
     
     void reportValidationContext(
-        NodeIndex nodeIndex, NodeIndex nodeIndex2, BlockIndex blockIndex)
+        Node* node, Node* node2, BlockIndex blockIndex)
     {
-        dataLog("@%u and @%u in Block #%u", nodeIndex, nodeIndex2, blockIndex);
+        dataLogF("@%u and @%u in Block #%u", node->index(), node2->index(), blockIndex);
     }
     
     void reportValidationContext(
-        NodeIndex nodeIndex, BlockIndex blockIndex, NodeIndex expectedNodeIndex, Edge incomingEdge)
+        Node* node, BlockIndex blockIndex, Node* expectedNode, Edge incomingEdge)
     {
-        dataLog("@%u in Block #%u, searching for @%u from @%u", nodeIndex, blockIndex, expectedNodeIndex, incomingEdge.index());
-    }
-    
-    void dumpData(unsigned value)
-    {
-        dataLog("%u", value);
+        dataLog(node, " in Block #", blockIndex, ", searching for ", expectedNode, " from ", incomingEdge);
     }
     
     void dumpGraphIfAppropriate()
     {
         if (m_graphDumpMode == DontDumpGraph)
             return;
-        dataLog("Graph at time of failure:\n");
+        dataLog("At time of failure:\n");
         m_graph.dump();
     }
 };
@@ -353,8 +442,6 @@ void validate(Graph& graph, GraphDumpMode graphDumpMode)
     Validate validationObject(graph, graphDumpMode);
     validationObject.validate();
 }
-
-#endif // DFG_ENABLE(VALIDATION)
 
 } } // namespace JSC::DFG
 

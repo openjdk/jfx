@@ -25,21 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.WeakHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-
 import javafx.application.ConditionalFeature;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.geometry.Dimension2D;
@@ -60,10 +45,28 @@ import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.SVGPath;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.embed.HostInterface;
@@ -77,44 +80,14 @@ import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
-import com.sun.javafx.sg.PGArc;
-import com.sun.javafx.sg.PGBox;
-import com.sun.javafx.sg.PGCanvas;
-import com.sun.javafx.sg.PGCircle;
-import com.sun.javafx.sg.PGCubicCurve;
-import com.sun.javafx.sg.PGEllipse;
-import com.sun.javafx.sg.PGExternalNode;
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.sg.PGImageView;
-import com.sun.javafx.sg.PGSubScene;
-import com.sun.javafx.sg.PGLine;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGPath;
-import com.sun.javafx.sg.PGPolygon;
-import com.sun.javafx.sg.PGPolyline;
-import com.sun.javafx.sg.PGQuadCurve;
-import com.sun.javafx.sg.PGRectangle;
-import com.sun.javafx.sg.PGRegion;
-import com.sun.javafx.sg.PGSVGPath;
-import com.sun.javafx.sg.PGShape;
-import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.PGAmbientLight;
-import com.sun.javafx.sg.PGCamera;
-import com.sun.javafx.sg.PGCylinder;
-import com.sun.javafx.sg.PGMeshView;
-import com.sun.javafx.sg.PGParallelCamera;
-import com.sun.javafx.sg.PGPerspectiveCamera;
-import com.sun.javafx.sg.PGPhongMaterial;
-import com.sun.javafx.sg.PGPointLight;
-import com.sun.javafx.sg.PGSphere;
-import com.sun.javafx.sg.PGTriangleMesh;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
-import sun.util.logging.PlatformLogger;
 
 
 public abstract class Toolkit {
@@ -294,11 +267,13 @@ public abstract class Toolkit {
      */
     public abstract void exitNestedEventLoop(Object key, Object rval);
 
-    public abstract TKStage createTKStage(StageStyle stageStyle, boolean primary,
-            Modality modality, TKStage owner, boolean rtl);
+    public abstract boolean isNestedLoopRunning();
 
-    public abstract TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner);
-    public abstract TKStage createTKEmbeddedStage(HostInterface host);
+    public abstract TKStage createTKStage(StageStyle stageStyle, boolean primary,
+            Modality modality, TKStage owner, boolean rtl, AccessControlContext acc);
+
+    public abstract TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner, AccessControlContext acc);
+    public abstract TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc);
 
     /**
      * Creates an AppletWindow using the provided window pointer as the parent
@@ -427,6 +402,12 @@ public abstract class Toolkit {
     public void notifyWindowListeners(List<TKStage> windows) {
         for (TKListener listener: toolkitListeners.keySet()) {
             listener.changedTopLevelWindows(windows);
+        }
+    }
+
+    public void notifyLastNestedLoopExited() {
+        for (TKListener listener: toolkitListeners.keySet()) {
+            listener.exitedLastNestedLoop();
         }
     }
 
@@ -562,28 +543,28 @@ public abstract class Toolkit {
     public abstract void
         accumulateStrokeBounds(com.sun.javafx.geom.Shape shape,
                                float bbox[],
-                               PGShape.StrokeType type,
+                               StrokeType type,
                                double strokewidth,
-                               PGShape.StrokeLineCap cap,
-                               PGShape.StrokeLineJoin join,
+                               StrokeLineCap cap,
+                               StrokeLineJoin join,
                                float miterLimit,
                                BaseTransform tx);
 
     public abstract boolean
         strokeContains(com.sun.javafx.geom.Shape shape,
                        double x, double y,
-                       PGShape.StrokeType type,
+                       StrokeType type,
                        double strokewidth,
-                       PGShape.StrokeLineCap cap,
-                       PGShape.StrokeLineJoin join,
+                       StrokeLineCap cap,
+                       StrokeLineJoin join,
                        float miterLimit);
 
     public abstract com.sun.javafx.geom.Shape
         createStrokedShape(com.sun.javafx.geom.Shape shape,
-                           PGShape.StrokeType type,
+                           StrokeType type,
                            double strokewidth,
-                           PGShape.StrokeLineCap cap,
-                           PGShape.StrokeLineJoin join,
+                           StrokeLineCap cap,
+                           StrokeLineJoin join,
                            float miterLimit,
                            float[] dashArray,
                            float dashOffset);
@@ -605,47 +586,8 @@ public abstract class Toolkit {
     public abstract FontLoader getFontLoader();
     public abstract TextLayoutFactory getTextLayoutFactory();
 
-    public abstract PGArc createPGArc();
-    public abstract PGCircle createPGCircle();
-    public abstract PGCubicCurve createPGCubicCurve();
-    public abstract PGEllipse createPGEllipse();
-    public abstract PGLine createPGLine();
-    public abstract PGPath createPGPath();
-    public abstract PGSVGPath createPGSVGPath();
-    public abstract PGPolygon createPGPolygon();
-    public abstract PGPolyline createPGPolyline();
-    public abstract PGQuadCurve createPGQuadCurve();
-    public abstract PGRectangle createPGRectangle();
-    public abstract PGImageView createPGImageView();
-    public abstract PGGroup createPGGroup();
-    public abstract PGRegion createPGRegion();
-    public abstract PGCanvas createPGCanvas();
-    public abstract PGText createPGText();
-    public abstract PGSubScene createPGSubScene();
-
     public abstract Object createSVGPathObject(SVGPath svgpath);
     public abstract Path2D createSVGPath2D(SVGPath svgpath);
-
-    // 3D API support for FX 8
-    // Shapes and mesh
-    public abstract PGBox createPGBox();
-    public abstract PGCylinder createPGCylinder();
-    public abstract PGSphere createPGSphere();
-    public abstract PGTriangleMesh createPGTriangleMesh();
-    public abstract PGMeshView createPGMeshView();
-
-    // Material
-    public abstract PGPhongMaterial createPGPhongMaterial();
-
-    // Lights
-    public abstract PGAmbientLight createPGAmbientLight();
-    public abstract PGPointLight createPGPointLight();
-
-    // Cameras
-    public abstract PGParallelCamera createPGParallelCamera();
-    public abstract PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyeAtCameraZero);
-
-    public abstract PGExternalNode createPGExternalNode();
 
     /**
      * Tests whether the pixel on the given coordinates in the given image
@@ -721,7 +663,7 @@ public abstract class Toolkit {
      */
     public static class ImageRenderingContext {
         // Node to be rendered
-        public PGNode root;
+        public NGNode root;
 
         // Viewport for rendering
         public int x;
@@ -735,7 +677,7 @@ public abstract class Toolkit {
         // Rendering parameters either from Scene or SnapShotParams
         public boolean depthBuffer;
         public Object platformPaint;
-        public PGCamera camera;
+        public NGCamera camera;
 
         // PlatformImage into which to render or null
         public Object platformImage;

@@ -8,6 +8,7 @@
 
 namespace WebCore {
 
+
 void init_plugins(bool refresh, Vector<PluginInfo> *plugins) {
 /*
     JNIEnv* env = WebCore_GetJavaEnv();
@@ -167,6 +168,7 @@ void init_plugins(bool refresh, Vector<PluginInfo> *plugins) {
 */
 }
 
+
 class PluginCache {
 public:
     PluginCache() : m_loaded(false), m_refresh(false) {}
@@ -201,6 +203,7 @@ static PluginCache& pluginCache()
     return cache;
 }
 
+/*
 void PluginData::initPlugins(const Page*)
 {
     const Vector<PluginInfo>& plugins = pluginCache().plugins();
@@ -213,5 +216,6 @@ void PluginData::refresh()
     pluginCache().reset(true);
     pluginCache().plugins(); // Force the plugins to be reloaded now.
 }
+*/
 
 }

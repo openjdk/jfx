@@ -183,11 +183,11 @@ class MeshUtil {
         b.sub(v2, v0);
 
         if (a.dot(a) > b.dot(b)) {
-            ntb[1] = a;
+            ntb[1].set(a);
             ntb[1].normalize(); // TODO: make sure each triangle area (size) will be considered
             ntb[2].cross(ntb[0], ntb[1]);
         } else {
-            ntb[2] = b;
+            ntb[2].set(b);
             ntb[2].normalize(); // TODO: make sure each triangle area (size) will be considered
             ntb[1].cross(ntb[2], ntb[0]);
         }

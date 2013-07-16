@@ -48,47 +48,41 @@ namespace JSC {
 
         static JSPropertyNameIterator* create(ExecState*, JSObject*);
 
+        static const bool needsDestruction = true;
+        static const bool hasImmortalStructure = true;
         static void destroy(JSCell*);
        
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(CompoundType, OverridesVisitChildren), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, OverridesVisitChildren), &s_info);
         }
 
         static void visitChildren(JSCell*, SlotVisitor&);
 
-        bool getOffset(size_t i, PropertyOffset& offset)
-        {
-            if (i >= m_numCacheableSlots)
-                return false;
-            offset = i + m_offsetBase;
-            return true;
-        }
-
         JSValue get(ExecState*, JSObject*, size_t i);
         size_t size() { return m_jsStringsSize; }
 
-        void setCachedStructure(JSGlobalData& globalData, Structure* structure)
+        void setCachedStructure(VM& vm, Structure* structure)
         {
             ASSERT(!m_cachedStructure);
             ASSERT(structure);
-            m_cachedStructure.set(globalData, this, structure);
+            m_cachedStructure.set(vm, this, structure);
         }
         Structure* cachedStructure() { return m_cachedStructure.get(); }
 
-        void setCachedPrototypeChain(JSGlobalData& globalData, StructureChain* cachedPrototypeChain) { m_cachedPrototypeChain.set(globalData, this, cachedPrototypeChain); }
+        void setCachedPrototypeChain(VM& vm, StructureChain* cachedPrototypeChain) { m_cachedPrototypeChain.set(vm, this, cachedPrototypeChain); }
         StructureChain* cachedPrototypeChain() { return m_cachedPrototypeChain.get(); }
 
-        static const ClassInfo s_info;
+        static JS_EXPORTDATA const ClassInfo s_info;
 
     protected:
         void finishCreation(ExecState* exec, PropertyNameArrayData* propertyNameArrayData, JSObject* object)
         {
-            Base::finishCreation(exec->globalData());
+            Base::finishCreation(exec->vm());
             PropertyNameArrayData::PropertyNameVector& propertyNameVector = propertyNameArrayData->propertyNameVector();
             for (size_t i = 0; i < m_jsStringsSize; ++i)
-                m_jsStrings[i].set(exec->globalData(), this, jsOwnedString(exec, propertyNameVector[i].ustring()));
-            m_offsetBase = object->structure()->firstValidOffset();
+                m_jsStrings[i].set(exec->vm(), this, jsOwnedString(exec, propertyNameVector[i].string()));
+            m_cachedStructureInlineCapacity = object->structure()->inlineCapacity();
         }
 
     private:
@@ -100,24 +94,23 @@ namespace JSC {
         WriteBarrier<StructureChain> m_cachedPrototypeChain;
         uint32_t m_numCacheableSlots;
         uint32_t m_jsStringsSize;
-        PropertyOffset m_offsetBase;
+        unsigned m_cachedStructureInlineCapacity;
         OwnArrayPtr<WriteBarrier<Unknown> > m_jsStrings;
     };
-
-    inline void Structure::setEnumerationCache(JSGlobalData& globalData, JSPropertyNameIterator* enumerationCache)
-    {
-        ASSERT(!isDictionary());
-        m_enumerationCache.set(globalData, this, enumerationCache);
-    }
-
-    inline JSPropertyNameIterator* Structure::enumerationCache()
-    {
-        return m_enumerationCache.get();
-    }
 
     ALWAYS_INLINE JSPropertyNameIterator* Register::propertyNameIterator() const
     {
         return jsCast<JSPropertyNameIterator*>(jsValue().asCell());
+    }
+
+    inline JSPropertyNameIterator* StructureRareData::enumerationCache()
+    {
+        return m_enumerationCache.get();
+    }
+    
+    inline void StructureRareData::setEnumerationCache(VM& vm, const Structure* owner, JSPropertyNameIterator* value)
+    {
+        m_enumerationCache.set(vm, owner, value);
     }
 
 } // namespace JSC

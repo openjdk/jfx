@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2009, 2010 Google Inc. All rights reserved.
 # Copyright (c) 2009 Apple Inc. All rights reserved.
 #
@@ -28,6 +27,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import os
 import re
 import sys
@@ -38,16 +38,17 @@ from webkitpy.tool import steps
 
 from webkitpy.common.checkout.changelog import parse_bug_id_from_changelog
 from webkitpy.common.config.committers import CommitterList
-from webkitpy.common.system.deprecated_logging import error, log
 from webkitpy.common.system.user import User
 from webkitpy.thirdparty.mock import Mock
 from webkitpy.tool.commands.abstractsequencedcommand import AbstractSequencedCommand
 from webkitpy.tool.comments import bug_comment_from_svn_revision
 from webkitpy.tool.grammar import pluralize, join_with_separators
-from webkitpy.tool.multicommandtool import AbstractDeclarativeCommand
+from webkitpy.tool.multicommandtool import Command
+
+_log = logging.getLogger(__name__)
 
 
-class CommitMessageForCurrentDiff(AbstractDeclarativeCommand):
+class CommitMessageForCurrentDiff(Command):
     name = "commit-message"
     help_text = "Print a commit message suitable for the uncommitted changes"
 
@@ -55,7 +56,7 @@ class CommitMessageForCurrentDiff(AbstractDeclarativeCommand):
         options = [
             steps.Options.git_commit,
         ]
-        AbstractDeclarativeCommand.__init__(self, options=options)
+        Command.__init__(self, options=options)
 
     def execute(self, options, args, tool):
         # This command is a useful test to make sure commit_message_for_this_commit
@@ -63,7 +64,7 @@ class CommitMessageForCurrentDiff(AbstractDeclarativeCommand):
         print "%s" % tool.checkout().commit_message_for_this_commit(options.git_commit).message()
 
 
-class CleanPendingCommit(AbstractDeclarativeCommand):
+class CleanPendingCommit(Command):
     name = "clean-pending-commit"
     help_text = "Clear r+ on obsolete patches so they do not appear in the pending-commit list."
 
@@ -74,7 +75,7 @@ class CleanPendingCommit(AbstractDeclarativeCommand):
         what_was_cleared = []
         if patch.review() == "+":
             if patch.reviewer():
-                what_was_cleared.append("%s's review+" % patch.reviewer().full_name)
+                what_was_cleared.append(u"%s's review+" % patch.reviewer().full_name)
             else:
                 what_was_cleared.append("review+")
         return join_with_separators(what_was_cleared)
@@ -88,12 +89,12 @@ class CleanPendingCommit(AbstractDeclarativeCommand):
                 flags_to_clear = self._flags_to_clear_on_patch(patch)
                 if not flags_to_clear:
                     continue
-                message = "Cleared %s from obsolete attachment %s so that this bug does not appear in http://webkit.org/pending-commit." % (flags_to_clear, patch.id())
+                message = u"Cleared %s from obsolete attachment %s so that this bug does not appear in http://webkit.org/pending-commit." % (flags_to_clear, patch.id())
                 self._tool.bugs.obsolete_attachment(patch.id(), message)
 
 
 # FIXME: This should be share more logic with AssignToCommitter and CleanPendingCommit
-class CleanReviewQueue(AbstractDeclarativeCommand):
+class CleanReviewQueue(Command):
     name = "clean-review-queue"
     help_text = "Clear r? on obsolete patches so they do not appear in the pending-review list."
 
@@ -118,7 +119,7 @@ class CleanReviewQueue(AbstractDeclarativeCommand):
             self._tool.bugs.obsolete_attachment(patch.id(), message)
 
 
-class AssignToCommitter(AbstractDeclarativeCommand):
+class AssignToCommitter(Command):
     name = "assign-to-committer"
     help_text = "Assign bug to whoever attached the most recent r+'d patch"
 
@@ -133,27 +134,27 @@ class AssignToCommitter(AbstractDeclarativeCommand):
         bug = self._tool.bugs.fetch_bug(bug_id)
         if not bug.is_unassigned():
             assigned_to_email = bug.assigned_to_email()
-            log("Bug %s is already assigned to %s (%s)." % (bug_id, assigned_to_email, committers.committer_by_email(assigned_to_email)))
+            _log.info(u"Bug %s is already assigned to %s (%s)." % (bug_id, assigned_to_email, committers.committer_by_email(assigned_to_email)))
             return
 
         reviewed_patches = bug.reviewed_patches()
         if not reviewed_patches:
-            log("Bug %s has no non-obsolete patches, ignoring." % bug_id)
+            _log.info("Bug %s has no non-obsolete patches, ignoring." % bug_id)
             return
 
         # We only need to do anything with this bug if one of the r+'d patches does not have a valid committer (cq+ set).
         if self._patches_have_commiters(reviewed_patches):
-            log("All reviewed patches on bug %s already have commit-queue+, ignoring." % bug_id)
+            _log.info("All reviewed patches on bug %s already have commit-queue+, ignoring." % bug_id)
             return
 
         latest_patch = reviewed_patches[-1]
         attacher_email = latest_patch.attacher_email()
         committer = committers.committer_by_email(attacher_email)
         if not committer:
-            log("Attacher %s is not a committer.  Bug %s likely needs commit-queue+." % (attacher_email, bug_id))
+            _log.info("Attacher %s is not a committer.  Bug %s likely needs commit-queue+." % (attacher_email, bug_id))
             return
 
-        reassign_message = "Attachment %s was posted by a committer and has review+, assigning to %s for commit." % (latest_patch.id(), committer.full_name)
+        reassign_message = u"Attachment %s was posted by a committer and has review+, assigning to %s for commit." % (latest_patch.id(), committer.full_name)
         self._tool.bugs.reassign_bug(bug_id, committer.bugzilla_email(), reassign_message)
 
     def execute(self, options, args, tool):
@@ -202,7 +203,8 @@ class AbstractPatchUploadingCommand(AbstractSequencedCommand):
         state = {}
         state["bug_id"] = self._bug_id(options, args, tool, state)
         if not state["bug_id"]:
-            error("No bug id passed and no bug url found in ChangeLogs.")
+            _log.error("No bug id passed and no bug url found in ChangeLogs.")
+            sys.exit(1)
         return state
 
 
@@ -236,6 +238,15 @@ class LandSafely(AbstractPatchUploadingCommand):
         steps.ObsoletePatches,
         steps.EnsureBugIsOpenAndAssigned,
         steps.PostDiffForCommit,
+    ]
+
+
+class HasLanded(AbstractPatchUploadingCommand):
+    name = "has-landed"
+    help_text = "Check that the current code was successfully landed and no changes remain."
+    argument_names = "[BUGID]"
+    steps = [
+        steps.HasLanded,
     ]
 
 
@@ -295,7 +306,7 @@ class EditChangeLogs(AbstractSequencedCommand):
     ]
 
 
-class PostCommits(AbstractDeclarativeCommand):
+class PostCommits(Command):
     name = "post-commits"
     help_text = "Attach a range of local commits to bugs as patch files"
     argument_names = "COMMITISH"
@@ -309,7 +320,7 @@ class PostCommits(AbstractDeclarativeCommand):
             steps.Options.review,
             steps.Options.request_commit,
         ]
-        AbstractDeclarativeCommand.__init__(self, options=options, requires_local_commits=True)
+        Command.__init__(self, options=options, requires_local_commits=True)
 
     def _comment_text_for_commit(self, options, commit_message, tool, commit_id):
         comment_text = None
@@ -322,7 +333,8 @@ class PostCommits(AbstractDeclarativeCommand):
     def execute(self, options, args, tool):
         commit_ids = tool.scm().commit_ids_from_commitish_arguments(args)
         if len(commit_ids) > 10: # We could lower this limit, 10 is too many for one bug as-is.
-            error("webkit-patch does not support attaching %s at once.  Are you sure you passed the right commit range?" % (pluralize("patch", len(commit_ids))))
+            _log.error("webkit-patch does not support attaching %s at once.  Are you sure you passed the right commit range?" % (pluralize("patch", len(commit_ids))))
+            sys.exit(1)
 
         have_obsoleted_patches = set()
         for commit_id in commit_ids:
@@ -331,7 +343,7 @@ class PostCommits(AbstractDeclarativeCommand):
             # Prefer --bug-id=, then a bug url in the commit message, then a bug url in the entire commit diff (i.e. ChangeLogs).
             bug_id = options.bug_id or parse_bug_id_from_changelog(commit_message.message()) or parse_bug_id_from_changelog(tool.scm().create_patch(git_commit=commit_id))
             if not bug_id:
-                log("Skipping %s: No bug id found in commit or specified with --bug-id." % commit_id)
+                _log.info("Skipping %s: No bug id found in commit or specified with --bug-id." % commit_id)
                 continue
 
             if options.obsolete_patches and bug_id not in have_obsoleted_patches:
@@ -346,7 +358,7 @@ class PostCommits(AbstractDeclarativeCommand):
 
 
 # FIXME: This command needs to be brought into the modern age with steps and CommitInfo.
-class MarkBugFixed(AbstractDeclarativeCommand):
+class MarkBugFixed(Command):
     name = "mark-bug-fixed"
     help_text = "Mark the specified bug as fixed"
     argument_names = "[SVN_REVISION]"
@@ -357,7 +369,7 @@ class MarkBugFixed(AbstractDeclarativeCommand):
             make_option("--open", action="store_true", default=False, dest="open_bug", help="Open bug in default web browser (Mac only)."),
             make_option("--update-only", action="store_true", default=False, dest="update_only", help="Add comment to the bug, but do not close it."),
         ]
-        AbstractDeclarativeCommand.__init__(self, options=options)
+        Command.__init__(self, options=options)
 
     # FIXME: We should be using checkout().changelog_entries_for_revision(...) instead here.
     def _fetch_commit_log(self, tool, svn_revision):
@@ -382,8 +394,9 @@ class MarkBugFixed(AbstractDeclarativeCommand):
                 not_found.append("bug id")
             if not svn_revision:
                 not_found.append("svn revision")
-            error("Could not find %s on command-line or in %s."
+            _log.error("Could not find %s on command-line or in %s."
                   % (" or ".join(not_found), "r%s" % svn_revision if svn_revision else "last commit"))
+            sys.exit(1)
 
         return (bug_id, svn_revision)
 
@@ -395,15 +408,16 @@ class MarkBugFixed(AbstractDeclarativeCommand):
             if re.match("^r[0-9]+$", svn_revision, re.IGNORECASE):
                 svn_revision = svn_revision[1:]
             if not re.match("^[0-9]+$", svn_revision):
-                error("Invalid svn revision: '%s'" % svn_revision)
+                _log.error("Invalid svn revision: '%s'" % svn_revision)
+                sys.exit(1)
 
         needs_prompt = False
         if not bug_id or not svn_revision:
             needs_prompt = True
             (bug_id, svn_revision) = self._determine_bug_id_and_svn_revision(tool, bug_id, svn_revision)
 
-        log("Bug: <%s> %s" % (tool.bugs.bug_url_for_bug_id(bug_id), tool.bugs.fetch_bug_dictionary(bug_id)["title"]))
-        log("Revision: %s" % svn_revision)
+        _log.info("Bug: <%s> %s" % (tool.bugs.bug_url_for_bug_id(bug_id), tool.bugs.fetch_bug_dictionary(bug_id)["title"]))
+        _log.info("Revision: %s" % svn_revision)
 
         if options.open_bug:
             tool.user.open_url(tool.bugs.bug_url_for_bug_id(bug_id))
@@ -417,15 +431,15 @@ class MarkBugFixed(AbstractDeclarativeCommand):
             bug_comment = "%s\n\n%s" % (options.comment, bug_comment)
 
         if options.update_only:
-            log("Adding comment to Bug %s." % bug_id)
+            _log.info("Adding comment to Bug %s." % bug_id)
             tool.bugs.post_comment_to_bug(bug_id, bug_comment)
         else:
-            log("Adding comment to Bug %s and marking as Resolved/Fixed." % bug_id)
+            _log.info("Adding comment to Bug %s and marking as Resolved/Fixed." % bug_id)
             tool.bugs.close_bug_as_fixed(bug_id, bug_comment)
 
 
 # FIXME: Requires unit test.  Blocking issue: too complex for now.
-class CreateBug(AbstractDeclarativeCommand):
+class CreateBug(Command):
     name = "create-bug"
     help_text = "Create a bug from local changes or local commits"
     argument_names = "[COMMITISH]"
@@ -438,12 +452,13 @@ class CreateBug(AbstractDeclarativeCommand):
             make_option("--no-review", action="store_false", dest="review", default=True, help="Do not mark the patch for review."),
             make_option("--request-commit", action="store_true", dest="request_commit", default=False, help="Mark the patch as needing auto-commit after review."),
         ]
-        AbstractDeclarativeCommand.__init__(self, options=options)
+        Command.__init__(self, options=options)
 
     def create_bug_from_commit(self, options, args, tool):
         commit_ids = tool.scm().commit_ids_from_commitish_arguments(args)
         if len(commit_ids) > 3:
-            error("Are you sure you want to create one bug with %s patches?" % len(commit_ids))
+            _log.error("Are you sure you want to create one bug with %s patches?" % len(commit_ids))
+            sys.exit(1)
 
         commit_id = commit_ids[0]
 
@@ -499,7 +514,8 @@ class CreateBug(AbstractDeclarativeCommand):
     def execute(self, options, args, tool):
         if len(args):
             if (not tool.scm().supports_local_commits()):
-                error("Extra arguments not supported; patch is taken from working directory.")
+                _log.error("Extra arguments not supported; patch is taken from working directory.")
+                sys.exit(1)
             self.create_bug_from_commit(options, args, tool)
         else:
             self.create_bug_from_patch(options, args, tool)

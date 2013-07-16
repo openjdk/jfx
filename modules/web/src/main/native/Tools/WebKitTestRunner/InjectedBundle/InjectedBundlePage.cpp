@@ -41,9 +41,16 @@
 #include <WebKit2/WKBundleNavigationAction.h>
 #include <WebKit2/WKBundleNodeHandlePrivate.h>
 #include <WebKit2/WKBundlePagePrivate.h>
+#include <WebKit2/WKBundlePrivate.h>
+#include <WebKit2/WKSecurityOrigin.h>
 #include <WebKit2/WKURLRequest.h>
+#include <wtf/HashMap.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
+
+#if USE(CF) && !PLATFORM(QT)
+#include "WebArchiveDumpSupport.h"
+#endif
 
 #if PLATFORM(QT)
 #include "DumpRenderTreeSupportQt.h"
@@ -93,11 +100,11 @@ static WTF::String dumpPath(JSGlobalContextRef context, JSObjectRef nodeValue)
 
     JSValueRef parentNode = propertyValue(context, nodeValue, "parentNode");
 
-    WTF::StringBuilder stringBuilder;
+    StringBuilder stringBuilder;
     stringBuilder.append(toWTFString(nodeName));
 
     if (parentNode && JSValueIsObject(context, parentNode)) {
-        stringBuilder.append(" > ");
+        stringBuilder.appendLiteral(" > ");
         stringBuilder.append(dumpPath(context, (JSObjectRef)parentNode));
     }
 
@@ -142,14 +149,14 @@ static WTF::String rangeToStr(WKBundlePageRef page, WKBundleScriptWorldRef world
     int startOffset = propertyValueInt(context, rangeObject, "startOffset");
     int endOffset = propertyValueInt(context, rangeObject, "endOffset");
 
-    WTF::StringBuilder stringBuilder;
-    stringBuilder.append("range from ");
-    stringBuilder.append(WTF::String::number(startOffset));
-    stringBuilder.append(" of ");
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("range from ");
+    stringBuilder.appendNumber(startOffset);
+    stringBuilder.appendLiteral(" of ");
     stringBuilder.append(dumpPath(context, startNodeObject));
-    stringBuilder.append(" to ");
-    stringBuilder.append(WTF::String::number(endOffset));
-    stringBuilder.append(" of ");
+    stringBuilder.appendLiteral(" to ");
+    stringBuilder.appendNumber(endOffset);
+    stringBuilder.appendLiteral(" of ");
     stringBuilder.append(dumpPath(context, endNodeObject));
     return stringBuilder.toString();
 }
@@ -178,33 +185,107 @@ static WTF::String styleDecToStr(WKBundleCSSStyleDeclarationRef style)
     // DumpRenderTree calls -[DOMCSSStyleDeclaration description], which just dumps class name and object address.
     // No existing tests actually hit this code path at the time of this writing, because WebCore doesn't call
     // the editing client if the styling operation source is CommandFromDOM or CommandFromDOMWithUserInterface.
-    WTF::StringBuilder stringBuilder;
-    stringBuilder.append("<DOMCSSStyleDeclaration ADDRESS>");
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("<DOMCSSStyleDeclaration ADDRESS>");
+    return stringBuilder.toString();
+}
+
+static WTF::String securityOriginToStr(WKSecurityOriginRef origin)
+{
+    StringBuilder stringBuilder;
+    stringBuilder.append('{');
+    stringBuilder.append(toWTFString(adoptWK(WKSecurityOriginCopyProtocol(origin))));
+    stringBuilder.appendLiteral(", ");
+    stringBuilder.append(toWTFString(adoptWK(WKSecurityOriginCopyHost(origin))));
+    stringBuilder.appendLiteral(", ");
+    stringBuilder.appendNumber(WKSecurityOriginGetPort(origin));
+    stringBuilder.append('}');
+
     return stringBuilder.toString();
 }
 
 static WTF::String frameToStr(WKBundleFrameRef frame)
 {
     WKRetainPtr<WKStringRef> name(AdoptWK, WKBundleFrameCopyName(frame));
-    WTF::StringBuilder stringBuilder;
+    StringBuilder stringBuilder;
     if (WKBundleFrameIsMainFrame(frame)) {
         if (!WKStringIsEmpty(name.get())) {
-            stringBuilder.append("main frame \"");
+            stringBuilder.appendLiteral("main frame \"");
             stringBuilder.append(toWTFString(name));
-            stringBuilder.append("\"");
+            stringBuilder.append('"');
         } else
-            stringBuilder.append("main frame");
+            stringBuilder.appendLiteral("main frame");
     } else {
         if (!WKStringIsEmpty(name.get())) {
-            stringBuilder.append("frame \"");
+            stringBuilder.appendLiteral("frame \"");
             stringBuilder.append(toWTFString(name));
-            stringBuilder.append("\"");
+            stringBuilder.append('"');
         }
         else
-            stringBuilder.append("frame (anonymous)");
+            stringBuilder.appendLiteral("frame (anonymous)");
     }
     
     return stringBuilder.toString();
+}
+
+static inline bool isLocalFileScheme(WKStringRef scheme)
+{
+    return WKStringIsEqualToUTF8CStringIgnoringCase(scheme, "file");
+}
+
+static const char divider = '/';
+
+static inline WTF::String pathSuitableForTestResult(WKURLRef fileUrl)
+{
+    if (!fileUrl)
+        return String();
+
+    WKRetainPtr<WKStringRef> schemeString = adoptWK(WKURLCopyScheme(fileUrl));
+    if (!isLocalFileScheme(schemeString.get()))
+        return toWTFString(adoptWK(WKURLCopyString(fileUrl)));
+
+    String pathString = toWTFString(adoptWK(WKURLCopyPath(fileUrl)));
+    StringBuilder stringBuilder;
+
+    // Remove the leading path from file urls.
+    const size_t indexBaseName = pathString.reverseFind(divider);
+    if (indexBaseName != notFound) {
+        const size_t indexDirName = pathString.reverseFind(divider, indexBaseName - 1);
+        if (indexDirName != notFound)
+            stringBuilder.append(pathString.substring(indexDirName + 1, indexBaseName - indexDirName - 1));
+        stringBuilder.append(divider);
+        stringBuilder.append(pathString.substring(indexBaseName + 1)); // Filename.
+    } else {
+        stringBuilder.append(divider);
+        stringBuilder.append(pathString); // Return "/pathString".
+    }
+
+    return stringBuilder.toString();
+}
+
+static inline WTF::String urlSuitableForTestResult(WKURLRef fileUrl)
+{
+    if (!fileUrl)
+        return String();
+
+    WKRetainPtr<WKStringRef> schemeString = adoptWK(WKURLCopyScheme(fileUrl));
+    if (!isLocalFileScheme(schemeString.get()))
+        return toWTFString(adoptWK(WKURLCopyString(fileUrl)));
+
+    WTF::String urlString = toWTFString(adoptWK(WKURLCopyString(fileUrl)));
+    const size_t indexBaseName = urlString.reverseFind(divider);
+
+    return (indexBaseName == notFound) ? urlString : urlString.substring(indexBaseName + 1);
+}
+
+static HashMap<uint64_t, String> assignedUrlsCache;
+
+static inline void dumpResourceURL(uint64_t identifier, StringBuilder& stringBuilder)
+{
+    if (assignedUrlsCache.contains(identifier))
+        stringBuilder.append(assignedUrlsCache.get(identifier));
+    else
+        stringBuilder.appendLiteral("<unknown>");
 }
 
 InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
@@ -241,7 +322,13 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
         0, // didReconnectDOMWindowExtensionToGlobalObject
         0, // willDestroyGlobalObjectForDOMWindowExtension
         didFinishProgress, // didFinishProgress
-        0 // shouldForceUniversalAccessFromLocalURL
+        0, // shouldForceUniversalAccessFromLocalURL
+        0, // didReceiveIntentForFrame
+        0, // registerIntentServiceForFrame
+        0, // didLayout
+        0, // featuresUsedInPage
+        0, // willLoadURLRequest
+        0, // willLoadDataRequest
     };
     WKBundlePageSetPageLoaderClient(m_page, &loaderClient);
 
@@ -254,7 +341,7 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
         didReceiveContentLengthForResource,
         didFinishLoadForResource,
         didFailLoadForResource,
-        0, // shouldCacheResponse
+        shouldCacheResponse,
         0 // shouldUseCredentialStorage
     };
     WKBundlePageSetResourceLoadClient(m_page, &resourceLoadClient);
@@ -286,6 +373,12 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
         0, /*statusBarIsVisible*/
         0, /*menuBarIsVisible*/
         0, /*toolbarsAreVisible*/
+        didReachApplicationCacheOriginQuota,
+        didExceedDatabaseQuota,
+        0, /*plugInStartLabelTitle*/
+        0, /*plugInStartLabelSubtitle*/
+        0, /*plugInExtraStyleSheet*/
+        0, /*plugInExtraScript*/
     };
     WKBundlePageSetUIClient(m_page, &uiClient);
 
@@ -302,7 +395,10 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
         didBeginEditing,
         didEndEditing,
         didChange,
-        didChangeSelection
+        didChangeSelection,
+        0, /* willWriteToPasteboard */
+        0, /* getPasteboardDataForRange */
+        0  /* didWriteToPasteboard */
     };
     WKBundlePageSetEditorClient(m_page, &editorClient);
 
@@ -352,38 +448,113 @@ void InjectedBundlePage::resetAfterTest()
     WKBundleFrameRef frame = WKBundlePageGetMainFrame(m_page);
     JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
 #if PLATFORM(QT)
-    DumpRenderTreeSupportQt::injectInternalsObject(context);
+    DumpRenderTreeSupportQt::resetInternalsObject(context);
 #else
     WebCoreTestSupport::resetInternalsObject(context);
 #endif
+    assignedUrlsCache.clear();
 }
 
 // Loader Client Callbacks
 
 // String output must be identical to -[WebFrame _drt_descriptionSuitableForTestResult].
-static void dumpFrameDescriptionSuitableForTestResult(WKBundleFrameRef frame)
+static void dumpFrameDescriptionSuitableForTestResult(WKBundleFrameRef frame, StringBuilder& stringBuilder)
 {
     WKRetainPtr<WKStringRef> name(AdoptWK, WKBundleFrameCopyName(frame));
     if (WKBundleFrameIsMainFrame(frame)) {
         if (WKStringIsEmpty(name.get())) {
-            InjectedBundle::shared().stringBuilder()->append("main frame");
+            stringBuilder.appendLiteral("main frame");
             return;
         }
 
-        InjectedBundle::shared().stringBuilder()->append("main frame \"");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(name));
-        InjectedBundle::shared().stringBuilder()->append("\"");
+        stringBuilder.appendLiteral("main frame \"");
+        stringBuilder.append(toWTFString(name));
+        stringBuilder.append('"');
         return;
     }
 
     if (WKStringIsEmpty(name.get())) {
-        InjectedBundle::shared().stringBuilder()->append("frame (anonymous)");
+        stringBuilder.appendLiteral("frame (anonymous)");
         return;
     }
 
-    InjectedBundle::shared().stringBuilder()->append("frame \"");
-    InjectedBundle::shared().stringBuilder()->append(toWTFString(name));
-    InjectedBundle::shared().stringBuilder()->append("\"");
+    stringBuilder.appendLiteral("frame \"");
+    stringBuilder.append(toWTFString(name));
+    stringBuilder.append('"');
+}
+
+static void dumpLoadEvent(WKBundleFrameRef frame, const char* eventName)
+{
+    StringBuilder stringBuilder;
+    dumpFrameDescriptionSuitableForTestResult(frame, stringBuilder);
+    stringBuilder.appendLiteral(" - ");
+    stringBuilder.append(eventName);
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
+}
+
+static inline void dumpRequestDescriptionSuitableForTestResult(WKURLRequestRef request, StringBuilder& stringBuilder)
+{
+    WKRetainPtr<WKURLRef> url = adoptWK(WKURLRequestCopyURL(request));
+    WKRetainPtr<WKURLRef> firstParty = adoptWK(WKURLRequestCopyFirstPartyForCookies(request));
+    WKRetainPtr<WKStringRef> httpMethod = adoptWK(WKURLRequestCopyHTTPMethod(request));
+
+    stringBuilder.appendLiteral("<NSURLRequest URL ");
+    stringBuilder.append(pathSuitableForTestResult(url.get()));
+    stringBuilder.appendLiteral(", main document URL ");
+    stringBuilder.append(urlSuitableForTestResult(firstParty.get()));
+    stringBuilder.appendLiteral(", http method ");
+
+    if (WKStringIsEmpty(httpMethod.get()))
+        stringBuilder.appendLiteral("(none)");
+    else
+        stringBuilder.append(toWTFString(httpMethod));
+
+    stringBuilder.append('>');
+}
+
+static inline void dumpResponseDescriptionSuitableForTestResult(WKURLResponseRef response, StringBuilder& stringBuilder)
+{
+    WKRetainPtr<WKURLRef> url = adoptWK(WKURLResponseCopyURL(response));
+    if (!url) {
+        stringBuilder.appendLiteral("(null)");
+        return;
+    }
+    stringBuilder.appendLiteral("<NSURLResponse ");
+    stringBuilder.append(pathSuitableForTestResult(url.get()));
+    stringBuilder.appendLiteral(", http status code ");
+    stringBuilder.appendNumber(WKURLResponseHTTPStatusCode(response));
+    stringBuilder.append('>');
+}
+
+static inline void dumpErrorDescriptionSuitableForTestResult(WKErrorRef error, StringBuilder& stringBuilder)
+{
+    WKRetainPtr<WKStringRef> errorDomain = adoptWK(WKErrorCopyDomain(error));
+    int errorCode = WKErrorGetErrorCode(error);
+
+    // We need to do some error mapping here to match the test expectations (Mac error names are expected).
+    if (WKStringIsEqualToUTF8CString(errorDomain.get(), "WebKitNetworkError")) {
+        errorDomain = adoptWK(WKStringCreateWithUTF8CString("NSURLErrorDomain"));
+        errorCode = -999;
+    }
+
+    if (WKStringIsEqualToUTF8CString(errorDomain.get(), "WebKitPolicyError"))
+        errorDomain = adoptWK(WKStringCreateWithUTF8CString("WebKitErrorDomain"));
+
+    stringBuilder.appendLiteral("<NSError domain ");
+    stringBuilder.append(toWTFString(errorDomain));
+    stringBuilder.appendLiteral(", code ");
+    stringBuilder.appendNumber(errorCode);
+
+    WKRetainPtr<WKURLRef> url = adoptWK(WKErrorCopyFailingURL(error));
+    if (url.get()) {
+        WKRetainPtr<WKStringRef> urlString = adoptWK(WKURLCopyString(url.get()));
+        stringBuilder.appendLiteral(", failing URL \"");
+        stringBuilder.append(toWTFString(urlString));
+        stringBuilder.append('"');
+    }
+
+    stringBuilder.append('>');
 }
 
 void InjectedBundlePage::didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame, WKTypeRef*, const void *clientInfo)
@@ -498,7 +669,12 @@ void InjectedBundlePage::didFinishLoadForResource(WKBundlePageRef page, WKBundle
 
 void InjectedBundlePage::didFailLoadForResource(WKBundlePageRef page, WKBundleFrameRef frame, uint64_t identifier, WKErrorRef error, const void* clientInfo)
 {
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didFinishLoadForResource(page, frame, identifier, error);
+    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didFailLoadForResource(page, frame, identifier, error);
+}
+
+bool InjectedBundlePage::shouldCacheResponse(WKBundlePageRef page, WKBundleFrameRef frame, uint64_t identifier, const void* clientInfo)
+{
+    return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->shouldCacheResponse(page, frame, identifier);
 }
 
 void InjectedBundlePage::didStartProvisionalLoadForFrame(WKBundleFrameRef frame)
@@ -506,33 +682,38 @@ void InjectedBundlePage::didStartProvisionalLoadForFrame(WKBundleFrameRef frame)
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFrameLoadCallbacks()) {
-        dumpFrameDescriptionSuitableForTestResult(frame);
-        InjectedBundle::shared().stringBuilder()->append(" - didStartProvisionalLoadForFrame\n");
-    }
+    platformDidStartProvisionalLoadForFrame(frame);
 
-    if (InjectedBundle::shared().topLoadingFrame())
-        return;
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        dumpLoadEvent(frame, "didStartProvisionalLoadForFrame");
+
+    if (!InjectedBundle::shared().topLoadingFrame())
     InjectedBundle::shared().setTopLoadingFrame(frame);
+
+    if (InjectedBundle::shared().testRunner()->shouldStopProvisionalFrameLoads())
+        dumpLoadEvent(frame, "stopping load in didStartProvisionalLoadForFrame callback");
 }
 
 void InjectedBundlePage::didReceiveServerRedirectForProvisionalLoadForFrame(WKBundleFrameRef frame)
 {
+    if (!InjectedBundle::shared().isTestRunning())
+        return;
+
+    if (!InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        return;
+
+    dumpLoadEvent(frame, "didReceiveServerRedirectForProvisionalLoadForFrame");
 }
 
-void InjectedBundlePage::didFailProvisionalLoadWithErrorForFrame(WKBundleFrameRef frame, WKErrorRef error)
+void InjectedBundlePage::didFailProvisionalLoadWithErrorForFrame(WKBundleFrameRef frame, WKErrorRef)
 {
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (frame != InjectedBundle::shared().topLoadingFrame())
-        return;
-    InjectedBundle::shared().setTopLoadingFrame(0);
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        dumpLoadEvent(frame, "didFailProvisionalLoadWithError");
 
-    if (InjectedBundle::shared().layoutTestController()->waitToDump())
-        return;
-
-    InjectedBundle::shared().done();
+    frameDidChangeLocation(frame);
 }
 
 void InjectedBundlePage::didCommitLoadForFrame(WKBundleFrameRef frame)
@@ -540,11 +721,10 @@ void InjectedBundlePage::didCommitLoadForFrame(WKBundleFrameRef frame)
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (!InjectedBundle::shared().layoutTestController()->shouldDumpFrameLoadCallbacks())
+    if (!InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
         return;
 
-    dumpFrameDescriptionSuitableForTestResult(frame);
-    InjectedBundle::shared().stringBuilder()->append(" - didCommitLoadForFrame\n");
+    dumpLoadEvent(frame, "didCommitLoadForFrame");
 }
 
 void InjectedBundlePage::didFinishProgress()
@@ -552,49 +732,50 @@ void InjectedBundlePage::didFinishProgress()
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (!InjectedBundle::shared().layoutTestController()->shouldDumpProgressFinishedCallback())
+    if (!InjectedBundle::shared().testRunner()->shouldDumpProgressFinishedCallback())
         return;
 
-    InjectedBundle::shared().stringBuilder()->append("postProgressFinishedNotification\n");
+    InjectedBundle::shared().outputText("postProgressFinishedNotification\n");
 }
 
 enum FrameNamePolicy { ShouldNotIncludeFrameName, ShouldIncludeFrameName };
 
-static void dumpFrameScrollPosition(WKBundleFrameRef frame, FrameNamePolicy shouldIncludeFrameName = ShouldNotIncludeFrameName)
+static void dumpFrameScrollPosition(WKBundleFrameRef frame, StringBuilder& stringBuilder, FrameNamePolicy shouldIncludeFrameName = ShouldNotIncludeFrameName)
 {
     double x = numericWindowPropertyValue(frame, "pageXOffset");
     double y = numericWindowPropertyValue(frame, "pageYOffset");
-    if (fabs(x) > 0.00000001 || fabs(y) > 0.00000001) {
+    if (fabs(x) <= 0.00000001 && fabs(y) <= 0.00000001)
+        return;
+
         if (shouldIncludeFrameName) {
             WKRetainPtr<WKStringRef> name(AdoptWK, WKBundleFrameCopyName(frame));
-            InjectedBundle::shared().stringBuilder()->append("frame '");
-            InjectedBundle::shared().stringBuilder()->append(toWTFString(name));
-            InjectedBundle::shared().stringBuilder()->append("' ");
+        stringBuilder.appendLiteral("frame '");
+        stringBuilder.append(toWTFString(name));
+        stringBuilder.appendLiteral("' ");
         }
-        InjectedBundle::shared().stringBuilder()->append("scrolled to ");
-        InjectedBundle::shared().stringBuilder()->append(WTF::String::number(x));
-        InjectedBundle::shared().stringBuilder()->append(",");
-        InjectedBundle::shared().stringBuilder()->append(WTF::String::number(y));
-        InjectedBundle::shared().stringBuilder()->append("\n");
-    }
+    stringBuilder.appendLiteral("scrolled to ");
+    stringBuilder.append(WTF::String::number(x));
+    stringBuilder.append(',');
+    stringBuilder.append(WTF::String::number(y));
+    stringBuilder.append('\n');
 }
 
-static void dumpDescendantFrameScrollPositions(WKBundleFrameRef frame)
+static void dumpDescendantFrameScrollPositions(WKBundleFrameRef frame, StringBuilder& stringBuilder)
 {
     WKRetainPtr<WKArrayRef> childFrames(AdoptWK, WKBundleFrameCopyChildFrames(frame));
     size_t size = WKArrayGetSize(childFrames.get());
     for (size_t i = 0; i < size; ++i) {
         WKBundleFrameRef subframe = static_cast<WKBundleFrameRef>(WKArrayGetItemAtIndex(childFrames.get(), i));
-        dumpFrameScrollPosition(subframe, ShouldIncludeFrameName);
-        dumpDescendantFrameScrollPositions(subframe);
+        dumpFrameScrollPosition(subframe, stringBuilder, ShouldIncludeFrameName);
+        dumpDescendantFrameScrollPositions(subframe, stringBuilder);
     }
 }
 
-void InjectedBundlePage::dumpAllFrameScrollPositions()
+void InjectedBundlePage::dumpAllFrameScrollPositions(StringBuilder& stringBuilder)
 {
     WKBundleFrameRef frame = WKBundlePageGetMainFrame(m_page);
-    dumpFrameScrollPosition(frame);
-    dumpDescendantFrameScrollPositions(frame);
+    dumpFrameScrollPosition(frame, stringBuilder);
+    dumpDescendantFrameScrollPositions(frame, stringBuilder);
 }
 
 static JSRetainPtr<JSStringRef> toJS(const char* string)
@@ -621,7 +802,7 @@ static bool hasDocumentElement(WKBundleFrameRef frame)
     return JSValueToBoolean(context, documentElementValue);
 }
 
-static void dumpFrameText(WKBundleFrameRef frame)
+static void dumpFrameText(WKBundleFrameRef frame, StringBuilder& stringBuilder)
 {
     // If the frame doesn't have a document element, its inner text will be an empty string, so
     // we'll end up just appending a single newline below. But DumpRenderTree doesn't append
@@ -630,37 +811,57 @@ static void dumpFrameText(WKBundleFrameRef frame)
         return;
 
     WKRetainPtr<WKStringRef> text(AdoptWK, WKBundleFrameCopyInnerText(frame));
-    InjectedBundle::shared().stringBuilder()->append(toWTFString(text));
-    InjectedBundle::shared().stringBuilder()->append("\n");
+    stringBuilder.append(toWTFString(text));
+    stringBuilder.append('\n');
 }
 
-static void dumpDescendantFramesText(WKBundleFrameRef frame)
+static void dumpDescendantFramesText(WKBundleFrameRef frame, StringBuilder& stringBuilder)
 {
     WKRetainPtr<WKArrayRef> childFrames(AdoptWK, WKBundleFrameCopyChildFrames(frame));
     size_t size = WKArrayGetSize(childFrames.get());
     for (size_t i = 0; i < size; ++i) {
         WKBundleFrameRef subframe = static_cast<WKBundleFrameRef>(WKArrayGetItemAtIndex(childFrames.get(), i));
         WKRetainPtr<WKStringRef> subframeName(AdoptWK, WKBundleFrameCopyName(subframe));
-        InjectedBundle::shared().stringBuilder()->append("\n--------\nFrame: '");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(subframeName));
-        InjectedBundle::shared().stringBuilder()->append("'\n--------\n");
-        dumpFrameText(subframe);
-        dumpDescendantFramesText(subframe);
+
+        // DumpRenderTree ignores empty frames, so do the same thing here.
+        if (!hasDocumentElement(subframe))
+            continue;
+
+        stringBuilder.appendLiteral("\n--------\nFrame: '");
+        stringBuilder.append(toWTFString(subframeName));
+        stringBuilder.appendLiteral("'\n--------\n");
+
+        dumpFrameText(subframe, stringBuilder);
+        dumpDescendantFramesText(subframe, stringBuilder);
     }
 }
 
-void InjectedBundlePage::dumpAllFramesText()
+void InjectedBundlePage::dumpAllFramesText(StringBuilder& stringBuilder)
 {
     WKBundleFrameRef frame = WKBundlePageGetMainFrame(m_page);
-    dumpFrameText(frame);
-    dumpDescendantFramesText(frame);
+    dumpFrameText(frame, stringBuilder);
+    dumpDescendantFramesText(frame, stringBuilder);
+}
+
+
+void InjectedBundlePage::dumpDOMAsWebArchive(WKBundleFrameRef frame, StringBuilder& stringBuilder)
+{
+#if USE(CF) && !PLATFORM(QT)
+    WKRetainPtr<WKDataRef> wkData = adoptWK(WKBundleFrameCopyWebArchive(frame));
+    RetainPtr<CFDataRef> cfData = adoptCF(CFDataCreate(0, WKDataGetBytes(wkData.get()), WKDataGetSize(wkData.get())));
+    RetainPtr<CFStringRef> cfString = adoptCF(createXMLStringFromWebArchiveData(cfData.get()));
+    stringBuilder.append(cfString.get());
+#else
+    UNUSED_PARAM(frame);
+    UNUSED_PARAM(stringBuilder);
+#endif
 }
 
 void InjectedBundlePage::dump()
 {
     ASSERT(InjectedBundle::shared().isTestRunning());
 
-    InjectedBundle::shared().layoutTestController()->invalidateWaitToDumpWatchdogTimer();
+    InjectedBundle::shared().testRunner()->invalidateWaitToDumpWatchdogTimer();
 
     // Force a paint before dumping. This matches DumpRenderTree on Windows. (DumpRenderTree on Mac
     // does this at a slightly different time.) See <http://webkit.org/b/55469> for details.
@@ -669,36 +870,50 @@ void InjectedBundlePage::dump()
     WKBundleFrameRef frame = WKBundlePageGetMainFrame(m_page);
     WTF::String url = toWTFString(adoptWK(WKURLCopyString(adoptWK(WKBundleFrameCopyURL(frame)).get())));
     if (url.find("dumpAsText/") != WTF::notFound)
-        InjectedBundle::shared().layoutTestController()->dumpAsText(false);
+        InjectedBundle::shared().testRunner()->dumpAsText(false);
 
-    switch (InjectedBundle::shared().layoutTestController()->whatToDump()) {
-    case LayoutTestController::RenderTree: {
-        WKRetainPtr<WKStringRef> text(AdoptWK, WKBundlePageCopyRenderTreeExternalRepresentation(m_page));
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(text));
+    StringBuilder stringBuilder;
+
+    switch (InjectedBundle::shared().testRunner()->whatToDump()) {
+    case TestRunner::RenderTree: {
+        if (InjectedBundle::shared().testRunner()->isPrinting())
+            stringBuilder.append(toWTFString(adoptWK(WKBundlePageCopyRenderTreeExternalRepresentationForPrinting(m_page)).get()));
+        else
+            stringBuilder.append(toWTFString(adoptWK(WKBundlePageCopyRenderTreeExternalRepresentation(m_page)).get()));
         break;
     }
-    case LayoutTestController::MainFrameText:
-        dumpFrameText(WKBundlePageGetMainFrame(m_page));
+    case TestRunner::MainFrameText:
+        dumpFrameText(WKBundlePageGetMainFrame(m_page), stringBuilder);
         break;
-    case LayoutTestController::AllFramesText:
-        dumpAllFramesText();
+    case TestRunner::AllFramesText:
+        dumpAllFramesText(stringBuilder);
+        break;
+    case TestRunner::Audio:
+        break;
+    case TestRunner::DOMAsWebArchive:
+        dumpDOMAsWebArchive(frame, stringBuilder);
         break;
     }
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpAllFrameScrollPositions())
-        dumpAllFrameScrollPositions();
-    else if (InjectedBundle::shared().layoutTestController()->shouldDumpMainFrameScrollPosition())
-        dumpFrameScrollPosition(WKBundlePageGetMainFrame(m_page));
+    if (InjectedBundle::shared().testRunner()->shouldDumpAllFrameScrollPositions())
+        dumpAllFrameScrollPositions(stringBuilder);
+    else if (InjectedBundle::shared().testRunner()->shouldDumpMainFrameScrollPosition())
+        dumpFrameScrollPosition(WKBundlePageGetMainFrame(m_page), stringBuilder);
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpBackForwardListsForAllWindows())
-        InjectedBundle::shared().dumpBackForwardListsForAllPages();
+    if (InjectedBundle::shared().testRunner()->shouldDumpBackForwardListsForAllWindows())
+        InjectedBundle::shared().dumpBackForwardListsForAllPages(stringBuilder);
 
-    if (InjectedBundle::shared().shouldDumpPixels() && InjectedBundle::shared().layoutTestController()->shouldDumpPixels()) {
-        InjectedBundle::shared().setPixelResult(adoptWK(WKBundlePageCreateSnapshotInViewCoordinates(m_page, WKBundleFrameGetVisibleContentBounds(WKBundlePageGetMainFrame(m_page)), kWKImageOptionsShareable)).get());
+    if (InjectedBundle::shared().shouldDumpPixels() && InjectedBundle::shared().testRunner()->shouldDumpPixels()) {
+        WKSnapshotOptions options = kWKSnapshotOptionsShareable | kWKSnapshotOptionsInViewCoordinates;
+        if (InjectedBundle::shared().testRunner()->shouldDumpSelectionRect())
+            options |= kWKSnapshotOptionsPaintSelectionRectangle;
+
+        InjectedBundle::shared().setPixelResult(adoptWK(WKBundlePageCreateSnapshotWithOptions(m_page, WKBundleFrameGetVisibleContentBounds(WKBundlePageGetMainFrame(m_page)), options)).get());
         if (WKBundlePageIsTrackingRepaints(m_page))
             InjectedBundle::shared().setRepaintRects(adoptWK(WKBundlePageCopyTrackedRepaintRects(m_page)).get());
     }
 
+    InjectedBundle::shared().outputText(stringBuilder.toString());
     InjectedBundle::shared().done();
 }
 
@@ -707,19 +922,10 @@ void InjectedBundlePage::didFinishLoadForFrame(WKBundleFrameRef frame)
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFrameLoadCallbacks()) {
-        dumpFrameDescriptionSuitableForTestResult(frame);
-        InjectedBundle::shared().stringBuilder()->append(" - didFinishLoadForFrame\n");
-    }
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        dumpLoadEvent(frame, "didFinishLoadForFrame");
 
-    if (frame != InjectedBundle::shared().topLoadingFrame())
-        return;
-    InjectedBundle::shared().setTopLoadingFrame(0);
-
-    if (InjectedBundle::shared().layoutTestController()->waitToDump())
-        return;
-
-    InjectedBundle::shared().page()->dump();
+    frameDidChangeLocation(frame, /*shouldDump*/ true);
 }
 
 void InjectedBundlePage::didFailLoadWithErrorForFrame(WKBundleFrameRef frame, WKErrorRef)
@@ -727,14 +933,10 @@ void InjectedBundlePage::didFailLoadWithErrorForFrame(WKBundleFrameRef frame, WK
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (frame != InjectedBundle::shared().topLoadingFrame())
-        return;
-    InjectedBundle::shared().setTopLoadingFrame(0);
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        dumpLoadEvent(frame, "didFailLoadWithError");
 
-    if (InjectedBundle::shared().layoutTestController()->waitToDump())
-        return;
-
-    InjectedBundle::shared().done();
+    frameDidChangeLocation(frame);
 }
 
 void InjectedBundlePage::didReceiveTitleForFrame(WKStringRef title, WKBundleFrameRef frame)
@@ -742,19 +944,21 @@ void InjectedBundlePage::didReceiveTitleForFrame(WKStringRef title, WKBundleFram
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFrameLoadCallbacks()) {
-        dumpFrameDescriptionSuitableForTestResult(frame);
-        InjectedBundle::shared().stringBuilder()->append(" - didReceiveTitle: ");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(title));
-        InjectedBundle::shared().stringBuilder()->append("\n");
+    StringBuilder stringBuilder;
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks()) {
+        dumpFrameDescriptionSuitableForTestResult(frame, stringBuilder);
+        stringBuilder.appendLiteral(" - didReceiveTitle: ");
+        stringBuilder.append(toWTFString(title));
+        stringBuilder.append('\n');
     }
 
-    if (!InjectedBundle::shared().layoutTestController()->shouldDumpTitleChanges())
-        return;
+    if (InjectedBundle::shared().testRunner()->shouldDumpTitleChanges()) {
+        stringBuilder.appendLiteral("TITLE CHANGED: '");
+        stringBuilder.append(toWTFString(title));
+        stringBuilder.appendLiteral("'\n");
+    }
 
-    InjectedBundle::shared().stringBuilder()->append("TITLE CHANGED: ");
-    InjectedBundle::shared().stringBuilder()->append(toWTFString(title));
-    InjectedBundle::shared().stringBuilder()->append("\n");
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::didClearWindowForFrame(WKBundleFrameRef frame, WKBundleScriptWorldRef world)
@@ -766,12 +970,12 @@ void InjectedBundlePage::didClearWindowForFrame(WKBundleFrameRef frame, WKBundle
     JSObjectRef window = JSContextGetGlobalObject(context);
 
     if (WKBundleScriptWorldNormalWorld() != world) {
-        JSObjectSetProperty(context, window, toJS("__worldID").get(), JSValueMakeNumber(context, LayoutTestController::worldIDForWorld(world)), kJSPropertyAttributeReadOnly, 0);
+        JSObjectSetProperty(context, window, toJS("__worldID").get(), JSValueMakeNumber(context, TestRunner::worldIDForWorld(world)), kJSPropertyAttributeReadOnly, 0);
         return;
     }
 
     JSValueRef exception = 0;
-    InjectedBundle::shared().layoutTestController()->makeWindowObject(context, window, &exception);
+    InjectedBundle::shared().testRunner()->makeWindowObject(context, window, &exception);
     InjectedBundle::shared().gcController()->makeWindowObject(context, window, &exception);
     InjectedBundle::shared().eventSendingController()->makeWindowObject(context, window, &exception);
     InjectedBundle::shared().textInputController()->makeWindowObject(context, window, &exception);
@@ -789,11 +993,10 @@ void InjectedBundlePage::didCancelClientRedirectForFrame(WKBundleFrameRef frame)
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (!InjectedBundle::shared().layoutTestController()->shouldDumpFrameLoadCallbacks())
+    if (!InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
         return;
 
-    dumpFrameDescriptionSuitableForTestResult(frame);
-    InjectedBundle::shared().stringBuilder()->append(" - didCancelClientRedirectForFrame\n");
+    dumpLoadEvent(frame, "didCancelClientRedirectForFrame");
 }
 
 void InjectedBundlePage::willPerformClientRedirectForFrame(WKBundleFrameRef frame, WKURLRef url, double delay, double date)
@@ -801,13 +1004,15 @@ void InjectedBundlePage::willPerformClientRedirectForFrame(WKBundleFrameRef fram
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (!InjectedBundle::shared().layoutTestController()->shouldDumpFrameLoadCallbacks())
+    if (!InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
         return;
 
-    dumpFrameDescriptionSuitableForTestResult(frame);
-    InjectedBundle::shared().stringBuilder()->append(" - willPerformClientRedirectToURL: ");
-    InjectedBundle::shared().stringBuilder()->append(toWTFString(adoptWK(WKURLCopyString(url))));
-    InjectedBundle::shared().stringBuilder()->append(" \n");
+    StringBuilder stringBuilder;
+    dumpFrameDescriptionSuitableForTestResult(frame, stringBuilder);
+    stringBuilder.appendLiteral(" - willPerformClientRedirectToURL: ");
+    stringBuilder.append(pathSuitableForTestResult(url));
+    stringBuilder.appendLiteral(" \n");
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::didSameDocumentNavigationForFrame(WKBundleFrameRef frame, WKSameDocumentNavigationType type)
@@ -819,17 +1024,17 @@ void InjectedBundlePage::didFinishDocumentLoadForFrame(WKBundleFrameRef frame)
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFrameLoadCallbacks()) {
-        dumpFrameDescriptionSuitableForTestResult(frame);
-        InjectedBundle::shared().stringBuilder()->append(" - didFinishDocumentLoadForFrame\n");
-    }
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        dumpLoadEvent(frame, "didFinishDocumentLoadForFrame");
 
     unsigned pendingFrameUnloadEvents = WKBundleFrameGetPendingUnloadCount(frame);
     if (pendingFrameUnloadEvents) {
-        InjectedBundle::shared().stringBuilder()->append(frameToStr(frame));
-        InjectedBundle::shared().stringBuilder()->append(" - has ");
-        InjectedBundle::shared().stringBuilder()->append(WTF::String::number(pendingFrameUnloadEvents));
-        InjectedBundle::shared().stringBuilder()->append(" onunload handler(s)\n");
+        StringBuilder stringBuilder;
+        stringBuilder.append(frameToStr(frame));
+        stringBuilder.appendLiteral(" - has ");
+        stringBuilder.appendNumber(pendingFrameUnloadEvents);
+        stringBuilder.appendLiteral(" onunload handler(s)\n");
+        InjectedBundle::shared().outputText(stringBuilder.toString());
     }
 }
 
@@ -838,68 +1043,188 @@ void InjectedBundlePage::didHandleOnloadEventsForFrame(WKBundleFrameRef frame)
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFrameLoadCallbacks()) {
-        dumpFrameDescriptionSuitableForTestResult(frame);
-        InjectedBundle::shared().stringBuilder()->append(" - didHandleOnloadEventsForFrame\n");
-    }
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        dumpLoadEvent(frame, "didHandleOnloadEventsForFrame");
 }
 
 void InjectedBundlePage::didDisplayInsecureContentForFrame(WKBundleFrameRef frame)
 {
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        InjectedBundle::shared().outputText("didDisplayInsecureContent\n");
 }
 
 void InjectedBundlePage::didRunInsecureContentForFrame(WKBundleFrameRef frame)
 {
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        InjectedBundle::shared().outputText("didRunInsecureContent\n");
 }
 
 void InjectedBundlePage::didDetectXSSForFrame(WKBundleFrameRef frame)
 {
+    if (InjectedBundle::shared().testRunner()->shouldDumpFrameLoadCallbacks())
+        InjectedBundle::shared().outputText("didDetectXSS\n");
 }
 
-void InjectedBundlePage::didInitiateLoadForResource(WKBundlePageRef, WKBundleFrameRef, uint64_t identifier, WKURLRequestRef, bool)
+void InjectedBundlePage::didInitiateLoadForResource(WKBundlePageRef, WKBundleFrameRef, uint64_t identifier, WKURLRequestRef request, bool)
 {
+    if (!InjectedBundle::shared().isTestRunning())
+        return;
+
+    if (!InjectedBundle::shared().testRunner()->shouldDumpResourceLoadCallbacks())
+        return;
+
+    WKRetainPtr<WKURLRef> url = adoptWK(WKURLRequestCopyURL(request));
+    assignedUrlsCache.add(identifier, pathSuitableForTestResult(url.get()));
 }
 
 // Resource Load Client Callbacks
 
-WKURLRequestRef InjectedBundlePage::willSendRequestForFrame(WKBundlePageRef, WKBundleFrameRef, uint64_t, WKURLRequestRef request, WKURLResponseRef)
+static inline bool isLocalHost(WKStringRef host)
 {
-    if (InjectedBundle::shared().isTestRunning() && InjectedBundle::shared().layoutTestController()->willSendRequestReturnsNull())
+    return WKStringIsEqualToUTF8CString(host, "127.0.0.1") || WKStringIsEqualToUTF8CString(host, "localhost");
+}
+
+static inline bool isHTTPOrHTTPSScheme(WKStringRef scheme)
+{
+    return WKStringIsEqualToUTF8CStringIgnoringCase(scheme, "http") || WKStringIsEqualToUTF8CStringIgnoringCase(scheme, "https");
+}
+
+WKURLRequestRef InjectedBundlePage::willSendRequestForFrame(WKBundlePageRef, WKBundleFrameRef frame, uint64_t identifier, WKURLRequestRef request, WKURLResponseRef response)
+{
+    if (InjectedBundle::shared().isTestRunning()
+        && InjectedBundle::shared().testRunner()->shouldDumpResourceLoadCallbacks()) {
+        StringBuilder stringBuilder;
+        dumpResourceURL(identifier, stringBuilder);
+        stringBuilder.appendLiteral(" - willSendRequest ");
+        dumpRequestDescriptionSuitableForTestResult(request, stringBuilder);
+        stringBuilder.appendLiteral(" redirectResponse ");
+        dumpResponseDescriptionSuitableForTestResult(response, stringBuilder);
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
+    }
+
+    if (InjectedBundle::shared().isTestRunning() && InjectedBundle::shared().testRunner()->willSendRequestReturnsNull())
         return 0;
+
+    WKRetainPtr<WKURLRef> redirectURL = adoptWK(WKURLResponseCopyURL(response));
+    if (InjectedBundle::shared().isTestRunning() && InjectedBundle::shared().testRunner()->willSendRequestReturnsNullOnRedirect() && redirectURL) {
+        InjectedBundle::shared().outputText("Returning null for this redirect\n");
+        return 0;
+    }
 
     WKRetainPtr<WKURLRef> url = adoptWK(WKURLRequestCopyURL(request));
     WKRetainPtr<WKStringRef> host = adoptWK(WKURLCopyHostName(url.get()));
     WKRetainPtr<WKStringRef> scheme = adoptWK(WKURLCopyScheme(url.get()));
     WKRetainPtr<WKStringRef> urlString = adoptWK(WKURLCopyString(url.get()));
     if (host && !WKStringIsEmpty(host.get())
-        && (WKStringIsEqualToUTF8CStringIgnoringCase(scheme.get(), "http") || WKStringIsEqualToUTF8CStringIgnoringCase(scheme.get(), "https"))
-        && !WKStringIsEqualToUTF8CString(host.get(), "127.0.0.1")
+        && isHTTPOrHTTPSScheme(scheme.get())
         && !WKStringIsEqualToUTF8CString(host.get(), "255.255.255.255") // Used in some tests that expect to get back an error.
-        && !WKStringIsEqualToUTF8CStringIgnoringCase(host.get(), "localhost")) {
-        InjectedBundle::shared().stringBuilder()->append("Blocked access to external URL ");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(urlString));
-        InjectedBundle::shared().stringBuilder()->append("\n");
+        && !isLocalHost(host.get())) {
+        bool mainFrameIsExternal = false;
+        if (InjectedBundle::shared().isTestRunning()) {
+            WKBundleFrameRef mainFrame = InjectedBundle::shared().topLoadingFrame();
+            WKRetainPtr<WKURLRef> mainFrameURL = adoptWK(WKBundleFrameCopyURL(mainFrame));
+            if (!mainFrameURL || WKStringIsEqualToUTF8CString(adoptWK(WKURLCopyString(mainFrameURL.get())).get(), "about:blank"))
+                mainFrameURL = adoptWK(WKBundleFrameCopyProvisionalURL(mainFrame));
+
+            WKRetainPtr<WKStringRef> mainFrameHost = WKURLCopyHostName(mainFrameURL.get());
+            WKRetainPtr<WKStringRef> mainFrameScheme = WKURLCopyScheme(mainFrameURL.get());
+            mainFrameIsExternal = isHTTPOrHTTPSScheme(mainFrameScheme.get()) && !isLocalHost(mainFrameHost.get());
+        }
+        if (!mainFrameIsExternal) {
+            StringBuilder stringBuilder;
+            stringBuilder.appendLiteral("Blocked access to external URL ");
+            stringBuilder.append(toWTFString(urlString));
+            stringBuilder.append('\n');
+            InjectedBundle::shared().outputText(stringBuilder.toString());
         return 0;
+    }
     }
 
     WKRetain(request);
     return request;
 }
 
-void InjectedBundlePage::didReceiveResponseForResource(WKBundlePageRef, WKBundleFrameRef, uint64_t, WKURLResponseRef)
+void InjectedBundlePage::didReceiveResponseForResource(WKBundlePageRef, WKBundleFrameRef, uint64_t identifier, WKURLResponseRef response)
 {
+    if (!InjectedBundle::shared().isTestRunning())
+        return;
+
+    if (InjectedBundle::shared().testRunner()->shouldDumpResourceLoadCallbacks()) {
+        StringBuilder stringBuilder;
+        dumpResourceURL(identifier, stringBuilder);
+        stringBuilder.appendLiteral(" - didReceiveResponse ");
+        dumpResponseDescriptionSuitableForTestResult(response, stringBuilder);
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
+    }
+
+
+    if (!InjectedBundle::shared().testRunner()->shouldDumpResourceResponseMIMETypes())
+        return;
+
+    WKRetainPtr<WKURLRef> url = adoptWK(WKURLResponseCopyURL(response));
+    WKRetainPtr<WKStringRef> urlString = adoptWK(WKURLCopyLastPathComponent(url.get()));
+    WKRetainPtr<WKStringRef> mimeTypeString = adoptWK(WKURLResponseCopyMIMEType(response));
+
+    StringBuilder stringBuilder;
+    stringBuilder.append(toWTFString(urlString));
+    stringBuilder.appendLiteral(" has MIME type ");
+    stringBuilder.append(toWTFString(mimeTypeString));
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::didReceiveContentLengthForResource(WKBundlePageRef, WKBundleFrameRef, uint64_t, uint64_t)
 {
 }
 
-void InjectedBundlePage::didFinishLoadForResource(WKBundlePageRef, WKBundleFrameRef, uint64_t)
+void InjectedBundlePage::didFinishLoadForResource(WKBundlePageRef, WKBundleFrameRef, uint64_t identifier)
 {
+    if (!InjectedBundle::shared().isTestRunning())
+        return;
+
+    if (!InjectedBundle::shared().testRunner()->shouldDumpResourceLoadCallbacks())
+        return;
+
+    StringBuilder stringBuilder;
+    dumpResourceURL(identifier, stringBuilder);
+    stringBuilder.appendLiteral(" - didFinishLoading\n");
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
-void InjectedBundlePage::didFailLoadForResource(WKBundlePageRef, WKBundleFrameRef, uint64_t, WKErrorRef)
+void InjectedBundlePage::didFailLoadForResource(WKBundlePageRef, WKBundleFrameRef, uint64_t identifier, WKErrorRef error)
 {
+    if (!InjectedBundle::shared().isTestRunning())
+        return;
+
+    if (!InjectedBundle::shared().testRunner()->shouldDumpResourceLoadCallbacks())
+        return;
+
+    StringBuilder stringBuilder;
+    dumpResourceURL(identifier, stringBuilder);
+    stringBuilder.appendLiteral(" - didFailLoadingWithError: ");
+
+    dumpErrorDescriptionSuitableForTestResult(error, stringBuilder);
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
+}
+
+bool InjectedBundlePage::shouldCacheResponse(WKBundlePageRef, WKBundleFrameRef, uint64_t identifier)
+{
+    if (!InjectedBundle::shared().isTestRunning())
+        return true;
+
+    if (!InjectedBundle::shared().testRunner()->shouldDumpWillCacheResponse())
+        return true;
+
+    StringBuilder stringBuilder;
+    stringBuilder.appendNumber(identifier);
+    stringBuilder.appendLiteral(" - willCacheResponse: called\n");
+    InjectedBundle::shared().outputText(stringBuilder.toString());
+
+    // The default behavior is the cache the response.
+    return true;
 }
 
 
@@ -930,27 +1255,35 @@ WKBundlePagePolicyAction InjectedBundlePage::decidePolicyForNavigationAction(WKB
     if (!InjectedBundle::shared().isTestRunning())
         return WKBundlePagePolicyActionUse;
 
-    if (!InjectedBundle::shared().layoutTestController()->isPolicyDelegateEnabled())
+    if (!InjectedBundle::shared().testRunner()->isPolicyDelegateEnabled())
         return WKBundlePagePolicyActionUse;
 
-    if (InjectedBundle::shared().layoutTestController()->waitToDump()) {
-        WKRetainPtr<WKStringRef> url = adoptWK(WKURLCopyString(WKURLRequestCopyURL(request)));
-        InjectedBundle::shared().stringBuilder()->append("Policy delegate: attempt to load ");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(url));
-        InjectedBundle::shared().stringBuilder()->append(" with navigation type \'");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(NavigationTypeToString(WKBundleNavigationActionGetNavigationType(navigationAction))));
-        InjectedBundle::shared().stringBuilder()->append("\'");
+    WKRetainPtr<WKURLRef> url = adoptWK(WKURLRequestCopyURL(request));
+    WKRetainPtr<WKStringRef> urlScheme = adoptWK(WKURLCopyScheme(url.get()));
+
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("Policy delegate: attempt to load ");
+    if (isLocalFileScheme(urlScheme.get())) {
+        WKRetainPtr<WKStringRef> filename = adoptWK(WKURLCopyLastPathComponent(url.get()));
+        stringBuilder.append(toWTFString(filename));
+    } else {
+        WKRetainPtr<WKStringRef> urlString = adoptWK(WKURLCopyString(url.get()));
+        stringBuilder.append(toWTFString(urlString));
+    }
+    stringBuilder.appendLiteral(" with navigation type \'");
+    stringBuilder.append(toWTFString(NavigationTypeToString(WKBundleNavigationActionGetNavigationType(navigationAction))));
+    stringBuilder.appendLiteral("\'");
         WKBundleHitTestResultRef hitTestResultRef = WKBundleNavigationActionCopyHitTestResult(navigationAction);
         if (hitTestResultRef) {
-            InjectedBundle::shared().stringBuilder()->append(" originating from "); 
-            InjectedBundle::shared().stringBuilder()->append(dumpPath(m_page, m_world.get(), WKBundleHitTestResultCopyNodeHandle(hitTestResultRef)));
+        stringBuilder.appendLiteral(" originating from ");
+        stringBuilder.append(dumpPath(m_page, m_world.get(), WKBundleHitTestResultCopyNodeHandle(hitTestResultRef)));
         }
 
-        InjectedBundle::shared().stringBuilder()->append("\n");
-        InjectedBundle::shared().layoutTestController()->notifyDone();
-    }
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
+    InjectedBundle::shared().testRunner()->notifyDone();
 
-    if (InjectedBundle::shared().layoutTestController()->isPolicyDelegatePermissive())
+    if (InjectedBundle::shared().testRunner()->isPolicyDelegatePermissive())
         return WKBundlePagePolicyActionUse;
     return WKBundlePagePolicyActionPassThrough;
 }
@@ -960,9 +1293,19 @@ WKBundlePagePolicyAction InjectedBundlePage::decidePolicyForNewWindowAction(WKBu
     return WKBundlePagePolicyActionUse;
 }
 
-WKBundlePagePolicyAction InjectedBundlePage::decidePolicyForResponse(WKBundlePageRef, WKBundleFrameRef, WKURLResponseRef, WKURLRequestRef, WKTypeRef*)
+WKBundlePagePolicyAction InjectedBundlePage::decidePolicyForResponse(WKBundlePageRef page, WKBundleFrameRef, WKURLResponseRef response, WKURLRequestRef, WKTypeRef*)
 {
-    return WKBundlePagePolicyActionUse;
+    if (WKURLResponseIsAttachment(response)) {
+        StringBuilder stringBuilder;
+        WKRetainPtr<WKStringRef> filename = adoptWK(WKURLResponseCopySuggestedFilename(response));
+        stringBuilder.appendLiteral("Policy delegate: resource is an attachment, suggested file name \'");
+        stringBuilder.append(toWTFString(filename));
+        stringBuilder.appendLiteral("\'\n");
+        InjectedBundle::shared().outputText(stringBuilder.toString());
+    }
+
+    WKRetainPtr<WKStringRef> mimeType = adoptWK(WKURLResponseCopyMIMEType(response));
+    return WKBundlePageCanShowMIMEType(page, mimeType.get()) ? WKBundlePagePolicyActionUse : WKBundlePagePolicyActionPassThrough;
 }
 
 void InjectedBundlePage::unableToImplementPolicy(WKBundlePageRef, WKBundleFrameRef, WKErrorRef, WKTypeRef*)
@@ -996,6 +1339,16 @@ void InjectedBundlePage::willRunJavaScriptPrompt(WKBundlePageRef page, WKStringR
     static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptPrompt(message, defaultValue, frame);
 }
 
+void InjectedBundlePage::didReachApplicationCacheOriginQuota(WKBundlePageRef page, WKSecurityOriginRef origin, int64_t totalBytesNeeded, const void* clientInfo)
+{
+    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didReachApplicationCacheOriginQuota(origin, totalBytesNeeded);
+}
+
+uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKBundlePageRef page, WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes, const void* clientInfo)
+{
+    return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didExceedDatabaseQuota(origin, databaseName, databaseDisplayName, currentQuotaBytes, currentOriginUsageBytes, currentDatabaseUsageBytes, expectedUsageBytes);
+}
+
 static WTF::String lastFileURLPathComponent(const WTF::String& path)
 {
     size_t pos = path.find("file://");
@@ -1022,20 +1375,25 @@ void InjectedBundlePage::willAddMessageToConsole(WKStringRef message, uint32_t l
         return;
 
     WTF::String messageString = toWTFString(message);
+    size_t nullCharPos = messageString.find(UChar(0));
+    if (nullCharPos != WTF::notFound)
+        messageString.truncate(nullCharPos);
+
     size_t fileProtocolStart = messageString.find("file://");
     if (fileProtocolStart != WTF::notFound)
         // FIXME: The code below does not handle additional text after url nor multiple urls. This matches DumpRenderTree implementation.
         messageString = messageString.substring(0, fileProtocolStart) + lastFileURLPathComponent(messageString.substring(fileProtocolStart));
 
-    InjectedBundle::shared().stringBuilder()->append("CONSOLE MESSAGE: ");
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("CONSOLE MESSAGE: ");
     if (lineNumber) {
-        InjectedBundle::shared().stringBuilder()->append("line ");
-        InjectedBundle::shared().stringBuilder()->append(WTF::String::number(lineNumber));
-        InjectedBundle::shared().stringBuilder()->append(": ");
+        stringBuilder.appendLiteral("line ");
+        stringBuilder.appendNumber(lineNumber);
+        stringBuilder.appendLiteral(": ");
     }
-    InjectedBundle::shared().stringBuilder()->append(messageString);
-    InjectedBundle::shared().stringBuilder()->append("\n");
-
+    stringBuilder.append(messageString);
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::willSetStatusbarText(WKStringRef statusbarText)
@@ -1043,12 +1401,14 @@ void InjectedBundlePage::willSetStatusbarText(WKStringRef statusbarText)
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    if (!InjectedBundle::shared().layoutTestController()->shouldDumpStatusCallbacks())
+    if (!InjectedBundle::shared().testRunner()->shouldDumpStatusCallbacks())
         return;
 
-    InjectedBundle::shared().stringBuilder()->append("UI DELEGATE STATUS CALLBACK: setStatusText:");
-    InjectedBundle::shared().stringBuilder()->append(toWTFString(statusbarText));
-    InjectedBundle::shared().stringBuilder()->append("\n");
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("UI DELEGATE STATUS CALLBACK: setStatusText:");
+    stringBuilder.append(toWTFString(statusbarText));
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::willRunJavaScriptAlert(WKStringRef message, WKBundleFrameRef)
@@ -1056,9 +1416,11 @@ void InjectedBundlePage::willRunJavaScriptAlert(WKStringRef message, WKBundleFra
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    InjectedBundle::shared().stringBuilder()->append("ALERT: ");
-    InjectedBundle::shared().stringBuilder()->append(toWTFString(message));
-    InjectedBundle::shared().stringBuilder()->append("\n");
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("ALERT: ");
+    stringBuilder.append(toWTFString(message));
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::willRunJavaScriptConfirm(WKStringRef message, WKBundleFrameRef)
@@ -1066,18 +1428,63 @@ void InjectedBundlePage::willRunJavaScriptConfirm(WKStringRef message, WKBundleF
     if (!InjectedBundle::shared().isTestRunning())
         return;
 
-    InjectedBundle::shared().stringBuilder()->append("CONFIRM: ");
-    InjectedBundle::shared().stringBuilder()->append(toWTFString(message));
-    InjectedBundle::shared().stringBuilder()->append("\n");
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("CONFIRM: ");
+    stringBuilder.append(toWTFString(message));
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::willRunJavaScriptPrompt(WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef)
 {
-    InjectedBundle::shared().stringBuilder()->append("PROMPT: ");
-    InjectedBundle::shared().stringBuilder()->append(toWTFString(message));
-    InjectedBundle::shared().stringBuilder()->append(", default text: ");
-    InjectedBundle::shared().stringBuilder()->append(toWTFString(defaultValue));
-    InjectedBundle::shared().stringBuilder()->append("\n");
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("PROMPT: ");
+    stringBuilder.append(toWTFString(message));
+    stringBuilder.appendLiteral(", default text: ");
+    stringBuilder.append(toWTFString(defaultValue));
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
+}
+
+void InjectedBundlePage::didReachApplicationCacheOriginQuota(WKSecurityOriginRef origin, int64_t totalBytesNeeded)
+{
+    if (InjectedBundle::shared().testRunner()->shouldDumpApplicationCacheDelegateCallbacks()) {
+        // For example, numbers from 30000 - 39999 will output as 30000.
+        // Rounding up or down does not really matter for these tests. It's
+        // sufficient to just get a range of 10000 to determine if we were
+        // above or below a threshold.
+        int64_t truncatedSpaceNeeded = (totalBytesNeeded / 10000) * 10000;
+
+        StringBuilder stringBuilder;
+        stringBuilder.appendLiteral("UI DELEGATE APPLICATION CACHE CALLBACK: exceededApplicationCacheOriginQuotaForSecurityOrigin:");
+        stringBuilder.append(securityOriginToStr(origin));
+        stringBuilder.appendLiteral(" totalSpaceNeeded:~");
+        stringBuilder.appendNumber(truncatedSpaceNeeded);
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
+    }
+
+    if (InjectedBundle::shared().testRunner()->shouldDisallowIncreaseForApplicationCacheQuota())
+        return;
+
+    // Reset default application cache quota.
+    WKBundleResetApplicationCacheOriginQuota(InjectedBundle::shared().bundle(), adoptWK(WKSecurityOriginCopyToString(origin)).get());
+}
+
+uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes)
+{
+    if (InjectedBundle::shared().testRunner()->shouldDumpDatabaseCallbacks()) {
+        StringBuilder stringBuilder;
+        stringBuilder.appendLiteral("UI DELEGATE DATABASE CALLBACK: exceededDatabaseQuotaForSecurityOrigin:");
+        stringBuilder.append(securityOriginToStr(origin));
+        stringBuilder.appendLiteral(" database:");
+        stringBuilder.append(toWTFString(databaseName));
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
+    }
+
+    static const uint64_t defaultQuota = 5 * 1024 * 1024;
+    return defaultQuota;
 }
 
 // Editor Client Callbacks
@@ -1142,12 +1549,14 @@ bool InjectedBundlePage::shouldBeginEditing(WKBundleRangeHandleRef range)
     if (!InjectedBundle::shared().isTestRunning())
         return true;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: shouldBeginEditingInDOMRange:");
-        InjectedBundle::shared().stringBuilder()->append(rangeToStr(m_page, m_world.get(), range));
-        InjectedBundle::shared().stringBuilder()->append("\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks()) {
+        StringBuilder stringBuilder;
+        stringBuilder.appendLiteral("EDITING DELEGATE: shouldBeginEditingInDOMRange:");
+        stringBuilder.append(rangeToStr(m_page, m_world.get(), range));
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
     }
-    return InjectedBundle::shared().layoutTestController()->shouldAllowEditing();
+    return InjectedBundle::shared().testRunner()->shouldAllowEditing();
 }
 
 bool InjectedBundlePage::shouldEndEditing(WKBundleRangeHandleRef range)
@@ -1155,12 +1564,14 @@ bool InjectedBundlePage::shouldEndEditing(WKBundleRangeHandleRef range)
     if (!InjectedBundle::shared().isTestRunning())
         return true;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: shouldEndEditingInDOMRange:");
-        InjectedBundle::shared().stringBuilder()->append(rangeToStr(m_page, m_world.get(), range));
-        InjectedBundle::shared().stringBuilder()->append("\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks()) {
+        StringBuilder stringBuilder;
+        stringBuilder.appendLiteral("EDITING DELEGATE: shouldEndEditingInDOMRange:");
+        stringBuilder.append(rangeToStr(m_page, m_world.get(), range));
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
     }
-    return InjectedBundle::shared().layoutTestController()->shouldAllowEditing();
+    return InjectedBundle::shared().testRunner()->shouldAllowEditing();
 }
 
 bool InjectedBundlePage::shouldInsertNode(WKBundleNodeHandleRef node, WKBundleRangeHandleRef rangeToReplace, WKInsertActionType action)
@@ -1174,16 +1585,18 @@ bool InjectedBundlePage::shouldInsertNode(WKBundleNodeHandleRef node, WKBundleRa
         "WebViewInsertActionDropped",
     };
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: shouldInsertNode:");
-        InjectedBundle::shared().stringBuilder()->append(dumpPath(m_page, m_world.get(), node));
-        InjectedBundle::shared().stringBuilder()->append(" replacingDOMRange:");
-        InjectedBundle::shared().stringBuilder()->append(rangeToStr(m_page, m_world.get(), rangeToReplace));
-        InjectedBundle::shared().stringBuilder()->append(" givenAction:");
-        InjectedBundle::shared().stringBuilder()->append(insertactionstring[action]);
-        InjectedBundle::shared().stringBuilder()->append("\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks()) {
+        StringBuilder stringBuilder;
+        stringBuilder.appendLiteral("EDITING DELEGATE: shouldInsertNode:");
+        stringBuilder.append(dumpPath(m_page, m_world.get(), node));
+        stringBuilder.appendLiteral(" replacingDOMRange:");
+        stringBuilder.append(rangeToStr(m_page, m_world.get(), rangeToReplace));
+        stringBuilder.appendLiteral(" givenAction:");
+        stringBuilder.append(insertactionstring[action]);
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
     }
-    return InjectedBundle::shared().layoutTestController()->shouldAllowEditing();
+    return InjectedBundle::shared().testRunner()->shouldAllowEditing();
 }
 
 bool InjectedBundlePage::shouldInsertText(WKStringRef text, WKBundleRangeHandleRef rangeToReplace, WKInsertActionType action)
@@ -1197,16 +1610,18 @@ bool InjectedBundlePage::shouldInsertText(WKStringRef text, WKBundleRangeHandleR
         "WebViewInsertActionDropped",
     };
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: shouldInsertText:");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(text));
-        InjectedBundle::shared().stringBuilder()->append(" replacingDOMRange:");
-        InjectedBundle::shared().stringBuilder()->append(rangeToStr(m_page, m_world.get(), rangeToReplace));
-        InjectedBundle::shared().stringBuilder()->append(" givenAction:");
-        InjectedBundle::shared().stringBuilder()->append(insertactionstring[action]);
-        InjectedBundle::shared().stringBuilder()->append("\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks()) {
+        StringBuilder stringBuilder;
+        stringBuilder.appendLiteral("EDITING DELEGATE: shouldInsertText:");
+        stringBuilder.append(toWTFString(text));
+        stringBuilder.appendLiteral(" replacingDOMRange:");
+        stringBuilder.append(rangeToStr(m_page, m_world.get(), rangeToReplace));
+        stringBuilder.appendLiteral(" givenAction:");
+        stringBuilder.append(insertactionstring[action]);
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
     }
-    return InjectedBundle::shared().layoutTestController()->shouldAllowEditing();
+    return InjectedBundle::shared().testRunner()->shouldAllowEditing();
 }
 
 bool InjectedBundlePage::shouldDeleteRange(WKBundleRangeHandleRef range)
@@ -1214,12 +1629,14 @@ bool InjectedBundlePage::shouldDeleteRange(WKBundleRangeHandleRef range)
     if (!InjectedBundle::shared().isTestRunning())
         return true;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: shouldDeleteDOMRange:");
-        InjectedBundle::shared().stringBuilder()->append(rangeToStr(m_page, m_world.get(), range));
-        InjectedBundle::shared().stringBuilder()->append("\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks()) {
+        StringBuilder stringBuilder;
+        stringBuilder.appendLiteral("EDITING DELEGATE: shouldDeleteDOMRange:");
+        stringBuilder.append(rangeToStr(m_page, m_world.get(), range));
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
     }
-    return InjectedBundle::shared().layoutTestController()->shouldAllowEditing();
+    return InjectedBundle::shared().testRunner()->shouldAllowEditing();
 }
 
 bool InjectedBundlePage::shouldChangeSelectedRange(WKBundleRangeHandleRef fromRange, WKBundleRangeHandleRef toRange, WKAffinityType affinity, bool stillSelecting)
@@ -1236,18 +1653,20 @@ bool InjectedBundlePage::shouldChangeSelectedRange(WKBundleRangeHandleRef fromRa
         "TRUE"
     };
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: shouldChangeSelectedDOMRange:");
-        InjectedBundle::shared().stringBuilder()->append(rangeToStr(m_page, m_world.get(), fromRange));
-        InjectedBundle::shared().stringBuilder()->append(" toDOMRange:");
-        InjectedBundle::shared().stringBuilder()->append(rangeToStr(m_page, m_world.get(), toRange));
-        InjectedBundle::shared().stringBuilder()->append(" affinity:");
-        InjectedBundle::shared().stringBuilder()->append(affinitystring[affinity]); 
-        InjectedBundle::shared().stringBuilder()->append(" stillSelecting:");
-        InjectedBundle::shared().stringBuilder()->append(boolstring[stillSelecting]); 
-        InjectedBundle::shared().stringBuilder()->append("\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks()) {
+        StringBuilder stringBuilder;
+        stringBuilder.appendLiteral("EDITING DELEGATE: shouldChangeSelectedDOMRange:");
+        stringBuilder.append(rangeToStr(m_page, m_world.get(), fromRange));
+        stringBuilder.appendLiteral(" toDOMRange:");
+        stringBuilder.append(rangeToStr(m_page, m_world.get(), toRange));
+        stringBuilder.appendLiteral(" affinity:");
+        stringBuilder.append(affinitystring[affinity]); 
+        stringBuilder.appendLiteral(" stillSelecting:");
+        stringBuilder.append(boolstring[stillSelecting]); 
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
     }
-    return InjectedBundle::shared().layoutTestController()->shouldAllowEditing();
+    return InjectedBundle::shared().testRunner()->shouldAllowEditing();
 }
 
 bool InjectedBundlePage::shouldApplyStyle(WKBundleCSSStyleDeclarationRef style, WKBundleRangeHandleRef range)
@@ -1255,78 +1674,88 @@ bool InjectedBundlePage::shouldApplyStyle(WKBundleCSSStyleDeclarationRef style, 
     if (!InjectedBundle::shared().isTestRunning())
         return true;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: shouldApplyStyle:");
-        InjectedBundle::shared().stringBuilder()->append(styleDecToStr(style));
-        InjectedBundle::shared().stringBuilder()->append(" toElementsInDOMRange:");
-        InjectedBundle::shared().stringBuilder()->append(rangeToStr(m_page, m_world.get(), range));
-        InjectedBundle::shared().stringBuilder()->append("\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks()) {
+        StringBuilder stringBuilder;
+        stringBuilder.appendLiteral("EDITING DELEGATE: shouldApplyStyle:");
+        stringBuilder.append(styleDecToStr(style));
+        stringBuilder.appendLiteral(" toElementsInDOMRange:");
+        stringBuilder.append(rangeToStr(m_page, m_world.get(), range));
+        stringBuilder.append('\n');
+        InjectedBundle::shared().outputText(stringBuilder.toString());
     }
-    return InjectedBundle::shared().layoutTestController()->shouldAllowEditing();
+    return InjectedBundle::shared().testRunner()->shouldAllowEditing();
 }
 
 void InjectedBundlePage::didBeginEditing(WKStringRef notificationName)
 {
     if (!InjectedBundle::shared().isTestRunning())
         return;
+    if (!InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks())
+        return;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: webViewDidBeginEditing:");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(notificationName));
-        InjectedBundle::shared().stringBuilder()->append("\n");
-    }
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("EDITING DELEGATE: webViewDidBeginEditing:");
+    stringBuilder.append(toWTFString(notificationName));
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::didEndEditing(WKStringRef notificationName)
 {
     if (!InjectedBundle::shared().isTestRunning())
         return;
+    if (!InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks())
+        return;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: webViewDidEndEditing:");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(notificationName));
-        InjectedBundle::shared().stringBuilder()->append("\n");
-    }
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("EDITING DELEGATE: webViewDidEndEditing:");
+    stringBuilder.append(toWTFString(notificationName));
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::didChange(WKStringRef notificationName)
 {
     if (!InjectedBundle::shared().isTestRunning())
         return;
+    if (!InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks())
+        return;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: webViewDidChange:");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(notificationName));
-        InjectedBundle::shared().stringBuilder()->append("\n");
-    }
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("EDITING DELEGATE: webViewDidChange:");
+    stringBuilder.append(toWTFString(notificationName));
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::didChangeSelection(WKStringRef notificationName)
 {
     if (!InjectedBundle::shared().isTestRunning())
         return;
+    if (!InjectedBundle::shared().testRunner()->shouldDumpEditingCallbacks())
+        return;
 
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpEditingCallbacks()) {
-        InjectedBundle::shared().stringBuilder()->append("EDITING DELEGATE: webViewDidChangeSelection:");
-        InjectedBundle::shared().stringBuilder()->append(toWTFString(notificationName));
-        InjectedBundle::shared().stringBuilder()->append("\n");
-    }
+    StringBuilder stringBuilder;
+    stringBuilder.appendLiteral("EDITING DELEGATE: webViewDidChangeSelection:");
+    stringBuilder.append(toWTFString(notificationName));
+    stringBuilder.append('\n');
+    InjectedBundle::shared().outputText(stringBuilder.toString());
 }
 
 #if ENABLE(FULLSCREEN_API)
 bool InjectedBundlePage::supportsFullScreen(WKBundlePageRef pageRef, WKFullScreenKeyboardRequestType requestType)
 {
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFullScreenCallbacks())
-        InjectedBundle::shared().stringBuilder()->append("supportsFullScreen() == true\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpFullScreenCallbacks())
+        InjectedBundle::shared().outputText("supportsFullScreen() == true\n");
     return true;
 }
 
 void InjectedBundlePage::enterFullScreenForElement(WKBundlePageRef pageRef, WKBundleNodeHandleRef elementRef)
 {
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFullScreenCallbacks())
-        InjectedBundle::shared().stringBuilder()->append("enterFullScreenForElement()\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpFullScreenCallbacks())
+        InjectedBundle::shared().outputText("enterFullScreenForElement()\n");
 
-    if (!InjectedBundle::shared().layoutTestController()->hasCustomFullScreenBehavior()) {
+    if (!InjectedBundle::shared().testRunner()->hasCustomFullScreenBehavior()) {
         WKBundlePageWillEnterFullScreen(pageRef);
         WKBundlePageDidEnterFullScreen(pageRef);
     }
@@ -1334,10 +1763,10 @@ void InjectedBundlePage::enterFullScreenForElement(WKBundlePageRef pageRef, WKBu
 
 void InjectedBundlePage::exitFullScreenForElement(WKBundlePageRef pageRef, WKBundleNodeHandleRef elementRef)
 {
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFullScreenCallbacks())
-        InjectedBundle::shared().stringBuilder()->append("exitFullScreenForElement()\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpFullScreenCallbacks())
+        InjectedBundle::shared().outputText("exitFullScreenForElement()\n");
 
-    if (!InjectedBundle::shared().layoutTestController()->hasCustomFullScreenBehavior()) {
+    if (!InjectedBundle::shared().testRunner()->hasCustomFullScreenBehavior()) {
         WKBundlePageWillExitFullScreen(pageRef);
         WKBundlePageDidExitFullScreen(pageRef);
     }
@@ -1345,22 +1774,22 @@ void InjectedBundlePage::exitFullScreenForElement(WKBundlePageRef pageRef, WKBun
 
 void InjectedBundlePage::beganEnterFullScreen(WKBundlePageRef, WKRect, WKRect)
 {
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFullScreenCallbacks())
-        InjectedBundle::shared().stringBuilder()->append("beganEnterFullScreen()\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpFullScreenCallbacks())
+        InjectedBundle::shared().outputText("beganEnterFullScreen()\n");
 }
 
 void InjectedBundlePage::beganExitFullScreen(WKBundlePageRef, WKRect, WKRect)
 {
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFullScreenCallbacks())
-        InjectedBundle::shared().stringBuilder()->append("beganExitFullScreen()\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpFullScreenCallbacks())
+        InjectedBundle::shared().outputText("beganExitFullScreen()\n");
 }
 
 void InjectedBundlePage::closeFullScreen(WKBundlePageRef pageRef)
 {
-    if (InjectedBundle::shared().layoutTestController()->shouldDumpFullScreenCallbacks())
-        InjectedBundle::shared().stringBuilder()->append("closeFullScreen()\n");
+    if (InjectedBundle::shared().testRunner()->shouldDumpFullScreenCallbacks())
+        InjectedBundle::shared().outputText("closeFullScreen()\n");
 
-    if (!InjectedBundle::shared().layoutTestController()->hasCustomFullScreenBehavior()) {
+    if (!InjectedBundle::shared().testRunner()->hasCustomFullScreenBehavior()) {
         WKBundlePageWillExitFullScreen(pageRef);
         WKBundlePageDidExitFullScreen(pageRef);
     }
@@ -1372,15 +1801,15 @@ static bool compareByTargetName(WKBundleBackForwardListItemRef item1, WKBundleBa
     return toSTD(adoptWK(WKBundleBackForwardListItemCopyTarget(item1))) < toSTD(adoptWK(WKBundleBackForwardListItemCopyTarget(item2)));
 }
 
-static void dumpBackForwardListItem(WKBundleBackForwardListItemRef item, unsigned indent, bool isCurrentItem)
+static void dumpBackForwardListItem(WKBundleBackForwardListItemRef item, unsigned indent, bool isCurrentItem, StringBuilder& stringBuilder)
 {
     unsigned column = 0;
     if (isCurrentItem) {
-        InjectedBundle::shared().stringBuilder()->append("curr->");
+        stringBuilder.appendLiteral("curr->");
         column = 6;
     }
     for (unsigned i = column; i < indent; i++)
-        InjectedBundle::shared().stringBuilder()->append(' ');
+        stringBuilder.append(' ');
 
     WTF::String url = toWTFString(adoptWK(WKURLCopyString(adoptWK(WKBundleBackForwardListItemCopyURL(item)).get())));
     if (hasPrefix(url, "file:")) {
@@ -1390,23 +1819,23 @@ static void dumpBackForwardListItem(WKBundleBackForwardListItemRef item, unsigne
             start = 0;
         else
             start += directoryName.length();
-        InjectedBundle::shared().stringBuilder()->append("(file test):");
-        InjectedBundle::shared().stringBuilder()->append(url.substring(start));
+        stringBuilder.appendLiteral("(file test):");
+        stringBuilder.append(url.substring(start));
     } else
-        InjectedBundle::shared().stringBuilder()->append(url);
+        stringBuilder.append(url);
 
     WTF::String target = toWTFString(adoptWK(WKBundleBackForwardListItemCopyTarget(item)));
     if (target.length()) {
-        InjectedBundle::shared().stringBuilder()->append(" (in frame \"");
-        InjectedBundle::shared().stringBuilder()->append(target);
-        InjectedBundle::shared().stringBuilder()->append("\")");
+        stringBuilder.appendLiteral(" (in frame \"");
+        stringBuilder.append(target);
+        stringBuilder.appendLiteral("\")");
     }
 
     // FIXME: Need WKBackForwardListItemIsTargetItem.
     if (WKBundleBackForwardListItemIsTargetItem(item))
-        InjectedBundle::shared().stringBuilder()->append("  **nav target**");
+        stringBuilder.appendLiteral("  **nav target**");
 
-    InjectedBundle::shared().stringBuilder()->append('\n');
+    stringBuilder.append('\n');
 
     if (WKRetainPtr<WKArrayRef> kids = adoptWK(WKBundleBackForwardListItemCopyChildren(item))) {
         // Sort to eliminate arbitrary result ordering which defeats reproducible testing.
@@ -1416,13 +1845,13 @@ static void dumpBackForwardListItem(WKBundleBackForwardListItemRef item, unsigne
             sortedKids[i] = static_cast<WKBundleBackForwardListItemRef>(WKArrayGetItemAtIndex(kids.get(), i));
         stable_sort(sortedKids.begin(), sortedKids.end(), compareByTargetName);
         for (size_t i = 0; i < size; ++i)
-            dumpBackForwardListItem(sortedKids[i], indent + 4, false);
+            dumpBackForwardListItem(sortedKids[i], indent + 4, false, stringBuilder);
     }
 }
 
-void InjectedBundlePage::dumpBackForwardList()
+void InjectedBundlePage::dumpBackForwardList(StringBuilder& stringBuilder)
 {
-    InjectedBundle::shared().stringBuilder()->append("\n============== Back Forward List ==============\n");
+    stringBuilder.appendLiteral("\n============== Back Forward List ==============\n");
 
     WKBundleBackForwardListRef list = WKBundlePageGetBackForwardList(m_page);
 
@@ -1451,9 +1880,36 @@ void InjectedBundlePage::dumpBackForwardList()
     }
 
     for (int i = itemsToPrint.size() - 1; i >= 0; i--)
-        dumpBackForwardListItem(itemsToPrint[i].get(), 8, i == currentItemIndex);
+        dumpBackForwardListItem(itemsToPrint[i].get(), 8, i == currentItemIndex, stringBuilder);
 
-    InjectedBundle::shared().stringBuilder()->append("===============================================\n");
+    stringBuilder.appendLiteral("===============================================\n");
+}
+
+#if !PLATFORM(MAC)
+void InjectedBundlePage::platformDidStartProvisionalLoadForFrame(WKBundleFrameRef)
+{
+}
+#endif
+
+void InjectedBundlePage::frameDidChangeLocation(WKBundleFrameRef frame, bool shouldDump)
+{
+    if (frame != InjectedBundle::shared().topLoadingFrame())
+        return;
+
+    InjectedBundle::shared().setTopLoadingFrame(0);
+
+    if (InjectedBundle::shared().testRunner()->waitToDump())
+        return;
+
+    if (InjectedBundle::shared().shouldProcessWorkQueue()) {
+        InjectedBundle::shared().processWorkQueue();
+        return;
+    }
+
+    if (shouldDump)
+        InjectedBundle::shared().page()->dump();
+    else
+        InjectedBundle::shared().done();
 }
 
 } // namespace WTR

@@ -29,22 +29,26 @@
 #include "FontPlatformData.h"
 #include "Frame.h"
 #include "FrameTree.h"
+#include "FrameLoadRequest.h"
 #include "FrameLoaderClientJava.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "HTMLFormElement.h"
+#include "IconController.h"
 #include "InspectorClientJava.h"
 #include "InspectorController.h"
+#include "InitializeLogging.h"
 #include "JavaEnv.h"
 #include "JavaRef.h"
 #include "Logging.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformTouchEvent.h"
+#include "PlatformStrategiesJava.h"
 #include "PlatformWheelEvent.h"
-#include "PlatformString.h"
 #include "RenderPart.h"
 #include "RenderThemeJava.h"
 #include "RenderTreeAsText.h"
@@ -53,23 +57,25 @@
 #include "ScriptValue.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
-#include "ScriptControllerBase.h"
+#include "ScriptController.h"
 #include "Text.h"
 #include "TextIterator.h"
 #if USE(ACCELERATED_COMPOSITING)
 #include "TextureMapper.h"
 #include "TextureMapperLayer.h"
+#include "GraphicsLayerTextureMapper.h"
 #endif
 #include "WebKitVersion.h" //generated
 #include "Widget.h"
 #include "WorkerThread.h"
 
-#include "runtime/InitializeThreading.h"
-#include "runtime/JSObject.h"
-#include "runtime/JSValue.h"
-#include "runtime/UString.h"
-#include "API/APIShims.h"
-#include "API/APICast.h"
+#include <wtf/text/WTFString.h>
+#include <runtime/InitializeThreading.h>
+#include <runtime/JSObject.h>
+#include <runtime/JSCJSValue.h>
+#include <API/APIShims.h>
+#include <API/APICast.h>
+
 #include "runtime_root.h"
 #if OS(UNIX)
 #include <sys/utsname.h>
@@ -116,7 +122,7 @@ JLObject WebPage::jobjectFromPage(Page* page)
     if (!page)
         return NULL;
 
-    ChromeClientJava* client = dynamic_cast<ChromeClientJava*>(page->chrome()->client());
+    ChromeClientJava* client = dynamic_cast<ChromeClientJava*>(page->chrome().client());
     return client
         ? client->platformPage()
         : NULL;
@@ -344,10 +350,12 @@ void WebPage::syncLayers()
 
     // Updating layout might have taken us out of compositing mode
     if (m_rootLayer) {
-        m_rootLayer->syncCompositingStateForThisLayerOnly();
+        m_rootLayer->flushCompositingStateForThisLayerOnly();
+                    //syncCompositingStateForThisLayerOnly();
     }
 
-    m_page->mainFrame()->view()->syncCompositingStateIncludingSubframes();
+    m_page->mainFrame()->view()->flushCompositingStateIncludingSubframes();
+                                //syncCompositingStateIncludingSubframes();
 }
 
 void WebPage::requestJavaRepaint(const IntRect& rect)
@@ -372,7 +380,7 @@ void WebPage::requestJavaRepaint(const IntRect& rect)
 
 IntRect WebPage::pageRect()
 {
-    ChromeClient* client = m_page->chrome()->client();
+    ChromeClient *client = m_page->chrome().client();
     if (client) {
         return IntRect(client->pageRect());
     } else {
@@ -394,7 +402,8 @@ void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& cl
     rootTextureMapperLayer->setTransform(matrix);
     m_textureMapper->beginPainting();
     m_textureMapper->beginClip(matrix, clip);
-    rootTextureMapperLayer->syncAnimationsRecursive();
+    //rootTextureMapperLayer->syncAnimationsRecursive();
+    rootTextureMapperLayer->applyAnimationsRecursively();
     rootTextureMapperLayer->paint();
     m_textureMapper->endClip();
     m_textureMapper->endPainting();
@@ -405,7 +414,7 @@ void WebPage::notifyAnimationStarted(const GraphicsLayer*, double)
     ASSERT_NOT_REACHED();
 }
 
-void WebPage::notifySyncRequired(const GraphicsLayer*)
+void WebPage::notifyFlushRequired(const GraphicsLayer*)
 {
     markForSync();
 }
@@ -759,6 +768,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 #if !LOG_DISABLED
     initializeLoggingChannelsIfNecessary();
 #endif
+    PlatformStrategiesJava::initialize();
 
     JLObject jlself(self, true);
 
@@ -967,7 +977,11 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetIconURL
     if (!frame || !frame->loader()) {
         return 0;
     }
+#if ENABLE(ICONDATABASE)
     return frame->loader()->icon()->url().string().toJavaString(env).releaseLocal();
+#else
+    return 0;
+#endif
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
@@ -978,8 +992,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
         return;
     }
 
-    ResourceRequest request(KURL(KURL(), String(env, url)));
-    frame->loader()->load(request, false);
+    static const KURL emptyParent;
+    frame->loader()->load(FrameLoadRequest(
+        frame,
+        ResourceRequest(KURL(emptyParent, String(env, url)))
+    ));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
@@ -991,13 +1008,20 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     }
 
     const char* stringChars = env->GetStringUTFChars(text, JNI_FALSE);
-    int stringLen = (int)env->GetStringUTFLength(text);
-    RefPtr<SharedBuffer> buffer = SharedBuffer::create(stringChars, stringLen);
+    size_t stringLen = (size_t)env->GetStringUTFLength(text);
+    RefPtr<SharedBuffer> buffer = SharedBuffer::create(stringChars, (int)stringLen);
 
-    String ctype(env, contentType);
-    SubstituteData substituteData(buffer.release(), ctype, "UTF-8",
-                                  KURL(ParsedURLString, ""));
-    frame->loader()->load(KURL(ParsedURLString, ""), substituteData, true);
+    static const KURL emptyUrl(ParsedURLString, "");
+    frame->loader()->load(FrameLoadRequest(
+        frame,
+        ResourceRequest(emptyUrl),
+        SubstituteData(
+            buffer,
+            String(env, contentType),
+            "UTF-8",
+            emptyUrl)
+    ));
+
     env->ReleaseStringUTFChars(text, stringChars);
 }
 
@@ -1054,12 +1078,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkCopy
     (JNIEnv* env, jobject self, jlong pFrame)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->editor()) {
+    if (!frame) {
         return JNI_FALSE;
     }
 
-    if (frame->editor()->canCopy()) {
-        frame->editor()->copy();
+    if (frame->editor().canCopy()) {
+        frame->editor().copy();
         return JNI_TRUE;
     }
 
@@ -1452,7 +1476,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
     switch (id) {
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:
         //frame->focusWindow();
-        page->chrome()->focus();
+        page->chrome().focus();
         consumeEvent = eventHandler->handleMousePressEvent(mouseEvent);
         break;
     case com_sun_webkit_event_WCMouseEvent_MOUSE_RELEASED:
@@ -1548,7 +1572,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
     Frame* frame = page->focusController()->focusedOrMainFrame();
     ASSERT(frame && frame->eventHandler());
 
-    if (!frame || !frame->eventHandler() || !frame->editor()->canEdit()) {
+    if (!frame || !frame->eventHandler() || !frame->editor().canEdit()) {
         // There's no client to deliver the event. Consume the event
         // so that it won't be delivered to a wrong webkit client.
         return JNI_TRUE;
@@ -1559,7 +1583,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
             // if both committed and composed are empty, confirm with an empty text
             (env->GetStringLength(jcomposed) == 0)) {
         String committed = String(env, jcommitted);
-        frame->editor()->confirmComposition(committed);
+        frame->editor().confirmComposition(committed);
     }
 
     // Process composed (composition) text here
@@ -1579,7 +1603,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
             env->ReleaseIntArrayElements(jattributes, attrs, JNI_ABORT);
         }
         String composed = String(env, jcomposed);
-        frame->editor()->setComposition(composed, underlines, caretPosition, 0);
+        frame->editor().setComposition(composed, underlines, caretPosition, 0);
     }
     return JNI_TRUE;
 }
@@ -1598,7 +1622,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessCaretPositionCh
         return JNI_FALSE;
     }
 
-    RefPtr<Text> text = frame->editor()->compositionNode();
+    RefPtr<Text> text = frame->editor().compositionNode();
     if (!text) {
         return JNI_FALSE;
     }
@@ -1652,18 +1676,18 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
     IntPoint point = IntPoint(x, y);
     point = frameView->windowToContents(point);
 
-    Editor* editor = frame->editor();
-    if (editor->hasComposition()) {
-        RefPtr<Range> range = editor->compositionRange();
+    Editor &editor = frame->editor();
+    if (editor.hasComposition()) {
+        RefPtr<Range> range = editor.compositionRange();
         ExceptionCode ec = 0;
-        for (Node* node = range.get()->startContainer(ec); node; node = node->traverseNextNode()) {
+        for (Node* node = range.get()->startContainer(ec); node; node = NodeTraversal::next(node)) {
             RenderObject* renderer = node->renderer();
             IntRect content = renderer->absoluteBoundingBoxRect();
             VisiblePosition targetPosition(renderer->positionForPoint(LayoutPoint(point.x() - content.x(),
                                                                             point.y() - content.y())));
             offset = targetPosition.deepEquivalent().offsetInContainerNode();
-            if (offset >= editor->compositionStart() && offset < editor->compositionEnd()) {
-                offset -= editor->compositionStart();
+            if (offset >= editor.compositionStart() && offset < editor.compositionEnd()) {
+                offset -= editor.compositionStart();
                 break;
             }
         }
@@ -1678,7 +1702,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetInsertPositionOffset
     Frame* frame = page->mainFrame();
 
     jint position = 0;
-    if (frame->editor() && frame->editor()->canEdit()) {
+    if (frame->editor().canEdit()) {
         VisibleSelection selection = frame->selection()->selection();
         if (selection.isCaret()) {
             VisiblePosition caret = selection.visibleStart();
@@ -1695,20 +1719,20 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedTextLength
     Frame* frame = page->mainFrame();
 
     jint length = 0;
-    Editor* editor = frame->editor();
-    if (editor && editor->canEdit()) {
+    Editor &editor = frame->editor();
+    if (editor.canEdit()) {
         RefPtr<Range> range = rangeOfContents(frame->selection()->start().element());
         // Code derived from Range::toString
         Node* pastLast = range.get()->pastLastNode();
-        for (Node* n = range.get()->firstNode(); n != pastLast; n = n->traverseNextNode()) {
+        for (Node* n = range.get()->firstNode(); n != pastLast; n = NodeTraversal::next(n)) {
             if (n->nodeType() == Node::TEXT_NODE || n->nodeType() == Node::CDATA_SECTION_NODE) {
                 length += static_cast<CharacterData*>(n)->data().length();
             }
         }
         // Exclude the composition part if any
-        if (editor->hasComposition()) {
-            int start = editor->compositionStart();
-            int end = editor->compositionEnd();
+        if (editor.hasComposition()) {
+            int start = editor.compositionStart();
+            int end = editor.compositionEnd();
             length -= end - start;
         }
     }
@@ -1723,16 +1747,16 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
 
     jstring text = 0;
 
-    Editor* editor = frame->editor();
-    if (editor && editor->canEdit()) {
+    Editor &editor = frame->editor();
+    if (editor.canEdit()) {
         RefPtr<Range> range = rangeOfContents(frame->selection()->start().element());
         if (range) {
             String t = plainText(range.get());
             // Exclude the composition text if any
-            if (editor->hasComposition()) {
-                String s("");
-                int start = editor->compositionStart();
-                int end = editor->compositionEnd();
+            if (editor.hasComposition()) {
+                String s;
+                int start = editor.compositionStart();
+                int end = editor.compositionEnd();
                 int length = t.length() - (end - start);
                 if (start > 0) {
                     s = t.substring(0, start);
@@ -1758,7 +1782,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetSelectedText
 
     jstring text = 0;
 
-    String t = frame->editor()->selectedText();
+    String t = frame->editor().selectedText();
     text = env->NewString(reinterpret_cast<const jchar *>(t.characters()), t.length());
     CheckAndClearException(env); // OOME
 
@@ -1877,8 +1901,7 @@ static Editor* getEditor(Page* page) {
     ASSERT(page->focusController());
     Frame* frame = page->focusController()->focusedOrMainFrame();
     if (frame) {
-        ASSERT(frame->editor());
-        return frame->editor();
+        return &frame->editor();
     } else {
         return NULL;
     }
@@ -2002,7 +2025,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkIsJavaScriptEnabled
     (JNIEnv*, jobject, jlong pPage)
 {
     ASSERT(pPage);
-    Page* page = static_cast<Page*>(jlong_to_ptr(pPage));
+    Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
     return bool_to_jbool(page->mainFrame()->script()->canExecuteScripts(NotAboutToExecuteScript));
 }
@@ -2085,7 +2108,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetUnloadEventListenersCou
     ASSERT(pFrame);
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
     ASSERT(frame);
-    return (jint)frame->domWindow()->pendingUnloadEventListeners();
+    return (jint)frame->document()->domWindow()->pendingUnloadEventListeners();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
@@ -2120,7 +2143,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDispatchInspectorMessageFr
     if (!page) {
         return;
     }
-    JSDOMWindowBase::commonJSGlobalData()->timeoutChecker.reset(); // RT-21428
+    //utatodo: seems that RT-21428 will back again
+    //JSDOMWindowBase::commonVM()->timeoutChecker.reset(); // RT-21428
     page->inspectorController()->dispatchMessageFromFrontend(
             String(env, message));
 }

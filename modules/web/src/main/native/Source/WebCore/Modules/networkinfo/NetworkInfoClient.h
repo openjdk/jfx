@@ -45,6 +45,8 @@ public:
    
     virtual void startUpdating() = 0;
     virtual void stopUpdating() = 0;
+
+    virtual void networkInfoControllerDestroyed() = 0;
 };
 
 void provideNetworkInfoTo(Page*, NetworkInfoClient*);

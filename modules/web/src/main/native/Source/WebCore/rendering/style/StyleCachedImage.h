@@ -24,11 +24,13 @@
 #ifndef StyleCachedImage_h
 #define StyleCachedImage_h
 
-#include "CachedImage.h"
+#include "CachedImageClient.h"
 #include "CachedResourceHandle.h"
 #include "StyleImage.h"
 
 namespace WebCore {
+
+class CachedImage;
 
 class StyleCachedImage : public StyleImage, private CachedImageClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -40,12 +42,10 @@ public:
 
     virtual PassRefPtr<CSSValue> cssValue() const;
     
-    CachedImage* cachedImage() const { return m_image.get(); }
-
     virtual bool canRender(const RenderObject*, float multiplier) const;
     virtual bool isLoaded() const;
     virtual bool errorOccurred() const;
-    virtual IntSize imageSize(const RenderObject*, float multiplier) const;
+    virtual LayoutSize imageSize(const RenderObject*, float multiplier) const OVERRIDE;
     virtual bool imageHasRelativeWidth() const;
     virtual bool imageHasRelativeHeight() const;
     virtual void computeIntrinsicDimensions(const RenderObject*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
@@ -54,6 +54,8 @@ public:
     virtual void addClient(RenderObject*);
     virtual void removeClient(RenderObject*);
     virtual PassRefPtr<Image> image(RenderObject*, const IntSize&) const;
+    virtual bool knownToBeOpaque(const RenderObject*) const OVERRIDE;
+    virtual CachedImage* cachedImage() const OVERRIDE { return m_image.get(); }
     
 private:
     explicit StyleCachedImage(CachedImage*);

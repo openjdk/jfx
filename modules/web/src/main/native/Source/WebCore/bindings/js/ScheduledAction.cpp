@@ -32,8 +32,6 @@
 #include "JSDOMBinding.h"
 #include "JSDOMWindow.h"
 #include "JSMainThreadExecState.h"
-#include "ScriptCallStack.h"
-#include "ScriptCallStackFactory.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptSourceCode.h"
@@ -55,32 +53,31 @@ PassOwnPtr<ScheduledAction> ScheduledAction::create(ExecState* exec, DOMWrapperW
     JSValue v = exec->argument(0);
     CallData callData;
     if (getCallData(v, callData) == CallTypeNone) {
-        RefPtr<ScriptCallStack> callStack(createScriptCallStackForInspector(exec));
-        if (policy && !policy->allowEval(callStack.release()))
+        if (policy && !policy->allowEval(exec))
             return nullptr;
-        UString string = v.toString(exec)->value(exec);
+        String string = v.toString(exec)->value(exec);
         if (exec->hadException())
             return nullptr;
-        return adoptPtr(new ScheduledAction(ustringToString(string), isolatedWorld));
+        return adoptPtr(new ScheduledAction(string, isolatedWorld));
     }
 
     return adoptPtr(new ScheduledAction(exec, v, isolatedWorld));
 }
 
 ScheduledAction::ScheduledAction(ExecState* exec, JSValue function, DOMWrapperWorld* isolatedWorld)
-    : m_function(exec->globalData(), function)
+    : m_function(exec->vm(), function)
     , m_isolatedWorld(isolatedWorld)
 {
     // setTimeout(function, interval, arg0, arg1...).
     // Start at 2 to skip function and interval.
     for (size_t i = 2; i < exec->argumentCount(); ++i)
-        m_args.append(Strong<JSC::Unknown>(exec->globalData(), exec->argument(i)));
+        m_args.append(Strong<JSC::Unknown>(exec->vm(), exec->argument(i)));
 }
 
 void ScheduledAction::execute(ScriptExecutionContext* context)
 {
     if (context->isDocument())
-        execute(static_cast<Document*>(context));
+        execute(toDocument(context));
 #if ENABLE(WORKERS)
     else {
         ASSERT(context->isWorkerContext());
@@ -94,7 +91,7 @@ void ScheduledAction::execute(ScriptExecutionContext* context)
 void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSValue thisValue, ScriptExecutionContext* context)
 {
     ASSERT(m_function);
-    JSLockHolder lock(context->globalData());
+    JSLockHolder lock(context->vm());
 
     CallData callData;
     CallType callType = getCallData(m_function.get(), callData);
@@ -108,7 +105,6 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
     for (size_t i = 0; i < size; ++i)
         args.append(m_args[i].get());
 
-    globalObject->globalData().timeoutChecker.start();
     InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionCall(context, callType, callData);
 
     if (context->isDocument())
@@ -117,7 +113,6 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
         JSC::call(exec, m_function.get(), callType, callData, thisValue, args);
 
     InspectorInstrumentation::didCallFunction(cookie);
-    globalObject->globalData().timeoutChecker.stop();
 
     if (exec->hadException())
         reportCurrentException(exec);

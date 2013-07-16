@@ -37,6 +37,22 @@
 
 namespace WebCore {
 
+static RetainPtr<NSError> createNSErrorFromResourceErrorBase(const ResourceErrorBase& resourceError)
+{
+    RetainPtr<NSMutableDictionary> userInfo = adoptNS([[NSMutableDictionary alloc] init]);
+
+    if (!resourceError.localizedDescription().isEmpty())
+        [userInfo.get() setValue:resourceError.localizedDescription() forKey:NSLocalizedDescriptionKey];
+
+    if (!resourceError.failingURL().isEmpty()) {
+        RetainPtr<NSURL> cocoaURL = adoptNS([[NSURL alloc] initWithString:resourceError.failingURL()]);
+        [userInfo.get() setValue:resourceError.failingURL() forKey:@"NSErrorFailingURLStringKey"];
+        [userInfo.get() setValue:cocoaURL.get() forKey:@"NSErrorFailingURLKey"];
+    }
+
+    return adoptNS([[NSError alloc] initWithDomain:resourceError.domain() code:resourceError.errorCode() userInfo:userInfo.get()]);
+}
+
 #if USE(CFNETWORK)
 
 ResourceError::ResourceError(NSError *error)
@@ -44,6 +60,8 @@ ResourceError::ResourceError(NSError *error)
     , m_platformError(reinterpret_cast<CFErrorRef>(error))
 {
     m_isNull = !error;
+    if (!m_isNull)
+        m_isTimeout = [error code] == NSURLErrorTimedOut;
 }
 
 NSError *ResourceError::nsError() const
@@ -52,11 +70,18 @@ NSError *ResourceError::nsError() const
         ASSERT(!m_platformError);
         return nil;
     }
-    if (!m_platformNSError) {
+
+    if (m_platformNSError)
+        return m_platformNSError.get();
+
+    if (m_platformError) {
         CFErrorRef error = m_platformError.get();
-        RetainPtr<NSDictionary> userInfo(AdoptCF, (NSDictionary *) CFErrorCopyUserInfo(error));
-        m_platformNSError.adoptNS([[NSError alloc] initWithDomain:(NSString *)CFErrorGetDomain(error) code:CFErrorGetCode(error) userInfo:userInfo.get()]);
+        RetainPtr<CFDictionaryRef> userInfo = adoptCF(CFErrorCopyUserInfo(error));
+        m_platformNSError = adoptNS([[NSError alloc] initWithDomain:(NSString *)CFErrorGetDomain(error) code:CFErrorGetCode(error) userInfo:(NSDictionary *)userInfo.get()]);
+        return m_platformNSError.get();
     }
+
+    m_platformNSError = createNSErrorFromResourceErrorBase(*this);
     return m_platformNSError.get();
 }
 
@@ -72,6 +97,8 @@ ResourceError::ResourceError(NSError *nsError)
     , m_platformError(nsError)
 {
     m_isNull = !nsError;
+    if (!m_isNull)
+        m_isTimeout = [m_platformError.get() code] == NSURLErrorTimedOut;
 }
 
 ResourceError::ResourceError(CFErrorRef cfError)
@@ -79,6 +106,8 @@ ResourceError::ResourceError(CFErrorRef cfError)
     , m_platformError((NSError *)cfError)
 {
     m_isNull = !cfError;
+    if (!m_isNull)
+        m_isTimeout = [m_platformError.get() code] == NSURLErrorTimedOut;
 }
 
 void ResourceError::platformLazyInit()
@@ -114,20 +143,8 @@ NSError *ResourceError::nsError() const
         return nil;
     }
     
-    if (!m_platformError) {
-        RetainPtr<NSMutableDictionary> userInfo(AdoptNS, [[NSMutableDictionary alloc] init]);
-
-        if (!m_localizedDescription.isEmpty())
-            [userInfo.get() setValue:m_localizedDescription forKey:NSLocalizedDescriptionKey];
-
-        if (!m_failingURL.isEmpty()) {
-            RetainPtr<NSURL> cocoaURL = adoptNS([[NSURL alloc] initWithString:m_failingURL]);
-            [userInfo.get() setValue:m_failingURL forKey:@"NSErrorFailingURLStringKey"];
-            [userInfo.get() setValue:cocoaURL.get() forKey:@"NSErrorFailingURLKey"];
-        }
-
-        m_platformError.adoptNS([[NSError alloc] initWithDomain:m_domain code:m_errorCode userInfo:userInfo.get()]);
-    }
+    if (!m_platformError)
+        m_platformError = createNSErrorFromResourceErrorBase(*this);;
 
     return m_platformError.get();
 }

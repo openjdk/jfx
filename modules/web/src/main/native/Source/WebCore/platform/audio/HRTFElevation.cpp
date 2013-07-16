@@ -36,6 +36,7 @@
 #include "AudioFileReader.h"
 #include "Biquad.h"
 #include "FFTFrame.h"
+#include "HRTFDatabaseLoader.h"
 #include "HRTFPanner.h"
 #include <algorithm>
 #include <math.h>
@@ -60,7 +61,7 @@ const size_t ResponseFrameSize = 256;
 // The impulse responses may be resampled to a different sample-rate (depending on the audio hardware) when they are loaded.
 const float ResponseSampleRate = 44100;
 
-#if PLATFORM(GTK) || PLATFORM(MAC) || PLATFORM(EFL)
+#if PLATFORM(MAC) || USE(WEBAUDIO_GSTREAMER)
 #define USE_CONCATENATED_IMPULSE_RESPONSES
 #endif
 
@@ -75,11 +76,15 @@ static AudioBus* getConcatenatedImpulseResponsesForSubject(const String& subject
     AudioBus* bus;
     AudioBusMap::iterator iterator = audioBusMap.find(subjectName);
     if (iterator == audioBusMap.end()) {
-        OwnPtr<AudioBus> concatenatedImpulseResponses = AudioBus::loadPlatformResource(subjectName.utf8().data(), ResponseSampleRate);
-        bus = concatenatedImpulseResponses.leakPtr();
+        RefPtr<AudioBus> concatenatedImpulseResponses = AudioBus::loadPlatformResource(subjectName.utf8().data(), ResponseSampleRate);
+        ASSERT(concatenatedImpulseResponses);
+        if (!concatenatedImpulseResponses)
+            return 0;
+
+        bus = concatenatedImpulseResponses.release().leakRef();
         audioBusMap.set(subjectName, bus);
     } else
-        bus = iterator->second;
+        bus = iterator->value;
 
     size_t responseLength = bus->length();
     size_t expectedLength = static_cast<size_t>(TotalNumberOfResponses * ResponseFrameSize);
@@ -168,14 +173,14 @@ bool HRTFElevation::calculateKernelsForAzimuthElevation(int azimuth, int elevati
     // (hardware) sample-rate.
     unsigned startFrame = index * ResponseFrameSize;
     unsigned stopFrame = startFrame + ResponseFrameSize;
-    OwnPtr<AudioBus> preSampleRateConvertedResponse = AudioBus::createBufferFromRange(bus, startFrame, stopFrame);
-    OwnPtr<AudioBus> response = AudioBus::createBySampleRateConverting(preSampleRateConvertedResponse.get(), false, sampleRate);
+    RefPtr<AudioBus> preSampleRateConvertedResponse = AudioBus::createBufferFromRange(bus, startFrame, stopFrame);
+    RefPtr<AudioBus> response = AudioBus::createBySampleRateConverting(preSampleRateConvertedResponse.get(), false, sampleRate);
     AudioChannel* leftEarImpulseResponse = response->channel(AudioBus::ChannelLeft);
     AudioChannel* rightEarImpulseResponse = response->channel(AudioBus::ChannelRight);
 #else
     String resourceName = String::format("IRC_%s_C_R0195_T%03d_P%03d", subjectName.utf8().data(), azimuth, positiveElevation);
 
-    OwnPtr<AudioBus> impulseResponse(AudioBus::loadPlatformResource(resourceName.utf8().data(), sampleRate));
+    RefPtr<AudioBus> impulseResponse(AudioBus::loadPlatformResource(resourceName.utf8().data(), sampleRate));
 
     ASSERT(impulseResponse.get());
     if (!impulseResponse.get())
@@ -196,8 +201,8 @@ bool HRTFElevation::calculateKernelsForAzimuthElevation(int azimuth, int elevati
 
     // Note that depending on the fftSize returned by the panner, we may be truncating the impulse response we just loaded in.
     const size_t fftSize = HRTFPanner::fftSizeForSampleRate(sampleRate);
-    kernelL = HRTFKernel::create(leftEarImpulseResponse, fftSize, sampleRate, true);
-    kernelR = HRTFKernel::create(rightEarImpulseResponse, fftSize, sampleRate, true);
+    kernelL = HRTFKernel::create(leftEarImpulseResponse, fftSize, sampleRate);
+    kernelR = HRTFKernel::create(rightEarImpulseResponse, fftSize, sampleRate);
     
     return true;
 }

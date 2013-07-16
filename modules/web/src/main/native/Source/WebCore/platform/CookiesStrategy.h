@@ -26,20 +26,30 @@
 #ifndef CookiesStrategy_h
 #define CookiesStrategy_h
 
-#if USE(PLATFORM_STRATEGIES)
+#include <wtf/HashSet.h>
+#include <wtf/RetainPtr.h>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class KURL;
+class NetworkStorageSession;
+struct Cookie;
+
 class CookiesStrategy {
 public:
-    virtual void notifyCookiesChanged() = 0;
+    virtual String cookiesForDOM(const NetworkStorageSession&, const KURL& firstParty, const KURL&) = 0;
+    virtual void setCookiesFromDOM(const NetworkStorageSession&, const KURL& firstParty, const KURL&, const String& cookieString) = 0;
+    virtual bool cookiesEnabled(const NetworkStorageSession&, const KURL& firstParty, const KURL&) = 0;
+    virtual String cookieRequestHeaderFieldValue(const NetworkStorageSession&, const KURL& firstParty, const KURL&) = 0;
+    virtual bool getRawCookies(const NetworkStorageSession&, const KURL& firstParty, const KURL&, Vector<Cookie>&) = 0;
+    virtual void deleteCookie(const NetworkStorageSession&, const KURL&, const String& cookieName) = 0;
 
 protected:
     virtual ~CookiesStrategy() { }
 };
 
 } // namespace WebCore
-
-#endif // USE(PLATFORM_STRATEGIES)
 
 #endif // CookiesStrategy_h

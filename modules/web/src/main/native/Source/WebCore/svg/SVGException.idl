@@ -18,12 +18,11 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module svg {
-
-    exception [
+[
         Conditional=SVG,
-        DoNotCheckConstants
-    ] SVGException {
+    DoNotCheckConstants,
+    ImplementationLacksVTable
+] exception SVGException {
 
         readonly attribute unsigned short   code;
         readonly attribute DOMString        name;
@@ -39,4 +38,3 @@ module svg {
         const unsigned short SVG_INVALID_VALUE_ERR = 1;
         const unsigned short SVG_MATRIX_NOT_INVERTABLE = 2;
     };
-}

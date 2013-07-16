@@ -41,8 +41,6 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 
-import com.sun.javafx.sg.prism.NGNode;
-
 import java.util.Locale;
 import java.util.ResourceBundle;
 
@@ -78,7 +76,7 @@ public class OverlayWarning {
 
         // TODO - needs to be thread-safe - see RT-13813
         Scene.impl_setAllowPGAccess(true);
-        painter.setOverlayRoot((NGNode)sceneRoot.impl_getPGNode());
+        painter.setOverlayRoot(sceneRoot.impl_getPeer());
         Scene.impl_setAllowPGAccess(false);
         
         PauseTransition pause = new PauseTransition(Duration.millis(4000));
@@ -114,7 +112,7 @@ public class OverlayWarning {
 
         // TODO - needs to be thread-safe - see RT-13813
         Scene.impl_setAllowPGAccess(true);
-        painter.setOverlayRoot((NGNode)sceneRoot.impl_getPGNode());
+        painter.setOverlayRoot(sceneRoot.impl_getPeer());
         Scene.impl_setAllowPGAccess(false);
 
         painter.setRenderOverlay(true);
@@ -180,9 +178,9 @@ public class OverlayWarning {
         root.getChildren().add(text);
 
         Scene.impl_setAllowPGAccess(true);
-        text.impl_updatePG();
-        background.impl_updatePG();
-        root.impl_updatePG();
+        text.impl_updatePeer();
+        background.impl_updatePeer();
+        root.impl_updatePeer();
         Scene.impl_setAllowPGAccess(false);
         return root;
     }

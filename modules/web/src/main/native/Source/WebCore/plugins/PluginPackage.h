@@ -28,13 +28,13 @@
 #define PluginPackage_h
 
 #include "FileSystem.h"
-#include "PlatformString.h"
 #include "PluginQuirkSet.h"
 #include "Timer.h"
 #include "npruntime_internal.h"
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
     typedef HashMap<String, String> MIMEToDescriptionsMap;
@@ -122,6 +122,11 @@ namespace WebCore {
         String m_fullMIMEDescription;
         bool m_infoIsFromCache;
 #endif
+    };
+
+    // FIXME: This is a workaround because PluginPackageHash is broken and may consider keys with different hashes as equal.
+    struct PluginPackageHashTraits : HashTraits<RefPtr<PluginPackage> > {
+        static const int minimumTableSize = 64;
     };
 
     struct PluginPackageHash {

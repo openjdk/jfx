@@ -5,6 +5,7 @@
  * Copyright (C) 2008 INdT - Instituto Nokia de Tecnologia
  * Copyright (C) 2009-2010 ProFUSION embedded systems
  * Copyright (C) 2009-2010 Samsung Electronics
+ * Copyright (C) 2012 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,64 +35,72 @@
 #include "config.h"
 #include "PlatformScreen.h"
 
-#include "EflScreenUtilities.h"
+#include "FloatRect.h"
 #include "NotImplemented.h"
-#include "PlatformString.h"
 #include "Widget.h"
 
 #include <Ecore_Evas.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
+
+#ifdef HAVE_ECORE_X
+#include <Ecore_X.h>
+#endif
 
 namespace WebCore {
  
-int screenHorizontalDPI(Widget* widget)
+int screenDepth(Widget*)
 {
-    notImplemented();
-    return 0;
-}
-
-int screenVerticalDPI(Widget* widget)
-{
-    notImplemented();
-    return 0;
-}
-
-int screenDepth(Widget* widget)
-{
-    if (!widget || !widget->evas())
-        return 0;
-
-    return getPixelDepth(widget->evas());
+#ifdef HAVE_ECORE_X
+    return ecore_x_default_depth_get(ecore_x_display_get(), ecore_x_default_screen_get());
+#else
+    return 24;
+#endif
 }
 
 int screenDepthPerComponent(Widget* widget)
 {
-    if (!widget || !widget->evas())
-        return 0;
+    if (!widget)
+        return 8;
 
-    // FIXME: How to support this functionality based on EFL library ?
-    return getPixelDepth(widget->evas());
+    int depth = screenDepth(widget);
+
+    switch (depth) {
+    // Special treat 0 as an error, and return 8 bit per component.
+    case 0:
+    case 24:
+    case 32:
+        return 8;
+    case 8:
+        return 2;
+    default:
+        return depth / 3;
+    }
 }
 
-bool screenIsMonochrome(Widget*)
+bool screenIsMonochrome(Widget* widget)
 {
-    notImplemented();
-    return false;
+    return screenDepth(widget) < 2;
 }
 
 FloatRect screenRect(Widget* widget)
 {
-    if (!widget)
+#ifdef HAVE_ECORE_X
+    UNUSED_PARAM(widget);
+    // Fallback to realistic values if the EcoreX call fails
+    // and we cannot accurately detect the screen size.
+    int width = 800;
+    int height = 600;
+    ecore_x_screen_size_get(ecore_x_default_screen_get(), &width, &height);
+    return FloatRect(0, 0, width, height);
+#else
+    if (!widget || !widget->evas())
         return FloatRect();
 
     int x, y, w, h;
-    Evas* e = widget->evas();
-    if (!e)
-        return FloatRect();
-
-    ecore_evas_screen_geometry_get(ecore_evas_ecore_evas_get(e), &x, &y, &w, &h);
-
+    ecore_evas_screen_geometry_get(ecore_evas_ecore_evas_get(widget->evas()), &x, &y, &w, &h);
     return FloatRect(x, y, w, h);
+#endif
 }
 
 FloatRect screenAvailableRect(Widget* widget)

@@ -42,15 +42,9 @@ WebInspector.NetworkManager = function()
     NetworkAgent.enable();
 
     WebInspector.settings.cacheDisabled.addChangeListener(this._cacheDisabledSettingChanged, this);
-
-    if (WebInspector.settings.userAgent.get())
-        this._userAgentSettingChanged();
-    WebInspector.settings.userAgent.addChangeListener(this._userAgentSettingChanged, this);
 }
 
 WebInspector.NetworkManager.EventTypes = {
-    ResourceTrackingEnabled: "ResourceTrackingEnabled",
-    ResourceTrackingDisabled: "ResourceTrackingDisabled",
     RequestStarted: "RequestStarted",
     RequestUpdated: "RequestUpdated",
     RequestFinished: "RequestFinished",
@@ -64,7 +58,9 @@ WebInspector.NetworkManager._MIMETypes = {
     "application/xhtml+xml":       {"document": true},
     "text/css":                    {"stylesheet": true},
     "text/xsl":                    {"stylesheet": true},
+    "image/jpg":                   {"image": true},
     "image/jpeg":                  {"image": true},
+    "image/pjpeg":                 {"image": true},
     "image/png":                   {"image": true},
     "image/gif":                   {"image": true},
     "image/bmp":                   {"image": true},
@@ -75,10 +71,9 @@ WebInspector.NetworkManager._MIMETypes = {
     "image/x-xbitmap":             {"image": true},
     "font/ttf":                    {"font": true},
     "font/opentype":               {"font": true},
-    "font/woff":                   {"font": true},
+    "application/font-woff":       {"font": true},
     "application/x-font-type1":    {"font": true},
     "application/x-font-ttf":      {"font": true},
-    "application/x-font-woff":     {"font": true},
     "application/x-truetype-font": {"font": true},
     "text/javascript":             {"script": true},
     "text/ecmascript":             {"script": true},
@@ -94,24 +89,6 @@ WebInspector.NetworkManager._MIMETypes = {
 }
 
 WebInspector.NetworkManager.prototype = {
-    enableResourceTracking: function()
-    {
-        function callback(error)
-        {
-            this.dispatchEventToListeners(WebInspector.NetworkManager.EventTypes.ResourceTrackingEnabled);
-        }
-        NetworkAgent.enable(callback.bind(this));
-    },
-
-    disableResourceTracking: function()
-    {
-        function callback(error)
-        {
-            this.dispatchEventToListeners(WebInspector.NetworkManager.EventTypes.ResourceTrackingDisabled);
-        }
-        NetworkAgent.disable(callback.bind(this));
-    },
-
     /**
      * @param {string} url
      * @return {WebInspector.NetworkRequest}
@@ -126,17 +103,12 @@ WebInspector.NetworkManager.prototype = {
      */
     _cacheDisabledSettingChanged: function(event)
     {
-        var enabled = /** @type {boolean} */ event.data;
+        var enabled = /** @type {boolean} */ (event.data);
         NetworkAgent.setCacheDisabled(enabled);
     },
 
-    _userAgentSettingChanged: function()
-    {
-        NetworkAgent.setUserAgentOverride(WebInspector.settings.userAgent.get());
+    __proto__: WebInspector.Object.prototype
     }
-}
-
-WebInspector.NetworkManager.prototype.__proto__ = WebInspector.Object.prototype;
 
 /**
  * @constructor
@@ -153,7 +125,7 @@ WebInspector.NetworkDispatcher = function(manager)
 WebInspector.NetworkDispatcher.prototype = {
     /**
      * @param {NetworkAgent.Headers} headersMap
-     * @return {Array.<Object>}
+     * @return {!Array.<!WebInspector.NetworkRequest.NameValue>}
      */
     _headersMapToHeadersArray: function(headersMap)
     {
@@ -209,7 +181,7 @@ WebInspector.NetworkDispatcher.prototype = {
 
         if (!this._mimeTypeIsConsistentWithType(networkRequest)) {
             WebInspector.console.addMessage(WebInspector.ConsoleMessage.create(WebInspector.ConsoleMessage.MessageSource.Network,
-                WebInspector.ConsoleMessage.MessageLevel.Warning,
+                WebInspector.ConsoleMessage.MessageLevel.Log,
                 WebInspector.UIString("Resource interpreted as %s but transferred with MIME type %s: \"%s\".", networkRequest.type.title(), networkRequest.mimeType, networkRequest.url),
                 WebInspector.ConsoleMessage.MessageType.Log,
                 "",
@@ -217,7 +189,7 @@ WebInspector.NetworkDispatcher.prototype = {
                 1,
                 [],
                 null,
-                networkRequest));
+                networkRequest.requestId));
         }
     },
 
@@ -290,7 +262,7 @@ WebInspector.NetworkDispatcher.prototype = {
             // FIXME: move this check to the backend.
             if (!redirectResponse)
                 return;
-            this.responseReceived(requestId, frameId, loaderId, time, "Other", redirectResponse);
+            this.responseReceived(requestId, frameId, loaderId, time, PageAgent.ResourceType.Other, redirectResponse);
             networkRequest = this._appendRedirect(requestId, time, request.url);
         } else
             networkRequest = this._createNetworkRequest(requestId, frameId, loaderId, request.url, documentURL, initiator);
@@ -442,7 +414,6 @@ WebInspector.NetworkDispatcher.prototype = {
 
         networkRequest.requestMethod = "GET";
         networkRequest.requestHeaders = this._headersMapToHeadersArray(request.headers);
-        networkRequest.webSocketRequestKey3 = request.requestKey3;
         networkRequest.startTime = time;
 
         this._updateNetworkRequest(networkRequest);
@@ -462,7 +433,6 @@ WebInspector.NetworkDispatcher.prototype = {
         networkRequest.statusCode = response.status;
         networkRequest.statusText = response.statusText;
         networkRequest.responseHeaders = this._headersMapToHeadersArray(response.headers);
-        networkRequest.webSocketChallengeResponse = response.challengeResponse;
         networkRequest.responseReceivedTime = time;
 
         this._updateNetworkRequest(networkRequest);

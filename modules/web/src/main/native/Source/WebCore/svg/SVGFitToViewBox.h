@@ -42,21 +42,20 @@ public:
     static void addSupportedAttributes(HashSet<QualifiedName>&);
 
     template<class SVGElementTarget>
-    static bool parseAttribute(SVGElementTarget* target, const Attribute& attribute)
+    static bool parseAttribute(SVGElementTarget* target, const QualifiedName& name, const AtomicString& value)
     {
         ASSERT(target);
         ASSERT(target->document());
-        if (attribute.name() == SVGNames::viewBoxAttr) {
+        if (name == SVGNames::viewBoxAttr) {
             FloatRect viewBox;
-            if (!attribute.isNull())
-                parseViewBox(target->document(), attribute.value(), viewBox);
-            target->setViewBoxBaseValue(viewBox);
+            bool valueIsValid = !value.isNull() && parseViewBox(target->document(), value, viewBox);
+            target->setViewBoxBaseValue(viewBox, valueIsValid);
             return true;
         }
 
-        if (attribute.name() == SVGNames::preserveAspectRatioAttr) {
+        if (name == SVGNames::preserveAspectRatioAttr) {
             SVGPreserveAspectRatio preserveAspectRatio;
-            preserveAspectRatio.parse(attribute.value());
+            preserveAspectRatio.parse(value);
             target->setPreserveAspectRatioBaseValue(preserveAspectRatio);
             return true;
         }

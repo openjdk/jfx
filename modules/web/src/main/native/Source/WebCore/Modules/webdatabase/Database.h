@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,34 +31,29 @@
 
 #if ENABLE(SQL_DATABASE)
 
-#include "AbstractDatabase.h"
-#include "PlatformString.h"
-
-#include <wtf/Deque.h>
-#include <wtf/Forward.h>
+#include "DatabaseBackend.h"
+#include "DatabaseBase.h"
+#include "DatabaseBasicTypes.h"
+#include "DatabaseError.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class ChangeVersionData;
 class DatabaseCallback;
-class ScriptExecutionContext;
+class DatabaseContext;
 class SecurityOrigin;
 class SQLTransaction;
+class SQLTransactionBackend;
 class SQLTransactionCallback;
-class SQLTransactionClient;
-class SQLTransactionCoordinator;
 class SQLTransactionErrorCallback;
-class SQLTransactionWrapper;
 class VoidCallback;
 
-typedef int ExceptionCode;
-
-class Database : public AbstractDatabase {
+class Database : public DatabaseBase, public DatabaseBackend {
 public:
     virtual ~Database();
 
     // Direct support for the DOM API
-    static PassRefPtr<Database> openDatabase(ScriptExecutionContext*, const String& name, const String& expectedVersion, const String& displayName,
-                                             unsigned long estimatedSize, PassRefPtr<DatabaseCallback>, ExceptionCode&);
     virtual String version() const;
     void changeVersion(const String& oldVersion, const String& newVersion, PassRefPtr<SQLTransactionCallback>,
                        PassRefPtr<SQLTransactionErrorCallback>, PassRefPtr<VoidCallback> successCallback);
@@ -66,6 +61,9 @@ public:
     void readTransaction(PassRefPtr<SQLTransactionCallback>, PassRefPtr<SQLTransactionErrorCallback>, PassRefPtr<VoidCallback> successCallback);
 
     // Internal engine support
+    static Database* from(DatabaseBackend*);
+    DatabaseContext* databaseContext() const { return m_databaseContext.get(); }
+
     Vector<String> tableNames();
 
     virtual SecurityOrigin* securityOrigin() const;
@@ -73,47 +71,31 @@ public:
     virtual void markAsDeletedAndClose();
     bool deleted() const { return m_deleted; }
 
-    void close();
     virtual void closeImmediately();
 
-    unsigned long long databaseSize() const;
-    unsigned long long maximumSize() const;
-
     void scheduleTransactionCallback(SQLTransaction*);
-    void scheduleTransactionStep(SQLTransaction*, bool immediately = false);
-
-    SQLTransactionClient* transactionClient() const;
-    SQLTransactionCoordinator* transactionCoordinator() const;
 
 private:
-    class DatabaseOpenTask;
-    class DatabaseCloseTask;
-    class DatabaseTransactionTask;
-    class DatabaseTableNamesTask;
+    Database(PassRefPtr<DatabaseBackendContext>, const String& name,
+        const String& expectedVersion, const String& displayName, unsigned long estimatedSize);
+    PassRefPtr<DatabaseBackend> backend();
+    static PassRefPtr<Database> create(ScriptExecutionContext*, PassRefPtr<DatabaseBackendBase>);
 
-    Database(ScriptExecutionContext*, const String& name, const String& expectedVersion,
-             const String& displayName, unsigned long estimatedSize);
     void runTransaction(PassRefPtr<SQLTransactionCallback>, PassRefPtr<SQLTransactionErrorCallback>,
-                        PassRefPtr<VoidCallback> successCallback, PassRefPtr<SQLTransactionWrapper>, bool readOnly);
-
-    bool openAndVerifyVersion(bool setVersionInNewDatabase, ExceptionCode&, String& errorMessage);
-    virtual bool performOpenAndVerify(bool setVersionInNewDatabase, ExceptionCode&, String& errorMessage);
-
-    void inProgressTransactionCompleted();
-    void scheduleTransaction();
+        PassRefPtr<VoidCallback> successCallback, bool readOnly, const ChangeVersionData* = 0);
 
     Vector<String> performGetTableNames();
 
-    static void deliverPendingCallback(void*);
-
-    Deque<RefPtr<SQLTransaction> > m_transactionQueue;
-    Mutex m_transactionInProgressMutex;
-    bool m_transactionInProgress;
-    bool m_isTransactionQueueEnabled;
-
     RefPtr<SecurityOrigin> m_databaseThreadSecurityOrigin;
+    RefPtr<DatabaseContext> m_databaseContext;
 
     bool m_deleted;
+
+    friend class DatabaseManager;
+    friend class DatabaseServer; // FIXME: remove this when the backend has been split out.
+    friend class DatabaseBackend; // FIXME: remove this when the backend has been split out.
+    friend class SQLStatement;
+    friend class SQLTransaction;
 };
 
 } // namespace WebCore

@@ -8,15 +8,12 @@
 #include "config.h"
 #include "WebKitDOMObject.h"
 
-#include "glib-object.h"
-#include "WebKitDOMBinding.h"
-
 enum {
     PROP_0,
     PROP_CORE_OBJECT
 };
 
-G_DEFINE_TYPE(WebKitDOMObject, webkit_dom_object, G_TYPE_OBJECT);
+G_DEFINE_TYPE(WebKitDOMObject, webkit_dom_object, G_TYPE_OBJECT)
 
 static void webkit_dom_object_init(WebKitDOMObject* object)
 {

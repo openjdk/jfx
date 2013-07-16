@@ -33,7 +33,6 @@
 #include "JSSymbolTableObject.h"
 #include "Register.h"
 #include "SymbolTable.h"
-#include <wtf/UnusedParam.h>
 #include <wtf/OwnArrayPtr.h>
 
 namespace JSC {
@@ -48,52 +47,30 @@ namespace JSC {
     public:
         typedef JSSymbolTableObject Base;
 
-        WriteBarrier<Unknown>& registerAt(int index) const { return m_registers[index]; }
+        WriteBarrierBase<Unknown>& registerAt(int index) const { return m_registers[index]; }
 
-        WriteBarrier<Unknown>* const * addressOfRegisters() const { return &m_registers; }
+        WriteBarrierBase<Unknown>* const * addressOfRegisters() const { return &m_registers; }
         static size_t offsetOfRegisters() { return OBJECT_OFFSETOF(JSVariableObject, m_registers); }
 
-        JS_EXPORT_PRIVATE static void destroy(JSCell*);
+        static const ClassInfo s_info;
 
     protected:
-        static const unsigned StructureFlags = JSSymbolTableObject::StructureFlags;
+        static const unsigned StructureFlags = Base::StructureFlags;
 
-        JSVariableObject(JSGlobalData& globalData, Structure* structure, SymbolTable* symbolTable, Register* registers)
-            : JSSymbolTableObject(globalData, structure, symbolTable)
-            , m_registers(reinterpret_cast<WriteBarrier<Unknown>*>(registers))
+        JSVariableObject(
+            VM& vm,
+            Structure* structure,
+            Register* registers,
+            JSScope* scope,
+            SharedSymbolTable* symbolTable = 0
+        )
+            : Base(vm, structure, scope, symbolTable)
+            , m_registers(reinterpret_cast<WriteBarrierBase<Unknown>*>(registers))
         {
         }
 
-        void finishCreation(JSGlobalData& globalData)
-        {
-            Base::finishCreation(globalData);
-            COMPILE_ASSERT(sizeof(WriteBarrier<Unknown>) == sizeof(Register), Register_should_be_same_size_as_WriteBarrier);
-        }
-
-        PassOwnArrayPtr<WriteBarrier<Unknown> > copyRegisterArray(JSGlobalData&, WriteBarrier<Unknown>* src, size_t count, size_t callframeStarts);
-        void setRegisters(WriteBarrier<Unknown>* registers, PassOwnArrayPtr<WriteBarrier<Unknown> > registerArray);
-
-        WriteBarrier<Unknown>* m_registers; // "r" in the register file.
-        OwnArrayPtr<WriteBarrier<Unknown> > m_registerArray; // Independent copy of registers, used when a variable object copies its registers out of the register file.
+        WriteBarrierBase<Unknown>* m_registers; // "r" in the stack.
     };
-
-    inline PassOwnArrayPtr<WriteBarrier<Unknown> > JSVariableObject::copyRegisterArray(JSGlobalData& globalData, WriteBarrier<Unknown>* src, size_t count, size_t callframeStarts)
-    {
-        OwnArrayPtr<WriteBarrier<Unknown> > registerArray = adoptArrayPtr(new WriteBarrier<Unknown>[count]);
-        for (size_t i = 0; i < callframeStarts; i++)
-            registerArray[i].set(globalData, this, src[i].get());
-        for (size_t i = callframeStarts + RegisterFile::CallFrameHeaderSize; i < count; i++)
-            registerArray[i].set(globalData, this, src[i].get());
-
-        return registerArray.release();
-    }
-
-    inline void JSVariableObject::setRegisters(WriteBarrier<Unknown>* registers, PassOwnArrayPtr<WriteBarrier<Unknown> > registerArray)
-    {
-        ASSERT(registerArray != m_registerArray);
-        m_registerArray = registerArray;
-        m_registers = registers;
-    }
 
 } // namespace JSC
 

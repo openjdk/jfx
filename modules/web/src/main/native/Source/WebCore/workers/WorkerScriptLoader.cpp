@@ -39,22 +39,16 @@
 #include "WorkerContext.h"
 #include "WorkerScriptLoaderClient.h"
 #include "WorkerThreadableLoader.h"
-
 #include <wtf/OwnPtr.h>
 #include <wtf/RefPtr.h>
-#include <wtf/UnusedParam.h>
 
 namespace WebCore {
 
 WorkerScriptLoader::WorkerScriptLoader()
     : m_client(0)
-    , m_script("")
     , m_failed(false)
     , m_identifier(0)
     , m_finishing(false)
-#if PLATFORM(CHROMIUM)
-    , m_targetType(ResourceRequest::TargetIsWorker)
-#endif
 {
 }
 
@@ -70,7 +64,7 @@ void WorkerScriptLoader::loadSynchronously(ScriptExecutionContext* scriptExecuti
     if (!request)
         return;
 
-    ASSERT(scriptExecutionContext->isWorkerContext());
+    ASSERT_WITH_SECURITY_IMPLICATION(scriptExecutionContext->isWorkerContext());
 
     ThreadableLoaderOptions options;
     options.allowCredentials = AllowStoredCredentials;
@@ -110,7 +104,7 @@ PassOwnPtr<ResourceRequest> WorkerScriptLoader::createResourceRequest()
 {
     OwnPtr<ResourceRequest> request = adoptPtr(new ResourceRequest(m_url));
     request->setHTTPMethod("GET");
-#if PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY)
+#if PLATFORM(BLACKBERRY)
     request->setTargetType(m_targetType);
 #endif
     return request.release();
@@ -146,7 +140,7 @@ void WorkerScriptLoader::didReceiveData(const char* data, int len)
     if (len == -1)
         len = strlen(data);
     
-    m_script += m_decoder->decode(data, len);
+    m_script.append(m_decoder->decode(data, len));
 }
 
 void WorkerScriptLoader::didFinishLoading(unsigned long identifier, double)
@@ -157,7 +151,7 @@ void WorkerScriptLoader::didFinishLoading(unsigned long identifier, double)
     }
 
     if (m_decoder)
-        m_script += m_decoder->flush();
+        m_script.append(m_decoder->flush());
 
     m_identifier = identifier;
     notifyFinished();
@@ -179,6 +173,11 @@ void WorkerScriptLoader::notifyError()
     notifyFinished();
 }
     
+String WorkerScriptLoader::script()
+{
+    return m_script.toString();
+}
+
 void WorkerScriptLoader::notifyFinished()
 {
     if (!m_client || m_finishing)

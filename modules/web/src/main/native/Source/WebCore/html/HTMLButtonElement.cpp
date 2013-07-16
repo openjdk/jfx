@@ -67,15 +67,15 @@ const AtomicString& HTMLButtonElement::formControlType() const
 {
     switch (m_type) {
         case SUBMIT: {
-            DEFINE_STATIC_LOCAL(const AtomicString, submit, ("submit"));
+            DEFINE_STATIC_LOCAL(const AtomicString, submit, ("submit", AtomicString::ConstructFromLiteral));
             return submit;
         }
         case BUTTON: {
-            DEFINE_STATIC_LOCAL(const AtomicString, button, ("button"));
+            DEFINE_STATIC_LOCAL(const AtomicString, button, ("button", AtomicString::ConstructFromLiteral));
             return button;
         }
         case RESET: {
-            DEFINE_STATIC_LOCAL(const AtomicString, reset, ("reset"));
+            DEFINE_STATIC_LOCAL(const AtomicString, reset, ("reset", AtomicString::ConstructFromLiteral));
             return reset;
         }
     }
@@ -95,23 +95,23 @@ bool HTMLButtonElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLFormControlElement::isPresentationAttribute(name);
 }
 
-void HTMLButtonElement::parseAttribute(const Attribute& attribute)
+void HTMLButtonElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == typeAttr) {
-        if (equalIgnoringCase(attribute.value(), "reset"))
+    if (name == typeAttr) {
+        if (equalIgnoringCase(value, "reset"))
             m_type = RESET;
-        else if (equalIgnoringCase(attribute.value(), "button"))
+        else if (equalIgnoringCase(value, "button"))
             m_type = BUTTON;
         else
             m_type = SUBMIT;
         setNeedsWillValidateCheck();
     } else
-        HTMLFormControlElement::parseAttribute(attribute);
+        HTMLFormControlElement::parseAttribute(name, value);
 }
 
 void HTMLButtonElement::defaultEventHandler(Event* event)
 {
-    if (event->type() == eventNames().DOMActivateEvent && !disabled()) {
+    if (event->type() == eventNames().DOMActivateEvent && !isDisabledFormControl()) {
         if (form() && m_type == SUBMIT) {
             m_isActivatedSubmit = true;
             form()->prepareForSubmission(event);
@@ -153,11 +153,18 @@ void HTMLButtonElement::defaultEventHandler(Event* event)
     HTMLFormControlElement::defaultEventHandler(event);
 }
 
+bool HTMLButtonElement::willRespondToMouseClickEvents()
+{
+    if (!isDisabledFormControl() && form() && (m_type == SUBMIT || m_type == RESET))
+        return true;
+    return HTMLFormControlElement::willRespondToMouseClickEvents();
+}
+
 bool HTMLButtonElement::isSuccessfulSubmitButton() const
 {
     // HTML spec says that buttons must have names to be considered successful.
     // However, other browsers do not impose this constraint.
-    return m_type == SUBMIT && !disabled();
+    return m_type == SUBMIT && !isDisabledFormControl();
 }
 
 bool HTMLButtonElement::isActivatedSubmit() const
@@ -181,8 +188,8 @@ bool HTMLButtonElement::appendFormData(FormDataList& formData, bool)
 void HTMLButtonElement::accessKeyAction(bool sendMouseEvents)
 {
     focus();
-    // Send the mouse button events if the caller specified sendMouseEvents
-    dispatchSimulatedClick(0, sendMouseEvents);
+
+    dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
 bool HTMLButtonElement::isURLAttribute(const Attribute& attribute) const

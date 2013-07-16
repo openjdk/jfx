@@ -39,8 +39,8 @@
 BrowserWindow::BrowserWindow(WindowOptions* options)
     : m_windowOptions(options)
 {
-    setWindowTitle("MiniBrowser");
-    setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
+    setTitle("MiniBrowser");
+    setFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
     setResizeMode(QQuickView::SizeRootObjectToView);
 
     // This allows starting MiniBrowser from the build directory without previously defining QML_IMPORT_PATH.
@@ -104,6 +104,11 @@ void BrowserWindow::focusAddressBar()
     QMetaObject::invokeMethod(rootObject(), "focusAddressBar", Qt::DirectConnection);
 }
 
+void BrowserWindow::toggleFind()
+{
+    QMetaObject::invokeMethod(rootObject(), "toggleFind", Qt::DirectConnection);
+}
+
 BrowserWindow* BrowserWindow::newWindow(const QString& url)
 {
     BrowserWindow* window = new BrowserWindow(m_windowOptions);
@@ -113,14 +118,22 @@ BrowserWindow* BrowserWindow::newWindow(const QString& url)
 
 void BrowserWindow::updateVisualMockTouchPoints(const QList<QTouchEvent::TouchPoint>& touchPoints)
 {
+    if (touchPoints.isEmpty()) {
+        // Hide all touch indicator items.
+        foreach (QQuickItem* item, m_activeMockComponents.values())
+            item->setProperty("pressed", false);
+
+        return;
+    }
+
     foreach (const QTouchEvent::TouchPoint& touchPoint, touchPoints) {
-        QString mockTouchPointIdentifier = QString("mockTouchPoint%1").arg(touchPoint.id());
-        QQuickItem* mockTouchPointItem = rootObject()->findChild<QQuickItem*>(mockTouchPointIdentifier, Qt::FindDirectChildrenOnly);
+        QQuickItem* mockTouchPointItem = m_activeMockComponents.value(touchPoint.id());
 
         if (!mockTouchPointItem) {
             QQmlComponent touchMockPointComponent(engine(), QUrl("qrc:///qml/MockTouchPoint.qml"));
             mockTouchPointItem = qobject_cast<QQuickItem*>(touchMockPointComponent.create());
-            mockTouchPointItem->setObjectName(mockTouchPointIdentifier);
+            Q_ASSERT(mockTouchPointItem);
+            m_activeMockComponents.insert(touchPoint.id(), mockTouchPointItem);
             mockTouchPointItem->setProperty("pointId", QVariant(touchPoint.id()));
             mockTouchPointItem->setParent(rootObject());
             mockTouchPointItem->setParentItem(rootObject());
@@ -147,7 +160,7 @@ void BrowserWindow::onTitleChanged(QString title)
 {
     if (title.isEmpty())
         title = QLatin1String("MiniBrowser");
-    setWindowTitle(title);
+    setTitle(title);
 }
 
 void BrowserWindow::zoomIn()

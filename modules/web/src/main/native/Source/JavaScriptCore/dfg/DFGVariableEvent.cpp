@@ -33,11 +33,11 @@
 
 namespace JSC { namespace DFG {
 
-void VariableEvent::dump(FILE* out) const
+void VariableEvent::dump(PrintStream& out) const
 {
     switch (kind()) {
     case Reset:
-        fprintf(out, "Reset");
+        out.printf("Reset");
         break;
     case BirthToFill:
         dumpFillInfo("BirthToFill", out);
@@ -52,37 +52,37 @@ void VariableEvent::dump(FILE* out) const
         dumpSpillInfo("Spill", out);
         break;
     case Death:
-        fprintf(out, "Death(@%u)", nodeIndex());
+        out.print("Death(", id(), ")");
         break;
-    case MovHint:
-        fprintf(out, "MovHint(@%u, r%d)", nodeIndex(), operand());
+    case MovHintEvent:
+        out.print("MovHint(", id(), ", r", operand(), ")");
         break;
     case SetLocalEvent:
-        fprintf(out, "SetLocal(r%d, %s)", operand(), dataFormatToString(dataFormat()));
+        out.printf("SetLocal(r%d, %s)", operand(), dataFormatToString(dataFormat()));
         break;
     default:
-        ASSERT_NOT_REACHED();
+        RELEASE_ASSERT_NOT_REACHED();
         break;
     }
 }
 
-void VariableEvent::dumpFillInfo(const char* name, FILE* out) const
+void VariableEvent::dumpFillInfo(const char* name, PrintStream& out) const
 {
-    fprintf(out, "%s(@%u, ", name, nodeIndex());
+    out.print(name, "(", id(), ", ");
     if (dataFormat() == DataFormatDouble)
-        fprintf(out, "%s", FPRInfo::debugName(fpr()));
+        out.printf("%s", FPRInfo::debugName(fpr()));
 #if USE(JSVALUE32_64)
     else if (dataFormat() & DataFormatJS)
-        fprintf(out, "%s:%s", GPRInfo::debugName(tagGPR()), GPRInfo::debugName(payloadGPR()));
+        out.printf("%s:%s", GPRInfo::debugName(tagGPR()), GPRInfo::debugName(payloadGPR()));
 #endif
     else
-        fprintf(out, "%s", GPRInfo::debugName(gpr()));
-    fprintf(out, ", %s)", dataFormatToString(dataFormat()));
+        out.printf("%s", GPRInfo::debugName(gpr()));
+    out.printf(", %s)", dataFormatToString(dataFormat()));
 }
 
-void VariableEvent::dumpSpillInfo(const char* name, FILE* out) const
+void VariableEvent::dumpSpillInfo(const char* name, PrintStream& out) const
 {
-    fprintf(out, "%s(@%u, r%d, %s)", name, nodeIndex(), virtualRegister(), dataFormatToString(dataFormat()));
+    out.print(name, "(", id(), ", r", virtualRegister(), ", ", dataFormatToString(dataFormat()), ")");
 }
 
 } } // namespace JSC::DFG

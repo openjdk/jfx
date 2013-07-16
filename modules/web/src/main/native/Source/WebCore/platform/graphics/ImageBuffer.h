@@ -70,23 +70,25 @@ namespace WebCore {
         DontCopyBackingStore // Subsequent draws may affect the copy.
     };
 
-    enum DeferralMode {
-        NonDeferred,
-        Deferred
+    enum ScaleBehavior {
+        Scaled,
+        Unscaled
     };
 
     class ImageBuffer {
         WTF_MAKE_NONCOPYABLE(ImageBuffer); WTF_MAKE_FAST_ALLOCATED;
     public:
         // Will return a null pointer on allocation failure.
-        static PassOwnPtr<ImageBuffer> create(const IntSize& size, float resolutionScale = 1, ColorSpace colorSpace = ColorSpaceDeviceRGB, RenderingMode renderingMode = Unaccelerated, DeferralMode deferralMode = NonDeferred)
+        static PassOwnPtr<ImageBuffer> create(const IntSize& size, float resolutionScale = 1, ColorSpace colorSpace = ColorSpaceDeviceRGB, RenderingMode renderingMode = Unaccelerated)
         {
             bool success = false;
-            OwnPtr<ImageBuffer> buf = adoptPtr(new ImageBuffer(size, resolutionScale, colorSpace, renderingMode, deferralMode, success));
+            OwnPtr<ImageBuffer> buf = adoptPtr(new ImageBuffer(size, resolutionScale, colorSpace, renderingMode, success));
             if (!success)
                 return nullptr;
             return buf.release();
         }
+
+        static PassOwnPtr<ImageBuffer> createCompatibleBuffer(const IntSize&, float resolutionScale, ColorSpace, const GraphicsContext*, bool hasAlpha);
 
         ~ImageBuffer();
 
@@ -96,7 +98,10 @@ namespace WebCore {
 
         GraphicsContext* context() const;
 
-        PassRefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore) const;
+        PassRefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, ScaleBehavior = Scaled) const;
+        // Give hints on the faster copyImage Mode, return DontCopyBackingStore if it supports the DontCopyBackingStore behavior
+        // or return CopyBackingStore if it doesn't.  
+        static BackingStoreCopy fastCopyImageMode();
 
         enum CoordinateSystem { LogicalCoordinateSystem, BackingStoreCoordinateSystem };
 
@@ -119,15 +124,19 @@ namespace WebCore {
         PlatformLayer* platformLayer() const;
 #endif
 
+        // FIXME: current implementations of this method have the restriction that they only work
+        // with textures that are RGB or RGBA format, and UNSIGNED_BYTE type.
         bool copyToPlatformTexture(GraphicsContext3D&, Platform3DObject, GC3Denum, bool, bool);
 
     private:
 #if USE(CG)
-        NativeImagePtr copyNativeImage(BackingStoreCopy = CopyBackingStore) const;
+        PassNativeImagePtr copyNativeImage(BackingStoreCopy = CopyBackingStore) const;
+        void flushContext() const;
+        void flushContextIfNecessary() const;
 #endif
         void clip(GraphicsContext*, const FloatRect&) const;
 
-        void draw(GraphicsContext*, ColorSpace, const FloatRect& destRect, const FloatRect& srcRect = FloatRect(0, 0, -1, -1), CompositeOperator = CompositeSourceOver, bool useLowQualityScale = false);
+        void draw(GraphicsContext*, ColorSpace, const FloatRect& destRect, const FloatRect& srcRect = FloatRect(0, 0, -1, -1), CompositeOperator = CompositeSourceOver, BlendMode = BlendModeNormal, bool useLowQualityScale = false);
         void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect);
 
         inline void genericConvertToLuminanceMask();
@@ -146,10 +155,10 @@ namespace WebCore {
 
         // This constructor will place its success into the given out-variable
         // so that create() knows when it should return failure.
-        ImageBuffer(const IntSize&, float resolutionScale, ColorSpace, RenderingMode, DeferralMode, bool& success);
+        ImageBuffer(const IntSize&, float resolutionScale, ColorSpace, RenderingMode, bool& success);
     };
 
-#if USE(CG) || USE(SKIA)
+#if USE(CG)
     String ImageDataToDataURL(const ImageData&, const String& mimeType, const double* quality);
 #endif
 

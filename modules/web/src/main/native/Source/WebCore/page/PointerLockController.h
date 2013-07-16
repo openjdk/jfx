@@ -44,29 +44,27 @@ class PointerLockController {
 public:
     static PassOwnPtr<PointerLockController> create(Page*);
 
-    void requestPointerLock(Element* target, PassRefPtr<VoidCallback> successCallback, PassRefPtr<VoidCallback> failureCallback);
+    void requestPointerLock(Element* target);
     void requestPointerUnlock();
     void elementRemoved(Element*);
     void documentDetached(Document*);
-    bool isLocked(); // FIXME: Rename to isClientLocked and move to private when removing old API. (https://bugs.webkit.org/show_bug.cgi?id=84402)
+    bool lockPending() const;
     Element* element() const;
 
     void didAcquirePointerLock();
     void didNotAcquirePointerLock();
-    void didLosePointerLock(bool sendChangeEvent = true); // FIXME: Remove sendChangeEvent parameter when removing old API. (https://bugs.webkit.org/show_bug.cgi?id=84402)
+    void didLosePointerLock();
     void dispatchLockedMouseEvent(const PlatformMouseEvent&, const AtomicString& eventType);
 
 private:
     explicit PointerLockController(Page*);
+    void clearElement();
     void enqueueEvent(const AtomicString& type, Element*);
     void enqueueEvent(const AtomicString& type, Document*);
     Page* m_page;
+    bool m_lockPending;
     RefPtr<Element> m_element;
     RefPtr<Document> m_documentOfRemovedElementWhileWaitingForUnlock;
-
-    // FIXME: Remove callback usage. (https://bugs.webkit.org/show_bug.cgi?id=84402)
-    RefPtr<VoidCallback> m_successCallback;
-    RefPtr<VoidCallback> m_failureCallback;
 };
 
 } // namespace WebCore

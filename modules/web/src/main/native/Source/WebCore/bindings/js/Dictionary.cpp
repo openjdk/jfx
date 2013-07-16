@@ -54,7 +54,7 @@ JSObject* Dictionary::asJSObject<Notification>(Notification* object) const
 }
 #endif
 
-bool Dictionary::getOwnPropertiesAsStringHashMap(WTF::HashMap<String, String>& map) const
+bool Dictionary::getOwnPropertiesAsStringHashMap(HashMap<String, String>& map) const
 {
     if (!m_dictionary.isValid())
         return false;
@@ -64,16 +64,35 @@ bool Dictionary::getOwnPropertiesAsStringHashMap(WTF::HashMap<String, String>& m
 
     PropertyNameArray propertyNames(exec);
     JSObject::getOwnPropertyNames(object, exec, propertyNames, ExcludeDontEnumProperties);
-    for (PropertyNameArray::const_iterator it = propertyNames.begin(); it != propertyNames.end(); it++) {
-        String stringKey = ustringToString(it->ustring());
+    for (PropertyNameArray::const_iterator it = propertyNames.begin(); it != propertyNames.end(); ++it) {
+        String stringKey = it->string();
         if (stringKey.isEmpty())
             continue;
         JSValue value = object->get(exec, *it);
         if (exec->hadException())
             continue;
-        String stringValue = ustringToString(value.toString(exec)->value(exec));
+        String stringValue = value.toString(exec)->value(exec);
         if (!exec->hadException())
             map.set(stringKey, stringValue);
+    }
+
+    return true;
+}
+
+bool Dictionary::getOwnPropertyNames(Vector<String>& names) const
+{
+    if (!m_dictionary.isValid())
+        return false;
+
+    JSObject* object =  m_dictionary.initializerObject();
+    ExecState* exec = m_dictionary.execState();
+
+    PropertyNameArray propertyNames(exec);
+    JSObject::getOwnPropertyNames(object, exec, propertyNames, ExcludeDontEnumProperties);
+    for (PropertyNameArray::const_iterator it = propertyNames.begin(); it != propertyNames.end(); ++it) {
+        String stringKey = it->string();
+        if (!stringKey.isEmpty())
+            names.append(stringKey);
     }
 
     return true;

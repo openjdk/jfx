@@ -28,7 +28,9 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "HTMLFrameElementBase.h"
+#include "HitTestResult.h"
 #include "PluginViewBase.h"
+#include "RenderLayer.h"
 #include "RenderSVGRoot.h"
 #include "RenderView.h"
 
@@ -78,13 +80,13 @@ bool RenderPart::requiresAcceleratedCompositing() const
     // renderer and the plugin has a layer, then we need a layer. Second, if this is 
     // a renderer with a contentDocument and that document needs a layer, then we need
     // a layer.
-    if (widget() && widget()->isPluginViewBase() && static_cast<PluginViewBase*>(widget())->platformLayer())
+    if (widget() && widget()->isPluginViewBase() && toPluginViewBase(widget())->platformLayer())
         return true;
 
     if (!node() || !node()->isFrameOwnerElement())
         return false;
 
-    HTMLFrameOwnerElement* element = static_cast<HTMLFrameOwnerElement*>(node());
+    HTMLFrameOwnerElement* element = toFrameOwnerElement(node());
     if (Document* contentDocument = element->contentDocument()) {
         if (RenderView* view = contentDocument->renderView())
             return view->usesCompositing();
@@ -105,7 +107,36 @@ RenderBox* RenderPart::embeddedContentBox() const
 {
     if (!node() || !widget() || !widget()->isFrameView())
         return 0;
-    return static_cast<FrameView*>(widget())->embeddedContentBox();
+    return toFrameView(widget())->embeddedContentBox();
+}
+
+bool RenderPart::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction action)
+{
+    if (!widget() || !widget()->isFrameView() || !request.allowsChildFrameContent())
+        return RenderWidget::nodeAtPoint(request, result, locationInContainer, accumulatedOffset, action);
+
+    FrameView* childFrameView = toFrameView(widget());
+    RenderView* childRoot = childFrameView->renderView();
+
+    if (childRoot) {
+        LayoutPoint adjustedLocation = accumulatedOffset + location();
+        LayoutPoint contentOffset = LayoutPoint(borderLeft() + paddingLeft(), borderTop() + paddingTop()) - childFrameView->scrollOffset();
+        HitTestLocation newHitTestLocation(locationInContainer, -adjustedLocation - contentOffset);
+        HitTestRequest newHitTestRequest(request.type() | HitTestRequest::ChildFrameHitTest);
+        HitTestResult childFrameResult(newHitTestLocation);
+
+        bool isInsideChildFrame = childRoot->hitTest(newHitTestRequest, newHitTestLocation, childFrameResult);
+
+        if (newHitTestLocation.isRectBasedTest())
+            result.append(childFrameResult);
+        else if (isInsideChildFrame)
+            result = childFrameResult;
+
+        if (isInsideChildFrame)
+            return true;
+    }
+
+    return RenderWidget::nodeAtPoint(request, result, locationInContainer, accumulatedOffset, action);
 }
 
 }

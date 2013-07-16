@@ -354,6 +354,10 @@ static PassOwnPtr<HPEN> createPen(const Color& col, double fWidth, StrokeStyle s
     int penStyle = PS_NULL;
     switch (style) {
         case SolidStroke:
+#if ENABLE(CSS3_TEXT)
+        case DoubleStroke:
+        case WavyStroke: // FIXME: https://bugs.webkit.org/show_bug.cgi?id=94114 - Needs platform support.
+#endif // CSS3_TEXT
             penStyle = PS_SOLID;
             break;
         case DottedStroke:  // not supported on Windows CE
@@ -779,81 +783,6 @@ void getEllipsePointByAngle(double angle, double a, double b, float& x, float& y
     }
 }
 
-void GraphicsContext::strokeArc(const IntRect& rect, int startAngle, int angleSpan)
-{
-    if (!m_data->m_opacity || paintingDisabled() || strokeStyle() == NoStroke || rect.isEmpty())
-        return;
-
-    ScopeDCProvider dcProvider(m_data);
-    if (!m_data->m_dc)
-        return;
-
-    IntRect trRect = m_data->mapRect(rect);
-    TransparentLayerDC transparentDC(m_data, trRect, &rect);
-    HDC dc = transparentDC.hdc();
-    if (!dc)
-        return;
-    trRect.move(transparentDC.toShift());
-
-    OwnPtr<HPEN> pen = createPen(strokeColor(), strokeThickness(), strokeStyle());
-    HGDIOBJ oldPen = SelectObject(dc, pen.get());
-
-    double a = trRect.width() * 0.5;
-    double b = trRect.height() * 0.5;
-    int centerX = stableRound(trRect.x() + a);
-    int centerY = stableRound(trRect.y() + b);
-    float fstartX, fstartY, fendX, fendY;
-    int startX, startY, endX, endY;
-    getEllipsePointByAngle(deg2rad((double)startAngle), a, b, fstartX, fstartY);
-    getEllipsePointByAngle(deg2rad((double)startAngle + angleSpan), a, b, fendX, fendY);
-    startX = stableRound(fstartX);
-    startY = stableRound(fstartY);
-    endX = stableRound(fendX);
-    endY = stableRound(fendY);
-
-    startX += centerX;
-    startY = centerY - startY;
-    endX += centerX;
-    endY = centerY - endY;
-    RECT clipRect;
-    if (startX < endX) {
-        clipRect.left = startX;
-        clipRect.right = endX;
-    } else {
-        clipRect.left = endX;
-        clipRect.right = startX;
-    }
-    if (startY < endY) {
-        clipRect.top = startY;
-        clipRect.bottom = endY;
-    } else {
-        clipRect.top = endY;
-        clipRect.bottom = startY;
-    }
-
-    OwnPtr<HRGN> clipRgn = adoptPtr(CreateRectRgn(0, 0, 0, 0));
-    bool newClip;
-    if (GetClipRgn(dc, clipRgn.get()) <= 0) {
-        newClip = true;
-        clipRgn = adoptPtr(CreateRectRgn(clipRect.left, clipRect.top, clipRect.right, clipRect.bottom));
-        SelectClipRgn(dc, clipRgn.get());
-    } else {
-        newClip = false;
-        IntersectClipRect(dc, clipRect.left, clipRect.top, clipRect.right, clipRect.bottom);
-    }
-
-    HGDIOBJ oldBrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
-    Ellipse(dc, trRect.x(), trRect.y(), trRect.maxX(), trRect.maxY());
-    SelectObject(dc, oldBrush);
-
-    if (newClip)
-        SelectClipRgn(dc, 0);
-    else
-        SelectClipRgn(dc, clipRgn.get());
-
-    SelectObject(dc, oldPen);
-}
-
 void GraphicsContext::drawConvexPolygon(size_t npoints, const FloatPoint* points, bool shouldAntialias)
 {
     if (!m_data->m_opacity || paintingDisabled() || npoints <= 1 || !points)
@@ -1057,12 +986,6 @@ void GraphicsContext::setURLForRect(const KURL& link, const IntRect& destRect)
     notImplemented();
 }
 
-void GraphicsContext::addInnerRoundedRectClip(const IntRect& rect, int thickness)
-{
-    // We can only clip rectangles on WINCE
-    clip(rect);
-}
-
 void GraphicsContext::clearRect(const FloatRect& rect)
 {
     if (paintingDisabled())
@@ -1189,19 +1112,19 @@ void GraphicsContext::setAlpha(float alpha)
     m_data->m_opacity = alpha;
 }
 
-void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op)
+void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendMode blendMode)
 {
     notImplemented();
 }
 
-void GraphicsContext::clip(const Path& path)
+void GraphicsContext::clip(const Path& path, WindRule)
 {
     notImplemented();
 }
 
-void GraphicsContext::canvasClip(const Path& path)
+void GraphicsContext::canvasClip(const Path& path, WindRule fillRule)
 {
-    clip(path);
+    clip(path, fillRule);
 }
 
 void GraphicsContext::clipOut(const Path&)
@@ -1330,6 +1253,9 @@ Color gradientAverageColor(const Gradient* gradient)
 
 void GraphicsContext::fillPath(const Path& path)
 {
+    if (path.isNull())
+        return;
+
     Color c = m_state.fillGradient
         ? gradientAverageColor(m_state.fillGradient.get())
         : fillColor();
@@ -1369,7 +1295,7 @@ void GraphicsContext::fillPath(const Path& path)
 
 void GraphicsContext::strokePath(const Path& path)
 {
-    if (!m_data->m_opacity)
+    if (path.isNull() || !m_data->m_opacity)
         return;
 
     ScopeDCProvider dcProvider(m_data);
@@ -1492,7 +1418,7 @@ void GraphicsContext::fillRect(const FloatRect& r, const Gradient* gradient)
     GradientFill(dc, tv.data(), tv.size(), mesh.data(), mesh.size(), vertical ? GRADIENT_FILL_RECT_V : GRADIENT_FILL_RECT_H);
 }
 
-AffineTransform GraphicsContext::getCTM() const
+AffineTransform GraphicsContext::getCTM(IncludeDeviceScale) const
 {
     if (paintingDisabled())
         return AffineTransform();
@@ -1595,7 +1521,7 @@ void GraphicsContext::drawText(const SimpleFontData* fontData, const GlyphBuffer
     double scaleY = m_data->m_transform.d();
 
     int height = fontData->platformData().size() * scaleY;
-    int width = fontData->platformData().averageCharWidth() * scaleX;
+    int width = fontData->avgCharWidth() * scaleX;
 
     if (!height || !width)
         return;
@@ -1623,10 +1549,10 @@ void GraphicsContext::drawText(const SimpleFontData* fontData, const GlyphBuffer
         const GlyphBufferAdvance* advance = glyphBuffer.advances(from);
         if (scaleX == 1.)
             for (int i = 1; i < numGlyphs; ++i)
-                offset += *advance++;
+                offset += (*advance++).width();
         else
             for (int i = 1; i < numGlyphs; ++i)
-                offset += *advance++ * scaleX;
+                offset += (*advance++).width() * scaleX;
 
         offset += width;
 
@@ -1684,7 +1610,7 @@ void GraphicsContext::drawText(const SimpleFontData* fontData, const GlyphBuffer
         bool drawOneByOne = false;
         if (scaleX == 1.) {
             for (; srcChar < srcCharEnd; ++srcChar) {
-                offset += *advance++;
+                offset += (*advance++).width();
                 int offsetInt = stableRound(offset);
                 if (isCharVisible(*srcChar)) {
                     if (!drawOneByOne && WTF::Unicode::direction(*srcChar) == WTF::Unicode::RightToLeft)
@@ -1696,7 +1622,7 @@ void GraphicsContext::drawText(const SimpleFontData* fontData, const GlyphBuffer
             }
         } else {
             for (; srcChar < srcCharEnd; ++srcChar) {
-                offset += *advance++ * scaleX;
+                offset += (*advance++).width() * scaleX;
                 int offsetInt = stableRound(offset);
                 if (isCharVisible(*srcChar)) {
                     if (!drawOneByOne && WTF::Unicode::direction(*srcChar) == WTF::Unicode::RightToLeft)
@@ -1822,7 +1748,7 @@ void GraphicsContext::paintTextField(const IntRect& rect, unsigned state)
     FillRect(dc, &rectWin, reinterpret_cast<HBRUSH>(((state & DFCS_INACTIVE) ? COLOR_BTNFACE : COLOR_WINDOW) + 1));
 }
 
-void GraphicsContext::drawBitmap(SharedBitmap* bmp, const IntRect& dstRectIn, const IntRect& srcRect, ColorSpace styleColorSpace, CompositeOperator compositeOp)
+void GraphicsContext::drawBitmap(SharedBitmap* bmp, const IntRect& dstRectIn, const IntRect& srcRect, ColorSpace styleColorSpace, CompositeOperator compositeOp, BlendMode blendMode)
 {
     if (!m_data->m_opacity)
         return;
@@ -1838,7 +1764,7 @@ void GraphicsContext::drawBitmap(SharedBitmap* bmp, const IntRect& dstRectIn, co
         return;
     dstRect.move(transparentDC.toShift());
 
-    bmp->draw(dc, dstRect, srcRect, compositeOp);
+    bmp->draw(dc, dstRect, srcRect, compositeOp, blendMode);
 
     if (bmp->is16bit())
         transparentDC.fillAlphaChannel();

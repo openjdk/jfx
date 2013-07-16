@@ -32,6 +32,7 @@
 #undef GTK_DISABLE_DEPRECATED
 
 #include "CSSValueKeywords.h"
+#include "Font.h"
 #include "GraphicsContext.h"
 #include "GtkVersioning.h"
 #include "HTMLNames.h"
@@ -527,12 +528,8 @@ bool RenderThemeGtk::paintSliderThumb(RenderObject* object, const PaintInfo& inf
 void RenderThemeGtk::adjustSliderThumbSize(RenderStyle* style, Element*) const
 {
     ControlPart part = style->appearance();
-#if ENABLE(VIDEO)
-    if (part == MediaSliderThumbPart) {
-        adjustMediaSliderThumbSize(style);
+    if (part != SliderThumbHorizontalPart && part != SliderThumbVerticalPart)
         return;
-    }
-#endif
 
     GtkWidget* widget = part == SliderThumbHorizontalPart ? gtkHScale() : gtkVScale();
     int length = 0, width = 0;
@@ -551,7 +548,7 @@ void RenderThemeGtk::adjustSliderThumbSize(RenderStyle* style, Element*) const
     style->setHeight(Length(length, Fixed));
 }
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 bool RenderThemeGtk::paintProgressBar(RenderObject* renderObject, const PaintInfo& paintInfo, const IntRect& rect)
 {
     GtkWidget* widget = gtkProgressBar();
@@ -669,6 +666,10 @@ GRefPtr<GdkPixbuf> getStockIconForWidgetType(GType widgetType, const char* iconN
                                               static_cast<GtkIconSize>(iconSize), 0, 0));
 }
 
+GRefPtr<GdkPixbuf> getStockSymbolicIconForWidgetType(GType widgetType, const char* symbolicIconName, const char *fallbackStockIconName, gint direction, gint state, gint iconSize)
+{
+    return getStockIconForWidgetType(widgetType, fallbackStockIconName, direction, state, iconSize);
+}
 
 Color RenderThemeGtk::platformActiveSelectionBackgroundColor() const
 {

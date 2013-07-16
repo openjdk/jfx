@@ -25,51 +25,56 @@
 
 package com.sun.javafx.pgstub;
 
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.List;
-
+import com.sun.javafx.font.FontResource;
+import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.font.PGFont;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.tk.FontLoader;
+import com.sun.javafx.tk.FontMetrics;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
-import com.sun.javafx.tk.FontLoader;
-import com.sun.javafx.tk.FontMetrics;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
 
 public class StubFontLoader extends FontLoader {
 
     @Override
     public void loadFont(Font font) {
+        StubFont nativeFont = new StubFont();
+        nativeFont.font = font;
         String name = font.getName().trim().toLowerCase();
         if (name.equals("system") || name.equals("system regular")) {
-            font.impl_setNativeFont(font, font.getName(), "System", "Regular");
+            font.impl_setNativeFont(nativeFont, font.getName(), "System", "Regular");
         } else if (name.equals("amble regular")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble", "Regular");
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble", "Regular");
         } else if (name.equals("amble bold")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble", "Bold");
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble", "Bold");
         } else if (name.equals("amble italic")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble", "Italic");
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble", "Italic");
         } else if (name.equals("amble bold italic")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble",
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble",
                     "Bold Italic");
         } else if (name.equals("amble condensed")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble Cn", "Regular");
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Cn", "Regular");
         } else if (name.equals("amble bold condensed")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble Cn", "Bold");
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Cn", "Bold");
         } else if (name.equals("amble condensed italic")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble Cn", "Italic");
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Cn", "Italic");
         } else if (name.equals("amble bold condensed italic")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble Cn",
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Cn",
                     "Bold Italic");
         } else if (name.equals("amble light")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble Lt", "Regular");
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Lt", "Regular");
         } else if (name.equals("amble light italic")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble Lt", "Italic");
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Lt", "Italic");
         } else if (name.equals("amble light condensed")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble LtCn",
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble LtCn",
                     "Regular");
         } else if (name.equals("amble light condensed italic")) {
-            font.impl_setNativeFont(font, font.getName(), "Amble LtCn",
+            font.impl_setNativeFont(nativeFont, font.getName(), "Amble LtCn",
                     "Italic");
         }
     }
@@ -185,5 +190,49 @@ public class StubFontLoader extends FontLoader {
     @Override
     public float getSystemFontSize() {
         return 12;
+    }
+
+    public static class StubFont implements PGFont {
+        public Font font;
+
+        @Override public String getFullName() {
+            return font.getName();
+        }
+
+        @Override public String getFamilyName() {
+            return font.getFamily();
+        }
+
+        @Override public String getStyleName() {
+            return font.getStyle();
+        }
+
+        @Override public String getName() {
+            return font.getName();
+        }
+
+        @Override public float getSize() {
+            return (float) font.getSize();
+        }
+
+        @Override
+        public FontResource getFontResource() {
+            return null;
+        }
+
+        @Override
+        public FontStrike getStrike(BaseTransform transform) {
+            return null;
+        }
+
+        @Override
+        public FontStrike getStrike(BaseTransform transform, int smoothingType) {
+            return null;
+        }
+
+        @Override
+        public int getFeatures() {
+            return 0;
+        }
     }
 }

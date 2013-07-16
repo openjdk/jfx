@@ -20,37 +20,36 @@
 #ifndef GraphicsLayerTextureMapper_h
 #define GraphicsLayerTextureMapper_h
 
-#include "GraphicsContext.h"
+#if USE(TEXTURE_MAPPER)
+
 #include "GraphicsLayer.h"
 #include "GraphicsLayerClient.h"
 #include "Image.h"
 #include "TextureMapperLayer.h"
+#include "TextureMapperPlatformLayer.h"
+#include "TextureMapperTiledBackingStore.h"
+#include "Timer.h"
 
 namespace WebCore {
 
-class TextureMapperLayer;
-class BitmapTexture;
-class TextureMapper;
-
-class GraphicsLayerTextureMapper : public GraphicsLayer {
-    friend class TextureMapperLayer;
-
+class GraphicsLayerTextureMapper : public GraphicsLayer, public TextureMapperPlatformLayer::Client {
 public:
-    GraphicsLayerTextureMapper(GraphicsLayerClient*);
+    explicit GraphicsLayerTextureMapper(GraphicsLayerClient*);
     virtual ~GraphicsLayerTextureMapper();
+
+    void setScrollClient(TextureMapperLayer::ScrollingClient* client) { m_layer->setScrollClient(client); }
+    void setID(uint32_t id) { m_layer->setID(id); }
 
     // reimps from GraphicsLayer.h
     virtual void setNeedsDisplay();
     virtual void setContentsNeedsDisplay();
     virtual void setNeedsDisplayInRect(const FloatRect&);
-    virtual void setParent(GraphicsLayer* layer);
     virtual bool setChildren(const Vector<GraphicsLayer*>&);
     virtual void addChild(GraphicsLayer*);
     virtual void addChildAtIndex(GraphicsLayer*, int index);
     virtual void addChildAbove(GraphicsLayer* layer, GraphicsLayer* sibling);
     virtual void addChildBelow(GraphicsLayer* layer, GraphicsLayer* sibling);
     virtual bool replaceChild(GraphicsLayer* oldChild, GraphicsLayer* newChild);
-    virtual void removeFromParent();
     virtual void setMaskLayer(GraphicsLayer* layer);
     virtual void setPosition(const FloatPoint& p);
     virtual void setAnchorPoint(const FloatPoint3D& p);
@@ -60,55 +59,126 @@ public:
     virtual void setPreserves3D(bool b);
     virtual void setMasksToBounds(bool b);
     virtual void setDrawsContent(bool b);
+    virtual void setContentsVisible(bool);
     virtual void setContentsOpaque(bool b);
     virtual void setBackfaceVisibility(bool b);
     virtual void setOpacity(float opacity);
     virtual void setContentsRect(const IntRect& r);
     virtual void setReplicatedByLayer(GraphicsLayer*);
     virtual void setContentsToImage(Image*);
+    virtual void setContentsToSolidColor(const Color&);
+    Color solidColor() const { return m_solidColor; }
     virtual void setContentsToMedia(PlatformLayer*);
     virtual void setContentsToCanvas(PlatformLayer* canvas) { setContentsToMedia(canvas); }
-    virtual void syncCompositingState(const FloatRect&);
-    virtual void syncCompositingStateForThisLayerOnly();
+    virtual void setShowDebugBorder(bool) OVERRIDE;
+    virtual void setDebugBorder(const Color&, float width) OVERRIDE;
+    virtual void setShowRepaintCounter(bool) OVERRIDE;
+    virtual void flushCompositingState(const FloatRect&);
+    virtual void flushCompositingStateForThisLayerOnly();
     virtual void setName(const String& name);
-    virtual PlatformLayer* platformLayer() const { return 0; }
+    virtual PlatformLayer* platformLayer() const { return m_contentsLayer; }
 
-    void notifyChange(TextureMapperLayer::ChangeMask);
     inline int changeMask() const { return m_changeMask; }
-    void didSynchronize();
 
     virtual bool addAnimation(const KeyframeValueList&, const IntSize&, const Animation*, const String&, double);
     virtual void pauseAnimation(const String&, double);
     virtual void removeAnimation(const String&);
+    void setAnimations(const GraphicsLayerAnimations&);
 
     TextureMapperLayer* layer() const { return m_layer.get(); }
-    TextureMapperPlatformLayer* contentsLayer() const { return m_contentsLayer; }
-    bool needsDisplay() const { return m_needsDisplay; }
-    IntRect needsDisplayRect() const { return enclosingIntRect(m_needsDisplayRect); }
 
-    virtual void setDebugBorder(const Color&, float width);
+    void didCommitScrollOffset(const IntSize&);
+    void setIsScrollable(bool);
+    bool isScrollable() const { return m_isScrollable; }
 
 #if ENABLE(CSS_FILTERS)
     virtual bool setFilters(const FilterOperations&);
 #endif
 
-    void setFixedToViewport(bool fixed) { m_fixedToViewport = fixed; }
+    void setFixedToViewport(bool);
     bool fixedToViewport() const { return m_fixedToViewport; }
+
+    Color debugBorderColor() const { return m_debugBorderColor; }
+    float debugBorderWidth() const { return m_debugBorderWidth; }
+    void setRepaintCount(int);
 
 private:
     virtual void willBeDestroyed();
 
+    void commitLayerChanges();
+    void updateDebugBorderAndRepaintCount();
+    void updateBackingStoreIfNeeded();
+    void prepareBackingStoreIfNeeded();
+    bool shouldHaveBackingStore() const;
+
+    virtual void setPlatformLayerNeedsDisplay() OVERRIDE { setContentsNeedsDisplay(); }
+
+    // This set of flags help us defer which properties of the layer have been
+    // modified by the compositor, so we can know what to look for in the next flush.
+    enum ChangeMask {
+        NoChanges =                 0,
+
+        ChildrenChange =            (1L << 1),
+        MaskLayerChange =           (1L << 2),
+        ReplicaLayerChange =        (1L << 3),
+
+        ContentChange =             (1L << 4),
+        ContentsRectChange =        (1L << 5),
+        ContentsVisibleChange =     (1L << 6),
+        ContentsOpaqueChange =      (1L << 7),
+
+        PositionChange =            (1L << 8),
+        AnchorPointChange =         (1L << 9),
+        SizeChange =                (1L << 10),
+        TransformChange =           (1L << 11),
+        ChildrenTransformChange =   (1L << 12),
+        Preserves3DChange =         (1L << 13),
+
+        MasksToBoundsChange =       (1L << 14),
+        DrawsContentChange =        (1L << 15),
+        OpacityChange =             (1L << 16),
+        BackfaceVisibilityChange =  (1L << 17),
+
+        BackingStoreChange =        (1L << 18),
+        DisplayChange =             (1L << 19),
+        ContentsDisplayChange =     (1L << 20),
+        BackgroundColorChange =     (1L << 21),
+
+        AnimationChange =           (1L << 22),
+        FilterChange =              (1L << 23),
+
+        DebugVisualsChange =        (1L << 24),
+        RepaintCountChange =        (1L << 25),
+
+        FixedToViewporChange =      (1L << 26),
+        AnimationStarted =          (1L << 27),
+
+        CommittedScrollOffsetChange =     (1L << 28),
+        IsScrollableChange =              (1L << 29)
+    };
+    void notifyChange(ChangeMask);
+
     OwnPtr<TextureMapperLayer> m_layer;
-    RefPtr<TextureMapperBackingStore> m_compositedImage;
-    RefPtr<Image> m_image;
+    RefPtr<TextureMapperTiledBackingStore> m_compositedImage;
+    NativeImagePtr m_compositedNativeImagePtr;
+    RefPtr<TextureMapperBackingStore> m_backingStore;
+
     int m_changeMask;
     bool m_needsDisplay;
+    bool m_hasOwnBackingStore;
     bool m_fixedToViewport;
+    Color m_solidColor;
+
+    Color m_debugBorderColor;
+    float m_debugBorderWidth;
+
     TextureMapperPlatformLayer* m_contentsLayer;
     FloatRect m_needsDisplayRect;
     GraphicsLayerAnimations m_animations;
-    void animationStartedTimerFired(Timer<GraphicsLayerTextureMapper>*);
-    Timer<GraphicsLayerTextureMapper> m_animationStartedTimer;
+    double m_animationStartTime;
+
+    IntSize m_committedScrollOffset;
+    bool m_isScrollable;
 };
 
 inline static GraphicsLayerTextureMapper* toGraphicsLayerTextureMapper(GraphicsLayer* layer)
@@ -116,5 +186,9 @@ inline static GraphicsLayerTextureMapper* toGraphicsLayerTextureMapper(GraphicsL
     return static_cast<GraphicsLayerTextureMapper*>(layer);
 }
 
+TextureMapperLayer* toTextureMapperLayer(GraphicsLayer*);
+
 }
+#endif
+
 #endif // GraphicsLayerTextureMapper_h

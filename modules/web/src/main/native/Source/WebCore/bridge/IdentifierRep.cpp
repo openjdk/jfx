@@ -25,12 +25,11 @@
 
 #include "config.h"
 #include "IdentifierRep.h"
-#include "JSDOMBinding.h"
 
-#include "PlatformString.h"
-#include <runtime/UString.h>
+#include "JSDOMBinding.h"
 #include <wtf/HashMap.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/WTFString.h>
 
 using namespace JSC;
 
@@ -69,13 +68,13 @@ IdentifierRep* IdentifierRep::get(int intID)
     
     IntIdentifierMap::AddResult result = intIdentifierMap().add(intID, 0);
     if (result.isNewEntry) {
-        ASSERT(!result.iterator->second);
-        result.iterator->second = new IdentifierRep(intID);
+        ASSERT(!result.iterator->value);
+        result.iterator->value = new IdentifierRep(intID);
         
-        identifierSet().add(result.iterator->second);
+        identifierSet().add(result.iterator->value);
     }
     
-    return result.iterator->second;
+    return result.iterator->value;
 }
 
 typedef HashMap<RefPtr<StringImpl>, IdentifierRep*> StringIdentifierMap;
@@ -92,16 +91,16 @@ IdentifierRep* IdentifierRep::get(const char* name)
     if (!name)
         return 0;
   
-    UString string = stringToUString(String::fromUTF8WithLatin1Fallback(name, strlen(name)));
+    String string = String::fromUTF8WithLatin1Fallback(name, strlen(name));
     StringIdentifierMap::AddResult result = stringIdentifierMap().add(string.impl(), 0);
     if (result.isNewEntry) {
-        ASSERT(!result.iterator->second);
-        result.iterator->second = new IdentifierRep(name);
+        ASSERT(!result.iterator->value);
+        result.iterator->value = new IdentifierRep(name);
         
-        identifierSet().add(result.iterator->second);
+        identifierSet().add(result.iterator->value);
     }
     
-    return result.iterator->second;
+    return result.iterator->value;
 }
 
 bool IdentifierRep::isValid(IdentifierRep* identifier)

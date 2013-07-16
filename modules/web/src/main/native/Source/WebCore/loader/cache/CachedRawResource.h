@@ -24,57 +24,59 @@
 #define CachedRawResource_h
 
 #include "CachedResource.h"
-#include "CachedResourceClient.h"
 
 namespace WebCore {
-class CachedRawResourceCallback;
-class CachedRawResourceClient;
+
+class CachedResourceClient;
+class SubresourceLoader;
 
 class CachedRawResource : public CachedResource {
 public:
-    CachedRawResource(ResourceRequest&);
+    CachedRawResource(ResourceRequest&, Type);
 
     // FIXME: AssociatedURLLoader shouldn't be a DocumentThreadableLoader and therefore shouldn't
     // use CachedRawResource. However, it is, and it needs to be able to defer loading.
     // This can be fixed by splitting CORS preflighting out of DocumentThreacableLoader.
     virtual void setDefersLoading(bool);
     
+    virtual void setDataBufferingPolicy(DataBufferingPolicy);
+    
     // FIXME: This is exposed for the InpsectorInstrumentation for preflights in DocumentThreadableLoader. It's also really lame.
     unsigned long identifier() const { return m_identifier; }
 
-    bool canReuse(const ResourceRequest&) const;
+    void clear();
+
+    virtual bool canReuse(const ResourceRequest&) const;
 
 private:
     virtual void didAddClient(CachedResourceClient*);
-    virtual void data(PassRefPtr<SharedBuffer> data, bool allDataReceived);
+    virtual void data(PassRefPtr<ResourceBuffer> data, bool allDataReceived);
 
     virtual bool shouldIgnoreHTTPStatusCodeErrors() const { return true; }
     virtual void allClientsRemoved();
 
     virtual void willSendRequest(ResourceRequest&, const ResourceResponse&);
-    virtual void setResponse(const ResourceResponse&);
+    virtual void responseReceived(const ResourceResponse&);
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
-#if PLATFORM(CHROMIUM)
-    virtual void didDownloadData(int);
-#endif
+
+    virtual void switchClientsToRevalidatedResource() OVERRIDE;
+    virtual bool mayTryReplaceEncodedData() const OVERRIDE { return true; }
 
     unsigned long m_identifier;
+
+    struct RedirectPair {
+    public:
+        explicit RedirectPair(const ResourceRequest& request, const ResourceResponse& redirectResponse)
+            : m_request(request)
+            , m_redirectResponse(redirectResponse)
+        {
+        }
+
+        const ResourceRequest m_request;
+        const ResourceResponse m_redirectResponse;
 };
 
-
-class CachedRawResourceClient : public CachedResourceClient {
-public:
-    virtual ~CachedRawResourceClient() { }
-    static CachedResourceClientType expectedType() { return RawResourceType; }
-    virtual CachedResourceClientType resourceClientType() const { return expectedType(); }
-
-    virtual void dataSent(CachedResource*, unsigned long long /* bytesSent */, unsigned long long /* totalBytesToBeSent */) { }
-    virtual void responseReceived(CachedResource*, const ResourceResponse&) { }
-    virtual void dataReceived(CachedResource*, const char* /* data */, int /* length */) { }
-    virtual void redirectReceived(CachedResource*, ResourceRequest&, const ResourceResponse&) { }
-#if PLATFORM(CHROMIUM)
-    virtual void dataDownloaded(CachedResource*, int) { }
-#endif
+    Vector<RedirectPair> m_redirectChain;
 };
 
 }

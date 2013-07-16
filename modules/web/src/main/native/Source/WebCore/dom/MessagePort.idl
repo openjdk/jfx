@@ -25,22 +25,19 @@
  *
  */
 
-module events {
-
-    interface [
+[
         JSCustomMarkFunction,
-        JSGenerateIsReachable=Impl,
+    GenerateIsReachable=Impl,
         ActiveDOMObject,
         EventTarget,
         JSNoStaticTables
-    ] MessagePort {
+] interface MessagePort {
 // We need to have something as an ObjC binding, because MessagePort is used in MessageEvent, which already has one,
 // but we don't want to actually expose the API while it is in flux.
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        [Custom] void postMessage(in DOMString message, in [Optional] Array messagePorts)
+    [Custom] void postMessage(any message, optional Array messagePorts)
             raises(DOMException);
-        [Custom] void webkitPostMessage(in DOMString message, in [Optional] Array transfer)
-            raises(DOMException);
+
         void start();
         void close();
 
@@ -48,15 +45,14 @@ module events {
         attribute EventListener onmessage;
 
         // EventTarget interface
-        void addEventListener(in DOMString type, 
-                              in EventListener listener, 
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type, 
-                                 in EventListener listener, 
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type, 
+                          EventListener listener, 
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type, 
+                             EventListener listener, 
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
 #endif
     };
 
-}

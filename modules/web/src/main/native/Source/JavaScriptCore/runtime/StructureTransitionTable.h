@@ -26,16 +26,69 @@
 #ifndef StructureTransitionTable_h
 #define StructureTransitionTable_h
 
-#include "UString.h"
+#include "IndexingType.h"
 #include "WeakGCMap.h"
 #include <wtf/HashFunctions.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/StringImpl.h>
 
 namespace JSC {
 
 class JSCell;
 class Structure;
+
+static const unsigned FirstInternalAttribute = 1 << 6; // Use for transitions that don't have to do with property additions.
+
+// Support for attributes used to indicate transitions not related to properties.
+// If any of these are used, the string portion of the key should be 0.
+enum NonPropertyTransition {
+    AllocateUndecided,
+    AllocateInt32,
+    AllocateDouble,
+    AllocateContiguous,
+    AllocateArrayStorage,
+    AllocateSlowPutArrayStorage,
+    SwitchToSlowPutArrayStorage,
+    AddIndexedAccessors
+};
+
+inline unsigned toAttributes(NonPropertyTransition transition)
+{
+    return transition + FirstInternalAttribute;
+}
+
+inline IndexingType newIndexingType(IndexingType oldType, NonPropertyTransition transition)
+{
+    switch (transition) {
+    case AllocateUndecided:
+        ASSERT(!hasIndexedProperties(oldType));
+        return oldType | UndecidedShape;
+    case AllocateInt32:
+        ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType));
+        return (oldType & ~IndexingShapeMask) | Int32Shape;
+    case AllocateDouble:
+        ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || hasInt32(oldType));
+        return (oldType & ~IndexingShapeMask) | DoubleShape;
+    case AllocateContiguous:
+        ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || hasInt32(oldType) || hasDouble(oldType));
+        return (oldType & ~IndexingShapeMask) | ContiguousShape;
+    case AllocateArrayStorage:
+        ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || hasInt32(oldType) || hasDouble(oldType) || hasContiguous(oldType));
+        return (oldType & ~IndexingShapeMask) | ArrayStorageShape;
+    case AllocateSlowPutArrayStorage:
+        ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || hasInt32(oldType) || hasDouble(oldType) || hasContiguous(oldType) || hasContiguous(oldType));
+        return (oldType & ~IndexingShapeMask) | SlowPutArrayStorageShape;
+    case SwitchToSlowPutArrayStorage:
+        ASSERT(hasFastArrayStorage(oldType));
+        return (oldType & ~IndexingShapeMask) | SlowPutArrayStorageShape;
+    case AddIndexedAccessors:
+        return oldType | MayHaveIndexedAccessors;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return oldType;
+    }
+}
 
 class StructureTransitionTable {
     static const intptr_t UsingSingleSlotFlag = 1;
@@ -44,7 +97,10 @@ class StructureTransitionTable {
         typedef std::pair<RefPtr<StringImpl>, unsigned> Key;
         static unsigned hash(const Key& p)
         {
-            return p.first->existingHash();
+            unsigned result = p.second;
+            if (p.first)
+                result += p.first->existingHash();
+            return result;
         }
 
         static bool equal(const Key& a, const Key& b)
@@ -55,21 +111,7 @@ class StructureTransitionTable {
         static const bool safeToCompareToEmptyOrDeleted = true;
     };
 
-    struct WeakGCMapFinalizerCallback {
-        static void* finalizerContextFor(Hash::Key)
-        {
-            return 0;
-        }
-
-        static inline Hash::Key keyForFinalizer(void* context, Structure* structure)
-        {
-            return keyForWeakGCMapFinalizer(context, structure);
-        }
-    };
-
-    typedef WeakGCMap<Hash::Key, Structure, WeakGCMapFinalizerCallback, Hash> TransitionMap;
-
-    static Hash::Key keyForWeakGCMapFinalizer(void* context, Structure*);
+    typedef WeakGCMap<Hash::Key, Structure, Hash> TransitionMap;
 
 public:
     StructureTransitionTable()
@@ -90,7 +132,7 @@ public:
         WeakSet::deallocate(impl);
     }
 
-    inline void add(JSGlobalData&, Structure*);
+    inline void add(VM&, Structure*);
     inline bool contains(StringImpl* rep, unsigned attributes) const;
     inline Structure* get(StringImpl* rep, unsigned attributes) const;
 
@@ -135,7 +177,7 @@ private:
         return 0;
     }
 
-    void setSingleTransition(JSGlobalData&, Structure* structure)
+    void setSingleTransition(VM&, Structure* structure)
     {
         ASSERT(isUsingSingleSlot());
         if (WeakImpl* impl = this->weakImpl())

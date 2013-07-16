@@ -461,7 +461,6 @@ public class GroupTest {
         region.setVisible(false);
         javafx.scene.layout.MockRegion region2 = new javafx.scene.layout.MockRegion(50,75);
         group.getChildren().addAll(region,region2);
-        group.layout();
 
         assertEquals(50, group.prefWidth(-1), 0);
     }
@@ -474,7 +473,6 @@ public class GroupTest {
         region.setVisible(false);
         javafx.scene.layout.MockRegion region2 = new javafx.scene.layout.MockRegion(50,75);
         group.getChildren().addAll(region,region2);
-        group.layout();
 
         assertEquals(75, group.prefHeight(-1), 0);
     }
@@ -485,7 +483,6 @@ public class GroupTest {
 
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(100, group.prefWidth(-1), 0);
     }
@@ -496,7 +493,6 @@ public class GroupTest {
 
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(150, group.prefHeight(-1), 0);
     }
@@ -508,7 +504,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         region.setScaleX(2.0);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(200, group.prefWidth(-1), 0);
     }
@@ -520,7 +515,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         region.setScaleY(2.0);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(300, group.prefHeight(-1), 0);
     }
@@ -532,7 +526,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         region.setClip(new Rectangle(50,75));
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(50, group.prefWidth(-1), 0);
     }
@@ -544,7 +537,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         region.setClip(new Rectangle(50,75));
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(75, group.prefHeight(-1), 0);
     }
@@ -556,7 +548,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         region.setRotate(90);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(150, group.prefWidth(-1), 0);
     }
@@ -568,7 +559,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         region.setRotate(90);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(100, group.prefHeight(-1), 0);
     }
@@ -581,7 +571,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region2 = new javafx.scene.layout.MockRegion(100,150);
         region2.setTranslateX(50);
         group.getChildren().addAll(region1,region2);
-        group.layout();
 
         assertEquals(150, group.prefWidth(-1), 0);
     }
@@ -594,7 +583,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region2 = new javafx.scene.layout.MockRegion(100,150);
         region2.setTranslateY(50);
         group.getChildren().addAll(region1,region2);
-        group.layout();
 
         assertEquals(200, group.prefHeight(-1), 0);
     }
@@ -606,7 +594,6 @@ public class GroupTest {
 
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(100, group.prefWidth(-1), 0);
     }
@@ -618,7 +605,6 @@ public class GroupTest {
 
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(150, group.prefHeight(-1), 0);
     }
@@ -630,7 +616,6 @@ public class GroupTest {
 
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(100, group.prefWidth(-1), 0);
     }
@@ -642,7 +627,6 @@ public class GroupTest {
 
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(150, group.prefHeight(-1), 0);
     }
@@ -654,7 +638,6 @@ public class GroupTest {
 
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(100, group.prefWidth(-1), 0);
     }
@@ -666,7 +649,6 @@ public class GroupTest {
 
         javafx.scene.layout.MockRegion region = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().add(region);
-        group.layout();
 
         assertEquals(150, group.prefHeight(-1), 0);
     }
@@ -679,7 +661,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region1 = new javafx.scene.layout.MockRegion(100,150);
         javafx.scene.layout.MockRegion region2 = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().addAll(region1,region2);
-        group.layout();
 
         assertEquals(100, group.prefWidth(-1), 0);
     }
@@ -692,7 +673,6 @@ public class GroupTest {
         javafx.scene.layout.MockRegion region1 = new javafx.scene.layout.MockRegion(100,150);
         javafx.scene.layout.MockRegion region2 = new javafx.scene.layout.MockRegion(100,150);
         group.getChildren().addAll(region1,region2);
-        group.layout();
 
         assertEquals(150, group.prefHeight(-1), 0);
     }

@@ -6,7 +6,9 @@
 #include "JavaEnv.h"
 #include "LocalizedStrings.h"
 #include "NotImplemented.h"
-#include "PlatformString.h"
+
+#include <wtf/MathExtras.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -287,6 +289,26 @@ String crashedPluginText()
     return getLocalizedProperty("crashedPluginText");
 }
 
+String blockedPluginByContentSecurityPolicyText()
+{
+    return getLocalizedProperty("blockedPluginByContentSecurityPolicyText");
+}
+
+String inactivePluginText()
+{
+    return getLocalizedProperty("inactivePluginText");
+}
+
+String snapshottedPlugInLabelSubtitle()
+{
+    return getLocalizedProperty("snapshottedPlugInLabelSubtitle");
+}
+
+String snapshottedPlugInLabelTitle()
+{
+    return getLocalizedProperty("snapshottedPlugInLabelTitle");
+}
+
 String missingPluginText()
 {
     return getLocalizedProperty("missingPluginText");
@@ -375,7 +397,7 @@ String localizedMediaControlElementHelpText(const String& s)
 
 String localizedMediaTimeDescription(float time)
 {
-    if (!isfinite(time))
+    if (!std::isfinite(time))
         return getLocalizedProperty("localizedMediaTimeDescriptionIndefinite");
 
     int seconds = (int)fabsf(time);
@@ -384,18 +406,18 @@ String localizedMediaTimeDescription(float time)
     int minutes = (seconds / 60) % 60;
     seconds %= 60;
 
-    String result = String();
+    String result;
     if (days) {
         String s = getLocalizedProperty("localizedMediaTimeDescriptionDays");
-        result += String::number(days) + " " + s + "  ";
+        result.append(String::number(days) + " " + s + "  ");
     }
     if (days || hours) {
         String s = getLocalizedProperty("localizedMediaTimeDescriptionHours");
-        result += String::number(hours) + " " + s + "  ";
+        result.append(String::number(hours) + " " + s + "  ");
     }
     if (days || hours || minutes) {
         String s = getLocalizedProperty("localizedMediaTimeDescriptionMinutes");
-        result += String::number(minutes) + " " + s + "  ";
+        result.append(String::number(minutes) + " " + s + "  ");
     }
     String s = getLocalizedProperty("localizedMediaTimeDescriptionSeconds");
     return result + String::number(days) + " " + s;
@@ -559,6 +581,21 @@ String validationMessageValueMissingForSelectText()
     notImplemented();
     return validationMessageValueMissingText();
 }
+
+String validationMessageBadInputForNumberText()
+{
+    return getLocalizedProperty("validationMessageBadInputForNumberText");
+}
+
+#if ENABLE(INPUT_TYPE_WEEK)
+// weekFormatInLDML() returns week and year format in LDML, Unicode
+// technical standard 35, Locale Data Markup Language, e.g. "'Week' ww, yyyy"
+String weekFormatInLDML()
+{
+    return getLocalizedProperty("weekFormatInLDML");
+}
+#endif
+
 
 String defaultDetailsSummaryText()
 {

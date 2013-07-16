@@ -47,6 +47,25 @@ namespace WebCore {
         CompositeDifference
     };
 
+    enum BlendMode {
+        BlendModeNormal,
+        BlendModeMultiply,
+        BlendModeScreen,
+        BlendModeOverlay,
+        BlendModeDarken,
+        BlendModeLighten,
+        BlendModeColorDodge,
+        BlendModeColorBurn,
+        BlendModeHardLight,
+        BlendModeSoftLight,
+        BlendModeDifference,
+        BlendModeExclusion,
+        BlendModeHue,
+        BlendModeSaturation,
+        BlendModeColor,
+        BlendModeLuminosity
+    };
+
     enum GradientSpreadMethod {
         SpreadMethodPad,
         SpreadMethodReflect,
@@ -63,8 +82,8 @@ namespace WebCore {
     
     enum TextAlign { StartTextAlign, EndTextAlign, LeftTextAlign, CenterTextAlign, RightTextAlign };
 
-    String compositeOperatorName(CompositeOperator);
-    bool parseCompositeOperator(const String&, CompositeOperator&);
+    String compositeOperatorName(CompositeOperator, BlendMode);
+    bool parseCompositeAndBlendOperator(const String&, CompositeOperator&, BlendMode&);
 
     String lineCapName(LineCap);
     bool parseLineCap(const String&, LineCap&);

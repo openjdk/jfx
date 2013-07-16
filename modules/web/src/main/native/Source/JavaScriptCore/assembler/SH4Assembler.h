@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Cisco Systems, Inc. All rights reserved.
  * Copyright (C) 2009-2011 STMicroelectronics. All rights reserved.
  * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
@@ -114,7 +115,9 @@ enum {
     MOVL_READ_OFFPC_OPCODE = 0xd000,
     MOVL_READ_OFFRM_OPCODE = 0x5000,
     MOVW_WRITE_RN_OPCODE = 0x2001,
+    MOVW_WRITE_R0RN_OPCODE = 0x0005,
     MOVW_READ_RM_OPCODE = 0x6001,
+    MOVW_READ_RMINC_OPCODE = 0x6005,
     MOVW_READ_R0RM_OPCODE = 0x000d,
     MOVW_READ_OFFRM_OPCODE = 0x8500,
     MOVW_READ_OFFPC_OPCODE = 0x9000,
@@ -166,6 +169,7 @@ enum {
     FMOVS_WRITE_RN_DEC_OPCODE = 0xf00b,
     FMOVS_WRITE_R0RN_OPCODE = 0xf007,
     FCNVDS_DRM_FPUL_OPCODE = 0xf0bd,
+    FCNVSD_FPUL_DRN_OPCODE = 0xf0ad,
     LDS_RM_FPUL_OPCODE = 0x405a,
     FLDS_FRM_FPUL_OPCODE = 0xf01d,
     STS_FPUL_RN_OPCODE = 0x005a,
@@ -326,7 +330,8 @@ public:
         padForAlign32 = 0x00090009,
     };
 
-    enum JumpType { JumpFar,
+    enum JumpType {
+        JumpFar,
                     JumpNear
     };
 
@@ -339,22 +344,23 @@ public:
     typedef enum {
         EQ = 0x0, // Equal
         NE = 0x1, // Not Equal
-        HS = 0x2, // Unsigend Greater Than equal
-        HI = 0x3, // Unsigend Greater Than
-        LS = 0x4, // Unsigend Lower or Same
-        LI = 0x5, // Unsigend Lower
+        HS = 0x2, // Unsigned Greater Than equal
+        HI = 0x3, // Unsigned Greater Than
+        LS = 0x4, // Unsigned Lower or Same
+        LI = 0x5, // Unsigned Lower
         GE = 0x6, // Greater or Equal
         LT = 0x7, // Less Than
         GT = 0x8, // Greater Than
         LE = 0x9, // Less or Equal
         OF = 0xa, // OverFlow
         SI = 0xb, // Signed
-        EQU= 0xc, // Equal or unordered(NaN)
-        NEU= 0xd,
-        GTU= 0xe,
-        GEU= 0xf,
-        LTU= 0x10,
-        LEU= 0x11,
+        NS = 0xc, // Not Signed
+        EQU= 0xd, // Equal or unordered(NaN)
+        NEU= 0xe,
+        GTU= 0xf,
+        GEU= 0x10,
+        LTU= 0x11,
+        LEU= 0x12,
     } Condition;
 
     // Opaque label types
@@ -532,7 +538,7 @@ public:
             oneShortOp(getOpcodeGroup2(SHLL16_OPCODE, dst));
             break;
         default:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
         }
     }
 
@@ -542,28 +548,14 @@ public:
         oneShortOp(opc);
     }
 
-    void shllRegReg(RegisterID dst, RegisterID rShift)
+    void shldRegReg(RegisterID dst, RegisterID rShift)
     {
-        uint16_t opc = getOpcodeGroup1(SHLD_OPCODE, dst, rShift);
-        oneShortOp(opc);
+        oneShortOp(getOpcodeGroup1(SHLD_OPCODE, dst, rShift));
     }
 
-    void shlrRegReg(RegisterID dst, RegisterID rShift)
+    void shadRegReg(RegisterID dst, RegisterID rShift)
     {
-        neg(rShift, rShift);
-        shllRegReg(dst, rShift);
-    }
-
-    void sharRegReg(RegisterID dst, RegisterID rShift)
-    {
-        neg(rShift, rShift);
-        shaRegReg(dst, rShift);
-    }
-
-    void shaRegReg(RegisterID dst, RegisterID rShift)
-    {
-        uint16_t opc = getOpcodeGroup1(SHAD_OPCODE, dst, rShift);
-        oneShortOp(opc);
+        oneShortOp(getOpcodeGroup1(SHAD_OPCODE, dst, rShift));
     }
 
     void shlrImm8r(int imm, RegisterID dst)
@@ -582,7 +574,29 @@ public:
             oneShortOp(getOpcodeGroup2(SHLR16_OPCODE, dst));
             break;
         default:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+    }
+
+    void shalImm8r(int imm, RegisterID dst)
+    {
+        switch (imm) {
+        case 1:
+            oneShortOp(getOpcodeGroup2(SHAL_OPCODE, dst));
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+    }
+
+    void sharImm8r(int imm, RegisterID dst)
+    {
+        switch (imm) {
+        case 1:
+            oneShortOp(getOpcodeGroup2(SHAR_OPCODE, dst));
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
         }
     }
 
@@ -652,7 +666,7 @@ public:
             oneShortOp(getOpcodeGroup1(CMPGT_OPCODE, left, right));
             break;
         default:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
         }
     }
 
@@ -729,7 +743,7 @@ public:
             oneShortOp(getOpcodeGroup5(BF_OPCODE, label));
             break;
         default:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
         }
     }
 
@@ -749,7 +763,7 @@ public:
             oneShortOp(getOpcodeGroup2(BSRF_OPCODE, reg));
             break;
         default:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
         }
     }
 
@@ -803,7 +817,7 @@ public:
         oneShortOp(opc);
     }
 
-    void floatfpulfrn(RegisterID src)
+    void floatfpulfrn(FPRegisterID src)
     {
         uint16_t opc = getOpcodeGroup2(FLOAT_OPCODE, src);
         oneShortOp(opc, true, false);
@@ -857,13 +871,13 @@ public:
         oneShortOp(opc, true, false);
     }
 
-    void fldsfpul(RegisterID src)
+    void fldsfpul(FPRegisterID src)
     {
         uint16_t opc = getOpcodeGroup2(FLDS_FRM_FPUL_OPCODE, src);
         oneShortOp(opc);
     }
 
-    void fstsfpul(RegisterID src)
+    void fstsfpul(FPRegisterID src)
     {
         uint16_t opc = getOpcodeGroup2(FSTS_FPUL_FRN_OPCODE, src);
         oneShortOp(opc);
@@ -886,6 +900,12 @@ public:
     void dcnvds(FPRegisterID src)
     {
         uint16_t opc = getOpcodeGroup7(FCNVDS_DRM_FPUL_OPCODE, src >> 1);
+        oneShortOp(opc);
+    }
+
+    void dcnvsd(FPRegisterID dst)
+    {
+        uint16_t opc = getOpcodeGroup7(FCNVSD_FPUL_DRN_OPCODE, dst >> 1);
         oneShortOp(opc);
     }
 
@@ -1019,6 +1039,12 @@ public:
         oneShortOp(opc);
     }
 
+    void movwMemRegIn(RegisterID base, RegisterID dst)
+    {
+        uint16_t opc = getOpcodeGroup1(MOVW_READ_RMINC_OPCODE, dst, base);
+        oneShortOp(opc);
+    }
+
     void movwPCReg(int offset, RegisterID base, RegisterID dst)
     {
         ASSERT(base == SH4Registers::pc);
@@ -1039,6 +1065,12 @@ public:
     void movwR0mr(RegisterID src, RegisterID dst)
     {
         uint16_t opc = getOpcodeGroup1(MOVW_READ_R0RM_OPCODE, dst, src);
+        oneShortOp(opc);
+    }
+
+    void movwRegMemr0(RegisterID src, RegisterID dst)
+    {
+        uint16_t opc = getOpcodeGroup1(MOVW_WRITE_R0RN_OPCODE, dst, src);
         oneShortOp(opc);
     }
 
@@ -1082,6 +1114,12 @@ public:
         oneShortOp(getOpcodeGroup4(MOVL_READ_OFFRM_OPCODE, dst, base, offset));
     }
 
+    void movbRegMem(RegisterID src, RegisterID base)
+    {
+        uint16_t opc = getOpcodeGroup1(MOVB_WRITE_RN_OPCODE, base, src);
+        oneShortOp(opc);
+    }
+
     void movbMemReg(int offset, RegisterID base, RegisterID dst)
     {
         ASSERT(dst == SH4Registers::r0);
@@ -1099,6 +1137,18 @@ public:
     void movbMemReg(RegisterID src, RegisterID dst)
     {
         uint16_t opc = getOpcodeGroup1(MOVB_READ_RM_OPCODE, dst, src);
+        oneShortOp(opc);
+    }
+
+    void movbMemRegIn(RegisterID base, RegisterID dst)
+    {
+        uint16_t opc = getOpcodeGroup1(MOVB_READ_RMINC_OPCODE, dst, base);
+        oneShortOp(opc);
+    }
+
+    void movbRegMemr0(RegisterID src, RegisterID dst)
+    {
+        uint16_t opc = getOpcodeGroup1(MOVB_WRITE_R0RN_OPCODE, dst, src);
         oneShortOp(opc);
     }
 
@@ -1237,6 +1287,12 @@ public:
     {
         m_buffer.ensureSpace(maxInstructionSize + 2);
         oneShortOp(RTS_OPCODE, false);
+    }
+
+    AssemblerLabel labelIgnoringWatchpoints()
+    {
+        m_buffer.ensureSpaceForAnyInstruction();
+        return m_buffer.label();
     }
 
     AssemblerLabel label()
@@ -1442,6 +1498,43 @@ public:
 
     // Linking & patching
 
+    static ptrdiff_t maxJumpReplacementSize()
+    {
+        return sizeof(SH4Word) * 6;
+    }
+
+    static void replaceWithJump(void *instructionStart, void *to)
+    {
+        SH4Word* instruction = reinterpret_cast<SH4Word*>(instructionStart);
+        intptr_t difference = reinterpret_cast<intptr_t>(to) - (reinterpret_cast<intptr_t>(instruction) + 2 * sizeof(SH4Word));
+        int nbinst = 0;
+
+        if ((difference >= -4096) && (difference <= 4094)) {
+            instruction[0] = getOpcodeGroup6(BRA_OPCODE, difference >> 1);
+            instruction[1] = NOP_OPCODE;
+            cacheFlush(instruction, sizeof(SH4Word) * 2);
+            return;
+        }
+
+        instruction[nbinst++] = getOpcodeGroup3(MOVL_READ_OFFPC_OPCODE, scratchReg2, 1);
+        instruction[nbinst++] = getOpcodeGroup2(JMP_OPCODE, scratchReg2);
+        instruction[nbinst++] = NOP_OPCODE;
+
+        if (!(reinterpret_cast<unsigned>(instruction) & 3))
+            instruction[nbinst++] = NOP_OPCODE;
+
+        instruction[nbinst++] = reinterpret_cast<unsigned>(to) & 0xffff;
+        instruction[nbinst++] = reinterpret_cast<unsigned>(to) >> 16;
+        cacheFlush(instruction, sizeof(SH4Word) * nbinst);
+    }
+
+    static void revertJump(void* instructionStart, void *immptr)
+    {
+        SH4Word *insn = reinterpret_cast<SH4Word*>(instructionStart);
+        ASSERT((insn[0] & 0xf000) == MOVL_READ_OFFPC_OPCODE);
+        changePCrelativeAddress(insn[0] & 0x00ff, insn, reinterpret_cast<uint32_t>(immptr));
+    }
+
     void linkJump(AssemblerLabel from, AssemblerLabel to, JumpType type = JumpFar)
     {
         ASSERT(to.isSet());
@@ -1541,19 +1634,27 @@ public:
         return reinterpret_cast<void*>(readPCrelativeAddress((*instructionPtr & 0xff), instructionPtr));
     }
 
-    PassRefPtr<ExecutableMemoryHandle> executableCopy(JSGlobalData& globalData, void* ownerUID, JITCompilationEffort effort)
+    PassRefPtr<ExecutableMemoryHandle> executableCopy(VM& vm, void* ownerUID, JITCompilationEffort effort)
     {
-        return m_buffer.executableCopy(globalData, ownerUID, effort);
+        return m_buffer.executableCopy(vm, ownerUID, effort);
     }
 
     static void cacheFlush(void* code, size_t size)
     {
-#if !OS(LINUX)
-#error "The cacheFlush support is missing on this platform."
-#elif defined CACHEFLUSH_D_L2
-        syscall(__NR_cacheflush, reinterpret_cast<unsigned>(code), size, CACHEFLUSH_D_WB | CACHEFLUSH_I | CACHEFLUSH_D_L2);
+#if OS(LINUX)
+        // Flush each page separately, otherwise the whole flush will fail if an uncommited page is in the area.
+        unsigned currentPage = reinterpret_cast<unsigned>(code) & ~(pageSize() - 1);
+        unsigned lastPage = (reinterpret_cast<unsigned>(code) + size - 1) & ~(pageSize() - 1);
+        do {
+#if defined CACHEFLUSH_D_L2
+            syscall(__NR_cacheflush, currentPage, pageSize(), CACHEFLUSH_D_WB | CACHEFLUSH_I | CACHEFLUSH_D_L2);
 #else
-        syscall(__NR_cacheflush, reinterpret_cast<unsigned>(code), size, CACHEFLUSH_D_WB | CACHEFLUSH_I);
+            syscall(__NR_cacheflush, currentPage, pageSize(), CACHEFLUSH_D_WB | CACHEFLUSH_I);
+#endif
+            currentPage += pageSize();
+        } while (lastPage >= currentPage);
+#else
+#error "The cacheFlush support is missing on this platform."
 #endif
     }
 
@@ -1586,7 +1687,7 @@ public:
     size_t codeSize() const { return m_buffer.codeSize(); }
 
 #ifdef SH4_ASSEMBLER_TRACING
-    static void printInstr(uint16_t opc, unsigned int size, bool isdoubleInst = true)
+    static void printInstr(uint16_t opc, unsigned size, bool isdoubleInst = true)
     {
         if (!getenv("JavaScriptCoreDumpJIT"))
             return;
@@ -1735,6 +1836,9 @@ public:
         case FCNVDS_DRM_FPUL_OPCODE:
             format = "    FCNVDS FR%d, FPUL\n";
             break;
+        case FCNVSD_FPUL_DRN_OPCODE:
+            format = "    FCNVSD FPUL, FR%d\n";
+            break;
         }
         if (format) {
             if (isdoubleInst)
@@ -1860,8 +1964,14 @@ public:
         case MOVW_READ_RM_OPCODE:
             format = "    MOV.W @R%d, R%d\n";
             break;
+        case MOVW_READ_RMINC_OPCODE:
+            format = "    MOV.W @R%d+, R%d\n";
+            break;
         case MOVW_READ_R0RM_OPCODE:
             format = "    MOV.W @(R0, R%d), R%d\n";
+            break;
+        case MOVW_WRITE_R0RN_OPCODE:
+            format = "    MOV.W R%d, @(R0, R%d)\n";
             break;
         case EXTUB_OPCODE:
             format = "    EXTU.B R%d, R%d\n";
@@ -2064,10 +2174,10 @@ public:
     static void vprintfStdoutInstr(const char* format, va_list args)
     {
         if (getenv("JavaScriptCoreDumpJIT"))
-            WTF::dataLogV(format, args);
+            WTF::dataLogFV(format, args);
     }
 
-    static void printBlockInstr(uint16_t* first, unsigned int offset, int nbInstr)
+    static void printBlockInstr(uint16_t* first, unsigned offset, int nbInstr)
     {
         printfStdoutInstr(">> repatch instructions after link\n");
         for (int i = 0; i <= nbInstr; i++)
@@ -2075,9 +2185,33 @@ public:
         printfStdoutInstr(">> end repatch\n");
     }
 #else
-    static void printInstr(uint16_t opc, unsigned int size, bool isdoubleInst = true) {};
-    static void printBlockInstr(uint16_t* first, unsigned int offset, int nbInstr) {};
+    static void printInstr(uint16_t opc, unsigned size, bool isdoubleInst = true) { };
+    static void printBlockInstr(uint16_t* first, unsigned offset, int nbInstr) { };
 #endif
+
+    static void replaceWithLoad(void* instructionStart)
+    {
+        SH4Word* insPtr = reinterpret_cast<SH4Word*>(instructionStart);
+
+        insPtr += 2; // skip MOV and ADD opcodes
+
+        if (((*insPtr) & 0xf00f) != MOVL_READ_RM_OPCODE) {
+            *insPtr = MOVL_READ_RM_OPCODE | (*insPtr & 0x0ff0);
+            cacheFlush(insPtr, sizeof(SH4Word));
+        }
+    }
+
+    static void replaceWithAddressComputation(void* instructionStart)
+    {
+        SH4Word* insPtr = reinterpret_cast<SH4Word*>(instructionStart);
+
+        insPtr += 2; // skip MOV and ADD opcodes
+
+        if (((*insPtr) & 0xf00f) != MOV_OPCODE) {
+            *insPtr = MOV_OPCODE | (*insPtr & 0x0ff0);
+            cacheFlush(insPtr, sizeof(SH4Word));
+        }
+    }
 
 private:
     SH4Buffer m_buffer;

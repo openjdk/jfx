@@ -25,28 +25,27 @@
 
 package javafx.scene.transform;
 
-import java.lang.reflect.Method;
-
+import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.transform.TransformUtils;
+import com.sun.javafx.test.TransformHelper;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Point3D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.NodeTest;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
-
+import javafx.scene.shape.RectangleTest;
 import org.junit.Assert;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
-import com.sun.javafx.geom.transform.Affine2D;
-import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.pgstub.StubRectangle;
-import com.sun.javafx.scene.transform.TransformUtils;
-import com.sun.javafx.test.TransformHelper;
-import javafx.geometry.BoundingBox;
-import javafx.geometry.Point3D;
+import java.lang.reflect.Method;
+
+import static org.junit.Assert.*;
 
 
 public class TransformTest {
@@ -215,7 +214,7 @@ public class TransformTest {
     static void checkDoublePropertySynced(Transform tr, String propertyName, double val)
         throws Exception {
 
-        final Rectangle r = new Rectangle(200, 200, 200, 200);
+        final Rectangle r = new RectangleTest.StubRectangle(200, 200, 200, 200);
 
         DoubleProperty v = new SimpleDoubleProperty(0.0);
         Method m = tr.getClass().getMethod(propertyName + "Property", new Class[] {});
@@ -228,7 +227,7 @@ public class TransformTest {
         NodeTest.syncNode(r);
 
         //check
-        StubRectangle pgR = (StubRectangle)r.impl_getPGNode();
+        RectangleTest.StubNGRectangle pgR = r.impl_getPeer();
         assertTx(r, pgR.getTransformMatrix());
     }
 }

@@ -32,7 +32,6 @@
 #include "Console.h"
 #include "ConsoleMessage.h"
 #include "DOMWindow.h"
-#include "IdentifiersFactory.h"
 #include "InjectedScriptHost.h"
 #include "InjectedScriptManager.h"
 #include "InspectorFrontend.h"
@@ -42,11 +41,14 @@
 #include "ScriptArguments.h"
 #include "ScriptCallFrame.h"
 #include "ScriptCallStack.h"
+#include "ScriptCallStackFactory.h"
+#include "ScriptController.h"
 #include "ScriptObject.h"
 #include "ScriptProfiler.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -59,12 +61,15 @@ static const char monitoringXHR[] = "monitoringXHR";
 static const char consoleMessagesEnabled[] = "consoleMessagesEnabled";
 }
 
-InspectorConsoleAgent::InspectorConsoleAgent(InstrumentingAgents* instrumentingAgents, InspectorState* state, InjectedScriptManager* injectedScriptManager)
+int InspectorConsoleAgent::s_enabledAgentCount = 0;
+
+InspectorConsoleAgent::InspectorConsoleAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, InjectedScriptManager* injectedScriptManager)
     : InspectorBaseAgent<InspectorConsoleAgent>("Console", instrumentingAgents, state)
     , m_injectedScriptManager(injectedScriptManager)
     , m_frontend(0)
     , m_previousMessage(0)
     , m_expiredConsoleMessageCount(0)
+    , m_enabled(false)
 {
     m_instrumentingAgents->setInspectorConsoleAgent(this);
 }
@@ -79,20 +84,32 @@ InspectorConsoleAgent::~InspectorConsoleAgent()
 
 void InspectorConsoleAgent::enable(ErrorString*)
 {
+    if (m_enabled)
+        return;
+    m_enabled = true;
+    if (!s_enabledAgentCount)
+        ScriptController::setCaptureCallStackForUncaughtExceptions(true);
+    ++s_enabledAgentCount;
+
     m_state->setBoolean(ConsoleAgentState::consoleMessagesEnabled, true);
 
     if (m_expiredConsoleMessageCount) {
-        ConsoleMessage expiredMessage(OtherMessageSource, LogMessageType, WarningMessageLevel, String::format("%d console messages are not shown.", m_expiredConsoleMessageCount), "", 0, "");
-        expiredMessage.addToFrontend(m_frontend, m_injectedScriptManager);
+        ConsoleMessage expiredMessage(!isWorkerAgent(), OtherMessageSource, LogMessageType, WarningMessageLevel, String::format("%d console messages are not shown.", m_expiredConsoleMessageCount));
+        expiredMessage.addToFrontend(m_frontend, m_injectedScriptManager, false);
     }
 
     size_t messageCount = m_consoleMessages.size();
     for (size_t i = 0; i < messageCount; ++i)
-        m_consoleMessages[i]->addToFrontend(m_frontend, m_injectedScriptManager);
+        m_consoleMessages[i]->addToFrontend(m_frontend, m_injectedScriptManager, false);
 }
 
 void InspectorConsoleAgent::disable(ErrorString*)
 {
+    if (!m_enabled)
+        return;
+    m_enabled = false;
+    if (!(--s_enabledAgentCount))
+        ScriptController::setCaptureCallStackForUncaughtExceptions(false);
     m_state->setBoolean(ConsoleAgentState::consoleMessagesEnabled, false);
 }
 
@@ -102,7 +119,7 @@ void InspectorConsoleAgent::clearMessages(ErrorString*)
     m_expiredConsoleMessageCount = 0;
     m_previousMessage = 0;
     m_injectedScriptManager->releaseObjectGroup("console");
-    if (m_frontend && m_state->getBoolean(ConsoleAgentState::consoleMessagesEnabled))
+    if (m_frontend && m_enabled)
         m_frontend->messagesCleared();
 }
 
@@ -131,21 +148,48 @@ void InspectorConsoleAgent::setFrontend(InspectorFrontend* frontend)
 void InspectorConsoleAgent::clearFrontend()
 {
     m_frontend = 0;
-    m_state->setBoolean(ConsoleAgentState::consoleMessagesEnabled, false);
+    String errorString;
+    disable(&errorString);
 }
 
-void InspectorConsoleAgent::addMessageToConsole(MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptArguments> arguments, PassRefPtr<ScriptCallStack> callStack)
+void InspectorConsoleAgent::addMessageToConsole(MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptCallStack> callStack, unsigned long requestIdentifier)
 {
     if (!developerExtrasEnabled())
         return;
-    addConsoleMessage(adoptPtr(new ConsoleMessage(source, type, level, message, arguments, callStack)));
+
+    if (type == ClearMessageType) {
+        ErrorString error;
+        clearMessages(&error);
 }
 
-void InspectorConsoleAgent::addMessageToConsole(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& scriptId, unsigned lineNumber)
+    addConsoleMessage(adoptPtr(new ConsoleMessage(!isWorkerAgent(), source, type, level, message, callStack, requestIdentifier)));
+}
+
+void InspectorConsoleAgent::addMessageToConsole(MessageSource source, MessageType type, MessageLevel level, const String& message, ScriptState* state, PassRefPtr<ScriptArguments> arguments, unsigned long requestIdentifier)
 {
     if (!developerExtrasEnabled())
         return;
-    addConsoleMessage(adoptPtr(new ConsoleMessage(source, type, level, message, scriptId, lineNumber)));
+
+    if (type == ClearMessageType) {
+        ErrorString error;
+        clearMessages(&error);
+    }
+
+    addConsoleMessage(adoptPtr(new ConsoleMessage(!isWorkerAgent(), source, type, level, message, arguments, state, requestIdentifier)));
+}
+
+void InspectorConsoleAgent::addMessageToConsole(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& scriptId, unsigned lineNumber, unsigned columnNumber, ScriptState* state, unsigned long requestIdentifier)
+{
+    if (!developerExtrasEnabled())
+        return;
+
+    if (type == ClearMessageType) {
+        ErrorString error;
+        clearMessages(&error);
+    }
+
+    bool canGenerateCallStack = !isWorkerAgent() && m_frontend;
+    addConsoleMessage(adoptPtr(new ConsoleMessage(canGenerateCallStack, source, type, level, message, scriptId, lineNumber, columnNumber, state, requestIdentifier)));
 }
 
 Vector<unsigned> InspectorConsoleAgent::consoleMessageArgumentCounts()
@@ -163,7 +207,7 @@ void InspectorConsoleAgent::startTiming(const String& title)
     if (title.isNull())
         return;
 
-    m_times.add(title, currentTime() * 1000);
+    m_times.add(title, monotonicallyIncreasingTime());
 }
 
 void InspectorConsoleAgent::stopTiming(const String& title, PassRefPtr<ScriptCallStack> callStack)
@@ -177,17 +221,17 @@ void InspectorConsoleAgent::stopTiming(const String& title, PassRefPtr<ScriptCal
     if (it == m_times.end())
         return;
 
-    double startTime = it->second;
+    double startTime = it->value;
     m_times.remove(it);
 
-    double elapsed = currentTime() * 1000 - startTime;
-    String message = title + String::format(": %.0fms", elapsed);
-    const ScriptCallFrame& lastCaller = callStack->at(0);
-    addMessageToConsole(JSMessageSource, LogMessageType, LogMessageLevel, message, lastCaller.sourceURL(), lastCaller.lineNumber());
+    double elapsed = monotonicallyIncreasingTime() - startTime;
+    String message = title + String::format(": %.3fms", elapsed * 1000);
+    addMessageToConsole(ConsoleAPIMessageSource, TimingMessageType, DebugMessageLevel, message, callStack);
 }
 
-void InspectorConsoleAgent::count(PassRefPtr<ScriptArguments> arguments, PassRefPtr<ScriptCallStack> callStack)
+void InspectorConsoleAgent::count(ScriptState* state, PassRefPtr<ScriptArguments> arguments)
 {
+    RefPtr<ScriptCallStack> callStack(createScriptCallStackForConsole(state));
     const ScriptCallFrame& lastCaller = callStack->at(0);
     // Follow Firebug's behavior of counting with null and undefined title in
     // the same bucket as no argument
@@ -200,14 +244,14 @@ void InspectorConsoleAgent::count(PassRefPtr<ScriptArguments> arguments, PassRef
     if (it == m_counts.end())
         count = 1;
     else {
-        count = it->second + 1;
+        count = it->value + 1;
         m_counts.remove(it);
     }
 
     m_counts.add(identifier, count);
 
     String message = title + ": " + String::number(count);
-    addMessageToConsole(JSMessageSource, LogMessageType, LogMessageLevel, message, lastCaller.sourceURL(), lastCaller.lineNumber());
+    addMessageToConsole(ConsoleAPIMessageSource, LogMessageType, DebugMessageLevel, message, callStack);
 }
 
 void InspectorConsoleAgent::frameWindowDiscarded(DOMWindow* window)
@@ -218,42 +262,41 @@ void InspectorConsoleAgent::frameWindowDiscarded(DOMWindow* window)
     m_injectedScriptManager->discardInjectedScriptsFor(window);
 }
 
-void InspectorConsoleAgent::resourceRetrievedByXMLHttpRequest(unsigned long identifier, const String& url, const String& sendURL, unsigned sendLineNumber)
+void InspectorConsoleAgent::didFinishXHRLoading(unsigned long requestIdentifier, const String& url, const String& sendURL, unsigned sendLineNumber)
 {
     if (!developerExtrasEnabled())
         return;
     if (m_frontend && m_state->getBoolean(ConsoleAgentState::monitoringXHR)) {
         String message = "XHR finished loading: \"" + url + "\".";
-        String requestId = IdentifiersFactory::requestId(identifier);
-        addConsoleMessage(adoptPtr(new ConsoleMessage(NetworkMessageSource, LogMessageType, LogMessageLevel, message, sendURL, sendLineNumber, requestId)));
+        // FIXME: <http://webkit.org/b/114316> InspectorConsoleAgent::didFinishXHRLoading ConsoleMessage should include a column number
+        addMessageToConsole(NetworkMessageSource, LogMessageType, DebugMessageLevel, message, sendURL, sendLineNumber, 0, 0, requestIdentifier);
+    }
     }
 
-
-}
-
-void InspectorConsoleAgent::didReceiveResponse(unsigned long identifier, const ResourceResponse& response)
+void InspectorConsoleAgent::didReceiveResponse(unsigned long requestIdentifier, const ResourceResponse& response)
 {
     if (!developerExtrasEnabled())
         return;
 
     if (response.httpStatusCode() >= 400) {
         String message = "Failed to load resource: the server responded with a status of " + String::number(response.httpStatusCode()) + " (" + response.httpStatusText() + ')';
-        String requestId = IdentifiersFactory::requestId(identifier);
-        addConsoleMessage(adoptPtr(new ConsoleMessage(NetworkMessageSource, LogMessageType, ErrorMessageLevel, message, response.url().string(), requestId)));
+        addMessageToConsole(NetworkMessageSource, LogMessageType, ErrorMessageLevel, message, response.url().string(), 0, 0, 0, requestIdentifier);
     }
 }
 
-void InspectorConsoleAgent::didFailLoading(unsigned long identifier, const ResourceError& error)
+void InspectorConsoleAgent::didFailLoading(unsigned long requestIdentifier, const ResourceError& error)
 {
     if (!developerExtrasEnabled())
         return;
     if (error.isCancellation()) // Report failures only.
         return;
-    String message = "Failed to load resource";
-    if (!error.localizedDescription().isEmpty())
-        message += ": " + error.localizedDescription();
-    String requestId = IdentifiersFactory::requestId(identifier);
-    addConsoleMessage(adoptPtr(new ConsoleMessage(NetworkMessageSource, LogMessageType, ErrorMessageLevel, message, error.failingURL(), requestId)));
+    StringBuilder message;
+    message.appendLiteral("Failed to load resource");
+    if (!error.localizedDescription().isEmpty()) {
+        message.appendLiteral(": ");
+        message.append(error.localizedDescription());
+    }
+    addMessageToConsole(NetworkMessageSource, LogMessageType, ErrorMessageLevel, message.toString(), error.failingURL(), 0, 0, 0, requestIdentifier);
 }
 
 void InspectorConsoleAgent::setMonitoringXHREnabled(ErrorString*, bool enabled)
@@ -275,13 +318,13 @@ void InspectorConsoleAgent::addConsoleMessage(PassOwnPtr<ConsoleMessage> console
 
     if (m_previousMessage && !isGroupMessage(m_previousMessage->type()) && m_previousMessage->isEqual(consoleMessage.get())) {
         m_previousMessage->incrementCount();
-        if (m_frontend && m_state->getBoolean(ConsoleAgentState::consoleMessagesEnabled))
+        if (m_frontend && m_enabled)
             m_previousMessage->updateRepeatCountInConsole(m_frontend);
     } else {
         m_previousMessage = consoleMessage.get();
         m_consoleMessages.append(consoleMessage);
-        if (m_frontend && m_state->getBoolean(ConsoleAgentState::consoleMessagesEnabled))
-            m_previousMessage->addToFrontend(m_frontend, m_injectedScriptManager);
+        if (m_frontend && m_enabled)
+            m_previousMessage->addToFrontend(m_frontend, m_injectedScriptManager, true);
     }
 
     if (!m_frontend && m_consoleMessages.size() >= maximumConsoleMessages) {

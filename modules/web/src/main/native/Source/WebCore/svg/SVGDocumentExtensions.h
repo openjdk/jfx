@@ -40,12 +40,12 @@ class SVGFontFaceElement;
 class SVGResourcesCache;
 class SVGSMILElement;
 class SVGSVGElement;
-class SVGStyledElement;
+class Element;
 
 class SVGDocumentExtensions {
     WTF_MAKE_NONCOPYABLE(SVGDocumentExtensions); WTF_MAKE_FAST_ALLOCATED;
 public:
-    typedef HashSet<SVGStyledElement*> SVGPendingElements;
+    typedef HashSet<Element*> SVGPendingElements;
     SVGDocumentExtensions(Document*);
     ~SVGDocumentExtensions();
     
@@ -61,10 +61,6 @@ public:
     void unpauseAnimations();
     void dispatchSVGLoadEventToOutermostSVGElements();
     
-    void addAnimationElementToTarget(SVGSMILElement*, SVGElement*);
-    void removeAnimationElementFromTarget(SVGSMILElement*, SVGElement*);
-    void removeAllAnimationElementsFromTarget(SVGElement*);
-
     void reportWarning(const String&);
     void reportError(const String&);
 
@@ -72,8 +68,9 @@ public:
 
     HashSet<SVGElement*>* setOfElementsReferencingTarget(SVGElement* referencedElement) const;
     void addElementReferencingTarget(SVGElement* referencingElement, SVGElement* referencedElement);
-    void removeAllTargetReferencesForElement(SVGElement* referencingElement);
-    void removeAllElementReferencesForTarget(SVGElement* referencedElement);
+    void removeAllTargetReferencesForElement(SVGElement*);
+    void rebuildAllElementReferencesForTarget(SVGElement*);
+    void removeAllElementReferencesForTarget(SVGElement*);
 
 #if ENABLE(SVG_FONTS)
     const HashSet<SVGFontFaceElement*>& svgFontFaceElements() const { return m_svgFontFaceElements; }
@@ -84,13 +81,12 @@ public:
 private:
     Document* m_document; // weak reference
     HashSet<SVGSVGElement*> m_timeContainers; // For SVG 1.2 support this will need to be made more general.
-    HashMap<SVGElement*, HashSet<SVGSMILElement*>* > m_animatedElements;
 #if ENABLE(SVG_FONTS)
     HashSet<SVGFontFaceElement*> m_svgFontFaceElements;
 #endif
     HashMap<AtomicString, RenderSVGResourceContainer*> m_resources;
-    HashMap<AtomicString, SVGPendingElements*> m_pendingResources; // Resources that are pending.
-    HashMap<AtomicString, SVGPendingElements*> m_pendingResourcesForRemoval; // Resources that are pending and scheduled for removal.
+    HashMap<AtomicString, OwnPtr<SVGPendingElements> > m_pendingResources; // Resources that are pending.
+    HashMap<AtomicString, OwnPtr<SVGPendingElements> > m_pendingResourcesForRemoval; // Resources that are pending and scheduled for removal.
     HashMap<SVGElement*, OwnPtr<HashSet<SVGElement*> > > m_elementDependencies;
     OwnPtr<SVGResourcesCache> m_resourcesCache;
 
@@ -98,16 +94,17 @@ public:
     // This HashMap contains a list of pending resources. Pending resources, are such
     // which are referenced by any object in the SVG document, but do NOT exist yet.
     // For instance, dynamically build gradients / patterns / clippers...
-    void addPendingResource(const AtomicString& id, SVGStyledElement*);
+    void addPendingResource(const AtomicString& id, Element*);
     bool hasPendingResource(const AtomicString& id) const;
-    bool isElementPendingResources(SVGStyledElement*) const;
-    bool isElementPendingResource(SVGStyledElement*, const AtomicString& id) const;
-    void removeElementFromPendingResources(SVGStyledElement*);
+    bool isElementPendingResources(Element*) const;
+    bool isElementPendingResource(Element*, const AtomicString& id) const;
+    void clearHasPendingResourcesIfPossible(Element*);
+    void removeElementFromPendingResources(Element*);
     PassOwnPtr<SVGPendingElements> removePendingResource(const AtomicString& id);
 
     // The following two functions are used for scheduling a pending resource to be removed.
     void markPendingResourcesForRemoval(const AtomicString&);
-    SVGStyledElement* removeElementFromPendingResourcesForRemoval(const AtomicString&);
+    Element* removeElementFromPendingResourcesForRemoval(const AtomicString&);
 
 private:
     PassOwnPtr<SVGPendingElements> removePendingResourceForRemoval(const AtomicString&);

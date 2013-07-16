@@ -26,12 +26,12 @@
 ext.ARMV6HF = [:]
 
 fetchExternalTools('ARMV6HF', 
-  ["armhf-raspberry-pi-05.tgz", 
+  ["armhf-raspberry-pi-09.tgz",
    "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ], 
   rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
 
 // Define the location of the sdk and toolchain
-def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-05")
+def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-09")
 def compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
 
 // Declare whether this particular target file applies to the current system
@@ -105,11 +105,13 @@ def extraCFlags = [
         "-I$sdk/usr/include",
         "-I$sdk/opt/vc/include",
         "-I$sdk/opt/vc/include/interface/vcos/pthreads",
+        "-I$sdk/opt/vc/include/interface/vmcs_host/linux",
         "-DOMAP3", "-DUSE_DISPMAN"].flatten();
 def extraLFlags = [
         "-I", "-L",
         linkFlags,
         "-L$sdk/lib/arm-linux/gnueabihf",
+        "-L$sdk/usr/lib",
         "-L$sdk/usr/lib/arm-linux-gnueabihf",
         "-L$sdk/opt/vc/lib"].flatten()
 
@@ -211,6 +213,31 @@ gtk.glass.platform=gtk
 gtk.prism.order=sw
 gtk.com.sun.javafx.isEmbedded=true
 gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
+
+def pangoCCFlags = [extraCFlags, "-D_ENABLE_PANGO"];
+def pangoLinkFlags = [extraLFlags];
+setupTools("linux_pango_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--cflags", "pangoft2"
+            standardOutput = results
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--libs", "pangoft2"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        pangoCCFlags.addAll(properties.getProperty("cflags").split(" "))
+        pangoLinkFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
+
 
 def compiler = file("$compilerHome/bin/arm-linux-gnueabihf-gcc").getAbsolutePath()
 def linker = file("$compilerHome/bin/arm-linux-gnueabihf-g++").getAbsolutePath()
@@ -363,8 +390,8 @@ ARMV6HF.prismES2.eglx11.lib = "prism-es2-eglx11"
 def closedDir = file("$projectDir/../rt-closed")
 ARMV6HF.font = [:]
 ARMV6HF.font.javahInclude = [
-        "com/sun/javafx/font/**/*",
-        "com/sun/javafx/text/**/*"]
+    "com/sun/javafx/font/**/*",
+    "com/sun/javafx/text/**/*"]
 ARMV6HF.font.nativeSource = [file("modules/graphics/src/main/native-font")]
 ARMV6HF.font.compiler = compiler
 ARMV6HF.font.ccFlags = fontCFlags
@@ -383,3 +410,14 @@ ARMV6HF.fontT2K.ccFlags = fontCFlags
 ARMV6HF.fontT2K.linker = linker
 ARMV6HF.fontT2K.linkFlags = fontLFlags
 ARMV6HF.fontT2K.lib = "javafx-font-t2k"
+
+ARMV6HF.fontPango = [:]
+ARMV6HF.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]
+ARMV6HF.fontPango.nativeSource = [
+    "src/main/native-font/pango.c",
+    "src/main/native-font/freetype.c"]
+ARMV6HF.fontPango.compiler = compiler
+ARMV6HF.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
+ARMV6HF.fontPango.linker = linker
+ARMV6HF.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
+ARMV6HF.fontPango.lib = "javafx-font-pango"

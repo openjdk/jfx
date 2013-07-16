@@ -29,8 +29,13 @@
 
 #include <Ecore.h>
 #include <Ecore_Evas.h>
+#include <Ecore_IMF.h>
 #include <Eina.h>
 #include <Evas.h>
+
+#if USE(ACCELERATED_COMPOSITING)
+#include <Evas_GL.h>
+#endif
 
 namespace WTF {
 
@@ -38,11 +43,6 @@ void deleteOwnedPtr(Ecore_Evas* ptr)
 {
     if (ptr)
         ecore_evas_free(ptr);
-}
-
-void deleteOwnedPtr(Evas_Object* ptr)
-{
-    evas_object_del(ptr);
 }
 
 void deleteOwnedPtr(Ecore_Pipe* ptr)
@@ -63,10 +63,18 @@ void deleteOwnedPtr(Eina_Module* ptr)
         eina_module_free(ptr); // If module wasn't unloaded, eina_module_free() calls eina_module_unload().
 }
 
-void deleteOwnedPtr(Ecore_Timer* ptr)
+void deleteOwnedPtr(Ecore_IMF_Context* ptr)
 {
     if (ptr)
-        ecore_timer_del(ptr);
+        ecore_imf_context_del(ptr);
 }
+
+#if USE(ACCELERATED_COMPOSITING)
+void deleteOwnedPtr(Evas_GL* ptr)
+{
+    if (ptr)
+        evas_gl_free(ptr);
+}
+#endif
 
 }

@@ -60,7 +60,8 @@ void InjectedBundleController::initialize(WKBundleRef bundle, WKTypeRef initiali
         didCreatePage,
         willDestroyPage,
         didInitializePageGroup,
-        didReceiveMessage
+        didReceiveMessage,
+        didReceiveMessageToPage
     };
     WKBundleSetClient(m_bundle, &client);
 
@@ -69,9 +70,11 @@ void InjectedBundleController::initialize(WKBundleRef bundle, WKTypeRef initiali
     assert(WKGetTypeID(initializationUserData) == WKDictionaryGetTypeID());
     WKDictionaryRef initializationDictionary = static_cast<WKDictionaryRef>(initializationUserData);
 
-    WKStringRef testName = static_cast<WKStringRef>(WKDictionaryGetItemForKey(initializationDictionary, WKStringCreateWithUTF8CString("TestName")));
+    WKRetainPtr<WKStringRef> testNameKey(AdoptWK, WKStringCreateWithUTF8CString("TestName"));
+    WKStringRef testName = static_cast<WKStringRef>(WKDictionaryGetItemForKey(initializationDictionary, testNameKey.get()));
 
-    WKTypeRef userData = WKDictionaryGetItemForKey(initializationDictionary, WKStringCreateWithUTF8CString("UserData"));
+    WKRetainPtr<WKStringRef> userDataKey(AdoptWK, WKStringCreateWithUTF8CString("UserData"));
+    WKTypeRef userData = WKDictionaryGetItemForKey(initializationDictionary, userDataKey.get());
     initializeTestNamed(bundle, Util::toSTD(testName), userData);
 }
 
@@ -101,6 +104,13 @@ void InjectedBundleController::didReceiveMessage(WKBundleRef bundle, WKStringRef
     InjectedBundleController* self = static_cast<InjectedBundleController*>(const_cast<void*>(clientInfo));
     assert(self->m_currentTest);
     self->m_currentTest->didReceiveMessage(bundle, messageName, messageBody);
+}
+
+void InjectedBundleController::didReceiveMessageToPage(WKBundleRef bundle, WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody, const void* clientInfo)
+{
+    InjectedBundleController* self = static_cast<InjectedBundleController*>(const_cast<void*>(clientInfo));
+    assert(self->m_currentTest);
+    self->m_currentTest->didReceiveMessageToPage(bundle, page, messageName, messageBody);
 }
 
 void InjectedBundleController::dumpTestNames()

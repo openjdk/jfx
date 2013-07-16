@@ -38,7 +38,7 @@
 // being local to the target being generated, and thus not subject to (e.g.) ELF
 // symbol interposition rules.
 
-#if !PLATFORM(CHROMIUM) && OS(WINDOWS)
+#if OS(WINDOWS)
 #define HAVE_INTERNAL_VISIBILITY 1
 #define WTF_INTERNAL
 #elif defined(__GNUC__) && !defined(__CC_ARM) && !defined(__ARMCC__)
@@ -48,7 +48,7 @@
 #define WTF_INTERNAL
 #endif
 
-#if !PLATFORM(CHROMIUM) && OS(WINDOWS)
+#if OS(WINDOWS)
 
 #define WTF_EXPORT_DECLARATION __declspec(dllexport)
 #define WTF_IMPORT_DECLARATION __declspec(dllimport)
@@ -68,7 +68,7 @@
 
 #endif
 
-#if defined(BUILDING_WTF) || defined(STATICALLY_LINKED_WITH_WTF) || (PLATFORM(WX) && defined(BUILDING_JavaScriptCore))
+#if defined(BUILDING_WTF) || defined(STATICALLY_LINKED_WITH_WTF)
 #define WTF_IS_LINKED_IN_SAME_BINARY 1
 #endif
 
@@ -89,15 +89,15 @@
 
 #else // !USE(EXPORT_MACROS)
 
-#if !PLATFORM(CHROMIUM) && OS(WINDOWS) && !COMPILER(GCC)
+#if OS(WINDOWS) && !COMPILER(GCC)
 #if defined(BUILDING_WTF) || defined(STATICALLY_LINKED_WITH_WTF)
 #define WTF_EXPORTDATA __declspec(dllexport)
 #else
 #define WTF_EXPORTDATA __declspec(dllimport)
 #endif
-#else // PLATFORM(CHROMIUM) || !OS(WINDOWS) || COMPILER(GCC)
+#else // !OS(WINDOWS) || COMPILER(GCC)
 #define WTF_EXPORTDATA
-#endif // !PLATFORM(CHROMIUM)...
+#endif
 
 #define WTF_EXPORTCLASS WTF_EXPORTDATA
 
@@ -131,14 +131,10 @@
 #define WTF_EXPORT_PRIVATE WTF_IMPORT
 #endif
 
-// wxWebKit uses RTTI because wx itself does, so use a special macro for
-// extra exports it needs.
-#if PLATFORM(WX)
-#define WTF_EXPORT_PRIVATE_RTTI WTF_EXPORT_PRIVATE
-#define WTF_EXPORT_PRIVATE_NO_RTTI
+#if PLATFORM(WIN)
+#define WTF_EXPORT_STRING_API
 #else
-#define WTF_EXPORT_PRIVATE_RTTI
-#define WTF_EXPORT_PRIVATE_NO_RTTI WTF_EXPORT_PRIVATE
+#define WTF_EXPORT_STRING_API WTF_EXPORT_PRIVATE
 #endif
 
 #define WTF_EXPORT_HIDDEN WTF_HIDDEN

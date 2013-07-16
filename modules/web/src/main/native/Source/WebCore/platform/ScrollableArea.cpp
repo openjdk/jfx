@@ -111,11 +111,9 @@ bool ScrollableArea::scroll(ScrollDirection direction, ScrollGranularity granula
     case ScrollByPrecisePixel:
         step = scrollbar->pixelStep();
         break;
-    case ScrollByPixelVelocity:
-        break;
     }
 
-    if (granularity != ScrollByPixelVelocity && (direction == ScrollUp || direction == ScrollLeft))
+    if (direction == ScrollUp || direction == ScrollLeft)
         multiplier = -multiplier;
 
     return scrollAnimator()->scroll(orientation, granularity, step, multiplier);
@@ -142,6 +140,7 @@ void ScrollableArea::notifyScrollPositionChanged(const IntPoint& position)
 
 void ScrollableArea::scrollPositionChanged(const IntPoint& position)
 {
+    IntPoint oldPosition = scrollPosition();
     // Tell the derived class to scroll its contents.
     setScrollOffset(position);
 
@@ -168,7 +167,8 @@ void ScrollableArea::scrollPositionChanged(const IntPoint& position)
             verticalScrollbar->invalidate();
     }
 
-    scrollAnimator()->notifyContentAreaScrolled();
+    if (scrollPosition() != oldPosition)
+        scrollAnimator()->notifyContentAreaScrolled(scrollPosition() - oldPosition);
 }
 
 bool ScrollableArea::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
@@ -254,29 +254,28 @@ void ScrollableArea::contentAreaDidHide() const
         scrollAnimator->contentAreaDidHide();
 }
 
-void ScrollableArea::didAddVerticalScrollbar(Scrollbar* scrollbar)
+void ScrollableArea::finishCurrentScrollAnimations() const
 {
-    scrollAnimator()->didAddVerticalScrollbar(scrollbar);
-
-    // <rdar://problem/9797253> AppKit resets the scrollbar's style when you attach a scrollbar
-    setScrollbarOverlayStyle(scrollbarOverlayStyle());
+    if (ScrollAnimator* scrollAnimator = existingScrollAnimator())
+        scrollAnimator->finishCurrentScrollAnimations();
 }
 
-void ScrollableArea::willRemoveVerticalScrollbar(Scrollbar* scrollbar)
+void ScrollableArea::didAddScrollbar(Scrollbar* scrollbar, ScrollbarOrientation orientation)
 {
-    scrollAnimator()->willRemoveVerticalScrollbar(scrollbar);
-}
-
-void ScrollableArea::didAddHorizontalScrollbar(Scrollbar* scrollbar)
-{
+    if (orientation == VerticalScrollbar)
+        scrollAnimator()->didAddVerticalScrollbar(scrollbar);
+    else
     scrollAnimator()->didAddHorizontalScrollbar(scrollbar);
 
     // <rdar://problem/9797253> AppKit resets the scrollbar's style when you attach a scrollbar
     setScrollbarOverlayStyle(scrollbarOverlayStyle());
 }
 
-void ScrollableArea::willRemoveHorizontalScrollbar(Scrollbar* scrollbar)
+void ScrollableArea::willRemoveScrollbar(Scrollbar* scrollbar, ScrollbarOrientation orientation)
 {
+    if (orientation == VerticalScrollbar)
+        scrollAnimator()->willRemoveVerticalScrollbar(scrollbar);
+    else
     scrollAnimator()->willRemoveHorizontalScrollbar(scrollbar);
 }
 
@@ -369,6 +368,85 @@ void ScrollableArea::serviceScrollAnimations()
 {
     if (ScrollAnimator* scrollAnimator = existingScrollAnimator())
         scrollAnimator->serviceScrollAnimations();
+}
+
+IntPoint ScrollableArea::scrollPosition() const
+{
+    int x = horizontalScrollbar() ? horizontalScrollbar()->value() : 0;
+    int y = verticalScrollbar() ? verticalScrollbar()->value() : 0;
+    return IntPoint(x, y);
+}
+
+IntPoint ScrollableArea::minimumScrollPosition() const
+{
+    return IntPoint();
+}
+
+IntPoint ScrollableArea::maximumScrollPosition() const
+{
+    return IntPoint(totalContentsSize().width() - visibleWidth(), totalContentsSize().height() - visibleHeight());
+}
+
+IntSize ScrollableArea::totalContentsSize() const
+{
+    IntSize totalContentsSize = contentsSize();
+    totalContentsSize.setHeight(totalContentsSize.height() + headerHeight() + footerHeight());
+    return totalContentsSize;
+}
+
+IntRect ScrollableArea::visibleContentRect(VisibleContentRectIncludesScrollbars scrollbarInclusion) const
+{
+    int verticalScrollbarWidth = 0;
+    int horizontalScrollbarHeight = 0;
+
+    if (scrollbarInclusion == IncludeScrollbars) {
+        if (Scrollbar* verticalBar = verticalScrollbar())
+            verticalScrollbarWidth = !verticalBar->isOverlayScrollbar() ? verticalBar->width() : 0;
+        if (Scrollbar* horizontalBar = horizontalScrollbar())
+            horizontalScrollbarHeight = !horizontalBar->isOverlayScrollbar() ? horizontalBar->height() : 0;
+    }
+
+    return IntRect(scrollPosition().x(),
+                   scrollPosition().y(),
+                   std::max(0, visibleWidth() + verticalScrollbarWidth),
+                   std::max(0, visibleHeight() + horizontalScrollbarHeight));
+}
+
+static int constrainedScrollPosition(int visibleContentSize, int totalContentsSize, int scrollPosition, int scrollOrigin, int headerHeight, int footerHeight)
+{
+    int maxValue = totalContentsSize - visibleContentSize - footerHeight;
+    if (maxValue <= 0)
+        return 0;
+
+    if (!scrollOrigin) {
+        if (scrollPosition <= headerHeight)
+            return 0;
+        if (scrollPosition > maxValue)
+            scrollPosition = maxValue - headerHeight;
+        else
+            scrollPosition -= headerHeight;
+    } else {
+        // FIXME: position:fixed elements are currently broken when there is a non-zero y-value in the scroll origin
+        // such as when -webkit-writing-mode:horizontal-bt; is set. But when we fix that, we need to make such
+        // pages work correctly with headers and footers as well. https://bugs.webkit.org/show_bug.cgi?id=113741
+        if (scrollPosition >= 0)
+            return 0;
+        if (scrollPosition < -maxValue)
+            scrollPosition = -maxValue;
+    }
+
+    return scrollPosition;
+}
+
+IntPoint ScrollableArea::constrainScrollPositionForOverhang(const IntRect& visibleContentRect, const IntSize& totalContentsSize, const IntPoint& scrollPosition, const IntPoint& scrollOrigin, int headerHeight, int footerHeight)
+{
+    return IntPoint(constrainedScrollPosition(visibleContentRect.width(), totalContentsSize.width(), scrollPosition.x(), scrollOrigin.x(), 0, 0),
+        constrainedScrollPosition(visibleContentRect.height(), totalContentsSize.height(), scrollPosition.y(), scrollOrigin.y(), headerHeight, footerHeight));
+}
+
+IntPoint ScrollableArea::constrainScrollPositionForOverhang(const IntPoint& scrollPosition)
+{
+    return constrainScrollPositionForOverhang(visibleContentRect(), totalContentsSize(), scrollPosition, scrollOrigin(), headerHeight(), footerHeight());
 }
 
 } // namespace WebCore

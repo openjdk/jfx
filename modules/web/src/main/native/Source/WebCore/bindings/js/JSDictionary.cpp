@@ -26,18 +26,31 @@
 #include "config.h"
 #include "JSDictionary.h"
 
+#include "ArrayValue.h"
 #include "Dictionary.h"
+#include "JSCSSFontFaceRule.h"
+#include "JSDOMError.h"
 #include "JSDOMWindow.h"
 #include "JSEventTarget.h"
 #include "JSMessagePortCustom.h"
 #include "JSNode.h"
 #include "JSStorage.h"
 #include "JSTrackCustom.h"
-#include "SerializedScriptValue.h"
+#include "JSUint8Array.h"
+#include "JSVoidCallback.h"
 #include "ScriptValue.h"
+#include "SerializedScriptValue.h"
 #include <wtf/HashMap.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/AtomicString.h>
+
+#if ENABLE(ENCRYPTED_MEDIA)
+#include "JSMediaKeyError.h"
+#endif
+
+#if ENABLE(MEDIA_STREAM)
+#include "JSMediaStream.h"
+#endif
 
 using namespace JSC;
 
@@ -45,10 +58,11 @@ namespace WebCore {
 
 JSDictionary::GetPropertyResult JSDictionary::tryGetProperty(const char* propertyName, JSValue& finalResult) const
 {
+    ASSERT(isValid());
     Identifier identifier(m_exec, propertyName);
-    PropertySlot slot(m_initializerObject);
+    PropertySlot slot(m_initializerObject.get());
 
-    if (!m_initializerObject->getPropertySlot(m_exec, identifier, slot))
+    if (!m_initializerObject.get()->getPropertySlot(m_exec, identifier, slot))
         return NoPropertyFound;
 
     if (m_exec->hadException())
@@ -61,9 +75,9 @@ JSDictionary::GetPropertyResult JSDictionary::tryGetProperty(const char* propert
     return PropertyFound;
 }
 
-void JSDictionary::convertValue(ExecState*, JSValue value, bool& result)
+void JSDictionary::convertValue(ExecState* exec, JSValue value, bool& result)
 {
-    result = value.toBoolean();
+    result = value.toBoolean(exec);
 }
 
 void JSDictionary::convertValue(ExecState* exec, JSValue value, int& result)
@@ -79,6 +93,11 @@ void JSDictionary::convertValue(ExecState* exec, JSValue value, unsigned& result
 void JSDictionary::convertValue(ExecState* exec, JSValue value, unsigned short& result)
 {
     result = static_cast<unsigned short>(value.toUInt32(exec));
+}
+
+void JSDictionary::convertValue(ExecState* exec, JSValue value, unsigned long& result)
+{
+    result = static_cast<unsigned long>(value.toUInt32(exec));
 }
 
 void JSDictionary::convertValue(ExecState* exec, JSValue value, unsigned long long& result)
@@ -99,7 +118,7 @@ void JSDictionary::convertValue(JSC::ExecState* exec, JSC::JSValue value, Dictio
 
 void JSDictionary::convertValue(ExecState* exec, JSValue value, String& result)
 {
-    result = ustringToString(value.toString(exec)->value(exec));
+    result = value.toString(exec)->value(exec);
 }
 
 void JSDictionary::convertValue(ExecState* exec, JSValue value, Vector<String>& result)
@@ -107,7 +126,7 @@ void JSDictionary::convertValue(ExecState* exec, JSValue value, Vector<String>& 
     if (value.isUndefinedOrNull())
         return;
 
-    unsigned length;
+    unsigned length = 0;
     JSObject* object = toJSSequence(exec, value, length);
     if (exec->hadException())
         return;
@@ -116,13 +135,13 @@ void JSDictionary::convertValue(ExecState* exec, JSValue value, Vector<String>& 
         JSValue itemValue = object->get(exec, i);
         if (exec->hadException())
             return;
-        result.append(ustringToString(itemValue.toString(exec)->value(exec)));
+        result.append(itemValue.toString(exec)->value(exec));
     }
 }
 
 void JSDictionary::convertValue(ExecState* exec, JSValue value, ScriptValue& result)
 {
-    result = ScriptValue(exec->globalData(), value);
+    result = ScriptValue(exec->vm(), value);
 }
 
 void JSDictionary::convertValue(ExecState* exec, JSValue value, RefPtr<SerializedScriptValue>& result)
@@ -163,7 +182,6 @@ void JSDictionary::convertValue(ExecState*, JSValue value, RefPtr<TrackBase>& re
 }
 #endif
 
-#if ENABLE(MUTATION_OBSERVERS)
 void JSDictionary::convertValue(ExecState* exec, JSValue value, HashSet<AtomicString>& result)
 {
     result.clear();
@@ -171,7 +189,7 @@ void JSDictionary::convertValue(ExecState* exec, JSValue value, HashSet<AtomicSt
     if (value.isUndefinedOrNull())
         return;
 
-    unsigned length;
+    unsigned length = 0;
     JSObject* object = toJSSequence(exec, value, length);
     if (exec->hadException())
         return;
@@ -180,18 +198,65 @@ void JSDictionary::convertValue(ExecState* exec, JSValue value, HashSet<AtomicSt
         JSValue itemValue = object->get(exec, i);
         if (exec->hadException())
             return;
-        result.add(ustringToAtomicString(itemValue.toString(exec)->value(exec)));
+        result.add(itemValue.toString(exec)->value(exec));
     }
+}
+
+void JSDictionary::convertValue(ExecState* exec, JSValue value, ArrayValue& result)
+{
+    if (value.isUndefinedOrNull())
+        return;
+
+    result = ArrayValue(exec, value);
+}
+
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<Uint8Array>& result)
+{
+    result = toUint8Array(value);
+}
+
+#if ENABLE(ENCRYPTED_MEDIA)
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<MediaKeyError>& result)
+{
+    result = toMediaKeyError(value);
+}
+#endif
+
+#if ENABLE(MEDIA_STREAM)
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<MediaStream>& result)
+{
+    result = toMediaStream(value);
+}
+#endif
+
+#if ENABLE(FONT_LOAD_EVENTS)
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<CSSFontFaceRule>& result)
+{
+    result = toCSSFontFaceRule(value);
+}
+
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<DOMError>& result)
+{
+    result = toDOMError(value);
+}
+
+void JSDictionary::convertValue(JSC::ExecState* exec, JSC::JSValue value, RefPtr<VoidCallback>& result)
+{
+    if (!value.isFunction())
+        return;
+
+    result = JSVoidCallback::create(asObject(value), jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject()));
 }
 #endif
 
 bool JSDictionary::getWithUndefinedOrNullCheck(const String& propertyName, String& result) const
 {
+    ASSERT(isValid());
     JSValue value;
     if (tryGetProperty(propertyName.utf8().data(), value) != PropertyFound || value.isUndefinedOrNull())
         return false;
 
-    result = ustringToString(value.toString(m_exec)->value(m_exec));
+    result = value.toWTFString(m_exec);
     return true;
 }
 

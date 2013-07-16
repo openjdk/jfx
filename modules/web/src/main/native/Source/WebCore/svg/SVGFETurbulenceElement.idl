@@ -23,12 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS,
         DoNotCheckConstants
-    ] SVGFETurbulenceElement : SVGElement,
+] interface SVGFETurbulenceElement : SVGStyledElement,
                                SVGFilterPrimitiveStandardAttributes {
         // Turbulence Types
         const unsigned short SVG_TURBULENCE_TYPE_UNKNOWN      = 0;
@@ -48,4 +46,3 @@ module svg {
         readonly attribute SVGAnimatedEnumeration type;
     };
 
-}

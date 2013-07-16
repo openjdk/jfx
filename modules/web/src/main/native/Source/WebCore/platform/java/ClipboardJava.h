@@ -39,12 +39,12 @@ namespace WebCore {
 
 
         virtual void clearData(const String& type);
-        virtual void clearAllData();
+        virtual void clearData();
         virtual String getData(const String& type) const;
         virtual bool setData(const String& type, const String& data);
 
         // extensions beyond IE's API
-        virtual HashSet<String> types() const;
+        virtual ListHashSet<String> types() const;
         virtual PassRefPtr<FileList> files() const;
 
         virtual void setDragImage(CachedImage*, const IntPoint&);
@@ -59,7 +59,7 @@ namespace WebCore {
 
         virtual bool hasData();
     private:
-        virtual HashSet<String> typesPrivate() const;
+        virtual ListHashSet<String> typesPrivate() const;
     private:
         ClipboardJava(
             ClipboardAccessPolicy policy,

@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.net.irc.ircproxy import IRCProxy
 from webkitpy.common.system.outputcapture import OutputCapture
@@ -39,5 +39,5 @@ class IRCProxyTest(unittest.TestCase):
             proxy.post("hello")
             proxy.disconnect()
 
-        expected_stderr = "Connecting to IRC\nDisconnecting from IRC...\n"
-        OutputCapture().assert_outputs(self, fun, expected_stderr=expected_stderr)
+        expected_logs = "Connecting to IRC\nDisconnecting from IRC...\n"
+        OutputCapture().assert_outputs(self, fun, expected_logs=expected_logs)

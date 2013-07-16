@@ -24,15 +24,15 @@
 #include "RegExp.h"
 
 #include "Lexer.h"
+#include "Operations.h"
 #include "RegExpCache.h"
-#include "yarr/Yarr.h"
-#include "yarr/YarrJIT.h"
+#include "Yarr.h"
+#include "YarrJIT.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wtf/Assertions.h>
 #include <wtf/OwnArrayPtr.h>
-
 
 #define REGEXP_FUNC_TEST_DATA_GEN 0
 
@@ -40,7 +40,7 @@ namespace JSC {
 
 const ClassInfo RegExp::s_info = { "RegExp", 0, 0, 0, CREATE_METHOD_TABLE(RegExp) };
 
-RegExpFlags regExpFlags(const UString& string)
+RegExpFlags regExpFlags(const String& string)
 {
     RegExpFlags flags = NoFlags;
 
@@ -83,7 +83,7 @@ public:
 
     ~RegExpFunctionalTestCollector();
 
-    void outputOneTest(RegExp*, UString, int, int*, int);
+    void outputOneTest(RegExp*, String, int, int*, int);
     void clearRegExp(RegExp* regExp)
     {
         if (regExp == m_lastRegExp)
@@ -93,7 +93,7 @@ public:
 private:
     RegExpFunctionalTestCollector();
 
-    void outputEscapedUString(const UString&, bool escapeSlash = false);
+    void outputEscapedString(const String&, bool escapeSlash = false);
 
     static RegExpFunctionalTestCollector* s_instance;
     FILE* m_file;
@@ -111,12 +111,12 @@ RegExpFunctionalTestCollector* RegExpFunctionalTestCollector::get()
     return s_instance;
 }
 
-void RegExpFunctionalTestCollector::outputOneTest(RegExp* regExp, UString s, int startOffset, int* ovector, int result)
+void RegExpFunctionalTestCollector::outputOneTest(RegExp* regExp, String s, int startOffset, int* ovector, int result)
 {
     if ((!m_lastRegExp) || (m_lastRegExp != regExp)) {
         m_lastRegExp = regExp;
         fputc('/', m_file);
-        outputEscapedUString(regExp->pattern(), true);
+        outputEscapedString(regExp->pattern(), true);
         fputc('/', m_file);
         if (regExp->global())
             fputc('g', m_file);
@@ -128,7 +128,7 @@ void RegExpFunctionalTestCollector::outputOneTest(RegExp* regExp, UString s, int
     }
 
     fprintf(m_file, " \"");
-    outputEscapedUString(s);
+    outputEscapedString(s);
     fprintf(m_file, "\", %d, %d, (", startOffset, result);
     for (unsigned i = 0; i <= regExp->numSubpatterns(); i++) {
         int subpatternBegin = ovector[i * 2];
@@ -159,7 +159,7 @@ RegExpFunctionalTestCollector::~RegExpFunctionalTestCollector()
     s_instance = 0;
 }
 
-void RegExpFunctionalTestCollector::outputEscapedUString(const UString& s, bool escapeSlash)
+void RegExpFunctionalTestCollector::outputEscapedString(const String& s, bool escapeSlash)
 {
     int len = s.length();
     
@@ -217,8 +217,8 @@ void RegExpFunctionalTestCollector::outputEscapedUString(const UString& s, bool 
 }
 #endif
 
-RegExp::RegExp(JSGlobalData& globalData, const UString& patternString, RegExpFlags flags)
-    : JSCell(globalData, globalData.regExpStructure.get())
+RegExp::RegExp(VM& vm, const String& patternString, RegExpFlags flags)
+    : JSCell(vm, vm.regExpStructure.get())
     , m_state(NotCompiled)
     , m_patternString(patternString)
     , m_flags(flags)
@@ -231,9 +231,9 @@ RegExp::RegExp(JSGlobalData& globalData, const UString& patternString, RegExpFla
 {
 }
 
-void RegExp::finishCreation(JSGlobalData& globalData)
+void RegExp::finishCreation(VM& vm)
 {
-    Base::finishCreation(globalData);
+    Base::finishCreation(vm);
     Yarr::YarrPattern pattern(m_patternString, ignoreCase(), multiline(), &m_constructionError);
     if (m_constructionError)
         m_state = ParseError;
@@ -250,23 +250,23 @@ void RegExp::destroy(JSCell* cell)
     thisObject->RegExp::~RegExp();
 }
 
-RegExp* RegExp::createWithoutCaching(JSGlobalData& globalData, const UString& patternString, RegExpFlags flags)
+RegExp* RegExp::createWithoutCaching(VM& vm, const String& patternString, RegExpFlags flags)
 {
-    RegExp* regExp = new (NotNull, allocateCell<RegExp>(globalData.heap)) RegExp(globalData, patternString, flags);
-    regExp->finishCreation(globalData);
+    RegExp* regExp = new (NotNull, allocateCell<RegExp>(vm.heap)) RegExp(vm, patternString, flags);
+    regExp->finishCreation(vm);
     return regExp;
 }
 
-RegExp* RegExp::create(JSGlobalData& globalData, const UString& patternString, RegExpFlags flags)
+RegExp* RegExp::create(VM& vm, const String& patternString, RegExpFlags flags)
 {
-    return globalData.regExpCache()->lookupOrCreate(patternString, flags);
+    return vm.regExpCache()->lookupOrCreate(patternString, flags);
 }
 
-void RegExp::compile(JSGlobalData* globalData, Yarr::YarrCharSize charSize)
+void RegExp::compile(VM* vm, Yarr::YarrCharSize charSize)
 {
     Yarr::YarrPattern pattern(m_patternString, ignoreCase(), multiline(), &m_constructionError);
     if (m_constructionError) {
-        ASSERT_NOT_REACHED();
+        RELEASE_ASSERT_NOT_REACHED();
         m_state = ParseError;
         return;
     }
@@ -274,13 +274,13 @@ void RegExp::compile(JSGlobalData* globalData, Yarr::YarrCharSize charSize)
 
     if (!hasCode()) {
         ASSERT(m_state == NotCompiled);
-        globalData->regExpCache()->addToStrongCache(this);
+        vm->regExpCache()->addToStrongCache(this);
         m_state = ByteCode;
     }
 
 #if ENABLE(YARR_JIT)
-    if (!pattern.m_containsBackreferences && globalData->canUseRegExpJIT()) {
-        Yarr::jitCompile(pattern, charSize, globalData, m_regExpJITCode);
+    if (!pattern.m_containsBackreferences && vm->canUseRegExpJIT()) {
+        Yarr::jitCompile(pattern, charSize, vm, m_regExpJITCode);
 #if ENABLE(YARR_JIT_DEBUG)
         if (!m_regExpJITCode.isFallBack())
             m_state = JITCode;
@@ -297,10 +297,10 @@ void RegExp::compile(JSGlobalData* globalData, Yarr::YarrCharSize charSize)
     UNUSED_PARAM(charSize);
 #endif
 
-    m_regExpBytecode = Yarr::byteCompile(pattern, &globalData->m_regExpAllocator);
+    m_regExpBytecode = Yarr::byteCompile(pattern, &vm->m_regExpAllocator);
 }
 
-void RegExp::compileIfNecessary(JSGlobalData& globalData, Yarr::YarrCharSize charSize)
+void RegExp::compileIfNecessary(VM& vm, Yarr::YarrCharSize charSize)
 {
     if (hasCode()) {
 #if ENABLE(YARR_JIT)
@@ -315,17 +315,17 @@ void RegExp::compileIfNecessary(JSGlobalData& globalData, Yarr::YarrCharSize cha
 #endif
     }
 
-    compile(&globalData, charSize);
+    compile(&vm, charSize);
 }
 
-int RegExp::match(JSGlobalData& globalData, const UString& s, unsigned startOffset, Vector<int, 32>& ovector)
+int RegExp::match(VM& vm, const String& s, unsigned startOffset, Vector<int, 32>& ovector)
 {
 #if ENABLE(REGEXP_TRACING)
     m_rtMatchCallCount++;
 #endif
 
     ASSERT(m_state != ParseError);
-    compileIfNecessary(globalData, s.is8Bit() ? Yarr::Char8 : Yarr::Char16);
+    compileIfNecessary(vm, s.is8Bit() ? Yarr::Char8 : Yarr::Char16);
 
     int offsetVectorSize = (m_numSubpatterns + 1) * 2;
     ovector.resize(offsetVectorSize);
@@ -384,11 +384,11 @@ int RegExp::match(JSGlobalData& globalData, const UString& s, unsigned startOffs
     return result;
 }
 
-void RegExp::compileMatchOnly(JSGlobalData* globalData, Yarr::YarrCharSize charSize)
+void RegExp::compileMatchOnly(VM* vm, Yarr::YarrCharSize charSize)
 {
     Yarr::YarrPattern pattern(m_patternString, ignoreCase(), multiline(), &m_constructionError);
     if (m_constructionError) {
-        ASSERT_NOT_REACHED();
+        RELEASE_ASSERT_NOT_REACHED();
         m_state = ParseError;
         return;
     }
@@ -396,13 +396,13 @@ void RegExp::compileMatchOnly(JSGlobalData* globalData, Yarr::YarrCharSize charS
 
     if (!hasCode()) {
         ASSERT(m_state == NotCompiled);
-        globalData->regExpCache()->addToStrongCache(this);
+        vm->regExpCache()->addToStrongCache(this);
         m_state = ByteCode;
     }
 
 #if ENABLE(YARR_JIT)
-    if (!pattern.m_containsBackreferences && globalData->canUseRegExpJIT()) {
-        Yarr::jitCompile(pattern, charSize, globalData, m_regExpJITCode, Yarr::MatchOnly);
+    if (!pattern.m_containsBackreferences && vm->canUseRegExpJIT()) {
+        Yarr::jitCompile(pattern, charSize, vm, m_regExpJITCode, Yarr::MatchOnly);
 #if ENABLE(YARR_JIT_DEBUG)
         if (!m_regExpJITCode.isFallBack())
             m_state = JITCode;
@@ -419,10 +419,10 @@ void RegExp::compileMatchOnly(JSGlobalData* globalData, Yarr::YarrCharSize charS
     UNUSED_PARAM(charSize);
 #endif
 
-    m_regExpBytecode = Yarr::byteCompile(pattern, &globalData->m_regExpAllocator);
+    m_regExpBytecode = Yarr::byteCompile(pattern, &vm->m_regExpAllocator);
 }
 
-void RegExp::compileIfNecessaryMatchOnly(JSGlobalData& globalData, Yarr::YarrCharSize charSize)
+void RegExp::compileIfNecessaryMatchOnly(VM& vm, Yarr::YarrCharSize charSize)
 {
     if (hasCode()) {
 #if ENABLE(YARR_JIT)
@@ -437,17 +437,17 @@ void RegExp::compileIfNecessaryMatchOnly(JSGlobalData& globalData, Yarr::YarrCha
 #endif
     }
 
-    compileMatchOnly(&globalData, charSize);
+    compileMatchOnly(&vm, charSize);
 }
 
-MatchResult RegExp::match(JSGlobalData& globalData, const UString& s, unsigned startOffset)
+MatchResult RegExp::match(VM& vm, const String& s, unsigned startOffset)
 {
 #if ENABLE(REGEXP_TRACING)
     m_rtMatchCallCount++;
 #endif
 
     ASSERT(m_state != ParseError);
-    compileIfNecessaryMatchOnly(globalData, s.is8Bit() ? Yarr::Char8 : Yarr::Char16);
+    compileIfNecessaryMatchOnly(vm, s.is8Bit() ? Yarr::Char8 : Yarr::Char16);
 
 #if ENABLE(YARR_JIT)
     if (m_state == JITCode) {
@@ -494,7 +494,7 @@ void RegExp::invalidateCode()
 }
 
 #if ENABLE(YARR_JIT_DEBUG)
-void RegExp::matchCompareWithInterpreter(const UString& s, int startOffset, int* offsetVector, int jitResult)
+void RegExp::matchCompareWithInterpreter(const String& s, int startOffset, int* offsetVector, int jitResult)
 {
     int offsetVectorSize = (m_numSubpatterns + 1) * 2;
     Vector<int, 32> interpreterOvector;
@@ -520,24 +520,24 @@ void RegExp::matchCompareWithInterpreter(const UString& s, int startOffset, int*
             differences++;
 
     if (differences) {
-        dataLog("RegExp Discrepency for /%s/\n    string input ", pattern().utf8().data());
+        dataLogF("RegExp Discrepency for /%s/\n    string input ", pattern().utf8().data());
         unsigned segmentLen = s.length() - static_cast<unsigned>(startOffset);
 
-        dataLog((segmentLen < 150) ? "\"%s\"\n" : "\"%148s...\"\n", s.utf8().data() + startOffset);
+        dataLogF((segmentLen < 150) ? "\"%s\"\n" : "\"%148s...\"\n", s.utf8().data() + startOffset);
 
         if (jitResult != interpreterResult) {
-            dataLog("    JIT result = %d, blah interpreted result = %d\n", jitResult, interpreterResult);
+            dataLogF("    JIT result = %d, blah interpreted result = %d\n", jitResult, interpreterResult);
             differences--;
         } else {
-            dataLog("    Correct result = %d\n", jitResult);
+            dataLogF("    Correct result = %d\n", jitResult);
         }
 
         if (differences) {
             for (unsigned j = 2, i = 0; i < m_numSubpatterns; j +=2, i++) {
                 if (offsetVector[j] != interpreterOffsetVector[j])
-                    dataLog("    JIT offset[%d] = %d, interpreted offset[%d] = %d\n", j, offsetVector[j], j, interpreterOffsetVector[j]);
+                    dataLogF("    JIT offset[%d] = %d, interpreted offset[%d] = %d\n", j, offsetVector[j], j, interpreterOffsetVector[j]);
                 if ((offsetVector[j] >= 0) && (offsetVector[j+1] != interpreterOffsetVector[j+1]))
-                    dataLog("    JIT offset[%d] = %d, interpreted offset[%d] = %d\n", j+1, offsetVector[j+1], j+1, interpreterOffsetVector[j+1]);
+                    dataLogF("    JIT offset[%d] = %d, interpreted offset[%d] = %d\n", j+1, offsetVector[j+1], j+1, interpreterOffsetVector[j+1]);
             }
         }
     }

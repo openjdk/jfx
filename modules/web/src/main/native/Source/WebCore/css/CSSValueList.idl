@@ -23,14 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module css {
-
     // Introduced in DOM Level 2:
-    interface [
-        IndexedGetter
-    ] CSSValueList : CSSValue {
+[
+    IndexedGetter,
+    ImplementationLacksVTable
+] interface CSSValueList : CSSValue {
         readonly attribute unsigned long    length;
-        CSSValue           item(in [Optional=DefaultIsUndefined] unsigned long index);
+    CSSValue           item([Default=Undefined] optional unsigned long index);
     };
 
-}

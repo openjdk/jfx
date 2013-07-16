@@ -26,7 +26,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import platform
+import sys
+import unittest2 as unittest
 
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.tool.mocktool import MockOptions, MockTool
@@ -38,9 +40,22 @@ class RunTestsTest(unittest.TestCase):
         tool._deprecated_port.run_python_unittests_command = lambda: None
         tool._deprecated_port.run_perl_unittests_command = lambda: None
         step = RunTests(tool, MockOptions(test=True, non_interactive=True, quiet=False))
-        expected_stderr = """Running WebKit unit tests
-MOCK run_and_throw_if_fail: ['mock-run-webkit-unit-tests', '--gtest_output=xml:/mock-results/webkit_unit_tests_output.xml'], cwd=/mock-checkout
+
+        if sys.platform != "cygwin":
+            expected_logs = """Running bindings generation tests
+MOCK run_and_throw_if_fail: ['mock-run-bindings-tests'], cwd=/mock-checkout
+Running WebKit unit tests
+MOCK run_and_throw_if_fail: ['mock-run-webkit-unit-tests'], cwd=/mock-checkout
 Running run-webkit-tests
-MOCK run_and_throw_if_fail: ['mock-run-webkit-tests', '--no-new-test-results', '--no-launch-safari', '--skip-failing-tests', '--exit-after-n-failures=30', '--results-directory=/mock-results', '--print=actual,config,expected,misc,slowest,unexpected,unexpected-results'], cwd=/mock-checkout
+MOCK run_and_throw_if_fail: ['mock-run-webkit-tests', '--no-new-test-results', '--no-show-results', '--exit-after-n-failures=30', '--quiet', '--skip-failing-tests'], cwd=/mock-checkout
 """
-        OutputCapture().assert_outputs(self, step.run, [{}], expected_stderr=expected_stderr)
+        else:
+            expected_logs = """Running bindings generation tests
+MOCK run_and_throw_if_fail: ['mock-run-bindings-tests'], cwd=/mock-checkout
+Running WebKit unit tests
+MOCK run_and_throw_if_fail: ['mock-run-webkit-unit-tests'], cwd=/mock-checkout
+Running run-webkit-tests
+MOCK run_and_throw_if_fail: ['mock-run-webkit-tests', '--no-new-test-results', '--no-show-results', '--exit-after-n-failures=30', '--no-build'], cwd=/mock-checkout
+"""
+
+        OutputCapture().assert_outputs(self, step.run, [{}], expected_logs=expected_logs)

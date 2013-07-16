@@ -25,14 +25,14 @@
 
 package javafx.scene.bounds;
 
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGRectangle;
 import javafx.beans.property.FloatProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.scene.Node;
 
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.pgstub.StubRectangle;
-import com.sun.javafx.sg.PGNode;
 
 /**
  * A special node used for performance tests to make sure that the minimum
@@ -163,8 +163,8 @@ public class PerfNode extends Node {
     }
 
     @Override
-    protected PGNode impl_createPGNode() {
-        return new StubRectangle();
+    protected NGNode impl_createPeer() {
+        return new NGRectangle();
     }
 
     @Override

@@ -10,6 +10,7 @@ accesskey
 action
 align
 alink
+allowfullscreen
 alt
 archive
 aria-activedescendant
@@ -36,11 +37,13 @@ aria-multiline
 aria-multiselectable
 aria-orientation
 aria-owns
+aria-posinset
 aria-pressed
 aria-readonly
 aria-relevant
 aria-required
 aria-selected
+aria-setsize
 aria-sort
 aria-valuemax
 aria-valuemin
@@ -123,6 +126,7 @@ http_equiv
 id
 incremental
 indeterminate
+is
 ismap
 itemid
 itemprop
@@ -204,6 +208,8 @@ onloadeddata
 onloadedmetadata
 onloadstart
 onmousedown
+onmouseenter
+onmouseleave
 onmousemove
 onmouseout
 onmouseover
@@ -240,6 +246,7 @@ ontouchstart
 ontouchmove
 ontouchend
 ontouchcancel
+ontransitionend
 onunload
 onvolumechange
 onwaiting
@@ -272,9 +279,11 @@ primary
 profile
 progress
 prompt
+pseudo
 readonly
 rel
 required
+reset-style-inheritance
 results
 rev
 reversed

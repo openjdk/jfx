@@ -25,16 +25,15 @@
 
 package javafx.scene.input;
 
-import javafx.geometry.Point2D;
-import javafx.geometry.Point3D;
-import javafx.scene.Node;
-
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.pgstub.StubNode;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.sg.prism.NGNode;
+import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
+import javafx.scene.Node;
 
 /**
  * Subclass of javafx.scene.Node used for input testing.
@@ -81,8 +80,8 @@ public class TestNode extends Node {
     }
 
     @Override
-    protected PGNode impl_createPGNode() {
-        return new StubNode();
+    protected NGNode impl_createPeer() {
+        return new NGGroup();
     }
 
     @Override

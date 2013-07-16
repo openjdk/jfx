@@ -31,6 +31,8 @@
 #ifndef RuntimeEnabledFeatures_h
 #define RuntimeEnabledFeatures_h
 
+#include "PlatformExportMacros.h"
+
 namespace WebCore {
 
 // A class that stores static enablers for all experimental features. Note that
@@ -59,16 +61,15 @@ public:
 
     static void setWebkitIndexedDBEnabled(bool isEnabled) { isIndexedDBEnabled = isEnabled; }
     static bool webkitIndexedDBEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBCursorEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBDatabaseEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBDatabaseErrorEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBDatabaseExceptionEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBFactoryEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBIndexEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBKeyRangeEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBObjectStoreEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBRequestEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBTransactionEnabled() { return isIndexedDBEnabled; }
+    static bool indexedDBEnabled() { return isIndexedDBEnabled; }
+
+#if ENABLE(CANVAS_PATH)
+    static void setCanvasPathEnabled(bool isEnabled) { isCanvasPathEnabled = isEnabled; }
+    static bool canvasPathEnabled() { return isCanvasPathEnabled; }
+#else
+    static void setCanvasPathEnabled(bool) { }
+    static bool canvasPathEnabled() { return false; }
+#endif
 
 #if ENABLE(CSS_EXCLUSIONS)
     static void setCSSExclusionsEnabled(bool isEnabled) { isCSSExclusionsEnabled = isEnabled; }
@@ -76,6 +77,30 @@ public:
 #else
     static void setCSSExclusionsEnabled(bool) { }
     static bool cssExclusionsEnabled() { return false; }
+#endif
+
+#if ENABLE(CSS_REGIONS)
+    static void setCSSRegionsEnabled(bool isEnabled) { isCSSRegionsEnabled = isEnabled; }
+    static bool cssRegionsEnabled() { return isCSSRegionsEnabled; }
+#else
+    static void setCSSRegionsEnabled(bool) { }
+    static bool cssRegionsEnabled() { return false; }
+#endif
+
+#if ENABLE(CSS_COMPOSITING)
+    static void setCSSCompositingEnabled(bool isEnabled) { isCSSCompositingEnabled = isEnabled; }
+    static bool cssCompositingEnabled() { return isCSSCompositingEnabled; }
+#else
+    static void setCSSCompositingEnabled(bool) { }
+    static bool cssCompositingEnabled() { return false; }
+#endif
+
+#if ENABLE(FONT_LOAD_EVENTS)
+    static void setFontLoadEventsEnabled(bool isEnabled) { isFontLoadEventsEnabled = isEnabled; }
+    static bool fontLoadEventsEnabled() { return isFontLoadEventsEnabled; }
+#else
+    static void setFontLoadEventsEnabled(bool) { }
+    static bool fontLoadEventsEnabled() { return false; }
 #endif
 
 #if ENABLE(FULLSCREEN_API)
@@ -93,11 +118,6 @@ public:
     static bool webkitFullscreenElementEnabled() { return isFullScreenAPIEnabled; }
     static bool webkitExitFullscreenEnabled() { return isFullScreenAPIEnabled; }
     static bool webkitRequestFullscreenEnabled() { return isFullScreenAPIEnabled; }
-#endif
-
-#if ENABLE(POINTER_LOCK)
-    static bool pointerLockEnabled() { return isPointerLockEnabled; }
-    static void setPointerLockEnabled(bool isEnabled) { isPointerLockEnabled = isEnabled; }
 #endif
 
 #if ENABLE(VIDEO)
@@ -125,23 +145,14 @@ public:
 #endif
 
 #if ENABLE(WEB_AUDIO)
-    static void setWebkitAudioContextEnabled(bool isEnabled) { isWebAudioEnabled = isEnabled; }
+    static void setWebAudioEnabled(bool isEnabled) { isWebAudioEnabled = isEnabled; }
     static bool webkitAudioContextEnabled() { return isWebAudioEnabled; }
+    static bool webkitOfflineAudioContextEnabled() { return isWebAudioEnabled; }
 #endif
-
-    static void setPushStateEnabled(bool isEnabled) { isPushStateEnabled = isEnabled; }
-    static bool pushStateEnabled() { return isPushStateEnabled; }
-    static bool replaceStateEnabled() { return isPushStateEnabled; }
 
 #if ENABLE(TOUCH_EVENTS)
     static bool touchEnabled() { return isTouchEnabled; }
     static void setTouchEnabled(bool isEnabled) { isTouchEnabled = isEnabled; }
-    static bool ontouchstartEnabled() { return isTouchEnabled; }
-    static bool ontouchmoveEnabled() { return isTouchEnabled; }
-    static bool ontouchendEnabled() { return isTouchEnabled; }
-    static bool ontouchcancelEnabled() { return isTouchEnabled; }
-    static bool createTouchEnabled() { return isTouchEnabled; }
-    static bool createTouchListEnabled() { return isTouchEnabled; }
 #endif
 
     static void setDeviceMotionEnabled(bool isEnabled) { isDeviceMotionEnabled = isEnabled; }
@@ -187,13 +198,17 @@ public:
 
     static bool peerConnectionEnabled() { return isMediaStreamEnabled && isPeerConnectionEnabled; }
     static void setPeerConnectionEnabled(bool isEnabled) { isPeerConnectionEnabled = isEnabled; }
-    static bool webkitDeprecatedPeerConnectionEnabled() { return peerConnectionEnabled(); }
-    static bool webkitPeerConnection00Enabled() { return peerConnectionEnabled(); }
+    static bool webkitRTCPeerConnectionEnabled() { return peerConnectionEnabled(); }
+#endif
+
+#if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
+    static void setLegacyCSSVendorPrefixesEnabled(bool isEnabled) { isLegacyCSSVendorPrefixesEnabled = isEnabled; }
+    static bool legacyCSSVendorPrefixesEnabled() { return isLegacyCSSVendorPrefixesEnabled; }
 #endif
 
 #if ENABLE(GAMEPAD)
-    static void setWebkitGamepadsEnabled(bool isEnabled) { isGamepadEnabled = isEnabled; }
-    static bool webkitGamepadsEnabled() { return isGamepadEnabled; }
+    static void setWebkitGetGamepadsEnabled(bool isEnabled) { isGamepadEnabled = isEnabled; }
+    static bool webkitGetGamepadsEnabled() { return isGamepadEnabled; }
 #endif
 
 #if ENABLE(QUOTA)
@@ -219,6 +234,14 @@ public:
 #if ENABLE(SHADOW_DOM)
     static bool shadowDOMEnabled() { return isShadowDOMEnabled; }
     static void setShadowDOMEnabled(bool isEnabled) { isShadowDOMEnabled = isEnabled; }
+
+    static bool authorShadowDOMForAnyElementEnabled() { return isAuthorShadowDOMForAnyElementEnabled; }
+    static void setAuthorShadowDOMForAnyElementEnabled(bool isEnabled) { isAuthorShadowDOMForAnyElementEnabled = isEnabled; }
+#endif
+
+#if ENABLE(CUSTOM_ELEMENTS)
+    static bool customDOMElementsEnabled() { return isCustomDOMElementsEnabled; }
+    static void setCustomDOMElements(bool isEnabled) { isCustomDOMElementsEnabled = isEnabled; }
 #endif
 
 #if ENABLE(STYLE_SCOPED)
@@ -231,10 +254,49 @@ public:
     static void setInputTypeDateEnabled(bool isEnabled) { isInputTypeDateEnabled = isEnabled; }
 #endif
 
+#if ENABLE(INPUT_TYPE_DATETIME_INCOMPLETE)
+    static bool inputTypeDateTimeEnabled() { return isInputTypeDateTimeEnabled; }
+    static void setInputTypeDateTimeEnabled(bool isEnabled) { isInputTypeDateTimeEnabled = isEnabled; }
+#endif
+
+#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
+    static bool inputTypeDateTimeLocalEnabled() { return isInputTypeDateTimeLocalEnabled; }
+    static void setInputTypeDateTimeLocalEnabled(bool isEnabled) { isInputTypeDateTimeLocalEnabled = isEnabled; }
+#endif
+
+#if ENABLE(INPUT_TYPE_MONTH)
+    static bool inputTypeMonthEnabled() { return isInputTypeMonthEnabled; }
+    static void setInputTypeMonthEnabled(bool isEnabled) { isInputTypeMonthEnabled = isEnabled; }
+#endif
+
+#if ENABLE(INPUT_TYPE_TIME)
+    static bool inputTypeTimeEnabled() { return isInputTypeTimeEnabled; }
+    static void setInputTypeTimeEnabled(bool isEnabled) { isInputTypeTimeEnabled = isEnabled; }
+#endif
+
+#if ENABLE(INPUT_TYPE_WEEK)
+    static bool inputTypeWeekEnabled() { return isInputTypeWeekEnabled; }
+    static void setInputTypeWeekEnabled(bool isEnabled) { isInputTypeWeekEnabled = isEnabled; }
+#endif
+
 #if ENABLE(DIALOG_ELEMENT)
     static bool dialogElementEnabled() { return isDialogElementEnabled; }
     static void setDialogElementEnabled(bool isEnabled) { isDialogElementEnabled = isEnabled; }
 #endif
+
+#if ENABLE(CSP_NEXT)
+    static bool experimentalContentSecurityPolicyFeaturesEnabled() { return areExperimentalContentSecurityPolicyFeaturesEnabled; }
+    static void setExperimentalContentSecurityPolicyFeaturesEnabled(bool isEnabled) { areExperimentalContentSecurityPolicyFeaturesEnabled = isEnabled; }
+#endif
+
+#if ENABLE(IFRAME_SEAMLESS)
+    static bool seamlessIFramesEnabled() { return areSeamlessIFramesEnabled; }
+    static void setSeamlessIFramesEnabled(bool isEnabled) { areSeamlessIFramesEnabled = isEnabled; }
+#endif
+
+    static bool langAttributeAwareFormControlUIEnabled() { return isLangAttributeAwareFormControlUIEnabled; }
+    // The lang attribute support is incomplete and should only be turned on for tests.
+    static void setLangAttributeAwareFormControlUIEnabled(bool isEnabled) { isLangAttributeAwareFormControlUIEnabled = isEnabled; }
 
 private:
     // Never instantiate.
@@ -248,12 +310,15 @@ private:
     static bool isGeolocationEnabled;
     static bool isIndexedDBEnabled;
     static bool isWebAudioEnabled;
-    static bool isPushStateEnabled;
     static bool isTouchEnabled;
     static bool isDeviceMotionEnabled;
     static bool isDeviceOrientationEnabled;
     static bool isSpeechInputEnabled;
+    static bool isCanvasPathEnabled;
     static bool isCSSExclusionsEnabled;
+    static bool isCSSRegionsEnabled;
+    static bool isCSSCompositingEnabled;
+    WEBCORE_TESTING static bool isLangAttributeAwareFormControlUIEnabled;
 #if ENABLE(SCRIPTED_SPEECH)
     static bool isScriptedSpeechEnabled;
 #endif
@@ -274,16 +339,16 @@ private:
     static bool isGamepadEnabled;
 #endif
 
+#if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
+    static bool isLegacyCSSVendorPrefixesEnabled;
+#endif
+
 #if ENABLE(QUOTA)
     static bool isQuotaEnabled;
 #endif
 
 #if ENABLE(FULLSCREEN_API)
     static bool isFullScreenAPIEnabled;
-#endif
-
-#if ENABLE(POINTER_LOCK)
-    static bool isPointerLockEnabled;
 #endif
 
 #if ENABLE(MEDIA_SOURCE)
@@ -300,6 +365,12 @@ private:
 
 #if ENABLE(SHADOW_DOM)
     static bool isShadowDOMEnabled;
+
+    static bool isAuthorShadowDOMForAnyElementEnabled;
+#endif
+
+#if ENABLE(CUSTOM_ELEMENTS)
+    static bool isCustomDOMElementsEnabled;
 #endif
 
 #if ENABLE(STYLE_SCOPED)
@@ -310,9 +381,42 @@ private:
     static bool isInputTypeDateEnabled;
 #endif
 
+#if ENABLE(INPUT_TYPE_DATETIME_INCOMPLETE)
+    static bool isInputTypeDateTimeEnabled;
+#endif
+
+#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
+    static bool isInputTypeDateTimeLocalEnabled;
+#endif
+
+#if ENABLE(INPUT_TYPE_MONTH)
+    static bool isInputTypeMonthEnabled;
+#endif
+
+#if ENABLE(INPUT_TYPE_TIME)
+    static bool isInputTypeTimeEnabled;
+#endif
+
+#if ENABLE(INPUT_TYPE_WEEK)
+    static bool isInputTypeWeekEnabled;
+#endif
+
 #if ENABLE(DIALOG_ELEMENT)
     static bool isDialogElementEnabled;
 #endif
+
+#if ENABLE(CSP_NEXT)
+    static bool areExperimentalContentSecurityPolicyFeaturesEnabled;
+#endif
+
+#if ENABLE(IFRAME_SEAMLESS)
+    static bool areSeamlessIFramesEnabled;
+#endif
+
+#if ENABLE(FONT_LOAD_EVENTS)
+    static bool isFontLoadEventsEnabled;
+#endif
+
 };
 
 } // namespace WebCore

@@ -33,40 +33,25 @@
 #include "InspectorState.h"
 
 #include "InspectorStateClient.h"
+#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-InspectorState::InspectorState(InspectorStateClient* client)
-    : m_client(client)
-    , m_properties(InspectorObject::create())
-    , m_isOnMute(false)
+InspectorState::InspectorState(InspectorStateUpdateListener* listener, PassRefPtr<InspectorObject> properties)
+    : m_listener(listener)
+    , m_properties(properties)
 {
-}
-
-void InspectorState::loadFromCookie(const String& inspectorStateCookie)
-{
-    m_properties.clear();
-    RefPtr<InspectorValue> cookie = InspectorValue::parseJSON(inspectorStateCookie);
-    if (cookie)
-        m_properties = cookie->asObject();
-    if (!m_properties)
-        m_properties = InspectorObject::create();
-}
-
-void InspectorState::mute()
-{
-    m_isOnMute = true;
-}
-
-void InspectorState::unmute()
-{
-    m_isOnMute = false;
 }
 
 void InspectorState::updateCookie()
 {
-    if (m_client && !m_isOnMute && m_client->supportsInspectorStateUpdates())
-        m_client->updateInspectorStateCookie(m_properties->toJSONString());
+    if (m_listener)
+        m_listener->inspectorStateUpdated();
+}
+
+void InspectorState::setFromCookie(PassRefPtr<InspectorObject> properties)
+{
+    m_properties = properties;
 }
 
 void InspectorState::setValue(const String& propertyName, PassRefPtr<InspectorValue> value)
@@ -75,12 +60,18 @@ void InspectorState::setValue(const String& propertyName, PassRefPtr<InspectorVa
     updateCookie();
 }
 
+void InspectorState::remove(const String& propertyName)
+{
+    m_properties->remove(propertyName);
+    updateCookie();
+}
+
 bool InspectorState::getBoolean(const String& propertyName)
 {
     InspectorObject::iterator it = m_properties->find(propertyName);
     bool value = false;
     if (it != m_properties->end())
-        it->second->asBoolean(&value);
+        it->value->asBoolean(&value);
     return value;
 }
 
@@ -89,7 +80,7 @@ String InspectorState::getString(const String& propertyName)
     InspectorObject::iterator it = m_properties->find(propertyName);
     String value;
     if (it != m_properties->end())
-        it->second->asString(&value);
+        it->value->asString(&value);
     return value;
 }
 
@@ -98,7 +89,7 @@ long InspectorState::getLong(const String& propertyName)
     InspectorObject::iterator it = m_properties->find(propertyName);
     long value = 0;
     if (it != m_properties->end())
-        it->second->asNumber(&value);
+        it->value->asNumber(&value);
     return value;
 }
 
@@ -107,7 +98,7 @@ double InspectorState::getDouble(const String& propertyName)
     InspectorObject::iterator it = m_properties->find(propertyName);
     double value = 0;
     if (it != m_properties->end())
-        it->second->asNumber(&value);
+        it->value->asNumber(&value);
     return value;
 }
 
@@ -118,7 +109,54 @@ PassRefPtr<InspectorObject> InspectorState::getObject(const String& propertyName
         m_properties->setObject(propertyName, InspectorObject::create());
         it = m_properties->find(propertyName);
     }
-    return it->second->asObject();
+    return it->value->asObject();
+}
+
+InspectorState* InspectorCompositeState::createAgentState(const String& agentName)
+{
+    ASSERT(m_stateObject->find(agentName) == m_stateObject->end());
+    ASSERT(m_inspectorStateMap.find(agentName) == m_inspectorStateMap.end());
+    RefPtr<InspectorObject> stateProperties = InspectorObject::create();
+    m_stateObject->setObject(agentName, stateProperties);
+    OwnPtr<InspectorState> statePtr = adoptPtr(new InspectorState(this, stateProperties));
+    InspectorState* state = statePtr.get();
+    m_inspectorStateMap.add(agentName, statePtr.release());
+    return state;
+}
+
+void InspectorCompositeState::loadFromCookie(const String& inspectorCompositeStateCookie)
+{
+    RefPtr<InspectorValue> cookie = InspectorValue::parseJSON(inspectorCompositeStateCookie);
+    if (cookie)
+        m_stateObject = cookie->asObject();
+    if (!m_stateObject)
+        m_stateObject = InspectorObject::create();
+
+    InspectorStateMap::iterator end = m_inspectorStateMap.end();
+    for (InspectorStateMap::iterator it = m_inspectorStateMap.begin(); it != end; ++it) {
+        RefPtr<InspectorObject> agentStateObject = m_stateObject->getObject(it->key);
+        if (!agentStateObject) {
+            agentStateObject = InspectorObject::create();
+            m_stateObject->setObject(it->key, agentStateObject);
+        }
+        it->value->setFromCookie(agentStateObject);
+    }
+}
+
+void InspectorCompositeState::mute()
+{
+    m_isMuted = true;
+}
+
+void InspectorCompositeState::unmute()
+{
+    m_isMuted = false;
+}
+
+void InspectorCompositeState::inspectorStateUpdated()
+{
+    if (m_client && !m_isMuted && m_client->supportsInspectorStateUpdates())
+        m_client->updateInspectorStateCookie(m_stateObject->toJSONString());
 }
 
 } // namespace WebCore

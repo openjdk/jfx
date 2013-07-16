@@ -48,7 +48,7 @@ static void registerWindowClass()
     RegisterClassExW(&wndClass);
 }
 
-PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef)
+PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef, WKPageRef /* relatedPage */, WKDictionaryRef /*options*/)
     : m_windowIsKey(true)
 {
     registerWindowClass();
@@ -116,6 +116,10 @@ WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
     // FIXME: implement to capture pixels in the UI process,
     // which may be necessary to capture things like 3D transforms.
     return 0;
+}
+
+void PlatformWebView::didInitializeClients()
+{
 }
 
 } // namespace WTR

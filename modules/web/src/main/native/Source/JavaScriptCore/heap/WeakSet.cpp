@@ -27,6 +27,7 @@
 #include "WeakSet.h"
 
 #include "Heap.h"
+#include "VM.h"
 
 namespace JSC {
 
@@ -35,7 +36,7 @@ WeakSet::~WeakSet()
     WeakBlock* next = 0;
     for (WeakBlock* block = m_blocks.head(); block; block = next) {
         next = block->next();
-        WeakBlock::destroy(block);
+        heap()->blockAllocator().deallocate(WeakBlock::destroy(block));
     }
     m_blocks.clear();
 }
@@ -72,8 +73,8 @@ WeakBlock::FreeCell* WeakSet::tryFindAllocator()
 
 WeakBlock::FreeCell* WeakSet::addAllocator()
 {
-    WeakBlock* block = WeakBlock::create();
-    m_heap->didAllocate(WeakBlock::blockSize);
+    WeakBlock* block = WeakBlock::create(heap()->blockAllocator().allocate<WeakBlock>());
+    heap()->didAllocate(WeakBlock::blockSize);
     m_blocks.append(block);
     WeakBlock::SweepResult sweepResult = block->takeSweepResult();
     ASSERT(!sweepResult.isNull() && sweepResult.freeList);
@@ -83,7 +84,7 @@ WeakBlock::FreeCell* WeakSet::addAllocator()
 void WeakSet::removeAllocator(WeakBlock* block)
 {
     m_blocks.remove(block);
-    WeakBlock::destroy(block);
+    heap()->blockAllocator().deallocate(WeakBlock::destroy(block));
 }
 
 } // namespace JSC

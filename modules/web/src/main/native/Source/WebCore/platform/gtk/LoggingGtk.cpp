@@ -19,13 +19,14 @@
  */
 
 #include "config.h"
+#include "InitializeLogging.h"
 #include "Logging.h"
 
 #if !LOG_DISABLED
 
-#include "PlatformString.h"
 #include <glib.h>
 #include <string.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 

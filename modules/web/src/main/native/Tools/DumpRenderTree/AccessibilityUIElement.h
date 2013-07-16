@@ -45,7 +45,7 @@ typedef struct objc_object* PlatformUIElement;
 #include <oleacc.h>
 
 typedef COMPtr<IAccessible> PlatformUIElement;
-#elif PLATFORM(GTK)
+#elif HAVE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(EFL))
 #include <atk/atk.h>
 typedef AtkObject* PlatformUIElement;
 #else
@@ -109,7 +109,9 @@ public:
     bool boolAttributeValue(JSStringRef attribute);
     bool isAttributeSupported(JSStringRef attribute);
     bool isAttributeSettable(JSStringRef attribute);
-    bool isActionSupported(JSStringRef action);
+    bool isPressActionSupported();
+    bool isIncrementActionSupported();
+    bool isDecrementActionSupported();
     JSStringRef role();
     JSStringRef subrole();
     JSStringRef roleDescription();
@@ -127,6 +129,7 @@ public:
     double intValue() const;
     double minValue();
     double maxValue();
+    JSStringRef pathDescription() const;
     JSStringRef valueDescription();
     int insertionPointLineNumber();
     JSStringRef selectedTextRange();
@@ -197,7 +200,14 @@ public:
     JSStringRef stringForRange(unsigned location, unsigned length);
     JSStringRef attributedStringForRange(unsigned location, unsigned length);
     bool attributedStringRangeIsMisspelled(unsigned location, unsigned length);
-    AccessibilityUIElement uiElementForSearchPredicate(AccessibilityUIElement* startElement, bool isDirectionNext, JSStringRef searchKey, JSStringRef searchText);
+    AccessibilityUIElement uiElementForSearchPredicate(JSContextRef, AccessibilityUIElement* startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText);
+#if PLATFORM(IOS)
+    void elementsForRange(unsigned location, unsigned length, Vector<AccessibilityUIElement>& elements);
+    JSStringRef stringForSelection();
+    void increaseTextSelection();
+    void decreaseTextSelection();
+    AccessibilityUIElement linkedElement();
+#endif
     
     // Table-specific
     AccessibilityUIElement cellForColumnAndRow(unsigned column, unsigned row);
@@ -231,6 +241,25 @@ public:
     bool addNotificationListener(JSObjectRef functionCallback);
     // Make sure you call remove, because you can't rely on objects being deallocated in a timely fashion.
     void removeNotificationListener();
+    
+#if PLATFORM(IOS)
+    JSStringRef iphoneLabel();
+    JSStringRef iphoneValue();
+    JSStringRef iphoneTraits();
+    JSStringRef iphoneHint();
+    JSStringRef iphoneIdentifier();
+    bool iphoneIsElement();
+    int iphoneElementTextPosition();
+    int iphoneElementTextLength();
+    AccessibilityUIElement headerElementAtIndex(unsigned);
+    // This will simulate the accessibilityDidBecomeFocused API in UIKit.
+    void assistiveTechnologySimulatedFocus();
+#endif // PLATFORM(IOS)
+
+#if PLATFORM(MAC) && !PLATFORM(IOS)
+    // Returns an ordered list of supported actions for an element.
+    JSStringRef supportedActions();
+#endif
     
 private:
     static JSClassRef getJSClass();

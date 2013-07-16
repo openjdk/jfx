@@ -109,15 +109,14 @@ void Pasteboard::clear()
     }
 }
 
-void Pasteboard::writeSelection(Range* selectedRange, bool canSmartCopyOrDelete, Frame* frame)
+void Pasteboard::writeSelection(Range* selectedRange, bool canSmartCopyOrDelete, Frame* frame, ShouldSerializeSelectedTextForClipboard shouldSerializeSelectedTextForClipboard)
 {
     clear();
 
     // Put CF_HTML format on the pasteboard
     if (::OpenClipboard(m_owner)) {
-        ExceptionCode ec = 0;
         Vector<char> data;
-        markupToCF_HTML(createMarkup(selectedRange, 0, AnnotateForInterchange), selectedRange->startContainer(ec)->document()->url(), data);
+        markupToCF_HTML(createMarkup(selectedRange, 0, AnnotateForInterchange), selectedRange->startContainer()->document()->url(), data);
         HGLOBAL cbData = createGlobalData(data);
         if (!::SetClipboardData(HTMLClipboardFormat, cbData))
             ::GlobalFree(cbData);
@@ -125,7 +124,7 @@ void Pasteboard::writeSelection(Range* selectedRange, bool canSmartCopyOrDelete,
     }
 
     // Put plain string on the pasteboard. CF_UNICODETEXT covers CF_TEXT as well
-    String str = frame->selectedText();
+    String str = shouldSerializeSelectedTextForClipboard == IncludeImageAltTextForClipboard ? frame->editor()->selectedTextForClipboard() : frame->editor()->selectedText();
     replaceNewlinesWithWindowsStyleNewlines(str);
     replaceNBSPWithSpace(str);
     if (::OpenClipboard(m_owner)) {
@@ -144,7 +143,7 @@ void Pasteboard::writeSelection(Range* selectedRange, bool canSmartCopyOrDelete,
     }
 }
 
-void Pasteboard::writePlainText(const String& text)
+void Pasteboard::writePlainText(const String& text, SmartReplaceOption smartReplaceOption)
 {
     clear();
 
@@ -156,6 +155,14 @@ void Pasteboard::writePlainText(const String& text)
         if (!::SetClipboardData(CF_UNICODETEXT, cbData))
             ::GlobalFree(cbData);
         ::CloseClipboard();
+    }
+
+    // enable smart-replacing later on by putting dummy data on the pasteboard
+    if (smartReplaceOption == CanSmartReplace) {
+        if (::OpenClipboard(m_owner)) {
+            ::SetClipboardData(WebSmartPasteFormat, 0);
+            ::CloseClipboard();
+        }
     }
 }
 

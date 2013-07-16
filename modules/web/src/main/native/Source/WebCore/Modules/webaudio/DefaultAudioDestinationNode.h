@@ -43,14 +43,22 @@ public:
     virtual ~DefaultAudioDestinationNode();
     
     // AudioNode   
-    virtual void initialize();
-    virtual void uninitialize();
-    virtual void startRendering();
+    virtual void initialize() OVERRIDE;
+    virtual void uninitialize() OVERRIDE;
+    virtual void setChannelCount(unsigned long, ExceptionCode&) OVERRIDE;
+
+    // AudioDestinationNode
+    virtual void enableInput(const String& inputDeviceId) OVERRIDE;
+    virtual void startRendering() OVERRIDE;
+    virtual unsigned long maxChannelCount() const OVERRIDE;
     
 private:
-    DefaultAudioDestinationNode(AudioContext*);
+    explicit DefaultAudioDestinationNode(AudioContext*);
+    void createDestination();
 
     OwnPtr<AudioDestination> m_destination;
+    String m_inputDeviceId;
+    unsigned m_numberOfInputChannels;
 };
 
 } // namespace WebCore

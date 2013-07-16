@@ -28,7 +28,6 @@
 
 #include "ExceptionHelpers.h"
 #include "JSString.h"
-#include "UStringConcatenate.h"
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -92,7 +91,7 @@ public:
         m_okay &= buffer16.tryAppend(str, len);
     }
 
-    void append(const UString& str)
+    void append(const String& str)
     {
         unsigned length = str.length();
 
@@ -129,17 +128,17 @@ public:
             buffer8.shrinkToFit();
             if (!buffer8.data())
                 return throwOutOfMemoryError(exec);
-            return jsString(exec, UString::adopt(buffer8));
+            return jsString(exec, String::adopt(buffer8));
         }
         buffer16.shrinkToFit();
         if (!buffer16.data())
             return throwOutOfMemoryError(exec);
-        return jsString(exec, UString::adopt(buffer16));
+        return jsString(exec, String::adopt(buffer16));
     }
 
 protected:
-    Vector<LChar, 64> buffer8;
-    Vector<UChar, 64> buffer16;
+    Vector<LChar, 64, UnsafeVectorOverflow> buffer8;
+    Vector<UChar, 64, UnsafeVectorOverflow> buffer16;
     bool m_okay;
     bool m_is8Bit;
 };

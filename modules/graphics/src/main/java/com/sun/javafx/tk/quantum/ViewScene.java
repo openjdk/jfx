@@ -26,15 +26,12 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteOrder;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 
@@ -48,8 +45,8 @@ class ViewScene extends GlassScene {
 
     private PaintRenderJob paintRenderJob;
 
-    public ViewScene(boolean depthBuffer) {
-        super(depthBuffer);
+    public ViewScene(boolean depthBuffer, boolean antiAliasing) {
+        super(depthBuffer, antiAliasing);
 
         this.platformView = Application.GetApplication().createView();
         this.platformView.setEventHandler(new GlassViewEventHandler(this));
@@ -107,10 +104,10 @@ class ViewScene extends GlassScene {
         super.dispose();
     }
     
-    @Override public void setRoot(PGNode root) {
+    @Override public void setRoot(NGNode root) {
         super.setRoot(root);
         if (painter != null) {
-            painter.setRoot((NGNode)root);
+            painter.setRoot(root);
         }
     }
 

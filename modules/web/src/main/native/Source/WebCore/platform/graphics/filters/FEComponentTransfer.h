@@ -87,6 +87,8 @@ private:
     FEComponentTransfer(Filter*, const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc,
                         const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc);
 
+    void getValues(unsigned char rValues[256], unsigned char gValues[256], unsigned char bValues[256], unsigned char aValues[256]);
+
     ComponentTransferFunction m_redFunc;
     ComponentTransferFunction m_greenFunc;
     ComponentTransferFunction m_blueFunc;

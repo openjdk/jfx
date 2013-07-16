@@ -23,15 +23,20 @@
 #include "config.h"
 #include "HTMLCollection.h"
 
+#include "ClassNodeList.h"
 #include "HTMLDocument.h"
 #include "HTMLElement.h"
+#include "HTMLNameCollection.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLOptionElement.h"
 #include "NodeList.h"
+#include "NodeRareData.h"
+#include "NodeTraversal.h"
 
 #if ENABLE(MICRODATA)
 #include "HTMLPropertiesCollection.h"
+#include "PropertyNodeList.h"
 #endif
 
 #include <utility>
@@ -50,7 +55,6 @@ static bool shouldOnlyIncludeDirectChildren(CollectionType type)
     case DocForms:
     case DocImages:
     case DocLinks:
-    case DocObjects:
     case DocScripts:
     case DocumentNamedItems:
     case MapAreas:
@@ -69,7 +73,15 @@ static bool shouldOnlyIncludeDirectChildren(CollectionType type)
     case TSectionRows:
     case TableTBodies:
         return true;
-    case InvalidCollectionType:
+    case ChildNodeListType:
+    case ClassNodeListType:
+    case NameNodeListType:
+    case TagNodeListType:
+    case HTMLTagNodeListType:
+    case RadioNodeListType:
+    case LabelsNodeListType:
+    case MicroDataItemListType:
+    case PropertyNodeListType:
         break;
     }
     ASSERT_NOT_REACHED();
@@ -82,7 +94,6 @@ static NodeListRootType rootTypeFromCollectionType(CollectionType type)
     case DocImages:
     case DocApplets:
     case DocEmbeds:
-    case DocObjects:
     case DocForms:
     case DocLinks:
     case DocAnchors:
@@ -104,8 +115,17 @@ static NodeListRootType rootTypeFromCollectionType(CollectionType type)
     case SelectedOptions:
     case DataListOptions:
     case MapAreas:
-    case InvalidCollectionType:
         return NodeListIsRootedAtNode;
+    case ChildNodeListType:
+    case ClassNodeListType:
+    case NameNodeListType:
+    case TagNodeListType:
+    case HTMLTagNodeListType:
+    case RadioNodeListType:
+    case LabelsNodeListType:
+    case MicroDataItemListType:
+    case PropertyNodeListType:
+        break;
     }
     ASSERT_NOT_REACHED();
     return NodeListIsRootedAtNode;
@@ -116,13 +136,9 @@ static NodeListInvalidationType invalidationTypeExcludingIdAndNameAttributes(Col
     switch (type) {
     case DocImages:
     case DocEmbeds:
-    case DocObjects:
     case DocForms:
-    case DocAnchors: // Depends on name attribute.
     case DocScripts:
     case DocAll:
-    case WindowNamedItems: // Depends on id and name attributes.
-    case DocumentNamedItems: // Ditto.
     case NodeChildren:
     case TableTBodies:
     case TSectionRows:
@@ -136,51 +152,59 @@ static NodeListInvalidationType invalidationTypeExcludingIdAndNameAttributes(Col
     case DataListOptions:
         // FIXME: We can do better some day.
         return InvalidateOnAnyAttrChange;
+    case DocAnchors:
+        return InvalidateOnNameAttrChange;
     case DocLinks:
         return InvalidateOnHRefAttrChange;
+    case WindowNamedItems:
+        return InvalidateOnIdNameAttrChange;
+    case DocumentNamedItems:
+        return InvalidateOnIdNameAttrChange;
 #if ENABLE(MICRODATA)
     case ItemProperties:
         return InvalidateOnItemAttrChange;
 #endif
     case FormControls:
         return InvalidateForFormControls;
-    case InvalidCollectionType:
+    case ChildNodeListType:
+    case ClassNodeListType:
+    case NameNodeListType:
+    case TagNodeListType:
+    case HTMLTagNodeListType:
+    case RadioNodeListType:
+    case LabelsNodeListType:
+    case MicroDataItemListType:
+    case PropertyNodeListType:
         break;
     }
     ASSERT_NOT_REACHED();
     return DoNotInvalidateOnAttributeChanges;
 }
     
-
-HTMLCollection::HTMLCollection(Node* base, CollectionType type, ItemBeforeSupportType itemBeforeSupportType)
-    : HTMLCollectionCacheBase(rootTypeFromCollectionType(type), invalidationTypeExcludingIdAndNameAttributes(type), type, itemBeforeSupportType)
-    , m_base(base)
+HTMLCollection::HTMLCollection(Node* ownerNode, CollectionType type, ItemAfterOverrideType itemAfterOverrideType)
+    : LiveNodeListBase(ownerNode, rootTypeFromCollectionType(type), invalidationTypeExcludingIdAndNameAttributes(type),
+        WebCore::shouldOnlyIncludeDirectChildren(type), type, itemAfterOverrideType)
 {
-    ASSERT(m_base);
-    m_base->document()->registerNodeListCache(this);
 }
 
 PassRefPtr<HTMLCollection> HTMLCollection::create(Node* base, CollectionType type)
 {
-    return adoptRef(new HTMLCollection(base, type, SupportItemBefore));
+    return adoptRef(new HTMLCollection(base, type, DoesNotOverrideItemAfter));
 }
 
 HTMLCollection::~HTMLCollection()
 {
-    if (isUnnamedDocumentCachedType(type())) {
-        ASSERT(base()->isDocumentNode());
-        static_cast<Document*>(base())->removeCachedHTMLCollection(this, type());
-    } else if (isNodeCollectionType(type())) {
-        ASSERT(base()->isElementNode());
-        toElement(base())->removeCachedHTMLCollection(this, type());
-    } else // HTMLNameCollection removes cache by itself.
-        ASSERT(type() == WindowNamedItems || type() == DocumentNamedItems);
-
-    m_base->document()->unregisterNodeListCache(this);
+    // HTMLNameCollection removes cache by itself.
+    if (type() != WindowNamedItems && type() != DocumentNamedItems)
+        ownerNode()->nodeLists()->removeCacheWithAtomicName(this, type());
 }
 
-static inline bool isAcceptableElement(CollectionType type, Element* element)
+template <class NodeListType>
+inline bool isMatchingElement(const NodeListType*, Element*);
+
+template <> inline bool isMatchingElement(const HTMLCollection* htmlCollection, Element* element)
 {
+    CollectionType type = htmlCollection->type();
     if (!element->isHTMLElement() && !(type == DocAll || type == NodeChildren))
         return false;
 
@@ -204,7 +228,7 @@ static inline bool isAcceptableElement(CollectionType type, Element* element)
     case DataListOptions:
         if (element->hasLocalName(optionTag)) {
             HTMLOptionElement* option = static_cast<HTMLOptionElement*>(element);
-            if (!option->disabled() && !option->value().isEmpty())
+            if (!option->isDisabledFormControl() && !option->value().isEmpty())
                 return true;
         }
         return false;
@@ -214,8 +238,6 @@ static inline bool isAcceptableElement(CollectionType type, Element* element)
         return element->hasLocalName(appletTag) || (element->hasLocalName(objectTag) && static_cast<HTMLObjectElement*>(element)->containsJavaApplet());
     case DocEmbeds:
         return element->hasLocalName(embedTag);
-    case DocObjects:
-        return element->hasLocalName(objectTag);
     case DocLinks:
         return (element->hasLocalName(aTag) || element->hasLocalName(areaTag)) && element->fastHasAttribute(hrefAttr);
     case DocAnchors:
@@ -223,27 +245,48 @@ static inline bool isAcceptableElement(CollectionType type, Element* element)
     case DocAll:
     case NodeChildren:
         return true;
+    case DocumentNamedItems:
+        return static_cast<const DocumentNameCollection*>(htmlCollection)->nodeMatches(element);
+    case WindowNamedItems:
+        return static_cast<const WindowNameCollection*>(htmlCollection)->nodeMatches(element);
 #if ENABLE(MICRODATA)
     case ItemProperties:
         return element->fastHasAttribute(itempropAttr);
 #endif
     case FormControls:
-    case DocumentNamedItems:
     case TableRows:
-    case WindowNamedItems:
-    case InvalidCollectionType:
+    case ChildNodeListType:
+    case ClassNodeListType:
+    case NameNodeListType:
+    case TagNodeListType:
+    case HTMLTagNodeListType:
+    case RadioNodeListType:
+    case LabelsNodeListType:
+    case MicroDataItemListType:
+    case PropertyNodeListType:
         ASSERT_NOT_REACHED();
     }
     return false;
 }
 
-template<bool forward>
-static Node* nextNode(Node* base, Node* previous, bool onlyIncludeDirectChildren)
+template <> inline bool isMatchingElement(const LiveNodeList* nodeList, Element* element)
 {
-    if (forward)
-        return onlyIncludeDirectChildren ? previous->nextSibling() : previous->traverseNextNode(base);
-    else
-        return onlyIncludeDirectChildren ? previous->previousSibling() : previous->traversePreviousNode(base);
+    return nodeList->nodeMatches(element);
+}
+
+template <> inline bool isMatchingElement(const HTMLTagNodeList* nodeList, Element* element)
+{
+    return nodeList->nodeMatchesInlined(element);
+}
+
+template <> inline bool isMatchingElement(const ClassNodeList* nodeList, Element* element)
+{
+    return nodeList->nodeMatchesInlined(element);
+}
+
+static Node* previousNode(Node* base, Node* previous, bool onlyIncludeDirectChildren)
+{
+    return onlyIncludeDirectChildren ? previous->previousSibling() : NodeTraversal::previous(previous, base);
 }
 
 static inline Node* lastDescendent(Node* node)
@@ -254,41 +297,107 @@ static inline Node* lastDescendent(Node* node)
     return node;
 }
 
-template<bool forward>
-static Element* itemBeforeOrAfter(CollectionType type, Node* base, unsigned& offsetInArray, Node* previous)
+static Node* lastNode(Node* rootNode, bool onlyIncludeDirectChildren)
 {
-    ASSERT_UNUSED(offsetInArray, !offsetInArray);
-    bool onlyIncludeDirectChildren = shouldOnlyIncludeDirectChildren(type);
-    Node* rootNode = base;
-    Node* current;
-    if (previous)
-        current = nextNode<forward>(rootNode, previous, onlyIncludeDirectChildren);
-    else {
-        if (forward)
-            current = rootNode->firstChild();
-        else
-            current = onlyIncludeDirectChildren ? rootNode->lastChild() : lastDescendent(rootNode);
+    return onlyIncludeDirectChildren ? rootNode->lastChild() : lastDescendent(rootNode);
     }
 
-    for (; current; current = nextNode<forward>(rootNode, current, onlyIncludeDirectChildren)) {
-        if (current->isElementNode() && isAcceptableElement(type, toElement(current)))
+ALWAYS_INLINE Node* LiveNodeListBase::iterateForPreviousNode(Node* current) const
+{
+    bool onlyIncludeDirectChildren = shouldOnlyIncludeDirectChildren();
+    CollectionType collectionType = type();
+    Node* rootNode = this->rootNode();
+    for (; current; current = previousNode(rootNode, current, onlyIncludeDirectChildren)) {
+        if (isNodeList(collectionType)) {
+            if (current->isElementNode() && isMatchingElement(static_cast<const LiveNodeList*>(this), toElement(current)))
+                return toElement(current);
+        } else {
+            if (current->isElementNode() && isMatchingElement(static_cast<const HTMLCollection*>(this), toElement(current)))
             return toElement(current);
     }
-
+    }
     return 0;
 }
 
-Element* HTMLCollection::itemBefore(unsigned& offsetInArray, Element* previous) const
+ALWAYS_INLINE Node* LiveNodeListBase::itemBefore(Node* previous) const
 {
-    return itemBeforeOrAfter<false>(type(), base(), offsetInArray, previous);
+    Node* current;
+    if (LIKELY(!!previous)) // Without this LIKELY, length() and item() can be 10% slower.
+        current = previousNode(rootNode(), previous, shouldOnlyIncludeDirectChildren());
+    else
+        current = lastNode(rootNode(), shouldOnlyIncludeDirectChildren());
+
+    if (type() == ChildNodeListType)
+        return current;
+    return iterateForPreviousNode(current);
 }
 
-Element* HTMLCollection::itemAfter(unsigned& offsetInArray, Element* previous) const
+template <class NodeListType>
+inline Element* firstMatchingElement(const NodeListType* nodeList, ContainerNode* root)
 {
-    return itemBeforeOrAfter<true>(type(), base(), offsetInArray, previous);
+    Element* element = ElementTraversal::firstWithin(root);
+    while (element && !isMatchingElement(nodeList, element))
+        element = ElementTraversal::next(element, root);
+    return element;
 }
 
-bool ALWAYS_INLINE HTMLCollection::isLastItemCloserThanLastOrCachedItem(unsigned offset) const
+template <class NodeListType>
+inline Element* nextMatchingElement(const NodeListType* nodeList, Element* current, ContainerNode* root)
+{
+    do {
+        current = ElementTraversal::next(current, root);
+    } while (current && !isMatchingElement(nodeList, current));
+    return current;
+}
+
+template <class NodeListType>
+inline Element* traverseMatchingElementsForwardToOffset(const NodeListType* nodeList, unsigned offset, Element* currentElement, unsigned& currentOffset, ContainerNode* root)
+{
+    ASSERT(currentOffset < offset);
+    while ((currentElement = nextMatchingElement(nodeList, currentElement, root))) {
+        if (++currentOffset == offset)
+            return currentElement;
+    }
+    return 0;
+}
+
+// FIXME: This should be in ChildNodeList
+inline Node* LiveNodeListBase::traverseChildNodeListForwardToOffset(unsigned offset, Node* currentNode, unsigned& currentOffset) const
+{
+    ASSERT(type() == ChildNodeListType);
+    ASSERT(currentOffset < offset);
+    while ((currentNode = currentNode->nextSibling())) {
+        if (++currentOffset == offset)
+            return currentNode;
+    }
+    return 0;
+}
+
+// FIXME: This should be in LiveNodeList
+inline Element* LiveNodeListBase::traverseLiveNodeListFirstElement(ContainerNode* root) const
+{
+    ASSERT(isNodeList(type()));
+    ASSERT(type() != ChildNodeListType);
+    if (type() == HTMLTagNodeListType)
+        return firstMatchingElement(static_cast<const HTMLTagNodeList*>(this), root);
+    if (type() == ClassNodeListType)
+        return firstMatchingElement(static_cast<const ClassNodeList*>(this), root);
+    return firstMatchingElement(static_cast<const LiveNodeList*>(this), root);
+}
+
+// FIXME: This should be in LiveNodeList
+inline Element* LiveNodeListBase::traverseLiveNodeListForwardToOffset(unsigned offset, Element* currentElement, unsigned& currentOffset, ContainerNode* root) const
+{
+    ASSERT(isNodeList(type()));
+    ASSERT(type() != ChildNodeListType);
+    if (type() == HTMLTagNodeListType)
+        return traverseMatchingElementsForwardToOffset(static_cast<const HTMLTagNodeList*>(this), offset, currentElement, currentOffset, root);
+    if (type() == ClassNodeListType)
+        return traverseMatchingElementsForwardToOffset(static_cast<const ClassNodeList*>(this), offset, currentElement, currentOffset, root);
+    return traverseMatchingElementsForwardToOffset(static_cast<const LiveNodeList*>(this), offset, currentElement, currentOffset, root);
+}
+
+bool ALWAYS_INLINE LiveNodeListBase::isLastItemCloserThanLastOrCachedItem(unsigned offset) const
 {
     ASSERT(isLengthCacheValid());
     unsigned distanceFromLastItem = cachedLength() - offset;
@@ -298,7 +407,7 @@ bool ALWAYS_INLINE HTMLCollection::isLastItemCloserThanLastOrCachedItem(unsigned
     return cachedItemOffset() < offset && distanceFromLastItem < offset - cachedItemOffset();
 }
     
-bool ALWAYS_INLINE HTMLCollection::isFirstItemCloserThanCachedItem(unsigned offset) const
+bool ALWAYS_INLINE LiveNodeListBase::isFirstItemCloserThanCachedItem(unsigned offset) const
 {
     ASSERT(isItemCacheValid());
     if (cachedItemOffset() < offset)
@@ -308,28 +417,29 @@ bool ALWAYS_INLINE HTMLCollection::isFirstItemCloserThanCachedItem(unsigned offs
     return offset < distanceFromCachedItem;
 }
 
-unsigned HTMLCollection::length() const
+ALWAYS_INLINE void LiveNodeListBase::setItemCache(Node* item, unsigned offset, unsigned elementsArrayOffset) const
+{
+    setItemCache(item, offset);
+    if (overridesItemAfter()) {
+        ASSERT_WITH_SECURITY_IMPLICATION(item->isElementNode());
+        static_cast<const HTMLCollection*>(this)->m_cachedElementsArrayOffset = elementsArrayOffset;
+    } else
+        ASSERT(!elementsArrayOffset);
+}
+
+unsigned LiveNodeListBase::length() const
 {
     if (isLengthCacheValid())
         return cachedLength();
 
-    if (!isItemCacheValid() && !item(0)) {
+    item(UINT_MAX);
         ASSERT(isLengthCacheValid());
-        return 0;
+    
+    return cachedLength();
     }
 
-    ASSERT(isItemCacheValid());
-    ASSERT(cachedItem());
-    unsigned offset = cachedItemOffset();
-    do {
-        offset++;
-    } while (itemBeforeOrAfterCachedItem(offset));
-    ASSERT(isLengthCacheValid());
-
-    return offset;
-}
-
-Node* HTMLCollection::item(unsigned offset) const
+// FIXME: It is silly that these functions are in HTMLCollection.cpp.
+Node* LiveNodeListBase::item(unsigned offset) const
 {
     if (isItemCacheValid() && cachedItemOffset() == offset)
         return cachedItem();
@@ -340,18 +450,31 @@ Node* HTMLCollection::item(unsigned offset) const
 #if ENABLE(MICRODATA)
     if (type() == ItemProperties)
         static_cast<const HTMLPropertiesCollection*>(this)->updateRefElements();
+    else if (type() == PropertyNodeListType)
+        static_cast<const PropertyNodeList*>(this)->updateRefElements();
 #endif
 
-    if (isLengthCacheValid() && supportsItemBefore() && isLastItemCloserThanLastOrCachedItem(offset)) {
-        // FIXME: Need to figure out the last offset in array for HTMLFormCollection and HTMLPropertiesCollection
-        unsigned unusedOffsetInArray = 0;
-        Node* lastItem = itemBefore(unusedOffsetInArray, 0);
-        ASSERT(!unusedOffsetInArray);
+    ContainerNode* root = rootContainerNode();
+    if (!root) {
+        // FIMXE: In someTextNode.childNodes case the root is Text. We shouldn't even make a LiveNodeList for that.
+        setLengthCache(0);
+        return 0;
+    }
+
+    if (isLengthCacheValid() && !overridesItemAfter() && isLastItemCloserThanLastOrCachedItem(offset)) {
+        Node* lastItem = itemBefore(0);
         ASSERT(lastItem);
         setItemCache(lastItem, cachedLength() - 1, 0);
-    } else if (!isItemCacheValid() || isFirstItemCloserThanCachedItem(offset) || (!supportsItemBefore() && offset < cachedItemOffset())) {
+    } else if (!isItemCacheValid() || isFirstItemCloserThanCachedItem(offset) || (overridesItemAfter() && offset < cachedItemOffset())) {
         unsigned offsetInArray = 0;
-        Node* firstItem = itemAfter(offsetInArray, 0);
+        Node* firstItem;
+        if (type() == ChildNodeListType)
+            firstItem = root->firstChild();
+        else if (isNodeList(type()))
+            firstItem = traverseLiveNodeListFirstElement(root);
+        else
+            firstItem = static_cast<const HTMLCollection*>(this)->traverseFirstElement(offsetInArray, root);
+
         if (!firstItem) {
             setLengthCache(0);
             return 0;
@@ -363,25 +486,23 @@ Node* HTMLCollection::item(unsigned offset) const
     if (cachedItemOffset() == offset)
         return cachedItem();
 
-    return itemBeforeOrAfterCachedItem(offset);
+    return itemBeforeOrAfterCachedItem(offset, root);
 }
 
-Element* HTMLCollection::itemBeforeOrAfterCachedItem(unsigned offset) const
+inline Node* LiveNodeListBase::itemBeforeOrAfterCachedItem(unsigned offset, ContainerNode* root) const
 {
     unsigned currentOffset = cachedItemOffset();
-    ASSERT(cachedItem()->isElementNode());
-    Element* currentItem = toElement(cachedItem());
+    Node* currentItem = cachedItem();
+    ASSERT(currentItem);
     ASSERT(currentOffset != offset);
 
-    unsigned offsetInArray = cachedElementsArrayOffset();
-
     if (offset < cachedItemOffset()) {
-        ASSERT(supportsItemBefore());
-        while ((currentItem = itemBefore(offsetInArray, currentItem))) {
+        ASSERT(!overridesItemAfter());
+        while ((currentItem = itemBefore(currentItem))) {
             ASSERT(currentOffset);
             currentOffset--;
             if (currentOffset == offset) {
-                setItemCache(currentItem, currentOffset, offsetInArray);
+                setItemCache(currentItem, currentOffset, 0);
                 return currentItem;
             }
         }
@@ -389,17 +510,26 @@ Element* HTMLCollection::itemBeforeOrAfterCachedItem(unsigned offset) const
         return 0;
     }
 
-    while ((currentItem = itemAfter(offsetInArray, currentItem))) {
-        currentOffset++;
-        if (currentOffset == offset) {
+    unsigned offsetInArray = 0;
+    if (type() == ChildNodeListType)
+        currentItem = traverseChildNodeListForwardToOffset(offset, currentItem, currentOffset);
+    else if (isNodeList(type()))
+        currentItem = traverseLiveNodeListForwardToOffset(offset, toElement(currentItem), currentOffset, root);
+    else
+        currentItem = static_cast<const HTMLCollection*>(this)->traverseForwardToOffset(offset, toElement(currentItem), currentOffset, offsetInArray, root);
+
+    if (!currentItem) {
+        // Did not find the item. On plus side, we now know the length.
+        setLengthCache(currentOffset + 1);
+        return 0;
+    }
             setItemCache(currentItem, currentOffset, offsetInArray);
             return currentItem;
         }
-    }
 
-    unsigned offsetOfLastItem = currentOffset;
-    setLengthCache(offsetOfLastItem + 1);
-
+Element* HTMLCollection::virtualItemAfter(unsigned&, Element*) const
+{
+    ASSERT_NOT_REACHED();
     return 0;
 }
 
@@ -416,19 +546,61 @@ static inline bool nameShouldBeVisibleInDocumentAll(HTMLElement* element)
         || element->hasLocalName(selectTag);
 }
 
-bool HTMLCollection::checkForNameMatch(Element* element, bool checkName, const AtomicString& name) const
+inline Element* firstMatchingChildElement(const HTMLCollection* nodeList, ContainerNode* root)
 {
-    if (!element->isHTMLElement())
-        return false;
+    Element* element = ElementTraversal::firstWithin(root);
+    while (element && !isMatchingElement(nodeList, element))
+        element = ElementTraversal::nextSkippingChildren(element, root);
+    return element;
+}
     
-    HTMLElement* e = toHTMLElement(element);
-    if (!checkName)
-        return e->getIdAttribute() == name;
+inline Element* nextMatchingChildElement(const HTMLCollection* nodeList, Element* current, ContainerNode* root)
+{
+    do {
+        current = ElementTraversal::nextSkippingChildren(current, root);
+    } while (current && !isMatchingElement(nodeList, current));
+    return current;
+}
 
-    if (type() == DocAll && !nameShouldBeVisibleInDocumentAll(e))
-        return false;
+inline Element* HTMLCollection::traverseFirstElement(unsigned& offsetInArray, ContainerNode* root) const
+{
+    if (overridesItemAfter())
+        return virtualItemAfter(offsetInArray, 0);
+    ASSERT(!offsetInArray);
+    if (shouldOnlyIncludeDirectChildren())
+        return firstMatchingChildElement(static_cast<const HTMLCollection*>(this), root);
+    return firstMatchingElement(static_cast<const HTMLCollection*>(this), root);
+}
 
-    return e->getNameAttribute() == name && e->getIdAttribute() != name;
+inline Element* HTMLCollection::traverseNextElement(unsigned& offsetInArray, Element* previous, ContainerNode* root) const
+{
+    if (overridesItemAfter())
+        return virtualItemAfter(offsetInArray, previous);
+    ASSERT(!offsetInArray);
+    if (shouldOnlyIncludeDirectChildren())
+        return nextMatchingChildElement(this, previous, root);
+    return nextMatchingElement(this, previous, root);
+}
+
+inline Element* HTMLCollection::traverseForwardToOffset(unsigned offset, Element* currentElement, unsigned& currentOffset, unsigned& offsetInArray, ContainerNode* root) const
+{
+    ASSERT(currentOffset < offset);
+    if (overridesItemAfter()) {
+        offsetInArray = m_cachedElementsArrayOffset;
+        while ((currentElement = virtualItemAfter(offsetInArray, currentElement))) {
+            if (++currentOffset == offset)
+                return currentElement;
+        }
+        return 0;
+    }
+    if (shouldOnlyIncludeDirectChildren()) {
+        while ((currentElement = nextMatchingChildElement(this, currentElement, root))) {
+            if (++currentOffset == offset)
+                return currentElement;
+        }
+        return 0;
+    }
+    return traverseMatchingElementsForwardToOffset(this, offset, currentElement, currentOffset, root);
 }
 
 Node* HTMLCollection::namedItem(const AtomicString& name) const
@@ -439,23 +611,42 @@ Node* HTMLCollection::namedItem(const AtomicString& name) const
     // object with a matching name attribute, but only on those elements
     // that are allowed a name attribute.
 
-    unsigned arrayOffset = 0;
-    unsigned i = 0;
-    for (Element* e = itemAfter(arrayOffset, 0); e; e = itemAfter(arrayOffset, e)) {
-        if (checkForNameMatch(e, /* checkName */ false, name)) {
-            setItemCache(e, i, arrayOffset);
-            return e;
+    ContainerNode* root = rootContainerNode();
+    if (name.isEmpty() || !root)
+        return 0;
+
+    if (!overridesItemAfter()) {
+        TreeScope* treeScope = root->treeScope();
+        Element* candidate = 0;
+        if (treeScope->hasElementWithId(name.impl())) {
+            if (!treeScope->containsMultipleElementsWithId(name))
+                candidate = treeScope->getElementById(name);
+        } else if (treeScope->hasElementWithName(name.impl())) {
+            if (!treeScope->containsMultipleElementsWithName(name)) {
+                candidate = treeScope->getElementByName(name);
+                if (candidate && type() == DocAll && (!candidate->isHTMLElement() || !nameShouldBeVisibleInDocumentAll(toHTMLElement(candidate))))
+                    candidate = 0;
         }
-        i++;
+        } else
+            return 0;
+
+        if (candidate
+            && isMatchingElement(this, candidate)
+            && (shouldOnlyIncludeDirectChildren() ? candidate->parentNode() == root : candidate->isDescendantOf(root)))
+            return candidate;
     }
 
-    i = 0;
-    for (Element* e = itemAfter(arrayOffset, 0); e; e = itemAfter(arrayOffset, e)) {
-        if (checkForNameMatch(e, /* checkName */ true, name)) {
-            setItemCache(e, i, arrayOffset);
-            return e;
+    // The pathological case. We need to walk the entire subtree.
+    updateNameCache();
+
+    if (Vector<Element*>* idResults = idCache(name)) {
+        if (idResults->size())
+            return idResults->at(0);
         }
-        i++;
+
+    if (Vector<Element*>* nameResults = nameCache(name)) {
+        if (nameResults->size())
+            return nameResults->at(0);
     }
 
     return 0;
@@ -466,17 +657,21 @@ void HTMLCollection::updateNameCache() const
     if (hasNameCache())
         return;
 
+    ContainerNode* root = rootContainerNode();
+    if (!root)
+        return;
+
     unsigned arrayOffset = 0;
-    for (Element* element = itemAfter(arrayOffset, 0); element; element = itemAfter(arrayOffset, element)) {
+    for (Element* element = traverseFirstElement(arrayOffset, root); element; element = traverseNextElement(arrayOffset, element, root)) {
         if (!element->isHTMLElement())
             continue;
-        HTMLElement* e = toHTMLElement(element);
-        const AtomicString& idAttrVal = e->getIdAttribute();
-        const AtomicString& nameAttrVal = e->getNameAttribute();
+        HTMLElement* htmlElement = toHTMLElement(element);
+        const AtomicString& idAttrVal = htmlElement->getIdAttribute();
+        const AtomicString& nameAttrVal = htmlElement->getNameAttribute();
         if (!idAttrVal.isEmpty())
-            appendIdCache(idAttrVal, e);
-        if (!nameAttrVal.isEmpty() && idAttrVal != nameAttrVal && (type() != DocAll || nameShouldBeVisibleInDocumentAll(e)))
-            appendNameCache(nameAttrVal, e);
+            appendIdCache(idAttrVal, htmlElement);
+        if (!nameAttrVal.isEmpty() && idAttrVal != nameAttrVal && (type() != DocAll || nameShouldBeVisibleInDocumentAll(htmlElement)))
+            appendNameCache(nameAttrVal, htmlElement);
     }
 
     setHasNameCache();
@@ -484,22 +679,8 @@ void HTMLCollection::updateNameCache() const
 
 bool HTMLCollection::hasNamedItem(const AtomicString& name) const
 {
-    if (name.isEmpty())
-        return false;
-
-    updateNameCache();
-
-    if (Vector<Element*>* cache = idCache(name)) {
-        if (!cache->isEmpty())
-            return true;
-    }
-
-    if (Vector<Element*>* cache = nameCache(name)) {
-        if (!cache->isEmpty())
-            return true;
-    }
-
-    return false;
+    // FIXME: We can do better when there are multiple elements of the same name.
+    return namedItem(name);
 }
 
 void HTMLCollection::namedItems(const AtomicString& name, Vector<RefPtr<Node> >& result) const
@@ -522,12 +703,12 @@ void HTMLCollection::namedItems(const AtomicString& name, Vector<RefPtr<Node> >&
 
 PassRefPtr<NodeList> HTMLCollection::tags(const String& name)
 {
-    return m_base->getElementsByTagName(name);
+    return ownerNode()->getElementsByTagName(name);
 }
 
-void HTMLCollectionCacheBase::append(NodeCacheMap& map, const AtomicString& key, Element* element)
+void HTMLCollection::append(NodeCacheMap& map, const AtomicString& key, Element* element)
 {
-    OwnPtr<Vector<Element*> >& vector = map.add(key.impl(), nullptr).iterator->second;
+    OwnPtr<Vector<Element*> >& vector = map.add(key.impl(), nullptr).iterator->value;
     if (!vector)
         vector = adoptPtr(new Vector<Element*>);
     vector->append(element);

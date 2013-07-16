@@ -30,10 +30,10 @@
 
 #include "DOMWindowWebDatabase.h"
 
-#include "AbstractDatabase.h"
 #include "DOMWindow.h"
 #include "Database.h"
 #include "DatabaseCallback.h"
+#include "DatabaseManager.h"
 #include "Document.h"
 #include "Frame.h"
 #include "SecurityOrigin.h"
@@ -46,10 +46,13 @@ PassRefPtr<Database> DOMWindowWebDatabase::openDatabase(DOMWindow* window, const
         return 0;
 
     RefPtr<Database> database = 0;
-    if (AbstractDatabase::isAvailable() && window->document()->securityOrigin()->canAccessDatabase())
-        database = Database::openDatabase(window->document(), name, version, displayName, estimatedSize, creationCallback, ec);
-
-    if (!database && !ec)
+    DatabaseManager& dbManager = DatabaseManager::manager();
+    DatabaseError error = DatabaseError::None;
+    if (dbManager.isAvailable() && window->document()->securityOrigin()->canAccessDatabase(window->document()->topOrigin())) {
+        database = dbManager.openDatabase(window->document(), name, version, displayName, estimatedSize, creationCallback, error);
+        ASSERT(database || error != DatabaseError::None);
+        ec = DatabaseManager::exceptionCodeForDatabaseError(error);
+    } else
         ec = SECURITY_ERR;
 
     return database;

@@ -25,7 +25,7 @@
 
 package javafx.scene.paint;
 
-import com.sun.javafx.sg.PGPhongMaterial;
+import com.sun.javafx.sg.prism.NGPhongMaterial;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -294,7 +294,7 @@ public class PhongMaterial extends Material {
     }
     
     /** The peer node created by the graphics Toolkit/Pipeline implementation */
-    private PGPhongMaterial peer;
+    private NGPhongMaterial peer;
     
     /**
      * @treatAsPrivate implementation detail
@@ -302,9 +302,9 @@ public class PhongMaterial extends Material {
      */
     @Deprecated
     @Override
-    public PGPhongMaterial impl_getPGMaterial() {
+    public NGPhongMaterial impl_getNGMaterial() {
         if (peer == null) {
-            peer = Toolkit.getToolkit().createPGPhongMaterial();
+            peer = new NGPhongMaterial();
         }
         return peer;
     }
@@ -320,7 +320,7 @@ public class PhongMaterial extends Material {
             return;
         }
 
-        PGPhongMaterial pMaterial = (PGPhongMaterial) impl_getPGMaterial();
+        final NGPhongMaterial pMaterial = impl_getNGMaterial();
         if (diffuseColorDirty) {
             pMaterial.setDiffuseColor(getDiffuseColor() == null ? null
                     : Toolkit.getPaintAccessor().getPlatformPaint(getDiffuseColor()));

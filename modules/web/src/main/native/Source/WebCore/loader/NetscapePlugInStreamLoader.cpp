@@ -36,7 +36,7 @@
 namespace WebCore {
 
 NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(Frame* frame, NetscapePlugInStreamLoaderClient* client)
-    : ResourceLoader(frame, ResourceLoaderOptions(SendCallbacks, SniffContent, DoNotBufferData, AllowStoredCredentials, AskClientForCrossOriginCredentials, SkipSecurityCheck))
+    : ResourceLoader(frame, ResourceLoaderOptions(SendCallbacks, SniffContent, DoNotBufferData, AllowStoredCredentials, AskClientForAllCredentials, SkipSecurityCheck))
     , m_client(client)
 {
 }
@@ -93,13 +93,23 @@ void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& resp
         cancel(frameLoader()->client()->fileDoesNotExistError(response));
 }
 
-void NetscapePlugInStreamLoader::didReceiveData(const char* data, int length, long long encodedDataLength, bool allAtOnce)
+void NetscapePlugInStreamLoader::didReceiveData(const char* data, int length, long long encodedDataLength, DataPayloadType dataPayloadType)
+{
+    didReceiveDataOrBuffer(data, length, 0, encodedDataLength, dataPayloadType);
+}
+
+void NetscapePlugInStreamLoader::didReceiveBuffer(PassRefPtr<SharedBuffer> buffer, long long encodedDataLength, DataPayloadType dataPayloadType)
+{
+    didReceiveDataOrBuffer(0, 0, buffer, encodedDataLength, dataPayloadType);
+}
+
+void NetscapePlugInStreamLoader::didReceiveDataOrBuffer(const char* data, int length, PassRefPtr<SharedBuffer> buffer, long long encodedDataLength, DataPayloadType dataPayloadType)
 {
     RefPtr<NetscapePlugInStreamLoader> protect(this);
 
-    m_client->didReceiveData(this, data, length);
+    m_client->didReceiveData(this, buffer ? buffer->data() : data, buffer ? buffer->size() : length);
     
-    ResourceLoader::didReceiveData(data, length, encodedDataLength, allAtOnce);
+    ResourceLoader::didReceiveDataOrBuffer(data, length, buffer, encodedDataLength, dataPayloadType);
 }
 
 void NetscapePlugInStreamLoader::didFinishLoading(double finishTime)

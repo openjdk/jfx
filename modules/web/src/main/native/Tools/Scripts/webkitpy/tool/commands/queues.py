@@ -4,7 +4,7 @@
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
 # met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright
 # notice, this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above
@@ -14,7 +14,7 @@
 #     * Neither the name of Google Inc. nor the names of its
 # contributors may be used to endorse or promote products derived from
 # this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 # LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -28,6 +28,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import codecs
+import logging
 import os
 import sys
 import time
@@ -41,7 +42,6 @@ from webkitpy.common.config.committervalidator import CommitterValidator
 from webkitpy.common.config.ports import DeprecatedPort
 from webkitpy.common.net.bugzilla import Attachment
 from webkitpy.common.net.statusserver import StatusServer
-from webkitpy.common.system.deprecated_logging import error, log
 from webkitpy.common.system.executive import ScriptError
 from webkitpy.tool.bot.botinfo import BotInfo
 from webkitpy.tool.bot.commitqueuetask import CommitQueueTask, CommitQueueTaskDelegate
@@ -54,6 +54,8 @@ from webkitpy.tool.bot.queueengine import QueueEngine, QueueEngineDelegate
 from webkitpy.tool.bot.stylequeuetask import StyleQueueTask, StyleQueueTaskDelegate
 from webkitpy.tool.commands.stepsequence import StepSequenceErrorHandler
 from webkitpy.tool.multicommandtool import Command, TryAgain
+
+_log = logging.getLogger(__name__)
 
 
 class AbstractQueue(Command, QueueEngineDelegate):
@@ -70,7 +72,8 @@ class AbstractQueue(Command, QueueEngineDelegate):
             make_option("--no-confirm", action="store_false", dest="confirm", default=True, help="Do not ask the user for confirmation before running the queue.  Dangerous!"),
             make_option("--exit-after-iteration", action="store", type="int", dest="iterations", default=None, help="Stop running the queue after iterating this number of times."),
         ]
-        Command.__init__(self, "Run the %s" % self.name, options=options_list)
+        self.help_text = "Run the %s" % self.name
+        Command.__init__(self, options=options_list)
         self._iteration_count = 0
 
     def _cc_watchers(self, bug_id):
@@ -78,7 +81,7 @@ class AbstractQueue(Command, QueueEngineDelegate):
             self._tool.bugs.add_cc_to_bug(bug_id, self.watchers)
         except Exception, e:
             traceback.print_exc()
-            log("Failed to CC watchers.")
+            _log.error("Failed to CC watchers.")
 
     def run_webkit_patch(self, args):
         webkit_patch_args = [self._tool.path()]
@@ -92,12 +95,17 @@ class AbstractQueue(Command, QueueEngineDelegate):
         if self._options.port:
             webkit_patch_args += ["--port=%s" % self._options.port]
         webkit_patch_args.extend(args)
-        # FIXME: There is probably no reason to use run_and_throw_if_fail anymore.
-        # run_and_throw_if_fail was invented to support tee'd output
-        # (where we write both to a log file and to the console at once),
-        # but the queues don't need live-progress, a dump-of-output at the
-        # end should be sufficient.
-        return self._tool.executive.run_and_throw_if_fail(webkit_patch_args, cwd=self._tool.scm().checkout_root)
+
+        try:
+            args_for_printing = list(webkit_patch_args)
+            args_for_printing[0] = 'webkit-patch'  # Printing our path for each log is redundant.
+            _log.info("Running: %s" % self._tool.executive.command_for_printing(args_for_printing))
+            command_output = self._tool.executive.run_command(webkit_patch_args, cwd=self._tool.scm().checkout_root)
+        except ScriptError, e:
+            # Make sure the whole output gets printed if the command failed.
+            _log.error(e.message_with_output(output_limit=None))
+            raise
+        return command_output
 
     def _log_directory(self):
         return os.path.join("..", "%s-logs" % self.name)
@@ -111,12 +119,13 @@ class AbstractQueue(Command, QueueEngineDelegate):
         raise NotImplementedError, "subclasses must implement"
 
     def begin_work_queue(self):
-        log("CAUTION: %s will discard all local changes in \"%s\"" % (self.name, self._tool.scm().checkout_root))
+        _log.info("CAUTION: %s will discard all local changes in \"%s\"" % (self.name, self._tool.scm().checkout_root))
         if self._options.confirm:
             response = self._tool.user.prompt("Are you sure?  Type \"yes\" to continue: ")
             if (response != "yes"):
-                error("User declined.")
-        log("Running WebKit %s." % self.name)
+                _log.error("User declined.")
+                sys.exit(1)
+        _log.info("Running WebKit %s." % self.name)
         self._tool.status_server.update_status(self.name, "Starting Queue")
 
     def stop_work_queue(self, reason):
@@ -140,7 +149,7 @@ class AbstractQueue(Command, QueueEngineDelegate):
     def execute(self, options, args, tool, engine=QueueEngine):
         self._options = options # FIXME: This code is wrong.  Command.options is a list, this assumes an Options element!
         self._tool = tool  # FIXME: This code is wrong too!  Command.bind_to_tool handles this!
-        return engine(self.name, self, self._tool.wakeup_event).run()
+        return engine(self.name, self, self._tool.wakeup_event, self._options.seconds_to_sleep).run()
 
     @classmethod
     def _log_from_script_error_for_upload(cls, script_error, output_limit=None):
@@ -193,7 +202,7 @@ class FeederQueue(AbstractQueue):
         return None
 
     def handle_unexpected_error(self, work_item, message):
-        log(message)
+        _log.error(message)
 
 
 class AbstractPatchQueue(AbstractQueue):
@@ -201,18 +210,21 @@ class AbstractPatchQueue(AbstractQueue):
         return self._tool.status_server.update_status(self.name, message, patch, results_file)
 
     def _next_patch(self):
-        patch_id = self._tool.status_server.next_work_item(self.name)
-        if not patch_id:
-            return None
-        patch = self._tool.bugs.fetch_attachment(patch_id)
-        if not patch:
-            # FIXME: Using a fake patch because release_work_item has the wrong API.
-            # We also don't really need to release the lock (although that's fine),
-            # mostly we just need to remove this bogus patch from our queue.
-            # If for some reason bugzilla is just down, then it will be re-fed later.
-            patch = Attachment({'id': patch_id}, None)
-            self._release_work_item(patch)
-            return None
+        # FIXME: Bugzilla accessibility should be checked here; if it's unaccessible,
+        # it should return None.
+        patch = None
+        while not patch:
+            patch_id = self._tool.status_server.next_work_item(self.name)
+            if not patch_id:
+                return None
+            patch = self._tool.bugs.fetch_attachment(patch_id)
+            if not patch:
+                # FIXME: Using a fake patch because release_work_item has the wrong API.
+                # We also don't really need to release the lock (although that's fine),
+                # mostly we just need to remove this bogus patch from our queue.
+                # If for some reason bugzilla is just down, then it will be re-fed later.
+                fake_patch = Attachment({'id': patch_id}, None)
+                self._release_work_item(fake_patch)
         return patch
 
     def _release_work_item(self, patch):
@@ -235,10 +247,44 @@ class AbstractPatchQueue(AbstractQueue):
         self._update_status(message, patch)
         self._release_work_item(patch)
 
-    # FIXME: This probably belongs at a layer below AbstractPatchQueue, but shared by CommitQueue and the EarlyWarningSystem.
+    def work_item_log_path(self, patch):
+        return os.path.join(self._log_directory(), "%s.log" % patch.bug_id())
+
+
+# Used to share code between the EWS and commit-queue.
+class PatchProcessingQueue(AbstractPatchQueue):
+    # Subclasses must override.
+    port_name = None
+
+    def __init__(self, options=None):
+        self._port = None  # We can't instantiate port here because tool isn't avaialble.
+        AbstractPatchQueue.__init__(self, options)
+
+    # FIXME: This is a hack to map between the old port names and the new port names.
+    def _new_port_name_from_old(self, port_name, platform):
+        # ApplePort.determine_full_port_name asserts if the name doesn't include version.
+        if port_name == 'mac':
+            return 'mac-' + platform.os_version
+        if port_name == 'win':
+            return 'win-future'
+        return port_name
+
+    def begin_work_queue(self):
+        AbstractPatchQueue.begin_work_queue(self)
+        if not self.port_name:
+            return
+        # FIXME: This is only used for self._deprecated_port.flag()
+        self._deprecated_port = DeprecatedPort.port(self.port_name)
+        # FIXME: This violates abstraction
+        self._tool._deprecated_port = self._deprecated_port
+        self._port = self._tool.port_factory.get(self._new_port_name_from_old(self.port_name, self._tool.platform))
+
     def _upload_results_archive_for_patch(self, patch, results_archive_zip):
+        if not self._port:
+            self._port = self._tool.port_factory.get(self._new_port_name_from_old(self.port_name, self._tool.platform))
+
         bot_id = self._tool.status_server.bot_id or "bot"
-        description = "Archive of layout-test-results from %s" % bot_id
+        description = "Archive of layout-test-results from %s for %s" % (bot_id, self._port.name())
         # results_archive is a ZipFile object, grab the File object (.fp) to pass to Mechanize for uploading.
         results_archive_file = results_archive_zip.fp
         # Rewind the file object to start (since Mechanize won't do that automatically)
@@ -249,30 +295,21 @@ class AbstractPatchQueue(AbstractQueue):
         comment_text = "The attached test failures were seen while running run-webkit-tests on the %s.\n" % (self.name)
         # FIXME: We could easily list the test failures from the archive here,
         # currently callers do that separately.
-        comment_text += BotInfo(self._tool).summary_text()
+        comment_text += BotInfo(self._tool, self._port.name()).summary_text()
         self._tool.bugs.add_attachment_to_bug(patch.bug_id(), results_archive_file, description, filename="layout-test-results.zip", comment_text=comment_text)
 
-    def work_item_log_path(self, patch):
-        return os.path.join(self._log_directory(), "%s.log" % patch.bug_id())
 
-
-class CommitQueue(AbstractPatchQueue, StepSequenceErrorHandler, CommitQueueTaskDelegate):
+class CommitQueue(PatchProcessingQueue, StepSequenceErrorHandler, CommitQueueTaskDelegate):
     name = "commit-queue"
-    port_name = "chromium-xvfb"
-
-    def __init__(self):
-        AbstractPatchQueue.__init__(self)
-        self.port = DeprecatedPort.port(self.port_name)
+    port_name = "mac-mountainlion"
 
     # AbstractPatchQueue methods
 
     def begin_work_queue(self):
-        # FIXME: This violates abstraction
-        self._tool._deprecated_port = self.port
-        AbstractPatchQueue.begin_work_queue(self)
+        PatchProcessingQueue.begin_work_queue(self)
         self.committer_validator = CommitterValidator(self._tool)
         self._expected_failures = ExpectedFailures()
-        self._layout_test_results_reader = LayoutTestResultsReader(self._tool, self._log_directory())
+        self._layout_test_results_reader = LayoutTestResultsReader(self._tool, self._port.results_directory(), self._log_directory())
 
     def next_work_item(self):
         return self._next_patch()
@@ -313,7 +350,7 @@ class CommitQueue(AbstractPatchQueue, StepSequenceErrorHandler, CommitQueueTaskD
     # CommitQueueTaskDelegate methods
 
     def run_command(self, command):
-        self.run_webkit_patch(command + [self.port.flag()])
+        self.run_webkit_patch(command + [self._deprecated_port.flag()])
 
     def command_passed(self, message, patch):
         self._update_status(message, patch=patch)
@@ -332,7 +369,7 @@ class CommitQueue(AbstractPatchQueue, StepSequenceErrorHandler, CommitQueueTaskD
         return self._layout_test_results_reader.archive(patch)
 
     def build_style(self):
-        return "both"
+        return "release"
 
     def refetch_patch(self, patch):
         return self._tool.bugs.fetch_attachment(patch.id())
@@ -342,18 +379,19 @@ class CommitQueue(AbstractPatchQueue, StepSequenceErrorHandler, CommitQueueTaskD
         reporter.report_flaky_tests(patch, flaky_test_results, results_archive)
 
     def did_pass_testing_ews(self, patch):
-        # Currently, chromium-ews is the only testing EWS. Once there are more,
-        # should make sure they all pass.
-        status = self._tool.status_server.patch_status("chromium-ews", patch.id())
-        return status == self._pass_status
+        # Only Mac and Mac WK2 run tests
+        # FIXME: We shouldn't have to hard-code it here.
+        patch_status = self._tool.status_server.patch_status
+        return patch_status("mac-ews", patch.id()) == self._pass_status or patch_status("mac-wk2-ews", patch.id()) == self._pass_status
 
     # StepSequenceErrorHandler methods
 
+    @classmethod
     def handle_script_error(cls, tool, state, script_error):
         # Hitting this error handler should be pretty rare.  It does occur,
         # however, when a patch no longer applies to top-of-tree in the final
         # land step.
-        log(script_error.message_with_output())
+        _log.error(script_error.message_with_output())
 
     @classmethod
     def handle_checkout_needs_update(cls, tool, state, options, error):
@@ -369,10 +407,10 @@ class CommitQueue(AbstractPatchQueue, StepSequenceErrorHandler, CommitQueueTaskD
         raise TryAgain()
 
 
-class AbstractReviewQueue(AbstractPatchQueue, StepSequenceErrorHandler):
+class AbstractReviewQueue(PatchProcessingQueue, StepSequenceErrorHandler):
     """This is the base-class for the EWS queues and the style-queue."""
     def __init__(self, options=None):
-        AbstractPatchQueue.__init__(self, options)
+        PatchProcessingQueue.__init__(self, options)
 
     def review_patch(self, patch):
         raise NotImplementedError("subclasses must implement")
@@ -380,7 +418,7 @@ class AbstractReviewQueue(AbstractPatchQueue, StepSequenceErrorHandler):
     # AbstractPatchQueue methods
 
     def begin_work_queue(self):
-        AbstractPatchQueue.begin_work_queue(self)
+        PatchProcessingQueue.begin_work_queue(self)
 
     def next_work_item(self):
         return self._next_patch()
@@ -401,13 +439,13 @@ class AbstractReviewQueue(AbstractPatchQueue, StepSequenceErrorHandler):
             raise e
 
     def handle_unexpected_error(self, patch, message):
-        log(message)
+        _log.error(message)
 
     # StepSequenceErrorHandler methods
 
     @classmethod
     def handle_script_error(cls, tool, state, script_error):
-        log(script_error.output)
+        _log.error(script_error.output)
 
 
 class StyleQueue(AbstractReviewQueue, StyleQueueTaskDelegate):

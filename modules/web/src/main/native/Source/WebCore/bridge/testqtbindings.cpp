@@ -25,8 +25,8 @@
 #include "config.h"
 
 #include "BridgeJSC.h"
+#include "JSCJSValue.h"
 #include "JSObject.h"
-#include "JSValue.h"
 #include "interpreter.h"
 #include "qdebug.h"
 #include "qobject.h"
@@ -65,7 +65,7 @@ public:
     QString string;
     int integer;
 
-public slots:
+public Q_SLOTS:
     void foo() { qDebug() << "foo invoked"; }
 };
 
@@ -78,7 +78,7 @@ class Global : public JSNonFinalObject {
 public:
     typedef JSNonFinalObject Base;
 
-    static UString className(const JSObject*) { return "global"; }
+    static String className(const JSObject*) { return "global"; }
 };
 
 static char code[] =

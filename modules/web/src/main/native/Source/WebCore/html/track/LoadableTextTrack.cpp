@@ -34,13 +34,15 @@
 #include "ScriptEventListener.h"
 #include "ScriptExecutionContext.h"
 #include "TextTrackCueList.h"
+#include "TextTrackRegionList.h"
 
 namespace WebCore {
 
-LoadableTextTrack::LoadableTextTrack(HTMLTrackElement* track, const String& kind, const String& label, const String& language, bool)
+LoadableTextTrack::LoadableTextTrack(HTMLTrackElement* track, const String& kind, const String& label, const String& language)
     : TextTrack(track->document(), track, kind, label, language, TrackElement)
     , m_trackElement(track)
     , m_loadTimer(this, &LoadableTextTrack::loadTimerFired)
+    , m_isDefault(false)
 {
 }
 
@@ -68,6 +70,11 @@ void LoadableTextTrack::scheduleLoad(const KURL& url)
     // was responsible for creating the text track or changing the text track mode.
     if (!m_loadTimer.isActive())
         m_loadTimer.startOneShot(0);
+}
+
+Element* LoadableTextTrack::element()
+{
+    return m_trackElement;
 }
 
 void LoadableTextTrack::loadTimerFired(Timer<LoadableTextTrack>*)
@@ -122,6 +129,21 @@ void LoadableTextTrack::cueLoadingCompleted(TextTrackLoader* loader, bool loadin
     m_trackElement->didCompleteLoad(this, loadingFailed ? HTMLTrackElement::Failure : HTMLTrackElement::Success);
 }
 
+#if ENABLE(WEBVTT_REGIONS)
+void LoadableTextTrack::newRegionsAvailable(TextTrackLoader* loader)
+{
+    ASSERT_UNUSED(loader, m_loader == loader);
+
+    Vector<RefPtr<TextTrackRegion> > newRegions;
+    m_loader->getNewRegions(newRegions);
+
+    for (size_t i = 0; i < newRegions.size(); ++i) {
+        newRegions[i]->setTrack(this);
+        regionList()->add(newRegions[i]);
+    }
+}
+#endif
+
 size_t LoadableTextTrack::trackElementIndex()
 {
     ASSERT(m_trackElement);
@@ -129,7 +151,7 @@ size_t LoadableTextTrack::trackElementIndex()
 
     size_t index = 0;
     for (Node* node = m_trackElement->parentNode()->firstChild(); node; node = node->nextSibling()) {
-        if (!node->hasTagName(trackTag) || !node->inDocument())
+        if (!node->hasTagName(trackTag) || !node->parentNode())
             continue;
         if (node == m_trackElement)
             return index;

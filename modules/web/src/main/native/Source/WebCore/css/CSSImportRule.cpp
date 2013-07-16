@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002, 2005, 2006, 2008, 2009, 2010, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2002, 2005, 2006, 2008, 2009, 2010, 2012, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -35,7 +35,7 @@
 namespace WebCore {
 
 CSSImportRule::CSSImportRule(StyleRuleImport* importRule, CSSStyleSheet* parent)
-    : CSSRule(parent, CSSRule::IMPORT_RULE)
+    : CSSRule(parent)
     , m_importRule(importRule)
 {
 }
@@ -63,13 +63,16 @@ MediaList* CSSImportRule::media() const
 String CSSImportRule::cssText() const
 {
     StringBuilder result;
-    result.append("@import url(\"");
+    result.appendLiteral("@import url(\"");
     result.append(m_importRule->href());
-    result.append("\")");
+    result.appendLiteral("\")");
 
     if (m_importRule->mediaQueries()) {
+        String mediaText = m_importRule->mediaQueries()->mediaText();
+        if (!mediaText.isEmpty()) {
         result.append(' ');
-        result.append(m_importRule->mediaQueries()->mediaText());
+            result.append(mediaText);
+        }
     }
     result.append(';');
     
@@ -84,6 +87,12 @@ CSSStyleSheet* CSSImportRule::styleSheet() const
     if (!m_styleSheetCSSOMWrapper)
         m_styleSheetCSSOMWrapper = CSSStyleSheet::create(m_importRule->styleSheet(), const_cast<CSSImportRule*>(this));
     return m_styleSheetCSSOMWrapper.get(); 
+}
+
+void CSSImportRule::reattach(StyleRuleBase*)
+{
+    // FIXME: Implement when enabling caching for stylesheets with import rules.
+    ASSERT_NOT_REACHED();
 }
 
 } // namespace WebCore

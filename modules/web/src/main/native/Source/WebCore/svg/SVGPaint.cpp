@@ -111,6 +111,11 @@ PassRefPtr<SVGPaint> SVGPaint::cloneForCSSOM() const
     return adoptRef(new SVGPaint(*this));
 }
 
+bool SVGPaint::equals(const SVGPaint& other) const
+{
+    return m_paintType == other.m_paintType && m_uri == other.m_uri && SVGColor::equals(other);
+}
+
 }
 
 #endif // ENABLE(SVG)

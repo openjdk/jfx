@@ -97,7 +97,7 @@ abstract class GlassStage implements TKStage {
         return accessCtrlCtx;
     }
 
-    @Override public final void setSecurityContext(AccessControlContext ctx) {
+    public final void setSecurityContext(AccessControlContext ctx) {
         if (accessCtrlCtx != null) {
             throw new RuntimeException("Stage security context has been already set!");
         }

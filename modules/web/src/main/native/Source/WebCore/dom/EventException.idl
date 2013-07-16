@@ -26,13 +26,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module events {
-
     // Introduced in DOM Level 2:
-    exception [
+[
         JSNoStaticTables,
-        DoNotCheckConstants
-    ] EventException {
+    DoNotCheckConstants,
+    ImplementationLacksVTable,
+] exception EventException {
 
         readonly attribute unsigned short   code;
         readonly attribute DOMString        name;
@@ -48,4 +47,3 @@ module events {
         const unsigned short DISPATCH_REQUEST_ERR = 1;
     };
 
-}

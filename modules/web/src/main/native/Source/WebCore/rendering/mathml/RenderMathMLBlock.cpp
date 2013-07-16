@@ -32,6 +32,7 @@
 
 #include "GraphicsContext.h"
 #include "MathMLNames.h"
+#include "RenderView.h"
 
 #if ENABLE(DEBUG_MATH_LAYOUT)
 #include "PaintInfo.h"
@@ -41,12 +42,9 @@ namespace WebCore {
     
 using namespace MathMLNames;
     
-RenderMathMLBlock::RenderMathMLBlock(Node* container) 
-    : RenderBlock(container)
-    , m_intrinsicPaddingBefore(0)
-    , m_intrinsicPaddingAfter(0)
-    , m_intrinsicPaddingStart(0)
-    , m_intrinsicPaddingEnd(0)
+RenderMathMLBlock::RenderMathMLBlock(Element* container)
+    : RenderFlexibleBox(container)
+    , m_ignoreInAccessibilityTree(false)
     , m_preferredLogicalHeight(preferredLogicalHeightUnset)
 {
 }
@@ -56,101 +54,18 @@ bool RenderMathMLBlock::isChildAllowed(RenderObject* child, RenderStyle*) const
     return child->node() && child->node()->nodeType() == Node::ELEMENT_NODE;
 }
 
-LayoutUnit RenderMathMLBlock::paddingTop() const
-{
-    LayoutUnit result = computedCSSPaddingTop();
-    switch (style()->writingMode()) {
-    case TopToBottomWritingMode:
-        return result + m_intrinsicPaddingBefore;
-    case BottomToTopWritingMode:
-        return result + m_intrinsicPaddingAfter;
-    case LeftToRightWritingMode:
-    case RightToLeftWritingMode:
-        return result + (style()->isLeftToRightDirection() ? m_intrinsicPaddingStart : m_intrinsicPaddingEnd);
-    }
-    ASSERT_NOT_REACHED();
-    return result;
-}
-
-LayoutUnit RenderMathMLBlock::paddingBottom() const
-{
-    LayoutUnit result = computedCSSPaddingBottom();
-    switch (style()->writingMode()) {
-    case TopToBottomWritingMode:
-        return result + m_intrinsicPaddingAfter;
-    case BottomToTopWritingMode:
-        return result + m_intrinsicPaddingBefore;
-    case LeftToRightWritingMode:
-    case RightToLeftWritingMode:
-        return result + (style()->isLeftToRightDirection() ? m_intrinsicPaddingEnd : m_intrinsicPaddingStart);
-    }
-    ASSERT_NOT_REACHED();
-    return result;
-}
-
-LayoutUnit RenderMathMLBlock::paddingLeft() const
-{
-    LayoutUnit result = computedCSSPaddingLeft();
-    switch (style()->writingMode()) {
-    case LeftToRightWritingMode:
-        return result + m_intrinsicPaddingBefore;
-    case RightToLeftWritingMode:
-        return result + m_intrinsicPaddingAfter;
-    case TopToBottomWritingMode:
-    case BottomToTopWritingMode:
-        return result + (style()->isLeftToRightDirection() ? m_intrinsicPaddingStart : m_intrinsicPaddingEnd);
-    }
-    ASSERT_NOT_REACHED();
-    return result;
-}
-
-LayoutUnit RenderMathMLBlock::paddingRight() const
-{
-    LayoutUnit result = computedCSSPaddingRight();
-    switch (style()->writingMode()) {
-    case RightToLeftWritingMode:
-        return result + m_intrinsicPaddingBefore;
-    case LeftToRightWritingMode:
-        return result + m_intrinsicPaddingAfter;
-    case TopToBottomWritingMode:
-    case BottomToTopWritingMode:
-        return result + (style()->isLeftToRightDirection() ? m_intrinsicPaddingEnd : m_intrinsicPaddingStart);
-    }
-    ASSERT_NOT_REACHED();
-    return result;
-}
-
-LayoutUnit RenderMathMLBlock::paddingBefore() const
-{
-    return computedCSSPaddingBefore() + m_intrinsicPaddingBefore;
-}
-
-LayoutUnit RenderMathMLBlock::paddingAfter() const
-{
-    return computedCSSPaddingAfter() + m_intrinsicPaddingAfter;
-}
-
-LayoutUnit RenderMathMLBlock::paddingStart() const
-{
-    return computedCSSPaddingStart() + m_intrinsicPaddingStart;
-}
-
-LayoutUnit RenderMathMLBlock::paddingEnd() const
-{
-    return computedCSSPaddingEnd() + m_intrinsicPaddingEnd;
-}
-
 void RenderMathMLBlock::computePreferredLogicalWidths()
 {
     ASSERT(preferredLogicalWidthsDirty());
     m_preferredLogicalHeight = preferredLogicalHeightUnset;
-    RenderBlock::computePreferredLogicalWidths();
+    RenderFlexibleBox::computePreferredLogicalWidths();
 }
 
 RenderMathMLBlock* RenderMathMLBlock::createAnonymousMathMLBlock(EDisplay display)
 {
     RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(style(), display);
-    RenderMathMLBlock* newBlock = new (renderArena()) RenderMathMLBlock(document() /* is anonymous */);
+    RenderMathMLBlock* newBlock = new (renderArena()) RenderMathMLBlock(0);
+    newBlock->setDocumentForAnonymous(document());
     newBlock->setStyle(newStyle.release());
     return newBlock;
 }
@@ -162,9 +77,19 @@ void RenderMathMLBlock::computeChildrenPreferredLogicalHeights()
 {
     ASSERT(needsLayout());
     
+    // This is ugly, but disable fragmentation when computing the preferred heights.
+    FragmentationDisabler fragmentationDisabler(this);
+
     // Ensure a full repaint will happen after layout finishes.
     setNeedsLayout(true, MarkOnlyThis);
     
+    RenderView* renderView = view();
+    bool hadLayoutState = renderView->layoutState();
+    if (!hadLayoutState)
+        renderView->pushLayoutState(this);
+    {
+        LayoutStateDisabler layoutStateDisabler(renderView);
+        
     LayoutUnit oldAvailableLogicalWidth = availableLogicalWidth();
     setLogicalWidth(cLargeLogicalWidth);
     
@@ -185,6 +110,9 @@ void RenderMathMLBlock::computeChildrenPreferredLogicalHeights()
             childMathMLBlock->setPreferredLogicalHeight(childMathMLBlock->logicalHeight());
     }
 }
+    if (!hadLayoutState)
+        renderView->popLayoutState(this);
+}
 
 LayoutUnit RenderMathMLBlock::preferredLogicalHeightAfterSizing(RenderObject* child)
 {
@@ -194,16 +122,31 @@ LayoutUnit RenderMathMLBlock::preferredLogicalHeightAfterSizing(RenderObject* ch
         ASSERT(!child->needsLayout());
         return toRenderBox(child)->logicalHeight();
     }
+    // This currently ignores -webkit-line-box-contain:
     return child->style()->fontSize();
+}
+
+int RenderMathMLBlock::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
+{
+    // mathml.css sets math { -webkit-line-box-contain: glyphs replaced; line-height: 0; }, so when linePositionMode == PositionOfInteriorLineBoxes we want to
+    // return 0 here to match our line-height. This matters when RootInlineBox::ascentAndDescentForBox is called on a RootInlineBox for an inline-block.
+    if (linePositionMode == PositionOfInteriorLineBoxes)
+        return 0;
+    
+    LayoutUnit baseline = firstLineBoxBaseline(); // FIXME: This may be unnecessary after flex baselines are implemented (https://bugs.webkit.org/show_bug.cgi?id=96188).
+    if (baseline != -1)
+        return baseline;
+    
+    return RenderFlexibleBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
 }
 
 const char* RenderMathMLBlock::renderName() const
 {
     EDisplay display = style()->display();
-    if (display == BLOCK)
-        return isAnonymous() ? "RenderMathMLBlock (anonymous, block)" : "RenderMathMLBlock (block)";
-    if (display == INLINE_BLOCK)
-        return isAnonymous() ? "RenderMathMLBlock (anonymous, inline-block)" : "RenderMathMLBlock (inline-block)";
+    if (display == FLEX)
+        return isAnonymous() ? "RenderMathMLBlock (anonymous, flex)" : "RenderMathMLBlock (flex)";
+    if (display == INLINE_FLEX)
+        return isAnonymous() ? "RenderMathMLBlock (anonymous, inline-flex)" : "RenderMathMLBlock (inline-flex)";
     // |display| should be one of the above.
     ASSERT_NOT_REACHED();
     return isAnonymous() ? "RenderMathMLBlock (anonymous)" : "RenderMathMLBlock";
@@ -212,7 +155,7 @@ const char* RenderMathMLBlock::renderName() const
 #if ENABLE(DEBUG_MATH_LAYOUT)
 void RenderMathMLBlock::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 {
-    RenderBlock::paint(info, paintOffset);
+    RenderFlexibleBox::paint(info, paintOffset);
     
     if (info.context->paintingDisabled() || info.phase != PaintPhaseForeground)
         return;
@@ -243,6 +186,14 @@ void RenderMathMLBlock::paint(PaintInfo& info, const LayoutPoint& paintOffset)
     info.context->drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + baseline), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + baseline));
 }
 #endif // ENABLE(DEBUG_MATH_LAYOUT)
+
+int RenderMathMLTable::firstLineBoxBaseline() const
+{
+    // In legal MathML, we'll have a MathML parent. That RenderFlexibleBox parent will use our firstLineBoxBaseline() for baseline alignment, per
+    // http://dev.w3.org/csswg/css3-flexbox/#flex-baselines. We want to vertically center an <mtable>, such as a matrix. Essentially the whole <mtable> element fits on a
+    // single line, whose baseline gives this centering. This is different than RenderTable::firstLineBoxBaseline, which returns the baseline of the first row of a <table>.
+    return (logicalHeight() + style()->fontMetrics().xHeight()) / 2;
+}
 
 }    
 

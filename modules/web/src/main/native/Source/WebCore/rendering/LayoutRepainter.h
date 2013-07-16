@@ -26,12 +26,12 @@
 #ifndef LayoutRepainter_h
 #define LayoutRepainter_h
 
-#include "LayoutTypes.h"
+#include "LayoutRect.h"
 
 namespace WebCore {
 
+class RenderLayerModelObject;
 class RenderObject;
-class RenderBoxModelObject;
 
 class LayoutRepainter {
 public:
@@ -44,7 +44,7 @@ public:
 
 private:
     RenderObject& m_object;
-    RenderBoxModelObject* m_repaintContainer;
+    RenderLayerModelObject* m_repaintContainer;
     // We store these values as LayoutRects, but the final invalidations will be pixel snapped
     LayoutRect m_oldBounds;
     LayoutRect m_oldOutlineBox;

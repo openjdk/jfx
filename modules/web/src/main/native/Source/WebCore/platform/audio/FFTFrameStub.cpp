@@ -29,7 +29,7 @@
 
 #if ENABLE(WEB_AUDIO)
 
-#if !OS(DARWIN) && !USE(WEBAUDIO_MKL) && !USE(WEBAUDIO_FFMPEG) && !USE(WEBAUDIO_GSTREAMER) && !USE(WEBAUDIO_IPP)
+#if !OS(DARWIN) && !USE(WEBAUDIO_MKL) && !USE(WEBAUDIO_FFMPEG) && !USE(WEBAUDIO_GSTREAMER) && !USE(WEBAUDIO_IPP) && !USE(WEBAUDIO_OPENMAX_DL_FFT)
 
 #include "FFTFrame.h"
 
@@ -69,7 +69,7 @@ void FFTFrame::multiply(const FFTFrame& frame)
     ASSERT_NOT_REACHED();
 }
 
-void FFTFrame::doFFT(float* data)
+void FFTFrame::doFFT(const float* data)
 {
     ASSERT_NOT_REACHED();
 }

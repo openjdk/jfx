@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright (C) 2010 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,7 +28,7 @@
 
 import os
 import sys
-import unittest
+import unittest2 as unittest
 
 from test_expectations import TestExpectationsChecker
 from webkitpy.common.host_mock import MockHost
@@ -71,14 +70,19 @@ class TestExpectationsTestCase(unittest.TestCase):
         if port:
             self.assertTrue(port.name().startswith(expected_port_implementation))
         else:
-            self.assertEquals(None, expected_port_implementation)
+            self.assertIsNone(expected_port_implementation)
 
     def test_determine_port_from_expectations_path(self):
         self._expect_port_for_expectations_path(None, '/')
-        self._expect_port_for_expectations_path(None, 'LayoutTests/chromium-mac/TestExpectations')
-        self._expect_port_for_expectations_path('chromium', 'LayoutTests/platform/chromium/TestExpectations')
         self._expect_port_for_expectations_path(None, '/mock-checkout/LayoutTests/platform/win/TestExpectations')
         self._expect_port_for_expectations_path('win', 'LayoutTests/platform/win/TestExpectations')
+        self._expect_port_for_expectations_path('efl', 'LayoutTests/platform/efl/TestExpectations')
+        self._expect_port_for_expectations_path('efl', 'LayoutTests/platform/efl-wk1/TestExpectations')
+        self._expect_port_for_expectations_path('efl', 'LayoutTests/platform/efl-wk2/TestExpectations')
+        self._expect_port_for_expectations_path('qt', 'LayoutTests/platform/qt-win/TestExpectations')
+        # FIXME: check-webkit-style doesn't know how to create port objects for all Qt version (4.8, 5.0) and
+        # will only check files based on the installed version of Qt.
+        #self._expect_port_for_expectations_path('qt', 'LayoutTests/platform/qt-5.0-wk2/TestExpectations')
 
     def assert_lines_lint(self, lines, should_pass, expected_output=None):
         self._error_collector.reset_errors()
@@ -88,27 +92,31 @@ class TestExpectationsTestCase(unittest.TestCase):
                                           self._error_collector, host=host)
 
         # We should have failed to find a valid port object for that path.
-        self.assertEquals(checker._port_obj, None)
+        self.assertIsNone(checker._port_obj)
 
         # Now use a test port so we can check the lines.
         checker._port_obj = host.port_factory.get('test-mac-leopard')
         checker.check_test_expectations(expectations_str='\n'.join(lines),
-                                        tests=[self._test_file],
-                                        overrides=None)
+                                        tests=[self._test_file])
         checker.check_tabs(lines)
         if should_pass:
             self.assertEqual('', self._error_collector.get_errors())
         elif expected_output:
-            self.assertEquals(expected_output, self._error_collector.get_errors())
+            self.assertEqual(expected_output, self._error_collector.get_errors())
         else:
             self.assertNotEquals('', self._error_collector.get_errors())
-        self.assertTrue(self._error_collector.turned_off_filtering)
+
+        # Note that a patch might change a line that introduces errors elsewhere, but we
+        # don't want to lint the whole file (it can unfairly punish patches for pre-existing errors).
+        # We rely on a separate lint-webkitpy step on the bots to keep the whole file okay.
+        # FIXME: See https://bugs.webkit.org/show_bug.cgi?id=104712 .
+        self.assertFalse(self._error_collector.turned_off_filtering)
 
     def test_valid_expectations(self):
-        self.assert_lines_lint(["BUGCR1234 MAC : passes/text.html = PASS TEXT"], should_pass=True)
+        self.assert_lines_lint(["webkit.org/b/1234 [ Mac ] passes/text.html [ Pass Failure ]"], should_pass=True)
 
     def test_invalid_expectations(self):
-        self.assert_lines_lint(["BUG1234 : passes/text.html = GIVE UP"], should_pass=False)
+        self.assert_lines_lint(["Bug(me) passes/text.html [ Give Up]"], should_pass=False)
 
     def test_tab(self):
-        self.assert_lines_lint(["\tBUGWK1 : passes/text.html = PASS"], should_pass=False, expected_output="Line contains tab character.  [whitespace/tab] [5]")
+        self.assert_lines_lint(["\twebkit.org/b/1 passes/text.html [ Pass ]"], should_pass=False, expected_output="Line contains tab character.  [whitespace/tab] [5]")

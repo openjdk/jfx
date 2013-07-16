@@ -51,6 +51,10 @@ WebInspector.KeyboardShortcut.Modifiers = {
     }
 };
 
+/** @typedef {{code: number, name: (string|Object.<string, string>)}} */
+WebInspector.KeyboardShortcut.Key;
+
+/** @type {!Object.<string, !WebInspector.KeyboardShortcut.Key>} */
 WebInspector.KeyboardShortcut.Keys = {
     Backspace: { code: 8, name: "\u21a4" },
     Tab: { code: 9, name: { mac: "\u21e5", other: "<Tab>" } },
@@ -86,14 +90,17 @@ WebInspector.KeyboardShortcut.Keys = {
     Period: { code: 190, name: "." },
     Slash: { code: 191, name: "/" },
     Apostrophe: { code: 192, name: "`" },
-    SingleQuote: { code: 222, name: "\'" }
+    SingleQuote: { code: 222, name: "\'" },
+    H: { code: 72, name: "H" }
 };
 
 /**
  * Creates a number encoding keyCode in the lower 8 bits and modifiers mask in the higher 8 bits.
  * It is useful for matching pressed keys.
- * keyCode is the Code of the key, or a character "a-z" which is converted to a keyCode value.
+ *
+ * @param {number|string} keyCode The Code of the key, or a character "a-z" which is converted to a keyCode value.
  * @param {number=} modifiers Optional list of modifiers passed as additional paramerters.
+ * @return {number}
  */
 WebInspector.KeyboardShortcut.makeKey = function(keyCode, modifiers)
 {
@@ -103,6 +110,10 @@ WebInspector.KeyboardShortcut.makeKey = function(keyCode, modifiers)
     return WebInspector.KeyboardShortcut._makeKeyFromCodeAndModifiers(keyCode, modifiers);
 }
 
+/**
+ * @param {KeyboardEvent} keyboardEvent
+ * @return {number}
+ */
 WebInspector.KeyboardShortcut.makeKeyFromEvent = function(keyboardEvent)
 {
     var modifiers = WebInspector.KeyboardShortcut.Modifiers.None;
@@ -117,13 +128,31 @@ WebInspector.KeyboardShortcut.makeKeyFromEvent = function(keyboardEvent)
     return WebInspector.KeyboardShortcut._makeKeyFromCodeAndModifiers(keyboardEvent.keyCode, modifiers);
 }
 
+/**
+ * @param {KeyboardEvent} event
+ * @return {boolean}
+ */
 WebInspector.KeyboardShortcut.eventHasCtrlOrMeta = function(event)
 {
     return WebInspector.isMac() ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
 }
 
 /**
+ * @param {KeyboardEvent} event
+ * @return {boolean}
+ */
+WebInspector.KeyboardShortcut.hasNoModifiers = function(event)
+{
+    return !event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey;
+}
+
+/** @typedef {{key: number, name: string}} */
+WebInspector.KeyboardShortcut.Descriptor;
+
+/**
+ * @param {string|WebInspector.KeyboardShortcut.Key} key
  * @param {number=} modifiers
+ * @return {WebInspector.KeyboardShortcut.Descriptor}
  */
 WebInspector.KeyboardShortcut.makeDescriptor = function(key, modifiers)
 {
@@ -134,27 +163,42 @@ WebInspector.KeyboardShortcut.makeDescriptor = function(key, modifiers)
 }
 
 /**
+ * @param {string|WebInspector.KeyboardShortcut.Key} key
  * @param {number=} modifiers
+ * @return {string}
  */
 WebInspector.KeyboardShortcut.shortcutToString = function(key, modifiers)
 {
     return WebInspector.KeyboardShortcut._modifiersToString(modifiers) + WebInspector.KeyboardShortcut._keyName(key);
 }
 
+/**
+ * @param {string|WebInspector.KeyboardShortcut.Key} key
+ * @return {string}
+ */
 WebInspector.KeyboardShortcut._keyName = function(key)
 {
     if (typeof key === "string")
         return key.toUpperCase();
     if (typeof key.name === "string")
         return key.name;
-    return key.name[WebInspector.platform()] || key.name.other;
+    return key.name[WebInspector.platform()] || key.name.other || '';
 }
 
+/**
+ * @param {number} keyCode
+ * @param {?number} modifiers
+ * @return {number}
+ */
 WebInspector.KeyboardShortcut._makeKeyFromCodeAndModifiers = function(keyCode, modifiers)
 {
     return (keyCode & 255) | (modifiers << 8);
 };
 
+/**
+ * @param {number|undefined} modifiers
+ * @return {string}
+ */
 WebInspector.KeyboardShortcut._modifiersToString = function(modifiers)
 {
     const cmdKey = "\u2318";
@@ -175,3 +219,5 @@ WebInspector.KeyboardShortcut._modifiersToString = function(modifiers)
 
     return res;
 };
+
+WebInspector.KeyboardShortcut.SelectAll = WebInspector.KeyboardShortcut.makeKey("a", WebInspector.KeyboardShortcut.Modifiers.CtrlOrMeta);

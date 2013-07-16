@@ -25,30 +25,22 @@
 
 package javafx.scene;
 
-import com.sun.javafx.pgstub.StubParallelCamera;
 import com.sun.javafx.pgstub.StubScene;
-import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.tk.Toolkit;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.TilePane;
+import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.TilePane;
-import javafx.scene.layout.VBox;
-
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests various aspects of Scene.
@@ -681,53 +673,50 @@ public class SceneTest {
         stage.setScene(scene);
 
         scene.setCamera(cam);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
 
         // verify it has correct owner
         cam.setNearClip(20);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(20, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
-                .getCamera())).getNearClip(), 0.00001);
+        Toolkit.getToolkit().firePulse();
+        NGCamera ngCamera = ((StubScene)scene.impl_getPeer()).getCamera();
+        assertEquals(20, ngCamera.getCameraImpl().getNearClip(), 0.00001);
 
         scene.setCamera(null);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
         // verify owner was removed
         cam.setNearClip(30);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(20, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
-                .getCamera())).getNearClip(), 0.00001);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(20, ngCamera.getCameraImpl().getNearClip(), 0.00001);
 
         scene.setCamera(cam);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
         // verify it has correct owner
         cam.setNearClip(40);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(40, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
-                .getCamera())).getNearClip(), 0.00001);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(40, ngCamera.getCameraImpl().getNearClip(), 0.00001);
 
-        StubParallelCamera oldCam =
-                ((StubParallelCamera) (((StubScene) scene.impl_getPeer()).getCamera()));
+        NGCamera oldCam = ngCamera;
         scene.setCamera(new ParallelCamera());
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
         // verify owner was removed
         cam.setNearClip(50);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(40, oldCam.getNearClip(), 0.00001);
-        assertEquals(0.1, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
-                .getCamera())).getNearClip(), 0.00001);
+        Toolkit.getToolkit().firePulse();
+        ngCamera = scene.getCamera().impl_getPeer();
+        assertEquals(40, oldCam.getCameraImpl().getNearClip(), 0.00001);
+        assertEquals(0.1, ngCamera.getCameraImpl().getNearClip(), 0.00001);
     }
 
     @Test
     public void testDefaultCameraUpdatesPG() {
         Scene scene = new Scene(new Group(), 300, 200);
         stage.setScene(scene);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Toolkit.getToolkit().firePulse();
         Camera cam = scene.getEffectiveCamera();
 
         cam.setNearClip(20);
-        ((StubToolkit) Toolkit.getToolkit()).firePulse();
-        assertEquals(20, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
-                .getCamera())).getNearClip(), 0.00001);
+        Toolkit.getToolkit().firePulse();
+        NGCamera camera = ((StubScene)scene.impl_getPeer()).getCamera();
+        assertEquals(20, camera.getCameraImpl().getNearClip(), 0.00001);
     }
 
     @Test(expected=IllegalArgumentException.class)

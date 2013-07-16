@@ -27,6 +27,8 @@ package com.sun.javafx.stage;
 
 import javafx.stage.Window;
 
+import java.security.AccessControlContext;
+
 /**
  * Used to access internal window methods.
  */
@@ -52,6 +54,10 @@ public final class WindowHelper {
         windowAccessor.setSize(window, width, height);
     }
 
+    static AccessControlContext getAccessControlContext(Window window) {
+        return windowAccessor.getAccessControlContext(window);
+    }
+
     public static void setWindowAccessor(final WindowAccessor newAccessor) {
         if (windowAccessor != null) {
             throw new IllegalStateException();
@@ -64,6 +70,8 @@ public final class WindowHelper {
         void setLocation(Window window, double x, double y);
 
         void setSize(Window window, double width, double height);
+
+        AccessControlContext getAccessControlContext(Window window);
     }
 
     private static void forceInit(final Class<?> classToInit) {

@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-class SVGFESpecularLightingElement : public SVGFilterPrimitiveStandardAttributes {
+class SVGFESpecularLightingElement FINAL : public SVGFilterPrimitiveStandardAttributes {
 public:
     static PassRefPtr<SVGFESpecularLightingElement> create(const QualifiedName&, Document*);
     void lightElementAttributeChanged(const SVGFELightElement*, const QualifiedName&);
@@ -39,7 +39,7 @@ private:
     SVGFESpecularLightingElement(const QualifiedName&, Document*);
     
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&);
     virtual void svgAttributeChanged(const QualifiedName&);
     virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*);

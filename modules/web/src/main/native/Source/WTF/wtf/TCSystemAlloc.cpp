@@ -35,8 +35,8 @@
 #include "TCSystemAlloc.h"
 
 #include "Assertions.h"
+#include "CheckedArithmetic.h"
 #include "TCSpinLock.h"
-#include "UnusedParam.h"
 #include "VMTags.h"
 #include <algorithm>
 #include <stdint.h>
@@ -75,9 +75,6 @@ static size_t pagesize = 0;
 // to get as much virtual memory as possible.
 #ifndef WTF_CHANGES
 static bool use_devmem = false;
-#endif
-
-#if HAVE(SBRK)
 static bool use_sbrk = false;
 #endif
 
@@ -107,7 +104,7 @@ static const int32_t FLAGS_malloc_devmem_start = 0;
 static const int32_t FLAGS_malloc_devmem_limit = 0;
 #endif
 
-#if HAVE(SBRK)
+#ifndef WTF_CHANGES
 
 static void* TrySbrk(size_t size, size_t *actual_size, size_t alignment) {
   size = ((size + alignment - 1) / alignment) * alignment;
@@ -149,7 +146,7 @@ static void* TrySbrk(size_t size, size_t *actual_size, size_t alignment) {
   return reinterpret_cast<void*>(ptr);
 }
 
-#endif /* HAVE(SBRK) */
+#endif /* ifndef(WTF_CHANGES) */
 
 #if HAVE(MMAP)
 
@@ -169,7 +166,8 @@ static void* TryMmap(size_t size, size_t *actual_size, size_t alignment) {
   if (alignment > pagesize) {
     extra = alignment - pagesize;
   }
-  void* result = mmap(NULL, size + extra,
+  Checked<size_t> mapSize = Checked<size_t>(size) + extra + 2 * pagesize;
+  void* result = mmap(NULL, mapSize.unsafeGet(),
                       PROT_READ | PROT_WRITE,
                       MAP_PRIVATE|MAP_ANONYMOUS,
                       VM_TAG_FOR_TCMALLOC_MEMORY, 0);
@@ -177,7 +175,9 @@ static void* TryMmap(size_t size, size_t *actual_size, size_t alignment) {
     mmap_failure = true;
     return NULL;
   }
-
+  mmap(result, pagesize, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, VM_TAG_FOR_TCMALLOC_MEMORY, 0);
+  mmap(static_cast<char*>(result) + (mapSize - pagesize).unsafeGet(), pagesize, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, VM_TAG_FOR_TCMALLOC_MEMORY, 0);
+  result = static_cast<char*>(result) + pagesize;
   // Adjust the return memory so it is aligned
   uintptr_t ptr = reinterpret_cast<uintptr_t>(result);
   size_t adjust = 0;
@@ -349,9 +349,7 @@ void* TCMalloc_SystemAlloc(size_t size, size_t *actual_size, size_t alignment) {
       void* result = TryDevMem(size, actual_size, alignment);
       if (result != NULL) return result;
     }
-#endif
     
-#if HAVE(SBRK)
     if (use_sbrk && !sbrk_failure) {
       void* result = TrySbrk(size, actual_size, alignment);
       if (result != NULL) return result;

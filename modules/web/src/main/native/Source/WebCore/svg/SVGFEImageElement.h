@@ -22,7 +22,7 @@
 #define SVGFEImageElement_h
 
 #if ENABLE(SVG) && ENABLE(FILTERS)
-#include "CachedImage.h"
+#include "CachedImageClient.h"
 #include "CachedResourceHandle.h"
 #include "ImageBuffer.h"
 #include "SVGAnimatedBoolean.h"
@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-class SVGFEImageElement : public SVGFilterPrimitiveStandardAttributes,
+class SVGFEImageElement FINAL : public SVGFilterPrimitiveStandardAttributes,
                           public SVGURIReference,
                           public SVGLangSpace,
                           public SVGExternalResourcesRequired,
@@ -49,7 +49,7 @@ private:
     SVGFEImageElement(const QualifiedName&, Document*);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual void svgAttributeChanged(const QualifiedName&);
     virtual void notifyFinished(CachedResource*);
 

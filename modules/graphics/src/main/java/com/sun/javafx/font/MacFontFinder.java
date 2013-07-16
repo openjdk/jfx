@@ -82,7 +82,7 @@ class MacFontFinder {
             String family = fontData[i++];
             String file = fontData[i++];
 
-            if (!PrismFontFactory.doCoreText) {
+            if (!PrismFontFactory.useNativeRasterizer) {
                 /* Skip OTF/CID keyed fonts for T2K (RT-15755) */
                 if (file.endsWith(".otf")) {
                     if (name.indexOf(" Pro W") != -1) continue;

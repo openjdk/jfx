@@ -25,15 +25,14 @@
 
 package javafx.scene.shape;
 
-import java.util.Iterator;
-
+import com.sun.javafx.WeakReferenceQueue;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.scene.Node;
 
-import com.sun.javafx.WeakReferenceQueue;
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.sg.PGPath;
+import java.util.Iterator;
 
 
 /**
@@ -65,7 +64,7 @@ public abstract class PathElement {
         }
     }
 
-    abstract void addTo(PGPath pgPath);
+    abstract void addTo(NGPath pgPath);
 
     /**
      * @treatAsPrivate implementation detail

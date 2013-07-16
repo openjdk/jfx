@@ -254,6 +254,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           <children>
             <Label text="Field of view:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
             <Slider fx:id="fovSlider" majorTickUnit="40.0" max="180.0" min="0.0" minorTickCount="4" showTickLabels="true" showTickMarks="true" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+            <Label fx:id="nearClipLabel" text="Near clipping pane: &#10;   %.5f" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+            <Slider fx:id="nearClipSlider" majorTickUnit="1" max="5" min="-5" minorTickCount="4" showTickLabels="true" showTickMarks="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <Label fx:id="farClipLabel" text="Far clipping pane: &#10;   %.5f" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+            <Slider fx:id="farClipSlider" majorTickUnit="1" max="5" min="-5" minorTickCount="4" showTickLabels="true" showTickMarks="true" GridPane.columnIndex="1" GridPane.rowIndex="2" />
           </children>
           <columnConstraints>
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />

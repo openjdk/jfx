@@ -48,11 +48,13 @@ import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 
 public class SanFranciscoFireworks extends Pane {
+    public static final int IMAGE_WIDTH = 1024;
+    public static final int IMAGE_HEIGHT = 708;
 
     private final AnimationTimer timer;
     private final Canvas canvas;
     private final ImageView background;
-    private final List<Particle> particles = new ArrayList<Particle>();
+    private final List<Particle> particles = new ArrayList<>();
     private final Paint[] colors;
     private int countDownTillNextFirework = 40;
 
@@ -72,7 +74,7 @@ public class SanFranciscoFireworks extends Pane {
                     new Stop(1, Color.hsb(h, 1, 1, 0)));
         }
         // create canvas
-        canvas = new Canvas(1024, 500);
+        canvas = new Canvas(IMAGE_WIDTH, IMAGE_HEIGHT);
 
         canvas.setBlendMode(BlendMode.ADD);
         canvas.setEffect(new Reflection(0, 0.4, 0.15, 0));
@@ -86,7 +88,7 @@ public class SanFranciscoFireworks extends Pane {
                 GraphicsContext gc = canvas.getGraphicsContext2D();
                 // clear area with transparent black
                 gc.setFill(Color.rgb(0, 0, 0, 0.2));
-                gc.fillRect(0, 0, 1024, 708);
+                gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
                 // draw fireworks
                 drawFireworks(gc);
                 // countdown to launching the next firework
@@ -112,13 +114,11 @@ public class SanFranciscoFireworks extends Pane {
      */
     @Override
     protected void layoutChildren() {
-        // final double w = 480.0;
-        // final double h = 360.0;
         final double w = getWidth();
         final double h = getHeight();
-        final double scale = Math.min(w / 1024d, h / 708d);
-        final int width = (int) (1024 * scale);
-        final int height = (int) (708 * scale);
+        final double scale = Math.min(w / IMAGE_WIDTH, h / IMAGE_HEIGHT);
+        final int width = (int) (IMAGE_WIDTH * scale);
+        final int height = (int) (IMAGE_HEIGHT * scale);
         final int x = (int) ((w - width) / 2);
         final int y = (int) ((h - height) / 2);
         background.relocate(x, y);
@@ -131,7 +131,7 @@ public class SanFranciscoFireworks extends Pane {
 
     private void drawFireworks(GraphicsContext gc) {
         Iterator<Particle> iter = particles.iterator();
-        List<Particle> newParticles = new ArrayList<Particle>();
+        List<Particle> newParticles = new ArrayList<>();
         while (iter.hasNext()) {
             Particle firework = iter.next();
             // if the update returns true then particle has expired

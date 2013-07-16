@@ -28,13 +28,13 @@
 #include "TextCodecMac.h"
 
 #include "CharsetData.h"
-#include "PlatformString.h"
 #include "ThreadGlobalData.h"
 #include <wtf/Assertions.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 using namespace std;
@@ -140,7 +140,7 @@ OSStatus TextCodecMac::decode(const unsigned char* inputBuffer, int inputBufferL
         // Finish converting a partial character that's in our buffer.
         
         // First, fill the partial character buffer with as many bytes as are available.
-        ASSERT(m_numBufferedBytes < sizeof(m_bufferedBytes));
+        ASSERT_WITH_SECURITY_IMPLICATION(m_numBufferedBytes < sizeof(m_bufferedBytes));
         const int spaceInBuffer = sizeof(m_bufferedBytes) - m_numBufferedBytes;
         const int bytesToPutInBuffer = min(spaceInBuffer, inputBufferLength);
         ASSERT(bytesToPutInBuffer != 0);
@@ -284,7 +284,7 @@ CString TextCodecMac::encode(const UChar* characters, size_t length, Unencodable
     // Encoding will change the yen sign back into a backslash.
     String copy(characters, length);
     copy.replace('\\', m_backslashAsCurrencySymbol);
-    RetainPtr<CFStringRef> cfs(AdoptCF, copy.createCFString());
+    RetainPtr<CFStringRef> cfs = copy.createCFString();
 
     CFIndex startPos = 0;
     CFIndex charactersLeft = CFStringGetLength(cfs.get());

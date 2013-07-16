@@ -25,9 +25,11 @@
 #ifndef TreeScopeAdopter_h
 #define TreeScopeAdopter_h
 
-#include "Element.h"
+#include "Node.h"
 
 namespace WebCore {
+
+class TreeScope;
 
 class TreeScopeAdopter {
 public:
@@ -43,6 +45,7 @@ public:
 #endif
 
 private:
+    void updateTreeScope(Node*) const;
     void moveTreeToNewScope(Node*) const;
     void moveTreeToNewDocument(Node*, Document* oldDocument, Document* newDocument) const;
     void moveNodeToNewDocument(Node*, Document* oldDocument, Document* newDocument) const;

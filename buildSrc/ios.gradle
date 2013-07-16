@@ -25,6 +25,12 @@
 
 ext.IOS = [:]
 
+if (BUILD_CLOSED) {
+    fetchExternalTools('IOS', 
+      ["ios-libs-05.tgz"], 
+      rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
+}
+
 // TODO Check for presence of iOS tools
 IOS.canBuild = IS_MAC
 if (!IOS.canBuild) return;
@@ -40,6 +46,11 @@ defineProperty("USE_LIPO", "false")
 defineProperty("GENERATE_SYMBOLS", "false")
 if (USE_LIPO instanceof String) IOS.useLipo = Boolean.parseBoolean(USE_LIPO)
 if (GENERATE_SYMBOLS instanceof String) IOS.generateSymbols = Boolean.parseBoolean(GENERATE_SYMBOLS)
+
+IOS.generateSymbolsExcludes = [
+    "libprism-sw.a",
+    "libdecora-sse-armv7.a"
+]
 
 defineProperty("IOS_VERSION", "6.1")
 
@@ -102,6 +113,16 @@ def ccFlags = [
 
 def compiler = "clang"
 def linker = "libtool"
+
+IOS.javafxPlatformProperties ="""javafx.platform=ios
+ios.jfxmedia.platforms=IOSPlatform
+ios.glass.platform=ios
+ios.prism.allowhidpi=false
+ios.prism.device=true
+ios.prism.mintexturesize=16
+ios.prism.verbose=true
+ios.prism.static.libraries=true
+ios.prism.useNativeIIO=false"""
 
 IOS.glass = [:]
 IOS.glass.variants = ["arm", "x86"];

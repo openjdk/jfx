@@ -31,6 +31,7 @@
 #include "config.h"
 #include "PlatformScreen.h"
 
+#include "FloatRect.h"
 #include "GtkVersioning.h"
 #include "HostWindow.h"
 #include "NotImplemented.h"
@@ -58,18 +59,6 @@ static GdkVisual* getVisual(Widget* widget)
     if (!gtk_widget_get_realized(container))
         container = getToplevel(container);
     return container ? gdk_window_get_visual(gtk_widget_get_window(container)) : 0;
-}
-
-int screenHorizontalDPI(Widget* widget)
-{
-    notImplemented();
-    return 0;
-}
-
-int screenVerticalDPI(Widget* widget)
-{
-    notImplemented();
-    return 0;
 }
 
 int screenDepth(Widget* widget)

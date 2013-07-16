@@ -33,6 +33,9 @@
 #elif PLATFORM(GTK)
 #include <gdk/gdk.h>
 #include <wtf/Vector.h>
+#elif PLATFORM(EFL)
+#include <WebKit2/EWebKit2.h>
+#include <wtf/Deque.h>
 #endif
 
 namespace WTR {
@@ -41,16 +44,20 @@ class TestController;
 
 #if PLATFORM(GTK)
 struct WTREventQueueItem;
+#elif PLATFORM(EFL)
+struct WTREvent;
 #endif
 
 class EventSenderProxy {
 public:
-    EventSenderProxy(TestController*);
+    explicit EventSenderProxy(TestController*);
+    ~EventSenderProxy();
 
     void mouseDown(unsigned button, WKEventModifiers);
     void mouseUp(unsigned button, WKEventModifiers);
     void mouseMoveTo(double x, double y);
     void mouseScrollBy(int x, int y);
+    void continuousMouseScrollBy(int x, int y, bool paged);
 
     void leapForward(int milliseconds);
 
@@ -77,7 +84,7 @@ private:
     double currentEventTime() { return m_time; }
     void updateClickCountForButton(int button);
 
-#if PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(QT) || PLATFORM(GTK) || PLATFORM(EFL)
     void replaySavedEvents();
 #endif
 
@@ -89,6 +96,12 @@ private:
 #elif PLATFORM(GTK)
     void sendOrQueueEvent(GdkEvent*);
     GdkEvent* createMouseButtonEvent(GdkEventType, unsigned button, WKEventModifiers);
+#elif PLATFORM(EFL)
+    void sendOrQueueEvent(const WTREvent&);
+    void dispatchEvent(const WTREvent&);
+#if ENABLE(TOUCH_EVENTS)
+    void sendTouchEvent(Ewk_Touch_Event_Type);
+#endif
 #endif
 
     double m_time;
@@ -111,6 +124,12 @@ private:
     Qt::KeyboardModifiers m_touchModifiers;
     QPoint m_touchPointRadius;
     bool m_touchActive;
+#endif
+#elif PLATFORM(EFL)
+    Deque<WTREvent> m_eventQueue;
+    WKEventMouseButton m_mouseButton;
+#if ENABLE(TOUCH_EVENTS)
+    Eina_List* m_touchPoints;
 #endif
 #endif
 };

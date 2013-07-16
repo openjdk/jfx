@@ -28,6 +28,7 @@
 
 #include "Event.h"
 #include "ScriptValue.h"
+#include "SerializedScriptValue.h"
 
 namespace WebCore {
 
@@ -56,12 +57,14 @@ public:
     virtual const AtomicString& interfaceName() const;
 
     const ScriptValue& detail() const { return m_detail; }
+    PassRefPtr<SerializedScriptValue> serializedScriptValue() { return m_serializedScriptValue; }
 
 private:
     CustomEvent();
     CustomEvent(const AtomicString& type, const CustomEventInit& initializer);
 
     ScriptValue m_detail;
+    RefPtr<SerializedScriptValue> m_serializedScriptValue;
 };
 
 } // namespace WebCore

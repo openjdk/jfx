@@ -1,0 +1,7 @@
+<atlassian-ide-plugin>
+  <project-configuration id="1">
+    <servers id="2" />
+    <default-crucible-server id="3">939232b1-9eb9-4c88-a44d-3abafd865a34</default-crucible-server>
+    <default-jira-server id="4">d42c85b0-998b-4a94-ad2b-02b0c042c35e</default-jira-server>
+  </project-configuration>
+</atlassian-ide-plugin>

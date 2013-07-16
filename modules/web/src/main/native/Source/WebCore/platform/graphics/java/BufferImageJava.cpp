@@ -51,10 +51,10 @@ void BufferImage::drawPattern(GraphicsContext *gc, const FloatRect& srcRect, con
 }
 
 void BufferImage::draw(GraphicsContext* gc, const FloatRect& dstRect,
-                       const FloatRect& srcRect, ColorSpace cs, CompositeOperator co)
+                       const FloatRect& srcRect, ColorSpace cs, CompositeOperator co, BlendMode bm)
 {
     flushImageRQ(gc);
-    Image::drawImage(gc, dstRect, srcRect, cs, co);
+    Image::drawImage(gc, dstRect, srcRect, cs, co, bm);
 }
 
 

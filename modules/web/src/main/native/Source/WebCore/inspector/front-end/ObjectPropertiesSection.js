@@ -27,10 +27,10 @@
 /**
  * @constructor
  * @extends {WebInspector.PropertiesSection}
- * @param {WebInspector.RemoteObject=} object
- * @param {string=} title
+ * @param {WebInspector.RemoteObject} object
+ * @param {?string|Element=} title
  * @param {string=} subtitle
- * @param {string=} emptyPlaceholder
+ * @param {?string=} emptyPlaceholder
  * @param {boolean=} ignoreHasOwnProperty
  * @param {Array.<WebInspector.RemoteObjectProperty>=} extraProperties
  * @param {function(new:TreeElement, WebInspector.RemoteObjectProperty)=} treeElementConstructor
@@ -45,57 +45,22 @@ WebInspector.ObjectPropertiesSection = function(object, title, subtitle, emptyPl
     this.editable = true;
     this.skipProto = false;
 
-    WebInspector.PropertiesSection.call(this, title, subtitle);
+    WebInspector.PropertiesSection.call(this, title || "", subtitle);
 }
 
 WebInspector.ObjectPropertiesSection._arrayLoadThreshold = 100;
 
-
-/**
- * @interface
- */
-WebInspector.ObjectPropertiesSection.ContextMenuProvider = function()
-{
-}
-
-WebInspector.ObjectPropertiesSection.ContextMenuProvider.prototype = {
-    /**
-     * @param {WebInspector.ObjectPropertiesSection} section
-     * @param {WebInspector.ContextMenu} contextMenu
-     */
-    populateContextMenu: function(section, contextMenu)
-    {
-    }
-}
-
-
-/**
- * @type {Array.<WebInspector.ObjectPropertiesSection.ContextMenuProvider>}
- */
-WebInspector.ObjectPropertiesSection._contextMenuProviers = [];
-
-/**
- * @param {WebInspector.ObjectPropertiesSection.ContextMenuProvider} provider
- */
-WebInspector.ObjectPropertiesSection.addContextMenuProvider = function(provider)
-{
-    WebInspector.ObjectPropertiesSection._contextMenuProviers.push(provider);
-}
-
 WebInspector.ObjectPropertiesSection.prototype = {
     enableContextMenu: function()
     {
-        this.element.addEventListener("contextmenu", this._contextMenuEventFired.bind(this), true);
+        this.element.addEventListener("contextmenu", this._contextMenuEventFired.bind(this), false);
     },
 
     _contextMenuEventFired: function(event)
     {
-        var contextMenu = new WebInspector.ContextMenu();
-        var providers = WebInspector.ObjectPropertiesSection._contextMenuProviers;
-        for (var i = 0; i < providers.length; i++)
-            providers[i].populateContextMenu(this, contextMenu);
-        if (!contextMenu.isEmpty())
-            contextMenu.show(event);
+        var contextMenu = new WebInspector.ContextMenu(event);
+        contextMenu.appendApplicableItems(this.object);
+        contextMenu.show();
     },
 
     onpopulate: function()
@@ -111,11 +76,15 @@ WebInspector.ObjectPropertiesSection.prototype = {
             return;
         }
 
-        function callback(properties)
+        /**
+         * @param {Array.<WebInspector.RemoteObjectProperty>} properties
+         * @param {Array.<WebInspector.RemoteObjectProperty>=} internalProperties
+         */
+        function callback(properties, internalProperties)
         {
             if (!properties)
                 return;
-            this.updateProperties(properties);
+            this.updateProperties(properties, internalProperties);
         }
 
         if (this.ignoreHasOwnProperty)
@@ -124,7 +93,7 @@ WebInspector.ObjectPropertiesSection.prototype = {
             this.object.getOwnProperties(callback.bind(this));
     },
 
-    updateProperties: function(properties, rootTreeElementConstructor, rootPropertyComparer)
+    updateProperties: function(properties, internalProperties, rootTreeElementConstructor, rootPropertyComparer)
     {
         if (!rootTreeElementConstructor)
             rootTreeElementConstructor = this.treeElementConstructor;
@@ -132,24 +101,19 @@ WebInspector.ObjectPropertiesSection.prototype = {
         if (!rootPropertyComparer)
             rootPropertyComparer = WebInspector.ObjectPropertiesSection.CompareProperties;
 
-        if (this.extraProperties)
+        if (this.extraProperties) {
             for (var i = 0; i < this.extraProperties.length; ++i)
                 properties.push(this.extraProperties[i]);
-
-        properties.sort(rootPropertyComparer);
+        }
 
         this.propertiesTreeOutline.removeChildren();
 
-        for (var i = 0; i < properties.length; ++i) {
-            if (this.skipProto && properties[i].name === "__proto__")
-                continue;
-            properties[i].parentObject = this.object;
-        }
+        WebInspector.ObjectPropertyTreeElement.populateWithProperties(this.propertiesTreeOutline,
+            properties, internalProperties,
+            rootTreeElementConstructor, rootPropertyComparer,
+            this.skipProto, this.object);
 
         this.propertiesForTest = properties;
-
-        for (var i = 0; i < properties.length; ++i)
-            this.propertiesTreeOutline.appendChild(new rootTreeElementConstructor(properties[i]));
 
         if (!this.propertiesTreeOutline.children.length) {
             var title = document.createElement("div");
@@ -158,10 +122,10 @@ WebInspector.ObjectPropertiesSection.prototype = {
             var infoElement = new TreeElement(title, null, false);
             this.propertiesTreeOutline.appendChild(infoElement);
         }
-    }
-}
+    },
 
-WebInspector.ObjectPropertiesSection.prototype.__proto__ = WebInspector.PropertiesSection.prototype;
+    __proto__: WebInspector.PropertiesSection.prototype
+    }
 
 WebInspector.ObjectPropertiesSection.CompareProperties = function(propertyA, propertyB)
 {
@@ -226,31 +190,7 @@ WebInspector.ObjectPropertyTreeElement = function(property)
 WebInspector.ObjectPropertyTreeElement.prototype = {
     onpopulate: function()
     {
-        if (this.children.length && !this.shouldRefreshChildren)
-            return;
-
-        if (this.property.value.arrayLength() > WebInspector.ObjectPropertiesSection._arrayLoadThreshold) {
-            this.removeChildren();
-            WebInspector.ArrayGroupingTreeElement._populateArray(this, this.property.value, 0, this.property.value.arrayLength() - 1);
-            return;
-        }
-
-        function callback(properties)
-        {
-            this.removeChildren();
-            if (!properties)
-                return;
-
-            properties.sort(WebInspector.ObjectPropertiesSection.CompareProperties);
-            for (var i = 0; i < properties.length; ++i) {
-                if (this.treeOutline.section.skipProto && properties[i].name === "__proto__")
-                    continue;
-                properties[i].parentObject = this.property.value;
-                this.appendChild(new this.treeOutline.section.treeElementConstructor(properties[i]));
-            }
-        }
-
-        this.property.value.getOwnProperties(callback.bind(this));
+        return WebInspector.ObjectPropertyTreeElement.populate(this, this.property.value);
     },
 
     ondblclick: function(event)
@@ -289,11 +229,8 @@ WebInspector.ObjectPropertyTreeElement.prototype = {
         } else if (this.property.value.type === "function" && typeof description === "string") {
             this.valueElement.textContent = /.*/.exec(description)[0].replace(/ +$/g, "");
             this.valueElement._originalTextContent = description;
-        } else
+        } else if (this.property.value.type !== "object" || this.property.value.subtype !== "node") 
             this.valueElement.textContent = description;
-
-        if (this.property.value.type === "function")
-            this.valueElement.addEventListener("contextmenu", this._functionContextMenuEventFired.bind(this), false);
 
         if (this.property.wasThrown)
             this.valueElement.addStyleClass("error");
@@ -301,8 +238,14 @@ WebInspector.ObjectPropertyTreeElement.prototype = {
             this.valueElement.addStyleClass("console-formatted-" + this.property.value.subtype);
         else if (this.property.value.type)
             this.valueElement.addStyleClass("console-formatted-" + this.property.value.type);
-        if (this.property.value.subtype === "node")
-            this.valueElement.addEventListener("contextmenu", this._contextMenuEventFired.bind(this), false);
+
+        this.valueElement.addEventListener("contextmenu", this._contextMenuFired.bind(this, this.property.value), false);
+        if (this.property.value.type === "object" && this.property.value.subtype === "node" && this.property.value.description) {
+            WebInspector.DOMPresentationUtils.createSpansForNodeTitle(this.valueElement, this.property.value.description);
+            this.valueElement.addEventListener("mousemove", this._mouseMove.bind(this, this.property.value), false);
+            this.valueElement.addEventListener("mouseout", this._mouseOut.bind(this, this.property.value), false);
+        } else
+            this.valueElement.title = description || "";
 
         this.listItemElement.removeChildren();
 
@@ -312,43 +255,29 @@ WebInspector.ObjectPropertyTreeElement.prototype = {
         this.hasChildren = this.property.value.hasChildren && !this.property.wasThrown;
     },
 
-    _contextMenuEventFired: function(event)
+    _contextMenuFired: function(value, event)
     {
-        function selectNode(nodeId)
-        {
-            if (nodeId)
-                WebInspector.domAgent.inspectElement(nodeId);
-        }
-
-        function revealElement()
-        {
-            this.property.value.pushNodeToFrontend(selectNode);
-        }
-
-        var contextMenu = new WebInspector.ContextMenu();
-        contextMenu.appendItem(WebInspector.UIString("Reveal in Elements Panel"), revealElement.bind(this));
-        contextMenu.show(event);
+        var contextMenu = new WebInspector.ContextMenu(event);
+        this.populateContextMenu(contextMenu);
+        contextMenu.appendApplicableItems(value);
+        contextMenu.show();
     },
 
-    _functionContextMenuEventFired: function(event)
+    /**
+     * @param {WebInspector.ContextMenu} contextMenu
+     */
+    populateContextMenu: function(contextMenu)
     {
-        function didGetDetails(error, response)
-        {
-            if (error) {
-                console.error(error);
-                return;
-            }
-            WebInspector.panels.scripts.showFunctionDefinition(response.location);
-        }
+    },
 
-        function revealFunction()
+    _mouseMove: function(event)
         {
-            DebuggerAgent.getFunctionDetails(this.property.value.objectId, didGetDetails.bind(this));
-        }
+        this.property.value.highlightAsDOMNode();
+    },
 
-        var contextMenu = new WebInspector.ContextMenu();
-        contextMenu.appendItem(WebInspector.UIString("Show function definition"), revealFunction.bind(this));
-        contextMenu.show(event);
+    _mouseOut: function(event)
+        {
+        this.property.value.hideDOMNodeHighlight();
     },
 
     updateSiblings: function()
@@ -402,6 +331,14 @@ WebInspector.ObjectPropertyTreeElement.prototype = {
         var proxyElement = this._prompt.attachAndStartEditing(elementToEdit, blurListener.bind(this));
         window.getSelection().setBaseAndExtent(elementToEdit, 0, elementToEdit, 1);
         proxyElement.addEventListener("keydown", this._promptKeyDown.bind(this, context), false);
+    },
+
+    /**
+     * @return {boolean}
+     */
+    isEditing: function()
+    {
+        return !!this._prompt;
     },
 
     editingEnded: function(context)
@@ -463,10 +400,221 @@ WebInspector.ObjectPropertyTreeElement.prototype = {
             }
         };
         this.property.parentObject.setPropertyValue(this.property.name, expression.trim(), callback.bind(this));
+    },
+
+    propertyPath: function()
+    {
+        if ("_cachedPropertyPath" in this)
+            return this._cachedPropertyPath;
+
+        var current = this;
+        var result;
+
+        do {
+            if (current.property) {
+                if (result)
+                    result = current.property.name + "." + result;
+                else
+                    result = current.property.name;
+    }
+            current = current.parent;
+        } while (current && !current.root);
+
+        this._cachedPropertyPath = result;
+        return result;
+    },
+
+
+    __proto__: TreeElement.prototype
+}
+
+/**
+ * @param {TreeElement} treeElement
+ * @param {WebInspector.RemoteObject} value
+ */
+WebInspector.ObjectPropertyTreeElement.populate = function(treeElement, value) {
+    if (treeElement.children.length && !treeElement.shouldRefreshChildren)
+        return;
+
+    if (value.arrayLength() > WebInspector.ObjectPropertiesSection._arrayLoadThreshold) {
+        treeElement.removeChildren();
+        WebInspector.ArrayGroupingTreeElement._populateArray(treeElement, value, 0, value.arrayLength() - 1);
+        return;
+    }
+
+    /**
+     * @param {Array.<WebInspector.RemoteObjectProperty>} properties
+     * @param {Array.<WebInspector.RemoteObjectProperty>=} internalProperties
+     */
+    function callback(properties, internalProperties)
+    {
+        treeElement.removeChildren();
+        if (!properties)
+            return;
+        if (!internalProperties)
+            internalProperties = [];
+
+        WebInspector.ObjectPropertyTreeElement.populateWithProperties(treeElement, properties, internalProperties,
+            treeElement.treeOutline.section.treeElementConstructor, WebInspector.ObjectPropertiesSection.CompareProperties,
+            treeElement.treeOutline.section.skipProto, value);
+    }
+
+    value.getOwnProperties(callback);
+}
+
+/**
+ * @param {!TreeElement|!TreeOutline} treeElement
+ * @param {Array.<!WebInspector.RemoteObjectProperty>} properties
+ * @param {?Array.<!WebInspector.RemoteObjectProperty>} internalProperties
+ * @param {function(new:TreeElement, WebInspector.RemoteObjectProperty)} treeElementConstructor
+ * @param {function (WebInspector.RemoteObjectProperty, WebInspector.RemoteObjectProperty): number} comparator
+ * @param {boolean} skipProto
+ * @param {?WebInspector.RemoteObject} value
+ */
+WebInspector.ObjectPropertyTreeElement.populateWithProperties = function(treeElement, properties, internalProperties, treeElementConstructor, comparator, skipProto, value) {
+    properties.sort(comparator);
+    
+    for (var i = 0; i < properties.length; ++i) {
+        if (skipProto && properties[i].name === "__proto__")
+            continue;
+        properties[i].parentObject = value;
+        treeElement.appendChild(new treeElementConstructor(properties[i]));
+    }
+    if (value && value.type === "function") {
+        // Whether function has TargetFunction internal property.
+        // This is a simple way to tell that the function is actually a bound function (we are not told).
+        // Bound function never has inner scope and doesn't need corresponding UI node.   
+        var hasTargetFunction = false;
+
+        if (internalProperties) {
+            for (var i = 0; i < internalProperties.length; i++) {
+                if (internalProperties[i].name == "[[TargetFunction]]") {
+                    hasTargetFunction = true;
+                    break;
+                }
+            }
+        }
+        if (!hasTargetFunction)
+            treeElement.appendChild(new WebInspector.FunctionScopeMainTreeElement(value));
+    }
+    if (internalProperties) {
+        for (var i = 0; i < internalProperties.length; i++) {
+            internalProperties[i].parentObject = value;
+            treeElement.appendChild(new treeElementConstructor(internalProperties[i]));
+        } 
     }
 }
 
-WebInspector.ObjectPropertyTreeElement.prototype.__proto__ = TreeElement.prototype;
+/**
+ * @constructor
+ * @extends {TreeElement}
+ * @param {WebInspector.RemoteObject} remoteObject
+ */
+WebInspector.FunctionScopeMainTreeElement = function(remoteObject)
+{
+    TreeElement.call(this, "<function scope>", null, false);
+    this.toggleOnClick = true;
+    this.selectable = false;
+    this._remoteObject = remoteObject;
+    this.hasChildren = true;
+}
+
+WebInspector.FunctionScopeMainTreeElement.prototype = {
+    onpopulate: function()
+    {
+        if (this.children.length && !this.shouldRefreshChildren)
+            return;
+
+        function didGetDetails(error, response)
+        {
+            if (error) {
+                console.error(error);
+                return;
+            }
+            this.removeChildren();
+
+            var scopeChain = response.scopeChain;
+            if (!scopeChain)
+                return;
+            for (var i = 0; i < scopeChain.length; ++i) {
+                var scope = scopeChain[i];
+                var title = null;
+                var isTrueObject;
+
+                switch (scope.type) {
+                    case "local":
+                        // Not really expecting this scope type here.
+                        title = WebInspector.UIString("Local");
+                        isTrueObject = false;
+                        break;
+                    case "closure":
+                        title = WebInspector.UIString("Closure");
+                        isTrueObject = false;
+                        break;
+                    case "catch":
+                        title = WebInspector.UIString("Catch");
+                        isTrueObject = false;
+                        break;
+                    case "with":
+                        title = WebInspector.UIString("With Block");
+                        isTrueObject = true;
+                        break;
+                    case "global":
+                        title = WebInspector.UIString("Global");
+                        isTrueObject = true;
+                        break;
+                    default:
+                        console.error("Unknown scope type: " + scope.type);
+                        continue;
+                }
+                
+                var scopeRef;
+                if (isTrueObject)
+                    scopeRef = undefined;
+                else 
+                    scopeRef = new WebInspector.ScopeRef(i, undefined, this._remoteObject.objectId);
+
+                var remoteObject = WebInspector.RemoteObject.fromScopePayload(scope.object, scopeRef);
+                if (isTrueObject) {
+                    var property = WebInspector.RemoteObjectProperty.fromScopeValue(title, remoteObject);
+                    property.parentObject = null;
+                    this.appendChild(new this.treeOutline.section.treeElementConstructor(property));
+                } else {
+                    var scopeTreeElement = new WebInspector.ScopeTreeElement(title, null, remoteObject);
+                    this.appendChild(scopeTreeElement);
+                }
+            }
+
+        }
+        DebuggerAgent.getFunctionDetails(this._remoteObject.objectId, didGetDetails.bind(this));
+    },
+
+    __proto__: TreeElement.prototype
+}
+
+/**
+ * @constructor
+ * @extends {TreeElement}
+ * @param {WebInspector.RemoteObject} remoteObject
+ */
+WebInspector.ScopeTreeElement = function(title, subtitle, remoteObject)
+{
+    // TODO: use subtitle parameter.
+    TreeElement.call(this, title, null, false);
+    this.toggleOnClick = true;
+    this.selectable = false;
+    this._remoteObject = remoteObject;
+    this.hasChildren = true;
+}
+
+WebInspector.ScopeTreeElement.prototype = {
+    onpopulate: function()
+    {
+        return WebInspector.ObjectPropertyTreeElement.populate(this, this._remoteObject);
+    },
+
+    __proto__: TreeElement.prototype
+}
 
 /**
  * @constructor
@@ -487,7 +635,8 @@ WebInspector.ArrayGroupingTreeElement = function(object, fromIndex, toIndex, pro
     this._populated = false;
 }
 
-WebInspector.ArrayGroupingTreeElement._bucketThreshold = 20;
+WebInspector.ArrayGroupingTreeElement._bucketThreshold = 100;
+WebInspector.ArrayGroupingTreeElement._sparseIterationThreshold = 250000;
 
 /**
  * @param {TreeElement|TreeOutline} treeElement
@@ -509,41 +658,55 @@ WebInspector.ArrayGroupingTreeElement._populateArray = function(treeElement, obj
  */
 WebInspector.ArrayGroupingTreeElement._populateRanges = function(treeElement, object, fromIndex, toIndex, topLevel)
 {
-    object.callFunctionJSON(packRanges, [{value: fromIndex}, {value: toIndex}, {value: WebInspector.ArrayGroupingTreeElement._bucketThreshold}], callback.bind(this));
+    object.callFunctionJSON(packRanges, [{value: fromIndex}, {value: toIndex}, {value: WebInspector.ArrayGroupingTreeElement._bucketThreshold}, {value: WebInspector.ArrayGroupingTreeElement._sparseIterationThreshold}], callback.bind(this));
 
     /**
      * @this {Object}
      * @param {number=} fromIndex // must declare optional
      * @param {number=} toIndex // must declare optional
      * @param {number=} bucketThreshold // must declare optional
+     * @param {number=} sparseIterationThreshold // must declare optional
      */
-    function packRanges(fromIndex, toIndex, bucketThreshold)
+    function packRanges(fromIndex, toIndex, bucketThreshold, sparseIterationThreshold)
     {
-        var count = 0;
-        for (var i = fromIndex; i <= toIndex; ++i) {
-            var value = this[i];
-            if (typeof value !== "undefined")
-                ++count;
+        var ownPropertyNames = null;
+        function doLoop(iterationCallback)
+        {
+            if (toIndex - fromIndex < sparseIterationThreshold) {
+                for (var i = fromIndex; i <= toIndex; ++i) {
+                    if (i in this)
+                        iterationCallback(i);
+                }
+            } else {
+                ownPropertyNames = ownPropertyNames || Object.getOwnPropertyNames(this);
+                for (var i = 0; i < ownPropertyNames.length; ++i) {
+                    var name = ownPropertyNames[i];
+                    var index = name >>> 0;
+                    if (String(index) === name && fromIndex <= index && index <= toIndex)
+                        iterationCallback(index);
+                }
+            }
         }
 
-        var bucketSize;
-        if (count < bucketThreshold)
-            bucketSize = count;
-        else {
-            bucketSize = Math.ceil(count / bucketThreshold);
-            if (bucketSize < bucketThreshold)
-                bucketSize = Math.floor(Math.sqrt(count));
+        var count = 0;
+        function countIterationCallback()
+        {
+                ++count;
         }
+        doLoop.call(this, countIterationCallback);
+
+        var bucketSize = count;
+        if (count <= bucketThreshold)
+            bucketSize = count;
+        else
+            bucketSize = Math.pow(bucketThreshold, Math.ceil(Math.log(count) / Math.log(bucketThreshold)) - 1);
 
         var ranges = [];
         count = 0;
         var groupStart = -1;
         var groupEnd = 0;
-        for (var i = fromIndex; i <= toIndex; ++i) {
-            var value = this[i];
-            if (typeof value === "undefined")
-                continue;
-
+        function loopIterationCallback(i)
+        {
             if (groupStart === -1)
                 groupStart = i;
 
@@ -554,6 +717,7 @@ WebInspector.ArrayGroupingTreeElement._populateRanges = function(treeElement, ob
                 groupStart = -1;
             }
         }
+        doLoop.call(this, loopIterationCallback);
 
         if (count > 0)
             ranges.push([groupStart, groupEnd, count]);
@@ -588,31 +752,42 @@ WebInspector.ArrayGroupingTreeElement._populateRanges = function(treeElement, ob
  */
 WebInspector.ArrayGroupingTreeElement._populateAsFragment = function(treeElement, object, fromIndex, toIndex)
 {
-    object.callFunction(buildArrayFragment, [{value: fromIndex}, {value: toIndex}], processArrayFragment.bind(this));
+    object.callFunction(buildArrayFragment, [{value: fromIndex}, {value: toIndex}, {value: WebInspector.ArrayGroupingTreeElement._sparseIterationThreshold}], processArrayFragment.bind(this));
 
     /**
      * @this {Object}
      * @param {number=} fromIndex // must declare optional
      * @param {number=} toIndex // must declare optional
+     * @param {number=} sparseIterationThreshold // must declare optional
      */
-    function buildArrayFragment(fromIndex, toIndex)
+    function buildArrayFragment(fromIndex, toIndex, sparseIterationThreshold)
     {
         var result = Object.create(null);
+        if (toIndex - fromIndex < sparseIterationThreshold) {
         for (var i = fromIndex; i <= toIndex; ++i) {
-            var value = this[i];
-            if (typeof value !== "undefined")
-                result[i] = value;
+                if (i in this)
+                    result[i] = this[i];
+            }
+        } else {
+            var ownPropertyNames = Object.getOwnPropertyNames(this);
+            for (var i = 0; i < ownPropertyNames.length; ++i) {
+                var name = ownPropertyNames[i];
+                var index = name >>> 0;
+                if (String(index) === name && fromIndex <= index && index <= toIndex)
+                    result[index] = this[index];
+            }
         }
         return result;
     }
 
+    /** @this {WebInspector.ArrayGroupingTreeElement} */
     function processArrayFragment(arrayFragment)
     {
         arrayFragment.getAllProperties(processProperties.bind(this));
     }
 
     /** @this {WebInspector.ArrayGroupingTreeElement} */
-    function processProperties(properties)
+    function processProperties(properties, internalProperties)
     {
         if (!properties)
             return;
@@ -642,7 +817,8 @@ WebInspector.ArrayGroupingTreeElement._populateNonIndexProperties = function(tre
         var names = Object.getOwnPropertyNames(this);
         for (var i = 0; i < names.length; ++i) {
             var name = names[i];
-            if (!isNaN(name))
+            // Array index check according to the ES5-15.4.
+            if (String(name >>> 0) === name && name >>> 0 !== 0xffffffff)
                 continue;
             var descriptor = Object.getOwnPropertyDescriptor(this, name);
             if (descriptor)
@@ -657,7 +833,7 @@ WebInspector.ArrayGroupingTreeElement._populateNonIndexProperties = function(tre
     }
 
     /** @this {WebInspector.ArrayGroupingTreeElement} */
-    function processProperties(properties)
+    function processProperties(properties, internalProperties)
     {
         if (!properties)
             return;
@@ -690,10 +866,10 @@ WebInspector.ArrayGroupingTreeElement.prototype = {
     onattach: function()
     {
         this.listItemElement.addStyleClass("name");
-    }
-}
+    },
 
-WebInspector.ArrayGroupingTreeElement.prototype.__proto__ = TreeElement.prototype;
+    __proto__: TreeElement.prototype
+    }
 
 /**
  * @constructor
@@ -702,11 +878,12 @@ WebInspector.ArrayGroupingTreeElement.prototype.__proto__ = TreeElement.prototyp
  */
 WebInspector.ObjectPropertyPrompt = function(commitHandler, cancelHandler, renderAsBlock)
 {
-    const ExpressionStopCharacters = " =:[({;,!+-*/&|^<>."; // Same as in ConsoleView.js + "."
-    WebInspector.TextPrompt.call(this, WebInspector.consoleView.completionsForTextPrompt.bind(WebInspector.consoleView), ExpressionStopCharacters);
+    WebInspector.TextPrompt.call(this, WebInspector.runtimeModel.completionsForTextPrompt.bind(WebInspector.runtimeModel));
     this.setSuggestBoxEnabled("generic-suggest");
     if (renderAsBlock)
         this.renderAsBlock();
 }
 
-WebInspector.ObjectPropertyPrompt.prototype.__proto__ = WebInspector.TextPrompt.prototype;
+WebInspector.ObjectPropertyPrompt.prototype = {
+    __proto__: WebInspector.TextPrompt.prototype
+}

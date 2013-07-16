@@ -35,8 +35,6 @@ namespace WebCore {
 
 using namespace MathMLNames;
     
-static const double gOverSpacingAdjustment = 0.5;
-    
 RenderMathMLUnderOver::RenderMathMLUnderOver(Element* element)
     : RenderMathMLBlock(element)
 {
@@ -51,227 +49,22 @@ RenderMathMLUnderOver::RenderMathMLUnderOver(Element* element)
     }
 }
 
-RenderBoxModelObject* RenderMathMLUnderOver::base() const
-{
-    RenderObject* baseWrapper = firstChild();
-    if ((m_kind == Over || m_kind == UnderOver) && baseWrapper)
-        baseWrapper = baseWrapper->nextSibling();
-    if (!baseWrapper)
-        return 0;
-    RenderObject* base = baseWrapper->firstChild();
-    if (!base || !base->isBoxModelObject())
-        return 0;
-    return toRenderBoxModelObject(base);
-}
-
-void RenderMathMLUnderOver::addChild(RenderObject* child, RenderObject* beforeChild)
-{    
-    RenderMathMLBlock* row = createAnonymousMathMLBlock();
-    
-    // look through the children for rendered elements counting the blocks so we know what child
-    // we are adding
-    int blocks = 0;
-    RenderObject* current = this->firstChild();
-    while (current) {
-        blocks++;
-        current = current->nextSibling();
-    }
-    
-    switch (blocks) {
-    case 0:
-        // this is the base so just append it
-        RenderBlock::addChild(row, beforeChild);
-        break;
-    case 1:
-        // the under or over
-        row->style()->setTextAlign(CENTER);
-        if (m_kind == Over) {
-            // add the over as first
-            RenderBlock::addChild(row, firstChild());
-        } else {
-            // add the under as last
-            RenderBlock::addChild(row, beforeChild);
-        }
-        break;
-    case 2:
-        // the under or over
-        row->style()->setTextAlign(CENTER);
-        if (m_kind == UnderOver) {
-            // add the over as first
-            RenderBlock::addChild(row, firstChild());
-        } else {
-            // we really shouldn't get here as only munderover should have three children
-            RenderBlock::addChild(row, beforeChild);
-        }
-        break;
-    default:
-        // munderover shouldn't have more than three children. In theory we shouldn't 
-        // get here if the MathML is correctly formed, but that isn't a guarantee.
-        // We will treat this as another under element and they'll get something funky.
-        RenderBlock::addChild(row, beforeChild);
-    }
-    row->addChild(child);    
-}
-
-void RenderMathMLUnderOver::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
-{
-    RenderMathMLBlock::styleDidChange(diff, oldStyle);
-    
-    RenderObject* base = this->base();
-    for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
-        ASSERT(child->isAnonymous() && child->style()->refCount() == 1);
-        if (child->firstChild() != base)
-            child->style()->setTextAlign(CENTER);
-    }
-}
-
 RenderMathMLOperator* RenderMathMLUnderOver::unembellishedOperator()
 {
-    RenderBoxModelObject* base = this->base();
+    RenderObject* base = firstChild();
     if (!base || !base->isRenderMathMLBlock())
         return 0;
     return toRenderMathMLBlock(base)->unembellishedOperator();
 }
 
-inline int getOffsetHeight(RenderObject* obj) 
+int RenderMathMLUnderOver::firstLineBoxBaseline() const
 {
-    if (obj->isBoxModelObject()) {
-        RenderBoxModelObject* box = toRenderBoxModelObject(obj);
-        return box->pixelSnappedOffsetHeight();
-    }
-   
-    return 0;
-}
-
-void RenderMathMLUnderOver::layout() 
-{
-    RenderBlock::layout();
-    RenderObject* over = 0;
-    RenderObject* base = 0;
-    switch (m_kind) {
-    case Over:
-        // We need to calculate the baseline over the over versus the start of the base and 
-        // adjust the placement of the base.
-        over = firstChild();
-        if (over) {
-            // FIXME: descending glyphs intrude into base (e.g. lowercase y over base)
-            // FIXME: bases that ascend higher than the line box intrude into the over
-            if (!over->firstChild() || !over->firstChild()->isBoxModelObject())
-                break;
-            
-            LayoutUnit overSpacing = static_cast<LayoutUnit>(gOverSpacingAdjustment * (getOffsetHeight(over) - toRenderBoxModelObject(over->firstChild())->baselinePosition(AlphabeticBaseline, true, HorizontalLine)));
-            
-            // base row wrapper
-            base = over->nextSibling();
-            if (base) {
-                if (overSpacing > 0) 
-                    base->style()->setMarginTop(Length(-overSpacing, Fixed));
-                else 
-                    base->style()->setMarginTop(Length(0, Fixed));
-            }
-            
-        }
-        break;
-    case Under:
-        // FIXME: Non-ascending glyphs in the under should be moved closer to the base
-
-        // We need to calculate the baseline of the base versus the start of the under block and
-        // adjust the placement of the under block.
-        
-        // base row wrapper
-        base = firstChild();
-        if (base) {
-            int baseHeight = getOffsetHeight(base);
-            // actual base
-            base = base->firstChild();
-            if (!base || !base->isBoxModelObject())
-                break;
-            
-            // FIXME: We need to look at the space between a single maximum height of
-            //        the line boxes and the baseline and squeeze them together
-            LayoutUnit underSpacing = baseHeight - toRenderBoxModelObject(base)->baselinePosition(AlphabeticBaseline, true, HorizontalLine);
-            
-            // adjust the base's intrusion into the under
-            RenderObject* under = lastChild();
-            if (under && underSpacing > 0)
-                under->style()->setMarginTop(Length(-underSpacing, Fixed));
-        }
-        break;
-    case UnderOver:
-        // FIXME: Non-descending glyphs in the over should be moved closer to the base
-        // FIXME: Non-ascending glyphs in the under should be moved closer to the base
-        
-        // We need to calculate the baseline of the over versus the start of the base and 
-        // adjust the placement of the base.
-        
-        over = firstChild();
-        if (over) {
-            // FIXME: descending glyphs intrude into base (e.g. lowercase y over base)
-            // FIXME: bases that ascend higher than the line box intrude into the over
-            if (!over->firstChild() || !over->firstChild()->isBoxModelObject())
-                break;
-            LayoutUnit overSpacing = static_cast<LayoutUnit>(gOverSpacingAdjustment * (getOffsetHeight(over) - toRenderBoxModelObject(over->firstChild())->baselinePosition(AlphabeticBaseline, true, HorizontalLine)));
-            
-            // base row wrapper
-            base = over->nextSibling();
-            
-            if (base) {
-                if (overSpacing > 0)
-                    base->style()->setMarginTop(Length(-overSpacing, Fixed));
-                
-                // We need to calculate the baseline of the base versus the start of the under block and
-                // adjust the placement of the under block.
-                
-                int baseHeight = getOffsetHeight(base);
-                // actual base
-                base = base->firstChild();
-                if (!base || !base->isBoxModelObject())
-                    break;
-
-                // FIXME: We need to look at the space between a single maximum height of
-                //        the line boxes and the baseline and squeeze them together
-                LayoutUnit underSpacing = baseHeight - toRenderBoxModelObject(base)->baselinePosition(AlphabeticBaseline, true, HorizontalLine);
-                
-                RenderObject* under = lastChild();
-                if (under && under->firstChild() && under->firstChild()->isRenderInline() && underSpacing > 0)
-                    under->style()->setMarginTop(Length(-underSpacing, Fixed));
-                
-            }
-        }
-        break;
-    }
-    setNeedsLayout(true);
-    RenderBlock::layout();
-}
-
-LayoutUnit RenderMathMLUnderOver::baselinePosition(FontBaseline, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
-{
-    RenderObject* current = firstChild();
-    if (!current || linePositionMode == PositionOfInteriorLineBoxes)
-        return RenderBlock::baselinePosition(AlphabeticBaseline, firstLine, direction, linePositionMode);
-
-    LayoutUnit baseline = 0;
-    switch (m_kind) {
-    case UnderOver:
-    case Over:
-        baseline += getOffsetHeight(current);
-        current = current->nextSibling();
-        if (current) {
-            // actual base
-            RenderObject* base = current->firstChild();
-            if (!base || !base->isBoxModelObject())
-                break;
-            baseline += toRenderBoxModelObject(base)->baselinePosition(AlphabeticBaseline, firstLine, HorizontalLine, linePositionMode);
-            // added the negative top margin
-            baseline += current->style()->marginTop().value();
-        }
-        break;
-    case Under:
-        RenderObject* base = current->firstChild();
-        if (base && base->isBoxModelObject())
-            baseline += toRenderBoxModelObject(base)->baselinePosition(AlphabeticBaseline, true, HorizontalLine);
-    }
-
+    RenderBox* base = firstChildBox();
+    if (!base)
+        return -1;
+    LayoutUnit baseline = base->firstLineBoxBaseline();
+    if (baseline != -1)
+        baseline += base->logicalTop();
     return baseline;
 }
 

@@ -66,7 +66,12 @@ public:
 
     virtual VisiblePosition positionForPoint(const LayoutPoint&);
 
+    bool is8Bit() const { return m_text.is8Bit(); }
+    const LChar* characters8() const { return m_text.impl()->characters8(); }
+    const UChar* characters16() const { return m_text.impl()->characters16(); }
     const UChar* characters() const { return m_text.characters(); }
+    UChar characterAt(unsigned i) const { return is8Bit() ? characters8()[i] : characters16()[i]; }
+    UChar operator[](unsigned i) const { return characterAt(i); }
     unsigned textLength() const { return m_text.length(); } // non virtual implementation of length()
     void positionLineBox(InlineBox*);
 
@@ -97,13 +102,13 @@ public:
 
     virtual bool canBeSelectionLeaf() const { return true; }
     virtual void setSelectionState(SelectionState s);
-    virtual LayoutRect selectionRectForRepaint(RenderBoxModelObject* repaintContainer, bool clipToVisibleContent = true);
+    virtual LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) OVERRIDE;
     virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0);
 
     virtual LayoutUnit marginLeft() const { return minimumValueForLength(style()->marginLeft(), 0, view()); }
     virtual LayoutUnit marginRight() const { return minimumValueForLength(style()->marginRight(), 0, view()); }
 
-    virtual LayoutRect clippedOverflowRectForRepaint(RenderBoxModelObject* repaintContainer) const;
+    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE;
 
     InlineTextBox* firstTextBox() const { return m_firstTextBox; }
     InlineTextBox* lastTextBox() const { return m_lastTextBox; }
@@ -125,8 +130,7 @@ public:
 
     void checkConsistency() const;
 
-    virtual void computePreferredLogicalWidths(float leadWidth);
-    bool isAllCollapsibleWhitespace();
+    bool isAllCollapsibleWhitespace() const;
 
     bool canUseSimpleFontCodePath() const { return m_canUseSimpleFontCodePath; }
     bool knownToHaveNoOverflowAndNoFallbackFonts() const { return m_knownToHaveNoOverflowAndNoFallbackFonts; }
@@ -134,6 +138,7 @@ public:
     void removeAndDestroyTextBoxes();
 
 protected:
+    virtual void computePreferredLogicalWidths(float leadWidth);
     virtual void willBeDestroyed();
 
     virtual void styleWillChange(StyleDifference, const RenderStyle*) { }
@@ -156,7 +161,7 @@ private:
 
     virtual void paint(PaintInfo&, const LayoutPoint&) { ASSERT_NOT_REACHED(); }
     virtual void layout() { ASSERT_NOT_REACHED(); }
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint&, const LayoutPoint&, HitTestAction) OVERRIDE { ASSERT_NOT_REACHED(); return false; }
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, HitTestAction) OVERRIDE { ASSERT_NOT_REACHED(); return false; }
 
     void deleteTextBoxes();
     bool containsOnlyWhitespace(unsigned from, unsigned len) const;
@@ -195,13 +200,13 @@ private:
 
 inline RenderText* toRenderText(RenderObject* object)
 { 
-    ASSERT(!object || object->isText());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isText());
     return static_cast<RenderText*>(object);
 }
 
 inline const RenderText* toRenderText(const RenderObject* object)
 { 
-    ASSERT(!object || object->isText());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isText());
     return static_cast<const RenderText*>(object);
 }
 

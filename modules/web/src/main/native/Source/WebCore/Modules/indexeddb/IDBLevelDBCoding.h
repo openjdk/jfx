@@ -43,12 +43,22 @@ namespace IDBLevelDBCoding {
 
 const unsigned char MinimumIndexId = 30;
 
+// As most of the IDBKeys and encoded values are short, we initialize some Vectors with a default inline buffer size
+// to reduce the memory re-allocations when the Vectors are appended.
+static const size_t DefaultInlineBufferSize = 32;
+
 Vector<char> encodeByte(unsigned char);
+const char* decodeByte(const char* p, const char* limit, unsigned char& foundChar);
 Vector<char> maxIDBKey();
 Vector<char> minIDBKey();
 Vector<char> encodeBool(bool);
 bool decodeBool(const char* begin, const char* end);
 Vector<char> encodeInt(int64_t);
+inline Vector<char> encodeIntSafely(int64_t nParam, int64_t max)
+{
+    ASSERT_UNUSED(max, nParam <= max);
+    return encodeInt(nParam);
+}
 int64_t decodeInt(const char* begin, const char* end);
 Vector<char> encodeVarInt(int64_t);
 const char* decodeVarInt(const char* p, const char* limit, int64_t& foundInt);
@@ -56,14 +66,14 @@ Vector<char> encodeString(const String&);
 String decodeString(const char* p, const char* end);
 Vector<char> encodeStringWithLength(const String&);
 const char* decodeStringWithLength(const char* p, const char* limit, String& foundString);
-int compareEncodedStringsWithLength(const char*& p, const char* limitP, const char*& q, const char* limitQ);
+int compareEncodedStringsWithLength(const char*& p, const char* limitP, const char*& q, const char* limitQ, bool& ok);
 Vector<char> encodeDouble(double);
 const char* decodeDouble(const char* p, const char* limit, double*);
-void encodeIDBKey(const IDBKey&, Vector<char>& into);
+void encodeIDBKey(const IDBKey&, Vector<char, DefaultInlineBufferSize>& into);
 Vector<char> encodeIDBKey(const IDBKey&);
 const char* decodeIDBKey(const char* p, const char* limit, RefPtr<IDBKey>& foundKey);
 const char* extractEncodedIDBKey(const char* start, const char* limit, Vector<char>* result);
-int compareEncodedIDBKeys(const Vector<char>&, const Vector<char>&);
+int compareEncodedIDBKeys(const Vector<char>&, const Vector<char>&, bool& ok);
 Vector<char> encodeIDBKeyPath(const IDBKeyPath&);
 IDBKeyPath decodeIDBKeyPath(const char*, const char*);
 
@@ -72,10 +82,14 @@ int compare(const LevelDBSlice&, const LevelDBSlice&, bool indexKeys = false);
 class KeyPrefix {
 public:
     KeyPrefix();
+    explicit KeyPrefix(int64_t databaseId);
+    KeyPrefix(int64_t databaseId, int64_t objectStoreId);
     KeyPrefix(int64_t databaseId, int64_t objectStoreId, int64_t indexId);
+    static KeyPrefix createWithSpecialIndex(int64_t databaseId, int64_t objectStoreId, int64_t indexId);
 
     static const char* decode(const char* start, const char* limit, KeyPrefix* result);
     Vector<char> encode() const;
+    static Vector<char> encodeEmpty();
     int compare(const KeyPrefix& other) const;
 
     enum Type {
@@ -87,6 +101,34 @@ public:
         InvalidType
     };
 
+    static const size_t kMaxDatabaseIdSizeBits = 3;
+    static const size_t kMaxObjectStoreIdSizeBits = 3;
+    static const size_t kMaxIndexIdSizeBits = 2;
+
+    static const size_t kMaxDatabaseIdSizeBytes = 1ULL << kMaxDatabaseIdSizeBits; // 8
+    static const size_t kMaxObjectStoreIdSizeBytes = 1ULL << kMaxObjectStoreIdSizeBits; // 8
+    static const size_t kMaxIndexIdSizeBytes = 1ULL << kMaxIndexIdSizeBits; // 4
+
+    static const size_t kMaxDatabaseIdBits = kMaxDatabaseIdSizeBytes * 8 - 1; // 63
+    static const size_t kMaxObjectStoreIdBits = kMaxObjectStoreIdSizeBytes * 8 - 1; // 63
+    static const size_t kMaxIndexIdBits = kMaxIndexIdSizeBytes * 8 - 1; // 31
+
+    static const int64_t kMaxDatabaseId = (1ULL << kMaxDatabaseIdBits) - 1; // max signed int64_t
+    static const int64_t kMaxObjectStoreId = (1ULL << kMaxObjectStoreIdBits) - 1; // max signed int64_t
+    static const int64_t kMaxIndexId = (1ULL << kMaxIndexIdBits) - 1; // max signed int32_t
+
+    static bool isValidDatabaseId(int64_t databaseId);
+    static bool isValidObjectStoreId(int64_t indexId);
+    static bool isValidIndexId(int64_t indexId);
+    static bool validIds(int64_t databaseId, int64_t objectStoreId, int64_t indexId)
+    {
+        return isValidDatabaseId(databaseId) && isValidObjectStoreId(objectStoreId) && isValidIndexId(indexId);
+    }
+    static bool validIds(int64_t databaseId, int64_t objectStoreId)
+    {
+        return isValidDatabaseId(databaseId) && isValidObjectStoreId(objectStoreId);
+    }
+
     Type type() const;
 
     int64_t m_databaseId;
@@ -94,6 +136,11 @@ public:
     int64_t m_indexId;
 
     static const int64_t InvalidId = -1;
+
+private:
+    static Vector<char> encodeInternal(int64_t databaseId, int64_t objectStoreId, int64_t indexId);
+    // Special constructor for createWithSpecialIndex()
+    KeyPrefix(Type, int64_t databaseId, int64_t objectStoreId, int64_t indexId);
 };
 
 class SchemaVersionKey {
@@ -102,6 +149,11 @@ public:
 };
 
 class MaxDatabaseIdKey {
+public:
+    static Vector<char> encode();
+};
+
+class DataVersionKey {
 public:
     static Vector<char> encode();
 };
@@ -140,7 +192,9 @@ public:
         OriginName = 0,
         DatabaseName = 1,
         UserVersion = 2,
-        MaxObjectStoreId = 3
+        MaxObjectStoreId = 3,
+        UserIntVersion = 4,
+        MaxSimpleMetaDataType = 5
     };
 
     static Vector<char> encode(int64_t databaseId, MetaDataType);
@@ -161,16 +215,16 @@ public:
 
     ObjectStoreMetaDataKey();
     static const char* decode(const char* start, const char* limit, ObjectStoreMetaDataKey* result);
-    static Vector<char> encode(int64_t databaseId, int64_t objectStoreId, int64_t metaDataType);
+    static Vector<char> encode(int64_t databaseId, int64_t objectStoreId, unsigned char metaDataType);
     static Vector<char> encodeMaxKey(int64_t databaseId);
     static Vector<char> encodeMaxKey(int64_t databaseId, int64_t objectStoreId);
     int64_t objectStoreId() const;
-    int64_t metaDataType() const;
+    unsigned char metaDataType() const;
     int compare(const ObjectStoreMetaDataKey& other);
 
 private:
     int64_t m_objectStoreId;
-    int64_t m_metaDataType; // FIXME: Make this a byte.
+    unsigned char m_metaDataType;
 };
 
 class IndexMetaDataKey {
@@ -259,7 +313,7 @@ public:
     static const char* decode(const char* start, const char* end, ObjectStoreDataKey* result);
     static Vector<char> encode(int64_t databaseId, int64_t objectStoreId, const Vector<char> encodedUserKey);
     static Vector<char> encode(int64_t databaseId, int64_t objectStoreId, const IDBKey& userKey);
-    int compare(const ObjectStoreDataKey& other);
+    int compare(const ObjectStoreDataKey& other, bool& ok);
     PassRefPtr<IDBKey> userKey() const;
     static const int64_t SpecialIndexNumber;
 
@@ -272,7 +326,7 @@ public:
     static const char* decode(const char* start, const char* end, ExistsEntryKey* result);
     static Vector<char> encode(int64_t databaseId, int64_t objectStoreId, const Vector<char>& encodedKey);
     static Vector<char> encode(int64_t databaseId, int64_t objectStoreId, const IDBKey& userKey);
-    int compare(const ExistsEntryKey& other);
+    int compare(const ExistsEntryKey& other, bool& ok);
     PassRefPtr<IDBKey> userKey() const;
 
     static const int64_t SpecialIndexNumber;
@@ -289,7 +343,7 @@ public:
     static Vector<char> encode(int64_t databaseId, int64_t objectStoreId, int64_t indexId, const IDBKey& userKey);
     static Vector<char> encodeMinKey(int64_t databaseId, int64_t objectStoreId, int64_t indexId);
     static Vector<char> encodeMaxKey(int64_t databaseId, int64_t objectStoreId, int64_t indexId);
-    int compare(const IndexDataKey& other, bool ignoreDuplicates);
+    int compare(const IndexDataKey& other, bool ignoreDuplicates, bool& ok);
     int64_t databaseId() const;
     int64_t objectStoreId() const;
     int64_t indexId() const;

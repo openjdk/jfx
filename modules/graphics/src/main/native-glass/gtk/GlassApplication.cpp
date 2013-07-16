@@ -71,13 +71,16 @@ static jobject createJavaScreen
     LOG4("[x: %d y: %d w: %d h: %d]\n",
             monitor_geometry.x, monitor_geometry.y,
             monitor_geometry.width, monitor_geometry.height)
+
+    GdkVisual* visual = gdk_screen_get_system_visual(screen);
+
     GdkRectangle working_monitor_geometry;
     gdk_rectangle_intersect(&workArea, &monitor_geometry, &working_monitor_geometry);
 
     jobject jScreen = env->NewObject(jScreenCls, jScreenInit,
                                     (jlong)monitor_idx,
 
-                                    gdk_screen_get_number(screen),
+                                    visual ? visual->depth : 0,
 
                                     monitor_geometry.x,
                                     monitor_geometry.y,
@@ -460,6 +463,7 @@ static void process_events(GdkEvent* event, gpointer data)
     }
 
     if (ctx != NULL) {
+        EventsCounterHelper helper(ctx);
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:

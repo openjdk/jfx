@@ -35,11 +35,11 @@ from webkitpy.common.checkout.changelog import ChangeLog
 from webkitpy.common.config.contributionareas import ContributionAreas
 from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.system.executive import Executive
-from webkitpy.tool.multicommandtool import AbstractDeclarativeCommand
+from webkitpy.tool.multicommandtool import Command
 from webkitpy.tool import steps
 
 
-class AnalyzeChangeLog(AbstractDeclarativeCommand):
+class AnalyzeChangeLog(Command):
     name = "analyze-changelog"
     help_text = "Experimental command for analyzing change logs."
     long_help = "This command parses changelogs in a specified directory and summarizes the result as JSON files."
@@ -48,7 +48,7 @@ class AnalyzeChangeLog(AbstractDeclarativeCommand):
         options = [
             steps.Options.changelog_count,
         ]
-        AbstractDeclarativeCommand.__init__(self, options=options)
+        Command.__init__(self, options=options)
 
     @staticmethod
     def _enumerate_changelogs(filesystem, dirname, changelog_count):
@@ -180,6 +180,7 @@ class ChangeLogAnalyzer(object):
 
     def _analyze_entries(self, entries, changelog_path):
         dirname = self._filesystem.dirname(changelog_path)
+        i = 0
         for i, entry in enumerate(entries):
             self._print_status('(%s) entries' % i)
             assert(entry.authors())
@@ -201,6 +202,5 @@ class ChangeLogAnalyzer(object):
 
             self._summary['reviewed' if reviewers_for_entry else 'unreviewed'] += 1
 
-            i += 1
         self._print_status('(%s) entries' % i)
         return i

@@ -31,20 +31,13 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 #include <wtf/unicode/Unicode.h>
 
 typedef unsigned short CGGlyph;
 
-#if USE(CORE_TEXT)
 typedef const struct __CTRun * CTRunRef;
 typedef const struct __CTLine * CTLineRef;
-#endif
-#if USE(ATSUI)
-typedef struct OpaqueATSUTextLayout*    ATSUTextLayout;
-typedef struct ATSGlyphVector*          ATSULineRef;
-typedef UInt32 ATSULayoutOperationSelector;
-typedef UInt32 ATSULayoutOperationCallbackStatus;
-#endif
 
 namespace WebCore {
 
@@ -52,17 +45,16 @@ class Font;
 class SimpleFontData;
 class TextRun;
 
+enum GlyphIterationStyle { IncludePartialGlyphs, ByWholeGlyphs };
+
 // ComplexTextController is responsible for rendering and measuring glyphs for
 // complex scripts on OS X.
-// The underlying API can be selected at compile time based on USE(ATSUI) and
-// USE(CORE_TEXT).  If both are defined then the Core Text APIs are used for
-// OS Versions >= 10.6, ATSUI is used otherwise.
 class ComplexTextController {
 public:
     ComplexTextController(const Font*, const TextRun&, bool mayUseNaturalWritingDirection = false, HashSet<const SimpleFontData*>* fallbackFonts = 0, bool forTextEmphasis = false);
 
     // Advance and emit glyphs up to the specified character.
-    void advance(unsigned to, GlyphBuffer* = 0);
+    void advance(unsigned to, GlyphBuffer* = 0, GlyphIterationStyle = IncludePartialGlyphs, HashSet<const SimpleFontData*>* fallbackFonts = 0);
 
     // Compute the character offset for a given x coordinate.
     int offsetForPosition(float x, bool includePartialGlyphs);
@@ -80,22 +72,13 @@ public:
     float maxGlyphBoundingBoxY() const { return m_maxGlyphBoundingBoxY; }
     
 private:
-    static const SimpleFontData* systemFallbackFontData() { return reinterpret_cast<const SimpleFontData*>(-1); }
-
     class ComplexTextRun : public RefCounted<ComplexTextRun> {
     public:
-#if USE(CORE_TEXT)
         static PassRefPtr<ComplexTextRun> create(CTRunRef ctRun, const SimpleFontData* fontData, const UChar* characters, unsigned stringLocation, size_t stringLength, CFRange runRange)
         {
             return adoptRef(new ComplexTextRun(ctRun, fontData, characters, stringLocation, stringLength, runRange));
         }
-#endif
-#if USE(ATSUI)
-        static PassRefPtr<ComplexTextRun> create(ATSUTextLayout atsuTextLayout, const SimpleFontData* fontData, const UChar* characters, unsigned stringLocation, size_t stringLength, bool ltr, bool directionalOverride)
-        {
-            return adoptRef(new ComplexTextRun(atsuTextLayout, fontData, characters, stringLocation, stringLength, ltr, directionalOverride));
-        }
-#endif
+
         static PassRefPtr<ComplexTextRun> create(const SimpleFontData* fontData, const UChar* characters, unsigned stringLocation, size_t stringLength, bool ltr)
         {
             return adoptRef(new ComplexTextRun(fontData, characters, stringLocation, stringLength, ltr));
@@ -107,72 +90,66 @@ private:
         unsigned stringLocation() const { return m_stringLocation; }
         size_t stringLength() const { return m_stringLength; }
         ALWAYS_INLINE CFIndex indexAt(size_t i) const;
+        CFIndex indexBegin() const { return m_indexBegin; }
         CFIndex indexEnd() const { return m_indexEnd; }
         CFIndex endOffsetAt(size_t i) const { ASSERT(!m_isMonotonic); return m_glyphEndOffsets[i]; }
         const CGGlyph* glyphs() const { return m_glyphs; }
+        CGSize initialAdvance() const { return m_initialAdvance; }
         const CGSize* advances() const { return m_advances; }
+        bool isLTR() const { return m_isLTR; }
         bool isMonotonic() const { return m_isMonotonic; }
         void setIsNonMonotonic();
 
     private:
-#if USE(CORE_TEXT)
         ComplexTextRun(CTRunRef, const SimpleFontData*, const UChar* characters, unsigned stringLocation, size_t stringLength, CFRange runRange);
-        void createTextRunFromFontDataCoreText(bool ltr);
-#endif
-#if USE(ATSUI)
-        ComplexTextRun(ATSUTextLayout, const SimpleFontData*, const UChar* characters, unsigned stringLocation, size_t stringLength, bool ltr, bool directionalOverride);
-        void createTextRunFromFontDataATSUI(bool ltr);
-#endif
         ComplexTextRun(const SimpleFontData*, const UChar* characters, unsigned stringLocation, size_t stringLength, bool ltr);
-
-#if USE(ATSUI)
-        static OSStatus overrideLayoutOperation(ATSULayoutOperationSelector, ATSULineRef, URefCon, void*, ATSULayoutOperationCallbackStatus*);
-#endif
 
         unsigned m_glyphCount;
         const SimpleFontData* m_fontData;
         const UChar* m_characters;
         unsigned m_stringLocation;
         size_t m_stringLength;
-#if USE(CORE_TEXT)
         Vector<CFIndex, 64> m_coreTextIndicesVector;
         const CFIndex* m_coreTextIndices;
-#endif
-#if USE(ATSUI)
-        Vector<CFIndex, 64> m_atsuiIndices;
-#endif
+        CFIndex m_indexBegin;
         CFIndex m_indexEnd;
         Vector<CFIndex, 64> m_glyphEndOffsets;
         Vector<CGGlyph, 64> m_glyphsVector;
         const CGGlyph* m_glyphs;
+        CGSize m_initialAdvance;
         Vector<CGSize, 64> m_advancesVector;
         const CGSize* m_advances;
-#if USE(ATSUI)
-        bool m_directionalOverride;
-#endif
+        bool m_isLTR;
         bool m_isMonotonic;
     };
 
+    static unsigned stringBegin(const ComplexTextRun& run) { return run.stringLocation() + run.indexBegin(); }
+    static unsigned stringEnd(const ComplexTextRun& run) { return run.stringLocation() + run.indexEnd(); }
+
     void collectComplexTextRuns();
 
-    // collectComplexTextRunsForCharacters() is a stub function that calls through to the ATSUI or Core Text variants based
-    // on the API in use.
     void collectComplexTextRunsForCharacters(const UChar*, unsigned length, unsigned stringLocation, const SimpleFontData*);
-    void collectComplexTextRunsForCharactersATSUI(const UChar*, unsigned length, unsigned stringLocation, const SimpleFontData*);
-    void collectComplexTextRunsForCharactersCoreText(const UChar*, unsigned length, unsigned stringLocation, const SimpleFontData*);
     void adjustGlyphsAndAdvances();
+
+    unsigned indexOfCurrentRun(unsigned& leftmostGlyph);
+    unsigned incrementCurrentRun(unsigned& leftmostGlyph);
+
+    // The initial capacity of these vectors was selected as being the smallest power of two greater than
+    // the average (3.5) plus one standard deviation (7.5) of nonzero sizes used on Arabic Wikipedia.
+    Vector<unsigned, 16> m_runIndices;
+    Vector<unsigned, 16> m_glyphCountFromStartToIndex;
 
     const Font& m_font;
     const TextRun& m_run;
+    bool m_isLTROnly;
     bool m_mayUseNaturalWritingDirection;
     bool m_forTextEmphasis;
 
+    Vector<String> m_stringsFor8BitRuns;
     Vector<UChar, 256> m_smallCapsBuffer;
 
-#if USE(CORE_TEXT)
     // Retain lines rather than their runs for better performance.
     Vector<RetainPtr<CTLineRef> > m_coreTextLines;
-#endif
     Vector<RefPtr<ComplexTextRun>, 16> m_complexTextRuns;
     Vector<CGSize, 256> m_adjustedAdvances;
     Vector<CGGlyph, 256> m_adjustedGlyphs;

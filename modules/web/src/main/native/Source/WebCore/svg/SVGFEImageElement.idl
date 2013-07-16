@@ -23,11 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS
-    ] SVGFEImageElement : SVGElement,
+] interface SVGFEImageElement : SVGStyledElement,
                                                             SVGURIReference,
                                                             SVGLangSpace,
                                                             SVGExternalResourcesRequired,
@@ -35,4 +33,3 @@ module svg {
         readonly attribute SVGAnimatedPreserveAspectRatio preserveAspectRatio;
     };
 
-}

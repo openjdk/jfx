@@ -25,12 +25,13 @@
 #include "config.h"
 #include "RenderListMarker.h"
 
-#include "CachedImage.h"
 #include "Document.h"
+#include "Font.h"
 #include "GraphicsContext.h"
 #include "RenderLayer.h"
 #include "RenderListItem.h"
 #include "RenderView.h"
+#include <wtf/StackStats.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -54,12 +55,12 @@ static String toRoman(int number, bool upper)
     // Big enough to store largest roman number less than 3999 which
     // is 3888 (MMMDCCCLXXXVIII)
     const int lettersSize = 15;
-    UChar letters[lettersSize];
+    LChar letters[lettersSize];
 
     int length = 0;
-    const UChar ldigits[] = { 'i', 'v', 'x', 'l', 'c', 'd', 'm' };
-    const UChar udigits[] = { 'I', 'V', 'X', 'L', 'C', 'D', 'M' };
-    const UChar* digits = upper ? udigits : ldigits;
+    const LChar ldigits[] = { 'i', 'v', 'x', 'l', 'c', 'd', 'm' };
+    const LChar udigits[] = { 'I', 'V', 'X', 'L', 'C', 'D', 'M' };
+    const LChar* digits = upper ? udigits : ldigits;
     int d = 0;
     do {
         int num = number % 10;
@@ -80,13 +81,18 @@ static String toRoman(int number, bool upper)
     return String(&letters[lettersSize - length], length);
 }
 
-static inline String toAlphabeticOrNumeric(int number, const UChar* sequence, unsigned sequenceSize, SequenceType type)
+// The typedef is needed because taking sizeof(number) in the const expression below doesn't work with some compilers.
+// This is likely the case because of the template.
+typedef int numberType;
+
+template <typename CharacterType>
+static inline String toAlphabeticOrNumeric(numberType number, const CharacterType* sequence, unsigned sequenceSize, SequenceType type)
 {
     ASSERT(sequenceSize >= 2);
 
-    const int lettersSize = sizeof(number) * 8 + 1; // Binary is the worst case; requires one character per bit plus a minus sign.
+    const int lettersSize = sizeof(numberType) * 8 + 1; // Binary is the worst case; requires one character per bit plus a minus sign.
 
-    UChar letters[lettersSize];
+    CharacterType letters[lettersSize];
 
     bool isNegativeNumber = false;
     unsigned numberShadow = number;
@@ -116,7 +122,8 @@ static inline String toAlphabeticOrNumeric(int number, const UChar* sequence, un
     return String(&letters[lettersSize - length], length);
 }
 
-static String toSymbolic(int number, const UChar* symbols, unsigned symbolsSize)
+template <typename CharacterType>
+static String toSymbolic(int number, const CharacterType* symbols, unsigned symbolsSize)
 {
     ASSERT(number > 0);
     ASSERT(symbolsSize >= 1);
@@ -132,27 +139,32 @@ static String toSymbolic(int number, const UChar* symbols, unsigned symbolsSize)
     return letters.toString();
 }
 
-static String toAlphabetic(int number, const UChar* alphabet, unsigned alphabetSize)
+template <typename CharacterType>
+static String toAlphabetic(int number, const CharacterType* alphabet, unsigned alphabetSize)
 {
     return toAlphabeticOrNumeric(number, alphabet, alphabetSize, AlphabeticSequence);
 }
 
-static String toNumeric(int number, const UChar* numerals, unsigned numeralsSize)
+template <typename CharacterType>
+static String toNumeric(int number, const CharacterType* numerals, unsigned numeralsSize)
 {
     return toAlphabeticOrNumeric(number, numerals, numeralsSize, NumericSequence);
 }
 
-template <size_t size> static inline String toAlphabetic(int number, const UChar(&alphabet)[size])
+template <typename CharacterType, size_t size>
+static inline String toAlphabetic(int number, const CharacterType(&alphabet)[size])
 {
     return toAlphabetic(number, alphabet, size);
 }
 
-template <size_t size> static inline String toNumeric(int number, const UChar(&alphabet)[size])
+template <typename CharacterType, size_t size>
+static inline String toNumeric(int number, const CharacterType(&alphabet)[size])
 {
     return toNumeric(number, alphabet, size);
 }
 
-template <size_t size> static inline String toSymbolic(int number, const UChar(&alphabet)[size])
+template <typename CharacterType, size_t size>
+static inline String toSymbolic(int number, const CharacterType(&alphabet)[size])
 {    
     return toSymbolic(number, alphabet, size);
 }
@@ -221,7 +233,6 @@ static int toArmenianUnder10000(int number, bool upper, bool addCircumflex, UCha
 
     if (int thousands = number / 1000) {
         if (thousands == 7) {
-            letters[length++] = 0x0548 + lowerOffset;
             letters[length++] = 0x0552 + lowerOffset;
             if (addCircumflex)
                 letters[length++] = 0x0302;
@@ -600,8 +611,8 @@ String listMarkerText(EListStyleType type, int value)
             return "";
 
         case Asterisks: {
-            static const UChar asterisksSymbols[1] = {
-                0x002A
+            static const LChar asterisksSymbols[1] = {
+                0x2A
             };
             return toSymbolic(value, asterisksSymbols);
         }
@@ -638,7 +649,7 @@ String listMarkerText(EListStyleType type, int value)
             return toNumeric(value, arabicIndicNumerals);
         }
         case BinaryListStyle: {
-            static const UChar binaryNumerals[2] = {
+            static const LChar binaryNumerals[2] = {
                 '0', '1'
             };
             return toNumeric(value, binaryNumerals);
@@ -681,7 +692,7 @@ String listMarkerText(EListStyleType type, int value)
             return toNumeric(value, kannadaNumerals);
         }
         case LowerHexadecimal: {
-            static const UChar lowerHexadecimalNumerals[16] = {
+            static const LChar lowerHexadecimalNumerals[16] = {
                 '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
             };
             return toNumeric(value, lowerHexadecimalNumerals);
@@ -711,7 +722,7 @@ String listMarkerText(EListStyleType type, int value)
             return toNumeric(value, myanmarNumerals);
         }
         case Octal: {
-            static const UChar octalNumerals[8] = {
+            static const LChar octalNumerals[8] = {
                 '0', '1', '2', '3', '4', '5', '6', '7'
             };
             return toNumeric(value, octalNumerals);
@@ -748,7 +759,7 @@ String listMarkerText(EListStyleType type, int value)
             return toNumeric(value, thaiNumerals);
         }
         case UpperHexadecimal: {
-            static const UChar upperHexadecimalNumerals[16] = {
+            static const LChar upperHexadecimalNumerals[16] = {
                 '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
             };
             return toNumeric(value, upperHexadecimalNumerals);
@@ -756,7 +767,7 @@ String listMarkerText(EListStyleType type, int value)
 
         case LowerAlpha:
         case LowerLatin: {
-            static const UChar lowerLatinAlphabet[26] = {
+            static const LChar lowerLatinAlphabet[26] = {
                 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
                 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
             };
@@ -764,7 +775,7 @@ String listMarkerText(EListStyleType type, int value)
         }
         case UpperAlpha:
         case UpperLatin: {
-            static const UChar upperLatinAlphabet[26] = {
+            static const LChar upperLatinAlphabet[26] = {
                 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
                 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
             };
@@ -992,20 +1003,20 @@ String listMarkerText(EListStyleType type, int value)
             return toAlphabetic(value, upperGreekAlphabet);
         }
         case LowerNorwegian: {
-            static const UChar lowerNorwegianAlphabet[29] = {
-                0x0061, 0x0062, 0x0063, 0x0064, 0x0065, 0x0066, 0x0067, 0x0068, 0x0069,
-                0x006A, 0x006B, 0x006C, 0x006D, 0x006E, 0x006F, 0x0070, 0x0071, 0x0072,
-                0x0073, 0x0074, 0x0075, 0x0076, 0x0077, 0x0078, 0x0079, 0x007A, 0x00E6,
-                0x00F8, 0x00E5
+            static const LChar lowerNorwegianAlphabet[29] = {
+                0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69,
+                0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, 0x70, 0x71, 0x72,
+                0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0xE6,
+                0xF8, 0xE5
             };
             return toAlphabetic(value, lowerNorwegianAlphabet);
         }
         case UpperNorwegian: {
-            static const UChar upperNorwegianAlphabet[29] = {
-                0x0041, 0x0042, 0x0043, 0x0044, 0x0045, 0x0046, 0x0047, 0x0048, 0x0049,
-                0x004A, 0x004B, 0x004C, 0x004D, 0x004E, 0x004F, 0x0050, 0x0051, 0x0052,
-                0x0053, 0x0054, 0x0055, 0x0056, 0x0057, 0x0058, 0x0059, 0x005A, 0x00C6,
-                0x00D8, 0x00C5
+            static const LChar upperNorwegianAlphabet[29] = {
+                0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49,
+                0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52,
+                0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0xC6,
+                0xD8, 0xC5
             };
             return toAlphabetic(value, upperNorwegianAlphabet);
         }
@@ -1043,7 +1054,7 @@ String listMarkerText(EListStyleType type, int value)
 }
 
 RenderListMarker::RenderListMarker(RenderListItem* item)
-    : RenderBox(item->document())
+    : RenderBox(0)
     , m_listItem(item)
 {
     // init RenderObject attributes
@@ -1055,6 +1066,14 @@ RenderListMarker::~RenderListMarker()
 {
     if (m_image)
         m_image->removeClient(this);
+}
+
+RenderListMarker* RenderListMarker::createAnonymous(RenderListItem* item)
+{
+    Document* document = item->document();
+    RenderListMarker* renderer = new (document->renderArena()) RenderListMarker(item);
+    renderer->setDocumentForAnonymous(document);
+    return renderer;
 }
 
 void RenderListMarker::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
@@ -1302,9 +1321,11 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
 
 void RenderListMarker::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
  
     if (isImage()) {
+        updateMarginsAndContent();
         setWidth(m_image->imageSize(this, style()->effectiveZoom()).width());
         setHeight(m_image->imageSize(this, style()->effectiveZoom()).height());
     } else {
@@ -1337,26 +1358,134 @@ void RenderListMarker::imageChanged(WrappedImagePtr o, const IntRect*)
         repaint();
 }
 
-void RenderListMarker::computePreferredLogicalWidths()
+void RenderListMarker::updateMarginsAndContent()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    updateContent();
+    updateMargins();
+}
+
+void RenderListMarker::updateContent()
+{
+    // FIXME: This if-statement is just a performance optimization, but it's messy to use the preferredLogicalWidths dirty bit for this.
+    // It's unclear if this is a premature optimization.
+    if (!preferredLogicalWidthsDirty())
+        return;
 
     m_text = "";
-
-    const Font& font = style()->font();
-    const FontMetrics& fontMetrics = font.fontMetrics();
 
     if (isImage()) {
         // FIXME: This is a somewhat arbitrary width.  Generated images for markers really won't become particularly useful
         // until we support the CSS3 marker pseudoclass to allow control over the width and height of the marker box.
-        int bulletWidth = fontMetrics.ascent() / 2;
+        int bulletWidth = style()->fontMetrics().ascent() / 2;
         m_image->setContainerSizeForRenderer(this, IntSize(bulletWidth, bulletWidth), style()->effectiveZoom());
+        return;
+    }
+
+    EListStyleType type = style()->listStyleType();
+    switch (type) {
+    case NoneListStyle:
+        break;
+    case Circle:
+    case Disc:
+    case Square:
+        m_text = listMarkerText(type, 0); // value is ignored for these types
+        break;
+    case Asterisks:
+    case Footnotes:
+    case Afar:
+    case Amharic:
+    case AmharicAbegede:
+    case ArabicIndic:
+    case Armenian:
+    case BinaryListStyle:
+    case Bengali:
+    case Cambodian:
+    case CJKIdeographic:
+    case CjkEarthlyBranch:
+    case CjkHeavenlyStem:
+    case DecimalLeadingZero:
+    case DecimalListStyle:
+    case Devanagari:
+    case Ethiopic:
+    case EthiopicAbegede:
+    case EthiopicAbegedeAmEt:
+    case EthiopicAbegedeGez:
+    case EthiopicAbegedeTiEr:
+    case EthiopicAbegedeTiEt:
+    case EthiopicHalehameAaEr:
+    case EthiopicHalehameAaEt:
+    case EthiopicHalehameAmEt:
+    case EthiopicHalehameGez:
+    case EthiopicHalehameOmEt:
+    case EthiopicHalehameSidEt:
+    case EthiopicHalehameSoEt:
+    case EthiopicHalehameTiEr:
+    case EthiopicHalehameTiEt:
+    case EthiopicHalehameTig:
+    case Georgian:
+    case Gujarati:
+    case Gurmukhi:
+    case Hangul:
+    case HangulConsonant:
+    case Hebrew:
+    case Hiragana:
+    case HiraganaIroha:
+    case Kannada:
+    case Katakana:
+    case KatakanaIroha:
+    case Khmer:
+    case Lao:
+    case LowerAlpha:
+    case LowerArmenian:
+    case LowerGreek:
+    case LowerHexadecimal:
+    case LowerLatin:
+    case LowerNorwegian:
+    case LowerRoman:
+    case Malayalam:
+    case Mongolian:
+    case Myanmar:
+    case Octal:
+    case Oriya:
+    case Oromo:
+    case Persian:
+    case Sidama:
+    case Somali:
+    case Telugu:
+    case Thai:
+    case Tibetan:
+    case Tigre:
+    case TigrinyaEr:
+    case TigrinyaErAbegede:
+    case TigrinyaEt:
+    case TigrinyaEtAbegede:
+    case UpperAlpha:
+    case UpperArmenian:
+    case UpperGreek:
+    case UpperHexadecimal:
+    case UpperLatin:
+    case UpperNorwegian:
+    case UpperRoman:
+    case Urdu:
+        m_text = listMarkerText(type, m_listItem->value());
+        break;
+    }
+}
+
+void RenderListMarker::computePreferredLogicalWidths()
+{
+    ASSERT(preferredLogicalWidthsDirty());
+    updateContent();
+
+    if (isImage()) {
         LayoutSize imageSize = m_image->imageSize(this, style()->effectiveZoom());
         m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = style()->isHorizontalWritingMode() ? imageSize.width() : imageSize.height();
         setPreferredLogicalWidthsDirty(false);
         updateMargins();
         return;
     }
+
+    const Font& font = style()->font();
 
     LayoutUnit logicalWidth = 0;
     EListStyleType type = style()->listStyleType();
@@ -1365,14 +1494,12 @@ void RenderListMarker::computePreferredLogicalWidths()
             break;
         case Asterisks:
         case Footnotes:
-            m_text = listMarkerText(type, m_listItem->value());
             logicalWidth = font.width(m_text); // no suffix for these types
             break;
         case Circle:
         case Disc:
         case Square:
-            m_text = listMarkerText(type, 0); // value is ignored for these types
-            logicalWidth = (fontMetrics.ascent() * 2 / 3 + 1) / 2 + 2;
+            logicalWidth = (font.fontMetrics().ascent() * 2 / 3 + 1) / 2 + 2;
             break;
         case Afar:
         case Amharic:
@@ -1449,7 +1576,6 @@ void RenderListMarker::computePreferredLogicalWidths()
         case UpperNorwegian:
         case UpperRoman:
         case Urdu:
-            m_text = listMarkerText(type, m_listItem->value());
             if (m_text.isEmpty())
                 logicalWidth = 0;
             else {
@@ -1504,7 +1630,7 @@ void RenderListMarker::updateMargins()
                     case NoneListStyle:
                         break;
                     default:
-                        marginStart = m_text.isEmpty() ? ZERO_LAYOUT_UNIT : -minPreferredLogicalWidth() - offset / 2;
+                        marginStart = m_text.isEmpty() ? LayoutUnit() : -minPreferredLogicalWidth() - offset / 2;
                 }
             }
             marginEnd = -marginStart - minPreferredLogicalWidth();
@@ -1541,7 +1667,7 @@ LayoutUnit RenderListMarker::lineHeight(bool firstLine, LineDirectionMode direct
     return RenderBox::lineHeight(firstLine, direction, linePositionMode);
 }
 
-LayoutUnit RenderListMarker::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
+int RenderListMarker::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
     if (!isImage())
         return m_listItem->baselinePosition(baselineType, firstLine, direction, PositionOfInteriorLineBoxes);
@@ -1702,7 +1828,7 @@ void RenderListMarker::setSelectionState(SelectionState state)
             root->setHasSelectedChildren(state != SelectionNone);
 }
 
-LayoutRect RenderListMarker::selectionRectForRepaint(RenderBoxModelObject* repaintContainer, bool clipToVisibleContent)
+LayoutRect RenderListMarker::selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent)
 {
     ASSERT(!needsLayout());
 

@@ -23,23 +23,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module core {
+// http://www.w3.org/TR/geolocation-API/#geolocation_interface
+[
+    NoInterfaceObject,
+    Conditional=GEOLOCATION, 
+    GenerateIsReachable=ImplFrame,
+    OmitConstructor
+] interface Geolocation {
+    [Custom] void getCurrentPosition(PositionCallback successCallback,
+                                     optional PositionErrorCallback errorCallback,
+                                     optional PositionOptions options);
 
-    // http://www.w3.org/TR/geolocation-API/#geolocation_interface
-    interface [
-        Conditional=GEOLOCATION, 
-        JSGenerateIsReachable=ImplFrame,
-        OmitConstructor
-    ] Geolocation {
-        [Custom] void getCurrentPosition(in PositionCallback successCallback,
-                                         in [Optional] PositionErrorCallback errorCallback,
-                                         in [Optional] PositionOptions options);
+    [Custom] long watchPosition(PositionCallback successCallback,
+                                optional PositionErrorCallback errorCallback,
+                                optional PositionOptions options);
 
-        [Custom] long watchPosition(in PositionCallback successCallback,
-                                    in [Optional] PositionErrorCallback errorCallback,
-                                    in [Optional] PositionOptions options);
-
-        void clearWatch(in long watchId);
+    void clearWatch(long watchID);
     };
 
-}

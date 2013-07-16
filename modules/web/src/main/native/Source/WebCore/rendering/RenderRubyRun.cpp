@@ -36,13 +36,15 @@
 #include "RenderRubyText.h"
 #include "RenderText.h"
 #include "RenderView.h"
+#include "StyleInheritedData.h"
+#include <wtf/StackStats.h>
 
 using namespace std;
 
 namespace WebCore {
 
-RenderRubyRun::RenderRubyRun(Node* node)
-    : RenderBlock(node)
+RenderRubyRun::RenderRubyRun()
+    : RenderBlock(0)
 {
     setReplaced(true);
     setInline(true);
@@ -198,17 +200,18 @@ void RenderRubyRun::removeChild(RenderObject* child)
 
 RenderRubyBase* RenderRubyRun::createRubyBase() const
 {
-    RenderRubyBase* rb = new (renderArena()) RenderRubyBase(document() /* anonymous */);
+    RenderRubyBase* renderer = RenderRubyBase::createAnonymous(document());
     RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK);
     newStyle->setTextAlign(CENTER); // FIXME: use WEBKIT_CENTER?
-    rb->setStyle(newStyle.release());
-    return rb;
+    renderer->setStyle(newStyle.release());
+    return renderer;
 }
 
 RenderRubyRun* RenderRubyRun::staticCreateRubyRun(const RenderObject* parentRuby)
 {
     ASSERT(parentRuby && parentRuby->isRuby());
-    RenderRubyRun* rr = new (parentRuby->renderArena()) RenderRubyRun(parentRuby->document() /* anonymous */);
+    RenderRubyRun* rr = new (parentRuby->renderArena()) RenderRubyRun();
+    rr->setDocumentForAnonymous(parentRuby->document());
     RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(parentRuby->style(), INLINE_BLOCK);
     rr->setStyle(newStyle.release());
     return rr;
@@ -216,6 +219,7 @@ RenderRubyRun* RenderRubyRun::staticCreateRubyRun(const RenderObject* parentRuby
 
 RenderObject* RenderRubyRun::layoutSpecialExcludedChild(bool relayoutChildren)
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     // Don't bother positioning the RenderRubyRun yet.
     RenderRubyText* rt = rubyText();
     if (!rt)
@@ -230,11 +234,13 @@ void RenderRubyRun::layout()
 {
     RenderBlock::layout();
     
-    // Place the RenderRubyText such that its bottom is flush with the lineTop of the first line of the RenderRubyBase.
     RenderRubyText* rt = rubyText();
     if (!rt)
         return;
     
+    rt->setLogicalLeft(0);
+    
+    // Place the RenderRubyText such that its bottom is flush with the lineTop of the first line of the RenderRubyBase.
     LayoutUnit lastLineRubyTextBottom = rt->logicalHeight();
     LayoutUnit firstLineRubyTextTop = 0;
     RootInlineBox* rootBox = rt->lastRootBox();
@@ -244,7 +250,7 @@ void RenderRubyRun::layout()
         lastLineRubyTextBottom = rootBox->logicalBottomLayoutOverflow();
     }
 
-    if (!style()->isFlippedLinesWritingMode()) {
+    if (style()->isFlippedLinesWritingMode() == (style()->rubyPosition() == RubyPositionAfter)) {
         LayoutUnit firstLineTop = 0;
         if (RenderRubyBase* rb = rubyBase()) {
             RootInlineBox* rootBox = rb->firstRootBox();
@@ -267,7 +273,6 @@ void RenderRubyRun::layout()
     }
 
     // Update our overflow to account for the new RenderRubyText position.
-    m_overflow.clear();
     computeOverflow(clientLogicalBottom());
 }
 

@@ -26,16 +26,15 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=SQL_DATABASE,
         OmitConstructor,
-        JSNoStaticTables
-    ] SQLTransaction {
-        [Custom] void executeSql(in DOMString sqlStatement,
-                                 in ObjectArray arguments,
-                                 in [Optional, Callback] SQLStatementCallback callback,
-                                 in [Optional, Callback] SQLStatementErrorCallback errorCallback);
+    JSNoStaticTables,
+    SkipVTableValidation
+] interface SQLTransaction {
+    [Custom] void executeSql(DOMString sqlStatement,
+                             ObjectArray arguments,
+                             optional SQLStatementCallback callback,
+                             optional SQLStatementErrorCallback errorCallback);
     };
-}

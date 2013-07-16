@@ -6,6 +6,7 @@
 # Copyright (C) 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
 # Copyright (C) Research In Motion Limited 2010. All rights reserved.
+# Copyright (C) 2013 Samsung Electronics. All rights reserved.
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Library General Public
@@ -38,6 +39,7 @@ my $useLayerOnTop = 0;
 my $preprocessor;
 my $writeDependencies = 0;
 my $defines = "";
+my $targetIdlFilePath = "";
 
 my $codeGenerator = 0;
 
@@ -52,6 +54,15 @@ my %primitiveTypeHash = ( "boolean" => 1, "void" => 1, "Date" => 1);
 
 my %stringTypeHash = ("DOMString" => 1, "AtomicString" => 1);
 
+# WebCore types used directly in IDL files.
+my %webCoreTypeHash = (
+    "CompareHow" => 1,
+    "SerializedScriptValue" => 1,
+    "Dictionary" => 1
+);
+
+my %enumTypeHash = ();
+
 my %nonPointerTypeHash = ("DOMTimeStamp" => 1, "CompareHow" => 1);
 
 my %svgAnimatedTypeHash = ("SVGAnimatedAngle" => 1, "SVGAnimatedBoolean" => 1,
@@ -64,6 +75,7 @@ my %svgAnimatedTypeHash = ("SVGAnimatedAngle" => 1, "SVGAnimatedBoolean" => 1,
 
 my %svgAttributesInHTMLHash = ("class" => 1, "id" => 1, "onabort" => 1, "onclick" => 1,
                                "onerror" => 1, "onload" => 1, "onmousedown" => 1,
+                               "onmouseenter" => 1, "onmouseleave" => 1,
                                "onmousemove" => 1, "onmouseout" => 1, "onmouseover" => 1,
                                "onmouseup" => 1, "onresize" => 1, "onscroll" => 1,
                                "onunload" => 1);
@@ -92,6 +104,7 @@ my %svgTypeWithWritablePropertiesNeedingTearOff = (
 
 # Cache of IDL file pathnames.
 my $idlFiles;
+my $cachedInterfaces = {};
 
 # Default constructor
 sub new
@@ -107,17 +120,10 @@ sub new
     $preprocessor = shift;
     $writeDependencies = shift;
     $verbose = shift;
+    $targetIdlFilePath = shift;
 
     bless($reference, $object);
     return $reference;
-}
-
-sub StripModule($)
-{
-    my $object = shift;
-    my $name = shift;
-    $name =~ s/[a-zA-Z0-9]*:://;
-    return $name;
 }
 
 sub ProcessDocument
@@ -129,23 +135,23 @@ sub ProcessDocument
     my $ifaceName = "CodeGenerator" . $useGenerator;
     require $ifaceName . ".pm";
 
+    %enumTypeHash = map { $_->name => $_->values } @{$useDocument->enumerations};
+
     # Dynamically load external code generation perl module
-    $codeGenerator = $ifaceName->new($object, $useOutputDir, $useOutputHeadersDir, $useLayerOnTop, $preprocessor, $writeDependencies, $verbose);
+    $codeGenerator = $ifaceName->new($object, $useLayerOnTop, $preprocessor, $writeDependencies, $verbose, $targetIdlFilePath);
     unless (defined($codeGenerator)) {
-        my $classes = $useDocument->classes;
-        foreach my $class (@$classes) {
-            print "Skipping $useGenerator code generation for IDL interface \"" . $class->name . "\".\n" if $verbose;
+        my $interfaces = $useDocument->interfaces;
+        foreach my $interface (@$interfaces) {
+            print "Skipping $useGenerator code generation for IDL interface \"" . $interface->name . "\".\n" if $verbose;
         }
         return;
     }
 
-    # Start the actual code generation!
-    $codeGenerator->GenerateModule($useDocument, $defines);
-
-    my $classes = $useDocument->classes;
-    foreach my $class (@$classes) {
-        print "Generating $useGenerator bindings code for IDL interface \"" . $class->name . "\"...\n" if $verbose;
-        $codeGenerator->GenerateInterface($class, $defines);
+    my $interfaces = $useDocument->interfaces;
+    foreach my $interface (@$interfaces) {
+        print "Generating $useGenerator bindings code for IDL interface \"" . $interface->name . "\"...\n" if $verbose;
+        $codeGenerator->GenerateInterface($interface, $defines);
+        $codeGenerator->WriteData($interface, $useOutputDir, $useOutputHeadersDir);
     }
 }
 
@@ -157,7 +163,7 @@ sub FileNamePrefix
     require $ifaceName . ".pm";
 
     # Dynamically load external code generation perl module
-    $codeGenerator = $ifaceName->new($object, $useOutputDir, $useOutputHeadersDir, $useLayerOnTop, $preprocessor, $writeDependencies, $verbose);
+    $codeGenerator = $ifaceName->new($object, $useLayerOnTop, $preprocessor, $writeDependencies, $verbose);
     return $codeGenerator->FileNamePrefix();
 }
 
@@ -175,18 +181,17 @@ sub UpdateFile
 sub ForAllParents
 {
     my $object = shift;
-    my $dataNode = shift;
+    my $interface = shift;
     my $beforeRecursion = shift;
     my $afterRecursion = shift;
-    my $parentsOnly = shift;
 
     my $recurse;
     $recurse = sub {
-        my $interface = shift;
+        my $currentInterface = shift;
 
-        for (@{$interface->parents}) {
-            my $interfaceName = $object->StripModule($_);
-            my $parentInterface = $object->ParseInterface($interfaceName, $parentsOnly);
+        for (@{$currentInterface->parents}) {
+            my $interfaceName = $_;
+            my $parentInterface = $object->ParseInterface($interfaceName);
 
             if ($beforeRecursion) {
                 &$beforeRecursion($parentInterface) eq 'prune' and next;
@@ -196,27 +201,27 @@ sub ForAllParents
         }
     };
 
-    &$recurse($dataNode);
+    &$recurse($interface);
 }
 
-sub AddMethodsConstantsAndAttributesFromParentClasses
+sub AddMethodsConstantsAndAttributesFromParentInterfaces
 {
-    # Add to $dataNode all of its inherited interface members, except for those
-    # inherited through $dataNode's first listed parent.  If an array reference
+    # Add to $interface all of its inherited interface members, except for those
+    # inherited through $interface's first listed parent.  If an array reference
     # is passed in as $parents, the names of all ancestor interfaces visited
     # will be appended to the array.  If $collectDirectParents is true, then
-    # even the names of $dataNode's first listed parent and its ancestors will
+    # even the names of $interface's first listed parent and its ancestors will
     # be appended to $parents.
 
     my $object = shift;
-    my $dataNode = shift;
+    my $interface = shift;
     my $parents = shift;
     my $collectDirectParents = shift;
 
     my $first = 1;
 
-    $object->ForAllParents($dataNode, sub {
-        my $interface = shift;
+    $object->ForAllParents($interface, sub {
+        my $currentInterface = shift;
 
         if ($first) {
             # Ignore first parent class, already handled by the generation itself.
@@ -225,11 +230,11 @@ sub AddMethodsConstantsAndAttributesFromParentClasses
             if ($collectDirectParents) {
                 # Just collect the names of the direct ancestor interfaces,
                 # if necessary.
-                push(@$parents, $interface->name);
-                $object->ForAllParents($interface, sub {
-                    my $interface = shift;
-                    push(@$parents, $interface->name);
-                }, undef, 1);
+                push(@$parents, $currentInterface->name);
+                $object->ForAllParents($currentInterface, sub {
+                    my $currentInterface = shift;
+                    push(@$parents, $currentInterface->name);
+                }, undef);
             }
 
             # Prune the recursion here.
@@ -237,52 +242,27 @@ sub AddMethodsConstantsAndAttributesFromParentClasses
         }
 
         # Collect the name of this additional parent.
-        push(@$parents, $interface->name) if $parents;
+        push(@$parents, $currentInterface->name) if $parents;
 
         print "  |  |>  -> Inheriting "
-            . @{$interface->constants} . " constants, "
-            . @{$interface->functions} . " functions, "
-            . @{$interface->attributes} . " attributes...\n  |  |>\n" if $verbose;
+            . @{$currentInterface->constants} . " constants, "
+            . @{$currentInterface->functions} . " functions, "
+            . @{$currentInterface->attributes} . " attributes...\n  |  |>\n" if $verbose;
 
-        # Add this parent's members to $dataNode.
-        push(@{$dataNode->constants}, @{$interface->constants});
-        push(@{$dataNode->functions}, @{$interface->functions});
-        push(@{$dataNode->attributes}, @{$interface->attributes});
+        # Add this parent's members to $interface.
+        push(@{$interface->constants}, @{$currentInterface->constants});
+        push(@{$interface->functions}, @{$currentInterface->functions});
+        push(@{$interface->attributes}, @{$currentInterface->attributes});
     });
-}
-
-sub GetMethodsAndAttributesFromParentClasses
-{
-    # For the passed interface, recursively parse all parent
-    # IDLs in order to find out all inherited properties/methods.
-
-    my $object = shift;
-    my $dataNode = shift;
-
-    my @parentList = ();
-
-    $object->ForAllParents($dataNode, undef, sub {
-        my $interface = shift;
-
-        my $hash = {
-            "name" => $interface->name,
-            "functions" => $interface->functions,
-            "attributes" => $interface->attributes
-        };
-
-        unshift(@parentList, $hash);
-    });
-
-    return @parentList;
 }
 
 sub FindSuperMethod
 {
-    my ($object, $dataNode, $functionName) = @_;
+    my ($object, $interface, $functionName) = @_;
     my $indexer;
-    $object->ForAllParents($dataNode, undef, sub {
-        my $interface = shift;
-        foreach my $function (@{$interface->functions}) {
+    $object->ForAllParents($interface, undef, sub {
+        my $currentInterface = shift;
+        foreach my $function (@{$currentInterface->functions}) {
             if ($function->signature->name eq $functionName) {
                 $indexer = $function->signature;
                 return 'prune';
@@ -300,6 +280,7 @@ sub IDLFileForInterface
     unless ($idlFiles) {
         my $sourceRoot = $ENV{SOURCE_ROOT};
         my @directories = map { $_ = "$sourceRoot/$_" if $sourceRoot && -d "$sourceRoot/$_"; $_ } @$useDirectories;
+        push(@directories, ".");
 
         $idlFiles = { };
 
@@ -317,9 +298,12 @@ sub ParseInterface
 {
     my $object = shift;
     my $interfaceName = shift;
-    my $parentsOnly = shift;
 
     return undef if $interfaceName eq 'Object';
+
+    if (exists $cachedInterfaces->{$interfaceName}) {
+        return $cachedInterfaces->{$interfaceName};
+    }
 
     # Step #1: Find the IDL file associated with 'interface'
     my $filename = $object->IDLFileForInterface($interfaceName)
@@ -329,10 +313,13 @@ sub ParseInterface
 
     # Step #2: Parse the found IDL file (in quiet mode).
     my $parser = IDLParser->new(1);
-    my $document = $parser->Parse($filename, $defines, $preprocessor, $parentsOnly);
+    my $document = $parser->Parse($filename, $defines, $preprocessor);
 
-    foreach my $interface (@{$document->classes}) {
-        return $interface if $interface->name eq $interfaceName;
+    foreach my $interface (@{$document->interfaces}) {
+        if ($interface->name eq $interfaceName) {
+            $cachedInterfaces->{$interfaceName} = $interface;
+            return $interface;
+        }
     }
 
     die("Could NOT find interface definition for $interfaceName in $filename");
@@ -354,13 +341,13 @@ sub SkipIncludeHeader
     return 0;
 }
 
-sub IsNumericType
+sub IsConstructorTemplate
 {
     my $object = shift;
-    my $type = shift;
+    my $interface = shift;
+    my $template = shift;
 
-    return 1 if $numericTypeHash{$type};
-    return 0;
+    return $interface->extendedAttributes->{"ConstructorTemplate"} && $interface->extendedAttributes->{"ConstructorTemplate"} eq $template;
 }
 
 sub IsPrimitiveType
@@ -380,6 +367,23 @@ sub IsStringType
 
     return 1 if $stringTypeHash{$type};
     return 0;
+}
+
+sub IsEnumType
+{
+    my $object = shift;
+    my $type = shift;
+
+    return 1 if exists $enumTypeHash{$type};
+    return 0;
+}
+
+sub ValidEnumValues
+{
+    my $object = shift;
+    my $type = shift;
+
+    return @{$enumTypeHash{$type}};
 }
 
 sub IsNonPointerType
@@ -407,6 +411,31 @@ sub IsSVGTypeWithWritablePropertiesNeedingTearOff
 
     return 1 if $svgTypeWithWritablePropertiesNeedingTearOff{$type};
     return 0;
+}
+
+sub IsTypedArrayType
+{
+    my $object = shift;
+    my $type = shift;
+    return 1 if (($type eq "ArrayBuffer") or ($type eq "ArrayBufferView"));
+    return 1 if (($type eq "Uint8Array") or ($type eq "Uint8ClampedArray") or ($type eq "Uint16Array") or ($type eq "Uint32Array"));
+    return 1 if (($type eq "Int8Array") or ($type eq "Int16Array") or ($type eq "Int32Array"));
+    return 1 if (($type eq "Float32Array") or ($type eq "Float64Array"));
+    return 0;
+}
+
+sub IsRefPtrType
+{
+    my $object = shift;
+    my $type = shift;
+
+    return 0 if $object->IsPrimitiveType($type);
+    return 0 if $object->GetArrayType($type);
+    return 0 if $object->GetSequenceType($type);
+    return 0 if $type eq "DOMString";
+    return 0 if $object->IsEnumType($type);
+
+    return 1;
 }
 
 sub GetSVGTypeNeedingTearOff
@@ -496,6 +525,7 @@ sub WK_lcfirst
     $ret =~ s/jS/js/ if $ret =~ /^jS/;
     $ret =~ s/xML/xml/ if $ret =~ /^xML/;
     $ret =~ s/xSLT/xslt/ if $ret =~ /^xSLT/;
+    $ret =~ s/cSS/css/ if $ret =~ /^cSS/;
 
     # For HTML5 FileSystem API Flags attributes.
     # (create is widely used to instantiate an object and must be avoided.)
@@ -517,10 +547,10 @@ sub NamespaceForAttributeName
 # links to its respective overloads (including itself).
 sub LinkOverloadedFunctions
 {
-    my ($object, $dataNode) = @_;
+    my ($object, $interface) = @_;
 
     my %nameToFunctionsMap = ();
-    foreach my $function (@{$dataNode->functions}) {
+    foreach my $function (@{$interface->functions}) {
         my $name = $function->signature->name;
         $nameToFunctionsMap{$name} = [] if !exists $nameToFunctionsMap{$name};
         push(@{$nameToFunctionsMap{$name}}, $function);
@@ -537,7 +567,7 @@ sub AttributeNameForGetterAndSetter
     if ($attribute->signature->extendedAttributes->{"ImplementedAs"}) {
         $attributeName = $attribute->signature->extendedAttributes->{"ImplementedAs"};
     }
-    my $attributeType = $generator->StripModule($attribute->signature->type);
+    my $attributeType = $attribute->signature->type;
 
     # Avoid clash with C++ keyword.
     $attributeName = "_operator" if $attributeName eq "operator";
@@ -568,6 +598,16 @@ sub ContentAttributeName
     return "WebCore::${namespace}::${contentAttributeName}Attr";
 }
 
+sub CanUseFastAttribute
+{
+    my ($generator, $attribute) = @_;
+    my $attributeType = $attribute->signature->type;
+    # HTMLNames::styleAttr cannot be used with fast{Get,Has}Attribute but we do not [Reflect] the
+    # style attribute.
+
+    return !$generator->IsSVGAnimatedType($attributeType);
+}
+
 sub GetterExpression
 {
     my ($generator, $implIncludes, $interfaceName, $attribute) = @_;
@@ -582,13 +622,28 @@ sub GetterExpression
     if ($attribute->signature->extendedAttributes->{"URL"}) {
         $functionName = "getURLAttribute";
     } elsif ($attribute->signature->type eq "boolean") {
+        my $namespace = $generator->NamespaceForAttributeName($interfaceName, $contentAttributeName);
+        if ($generator->CanUseFastAttribute($attribute)) {
+            $functionName = "fastHasAttribute";
+        } else {
         $functionName = "hasAttribute";
+        }
     } elsif ($attribute->signature->type eq "long") {
         $functionName = "getIntegralAttribute";
     } elsif ($attribute->signature->type eq "unsigned long") {
         $functionName = "getUnsignedIntegralAttribute";
     } else {
+        if ($contentAttributeName eq "WebCore::HTMLNames::idAttr") {
+            $functionName = "getIdAttribute";
+            $contentAttributeName = "";
+        } elsif ($contentAttributeName eq "WebCore::HTMLNames::nameAttr") {
+            $functionName = "getNameAttribute";
+            $contentAttributeName = "";
+        } elsif ($generator->CanUseFastAttribute($attribute)) {
+            $functionName = "fastGetAttribute";
+        } else {
         $functionName = "getAttribute";
+    }
     }
 
     return ($functionName, $contentAttributeName);
@@ -618,10 +673,38 @@ sub SetterExpression
     return ($functionName, $contentAttributeName);
 }
 
-sub ShouldCheckEnums
+sub IsWrapperType
 {
-    my $dataNode = shift;
-    return not $dataNode->extendedAttributes->{"DoNotCheckConstants"};
+    my $object = shift;
+    my $type = shift;
+
+    return 0 if $object->IsPrimitiveType($type);
+    return 0 if $object->GetArrayType($type);
+    return 0 if $object->GetSequenceType($type);
+    return 0 if $object->IsEnumType($type);
+    return 0 if $object->IsStringType($type);
+    return 0 if $webCoreTypeHash{$type};
+    return 0 if $type eq "any";
+
+    return 1;
+}
+
+sub IsCallbackInterface
+{
+  my $object = shift;
+  my $type = shift;
+
+  return 0 unless $object->IsWrapperType($type);
+
+  my $idlFile = $object->IDLFileForInterface($type)
+      or die("Could NOT find IDL file for interface \"$type\"!\n");
+
+  open FILE, "<", $idlFile;
+  my @lines = <FILE>;
+  close FILE;
+
+  my $fileContents = join('', @lines);
+  return ($fileContents =~ /callback\s+interface\s+(\w+)/gs);
 }
 
 sub GenerateConditionalString
@@ -630,6 +713,19 @@ sub GenerateConditionalString
     my $node = shift;
 
     my $conditional = $node->extendedAttributes->{"Conditional"};
+    if ($conditional) {
+        return $generator->GenerateConditionalStringFromAttributeValue($conditional);
+    } else {
+        return "";
+    }
+}
+
+sub GenerateConstructorConditionalString
+{
+    my $generator = shift;
+    my $node = shift;
+
+    my $conditional = $node->extendedAttributes->{"ConstructorConditional"};
     if ($conditional) {
         return $generator->GenerateConditionalStringFromAttributeValue($conditional);
     } else {
@@ -655,13 +751,13 @@ sub GenerateConditionalStringFromAttributeValue
 
 sub GenerateCompileTimeCheckForEnumsIfNeeded
 {
-    my ($generator, $dataNode) = @_;
-    my $interfaceName = $dataNode->name;
+    my ($generator, $interface) = @_;
+    my $interfaceName = $interface->name;
     my @checks = ();
     # If necessary, check that all constants are available as enums with the same value.
-    if (ShouldCheckEnums($dataNode) && @{$dataNode->constants}) {
+    if (!$interface->extendedAttributes->{"DoNotCheckConstants"} && @{$interface->constants}) {
         push(@checks, "\n");
-        foreach my $constant (@{$dataNode->constants}) {
+        foreach my $constant (@{$interface->constants}) {
             my $reflect = $constant->extendedAttributes->{"Reflect"};
             my $name = $reflect ? $reflect : $constant->name;
             my $value = $constant->value;
@@ -703,9 +799,47 @@ sub ExtendedAttributeContains
 sub GetVisibleInterfaceName
 {
     my $object = shift;
-    my $dataNode = shift;
-    my $interfaceName = $dataNode->extendedAttributes->{"InterfaceName"};
-    return $interfaceName ? $interfaceName : $dataNode->name;
+    my $interface = shift;
+    my $interfaceName = $interface->extendedAttributes->{"InterfaceName"};
+    return $interfaceName ? $interfaceName : $interface->name;
+}
+
+sub InheritsInterface
+{
+    my $object = shift;
+    my $interface = shift;
+    my $interfaceName = shift;
+    my $found = 0;
+
+    return 1 if $interfaceName eq $interface->name;
+    $object->ForAllParents($interface, sub {
+        my $currentInterface = shift;
+        if ($currentInterface->name eq $interfaceName) {
+            $found = 1;
+        }
+        return 1 if $found;
+    }, 0);
+
+    return $found;
+}
+
+sub InheritsExtendedAttribute
+{
+    my $object = shift;
+    my $interface = shift;
+    my $extendedAttribute = shift;
+    my $found = 0;
+
+    return 1 if $interface->extendedAttributes->{$extendedAttribute};
+    $object->ForAllParents($interface, sub {
+        my $currentInterface = shift;
+        if ($currentInterface->extendedAttributes->{$extendedAttribute}) {
+            $found = 1;
+        }
+        return 1 if $found;
+    }, 0);
+
+    return $found;
 }
 
 1;

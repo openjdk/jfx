@@ -23,12 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS,
         DoNotCheckConstants
-    ] SVGFEBlendElement : SVGElement,
+] interface SVGFEBlendElement : SVGStyledElement,
                           SVGFilterPrimitiveStandardAttributes {
         // Blend Mode Types
         const unsigned short SVG_FEBLEND_MODE_UNKNOWN  = 0;
@@ -43,4 +41,3 @@ module svg {
         readonly attribute SVGAnimatedEnumeration mode;
     };
 
-}

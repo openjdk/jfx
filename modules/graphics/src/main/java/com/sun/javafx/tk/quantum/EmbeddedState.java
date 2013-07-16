@@ -40,7 +40,7 @@ final class EmbeddedState extends SceneState {
     public EmbeddedState(GlassScene vs) {
         super(vs);
     }
-    
+
     /**
      * Put the pixels on the screen.
      * 
@@ -58,7 +58,7 @@ final class EmbeddedState extends SceneState {
             }
         }
     }
-    
+
     /**
      * Drawing can occur when there is an embedded scene that has a host.
      *
@@ -70,7 +70,7 @@ final class EmbeddedState extends SceneState {
         EmbeddedScene escene = (EmbeddedScene) scene;
         return escene != null && escene.host != null && getWidth() > 0 && getHeight() > 0;
     }
-    
+
     /** Updates the state of this object based on the current state of its
      * nativeWindow.
      *

@@ -24,9 +24,9 @@
  *
  */
 
-module view {
-
-    interface ClientRect {
+[
+    ImplementationLacksVTable
+] interface ClientRect {
         readonly attribute float top;
         readonly attribute float right;
         readonly attribute float bottom;
@@ -35,4 +35,3 @@ module view {
         readonly attribute float height;
     };
 
-}

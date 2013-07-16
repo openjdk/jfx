@@ -43,16 +43,15 @@ WebInspector.NetworkItemView = function(request)
 
     this.addEventListener(WebInspector.TabbedPane.EventTypes.TabSelected, this._tabSelected, this);
 
-    if (request.frames().length > 0) {
+    if (request.type === WebInspector.resourceTypes.WebSocket) {
         var frameView = new WebInspector.ResourceWebSocketFrameView(request);
         this.appendTab("webSocketFrames", WebInspector.UIString("Frames"), frameView);
-        return;
-    }
-
+    } else {
     var responseView = new WebInspector.RequestResponseView(request);
     var previewView = new WebInspector.RequestPreviewView(request, responseView);
     this.appendTab("preview", WebInspector.UIString("Preview"), previewView);
     this.appendTab("response", WebInspector.UIString("Response"), responseView);
+    }
 
     if (request.requestCookies || request.responseCookies) {
         this._cookiesView = new WebInspector.RequestCookiesView(request);
@@ -90,8 +89,16 @@ WebInspector.NetworkItemView.prototype = {
 
     _tabSelected: function(event)
     {
-        if (event.data.isUserGesture)
+        if (!event.data.isUserGesture)
+            return;
+
             WebInspector.settings.resourceViewTab.set(event.data.tabId);
+
+        WebInspector.notifications.dispatchEventToListeners(WebInspector.UserMetrics.UserAction, {
+            action: WebInspector.UserMetrics.UserActionNames.NetworkRequestTabSelected,
+            tab: event.data.tabId,
+            url: this._request.url
+        });
     },
 
     /**
@@ -100,10 +107,10 @@ WebInspector.NetworkItemView.prototype = {
     request: function()
     {
         return this._request;
-    }
-}
+    },
 
-WebInspector.NetworkItemView.prototype.__proto__ = WebInspector.TabbedPane.prototype;
+    __proto__: WebInspector.TabbedPane.prototype
+    }
 
 /**
  * @constructor
@@ -170,7 +177,7 @@ WebInspector.RequestContentView.prototype = {
     {
         if (this.canHighlightLine())
             this._innerView.highlightLine(line);
-    }
-}
+    },
 
-WebInspector.RequestContentView.prototype.__proto__ = WebInspector.RequestView.prototype;
+    __proto__: WebInspector.RequestView.prototype
+    }

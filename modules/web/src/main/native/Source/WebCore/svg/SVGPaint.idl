@@ -23,11 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
-        Conditional=SVG
-    ] SVGPaint : SVGColor {
+[
+    Conditional=SVG,
+    ImplementationLacksVTable
+] interface SVGPaint : SVGColor {
         const unsigned short SVG_PAINTTYPE_UNKNOWN = 0;
         const unsigned short SVG_PAINTTYPE_RGBCOLOR = 1;
         const unsigned short SVG_PAINTTYPE_RGBCOLOR_ICCCOLOR = 2;
@@ -42,9 +41,8 @@ module svg {
         readonly attribute unsigned short paintType;
         readonly attribute DOMString uri;
 
-        [StrictTypeChecking] void setUri(in DOMString uri);
-        [StrictTypeChecking] void setPaint(in unsigned short paintType, in DOMString uri, in DOMString rgbColor, in DOMString iccColor)
+    [StrictTypeChecking] void setUri(DOMString uri);
+    [StrictTypeChecking] void setPaint(unsigned short paintType, DOMString uri, DOMString rgbColor, DOMString iccColor)
             raises(DOMException, SVGException);
     };
 
-}

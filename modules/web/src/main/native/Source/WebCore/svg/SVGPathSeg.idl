@@ -24,13 +24,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG,
         CustomToJSObject,
-        ObjCPolymorphic
-    ] SVGPathSeg {
+    ObjCPolymorphic,
+    ImplementationLacksVTable
+] interface SVGPathSeg {
         // Path Segment Types
         const unsigned short PATHSEG_UNKNOWN = 0;
         const unsigned short PATHSEG_CLOSEPATH = 1;
@@ -57,4 +56,3 @@ module svg {
         readonly attribute DOMString pathSegTypeAsLetter;
     };
 
-}

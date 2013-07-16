@@ -171,6 +171,8 @@ void SVGTextLayoutEngine::beginTextPathLayout(RenderObject* object, SVGTextLayou
     RenderSVGTextPath* textPath = toRenderSVGTextPath(object);
 
     m_textPath = textPath->layoutPath();
+    if (m_textPath.isEmpty())
+        return;
     m_textPathStartOffset = textPath->startOffset();
     m_textPathLength = m_textPath.length();
     if (m_textPathStartOffset > 0 && m_textPathStartOffset <= 1)
@@ -423,7 +425,10 @@ void SVGTextLayoutEngine::advanceToNextVisualCharacter(const SVGTextMetrics& vis
 
 void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox* textBox, RenderSVGInlineText* text, const RenderStyle* style)
 {
-    SVGElement* lengthContext = static_cast<SVGElement*>(text->parent()->node());
+    if (m_inPathLayout && m_textPath.isEmpty())
+        return;
+
+    SVGElement* lengthContext = toSVGElement(text->parent()->node());
     
     RenderObject* textParent = text->parent();
     bool definesTextLength = textParent ? parentDefinesTextLength(textParent) : false;
@@ -475,7 +480,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox* textBox, Rend
         SVGCharacterData data;
         SVGCharacterDataMap::iterator it = characterDataMap.find(m_logicalCharacterOffset + 1);
         if (it != characterDataMap.end())
-            data = it->second;
+            data = it->value;
 
         float x = data.x;
         float y = data.y;
@@ -578,20 +583,9 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox* textBox, Rend
             y += m_dy;
         }
 
-        // Determine wheter we have to start a new fragment.
-        bool shouldStartNewFragment = false;
-
-        if (m_dx || m_dy)
-            shouldStartNewFragment = true;
-
-        if (!shouldStartNewFragment && (m_isVerticalText || m_inPathLayout))
-            shouldStartNewFragment = true;
-
-        if (!shouldStartNewFragment && (angle || angle != lastAngle || orientationAngle))
-            shouldStartNewFragment = true;
-
-        if (!shouldStartNewFragment && (kerning || applySpacingToNextCharacter || definesTextLength))
-            shouldStartNewFragment = true;
+        // Determine whether we have to start a new fragment.
+        bool shouldStartNewFragment = m_dx || m_dy || m_isVerticalText || m_inPathLayout || angle || angle != lastAngle
+            || orientationAngle || kerning || applySpacingToNextCharacter || definesTextLength;
 
         // If we already started a fragment, close it now.
         if (didStartTextFragment && shouldStartNewFragment) {

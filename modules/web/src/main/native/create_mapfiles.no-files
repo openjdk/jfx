@@ -5,3 +5,7 @@ JSWeakObjectMapRefPrivate.h
 ImageSourceJava.cpp
 ThreadingJava.cpp
 SharedBufferManager.cpp
+BridgeUtils.cpp
+BridgeUtils.h
+JSStringRefQt.cpp
+JSStringRefQt.h

@@ -82,6 +82,7 @@ public class DigitalClockApp extends Application {
         primaryStage.setResizable(false);
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
+        play();
     }
 
     /**

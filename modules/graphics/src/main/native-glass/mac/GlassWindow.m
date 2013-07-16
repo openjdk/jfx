@@ -1211,17 +1211,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMinimumSize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        window->_setMinimumSizeW = jW;
-        window->_setMinimumSizeH = jH;
-        
-        if ([NSThread isMainThread] == YES)
-        {
-            [window _setMinimumSize];
-        }
-        else
-        {
-            [window performSelectorOnMainThread:@selector(_setMinimumSize) withObject:nil waitUntilDone:YES];
-        }
+        [window->nsWindow setMinSize:NSMakeSize(jW, jH)];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1243,17 +1233,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        window->_setMaximumSizeW = jW == -1 ? FLT_MAX : (CGFloat)jW;
-        window->_setMaximumSizeH = jH == -1 ? FLT_MAX : (CGFloat)jH;
-        
-        if ([NSThread isMainThread] == YES)
-        {
-            [window _setMaximumSize];
-        }
-        else
-        {
-            [window performSelectorOnMainThread:@selector(_setMaximumSize) withObject:nil waitUntilDone:YES];
-        }
+        [window->nsWindow setMaxSize:NSMakeSize(jW == -1 ? FLT_MAX : (CGFloat)jW,
+                                                jH == -1 ? FLT_MAX : (CGFloat)jH)];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

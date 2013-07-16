@@ -52,6 +52,7 @@
 #include "WebScriptWorld.h"
 #include "WebURLResponse.h"
 #include "WebView.h"
+#include <WebCore/AnimationController.h>
 #include <WebCore/BString.h>
 #include <WebCore/COMPtr.h>
 #include <WebCore/MemoryCache.h>
@@ -60,6 +61,7 @@
 #include <WebCore/DocumentMarkerController.h>
 #include <WebCore/DOMImplementation.h>
 #include <WebCore/DOMWindow.h>
+#include <WebCore/Editor.h>
 #include <WebCore/Event.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/FormState.h>
@@ -87,8 +89,10 @@
 #include <WebCore/PluginData.h>
 #include <WebCore/PluginDatabase.h>
 #include <WebCore/PluginView.h>
+#include <WebCore/PolicyChecker.h>
 #include <WebCore/PrintContext.h>
 #include <WebCore/ResourceHandle.h>
+#include <WebCore/ResourceLoader.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/RenderView.h>
 #include <WebCore/RenderTreeAsText.h>
@@ -99,9 +103,9 @@
 #include <WebCore/ScriptValue.h>
 #include <WebCore/SecurityOrigin.h>
 #include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/JSObject.h>
-#include <JavaScriptCore/JSValue.h>
 #include <wtf/MathExtras.h>
 
 #if USE(CG)
@@ -478,7 +482,7 @@ HRESULT WebFrame::DOMWindow(/* [retval][out] */ IDOMWindow** window)
     *window = 0;
 
     if (Frame* coreFrame = core(this)) {
-        if (WebCore::DOMWindow* coreWindow = coreFrame->domWindow())
+        if (WebCore::DOMWindow* coreWindow = coreFrame->document()->domWindow())
             *window = ::DOMWindow::createInstance(coreWindow);
     }
 
@@ -556,7 +560,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::loadRequest(
     if (!coreFrame)
         return E_FAIL;
 
-    coreFrame->loader()->load(requestImpl->resourceRequest(), false);
+    coreFrame->loader()->load(FrameLoadRequest(coreFrame, requestImpl->resourceRequest()));
     return S_OK;
 }
 
@@ -580,7 +584,7 @@ void WebFrame::loadData(PassRefPtr<WebCore::SharedBuffer> data, BSTR mimeType, B
 
     // This method is only called from IWebFrame methods, so don't ASSERT that the Frame pointer isn't null.
     if (Frame* coreFrame = core(this))
-        coreFrame->loader()->load(request, substituteData, false);
+        coreFrame->loader()->load(FrameLoadRequest(coreFrame, request, substituteData));
 }
 
 
@@ -883,20 +887,10 @@ HRESULT STDMETHODCALLTYPE WebFrame::pageNumberForElementById(
     /* [in] */ float pageHeightInPixels,
     /* [retval][out] */ int* result)
 {
-    if (!result)
-        return E_POINTER;
-
-    Frame* coreFrame = core(this);
-    if (!coreFrame)
+    // TODO: Please remove this function if not needed as this is LTC specific function
+    // and has been moved to Internals.
+    notImplemented();
         return E_FAIL;
-
-    String coreId = String(id, SysStringLen(id));
-
-    Element* element = coreFrame->document()->getElementById(coreId);
-    if (!element)
-        return E_FAIL;
-    *result = PrintContext::pageNumberForElement(element, FloatSize(pageWidthInPixels, pageHeightInPixels));
-    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE WebFrame::numberOfPages(
@@ -904,15 +898,10 @@ HRESULT STDMETHODCALLTYPE WebFrame::numberOfPages(
     /* [in] */ float pageHeightInPixels,
     /* [retval][out] */ int* result)
 {
-    if (!result)
-        return E_POINTER;
-
-    Frame* coreFrame = core(this);
-    if (!coreFrame)
+    // TODO: Please remove this function if not needed as this is LTC specific function
+    // and has been moved to Internals.
+    notImplemented();
         return E_FAIL;
-
-    *result = PrintContext::numberOfPages(coreFrame, FloatSize(pageWidthInPixels, pageHeightInPixels));
-    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE WebFrame::scrollOffset(
@@ -999,7 +988,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::pendingFrameUnloadEventCount(
     if (!coreFrame)
         return E_FAIL;
 
-    *result = coreFrame->domWindow()->pendingUnloadEventListeners();
+    *result = coreFrame->document()->domWindow()->pendingUnloadEventListeners();
     return S_OK;
 }
 
@@ -1016,7 +1005,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::hasSpellingMarker(
     Frame* coreFrame = core(this);
     if (!coreFrame)
         return E_FAIL;
-    *result = coreFrame->editor()->selectionStartHasMarkerFor(DocumentMarker::Spelling, from, length);
+    *result = coreFrame->editor().selectionStartHasMarkerFor(DocumentMarker::Spelling, from, length);
     return S_OK;
 }
 
@@ -1032,16 +1021,16 @@ HRESULT STDMETHODCALLTYPE WebFrame::clearOpener()
 HRESULT WebFrame::setTextDirection(BSTR direction)
 {
     Frame* coreFrame = core(this);
-    if (!coreFrame || !coreFrame->editor())
+    if (!coreFrame)
         return E_FAIL;
 
     String directionString(direction, SysStringLen(direction));
     if (directionString == "auto")
-        coreFrame->editor()->setBaseWritingDirection(NaturalWritingDirection);
+        coreFrame->editor().setBaseWritingDirection(NaturalWritingDirection);
     else if (directionString == "ltr")
-        coreFrame->editor()->setBaseWritingDirection(LeftToRightWritingDirection);
+        coreFrame->editor().setBaseWritingDirection(LeftToRightWritingDirection);
     else if (directionString == "rtl")
-        coreFrame->editor()->setBaseWritingDirection(RightToLeftWritingDirection);
+        coreFrame->editor().setBaseWritingDirection(RightToLeftWritingDirection);
     return S_OK;
 }
 
@@ -1063,7 +1052,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::selectedString(
     if (!coreFrame)
         return E_FAIL;
 
-    String text = coreFrame->displayStringModifiedByEncoding(coreFrame->editor()->selectedText());
+    String text = coreFrame->displayStringModifiedByEncoding(coreFrame->editor().selectedText());
 
     *result = BString(text).release();
     return S_OK;
@@ -1075,7 +1064,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::selectAll()
     if (!coreFrame)
         return E_FAIL;
 
-    if (!coreFrame->editor()->command("SelectAll").execute())
+    if (!coreFrame->editor().command("SelectAll").execute())
         return E_FAIL;
 
     return S_OK;
@@ -1198,6 +1187,26 @@ HRESULT WebFrame::elementDoesAutoComplete(IDOMElement *element, BOOL *result)
     return S_OK;
 }
 
+HRESULT STDMETHODCALLTYPE WebFrame::resumeAnimations()
+{
+    Frame* frame = core(this);
+    if (!frame)
+        return E_FAIL;
+
+    frame->animation()->resumeAnimations();
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE WebFrame::suspendAnimations()
+{
+    Frame* frame = core(this);
+    if (!frame)
+        return E_FAIL;
+
+    frame->animation()->suspendAnimations();
+    return S_OK;
+}
+
 HRESULT WebFrame::pauseAnimation(BSTR animationName, IDOMNode* node, double secondsFromNow, BOOL* animationWasRunning)
 {
     if (!node || !animationWasRunning)
@@ -1258,7 +1267,7 @@ HRESULT WebFrame::visibleContentRect(RECT* rect)
     if (!view)
         return E_FAIL;
 
-    *rect = view->visibleContentRect(false);
+    *rect = view->visibleContentRect();
     return S_OK;
 }
 
@@ -1437,11 +1446,10 @@ HRESULT WebFrame::canProvideDocumentSource(bool* result)
     COMPtr<IWebURLResponse> urlResponse;
     hr = dataSource->response(&urlResponse);
     if (SUCCEEDED(hr) && urlResponse) {
-        BSTR mimeTypeBStr;
+        BString mimeTypeBStr;
         if (SUCCEEDED(urlResponse->MIMEType(&mimeTypeBStr))) {
             String mimeType(mimeTypeBStr, SysStringLen(mimeTypeBStr));
             *result = mimeType == "text/html" || WebCore::DOMImplementation::isXMLMIMEType(mimeType);
-            SysFreeString(mimeTypeBStr);
         }
     }
     return hr;
@@ -1786,7 +1794,7 @@ void WebFrame::dispatchUnableToImplementPolicy(const ResourceError& error)
     policyDelegate->unableToImplementPolicyWithError(d->webView, webError.get(), this);
 }
 
-void WebFrame::download(ResourceHandle* handle, const ResourceRequest& request, const ResourceResponse& response)
+void WebFrame::convertMainResourceLoadToDownload(DocumentLoader* documentLoader, const ResourceRequest& request, const ResourceResponse& response)
 {
     COMPtr<IWebDownloadDelegate> downloadDelegate;
     COMPtr<IWebView> webView;
@@ -1802,7 +1810,7 @@ void WebFrame::download(ResourceHandle* handle, const ResourceRequest& request, 
     // Its the delegate's job to ref the WebDownload to keep it alive - otherwise it will be destroyed
     // when this method returns
     COMPtr<WebDownload> download;
-    download.adoptRef(WebDownload::createInstance(handle, request, response, downloadDelegate.get()));
+    download.adoptRef(WebDownload::createInstance(documentLoader->mainResourceLoader()->handle(), request, response, downloadDelegate.get()));
 }
 
 bool WebFrame::dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int /*length*/)
@@ -2466,7 +2474,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::frameBounds(
     if (!view)
         return E_FAIL;
 
-    FloatRect bounds = view->visibleContentRect(true);
+    FloatRect bounds = view->visibleContentRect(ScrollableArea::IncludeScrollbars);
     result->bottom = (LONG) bounds.height();
     result->right = (LONG) bounds.width();
     return S_OK;
@@ -2529,7 +2537,7 @@ HRESULT WebFrame::stringByEvaluatingJavaScriptInScriptWorld(IWebScriptWorld* iWo
 
     JSC::ExecState* exec = anyWorldGlobalObject->globalExec();
     JSC::JSLockHolder lock(exec);
-    String resultString = ustringToString(result.toString(exec)->value(exec));
+    String resultString = result.toWTFString(exec);
     *evaluationResult = BString(resultString).release();
 
     return S_OK;

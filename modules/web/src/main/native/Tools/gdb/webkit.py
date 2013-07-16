@@ -115,10 +115,10 @@ class WTFAtomicStringPrinter(StringPrinter):
 class WTFCStringPrinter(StringPrinter):
     "Print a WTF::CString"
     def to_string(self):
-        # The CString holds a buffer, which is a refptr to a WTF::Vector of chars.
-        vector = self.val['m_buffer']['m_ptr']['m_vector']
-        # The vector has two more layers of buffer members.
-        return vector['m_buffer']['m_buffer']
+        # The CString holds a buffer, which is a refptr to a WTF::CStringBuffer.
+        data = self.val['m_buffer']['m_ptr']['m_data'].cast(gdb.lookup_type('char').pointer())
+        length = self.val['m_buffer']['m_ptr']['m_length']
+        return ''.join([chr((data + i).dereference()) for i in xrange(length)])
 
 
 class WTFStringImplPrinter(StringPrinter):
@@ -151,13 +151,11 @@ class WTFStringPrinter(StringPrinter):
         return self.stringimpl_ptr().dereference()
 
 
-JSCUStringPrinter = WTFStringImplPrinter
-
 
 class JSCIdentifierPrinter(StringPrinter):
     "Print a JSC::Identifier"
     def to_string(self):
-        return JSCUStringPrinter(self.val['m_string']).to_string()
+        return WTFStringPrinter(self.val['m_string']).to_string()
 
 
 class JSCJSStringPrinter(StringPrinter):
@@ -166,7 +164,7 @@ class JSCJSStringPrinter(StringPrinter):
         if self.val['m_length'] == 0:
             return ''
 
-        return JSCUStringPrinter(self.val['m_value']).to_string()
+        return WTFStringImplPrinter(self.val['m_value']).to_string()
 
 
 class WebCoreKURLGooglePrivatePrinter(StringPrinter):
@@ -263,12 +261,12 @@ class WTFVectorPrinter:
         self.val = val
 
     def children(self):
-        start = self.val['m_buffer']['m_buffer']
+        start = self.val['m_buffer']
         return self.Iterator(start, start + self.val['m_size'])
 
     def to_string(self):
         return ('%s of length %d, capacity %d'
-                % ('WTF::Vector', self.val['m_size'], self.val['m_buffer']['m_capacity']))
+                % ('WTF::Vector', self.val['m_size'], self.val['m_capacity']))
 
     def display_hint(self):
         return 'array'
@@ -282,7 +280,6 @@ def add_pretty_printers():
         (re.compile("^WTF::StringImpl$"), WTFStringImplPrinter),
         (re.compile("^WebCore::KURLGooglePrivate$"), WebCoreKURLGooglePrivatePrinter),
         (re.compile("^WebCore::QualifiedName$"), WebCoreQualifiedNamePrinter),
-        (re.compile("^JSC::UString$"), JSCUStringPrinter),
         (re.compile("^JSC::Identifier$"), JSCIdentifierPrinter),
         (re.compile("^JSC::JSString$"), JSCJSStringPrinter),
     )

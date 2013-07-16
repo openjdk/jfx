@@ -17,11 +17,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS
-    ] SVGFEDropShadowElement : SVGElement,
+] interface SVGFEDropShadowElement : SVGStyledElement,
                                                            SVGFilterPrimitiveStandardAttributes { 
         readonly attribute SVGAnimatedString in1;
         readonly attribute SVGAnimatedNumber dx;
@@ -29,8 +27,7 @@ module svg {
         readonly attribute SVGAnimatedNumber stdDeviationX;
         readonly attribute SVGAnimatedNumber stdDeviationY;
 
-        void setStdDeviation(in [Optional=DefaultIsUndefined] float stdDeviationX, 
-                             in [Optional=DefaultIsUndefined] float stdDeviationY);
+    void setStdDeviation([Default=Undefined] optional float stdDeviationX, 
+                         [Default=Undefined] optional float stdDeviationY);
     };
 
-}

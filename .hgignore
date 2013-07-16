@@ -6,11 +6,11 @@
 \.rej$
 \.conflict\~$
 ^\.ant-targets.*$
-\.idea/tasks.xml$
-\.idea/workspace.xml$
+^.idea/tasks.xml$
+^.idea/workspace.xml$
 ^\.gradle/
 ^buildSrc/\.gradle/
-^idea/out/
+^.idea/out/
 build/
 bin/
 dist/

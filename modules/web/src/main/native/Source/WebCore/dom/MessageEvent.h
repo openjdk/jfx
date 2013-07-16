@@ -64,17 +64,17 @@ public:
     {
         return adoptRef(new MessageEvent(data, origin, lastEventId, source, ports));
     }
-    static PassRefPtr<MessageEvent> create(const String& data)
+    static PassRefPtr<MessageEvent> create(const String& data, const String& origin = "")
     {
-        return adoptRef(new MessageEvent(data));
+        return adoptRef(new MessageEvent(data, origin));
     }
-    static PassRefPtr<MessageEvent> create(PassRefPtr<Blob> data)
+    static PassRefPtr<MessageEvent> create(PassRefPtr<Blob> data, const String& origin = "")
     {
-        return adoptRef(new MessageEvent(data));
+        return adoptRef(new MessageEvent(data, origin));
     }
-    static PassRefPtr<MessageEvent> create(PassRefPtr<ArrayBuffer> data)
+    static PassRefPtr<MessageEvent> create(PassRefPtr<ArrayBuffer> data, const String& origin = "")
     {
-        return adoptRef(new MessageEvent(data));
+        return adoptRef(new MessageEvent(data, origin));
     }
     static PassRefPtr<MessageEvent> create(const AtomicString& type, const MessageEventInit& initializer)
     {
@@ -88,13 +88,13 @@ public:
     const String& origin() const { return m_origin; }
     const String& lastEventId() const { return m_lastEventId; }
     DOMWindow* source() const { return m_source.get(); }
-    MessagePortArray* ports() const { return m_ports.get(); }
+    MessagePortArray ports() const { return m_ports ? *m_ports : MessagePortArray(); }
 
     // FIXME: Remove this when we have custom ObjC binding support.
     SerializedScriptValue* data() const;
-    // FIXME: remove this when we update the ObjC bindings (bug #28774).
+
+    // Needed for Objective-C bindings (see bug 28774).
     MessagePort* messagePort();
-    // FIXME: remove this when we update the ObjC bindings (bug #28774).
     void initMessageEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<SerializedScriptValue> data, const String& origin, const String& lastEventId, DOMWindow* source, MessagePort*);
 
     virtual const AtomicString& interfaceName() const;
@@ -108,7 +108,7 @@ public:
     };
     DataType dataType() const { return m_dataType; }
     const ScriptValue& dataAsScriptValue() const { ASSERT(m_dataType == DataTypeScriptValue); return m_dataAsScriptValue; }
-    SerializedScriptValue* dataAsSerializedScriptValue() const { ASSERT(m_dataType == DataTypeSerializedScriptValue); return m_dataAsSerializedScriptValue.get(); }
+    PassRefPtr<SerializedScriptValue> dataAsSerializedScriptValue() const { ASSERT(m_dataType == DataTypeSerializedScriptValue); return m_dataAsSerializedScriptValue; }
     String dataAsString() const { ASSERT(m_dataType == DataTypeString); return m_dataAsString; }
     Blob* dataAsBlob() const { ASSERT(m_dataType == DataTypeBlob); return m_dataAsBlob.get(); }
     ArrayBuffer* dataAsArrayBuffer() const { ASSERT(m_dataType == DataTypeArrayBuffer); return m_dataAsArrayBuffer.get(); }
@@ -119,9 +119,9 @@ private:
     MessageEvent(const ScriptValue& data, const String& origin, const String& lastEventId, PassRefPtr<DOMWindow> source, PassOwnPtr<MessagePortArray>);
     MessageEvent(PassRefPtr<SerializedScriptValue> data, const String& origin, const String& lastEventId, PassRefPtr<DOMWindow> source, PassOwnPtr<MessagePortArray>);
 
-    explicit MessageEvent(const String& data);
-    explicit MessageEvent(PassRefPtr<Blob> data);
-    explicit MessageEvent(PassRefPtr<ArrayBuffer> data);
+    explicit MessageEvent(const String& data, const String& origin);
+    explicit MessageEvent(PassRefPtr<Blob> data, const String& origin);
+    explicit MessageEvent(PassRefPtr<ArrayBuffer> data, const String& origin);
 
     DataType m_dataType;
     ScriptValue m_dataAsScriptValue;

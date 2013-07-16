@@ -195,10 +195,10 @@ public:
         putIntegralUnchecked(value.low);
     }
 
-    PassRefPtr<ExecutableMemoryHandle> executableCopy(JSGlobalData& globalData, void* ownerUID, JITCompilationEffort effort)
+    PassRefPtr<ExecutableMemoryHandle> executableCopy(VM& vm, void* ownerUID, JITCompilationEffort effort)
     {
         flushConstantPool(false);
-        return AssemblerBuffer::executableCopy(globalData, ownerUID, effort);
+        return AssemblerBuffer::executableCopy(vm, ownerUID, effort);
     }
 
     void putShortWithConstantInt(uint16_t insn, uint32_t constant, bool isReusable = false)
@@ -215,7 +215,7 @@ public:
     void flushWithoutBarrier(bool isForced = false)
     {
         // Flush if constant pool is more than 60% full to avoid overuse of this function.
-        if (isForced || 5 * m_numConsts > 3 * maxPoolSize / sizeof(uint32_t))
+        if (isForced || 5 * static_cast<uint32_t>(m_numConsts) > 3 * maxPoolSize / sizeof(uint32_t))
             flushConstantPool(false);
     }
 

@@ -26,16 +26,17 @@
 #ifndef DOMStringMap_h
 #define DOMStringMap_h
 
-#include "PlatformString.h"
+#include "ScriptWrappable.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class Element;
 typedef int ExceptionCode;
 
-class DOMStringMap {
+class DOMStringMap : public ScriptWrappable {
     WTF_MAKE_NONCOPYABLE(DOMStringMap); WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~DOMStringMap();
@@ -52,9 +53,7 @@ public:
     virtual Element* element() = 0;
 
 protected:
-    DOMStringMap()
-    {
-    }
+    DOMStringMap();
 };
 
 } // namespace WebCore

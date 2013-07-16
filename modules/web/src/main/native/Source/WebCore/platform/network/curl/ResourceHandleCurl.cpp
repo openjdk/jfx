@@ -29,6 +29,7 @@
 #include "ResourceHandle.h"
 
 #include "CachedResourceLoader.h"
+#include "NetworkingContext.h"
 #include "NotImplemented.h"
 #include "ResourceHandleInternal.h"
 #include "ResourceHandleManager.h"
@@ -95,14 +96,14 @@ ResourceHandle::~ResourceHandle()
     cancel();
 }
 
-bool ResourceHandle::start(NetworkingContext* context)
+bool ResourceHandle::start()
 {
     // The frame could be null if the ResourceHandle is not associated to any
     // Frame, e.g. if we are downloading a file.
     // If the frame is not null but the page is null this must be an attempted
     // load from an unload handler, so let's just block it.
     // If both the frame and the page are not null the context is valid.
-    if (context && !context->isValid())
+    if (d->m_context && !d->m_context->isValid())
         return false;
 
     ResourceHandleManager::sharedInstance()->add(this);
@@ -145,7 +146,6 @@ void ResourceHandle::setClientCertificate(const String& host, CFDataRef cert)
 
 void ResourceHandle::platformSetDefersLoading(bool defers)
 {
-#if LIBCURL_VERSION_NUM > 0x071200
     if (!d->m_handle)
         return;
 
@@ -160,15 +160,6 @@ void ResourceHandle::platformSetDefersLoading(bool defers)
             // Restarting the handle has failed so just cancel it.
             cancel();
     }
-#else
-    LOG_ERROR("Deferred loading is implemented if libcURL version is above 7.18.0");
-#endif
-}
-
-bool ResourceHandle::willLoadFromCache(ResourceRequest&, Frame*)
-{
-    notImplemented();
-    return false;
 }
 
 bool ResourceHandle::loadsBlocked()
@@ -177,10 +168,10 @@ bool ResourceHandle::loadsBlocked()
     return false;
 }
 
-void ResourceHandle::loadResourceSynchronously(NetworkingContext*, const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
     WebCoreSynchronousLoader syncLoader;
-    RefPtr<ResourceHandle> handle = adoptRef(new ResourceHandle(request, &syncLoader, true, false));
+    RefPtr<ResourceHandle> handle = adoptRef(new ResourceHandle(context, request, &syncLoader, true, false));
 
     ResourceHandleManager* manager = ResourceHandleManager::sharedInstance();
 

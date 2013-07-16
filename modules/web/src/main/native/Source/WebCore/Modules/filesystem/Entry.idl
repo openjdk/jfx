@@ -28,23 +28,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-    interface [
+[
+    NoInterfaceObject,
         Conditional=FILE_SYSTEM,
         CustomToJSObject,
         JSNoStaticTables
-    ] Entry {
+] interface Entry {
         readonly attribute boolean isFile;
         readonly attribute boolean isDirectory;
         readonly attribute DOMString name;
         readonly attribute DOMString fullPath;
         readonly attribute DOMFileSystem filesystem;
 
-        void getMetadata(in [Callback] MetadataCallback successCallback, in [Optional, Callback] ErrorCallback errorCallback);
-        void moveTo(in DirectoryEntry parent, in [Optional, TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString name, in [Optional, Callback] EntryCallback successCallback, in [Optional, Callback] ErrorCallback errorCallback);
-        void copyTo(in DirectoryEntry parent, in [Optional, TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString name, in [Optional, Callback] EntryCallback successCallback, in [Optional, Callback] ErrorCallback errorCallback);
+    void getMetadata(MetadataCallback successCallback, optional ErrorCallback errorCallback);
+    void moveTo(DirectoryEntry parent, [TreatNullAs=NullString, TreatUndefinedAs=NullString] optional DOMString name, optional EntryCallback successCallback, optional ErrorCallback errorCallback);
+    void copyTo(DirectoryEntry parent, [TreatNullAs=NullString, TreatUndefinedAs=NullString] optional DOMString name, optional EntryCallback successCallback, optional ErrorCallback errorCallback);
         DOMString toURL();
-        void remove(in [Callback] VoidCallback successCallback, in [Optional, Callback] ErrorCallback errorCallback);
-        void getParent(in [Optional, Callback] EntryCallback successCallback, in [Optional, Callback] ErrorCallback errorCallback);
+    void remove(VoidCallback successCallback, optional ErrorCallback errorCallback);
+    void getParent(optional EntryCallback successCallback, optional ErrorCallback errorCallback);
     };
-}

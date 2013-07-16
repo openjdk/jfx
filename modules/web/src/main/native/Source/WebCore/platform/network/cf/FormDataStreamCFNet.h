@@ -33,16 +33,17 @@
 
 typedef struct _CFURLRequest* CFMutableURLRequestRef;
 typedef struct __CFReadStream* CFReadStreamRef;
-typedef const struct _CFURLRequest* CFURLRequestRef;
+typedef const struct __CFString* CFStringRef;
 
 namespace WebCore {
 
 class FormData;
 
 void setHTTPBody(CFMutableURLRequestRef, PassRefPtr<FormData>);
-PassRefPtr<FormData> httpBodyFromRequest(CFURLRequestRef);
 
 FormData* httpBodyFromStream(CFReadStreamRef);
+
+CFStringRef formDataStreamLengthPropertyName();
 
 } // namespace WebCore
 

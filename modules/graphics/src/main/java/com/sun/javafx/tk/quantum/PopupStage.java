@@ -35,6 +35,8 @@ import com.sun.glass.ui.Window;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 
+import java.security.AccessControlContext;
+
 final class PopupStage extends WindowStage  {
 
     public PopupStage(final TKStage owner) {
@@ -56,8 +58,10 @@ final class PopupStage extends WindowStage  {
     }
 
     @Override
-    public TKScene createTKScene(boolean depthBuffer) {
-        return new PopupScene(depthBuffer);
+    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing, AccessControlContext acc) {
+        PopupScene scene =  new PopupScene(depthBuffer, antiAliasing);
+        scene.setSecurityContext(acc);
+        return scene;
     }
 
     public void setResizable(final boolean resizable) {

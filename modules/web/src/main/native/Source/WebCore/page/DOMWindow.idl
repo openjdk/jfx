@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,9 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module window {
-
-    interface [
+[
         CheckSecurity,
         JSCustomDefineOwnProperty,
         CustomDeleteProperty,
@@ -40,25 +38,24 @@ module window {
         JSGenerateToNativeObject,
         ReplaceableConstructor,
         JSLegacyParent=JSDOMWindowBase,
-        V8CustomToJSObject,
         InterfaceName=Window
-    ] DOMWindow {
+] interface DOMWindow {
         // DOM Level 0
-        attribute [Replaceable] Screen screen;
-        attribute [Replaceable, DoNotCheckSecurityOnGetter] History history;
-        attribute [Replaceable] BarInfo locationbar;
-        attribute [Replaceable] BarInfo menubar;
-        attribute [Replaceable] BarInfo personalbar;
-        attribute [Replaceable] BarInfo scrollbars;
-        attribute [Replaceable] BarInfo statusbar;
-        attribute [Replaceable] BarInfo toolbar;
-        attribute [Replaceable] Navigator navigator;
-        attribute [Replaceable] Navigator clientInformation;
+    [Replaceable] readonly attribute Screen screen;
+    [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute History history;
+    [Replaceable] readonly attribute BarProp locationbar;
+    [Replaceable] readonly attribute BarProp menubar;
+    [Replaceable] readonly attribute BarProp personalbar;
+    [Replaceable] readonly attribute BarProp scrollbars;
+    [Replaceable] readonly attribute BarProp statusbar;
+    [Replaceable] readonly attribute BarProp toolbar;
+    [Replaceable] readonly attribute Navigator navigator;
+    [Replaceable] readonly attribute Navigator clientInformation;
         readonly attribute Crypto crypto;
 #if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
-        attribute [DoNotCheckSecurity, CustomSetter, V8Unforgeable] Location location;
+    attribute [DoNotCheckSecurity, CustomSetter] Location location;
 #endif
-        attribute [Replaceable, CustomGetter, V8CustomSetter] Event event;
+    [Replaceable, CustomGetter] readonly attribute Event event;
 
         DOMSelection getSelection();
 
@@ -71,53 +68,53 @@ module window {
         void print();
         void stop();
 
-        [Custom] DOMWindow open(in DOMString url,
-                                in DOMString name,
-                                in [Optional] DOMString options);
+    [Custom] DOMWindow open(DOMString url,
+                            DOMString name,
+                            optional DOMString options);
 
-        [Custom] DOMObject showModalDialog(in DOMString url,
-                                           in [Optional] DOMObject dialogArgs,
-                                           in [Optional] DOMString featureArgs);
+    [Custom] any showModalDialog(DOMString url,
+                                       optional any dialogArgs,
+                                       optional DOMString featureArgs);
 
-        void alert(in [Optional=DefaultIsUndefined] DOMString message);
-        boolean confirm(in [Optional=DefaultIsUndefined] DOMString message);
-        [TreatReturnedNullStringAs=Null] DOMString prompt(in [Optional=DefaultIsUndefined] DOMString message,
-                                                    in [TreatNullAs=NullString, TreatUndefinedAs=NullString,Optional=DefaultIsUndefined] DOMString defaultValue);
+    void alert([Default=Undefined] optional DOMString message);
+    boolean confirm([Default=Undefined] optional DOMString message);
+    [TreatReturnedNullStringAs=Null] DOMString prompt([Default=Undefined] optional DOMString message,
+                                                [TreatNullAs=NullString, TreatUndefinedAs=NullString,Default=Undefined] optional DOMString defaultValue);
 
-        boolean find(in [Optional=DefaultIsUndefined] DOMString string,
-                     in [Optional=DefaultIsUndefined] boolean caseSensitive,
-                     in [Optional=DefaultIsUndefined] boolean backwards,
-                     in [Optional=DefaultIsUndefined] boolean wrap,
-                     in [Optional=DefaultIsUndefined] boolean wholeWord,
-                     in [Optional=DefaultIsUndefined] boolean searchInFrames,
-                     in [Optional=DefaultIsUndefined] boolean showDialog);
+    boolean find([Default=Undefined] optional DOMString string,
+                 [Default=Undefined] optional boolean caseSensitive,
+                 [Default=Undefined] optional boolean backwards,
+                 [Default=Undefined] optional boolean wrap,
+                 [Default=Undefined] optional boolean wholeWord,
+                 [Default=Undefined] optional boolean searchInFrames,
+                 [Default=Undefined] optional boolean showDialog);
 
-        attribute [Replaceable] boolean offscreenBuffering;
+    [Replaceable] readonly attribute  boolean offscreenBuffering;
 
-        attribute [Replaceable] long outerHeight;
-        attribute [Replaceable] long outerWidth;
-        attribute [Replaceable] long innerHeight;
-        attribute [Replaceable] long innerWidth;
-        attribute [Replaceable] long screenX;
-        attribute [Replaceable] long screenY;
-        attribute [Replaceable] long screenLeft;
-        attribute [Replaceable] long screenTop;
-        attribute [Replaceable] long scrollX;
-        attribute [Replaceable] long scrollY;
+    [Replaceable] readonly attribute long outerHeight;
+    [Replaceable] readonly attribute long outerWidth;
+    [Replaceable] readonly attribute long innerHeight;
+    [Replaceable] readonly attribute long innerWidth;
+    [Replaceable] readonly attribute long screenX;
+    [Replaceable] readonly attribute long screenY;
+    [Replaceable] readonly attribute long screenLeft;
+    [Replaceable] readonly attribute long screenTop;
+    [Replaceable] readonly attribute long scrollX;
+    [Replaceable] readonly attribute long scrollY;
         readonly attribute long pageXOffset;
         readonly attribute long pageYOffset;
 
-        void scrollBy(in [Optional=DefaultIsUndefined] long x, in [Optional=DefaultIsUndefined] long y);
-        void scrollTo(in [Optional=DefaultIsUndefined] long x, in [Optional=DefaultIsUndefined] long y);
-        void scroll(in [Optional=DefaultIsUndefined] long x, in [Optional=DefaultIsUndefined] long y);
-        void moveBy(in [Optional=DefaultIsUndefined] float x, in [Optional=DefaultIsUndefined] float y); // FIXME: this should take longs not floats.
-        void moveTo(in [Optional=DefaultIsUndefined] float x, in [Optional=DefaultIsUndefined] float y); // FIXME: this should take longs not floats.
-        void resizeBy(in [Optional=DefaultIsUndefined] float x, in [Optional=DefaultIsUndefined] float y); // FIXME: this should take longs not floats.
-        void resizeTo(in [Optional=DefaultIsUndefined] float width, in [Optional=DefaultIsUndefined] float height); // FIXME: this should take longs not floats.
+    void scrollBy([Default=Undefined] optional long x, [Default=Undefined] optional long y);
+    void scrollTo([Default=Undefined] optional long x, [Default=Undefined] optional long y);
+    void scroll([Default=Undefined] optional long x, [Default=Undefined] optional long y);
+    void moveBy([Default=Undefined] optional float x, [Default=Undefined] optional float y); // FIXME: this should take longs not floats.
+    void moveTo([Default=Undefined] optional float x, [Default=Undefined] optional float y); // FIXME: this should take longs not floats.
+    void resizeBy([Default=Undefined] optional float x, [Default=Undefined] optional float y); // FIXME: this should take longs not floats.
+    void resizeTo([Default=Undefined] optional float width, [Default=Undefined] optional float height); // FIXME: this should take longs not floats.
 
         readonly attribute [DoNotCheckSecurity] boolean closed;
 
-        attribute [Replaceable, DoNotCheckSecurityOnGetter] unsigned long length;
+    [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute unsigned long length;
 
         attribute DOMString name;
 
@@ -129,45 +126,45 @@ module window {
 #endif
 
         // Self referential attributes
-        attribute [Replaceable, DoNotCheckSecurityOnGetter] DOMWindow self;
-        readonly attribute [DoNotCheckSecurity, V8Unforgeable] DOMWindow window;
-        attribute [Replaceable, DoNotCheckSecurityOnGetter] DOMWindow frames;
+    [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute DOMWindow self;
+    [DoNotCheckSecurity] readonly attribute DOMWindow window;
+    [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute  DOMWindow frames;
 
-        attribute [Replaceable, DoNotCheckSecurityOnGetter, V8CustomSetter] DOMWindow opener;
-        attribute [Replaceable, DoNotCheckSecurityOnGetter] DOMWindow parent;
-        attribute [Replaceable, DoNotCheckSecurityOnGetter, V8Unforgeable, V8ReadOnly] DOMWindow top;
+    [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute DOMWindow opener;
+    [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute DOMWindow parent;
+    [DoNotCheckSecurityOnGetter] readonly attribute DOMWindow top;
 
         // DOM Level 2 AbstractView Interface
         readonly attribute Document document;
 
         // CSSOM View Module
-        MediaQueryList matchMedia(in DOMString query);
+    MediaQueryList matchMedia(DOMString query);
 
         // styleMedia has been removed from the CSSOM View specification.
         readonly attribute StyleMedia styleMedia;
 
         // DOM Level 2 Style Interface
-        CSSStyleDeclaration getComputedStyle(in [Optional=DefaultIsUndefined] Element element,
-                                             in [TreatNullAs=NullString, TreatUndefinedAs=NullString,Optional=DefaultIsUndefined] DOMString pseudoElement);
+    CSSStyleDeclaration getComputedStyle([Default=Undefined] optional Element element,
+                                                              [TreatNullAs=NullString, TreatUndefinedAs=NullString,Default=Undefined] optional DOMString pseudoElement);
 
         // WebKit extensions
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        CSSRuleList getMatchedCSSRules(in [Optional=DefaultIsUndefined] Element element,
-                                       in [TreatNullAs=NullString, TreatUndefinedAs=NullString,Optional=DefaultIsUndefined] DOMString pseudoElement);
+    CSSRuleList getMatchedCSSRules([Default=Undefined] optional Element element,
+                                   [TreatNullAs=NullString, TreatUndefinedAs=NullString,Default=Undefined] optional DOMString pseudoElement);
 #endif
 
-        attribute [Replaceable] double devicePixelRatio;
+    [Replaceable] readonly attribute double devicePixelRatio;
         
-        WebKitPoint webkitConvertPointFromPageToNode(in [Optional=DefaultIsUndefined] Node node, 
-                                                     in [Optional=DefaultIsUndefined] WebKitPoint p);
-        WebKitPoint webkitConvertPointFromNodeToPage(in [Optional=DefaultIsUndefined] Node node, 
-                                                     in [Optional=DefaultIsUndefined] WebKitPoint p);
+    WebKitPoint webkitConvertPointFromPageToNode([Default=Undefined] optional Node node, 
+                                                 [Default=Undefined] optional WebKitPoint p);
+    WebKitPoint webkitConvertPointFromNodeToPage([Default=Undefined] optional Node node, 
+                                                 [Default=Undefined] optional WebKitPoint p);
 
-        readonly attribute [V8EnabledAtRuntime] DOMApplicationCache applicationCache;
+    readonly attribute DOMApplicationCache applicationCache;
 
-        readonly attribute [V8EnabledAtRuntime] Storage sessionStorage
+    readonly attribute Storage sessionStorage
             getter raises(DOMException);
-        readonly attribute [V8EnabledAtRuntime] Storage localStorage
+    readonly attribute Storage localStorage
             getter raises(DOMException);
 
 #if defined(ENABLE_ORIENTATION_EVENTS) && ENABLE_ORIENTATION_EVENTS
@@ -177,52 +174,43 @@ module window {
         readonly attribute long orientation;
 #endif
 
-                 attribute [Replaceable] Console console;
+    [Replaceable] readonly attribute Console console;
 
         // cross-document messaging
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        [DoNotCheckSecurity, Custom] void postMessage(in SerializedScriptValue message, in DOMString targetOrigin)
-            raises(DOMException);
-        [DoNotCheckSecurity, Custom] void postMessage(in SerializedScriptValue message, in DOMString targetOrigin, in Array messagePorts)
-            raises(DOMException);
-
-        [DoNotCheckSecurity, Custom] void webkitPostMessage(in SerializedScriptValue message, in DOMString targetOrigin)
-            raises(DOMException);
-        [DoNotCheckSecurity, Custom] void webkitPostMessage(in SerializedScriptValue message, in DOMString targetOrigin, in Array transferList)
+    [DoNotCheckSecurity, Custom] void postMessage(SerializedScriptValue message, DOMString targetOrigin, optional Array messagePorts)
             raises(DOMException);
 #else
         // There's no good way to expose an array via the ObjC bindings, so for now just allow passing in a single port.
-        [DoNotCheckSecurity, Custom] void postMessage(in SerializedScriptValue message, in [Optional] MessagePort messagePort, in DOMString targetOrigin)
+    [DoNotCheckSecurity, Custom] void postMessage(SerializedScriptValue message, optional MessagePort messagePort, DOMString targetOrigin)
             raises(DOMException);
 #endif
 
 #if defined(ENABLE_WEB_TIMING) && ENABLE_WEB_TIMING
-        attribute [Replaceable] Performance performance;
+    [Replaceable] readonly attribute Performance performance;
 #endif
 
         // Timers
-        [Custom] long setTimeout(in [Optional=DefaultIsUndefined] TimeoutHandler handler, 
-                                 in [Optional=DefaultIsUndefined] long timeout);
-        // [Custom] long setTimeout(in TimeoutHandler handler, in long timeout, arguments...);
-        // [Custom] long setTimeout(in DOMString code, in long timeout);
-        void clearTimeout(in [Optional=DefaultIsUndefined] long handle);
-        [Custom] long setInterval(in TimeoutHandler handler, in long timeout);
-        // [Custom] long setInterval(in TimeoutHandler handler, in long timeout, arguments...);
-        // [Custom] long setInterval(in DOMString code, in long timeout);
-        void clearInterval(in [Optional=DefaultIsUndefined] long handle);
+    [Custom] long setTimeout(any handler, [Default=Undefined] optional long timeout);
+    void clearTimeout([Default=Undefined] optional long handle);
+    [Custom] long setInterval(any handler, [Default=Undefined] optional long timeout);
+    void clearInterval([Default=Undefined] optional long handle);
 
-#if defined(ENABLE_REQUEST_ANIMATION_FRAME)
-        // WebKit animation extensions, being standardized in the WebPerf WG
-        long webkitRequestAnimationFrame(in [Callback] RequestAnimationFrameCallback callback);
-        void webkitCancelAnimationFrame(in long id);
-        void webkitCancelRequestAnimationFrame(in long id); // This is a deprecated alias for webkitCancelAnimationFrame(). Remove this when removing vendor prefix.
+#if defined(ENABLE_REQUEST_ANIMATION_FRAME) && ENABLE_REQUEST_ANIMATION_FRAME
+    long requestAnimationFrame(RequestAnimationFrameCallback callback);
+    void cancelAnimationFrame(long id);
+    long webkitRequestAnimationFrame(RequestAnimationFrameCallback callback);
+    [ImplementedAs=cancelAnimationFrame] void webkitCancelAnimationFrame(long id);
+    [ImplementedAs=cancelAnimationFrame] void webkitCancelRequestAnimationFrame(long id); // This is a deprecated alias for webkitCancelAnimationFrame(). Remove this when removing vendor prefix.
 #endif
 
         // Base64
-        DOMString atob(in [TreatNullAs=NullString,Optional=DefaultIsUndefined] DOMString string)
+    DOMString atob([TreatNullAs=NullString,Default=Undefined] optional DOMString string)
             raises(DOMException);
-        DOMString btoa(in [TreatNullAs=NullString,Optional=DefaultIsUndefined] DOMString string)
+    DOMString btoa([TreatNullAs=NullString,Default=Undefined] optional DOMString string)
             raises(DOMException);
+
+    readonly attribute [Replaceable,Conditional=CSS3_CONDITIONAL_RULES] DOMWindowCSS CSS;
 
         // Events
         attribute EventListener onabort;
@@ -258,6 +246,8 @@ module window {
         attribute EventListener onloadstart;
         attribute EventListener onmessage;
         attribute EventListener onmousedown;
+    attribute EventListener onmouseenter;
+    attribute EventListener onmouseleave;
         attribute EventListener onmousemove;
         attribute EventListener onmouseout;
         attribute EventListener onmouseover;
@@ -302,492 +292,48 @@ module window {
         attribute EventListener onwebkitanimationiteration;
         attribute EventListener onwebkitanimationstart;
         attribute EventListener onwebkittransitionend;
+    attribute EventListener ontransitionend;
 #if defined(ENABLE_ORIENTATION_EVENTS) && ENABLE_ORIENTATION_EVENTS
         attribute EventListener onorientationchange;
 #endif
-        attribute [Conditional=TOUCH_EVENTS,V8EnabledAtRuntime] EventListener ontouchstart;
-        attribute [Conditional=TOUCH_EVENTS,V8EnabledAtRuntime] EventListener ontouchmove;
-        attribute [Conditional=TOUCH_EVENTS,V8EnabledAtRuntime] EventListener ontouchend;
-        attribute [Conditional=TOUCH_EVENTS,V8EnabledAtRuntime] EventListener ontouchcancel;
+    attribute [Conditional=TOUCH_EVENTS] EventListener ontouchstart;
+    attribute [Conditional=TOUCH_EVENTS] EventListener ontouchmove;
+    attribute [Conditional=TOUCH_EVENTS] EventListener ontouchend;
+    attribute [Conditional=TOUCH_EVENTS] EventListener ontouchcancel;
 
-        attribute [Conditional=DEVICE_ORIENTATION,V8EnabledAtRuntime] EventListener ondevicemotion;
-        attribute [Conditional=DEVICE_ORIENTATION,V8EnabledAtRuntime] EventListener ondeviceorientation;
+    attribute [Conditional=DEVICE_ORIENTATION] EventListener ondevicemotion;
+    attribute [Conditional=DEVICE_ORIENTATION] EventListener ondeviceorientation;
+
+    attribute [Conditional=PROXIMITY_EVENTS] EventListener onwebkitdeviceproximity;
 
         // EventTarget interface
-        [Custom] void addEventListener(in DOMString type,
-                                      in EventListener listener,
-                                      in [Optional] boolean useCapture);
-        [Custom] void removeEventListener(in DOMString type,
-                                          in EventListener listener,
-                                          in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    [Custom] void addEventListener(DOMString type,
+                                  EventListener listener,
+                                  optional boolean useCapture);
+    [Custom] void removeEventListener(DOMString type,
+                                      EventListener listener,
+                                      optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
 
-        [V8Custom] void captureEvents(/*in long eventFlags*/);
-        [V8Custom] void releaseEvents(/*in long eventFlags*/);
+    void captureEvents(/*in long eventFlags*/);
+    void releaseEvents(/*in long eventFlags*/);
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        // Global constructors
-        attribute StyleSheetConstructor StyleSheet;
-        attribute CSSStyleSheetConstructor CSSStyleSheet;
-
-        attribute CSSValueConstructor CSSValue;
-        attribute CSSPrimitiveValueConstructor CSSPrimitiveValue;
-        attribute CSSValueListConstructor CSSValueList;
-        attribute WebKitCSSTransformValueConstructor WebKitCSSTransformValue;
-
-#if defined(ENABLE_CSS_FILTERS) && ENABLE_CSS_FILTERS
-        attribute WebKitCSSFilterValueConstructor WebKitCSSFilterValue;
-#endif
-
-        attribute CSSRuleConstructor CSSRule;
-        attribute CSSCharsetRuleConstructor CSSCharsetRule;
-        attribute CSSFontFaceRuleConstructor CSSFontFaceRule;
-        attribute CSSImportRuleConstructor CSSImportRule;
-        attribute CSSMediaRuleConstructor CSSMediaRule;
-        attribute CSSPageRuleConstructor CSSPageRule;
-        attribute CSSStyleRuleConstructor CSSStyleRule;
-        
-        attribute CSSStyleDeclarationConstructor CSSStyleDeclaration;
-        attribute MediaListConstructor MediaList;
-        attribute CounterConstructor Counter;
-        attribute CSSRuleListConstructor CSSRuleList;
-        attribute RectConstructor Rect;
-        attribute RGBColorConstructor RGBColor;
-        attribute StyleSheetListConstructor StyleSheetList;
-
-        // FIXME: Implement the commented-out global constructors for interfaces listed in DOM Level 3 Core specification.
-        attribute DOMCoreExceptionConstructor DOMException;
-        attribute DOMStringListConstructor DOMStringList;
-//        attribute NameListConstructor NameList;
-//        attribute DOMImplementationListConstructor DOMImplementationList;
-//        attribute DOMImplementationSourceConstructor DOMImplementationSource;
-        attribute DOMImplementationConstructor DOMImplementation;
-        attribute DOMSettableTokenListConstructor DOMSettableTokenList;
-        attribute DOMTokenListConstructor DOMTokenList;
-        attribute DocumentFragmentConstructor DocumentFragment;
-        attribute DocumentConstructor Document;
-        attribute NodeConstructor Node;
-        attribute NodeListConstructor NodeList;
-        attribute NamedNodeMapConstructor NamedNodeMap;
-        attribute CharacterDataConstructor CharacterData;
-        attribute AttrConstructor Attr;
-        attribute ElementConstructor Element;
-        attribute TextConstructor Text;
-        attribute CommentConstructor Comment;
-//        attribute TypeInfoConstructor TypeInfo;
-//        attribute UserDataHandlerConstructor UserDataHandler;
-//        attribute DOMErrorConstructor DOMError;
-//        attribute DOMErrorHandlerConstructor DOMErrorHandler
-//        attribute DOMLocatorConstructor DOMLocator;
-//        attribute DOMConfigurationConstructor DOMConfiguration;
-        attribute CDATASectionConstructor CDATASection;
-        attribute DocumentTypeConstructor DocumentType;
-        attribute NotationConstructor Notation;
-        attribute EntityConstructor Entity;
-        attribute EntityReferenceConstructor EntityReference;
-        attribute ProcessingInstructionConstructor ProcessingInstruction;
-        attribute [Conditional=SHADOW_DOM, V8EnabledPerContext=shadowDOM] ShadowRootConstructor WebKitShadowRoot;
-        attribute [Conditional=SHADOW_DOM, V8EnabledPerContext=shadowDOM] HTMLContentElementConstructor HTMLContentElement;
-        attribute [Conditional=SHADOW_DOM, V8EnabledPerContext=shadowDOM] HTMLShadowElementConstructor HTMLShadowElement;
-
-        attribute DOMSelectionConstructor Selection;
-        attribute DOMWindowConstructor Window;
-
-        attribute HTMLDocumentConstructor HTMLDocument;
-        attribute HTMLElementConstructor HTMLElement;
-        attribute HTMLAnchorElementConstructor HTMLAnchorElement;
-        attribute HTMLAppletElementConstructor HTMLAppletElement;
-        attribute HTMLAreaElementConstructor HTMLAreaElement;
-        attribute HTMLBRElementConstructor HTMLBRElement;
-        attribute HTMLBaseElementConstructor HTMLBaseElement;
-        attribute HTMLBaseFontElementConstructor HTMLBaseFontElement;
-        attribute HTMLBodyElementConstructor HTMLBodyElement;
-        attribute HTMLButtonElementConstructor HTMLButtonElement;
-        attribute HTMLCanvasElementConstructor HTMLCanvasElement;
-        attribute HTMLDListElementConstructor HTMLDListElement;
-        attribute [Conditional=DATALIST] HTMLDataListElementConstructor HTMLDataListElement;
-        attribute [Conditional=DIALOG_ELEMENT, V8EnabledPerContext=dialogElement] HTMLDialogElementConstructor HTMLDialogElement;
-        attribute HTMLDirectoryElementConstructor HTMLDirectoryElement;
-        attribute HTMLDivElementConstructor HTMLDivElement;
-        attribute HTMLEmbedElementConstructor HTMLEmbedElement;
-        attribute HTMLFieldSetElementConstructor HTMLFieldSetElement;
-        attribute HTMLFontElementConstructor HTMLFontElement;
-        attribute HTMLFormElementConstructor HTMLFormElement;
-        attribute HTMLFrameElementConstructor HTMLFrameElement;
-        attribute HTMLFrameSetElementConstructor HTMLFrameSetElement;
-        attribute HTMLHRElementConstructor HTMLHRElement;
-        attribute HTMLHeadElementConstructor HTMLHeadElement;
-        attribute HTMLHeadingElementConstructor HTMLHeadingElement;
-        attribute HTMLHtmlElementConstructor HTMLHtmlElement;
-        attribute HTMLIFrameElementConstructor HTMLIFrameElement;
-        attribute HTMLImageElementConstructor HTMLImageElement;
-        attribute HTMLInputElementConstructor HTMLInputElement;
-        attribute HTMLKeygenElementConstructor HTMLKeygenElement;
-        attribute HTMLLIElementConstructor HTMLLIElement;
-        attribute HTMLLabelElementConstructor HTMLLabelElement;
-        attribute HTMLLegendElementConstructor HTMLLegendElement;
-        attribute HTMLLinkElementConstructor HTMLLinkElement;
-        attribute HTMLMapElementConstructor HTMLMapElement;
-        attribute HTMLMarqueeElementConstructor HTMLMarqueeElement;
-        attribute HTMLMenuElementConstructor HTMLMenuElement;
-        attribute HTMLMetaElementConstructor HTMLMetaElement;
-#if defined(ENABLE_METER_TAG) && ENABLE_METER_TAG
-        attribute HTMLMeterElementConstructor HTMLMeterElement;
-#endif
-        attribute HTMLModElementConstructor HTMLModElement;
-        attribute HTMLOListElementConstructor HTMLOListElement;
-        attribute HTMLObjectElementConstructor HTMLObjectElement;
-        attribute HTMLOptGroupElementConstructor HTMLOptGroupElement;
-        attribute HTMLOptionElementConstructor HTMLOptionElement;
-        attribute HTMLOutputElementConstructor HTMLOutputElement;
-        attribute HTMLParagraphElementConstructor HTMLParagraphElement;
-        attribute HTMLParamElementConstructor HTMLParamElement;
-        attribute HTMLPreElementConstructor HTMLPreElement;
-#if defined(ENABLE_PROGRESS_TAG) && ENABLE_PROGRESS_TAG
-        attribute HTMLProgressElementConstructor HTMLProgressElement;
-#endif
-        attribute HTMLQuoteElementConstructor HTMLQuoteElement;
-        attribute HTMLScriptElementConstructor HTMLScriptElement;
-        attribute HTMLSelectElementConstructor HTMLSelectElement;
-        attribute HTMLSpanElementConstructor HTMLSpanElement;
-        attribute HTMLStyleElementConstructor HTMLStyleElement;
-        attribute HTMLTableCaptionElementConstructor HTMLTableCaptionElement;
-        attribute HTMLTableCellElementConstructor HTMLTableCellElement;
-        attribute HTMLTableColElementConstructor HTMLTableColElement;
-        attribute HTMLTableElementConstructor HTMLTableElement;
-        attribute HTMLTableRowElementConstructor HTMLTableRowElement;
-        attribute HTMLTableSectionElementConstructor HTMLTableSectionElement;
-        attribute HTMLTextAreaElementConstructor HTMLTextAreaElement;
-        attribute HTMLTitleElementConstructor HTMLTitleElement;
-        attribute HTMLUListElementConstructor HTMLUListElement;
-
-        attribute HTMLCollectionConstructor HTMLCollection;
-        attribute HTMLAllCollectionConstructor HTMLAllCollection;
-        attribute [Conditional=MICRODATA] HTMLPropertiesCollectionConstructor HTMLPropertiesCollection;
-        attribute HTMLUnknownElementConstructor HTMLUnknownElement;
-
-        attribute [JSCustomGetter, CustomConstructor] HTMLImageElementConstructorConstructor Image; // Usable with new operator
-        attribute [JSCustomGetter] HTMLOptionElementConstructorConstructor Option; // Usable with new operator
-
-        attribute [Conditional=ENCRYPTED_MEDIA, V8EnabledAtRuntime=encryptedMedia] MediaKeyErrorConstructor MediaKeyError;
-        attribute [Conditional=ENCRYPTED_MEDIA, V8EnabledAtRuntime=encryptedMedia] MediaKeyEventConstructor MediaKeyEvent;
-
-        attribute [Conditional=VIDEO_TRACK, V8EnabledAtRuntime=webkitVideoTrack] HTMLTrackElementConstructor HTMLTrackElement;
-        attribute [Conditional=VIDEO_TRACK, V8EnabledAtRuntime=webkitVideoTrack] TextTrackConstructor TextTrack;
-        attribute [Conditional=VIDEO_TRACK, V8EnabledAtRuntime=webkitVideoTrack] TextTrackCueConstructor TextTrackCue; // Usable with the new operator
-        attribute [Conditional=VIDEO_TRACK, V8EnabledAtRuntime=webkitVideoTrack] TextTrackCueListConstructor TextTrackCueList;
-        attribute [Conditional=VIDEO_TRACK, V8EnabledAtRuntime=webkitVideoTrack] TextTrackListConstructor TextTrackList;
-        attribute [Conditional=VIDEO_TRACK, V8EnabledAtRuntime=webkitVideoTrack] TrackEventConstructor TrackEvent;
-
-        attribute [JSCustomGetter, Conditional=VIDEO, V8EnabledAtRuntime] HTMLAudioElementConstructorConstructor Audio; // Usable with the new operator
-        attribute [Conditional=VIDEO, V8EnabledAtRuntime] HTMLAudioElementConstructor HTMLAudioElement;
-        attribute [Conditional=VIDEO, V8EnabledAtRuntime] HTMLMediaElementConstructor HTMLMediaElement;
-        attribute [Conditional=VIDEO, V8EnabledAtRuntime] HTMLVideoElementConstructor HTMLVideoElement;
-        attribute [Conditional=VIDEO, V8EnabledAtRuntime] MediaErrorConstructor MediaError;
-        attribute [Conditional=VIDEO, V8EnabledAtRuntime] TimeRangesConstructor TimeRanges;
-        attribute [Conditional=VIDEO, V8EnabledAtRuntime] HTMLSourceElementConstructor HTMLSourceElement;
-        attribute [Conditional=VIDEO, V8EnabledAtRuntime] MediaControllerConstructor MediaController;
-
-        attribute [Conditional=WEB_INTENTS_TAG] HTMLIntentElementConstructor HTMLIntentElement;
-
-        attribute CanvasPatternConstructor CanvasPattern;
-        attribute CanvasGradientConstructor CanvasGradient;
-        attribute CanvasRenderingContext2DConstructor CanvasRenderingContext2D;
-
-        attribute ImageDataConstructor ImageData;
-        attribute TextMetricsConstructor TextMetrics;
-
-        attribute [Conditional=WEBGL] WebGLActiveInfoConstructor WebGLActiveInfo;
-        attribute [Conditional=WEBGL] WebGLBufferConstructor WebGLBuffer;
-        attribute [Conditional=WEBGL] WebGLFramebufferConstructor WebGLFramebuffer;
-        attribute [Conditional=WEBGL] WebGLProgramConstructor WebGLProgram;
-        attribute [Conditional=WEBGL] WebGLRenderbufferConstructor WebGLRenderbuffer;
-        attribute [Conditional=WEBGL] WebGLRenderingContextConstructor WebGLRenderingContext;
-        attribute [Conditional=WEBGL] WebGLShaderConstructor WebGLShader;
-        attribute [Conditional=WEBGL] WebGLShaderPrecisionFormatConstructor WebGLShaderPrecisionFormat;
-        attribute [Conditional=WEBGL] WebGLTextureConstructor WebGLTexture;
-        attribute [Conditional=WEBGL] WebGLUniformLocationConstructor WebGLUniformLocation;
-
-        attribute DOMStringMapConstructor DOMStringMap;
-
-        attribute ArrayBufferConstructor ArrayBuffer; // Usable with new operator
-        attribute Int8ArrayConstructor Int8Array; // Usable with new operator
-        attribute Uint8ArrayConstructor Uint8Array; // Usable with new operator
-        attribute Uint8ClampedArrayConstructor Uint8ClampedArray; // Usable with new operator
-        attribute Int16ArrayConstructor Int16Array; // Usable with new operator
-        attribute Uint16ArrayConstructor Uint16Array; // Usable with new operator
-        attribute Int32ArrayConstructor Int32Array; // Usable with new operator
-        attribute Uint32ArrayConstructor Uint32Array; // Usable with new operator
-        attribute Float32ArrayConstructor Float32Array; // Usable with new operator
-        attribute Float64ArrayConstructor Float64Array; // Usable with new operator
-        attribute DataViewConstructor DataView; // Usable with new operator
-
-        // Event Constructors
-        attribute EventConstructor Event;
-        attribute BeforeLoadEventConstructor BeforeLoadEvent;
-        attribute CompositionEventConstructor CompositionEvent;
-        attribute CustomEventConstructor CustomEvent;
-        attribute ErrorEventConstructor ErrorEvent;
-        attribute HashChangeEventConstructor HashChangeEvent;
-        attribute KeyboardEventConstructor KeyboardEvent;
-        attribute MessageEventConstructor MessageEvent;
-        attribute MouseEventConstructor MouseEvent;
-        attribute MutationEventConstructor MutationEvent;
-        attribute OverflowEventConstructor OverflowEvent;
-        attribute PopStateEventConstructor PopStateEvent;
-        attribute PageTransitionEventConstructor PageTransitionEvent;
-        attribute ProgressEventConstructor ProgressEvent;
-        attribute TextEventConstructor TextEvent;
-        attribute UIEventConstructor UIEvent;
-        attribute WebKitAnimationEventConstructor WebKitAnimationEvent;
-        attribute WebKitTransitionEventConstructor WebKitTransitionEvent;
-        attribute WheelEventConstructor WheelEvent;
-        attribute XMLHttpRequestProgressEventConstructor XMLHttpRequestProgressEvent;
-        attribute [Conditional=DEVICE_ORIENTATION, V8EnabledAtRuntime] DeviceMotionEventConstructor DeviceMotionEvent;
-        attribute [Conditional=DEVICE_ORIENTATION, V8EnabledAtRuntime] DeviceOrientationEventConstructor DeviceOrientationEvent;
-        attribute [Conditional=TOUCH_EVENTS] TouchEventConstructor TouchEvent;
-        attribute StorageEventConstructor StorageEvent;
-        attribute [Conditional=INPUT_SPEECH] SpeechInputEventConstructor SpeechInputEvent;
-        attribute [Conditional=WEBGL] WebGLContextEventConstructor WebGLContextEvent;
-
-        attribute EventExceptionConstructor EventException;
-
-        attribute WebKitCSSKeyframeRuleConstructor WebKitCSSKeyframeRule;
-        attribute WebKitCSSKeyframesRuleConstructor WebKitCSSKeyframesRule;
-        attribute [Conditional=CSS_REGIONS] WebKitCSSRegionRuleConstructor WebKitCSSRegionRule;
-
-        attribute WebKitCSSMatrixConstructor WebKitCSSMatrix; // Usable with the new operator
-
-        attribute WebKitPointConstructor WebKitPoint; // Usable with new the operator
-
-        attribute ClipboardConstructor Clipboard;
-
-        attribute [Conditional=WORKERS] WorkerConstructor Worker; // Usable with the new operator
-        attribute [Conditional=SHARED_WORKERS, JSCustomGetter, V8EnabledAtRuntime] SharedWorkerConstructor SharedWorker; // Usable with the new operator
-
-        attribute FileConstructor File;
-        attribute FileListConstructor FileList;
-        attribute BlobConstructor Blob;
-
-        attribute NodeFilterConstructor NodeFilter;
-        attribute RangeConstructor Range;
-        attribute RangeExceptionConstructor RangeException;
-
-        attribute EventSourceConstructor EventSource; // Usable with new the operator
-
+    // Additional constructors.
+    [CustomGetter, CustomConstructor] attribute HTMLImageElementNamedConstructor Image; // Usable with new operator
         // Mozilla has a separate XMLDocument object for XML documents. 
         // We just use Document for this.
         attribute DocumentConstructor XMLDocument;
-        attribute DOMParserConstructor DOMParser;
-        attribute XMLSerializerConstructor XMLSerializer;
-        attribute XMLHttpRequestConstructor XMLHttpRequest; // Usable with the new operator
-        attribute XMLHttpRequestUploadConstructor XMLHttpRequestUpload;
-        attribute XMLHttpRequestExceptionConstructor XMLHttpRequestException;
-        attribute [Conditional=XSLT] XSLTProcessorConstructor XSLTProcessor; // Usable with the new operator
-
-#if defined(ENABLE_CHANNEL_MESSAGING) && ENABLE_CHANNEL_MESSAGING
-        attribute MessagePortConstructor MessagePort;
-        attribute MessageChannelConstructor MessageChannel; // Usable with the new operator
-#endif
-
-        attribute DOMPluginConstructor Plugin;
-        attribute DOMPluginArrayConstructor PluginArray;
-
-        attribute DOMMimeTypeConstructor MimeType;
-        attribute DOMMimeTypeArrayConstructor MimeTypeArray;
-
-        attribute ClientRectConstructor ClientRect;
-        attribute ClientRectListConstructor ClientRectList;
-
-        attribute StorageConstructor Storage;
-
-#if defined(ENABLE_ANIMATION_API) && ENABLE_ANIMATION_API
-        attribute WebKitAnimationConstructor WebKitAnimation;
-        attribute WebKitAnimationListConstructor WebKitAnimationList;
-#endif
-
-        attribute XPathEvaluatorConstructor XPathEvaluator;
-        attribute XPathResultConstructor XPathResult;
-        attribute XPathExceptionConstructor XPathException;
-
-        attribute [Conditional=SVG] SVGZoomEventConstructor SVGZoomEvent;
-
-#if defined(ENABLE_SVG) && ENABLE_SVG
-        // Expose all implemented SVG 1.1 interfaces, excluding the SVG MI interfaces:
-        // SVGAnimatedPathData, SVGAnimatedPoints, SVGExternalResourcesRequired,
-        // SVGFilterPrimitiveStandardAttributes, SVGFitToViewBox, SVGLangSpace, SVGLocatable
-        // SVGStylable, SVGTests, SVGTransformable, SVGURIReference, SVGZoomAndPan
-        attribute SVGAElementConstructor SVGAElement;
-        attribute SVGAngleConstructor SVGAngle;
-        attribute SVGAnimatedAngleConstructor SVGAnimatedAngle;
-        attribute SVGAnimatedBooleanConstructor SVGAnimatedBoolean;
-        attribute SVGAnimatedEnumerationConstructor SVGAnimatedEnumeration;
-        attribute SVGAnimatedIntegerConstructor SVGAnimatedInteger;
-        attribute SVGAnimatedLengthConstructor SVGAnimatedLength;
-        attribute SVGAnimatedLengthListConstructor SVGAnimatedLengthList;
-        attribute SVGAnimatedNumberConstructor SVGAnimatedNumber;
-        attribute SVGAnimatedNumberListConstructor SVGAnimatedNumberList;
-        attribute SVGAnimatedPreserveAspectRatioConstructor SVGAnimatedPreserveAspectRatio;
-        attribute SVGAnimatedRectConstructor SVGAnimatedRect;
-        attribute SVGAnimatedStringConstructor SVGAnimatedString;
-        attribute SVGAnimatedTransformListConstructor SVGAnimatedTransformList;
-        attribute SVGCircleElementConstructor SVGCircleElement;
-        attribute SVGClipPathElementConstructor SVGClipPathElement;
-        attribute SVGColorConstructor SVGColor;
-        attribute SVGCursorElementConstructor SVGCursorElement;
-//      attribute SVGCSSRuleConstructor SVGCSSRule;
-        attribute SVGDefsElementConstructor SVGDefsElement;
-        attribute SVGDescElementConstructor SVGDescElement;
-        attribute SVGDocumentConstructor SVGDocument;
-        attribute SVGElementConstructor SVGElement;
-        attribute SVGElementInstanceConstructor SVGElementInstance;
-        attribute SVGElementInstanceListConstructor SVGElementInstanceList;
-        attribute SVGEllipseElementConstructor SVGEllipseElement;
-        attribute SVGForeignObjectElementConstructor SVGForeignObjectElement;
-        attribute SVGExceptionConstructor SVGException;
-        attribute SVGGElementConstructor SVGGElement;
-        attribute SVGGradientElementConstructor SVGGradientElement;
-        attribute SVGImageElementConstructor SVGImageElement;
-        attribute SVGLengthConstructor SVGLength;
-        attribute SVGLengthListConstructor SVGLengthList;
-        attribute SVGLinearGradientElementConstructor SVGLinearGradientElement;
-        attribute SVGLineElementConstructor SVGLineElement;
-        attribute SVGMarkerElementConstructor SVGMarkerElement;
-        attribute SVGMaskElementConstructor SVGMaskElement;
-        attribute SVGMatrixConstructor SVGMatrix;
-        attribute SVGMetadataElementConstructor SVGMetadataElement;
-        attribute SVGNumberConstructor SVGNumber;
-        attribute SVGNumberListConstructor SVGNumberList;
-        attribute SVGPaintConstructor SVGPaint;
-        attribute SVGPathElementConstructor SVGPathElement;
-        attribute SVGPathSegConstructor SVGPathSeg;
-        attribute SVGPathSegArcAbsConstructor SVGPathSegArcAbs;
-        attribute SVGPathSegArcRelConstructor SVGPathSegArcRel;
-        attribute SVGPathSegClosePathConstructor SVGPathSegClosePath;
-        attribute SVGPathSegCurvetoCubicAbsConstructor SVGPathSegCurvetoCubicAbs;
-        attribute SVGPathSegCurvetoCubicRelConstructor SVGPathSegCurvetoCubicRel;
-        attribute SVGPathSegCurvetoCubicSmoothAbsConstructor SVGPathSegCurvetoCubicSmoothAbs;
-        attribute SVGPathSegCurvetoCubicSmoothRelConstructor SVGPathSegCurvetoCubicSmoothRel;
-        attribute SVGPathSegCurvetoQuadraticAbsConstructor SVGPathSegCurvetoQuadraticAbs;
-        attribute SVGPathSegCurvetoQuadraticRelConstructor SVGPathSegCurvetoQuadraticRel;
-        attribute SVGPathSegCurvetoQuadraticSmoothAbsConstructor SVGPathSegCurvetoQuadraticSmoothAbs;
-        attribute SVGPathSegCurvetoQuadraticSmoothRelConstructor SVGPathSegCurvetoQuadraticSmoothRel;
-        attribute SVGPathSegLinetoAbsConstructor SVGPathSegLinetoAbs;
-        attribute SVGPathSegLinetoHorizontalAbsConstructor SVGPathSegLinetoHorizontalAbs;
-        attribute SVGPathSegLinetoHorizontalRelConstructor SVGPathSegLinetoHorizontalRel;
-        attribute SVGPathSegLinetoRelConstructor SVGPathSegLinetoRel;
-        attribute SVGPathSegLinetoVerticalAbsConstructor SVGPathSegLinetoVerticalAbs;
-        attribute SVGPathSegLinetoVerticalRelConstructor SVGPathSegLinetoVerticalRel;
-        attribute SVGPathSegListConstructor SVGPathSegList;
-        attribute SVGPathSegMovetoAbsConstructor SVGPathSegMovetoAbs;
-        attribute SVGPathSegMovetoRelConstructor SVGPathSegMovetoRel;
-        attribute SVGPatternElementConstructor SVGPatternElement;
-        attribute SVGPointConstructor SVGPoint;
-        attribute SVGPointListConstructor SVGPointList;
-        attribute SVGPolygonElementConstructor SVGPolygonElement;
-        attribute SVGPolylineElementConstructor SVGPolylineElement;
-        attribute SVGPreserveAspectRatioConstructor SVGPreserveAspectRatio;
-        attribute SVGRadialGradientElementConstructor SVGRadialGradientElement;
-        attribute SVGRectConstructor SVGRect;
-        attribute SVGRectElementConstructor SVGRectElement;
-        attribute SVGRenderingIntentConstructor SVGRenderingIntent;
-        attribute SVGScriptElementConstructor SVGScriptElement;
-        attribute SVGStopElementConstructor SVGStopElement;
-        attribute SVGStringListConstructor SVGStringList;
-        attribute SVGStyleElementConstructor SVGStyleElement;
-        attribute SVGSVGElementConstructor SVGSVGElement;
-        attribute SVGSwitchElementConstructor SVGSwitchElement;
-        attribute SVGSymbolElementConstructor SVGSymbolElement;
-        attribute SVGTextContentElementConstructor SVGTextContentElement;
-        attribute SVGTextElementConstructor SVGTextElement;
-        attribute SVGTextPathElementConstructor SVGTextPathElement;
-        attribute SVGTextPositioningElementConstructor SVGTextPositioningElement;
-        attribute SVGTitleElementConstructor SVGTitleElement;
-        attribute SVGTransformConstructor SVGTransform;
-        attribute SVGTransformListConstructor SVGTransformList;
-        attribute SVGTRefElementConstructor SVGTRefElement;
-        attribute SVGTSpanElementConstructor SVGTSpanElement;
-        attribute SVGUnitTypesConstructor SVGUnitTypes;
-        attribute SVGUseElementConstructor SVGUseElement;
-        attribute SVGViewElementConstructor SVGViewElement;
-        attribute SVGViewSpecConstructor SVGViewSpec;
-        attribute SVGZoomAndPanConstructor SVGZoomAndPan;
-
-        attribute SVGAnimateColorElementConstructor SVGAnimateColorElement;
-        attribute SVGAnimateElementConstructor SVGAnimateElement;
-        attribute SVGAnimateMotionElementConstructor SVGAnimateMotionElement;
-        attribute SVGAnimateTransformElementConstructor SVGAnimateTransformElement;
-        attribute SVGMPathElementConstructor SVGMPathElement;
-        attribute SVGSetElementConstructor SVGSetElement;
-
-#if defined(ENABLE_SVG_FONTS) && ENABLE_SVG_FONTS
-        attribute SVGAltGlyphDefElementConstructor SVGAltGlyphDefElement;
-        attribute SVGAltGlyphElementConstructor SVGAltGlyphElement;
-        attribute SVGAltGlyphItemElementConstructor SVGAltGlyphItemElement;
-//      attribute SVGDefinitionSrcElementConstructor SVGDefinitionSrcElement;
-        attribute SVGFontElementConstructor SVGFontElement;
-        attribute SVGFontFaceElementConstructor SVGFontFaceElement;
-        attribute SVGFontFaceFormatElementConstructor SVGFontFaceFormatElement;
-        attribute SVGFontFaceNameElementConstructor SVGFontFaceNameElement;
-        attribute SVGFontFaceSrcElementConstructor SVGFontFaceSrcElement;
-        attribute SVGFontFaceUriElementConstructor SVGFontFaceUriElement;
-        attribute SVGGlyphElementConstructor SVGGlyphElement;
-        attribute SVGGlyphRefElementConstructor SVGGlyphRefElement;
-        attribute SVGHKernElementConstructor SVGHKernElement;
-        attribute SVGMissingGlyphElementConstructor SVGMissingGlyphElement;
-        attribute SVGVKernElementConstructor SVGVKernElement;
-#endif
-
-#if defined(ENABLE_FILTERS) && ENABLE_FILTERS
-        attribute SVGComponentTransferFunctionElementConstructor SVGComponentTransferFunctionElement;
-        attribute SVGFEBlendElementConstructor SVGFEBlendElement;
-        attribute SVGFEColorMatrixElementConstructor SVGFEColorMatrixElement;
-        attribute SVGFEComponentTransferElementConstructor SVGFEComponentTransferElement;
-        attribute SVGFECompositeElementConstructor SVGFECompositeElement;
-        attribute SVGFEConvolveMatrixElementConstructor SVGFEConvolveMatrixElement;
-        attribute SVGFEDiffuseLightingElementConstructor SVGFEDiffuseLightingElement;
-        attribute SVGFEDisplacementMapElementConstructor SVGFEDisplacementMapElement;
-        attribute SVGFEDistantLightElementConstructor SVGFEDistantLightElement;
-        attribute SVGFEDropShadowElementConstructor SVGFEDropShadowElement;
-        attribute SVGFEFloodElementConstructor SVGFEFloodElement;
-        attribute SVGFEFuncAElementConstructor SVGFEFuncAElement;
-        attribute SVGFEFuncBElementConstructor SVGFEFuncBElement;
-        attribute SVGFEFuncGElementConstructor SVGFEFuncGElement;
-        attribute SVGFEFuncRElementConstructor SVGFEFuncRElement;
-        attribute SVGFEGaussianBlurElementConstructor SVGFEGaussianBlurElement;
-        attribute SVGFEImageElementConstructor SVGFEImageElement;
-        attribute SVGFEMergeElementConstructor SVGFEMergeElement;
-        attribute SVGFEMergeNodeElementConstructor SVGFEMergeNodeElement;
-        attribute SVGFEMorphologyElementConstructor SVGFEMorphologyElement;
-        attribute SVGFEOffsetElementConstructor SVGFEOffsetElement;
-        attribute SVGFEPointLightElementConstructor SVGFEPointLightElement;
-        attribute SVGFESpecularLightingElementConstructor SVGFESpecularLightingElement;
-        attribute SVGFESpotLightElementConstructor SVGFESpotLightElement;
-        attribute SVGFETileElementConstructor SVGFETileElement;
-        attribute SVGFETurbulenceElementConstructor SVGFETurbulenceElement;
-        attribute SVGFilterElementConstructor SVGFilterElement;
-#endif
-#endif
-
-        attribute DOMFormDataConstructor FormData;
-
-        attribute [Conditional=BLOB|FILE_SYSTEM] FileErrorConstructor FileError;
-        attribute [Conditional=BLOB] FileReaderConstructor FileReader;
-
-        attribute [Conditional=BLOB&LEGACY_WEBKIT_BLOB_BUILDER] WebKitBlobBuilderConstructor WebKitBlobBuilder;
-
-        attribute [Conditional=BLOB] DOMURLConstructor webkitURL;
-
-        attribute [Conditional=MUTATION_OBSERVERS] MutationObserverConstructor WebKitMutationObserver;
-
+    [Conditional=BLOB] attribute DOMURLConstructor webkitURL; // FIXME: deprecate this.
+    attribute MutationObserverConstructor WebKitMutationObserver; // FIXME: Add metrics to determine when we can remove this.
+    [Conditional=INDEXED_DATABASE] attribute IDBCursorConstructor webkitIDBCursor;
+    [Conditional=INDEXED_DATABASE] attribute IDBDatabaseConstructor webkitIDBDatabase;
+    [Conditional=INDEXED_DATABASE] attribute IDBFactoryConstructor webkitIDBFactory;
+    [Conditional=INDEXED_DATABASE] attribute IDBIndexConstructor webkitIDBIndex;
+    [Conditional=INDEXED_DATABASE] attribute IDBKeyRangeConstructor webkitIDBKeyRange;
+    [Conditional=INDEXED_DATABASE] attribute IDBObjectStoreConstructor webkitIDBObjectStore;
+    [Conditional=INDEXED_DATABASE] attribute IDBRequestConstructor webkitIDBRequest;
+    [Conditional=INDEXED_DATABASE] attribute IDBTransactionConstructor webkitIDBTransaction;
 #endif // defined(LANGUAGE_JAVASCRIPT)
-
-#if defined(V8_BINDING) && V8_BINDING
-        // window.toString() requires special handling in V8
-        [V8DoNotCheckSignature, DoNotCheckSecurity, Custom, NotEnumerable] DOMString toString();
-#endif // defined(V8_BINDING)
     };
-
-}
-

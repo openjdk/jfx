@@ -26,11 +26,11 @@
 #include "config.h"
 #include "FontPlatformData.h"
 
-#include "PlatformString.h"
 #include <wtf/HashMap.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 #include <cairo-win32.h>
 
@@ -60,7 +60,6 @@ FontPlatformData::FontPlatformData(cairo_font_face_t* fontFace, float size, bool
     : m_font(0)
     , m_size(size)
     , m_orientation(Horizontal)
-    , m_textOrientation(TextOrientationVerticalRight)
     , m_widthVariant(RegularWidth)
     , m_scaledFont(0)
     , m_isColorBitmapFont(false)

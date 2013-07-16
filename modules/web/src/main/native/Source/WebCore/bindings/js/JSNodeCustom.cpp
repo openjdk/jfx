@@ -27,8 +27,6 @@
 #include "JSNode.h"
 
 #include "Attr.h"
-#include "CachedImage.h"
-#include "CachedScript.h"
 #include "CDATASection.h"
 #include "Comment.h"
 #include "Document.h"
@@ -85,10 +83,7 @@ using namespace HTMLNames;
 
 static inline bool isObservable(JSNode* jsNode, Node* node)
 {
-    // The DOM doesn't know how to keep a tree of nodes alive without the root
-    // being explicitly referenced. So, we artificially treat the root of
-    // every tree as observable.
-    // FIXME: Resolve this lifetime issue in the DOM, and remove this.
+    // The root node keeps the tree intact.
     if (!node->parentNode())
         return true;
 
@@ -150,7 +145,7 @@ JSValue JSNode::insertBefore(ExecState* exec)
 {
     Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->insertBefore(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, true);
+    bool ok = imp->insertBefore(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
@@ -161,7 +156,7 @@ JSValue JSNode::replaceChild(ExecState* exec)
 {
     Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->replaceChild(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, true);
+    bool ok = imp->replaceChild(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(1);
@@ -183,14 +178,14 @@ JSValue JSNode::appendChild(ExecState* exec)
 {
     Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->appendChild(toNode(exec->argument(0)), ec, true);
+    bool ok = imp->appendChild(toNode(exec->argument(0)), ec, AttachLazily);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
     return jsNull();
 }
 
-ScopeChainNode* JSNode::pushEventHandlerScope(ExecState* exec, ScopeChainNode* node) const
+JSScope* JSNode::pushEventHandlerScope(ExecState* exec, JSScope* node) const
 {
     if (inherits(&JSHTMLElement::s_info))
         return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(exec, node);
@@ -223,7 +218,7 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
                 wrapper = createJSHTMLWrapper(exec, globalObject, toHTMLElement(node));
 #if ENABLE(SVG)
             else if (node->isSVGElement())
-                wrapper = createJSSVGWrapper(exec, globalObject, static_cast<SVGElement*>(node));
+                wrapper = createJSSVGWrapper(exec, globalObject, toSVGElement(node));
 #endif
             else
                 wrapper = CREATE_DOM_WRAPPER(exec, globalObject, Element, node);
@@ -248,7 +243,7 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
             break;
         case Node::DOCUMENT_NODE:
             // we don't want to cache the document itself in the per-document dictionary
-            return toJS(exec, globalObject, static_cast<Document*>(node));
+            return toJS(exec, globalObject, toDocument(node));
         case Node::DOCUMENT_TYPE_NODE:
             wrapper = CREATE_DOM_WRAPPER(exec, globalObject, DocumentType, node);
             break;
@@ -279,6 +274,16 @@ JSValue toJSNewlyCreated(ExecState* exec, JSDOMGlobalObject* globalObject, Node*
         return jsNull();
     
     return createWrapperInline(exec, globalObject, node);
+}
+
+void willCreatePossiblyOrphanedTreeByRemovalSlowCase(Node* root)
+{
+    ScriptState* scriptState = mainWorldScriptState(root->document()->frame());
+    if (!scriptState)
+        return;
+
+    JSLockHolder lock(scriptState);
+    toJS(scriptState, static_cast<JSDOMGlobalObject*>(scriptState->lexicalGlobalObject()), root);
 }
 
 } // namespace WebCore

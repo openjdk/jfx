@@ -25,16 +25,16 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.Logging;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGSVGPath;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import com.sun.javafx.Logging;
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGSVGPath;
-import com.sun.javafx.tk.Toolkit;
 import javafx.scene.paint.Paint;
 
 /**
@@ -146,17 +146,8 @@ public  class SVGPath extends Shape {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGSVGPath();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public PGSVGPath impl_getPGSVGPath() {
-        return (PGSVGPath)impl_getPGNode();
+    protected NGNode impl_createPeer() {
+        return new NGSVGPath();
     }
 
     /**
@@ -182,13 +173,14 @@ public  class SVGPath extends Shape {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.SHAPE_FILLRULE) ||
             impl_isDirty(DirtyBits.NODE_CONTENTS))
         {
-            if (impl_getPGSVGPath().acceptsPath2dOnUpdate()) {
+            final NGSVGPath peer = impl_getPeer();
+            if (peer.acceptsPath2dOnUpdate()) {
                 if (svgPathObject == null) {
                     svgPathObject = new Path2D();
                 }
@@ -197,7 +189,7 @@ public  class SVGPath extends Shape {
             } else {
                 svgPathObject = createSVGPathObject();
             }
-            impl_getPGSVGPath().setContent(svgPathObject);
+            peer.setContent(svgPathObject);
         }
     }
 

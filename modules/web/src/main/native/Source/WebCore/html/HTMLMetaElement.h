@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-class HTMLMetaElement : public HTMLElement {
+class HTMLMetaElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLMetaElement> create(const QualifiedName&, Document*);
 
@@ -38,7 +38,7 @@ public:
 private:
     HTMLMetaElement(const QualifiedName&, Document*);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
 
     void process();

@@ -30,6 +30,7 @@
 #include "AffineTransform.h"
 #include "BitmapImage.h"
 #include "GraphicsContext.h"
+#include "ImageObserver.h"
 #include "IntRect.h"
 #include "Length.h"
 #include "MIMETypeRegistry.h"
@@ -67,11 +68,11 @@ bool Image::supportsType(const String& type)
 
 bool Image::setData(PassRefPtr<SharedBuffer> data, bool allDataReceived)
 {
-    m_data = data;
-    if (!m_data.get())
+    m_encodedImageData = data;
+    if (!m_encodedImageData.get())
         return true;
 
-    int length = m_data->size();
+    int length = m_encodedImageData->size();
     if (!length)
         return true;
     
@@ -80,7 +81,7 @@ bool Image::setData(PassRefPtr<SharedBuffer> data, bool allDataReceived)
 
 void Image::fillWithSolidColor(GraphicsContext* ctxt, const FloatRect& dstRect, const Color& color, ColorSpace styleColorSpace, CompositeOperator op)
 {
-    if (color.alpha() <= 0)
+    if (!color.alpha())
         return;
     
     CompositeOperator previousOperator = ctxt->compositeOperation();
@@ -89,20 +90,19 @@ void Image::fillWithSolidColor(GraphicsContext* ctxt, const FloatRect& dstRect, 
     ctxt->setCompositeOperation(previousOperator);
 }
 
-void Image::draw(GraphicsContext* ctx, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator op, RespectImageOrientationEnum)
+void Image::draw(GraphicsContext* ctx, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator op, BlendMode blendMode, RespectImageOrientationEnum)
 {
-    draw(ctx, dstRect, srcRect, styleColorSpace, op);
+    draw(ctx, dstRect, srcRect, styleColorSpace, op, blendMode);
 }
 
-void Image::drawTiled(GraphicsContext* ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, ColorSpace styleColorSpace, CompositeOperator op)
+void Image::drawTiled(GraphicsContext* ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, ColorSpace styleColorSpace, CompositeOperator op, BlendMode blendMode)
 {    
     if (mayFillWithSolidColor()) {
         fillWithSolidColor(ctxt, destRect, solidColor(), styleColorSpace, op);
         return;
     }
 
-    // See <https://webkit.org/b/59043>.
-#if !PLATFORM(WX) && !PLATFORM(JAVA)
+#if !PLATFORM(JAVA)
     ASSERT(!isBitmapImage() || notSolidColor());
 #endif
 
@@ -127,13 +127,13 @@ void Image::drawTiled(GraphicsContext* ctxt, const FloatRect& destRect, const Fl
         visibleSrcRect.setY((destRect.y() - oneTileRect.y()) / scale.height());
         visibleSrcRect.setWidth(destRect.width() / scale.width());
         visibleSrcRect.setHeight(destRect.height() / scale.height());
-        draw(ctxt, destRect, visibleSrcRect, styleColorSpace, op);
+        draw(ctxt, destRect, visibleSrcRect, styleColorSpace, op, blendMode);
         return;
     }
 
     AffineTransform patternTransform = AffineTransform().scaleNonUniform(scale.width(), scale.height());
     FloatRect tileRect(FloatPoint(), intrinsicTileSize);    
-    drawPattern(ctxt, tileRect, patternTransform, oneTileRect.location(), styleColorSpace, op, destRect);
+    drawPattern(ctxt, tileRect, patternTransform, oneTileRect.location(), styleColorSpace, op, destRect, blendMode);
     
     startAnimation();
 }

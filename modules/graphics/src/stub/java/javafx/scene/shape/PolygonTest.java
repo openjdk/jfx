@@ -25,23 +25,20 @@
 
 package javafx.scene.shape;
 
-import static com.sun.javafx.test.TestHelper.assertBoundsEqual;
-import static com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGPolygon;
 import javafx.collections.ObservableList;
 import javafx.scene.NodeTest;
-
 import org.junit.Test;
 
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.pgstub.StubPolygon;
+import static com.sun.javafx.test.TestHelper.assertBoundsEqual;
+import static com.sun.javafx.test.TestHelper.box;
+import static org.junit.Assert.*;
 
 public class PolygonTest {
     @Test public void testPropertyPropagation_emptyPoints() {
-        final Polygon polygon = new Polygon();
+        final StubPolygon polygon = new StubPolygon();
         NodeTest.callSyncPGNode(polygon);
         assertPGPolygonPointsEquals(polygon, new double[0]);
     }
@@ -49,7 +46,7 @@ public class PolygonTest {
     @Test public void testPropertyPropagation_pointsEvenLength() {
         final double[] initialPoints = { 10, 20, 100, 200, 200, 100, 50, 10 };
 
-        final Polygon polygon = new Polygon(initialPoints);
+        final StubPolygon polygon = new StubPolygon(initialPoints);
         NodeTest.callSyncPGNode(polygon);
         assertPGPolygonPointsEquals(polygon, initialPoints);
 
@@ -64,7 +61,7 @@ public class PolygonTest {
     @Test public void testPropertyPropagation_pointsOddLength() {
         final double[] initialPoints = { 10, 20, 100, 200, 200 };
 
-        final Polygon polygon = new Polygon(initialPoints);
+        final StubPolygon polygon = new StubPolygon(initialPoints);
         NodeTest.callSyncPGNode(polygon);
         assertPGPolygonPointsEquals(polygon, initialPoints);
 
@@ -77,19 +74,19 @@ public class PolygonTest {
     }
 
     @Test public void testPropertyPropagation_visible() throws Exception {
-        final Polygon polygon = new Polygon();
+        final StubPolygon polygon = new StubPolygon();
         NodeTest.testBooleanPropertyPropagation(polygon, "visible", false, true);
     }
 
     @Test public void testBounds_emptyPoints() {
-        final Polygon polygon = new Polygon();
+        final StubPolygon polygon = new StubPolygon();
         assertBoundsEqual(box(0, 0, -1, -1), polygon.getBoundsInLocal());
     }
 
     @Test public void testBounds_evenPointsLength() {
         final double[] initialPoints = { 100, 100, 200, 100, 200, 200 };
 
-        final Polygon polygon = new Polygon(initialPoints);
+        final StubPolygon polygon = new StubPolygon(initialPoints);
         assertBoundsEqual(box(100, 100, 100, 100), polygon.getBoundsInLocal());
 
         final ObservableList<Double> polygonPoints = polygon.getPoints();
@@ -104,7 +101,7 @@ public class PolygonTest {
             100, 100, 200, 100, 200, 200, 150, 300
         };
 
-        final Polygon polygon = new Polygon(initialPoints);
+        final StubPolygon polygon = new StubPolygon(initialPoints);
         assertBoundsEqual(box(100, 100, 100, 200), polygon.getBoundsInLocal());
 
         final ObservableList<Double> polygonPoints = polygon.getPoints();
@@ -114,18 +111,18 @@ public class PolygonTest {
     }
     
     @Test public void testConfigShape() throws Exception {
-        final Polygon polygon = 
-                new Polygon(new double[] { 0, 0, 0, 1, 1, 1, 1, 0 });
+        final StubPolygon polygon =
+                new StubPolygon(new double[] { 0, 0, 0, 1, 1, 1, 1, 0 });
         final Path2D path = polygon.impl_configShape();
         assertTrue(path.contains(0.5f, 0.5f));
         assertFalse(path.contains(0, 2));
     }
 
     private static void assertPGPolygonPointsEquals(
-            final Polygon polygon,
+            final StubPolygon polygon,
             final double... expectedPoints) {
-        final StubPolygon stubPolygon = (StubPolygon) polygon.getPGPolygon();
-        final float[] pgPoints = stubPolygon.getPoints();
+        final StubNGPolygon stubPolygon = polygon.impl_getPeer();
+        final float[] pgPoints = stubPolygon.points;
 
         final int minLength = expectedPoints.length & ~1;
         final int maxLength = expectedPoints.length;
@@ -148,5 +145,29 @@ public class PolygonTest {
         String s = new Polygon().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
+    }
+
+    private final class StubPolygon extends Polygon {
+        public StubPolygon(double... initialPoints) {
+            super(initialPoints);
+        }
+
+        public StubPolygon() {
+            super();
+        }
+
+        @Override
+        protected NGNode impl_createPeer() {
+            return new StubNGPolygon();
+        }
+    }
+
+    private final class StubNGPolygon extends NGPolygon {
+        private float[] points;
+        @Override
+        public void updatePolygon(float[] points) {
+            super.updatePolygon(points);
+            this.points = points;
+        }
     }
 }

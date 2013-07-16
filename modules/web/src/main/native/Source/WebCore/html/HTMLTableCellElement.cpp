@@ -67,6 +67,9 @@ int HTMLTableCellElement::rowSpan() const
 int HTMLTableCellElement::cellIndex() const
 {
     int index = 0;
+    if (!parentElement() || !parentElement()->hasTagName(trTag))
+        return -1;
+
     for (const Node * node = previousSibling(); node; node = node->previousSibling()) {
         if (node->hasTagName(tdTag) || node->hasTagName(thTag))
             index++;
@@ -82,39 +85,39 @@ bool HTMLTableCellElement::isPresentationAttribute(const QualifiedName& name) co
     return HTMLTablePartElement::isPresentationAttribute(name);
 }
 
-void HTMLTableCellElement::collectStyleForAttribute(const Attribute& attribute, StylePropertySet* style)
+void HTMLTableCellElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
 {
-    if (attribute.name() == nowrapAttr) {
-        addPropertyToAttributeStyle(style, CSSPropertyWhiteSpace, CSSValueWebkitNowrap);
-    } else if (attribute.name() == widthAttr) {
-        if (!attribute.value().isEmpty()) {
-            int widthInt = attribute.value().toInt();
+    if (name == nowrapAttr)
+        addPropertyToPresentationAttributeStyle(style, CSSPropertyWhiteSpace, CSSValueWebkitNowrap);
+    else if (name == widthAttr) {
+        if (!value.isEmpty()) {
+            int widthInt = value.toInt();
             if (widthInt > 0) // width="0" is ignored for compatibility with WinIE.
-                addHTMLLengthToStyle(style, CSSPropertyWidth, attribute.value());
+                addHTMLLengthToStyle(style, CSSPropertyWidth, value);
         }
-    } else if (attribute.name() == heightAttr) {
-        if (!attribute.value().isEmpty()) {
-            int heightInt = attribute.value().toInt();
+    } else if (name == heightAttr) {
+        if (!value.isEmpty()) {
+            int heightInt = value.toInt();
             if (heightInt > 0) // height="0" is ignored for compatibility with WinIE.
-                addHTMLLengthToStyle(style, CSSPropertyHeight, attribute.value());
+                addHTMLLengthToStyle(style, CSSPropertyHeight, value);
         }
     } else
-        HTMLTablePartElement::collectStyleForAttribute(attribute, style);
+        HTMLTablePartElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
-void HTMLTableCellElement::parseAttribute(const Attribute& attribute)
+void HTMLTableCellElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == rowspanAttr) {
+    if (name == rowspanAttr) {
         if (renderer() && renderer()->isTableCell())
             toRenderTableCell(renderer())->colSpanOrRowSpanChanged();
-    } else if (attribute.name() == colspanAttr) {
+    } else if (name == colspanAttr) {
         if (renderer() && renderer()->isTableCell())
             toRenderTableCell(renderer())->colSpanOrRowSpanChanged();
     } else
-        HTMLTablePartElement::parseAttribute(attribute);
+        HTMLTablePartElement::parseAttribute(name, value);
 }
 
-StylePropertySet* HTMLTableCellElement::additionalAttributeStyle()
+const StylePropertySet* HTMLTableCellElement::additionalPresentationAttributeStyle()
 {
     if (HTMLTableElement* table = findParentTable())
         return table->additionalCellStyle();
@@ -183,13 +186,13 @@ HTMLTableCellElement* HTMLTableCellElement::cellAbove() const
 
 HTMLTableCellElement* toHTMLTableCellElement(Node* node)
 {
-    ASSERT(!node || node->hasTagName(HTMLNames::tdTag) || node->hasTagName(HTMLNames::thTag));
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->hasTagName(HTMLNames::tdTag) || node->hasTagName(HTMLNames::thTag));
     return static_cast<HTMLTableCellElement*>(node);
 }
 
 const HTMLTableCellElement* toHTMLTableCellElement(const Node* node)
 {
-    ASSERT(!node || node->hasTagName(HTMLNames::tdTag) || node->hasTagName(HTMLNames::thTag));
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->hasTagName(HTMLNames::tdTag) || node->hasTagName(HTMLNames::thTag));
     return static_cast<const HTMLTableCellElement*>(node);
 }
 

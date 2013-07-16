@@ -36,8 +36,7 @@
 #import <WebCore/DisplaySleepDisabler.h>
 #import <WebCore/HTMLMediaElement.h>
 #import <WebCore/SoftLinking.h>
-#import <objc/objc-runtime.h>
-#import <wtf/UnusedParam.h>
+#import <objc/runtime.h>
 
 #if USE(GSTREAMER)
 #import <WebCore/GStreamerGWorld.h>
@@ -52,10 +51,7 @@ SOFT_LINK_POINTER(QTKit, QTMovieRateDidChangeNotification, NSString *)
 
 #define QTMovieRateDidChangeNotification getQTMovieRateDidChangeNotification()
 
-@interface WebVideoFullscreenWindow : NSWindow
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
-<NSAnimationDelegate>
-#endif
+@interface WebVideoFullscreenWindow : NSWindow<NSAnimationDelegate>
 {
     SEL _controllerActionOnAnimationEnd;
     WebWindowScaleAnimation *_fullscreenAnimation; // (retain)
@@ -339,7 +335,6 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
 - (void)updateMenuAndDockForFullscreen
 {
     // NSApplicationPresentationOptions is available on > 10.6 only:
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     NSApplicationPresentationOptions options = NSApplicationPresentationDefault;
     NSScreen* fullscreenScreen = [[self window] screen];
 
@@ -359,7 +354,6 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
     if ([NSApp respondsToSelector:@selector(setPresentationOptions:)])
         [NSApp setPresentationOptions:options];
     else
-#endif
         SetSystemUIMode(_isEndingFullscreen ? kUIModeNormal : kUIModeAllHidden, 0);
 }
 

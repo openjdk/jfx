@@ -26,16 +26,14 @@
 #include "config.h"
 #include "DragImage.h"
 
-#include "CachedImage.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontDescription.h"
 #include "FontSelector.h"
-#include "Frame.h"
 #include "GraphicsContext.h"
 #include "HWndDC.h"
 #include "Image.h"
-#include "Settings.h"
+#include "KURL.h"
 #include "StringTruncator.h"
 #include "TextRun.h"
 #include "WebCoreTextRenderer.h"
@@ -69,15 +67,11 @@ DragImageRef dissolveDragImageToFraction(DragImageRef image, float)
     return image;
 }
         
-DragImageRef createDragImageIconForCachedImage(CachedImage* image)
+DragImageRef createDragImageIconForCachedImageFilename(const String& filename)
 {
-    if (!image)
-        return 0;
-
-    String filename = image->response().suggestedFilename();
-    
     SHFILEINFO shfi = {0};
-    if (FAILED(SHGetFileInfo(static_cast<LPCWSTR>(filename.charactersWithNullTermination()), FILE_ATTRIBUTE_NORMAL,
+    String fname = filename;
+    if (FAILED(SHGetFileInfo(static_cast<LPCWSTR>(fname.charactersWithNullTermination()), FILE_ATTRIBUTE_NORMAL,
         &shfi, sizeof(shfi), SHGFI_ICON | SHGFI_USEFILEATTRIBUTES)))
         return 0;
 
@@ -108,25 +102,25 @@ const float DragLinkUrlFontSize = 10;
 
 static Font dragLabelFont(int size, bool bold, FontRenderingMode renderingMode)
 {
+    Font result;
+#if !OS(WINCE)
     NONCLIENTMETRICS metrics;
     metrics.cbSize = sizeof(metrics);
     SystemParametersInfo(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0);
 
     FontDescription description;
     description.setWeight(bold ? FontWeightBold : FontWeightNormal);
-
-    FontFamily family;
-    family.setFamily(metrics.lfSmCaptionFont.lfFaceName);
-    description.setFamily(family);
+    description.setOneFamily(metrics.lfSmCaptionFont.lfFaceName);
     description.setSpecifiedSize((float)size);
     description.setComputedSize((float)size);
     description.setRenderingMode(renderingMode);
-    Font result = Font(description, 0, 0); 
+    result = Font(description, 0, 0);
     result.update(0);
+#endif
     return result;
 }
 
-DragImageRef createDragImageForLink(KURL& url, const String& inLabel, Frame* frame)
+DragImageRef createDragImageForLink(KURL& url, const String& inLabel, FontRenderingMode fontRenderingMode)
 {
     // This is more or less an exact match for the Mac OS X code.
 
@@ -134,7 +128,7 @@ DragImageRef createDragImageForLink(KURL& url, const String& inLabel, Frame* fra
     const Font* urlFont;
     FontCachePurgePreventer fontCachePurgePreventer;
 
-    if (frame->settings() && frame->settings()->fontRenderingMode() == AlternateRenderingMode) {
+    if (fontRenderingMode == AlternateRenderingMode) {
         static const Font alternateRenderingModeLabelFont = dragLabelFont(DragLinkLabelFontsize, true, AlternateRenderingMode);
         static const Font alternateRenderingModeURLFont = dragLabelFont(DragLinkUrlFontSize, false, AlternateRenderingMode);
         labelFont = &alternateRenderingModeLabelFont;

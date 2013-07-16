@@ -23,14 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG
-    ] SVGMarkerElement : SVGElement,
+] interface SVGMarkerElement : SVGStyledElement,
                                                    SVGLangSpace,
                                                    SVGExternalResourcesRequired,
-                                                   SVGStylable,
                                                    SVGFitToViewBox { 
         // Marker Unit Types
         const unsigned short SVG_MARKERUNITS_UNKNOWN        = 0;
@@ -51,7 +48,6 @@ module svg {
         readonly attribute SVGAnimatedAngle       orientAngle;
 
         void setOrientToAuto();
-        void setOrientToAngle(in [Optional=DefaultIsUndefined] SVGAngle angle);
+    void setOrientToAngle([Default=Undefined] optional SVGAngle angle);
     };
 
-}

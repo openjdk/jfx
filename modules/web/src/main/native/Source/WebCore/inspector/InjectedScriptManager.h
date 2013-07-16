@@ -30,11 +30,10 @@
 #ifndef InjectedScriptManager_h
 #define InjectedScriptManager_h
 
-#include "PlatformString.h"
 #include "ScriptState.h"
-
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -45,7 +44,7 @@ class InspectorObject;
 class ScriptObject;
 
 class InjectedScriptManager {
-    WTF_MAKE_NONCOPYABLE(InjectedScriptManager);
+    WTF_MAKE_NONCOPYABLE(InjectedScriptManager); WTF_MAKE_FAST_ALLOCATED;
 public:
     static PassOwnPtr<InjectedScriptManager> createForPage();
     static PassOwnPtr<InjectedScriptManager> createForWorker();
@@ -55,7 +54,6 @@ public:
 
     InjectedScriptHost* injectedScriptHost();
 
-    pair<int, ScriptObject> injectScript(const String& source, ScriptState*);
     InjectedScript injectedScriptFor(ScriptState*);
     InjectedScript injectedScriptForId(int);
     int injectedScriptIdFor(ScriptState*);

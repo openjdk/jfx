@@ -39,6 +39,7 @@ public class DWGlyph implements Glyph {
     private float pixelXAdvance, pixelYAdvance;
     private RECT rect;
     private boolean drawShapes;
+    byte[] pixelData;
 
     private static final boolean CACHE_TARGET = true;
     private static IWICBitmap cachedBitmap;
@@ -268,7 +269,10 @@ public class DWGlyph implements Glyph {
 
     @Override
     public byte[] getPixelData(float x, float y) {
-        return isLCDGlyph() ? getLCDMask(x, y) : getGrayMask(x, y);
+        if (pixelData == null) {
+            pixelData = isLCDGlyph() ? getLCDMask(x, y) : getGrayMask(x, y);
+        }
+        return pixelData;
     }
 
     @Override

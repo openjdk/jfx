@@ -27,13 +27,13 @@
 #include "EditCommand.h"
 
 #include "CompositeEditCommand.h"
-#include "DeleteButtonController.h"
 #include "Document.h"
 #include "Editor.h"
 #include "Element.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameSelection.h"
+#include "NodeTraversal.h"
 #include "VisiblePosition.h"
 #include "htmlediting.h"
 
@@ -45,7 +45,7 @@ EditCommand::EditCommand(Document* document)
 {
     ASSERT(m_document);
     ASSERT(m_document->frame());
-    setStartingSelection(avoidIntersectionWithNode(m_document->frame()->selection()->selection(), m_document->frame()->editor()->deleteButtonController()->containerElement()));
+    setStartingSelection(m_document->frame()->editor().avoidIntersectionWithDeleteButtonController(m_document->frame()->selection()->selection()));
     setEndingSelection(m_startingSelection);
 }
 
@@ -118,7 +118,7 @@ void SimpleEditCommand::doReapply()
 #ifndef NDEBUG
 void SimpleEditCommand::addNodeAndDescendants(Node* startNode, HashSet<Node*>& nodes)
 {
-    for (Node* node = startNode; node; node = node->traverseNextNode(startNode))
+    for (Node* node = startNode; node; node = NodeTraversal::next(node, startNode))
         nodes.add(node);
 }
 #endif

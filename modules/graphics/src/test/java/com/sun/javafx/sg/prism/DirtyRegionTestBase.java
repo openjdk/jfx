@@ -25,6 +25,10 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.geometry.Insets;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,24 +36,17 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javafx.geometry.Insets;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.CornerRadii;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.sg.BaseNode;
-import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NodeTestUtils.TestNGGroup;
 import com.sun.prism.paint.Color;
 import com.sun.scenario.effect.Effect;
 import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * A base class for all testing of the dirty regions. This class contains
@@ -95,7 +92,7 @@ public class DirtyRegionTestBase {
                 // This simulates making it invisible, painting, and then
                 // making it visible again.
                 node.setOpacity(0f);
-                BaseNode parent = node;
+                NGNode parent = node;
                 while(parent.getParent() != null) parent = parent.getParent();
                 parent.render(TestGraphics.TEST_GRAPHICS);
                 // Now we can go ahead and set the opacity
@@ -189,7 +186,7 @@ public class DirtyRegionTestBase {
                 // This simulates making it invisible, painting, and then
                 // making it visible again.
                 node.setVisible(false);
-                BaseNode parent = node;
+                NGNode parent = node;
                 while(parent.getParent() != null) parent = parent.getParent();
                 parent.render(TestGraphics.TEST_GRAPHICS);
                 // Now we can go ahead and set the opacity
@@ -430,8 +427,8 @@ public class DirtyRegionTestBase {
                 "creator=" + creator + ", polluter=" + polluter,
                 nodes.contains(start), ((TestNGNode)start).askedToAccumulateDirtyRegion());
         if (start instanceof NGGroup) {
-            for (PGNode child : ((NGGroup)start).getChildren()) {
-                assertOnlyTheseNodesWereAskedToAccumulateDirtyRegions((NGNode)child, nodes);
+            for (NGNode child : ((NGGroup)start).getChildren()) {
+                assertOnlyTheseNodesWereAskedToAccumulateDirtyRegions(child, nodes);
             }
         }
     }
@@ -445,8 +442,8 @@ public class DirtyRegionTestBase {
                 "creator=" + creator + ", polluter=" + polluter,
                 nodes.contains(start), ((TestNGNode)start).computedDirtyRegion());
         if (start instanceof NGGroup) {
-            for (PGNode child : ((NGGroup)start).getChildren()) {
-                assertOnlyTheseNodesWereAskedToComputeDirtyRegions((NGNode)child, nodes);
+            for (NGNode child : ((NGGroup)start).getChildren()) {
+                assertOnlyTheseNodesWereAskedToComputeDirtyRegions(child, nodes);
             }
         }
     }
@@ -455,8 +452,7 @@ public class DirtyRegionTestBase {
 
     static protected void resetGroupBounds(NGGroup group) {
         BaseBounds contentBounds = new RectBounds();
-        for (PGNode c : group.getChildren()) {
-            NGNode child = (NGNode)c;
+        for (NGNode child : group.getChildren()) {
             contentBounds = contentBounds.deriveWithUnion(
                     child.getCompleteBounds(
                             new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));

@@ -197,8 +197,8 @@ public class PhongMaterialTest {
 
         runAndWait(new Runnable() {
             public void run() {
-                NGShape3D peer = (NGShape3D)shape.impl_getPGNode();
-                NGPhongMaterial phongMaterial = NGHelper.getMaterial(peer);
+                final NGShape3D peer = shape.impl_getPeer();
+                final NGPhongMaterial phongMaterial = NGHelper.getMaterial(peer);
                 com.sun.prism.PhongMaterial tmp = NGHelper.createMaterial(phongMaterial);
                 if (com.sun.prism.es2.ES2Pipeline.class.equals(pipelineClass)) {
                     ES2Helper.checkMaterial(testMat, tmp);

@@ -28,9 +28,9 @@
 
 #if USE(CFNETWORK)
 
-#include "AutodrainedPool.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <limits>
+#include <wtf/AutodrainedPool.h>
 #include <wtf/MainThread.h>
 #include <wtf/Threading.h>
 
@@ -38,18 +38,35 @@ namespace WebCore {
 
 static CFRunLoopRef loaderRunLoopObject = 0;
 
+static Mutex& loaderRunLoopMutex()
+{
+    DEFINE_STATIC_LOCAL(Mutex, mutex, ());
+    return mutex;
+}
+
+static ThreadCondition& loaderRunLoopCondition()
+{
+    DEFINE_STATIC_LOCAL(ThreadCondition, threadCondition, ());
+    return threadCondition;
+}
+
 static void emptyPerform(void*) 
 {
 }
 
 static void runLoaderThread(void*)
 {
+    {
+        MutexLocker lock(loaderRunLoopMutex());
     loaderRunLoopObject = CFRunLoopGetCurrent();
 
     // Must add a source to the run loop to prevent CFRunLoopRun() from exiting.
-    CFRunLoopSourceContext ctxt = {0, (void*)1 /*must be non-NULL*/, 0, 0, 0, 0, 0, 0, 0, emptyPerform};
+        CFRunLoopSourceContext ctxt = {0, (void*)1 /*must be non-null*/, 0, 0, 0, 0, 0, 0, 0, emptyPerform};
     CFRunLoopSourceRef bogusSource = CFRunLoopSourceCreate(0, 0, &ctxt);
     CFRunLoopAddSource(loaderRunLoopObject, bogusSource, kCFRunLoopDefaultMode);
+
+        loaderRunLoopCondition().signal();
+    }
 
     SInt32 result;
     do {
@@ -61,17 +78,11 @@ static void runLoaderThread(void*)
 CFRunLoopRef loaderRunLoop()
 {
     ASSERT(isMainThread());
+
+    MutexLocker lock(loaderRunLoopMutex());
     if (!loaderRunLoopObject) {
         createThread(runLoaderThread, 0, "WebCore: CFNetwork Loader");
-        while (!loaderRunLoopObject) {
-            // FIXME: <http://webkit.org/b/55402> - loaderRunLoop() should use synchronization instead of while loop
-#if PLATFORM(WIN)
-            Sleep(10);
-#else
-            struct timespec sleepTime = { 0, 10 * 1000 * 1000 };
-            nanosleep(&sleepTime, 0);
-#endif
-        }
+        loaderRunLoopCondition().wait(loaderRunLoopMutex());
     }
     return loaderRunLoopObject;
 }

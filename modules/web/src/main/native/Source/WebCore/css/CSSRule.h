@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002, 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2002, 2006, 2007, 2012 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Andreas Kling (kling@webkit.org)
  *
  * This library is free software; you can redistribute it and/or
@@ -23,9 +23,8 @@
 #ifndef CSSRule_h
 #define CSSRule_h
 
-#include "KURLHash.h"
-#include <wtf/ListHashSet.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -36,13 +35,7 @@ typedef int ExceptionCode;
 
 class CSSRule : public RefCounted<CSSRule> {
 public:
-    // Override RefCounted's deref() to ensure operator delete is called on
-    // the appropriate subclass type.
-    void deref()
-    {
-        if (derefBase())
-            destroy();
-    }
+    virtual ~CSSRule() { }
 
     enum Type {
         UNKNOWN_RULE,
@@ -57,25 +50,26 @@ public:
         // <https://bugs.webkit.org/show_bug.cgi?id=71293>.
         WEBKIT_KEYFRAMES_RULE,
         WEBKIT_KEYFRAME_RULE,
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+        SUPPORTS_RULE = 12,
+#endif
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+        WEBKIT_VIEWPORT_RULE = 15,
+#endif
 #if ENABLE(CSS_REGIONS)
-        WEBKIT_REGION_RULE = 16
+        WEBKIT_REGION_RULE = 16,
+#endif
+#if ENABLE(CSS_SHADERS)
+        WEBKIT_FILTER_RULE = 17,
+#endif
+#if ENABLE(SHADOW_DOM)
+        HOST_RULE = 1001,
 #endif
     };
 
-    Type type() const { return static_cast<Type>(m_type); }
-
-    bool isCharsetRule() const { return type() == CHARSET_RULE; }
-    bool isFontFaceRule() const { return type() == FONT_FACE_RULE; }
-    bool isKeyframeRule() const { return type() == WEBKIT_KEYFRAME_RULE; }
-    bool isKeyframesRule() const { return type() == WEBKIT_KEYFRAMES_RULE; }
-    bool isMediaRule() const { return type() == MEDIA_RULE; }
-    bool isPageRule() const { return type() == PAGE_RULE; }
-    bool isStyleRule() const { return type() == STYLE_RULE; }
-    bool isImportRule() const { return type() == IMPORT_RULE; }
-
-#if ENABLE(CSS_REGIONS)
-    bool isRegionRule() const { return type() == WEBKIT_REGION_RULE; }
-#endif
+    virtual Type type() const = 0;
+    virtual String cssText() const = 0;
+    virtual void reattach(StyleRuleBase*) = 0;
 
     void setParentStyleSheet(CSSStyleSheet* styleSheet)
     {
@@ -98,24 +92,16 @@ public:
 
     CSSRule* parentRule() const { return m_parentIsRule ? m_parentRule : 0; }
 
-    String cssText() const;
+    // NOTE: Just calls notImplemented().
     void setCssText(const String&, ExceptionCode&);
 
-    void reattach(StyleRuleBase*);
-
 protected:
-    CSSRule(CSSStyleSheet* parent, Type type)
+    CSSRule(CSSStyleSheet* parent)
         : m_hasCachedSelectorText(false)
         , m_parentIsRule(false)
-        , m_type(type)
         , m_parentStyleSheet(parent)
     {
     }
-
-    // NOTE: This class is non-virtual for memory and performance reasons.
-    // Don't go making it virtual again unless you know exactly what you're doing!
-
-    ~CSSRule() { }
 
     bool hasCachedSelectorText() const { return m_hasCachedSelectorText; }
     void setHasCachedSelectorText(bool hasCachedSelectorText) const { m_hasCachedSelectorText = hasCachedSelectorText; }
@@ -123,15 +109,13 @@ protected:
     const CSSParserContext& parserContext() const;
 
 private:
-    mutable unsigned m_hasCachedSelectorText : 1;
-    unsigned m_parentIsRule : 1;
-    unsigned m_type : 5;
+    mutable unsigned char m_hasCachedSelectorText : 1;
+    unsigned char m_parentIsRule : 1;
+
     union {
         CSSRule* m_parentRule;
         CSSStyleSheet* m_parentStyleSheet;
     };
-
-    void destroy();
 };
 
 } // namespace WebCore

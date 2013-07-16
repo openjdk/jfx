@@ -25,6 +25,7 @@
 #include "SVGAnimatedBoolean.h"
 #include "SVGExternalResourcesRequired.h"
 #include "SVGLangSpace.h"
+#include "SVGNames.h"
 #include "SVGPointList.h"
 #include "SVGStyledTransformableElement.h"
 #include "SVGTests.h"
@@ -48,17 +49,17 @@ protected:
 
 private:
     virtual bool isValid() const { return SVGTests::isValid(); }
-    virtual bool supportsFocus() const { return true; }
+    virtual bool supportsFocus() const OVERRIDE { return true; }
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE; 
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE; 
     virtual void svgAttributeChanged(const QualifiedName&);
 
     virtual bool supportsMarkers() const { return true; }
 
     // Custom 'points' property
-    static void synchronizePoints(void* contextElement);
-    static PassRefPtr<SVGAnimatedProperty> lookupOrCreatePointsWrapper(void* contextElement);
+    static void synchronizePoints(SVGElement* contextElement);
+    static PassRefPtr<SVGAnimatedProperty> lookupOrCreatePointsWrapper(SVGElement* contextElement);
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGPolyElement)
         DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
@@ -72,6 +73,12 @@ private:
 protected:
     mutable SVGSynchronizableAnimatedProperty<SVGPointList> m_points;
 };
+
+inline SVGPolyElement* toSVGPolyElement(SVGElement* element)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!element || element->hasTagName(SVGNames::polygonTag) || element->hasTagName(SVGNames::polylineTag));
+    return static_cast<SVGPolyElement*>(element);
+}
 
 } // namespace WebCore
 

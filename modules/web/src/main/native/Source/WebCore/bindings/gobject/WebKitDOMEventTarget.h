@@ -19,9 +19,8 @@
 #ifndef WebKitDOMEventTarget_h
 #define WebKitDOMEventTarget_h
 
-#include "webkit/webkitdomdefines.h"
 #include <glib-object.h>
-#include <webkit/webkitdefines.h>
+#include <webkitdom/webkitdomdefines.h>
 
 G_BEGIN_DECLS
 
@@ -42,12 +41,12 @@ struct _WebKitDOMEventTargetIface {
                                      GError              **error);
 
     gboolean      (* add_event_listener)(WebKitDOMEventTarget *target,
-                                         const char          *eventName,
+                                         const char           *event_name,
                                          GCallback             handler,
                                          gboolean              bubble,
-                                         gpointer              userData);
+                                         gpointer              user_data);
     gboolean      (* remove_event_listener)(WebKitDOMEventTarget *target,
-                                            const char           *eventName,
+                                            const char           *event_name,
                                             GCallback             handler,
                                             gboolean              bubble);
 };
@@ -59,14 +58,31 @@ WEBKIT_API void      webkit_dom_event_target_dispatch_event(WebKitDOMEventTarget
                                                             WebKitDOMEvent       *event,
                                                             GError              **error);
 
+/**
+ * webkit_dom_event_target_add_event_listener:
+ * @target: A #WebKitDOMEventTarget
+ * @event_name: A #gchar
+ * @handler: (scope async): A #GCallback
+ * @bubble: A #gboolean
+ * @user_data: A #gpointer
+ *
+ */
 WEBKIT_API gboolean  webkit_dom_event_target_add_event_listener(WebKitDOMEventTarget *target,
-                                                                const char           *eventName,
+                                                                const char           *event_name,
                                                                 GCallback             handler,
                                                                 gboolean              bubble,
-                                                                gpointer              userData);
+                                                                gpointer              user_data);
 
+/**
+ * webkit_dom_event_target_remove_event_listener:
+ * @target: A #WebKitDOMEventTarget
+ * @event_name: A #gchar
+ * @handler: (scope call): A #GCallback
+ * @bubble: A #gboolean
+ *
+ */
 WEBKIT_API gboolean  webkit_dom_event_target_remove_event_listener(WebKitDOMEventTarget *target,
-                                                                   const char           *eventName,
+                                                                   const char           *event_name,
                                                                    GCallback             handler,
                                                                    gboolean              bubble);
 

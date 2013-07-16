@@ -26,7 +26,7 @@
 #ifndef WeakSetInlines_h
 #define WeakSetInlines_h
 
-#include "WeakSet.h"
+#include "MarkedBlock.h"
 
 namespace JSC {
 
@@ -49,9 +49,6 @@ inline void WeakBlock::finalize(WeakImpl* weakImpl)
     WeakHandleOwner* weakHandleOwner = weakImpl->weakHandleOwner();
     if (!weakHandleOwner)
         return;
-#if !ASSERT_DISABLED || ENABLE(GC_VALIDATION)
-    weakImpl->jsValue().asCell()->clearStructure();
-#endif
     weakHandleOwner->finalize(Handle<Unknown>::wrapSlot(&const_cast<JSValue&>(weakImpl->jsValue())), weakImpl->context());
 }
 

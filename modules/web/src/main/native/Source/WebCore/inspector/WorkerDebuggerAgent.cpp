@@ -80,14 +80,14 @@ private:
 
 const char* WorkerDebuggerAgent::debuggerTaskMode = "debugger";
 
-PassOwnPtr<WorkerDebuggerAgent> WorkerDebuggerAgent::create(InstrumentingAgents* instrumentingAgents, InspectorState* inspectorState, WorkerContext* inspectedWorkerContext, InjectedScriptManager* injectedScriptManager)
+PassOwnPtr<WorkerDebuggerAgent> WorkerDebuggerAgent::create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* inspectorState, WorkerContext* inspectedWorkerContext, InjectedScriptManager* injectedScriptManager)
 {
     return adoptPtr(new WorkerDebuggerAgent(instrumentingAgents, inspectorState, inspectedWorkerContext, injectedScriptManager));
 }
 
-WorkerDebuggerAgent::WorkerDebuggerAgent(InstrumentingAgents* instrumentingAgents, InspectorState* inspectorState, WorkerContext* inspectedWorkerContext, InjectedScriptManager* injectedScriptManager)
+WorkerDebuggerAgent::WorkerDebuggerAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* inspectorState, WorkerContext* inspectedWorkerContext, InjectedScriptManager* injectedScriptManager)
     : InspectorDebuggerAgent(instrumentingAgents, inspectorState, injectedScriptManager)
-    , m_scriptDebugServer(inspectedWorkerContext)
+    , m_scriptDebugServer(inspectedWorkerContext, WorkerDebuggerAgent::debuggerTaskMode)
     , m_inspectedWorkerContext(inspectedWorkerContext)
 {
     MutexLocker lock(workerDebuggerAgentsMutex());

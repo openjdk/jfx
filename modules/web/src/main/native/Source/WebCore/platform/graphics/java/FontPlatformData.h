@@ -29,6 +29,11 @@ public:
         , m_size(fontDescription.computedSize())
         {};
 
+    FontPlatformData(const FontDescription& fontDescription, float size)
+        : m_jFont(getJavaFont(fontDescription, fontDescription.firstFamily()))
+        , m_size(size)
+        {};
+
     FontPlatformData(RefPtr<RQRef> font, float size)
         : m_jFont(font)
         , m_size(size)

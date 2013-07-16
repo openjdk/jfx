@@ -25,17 +25,15 @@
 
 package javafx.scene.shape;
 
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGPath;
-import javafx.scene.paint.Paint;
+import com.sun.javafx.sg.prism.NGPath;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
 
 // PENDING_DOC_REVIEW
 /**
@@ -409,7 +407,7 @@ public class ArcTo extends PathElement {
     }
 
     @Override
-    void addTo(PGPath pgPath) {
+    void addTo(NGPath pgPath) {
         addArcTo(pgPath, null, pgPath.getCurrentX(), pgPath.getCurrentY());
     }
 
@@ -425,7 +423,7 @@ public class ArcTo extends PathElement {
     // This function is nearly identical to the one written for the
     // original port of the F3 graphics/UI library:
     // javafx.ui.canvas.ArcTo#addTo
-    private void addArcTo(PGPath pgPath, Path2D path,
+    private void addArcTo(NGPath pgPath, Path2D path,
                           final double x0, final double y0)
     {
         double localX = getX();

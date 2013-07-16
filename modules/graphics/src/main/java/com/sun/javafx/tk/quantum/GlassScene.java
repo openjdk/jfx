@@ -25,14 +25,9 @@
 
 package com.sun.javafx.tk.quantum;
 
-import javafx.application.Platform;
-import javafx.scene.input.InputMethodRequests;
-import javafx.stage.StageStyle;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.View;
-import com.sun.javafx.sg.PGCamera;
-import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKClipboard;
@@ -47,6 +42,9 @@ import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
+import javafx.application.Platform;
+import javafx.scene.input.InputMethodRequests;
+import javafx.stage.StageStyle;
 
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -74,13 +72,15 @@ abstract class GlassScene implements TKScene {
     private boolean doPresent = true;
     private final AtomicBoolean painting = new AtomicBoolean(false);
 
-    private boolean depthBuffer = false;
+    private final boolean depthBuffer;
+    private final boolean antiAliasing;
 
     SceneState sceneState;
 
     private AccessControlContext accessCtrlCtx = null;
 
-    protected GlassScene(boolean depthBuffer) {
+    protected GlassScene(boolean depthBuffer, boolean antiAliasing) {
+        this.antiAliasing = antiAliasing;
         this.depthBuffer = depthBuffer;
         sceneState = new SceneState(this);
     }
@@ -98,7 +98,7 @@ abstract class GlassScene implements TKScene {
         return accessCtrlCtx;
     }
 
-    @Override public final void setSecurityContext(AccessControlContext ctx) {
+    public final void setSecurityContext(AccessControlContext ctx) {
         if (accessCtrlCtx != null) {
             throw new RuntimeException("Scene security context has been already set!");
         }
@@ -129,6 +129,10 @@ abstract class GlassScene implements TKScene {
         return depthBuffer;
     }
 
+    boolean isAntiAliasing() {
+        return antiAliasing;
+    }
+
     protected abstract boolean isSynchronous();
 
     @Override public void setTKSceneListener(final TKSceneListener listener) {
@@ -156,8 +160,8 @@ abstract class GlassScene implements TKScene {
     }
 
     @Override
-    public void setRoot(PGNode root) {
-        this.root = (NGNode)root;
+    public void setRoot(NGNode root) {
+        this.root = root;
         entireSceneNeedsRepaint();
     }
 
@@ -177,9 +181,9 @@ abstract class GlassScene implements TKScene {
     public void setLights(Object[] lights) { this.lights = lights; }
 
     @Override
-    public void setCamera(PGCamera camera) {
+    public void setCamera(NGCamera camera) {
         if (camera != null) {
-            this.camera = ((NGCamera) camera).getCameraImpl();
+            this.camera = camera.getCameraImpl();
         } else {
             this.camera = PrismDefaultCamera.getInstance();
         }

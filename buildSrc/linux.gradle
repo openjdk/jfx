@@ -104,6 +104,31 @@ setupTools("linux_tools",
     }
 )
 
+def pangoCCFlags = ["-D_ENABLE_PANGO"];
+def pangoLinkFlags = [];
+setupTools("linux_pango_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--cflags", "pangoft2"
+            standardOutput = results
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--libs", "pangoft2"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        pangoCCFlags.addAll(properties.getProperty("cflags").split(" "))
+        pangoLinkFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
+
+
 def compiler = "gcc"
 def linker = "g++"
 
@@ -178,8 +203,8 @@ LINUX.prismES2.lib = "prism-es2"
 def closedDir = file("$projectDir/../rt-closed")
 LINUX.font = [:]
 LINUX.font.javahInclude = [
-        "com/sun/javafx/font/**/*",
-        "com/sun/javafx/text/**/*"]
+     "com/sun/javafx/font/**/*",
+     "com/sun/javafx/text/**/*"]
 LINUX.font.compiler = compiler
 LINUX.font.nativeSource = [file("modules/graphics/src/main/native-font")]
 LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
@@ -198,3 +223,14 @@ LINUX.fontT2K.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 LINUX.fontT2K.linker = linker
 LINUX.fontT2K.linkFlags = [linkFlags].flatten()
 LINUX.fontT2K.lib = "javafx-font-t2k"
+
+LINUX.fontPango = [:]
+LINUX.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]
+LINUX.fontPango.nativeSource = [
+    "src/main/native-font/pango.c",
+    "src/main/native-font/freetype.c"]
+LINUX.fontPango.compiler = compiler
+LINUX.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
+LINUX.fontPango.linker = linker
+LINUX.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
+LINUX.fontPango.lib = "javafx-font-pango"

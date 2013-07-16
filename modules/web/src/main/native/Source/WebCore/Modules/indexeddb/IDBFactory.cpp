@@ -31,18 +31,21 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
-#include "DOMStringList.h"
 #include "Document.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
 #include "GroupSettings.h"
+#include "HistogramSupport.h"
+#include "IDBBindingUtilities.h"
 #include "IDBDatabase.h"
+#include "IDBDatabaseCallbacksImpl.h"
 #include "IDBDatabaseException.h"
 #include "IDBFactoryBackendInterface.h"
+#include "IDBHistograms.h"
 #include "IDBKey.h"
 #include "IDBKeyRange.h"
-#include "IDBRequest.h"
-#include "IDBVersionChangeRequest.h"
+#include "IDBOpenDBRequest.h"
+#include "IDBTracing.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "SecurityOrigin.h"
@@ -68,7 +71,7 @@ static bool isContextValid(ScriptExecutionContext* context)
 {
     ASSERT(context->isDocument() || context->isWorkerContext());
     if (context->isDocument()) {
-        Document* document = static_cast<Document*>(context);
+        Document* document = toDocument(context);
         return document->frame() && document->page();
     }
 #if !ENABLE(WORKERS)
@@ -82,7 +85,7 @@ static String getIndexedDBDatabasePath(ScriptExecutionContext* context)
 {
     ASSERT(isContextValid(context));
     if (context->isDocument()) {
-        Document* document = static_cast<Document*>(context);
+        Document* document = toDocument(context);
         return document->page()->group().groupSettings()->indexedDBDatabasePath();
     }
 #if ENABLE(WORKERS)
@@ -95,51 +98,90 @@ static String getIndexedDBDatabasePath(ScriptExecutionContext* context)
 }
 }
 
-PassRefPtr<IDBRequest> IDBFactory::getDatabaseNames(ScriptExecutionContext* context)
+PassRefPtr<IDBRequest> IDBFactory::getDatabaseNames(ScriptExecutionContext* context, ExceptionCode& ec)
 {
+    IDB_TRACE("IDBFactory::getDatabaseNames");
     if (!isContextValid(context))
         return 0;
+    if (!context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        ec = SECURITY_ERR;
+        return 0;
+    }
 
     RefPtr<IDBRequest> request = IDBRequest::create(context, IDBAny::create(this), 0);
     m_backend->getDatabaseNames(request, context->securityOrigin(), context, getIndexedDBDatabasePath(context));
     return request;
 }
 
-PassRefPtr<IDBRequest> IDBFactory::open(ScriptExecutionContext* context, const String& name, ExceptionCode& ec)
+PassRefPtr<IDBOpenDBRequest> IDBFactory::open(ScriptExecutionContext* context, const String& name, unsigned long long version, ExceptionCode& ec)
 {
+    IDB_TRACE("IDBFactory::open");
+    if (!version) {
+        ec = TypeError;
+        return 0;
+    }
+    return openInternal(context, name, version, ec);
+}
+
+PassRefPtr<IDBOpenDBRequest> IDBFactory::openInternal(ScriptExecutionContext* context, const String& name, int64_t version, ExceptionCode& ec)
+{
+    HistogramSupport::histogramEnumeration("WebCore.IndexedDB.FrontEndAPICalls", IDBOpenCall, IDBMethodsMax);
+    ASSERT(version >= 1 || version == IDBDatabaseMetadata::NoIntVersion);
     if (name.isNull()) {
-        ec = IDBDatabaseException::IDB_TYPE_ERR;
+        ec = TypeError;
         return 0;
     }
     if (!isContextValid(context))
         return 0;
+    if (!context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        ec = SECURITY_ERR;
+        return 0;
+    }
 
-    RefPtr<IDBRequest> request = IDBRequest::create(context, IDBAny::create(this), 0);
-    m_backend->open(name, request, context->securityOrigin(), context, getIndexedDBDatabasePath(context));
+    RefPtr<IDBDatabaseCallbacksImpl> databaseCallbacks = IDBDatabaseCallbacksImpl::create();
+    int64_t transactionId = IDBDatabase::nextTransactionId();
+    RefPtr<IDBOpenDBRequest> request = IDBOpenDBRequest::create(context, databaseCallbacks, transactionId, version);
+    m_backend->open(name, version, transactionId, request, databaseCallbacks, context->securityOrigin(), context, getIndexedDBDatabasePath(context));
     return request;
 }
 
-PassRefPtr<IDBVersionChangeRequest> IDBFactory::deleteDatabase(ScriptExecutionContext* context, const String& name, ExceptionCode& ec)
+PassRefPtr<IDBOpenDBRequest> IDBFactory::open(ScriptExecutionContext* context, const String& name, ExceptionCode& ec)
 {
+    IDB_TRACE("IDBFactory::open");
+    return openInternal(context, name, IDBDatabaseMetadata::NoIntVersion, ec);
+}
+
+PassRefPtr<IDBOpenDBRequest> IDBFactory::deleteDatabase(ScriptExecutionContext* context, const String& name, ExceptionCode& ec)
+{
+    IDB_TRACE("IDBFactory::deleteDatabase");
+    HistogramSupport::histogramEnumeration("WebCore.IndexedDB.FrontEndAPICalls", IDBDeleteDatabaseCall, IDBMethodsMax);
     if (name.isNull()) {
-        ec = IDBDatabaseException::IDB_TYPE_ERR;
+        ec = TypeError;
         return 0;
     }
     if (!isContextValid(context))
         return 0;
+    if (!context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        ec = SECURITY_ERR;
+        return 0;
+    }
 
-    RefPtr<IDBVersionChangeRequest> request = IDBVersionChangeRequest::create(context, IDBAny::createNull(), "");
+    RefPtr<IDBOpenDBRequest> request = IDBOpenDBRequest::create(context, 0, 0, IDBDatabaseMetadata::DefaultIntVersion);
     m_backend->deleteDatabase(name, request, context->securityOrigin(), context, getIndexedDBDatabasePath(context));
     return request;
 }
 
-short IDBFactory::cmp(PassRefPtr<IDBKey> first, PassRefPtr<IDBKey> second, ExceptionCode& ec)
+short IDBFactory::cmp(ScriptExecutionContext* context, const ScriptValue& firstValue, const ScriptValue& secondValue, ExceptionCode& ec)
 {
+    DOMRequestState requestState(context);
+    RefPtr<IDBKey> first = scriptValueToIDBKey(&requestState, firstValue);
+    RefPtr<IDBKey> second = scriptValueToIDBKey(&requestState, secondValue);
+
     ASSERT(first);
     ASSERT(second);
 
     if (!first->isValid() || !second->isValid()) {
-        ec = IDBDatabaseException::DATA_ERR;
+        ec = IDBDatabaseException::DataError;
         return 0;
     }
 

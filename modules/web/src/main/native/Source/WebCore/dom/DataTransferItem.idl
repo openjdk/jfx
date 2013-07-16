@@ -28,16 +28,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module core {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=DATA_TRANSFER_ITEMS,
-    ] DataTransferItem {
+    ImplementationLacksVTable
+] interface DataTransferItem {
         readonly attribute DOMString kind;
         readonly attribute DOMString type;
 
-        void getAsString(in [Callback,Optional=DefaultIsUndefined] StringCallback callback);
+    void getAsString([Default=Undefined] optional StringCallback callback);
         Blob getAsFile();
     };
 
-}

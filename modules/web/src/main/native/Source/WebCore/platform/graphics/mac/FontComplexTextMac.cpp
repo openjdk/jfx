@@ -34,32 +34,13 @@
 #include "TextRun.h"
 #include <wtf/MathExtras.h>
 
-#if PLATFORM(CHROMIUM)
-#include "HarfBuzzShaper.h"
-#endif
-
 using namespace std;
 
 namespace WebCore {
 
-#if PLATFORM(CHROMIUM)
-static bool preferHarfBuzz(const Font* font)
-{
-    const FontDescription& description = font->fontDescription();
-    return description.featureSettings() && description.featureSettings()->size() > 0;
-}
-#endif
-
 FloatRect Font::selectionRectForComplexText(const TextRun& run, const FloatPoint& point, int h,
                                             int from, int to) const
 {
-#if PLATFORM(CHROMIUM)
-    if (preferHarfBuzz(this)) {
-        HarfBuzzShaper shaper(this, run);
-        if (shaper.shape())
-            return shaper.selectionRect(point, h, from, to);
-    }
-#endif
     ComplexTextController controller(this, run);
     controller.advance(from);
     float beforeWidth = controller.runWidthSoFar();
@@ -91,8 +72,7 @@ float Font::getGlyphsAndAdvancesForComplexText(const TextRun& run, int from, int
 
     if (run.rtl()) {
         initialAdvance = controller.totalWidth() + controller.finalRoundingWidth() - afterWidth;
-        for (int i = 0, end = glyphBuffer.size() - 1; i < glyphBuffer.size() / 2; ++i, --end)
-            glyphBuffer.swap(i, end);
+        glyphBuffer.reverse(0, glyphBuffer.size());
     } else
         initialAdvance = beforeWidth;
 
@@ -101,16 +81,6 @@ float Font::getGlyphsAndAdvancesForComplexText(const TextRun& run, int from, int
 
 void Font::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to) const
 {
-#if PLATFORM(CHROMIUM)
-    if (preferHarfBuzz(this)) {
-        GlyphBuffer glyphBuffer;
-        HarfBuzzShaper shaper(this, run);
-        if (shaper.shape(&glyphBuffer)) {
-            drawGlyphBuffer(context, run, glyphBuffer, point);
-            return;
-        }
-    }
-#endif
     // This glyph buffer holds our glyphs + advances + font data for each glyph.
     GlyphBuffer glyphBuffer;
 
@@ -138,13 +108,6 @@ void Font::drawEmphasisMarksForComplexText(GraphicsContext* context, const TextR
 
 float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
 {
-#if PLATFORM(CHROMIUM)
-    if (preferHarfBuzz(this)) {
-        HarfBuzzShaper shaper(this, run);
-        if (shaper.shape())
-            return shaper.totalWidth();
-    }
-#endif
     ComplexTextController controller(this, run, true, fallbackFonts);
     if (glyphOverflow) {
         glyphOverflow->top = max<int>(glyphOverflow->top, ceilf(-controller.minGlyphBoundingBoxY()) - (glyphOverflow->computeBounds ? 0 : fontMetrics().ascent()));
@@ -157,13 +120,6 @@ float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFon
 
 int Font::offsetForPositionForComplexText(const TextRun& run, float x, bool includePartialGlyphs) const
 {
-#if PLATFORM(CHROMIUM)
-    if (preferHarfBuzz(this)) {
-        HarfBuzzShaper shaper(this, run);
-        if (shaper.shape())
-            return shaper.offsetForPosition(x);
-    }
-#endif
     ComplexTextController controller(this, run);
     return controller.offsetForPosition(x, includePartialGlyphs);
 }
@@ -176,16 +132,36 @@ const SimpleFontData* Font::fontDataForCombiningCharacterSequence(const UChar* c
 
     GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, variant);
 
+    if (!baseCharacterGlyphData.glyph)
+        return 0;
+
     if (length == baseCharacterLength)
-        return baseCharacterGlyphData.glyph ? baseCharacterGlyphData.fontData : 0;
+        return baseCharacterGlyphData.fontData;
 
     bool triedBaseCharacterFontData = false;
 
     unsigned i = 0;
     for (const FontData* fontData = fontDataAt(0); fontData; fontData = fontDataAt(++i)) {
         const SimpleFontData* simpleFontData = fontData->fontDataForCharacter(baseCharacter);
-        if (variant != NormalVariant) {
-            if (const SimpleFontData* variantFontData = simpleFontData->variantFontData(m_fontDescription, variant))
+        if (variant == NormalVariant) {
+            if (simpleFontData->platformData().orientation() == Vertical) {
+                if (isCJKIdeographOrSymbol(baseCharacter) && !simpleFontData->hasVerticalGlyphs()) {
+                    variant = BrokenIdeographVariant;
+                    simpleFontData = simpleFontData->brokenIdeographFontData().get();
+                } else if (m_fontDescription.nonCJKGlyphOrientation() == NonCJKGlyphOrientationVerticalRight) {
+                    SimpleFontData* verticalRightFontData = simpleFontData->verticalRightOrientationFontData().get();
+                    Glyph verticalRightGlyph = verticalRightFontData->glyphForCharacter(baseCharacter);
+                    if (verticalRightGlyph == baseCharacterGlyphData.glyph)
+                        simpleFontData = verticalRightFontData;
+                } else {
+                    SimpleFontData* uprightFontData = simpleFontData->uprightOrientationFontData().get();
+                    Glyph uprightGlyph = uprightFontData->glyphForCharacter(baseCharacter);
+                    if (uprightGlyph != baseCharacterGlyphData.glyph)
+                        simpleFontData = uprightFontData;
+                }
+            }
+        } else {
+            if (const SimpleFontData* variantFontData = simpleFontData->variantFontData(m_fontDescription, variant).get())
                 simpleFontData = variantFontData;
         }
 
@@ -199,7 +175,7 @@ const SimpleFontData* Font::fontDataForCombiningCharacterSequence(const UChar* c
     if (!triedBaseCharacterFontData && baseCharacterGlyphData.fontData && baseCharacterGlyphData.fontData->canRenderCombiningCharacterSequence(characters, length))
         return baseCharacterGlyphData.fontData;
 
-    return 0;
+    return SimpleFontData::systemFallback();
 }
 
 } // namespace WebCore

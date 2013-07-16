@@ -26,31 +26,50 @@
 #if defined(HAVE_CONFIG_H) && HAVE_CONFIG_H
 #ifdef BUILDING_WITH_CMAKE
 #include "cmakeconfig.h"
+#else
+#include "autotoolsconfig.h"
 #endif
 #endif
 
 #include <wtf/Platform.h>
 #include <wtf/ExportMacros.h>
-#if USE(JSC)
 #include <runtime/JSExportMacros.h>
-#endif
 
 #if defined(__APPLE__) && __APPLE__
 
 #ifdef __OBJC__
+#if PLATFORM(IOS)
+#import <Foundation/Foundation.h>
+#else
 #import <Cocoa/Cocoa.h>
 #endif
-
-#elif defined(WIN32) || defined(_WIN32)
-
-#define NOMINMAX
-
 #endif
+
+#elif PLATFORM(WIN)
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#if PLATFORM(WIN_CAIRO)
+#undef WTF_USE_CG
+#define WTF_USE_CAIRO 1
+#define WTF_USE_CURL 1
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h
+#endif
+#elif !OS(WINCE)
+#define WTF_USE_CG 1
+#undef WTF_USE_CAIRO
+#undef WTF_USE_CURL
+#endif
+
+#endif // PLATFORM(WIN)
 
 #include <stdint.h>
 
-#if !PLATFORM(CHROMIUM) || (PLATFORM(GTK) && defined(BUILDING_WEBKIT2__))
-#include <WebKit2/WebKit2.h>
+#if !PLATFORM(IOS) && !PLATFORM(WIN) && !(PLATFORM(GTK) && !defined(BUILDING_WEBKIT2__))
+#include <WebKit2/WebKit2_C.h>
 #endif
 
 #ifdef __clang__

@@ -51,44 +51,50 @@ import com.sun.javafx.binding.ExpressionHelper;
  * {@link #get()} is called for an invalid binding.
  * <p>
  * See {@link DoubleBinding} for an example how this base class can be extended.
- * 
+ *
  * @see Binding
  * @see javafx.beans.binding.BooleanExpression
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class BooleanBinding extends BooleanExpression implements
         Binding<Boolean> {
+
+    /**
+     * Sole constructor
+     */
+    public BooleanBinding() {
+    }
 
     private boolean value;
     private boolean valid = false;
     private BindingHelperObserver observer;
     private ExpressionHelper<Boolean> helper = null;
 
-    @Override 
+    @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(InvalidationListener listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     @Override
     public void addListener(ChangeListener<? super Boolean> listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(ChangeListener<? super Boolean> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     /**
      * Start observing the dependencies for changes. If the value of one of the
      * dependencies changes, the binding is marked as invalid.
-     * 
+     *
      * @param dependencies
      *            the dependencies to observe
      */
@@ -105,7 +111,7 @@ public abstract class BooleanBinding extends BooleanExpression implements
 
     /**
      * Stop observing the dependencies for changes.
-     * 
+     *
      * @param dependencies
      *            the dependencies to stop observing
      */
@@ -128,7 +134,7 @@ public abstract class BooleanBinding extends BooleanExpression implements
     /**
      * A default implementation of {@code getDependencies()} that returns an
      * empty {@link javafx.collections.ObservableList}.
-     * 
+     *
      * @return an empty {@code ObservableList}
      */
     @Override
@@ -142,7 +148,7 @@ public abstract class BooleanBinding extends BooleanExpression implements
      * {@code computeValue()} is only called if the binding is invalid. The
      * result is cached and returned if the binding did not become invalid since
      * the last call of {@code get()}.
-     * 
+     *
      * @return the current value
      */
     @Override
@@ -181,7 +187,7 @@ public abstract class BooleanBinding extends BooleanExpression implements
      * <p>
      * Classes extending {@code BooleanBinding} have to provide an
      * implementation of {@code computeValue}.
-     * 
+     *
      * @return the current value
      */
     protected abstract boolean computeValue();
@@ -189,7 +195,7 @@ public abstract class BooleanBinding extends BooleanExpression implements
     /**
      * Returns a string representation of this {@code BooleanBinding} object.
      * @return a string representation of this {@code BooleanBinding} object.
-     */ 
+     */
     @Override
     public String toString() {
         return valid ? "BooleanBinding [value: " + get() + "]"

@@ -47,11 +47,6 @@ JSC::JSValue JSDedicatedWorkerContext::postMessage(JSC::ExecState* exec)
     return handlePostMessage(exec, impl());
 }
 
-JSC::JSValue JSDedicatedWorkerContext::webkitPostMessage(JSC::ExecState* exec)
-{
-    return handlePostMessage(exec, impl());
-}
-
 } // namespace WebCore
 
 #endif // ENABLE(WORKERS)
