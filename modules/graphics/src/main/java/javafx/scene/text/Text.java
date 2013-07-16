@@ -330,6 +330,9 @@ public class Text extends Shape {
         TextLayout layout = getTextLayout();
         /* TextLayout has the text shape cached */
         int type = TextLayout.TYPE_TEXT;
+        if (isStrikethrough()) type |= TextLayout.TYPE_STRIKETHROUGH;
+        if (isUnderline()) type |= TextLayout.TYPE_UNDERLINE;
+        
         TextSpan filter = null;
         if (isSpan()) {
             /* Spans are always relative to the top */
