@@ -167,10 +167,14 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
     }
 
     /**
-     * A boolean property that is {@code true}, if the set is empty.
+     * An integer property that represents the size of the set.
+     * @return the property
      */
     public abstract ReadOnlyIntegerProperty sizeProperty();
 
+    /**
+     * A boolean property that is {@code true}, if the set is empty.
+     */
     public abstract ReadOnlyBooleanProperty emptyProperty();
 
     /**
