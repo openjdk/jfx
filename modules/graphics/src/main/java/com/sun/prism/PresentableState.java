@@ -61,6 +61,7 @@ public class PresentableState {
     // the associated View can be closed. This variable allows us
     // to shortcut the queued *Painter task.
     protected boolean isClosed;
+    protected final int pixelFormat = Pixels.getNativeFormat();
 
     /** Create a PresentableState based on a View.
      *
@@ -209,6 +210,15 @@ public class PresentableState {
      */
     public View getView() {
         return view;
+    }
+
+    /**
+     * @return native pixel format
+     *
+     * May be called on any thread.
+     */
+    public int getPixelFormat() {
+        return pixelFormat;
     }
 
     /**

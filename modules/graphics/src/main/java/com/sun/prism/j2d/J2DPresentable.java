@@ -72,7 +72,7 @@ public abstract class J2DPresentable implements Presentable {
         public BufferedImage createBuffer(int w, int h) {
             pixels = null;
             pixBuf = null;
-            int format = Pixels.getNativeFormat();
+            int format = pState.getPixelFormat();
             if (PrismSettings.verbose) {
                 System.out.println("Glass native format: "+format);
             }
