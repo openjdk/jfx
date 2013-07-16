@@ -71,7 +71,7 @@ public class BackgroundRepeatConverterTest {
      */
     @Test public void scenario3() {
         ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
-                { new ParsedValueImpl(BackgroundRepeat.REPEAT, null), new ParsedValueImpl(BackgroundRepeat.ROUND, null) }
+                { new ParsedValueImpl("repeat", null), new ParsedValueImpl("round", null) }
         };
 
         ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
@@ -89,7 +89,7 @@ public class BackgroundRepeatConverterTest {
      */
     @Test public void scenario4() {
         ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
-                { new ParsedValueImpl(BackgroundRepeat.SPACE, null), new ParsedValueImpl(BackgroundRepeat.NO_REPEAT, null) }
+                { new ParsedValueImpl("space", null), new ParsedValueImpl("no-repeat", null) }
         };
 
         ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
@@ -107,8 +107,8 @@ public class BackgroundRepeatConverterTest {
      */
     @Test public void scenario5() {
         ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
-                { new ParsedValueImpl(BackgroundRepeat.NO_REPEAT, null), new ParsedValueImpl(BackgroundRepeat.REPEAT, null) },
-                { new ParsedValueImpl(BackgroundRepeat.SPACE, null), new ParsedValueImpl(BackgroundRepeat.ROUND, null) }
+                { new ParsedValueImpl("no-repeat", null), new ParsedValueImpl("repeat", null) },
+                { new ParsedValueImpl("space", null), new ParsedValueImpl("round", null) }
         };
 
         ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =

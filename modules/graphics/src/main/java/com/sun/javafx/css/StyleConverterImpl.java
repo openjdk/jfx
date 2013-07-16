@@ -30,6 +30,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
 import javafx.css.CssMetaData;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
@@ -132,12 +133,15 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
             styleConverter = com.sun.javafx.css.converters.FontConverter.getInstance();
             break;
         case "com.sun.javafx.css.converters.FontConverter$FontStyleConverter" :
+        case "com.sun.javafx.css.converters.FontConverter$StyleConverter" :
             styleConverter = com.sun.javafx.css.converters.FontConverter.FontStyleConverter.getInstance();
             break;
         case "com.sun.javafx.css.converters.FontConverter$FontWeightConverter" :
+        case "com.sun.javafx.css.converters.FontConverter$WeightConverter" :
             styleConverter = com.sun.javafx.css.converters.FontConverter.FontWeightConverter.getInstance();
             break;
         case "com.sun.javafx.css.converters.FontConverter$FontSizeConverter" :
+        case "com.sun.javafx.css.converters.FontConverter$SizeConverter" :
             styleConverter = com.sun.javafx.css.converters.FontConverter.FontSizeConverter.getInstance();
             break;
 
@@ -181,14 +185,17 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
             styleConverter = com.sun.javafx.css.converters.URLConverter.SequenceConverter.getInstance();
             break;
 
-        // Region stuff
+        // Region stuff  - including 2.x class names
         case "com.sun.javafx.scene.layout.region.BackgroundPositionConverter" :
+        case "com.sun.javafx.scene.layout.region.BackgroundImage$BackgroundPositionConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.BackgroundPositionConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.BackgroundSizeConverter" :
+        case "com.sun.javafx.scene.layout.region.BackgroundImage$BackgroundSizeConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.BackgroundSizeConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.BorderImageSliceConverter" :
+        case "com.sun.javafx.scene.layout.region.BorderImage$SliceConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.BorderImageSliceConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.BorderImageWidthConverter" :
@@ -198,30 +205,40 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
             styleConverter = com.sun.javafx.scene.layout.region.BorderImageWidthsSequenceConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.BorderStrokeStyleSequenceConverter" :
+        case "com.sun.javafx.scene.layout.region.StrokeBorder$BorderStyleSequenceConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.BorderStrokeStyleSequenceConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.BorderStyleConverter" :
+        case "com.sun.javafx.scene.layout.region.StrokeBorder$BorderStyleConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.BorderStyleConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.LayeredBackgroundPositionConverter" :
+        case "com.sun.javafx.scene.layout.region.BackgroundImage$LayeredBackgroundPositionConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.LayeredBackgroundPositionConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.LayeredBackgroundSizeConverter" :
+        case "com.sun.javafx.scene.layout.region.BackgroundImage$LayeredBackgroundSizeConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.LayeredBackgroundSizeConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.LayeredBorderPaintConverter" :
-            styleConverter = com.sun.javafx.scene.layout.region.LayeredBorderPaintConverter.getInstance();
+        case "com.sun.javafx.scene.layout.region.StrokeBorder$LayeredBorderPaintConverter" :
+           styleConverter = com.sun.javafx.scene.layout.region.LayeredBorderPaintConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.LayeredBorderStyleConverter" :
+        case "com.sun.javafx.scene.layout.region.StrokeBorder$LayeredBorderStyleConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.LayeredBorderStyleConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.RepeatStructConverter" :
+        case "com.sun.javafx.scene.layout.region.BackgroundImage$BackgroundRepeatConverter" :
+        case "com.sun.javafx.scene.layout.region.BorderImage$RepeatConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.RepeatStructConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.SliceSequenceConverter" :
+        case "com.sun.javafx.scene.layout.region.BorderImage$SliceSequenceConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.SliceSequenceConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter" :
+        case "com.sun.javafx.scene.layout.region.StrokeBorder$BorderPaintConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter.getInstance();
             break;
         case "com.sun.javafx.scene.layout.region.Margins$Converter" :
@@ -245,7 +262,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
             styleConverter = com.sun.javafx.css.parser.StopConverter.getInstance();
             break;
 
-        default :
+            default :
             final PlatformLogger logger = Logging.getCSSLogger();
             if (logger.isLoggable(Level.SEVERE)) {
                 logger.severe("StyleConverterImpl : converter Class is null for : "+converterClass);

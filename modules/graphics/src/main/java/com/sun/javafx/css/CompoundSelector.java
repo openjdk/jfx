@@ -298,7 +298,7 @@ final public class CompoundSelector extends Selector {
         return sbuf.toString();
     }
 
-    public void writeBinary(final DataOutputStream os, final StringStore stringStore)
+    public final void writeBinary(final DataOutputStream os, final StringStore stringStore)
             throws IOException
     {
         super.writeBinary(os, stringStore);
@@ -308,14 +308,14 @@ final public class CompoundSelector extends Selector {
         for (int n=0; n< relationships.size(); n++) os.writeByte(relationships.get(n).ordinal());
     }
 
-    public static CompoundSelector readBinary(final DataInputStream is, final String[] strings)
+    public static CompoundSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
             throws IOException
     {
 
         final int nSelectors = is.readShort();
         final List<SimpleSelector> selectors = new ArrayList<SimpleSelector>();
         for (int n=0; n<nSelectors; n++) {
-            selectors.add((SimpleSelector)Selector.readBinary(is,strings));
+            selectors.add((SimpleSelector)Selector.readBinary(bssVersion, is,strings));
         }
 
         final int nRelationships = is.readShort();

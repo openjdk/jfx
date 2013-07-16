@@ -170,7 +170,7 @@ final public class Declaration {
                 
     }
 
-    void writeBinary(final DataOutputStream os, final StringStore stringStore)
+    final void writeBinary(final DataOutputStream os, final StringStore stringStore)
         throws IOException
     {
         os.writeShort(stringStore.addString(getProperty()));
@@ -178,11 +178,11 @@ final public class Declaration {
         os.writeBoolean(isImportant());            
     }
 
-    static Declaration readBinary(DataInputStream is, String[] strings)
+    static Declaration readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException
     {
         final String propertyName = strings[is.readShort()];
-        final ParsedValueImpl parsedValue = ParsedValueImpl.readBinary(is,strings);
+        final ParsedValueImpl parsedValue = ParsedValueImpl.readBinary(bssVersion,is,strings);
         final boolean important = is.readBoolean();
         return new Declaration(propertyName, parsedValue, important);
             

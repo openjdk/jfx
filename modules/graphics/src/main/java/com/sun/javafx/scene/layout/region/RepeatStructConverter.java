@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.layout.region;
 
+import com.sun.javafx.css.converters.EnumConverter;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.scene.layout.BackgroundRepeat;
@@ -41,7 +42,12 @@ public final class RepeatStructConverter extends StyleConverterImpl<ParsedValue<
         return REPEAT_STRUCT_CONVERTER;
     }
 
-    private RepeatStructConverter() { }
+    private RepeatStructConverter() {
+        super();
+        repeatConverter = new EnumConverter<BackgroundRepeat>(BackgroundRepeat.class);
+    }
+
+    private final EnumConverter<BackgroundRepeat> repeatConverter;
 
     @Override
     public RepeatStruct[] convert(ParsedValue<ParsedValue<String, BackgroundRepeat>[][], RepeatStruct[]> value, Font font) {
@@ -49,8 +55,8 @@ public final class RepeatStructConverter extends StyleConverterImpl<ParsedValue<
         final RepeatStruct[] backgroundRepeat = new RepeatStruct[layers.length];
         for (int l = 0; l < layers.length; l++) {
             final ParsedValue<String, BackgroundRepeat>[] repeats = layers[l];
-            final BackgroundRepeat horizontal = repeats[0].convert(null);
-            final BackgroundRepeat vertical = repeats[1].convert(null);
+            final BackgroundRepeat horizontal = repeatConverter.convert(repeats[0],null);
+            final BackgroundRepeat vertical = repeatConverter.convert(repeats[1],null);
             backgroundRepeat[l] = new RepeatStruct(horizontal, vertical);
         }
         return backgroundRepeat;
