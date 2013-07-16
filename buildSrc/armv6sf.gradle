@@ -32,6 +32,10 @@ fetchExternalTools('ARMV6SF', [ "armv6-vfp-03.tgz" ],
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armv6-vfp-03")
 
 def compilerHome=file("/opt/arm-2009q1")
+if (rootProject.hasProperty("ARMV6SF_COMPILER")) {
+    logger.quiet "Using alternate ARMV6SF_COMPILER $rootProject.ARMV6SF_COMPILER"
+    compilerHome=file(rootProject.ARMV6SF_COMPILER);
+}
 
 // Declare whether this particular target file applies to the current system
 ARMV6SF.canBuild = IS_LINUX && compilerHome.exists() && sdk.exists()
