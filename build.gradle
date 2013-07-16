@@ -1239,6 +1239,7 @@ project(":controls") {
         compile BUILD_SRC, project(":base"), project(":graphics"), project(":designTime")
         // TODO not sure how to specify this? processResources project(":base"), project(":graphics")
         testCompile project(":graphics").sourceSets.stub.output
+        testCompile project(":base").sourceSets.test.output
     }
 
     test {
