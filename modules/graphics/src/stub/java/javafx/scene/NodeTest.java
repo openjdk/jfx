@@ -49,6 +49,7 @@ import org.junit.rules.ExpectedException;
 
 import java.lang.reflect.Method;
 import java.util.Comparator;
+import javafx.scene.layout.AnchorPane;
 
 import static org.junit.Assert.*;
 /**
@@ -1026,7 +1027,7 @@ public class NodeTest {
         syncNode(c);
         assertEquals(2, sg.getChildren().size());
         assertEquals(100.0, sc.getRadius(), 0.01);
-        
+
     }
 
     @Test
@@ -1284,5 +1285,58 @@ public class NodeTest {
 
         final Point2D trPoint = scene.getRoot().localToScene(0, 0);
         assertEquals(180, trPoint.getX(), 0.1);
+    }
+
+
+    @Test
+    public void testLayoutXYTriggersParentSizeChange() {
+        final Group rootGroup = new Group();
+        final Group subGroup = new Group();
+        rootGroup.getChildren().add(subGroup);
+
+        Rectangle r = new Rectangle(50,50);
+        r.setManaged(false);
+        Rectangle staticR = new Rectangle(1,1);
+        subGroup.getChildren().addAll(r, staticR);
+
+        assertEquals(50,subGroup.getLayoutBounds().getWidth(), 1e-10);
+        assertEquals(50,subGroup.getLayoutBounds().getHeight(), 1e-10);
+
+        r.setLayoutX(50);
+
+        rootGroup.layout();
+
+        assertEquals(100,subGroup.getLayoutBounds().getWidth(), 1e-10);
+        assertEquals(50,subGroup.getLayoutBounds().getHeight(), 1e-10);
+
+    }
+
+    @Test
+    public void testLayoutXYWontBreakLayout() {
+        final Group rootGroup = new Group();
+        final AnchorPane pane = new AnchorPane();
+        rootGroup.getChildren().add(pane);
+
+        Rectangle r = new Rectangle(50,50);
+        pane.getChildren().add(r);
+
+        AnchorPane.setLeftAnchor(r, 10d);
+        AnchorPane.setTopAnchor(r, 10d);
+
+        rootGroup.layout();
+
+        assertEquals(10, r.getLayoutX(), 1e-10);
+        assertEquals(10, r.getLayoutY(), 1e-10);
+
+        r.setLayoutX(50);
+
+        assertEquals(50, r.getLayoutX(), 1e-10);
+        assertEquals(10, r.getLayoutY(), 1e-10);
+
+        rootGroup.layout();
+
+        assertEquals(10, r.getLayoutX(), 1e-10);
+        assertEquals(10, r.getLayoutY(), 1e-10);
+
     }
 }

@@ -2387,6 +2387,17 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     impl_transformsChanged();
+                    final Parent p = getParent();
+                    if (p != null && !p.performingLayout) {
+                        if (isManaged()) {
+                            // Let parent fix the layout
+                            p.requestLayout();
+                        } else {
+                            // Parent size changed, parent's parent might need to re-layout
+                            p.clearSizeCache();
+                            p.requestParentLayout();
+                        }
+                    }
                 }
 
                 @Override
@@ -2448,6 +2459,17 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     impl_transformsChanged();
+                    final Parent p = getParent();
+                    if (p != null && !p.performingLayout) {
+                        if (isManaged()) {
+                            // Let parent fix the layout
+                            p.requestLayout();
+                        } else {
+                            // Parent size changed, parent's parent might need to re-layout
+                            p.clearSizeCache();
+                            p.requestParentLayout();
+                        }
+                    }
                 }
 
                 @Override
@@ -4813,7 +4835,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         return tmin;
     }
-    
+
 
     // Good to find a home for commonly use util. code such as EPS.
     // and almostZero. This code currently defined in multiple places,
@@ -7578,9 +7600,9 @@ public abstract class Node implements EventTarget, Styleable {
     private void updateTreeVisible() {
         boolean isTreeVisible = isVisible();
         if (isTreeVisible) {
-            final Parent p = getParent(); 
+            final Parent p = getParent();
             isTreeVisible = p != null ? getParent().impl_isTreeVisible() :
-                    clipParent != null ? clipParent.impl_isTreeVisible() : 
+                    clipParent != null ? clipParent.impl_isTreeVisible() :
                     getSubScene() == null || getSubScene().impl_isTreeVisible();
         }
         setTreeVisible(isTreeVisible);
@@ -8381,14 +8403,14 @@ public abstract class Node implements EventTarget, Styleable {
              styleHelper.setObservableStyleMap(styleMap);
          }
      }
-     
+
     /**
      * Flags used to indicate in which way this node is dirty (or whether it
      * is clean) and what must happen during the next CSS cycle on the
      * scenegraph.
      */
     CssFlags cssFlag = CssFlags.CLEAN;
-    
+
     /**
      * Needed for testing.
      */
