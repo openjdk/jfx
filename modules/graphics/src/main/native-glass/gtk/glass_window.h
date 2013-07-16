@@ -161,6 +161,11 @@ public:
     virtual int getEmbeddedX() = 0;
     virtual int getEmbeddedY() = 0;
 
+
+    virtual void increment_events_counter() = 0;
+    virtual void decrement_events_counter() = 0;
+    virtual size_t get_events_count() = 0;
+    virtual bool is_dead() = 0;
     virtual ~WindowContext() {}
 };
 
@@ -173,6 +178,8 @@ class WindowContextBase: public WindowContext {
         bool enabled;
     } xim;
 
+    size_t events_processing_cnt;
+    bool can_be_deleted;
 protected:
     jobject jwindow;
     jobject jview;
@@ -217,6 +224,11 @@ public:
 
     int getEmbeddedX() { return 0; }
     int getEmbeddedY() { return 0; }
+
+    void increment_events_counter();
+    void decrement_events_counter();
+    size_t get_events_count();
+    bool is_dead();
 
     ~WindowContextBase();
 protected:
@@ -297,6 +309,7 @@ public:
     void process_property_notify(GdkEventProperty*) {}
     void process_configure(GdkEventConfigure*);
     void process_state(GdkEventWindowState*);
+    void process_destroy();
     void set_visible(bool visible);
 
     int getEmbeddedX();
@@ -306,7 +319,6 @@ public:
     GtkWindow *get_gtk_window(); // TODO, get window from parent
 
     WindowContextChild(jobject, void*, GtkWidget *parent_widget, WindowContextPlug *parent_context);
-    ~WindowContextChild();
 private:
     WindowContextChild(WindowContextChild&);
     WindowContextChild& operator= (const WindowContextChild&);
@@ -340,6 +352,7 @@ public:
     void process_property_notify(GdkEventProperty*);
     void process_configure(GdkEventConfigure*);
     void process_state(GdkEventWindowState*);
+    void process_destroy();
     WindowFrameExtents get_frame_extents();
 
     void set_minimized(bool);
@@ -381,6 +394,23 @@ private:
 };
 
 void destroy_and_delete_ctx(WindowContext* ctx);
+
+class EventsCounterHelper {
+private:
+    WindowContext* ctx;
+public:
+    explicit EventsCounterHelper(WindowContext* context) {
+        ctx = context;
+        ctx->increment_events_counter();
+    }
+    ~EventsCounterHelper() {
+        ctx->decrement_events_counter();
+        if (ctx->is_dead() && ctx->get_events_count() == 0) {
+            delete ctx;
+        }
+        ctx = NULL;
+    }
+};
 
 #endif        /* GLASS_WINDOW_H */
 
