@@ -410,6 +410,20 @@ public class NestedTableColumnHeader extends TableColumnHeader {
                 new NestedTableColumnHeader(getTableViewSkin(), col);
     }
 
+    // allowing subclasses to force an update on the headers
+    protected void setHeadersNeedUpdate() {
+        updateColumns = true;
+
+        // go through children columns - they should update too
+        for (int i = 0; i < getColumnHeaders().size(); i++) {
+            TableColumnHeader header = getColumnHeaders().get(i);
+            if (header instanceof NestedTableColumnHeader) {
+                ((NestedTableColumnHeader)header).setHeadersNeedUpdate();
+            }
+        }
+        requestLayout();
+    }
+
 
 
     /***************************************************************************
@@ -479,19 +493,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
             dragRects.add(rect);
         }
-    }
-
-    void setHeadersNeedUpdate() {
-        updateColumns = true;
-
-        // go through children columns - they should update too
-        for (int i = 0; i < getColumnHeaders().size(); i++) {
-            TableColumnHeader header = getColumnHeaders().get(i);
-            if (header instanceof NestedTableColumnHeader) {
-                ((NestedTableColumnHeader)header).setHeadersNeedUpdate();
-            }
-        }
-        requestLayout();
     }
 
     private void checkState() {
