@@ -31,34 +31,37 @@ import com.sun.scenario.animation.AbstractMasterTimer;
 /**
  * The class {@code AnimationTimer} allows to create a timer, that is called in
  * each frame while it is active.
- * 
+ *
  * An extending class has to override the method {@link #handle(long)} which
  * will be called in every frame.
- * 
+ *
  * The methods {@link AnimationTimer#start()} and {@link #stop()} allow to start
  * and stop the timer.
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public abstract class AnimationTimer {
-    
+
     private final AbstractMasterTimer timer;
     private boolean active;
-    
+
+    /**
+     * Creates a new timer.
+     */
     public AnimationTimer() {
         timer = Toolkit.getToolkit().getMasterTimer();
     }
-    
+
     // For testing only
     AnimationTimer(AbstractMasterTimer timer) {
         this.timer = timer;
     }
-    
+
     /**
      * This method needs to be overridden by extending classes. It is going to
      * be called in every frame while the {@code AnimationTimer} is active.
-     * 
+     *
      * @param now
      *            The timestamp of the current frame given in nanoseconds. This
      *            value will be the same for all {@code AnimationTimers} called
@@ -70,7 +73,7 @@ public abstract class AnimationTimer {
      * Starts the {@code AnimationTimers}. Once it is started, the
      * {@link #handle(long)} method of this {@code AnimationTimers} will be
      * called in every frame.
-     * 
+     *
      * The {@code AnimationTimers} can be stopped by calling {@link #stop()}.
      */
     public void start() {

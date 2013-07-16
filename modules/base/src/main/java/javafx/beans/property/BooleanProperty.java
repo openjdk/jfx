@@ -60,6 +60,12 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
         Property<Boolean>, WritableBooleanValue {
 
     /**
+     * Sole constructor
+     */
+    public BooleanProperty() {
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

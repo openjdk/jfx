@@ -45,6 +45,12 @@ import javafx.beans.value.ObservableValue;
  */
 public abstract class BooleanExpression implements ObservableBooleanValue {
 
+    /**
+     * Sole constructor
+     */
+    public BooleanExpression() {
+    }
+
     @Override
     public Boolean getValue() {
         return get();
@@ -57,7 +63,7 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
      * will be returned. Otherwise a new
      * {@link javafx.beans.binding.BooleanBinding} is created that is bound to
      * the {@code ObservableBooleanValue}.
-     * 
+     *
      * @param value
      *            The source {@code ObservableBooleanValue}
      * @return A {@code BooleanExpression} that wraps the
@@ -93,7 +99,7 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
                     }
                 };
     }
-    
+
     /**
      * Returns a {@code BooleanExpression} that wraps an
      * {@link javafx.beans.value.ObservableValue}. If the
@@ -101,9 +107,9 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
      * will be returned. Otherwise a new
      * {@link javafx.beans.binding.BooleanBinding} is created that is bound to
      * the {@code ObservableValue}.
-     * 
+     *
      * Note: null values will be interpreted as "false".
-     * 
+     *
      * @param value
      *            The source {@code ObservableValue}
      * @return A {@code BooleanExpression} that wraps the
@@ -145,7 +151,7 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
      * Creates a new {@code BooleanExpression} that performs the conditional
      * AND-operation on this {@code BooleanExpression} and a
      * {@link ObservableBooleanValue}.
-     * 
+     *
      * @param other
      *            the other {@code ObservableBooleanValue}
      * @return the new {@code BooleanExpression}
@@ -160,7 +166,7 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
      * Creates a new {@code BooleanExpression} that performs the conditional
      * OR-operation on this {@code BooleanExpression} and a
      * {@link ObservableBooleanValue}.
-     * 
+     *
      * @param other
      *            the other {@code ObservableBooleanValue}
      * @return the new {@code BooleanExpression}
@@ -174,7 +180,7 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
     /**
      * Creates a new {@code BooleanExpression} that calculates the negation of
      * this {@code BooleanExpression}.
-     * 
+     *
      * @return the new {@code BooleanExpression}
      */
     public BooleanBinding not() {
@@ -184,7 +190,7 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
     /**
      * Creates a new {@code BooleanExpression} that holds {@code true} if this and
      * another {@link javafx.beans.value.ObservableBooleanValue} are equal.
-     * 
+     *
      * @param other
      *            the other {@code ObservableBooleanValue}
      * @return the new {@code BooleanExpression}
@@ -198,7 +204,7 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
     /**
      * Creates a new {@code BooleanExpression} that holds {@code true} if this and
      * another {@link javafx.beans.value.ObservableBooleanValue} are equal.
-     * 
+     *
      * @param other
      *            the other {@code ObservableBooleanValue}
      * @return the new {@code BooleanExpression}
@@ -214,19 +220,19 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
      * of this {@code BooleanExpression} turned into a {@code String}. If the
      * value of this {@code BooleanExpression} changes, the value of the
      * {@code StringBinding} will be updated automatically.
-     * 
+     *
      * @return the new {@code StringBinding}
      */
     public StringBinding asString() {
         return (StringBinding) StringFormatter.convert(this);
     }
-    
+
     /**
      * Creates an {@link javafx.beans.binding.ObjectExpression} that holds the value
      * of this {@code BooleanExpression}. If the
      * value of this {@code BooleanExpression} changes, the value of the
      * {@code ObjectExpression} will be updated automatically.
-     * 
+     *
      * @return the new {@code ObjectExpression}
      * @since JavaFX 8.0
      */
