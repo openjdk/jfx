@@ -34,7 +34,7 @@ static void (*_ANDROID_hideIME)();
 
 
 void init_functions(JNIEnv *env) {
-    void *libglass = dlopen("libglass-lens-android.so", RTLD_LAZY | RTLD_GLOBAL);
+    void *libglass = dlopen("libglass_lens_android.so", RTLD_LAZY | RTLD_GLOBAL);
     if (!libglass) {
         THROW_RUNTIME_EXCEPTION(env, "dlopen failed with error: ", dlerror());
     }

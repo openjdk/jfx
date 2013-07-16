@@ -60,9 +60,9 @@ public class ES2Pipeline extends GraphicsPipeline {
 
                 String eglType = PlatformUtil.getEmbeddedType();
                 if ("eglfb".equals(eglType))
-                    libName = "prism-es2-eglfb";
+                    libName = "prism_es2_eglfb";
                 else if ("eglx11".equals(eglType))
-                    libName = "prism-es2-eglx11";
+                    libName = "prism_es2_eglx11";
 
                 if (PrismSettings.verbose) {
                     System.out.println("Loading ES2 native library ... " + libName);

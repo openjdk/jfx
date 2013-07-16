@@ -127,7 +127,7 @@ final class LensApplication extends Application {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override
             public Void run() {
-                Application.loadNativeLibrary("glass-lens-" + platform);
+                Application.loadNativeLibrary("glass_lens_" + platform);
                 return null;
             }
         });
