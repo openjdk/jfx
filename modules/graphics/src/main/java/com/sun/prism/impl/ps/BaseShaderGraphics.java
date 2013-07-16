@@ -41,7 +41,7 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.font.PrismFontUtils;
+import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.AffineBase;
 import com.sun.prism.CompositeMode;
@@ -2001,8 +2001,7 @@ public abstract class BaseShaderGraphics
             } else {
                 initLCDSampleRT();
             }
-
-            float invgamma = PrismFontUtils.getLCDContrast();
+            float invgamma = PrismFontFactory.getLCDContrast();
             float gamma = 1.0f/invgamma;
             textColor = new Color((float)Math.pow(textColor.getRed(),   invgamma),
                                   (float)Math.pow(textColor.getGreen(), invgamma),

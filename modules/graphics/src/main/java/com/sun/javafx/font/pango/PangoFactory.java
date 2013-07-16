@@ -80,6 +80,11 @@ public class PangoFactory extends PrismFontFactory {
     }
 
     @Override
+    public boolean isLCDTextSupported() {
+        return LCD_SUPPORT && super.isLCDTextSupported();
+    }
+
+    @Override
     protected boolean registerEmbeddedFont(String path) {
         boolean result = false;
 

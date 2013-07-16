@@ -42,10 +42,10 @@ public class ShapeUtil {
             shapeRasterizer = new OpenPiscesRasterizer();
         }
 
-        if (PrismSettings.doT2KText) {
-            textRasterizer = null;
-        } else {
+        if (PrismSettings.doPiscesText || PrismSettings.doOpenPiscesText) {
             textRasterizer = shapeRasterizer;
+        } else {
+            textRasterizer = null;
         }
     }
 

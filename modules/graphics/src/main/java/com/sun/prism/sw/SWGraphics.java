@@ -30,7 +30,7 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Glyph;
 import com.sun.javafx.font.Metrics;
-import com.sun.javafx.font.PrismFontUtils;
+import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.Line2D;
@@ -756,7 +756,7 @@ final class SWGraphics implements ReadbackGraphics {
                     tx.is2D();
 
             if (doLCDText) {
-                this.pr.setLCDGammaCorrection(1f / PrismFontUtils.getLCDContrast());
+                this.pr.setLCDGammaCorrection(1f / PrismFontFactory.getLCDContrast());
             } else {
                 final FontResource fr = strike.getFontResource();
                 final float origSize = strike.getSize();

@@ -25,33 +25,11 @@
 
 package com.sun.javafx.font;
 
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.transform.BaseTransform;
 
 public class PrismFontUtils {
 
     private PrismFontUtils() {
-    }
-
-    private static float lcdContrast = -1;
-
-    public static float getLCDContrast() {
-        if (lcdContrast == -1) {
-            if (PlatformUtil.isWindows()) {
-                lcdContrast = PrismFontFactory.getLCDContrast() / 1000f;
-            } else {
-                /* REMIND: When using CoreText it likely already applies gamma
-                 * correction to the glyph images. The current implementation does
-                 * not take this into account when rasterizing the glyph. Thus,
-                 * it is possible gamma correction is been applied twice to the
-                 * final result.
-                 * Consider using "1" for lcdContrast possibly produces visually
-                 * more appealing results (although not strictly correct).
-                 */
-                lcdContrast = 1.3f;
-            }
-        }
-        return lcdContrast;
     }
 
     static Metrics getFontMetrics(PGFont font) {

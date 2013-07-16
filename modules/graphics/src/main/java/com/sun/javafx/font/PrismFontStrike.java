@@ -51,7 +51,8 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
         this.fontResource = fontResource;
         this.size = size;
         this.desc = desc;
-        boolean lcdEnabled = PrismFontLoader.isLCDTextSupported();
+        PrismFontFactory factory = PrismFontFactory.getFontFactory();
+        boolean lcdEnabled = factory.isLCDTextSupported();
         this.aaMode = lcdEnabled ? aaMode : FontResource.AA_GREYSCALE;
         if (tx.isTranslateOrIdentity()) {
             transform = BaseTransform.IDENTITY_TRANSFORM;
