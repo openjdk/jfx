@@ -80,8 +80,8 @@ public final class BackgroundSize {
      * no meaning if either {@code contain} or {@code cover} are specified. This value
      * cannot be negative, except when set to the value of AUTO.
      */
-    final double width;
     public final double getWidth() { return width; }
+    final double width;
 
     /**
      * The height of the area within the Region where the associated BackgroundImage should
@@ -89,38 +89,38 @@ public final class BackgroundSize {
      * no meaning if either {@code contain} or {@code cover} are specified. This value
      * cannot be negative, except when set to the value of AUTO.
      */
-    final double height;
     public final double getHeight() { return height; }
+    final double height;
 
     /**
      * Specifies whether the value contained in {@code width} should be interpreted
      * as a percentage or as a normal value.
      */
-    final boolean widthAsPercentage;
     public final boolean isWidthAsPercentage() { return widthAsPercentage; }
+    final boolean widthAsPercentage;
 
     /**
      * Specifies whether the value contained in {@code height} should be interpreted
      * as a percentage or as a normal value.
      */
-    final boolean heightAsPercentage;
     public final boolean isHeightAsPercentage() { return heightAsPercentage; }
+    final boolean heightAsPercentage;
 
     /**
      * If true, scale the image, while preserving its intrinsic aspect ratio (if any), to the
      * largest size such that both its width and its height can fit inside the background
      * positioning area.
      */
-    final boolean contain;
     public final boolean isContain() { return contain; }
+    final boolean contain;
 
     /**
      * If true, scale the image, while preserving its intrinsic aspect ratio (if any), to the
      * smallest size such that both its width and its height can completely cover the background
      * positioning area.
      */
-    final boolean cover;
     public final boolean isCover() { return cover; }
+    final boolean cover;
 
     /**
      * A cached hash code value

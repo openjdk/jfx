@@ -52,37 +52,37 @@ public final class BackgroundImage {
      * image fails to load, then the entire BackgroundImage will
      * be skipped at rendering time.
      */
-    final Image image;
     public final Image getImage() { return image; }
+    final Image image;
 
     /**
      * Indicates in what manner (if at all) the background image
      * is to be repeated along the x-axis of the region. This
      * will never be null.
      */
-    final BackgroundRepeat repeatX;
     public final BackgroundRepeat getRepeatX() { return repeatX; }
+    final BackgroundRepeat repeatX;
 
     /**
      * Indicates in what manner (if at all) the background image
      * is to be repeated along the y-axis of the region. This will
      * never be null.
      */
-    final BackgroundRepeat repeatY;
     public final BackgroundRepeat getRepeatY() { return repeatY; }
+    final BackgroundRepeat repeatY;
 
     /**
      * The position of this BackgroundImage relative to the Region. Note that any
      * position outside the background area of the region will be clipped.
      */
-    final BackgroundPosition position;
     public final BackgroundPosition getPosition() { return position; }
+    final BackgroundPosition position;
 
     /**
      * The size of this image relative to the Region.
      */
-    final BackgroundSize size;
     public final BackgroundSize getSize() { return size; }
+    final BackgroundSize size;
 
     /**
      * A cached hash code for faster secondary usage. It is expected

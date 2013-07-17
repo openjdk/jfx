@@ -66,7 +66,7 @@ import javafx.css.Styleable;
  *
  * @since JavaFX 8.0
  */
-@SuppressWarnings("unchecked") 
+@SuppressWarnings("unchecked")
 public final class Background {
     static final CssMetaData<Node,Paint[]> BACKGROUND_COLOR =
             new SubCssMetaData<Paint[]>("-fx-background-color",
@@ -132,16 +132,16 @@ public final class Background {
      * of this Background. This List is unmodifiable and immutable. It
      * will never be null. The elements of this list will also never be null.
      */
-    final List<BackgroundFill> fills;
     public final List<BackgroundFill> getFills() { return fills; }
+    final List<BackgroundFill> fills;
 
     /**
      * The list of BackgroundImages which together define the image portion
      * of this Background. This List is unmodifiable and immutable. It
      * will never be null. The elements of this list will also never be null.
      */
-    final List<BackgroundImage> images;
     public final List<BackgroundImage> getImages() { return images; }
+    final List<BackgroundImage> images;
 
     /**
      * The outsets of this Background. This represents the largest
@@ -151,8 +151,8 @@ public final class Background {
      * which would extend beyond the outsets will be clipped. Only the
      * BackgroundFills contribute to the outsets.
      */
-    final Insets outsets;
     public final Insets getOutsets() { return outsets; }
+    final Insets outsets;
 
     /**
      * Gets whether the background is empty. It is empty if there are no fills or images.

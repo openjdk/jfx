@@ -74,8 +74,8 @@ public final class BorderStrokeStyle {
      *
      * @defaultValue CENTERED
      */
-    private final StrokeType type;
     public final StrokeType getType() { return type; }
+    private final StrokeType type;
 
     /**
      * Defines the decoration applied where path segments meet.
@@ -85,8 +85,8 @@ public final class BorderStrokeStyle {
      *
      * @defaultValue MITER
      */
-    private final StrokeLineJoin lineJoin;
     public final StrokeLineJoin getLineJoin() { return lineJoin; }
+    private final StrokeLineJoin lineJoin;
 
     /**
      * The end cap style of this {@code Shape} as one of the following
@@ -96,16 +96,16 @@ public final class BorderStrokeStyle {
      *
      * @defaultValue SQUARE
      */
-    private final StrokeLineCap lineCap;
     public final StrokeLineCap getLineCap() { return lineCap; }
+    private final StrokeLineCap lineCap;
 
     /**
      * Defines the limit for the {@code StrokeLineJoin.MITER} line join style.
      *
      * @defaultValue 10
      */
-    private final double miterLimit;
     public final double getMiterLimit() { return miterLimit; }
+    private final double miterLimit;
 
     /**
      * Defines a distance specified in user coordinates that represents
@@ -115,8 +115,8 @@ public final class BorderStrokeStyle {
      *
      * @defaultValue 0
      */
-    private final double dashOffset;
     public final double getDashOffset() { return dashOffset; }
+    private final double dashOffset;
 
     /**
      * Defines the array representing the lengths of the dash segments.
@@ -130,8 +130,8 @@ public final class BorderStrokeStyle {
      * An empty dashArray indicates a solid line with no spaces.
      * @defaultValue empty
      */
-    private final List<Double> dashArray;
     public final List<Double> getDashArray() { return dashArray; }
+    private final List<Double> dashArray;
 
     /**
      * A cached hash code
