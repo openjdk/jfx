@@ -584,8 +584,17 @@ final class SWGraphics implements ReadbackGraphics {
             }
             return;
         }
-
         this.setPaintFromShape(shape, tr, 0,0,0,0);
+        this.paintShapePaintAlreadySet(shape, st, tr);
+    }
+
+    private void paintShapePaintAlreadySet(Shape shape, BasicStroke st, BaseTransform tr) {
+        if (this.finalClip.isEmpty()) {
+            if (PrismSettings.debug) {
+                System.out.println("Final clip is empty: not rendering the shape: " + shape);
+            }
+            return;
+        }
 
         if (PrismSettings.debug) {
             System.out.println("GR: " + this);
@@ -731,24 +740,23 @@ final class SWGraphics implements ReadbackGraphics {
         if ((selectGlyphStart < 0 && selectGlyphEnd < 0)||(selectGlyphStart >= gl.getGlyphCount() && selectGlyphEnd >= gl.getGlyphCount())) {
             this.drawStringInternal(gl, strike, x, y, 0, gl.getGlyphCount(), this.paint, bx, by, bw, bh);
         } else {
-            float advanceX = 0;
             if (selectGlyphStart > 0) {
-                advanceX = this.drawStringInternal(gl, strike, x, y, 0, selectGlyphStart, this.paint, bx, by, bw, bh);
+                this.drawStringInternal(gl, strike, x, y, 0, selectGlyphStart, this.paint, bx, by, bw, bh);
             }
-            advanceX += this.drawStringInternal(gl, strike, x+advanceX, y,
-                                                Math.max(0, selectGlyphStart), Math.min(gl.getGlyphCount(), selectGlyphEnd),
-                                                selectColor, 0, 0, 0, 0);
+            this.drawStringInternal(gl, strike, x, y,
+                                            Math.max(0, selectGlyphStart), Math.min(gl.getGlyphCount(), selectGlyphEnd),
+                                            selectColor, 0, 0, 0, 0);
             if (selectGlyphEnd < gl.getGlyphCount()) {
-                this.drawStringInternal(gl, strike, x+advanceX, y, selectGlyphEnd, gl.getGlyphCount(),
+                this.drawStringInternal(gl, strike, x, y, selectGlyphEnd, gl.getGlyphCount(),
                                         this.paint, bx, by, bw, bh);
             }
         }
     }
 
-    private float drawStringInternal(GlyphList gl, FontStrike strike, float x, float y, int strFrom, int strTo,
+    private void  drawStringInternal(GlyphList gl, FontStrike strike, float x, float y, int strFrom, int strTo,
                                      Paint p, float bx, float by, float bw, float bh)
     {
-        float advanceX = 0;
+        this.setPaintBeforeDraw(p, bx, by, bw, bh);
         if (tx.isTranslateOrIdentity() && (!strike.drawAsShapes())) {
             final boolean doLCDText = (strike.getAAMode() == FontResource.AA_LCD) &&
                     getRenderTarget().isOpaque() &&
@@ -763,7 +771,6 @@ final class SWGraphics implements ReadbackGraphics {
                 final BaseTransform origTx = strike.getTransform();
                 strike = fr.getStrike(origSize, origTx, FontResource.AA_GREYSCALE);
             }
-            this.setPaintBeforeDraw(p, bx, by, bw, bh);
 
             for (int i = strFrom; i < strTo; i++) {
                 final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
@@ -791,16 +798,14 @@ final class SWGraphics implements ReadbackGraphics {
                 }
             }
         } else {
-            final BaseTransform glyphTx = tx.copy();
-            glyphTx.deriveWithTranslation(x, y);
+            final BaseTransform glyphTx = new Affine2D();
             for (int i = strFrom; i < strTo; i++) {
                 final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
-                this.paintShape(g.getShape(), null, glyphTx);
-                advanceX += g.getAdvance();
-                glyphTx.deriveWithTranslation(g.getAdvance(), 0);
+                glyphTx.setTransform(tx);
+                glyphTx.deriveWithTranslation(x + gl.getPosX(i), y + gl.getPosY(i));
+                this.paintShapePaintAlreadySet(g.getShape(), null, glyphTx);
             }
         }
-        return advanceX;
     }
 
     public void drawTexture(Texture tex, float x, float y, float w, float h) {

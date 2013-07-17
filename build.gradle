@@ -1239,6 +1239,7 @@ project(":controls") {
         compile BUILD_SRC, project(":base"), project(":graphics"), project(":designTime")
         // TODO not sure how to specify this? processResources project(":base"), project(":graphics")
         testCompile project(":graphics").sourceSets.stub.output
+        testCompile project(":base").sourceSets.test.output
     }
 
     test {
@@ -2181,4 +2182,20 @@ project(":web") {
             "src/main/native/dist",
             "src/main/native/WebKitLibraries/import")
     }
+}
+
+task showFlags {
+}
+
+compileTargets { t ->
+    // Every platform must define these variables
+    def props = project.ext[t.upper];
+    showFlags.dependsOn(
+        project.task("showFlags$t.upper") {
+            doLast() {
+                println "Properties set for $t.upper"
+                props.each { println it }
+            }
+        }
+    )
 }

@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.binding.ExpressionHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,6 +47,8 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+import javafx.beans.InvalidationListener;
+import javafx.beans.value.ChangeListener;
 import javafx.css.Styleable;
 
 import static javafx.geometry.Orientation.*;
@@ -245,8 +248,8 @@ public class TilePane extends Pane {
      *  END static methods
      ********************************************************************/
 
-    private double computedTileWidth = -1;
-    private double computedTileHeight = -1;
+    private double _tileWidth = -1;
+    private double _tileHeight = -1;
 
     /**
      * Creates a horizontal TilePane layout with prefColumn = 5 and hgap/vgap = 0.
@@ -503,7 +506,6 @@ public class TilePane extends Pane {
         return prefTileWidth;
     }
 
-    // TODO: DAVID AND AMY PLEASE LOOK AT THIS
     private DoubleProperty prefTileWidth;
     public final void setPrefTileWidth(double value) { prefTileWidthProperty().set(value); }
     public final double getPrefTileWidth() { return prefTileWidth == null ? USE_COMPUTED_SIZE : prefTileWidth.get(); }
@@ -544,7 +546,6 @@ public class TilePane extends Pane {
         return prefTileHeight;
     }
 
-    // TODO: DAVID AND AMY PLEASE LOOK AT THIS
     private DoubleProperty prefTileHeight;
     public final void setPrefTileHeight(double value) { prefTileHeightProperty().set(value); }
     public final double getPrefTileHeight() { return prefTileHeight == null ? USE_COMPUTED_SIZE : prefTileHeight.get(); }
@@ -553,33 +554,71 @@ public class TilePane extends Pane {
      * The actual width of each tile.  This property is read-only.
      */
     public final ReadOnlyDoubleProperty tileWidthProperty() {
-        return tileWidthPropertyImpl().getReadOnlyProperty();
-    }
-    private ReadOnlyDoubleWrapper tileWidthPropertyImpl() {
         if (tileWidth == null) {
-            tileWidth = new ReadOnlyDoubleWrapper(this, "tileWidth", 0);
+            tileWidth = new TileSizeProperty("tileWidth", _tileWidth) {
+
+                @Override
+                public double compute() {
+                    return computeTileWidth();
+                }
+
+            };
         }
         return tileWidth;
     }
-    private ReadOnlyDoubleWrapper tileWidth;
-    private void setTileWidth(double value) { tileWidthPropertyImpl().set(value); }
-    public final double getTileWidth() { return tileWidth == null ? 0.0 : tileWidth.get(); }
+    private TileSizeProperty tileWidth;
+    private void invalidateTileWidth() {
+        if (tileWidth != null) {
+            tileWidth.invalidate();
+        } else {
+            _tileWidth = -1;
+        }
+    }
+
+    public final double getTileWidth() {
+        if (tileWidth != null) {
+            return tileWidth.get();
+        }
+        if (_tileWidth == -1) {
+            _tileWidth = computeTileWidth();
+        }
+        return _tileWidth;
+    }
 
     /**
      * The actual height of each tile.  This property is read-only.
      */
     public final ReadOnlyDoubleProperty tileHeightProperty() {
-        return tileHeightPropertyImpl().getReadOnlyProperty();
-    }
-    private ReadOnlyDoubleWrapper tileHeightPropertyImpl() {
         if (tileHeight == null) {
-            tileHeight = new ReadOnlyDoubleWrapper(this, "tileHeight", 0);
+            tileHeight = new TileSizeProperty("tileHeight", _tileHeight) {
+
+                @Override
+                public double compute() {
+                    return computeTileHeight();
+                }
+
+            };
         }
         return tileHeight;
     }
-    private ReadOnlyDoubleWrapper tileHeight;
-    private void setTileHeight(double value) { tileHeightPropertyImpl().set(value); }
-    public final double getTileHeight() { return tileHeight == null ? 0.0 : tileHeight.get(); }
+    private TileSizeProperty tileHeight;
+    private void invalidateTileHeight() {
+        if (tileHeight != null) {
+            tileHeight.invalidate();
+        } else {
+            _tileHeight = -1;
+        }
+    }
+
+    public final double getTileHeight() {
+        if (tileHeight != null) {
+            return tileHeight.get();
+        }
+        if (_tileHeight == -1) {
+            _tileHeight = computeTileHeight();
+        }
+        return _tileHeight;
+    }
 
     /**
      * The amount of horizontal space between each tile in a row.
@@ -739,21 +778,21 @@ public class TilePane extends Pane {
     }
 
     @Override public void requestLayout() {
-        computedTileWidth = -1;
-        computedTileHeight = -1;
+        invalidateTileWidth();
+        invalidateTileHeight();
         super.requestLayout();
     }
 
     @Override protected double computeMinWidth(double height) {
         if (getContentBias() == Orientation.HORIZONTAL) {
-            return getInsets().getLeft() + computeTileWidth(getManagedChildren()) + getInsets().getRight();
+            return getInsets().getLeft() + getTileWidth() + getInsets().getRight();
         }
         return computePrefWidth(height);
     }
 
     @Override protected double computeMinHeight(double width) {
         if (getContentBias() == Orientation.VERTICAL) {
-            return getInsets().getTop() + computeTileHeight(getManagedChildren()) + getInsets().getBottom();
+            return getInsets().getTop() + getTileHeight() + getInsets().getBottom();
         }
         return computePrefHeight(width);
     }
@@ -761,12 +800,10 @@ public class TilePane extends Pane {
     @Override protected double computePrefWidth(double forHeight) {
         List<Node> managed = getManagedChildren();
         final Insets insets = getInsets();
-        setTileWidth(computeTileWidth(managed));
         int prefCols = 0;
         if (forHeight != -1) {
             // first compute number of rows that will fit in given height and
             // compute pref columns from that
-            setTileHeight(computeTileHeight(managed));
             int prefRows = computeRows(forHeight - snapSpace(insets.getTop()) - snapSpace(insets.getBottom()), getTileHeight());
             prefCols = computeOther(managed.size(), prefRows);
         } else {
@@ -780,12 +817,10 @@ public class TilePane extends Pane {
     @Override protected double computePrefHeight(double forWidth) {
         List<Node> managed = getManagedChildren();
         final Insets insets = getInsets();
-        setTileHeight(computeTileHeight(managed));
         int prefRows = 0;
         if (forWidth != -1) {
             // first compute number of columns that will fit in given width and
             // compute pref rows from that
-            setTileWidth(computeTileWidth(managed));
             int prefCols = computeColumns(forWidth - snapSpace(insets.getLeft()) - snapSpace(insets.getRight()), getTileWidth());
             prefRows = computeOther(managed.size(), prefCols);
         } else {
@@ -796,53 +831,46 @@ public class TilePane extends Pane {
                snapSpace(insets.getBottom());
     }
 
-
-    private double computeTileWidth(List<Node>managed) {
+    private double computeTileWidth() {
+        List<Node> managed = getManagedChildren();
         double preftilewidth = getPrefTileWidth();
         if (preftilewidth == USE_COMPUTED_SIZE) {
-            if (computedTileWidth == -1) {
-                double h = -1;
-                boolean vertBias = false;
-                for (int i = 0, size = managed.size(); i < size; i++) {
-                    Node child = managed.get(i);
-                    if (child.getContentBias() == VERTICAL) {
-                        vertBias = true;
-                        break;
-                    }
+            double h = -1;
+            boolean vertBias = false;
+            for (int i = 0, size = managed.size(); i < size; i++) {
+                Node child = managed.get(i);
+                if (child.getContentBias() == VERTICAL) {
+                    vertBias = true;
+                    break;
                 }
-                if (vertBias) {
-                    // widest may depend on height of tile
-                    h = computeMaxPrefAreaHeight(managed, marginAccessor, getMaxAreaBaselineOffset(managed, marginAccessor),
-                            getTileAlignmentInternal().getVpos());
-                }
-                computedTileWidth = computeMaxPrefAreaWidth(managed, marginAccessor, h, getTileAlignmentInternal().getHpos());
             }
-            return snapSize(computedTileWidth);
+            if (vertBias) {
+                // widest may depend on height of tile
+                h = computeMaxPrefAreaHeight(managed, marginAccessor, -1, getTileAlignmentInternal().getVpos());
+            }
+            return snapSize(computeMaxPrefAreaWidth(managed, marginAccessor, h, getTileAlignmentInternal().getHpos()));
         }
         return snapSize(preftilewidth);
     }
 
-    private double computeTileHeight(List<Node>managed) {
+    private double computeTileHeight() {
+        List<Node> managed = getManagedChildren();
         double preftileheight = getPrefTileHeight();
         if (preftileheight == USE_COMPUTED_SIZE) {
-            if (computedTileHeight == -1) {
-                double w = -1;
-                boolean horizBias = false;
-                for (int i = 0, size = managed.size(); i < size; i++) {
-                    Node child = managed.get(i);
-                    if (child.getContentBias() == Orientation.HORIZONTAL) {
-                        horizBias = true;
-                        break;
-                    }
+            double w = -1;
+            boolean horizBias = false;
+            for (int i = 0, size = managed.size(); i < size; i++) {
+                Node child = managed.get(i);
+                if (child.getContentBias() == Orientation.HORIZONTAL) {
+                    horizBias = true;
+                    break;
                 }
-                if (horizBias) {
-                    // tallest may depend on width of tile
-                    w = computeMaxPrefAreaWidth(managed, marginAccessor, getMaxAreaBaselineOffset(managed, marginAccessor),
-                            getTileAlignmentInternal().getHpos());
-                }
-                computedTileHeight = computeMaxPrefAreaHeight(managed, marginAccessor, w, getTileAlignmentInternal().getVpos());
             }
-            return snapSize(computedTileHeight);
+            if (horizBias) {
+                // tallest may depend on width of tile
+                w = computeMaxPrefAreaWidth(managed, marginAccessor, -1, getTileAlignmentInternal().getHpos());
+            }
+            return snapSize(computeMaxPrefAreaHeight(managed, marginAccessor, w, getTileAlignmentInternal().getVpos()));
         }
         return snapSize(preftileheight);
     }
@@ -882,9 +910,6 @@ public class TilePane extends Pane {
         double hgap = snapSpace(getHgap());
         double insideWidth = width - left - right;
         double insideHeight = height - top - bottom;
-
-        setTileWidth(computeTileWidth(managed));
-        setTileHeight(computeTileHeight(managed));
 
         int lastRowRemainder = 0;
         int lastColumnRemainder = 0;
@@ -1155,6 +1180,69 @@ public class TilePane extends Pane {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
+    }
+
+    private abstract class TileSizeProperty extends ReadOnlyDoubleProperty {
+        private final String name;
+        private ExpressionHelper<Number> helper;
+        private double value;
+        private boolean valid;
+
+        TileSizeProperty(String name, double initSize) {
+            this.name = name;
+            this.value = initSize;
+            this.valid = initSize != -1;
+        }
+
+
+        @Override
+        public Object getBean() {
+            return TilePane.this;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public void addListener(InvalidationListener listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(InvalidationListener listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        @Override
+        public void addListener(ChangeListener<? super Number> listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(ChangeListener<? super Number> listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        @Override
+        public double get() {
+            if (!valid) {
+                value = compute();
+                valid = true;
+            }
+
+            return value;
+        }
+
+        public void invalidate() {
+            if (valid) {
+                valid = false;
+                ExpressionHelper.fireValueChangedEvent(helper);
+            }
+        }
+
+        public abstract double compute();
     }
 
 }

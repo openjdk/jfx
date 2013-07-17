@@ -40,7 +40,7 @@ public final class SWPipeline extends GraphicsPipeline {
     static {
         AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
-                NativeLibLoader.loadLibrary("prism-sw");
+                NativeLibLoader.loadLibrary("prism_sw");
                 return null;
             }
         });

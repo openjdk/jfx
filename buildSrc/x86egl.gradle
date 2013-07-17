@@ -235,7 +235,7 @@ X86EGL.glass.eglfb.compiler = compiler
 X86EGL.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 X86EGL.glass.eglfb.linker = linker
 X86EGL.glass.eglfb.linkFlags = [lensLFlags].flatten()
-X86EGL.glass.eglfb.lib = "glass-lens-eglfb"
+X86EGL.glass.eglfb.lib = "glass_lens_eglfb"
 
 X86EGL.glass.directfb = [:]
 X86EGL.glass.directfb.nativeSource = [
@@ -249,7 +249,7 @@ X86EGL.glass.directfb.compiler = compiler
 X86EGL.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I/usr/include/directfb", "-DLINUX", "-DGRADLE_BUILD"].flatten()
 X86EGL.glass.directfb.linker = linker
 X86EGL.glass.directfb.linkFlags = [lensLFlags].flatten()
-X86EGL.glass.directfb.lib = "glass-lens-dfb"
+X86EGL.glass.directfb.lib = "glass_lens_dfb"
 
 X86EGL.glass.fb = [:]
 X86EGL.glass.fb.nativeSource = [
@@ -263,7 +263,7 @@ X86EGL.glass.fb.compiler = compiler
 X86EGL.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 X86EGL.glass.fb.linker = linker
 X86EGL.glass.fb.linkFlags = [lensLFlags].flatten()
-X86EGL.glass.fb.lib = "glass-lens-fb"
+X86EGL.glass.fb.lib = "glass_lens_fb"
 
 X86EGL.glass.eglx11 = [:]
 X86EGL.glass.eglx11.nativeSource = [
@@ -277,7 +277,7 @@ X86EGL.glass.eglx11.compiler = compiler
 X86EGL.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 X86EGL.glass.eglx11.linker = linker
 X86EGL.glass.eglx11.linkFlags = [lensLFlags].flatten()
-X86EGL.glass.eglx11.lib = "glass-lens-eglx11"
+X86EGL.glass.eglx11.lib = "glass_lens_eglx11"
 
 X86EGL.glass.gtk = [:]
 X86EGL.glass.gtk.nativeSource = [
@@ -294,7 +294,7 @@ X86EGL.decora.compiler = compiler
 X86EGL.decora.ccFlags = extraCFlags
 X86EGL.decora.linker = linker
 X86EGL.decora.linkFlags = extraLFlags
-X86EGL.decora.lib = "decora-sse"
+X86EGL.decora.lib = "decora_sse"
 
 X86EGL.prism = [:]
 X86EGL.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -303,7 +303,7 @@ X86EGL.prism.compiler = compiler
 X86EGL.prism.ccFlags = [extraCFlags].flatten()
 X86EGL.prism.linker = linker
 X86EGL.prism.linkFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
-X86EGL.prism.lib = "prism-common"
+X86EGL.prism.lib = "prism_common"
 
 X86EGL.prismSW = [:]
 X86EGL.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -312,7 +312,7 @@ X86EGL.prismSW.compiler = compiler
 X86EGL.prismSW.ccFlags = [extraCFlags].flatten()
 X86EGL.prismSW.linker = linker
 X86EGL.prismSW.linkFlags = [extraLFlags].flatten()
-X86EGL.prismSW.lib = "prism-sw"
+X86EGL.prismSW.lib = "prism_sw"
 
 X86EGL.iio = [:]
 X86EGL.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
@@ -323,7 +323,7 @@ X86EGL.iio.compiler = compiler
 X86EGL.iio.ccFlags = iioCFlags
 X86EGL.iio.linker = linker
 X86EGL.iio.linkFlags = iioLFlags
-X86EGL.iio.lib = "javafx-iio"
+X86EGL.iio.lib = "javafx_iio"
 
 X86EGL.prismES2 = [:]
 X86EGL.prismES2.variants = ["eglfb", "eglx11"]
@@ -339,7 +339,7 @@ X86EGL.prismES2.eglfb.compiler = compiler
 X86EGL.prismES2.eglfb.ccFlags = es2EglfbCFlags
 X86EGL.prismES2.eglfb.linker = linker
 X86EGL.prismES2.eglfb.linkFlags = es2EglfbLFlags
-X86EGL.prismES2.eglfb.lib = "prism-es2-eglfb"
+X86EGL.prismES2.eglfb.lib = "prism_es2_eglfb"
 
 X86EGL.prismES2.eglx11 = [:]
 X86EGL.prismES2.eglx11.nativeSource = [
@@ -351,7 +351,7 @@ X86EGL.prismES2.eglx11.compiler = compiler
 X86EGL.prismES2.eglx11.ccFlags = es2X11CFlags
 X86EGL.prismES2.eglx11.linker = linker
 X86EGL.prismES2.eglx11.linkFlags = es2X11LFlags
-X86EGL.prismES2.eglx11.lib = "prism-es2-eglx11"
+X86EGL.prismES2.eglx11.lib = "prism_es2_eglx11"
 
 def closedDir = file("$projectDir/../rt-closed")
 X86EGL.font = [:]
@@ -363,7 +363,7 @@ X86EGL.font.compiler = compiler
 X86EGL.font.ccFlags = fontCFlags
 X86EGL.font.linker = linker
 X86EGL.font.linkFlags = fontLFlags
-X86EGL.font.lib = "javafx-font"
+X86EGL.font.lib = "javafx_font"
 
 X86EGL.fontT2K = [:]
 X86EGL.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
@@ -375,7 +375,7 @@ X86EGL.fontT2K.compiler = compiler
 X86EGL.fontT2K.ccFlags = fontCFlags
 X86EGL.fontT2K.linker = linker
 X86EGL.fontT2K.linkFlags = fontLFlags
-X86EGL.fontT2K.lib = "javafx-font-t2k"
+X86EGL.fontT2K.lib = "javafx_font_t2k"
 
 X86EGL.fontPango = [:]
 X86EGL.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]
@@ -386,4 +386,4 @@ X86EGL.fontPango.compiler = compiler
 X86EGL.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 X86EGL.fontPango.linker = linker
 X86EGL.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
-X86EGL.fontPango.lib = "javafx-font-pango"
+X86EGL.fontPango.lib = "javafx_font_pango"

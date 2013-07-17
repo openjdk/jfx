@@ -45,8 +45,8 @@ public final class BackgroundFill {
      * The Paint to use for filling the background of the {@link Region}.
      * This value will never be null.
      */
-    final Paint fill;
     public final Paint getFill() { return fill; }
+    final Paint fill;
 
     /**
      * The Radii to use for representing the four radii of the
@@ -54,8 +54,8 @@ public final class BackgroundFill {
      * specified. This will never be null. The radii values will
      * never be negative.
      */
-    final CornerRadii radii;
     public final CornerRadii getRadii() { return radii; }
+    final CornerRadii radii;
 
     /**
      * The Insets to use for this fill. Each inset indicates at what
@@ -64,8 +64,8 @@ public final class BackgroundFill {
      * in order to position the border beyond the natural bounds
      * (that is, (0, 0, width, height)) of the Region.
      */
-    final Insets insets;
     public final Insets getInsets() { return insets; }
+    final Insets insets;
 
     /**
      * A cached hash for improved performance on subsequent hash or

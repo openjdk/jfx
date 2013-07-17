@@ -299,9 +299,9 @@ EGLNativeWindowType getNativeWindowType() {
 #ifdef ANDROID_NDK
     //don't cache for Android!
     printf("Using getAndroidNativeWindow() from glass.\n");
-    void *libglass_android = dlopen("libglass-lens-android.so", RTLD_LAZY | RTLD_GLOBAL);
+    void *libglass_android = dlopen("libglass_lens_android.so", RTLD_LAZY | RTLD_GLOBAL);
     if (!libglass_android) {
-        fprintf(stderr, "Did not find libglass-lens-android.so %s\n", dlerror());
+        fprintf(stderr, "Did not find libglass_lens_android.so %s\n", dlerror());
            return NULL;
     }
     _ANDROID_getNativeWindow = GET_SYMBOL(libglass_android, "ANDROID_getNativeWindow");

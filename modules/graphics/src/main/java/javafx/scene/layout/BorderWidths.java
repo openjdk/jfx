@@ -70,8 +70,8 @@ public final class BorderWidths {
      * treated as a percentage, based on the value of the
      * {@link #isTopAsPercentage() topAsPercentage} property.
      */
-    final double top;
     public final double getTop() { return top; }
+    final double top;
 
     /**
      * The non-negative value (with the exception of {@link #AUTO}) indicating the border
@@ -79,8 +79,8 @@ public final class BorderWidths {
      * treated as a percentage, based on the value of the
      * {@link #isRightAsPercentage() rightAsPercentage} property.
      */
-    final double right;
     public final double getRight() { return right; }
+    final double right;
 
     /**
      * The non-negative value (with the exception of {@link #AUTO}) indicating the border
@@ -88,8 +88,8 @@ public final class BorderWidths {
      * treated as a percentage, based on the value of the
      * {@link #isBottomAsPercentage() bottomAsPercentage} property.
      */
-    final double bottom;
     public final double getBottom() { return bottom; }
+    final double bottom;
 
     /**
      * The non-negative value (with the exception of {@link #AUTO}) indicating the border
@@ -97,36 +97,36 @@ public final class BorderWidths {
      * treated as a percentage, based on the value of the
      * {@link #isLeftAsPercentage() leftAsPercentage} property.
      */
-    final double left;
     public final double getLeft() { return left; }
+    final double left;
 
     /**
      * Specifies whether the {@link #getTop() top} property should be interpreted as a percentage ({@code true})
      * of the region height or not ({@code false}).
      */
-    final boolean topAsPercentage;
     public final boolean isTopAsPercentage() { return topAsPercentage; }
+    final boolean topAsPercentage;
 
     /**
      * Specifies whether the {@link #getRight() right} property should be interpreted as a percentage ({@code true})
      * of the region width or not ({@code false}).
      */
-    final boolean rightAsPercentage;
     public final boolean isRightAsPercentage() { return rightAsPercentage; }
+    final boolean rightAsPercentage;
 
     /**
      * Specifies whether the {@link #getBottom() bottom} property should be interpreted as a percentage ({@code true})
      * of the region height or not ({@code false}).
      */
-    final boolean bottomAsPercentage;
     public final boolean isBottomAsPercentage() { return bottomAsPercentage; }
+    final boolean bottomAsPercentage;
 
     /**
      * Specifies whether the {@link #getLeft() left} property should be interpreted as a percentage ({@code true})
      * of the region width or not ({@code false}).
      */
-    final boolean leftAsPercentage;
     public final boolean isLeftAsPercentage() { return leftAsPercentage; }
+    final boolean leftAsPercentage;
 
     /**
      * A cached hash code for faster secondary usage. It is expected
