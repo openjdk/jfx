@@ -59,12 +59,13 @@ class CTGlyphLayout extends GlyphLayout {
         String fontName = OS.CTFontCopyDisplayName(actualFont);
         int slot = 0;
         if (!fontName.equalsIgnoreCase(name)) {
+            if (fr == null) return -1;
             slot = fr.getSlotForFont(fontName);
             if (PrismFontFactory.debugFonts) {
                 System.err.println("\tFallback front= "+ fontName + " slot=" + slot);
             }
         }
-        return slot;
+        return slot << 24;
     }
 
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
@@ -85,12 +86,13 @@ class CTGlyphLayout extends GlyphLayout {
         long runCount = OS.CFArrayGetCount(runs);
         int glyphStart = 0, posStart = 0, indicesStart = 0;
         for (int i = 0; i < runCount; i++) {
-            int slot = 0;
             long runRef = OS.CFArrayGetValueAtIndex(runs, i);
-            if (composite != null) {
-                slot = getFontSlot(runRef, composite, fontName) << 24;
+            int slot = getFontSlot(runRef, composite, fontName) ;
+            if (slot != -1) {
+                glyphStart += OS.CTRunGetGlyphs(runRef, slot, glyphStart, glyphs);
+            } else {
+                glyphStart += OS.CTRunGetGlyphCount(runRef);
             }
-            glyphStart += OS.CTRunGetGlyphs(runRef, slot, glyphStart, glyphs);
             posStart += OS.CTRunGetPositions(runRef, posStart, positions);
             indicesStart += OS.CTRunGetStringIndices(runRef, indicesStart, indices);
 
