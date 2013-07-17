@@ -64,6 +64,11 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
     }
 
     private final CharToGlyphMapper getSlotMapper(int slot) {
+        if (slot >= slotMappers.length) {
+            CharToGlyphMapper[] tmp = new CharToGlyphMapper[font.getNumSlots()];
+            System.arraycopy(slotMappers, 0, tmp, 0, slotMappers.length);
+            slotMappers = tmp;
+        }
         CharToGlyphMapper mapper = slotMappers[slot];
         if (mapper == null) {
             mapper = font.getSlotResource(slot).getGlyphMapper();
