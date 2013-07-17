@@ -198,19 +198,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         updateTableItems(null, itemsProperty().get());
         itemsProperty().addListener(weakItemsChangeListener);
 
-        control.getProperties().addListener(new MapChangeListener<Object, Object>() {
-            @Override public void onChanged(MapChangeListener.Change<? extends Object, ? extends Object> c) {
-                if (! c.wasAdded()) return;
-                if (REFRESH.equals(c.getKey())) {
-                    refreshView();
-                    control.getProperties().remove(REFRESH);
-                } else if (RECREATE.equals(c.getKey())) {
-                    forceCellRecreate = true;
-                    refreshView();
-                    control.getProperties().remove(RECREATE);
-                }
-            }
-        });
+        control.getProperties().addListener(propertiesMapListener);
         
         control.addEventHandler(ScrollToEvent.<TableColumnBase>scrollToColumn(), new EventHandler<ScrollToEvent<TableColumnBase>>() {
             @Override public void handle(ScrollToEvent<TableColumnBase> event) {
@@ -241,6 +229,20 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
+
+    private MapChangeListener<Object, Object> propertiesMapListener = new MapChangeListener<Object, Object>() {
+        @Override public void onChanged(MapChangeListener.Change<? extends Object, ? extends Object> c) {
+            if (! c.wasAdded()) return;
+            if (REFRESH.equals(c.getKey())) {
+                refreshView();
+                getSkinnable().getProperties().remove(REFRESH);
+            } else if (RECREATE.equals(c.getKey())) {
+                forceCellRecreate = true;
+                refreshView();
+                getSkinnable().getProperties().remove(RECREATE);
+            }
+        }
+    };
     
     private ListChangeListener rowCountListener = new ListChangeListener() {
         @Override public void onChanged(Change c) {
@@ -387,6 +389,15 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 //        } else if ("WIDTH".equals(p)) {
 //            tableHeaderRow.setTablePadding(getSkinnable().getInsets());
         }
+    }
+
+    @Override public void dispose() {
+        getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
+        itemsProperty().removeListener(weakItemsChangeListener);
+        getSkinnable().getProperties().removeListener(propertiesMapListener);
+        updateTableItems(itemsProperty().get(), null);
+
+        super.dispose();
     }
 
     protected TableHeaderRow createTableHeaderRow() {
