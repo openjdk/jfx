@@ -32,6 +32,10 @@ fetchExternalTools('ARMV6SF', [ "armv6-vfp-03.tgz" ],
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armv6-vfp-03")
 
 def compilerHome=file("/opt/arm-2009q1")
+if (rootProject.hasProperty("ARMV6SF_COMPILER")) {
+    logger.quiet "Using alternate ARMV6SF_COMPILER $rootProject.ARMV6SF_COMPILER"
+    compilerHome=file(rootProject.ARMV6SF_COMPILER);
+}
 
 // Declare whether this particular target file applies to the current system
 ARMV6SF.canBuild = IS_LINUX && compilerHome.exists() && sdk.exists()
@@ -165,7 +169,7 @@ def webLFlags = [extraLFlags].flatten()
 //defineProperty("PRISM_CC", "cc");
 //defineProperty("PRISM_SW_CC", "cc");
 
-setupTools("armv6-sf_tools",
+setupTools("armv6sf_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
@@ -231,18 +235,18 @@ gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
 
 def pangoCCFlags = [extraCFlags, "-D_ENABLE_PANGO"];
 def pangoLinkFlags = [extraLFlags];
-setupTools("linux_pango_tools",
+setupTools("armv6sf_pango_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--cflags", "pangoft2"
+            commandLine "$sdk/bin/pkg-config", "--cflags", "pangoft2"
             standardOutput = results
         }
         propFile << "cflags=" << results.toString().trim() << "\n";
 
         results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--libs", "pangoft2"
+            commandLine "$sdk/bin/pkg-config", "--libs", "pangoft2"
             standardOutput = results
         }
         propFile << "libs=" << results.toString().trim();
@@ -283,7 +287,7 @@ ARMV6SF.glass.eglfb.compiler = compiler
 ARMV6SF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 ARMV6SF.glass.eglfb.linker = linker
 ARMV6SF.glass.eglfb.linkFlags = [lensLFlags].flatten()
-ARMV6SF.glass.eglfb.lib = "glass-lens-eglfb"
+ARMV6SF.glass.eglfb.lib = "glass_lens_eglfb"
 
 ARMV6SF.glass.directfb = [:]
 ARMV6SF.glass.directfb.nativeSource = [
@@ -309,7 +313,7 @@ ARMV6SF.glass.fb.compiler = compiler
 ARMV6SF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 ARMV6SF.glass.fb.linker = linker
 ARMV6SF.glass.fb.linkFlags = [lensLFlags].flatten()
-ARMV6SF.glass.fb.lib = "glass-lens-fb"
+ARMV6SF.glass.fb.lib = "glass_lens_fb"
  
 ARMV6SF.glass.eglx11 = [:]
 ARMV6SF.glass.eglx11.nativeSource = [
@@ -323,7 +327,7 @@ ARMV6SF.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags].flatten()
 ARMV6SF.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 ARMV6SF.glass.eglx11.linker = linker
 ARMV6SF.glass.eglx11.linkFlags = [lensLFlags].flatten()
-ARMV6SF.glass.eglx11.lib = "glass-lens-eglx11"
+ARMV6SF.glass.eglx11.lib = "glass_lens_eglx11"
  
 ARMV6SF.glass.gtk = [:]
 ARMV6SF.glass.gtk.nativeSource = [
@@ -340,7 +344,7 @@ ARMV6SF.decora.compiler = compiler
 ARMV6SF.decora.ccFlags = extraCFlags
 ARMV6SF.decora.linker = linker
 ARMV6SF.decora.linkFlags = extraLFlags
-ARMV6SF.decora.lib = "decora-sse"
+ARMV6SF.decora.lib = "decora_sse"
 
 ARMV6SF.prism = [:]
 ARMV6SF.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -349,7 +353,7 @@ ARMV6SF.prism.compiler = compiler
 ARMV6SF.prism.ccFlags = es2CFlags // or es2EglfbCFlags? or es2X11CFlags?
 ARMV6SF.prism.linker = linker
 ARMV6SF.prism.linkFlags = es2LFlags // or es2EglfbLFlags or es2X11LFlags?
-ARMV6SF.prism.lib = "prism-common"
+ARMV6SF.prism.lib = "prism_common"
 
 ARMV6SF.prismSW = [:]
 ARMV6SF.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -358,7 +362,7 @@ ARMV6SF.prismSW.compiler = compiler
 ARMV6SF.prismSW.ccFlags = prismSWCFlags
 ARMV6SF.prismSW.linker = linker
 ARMV6SF.prismSW.linkFlags = prismSWLFlags
-ARMV6SF.prismSW.lib = "prism-sw"
+ARMV6SF.prismSW.lib = "prism_sw"
 
 ARMV6SF.iio = [:]
 ARMV6SF.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
@@ -369,7 +373,7 @@ ARMV6SF.iio.compiler = compiler
 ARMV6SF.iio.ccFlags = iioCFlags
 ARMV6SF.iio.linker = linker
 ARMV6SF.iio.linkFlags = iioLFlags
-ARMV6SF.iio.lib = "javafx-iio"
+ARMV6SF.iio.lib = "javafx_iio"
 
 ARMV6SF.prismES2 = [:]
 ARMV6SF.prismES2.variants = ["eglfb", "eglx11"]
@@ -385,7 +389,7 @@ ARMV6SF.prismES2.eglfb.compiler = compiler
 ARMV6SF.prismES2.eglfb.ccFlags = es2EglfbCFlags
 ARMV6SF.prismES2.eglfb.linker = linker
 ARMV6SF.prismES2.eglfb.linkFlags = es2EglfbLFlags
-ARMV6SF.prismES2.eglfb.lib = "prism-es2-eglfb"
+ARMV6SF.prismES2.eglfb.lib = "prism_es2_eglfb"
 
 ARMV6SF.prismES2.eglx11 = [:]
 ARMV6SF.prismES2.eglx11.nativeSource = [
@@ -397,7 +401,7 @@ ARMV6SF.prismES2.eglx11.compiler = compiler
 ARMV6SF.prismES2.eglx11.ccFlags = es2X11CFlags
 ARMV6SF.prismES2.eglx11.linker = linker
 ARMV6SF.prismES2.eglx11.linkFlags = es2X11LFlags
-ARMV6SF.prismES2.eglx11.lib = "prism-es2-eglx11"
+ARMV6SF.prismES2.eglx11.lib = "prism_es2_eglx11"
 
 def closedDir = file("$projectDir/../rt-closed")
 ARMV6SF.font = [:]
@@ -409,7 +413,7 @@ ARMV6SF.font.compiler = compiler
 ARMV6SF.font.ccFlags = fontCFlags
 ARMV6SF.font.linker = linker
 ARMV6SF.font.linkFlags = fontLFlags
-ARMV6SF.font.lib = "javafx-font"
+ARMV6SF.font.lib = "javafx_font"
 
 ARMV6SF.fontT2K = [:]
 ARMV6SF.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
@@ -421,7 +425,7 @@ ARMV6SF.fontT2K.compiler = compiler
 ARMV6SF.fontT2K.ccFlags = fontCFlags
 ARMV6SF.fontT2K.linker = linker
 ARMV6SF.fontT2K.linkFlags = fontLFlags
-ARMV6SF.fontT2K.lib = "javafx-font-t2k"
+ARMV6SF.fontT2K.lib = "javafx_font_t2k"
 
 ARMV6SF.fontPango = [:]
 ARMV6SF.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]

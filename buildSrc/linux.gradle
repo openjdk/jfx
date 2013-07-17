@@ -150,7 +150,7 @@ LINUX.decora.compiler = compiler
 LINUX.decora.ccFlags = [ccFlags, "-ffast-math"].flatten()
 LINUX.decora.linker = linker
 LINUX.decora.linkFlags = [linkFlags].flatten()
-LINUX.decora.lib = "decora-sse"
+LINUX.decora.lib = "decora_sse"
 
 LINUX.prism = [:]
 LINUX.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -159,7 +159,7 @@ LINUX.prism.compiler = "cc"
 LINUX.prism.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prism.linker = linker
 LINUX.prism.linkFlags = [linkFlags].flatten()
-LINUX.prism.lib = "prism-common"
+LINUX.prism.lib = "prism_common"
 
 LINUX.prismSW = [:]
 LINUX.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -168,7 +168,7 @@ LINUX.prismSW.compiler = "cc"
 LINUX.prismSW.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prismSW.linker = linker
 LINUX.prismSW.linkFlags = [linkFlags].flatten()
-LINUX.prismSW.lib = "prism-sw"
+LINUX.prismSW.lib = "prism_sw"
 
 LINUX.launcher = [:]
 LINUX.launcher.compiler = compiler
@@ -185,7 +185,7 @@ LINUX.iio.compiler = compiler
 LINUX.iio.ccFlags = [ccFlags].flatten()
 LINUX.iio.linker = linker
 LINUX.iio.linkFlags = [linkFlags].flatten()
-LINUX.iio.lib = "javafx-iio"
+LINUX.iio.lib = "javafx_iio"
 
 LINUX.prismES2 = [:]
 LINUX.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
@@ -198,7 +198,7 @@ LINUX.prismES2.compiler = compiler
 LINUX.prismES2.ccFlags = ["-DLINUX", "-DGRADLE_BUILD", ccFlags].flatten()
 LINUX.prismES2.linker = linker
 LINUX.prismES2.linkFlags = [linkFlags, "-lX11", "-lXxf86vm", "-lGL"].flatten()
-LINUX.prismES2.lib = "prism-es2"
+LINUX.prismES2.lib = "prism_es2"
 
 def closedDir = file("$projectDir/../rt-closed")
 LINUX.font = [:]
@@ -210,7 +210,7 @@ LINUX.font.nativeSource = [file("modules/graphics/src/main/native-font")]
 LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 LINUX.font.linker = linker
 LINUX.font.linkFlags = [linkFlags].flatten()
-LINUX.font.lib = "javafx-font"
+LINUX.font.lib = "javafx_font"
 
 LINUX.fontT2K = [:]
 LINUX.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
@@ -222,7 +222,7 @@ LINUX.fontT2K.compiler = compiler
 LINUX.fontT2K.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 LINUX.fontT2K.linker = linker
 LINUX.fontT2K.linkFlags = [linkFlags].flatten()
-LINUX.fontT2K.lib = "javafx-font-t2k"
+LINUX.fontT2K.lib = "javafx_font_t2k"
 
 LINUX.fontPango = [:]
 LINUX.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]

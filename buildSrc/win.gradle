@@ -157,7 +157,7 @@ WIN.decora.compiler = compiler
 WIN.decora.ccFlags = [ccFlags].flatten()
 WIN.decora.linker = linker
 WIN.decora.linkFlags = [linkFlags].flatten()
-WIN.decora.lib = "decora-sse"
+WIN.decora.lib = "decora_sse"
 
 WIN.prism = [:]
 WIN.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -166,7 +166,7 @@ WIN.prism.compiler = compiler
 WIN.prism.ccFlags = [ccFlags].flatten()
 WIN.prism.linker = linker
 WIN.prism.linkFlags = [linkFlags].flatten()
-WIN.prism.lib = "prism-common"
+WIN.prism.lib = "prism_common"
 
 WIN.prismSW = [:]
 WIN.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -175,7 +175,7 @@ WIN.prismSW.compiler = compiler
 WIN.prismSW.ccFlags = [ccFlags].flatten()
 WIN.prismSW.linker = linker
 WIN.prismSW.linkFlags = [linkFlags].flatten()
-WIN.prismSW.lib = "prism-sw"
+WIN.prismSW.lib = "prism_sw"
 
 WIN.prismD3D = [:]
 WIN.prismD3D.javahInclude = ["com/sun/prism/d3d/**/*"]
@@ -186,7 +186,7 @@ WIN.prismD3D.compiler = compiler
 WIN.prismD3D.ccFlags = [ccFlags, "/Ibuild/headers/PrismD3D"].flatten()
 WIN.prismD3D.linker = linker
 WIN.prismD3D.linkFlags = [linkFlags, "user32.lib"].flatten()
-WIN.prismD3D.lib = "prism-d3d"
+WIN.prismD3D.lib = "prism_d3d"
 
 WIN.launcher = [:]
 WIN.launcher.compiler = compiler
@@ -223,7 +223,7 @@ WIN.iio.compiler = compiler
 WIN.iio.ccFlags = [ccFlags].flatten()
 WIN.iio.linker = linker
 WIN.iio.linkFlags = [linkFlags].flatten()
-WIN.iio.lib = "javafx-iio"
+WIN.iio.lib = "javafx_iio"
 
 WIN.prismES2 = [:]
 WIN.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
@@ -236,7 +236,7 @@ WIN.prismES2.compiler = compiler
 WIN.prismES2.ccFlags = ["/Ob1", "/GF", "/Gy", "/GS", "/DWIN32", "/DGRADLE_BUILD", ccFlags].flatten()
 WIN.prismES2.linker = linker
 WIN.prismES2.linkFlags = [linkFlags, "/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"].flatten()
-WIN.prismES2.lib = "prism-es2"
+WIN.prismES2.lib = "prism_es2"
 
 def closedDir = file("$projectDir/../rt-closed")
 WIN.font = [:]
@@ -249,7 +249,7 @@ WIN.font.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
 WIN.font.ccFlags -= ["/DUNICODE", "/D_UNICODE"]
 WIN.font.linker = linker
 WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib", "dwrite.lib", "d2d1.lib", "windowscodecs.lib", "ole32.lib"].flatten()
-WIN.font.lib = "javafx-font"
+WIN.font.lib = "javafx_font"
 
 WIN.fontT2K = [:]
 WIN.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
@@ -261,4 +261,4 @@ WIN.fontT2K.compiler = compiler
 WIN.fontT2K.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
 WIN.fontT2K.linker = linker
 WIN.fontT2K.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
-WIN.fontT2K.lib = "javafx-font-t2k"
+WIN.fontT2K.lib = "javafx_font_t2k"

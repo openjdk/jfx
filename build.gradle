@@ -2183,3 +2183,19 @@ project(":web") {
             "src/main/native/WebKitLibraries/import")
     }
 }
+
+task showFlags {
+}
+
+compileTargets { t ->
+    // Every platform must define these variables
+    def props = project.ext[t.upper];
+    showFlags.dependsOn(
+        project.task("showFlags$t.upper") {
+            doLast() {
+                println "Properties set for $t.upper"
+                props.each { println it }
+            }
+        }
+    )
+}

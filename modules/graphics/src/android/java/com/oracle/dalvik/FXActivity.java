@@ -61,7 +61,7 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
     private static final String META_DATA_APP_ARGS   = "app.args";
     private static final String META_DATA_DEBUG_PORT = "debug.port";
     private static final String ANDROID_WEBVIEW = "android_webview";
-    private static final String GLASS_LENS_ANDROID = "glass-lens-android";
+    private static final String GLASS_LENS_ANDROID = "glass_lens_android";
 
     static {        
         System.loadLibrary("vmlauncher");
