@@ -35,7 +35,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import javafx.collections.FXCollections;
+
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
@@ -78,7 +78,7 @@ final public class Rule {
                 declarations = new ArrayList<Declaration>(nDeclarations);
                 for (int i = 0; i < nDeclarations; i++) {
 
-                    Declaration decl = Declaration.readBinary(dis, stylesheet.getStringStore());
+                    Declaration decl = Declaration.readBinary(bssVersion, dis, stylesheet.getStringStore());
                     decl.rule = Rule.this;
 
                     if (stylesheet != null && stylesheet.getUrl() != null) {
@@ -173,6 +173,7 @@ final public class Rule {
         this.selectors = selectors;
         this.declarations = declarations;
         serializedDecls = null;
+        this.bssVersion = Stylesheet.BINARY_CSS_VERSION;
 
         int sMax = selectors != null ? selectors.size() : 0;
         for(int i = 0; i < sMax; i++) {
@@ -188,12 +189,14 @@ final public class Rule {
     }
 
     private byte[] serializedDecls;
+    private final int bssVersion;
 
-    private Rule(List<Selector> selectors, byte[] buf, String[] stringStoreStrings) {
+    private Rule(List<Selector> selectors, byte[] buf, int bssVersion) {
 
         this.selectors = selectors;
         this.declarations = null;
         this.serializedDecls = buf;
+        this.bssVersion = bssVersion;
 
         int sMax = selectors != null ? selectors.size() : 0;
         for(int i = 0; i < sMax; i++) {
@@ -318,7 +321,7 @@ final public class Rule {
 
     }
 
-    void writeBinary(DataOutputStream os, StringStore stringStore)
+    final void writeBinary(DataOutputStream os, StringStore stringStore)
             throws IOException {
 
         final int nSelectors = this.selectors != null ? this.selectors.size() : 0;
@@ -351,16 +354,26 @@ final public class Rule {
         }
     }
 
-    static Rule readBinary(DataInputStream is, String[] strings)
+    static Rule readBinary(int bssVersion, DataInputStream is, String[] strings)
             throws IOException
     {
         short nSelectors = is.readShort();
         List<Selector> selectors = new ArrayList<Selector>(nSelectors);
         for (int i = 0; i < nSelectors; i++) {
-            Selector s = Selector.readBinary(is, strings);
+            Selector s = Selector.readBinary(bssVersion, is, strings);
             selectors.add(s);
         }
 
+        if (bssVersion < 4) {
+            short nDeclarations = is.readShort();
+            List<Declaration> declarations = new ArrayList<Declaration>(nDeclarations);
+            for (int i = 0; i < nDeclarations; i++) {
+                Declaration d = Declaration.readBinary(bssVersion, is, strings);
+                declarations.add(d);
+            }
+
+            return new Rule(selectors, declarations);
+        }
 
         // de-serialize decls into byte array
         int nBytes = is.readInt();
@@ -369,7 +382,6 @@ final public class Rule {
         if (nBytes > 0) {
             is.readFully(buf);
         }
-
-        return new Rule(selectors, buf, strings);
+        return new Rule(selectors, buf, bssVersion);
     }
 }

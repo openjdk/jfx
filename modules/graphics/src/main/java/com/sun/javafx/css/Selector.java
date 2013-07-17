@@ -94,13 +94,13 @@ abstract public class Selector {
         }
     }
 
-    static Selector readBinary(DataInputStream is, String[] strings)
+    static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException {
         final int type = is.readByte();
         if (type == TYPE_SIMPLE)
-            return SimpleSelector.readBinary(is,strings);
+            return SimpleSelector.readBinary(bssVersion, is,strings);
         else
-            return CompoundSelector.readBinary(is,strings);
+            return CompoundSelector.readBinary(bssVersion, is,strings);
     }
     
     public static Selector createSelector(final String cssSelector) {

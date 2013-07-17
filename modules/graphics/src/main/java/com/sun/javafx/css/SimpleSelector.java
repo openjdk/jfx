@@ -383,7 +383,7 @@ final public class SimpleSelector extends Selector {
         return sbuf.toString();
     }
 
-    public void writeBinary(final DataOutputStream os, final StringStore stringStore)
+    public final void writeBinary(final DataOutputStream os, final StringStore stringStore)
         throws IOException
     {
         super.writeBinary(os, stringStore);
@@ -403,7 +403,7 @@ final public class SimpleSelector extends Selector {
         }
     }
 
-    static SimpleSelector readBinary(final DataInputStream is, final String[] strings)
+    static SimpleSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
         throws IOException
     {
         final String name = strings[is.readShort()];

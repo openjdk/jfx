@@ -25,11 +25,21 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.StringConverter;
+import com.sun.javafx.css.parser.CSSParser;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
+
+import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 import javafx.css.StyleableProperty;
+import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
@@ -38,6 +48,9 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontSmoothingType;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -338,5 +351,136 @@ public class StylesheetTest {
 
     }
 
-    
+    @Test
+    public void testRT_30953_parse() {
+
+        try {
+            // RT-30953-2.2.4_33.bss was generated with javafx version 2.2.4_33
+            URL url = StylesheetTest.class.getResource("RT-30953.css");
+            if (url == null) {
+                fail("Can't find RT-30953.css");
+            }
+
+            Stylesheet ss = CSSParser.getInstance().parse(url);
+            checkConvert(ss);
+
+        } catch (Exception e) {
+            fail(e.toString());
+        }
+
+    }
+
+    @Test
+    public void testRT_30953_deserialize_from_2_2_45() {
+
+        // RT-30953-2.2.4bss was generated with javafx version 2.2.45 from 7u??
+        Stylesheet ss = deserialize("RT-30953-2.2.45.bss");
+        checkConvert(ss);
+    }
+
+    @Test
+    public void testRT_30953_deserialize_from_2_2_4() {
+
+        // RT-30953-2.2.4bss was generated with javafx version 2.2.4 from 7u10
+        Stylesheet ss = deserialize("RT-30953-2.2.4.bss");
+        checkConvert(ss);
+    }
+
+    @Test
+    public void testRT_30953_deserialize_from_2_2_21() {
+
+        // RT-30953-2.2.21.bss was generated with javafx version 2.2.21 from 7u21
+        Stylesheet ss = deserialize("RT-30953-2.2.21.bss");
+        checkConvert(ss);
+
+    }
+
+    private Stylesheet deserialize(String bssFile) {
+        Stylesheet ss = null;
+        try {
+            URL url = StylesheetTest.class.getResource(bssFile);
+            if (url == null) {
+                fail(bssFile);
+            }
+            ss = Stylesheet.loadBinary(url);
+        } catch (IOException ioe) {
+            fail(ioe.toString());
+        } catch (Exception e) {
+            fail(e.toString());
+        }
+        return ss;
+    }
+
+    private void checkConvert(Stylesheet ss) {
+        Declaration decl = null;
+        StyleConverter converter = null;
+        try {
+            for (Rule r : ss.getRules()) {
+                for (Declaration d : r.getDeclarations()) {
+                    decl = d;
+                    ParsedValue pv = decl.getParsedValue();
+                    converter = pv.getConverter();
+                    if (converter == null) {
+
+                        if ("inherit".equals(pv.getValue())) continue;
+
+                        String prop = d.getProperty().toLowerCase();
+                        if ("-fx-shape".equals(prop)) {
+                            StringConverter.getInstance().convert(pv, null);
+                        } else if ("-fx-font-smoothing-type".equals(prop)) {
+                            (new EnumConverter<FontSmoothingType>(FontSmoothingType.class)).convert(pv, null);
+                        } else if ("-fx-text-alignment".equals(prop)) {
+                            (new EnumConverter<TextAlignment>(TextAlignment.class)).convert(pv, null);
+                        } else if ("-fx-alignment".equals(prop)) {
+                            (new EnumConverter<Pos>(Pos.class)).convert(pv, null);
+                        } else if ("-fx-text-origin".equals(prop)) {
+                            (new EnumConverter<VPos>(VPos.class)).convert(pv, null);
+                        } else if ("-fx-text-overrun".equals(prop)) {
+                            Class cl = null;
+                            try {
+                                cl = Class.forName("javafx.scene.control.OverrunStyle");
+                            } catch (Exception ignored) {
+                                // just means we're running ant test from javafx-ui-common
+                            }
+                            if (cl != null) {
+                                (new EnumConverter(cl)).convert(pv, null);
+                            }
+                        } else if ("-fx-orientation".equals(prop)) {
+                            (new EnumConverter<Orientation>(Orientation.class)).convert(pv, null);
+                        } else if ("-fx-content-display".equals(prop)) {
+                            Class cl = null;
+                            try {
+                                cl = Class.forName("javafx.scene.control.CpntentDisplay");
+                            } catch (Exception ignored) {
+                                // just means we're running ant test from javafx-ui-common
+                            }
+                            if (cl != null) {
+                                (new EnumConverter(cl)).convert(pv, null);
+                            }
+                        } else if ("-fx-hbar-policy".equals(prop)) {
+                            Class cl = null;
+                            try {
+                                cl = Class.forName("javafx.scene.control.ScrollPane.ScrollBarPolicy");
+                            } catch (Exception ignored) {
+                                // just means we're running ant test from javafx-ui-common
+                            }
+                            if (cl != null) {
+                                (new EnumConverter(cl)).convert(pv, null);
+                            }
+                        } else {
+                            System.out.println("No converter for " + d.toString() + ". Skipped conversion.");
+                        }
+                        continue;
+                    }
+                    Object value = converter.convert(pv, Font.getDefault());
+                }
+            }
+        } catch (Exception e) {
+            if (decl == null) fail(e.toString());
+            else if (converter != null) fail(decl.getProperty() + ", " + converter + ", " + e.toString());
+            else fail(decl.getProperty() + ", " + e.toString());
+        }
+
+    }
+
 }

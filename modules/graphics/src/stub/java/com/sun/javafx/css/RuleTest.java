@@ -180,7 +180,7 @@ public class RuleTest {
         DataInputStream is = null;
         String[] strings = null;
         Rule expResult = null;
-        Rule result = Rule.readBinary(is, strings);
+        Rule result = Rule.readBinary(Stylesheet.BINARY_CSS_VERSION, is, strings);
         assertEquals(expResult, result);
         fail("The test case is a prototype.");
     }

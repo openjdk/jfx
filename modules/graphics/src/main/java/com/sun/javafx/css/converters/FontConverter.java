@@ -124,14 +124,26 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         @Override
         public FontPosture convert(ParsedValue<String, FontPosture> value, Font font) {
 
-            FontPosture fontPosture = FontPosture.REGULAR;
-            final String ident = value.getValue().toUpperCase();
-            try {
-                fontPosture = FontPosture.valueOf(ident);
-            } catch (IllegalArgumentException iae) {
-                // TODO: How to handle "inherit"? Probably in CssStyleHelper so that inherit is never passed to here
+            // Testing for RT-31022 exposed a ClassCastException where value
+            // wraps a String (e.g., "ITALIC", not a FontUnits.Style).
+            final Object val = value.getValue();
+
+            FontPosture style = null;
+
+            if (val instanceof String) {
+                try {
+                    String sval = ((String)val).toUpperCase();
+                    style = Enum.valueOf(FontPosture.class, sval);
+                } catch (IllegalArgumentException iae) {
+                    style =  FontPosture.REGULAR;
+                } catch (NullPointerException npe) {
+                    style =  FontPosture.REGULAR;
+                }
+
+            } else if (val instanceof FontPosture) {
+                style = (FontPosture)val;
             }
-            return fontPosture;
+            return style;
         }
 
         @Override
@@ -158,14 +170,26 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         @Override
         public FontWeight convert(ParsedValue<String, FontWeight> value, Font font) {
 
-            FontWeight weight = FontWeight.NORMAL;
+            // Testing for RT-31022 exposed a ClassCastException where value
+            // wraps a String (e.g., "ITALIC", not a FontUnits.Style).
+            final Object val = value.getValue();
 
-            final String ident = value.getValue().toUpperCase();
-            try {
-                weight = FontWeight.valueOf(ident);
-            } catch (IllegalArgumentException iae) {
-                // TODO: How to handle "inherit"? Probably in CssStyleHelper so that inherit is never passed to here
+            FontWeight weight = null;
+
+            if (val instanceof String) {
+                try {
+                    String sval = ((String)val).toUpperCase();
+                    weight = Enum.valueOf(FontWeight.class, sval);
+                } catch (IllegalArgumentException iae) {
+                    weight =  FontWeight.NORMAL;
+                } catch (NullPointerException npe) {
+                    weight =  FontWeight.NORMAL;
+                }
+
+            } else if (val instanceof FontWeight) {
+                weight = (FontWeight)val;
             }
+
             return weight;
         }
 
