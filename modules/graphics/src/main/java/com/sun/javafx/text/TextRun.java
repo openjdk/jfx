@@ -62,7 +62,7 @@ public class TextRun implements GlyphList {
     final static int FLAGS_COMPACT          = 1 << 12;
     /* Compact is performance optimization used for simple text, it implies:
      * The glyphs and positions arrays are shared by all the runs and owned
-     * by the TextHelper. The positions arrays only has x advance.  
+     * by the TextHelper. The positions arrays only has x advance.
      */
 
     public TextRun(int start, int length, byte level, boolean complex,
@@ -177,7 +177,7 @@ public class TextRun implements GlyphList {
             flags &= ~FLAGS_COMPLEX;
         }
     }
-    
+
     @Override public float getWidth() {
         if (width != -1) return width;
         if (positions != null) {
@@ -196,7 +196,7 @@ public class TextRun implements GlyphList {
     @Override public float getHeight() {
         return -ascent + descent + leading;
     }
-    
+
     public void setWidth(float width) {
         this.width = width;
     }
@@ -277,10 +277,10 @@ public class TextRun implements GlyphList {
                 }
             }
         } else {
-            /* This code is not correct. The width of the run excluding a glyph 
-             * cannot be computed by subtracting the glyph's width. Removing a 
-             * glyph from the run can change the contextual shapes for the 
-             * remaining glyphs (i.e. Arabic). The correct code is to reshape 
+            /* This code is not correct. The width of the run excluding a glyph
+             * cannot be computed by subtracting the glyph's width. Removing a
+             * glyph from the run can change the contextual shapes for the
+             * remaining glyphs (i.e. Arabic). The correct code is to reshape
              * the run excluding the given glyph. Due to performance reshaping
              * should only be used when the run has contextual shaping.
              */
@@ -298,9 +298,9 @@ public class TextRun implements GlyphList {
         }
         return 0;
     }
-    
+
     @Override public int getGlyphCount() {
-        return glyphCount; 
+        return glyphCount;
     }
 
     @Override public int getGlyphCode(int glyphIndex) {
@@ -345,7 +345,7 @@ public class TextRun implements GlyphList {
         }
         return 0;
     }
-    
+
     public float getAdvance(int glyphIndex) {
         if ((flags & FLAGS_COMPACT) != 0) {
             return positions[start + glyphIndex];
@@ -353,14 +353,14 @@ public class TextRun implements GlyphList {
             return positions[(glyphIndex + 1) << 1] - positions[glyphIndex << 1];
         }
     }
-    
+
     public void shape(int count, int[] glyphs, float[] pos, int[] indices) {
         this.glyphCount = count;
         this.gids = glyphs;
         this.positions = pos;
         this.charIndices = indices;
     }
-    
+
     public void shape(int count, int[] glyphs, float[] pos) {
         this.glyphCount = count;
         this.gids = glyphs;
@@ -413,7 +413,7 @@ public class TextRun implements GlyphList {
         if (trailing != null) trailing[0] = ltr ? 1 : 0;
         return Math.max(0, glyphCount - 1);
     }
-    
+
     public int getOffsetAtX(float x, int[] trailing) {
         if (glyphCount > 0) {
             int glyphIndex = getGlyphAtX(x, trailing);
@@ -425,11 +425,11 @@ public class TextRun implements GlyphList {
                 if (x > width / 2) {
                     trailing[0] = 1;
                 }
-            } 
+            }
         }
         return 0;
     }
-    
+
     private void reset() {
         positions = null;
         charIndices = null;
@@ -438,12 +438,12 @@ public class TextRun implements GlyphList {
         ascent = descent = leading = 0;
         glyphCount = 0;
     }
-    
+
     public TextRun split(int offset) {
         int newLength = length - offset;
         length = offset;
         boolean complex = isComplex();
-        TextRun newRun = new TextRun(start + length, newLength, level, complex, 
+        TextRun newRun = new TextRun(start + length, newLength, level, complex,
                                      script, span, slot, isCanonical());
         flags |= FLAGS_NO_LINK_AFTER;
         newRun.flags |= FLAGS_NO_LINK_BEFORE;
@@ -482,7 +482,7 @@ public class TextRun implements GlyphList {
         }
         return newRun;
     }
-    
+
     public void merge(TextRun run) {
         /* This method can only be used for already shaped runs in simple layout */
         if (run != null) {
@@ -495,7 +495,7 @@ public class TextRun implements GlyphList {
     }
 
     public TextRun unwrap() {
-        TextRun newRun = new TextRun(start, length, level, isComplex(), 
+        TextRun newRun = new TextRun(start, length, level, isComplex(),
                                      script, span, slot, isCanonical());
         newRun.shape(glyphCount, gids, positions);
         newRun.setWidth(width);
@@ -516,7 +516,7 @@ public class TextRun implements GlyphList {
                 }
                 this.width = -1;
             }
-            
+
             /* Temp code: Setting complex to true to force rendering to use
              * advances from the GlyphList instead of GlyphData
              */

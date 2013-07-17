@@ -99,7 +99,7 @@ public abstract class GlyphLayout {
                                  int start, int length,
                                  PGFont font, TextSpan span, byte level) {
         /* subclass can overwrite this method in order to handle complex text */
-        TextRun run = new TextRun(start, length, level, false, 0, span, 0, false);
+        TextRun run = new TextRun(start, length, level, true, 0, span, 0, false);
         layout.addTextRun(run);
         return run;
     }
