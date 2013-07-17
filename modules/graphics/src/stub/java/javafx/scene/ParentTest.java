@@ -41,7 +41,7 @@ import static org.junit.Assert.*;
 public class ParentTest {
     private StubToolkit toolkit;
     private Stage stage;
-    
+
     @Before
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
@@ -96,7 +96,7 @@ public class ParentTest {
         assertEquals(rectE, group.lookup("#e"));
         assertEquals(rectF, group.lookup("#f"));
     }
-    
+
     @Test
     public void testGroupLookupBadId() {
         Rectangle rectA = new Rectangle();
@@ -139,15 +139,15 @@ public class ParentTest {
         Rectangle rect4 = new Rectangle();
         Rectangle rect5 = new Rectangle();
         Rectangle rect6 = new Rectangle();
-        
+
         Group g = new Group();
         Scene s = new Scene(g);
         stage.setScene(s);
         stage.show();
-    
+
         g.getChildren().addAll(rect1, rect2, rect3, rect4, rect5, rect6);
         toolkit.fireTestPulse();
-    
+
         // try removing node from the end of the observableArrayList
         g.getChildren().remove(rect6);
         toolkit.fireTestPulse();
@@ -160,7 +160,7 @@ public class ParentTest {
         toolkit.fireTestPulse();
         assertEquals(4, g.getChildren().size());
         assertEquals(4, peer.getChildren().size());
-        
+
         // try removing node from the middle of the observableArrayList
         g.getChildren().remove(rect3);
         toolkit.fireTestPulse();
@@ -173,15 +173,15 @@ public class ParentTest {
         Rectangle rect1 = new Rectangle();
         Rectangle rect2 = new Rectangle();
         Rectangle rect3 = new Rectangle();
-        
+
         Group g = new Group();
         Scene s = new Scene(g);
         stage.setScene(s);
         stage.show();
-    
+
         g.getChildren().addAll(rect1, rect2);
         toolkit.fireTestPulse();
-    
+
         // try setting node at given index
         g.getChildren().set(1, rect3);
         toolkit.fireTestPulse();
@@ -193,18 +193,18 @@ public class ParentTest {
     public void testSetSameChild() {
         Rectangle rect1 = new Rectangle();
         Rectangle rect2 = new Rectangle();
-        
+
         Group g = new Group();
         Scene s = new Scene(g);
         stage.setScene(s);
         stage.show();
-    
+
         g.getChildren().addAll(rect1, rect2);
         toolkit.fireTestPulse();
-    
+
         // try setting the same node at given index
         g.getChildren().set(1, rect2);
-        
+
         toolkit.fireTestPulse();
         assertEquals(2, g.getChildren().size());
         assertEquals(2, ((NGGroup)g.impl_getPeer()).getChildren().size());
@@ -218,15 +218,15 @@ public class ParentTest {
         Rectangle rect4 = new Rectangle();
         Rectangle rect5 = new Rectangle();
         Rectangle rect6 = new Rectangle();
-        
+
         Group g = new Group();
         Scene s = new Scene(g);
         stage.setScene(s);
         stage.show();
-    
+
         g.getChildren().addAll(rect1, rect2, rect3, rect4, rect5, rect6);
         toolkit.fireTestPulse();
-    
+
         // try removing node from the end of the observableArrayList
         // and add it afterwords
         g.getChildren().remove(rect6);
@@ -235,7 +235,7 @@ public class ParentTest {
         assertEquals(6, g.getChildren().size());
         assertEquals(6, ((NGGroup)g.impl_getPeer()).getChildren().size());
     }
-    
+
     @Test
     public void testRemoveAddDiferentChild() {
         Rectangle rect1 = new Rectangle();
@@ -244,15 +244,15 @@ public class ParentTest {
         Rectangle rect4 = new Rectangle();
         Rectangle rect5 = new Rectangle();
         Rectangle rect6 = new Rectangle();
-        
+
         Group g = new Group();
         Scene s = new Scene(g);
         stage.setScene(s);
         stage.show();
-    
+
         g.getChildren().addAll(rect1, rect2, rect3, rect4, rect5);
         toolkit.fireTestPulse();
-    
+
         // try removing node from the end of the observableArrayList
         // and add a different one
         g.getChildren().remove(rect5);
@@ -285,7 +285,7 @@ public class ParentTest {
 
         Group g = new Group();
         g.getChildren().addAll(rect1,rect2,rect3);
-        
+
         try {
             g.getChildrenUnmodifiable().add(new Rectangle());
             fail("UnsupportedOperationException should have been thrown.");
@@ -299,7 +299,7 @@ public class ParentTest {
         Group g = new Group();
         g.layout();
         // this shouldn't fail even when the group doesn't have a parent
-        g.requestLayout();        
+        g.requestLayout();
     }
 
     @Test
@@ -307,7 +307,7 @@ public class ParentTest {
         Group g = new Group();
         g.setManaged(false);
         g.layout();
-        // this shouldn't fail even when the scene is not set       
+        // this shouldn't fail even when the scene is not set
         g.requestLayout();
     }
 
@@ -380,10 +380,10 @@ public class ParentTest {
     @Test(expected=IllegalArgumentException.class)
     public void testAddingClipNodeTwice() {
         Group g = new Group();
-        
+
         Node clipParent = new Rectangle();
         Node clipNode = new Rectangle();
-        
+
         clipParent.setClip(clipNode);
         try {
             // try to add node which is already set as a clip
@@ -424,7 +424,7 @@ public class ParentTest {
         Rectangle r2 = new Rectangle();
         Rectangle r3 = new Rectangle();
         Rectangle r4 = new Rectangle();
-        
+
         g.getChildren().addAll(r1, r2, r3, r4);
         g.getChildren().setAll(r1, r2, r2, r4);
     }
@@ -469,6 +469,88 @@ public class ParentTest {
         stage.show();
 
         // there are assertions tested down the stack (see RT-21746)
+    }
+
+    private static class LGroup extends Group {
+
+        private boolean layoutCalled;
+
+        @Override
+        public void requestLayout() {
+            super.requestLayout();
+            layoutCalled = true;
+        }
+
+        public void assertAndClear(boolean b) {
+            assertEquals(b, layoutCalled);
+            layoutCalled = false;
+        }
+
+        public void clear() {
+            layoutCalled = false;
+        }
+
+    }
+
+    @Test
+    public void requestLayoutAlwaysCalledUpToTheLayoutRoot() {
+        final Group root = new Group() {
+
+            @Override
+            public void requestLayout() {
+                fail();
+            }
+
+        };
+        final LGroup lroot = new LGroup();
+        lroot.setManaged(false);
+        root.getChildren().add(lroot);
+        final LGroup sub = new LGroup();
+        lroot.getChildren().add(sub);
+
+        lroot.clear();
+        sub.clear();
+        root.layout();
+
+        lroot.assertAndClear(false);
+        sub.assertAndClear(false);
+
+        sub.requestLayout();
+
+        lroot.assertAndClear(true);
+        sub.assertAndClear(true);
+
+        sub.requestLayout();
+        lroot.assertAndClear(true);
+        sub.assertAndClear(true);
+
+    }
+
+    @Test
+    public void requestLayoutNotPropagatingDuringLayout() {
+        final LGroup lroot = new LGroup();
+        lroot.setManaged(false);
+        final LGroup sub = new LGroup() {
+
+            @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+                requestLayout();
+            }
+
+        };
+        lroot.getChildren().add(sub);
+        lroot.clear();
+        sub.clear();
+
+        sub.requestLayout();
+        lroot.assertAndClear(true);
+        sub.assertAndClear(true);
+
+        lroot.layout();
+
+        lroot.assertAndClear(false);
+        sub.assertAndClear(true);
     }
 
     @Test
