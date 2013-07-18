@@ -54,7 +54,7 @@ public abstract class AbstractMasterTimer {
             return null;
         }
     };
-    
+
     protected final static String FULLSPEED_PROP = "javafx.animation.fullspeed";
     private static boolean fullspeed = Settings.getBoolean(FULLSPEED_PROP);
 
@@ -99,7 +99,6 @@ public abstract class AbstractMasterTimer {
                                                                      // snapshot
     private int animationTimersLength;
     private boolean animationTimersLocked;
-    private final boolean shouldUseNanoTime;
 
     // These two variables are ONLY USED if FIXED_PULSE_LENGTH_PROP is true. In this
     // case, instead of advancing time based on the system time (nanos etc) we instead
@@ -123,30 +122,28 @@ public abstract class AbstractMasterTimer {
     public int getDefaultResolution() {
         return PULSE_DURATION_TICKS;
     }
-    
+
     public void pause() {
         if (!paused) {
             startPauseTime = nanos();
             paused = true;
         }
     }
-    
+
     public void resume() {
         if (paused) {
             paused = false;
             totalPausedTime += nanos() - startPauseTime;
         }
     }
-    
+
     public long nanos() {
         if (fixedPulseLength > 0) {
             return debugNanos;
         }
 
         return paused ? startPauseTime :
-                (shouldUseNanoTime ?
-                        System.nanoTime() :
-                        System.currentTimeMillis() * 1000000) - totalPausedTime;
+                        System.nanoTime() - totalPausedTime;
     }
 
     public boolean isFullspeed() {
@@ -154,20 +151,19 @@ public abstract class AbstractMasterTimer {
     }
 
     /** Prevent external instantiation of MasterTimer. */
-    protected AbstractMasterTimer(boolean shouldUseNanoTime) {
-        this.shouldUseNanoTime = shouldUseNanoTime;
+    protected AbstractMasterTimer() {
     }
-    
+
     /**
      * Adds a PulseReceiver to the list of targets being tracked against the
      * global schedule. The target should already have an absolute start time
      * recorded in it and that time will be used to start the clip at the
      * appropriate wall clock time as defined by milliTime().
-     * 
+     *
      * Note that pulseReceiver cannot be removed from the MasterTimer directly.
      * It is removed automatically in the timePulse-iteration if timePulse
      * returns true.
-     * 
+     *
      * @param target
      *            the Clip to be added to the scheduling queue
      */
@@ -184,7 +180,7 @@ public abstract class AbstractMasterTimer {
     }
 
     public void removePulseReceiver(PulseReceiver target) {
-        if (receiversLocked) { 
+        if (receiversLocked) {
             receivers = receivers.clone();
             receiversLocked = false;
         }
@@ -217,7 +213,7 @@ public abstract class AbstractMasterTimer {
     }
 
     public void removeAnimationTimer(AnimationTimer timer) {
-        if (animationTimersLocked) { 
+        if (animationTimersLocked) {
             animationTimers = animationTimers.clone();
             animationTimersLocked = false;
         }
@@ -257,7 +253,7 @@ public abstract class AbstractMasterTimer {
     private final class MainLoop implements DelayedRunnable {
 
         private boolean inactive = true;
-        
+
         private long nextPulseTime = nanos();
         private long lastPulseDuration = Integer.MIN_VALUE;
 

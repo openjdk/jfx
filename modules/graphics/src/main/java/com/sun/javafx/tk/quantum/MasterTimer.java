@@ -43,10 +43,9 @@ import com.sun.scenario.animation.AnimationPulse;
  * For now it is hidden until we have some use to expose it.
  */
 public final class MasterTimer extends AbstractMasterTimer {
-    
+
     /** Prevent external instantiation of MasterTimer */
     private MasterTimer() {
-        super(true);
     }
 
     private static final Object MASTER_TIMER_KEY = new StringBuilder(
