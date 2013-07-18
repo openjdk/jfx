@@ -227,7 +227,7 @@ public class FontTypeTest {
         txt.setFont(Font.font("Amble", 32));
 
         Group g = new Group();
-        txt.setStyle("-fx-font: 16 Amble;");
+        g.setStyle("-fx-font: 16 Amble;");
 
         Scene scene  = new Scene(g);
         g.getChildren().add(txt);

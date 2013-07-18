@@ -110,20 +110,6 @@ final class CssStyleHelper {
         final StyleMap styleMap =
                 StyleManager.getInstance().findMatchingStyles(node, triggerStates);
 
-        if (node.styleHelper != null) {
-
-            boolean sameMap = false;
-
-            if (styleMap != null) {
-                StyleMap currentMap = node.styleHelper.getStyleMap(node);
-                // check instance equality!
-                if (currentMap == styleMap) {
-                    return node.styleHelper;
-                }
-            }
-
-        }
-
         if (styleMap == null || styleMap.isEmpty()) {
 
             boolean mightInherit = false;
@@ -471,7 +457,7 @@ final class CssStyleHelper {
 
         if (cachedFont == null) {
 
-            cachedFont = lookupFont(node, "-fx-font", true, null);
+            cachedFont = lookupFont(node, "-fx-font", cachedFont, null);
 
             if (cachedFont == SKIP) cachedFont = getCachedFont(node.getStyleableParent());
             if (cachedFont == null) cachedFont = new CalculatedValue(Font.getDefault(), null, false);
@@ -742,7 +728,7 @@ final class CssStyleHelper {
 
         if (styleable.getConverter() == FontConverter.getInstance()) {
 
-            return lookupFont(node, styleable.getProperty(), false, styleList);
+            return lookupFont(node, styleable.getProperty(), cachedFont, styleList);
         }
 
         final String property = styleable.getProperty();
@@ -1526,7 +1512,7 @@ final class CssStyleHelper {
      /*package access for testing*/ CalculatedValue lookupFont(
             final Node styleable,
             final String property,
-            boolean lookupForFontCache,
+            final CalculatedValue cachedFont,
             final List<Style> styleList)
     {
 
@@ -1536,7 +1522,7 @@ final class CssStyleHelper {
         // Each time a sub-property is encountered, cvFont is passed along to
         // calculateValue and the resulting font becomes cvFont. In the end
         // cvFont is returned.
-        CalculatedValue cvFont = null;
+        CalculatedValue cvFont = cachedFont;
 
         Set<PseudoClass> states = styleable.pseudoClassStates;
 
@@ -1554,11 +1540,16 @@ final class CssStyleHelper {
             }
         }
 
+        final boolean userSetFont = (origin == StyleOrigin.USER);
+
         //
         // Look up the font- properties
         //
         CascadingStyle fontShorthand = getStyle(styleable, property, states);
-        if (fontShorthand == null) {
+
+        // don't look past current node for font shorthand if user set the font
+        // or if we're looking up the font for font cache.
+        if (fontShorthand == null && origin != StyleOrigin.USER) {
 
             Node parent = styleable != null ? styleable.getParent() : null;
 
@@ -1590,7 +1581,6 @@ final class CssStyleHelper {
 
         }
 
-        // if user set the font, then fontShorthand must be at zero
         if (fontShorthand != null) {
 
             //
@@ -1616,14 +1606,16 @@ final class CssStyleHelper {
         }
 
         CascadingStyle fontSize = getStyle(styleable, property.concat("-size"), states);
-        if (fontSize == null) {
+        // don't look past current node for font size if user set the font
+        // or if we're looking up the font for font cache.
+        if (fontSize == null && origin != StyleOrigin.USER) {
             fontSize = lookupInheritedFont(styleable, property.concat("-size"), distance);
         }
 
         // font-size must be closer and more specific than font shorthand
         if (fontSize != null) {
 
-            if (fontShorthand == null || fontShorthand.compareTo(fontSize) > 0) {
+            if (fontShorthand == null || fontShorthand.compareTo(fontSize) >= 0) {
 
                 if (origin == null || origin.compareTo(fontSize.getOrigin()) <= 0) {
 
@@ -1650,16 +1642,19 @@ final class CssStyleHelper {
 
         }
 
-        if (lookupForFontCache == false ) {
+        // if cachedFont is null, then we're in this method to look up a font for the CacheContainer's fontSizeCache
+        // and we only care about font-size or the size from font shorthand.
+        if (cachedFont != null ) {
 
             CascadingStyle fontWeight = getStyle(styleable, property.concat("-weight"), states);
-            if (fontWeight == null) {
+            // don't look past current node for font weight if user set the font
+            if (fontWeight == null && origin != StyleOrigin.USER) {
                 fontWeight = lookupInheritedFont(styleable,property.concat("-weight"), distance);
             }
 
             if (fontWeight != null) {
 
-                if (fontShorthand == null || fontShorthand.compareTo(fontWeight) > 0) {
+                if (fontShorthand == null || fontShorthand.compareTo(fontWeight) >= 0) {
 
                     if (origin == null || origin.compareTo(fontWeight.getOrigin()) <= 0) {
 
@@ -1685,13 +1680,14 @@ final class CssStyleHelper {
             }
 
             CascadingStyle fontStyle = getStyle(styleable, property.concat("-style"), states);
-            if (fontStyle == null) {
+            // don't look past current node for font style if user set the font
+            if (fontStyle == null && origin != StyleOrigin.USER) {
                 fontStyle = lookupInheritedFont(styleable, property.concat("-style"), distance);
             }
 
             if (fontStyle != null) {
 
-                if (fontShorthand == null || fontShorthand.compareTo(fontStyle) > 0) {
+                if (fontShorthand == null || fontShorthand.compareTo(fontStyle) >= 0) {
 
                     if (origin == null || origin.compareTo(fontStyle.getOrigin()) <= 0) {
 
@@ -1718,13 +1714,14 @@ final class CssStyleHelper {
             }
 
             CascadingStyle fontFamily = getStyle(styleable, property.concat("-family"), states);
-            if (fontFamily == null) {
+            // don't look past current node for font family if user set the font
+            if (fontFamily == null && origin != StyleOrigin.USER) {
                 fontFamily = lookupInheritedFont(styleable,property.concat("-family"), distance);
             }
 
             if (fontFamily != null) {
 
-                if (fontShorthand == null || fontShorthand.compareTo(fontFamily) > 0) {
+                if (fontShorthand == null || fontShorthand.compareTo(fontFamily) >= 0) {
 
                     if (origin == null || origin.compareTo(fontFamily.getOrigin()) <= 0) {
 
@@ -1757,7 +1754,8 @@ final class CssStyleHelper {
         // If the origin is USER, then skip the value.
         if (cvFont != null) {
 
-            if (lookupForFontCache) {
+            // if cachedFont is null, then we're in this method to look up a font for the CacheContainer's fontSizeCache
+            if (cachedFont == null) {
                 return cvFont;
 
             } else if (origin != null && origin != StyleOrigin.USER) {
@@ -1780,7 +1778,7 @@ final class CssStyleHelper {
         Node parent = styleable != null ? styleable.getParent() : null;
 
         int nlooks = distance;
-        while (parent != null && nlooks >= 0) {
+        while (parent != null && nlooks > 0) {
 
             CssStyleHelper parentStyleHelper = parent.styleHelper;
             if (parentStyleHelper != null) {
