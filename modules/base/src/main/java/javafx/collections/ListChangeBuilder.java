@@ -615,7 +615,7 @@ final class ListChangeBuilder<E> {
 
         private void checkState() {
             if (!onChange) {
-                throw new IllegalStateException();
+                throw new IllegalStateException("Invalid Change state: next() must be called before inspecting the Change.");
             }
         }
 
