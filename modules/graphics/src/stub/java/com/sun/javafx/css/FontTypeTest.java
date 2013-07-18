@@ -201,7 +201,7 @@ public class FontTypeTest {
 
     }
 
-    @org.junit.Ignore("Pending RT-31305") @Test public void test_RT_25355_weightFirstInheritedShorthand() {
+    @Test public void test_RT_25355_weightFirstInheritedShorthand() {
 
         Text txt = new Text("test_RT_25355");
         txt.setStyle("-fx-font-weight: bold;");
@@ -218,6 +218,25 @@ public class FontTypeTest {
         assertEquals("Bold", f.getStyle());
         assertEquals("Amble", f.getFamily());
         assertEquals(16, f.getSize(),0);
+
+    }
+
+    @Test public void testInheritedFontDoesNotOverrideUserSetFont() {
+
+        Text txt = new Text("testInheritedFontDoesNotOverrideUserSetFont");
+        txt.setFont(Font.font("Amble", 32));
+
+        Group g = new Group();
+        txt.setStyle("-fx-font: 16 Amble;");
+
+        Scene scene  = new Scene(g);
+        g.getChildren().add(txt);
+
+        g.impl_processCSS(true);
+
+        Font f = txt.getFont();
+        assertEquals("Amble", f.getFamily());
+        assertEquals(32, f.getSize(),0);
 
     }
 
