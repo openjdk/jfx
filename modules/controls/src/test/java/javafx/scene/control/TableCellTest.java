@@ -180,6 +180,8 @@ public class TableCellTest {
         cell.updateIndex(1);
         assertNull(cell.getItem());
         assertFalse(cell.isEmpty());
-        assertEquals(2, rt_29923_count);
+        assertEquals(1, rt_29923_count);    // even though the index has changed,
+                                            // the item is the same, so we don't
+                                            // update the cell item.
     }
 }

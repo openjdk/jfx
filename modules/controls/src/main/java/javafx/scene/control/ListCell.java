@@ -426,14 +426,23 @@ public class ListCell<T> extends IndexedCell<T> {
         // Compute whether the index for this cell is for a real item
         boolean valid = items != null && index >=0 && index < items.size();
 
+        final T oldValue = getItem();
+        final boolean isEmpty = isEmpty();
+
         // Cause the cell to update itself
         if (valid) {
-            T oldValue = getItem();
-            T newValue = items.get(index);
-            
-            updateItem(newValue, false);
+            final T newValue = items.get(index);
+
+            if ((newValue != null && ! newValue.equals(oldValue)) ||
+                    oldValue != null && ! oldValue.equals(newValue)) {
+                updateItem(newValue, false);
+            } else if(isEmpty && newValue == null) {
+                updateItem(newValue, false);
+            }
         } else {
-            updateItem(null, true);
+            if (!isEmpty && oldValue != null) {
+                updateItem(null, true);
+            }
         }
     }
     

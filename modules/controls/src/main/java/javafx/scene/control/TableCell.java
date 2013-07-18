@@ -534,6 +534,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
         final TableColumn tableColumn = getTableColumn();
         final int itemCount = items.size();
         final int index = getIndex();
+        final boolean isEmpty = isEmpty();
+        final T oldValue = getItem();
         
         // there is a whole heap of reasons why we should just punt...
         if (index >= itemCount ||
@@ -542,16 +544,21 @@ public class TableCell<S,T> extends IndexedCell<T> {
                 !isVisible() ||
                 tableColumn == null || 
                 !tableColumn.isVisible()) {
-            
-            updateItem(null, true);
+
+            if (!isEmpty && oldValue != null) {
+                updateItem(null, true);
+            }
             return;
         } else {
             currentObservableValue = tableColumn.getCellObservableValue(index);
-            T oldValue = getItem();
-            T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
-            
-            // update the 'item' property of this cell.
-            updateItem(newValue, false);
+            final T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
+
+            if ((newValue != null && ! newValue.equals(oldValue)) ||
+                    oldValue != null && ! oldValue.equals(newValue)) {
+                updateItem(newValue, false);
+            } else if(isEmpty && newValue == null) {
+                updateItem(newValue, false);
+            }
         }
         
         if (currentObservableValue == null) {

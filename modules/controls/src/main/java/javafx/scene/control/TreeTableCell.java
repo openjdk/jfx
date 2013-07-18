@@ -526,6 +526,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         final TreeTableColumn<S,T> tableColumn = getTableColumn();
         final int itemCount = tableView == null ? -1 : getTreeTableView().getExpandedItemCount();
         final int index = getIndex();
+        final boolean isEmpty = isEmpty();
+        final T oldValue = getItem();
         
         // there is a whole heap of reasons why we should just punt...
         if (index >= itemCount ||
@@ -535,17 +537,22 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                 tableColumn == null || 
                 !tableColumn.isVisible() ||
                 tableView.getRoot() == null) {
-            
-            updateItem(null, true);
+
+            if (!isEmpty && oldValue != null) {
+                updateItem(null, true);
+            }
             return;
         } else {
             currentObservableValue = tableColumn.getCellObservableValue(index);
             
-            T oldValue = getItem();
-            T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
+            final T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
             
-            // update the 'item' property of this cell.
-            updateItem(newValue, false);
+            if ((newValue != null && ! newValue.equals(oldValue)) ||
+                    oldValue != null && ! oldValue.equals(newValue)) {
+                updateItem(newValue, false);
+            } else if(isEmpty && newValue == null) {
+                updateItem(newValue, false);
+            }
         }
         
         if (currentObservableValue == null) {

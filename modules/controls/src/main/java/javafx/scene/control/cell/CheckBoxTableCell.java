@@ -244,7 +244,9 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
         this.getStyleClass().add("check-box-table-cell");
         
         this.checkBox = new CheckBox();
-        setGraphic(checkBox);
+
+        // by default the graphic is null until the cell stops being empty
+        setGraphic(null);
         
         setSelectedStateCallback(getSelectedProperty);
         setConverter(converter);
