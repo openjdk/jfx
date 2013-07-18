@@ -470,12 +470,11 @@ public class TreeCell<T> extends IndexedCell<T> {
         
         // Compute whether the index for this cell is for a real item
         boolean valid = index >=0 && index < tv.getExpandedItemCount();
+        final boolean isEmpty = isEmpty();
+        final TreeItem<T> oldTreeItem = getTreeItem();
 
         // Cause the cell to update itself
         if (valid) {
-            TreeItem<T> oldTreeItem = getTreeItem();
-            T oldValue = getItem();
-            
             // update the TreeCell state.
             // get the new treeItem that is about to go in to the TreeCell
             TreeItem<T> newTreeItem = tv.getTreeItem(index);
@@ -486,11 +485,19 @@ public class TreeCell<T> extends IndexedCell<T> {
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
-            updateTreeItem(newTreeItem);
-            updateItem(newValue, false);
+            if ((newTreeItem != null && ! newTreeItem.equals(oldTreeItem)) ||
+                    oldTreeItem != null && ! oldTreeItem.equals(newTreeItem)) {
+                updateTreeItem(newTreeItem);
+                updateItem(newValue, false);
+            } else if(isEmpty && newValue == null) {
+                updateTreeItem(newTreeItem);
+                updateItem(newValue, false);
+            }
         } else {
-            updateTreeItem(null);
-            updateItem(null, true);
+            if (!isEmpty && oldTreeItem != null) {
+                updateTreeItem(null);
+                updateItem(null, true);
+            }
         }
     }
 

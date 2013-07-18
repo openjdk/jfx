@@ -25,6 +25,8 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.value.ChangeListener;
@@ -33,6 +35,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.scene.image.ImageView;
 import javafx.util.Callback;
 
 import com.sun.javafx.stage.EmbeddedWindow;
@@ -704,6 +707,8 @@ public class ListCellTest {
         cell.updateIndex(1);
         assertNull(cell.getItem());
         assertFalse(cell.isEmpty());
-        assertEquals(2, rt_29923_count);
+        assertEquals(1, rt_29923_count);    // even though the index has changed,
+                                            // the item is the same, so we don't
+                                            // update the cell item.
     }
 }
