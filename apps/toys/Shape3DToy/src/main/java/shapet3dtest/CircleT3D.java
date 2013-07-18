@@ -35,8 +35,12 @@ import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
+import javafx.scene.shape.Circle;
+import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -46,23 +50,16 @@ public class CircleT3D extends Application {
         final double sceneWidth = 640;
         final double sceneHeight = 480;
 
-//        final Circle circle = new Circle(sceneWidth / 2, sceneHeight / 2, 120);
-//        circle.setFill(new LinearGradient(0, 0, 1, 1, true,
-//                CycleMethod.NO_CYCLE,
-//                new Stop(0, Color.LIME),
-//                new Stop(1, Color.GREEN)));
-//        circle.setStroke(Color.WHITE);
-//        circle.setStrokeWidth(5);
-////        circle.setRotate(-30);
-//        circle.setRotationAxis(Rotate.Y_AXIS);
+        final Circle circle = new Circle(sceneWidth / 2, sceneHeight / 2, 120);
+        circle.setFill(new LinearGradient(0, 0, 1, 1, true,
+                CycleMethod.NO_CYCLE,
+                new Stop(0, Color.LIME),
+                new Stop(1, Color.GREEN)));
+        circle.setStroke(Color.WHITE);
+        circle.setStrokeWidth(5);
+        circle.setRotationAxis(Rotate.Y_AXIS);
 
-        Button button = new Button("RICHARD!!");
-        button.setTranslateX(sceneWidth / 2);
-        button.setTranslateY(sceneHeight / 2);
-        button.setScaleX(2);
-        button.setScaleY(2);
-
-        final Scene scene = new Scene(new Group(button), sceneWidth, sceneHeight);
+        final Scene scene = new Scene(new Group(circle), sceneWidth, sceneHeight);
         scene.setCamera(new PerspectiveCamera());
         scene.setFill(Color.BLACK);
         stage.setScene(scene);
@@ -75,7 +72,7 @@ public class CircleT3D extends Application {
             System.out.println("*************************************************************");
         }
 
-        final RotateTransition tx = new RotateTransition(Duration.seconds(20), button);
+        final RotateTransition tx = new RotateTransition(Duration.seconds(2), circle);
         tx.setToAngle(360);
         tx.setCycleCount(RotateTransition.INDEFINITE);
         tx.setInterpolator(Interpolator.LINEAR);
