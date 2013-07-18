@@ -77,19 +77,19 @@ final class SWResourceFactory
         context.dispose();
     }
 
-    @Override public ShapeRep createArcRep(boolean needs3D) {
+    @Override public ShapeRep createArcRep() {
         return theRep;
     }
     
-    @Override public ShapeRep createEllipseRep(boolean needs3D) {
+    @Override public ShapeRep createEllipseRep() {
         return theRep;
     }
     
-    @Override public ShapeRep createRoundRectRep(boolean needs3D) {
+    @Override public ShapeRep createRoundRectRep() {
         return rectRep;
     }
     
-    @Override public ShapeRep createPathRep(boolean needs3D) {
+    @Override public ShapeRep createPathRep() {
         return theRep;
     }
             

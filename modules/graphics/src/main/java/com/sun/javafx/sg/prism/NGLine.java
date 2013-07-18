@@ -45,12 +45,7 @@ public class NGLine extends NGShape {
         geometryChanged();
     }
 
-    @Override
-    protected void renderContent(Graphics g) {
-        if (!g.getTransformNoClone().is2D()) {
-            super.renderContent(g);
-            return;
-        }
+    @Override protected void renderContent2D(Graphics g, boolean printing) {
         if ((mode == Mode.STROKE || mode == Mode.STROKE_FILL) &&
             drawStroke.getLineWidth() > 0 &&
             drawStroke.getType() != BasicStroke.TYPE_INNER)

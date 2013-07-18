@@ -95,7 +95,7 @@ public interface ResourceFactory extends GraphicsResource {
      * due to renderer limitations, some format conversion may be necessary so
      * the texture format may end up being different from the video image format.
      *
-     * @param vdb the video image that we need to create a new texture for
+     * @param frame the video image that we need to create a new texture for
      * @return texture most appropriate for the given video image.
      */
     public Texture createTexture(MediaFrame frame);
@@ -159,10 +159,10 @@ public interface ResourceFactory extends GraphicsResource {
     public Presentable createPresentable(PresentableState pState);
     public VertexBuffer createVertexBuffer(int maxQuads);
 
-    public ShapeRep createPathRep(boolean needs3D);
-    public ShapeRep createRoundRectRep(boolean needs3D);
-    public ShapeRep createEllipseRep(boolean needs3D);
-    public ShapeRep createArcRep(boolean needs3D);
+    public ShapeRep createPathRep();
+    public ShapeRep createRoundRectRep();
+    public ShapeRep createEllipseRep();
+    public ShapeRep createArcRep();
 
     public void addFactoryListener(ResourceFactoryListener l);
     public void removeFactoryListener(ResourceFactoryListener l);

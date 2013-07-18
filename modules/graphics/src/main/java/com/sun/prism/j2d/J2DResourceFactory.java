@@ -61,19 +61,19 @@ class J2DResourceFactory extends BaseResourceFactory
 
     private static ShapeRep theRep = new BasicShapeRep();
 
-    public ShapeRep createArcRep(boolean needs3D) {
+    public ShapeRep createArcRep() {
         return theRep;
     }
 
-    public ShapeRep createEllipseRep(boolean needs3D) {
+    public ShapeRep createEllipseRep() {
         return theRep;
     }
 
-    public ShapeRep createRoundRectRep(boolean needs3D) {
+    public ShapeRep createRoundRectRep() {
         return theRep;
     }
 
-    public ShapeRep createPathRep(boolean needs3D) {
+    public ShapeRep createPathRep() {
         return theRep;
     }
 

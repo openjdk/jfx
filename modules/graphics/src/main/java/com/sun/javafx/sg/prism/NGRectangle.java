@@ -169,8 +169,8 @@ public class NGRectangle extends NGShape {
     }
 
     @Override
-    protected ShapeRep createShapeRep(Graphics g, boolean needs3D) {
-        return g.getResourceFactory().createRoundRectRep(needs3D);
+    protected ShapeRep createShapeRep(Graphics g) {
+        return g.getResourceFactory().createRoundRectRep();
     }
 
     private static final double SQRT_2 = Math.sqrt(2.0);
