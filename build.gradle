@@ -319,6 +319,10 @@ ext.IS_DOC_LINT = DOC_LINT != "none"
 defineProperty("USE_DEPEND", "true")
 ext.USE_DEPEND = Boolean.parseBoolean(USE_DEPEND)
 
+// Specifies whether to generate code coverage statistics when running tests
+defineProperty("JCOV", "false")
+ext.DO_JCOV = Boolean.parseBoolean(JCOV)
+
 // Define the number of threads to use when compiling (specifically for native compilation)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
@@ -853,7 +857,9 @@ allprojects {
     // setup this dependency here.
     dependencies {
         testCompile group: "junit", name: "junit", version: "4.8.2"
-        if (BUILD_CLOSED) testCompile name: "jcov"
+        if (BUILD_CLOSED && DO_JCOV)  {
+            testCompile name: "jcov"
+        }
     }
 
     // At the moment the ASM library shipped with Gradle that is used to
@@ -872,7 +878,7 @@ allprojects {
         include("**/*Test.*");
         exclude("**/DepthTest.*");
         exclude("**/*Abstract*.*");
-        if (BUILD_CLOSED) {
+        if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
     }
@@ -1197,7 +1203,7 @@ project(":graphics") {
         test.scanForTestClasses = false
         test.include "**/*Test.*"
         test.exclude "**/*Abstract*.*"
-        if (BUILD_CLOSED) {
+        if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
     }
