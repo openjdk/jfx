@@ -48,8 +48,8 @@ if (USE_LIPO instanceof String) IOS.useLipo = Boolean.parseBoolean(USE_LIPO)
 if (GENERATE_SYMBOLS instanceof String) IOS.generateSymbols = Boolean.parseBoolean(GENERATE_SYMBOLS)
 
 IOS.generateSymbolsExcludes = [
-    "libprism-sw.a",
-    "libdecora-sse-armv7.a"
+    "libprism_sw.a",
+    "libdecora_sse_armv7.a"
 ]
 
 defineProperty("IOS_VERSION", "6.1")
@@ -156,7 +156,7 @@ IOS.decora.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS),
 IOS.decora.lib = "decora_sse_${archArm}"
 
 IOS.prism = [:]
-IOS.prism.lib = "prism-common"
+IOS.prism.lib = "prism_common"
 IOS.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 IOS.prism.variants = ["arm", "x86"];
 
@@ -177,7 +177,7 @@ IOS.prism.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneS
 IOS.prism.x86.lib = "prism_common_${archX86}"
 
 IOS.prismSW = [:]
-IOS.prismSW.lib = "prism-sw"
+IOS.prismSW.lib = "prism_sw"
 IOS.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 IOS.prismSW.variants = ["arm", "x86"];
 
@@ -198,7 +198,7 @@ IOS.prismSW.x86.linkFlags = [IOS.prism.x86.linkFlags].flatten()
 IOS.prismSW.x86.lib = "prism_sw_${archX86}"
 
 IOS.iio = [:]
-IOS.iio.lib = "javafx-iio"
+IOS.iio.lib = "javafx_iio"
 IOS.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 IOS.iio.variants = ["arm", "x86"];
 
@@ -222,7 +222,7 @@ IOS.iio.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim
 IOS.iio.x86.lib = "javafx_iio_${archX86}"
 
 IOS.prismES2 = [:]
-IOS.prismES2.lib = "prism-es2"
+IOS.prismES2.lib = "prism_es2"
 IOS.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 IOS.prismES2.variants = ["arm", "x86"];
 
@@ -248,7 +248,7 @@ IOS.prismES2.x86.lib = "prism_es2_${archX86}"
 
 def closedDir = file("$projectDir/../rt-closed")
 IOS.font = [:]
-IOS.font.lib = "javafx-font"
+IOS.font.lib = "javafx_font"
 IOS.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
@@ -271,7 +271,7 @@ IOS.font.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSi
 IOS.font.x86.lib = "javafx_font_${archX86}"
 
 IOS.fontT2K = [:]
-IOS.fontT2K.lib = "javafx-font-t2k"
+IOS.fontT2K.lib = "javafx_font_t2k"
 IOS.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
 IOS.fontT2K.variants = ["arm", "x86"];
 
@@ -282,7 +282,7 @@ IOS.fontT2K.arm.nativeSource = [
         file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
 IOS.fontT2K.arm.compiler = compiler
 IOS.fontT2K.arm.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
-IOS.fontT2K.arm.linker = _inker
+IOS.fontT2K.arm.linker = linker
 IOS.fontT2K.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
 IOS.fontT2K.arm.lib = "javafx_font_t2k_${archArm}"
 
@@ -295,7 +295,7 @@ IOS.fontT2K.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhon
 IOS.fontT2K.x86.lib = "javafx_font_t2k_${archX86}"
 
 IOS.webview = [:]
-IOS.webview.lib = "javafx-ios-webnode"
+IOS.webview.lib = "javafx_ios_webnode"
 IOS.webview.javahInclude = ["javafx/scene/web/*"]
 IOS.webview.variants = ["arm", "x86"];
 
@@ -305,7 +305,7 @@ IOS.webview.arm.compiler = compiler
 IOS.webview.arm.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.webview.arm.linker = linker
 IOS.webview.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.webview.arm.lib = "javafx-ios-webnode-${archArm}"
+IOS.webview.arm.lib = "javafx_ios_webnode_${archArm}"
 
 IOS.webview.x86 = [:]
 IOS.webview.x86.nativeSource = [IOS.webview.arm.nativeSource].flatten()
@@ -313,7 +313,7 @@ IOS.webview.x86.compiler = compiler
 IOS.webview.x86.ccFlags = [ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.webview.x86.linker = linker
 IOS.webview.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.webview.x86.lib = "javafx-ios-webnode-${archX86}"
+IOS.webview.x86.lib = "javafx_ios_webnode_${archX86}"
 
 project(":web") {
     if (BUILD_CLOSED) {
