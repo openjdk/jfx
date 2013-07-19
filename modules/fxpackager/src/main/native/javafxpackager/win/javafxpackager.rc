@@ -35,10 +35,10 @@ BEGIN
     BEGIN
         BLOCK "000004b0"
         BEGIN
-            VALUE "CompanyName",      "Oracle\0"       "\0"
+            VALUE "CompanyName",      "Oracle Corporation\0"       "\0"
             VALUE "FileDescription",  "JavaFX(TM) Packager\0"
             VALUE "InternalName",     "javafxpackager\0"
-            VALUE "LegalCopyright",   "Copyright 2011\0"     "\0"
+            VALUE "LegalCopyright",   "Copyright 2013\0"     "\0"
             VALUE "OriginalFilename", "javafxpackager.exe\0"
             VALUE "ProductName",      "JavaFX(TM) Runtime\0"          "\0"
             VALUE "ProductVersion",   XSTR(JFX_DVERSION)           "\0"
