@@ -948,7 +948,7 @@ public abstract class PrismFontFactory implements FontFactory {
             for (int i=0; i < linkListLen; i++) {
                 String[] splitFontData = fontRegList[i].split(",");
                 int len = splitFontData.length;
-                String file = splitFontData[0];
+                String file = getPathNameWindows(splitFontData[0]);
                 String name = (len > 1) ? splitFontData[1] : null;
                 if (name != null && fontRegInfo[1].contains(name)) {
                     continue;
@@ -972,16 +972,16 @@ public abstract class PrismFontFactory implements FontFactory {
 
         if (PlatformUtil.isWinVistaOrLater()) {
             // CJK Ext B Supplementary character fallbacks.
-            fontRegInfo[0].add("mingliub.ttc");
+            fontRegInfo[0].add(getPathNameWindows("mingliub.ttc"));
             fontRegInfo[1].add("MingLiU-ExtB");
 
             if (PlatformUtil.isWin7OrLater()) {
                 // Add Segoe UI Symbol to Windows 7 or later fallback list
-                fontRegInfo[0].add("seguisym.ttf");
+                fontRegInfo[0].add(getPathNameWindows("seguisym.ttf"));
                 fontRegInfo[1].add("Segoe UI Symbol");
             } else {
                 // Add Cambria Math to Windows Vista fallback list
-                fontRegInfo[0].add("cambria.ttc");
+                fontRegInfo[0].add(getPathNameWindows("cambria.ttc"));
                 fontRegInfo[1].add("Cambria Math");
             }
         }
