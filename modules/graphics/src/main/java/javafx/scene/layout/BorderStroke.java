@@ -158,13 +158,6 @@ public class BorderStroke {
     final Insets innerEdge;
     final Insets outerEdge;
 
-    public void solid(Region region) {
-        region.setStyle("-fx-background-color: lightgrey;" +
-                        "-fx-border-style: solid;" +
-                        "-fx-border-width: 5;" +
-                        "-fx-border-color: red;");
-    }
-
     /**
      * Defines the radii for each corner of this BorderStroke. This will never
      * be null, and defaults to CornerRadii.EMPTY.
