@@ -51,7 +51,9 @@ public class DWGlyph implements Glyph {
     private static D2D1_COLOR_F WHITE = new D2D1_COLOR_F(1f, 1f, 1f, 1f);
     private static D2D1_MATRIX_3X2_F D2D2_MATRIX_IDENTITY = new D2D1_MATRIX_3X2_F(1,0, 0,1, 0,0);
 
-    DWGlyph(DWFontStrike strike, int glyphCode, boolean drawShapes) {
+
+    DWGlyph(DWFontStrike strike, int glyphCode, float advanceOffset,
+            float ascenderOffset, boolean drawShapes) {
         this.strike = strike;
         this.drawShapes = drawShapes;
 
@@ -59,9 +61,10 @@ public class DWGlyph implements Glyph {
         run = new DWRITE_GLYPH_RUN();
         run.fontFace = face.ptr;
         run.fontEmSize = strike.getSize();
-        run.glyphCount = 1;
         run.glyphIndices = (short)glyphCode;
         run.glyphAdvances = 0;
+        run.advanceOffset = advanceOffset;
+        run.ascenderOffset = ascenderOffset;
         run.bidiLevel = 0; //should not matter as it draws just one glyph
         run.isSideways = false;
 

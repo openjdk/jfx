@@ -36,6 +36,7 @@ public class TextRun implements GlyphList {
     int[] gids;
     float[] positions;
     int[] charIndices;
+    Object[] glyphData;
     int start, length;
     float width = -1;
     byte level;
@@ -255,6 +256,23 @@ public class TextRun implements GlyphList {
         flags |= FLAGS_RIGHT_BEARING;
     }
 
+    /* This method can be used as a medium to allow the glyph layout to provided
+     * the rendered with additional data.
+     * For example, used by DirectWrite use this to transfer the glyph offsets.
+     *
+     * Should only be called after shape, and only for complex text.
+     */
+    public void setGlyphData(int index, Object data) {
+        if (glyphData == null) {
+            glyphData = new Object[glyphCount];
+        }
+        glyphData[index] = data;
+    }
+
+    public Object getGlyphData(int index) {
+        return glyphData != null ? glyphData[index] : null;
+    }
+
     public int getWrapIndex(float width) {
         if (glyphCount == 0) return 0;
         if (isLeftToRight()) {
@@ -434,6 +452,7 @@ public class TextRun implements GlyphList {
         positions = null;
         charIndices = null;
         gids = null;
+        glyphData = null;
         width = -1;
         ascent = descent = leading = 0;
         glyphCount = 0;
@@ -477,6 +496,7 @@ public class TextRun implements GlyphList {
                 }
                 newRun.shape(newLength, newGlyphs, newPos, null);
             }
+            /* ignore glyphData array as it is only used for complex text */
         } else {
             reset();
         }
@@ -503,6 +523,7 @@ public class TextRun implements GlyphList {
         /* do not clear SPLIT here as it is still needed for merging */
         int mask = FLAGS_SOFTBREAK | FLAGS_NO_LINK_AFTER | FLAGS_NO_LINK_BEFORE;
         newRun.flags = flags & ~mask;
+        newRun.glyphData = glyphData;
         return newRun;
     }
 

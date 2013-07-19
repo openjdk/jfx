@@ -56,24 +56,16 @@ class JFXTextRenderer extends IUnknown {
         return result != 0 ? new IDWriteFontFace(result) : null;
     }
 
-    int[] GetGlyphIndices() {
-        return OS.JFXTextRendererGetGlyphIndices(ptr);
-    }
-
     int GetGlyphIndices(int[] glyphs, int start, int slot) {
         return OS.JFXTextRendererGetGlyphIndices(ptr, glyphs, start, slot);
-    }
-
-    float[] GetGlyphAdvances() {
-        return OS.JFXTextRendererGetGlyphAdvances(ptr);
     }
 
     int GetGlyphAdvances(float[] advances, int start) {
         return OS.JFXTextRendererGetGlyphAdvances(ptr, advances, start);
     }
 
-    int[] GetClusterMap() {
-        return OS.JFXTextRendererGetClusterMap(ptr);
+    int GetGlyphOffsets(float[] offsets, int start) {
+        return OS.JFXTextRendererGetGlyphOffsets(ptr, offsets, start);
     }
 
     int GetClusterMap(int[] clusterMap, int start) {

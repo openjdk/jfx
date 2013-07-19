@@ -203,11 +203,9 @@ class OS {
     static final native int JFXTextRendererGetGlyphCount(long ptr);
     static final native int JFXTextRendererGetTotalGlyphCount(long ptr);
     static final native long JFXTextRendererGetFontFace(long ptr);
-    static final native int[] JFXTextRendererGetGlyphIndices(long ptr);
     static final native int JFXTextRendererGetGlyphIndices(long ptr, int[] glyphs, int start, int slot);
-    static final native float[] JFXTextRendererGetGlyphAdvances(long ptr);
     static final native int JFXTextRendererGetGlyphAdvances(long ptr, float[] advances, int start);
-    static final native int[] JFXTextRendererGetClusterMap(long ptr);
+    static final native int JFXTextRendererGetGlyphOffsets(long ptr, float[] offsets, int start);
     static final native int JFXTextRendererGetClusterMap(long ptr, int[] clusterMap, int start);
 
     //IDWriteFontFace

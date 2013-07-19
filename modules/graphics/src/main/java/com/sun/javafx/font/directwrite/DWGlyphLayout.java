@@ -30,6 +30,7 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
+import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.GlyphLayout;
 import com.sun.javafx.text.PrismTextLayout;
@@ -39,6 +40,7 @@ public class DWGlyphLayout extends GlyphLayout {
 
     private static final String LOCALE = "en-us";
 
+    @Override
     protected TextRun addTextRun(PrismTextLayout layout, char[] chars, int start,
                                  int length, PGFont font, TextSpan span, byte level) {
         TextRun textRun = null;
@@ -137,11 +139,11 @@ public class DWGlyphLayout extends GlyphLayout {
 
         float size = font.getSize();
         float[] advances = new float[glyphCount];
-        float[] glyphOffsets = new float[glyphCount * 2];
+        float[] offsets = new float[glyphCount * 2];
         analyzer.GetGlyphPlacements(text, clusterMap, textProps, start, length, glyphs,
                                     glyphProps, glyphCount, face, size, false, rtl,
                                     analysis, null, features, featuresRangeLengths,
-                                    featuresCount, advances, glyphOffsets);
+                                    featuresCount, advances, offsets);
 
         /* Adjust glyph indices */
         int[] indices = new int[length];
@@ -167,11 +169,24 @@ public class DWGlyphLayout extends GlyphLayout {
 
         analyzer.Release();
         run.shape(glyphCount, iglyphs, pos, indices);
+
+        /* Checking glyphs offsets */
+        i = 0;
+        j = 0;
+        while (i < glyphCount) {
+            float glyphOffsetX = offsets[j++];
+            float glyphOffsetY = offsets[j++];
+            if (glyphOffsetX != 0 || glyphOffsetY != 0) {
+                run.setGlyphData(i, new Point2D(glyphOffsetX, glyphOffsetY));
+            }
+            i++;
+        }
     }
 
     private void renderShape(char[] text, TextRun run, PGFont font) {
-        String family = font.getFamilyName();
-        CompositeFontResource fr = (CompositeFontResource)font.getFontResource();
+        CompositeFontResource composite = (CompositeFontResource)font.getFontResource();
+        FontResource fr = composite.getSlotResource(0);
+        String family = fr.getFamilyName();
         int weight = fr.isBold() ? OS.DWRITE_FONT_WEIGHT_BOLD :
                                    OS.DWRITE_FONT_WEIGHT_NORMAL;
         int stretch = OS.DWRITE_FONT_STRETCH_NORMAL;
@@ -204,6 +219,7 @@ public class DWGlyphLayout extends GlyphLayout {
         int totalGlyphCount = renderer.GetTotalGlyphCount();
         int[] glyphs = new int[totalGlyphCount];
         float[] advances = new float[totalGlyphCount];
+        float[] offsets = new float[totalGlyphCount * 2];
         int[] clusterMap = new int[length];
         int glyphStart = 0;
         int textStart = 0;
@@ -226,13 +242,14 @@ public class DWGlyphLayout extends GlyphLayout {
 
             int slot = 0;
             if (!fallbackFullname.equalsIgnoreCase(fr.getFullName())) {
-                slot = fr.getSlotForFont(fallbackFullname) << 24;
+                slot = composite.getSlotForFont(fallbackFullname) << 24;
                 if (PrismFontFactory.debugFonts) {
                     System.err.println("\tFallback front= "+ fallbackFullname + " slot=" + (slot>>24));
                 }
             }
             renderer.GetGlyphIndices(glyphs, glyphStart, slot);
             renderer.GetGlyphAdvances(advances, glyphStart);
+            renderer.GetGlyphOffsets(offsets, glyphStart * 2);
             renderer.GetClusterMap(clusterMap, textStart);
             glyphStart += renderer.GetGlyphCount();
             textStart += renderer.GetLength();
@@ -270,5 +287,17 @@ public class DWGlyphLayout extends GlyphLayout {
             }
         }
         run.shape(totalGlyphCount, glyphs, pos, clusterMap);
+
+        /* Checking glyphs offsets */
+        i = 0;
+        j = 0;
+        while (i < totalGlyphCount) {
+            float glyphOffsetX = offsets[j++];
+            float glyphOffsetY = offsets[j++];
+            if (glyphOffsetX != 0 || glyphOffsetY != 0) {
+                run.setGlyphData(i, new Point2D(glyphOffsetX, glyphOffsetY));
+            }
+            i++;
+        }
     }
 }

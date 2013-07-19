@@ -153,10 +153,24 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
 
     protected abstract Glyph createGlyph(int glyphCode);
 
+    protected Glyph createGlyph(GlyphList gl, int gi) {
+        return createGlyph(gl.getGlyphCode(gi));
+    }
+
     public Glyph getGlyph(int glyphCode) {
         Glyph glyph = glyphMap.get(glyphCode);
         if (glyph == null) {
             glyph = createGlyph(glyphCode);
+            glyphMap.put(glyphCode, glyph);
+        }
+        return glyph;
+    }
+
+    public Glyph getGlyph(GlyphList gl, int gi) {
+        int glyphCode = gl.getGlyphCode(gi);
+        Glyph glyph = glyphMap.get(glyphCode);
+        if (glyph == null) {
+            glyph = createGlyph(gl, gi);
             glyphMap.put(glyphCode, glyph);
         }
         return glyph;

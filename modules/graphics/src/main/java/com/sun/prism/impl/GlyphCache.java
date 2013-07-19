@@ -147,7 +147,7 @@ public class GlyphCache {
                 pt.x = (int)pt.x;
                 subPixelX -= pt.x;
             }
-            GlyphData data = getCachedGlyph(gc, subPixelX, 0);
+            GlyphData data = getCachedGlyph(gl, gi, subPixelX, 0);
             if (data != null) {
                 if (clip != null) {
                     // Always check clipping using user space.
@@ -240,7 +240,8 @@ public class GlyphCache {
         packer.clear();
     }
 
-    private GlyphData getCachedGlyph(int glyphCode, float x, float y) {
+    private GlyphData getCachedGlyph(GlyphList gl, int gi, float x, float y) {
+        int glyphCode = gl.getGlyphCode(gi);
         int segIndex = glyphCode >> SEGSHIFT;
         int subIndex = glyphCode % SEGSIZE;
         if (x != 0) {
@@ -269,7 +270,7 @@ public class GlyphCache {
 
         // Render the glyph and insert it in the cache
         GlyphData data = null;
-        Glyph glyph = strike.getGlyph(glyphCode);
+        Glyph glyph = strike.getGlyph(gl, gi);
         if (glyph != null) {
             if (glyph.getWidth() == 0 || glyph.getHeight() == 0) {
                 data = new GlyphData(0, 0, 0,
