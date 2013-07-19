@@ -54,6 +54,8 @@ linux-*|solaris-* {
 }
 
 mac* {
+    QMAKE_CXXFLAGS_X86_64 -= -mmacosx-version-min=10.5
+    QMAKE_CXXFLAGS_X86_64 += -mmacosx-version-min=10.7
     contains(DEFINES, ICU_UNICODE=1) {
         LIBS += $$system(icu-config --ldflags) # the output contains '\n' symbol, qmake replaces it with "\c" string
         LIBS -= \c                             # a workaround for the above issue
@@ -78,15 +80,15 @@ win32-* {
     INCLUDEPATH += $$BASE_DIR/JavaScriptCore/os-win32
     contains(DEFINES, ICU_UNICODE=1) {
 #       INCLUDEPATH += $$BASE_DIR/WTF/icu
-        INCLUDEPATH += $(WEBKITLIBRARIESDIR)/import/include/icu
+        INCLUDEPATH += $(WEBKITOUTPUTDIR)/import/include/icu
         LIBS += -licuuc -licuin
     }
 
     INCLUDEPATH += \
-        $(WEBKITLIBRARIESDIR)/import/include \
+        $(WEBKITOUTPUTDIR)/import/include \
         $(JAVA_HOME)/include/win32
     LIBS += \
-        -L$(WEBKITLIBRARIESDIR)/import/lib \
+        -L$(WEBKITOUTPUTDIR)/import/lib \
         -lwinmm
 
     QMAKE_CXXFLAGS -= -Zc:wchar_t-

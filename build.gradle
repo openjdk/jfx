@@ -1998,7 +1998,7 @@ project(":web") {
         doLast {
             def classpath = files("$buildDir/classes/main",
                                   project(":graphics").sourceSets.main.output.classesDir)
-            def dest = file("src/main/build/javah");
+            def dest = file("$buildDir/generated-src/headers");
             mkdir dest;
             exec {
                 commandLine("$JAVAH", "-J-Djava.ext.dirs=", "-d", "$dest",
@@ -2043,13 +2043,13 @@ project(":web") {
 
     task compileNative(dependsOn: generateHeaders) {
         doLast {
-            ant.unzip(src:  configurations.webkit.files.iterator().next(),
-                      dest: "src/main/native/WebKitLibraries")
             exec {
                 println "Webkit configuration to use: $CONF"
                 workingDir("src/main/native")
                 commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$CONF")
             }
+            ant.unzip(src:  configurations.webkit.files.iterator().next(),
+                      dest: "src/main/native/WebKitBuild")
             exec {
                 workingDir("src/main/native")
                 if (IS_WINDOWS) {
@@ -2181,12 +2181,9 @@ project(":web") {
 
     clean << {
         project.delete(
-            "src/main/build",
             "$webkitOutputDir",
             "src/main/native/WebKitBuild/Tools",
-            "src/main/native/WebKitBuild/classes",
-            "src/main/native/dist",
-            "src/main/native/WebKitLibraries/import")
+            "src/main/native/WebKitBuild/import")
     }
 }
 
