@@ -266,7 +266,7 @@ ARMV6HF.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.eglfb.compiler = compiler
-ARMV6HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
+ARMV6HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD", "-DISEGLFB"].flatten()
 ARMV6HF.glass.eglfb.linker = linker
 ARMV6HF.glass.eglfb.linkFlags = [lensLFlags].flatten()
 ARMV6HF.glass.eglfb.lib = "glass_lens_eglfb"
