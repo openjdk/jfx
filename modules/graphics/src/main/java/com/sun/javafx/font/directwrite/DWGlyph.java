@@ -95,6 +95,13 @@ public class DWGlyph implements Glyph {
         int textureType = OS.DWRITE_TEXTURE_CLEARTYPE_3x1;
         IDWriteGlyphRunAnalysis runAnalysis = createAnalysis(0, 0);
         rect = runAnalysis.GetAlphaTextureBounds(textureType);
+        if ((rect.right - rect.left == 0) ||
+             (rect.bottom - rect.top == 0)) {
+            /* Check for both texture types due to some limitations with
+             * IDWriteGlyphRunAnalysis. See RT-31587.
+             */
+            rect = runAnalysis.GetAlphaTextureBounds(OS.DWRITE_TEXTURE_ALIASED_1x1);
+        }
         runAnalysis.Release();
     }
 
@@ -104,20 +111,27 @@ public class DWGlyph implements Glyph {
         rect = runAnalysis.GetAlphaTextureBounds(textureType);
         if ((rect.right - rect.left == 0) ||
             (rect.bottom - rect.top == 0)) {
-            return new byte[0];
+            rect = runAnalysis.GetAlphaTextureBounds(OS.DWRITE_TEXTURE_ALIASED_1x1);
+            if ((rect.right - rect.left == 0) ||
+                (rect.bottom - rect.top == 0)) {
+                return new byte[0];
+            } else {
+                /* In some cases IDWriteGlyphRunAnalysis is unable to produce
+                 * LCD masks. But as long as the size can determined D2D can be
+                 * used to do the rendering. */
+                return getD2DMask(subPixelX, subPixelY, true);
+            }
         }
         byte[] buffer = runAnalysis.CreateAlphaTexture(textureType, rect);
         runAnalysis.Release();
         return buffer;
     }
 
-    byte[] getGrayMask(float subPixelX, float subPixelY) {
-
-        //TODO is using 3x1 for GrayScale (to measure) always correct ?
-        int textureType = OS.DWRITE_TEXTURE_CLEARTYPE_3x1;
-        IDWriteGlyphRunAnalysis runAnalysis = createAnalysis(subPixelX, subPixelY);
-        rect = runAnalysis.GetAlphaTextureBounds(textureType);
-        runAnalysis.Release();
+    byte[] getD2DMask(float subPixelX, float subPixelY, boolean lcd) {
+        checkBounds();
+        if (getWidth() == 0 || getHeight() == 0) {
+            return new byte[0];
+        }
 
         /* Increase the RECT */
         rect.left--;
@@ -157,7 +171,9 @@ public class DWGlyph implements Glyph {
         target.Clear(WHITE);
         D2D1_POINT_2F pt = new D2D1_POINT_2F(-glyphX, -glyphY);
         ID2D1Brush brush = target.CreateSolidColorBrush(BLACK);
-        target.SetTextAntialiasMode(OS.D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+        if (!lcd) {
+            target.SetTextAntialiasMode(OS.D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+        }
         target.DrawGlyphRun(pt, run, brush, OS.DWRITE_MEASURING_MODE_NATURAL);
         int hr = target.EndDraw();
         brush.Release();
@@ -180,14 +196,31 @@ public class DWGlyph implements Glyph {
         //blit in native code.
         byte[] buffer = lock.GetDataPointer();
         int stride = lock.GetStride();
-        byte[] result = new byte[w*h];
+        byte[] result;
         int i = 0, j = 0;
         byte one = (byte)0xFF;
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                result[i++] = (byte)(one - buffer[j + (x*4)]);
+        if (lcd) {
+            result = new byte[w*h*3];
+            for (int y = 0; y < h; y++) {
+                int row = j;
+                for (int x = 0; x < w; x++) {
+                    result[i++] = (byte)(one - buffer[row++]);
+                    result[i++] = (byte)(one - buffer[row++]);
+                    result[i++] = (byte)(one - buffer[row++]);
+                    row++;
+                }
+                j += stride;
             }
-            j += stride;
+        } else {
+            result = new byte[w*h];
+            for (int y = 0; y < h; y++) {
+                int row = j;
+                for (int x = 0; x < w; x++) {
+                    result[i++] = (byte)(one - buffer[row]);
+                    row += 4;
+                }
+                j += stride;
+            }
         }
         lock.Release();
 
@@ -270,7 +303,7 @@ public class DWGlyph implements Glyph {
     @Override
     public byte[] getPixelData(float x, float y) {
         if (pixelData == null) {
-            pixelData = isLCDGlyph() ? getLCDMask(x, y) : getGrayMask(x, y);
+            pixelData = isLCDGlyph() ? getLCDMask(x, y) : getD2DMask(x, y, false);
         }
         return pixelData;
     }
