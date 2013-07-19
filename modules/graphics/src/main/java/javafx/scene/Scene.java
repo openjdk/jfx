@@ -3581,7 +3581,7 @@ public class Scene implements EventTarget {
                 handleEnterExit(e, tmpTargetWrapper);
             }
 
-            lastEvent = e;
+            lastEvent = e.getEventType() == MouseEvent.MOUSE_EXITED ? null : e;
             Scene.inMousePick = false;
         }
 
