@@ -30,6 +30,7 @@ package javafx.collections;
  * @param <E> the element type
  * @since JavaFX 2.1
  */
+@FunctionalInterface
 public interface SetChangeListener<E> {
 
     /**

@@ -31,6 +31,7 @@ package javafx.util;
  *
  * @since JavaFX 2.0
  */
+@FunctionalInterface
 public interface Builder<T> {
     /**
      * Builds and returns the object.
