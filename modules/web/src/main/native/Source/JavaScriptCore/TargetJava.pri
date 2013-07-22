@@ -32,7 +32,7 @@ INCLUDEPATH += \
     $$PWD/yarr \
     $$PWD/API \
     $$PWD/ForwardingHeaders \
-    ../../../../build/javah
+    ../../../../../../build/generated-src/headers
 
 include(yarr/yarr.pri)
 include($$PWD/../WTF/WTFJava.pri)

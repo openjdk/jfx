@@ -48,8 +48,8 @@ if (USE_LIPO instanceof String) IOS.useLipo = Boolean.parseBoolean(USE_LIPO)
 if (GENERATE_SYMBOLS instanceof String) IOS.generateSymbols = Boolean.parseBoolean(GENERATE_SYMBOLS)
 
 IOS.generateSymbolsExcludes = [
-    "libprism-sw.a",
-    "libdecora-sse-armv7.a"
+    "libprism_sw.a",
+    "libdecora_sse_armv7.a"
 ]
 
 defineProperty("IOS_VERSION", "6.1")
@@ -138,7 +138,7 @@ IOS.glass.arm.compiler = compiler
 IOS.glass.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.glass.arm.linker = linker
 IOS.glass.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags, "-L${sdkPath(iPhoneOS)}/usr/lib"].flatten()
-IOS.glass.arm.lib = "glass-${archArm}"
+IOS.glass.arm.lib = "glass_${archArm}"
 
 IOS.glass.x86 = [:]
 IOS.glass.x86.nativeSource = file("modules/graphics/src/main/native-glass/ios")
@@ -146,17 +146,17 @@ IOS.glass.x86.compiler = compiler
 IOS.glass.x86.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.glass.x86.linker = linker
 IOS.glass.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags, "-L${sdkPath(iPhoneSim)}/usr/lib"].flatten()
-IOS.glass.x86.lib = "glass-${archX86}"
+IOS.glass.x86.lib = "glass_${archX86}"
 
 IOS.decora = [:]
 IOS.decora.compiler = compiler
 IOS.decora.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS), "-ffast-math"].flatten()
 IOS.decora.linker = linker
 IOS.decora.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.decora.lib = "decora-sse-${archArm}"
+IOS.decora.lib = "decora_sse_${archArm}"
 
 IOS.prism = [:]
-IOS.prism.lib = "prism-common"
+IOS.prism.lib = "prism_common"
 IOS.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 IOS.prism.variants = ["arm", "x86"];
 
@@ -166,7 +166,7 @@ IOS.prism.arm.compiler = compiler
 IOS.prism.arm.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS), "-DINLINE=inline"].flatten()
 IOS.prism.arm.linker = linker
 IOS.prism.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.prism.arm.lib = "prism-common-${archArm}"
+IOS.prism.arm.lib = "prism_common_${archArm}"
 
 IOS.prism.x86 = [:]
 IOS.prism.x86.nativeSource = file("modules/graphics/src/main/native-prism")
@@ -174,10 +174,10 @@ IOS.prism.x86.compiler = compiler
 IOS.prism.x86.ccFlags = [ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim), "-DINLINE=inline"].flatten()
 IOS.prism.x86.linker = linker
 IOS.prism.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.prism.x86.lib = "prism-common-${archX86}"
+IOS.prism.x86.lib = "prism_common_${archX86}"
 
 IOS.prismSW = [:]
-IOS.prismSW.lib = "prism-sw"
+IOS.prismSW.lib = "prism_sw"
 IOS.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 IOS.prismSW.variants = ["arm", "x86"];
 
@@ -187,7 +187,7 @@ IOS.prismSW.arm.compiler = compiler
 IOS.prismSW.arm.ccFlags = [IOS.prism.arm.ccFlags].flatten()
 IOS.prismSW.arm.linker = linker
 IOS.prismSW.arm.linkFlags = [IOS.prism.arm.linkFlags].flatten()
-IOS.prismSW.arm.lib = "prism-sw-${archArm}"
+IOS.prismSW.arm.lib = "prism_sw_${archArm}"
 
 IOS.prismSW.x86 = [:]
 IOS.prismSW.x86.nativeSource = file("modules/graphics/src/main/native-prism-sw")
@@ -195,10 +195,10 @@ IOS.prismSW.x86.compiler = compiler
 IOS.prismSW.x86.ccFlags = [IOS.prism.x86.ccFlags].flatten()
 IOS.prismSW.x86.linker = linker
 IOS.prismSW.x86.linkFlags = [IOS.prism.x86.linkFlags].flatten()
-IOS.prismSW.x86.lib = "prism-sw-${archX86}"
+IOS.prismSW.x86.lib = "prism_sw_${archX86}"
 
 IOS.iio = [:]
-IOS.iio.lib = "javafx-iio"
+IOS.iio.lib = "javafx_iio"
 IOS.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 IOS.iio.variants = ["arm", "x86"];
 
@@ -211,7 +211,7 @@ IOS.iio.arm.compiler = compiler
 IOS.iio.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS), "-ffast-math"].flatten()
 IOS.iio.arm.linker = linker
 IOS.iio.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.iio.arm.lib = "javafx-iio-${archArm}"
+IOS.iio.arm.lib = "javafx_iio_${archArm}"
 
 IOS.iio.x86 = [:]
 IOS.iio.x86.nativeSource = [IOS.iio.arm.nativeSource].flatten()
@@ -219,10 +219,10 @@ IOS.iio.x86.compiler = compiler
 IOS.iio.x86.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim), "-ffast-math"].flatten()
 IOS.iio.x86.linker = linker
 IOS.iio.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.iio.x86.lib = "javafx-iio-${archX86}"
+IOS.iio.x86.lib = "javafx_iio_${archX86}"
 
 IOS.prismES2 = [:]
-IOS.prismES2.lib = "prism-es2"
+IOS.prismES2.lib = "prism_es2"
 IOS.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 IOS.prismES2.variants = ["arm", "x86"];
 
@@ -236,7 +236,7 @@ IOS.prismES2.arm.compiler = compiler
 IOS.prismES2.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.prismES2.arm.linker = linker
 IOS.prismES2.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.prismES2.arm.lib = "prism-es2-${archArm}"
+IOS.prismES2.arm.lib = "prism_es2_${archArm}"
 
 IOS.prismES2.x86 = [:]
 IOS.prismES2.x86.nativeSource = [IOS.prismES2.arm.nativeSource].flatten()
@@ -244,11 +244,11 @@ IOS.prismES2.x86.compiler = compiler
 IOS.prismES2.x86.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.prismES2.x86.linker = linker
 IOS.prismES2.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.prismES2.x86.lib = "prism-es2-${archX86}"
+IOS.prismES2.x86.lib = "prism_es2_${archX86}"
 
 def closedDir = file("$projectDir/../rt-closed")
 IOS.font = [:]
-IOS.font.lib = "javafx-font"
+IOS.font.lib = "javafx_font"
 IOS.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
@@ -260,7 +260,7 @@ IOS.font.arm.compiler = compiler
 IOS.font.arm.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.font.arm.linker = linker
 IOS.font.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.font.arm.lib = "javafx-font-${archArm}"
+IOS.font.arm.lib = "javafx_font_${archArm}"
 
 IOS.font.x86 = [:]
 IOS.font.x86.nativeSource = [IOS.font.arm.nativeSource].flatten()
@@ -268,10 +268,10 @@ IOS.font.x86.compiler = compiler
 IOS.font.x86.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.font.x86.linker = linker
 IOS.font.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.font.x86.lib = "javafx-font-${archX86}"
+IOS.font.x86.lib = "javafx_font_${archX86}"
 
 IOS.fontT2K = [:]
-IOS.fontT2K.lib = "javafx-font-t2k"
+IOS.fontT2K.lib = "javafx_font_t2k"
 IOS.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
 IOS.fontT2K.variants = ["arm", "x86"];
 
@@ -284,7 +284,7 @@ IOS.fontT2K.arm.compiler = compiler
 IOS.fontT2K.arm.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.fontT2K.arm.linker = linker
 IOS.fontT2K.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.fontT2K.arm.lib = "javafx-font-t2k-${archArm}"
+IOS.fontT2K.arm.lib = "javafx_font_t2k_${archArm}"
 
 IOS.fontT2K.x86 = [:]
 IOS.fontT2K.x86.nativeSource = [IOS.fontT2K.arm.nativeSource].flatten()
@@ -292,10 +292,10 @@ IOS.fontT2K.x86.compiler = compiler
 IOS.fontT2K.x86.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.fontT2K.x86.linker = linker
 IOS.fontT2K.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.fontT2K.x86.lib = "javafx-font-t2k-${archX86}"
+IOS.fontT2K.x86.lib = "javafx_font_t2k_${archX86}"
 
 IOS.webview = [:]
-IOS.webview.lib = "javafx-ios-webnode"
+IOS.webview.lib = "javafx_ios_webnode"
 IOS.webview.javahInclude = ["javafx/scene/web/*"]
 IOS.webview.variants = ["arm", "x86"];
 
@@ -305,7 +305,7 @@ IOS.webview.arm.compiler = compiler
 IOS.webview.arm.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.webview.arm.linker = linker
 IOS.webview.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.webview.arm.lib = "javafx-ios-webnode-${archArm}"
+IOS.webview.arm.lib = "javafx_ios_webnode_${archArm}"
 
 IOS.webview.x86 = [:]
 IOS.webview.x86.nativeSource = [IOS.webview.arm.nativeSource].flatten()
@@ -313,7 +313,7 @@ IOS.webview.x86.compiler = compiler
 IOS.webview.x86.ccFlags = [ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.webview.x86.linker = linker
 IOS.webview.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.webview.x86.lib = "javafx-ios-webnode-${archX86}"
+IOS.webview.x86.lib = "javafx_ios_webnode_${archX86}"
 
 project(":web") {
     if (BUILD_CLOSED) {

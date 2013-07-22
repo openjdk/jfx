@@ -396,6 +396,9 @@ ScrollAnimatorNone::~ScrollAnimatorNone()
 ScrollAnimatorNone::Parameters ScrollAnimatorNone::parametersForScrollGranularity(ScrollGranularity granularity) const
 {
 #if !PLATFORM(QT)
+#if PLATFORM(JAVA)
+    return Parameters();
+#endif
     switch (granularity) {
     case ScrollByDocument:
         return Parameters(true, 20 * kTickTime, 10 * kTickTime, Cubic, 10 * kTickTime, Cubic, 10 * kTickTime, Linear, 1);

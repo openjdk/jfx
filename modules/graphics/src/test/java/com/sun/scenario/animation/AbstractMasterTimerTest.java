@@ -158,10 +158,6 @@ public class AbstractMasterTimerTest {
         private long nanos;
         private DelayedRunnable animationRunnable;
         
-        protected AbstractMasterTimerStub() {
-            super(true);
-        }
-
         public void setNanos(long nanos) {
             this.nanos = nanos;
         }

@@ -847,15 +847,8 @@ public abstract class Parent extends Node {
      * @since JavaFX 8.0
      */
     public void requestLayout() {
-        if (layoutFlag != LayoutFlags.NEEDS_LAYOUT) {
-            prefWidthCache = -1;
-            prefHeightCache = -1;
-            minWidthCache = -1;
-            minHeightCache = -1;
-            markDirtyLayout(false);
-        } else {
-            clearSizeCache();
-        }
+        clearSizeCache();
+        markDirtyLayout(false);
     }
 
     /**
@@ -886,12 +879,6 @@ public abstract class Parent extends Node {
         prefHeightCache = -1;
         minWidthCache = -1;
         minHeightCache = -1;
-        if (!layoutRoot) {
-            final Parent parent = getParent();
-            if (parent != null) {
-                parent.clearSizeCache();
-            }
-        }
     }
 
     @Override public double prefWidth(double height) {

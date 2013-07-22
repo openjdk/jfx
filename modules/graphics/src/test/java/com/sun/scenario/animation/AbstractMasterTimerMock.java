@@ -37,10 +37,6 @@ public class AbstractMasterTimerMock extends AbstractMasterTimer {
     
     private long nanos;
     
-    public AbstractMasterTimerMock() {
-        super(true);
-    }
-
     public void setNanos(long nanos) {
         this.nanos = nanos;
     }

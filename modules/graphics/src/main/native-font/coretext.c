@@ -495,6 +495,18 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CTLineGetGlyphRuns)
     return (jlong)CTLineGetGlyphRuns((CTLineRef)arg0);
 }
 
+JNIEXPORT jdouble JNICALL OS_NATIVE(CTLineGetTypographicBounds)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    return (jdouble)CTLineGetTypographicBounds((CTLineRef)arg0, NULL, NULL, NULL);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(CTLineGetGlyphCount)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    return (jlong)CTLineGetGlyphCount((CTLineRef)arg0);
+}
+
 JNIEXPORT jlong JNICALL OS_NATIVE(CFArrayGetCount)
     (JNIEnv *env, jclass that, jlong arg0)
 {
@@ -545,97 +557,66 @@ fail:
     return rc;
 }
 
-JNIEXPORT jfloatArray JNICALL OS_NATIVE(CTRunGetAdvancesPtr)
-    (JNIEnv *env, jclass that, jlong arg0)
+JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetGlyphs)
+    (JNIEnv *env, jclass that, jlong runRef, jint slotMask, jint start, jintArray bufferRef)
 {
-    CTRunRef run = (CTRunRef)arg0;
-    const CGSize* advances = CTRunGetAdvancesPtr(run);
-    if (advances) {
-        CFIndex count = CTRunGetGlyphCount(run);
-        jfloatArray result = (*env)->NewFloatArray(env, count * 2);
-        if (result) {
-            int i, j;
-            jfloat data[count*2];
-            for(i = 0, j = 0; i < count; i++) {
-                CGSize advance = advances[i];
-                data[j++] = advance.width;
-                data[j++] = advance.height;
-            }
-            (*env)->SetFloatArrayRegion(env, result, 0, count * 2, data);
-            return result;
-        }
-    }
-    return NULL;
-}
-
-JNIEXPORT jintArray JNICALL OS_NATIVE(CTRunGetGlyphsPtr)
-    (JNIEnv *env, jclass that, jlong arg0)
-{
-    CTRunRef run = (CTRunRef)arg0;
+    CTRunRef run = (CTRunRef)runRef;
     const CGGlyph * glyphs = CTRunGetGlyphsPtr(run);
+    int i = 0;
     if (glyphs) {
-        CFIndex count = CTRunGetGlyphCount(run);
-        jintArray result = (*env)->NewIntArray(env, count);
-        if (result) {
-            int i;
-            jint data[count];
-            for(i = 0; i < count; i++) {
-                data[i] = glyphs[i];
+        jint* buffer = (*env)->GetPrimitiveArrayCritical(env, bufferRef, NULL);
+        if (buffer) {
+            CFIndex count = CTRunGetGlyphCount(run);
+            while(i < count) {
+                buffer[start + i] = slotMask | (glyphs[i] & 0xFFFF);
+                i++;
             }
-            (*env)->SetIntArrayRegion(env, result, 0, count, data);
-            return result;
+            (*env)->ReleasePrimitiveArrayCritical(env, bufferRef, buffer, 0);
         }
     }
-    return NULL;
+    return i;
 }
 
-JNIEXPORT jfloatArray JNICALL OS_NATIVE(CTRunGetPositionsPtr)
-    (JNIEnv *env, jclass that, jlong arg0)
+JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetPositions)
+    (JNIEnv *env, jclass that, jlong runRef, jint start, jfloatArray bufferRef)
 {
-    CTRunRef run = (CTRunRef)arg0;
+    CTRunRef run = (CTRunRef)runRef;
     const CGPoint* positions = CTRunGetPositionsPtr(run);
+    int j = 0;
     if (positions) {
-        CFIndex count = CTRunGetGlyphCount(run);
-        jfloatArray result = (*env)->NewFloatArray(env, count * 2 + 2);
-        if (result) {
-            int i, j;
-            CGFloat x = positions[0].x;
-            CGFloat y = positions[0].y;
-            jfloat data[count * 2 + 2];
-            for(i = 0, j = 0; i < count; i++) {
-                CGPoint pos = positions[i];
-                data[j++] = pos.x - x;
-                data[j++] = pos.y - y;
+        jfloat* buffer = (*env)->GetPrimitiveArrayCritical(env, bufferRef, NULL);
+        if (buffer) {
+            CFIndex count = CTRunGetGlyphCount(run);
+            int i = 0;
+            while (i < count) {
+                CGPoint pos = positions[i++];
+                buffer[start + j++] = pos.x;
+                buffer[start + j++] = pos.y;
             }
-            data[j++] = CTRunGetTypographicBounds(run, CFRangeMake(0, 0), NULL, NULL, NULL);
-            data[j++] = 0;
-            (*env)->SetFloatArrayRegion(env, result, 0, count * 2 + 2, data);
-            return result;
+            (*env)->ReleasePrimitiveArrayCritical(env, bufferRef, buffer, 0);
         }
     }
-    return NULL;
+    return j;
 }
 
-JNIEXPORT jintArray JNICALL OS_NATIVE(CTRunGetStringIndicesPtr)
-    (JNIEnv *env, jclass that, jlong arg0)
+JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetStringIndices)
+    (JNIEnv *env, jclass that, jlong runRef, jint start, jintArray bufferRef)
 {
-    CTRunRef run = (CTRunRef)arg0;
+    CTRunRef run = (CTRunRef)runRef;
     const CFIndex* indices = CTRunGetStringIndicesPtr(run);
+    int i = 0;
     if (indices) {
-        CFIndex count = CTRunGetGlyphCount(run);
-        CFIndex start = CTRunGetStringRange(run).location;
-        jintArray result = (*env)->NewIntArray(env, count);
-        if (result) {
-            int i;
-            jint data[count];
-            for(i = 0; i < count; i++) {
-                data[i] = indices[i] - start;
+        jint* buffer = (*env)->GetPrimitiveArrayCritical(env, bufferRef, NULL);
+        if (buffer) {
+            CFIndex count = CTRunGetGlyphCount(run);
+            while(i < count) {
+                buffer[start + i] = indices[i];
+                i++;
             }
-            (*env)->SetIntArrayRegion(env, result, 0, count, data);
-            return result;
+            (*env)->ReleasePrimitiveArrayCritical(env, bufferRef, buffer, 0);
         }
     }
-    return NULL;
+    return i;
 }
 
 JNIEXPORT jobject JNICALL OS_NATIVE(CTRunGetStringRange)

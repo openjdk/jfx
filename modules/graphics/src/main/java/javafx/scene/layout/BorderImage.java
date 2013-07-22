@@ -55,24 +55,24 @@ public class BorderImage {
      * be skipped at rendering time and will not contribute to
      * any bounds or other computations.
      */
-    final Image image;
     public final Image getImage() { return image; }
+    final Image image;
 
     /**
      * Indicates in what manner (if at all) the border image
      * is to be repeated along the x-axis of the region. If not specified,
      * the default value is STRETCH.
      */
-    final BorderRepeat repeatX;
     public final BorderRepeat getRepeatX() { return repeatX; }
+    final BorderRepeat repeatX;
 
     /**
      * Indicates in what manner (if at all) the border image
      * is to be repeated along the y-axis of the region. If not specified,
      * the default value is STRETCH.
      */
-    final BorderRepeat repeatY;
     public final BorderRepeat getRepeatY() { return repeatY; }
+    final BorderRepeat repeatY;
 
     /**
      * The widths of the border on each side. These can be defined
@@ -80,8 +80,8 @@ public class BorderImage {
      * the Region, {@see BorderWidths} for more details. If null,
      * this will default to being 1 pixel wide.
      */
-    final BorderWidths widths;
     public final BorderWidths getWidths() { return widths; }
+    final BorderWidths widths;
 
     /**
      * Defines the slices of the image. JavaFX uses a 4-slice scheme where
@@ -96,25 +96,25 @@ public class BorderImage {
      * omitted (ie: not drawn), although a BorderImageSlices value of {@code true}
      * for the {@code filled} property will cause the center to be drawn. A
      * default value for this property will result in BorderImageSlices.DEFAULT, which
-     * is a border-image-slice of 100% 
+     * is a border-image-slice of 100%
      * @see <a href="http://www.w3.org/TR/css3-background/#the-border-image-slice">border-image-slice</a>
      */
-    final BorderWidths slices;
     public final BorderWidths getSlices() { return slices; }
+    final BorderWidths slices;
 
     /**
      * Specifies whether or not the center patch (as defined by the left, right, top, and bottom slices)
      * should be drawn.
      */
-    final boolean filled;
     public final boolean isFilled() { return filled; }
+    final boolean filled;
 
     /**
      * The insets of the BorderImage define where the border should be positioned
      * relative to the edge of the Region. This value will never be null.
      */
-    final Insets insets;
     public final Insets getInsets() { return insets; }
+    final Insets insets;
 
     // These two are used by Border to compute the insets and outsets of the border
     final Insets innerEdge;

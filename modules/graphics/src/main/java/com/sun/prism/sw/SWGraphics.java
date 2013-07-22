@@ -333,11 +333,19 @@ final class SWGraphics implements ReadbackGraphics {
                 }
 
                 paintTx.setTransform(tx);
-                if (lg.isProportional()) {
-                    paintTx.deriveWithConcatenation(width, 0, 0, height, x, y);
-                }
                 convertToPiscesTransform(paintTx, piscesTx);
-                this.pr.setLinearGradient((int)(TO_PISCES * lg.getX1()), (int)(TO_PISCES * lg.getY1()), (int)(TO_PISCES * lg.getX2()), (int)(TO_PISCES * lg.getY2()),
+
+                float x1 = lg.getX1();
+                float y1 = lg.getY1();
+                float x2 = lg.getX2();
+                float y2 = lg.getY2();
+                if (lg.isProportional()) {
+                    x1 = x + width * x1;
+                    y1 = y + height * y1;
+                    x2 = x + width * x2;
+                    y2 = y + height * y2;
+                }
+                this.pr.setLinearGradient((int)(TO_PISCES * x1), (int)(TO_PISCES * y1), (int)(TO_PISCES * x2), (int)(TO_PISCES * y2),
                     getFractions(lg), getARGB(lg, this.compositeAlpha), getPiscesGradientCycleMethod(lg.getSpreadMethod()), piscesTx);
                 break;
             case RADIAL_GRADIENT:
@@ -347,13 +355,29 @@ final class SWGraphics implements ReadbackGraphics {
                 }
 
                 paintTx.setTransform(tx);
+
+                float cx = rg.getCenterX();
+                float cy = rg.getCenterY();
+                float r = rg.getRadius();
                 if (rg.isProportional()) {
-                    paintTx.deriveWithConcatenation(width, 0, 0, height, x, y);
+                    float dim = Math.min(width, height);
+                    float bcx = x + width * 0.5f;
+                    float bcy = y + height * 0.5f;
+                    cx = bcx + (cx - 0.5f) * dim;
+                    cy = bcy + (cy - 0.5f) * dim;
+                    r *= dim;
+                    if (width != height && width != 0.0 && height != 0.0) {
+                        paintTx.deriveWithTranslation(bcx, bcy);
+                        paintTx.deriveWithConcatenation(width / dim, 0, 0, height / dim, 0, 0);
+                        paintTx.deriveWithTranslation(-bcx, -bcy);
+                    }
                 }
                 convertToPiscesTransform(paintTx, piscesTx);
-                final float fx = (float)(rg.getCenterX() + rg.getFocusDistance() * rg.getRadius() * Math.cos(Math.toRadians(rg.getFocusAngle())));
-                final float fy = (float)(rg.getCenterY() + rg.getFocusDistance() * rg.getRadius() * Math.sin(Math.toRadians(rg.getFocusAngle())));
-                this.pr.setRadialGradient((int) (TO_PISCES * rg.getCenterX()), (int) (TO_PISCES * rg.getCenterY()), (int) (TO_PISCES * fx), (int) (TO_PISCES * fy), (int) (TO_PISCES * rg.getRadius()),
+
+                final float fx = (float)(cx + rg.getFocusDistance() * r * Math.cos(Math.toRadians(rg.getFocusAngle())));
+                final float fy = (float)(cy + rg.getFocusDistance() * r * Math.sin(Math.toRadians(rg.getFocusAngle())));
+
+                this.pr.setRadialGradient((int) (TO_PISCES * cx), (int) (TO_PISCES * cy), (int) (TO_PISCES * fx), (int) (TO_PISCES * fy), (int) (TO_PISCES * r),
                         getFractions(rg), getARGB(rg, this.compositeAlpha), getPiscesGradientCycleMethod(rg.getSpreadMethod()), piscesTx);
                 break;
             case IMAGE_PATTERN:
@@ -584,8 +608,17 @@ final class SWGraphics implements ReadbackGraphics {
             }
             return;
         }
-
         this.setPaintFromShape(shape, tr, 0,0,0,0);
+        this.paintShapePaintAlreadySet(shape, st, tr);
+    }
+
+    private void paintShapePaintAlreadySet(Shape shape, BasicStroke st, BaseTransform tr) {
+        if (this.finalClip.isEmpty()) {
+            if (PrismSettings.debug) {
+                System.out.println("Final clip is empty: not rendering the shape: " + shape);
+            }
+            return;
+        }
 
         if (PrismSettings.debug) {
             System.out.println("GR: " + this);
@@ -731,24 +764,23 @@ final class SWGraphics implements ReadbackGraphics {
         if ((selectGlyphStart < 0 && selectGlyphEnd < 0)||(selectGlyphStart >= gl.getGlyphCount() && selectGlyphEnd >= gl.getGlyphCount())) {
             this.drawStringInternal(gl, strike, x, y, 0, gl.getGlyphCount(), this.paint, bx, by, bw, bh);
         } else {
-            float advanceX = 0;
             if (selectGlyphStart > 0) {
-                advanceX = this.drawStringInternal(gl, strike, x, y, 0, selectGlyphStart, this.paint, bx, by, bw, bh);
+                this.drawStringInternal(gl, strike, x, y, 0, selectGlyphStart, this.paint, bx, by, bw, bh);
             }
-            advanceX += this.drawStringInternal(gl, strike, x+advanceX, y,
-                                                Math.max(0, selectGlyphStart), Math.min(gl.getGlyphCount(), selectGlyphEnd),
-                                                selectColor, 0, 0, 0, 0);
+            this.drawStringInternal(gl, strike, x, y,
+                                            Math.max(0, selectGlyphStart), Math.min(gl.getGlyphCount(), selectGlyphEnd),
+                                            selectColor, 0, 0, 0, 0);
             if (selectGlyphEnd < gl.getGlyphCount()) {
-                this.drawStringInternal(gl, strike, x+advanceX, y, selectGlyphEnd, gl.getGlyphCount(),
+                this.drawStringInternal(gl, strike, x, y, selectGlyphEnd, gl.getGlyphCount(),
                                         this.paint, bx, by, bw, bh);
             }
         }
     }
 
-    private float drawStringInternal(GlyphList gl, FontStrike strike, float x, float y, int strFrom, int strTo,
+    private void  drawStringInternal(GlyphList gl, FontStrike strike, float x, float y, int strFrom, int strTo,
                                      Paint p, float bx, float by, float bw, float bh)
     {
-        float advanceX = 0;
+        this.setPaintBeforeDraw(p, bx, by, bw, bh);
         if (tx.isTranslateOrIdentity() && (!strike.drawAsShapes())) {
             final boolean doLCDText = (strike.getAAMode() == FontResource.AA_LCD) &&
                     getRenderTarget().isOpaque() &&
@@ -763,7 +795,6 @@ final class SWGraphics implements ReadbackGraphics {
                 final BaseTransform origTx = strike.getTransform();
                 strike = fr.getStrike(origSize, origTx, FontResource.AA_GREYSCALE);
             }
-            this.setPaintBeforeDraw(p, bx, by, bw, bh);
 
             for (int i = strFrom; i < strTo; i++) {
                 final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
@@ -791,16 +822,14 @@ final class SWGraphics implements ReadbackGraphics {
                 }
             }
         } else {
-            final BaseTransform glyphTx = tx.copy();
-            glyphTx.deriveWithTranslation(x, y);
+            final BaseTransform glyphTx = new Affine2D();
             for (int i = strFrom; i < strTo; i++) {
                 final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
-                this.paintShape(g.getShape(), null, glyphTx);
-                advanceX += g.getAdvance();
-                glyphTx.deriveWithTranslation(g.getAdvance(), 0);
+                glyphTx.setTransform(tx);
+                glyphTx.deriveWithTranslation(x + gl.getPosX(i), y + gl.getPosY(i));
+                this.paintShapePaintAlreadySet(g.getShape(), null, glyphTx);
             }
         }
-        return advanceX;
     }
 
     public void drawTexture(Texture tex, float x, float y, float w, float h) {

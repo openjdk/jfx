@@ -59,7 +59,7 @@ public class NGArc extends NGShape {
     }
 
     @Override public Shape getShape() { return arc; }
-    @Override protected ShapeRep createShapeRep(Graphics g, boolean needs3D) {
-        return g.getResourceFactory().createArcRep(needs3D);
+    @Override protected ShapeRep createShapeRep(Graphics g) {
+        return g.getResourceFactory().createArcRep();
     }
 }

@@ -175,7 +175,7 @@ jobject newDWRITE_MATRIX(JNIEnv *env, DWRITE_MATRIX *lpStruct)
 typedef struct DWRITE_GLYPH_RUN_FID_CACHE {
     int cached;
     jclass clazz;
-    jfieldID fontFace, fontEmSize, glyphCount, glyphIndices, glyphAdvances/*, glyphOffsets*/, isSideways, bidiLevel;
+    jfieldID fontFace, fontEmSize, glyphIndices, glyphAdvances, advanceOffset, ascenderOffset, isSideways, bidiLevel;
     jmethodID init;
 } DWRITE_GLYPH_RUN_FID_CACHE;
 
@@ -188,9 +188,10 @@ void cacheDWRITE_GLYPH_RUNFields(JNIEnv *env)
     DWRITE_GLYPH_RUNFc.clazz =  (jclass)env->NewGlobalRef(tmpClass);
     DWRITE_GLYPH_RUNFc.fontFace = env->GetFieldID(DWRITE_GLYPH_RUNFc.clazz, "fontFace", "J");
     DWRITE_GLYPH_RUNFc.fontEmSize = env->GetFieldID(DWRITE_GLYPH_RUNFc.clazz, "fontEmSize", "F");
-    DWRITE_GLYPH_RUNFc.glyphCount = env->GetFieldID(DWRITE_GLYPH_RUNFc.clazz, "glyphCount", "I");
     DWRITE_GLYPH_RUNFc.glyphIndices = env->GetFieldID(DWRITE_GLYPH_RUNFc.clazz, "glyphIndices", "S");
     DWRITE_GLYPH_RUNFc.glyphAdvances = env->GetFieldID(DWRITE_GLYPH_RUNFc.clazz, "glyphAdvances", "F");
+    DWRITE_GLYPH_RUNFc.advanceOffset = env->GetFieldID(DWRITE_GLYPH_RUNFc.clazz, "advanceOffset", "F");
+    DWRITE_GLYPH_RUNFc.ascenderOffset = env->GetFieldID(DWRITE_GLYPH_RUNFc.clazz, "ascenderOffset", "F");
     DWRITE_GLYPH_RUNFc.isSideways = env->GetFieldID(DWRITE_GLYPH_RUNFc.clazz, "isSideways", "Z");
     DWRITE_GLYPH_RUNFc.bidiLevel = env->GetFieldID(DWRITE_GLYPH_RUNFc.clazz, "bidiLevel", "I");
     DWRITE_GLYPH_RUNFc.init = env->GetMethodID(DWRITE_GLYPH_RUNFc.clazz, "<init>", "()V");
@@ -202,28 +203,12 @@ DWRITE_GLYPH_RUN *getDWRITE_GLYPH_RUNFields(JNIEnv *env, jobject lpObject, DWRIT
     if (!DWRITE_GLYPH_RUNFc.cached) cacheDWRITE_GLYPH_RUNFields(env);
     lpStruct->fontFace = (IDWriteFontFace *)env->GetLongField(lpObject, DWRITE_GLYPH_RUNFc.fontFace);
     lpStruct->fontEmSize = env->GetFloatField(lpObject, DWRITE_GLYPH_RUNFc.fontEmSize);
-    lpStruct->glyphCount = env->GetIntField(lpObject, DWRITE_GLYPH_RUNFc.glyphCount);
     ((jshort*)lpStruct->glyphIndices)[0] = env->GetShortField(lpObject, DWRITE_GLYPH_RUNFc.glyphIndices);
-    ((jfloat*)lpStruct->glyphAdvances)[0] = env->GetFloatField(lpObject, DWRITE_GLYPH_RUNFc.glyphAdvances);
-    lpStruct->glyphOffsets = NULL;
+    ((float)lpStruct->glyphOffsets[0].advanceOffset) = env->GetFloatField(lpObject, DWRITE_GLYPH_RUNFc.advanceOffset);
+    ((float)lpStruct->glyphOffsets[0].ascenderOffset) = env->GetFloatField(lpObject, DWRITE_GLYPH_RUNFc.ascenderOffset);
     lpStruct->isSideways = env->GetBooleanField(lpObject, DWRITE_GLYPH_RUNFc.isSideways);
     lpStruct->bidiLevel = env->GetIntField(lpObject, DWRITE_GLYPH_RUNFc.bidiLevel);
     return lpStruct;
-}
-
-void setDWRITE_GLYPH_RUNFields(JNIEnv *env, jobject lpObject, DWRITE_GLYPH_RUN *lpStruct)
-{
-    if (!DWRITE_GLYPH_RUNFc.cached) cacheDWRITE_GLYPH_RUNFields(env);
-    //NOT USED
-}
-
-jobject newDWRITE_GLYPH_RUN(JNIEnv *env, DWRITE_GLYPH_RUN *lpStruct)
-{
-    jobject lpObject = NULL;
-    if (!DWRITE_GLYPH_RUNFc.cached) cacheDWRITE_GLYPH_RUNFields(env);
-    lpObject = env->NewObject(DWRITE_GLYPH_RUNFc.clazz, DWRITE_GLYPH_RUNFc.init);
-    if (lpObject && lpStruct) setDWRITE_GLYPH_RUNFields(env, lpObject, lpStruct);
-    return lpObject;
 }
 
 typedef struct DWRITE_SCRIPT_ANALYSIS_FID_CACHE {
@@ -1017,6 +1002,7 @@ public:
     const UINT16* GetClusterMap();
     const UINT16* GetGlyphIndices();
     const FLOAT*  GetGlyphAdvances();
+    const DWRITE_GLYPH_OFFSET* GetGlyphOffsets();
 
 private:
     ULONG cRefCount_;
@@ -1172,6 +1158,10 @@ const FLOAT* JFXTextRenderer::GetGlyphAdvances() {
     return runs_[position_].glyphRun.glyphAdvances;
 }
 
+const DWRITE_GLYPH_OFFSET* JFXTextRenderer::GetGlyphOffsets() {
+    return runs_[position_].glyphRun.glyphOffsets;
+}
+
 const UINT16* JFXTextRenderer::GetGlyphIndices() {
     return runs_[position_].glyphRun.glyphIndices;
 }
@@ -1216,24 +1206,7 @@ JNIEXPORT jlong JNICALL OS_NATIVE(JFXTextRendererGetFontFace)
     return (jlong)((JFXTextRenderer*)arg0)->GetFontFace();
 }
 
-JNIEXPORT jintArray JNICALL OS_NATIVE(JFXTextRendererGetGlyphIndices__J)
-(JNIEnv *env, jclass that, jlong arg0) {
-    JFXTextRenderer* renderer = (JFXTextRenderer*)arg0;
-    UINT32 length = renderer->GetGlyphCount();
-    jintArray result = env->NewIntArray(length);
-    if (!result) return NULL;
-    jint* data = env->GetIntArrayElements(result, NULL);
-    if (!data) return NULL;
-    const UINT16* indices = renderer->GetGlyphIndices();
-    UINT32 i;
-    for (i = 0; i < length; i++) {
-        data[i] = indices[i];
-    }
-    env->ReleaseIntArrayElements(result, data, NULL);
-    return result;
-}
-
-JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphIndices__J_3III)
+JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphIndices)
 (JNIEnv *env, jclass that, jlong arg0, jintArray arg1, jint start, jint slot) {
     if (!arg1) return 0;
     jint* data = env->GetIntArrayElements(arg1, NULL);
@@ -1253,24 +1226,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphIndices__J_3III)
     return copiedCount;
 }
 
-JNIEXPORT jfloatArray JNICALL OS_NATIVE(JFXTextRendererGetGlyphAdvances__J)
-(JNIEnv *env, jclass that, jlong arg0) {
-    JFXTextRenderer* renderer = (JFXTextRenderer*)arg0;
-    UINT32 length = renderer->GetGlyphCount();
-    jfloatArray result = env->NewFloatArray(length);
-    if (!result) return NULL;
-    jfloat* data = env->GetFloatArrayElements(result, NULL);
-    if (!data) return NULL;
-    const FLOAT* advances = renderer->GetGlyphAdvances();
-    UINT32 i;
-    for (i = 0; i < length; i++) {
-        data[i] = advances[i];
-    }
-    env->ReleaseFloatArrayElements(result, data, NULL);
-    return result;
-}
-
-JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphAdvances__J_3FI)
+JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphAdvances)
 (JNIEnv *env, jclass that, jlong arg0, jfloatArray arg1, jint start) {
     if (!arg1) return 0;
     jfloat* data = env->GetFloatArrayElements(arg1, NULL);
@@ -1290,24 +1246,29 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphAdvances__J_3FI)
     return copiedCount;
 }
 
-JNIEXPORT jintArray JNICALL OS_NATIVE(JFXTextRendererGetClusterMap__J)
-(JNIEnv *env, jclass that, jlong arg0) {
+JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphOffsets)
+(JNIEnv *env, jclass that, jlong arg0, jfloatArray arg1, jint start) {
+    if (!arg1) return 0;
+    jfloat* data = env->GetFloatArrayElements(arg1, NULL);
+    if (!data) return 0;
+
     JFXTextRenderer* renderer = (JFXTextRenderer*)arg0;
-    UINT32 length = renderer->GetLength();
-    jintArray result = env->NewIntArray(length);
-    if (!result) return NULL;
-    jint* data = env->GetIntArrayElements(result, NULL);
-    if (!data) return NULL;
-    const UINT16* map = renderer->GetClusterMap();
-    UINT32 i;
-    for (i = 0; i < length; i++) {
-        data[i] = map[i];
+    UINT32 offsetCount = renderer->GetGlyphCount() * 2;
+    UINT32 length = env->GetArrayLength(arg1);
+    UINT32 copiedCount = length - start > offsetCount ? offsetCount : length - start;
+
+    const DWRITE_GLYPH_OFFSET* offsets = renderer->GetGlyphOffsets();
+    UINT32 i = 0, j = 0;
+    while (i < copiedCount) {
+    	DWRITE_GLYPH_OFFSET offset = offsets[j++];
+        data[start + i++] = offset.advanceOffset;
+        data[start + i++] = offset.ascenderOffset;
     }
-    env->ReleaseIntArrayElements(result, data, NULL);
-    return result;
+    env->ReleaseFloatArrayElements(arg1, data, NULL);
+    return copiedCount;
 }
 
-JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetClusterMap__J_3II)
+JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetClusterMap)
 (JNIEnv *env, jclass that, jlong arg0, jintArray arg1, jint start) {
     if (!arg1) return 0;
     jint* data = env->GetIntArrayElements(arg1, NULL);
@@ -1666,8 +1627,10 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CreateGlyphRunAnalysis)
     IDWriteGlyphRunAnalysis* result = NULL;
     DWRITE_GLYPH_RUN _arg1, *lparg1 = NULL;
     DWRITE_MATRIX _arg3, *lparg3 = NULL;
+    _arg1.glyphCount = 1;
     _arg1.glyphIndices = new (std::nothrow) UINT16 [1];
     _arg1.glyphAdvances = new (std::nothrow) FLOAT [1];
+    _arg1.glyphOffsets = new (std::nothrow) DWRITE_GLYPH_OFFSET [1];
 
     /* In Only */
     if (arg1) if ((lparg1 = getDWRITE_GLYPH_RUNFields(env, arg1, &_arg1)) == NULL) goto fail;
@@ -1684,6 +1647,7 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CreateGlyphRunAnalysis)
 fail:
     delete [] _arg1.glyphIndices;
     delete [] _arg1.glyphAdvances;
+    delete [] _arg1.glyphOffsets;
     return SUCCEEDED(hr) ? (jlong)result : NULL;
 }
 
@@ -2184,14 +2148,17 @@ JNIEXPORT void JNICALL OS_NATIVE(DrawGlyphRun)
 {
     D2D1_POINT_2F _arg1, *lparg1=NULL;
     DWRITE_GLYPH_RUN _arg2, *lparg2=NULL;
+    _arg2.glyphCount = 1;
     _arg2.glyphIndices = new (std::nothrow) UINT16 [1];
     _arg2.glyphAdvances = new (std::nothrow) FLOAT [1];
+    _arg2.glyphOffsets = new (std::nothrow) DWRITE_GLYPH_OFFSET [1];
     if (arg1) if ((lparg1 = getD2D1_POINT_2FFields(env, arg1, &_arg1)) == NULL) goto fail;
     if (arg2) if ((lparg2 = getDWRITE_GLYPH_RUNFields(env, arg2, &_arg2)) == NULL) goto fail;
     ((ID2D1RenderTarget *)arg0)->DrawGlyphRun(_arg1, lparg2, (ID2D1Brush *)arg3, (DWRITE_MEASURING_MODE)arg4);
 fail:
     delete [] _arg2.glyphIndices;
     delete [] _arg2.glyphAdvances;
+    delete [] _arg2.glyphOffsets;
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(CreateSolidColorBrush)

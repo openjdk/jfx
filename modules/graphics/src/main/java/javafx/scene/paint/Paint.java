@@ -64,7 +64,12 @@ public abstract class Paint {
             
         });
     }
-    
+
+    /**
+     *  Only allow classes in this package to subclass Paint
+     */
+    Paint() { }
+
     boolean acc_isMutable() {
         return false;
     }

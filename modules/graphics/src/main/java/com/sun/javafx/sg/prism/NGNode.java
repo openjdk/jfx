@@ -1873,7 +1873,7 @@ public abstract class NGNode {
     }
 
     private void renderCached(Graphics g) {
-        // We will punt on 3D completely for cahcing.
+        // We will punt on 3D completely for caching.
         // The first check is for any of its children contains a 3D Transform.
         // The second check is for any of its parents and itself has a 3D Transform
         if (isContentBounds2D() && g.getTransformNoClone().is2D()) {

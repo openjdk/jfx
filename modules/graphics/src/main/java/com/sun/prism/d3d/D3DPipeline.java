@@ -46,7 +46,7 @@ public final class D3DPipeline extends GraphicsPipeline {
                 if (PrismSettings.verbose) {
                     System.out.println("Loading D3D native library ...");
                 }
-                NativeLibLoader.loadLibrary("prism-d3d");
+                NativeLibLoader.loadLibrary("prism_d3d");
                 if (PrismSettings.verbose) {
                     System.out.println("\tsucceeded.");
                 }

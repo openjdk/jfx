@@ -96,50 +96,50 @@ public class CornerRadii {
     /**
      * indicates whether {@code topLeftHorizontalRadius} is interpreted as a value or a percentage.
      */
-    private final boolean topLeftHorizontalRadiusAsPercentage;
     public final boolean isTopLeftHorizontalRadiusAsPercentage() { return topLeftHorizontalRadiusAsPercentage; }
+    private final boolean topLeftHorizontalRadiusAsPercentage;
 
     /**
      * indicates whether {@code topLeftVerticalRadius} is interpreted as a value or a percentage.
      */
-    private final boolean topLeftVerticalRadiusAsPercentage;
     public final boolean isTopLeftVerticalRadiusAsPercentage() { return topLeftVerticalRadiusAsPercentage; }
+    private final boolean topLeftVerticalRadiusAsPercentage;
 
     /**
      * indicates whether {@code topRightVerticalRadius} is interpreted as a value or a percentage.
      */
-    private final boolean topRightVerticalRadiusAsPercentage;
     public final boolean isTopRightVerticalRadiusAsPercentage() { return topRightVerticalRadiusAsPercentage; }
+    private final boolean topRightVerticalRadiusAsPercentage;
 
     /**
      * indicates whether {@code topRightHorizontalRadius} is interpreted as a value or a percentage.
      */
-    private final boolean topRightHorizontalRadiusAsPercentage;
     public final boolean isTopRightHorizontalRadiusAsPercentage() { return topRightHorizontalRadiusAsPercentage; }
+    private final boolean topRightHorizontalRadiusAsPercentage;
 
     /**
      * indicates whether {@code bottomRightHorizontalRadius} is interpreted as a value or a percentage.
      */
-    private final boolean bottomRightHorizontalRadiusAsPercentage;
     public final boolean isBottomRightHorizontalRadiusAsPercentage() { return bottomRightHorizontalRadiusAsPercentage; }
+    private final boolean bottomRightHorizontalRadiusAsPercentage;
 
     /**
      * indicates whether {@code bottomRightVerticalRadius} is interpreted as a value or a percentage.
      */
-    private final boolean bottomRightVerticalRadiusAsPercentage;
     public final boolean isBottomRightVerticalRadiusAsPercentage() { return bottomRightVerticalRadiusAsPercentage; }
+    private final boolean bottomRightVerticalRadiusAsPercentage;
 
     /**
      * indicates whether {@code bottomLeftVerticalRadius} is interpreted as a value or a percentage.
      */
-    private final boolean bottomLeftVerticalRadiusAsPercentage;
     public final boolean isBottomLeftVerticalRadiusAsPercentage() { return bottomLeftVerticalRadiusAsPercentage; }
+    private final boolean bottomLeftVerticalRadiusAsPercentage;
 
     /**
      * indicates whether {@code bottomLeftHorizontalRadius} is interpreted as a value or a percentage.
      */
-    private final boolean bottomLeftHorizontalRadiusAsPercentage;
     public final boolean isBottomLeftHorizontalRadiusAsPercentage() { return bottomLeftHorizontalRadiusAsPercentage; }
+    private final boolean bottomLeftHorizontalRadiusAsPercentage;
 
     final boolean hasPercentBasedRadii;
 
@@ -147,8 +147,8 @@ public class CornerRadii {
      * Indicates whether each corner radius is exactly the same, and each are either uniformly percentage-based
      * or not.
      */
-    final boolean uniform;
     public final boolean isUniform() { return uniform; }
+    final boolean uniform;
 
     /**
      * The cached hash code.

@@ -343,7 +343,7 @@ public class PlatformImpl {
             // runnables (including this one) are done and there is no running
             // nested loops, then we will shutdown.
             if (lastWindowClosed && pendingRunnables.get() == 0
-                    && !Toolkit.getToolkit().isNestedLoopRunning()) {
+                    && (toolkitExit.get() || !Toolkit.getToolkit().isNestedLoopRunning())) {
 //                System.err.println("Last window closed and no pending runnables");
                 if (reallyIdle.getAndSet(true)) {
 //                    System.err.println("Really idle now");

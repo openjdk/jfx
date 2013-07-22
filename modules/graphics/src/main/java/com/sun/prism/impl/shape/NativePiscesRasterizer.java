@@ -68,7 +68,7 @@ public class NativePiscesRasterizer implements ShapeRasterizer {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override
             public Void run() {
-                String libName = "prism-common";
+                String libName = "prism_common";
 
                 if (PrismSettings.verbose) {
                     System.out.println("Loading Prism common native library ...");

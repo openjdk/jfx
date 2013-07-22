@@ -37,7 +37,6 @@ public class StubMasterTimer extends AbstractMasterTimer {
     private long currentTimeMillis;
 
     protected StubMasterTimer() {
-        super(false);
     }
 
     protected int getPulseDuration(int precision) {

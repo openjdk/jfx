@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <stdint.h>
 #include <string.h>
 #include <linux/fb.h>
 #include <sys/ioctl.h>
@@ -271,7 +272,9 @@ NativeScreen lens_screen_initialize(JNIEnv *env) {
     fbScreen.x = screenInfo.xoffset;
     fbScreen.y = screenInfo.yoffset;
     fbScreen.depth = screenInfo.bits_per_pixel;
-    if (screenInfo.width > 0) {
+    // Only use reported physical screen size if it makes sense.
+    // Sometimes -1 is reported for the physical width and height.
+    if (screenInfo.width > 0 && screenInfo.width < INT32_MAX) {
         // convert pixels/mm to pixels/inch
         fbScreen.resolutionX = (fbScreen.visibleWidth * 254)
                                / (fbScreen.width * 10);
@@ -279,7 +282,7 @@ NativeScreen lens_screen_initialize(JNIEnv *env) {
         // take a guess at pixel density
         fbScreen.resolutionX = 96;
     }
-    if (screenInfo.height > 0) {
+    if (screenInfo.height > 0 && screenInfo.height < INT32_MAX) {
         fbScreen.resolutionY = (fbScreen.visibleHeight * 254)
                                / (fbScreen.height * 10);
     } else {

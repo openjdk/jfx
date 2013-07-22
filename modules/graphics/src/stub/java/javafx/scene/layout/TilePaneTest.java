@@ -877,14 +877,17 @@ public class TilePaneTest {
             tilepane.getChildren().addAll(child1, child2);
         }
 
-        tilepane.autosize();
-        tilepane.layout();
-
         assertEquals(200, tilepane.getTileWidth(), 0);
         assertEquals(300, tilepane.getTileHeight(), 0);
 
         assertEquals(600, tilepane.prefWidth(-1), 0);
         assertEquals(900, tilepane.prefHeight(-1), 0);
+
+        tilepane.autosize();
+        tilepane.layout();
+
+        assertEquals(200, tilepane.getTileWidth(), 0);
+        assertEquals(300, tilepane.getTileHeight(), 0);
 
         // test a handful
         Node first = tilepane.getChildren().get(0);
@@ -911,14 +914,18 @@ public class TilePaneTest {
             tilepane.getChildren().addAll(child1, child2);
         }
 
-        tilepane.autosize();
-        tilepane.layout();
 
         assertEquals(300, tilepane.getTileWidth(), 0);
         assertEquals(200, tilepane.getTileHeight(), 0);
 
         assertEquals(900, tilepane.prefWidth(-1), 0);
         assertEquals(600, tilepane.prefHeight(-1), 0);
+
+        tilepane.autosize();
+        tilepane.layout();
+
+        assertEquals(300, tilepane.getTileWidth(), 0);
+        assertEquals(200, tilepane.getTileHeight(), 0);
 
         // test a handful
         Node first = tilepane.getChildren().get(0);
@@ -943,14 +950,18 @@ public class TilePaneTest {
             tilepane.getChildren().add(child);
         }
 
-        tilepane.autosize();
-        tilepane.layout();
 
         assertEquals(40, tilepane.getTileWidth(), 0);
         assertEquals(40, tilepane.getTileHeight(), 0);
 
         assertEquals(100, tilepane.prefWidth(-1), 0);
         assertEquals(100, tilepane.prefHeight(-1), 0);
+
+        tilepane.autosize();
+        tilepane.layout();
+
+        assertEquals(40, tilepane.getTileWidth(), 0);
+        assertEquals(40, tilepane.getTileHeight(), 0);
 
         Node first = tilepane.getChildren().get(0);
 
@@ -969,14 +980,16 @@ public class TilePaneTest {
             tilepane.getChildren().add(child);
         }
 
-        tilepane.autosize();
-        tilepane.layout();
-
         assertEquals(40, tilepane.getTileWidth(), 0);
         assertEquals(40, tilepane.getTileHeight(), 0);
 
         assertEquals(100, tilepane.prefWidth(-1), 0);
         assertEquals(100, tilepane.prefHeight(-1), 0);
+        tilepane.autosize();
+        tilepane.layout();
+
+        assertEquals(40, tilepane.getTileWidth(), 0);
+        assertEquals(40, tilepane.getTileHeight(), 0);
 
         Node first = tilepane.getChildren().get(0);
 

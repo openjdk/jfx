@@ -28,10 +28,10 @@ package com.sun.javafx.font.directwrite;
 class DWRITE_GLYPH_RUN {
     long fontFace;
     float fontEmSize;
-    int glyphCount;
     short glyphIndices;
     float glyphAdvances;
-//    DWRITE_GLYPH_OFFSET[] glyphOffsets; //not used
+    float advanceOffset;
+    float ascenderOffset;
     boolean isSideways;
     int bidiLevel;
 }

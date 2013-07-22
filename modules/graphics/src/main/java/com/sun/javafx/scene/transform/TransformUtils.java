@@ -233,6 +233,11 @@ public class TransformUtils {
                 yx = left.yx * right.xx + left.yy * right.yx;
                 yy = left.yx * right.xy + left.yy * right.yy;
                 yt = left.yx * right.xt + left.yy * right.yt + left.yt;
+                if (state3d != APPLY_NON_3D) {
+                    xz = yz = zx = zy = zt = 0.0;
+                    zz = 1.0;
+                    state3d = APPLY_NON_3D;
+                }
                 updateState2D();
             } else {
                 xx = left.xx * right.xx + left.xy * right.yx + left.xz * right.zx;

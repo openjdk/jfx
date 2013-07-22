@@ -12,7 +12,7 @@ import static org.junit.Assert.*;
 
 public class IrresponsiveScriptTest extends TestBase {
 
-    @Test public void testInfiniteLoopInScript() {
+    @org.junit.Ignore @Test public void testInfiniteLoopInScript() {
         try {
             // This infinite loop should get interrupted by Webkit in about 10s.
             // If it doesn't, test times out.

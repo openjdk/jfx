@@ -31,13 +31,14 @@ package javafx.animation;
  * of given fraction.
  * @since JavaFX 2.0
  */
+@FunctionalInterface
 public interface Interpolatable<T> {
 
     /**
      * The function calculates an interpolated value along the fraction
      * {@code t} between {@code 0.0} and {@code 1.0}. When {@code t} = 1.0,
      * {@code endVal} is returned.
-     * 
+     *
      * @param endValue
      *            target value
      * @param t

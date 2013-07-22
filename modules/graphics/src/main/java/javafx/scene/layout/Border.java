@@ -160,8 +160,8 @@ public final class Border {
      * of this Border. This List is unmodifiable and immutable. It
      * will never be null. It will never contain any null elements.
      */
-    final List<BorderStroke> strokes;
     public final List<BorderStroke> getStrokes() { return strokes; }
+    final List<BorderStroke> strokes;
 
     /**
      * The list of BorderImages which together define the images to use
@@ -173,23 +173,23 @@ public final class Border {
      * This List is unmodifiable and immutable. It will never be null.
      * It will never contain any null elements.
      */
-    final List<BorderImage> images;
     public final List<BorderImage> getImages() { return images; }
+    final List<BorderImage> images;
 
     /**
      * The outsets of the border define the outer-most edge of the border to be drawn.
      * The values in these outsets are strictly non-negative.
      */
-    final Insets outsets;
     public final Insets getOutsets() { return outsets; }
+    final Insets outsets;
 
     /**
      * The insets define the distance from the edge of the Region to the inner-most edge
      * of the border, if that distance is non-negative. The values in these outsets
      * are strictly non-negative.
      */
-    final Insets insets;
     public final Insets getInsets() { return insets; }
+    final Insets insets;
 
     /**
      * Gets whether the Border is empty. It is empty if there are no strokes or images.

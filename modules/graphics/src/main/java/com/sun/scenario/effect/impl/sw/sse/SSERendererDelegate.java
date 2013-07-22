@@ -39,7 +39,7 @@ public class SSERendererDelegate implements RendererDelegate {
     static {
         AccessController.doPrivileged(new PrivilegedAction() {
             public Object run() {
-                NativeLibLoader.loadLibrary("decora-sse");
+                NativeLibLoader.loadLibrary("decora_sse");
                 return null;
             }
         });

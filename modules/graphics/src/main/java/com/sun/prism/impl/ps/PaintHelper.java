@@ -25,14 +25,17 @@
 
 package com.sun.prism.impl.ps;
 
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.util.List;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.AffineBase;
-import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.ResourceFactory;
@@ -42,17 +45,14 @@ import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 import com.sun.prism.impl.BufferUtil;
-import com.sun.prism.ps.Shader;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
+import com.sun.prism.paint.ImagePattern;
 import com.sun.prism.paint.LinearGradient;
 import com.sun.prism.paint.RadialGradient;
-import com.sun.prism.paint.ImagePattern;
 import com.sun.prism.paint.Stop;
+import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderGraphics;
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
-import java.util.List;
 
 class PaintHelper {
 

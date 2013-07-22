@@ -70,8 +70,8 @@ public class BorderStroke {
      *
      * @defaultValue black
      */
-    final Paint topStroke;
     public final Paint getTopStroke() { return topStroke; }
+    final Paint topStroke;
     // TODO: The spec says the default color is "currentColor", which appears to mean
     // by default the color is "inherit". So we should file a JIRA on this so that
     // we use inherit. But first I'd like a performance analysis.
@@ -82,8 +82,8 @@ public class BorderStroke {
      *
      * @defaultValue null = same as topFill
      */
-    final Paint rightStroke;
     public final Paint getRightStroke() { return rightStroke; }
+    final Paint rightStroke;
 
     /**
      * Defines the fill of bottom side of this border. If {@code null} then the
@@ -91,8 +91,8 @@ public class BorderStroke {
      *
      * @defaultValue null = same as topFill
      */
-    final Paint bottomStroke;
     public final Paint getBottomStroke() { return bottomStroke; }
+    final Paint bottomStroke;
 
     /**
      * Defines the fill of left side of this border. If {@code null} then the
@@ -100,16 +100,16 @@ public class BorderStroke {
      *
      * @defaultValue null = same sa rightFill
      */
-    final Paint leftStroke;
     public final Paint getLeftStroke() { return leftStroke; }
+    final Paint leftStroke;
 
     /**
      * Defines the style of top side of this border.
      *
      * @defaultValue none
      */
-    final BorderStrokeStyle topStyle;
     public final BorderStrokeStyle getTopStyle() { return topStyle; }
+    final BorderStrokeStyle topStyle;
 
     /**
      * Defines the style of right side of this border. If {@code null} then
@@ -117,8 +117,8 @@ public class BorderStroke {
      *
      * @defaultValue null = same as topStyle
      */
-    final BorderStrokeStyle rightStyle;
     public final BorderStrokeStyle getRightStyle() { return rightStyle; }
+    final BorderStrokeStyle rightStyle;
 
     /**
      * Defines the style of bottom side of this border. If {@code null} then
@@ -127,8 +127,8 @@ public class BorderStroke {
      *
      * @defaultValue null = same as topStyle
      */
-    final BorderStrokeStyle bottomStyle;
     public final BorderStrokeStyle getBottomStyle() { return bottomStyle; }
+    final BorderStrokeStyle bottomStyle;
 
     /**
      * Defines the style of left side of this border. If {@code null} then
@@ -137,45 +137,44 @@ public class BorderStroke {
      *
      * @defaultValue null = same as rightStyle
      */
-    final BorderStrokeStyle leftStyle;
     public final BorderStrokeStyle getLeftStyle() { return leftStyle; }
+    final BorderStrokeStyle leftStyle;
 
     /**
      * Defines the thickness of each side of the BorderStroke. This will never
      * be null, and defaults to DEFAULT_WIDTHS.
      */
-    final BorderWidths widths;
     public final BorderWidths getWidths() { return widths; }
+    final BorderWidths widths;
 
     /**
      * Defines the insets of each side of the BorderStroke. This will never
      * be null, and defaults to EMPTY.
      */
-    final Insets insets;
     public final Insets getInsets() { return insets; }
+    final Insets insets;
 
     // These two are used by Border to compute the insets and outsets of the border
     final Insets innerEdge;
     final Insets outerEdge;
-    public void solid(Region region) {
-        region.setStyle("-fx-background-color: lightgrey;" +
-                        "-fx-border-style: solid;" +
-                        "-fx-border-width: 5;" +
-                        "-fx-border-color: red;");
-    }
 
     /**
      * Defines the radii for each corner of this BorderStroke. This will never
      * be null, and defaults to CornerRadii.EMPTY.
-     * TODO I should change CornerRadii to be 4 properties, one for each corner,
-     * where each corner is a horizontal / vertical radius! I think that would
-     * be cleaner.
      */
-    private final CornerRadii radii;
     public final CornerRadii getRadii() { return radii; }
+     /* TODO I should change CornerRadii to be 4 properties, one for each corner,
+     * where each corner is a horizontal / vertical radius! I think that would
+     * be cleaner. */
+    private final CornerRadii radii;
 
-    private final boolean strokeUniform;
+    /**
+     * An uniform stroke has all (top, bottom, left, right) strokes of
+     * same color, width and style
+     * @return true if border stroke is uniform as defined above
+     */
     public final boolean isStrokeUniform() { return strokeUniform; }
+    private final boolean strokeUniform;
 
     /**
      * A cached hash code

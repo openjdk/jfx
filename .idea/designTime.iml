@@ -4,6 +4,8 @@
     <exclude-output />
     <content url="file://$MODULE_DIR$/modules/designTime">
       <sourceFolder url="file://$MODULE_DIR$/modules/designTime/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/designTime/src/test/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/designTime/src/test/resources" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/modules/designTime/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />

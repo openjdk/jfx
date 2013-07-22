@@ -135,7 +135,7 @@ win32-* {
         LIBS += -llibxslt
     }
     !contains(DEFINES, IMAGEIO=1) {
-        INCLUDEPATH += $(WEBKITLIBRARIESDIR)/import/include/image
+        INCLUDEPATH += $(WEBKITOUTPUTDIR)/import/include/image
         LIBS += -llibjpeg -llibpng -lzlib
         QMAKE_LFLAGS += /NODEFAULTLIB:LIBCMTD /NODEFAULTLIB:LIBCMT
     }
@@ -174,8 +174,8 @@ mac* {
     }
     !contains(DEFINES, IMAGEIO=1) {
         INCLUDEPATH += /usr/X11/include \
-                       $(WEBKITLIBRARIESDIR)/import/include
-        LIBS += -L/usr/X11/lib -L$(WEBKITLIBRARIESDIR)/import/lib
+                       $(WEBKITOUTPUTDIR)/import/include
+        LIBS += -L/usr/X11/lib -L$(WEBKITOUTPUTDIR)/import/lib
         LIBS += -ljpeg -lpng
     }
     SOURCES +=  \
@@ -191,7 +191,7 @@ mac* {
     QMAKE_LFLAGS += -exported_symbols_list $$PWD/mapfile-macosx
 }
 
-INCLUDEPATH += ../../../../build/javah
+INCLUDEPATH += ../../../../../../build/generated-src/headers
 
 win32-* {
     POST_TARGETDEPS += ../lib/JavaScriptCoreJava.lib
