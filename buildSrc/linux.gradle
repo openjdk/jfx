@@ -195,7 +195,7 @@ LINUX.prismES2.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2/x11")
 ]
 LINUX.prismES2.compiler = compiler
-LINUX.prismES2.ccFlags = ["-DLINUX", "-DGRADLE_BUILD", ccFlags].flatten()
+LINUX.prismES2.ccFlags = ["-DLINUX", ccFlags].flatten()
 LINUX.prismES2.linker = linker
 LINUX.prismES2.linkFlags = [linkFlags, "-lX11", "-lXxf86vm", "-lGL"].flatten()
 LINUX.prismES2.lib = "prism_es2"

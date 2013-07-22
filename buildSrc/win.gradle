@@ -233,7 +233,7 @@ WIN.prismES2.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2/windows")
 ]
 WIN.prismES2.compiler = compiler
-WIN.prismES2.ccFlags = ["/Ob1", "/GF", "/Gy", "/GS", "/DWIN32", "/DGRADLE_BUILD", ccFlags].flatten()
+WIN.prismES2.ccFlags = ["/Ob1", "/GF", "/Gy", "/GS", "/DWIN32", ccFlags].flatten()
 WIN.prismES2.linker = linker
 WIN.prismES2.linkFlags = [linkFlags, "/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"].flatten()
 WIN.prismES2.lib = "prism_es2"

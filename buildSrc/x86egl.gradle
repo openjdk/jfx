@@ -103,10 +103,10 @@ def fontLFlags = [extraLFlags].flatten()
 def iioCFlags = [extraCFlags].flatten()
 def iioLFlags = [extraLFlags].flatten()
 
-def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX", "-DGRADLE_BUILD"].flatten()
+def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
 def es2EglfbLFlags = [extraLFlags].flatten()
 
-def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX", "-DGRADLE_BUILD"].flatten()
+def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX"].flatten()
 def es2X11LFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
 
 def mediaCFlags = [extraCFlags,
@@ -232,7 +232,7 @@ X86EGL.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c")]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.eglfb.compiler = compiler
-X86EGL.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
+X86EGL.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 X86EGL.glass.eglfb.linker = linker
 X86EGL.glass.eglfb.linkFlags = [lensLFlags].flatten()
 X86EGL.glass.eglfb.lib = "glass_lens_eglfb"
@@ -246,7 +246,7 @@ X86EGL.glass.directfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c")]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.directfb.compiler = compiler
-X86EGL.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I/usr/include/directfb", "-DLINUX", "-DGRADLE_BUILD"].flatten()
+X86EGL.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I/usr/include/directfb", "-DLINUX"].flatten()
 X86EGL.glass.directfb.linker = linker
 X86EGL.glass.directfb.linkFlags = [lensLFlags].flatten()
 X86EGL.glass.directfb.lib = "glass_lens_dfb"
@@ -260,7 +260,7 @@ X86EGL.glass.fb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.fb.compiler = compiler
-X86EGL.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
+X86EGL.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 X86EGL.glass.fb.linker = linker
 X86EGL.glass.fb.linkFlags = [lensLFlags].flatten()
 X86EGL.glass.fb.lib = "glass_lens_fb"
@@ -274,7 +274,7 @@ X86EGL.glass.eglx11.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c")]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.eglx11.compiler = compiler
-X86EGL.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
+X86EGL.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 X86EGL.glass.eglx11.linker = linker
 X86EGL.glass.eglx11.linkFlags = [lensLFlags].flatten()
 X86EGL.glass.eglx11.lib = "glass_lens_eglx11"
@@ -284,7 +284,7 @@ X86EGL.glass.gtk.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens"),
     file("modules/graphics/src/main/native-glass/lens/wm")]
 X86EGL.glass.gtk.compiler = compiler
-X86EGL.glass.gtk.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
+X86EGL.glass.gtk.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 X86EGL.glass.gtk.linker = linker
 X86EGL.glass.gtk.linkFlags = [lensLFlags, "-lstdc++"].flatten()
 X86EGL.glass.gtk.lib = "glass"

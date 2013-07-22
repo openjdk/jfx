@@ -169,7 +169,7 @@ MAC.prismES2.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2/macosx")
 ]
 MAC.prismES2.compiler = compiler
-MAC.prismES2.ccFlags = ["-DMACOSX", "-DGRADLE_BUILD", ccFlags].flatten()
+MAC.prismES2.ccFlags = ["-DMACOSX", ccFlags].flatten()
 MAC.prismES2.linker = linker
 MAC.prismES2.linkFlags = [linkFlags].flatten()
 MAC.prismES2.lib = "prism_es2"
