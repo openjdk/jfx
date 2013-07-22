@@ -338,7 +338,9 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
         
         this.checkBox = new CheckBox();
         this.checkBox.setAllowIndeterminate(false);
-        setGraphic(checkBox);
+
+        // by default the graphic is null until the cell stops being empty
+        setGraphic(null);
     }
     
     

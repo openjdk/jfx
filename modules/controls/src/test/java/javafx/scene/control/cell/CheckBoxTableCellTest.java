@@ -188,9 +188,9 @@ public class CheckBoxTableCellTest {
         assertTrue(cell.getStyleClass().contains("check-box-table-cell"));
     }
     
-    @Test public void testConstructor_noArgs_defaultGraphicIsACheckBox() {
+    @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>();
-        assertTrue(cell.getGraphic() instanceof CheckBox);
+        assertNull(cell.getGraphic());
     }
     
     
@@ -215,9 +215,9 @@ public class CheckBoxTableCellTest {
         assertTrue(cell.getStyleClass().contains("check-box-table-cell"));
     }
     
-    @Test public void testConstructor_getSelectedProperty_defaultGraphicIsACheckBox() {
+    @Test public void testConstructor_getSelectedProperty_defaultGraphicIsNull() {
         CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback);
-        assertTrue(cell.getGraphic() instanceof CheckBox);
+        assertNull(cell.getGraphic());
     }
     
     
@@ -243,9 +243,9 @@ public class CheckBoxTableCellTest {
         assertTrue(cell.getStyleClass().contains("check-box-table-cell"));
     }
     
-    @Test public void testConstructor_getSelectedProperty_converter_defaultGraphicIsACheckBox() {
+    @Test public void testConstructor_getSelectedProperty_converter_defaultGraphicIsNull() {
         CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback, converter);
-        assertTrue(cell.getGraphic() instanceof CheckBox);
+        assertNull(cell.getGraphic());
     }
     
     

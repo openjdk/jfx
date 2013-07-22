@@ -178,7 +178,9 @@ public class CheckBoxListCell<T> extends ListCell<T> {
         
         setAlignment(Pos.CENTER_LEFT);
         setContentDisplay(ContentDisplay.LEFT);
-        setGraphic(checkBox);
+
+        // by default the graphic is null until the cell stops being empty
+        setGraphic(null);
     }
     
     

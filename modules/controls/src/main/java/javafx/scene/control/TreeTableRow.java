@@ -385,22 +385,34 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         // Compute whether the index for this cell is for a real item
         boolean valid = index >=0 && index < tv.getExpandedItemCount();
 
+        final TreeItem<T> oldTreeItem = getTreeItem();
+        final boolean isEmpty = isEmpty();
+
         // Cause the cell to update itself
         if (valid) {
             // update the TreeCell state.
             // get the new treeItem that is about to go in to the TreeCell
-            TreeItem<T> treeItem = tv.getTreeItem(index);
+            final TreeItem<T> newTreeItem = tv.getTreeItem(index);
+            final T newValue = newTreeItem == null ? null : newTreeItem.getValue();
             
             // For the sake of RT-14279, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
-            updateTreeItem(treeItem);
-            updateItem(treeItem == null ? null : treeItem.getValue(), false);
+            if ((newTreeItem != null && ! newTreeItem.equals(oldTreeItem)) ||
+                    oldTreeItem != null && ! oldTreeItem.equals(newTreeItem)) {
+                updateTreeItem(newTreeItem);
+                updateItem(newValue, false);
+            } else if(isEmpty && newValue == null) {
+                updateTreeItem(newTreeItem);
+                updateItem(newValue, false);
+            }
         } else {
-            updateTreeItem(null);
-            updateItem(null, true);
+            if (!isEmpty && oldTreeItem != null) {
+                updateTreeItem(null);
+                updateItem(null, true);
+            }
         }
     }
 
@@ -444,7 +456,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     /**
      * Updates the TreeTableView associated with this TreeTableCell.
      * 
-     * @param tree The new TreeTableView that should be associated with this 
+     * @param treeTable The new TreeTableView that should be associated with this
      *         TreeTableCell.
      * @expert This function is intended to be used by experts, primarily
      *         by those implementing new Skins. It is not common

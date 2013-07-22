@@ -251,14 +251,23 @@ public class TableRow<T> extends IndexedCell<T> {
         // Compute whether the index for this cell is for a real item
         boolean valid = newIndex >= 0 && newIndex < items.size();
 
+        final T oldValue = getItem();
+        final boolean isEmpty = isEmpty();
+
         // Cause the cell to update itself
         if (valid) {
-            T newItem = items.get(newIndex);
-            if (newItem == null || ! newItem.equals(getItem())) {
-                updateItem(newItem, false);
+            final T newValue = items.get(newIndex);
+
+            if ((newValue != null && ! newValue.equals(oldValue)) ||
+                    oldValue != null && ! oldValue.equals(newValue)) {
+                updateItem(newValue, false);
+            } else if(isEmpty && newValue == null) {
+                updateItem(newValue, false);
             }
         } else {
-            updateItem(null, true);
+            if (!isEmpty && oldValue != null) {
+                updateItem(null, true);
+            }
         }
     }
     
