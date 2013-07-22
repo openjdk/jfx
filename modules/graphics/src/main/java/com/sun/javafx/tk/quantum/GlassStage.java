@@ -166,7 +166,9 @@ abstract class GlassStage implements TKStage {
     // Cmd+Q action
     static void requestClosingAllWindows() {
         for (final GlassStage window : windows.toArray(new GlassStage[windows.size()])) {
-            if (window.isVisible() && window.stageListener != null) {
+            // In case of child windows some of them could already be closed
+            // so check if list still contains an object
+            if (windows.contains(window) && window.isVisible() && window.stageListener != null) {
                 AccessController.doPrivileged(new PrivilegedAction<Void>() {
                     @Override
                     public Void run() {
