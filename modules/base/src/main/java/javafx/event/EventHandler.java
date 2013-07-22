@@ -34,6 +34,7 @@ import java.util.EventListener;
  * @param <T> the event class this handler can handle
  * @since JavaFX 2.0
  */
+@FunctionalInterface
 public interface EventHandler<T extends Event> extends EventListener {
     /**
      * Invoked when a specific event of the type for which this handler is

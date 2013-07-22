@@ -36,12 +36,13 @@ package javafx.beans.value;
  * <p>
  * The same instance of {@code ChangeListener} can be registered to listen to
  * multiple {@code ObservableValues}.
- * 
+ *
  * @see ObservableValue
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
+@FunctionalInterface
 public interface ChangeListener<T> {
 
     /**
@@ -51,7 +52,7 @@ public interface ChangeListener<T> {
      * <p>
      * In general is is considered bad practice to modify the observed value in
      * this method.
-     * 
+     *
      * @param observable
      *            The {@code ObservableValue} which value changed
      * @param oldValue

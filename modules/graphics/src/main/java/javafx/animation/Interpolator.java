@@ -87,7 +87,7 @@ public abstract class Interpolator {
     /*
      * Easing is calculated with the following algorithm (taken from SMIL 3.0
      * specs). The result is clamped because of possible rounding errors.
-     * 
+     *
      * double runRate = 1.0 / (1.0 - acceleration/2.0 - deceleration/2.0); if
      * (fraction < acceleration) { double averageRunRate = runRate * (fraction /
      * acceleration) / 2; fraction *= averageRunRate; } else if (fraction > (1.0
@@ -155,7 +155,7 @@ public abstract class Interpolator {
      * An ease-out interpolator will make an animation slow down toward the
      * end smoothly.
      * <p>
-     * The implementation uses the algorithm for easing defined in SMIL 3.0 
+     * The implementation uses the algorithm for easing defined in SMIL 3.0
      * with an deceleration factor of 0.2.
      */
     public static final Interpolator EASE_OUT = new Interpolator() {
@@ -184,7 +184,7 @@ public abstract class Interpolator {
      * ) and ({@code x2}, {@code y2}). The anchor points of the spline are
      * implicitly defined as ({@code 0.0}, {@code 0.0}) and ({@code 1.0},
      * {@code 1.0}).
-     * 
+     *
      * @param x1
      *            x coordinate of the first control point
      * @param y1
@@ -203,7 +203,7 @@ public abstract class Interpolator {
      * Create a tangent interpolator. A tangent interpolator allows to define
      * the behavior of an animation curve very precisely by defining the
      * tangents close to a key frame.
-     * 
+     *
      * A tangent interpolator defines the behavior to the left and to the right
      * of a key frame, therefore it is only useful within a {@link Timeline}.
      * If used in a {@link KeyFrame} after a KeyFrame that has different interpolator,
@@ -211,7 +211,7 @@ public abstract class Interpolator {
      *
      * <p>
      * <img src="doc-files/tangent_interpolator.png"/>
-     * 
+     *
      * <p>
      * The parameters define the tangent of the animation curve for the in
      * tangent (before a key frame) and out tangent (after a key frame). Each
@@ -220,7 +220,7 @@ public abstract class Interpolator {
      * <p>
      * The interpolation then follows a bezier curve, with 2 control points defined by the specified tangent and
      * positioned at 1/3 of the duration before the second KeyFrame or after the first KeyFrame. See the picture above.
-     * 
+     *
      * @param t1
      *            The delta time of the in-tangent, relative to the KeyFrame
      * @param v1
@@ -241,9 +241,9 @@ public abstract class Interpolator {
      * identical. This is especially useful for the first and the last key frame
      * of a {@link Timeline}, because for these key frames only one tangent is
      * used.
-     * 
+     *
      * @see #TANGENT(Duration, double, Duration, double)
-     * 
+     *
      * @param t
      *            The delta time of the tangent
      * @param v
@@ -268,7 +268,7 @@ public abstract class Interpolator {
      * <p>
      * Before calculating the interpolated value, the fraction is altered
      * according to the function defined in {@link #curve(double) curve()}.
-     * 
+     *
      * @param startValue
      *            start value
      * @param endValue
@@ -310,7 +310,7 @@ public abstract class Interpolator {
      * <p>
      * Before calculating the interpolated value, the fraction is altered
      * according to the function defined in {@link #curve(double) curve()}.
-     * 
+     *
      * @param startValue
      *            the first data point
      * @param endValue
@@ -330,7 +330,7 @@ public abstract class Interpolator {
      * <p>
      * Before calculating the interpolated value, the fraction is altered
      * according to the function defined in {@link #curve(double) curve()}.
-     * 
+     *
      * @param startValue
      *            the first data point
      * @param endValue
@@ -349,7 +349,7 @@ public abstract class Interpolator {
      * <p>
      * Before calculating the interpolated value, the fraction is altered
      * according to the function defined in {@link #curve(double) curve()}.
-     * 
+     *
      * @param startValue
      *            the first data point
      * @param endValue
@@ -368,7 +368,7 @@ public abstract class Interpolator {
      * <p>
      * Before calculating the interpolated value, the fraction is altered
      * according to the function defined in {@link #curve(double) curve()}.
-     * 
+     *
      * @param startValue
      *            the first data point
      * @param endValue
@@ -388,7 +388,7 @@ public abstract class Interpolator {
 
     /**
      * Mapping from [0.0..1.0] to itself.
-     * 
+     *
      * @param t
      *            time, but normalized to the range [0.0..1.0], where 0.0 is the
      *            start of the current interval, while 1.0 is the end of the
