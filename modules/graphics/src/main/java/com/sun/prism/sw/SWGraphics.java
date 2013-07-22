@@ -333,11 +333,19 @@ final class SWGraphics implements ReadbackGraphics {
                 }
 
                 paintTx.setTransform(tx);
-                if (lg.isProportional()) {
-                    paintTx.deriveWithConcatenation(width, 0, 0, height, x, y);
-                }
                 convertToPiscesTransform(paintTx, piscesTx);
-                this.pr.setLinearGradient((int)(TO_PISCES * lg.getX1()), (int)(TO_PISCES * lg.getY1()), (int)(TO_PISCES * lg.getX2()), (int)(TO_PISCES * lg.getY2()),
+
+                float x1 = lg.getX1();
+                float y1 = lg.getY1();
+                float x2 = lg.getX2();
+                float y2 = lg.getY2();
+                if (lg.isProportional()) {
+                    x1 = x + width * x1;
+                    y1 = y + height * y1;
+                    x2 = x + width * x2;
+                    y2 = y + height * y2;
+                }
+                this.pr.setLinearGradient((int)(TO_PISCES * x1), (int)(TO_PISCES * y1), (int)(TO_PISCES * x2), (int)(TO_PISCES * y2),
                     getFractions(lg), getARGB(lg, this.compositeAlpha), getPiscesGradientCycleMethod(lg.getSpreadMethod()), piscesTx);
                 break;
             case RADIAL_GRADIENT:
@@ -347,13 +355,29 @@ final class SWGraphics implements ReadbackGraphics {
                 }
 
                 paintTx.setTransform(tx);
+
+                float cx = rg.getCenterX();
+                float cy = rg.getCenterY();
+                float r = rg.getRadius();
                 if (rg.isProportional()) {
-                    paintTx.deriveWithConcatenation(width, 0, 0, height, x, y);
+                    float dim = Math.min(width, height);
+                    float bcx = x + width * 0.5f;
+                    float bcy = y + height * 0.5f;
+                    cx = bcx + (cx - 0.5f) * dim;
+                    cy = bcy + (cy - 0.5f) * dim;
+                    r *= dim;
+                    if (width != height && width != 0.0 && height != 0.0) {
+                        paintTx.deriveWithTranslation(bcx, bcy);
+                        paintTx.deriveWithConcatenation(width / dim, 0, 0, height / dim, 0, 0);
+                        paintTx.deriveWithTranslation(-bcx, -bcy);
+                    }
                 }
                 convertToPiscesTransform(paintTx, piscesTx);
-                final float fx = (float)(rg.getCenterX() + rg.getFocusDistance() * rg.getRadius() * Math.cos(Math.toRadians(rg.getFocusAngle())));
-                final float fy = (float)(rg.getCenterY() + rg.getFocusDistance() * rg.getRadius() * Math.sin(Math.toRadians(rg.getFocusAngle())));
-                this.pr.setRadialGradient((int) (TO_PISCES * rg.getCenterX()), (int) (TO_PISCES * rg.getCenterY()), (int) (TO_PISCES * fx), (int) (TO_PISCES * fy), (int) (TO_PISCES * rg.getRadius()),
+
+                final float fx = (float)(cx + rg.getFocusDistance() * r * Math.cos(Math.toRadians(rg.getFocusAngle())));
+                final float fy = (float)(cy + rg.getFocusDistance() * r * Math.sin(Math.toRadians(rg.getFocusAngle())));
+
+                this.pr.setRadialGradient((int) (TO_PISCES * cx), (int) (TO_PISCES * cy), (int) (TO_PISCES * fx), (int) (TO_PISCES * fy), (int) (TO_PISCES * r),
                         getFractions(rg), getARGB(rg, this.compositeAlpha), getPiscesGradientCycleMethod(rg.getSpreadMethod()), piscesTx);
                 break;
             case IMAGE_PATTERN:
