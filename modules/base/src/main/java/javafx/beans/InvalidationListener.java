@@ -45,6 +45,7 @@ import javafx.beans.value.ObservableValue;
  *
  * @since JavaFX 2.0
  */
+@FunctionalInterface
 public interface InvalidationListener {
 
     /**
