@@ -378,6 +378,7 @@ public class DatePickerTest {
      * Tests for bug reports                                             *
      ********************************************************************/
 
+    @Ignore
     @Test public void test_rt30549() {
         Locale.setDefault(Locale.forLanguageTag("en-US"));
         StringConverter<LocalDate> converter = datePicker.getConverter();
