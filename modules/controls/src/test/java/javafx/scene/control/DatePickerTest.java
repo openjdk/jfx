@@ -379,7 +379,6 @@ public class DatePickerTest {
      * Tests for bug reports                                             *
      ********************************************************************/
 
-    @Ignore
     @Test public void test_rt30549() {
         StringConverter<LocalDate> converter = datePicker.getConverter();
 
