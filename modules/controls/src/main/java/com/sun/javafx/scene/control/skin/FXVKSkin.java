@@ -596,20 +596,31 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             text.setText(this.chars);
             altText.setText(this.altChars);
 
-            if (fxvk != secondaryVK) {
-                setOnMousePressed(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        showSecondaryVK(null);
-                        secondaryVKKey = CharKey.this;
-                        secondaryVKDelay.playFromStart();
-                    }
-                });
+            handleSecondaryVK(letter, alt, moreChars);
+        }
 
-                setOnMouseReleased(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        secondaryVKDelay.stop();
-                    }
-                });
+
+        private void handleSecondaryVK(String letter, String alt, String[] moreChars) {
+            // If key has only one char (alternative char is the same, and it has no more chars),
+            // secondaryVK will not pop-up
+            if (letter.equals(alt) && moreChars == null) {
+                return;
+            } else {
+                if (fxvk != secondaryVK) {
+                    setOnMousePressed(new EventHandler<MouseEvent>() {
+                        @Override public void handle(MouseEvent event) {
+                            showSecondaryVK(null);
+                            secondaryVKKey = CharKey.this;
+                            secondaryVKDelay.playFromStart();
+                        }
+                    });
+
+                    setOnMouseReleased(new EventHandler<MouseEvent>() {
+                        @Override public void handle(MouseEvent event) {
+                            secondaryVKDelay.stop();
+                        }
+                    });
+                }
             }
         }
 
