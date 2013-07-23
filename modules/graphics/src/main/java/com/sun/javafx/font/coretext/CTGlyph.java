@@ -160,22 +160,25 @@ class CTGlyph implements Glyph {
         rect.size.height = h;
         OS.CGContextFillRect(context, rect);
 
-        CGPoint pt = new CGPoint();
-        pt.x = x;
-        pt.y = y;
+        double drawX = 0, drawY = 0;
         if (matrix != null) {
-            /* Need to use the native matrix as it is y up */
-            OS.CGPointApplyAffineTransform(pt, strike.imatrix);
+            OS.CGContextTranslateCTM(context, -x, -y);
         } else {
+            drawX = x;
+            drawY = y;
             if (strike.isSubPixelGlyph()) {
-                pt.x -= subPixelX;
-                pt.y -= subPixelY;
+                drawX -= subPixelX;
+                drawX -= subPixelY;
             }
         }
 
         /* Draw the text with black */
         OS.CGContextSetRGBFillColor(context, 0, 0, 0, 1);
-        OS.CTFontDrawGlyphs(fontRef, (short)glyphCode, -pt.x, -pt.y, 1, context);
+        OS.CTFontDrawGlyphs(fontRef, (short)glyphCode, -drawX, -drawY, 1, context);
+
+        if (matrix != null) {
+            OS.CGContextTranslateCTM(context, x, y);
+        }
 
         byte[] imageData;
         if (lcd) {
