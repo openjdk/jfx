@@ -1,5 +1,7 @@
+if ENABLE_WEBKIT1
 lib_LTLIBRARIES += \
 	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la
+endif
 
 nodist_libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_SOURCES = \
 	$(webkitgtk_built_sources)
@@ -16,17 +18,14 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_SOUR
 	$(webkitgtk_sources)
 
 libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CXXFLAGS = \
-	$(SYMBOL_VISIBILITY_INLINES) \
+	-fvisibility-inlines-hidden \
 	$(global_cxxflags)
 
 libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CFLAGS = \
-	$(SYMBOL_VISIBILITY) \
+	-fvisibility=hidden \
 	$(global_cflags)
 
 if ENABLE_SPELLCHECK
-webkitgtk_cppflags += \
-	-DENABLE_SPELLCHECK=1
-
 webkitgtk_sources += \
 	Source/WebKit/gtk/WebCoreSupport/TextCheckerClientGtk.cpp \
 	Source/WebKit/gtk/WebCoreSupport/TextCheckerClientGtk.h
@@ -45,8 +44,12 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CPPF
 	-I$(WebKit)/WebCoreSupport \
 	-I$(WebKit)/webkit \
 	-I$(GENSOURCES_WEBKIT) \
+	-I$(GENSOURCES_WEBKITDOM) \
 	-ISource/WebKit/gtk/webkit \
 	$(global_cppflags) \
+	$(platform_cppflags) \
+	$(platformgtk_cppflags) \
+	$(platform_webcore_cppflags) \
 	$(webcore_cppflags) \
 	$(webcoregtk_cppflags) \
 	$(javascriptcore_cppflags) \
@@ -56,6 +59,7 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CPPF
 	$(CLUTTER_GTK_CFLAGS) \
 	$(COVERAGE_CFLAGS) \
 	$(ENCHANT_CFLAGS) \
+	$(FREETYPE_CFLAGS) \
 	$(GAIL_CFLAGS) \
 	$(GEOCLUE_CFLAGS) \
 	$(GLIB_CFLAGS) \
@@ -66,6 +70,8 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CPPF
 	$(LIBXSLT_CFLAGS) \
 	$(SQLITE3_CFLAGS) \
 	$(UNICODE_CFLAGS) \
+	$(XCOMPOSITE_CFLAGS) \
+	$(XDAMAGE_CFLAGS) \
 	$(XT_CFLAGS) \
 	$(ZLIB_CFLAGS)
 
@@ -74,11 +80,32 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LDFL
 	$(version_script) \
 	$(no_undefined)
 
-libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD = \
+libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD := \
 	-lpthread \
+	libPlatform.la \
+	libPlatformGtk.la \
 	libWebCore.la \
+	libWebCorePlatform.la \
 	libWebCoreModules.la \
-	libWebCoreGtk.la \
+	libWebCoreDOM.la \
+	libWebCoreGtk.la
+
+if ENABLE_INDEXED_DATABASE
+libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD += \
+	libLevelDB.la
+endif
+
+if USE_OPENGL
+libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD += \
+	libANGLE.la
+endif
+
+if ENABLE_SVG
+libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD += \
+	libWebCoreSVG.la
+endif
+
+libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD += \
 	libjavascriptcoregtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
 	$(CAIRO_LIBS) \
 	$(CLUTTER_LIBS) \
@@ -93,6 +120,7 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBA
 	$(GSTREAMER_LIBS) \
 	$(GTK_LIBS) \
 	$(JPEG_LIBS) \
+	$(LIBSECRET_LIBS) \
 	$(LIBSOUP_LIBS) \
 	$(LIBXML_LIBS) \
 	$(LIBXSLT_LIBS) \
@@ -101,6 +129,9 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBA
 	$(PNG_LIBS) \
 	$(SQLITE3_LIBS) \
 	$(UNICODE_LIBS) \
+	$(WEBP_LIBS) \
+	$(XCOMPOSITE_LIBS) \
+	$(XDAMAGE_LIBS) \
 	$(XRENDER_LIBS) \
 	$(XT_LIBS) \
 	$(WINMM_LIBS) \
@@ -112,6 +143,7 @@ webkitgtk_static_h_api += \
 	$(srcdir)/Source/WebKit/gtk/webkit/webkit.h \
 	$(srcdir)/Source/WebKit/gtk/webkit/webkitapplicationcache.h \
 	$(srcdir)/Source/WebKit/gtk/webkit/webkitdefines.h \
+	$(srcdir)/Source/WebKit/gtk/webkit/webkitdom.h \
 	$(srcdir)/Source/WebKit/gtk/webkit/webkitdownload.h \
 	$(srcdir)/Source/WebKit/gtk/webkit/webkiterror.h \
 	$(srcdir)/Source/WebKit/gtk/webkit/webkitfavicondatabase.h \
@@ -155,28 +187,11 @@ webkitgtk_built_sources += \
 	DerivedSources/webkit/webkitenumtypes.h \
 	DerivedSources/webkit/webkitmarshal.cpp \
 	DerivedSources/webkit/webkitmarshal.h \
-	$(webkitgtk_built_h_api) \
-	$(webkitgtk_gdom_built_sources) 
+	$(webkitgtk_built_h_api)
+
 BUILT_SOURCES += $(webkitgtk_built_sources)
 
 webkitgtk_sources += \
-	Source/WebCore/bindings/gobject/ConvertToUTF8String.cpp \
-	Source/WebCore/bindings/gobject/ConvertToUTF8String.h \
-	Source/WebCore/bindings/gobject/DOMObjectCache.cpp \
-	Source/WebCore/bindings/gobject/DOMObjectCache.h \
-	Source/WebCore/bindings/gobject/GObjectEventListener.cpp \
-	Source/WebCore/bindings/gobject/GObjectEventListener.h \
-	Source/WebCore/bindings/gobject/WebKitDOMBinding.cpp \
-	Source/WebCore/bindings/gobject/WebKitDOMBinding.h \
-	Source/WebCore/bindings/gobject/WebKitDOMCustom.cpp \
-	Source/WebCore/bindings/gobject/WebKitDOMCustom.h \
-	Source/WebCore/bindings/gobject/WebKitDOMEventTarget.cpp \
-	Source/WebCore/bindings/gobject/WebKitDOMEventTarget.h \
-	Source/WebCore/bindings/gobject/WebKitDOMEventTargetPrivate.h \
-	Source/WebCore/bindings/gobject/WebKitDOMObject.cpp \
-	Source/WebCore/bindings/gobject/WebKitDOMObject.h \
-	Source/WebCore/bindings/gobject/WebKitHTMLElementWrapperFactory.cpp \
-	Source/WebCore/bindings/gobject/WebKitHTMLElementWrapperFactory.h \
 	Source/WebKit/gtk/WebCoreSupport/AcceleratedCompositingContext.h \
 	Source/WebKit/gtk/WebCoreSupport/AcceleratedCompositingContextClutter.cpp \
 	Source/WebKit/gtk/WebCoreSupport/AcceleratedCompositingContextGL.cpp \
@@ -202,24 +217,24 @@ webkitgtk_sources += \
 	Source/WebKit/gtk/WebCoreSupport/FrameLoaderClientGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/FrameNetworkingContextGtk.cpp \
 	Source/WebKit/gtk/WebCoreSupport/FrameNetworkingContextGtk.h \
-	Source/WebKit/gtk/WebCoreSupport/FullscreenVideoController.cpp \
-	Source/WebKit/gtk/WebCoreSupport/FullscreenVideoController.h \
 	Source/WebKit/gtk/WebCoreSupport/GeolocationClientGtk.cpp \
 	Source/WebKit/gtk/WebCoreSupport/GeolocationClientGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/GtkAdjustmentWatcher.cpp \
 	Source/WebKit/gtk/WebCoreSupport/GtkAdjustmentWatcher.h \
 	Source/WebKit/gtk/WebCoreSupport/InspectorClientGtk.cpp \
 	Source/WebKit/gtk/WebCoreSupport/InspectorClientGtk.h \
+	Source/WebKit/gtk/WebCoreSupport/NavigatorContentUtilsClientGtk.h \
+	Source/WebKit/gtk/WebCoreSupport/NavigatorContentUtilsClientGtk.cpp \
 	Source/WebKit/gtk/WebCoreSupport/PasteboardHelperGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/PlatformStrategiesGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/PlatformStrategiesGtk.cpp \
-	Source/WebKit/gtk/WebCoreSupport/RegisterProtocolHandlerClientGtk.h \
-	Source/WebKit/gtk/WebCoreSupport/RegisterProtocolHandlerClientGtk.cpp \
 	Source/WebKit/gtk/WebCoreSupport/UserMediaClientGtk.cpp \
 	Source/WebKit/gtk/WebCoreSupport/UserMediaClientGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/WebViewInputMethodFilter.cpp \
 	Source/WebKit/gtk/WebCoreSupport/WebViewInputMethodFilter.h \
 	Source/WebKit/gtk/webkit/webkitapplicationcache.cpp \
+	Source/WebKit/gtk/webkit/webkitauthenticationdialog.cpp \
+	Source/WebKit/gtk/webkit/webkitauthenticationdialog.h \
 	Source/WebKit/gtk/webkit/webkitdownload.cpp \
 	Source/WebKit/gtk/webkit/webkitdownloadprivate.h \
 	Source/WebKit/gtk/webkit/webkiterror.cpp \
@@ -277,25 +292,23 @@ webkitgtk_sources += \
 	Source/WebKit/gtk/webkit/webkitwebwindowfeatures.cpp \
 	Source/WebKit/gtk/webkit/webkitwebwindowfeaturesprivate.h
 
+if ENABLE_WEBKIT1
 pkgconfig_DATA += Source/WebKit/gtk/@WEBKITGTK_PC_NAME@-@WEBKITGTK_API_VERSION@.pc
 
 if ENABLE_INTROSPECTION
-
-JSCore-@WEBKITGTK_API_VERSION@.gir: $(top_builddir)/Source/WebKit/gtk/JSCore-@WEBKITGTK_API_VERSION@.gir
-	$(AM_V_GEN)cp $(top_builddir)/Source/WebKit/gtk/JSCore-@WEBKITGTK_API_VERSION@.gir $(top_builddir)/
-
-JSCORE_GIRSOURCES += JSCore-@WEBKITGTK_API_VERSION@.gir
-WEBKIT_GIRSOURCES += WebKit-@WEBKITGTK_API_VERSION@.gir
-
-$(WEBKIT_GIRSOURCES): $(G_IR_SCANNER) $(JSCORE_GIRSOURCES) libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la
-	$(AM_V_GEN)$(G_IR_SCANNER) -v --warn-all \
+WebKit-@WEBKITGTK_API_VERSION@.gir: $(G_IR_SCANNER) JavaScriptCore-@WEBKITGTK_API_VERSION@.gir libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la
+	$(AM_V_GEN) \
+	     CFLAGS="$(CFLAGS) -Wno-deprecated-declarations" \
+	     $(G_IR_SCANNER) \
+	     --quiet \
+	     --warn-all \
 	     --symbol-prefix=webkit \
 	     --identifier-prefix=WebKit \
 	     --namespace=WebKit \
 	     --nsversion=@WEBKITGTK_API_VERSION@ \
 	     --include=GObject-2.0 \
 	     --include=Gtk-@GTK_API_VERSION@ \
-	     --include=JSCore-@WEBKITGTK_API_VERSION@ \
+	     --include=JavaScriptCore-@WEBKITGTK_API_VERSION@ \
 	     --include=Soup-2.4 \
 	     --library=webkitgtk-@WEBKITGTK_API_VERSION@ \
 	     --library=javascriptcoregtk-@WEBKITGTK_API_VERSION@ \
@@ -308,31 +321,28 @@ $(WEBKIT_GIRSOURCES): $(G_IR_SCANNER) $(JSCORE_GIRSOURCES) libwebkitgtk-@WEBKITG
 	     --add-include-path=$(WebKit) \
 	     --add-include-path=$(top_builddir) \
 	     --c-include="webkit/webkit.h" \
+	     -DBUILDING_WEBKIT \
 	     -I$(srcdir)/Source \
 	     -I$(WebKit) \
 	     -I$(GENSOURCES) \
+	     -I$(GENSOURCES_WEBKITDOM) \
 	     -I$(GENSOURCES_WEBKIT) \
 	     -I$(top_builddir)/Source/WebKit/gtk \
 	     -I$(top_srcdir)/Source/JavaScriptCore/ForwardingHeaders \
 	     -I$(top_srcdir) \
 	     $(GENSOURCES_WEBKIT)/webkitenumtypes.h \
 	     $(webkitgtk_h_api) \
+	     $(webkitgtk_gdom_built_h_api) \
 	     $(WebKit)/webkit/*.cpp
 
-girdir = $(datadir)/gir-1.0
-gir_DATA = $(WEBKIT_GIRSOURCES) $(JSCORE_GIRSOURCES)
-
-typelibsdir += $(libdir)/girepository-1.0
-typelibs_DATA += $(JSCORE_GIRSOURCES:.gir=.typelib) $(WEBKIT_GIRSOURCES:.gir=.typelib)
-
-%.typelib: %.gir $(G_IR_COMPILER)
+WebKit-@WEBKITGTK_API_VERSION@.typelib: WebKit-@WEBKITGTK_API_VERSION@.gir $(G_IR_COMPILER)
 	$(AM_V_GEN)$(G_IR_COMPILER) --includedir $(WebKit) --includedir $(top_builddir) $< -o $@
 
-CLEANFILES += $(JSCORE_GIRSOURCES) $(WEBKIT_GIRSOURCES) $(typelibs_DATA)
-
+gir_DATA += WebKit-@WEBKITGTK_API_VERSION@.gir
+typelibs_DATA += WebKit-@WEBKITGTK_API_VERSION@.typelib
+CLEANFILES += WebKit-@WEBKITGTK_API_VERSION@.gir WebKit-@WEBKITGTK_API_VERSION@.typelib
 endif
-
-EXTRA_DIST += $(top_builddir)/Source/WebKit/gtk/JSCore-@WEBKITGTK_API_VERSION@.gir
+endif
 
 WEBKIT_MARSHAL_LIST = $(WebKit)/webkitmarshal.list
 $(GENSOURCES_WEBKIT)/webkitmarshal.cpp: stamp-webkitmarshal.cpp
@@ -403,7 +413,6 @@ EXTRA_DIST += \
 	$(WebKit)/docs/webkitenvironment.xml \
 	$(WebKit)/docs/webkitgtk-overrides.txt \
 	$(WebKit)/webkitmarshal.list \
-	$(WebKit)/po/* \
 	$(WebKit)/resources/* \
 	$(WebKit)/tests/resources/* \
 	$(WebKit)/tests/test_utils.h
@@ -425,23 +434,27 @@ webkit_tests_cflags = \
 	$(global_cppflags) \
 	$(global_cflags) \
 	$(javascriptcore_cppflags) \
+	$(FREETYPE_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GTK_CFLAGS) \
 	$(LIBSOUP_CFLAGS) \
-	$(XRENDER_LIBS) \
-	$(XT_LIBS)
+	$(XRENDER_CFLAGS) \
+	$(XT_CFLAGS)
 
 webkit_tests_ldadd = \
 	libjavascriptcoregtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
 	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
+	$(FREETYPE_LIBS) \
 	$(GTK_LIBS) \
 	$(GLIB_LIBS) \
-	$(LIBSOUP_LIBS)
+	$(LIBSOUP_LIBS) \
+	$(XRENDER_LIBS)
 
 webkit_tests_ldflags = \
 	-no-install \
 	-no-fast-install
 
+if ENABLE_WEBKIT1
 noinst_PROGRAMS += \
 	Programs/unittests/testapplicationcache \
 	Programs/unittests/testcontextmenu \
@@ -471,6 +484,7 @@ noinst_PROGRAMS += \
 	Programs/unittests/testwebview \
 	Programs/unittests/testkeyevents \
 	Programs/unittests/testcopyandpaste
+endif
 
 # Add additional tests here
 Programs_unittests_testapplicationcache_SOURCES = Source/WebKit/gtk/tests/testapplicationcache.c
@@ -627,8 +641,3 @@ DISTCLEANFILES += \
 	$(top_builddir)/Source/WebKit/gtk/@WEBKITGTK_PC_NAME@-@WEBKITGTK_API_VERSION@.pc \
 	$(top_builddir)/Source/WebKit/gtk/org.webkitgtk-@WEBKITGTK_API_VERSION@.gschema.xml \
 	$(top_builddir)/Source/WebKit/gtk/webkit/webkitversion.h
-
-install-data-local: po-install-data-local
-installdirs-data-local: po-installdirs-data-local
-uninstall-local: po-uninstall-local
-

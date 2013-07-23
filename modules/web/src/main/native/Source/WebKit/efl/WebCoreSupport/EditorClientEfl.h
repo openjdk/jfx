@@ -41,8 +41,6 @@
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
 
-typedef struct _Evas_Object Evas_Object;
-
 struct Ewk_Should_Insert_Node_Event {
     WebCore::Node* node;
     WebCore::Range* range;
@@ -85,11 +83,8 @@ public:
     virtual void frameWillDetachPage(Frame*) { }
 
     virtual bool shouldDeleteRange(Range*);
-    virtual bool shouldShowDeleteInterface(HTMLElement*);
     virtual bool smartInsertDeleteEnabled();
-    void setSmartInsertDeleteEnabled(bool);
     virtual bool isSelectTrailingWhitespaceEnabled();
-    void setSelectTrailingWhitespaceEnabled(bool);
     virtual bool isContinuousSpellCheckingEnabled();
     virtual void toggleContinuousSpellChecking();
     virtual bool isGrammarCheckingEnabled();
@@ -110,7 +105,9 @@ public:
     virtual void respondToChangedContents();
     virtual void respondToChangedSelection(Frame*);
     virtual void didEndEditing();
+    virtual void willWriteSelectionToPasteboard(WebCore::Range*);
     virtual void didWriteSelectionToPasteboard();
+    virtual void getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData);
     virtual void didSetSelectionTypesForPasteboard();
 
     virtual void registerUndoStep(WTF::PassRefPtr<UndoStep>);
@@ -151,12 +148,13 @@ public:
     virtual void willSetInputMethodState();
     virtual void setInputMethodState(bool enabled);
     virtual void requestCheckingOfString(WTF::PassRefPtr<WebCore::TextCheckingRequest>) { }
+#if USE(UNIFIED_TEXT_CHECKING)
+    virtual void checkTextOfParagraph(const UChar*, int, TextCheckingTypeMask, Vector<TextCheckingResult>&) { }
+#endif
     virtual TextCheckerClient* textChecker() { return this; }
 
 private:
     Evas_Object *m_view;
-    bool m_selectTrailingWhitespaceEnabled;
-    bool m_smartInsertDeleteEnabled;
 };
 }
 

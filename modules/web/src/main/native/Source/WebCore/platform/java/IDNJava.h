@@ -4,7 +4,7 @@
 #ifndef IDNJava_h
 #define IDNJava_h
 
-#include "PlatformString.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 

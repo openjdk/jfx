@@ -438,15 +438,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\LayoutTestController.cpp"
+				RelativePath="..\TestRunner.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\LayoutTestController.h"
+				RelativePath="..\TestRunner.h"
 				>
 			</File>
 			<File
-				RelativePath=".\LayoutTestControllerWin.cpp"
+				RelativePath=".\TestRunnerWin.cpp"
 				>
 			</File>
 			<File
@@ -563,6 +563,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\DumpRenderTreeCommon.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\DumpRenderTreePrefix.h"
 			>
 		</File>
@@ -609,6 +613,14 @@
 					Name="VCCustomBuildTool"
 				/>
 			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\JavaScriptThreading.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\JavaScriptThreading.h"
+			>
 		</File>
 		<File
 			RelativePath="..\PixelDumpSupport.cpp"

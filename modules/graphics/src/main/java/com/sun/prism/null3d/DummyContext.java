@@ -29,6 +29,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.CompositeMode;
+import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
 import com.sun.prism.camera.PrismCameraImpl;
@@ -50,7 +51,7 @@ class DummyContext extends BaseShaderContext {
     }
 
     @Override
-    protected State updateRenderTarget(RenderTarget target, PrismCameraImpl camera, boolean depthTest)  {
+    protected State updateRenderTarget(RenderTarget target, PrismCameraImpl camera, boolean depthTest) {
         return state;
     }
 
@@ -72,5 +73,11 @@ class DummyContext extends BaseShaderContext {
 
     @Override
     protected void updateCompositeMode(CompositeMode mode) {
+    }
+
+    @Override
+    public void blit(RTTexture srcRTT, RTTexture dstRTT,
+                     int srcX0, int srcY0, int srcX1, int srcY1,
+                     int dstX0, int dstY0, int dstX1, int dstY1) {
     }
 }

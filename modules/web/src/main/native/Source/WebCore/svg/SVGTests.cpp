@@ -123,18 +123,18 @@ bool SVGTests::isValid() const
     return true;
 }
 
-bool SVGTests::parseAttribute(const Attribute& attribute)
+bool SVGTests::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == SVGNames::requiredFeaturesAttr) {
-        m_requiredFeatures.value.reset(attribute.value());
+    if (name == SVGNames::requiredFeaturesAttr) {
+        m_requiredFeatures.value.reset(value);
         return true;
     }
-    if (attribute.name() == SVGNames::requiredExtensionsAttr) {
-        m_requiredExtensions.value.reset(attribute.value());
+    if (name == SVGNames::requiredExtensionsAttr) {
+        m_requiredExtensions.value.reset(value);
         return true;
     }
-    if (attribute.name() == SVGNames::systemLanguageAttr) {
-        m_systemLanguage.value.reset(attribute.value());
+    if (name == SVGNames::systemLanguageAttr) {
+        m_systemLanguage.value.reset(value);
         return true;
     }
     
@@ -155,11 +155,14 @@ bool SVGTests::handleAttributeChange(SVGElement* targetElement, const QualifiedN
         return false;
     if (!targetElement->inDocument())
         return true;
+
     bool valid = targetElement->isValid();
-    if (valid && !targetElement->attached())
+    bool attached = targetElement->attached();
+    if (valid && !attached && targetElement->parentNode()->attached())
         targetElement->attach();
-    if (!valid && targetElement->attached())
+    else if (!valid && attached)
         targetElement->detach();
+
     return true;
 }
 

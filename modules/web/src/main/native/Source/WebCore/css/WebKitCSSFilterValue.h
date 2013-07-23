@@ -68,6 +68,8 @@ public:
 
     PassRefPtr<WebKitCSSFilterValue> cloneForCSSOM() const;
 
+    bool equals(const WebKitCSSFilterValue&) const;
+
 private:
     WebKitCSSFilterValue(FilterOperationType);
     WebKitCSSFilterValue(const WebKitCSSFilterValue& cloneFrom);

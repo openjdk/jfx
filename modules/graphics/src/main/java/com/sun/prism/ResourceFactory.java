@@ -155,6 +155,7 @@ public interface ResourceFactory extends GraphicsResource {
     public Texture createMaskTexture(int width, int height, Texture.WrapMode wrapMode);
     public Texture createFloatTexture(int width, int height);
     public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode);
+    public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean antiAliasing);
     public Presentable createPresentable(PresentableState pState);
     public VertexBuffer createVertexBuffer(int maxQuads);
 
@@ -167,7 +168,7 @@ public interface ResourceFactory extends GraphicsResource {
     public void removeFactoryListener(ResourceFactoryListener l);
 
     public void dispose();
-    
+
     /*
      * 3D stuff
      */

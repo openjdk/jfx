@@ -28,14 +28,13 @@ package com.sun.javafx.sg.prism;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.sg.PGCamera;
 import com.sun.prism.Graphics;
 import com.sun.prism.camera.PrismCameraImpl;
 
 /**
  * TODO: 3D - Need documentation
  */
-abstract public class NGCamera extends NGNode implements PGCamera {
+abstract public class NGCamera extends NGNode {
 
     private PrismCameraImpl cameraImpl;
 
@@ -49,41 +48,33 @@ abstract public class NGCamera extends NGNode implements PGCamera {
         return false;
     }
 
-    @Override
     public void setNearClip(float nearClip) {
-        getCameraImpl().setNearClip(nearClip);
+        cameraImpl.setNearClip(nearClip);
     }
 
-    @Override
     public void setFarClip(float farClip) {
-        getCameraImpl().setFarClip(farClip);
+        cameraImpl.setFarClip(farClip);
     }
 
-    @Override
     public void setViewWidth(double viewWidth) {
-        getCameraImpl().setViewWidth(viewWidth);
+        cameraImpl.setViewWidth(viewWidth);
     }
 
-    @Override
     public void setViewHeight(double viewHeight) {
-        getCameraImpl().setViewHeight(viewHeight);
+        cameraImpl.setViewHeight(viewHeight);
     }
 
-    @Override
     public void setProjViewTransform(GeneralTransform3D projViewTx) {
-        getCameraImpl().setProjViewTransform(projViewTx);
+        cameraImpl.setProjViewTransform(projViewTx);
     }
 
-    @Override
     public void setPosition(Vec3d position) {
-        getCameraImpl().setPosition(position);
+        cameraImpl.setPosition(position);
     }
 
-    @Override
     public void setWorldTransform(Affine3D localToWorldTx) {
-        getCameraImpl().setWorldTransform(localToWorldTx);
+        cameraImpl.setWorldTransform(localToWorldTx);
     }
-    
     
     public void setCameraImpl(PrismCameraImpl cameraImpl) {
         this.cameraImpl = cameraImpl;

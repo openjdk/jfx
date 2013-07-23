@@ -48,6 +48,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Callback;
@@ -645,5 +646,61 @@ public class ListViewTest {
 
         assertEquals(1, listView.getEditingIndex());
         assertTrue(cell.isEditing());
+    }
+
+    @Test public void test_rt31471() {
+        final ObservableList names = FXCollections.observableArrayList("Adam", "Alex", "Alfred", "Albert");
+        final ListView listView = new ListView(names);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(listView, 0);
+        assertEquals("Adam", cell.getItem());
+
+        listView.setFixedCellSize(50);
+
+        VirtualFlowTestUtils.getVirtualFlow(listView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals("Adam", cell.getItem());
+        assertEquals(50, cell.getHeight(), 0.00);
+    }
+
+    private int rt_31200_count = 0;
+    @Test public void test_rt_31200() {
+        final ListView listView = new ListView();
+        listView.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+            @Override
+            public ListCell<String> call(ListView<String> param) {
+                return new ListCell<String>() {
+                    ImageView view = new ImageView();
+                    { setGraphic(view); };
+
+                    @Override
+                    protected void updateItem(String item, boolean empty) {
+                        if (getItem() == null ? item == null : getItem().equals(item)) {
+                            rt_31200_count++;
+                        }
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            view.setImage(null);
+                            setText(null);
+                        } else {
+                            setText(item);
+                        }
+                    }
+                };
+            }
+        });
+        listView.getItems().setAll("one", "two", "three", "four", "five");
+
+        StageLoader sl = new StageLoader(listView);
+
+        assertEquals(0, rt_31200_count);
+
+        // resize the stage
+        sl.getStage().setHeight(250);
+        Toolkit.getToolkit().firePulse();
+        sl.getStage().setHeight(50);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(0, rt_31200_count);
     }
 }

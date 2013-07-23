@@ -36,7 +36,7 @@ import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.jmx.HighlightRegion;
 import com.sun.javafx.runtime.SystemProperties;
-import com.sun.javafx.sg.NodePath;
+import com.sun.javafx.sg.prism.NodePath;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;

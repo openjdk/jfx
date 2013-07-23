@@ -38,6 +38,7 @@
 #include <wtf/FastAllocBase.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -60,19 +61,19 @@ namespace WebCore {
 
         void notifyError();
 
-        const String& script() const { return m_script; }
+        String script();
         const KURL& url() const { return m_url; }
         const KURL& responseURL() const;
         bool failed() const { return m_failed; }
         unsigned long identifier() const { return m_identifier; }
 
-        virtual void didReceiveResponse(unsigned long /*identifier*/, const ResourceResponse&);
-        virtual void didReceiveData(const char* data, int dataLength);
-        virtual void didFinishLoading(unsigned long identifier, double);
-        virtual void didFail(const ResourceError&);
-        virtual void didFailRedirectCheck();
+        virtual void didReceiveResponse(unsigned long /*identifier*/, const ResourceResponse&) OVERRIDE;
+        virtual void didReceiveData(const char* data, int dataLength) OVERRIDE;
+        virtual void didFinishLoading(unsigned long identifier, double) OVERRIDE;
+        virtual void didFail(const ResourceError&) OVERRIDE;
+        virtual void didFailRedirectCheck() OVERRIDE;
 
-#if PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY)
+#if PLATFORM(BLACKBERRY)
         void setTargetType(ResourceRequest::TargetType targetType) { m_targetType = targetType; }
 #endif
 
@@ -89,13 +90,13 @@ namespace WebCore {
         RefPtr<ThreadableLoader> m_threadableLoader;
         String m_responseEncoding;        
         RefPtr<TextResourceDecoder> m_decoder;
-        String m_script;
+        StringBuilder m_script;
         KURL m_url;
         KURL m_responseURL;
         bool m_failed;
         unsigned long m_identifier;
         bool m_finishing;
-#if PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY)
+#if PLATFORM(BLACKBERRY)
         ResourceRequest::TargetType m_targetType;
 #endif
     };

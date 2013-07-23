@@ -25,7 +25,7 @@
 #include "ConservativeRoots.h"
 #include "Heap.h"
 #include "JSArray.h"
-#include "JSGlobalData.h"
+#include "VM.h"
 #include <setjmp.h>
 #include <stdlib.h>
 #include <wtf/StdLibExtras.h>
@@ -71,82 +71,6 @@
 
 #endif
 
-#if USE(PTHREADS)
-
-#define NON_INIT_KEY_VALUE 0
-
-#elif OS(WINDOWS)
-
-#include <wtf/ThreadingPrimitives.h>
-
-#ifndef TLS_OUT_OF_INDEXES
-#define TLS_OUT_OF_INDEXES 0xffffffff
-#endif
-
-#define NON_INIT_KEY_VALUE TLS_OUT_OF_INDEXES
-
-typedef void (*_ThreadDesstructor)(void*);
-
-static LONG  volatile     __cRefKey = 0L;
-static DWORD              __keyThreadDestructor = NON_INIT_KEY_VALUE;
-static _ThreadDesstructor __threadDesstructor = 0;
-static Mutex              __staticLocker;
-
-static void NTAPI on_tls_callback(HINSTANCE, DWORD dwReason, PVOID) {
-    switch (dwReason) {
-    case DLL_THREAD_DETACH:
-        if (__threadDesstructor) {
-            __threadDesstructor(TlsGetValue(__keyThreadDestructor));
-        }
-        break;
-    }
-}
-
-//from boost http://www.ccp4.ac.uk/ccp4bin/viewcvs/cctbx/cctbx_sources/boost/libs/thread/src/win32/tss_pe.cpp
-
-typedef void (NTAPI* _TLSCB)(HINSTANCE, DWORD, PVOID);
-//Callback for tls notifications.
-#pragma data_seg(".CRT$XLB")
-_TLSCB p_thread_callback = on_tls_callback;
-#pragma data_seg()
-
-inline int pthread_key_delete(pthread_key_t key) {
-    ASSERT(key == __keyThreadDestructor);
-    MutexLocker __l(__staticLocker);
-    --__cRefKey;
-    if (__cRefKey == 0) {
-        __threadDesstructor = 0;
-        return TlsFree(key) ? 0 : GetLastError();
-    }
-    return 0;
-}
-
-inline void *pthread_getspecific(pthread_key_t key) {
-    ASSERT(key == __keyThreadDestructor);
-    return TlsGetValue(key);
-}
-
-inline int pthread_setspecific (pthread_key_t key, const void *value) {
-    ASSERT(key == __keyThreadDestructor);
-    return TlsSetValue(key, (LPVOID)value) ? 0 : GetLastError();
-}
-
-//limited case. One thread destructor for any key
-inline int pthread_key_create(pthread_key_t *key, void (*destructor)(void*)) {
-    MutexLocker __l(__staticLocker);
-    if (0 == __cRefKey) {
-        __keyThreadDestructor = TlsAlloc();
-        if (__keyThreadDestructor == TLS_OUT_OF_INDEXES)
-            return GetLastError();
-        __threadDesstructor = destructor;
-    }
-    ++__cRefKey;
-    *key = __keyThreadDestructor;
-    return 0;
-}
-#endif
-
-
 using namespace WTF;
 
 namespace JSC {
@@ -172,7 +96,7 @@ typedef pthread_t PlatformThread;
 static const int SigThreadSuspendResume = SIGUSR2;
 
 #if defined(SA_RESTART)
-static void pthreadSignalHandlerSuspendResume(int signo)
+static void pthreadSignalHandlerSuspendResume(int)
 {
     sigset_t signalSet;
     sigemptyset(&signalSet);
@@ -183,6 +107,7 @@ static void pthreadSignalHandlerSuspendResume(int signo)
 #endif
 
 class MachineThreads::Thread {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     Thread(const PlatformThread& platThread, void* base)
         : platformThread(platThread)
@@ -209,18 +134,19 @@ public:
 };
 
 MachineThreads::MachineThreads(Heap* heap)
-    : m_heap(heap)
-    , m_registeredThreads(0)
-    , m_threadSpecific(NON_INIT_KEY_VALUE)
+    : m_registeredThreads(0)
+    , m_threadSpecific(0)
+#if !ASSERT_DISABLED
+    , m_heap(heap)
+#endif
 {
+    UNUSED_PARAM(heap);
 }
 
 MachineThreads::~MachineThreads()
 {
-    if (m_threadSpecific != NON_INIT_KEY_VALUE) {
-        int error = pthread_key_delete(m_threadSpecific);
-        ASSERT_UNUSED(error, !error);
-    }
+    if (m_threadSpecific)
+        threadSpecificKeyDelete(m_threadSpecific);
 
     MutexLocker registeredThreadsLock(m_registeredThreadsMutex);
     for (Thread* t = m_registeredThreads; t;) {
@@ -254,21 +180,20 @@ static inline bool equalThread(const PlatformThread& first, const PlatformThread
 
 void MachineThreads::makeUsableFromMultipleThreads()
 {
-    if (m_threadSpecific != NON_INIT_KEY_VALUE)
+    if (m_threadSpecific)
         return;
 
-    int error = pthread_key_create(&m_threadSpecific, removeThread);
-    if (error)
-        CRASH();
+    threadSpecificKeyCreate(&m_threadSpecific, removeThread);
 }
 
 void MachineThreads::addCurrentThread()
 {
-    ASSERT(!m_heap->globalData()->exclusiveThread || m_heap->globalData()->exclusiveThread == currentThread());
-    if (m_threadSpecific == NON_INIT_KEY_VALUE || pthread_getspecific(m_threadSpecific))
+    ASSERT(!m_heap->vm()->exclusiveThread || m_heap->vm()->exclusiveThread == currentThread());
+
+    if (!m_threadSpecific || threadSpecificGet(m_threadSpecific))
         return;
 
-    pthread_setspecific(m_threadSpecific, this);
+    threadSpecificSet(m_threadSpecific, this);
     Thread* thread = new Thread(getCurrentPlatformThread(), wtfThreadData().stack().origin());
 
     MutexLocker lock(m_registeredThreadsMutex);
@@ -548,7 +473,8 @@ void MachineThreads::gatherFromOtherThread(ConservativeRoots& conservativeRoots,
 void MachineThreads::gatherConservativeRoots(ConservativeRoots& conservativeRoots, void* stackCurrent)
 {
     gatherFromCurrentThread(conservativeRoots, stackCurrent);
-    if (m_threadSpecific != NON_INIT_KEY_VALUE) {
+
+    if (m_threadSpecific) {
         PlatformThread currentPlatformThread = getCurrentPlatformThread();
 
         MutexLocker lock(m_registeredThreadsMutex);

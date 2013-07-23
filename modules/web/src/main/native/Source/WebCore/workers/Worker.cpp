@@ -38,6 +38,7 @@
 #include "EventListener.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
+#include "FeatureObserver.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "InspectorInstrumentation.h"
@@ -58,6 +59,9 @@ inline Worker::Worker(ScriptExecutionContext* context)
 
 PassRefPtr<Worker> Worker::create(ScriptExecutionContext* context, const String& url, ExceptionCode& ec)
 {
+    ASSERT(isMainThread());
+    FeatureObserver::observe(static_cast<Document*>(context)->domWindow(), FeatureObserver::WorkerStart);
+
     RefPtr<Worker> worker = adoptRef(new Worker(context));
 
     worker->suspendIfNeeded();
@@ -75,8 +79,6 @@ PassRefPtr<Worker> Worker::create(ScriptExecutionContext* context, const String&
 #endif
     worker->m_scriptLoader->loadAsynchronously(context, scriptURL, DenyCrossOriginRequests, worker.get());
 
-    InspectorInstrumentation::didCreateWorker(context, worker->asID(), scriptURL.string(), false);
-
     return worker.release();
 }
 
@@ -92,18 +94,12 @@ const AtomicString& Worker::interfaceName() const
     return eventNames().interfaceForWorker;
 }
 
-// FIXME: remove this when we update the ObjC bindings (bug #28774).
 void Worker::postMessage(PassRefPtr<SerializedScriptValue> message, MessagePort* port, ExceptionCode& ec)
 {
     MessagePortArray ports;
     if (port)
         ports.append(port);
     postMessage(message, &ports, ec);
-}
-
-void Worker::postMessage(PassRefPtr<SerializedScriptValue> message, ExceptionCode& ec)
-{
-    postMessage(message, static_cast<MessagePortArray*>(0), ec);
 }
 
 void Worker::postMessage(PassRefPtr<SerializedScriptValue> message, const MessagePortArray* ports, ExceptionCode& ec)

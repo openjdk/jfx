@@ -76,7 +76,7 @@ public class Css2Bin {
         FileOutputStream fos = new FileOutputStream(outFile);
         DataOutputStream os = new DataOutputStream(fos);
         // write file version
-        os.writeShort(2);
+        os.writeShort(Stylesheet.BINARY_CSS_VERSION);
         // write strings
         stringStore.writeBinary(os);
         // write binary data

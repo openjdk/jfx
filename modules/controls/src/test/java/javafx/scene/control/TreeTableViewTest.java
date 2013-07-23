@@ -61,8 +61,11 @@ import javafx.scene.control.cell.CheckBoxTreeTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -2112,5 +2115,177 @@ public class TreeTableViewTest {
 
         treeTableView.setShowRoot(false);
         assertEquals("Child 1", cell.getText());
+    }
+
+    @Test public void test_rt31471() {
+        installChildren();
+
+        TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue().getValue());
+            }
+        });
+
+        treeTableView.getColumns().add(firstNameCol);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertEquals("Root", cell.getItem());
+
+        treeTableView.setFixedCellSize(50);
+
+        VirtualFlowTestUtils.getVirtualFlow(treeTableView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals("Root", cell.getItem());
+        assertEquals(50, cell.getHeight(), 0.00);
+    }
+
+    @Test public void test_rt30466() {
+        final Node graphic1 = new Circle(6.75, Color.RED);
+        final Node graphic2 = new Circle(6.75, Color.GREEN);
+
+        installChildren();
+
+        TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue().getValue());
+            }
+        });
+
+        treeTableView.getColumns().add(firstNameCol);
+
+        TreeTableRow cell = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertEquals("Root", cell.getItem());
+
+        // set the first graphic - which we expect to see as a child of the cell
+        root.setGraphic(graphic1);
+        cell = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 0);
+        boolean matchGraphic1 = false;
+        boolean matchGraphic2 = false;
+        for (Node n : cell.getChildrenUnmodifiable()) {
+            if (n == graphic1) {
+                matchGraphic1 = true;
+            }
+            if (n == graphic2) {
+                matchGraphic2 = true;
+            }
+        }
+        assertTrue(matchGraphic1);
+        assertFalse(matchGraphic2);
+
+        // set the second graphic - which we also expect to see - but of course graphic1 should not be a child any longer
+        root.setGraphic(graphic2);
+        cell = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 0);
+        matchGraphic1 = false;
+        matchGraphic2 = false;
+        for (Node n : cell.getChildrenUnmodifiable()) {
+            if (n == graphic1) {
+                matchGraphic1 = true;
+            }
+            if (n == graphic2) {
+                matchGraphic2 = true;
+            }
+        }
+        assertFalse(matchGraphic1);
+        assertTrue(matchGraphic2);
+    }
+
+    private int rt_31200_count = 0;
+    @Test public void test_rt_31200_tableCell() {
+        rt_31200_count = 0;
+
+        installChildren();
+        TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(firstNameCol);
+
+        firstNameCol.setCellFactory(new Callback<TreeTableColumn<String,String>, TreeTableCell<String, String>>() {
+            @Override
+            public TreeTableCell<String, String> call(TreeTableColumn<String,String> param) {
+                return new TreeTableCell<String, String>() {
+                    ImageView view = new ImageView();
+                    { setGraphic(view); };
+
+                    @Override
+                    protected void updateItem(String item, boolean empty) {
+                        if (getItem() == null ? item == null : getItem().equals(item)) {
+                            rt_31200_count++;
+                        }
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            view.setImage(null);
+                            setText(null);
+                        } else {
+                            setText(item);
+                        }
+                    }
+                };
+            }
+        });
+
+        StageLoader sl = new StageLoader(treeTableView);
+
+        assertEquals(0, rt_31200_count);
+
+        // resize the stage
+        sl.getStage().setHeight(250);
+        Toolkit.getToolkit().firePulse();
+        sl.getStage().setHeight(50);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(0, rt_31200_count);
+    }
+
+    @Test public void test_rt_31200_tableRow() {
+        rt_31200_count = 0;
+
+        installChildren();
+        TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(firstNameCol);
+
+        treeTableView.setRowFactory(new Callback<TreeTableView<String>, TreeTableRow<String>>() {
+            @Override
+            public TreeTableRow<String> call(TreeTableView<String> param) {
+                return new TreeTableRow<String>() {
+                    ImageView view = new ImageView();
+                    { setGraphic(view); };
+
+                    @Override
+                    protected void updateItem(String item, boolean empty) {
+                        if (getItem() == null ? item == null : getItem().equals(item)) {
+                            rt_31200_count++;
+                        }
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            view.setImage(null);
+                            setText(null);
+                        } else {
+                            setText(item.toString());
+                        }
+                    }
+                };
+            }
+        });
+
+        StageLoader sl = new StageLoader(treeTableView);
+
+        assertEquals(0, rt_31200_count);
+
+        // resize the stage
+        sl.getStage().setHeight(250);
+        Toolkit.getToolkit().firePulse();
+        sl.getStage().setHeight(50);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(0, rt_31200_count);
     }
 }

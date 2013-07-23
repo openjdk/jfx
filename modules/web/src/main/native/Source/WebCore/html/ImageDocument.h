@@ -32,7 +32,7 @@ namespace WebCore {
 class CachedImage;
 class ImageDocumentElement;
 
-class ImageDocument : public HTMLDocument {
+class ImageDocument FINAL : public HTMLDocument {
 public:
     static PassRefPtr<ImageDocument> create(Frame* frame, const KURL& url)
     {
@@ -51,7 +51,6 @@ private:
     ImageDocument(Frame*, const KURL&);
 
     virtual PassRefPtr<DocumentParser> createParser();
-    virtual bool isImageDocument() const { return true; }
     
     void createDocumentStructure();
     void resizeImageToFit();
@@ -72,6 +71,21 @@ private:
     bool m_shouldShrinkImage;
 };
     
+inline ImageDocument* toImageDocument(Document* document)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isImageDocument());
+    return static_cast<ImageDocument*>(document);
+}
+
+inline const ImageDocument* toImageDocument(const Document* document)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isImageDocument());
+    return static_cast<const ImageDocument*>(document);
+}
+
+// This will catch anyone doing an unnecessary cast.
+void toImageDocument(const ImageDocument*);
+
 }
 
 #endif // ImageDocument_h

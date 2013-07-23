@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-class HTMLFrameSetElement : public HTMLElement {
+class HTMLFrameSetElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLFrameSetElement> create(const QualifiedName&, Document*);
 
@@ -67,9 +67,9 @@ public:
 private:
     HTMLFrameSetElement(const QualifiedName&, Document*);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
     virtual void attach();
     virtual bool rendererIsNeeded(const NodeRenderingContext&);

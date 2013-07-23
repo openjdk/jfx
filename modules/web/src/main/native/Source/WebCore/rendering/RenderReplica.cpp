@@ -30,11 +30,12 @@
 #include "RenderReplica.h"
 
 #include "RenderLayer.h"
+#include <wtf/StackStats.h>
 
 namespace WebCore {
 
-RenderReplica::RenderReplica(Node* n)
-: RenderBox(n)
+RenderReplica::RenderReplica()
+    : RenderBox(0)
 {
     // This is a hack. Replicas are synthetic, and don't pick up the attributes of the
     // renderers being replicated, so they always report that they are inline, non-replaced.
@@ -43,11 +44,20 @@ RenderReplica::RenderReplica(Node* n)
     setReplaced(true);
 }
 
+RenderReplica* RenderReplica::createAnonymous(Document* document)
+{
+    RenderReplica* renderer = new (document->renderArena()) RenderReplica();
+    renderer->setDocumentForAnonymous(document);
+    return renderer;
+}
+
 RenderReplica::~RenderReplica()
-{}
+{
+}
     
 void RenderReplica::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     setFrameRect(parentBox()->borderBoxRect());
     updateLayerTransform();
     setNeedsLayout(false);
@@ -67,14 +77,14 @@ void RenderReplica::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
  
     LayoutPoint adjustedPaintOffset = paintOffset + location();
 
-    if (paintInfo.phase == PaintPhaseForeground)
+    if (paintInfo.phase == PaintPhaseForeground) {
         // Turn around and paint the parent layer. Use temporary clipRects, so that the layer doesn't end up caching clip rects
         // computing using the wrong rootLayer
-        layer()->parent()->paintLayer(layer()->transform() ? layer()->parent() : layer()->enclosingTransformedAncestor(),
-                                      paintInfo.context, paintInfo.rect,
-                                      PaintBehaviorNormal, 0, paintInfo.renderRegion, 0,
-                                      RenderLayer::PaintLayerHaveTransparency | RenderLayer::PaintLayerAppliedTransform | RenderLayer::PaintLayerTemporaryClipRects | RenderLayer::PaintLayerPaintingReflection);
-    else if (paintInfo.phase == PaintPhaseMask)
+        RenderLayer* rootPaintingLayer = layer()->transform() ? layer()->parent() : layer()->enclosingTransformedAncestor();
+        RenderLayer::LayerPaintingInfo paintingInfo(rootPaintingLayer, paintInfo.rect, PaintBehaviorNormal, LayoutSize(), 0, paintInfo.renderRegion);
+        RenderLayer::PaintLayerFlags flags = RenderLayer::PaintLayerHaveTransparency | RenderLayer::PaintLayerAppliedTransform | RenderLayer::PaintLayerTemporaryClipRects | RenderLayer::PaintLayerPaintingReflection;
+        layer()->parent()->paintLayer(paintInfo.context, paintingInfo, flags);
+    } else if (paintInfo.phase == PaintPhaseMask)
         paintMask(paintInfo, adjustedPaintOffset);
 }
 

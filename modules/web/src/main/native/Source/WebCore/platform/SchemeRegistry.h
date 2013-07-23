@@ -26,9 +26,9 @@
 #ifndef SchemeRegistry_h
 #define SchemeRegistry_h
 
-#include "PlatformString.h"
 #include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -88,6 +88,9 @@ public:
     static void registerURLSchemeAsBypassingContentSecurityPolicy(const String& scheme);
     static void removeURLSchemeRegisteredAsBypassingContentSecurityPolicy(const String& scheme);
     static bool schemeShouldBypassContentSecurityPolicy(const String& scheme);
+    
+    // Schemes whose responses can be cached indefinitely.
+    static bool shouldCacheResponsesFromURLSchemeIndefinitely(const String& scheme);
 };
 
 } // namespace WebCore

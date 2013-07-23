@@ -27,16 +27,15 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.CubicCurve2D;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.sg.PGCubicCurve;
 
 /**
  *
  */
-public class NGCubicCurve extends NGShape implements PGCubicCurve {
+public class NGCubicCurve extends NGShape {
     private CubicCurve2D curve = new CubicCurve2D();
 
     @Override public final Shape getShape() { return curve; }
-    @Override public void updateCubicCurve(
+    public void updateCubicCurve(
             float x1, float y1, float x2, float y2,
             float ctrlx1, float ctrly1, float ctrlx2, float ctrly2) {
         curve.x1 = x1;

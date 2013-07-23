@@ -26,15 +26,17 @@
 package javafx.scene.shape;
 
 import javafx.geometry.BoundingBox;
-import static org.junit.Assert.*;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class SphereTest {
 
     @Test
     public void testImpl_computeGeomBoundsOnNegDimension() {
         Sphere sphere = new Sphere(-10);
-        sphere.impl_updatePG(); // should not throw NPE
+        sphere.impl_updatePeer(); // should not throw NPE
         assertTrue(sphere.getBoundsInLocal().isEmpty());
         assertEquals(sphere.getRadius(), -10, 0.00001);
     }
@@ -42,7 +44,7 @@ public class SphereTest {
     @Test
     public void testImpl_computeGeomBoundsOnDegeneratedShape() {
         Sphere sphere = new Sphere(0);
-        sphere.impl_updatePG(); // should not throw NPE
+        sphere.impl_updatePeer(); // should not throw NPE
         assertEquals(sphere.getBoundsInLocal(), new BoundingBox(0, 0, 0, 0, 0, 0));
     }
 }

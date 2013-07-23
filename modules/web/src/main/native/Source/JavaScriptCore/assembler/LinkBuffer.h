@@ -41,7 +41,7 @@
 
 namespace JSC {
 
-class JSGlobalData;
+class VM;
 
 // LinkBuffer:
 //
@@ -76,14 +76,14 @@ class LinkBuffer {
 #endif
 
 public:
-    LinkBuffer(JSGlobalData& globalData, MacroAssembler* masm, void* ownerUID, JITCompilationEffort effort = JITCompilationMustSucceed)
+    LinkBuffer(VM& vm, MacroAssembler* masm, void* ownerUID, JITCompilationEffort effort = JITCompilationMustSucceed)
         : m_size(0)
 #if ENABLE(BRANCH_COMPACTION)
         , m_initialSize(0)
 #endif
         , m_code(0)
         , m_assembler(masm)
-        , m_globalData(&globalData)
+        , m_vm(&vm)
 #ifndef NDEBUG
         , m_completed(false)
         , m_effort(effort)
@@ -256,16 +256,16 @@ private:
 #endif
     void* m_code;
     MacroAssembler* m_assembler;
-    JSGlobalData* m_globalData;
+    VM* m_vm;
 #ifndef NDEBUG
     bool m_completed;
     JITCompilationEffort m_effort;
 #endif
 };
 
-#define FINALIZE_CODE_IF(condition, linkBufferReference, dataLogArgumentsForHeading)  \
+#define FINALIZE_CODE_IF(condition, linkBufferReference, dataLogFArgumentsForHeading)  \
     (UNLIKELY((condition))                                              \
-     ? ((linkBufferReference).finalizeCodeWithDisassembly dataLogArgumentsForHeading) \
+     ? ((linkBufferReference).finalizeCodeWithDisassembly dataLogFArgumentsForHeading) \
      : (linkBufferReference).finalizeCodeWithoutDisassembly())
 
 // Use this to finalize code, like so:
@@ -281,11 +281,14 @@ private:
 //
 // ... and so on.
 //
-// Note that the dataLogArgumentsForHeading are only evaluated when showDisassembly
+// Note that the dataLogFArgumentsForHeading are only evaluated when showDisassembly
 // is true, so you can hide expensive disassembly-only computations inside there.
 
-#define FINALIZE_CODE(linkBufferReference, dataLogArgumentsForHeading)  \
-    FINALIZE_CODE_IF(Options::showDisassembly(), linkBufferReference, dataLogArgumentsForHeading)
+#define FINALIZE_CODE(linkBufferReference, dataLogFArgumentsForHeading)  \
+    FINALIZE_CODE_IF(Options::showDisassembly(), linkBufferReference, dataLogFArgumentsForHeading)
+
+#define FINALIZE_DFG_CODE(linkBufferReference, dataLogFArgumentsForHeading)  \
+    FINALIZE_CODE_IF((Options::showDisassembly() || Options::showDFGDisassembly()), linkBufferReference, dataLogFArgumentsForHeading)
 
 } // namespace JSC
 

@@ -45,18 +45,18 @@ public:
     static bool isSMILElement(Node*);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual void svgAttributeChanged(const QualifiedName&) OVERRIDE;
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
     
     virtual bool hasValidAttributeType() = 0;
+    virtual bool hasValidAttributeName();
     virtual void animationAttributeChanged() = 0;
 
     SMILTimeContainer* timeContainer() const { return m_timeContainer.get(); }
 
-    SVGElement* targetElement();
-    void resetTargetElement();
+    SVGElement* targetElement() const { return m_targetElement; }
     const QualifiedName& attributeName() const { return m_attributeName; }
 
     void beginByLinkActivation();
@@ -117,9 +117,13 @@ protected:
     void setInactive() { m_activeState = Inactive; }
 
     // Sub-classes may need to take action when the target is changed.
-    virtual void targetElementWillChange(SVGElement* currentTarget, SVGElement* newTarget);
+    virtual void setTargetElement(SVGElement*);
+    virtual void setAttributeName(const QualifiedName&);
 
 private:
+    void buildPendingResource();
+    void clearResourceReferences();
+
     virtual void startedActiveInterval() = 0;
     void endedActiveInterval();
     virtual void updateAnimation(float percent, unsigned repeat, SVGSMILElement* resultElement) = 0;
@@ -138,7 +142,6 @@ private:
     void checkRestart(SMILTime elapsed);
     void beginListChanged(SMILTime eventTime);
     void endListChanged(SMILTime eventTime);
-    void reschedule();
 
     // This represents conditions on elements begin or end list that need to be resolved on runtime
     // for example <animate begin="otherElement.begin + 8s; button.click" ... />

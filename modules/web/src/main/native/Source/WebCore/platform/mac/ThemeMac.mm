@@ -66,7 +66,9 @@ NSRect focusRingClipRect;
         return [self visibleRect];
 
     NSRect rect = focusRingClipRect;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1090
     rect.origin.y = [self bounds].size.height - NSMaxY(rect);
+#endif
 
     return rect;
 }
@@ -74,6 +76,18 @@ NSRect focusRingClipRect;
 - (NSView *)_focusRingClipAncestor
 {
     return self;
+}
+
+@end
+
+@implementation NSFont (WebCoreTheme)
+
+- (NSString*)webCoreFamilyName
+{
+    if ([[self familyName] hasPrefix:@"."])
+        return [self fontName];
+
+    return [self familyName];
 }
 
 @end
@@ -269,8 +283,6 @@ static void paintCheckbox(ControlStates states, GraphicsContext* context, const 
 
     // Determine the width and height needed for the control and prepare the cell for painting.
     NSButtonCell *checkboxCell = checkbox(states, zoomedRect, zoomFactor);
-    LocalCurrentGraphicsContext localContext(context);
-
     GraphicsContextStateSaver stateSaver(*context);
 
     NSControlSize controlSize = [checkboxCell controlSize];
@@ -287,6 +299,7 @@ static void paintCheckbox(ControlStates states, GraphicsContext* context, const 
         context->translate(-inflatedRect.x(), -inflatedRect.y());
     }
 
+    LocalCurrentGraphicsContext localContext(context);
     NSView *view = ThemeMac::ensuredView(scrollView);
     [checkboxCell drawWithFrame:NSRect(inflatedRect) inView:view];
 #if !BUTTON_CELL_DRAW_WITH_FRAME_DRAWS_FOCUS_RING
@@ -350,8 +363,6 @@ static void paintRadio(ControlStates states, GraphicsContext* context, const Int
 {
     // Determine the width and height needed for the control and prepare the cell for painting.
     NSButtonCell *radioCell = radio(states, zoomedRect, zoomFactor);
-    LocalCurrentGraphicsContext localContext(context);
-
     GraphicsContextStateSaver stateSaver(*context);
 
     NSControlSize controlSize = [radioCell controlSize];
@@ -368,6 +379,7 @@ static void paintRadio(ControlStates states, GraphicsContext* context, const Int
         context->translate(-inflatedRect.x(), -inflatedRect.y());
     }
 
+    LocalCurrentGraphicsContext localContext(context);
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     NSView *view = ThemeMac::ensuredView(scrollView);
     [radioCell drawWithFrame:NSRect(inflatedRect) inView:view];
@@ -448,7 +460,7 @@ static void paintButton(ControlPart part, ControlStates states, GraphicsContext*
     
     // Determine the width and height needed for the control and prepare the cell for painting.
     NSButtonCell *buttonCell = button(part, states, zoomedRect, zoomFactor);
-    LocalCurrentGraphicsContext localContext(context);
+    GraphicsContextStateSaver stateSaver(*context);
 
     NSControlSize controlSize = [buttonCell controlSize];
     IntSize zoomedSize = buttonSizes()[controlSize];
@@ -474,6 +486,7 @@ static void paintButton(ControlPart part, ControlStates states, GraphicsContext*
         }
     } 
 
+    LocalCurrentGraphicsContext localContext(context);
     NSView *view = ThemeMac::ensuredView(scrollView);
     NSWindow *window = [view window];
     NSButtonCell *previousDefaultButtonCell = [window defaultButtonCell];
@@ -552,7 +565,9 @@ static void paintStepper(ControlStates states, GraphicsContext* context, const I
         int heightDiff = clampToInteger(bounds.size.height - backgroundBounds.size.height);
         backgroundBounds.origin.y = bounds.origin.y + (heightDiff / 2) + 1;
     }
-    HIThemeDrawButton(&backgroundBounds, &drawInfo, context->platformContext(), kHIThemeOrientationNormal, 0);
+
+    LocalCurrentGraphicsContext localContext(context);
+    HIThemeDrawButton(&backgroundBounds, &drawInfo, localContext.cgContext(), kHIThemeOrientationNormal, 0);
 }
 
 // This will ensure that we always return a valid NSView, even if ScrollView doesn't have an associated document NSView.
@@ -564,7 +579,7 @@ NSView *ThemeMac::ensuredView(ScrollView* scrollView)
     
     // Use a fake flipped view.
     static NSView *flippedView = [[WebCoreFlippedView alloc] init];
-    [flippedView setFrameSize:scrollView->contentsSize()];
+    [flippedView setFrameSize:NSSizeFromCGSize(scrollView->totalContentsSize())];
 
     return flippedView;
 }
@@ -592,7 +607,7 @@ FontDescription ThemeMac::controlFont(ControlPart part, const Font& font, float 
             fontDescription.setGenericFamily(FontDescription::SerifFamily);
 
             NSFont* nsFont = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:controlSizeForFont(font)]];
-            fontDescription.firstFamily().setFamily([nsFont familyName]);
+            fontDescription.setOneFamily([nsFont webCoreFamilyName]);
             fontDescription.setComputedSize([nsFont pointSize] * zoomFactor);
             fontDescription.setSpecifiedSize([nsFont pointSize] * zoomFactor);
             return fontDescription;

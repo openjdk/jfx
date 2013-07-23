@@ -36,11 +36,17 @@
 #include "KURL.h"
 #include "MemoryCache.h"
 #include "PublicURLManager.h"
+#include "ResourceRequest.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "ThreadableBlobRegistry.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/MainThread.h>
+
+#if ENABLE(MEDIA_SOURCE)
+#include "MediaSource.h"
+#include "MediaSourceRegistry.h"
+#endif
 
 #if ENABLE(MEDIA_STREAM)
 #include "MediaStream.h"
@@ -48,6 +54,26 @@
 #endif
 
 namespace WebCore {
+
+#if ENABLE(MEDIA_SOURCE)
+String DOMURL::createObjectURL(ScriptExecutionContext* scriptExecutionContext, MediaSource* source)
+{
+    // Since WebWorkers cannot obtain MediaSource objects, we should be on the main thread.
+    ASSERT(isMainThread());
+
+    if (!scriptExecutionContext || !source)
+        return String();
+
+    KURL publicURL = BlobURL::createPublicURL(scriptExecutionContext->securityOrigin());
+    if (publicURL.isEmpty())
+        return String();
+
+    MediaSourceRegistry::registry().registerMediaSourceURL(publicURL, source);
+    scriptExecutionContext->publicURLManager().sourceURLs().add(publicURL.string());
+
+    return publicURL.string();
+}
+#endif
 
 #if ENABLE(MEDIA_STREAM)
 String DOMURL::createObjectURL(ScriptExecutionContext* scriptExecutionContext, MediaStream* stream)
@@ -89,15 +115,26 @@ void DOMURL::revokeObjectURL(ScriptExecutionContext* scriptExecutionContext, con
     if (!scriptExecutionContext)
         return;
 
-    MemoryCache::removeUrlFromCache(scriptExecutionContext, urlString);
-
     KURL url(KURL(), urlString);
+    ResourceRequest request(url);
+#if ENABLE(CACHE_PARTITIONING)
+    request.setCachePartition(scriptExecutionContext->topOrigin()->cachePartition());
+#endif
+    MemoryCache::removeRequestFromCache(scriptExecutionContext, request);
+
     HashSet<String>& blobURLs = scriptExecutionContext->publicURLManager().blobURLs();
     if (blobURLs.contains(url.string())) {
         ThreadableBlobRegistry::unregisterBlobURL(url);
         blobURLs.remove(url.string());
     }
 
+#if ENABLE(MEDIA_SOURCE)
+    HashSet<String>& sourceURLs = scriptExecutionContext->publicURLManager().sourceURLs();
+    if (sourceURLs.contains(url.string())) {
+        MediaSourceRegistry::registry().unregisterMediaSourceURL(url);
+        sourceURLs.remove(url.string());
+    }
+#endif
 #if ENABLE(MEDIA_STREAM)
     HashSet<String>& streamURLs = scriptExecutionContext->publicURLManager().streamURLs();
     if (streamURLs.contains(url.string())) {

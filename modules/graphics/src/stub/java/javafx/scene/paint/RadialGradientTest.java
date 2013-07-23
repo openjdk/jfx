@@ -25,18 +25,16 @@
 
 package javafx.scene.paint;
 
+import java.util.Arrays;
+import java.util.List;
 import com.sun.javafx.tk.Toolkit;
+import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import java.util.Arrays;
-import java.util.List;
-
-import org.junit.Test;
 
 public class RadialGradientTest {
 
@@ -188,17 +186,11 @@ public class RadialGradientTest {
 
     @Test
     public void testBuilder() {
-        RadialGradient gradient = RadialGradientBuilder.create()
-                .centerX(2.0)
-                .centerY(3.0)
-                .cycleMethod(CycleMethod.REPEAT)
-                .focusAngle(23)
-                .focusDistance(24)
-                .proportional(false)
-                .radius(17)
-                .stops(StopBuilder.create().color(Color.RED).offset(0).build(),
-                       StopBuilder.create().color(Color.BLUE).offset(1).build())
-                .build();
+        RadialGradient gradient = new RadialGradient(
+                23, 24, 2.0, 3.0, 17,
+                false, CycleMethod.REPEAT,
+                new Stop(0, Color.RED),
+                new Stop(1, Color.BLUE));
         assertEquals(2.0, gradient.getCenterX(), 0);
         assertEquals(3.0, gradient.getCenterY(), 0);
         assertSame(CycleMethod.REPEAT, gradient.getCycleMethod());
@@ -305,13 +297,12 @@ public class RadialGradientTest {
     public void testValueOfRelativeValues() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(radius 100%, red  0% , blue 30%,  black 100%)");
-        RadialGradient expected =
-                RadialGradientBuilder.create().radius(1)
-                .proportional(true)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        RadialGradient expected = new RadialGradient(
+                0, 0, 0, 0, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -319,13 +310,12 @@ public class RadialGradientTest {
     public void testValueOfAbsoluteValues() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(center 10px 10, radius 100, red 0px, blue 50px,  black 100px)");
-        RadialGradient expected =
-                RadialGradientBuilder.create().centerX(10).centerY(10).radius(100)
-                .proportional(false)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.5, Color.BLUE),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        RadialGradient expected = new RadialGradient(
+                0, 0, 10, 10, 100,
+                false, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -333,16 +323,12 @@ public class RadialGradientTest {
     public void testValueOfDefaults() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(radius 10%, red  0%, blue 30%, black 100%)");
-        RadialGradient expected =
-                RadialGradientBuilder.create().centerX(0).centerY(0)
-                .focusAngle(0).focusDistance(0)
-                .radius(0.1)
-                .proportional(true)
-                .cycleMethod(CycleMethod.NO_CYCLE)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        RadialGradient expected = new RadialGradient(
+                0, 0, 0, 0, .1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -350,16 +336,12 @@ public class RadialGradientTest {
     public void testValueOfCenter() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(center 20% 40%, radius 10%, red  0%, blue 30%, black 100%)");
-        RadialGradient expected =
-                RadialGradientBuilder.create().centerX(0.2).centerY(0.4)
-                .focusAngle(0).focusDistance(0)
-                .radius(0.1)
-                .proportional(true)
-                .cycleMethod(CycleMethod.NO_CYCLE)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        RadialGradient expected = new RadialGradient(
+                0, 0, .2, .4, .1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -367,34 +349,42 @@ public class RadialGradientTest {
     public void testValueOfFocusAngle() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(focus-angle 45deg, radius 10%, red  0%, blue 30%, black 100%)");
-        RadialGradientBuilder builder =
-                RadialGradientBuilder.create().centerX(0).centerY(0)
-                .focusAngle(45).focusDistance(0)
-                .radius(0.1)
-                .proportional(true)
-                .cycleMethod(CycleMethod.NO_CYCLE)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK));
-        RadialGradient expected = builder.build();
+        RadialGradient expected = new RadialGradient(
+                45, 0, 0, 0, .1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
         
         actual =
                 RadialGradient.valueOf("radial-gradient(focus-angle 3.1415926535rad, radius 10%, red  0%, blue 30%, black 100%)");
-        builder.focusAngle(180);
-        expected = builder.build();
+        expected = new RadialGradient(
+                180, 0, 0, 0, .1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected.getFocusAngle(), actual.getFocusAngle(), 1e-5);
 
         actual =
                 RadialGradient.valueOf("radial-gradient(focus-angle 0.5turn, radius 10%, red  0%, blue 30%, black 100%)");
-        builder.focusAngle(180);
-        expected = builder.build();
+        expected = new RadialGradient(
+                180, 0, 0, 0, .1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
 
         actual =
                 RadialGradient.valueOf("radial-gradient(focus-angle 1grad, radius 10%, red  0%, blue 30%, black 100%)");
-        builder.focusAngle(0.9);
-        expected = builder.build();
+        expected = new RadialGradient(
+                .9, 0, 0, 0, .1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -402,16 +392,12 @@ public class RadialGradientTest {
     public void testValueOfFocusDistance() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(focus-distance 20%, radius 10%, red  0%, blue 30%, black 100%)");
-        RadialGradient expected =
-                RadialGradientBuilder.create().centerX(0).centerY(0)
-                .focusAngle(0).focusDistance(0.2)
-                .radius(0.1)
-                .proportional(true)
-                .cycleMethod(CycleMethod.NO_CYCLE)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        RadialGradient expected = new RadialGradient(
+                0, .2, 0, 0, .1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -419,22 +405,22 @@ public class RadialGradientTest {
     public void testValueOfCycleMethod() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(radius 10%, repeat, red 0%, blue 30%, black 100%)");
-        RadialGradientBuilder builder =
-                RadialGradientBuilder.create().centerX(0).centerY(0)
-                .focusAngle(0).focusDistance(0)
-                .radius(0.1)
-                .proportional(true)
-                .cycleMethod(CycleMethod.REPEAT)
-                .stops(new Stop(0, Color.RED),
-                       new Stop(.3, Color.BLUE),
-                       new Stop(1.0, Color.BLACK));
-        RadialGradient expected = builder.build();
+        RadialGradient expected = new RadialGradient(
+                0, 0, 0, 0, .1,
+                true, CycleMethod.REPEAT,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
         
         actual =
                 RadialGradient.valueOf("radial-gradient(radius 10%, reflect, red 0%, blue 30%, black 100%)");
-        builder.cycleMethod(CycleMethod.REFLECT);
-        expected = builder.build();
+        expected = new RadialGradient(
+                0, 0, 0, 0, .1,
+                true, CycleMethod.REFLECT,
+                new Stop(0, Color.RED),
+                new Stop(.3, Color.BLUE),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -442,16 +428,12 @@ public class RadialGradientTest {
     public void testValueOfSpecifyAll() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(focus-angle 45deg, focus-distance 20%, center 25% 25%, radius 50%, reflect, gray, darkgray 75%, dimgray)");
-        RadialGradient expected =
-                RadialGradientBuilder.create().centerX(.25).centerY(0.25).radius(0.5)
-                .proportional(true)
-                .cycleMethod(CycleMethod.REFLECT)
-                .focusAngle(45)
-                .focusDistance(0.2)
-                .stops(new Stop(0, Color.GRAY),
-                       new Stop(0.75, Color.DARKGRAY),
-                       new Stop(1.0, Color.DIMGRAY))
-                .build();
+        RadialGradient expected = new RadialGradient(
+                45, .2, .25, .25, .5,
+                true, CycleMethod.REFLECT,
+                new Stop(0, Color.GRAY),
+                new Stop(.75, Color.DARKGRAY),
+                new Stop(1.0, Color.DIMGRAY));
         assertEquals(expected, actual);
     }
 
@@ -459,14 +441,13 @@ public class RadialGradientTest {
     public void testValueOfStopsNormalizeLargerValues() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(radius 10, red  10%, blue 9%, red 8%, black 100%)");
-        RadialGradient expected =
-                RadialGradientBuilder.create().centerX(0).centerY(0).radius(10)
-                .proportional(false)
-                .stops(new Stop(0.1, Color.RED),
-                       new Stop(0.1, Color.BLUE),
-                       new Stop(0.1, Color.RED),
-                       new Stop(1.0, Color.BLACK))
-                .build();
+        RadialGradient expected = new RadialGradient(
+                0, 0, 0, 0, 10,
+                false, CycleMethod.NO_CYCLE,
+                new Stop(0.1, Color.RED),
+                new Stop(0.1, Color.BLUE),
+                new Stop(0.1, Color.RED),
+                new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
     }
 
@@ -474,12 +455,11 @@ public class RadialGradientTest {
     public void testValueOfColor() {
         RadialGradient actual =
                 RadialGradient.valueOf("radial-gradient(radius 10, rgb(0,0,255), rgb(255, 0,  0))");
-        RadialGradient expected =
-                RadialGradientBuilder.create().centerX(0).centerY(0).radius(10)
-                .proportional(false)
-                .stops(new Stop(0, Color.BLUE),
-                       new Stop(1.0, Color.RED))
-                .build();
+        RadialGradient expected = new RadialGradient(
+                0, 0, 0, 0, 10,
+                false, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.BLUE),
+                new Stop(1.0, Color.RED));
         assertEquals(expected, actual);
     }
 }

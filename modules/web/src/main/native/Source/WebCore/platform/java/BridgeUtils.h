@@ -6,7 +6,7 @@
 
 #include "JNIUtility.h"
 #include "ScriptController.h"
-#include "JSValue.h"
+#include <JavaScriptCore/API/JSValue.h>
 #include <JavaScriptCore/JSObjectRef.h>
 
 

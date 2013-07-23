@@ -26,21 +26,37 @@
 #ifndef CopiedBlock_h
 #define CopiedBlock_h
 
+#include "BlockAllocator.h"
+#include "CopyWorkList.h"
 #include "HeapBlock.h"
-#include "JSValue.h"
-#include "JSValueInlineMethods.h"
+#include "JSCJSValue.h"
+#include "Options.h"
+#include <wtf/Atomics.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/PassOwnPtr.h>
 
 namespace JSC {
 
 class CopiedSpace;
 
-class CopiedBlock : public HeapBlock {
+class CopiedBlock : public HeapBlock<CopiedBlock> {
     friend class CopiedSpace;
     friend class CopiedAllocator;
 public:
-    static CopiedBlock* create(const PageAllocationAligned&);
-    static CopiedBlock* createNoZeroFill(const PageAllocationAligned&);
-    static PageAllocationAligned destroy(CopiedBlock*);
+    static CopiedBlock* create(DeadBlock*);
+    static CopiedBlock* createNoZeroFill(DeadBlock*);
+
+    void pin();
+    bool isPinned();
+
+    bool isOversize();
+
+    unsigned liveBytes();
+    void reportLiveBytes(JSCell*, unsigned);
+    void didSurviveGC();
+    void didEvacuateBytes(unsigned);
+    bool shouldEvacuate();
+    bool canBeRecycled();
 
     // The payload is the region of the block that is usable for allocations.
     char* payload();
@@ -61,24 +77,36 @@ public:
     size_t size();
     size_t capacity();
 
+    static const size_t blockSize = 32 * KB;
+
+    bool hasWorkList();
+    CopyWorkList& workList();
+
 private:
-    CopiedBlock(const PageAllocationAligned&);
+    CopiedBlock(Region*);
     void zeroFillWilderness(); // Can be called at any time to zero-fill to the end of the block.
+
+#if ENABLE(PARALLEL_GC)
+    SpinLock m_workListLock;
+#endif
+    OwnPtr<CopyWorkList> m_workList;
 
     size_t m_remaining;
     uintptr_t m_isPinned;
+    unsigned m_liveBytes;
 };
 
-inline CopiedBlock* CopiedBlock::createNoZeroFill(const PageAllocationAligned& allocation)
+inline CopiedBlock* CopiedBlock::createNoZeroFill(DeadBlock* block)
 {
-    return new(NotNull, allocation.base()) CopiedBlock(allocation);
+    Region* region = block->region();
+    return new(NotNull, block) CopiedBlock(region);
 }
 
-inline CopiedBlock* CopiedBlock::create(const PageAllocationAligned& allocation)
+inline CopiedBlock* CopiedBlock::create(DeadBlock* block)
 {
-    CopiedBlock* block = createNoZeroFill(allocation);
-    block->zeroFillWilderness();
-    return block;
+    CopiedBlock* newBlock = createNoZeroFill(block);
+    newBlock->zeroFillWilderness();
+    return newBlock;
 }
 
 inline void CopiedBlock::zeroFillWilderness()
@@ -88,26 +116,67 @@ inline void CopiedBlock::zeroFillWilderness()
 #else
     JSValue emptyValue;
     JSValue* limit = reinterpret_cast_ptr<JSValue*>(wildernessEnd());
-    for (JSValue* currentValue = reinterpret_cast<JSValue*>(wilderness()); currentValue < limit; currentValue++)
+    for (JSValue* currentValue = reinterpret_cast_ptr<JSValue*>(wilderness()); currentValue < limit; currentValue++)
         *currentValue = emptyValue;
 #endif
 }
 
-inline PageAllocationAligned CopiedBlock::destroy(CopiedBlock* block)
-{
-    PageAllocationAligned allocation;
-    swap(allocation, block->m_allocation);
-
-    block->~CopiedBlock();
-    return allocation;
-}
-
-inline CopiedBlock::CopiedBlock(const PageAllocationAligned& allocation)
-    : HeapBlock(allocation)
+inline CopiedBlock::CopiedBlock(Region* region)
+    : HeapBlock<CopiedBlock>(region)
     , m_remaining(payloadCapacity())
     , m_isPinned(false)
+    , m_liveBytes(0)
 {
+#if ENABLE(PARALLEL_GC)
+    m_workListLock.Init();
+#endif
     ASSERT(is8ByteAligned(reinterpret_cast<void*>(m_remaining)));
+}
+
+inline void CopiedBlock::didSurviveGC()
+{
+    m_liveBytes = 0;
+    m_isPinned = false;
+    if (m_workList)
+        m_workList.clear();
+}
+
+inline void CopiedBlock::didEvacuateBytes(unsigned bytes)
+{
+    ASSERT(m_liveBytes >= bytes);
+    m_liveBytes -= bytes;
+}
+
+inline bool CopiedBlock::canBeRecycled()
+{
+    return !m_liveBytes;
+}
+
+inline bool CopiedBlock::shouldEvacuate()
+{
+    return static_cast<double>(m_liveBytes) / static_cast<double>(payloadCapacity()) <= Options::minCopiedBlockUtilization();
+}
+
+inline void CopiedBlock::pin()
+{
+    m_isPinned = true;
+    if (m_workList)
+        m_workList.clear();
+}
+
+inline bool CopiedBlock::isPinned()
+{
+    return m_isPinned;
+}
+
+inline bool CopiedBlock::isOversize()
+{
+    return region()->isCustomSize();
+}
+
+inline unsigned CopiedBlock::liveBytes()
+{
+    return m_liveBytes;
 }
 
 inline char* CopiedBlock::payload()
@@ -117,7 +186,7 @@ inline char* CopiedBlock::payload()
 
 inline char* CopiedBlock::payloadEnd()
 {
-    return reinterpret_cast<char*>(this) + m_allocation.size();
+    return reinterpret_cast<char*>(this) + region()->blockSize();
 }
 
 inline size_t CopiedBlock::payloadCapacity()
@@ -162,7 +231,17 @@ inline size_t CopiedBlock::size()
 
 inline size_t CopiedBlock::capacity()
 {
-    return m_allocation.size();
+    return region()->blockSize();
+}
+
+inline bool CopiedBlock::hasWorkList()
+{
+    return !!m_workList;
+}
+
+inline CopyWorkList& CopiedBlock::workList()
+{
+    return *m_workList;
 }
 
 } // namespace JSC

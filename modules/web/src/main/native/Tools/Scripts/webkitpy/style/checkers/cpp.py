@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2009, 2010, 2012 Google Inc. All rights reserved.
@@ -649,13 +648,16 @@ class FileInfo:
                 prefix = os.path.commonprefix([root_dir, project_dir])
                 return fullname[len(prefix) + 1:]
 
-            # Not SVN? Try to find a git top level directory by
+
+            # Not SVN <= 1.6? Try to find a git, or svn top level directory by
             # searching up from the current path.
             root_dir = os.path.dirname(fullname)
             while (root_dir != os.path.dirname(root_dir)
-                   and not os.path.exists(os.path.join(root_dir, ".git"))):
+                   and not os.path.exists(os.path.join(root_dir, ".git"))
+                   and not os.path.exists(os.path.join(root_dir, ".svn"))):
                 root_dir = os.path.dirname(root_dir)
-                if os.path.exists(os.path.join(root_dir, ".git")):
+                if (os.path.exists(os.path.join(root_dir, ".git")) or
+                   os.path.exists(os.path.join(root_dir, ".svn"))):
                     prefix = os.path.commonprefix([root_dir, project_dir])
                     return fullname[len(prefix) + 1:]
 
@@ -1078,7 +1080,7 @@ def check_posix_threading(clean_lines, line_number, error):
     line = clean_lines.elided[line_number]
     for single_thread_function, multithread_safe_function in _THREADING_LIST:
         index = line.find(single_thread_function)
-        # Comparisons made explicit for clarity -- pylint: disable-msg=C6403
+        # Comparisons made explicit for clarity
         if index >= 0 and (index == 0 or (not line[index - 1].isalnum()
                                           and line[index - 1] not in ('_', '.', '>'))):
             error(line_number, 'runtime/threadsafe_fn', 2,
@@ -1209,6 +1211,51 @@ class _FileState(object):
         """Return whether the file extension corresponds to C or Objective-C."""
         return self.is_c() or self.is_objective_c()
 
+
+class _EnumState(object):
+    """Maintains whether currently in an enum declaration, and checks whether
+    enum declarations follow the style guide.
+    """
+
+    def __init__(self):
+        self.in_enum_decl = False
+        self.is_webidl_enum = False
+
+    def process_clean_line(self, line):
+        # FIXME: The regular expressions for expr_all_uppercase and expr_enum_end only accept integers
+        # and identifiers for the value of the enumerator, but do not accept any other constant
+        # expressions. However, this is sufficient for now (11/27/2012).
+        expr_all_uppercase = r'\s*[A-Z0-9_]+\s*(?:=\s*[a-zA-Z0-9]+\s*)?,?\s*$'
+        expr_starts_lowercase = r'\s*[a-z]'
+        expr_enum_end = r'}\s*(?:[a-zA-Z0-9]+\s*(?:=\s*[a-zA-Z0-9]+)?)?\s*;\s*'
+        expr_enum_start = r'\s*enum(?:\s+[a-zA-Z0-9]+)?\s*\{?\s*'
+        if self.in_enum_decl:
+            if match(r'\s*' + expr_enum_end + r'$', line):
+                self.in_enum_decl = False
+                self.is_webidl_enum = False
+            elif match(expr_all_uppercase, line):
+                return self.is_webidl_enum
+            elif match(expr_starts_lowercase, line):
+                return False
+        else:
+            matched = match(expr_enum_start + r'$', line)
+            if matched:
+                self.in_enum_decl = True
+            else:
+                matched = match(expr_enum_start + r'(?P<members>.*)' + expr_enum_end + r'$', line)
+                if matched:
+                    members = matched.group('members').split(',')
+                    found_invalid_member = False
+                    for member in members:
+                        if match(expr_all_uppercase, member):
+                            found_invalid_member = not self.is_webidl_enum
+                        if match(expr_starts_lowercase, member):
+                            found_invalid_member = True
+                        if found_invalid_member:
+                            self.is_webidl_enum = False
+                            return False
+                    return True
+        return True
 
 def check_for_non_standard_constructs(clean_lines, line_number,
                                       class_state, error):
@@ -1594,7 +1641,7 @@ def check_function_definition_and_pass_ptr(type_text, row, location_description,
     """
     match_ref_or_own_ptr = '(?=\W|^)(Ref|Own)Ptr(?=\W)'
     bad_type_usage = search(match_ref_or_own_ptr, type_text)
-    if not bad_type_usage or type_text.endswith('&'):
+    if not bad_type_usage or type_text.endswith('&') or type_text.endswith('*'):
         return
     type_name = bad_type_usage.group(0)
     error(row, 'readability/pass_ptr', 5,
@@ -1618,20 +1665,6 @@ def check_function_definition(filename, file_extension, clean_lines, line_number
         return
 
     modifiers_and_return_type = function_state.modifiers_and_return_type()
-    if filename.find('/chromium/') != -1 and search(r'\bWEBKIT_EXPORT\b', modifiers_and_return_type):
-        if filename.find('/chromium/public/') == -1 and filename.find('/chromium/tests/') == -1 and filename.find('chromium/platform') == -1:
-            error(function_state.function_name_start_position.row, 'readability/webkit_export', 5,
-                  'WEBKIT_EXPORT should only appear in the chromium public (or tests) directory.')
-        elif not file_extension == "h":
-            error(function_state.function_name_start_position.row, 'readability/webkit_export', 5,
-                  'WEBKIT_EXPORT should only be used in header files.')
-        elif not function_state.is_declaration or search(r'\binline\b', modifiers_and_return_type):
-            error(function_state.function_name_start_position.row, 'readability/webkit_export', 5,
-                  'WEBKIT_EXPORT should not be used on a function with a body.')
-        elif function_state.is_pure:
-            error(function_state.function_name_start_position.row, 'readability/webkit_export', 5,
-                  'WEBKIT_EXPORT should not be used with a pure virtual function.')
-
     check_function_definition_and_pass_ptr(modifiers_and_return_type, function_state.function_name_start_position.row, 'return', error)
 
     parameter_list = function_state.parameter_list()
@@ -1793,7 +1826,7 @@ def check_spacing(file_extension, clean_lines, line_number, error):
     comment_position = line.find('//')
     if comment_position != -1:
         # Check if the // may be in quotes.  If so, ignore it
-        # Comparisons made explicit for clarity -- pylint: disable-msg=C6403
+        # Comparisons made explicit for clarity
         if (line.count('"', 0, comment_position) - line.count('\\"', 0, comment_position)) % 2 == 0:   # not in quotes
             # Allow one space before end of line comment.
             if (not match(r'^\s*$', line[:comment_position])
@@ -2038,6 +2071,68 @@ def check_namespace_indentation(clean_lines, line_number, file_extension, file_s
         current_indentation_level += current_line.count('{') - current_line.count('}')
         if current_indentation_level < 0:
             break;
+
+
+def check_enum_casing(clean_lines, line_number, enum_state, error):
+    """Looks for incorrectly named enum values.
+
+    Args:
+      clean_lines: A CleansedLines instance containing the file.
+      line_number: The number of the line to check.
+      enum_state: A _EnumState instance which maintains enum declaration state.
+      error: The function to call with any errors found.
+    """
+
+    enum_state.is_webidl_enum |= bool(match(r'\s*// Web(?:Kit)?IDL enum\s*$', clean_lines.raw_lines[line_number]))
+
+    line = clean_lines.elided[line_number]  # Get rid of comments and strings.
+    if not enum_state.process_clean_line(line):
+        error(line_number, 'readability/enum_casing', 4,
+              'enum members should use InterCaps with an initial capital letter.')
+
+def check_directive_indentation(clean_lines, line_number, file_state, error):
+    """Looks for indentation of preprocessor directives.
+
+    Args:
+      clean_lines: A CleansedLines instance containing the file.
+      line_number: The number of the line to check.
+      file_state: A _FileState instance which maintains information about
+                  the state of things in the file.
+      error: The function to call with any errors found.
+    """
+
+    line = clean_lines.elided[line_number]  # Get rid of comments and strings.
+
+    indented_preprocessor_directives = match(r'\s+#', line)
+    if not indented_preprocessor_directives:
+        return
+
+    error(line_number, 'whitespace/indent', 4, 'preprocessor directives (e.g., #ifdef, #define, #import) should never be indented.')
+
+
+def get_initial_spaces_for_line(clean_line):
+    initial_spaces = 0
+    while initial_spaces < len(clean_line) and clean_line[initial_spaces] == ' ':
+        initial_spaces += 1
+    return initial_spaces
+
+
+def check_indentation_amount(clean_lines, line_number, error):
+    line = clean_lines.elided[line_number]
+    initial_spaces = get_initial_spaces_for_line(line)
+
+    if initial_spaces % 4:
+        error(line_number, 'whitespace/indent', 3,
+              'Weird number of spaces at line-start.  Are you using a 4-space indent?')
+        return
+
+    previous_line = get_previous_non_blank_line(clean_lines, line_number)[0]
+    if not previous_line.strip() or match(r'\s*\w+\s*:\s*$', previous_line) or previous_line[0] == '#':
+        return
+
+    previous_line_initial_spaces = get_initial_spaces_for_line(previous_line)
+    if initial_spaces > previous_line_initial_spaces + 4:
+        error(line_number, 'whitespace/indent', 3, 'When wrapping a line, only indent 4 spaces.')
 
 
 def check_using_std(clean_lines, line_number, file_state, error):
@@ -2425,7 +2520,7 @@ def check_for_comparisons_to_zero(clean_lines, line_number, error):
     line = clean_lines.elided[line_number]
 
     # Include NULL here so that users don't have to convert NULL to 0 first and then get this error.
-    if search(r'[=!]=\s*(NULL|0|true|false)\W', line) or search(r'\W(NULL|0|true|false)\s*[=!]=', line):
+    if search(r'[=!]=\s*(NULL|0|true|false)[^\w.]', line) or search(r'[^\w.](NULL|0|true|false)\s*[=!]=', line):
         if not search('LIKELY', line) and not search('UNLIKELY', line):
             error(line_number, 'readability/comparison_to_zero', 5,
                   'Tests for true/false, null/non-null, and zero/non-zero should all be done without equality comparisons.')
@@ -2450,8 +2545,8 @@ def check_for_null(clean_lines, line_number, file_state, error):
     if search(r'\bgdk_pixbuf_save_to\w+\b', line):
         return
 
-    # Don't warn about NULL usage in gtk_widget_style_get() or gtk_style_context_get_style. See Bug 51758
-    if search(r'\bgtk_widget_style_get\(\w+\b', line) or search(r'\bgtk_style_context_get_style\(\w+\b', line):
+    # Don't warn about NULL usage in gtk_widget_style_get(), gtk_style_context_get_style(), or gtk_style_context_get(). See Bug 51758
+    if search(r'\bgtk_widget_style_get\(\w+\b', line) or search(r'\bgtk_style_context_get_style\(\w+\b', line) or search(r'\bgtk_style_context_get\(\w+\b', line):
         return
 
     # Don't warn about NULL usage in soup_server_new(). See Bug 77890.
@@ -2490,7 +2585,7 @@ def get_line_width(line):
     return len(line)
 
 
-def check_style(clean_lines, line_number, file_extension, class_state, file_state, error):
+def check_style(clean_lines, line_number, file_extension, class_state, file_state, enum_state, error):
     """Checks rules from the 'C++ style rules' section of cppguide.html.
 
     Most of these rules are hard to test (naming, comment style), but we
@@ -2505,6 +2600,7 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
                    the current stack of nested class declarations being parsed.
       file_state: A _FileState instance which maintains information about
                   the state of things in the file.
+      enum_state: A _EnumState instance which maintains the current enum state.
       error: The function to call with any errors found.
     """
 
@@ -2515,44 +2611,10 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
         error(line_number, 'whitespace/tab', 1,
               'Tab found; better to use spaces')
 
-    # One or three blank spaces at the beginning of the line is weird; it's
-    # hard to reconcile that with 4-space indents.
-    # NOTE: here are the conditions rob pike used for his tests.  Mine aren't
-    # as sophisticated, but it may be worth becoming so:  RLENGTH==initial_spaces
-    # if(RLENGTH > 20) complain = 0;
-    # if(match($0, " +(error|private|public|protected):")) complain = 0;
-    # if(match(prev, "&& *$")) complain = 0;
-    # if(match(prev, "\\|\\| *$")) complain = 0;
-    # if(match(prev, "[\",=><] *$")) complain = 0;
-    # if(match($0, " <<")) complain = 0;
-    # if(match(prev, " +for \\(")) complain = 0;
-    # if(prevodd && match(prevprev, " +for \\(")) complain = 0;
-    initial_spaces = 0
     cleansed_line = clean_lines.elided[line_number]
-    while initial_spaces < len(line) and line[initial_spaces] == ' ':
-        initial_spaces += 1
     if line and line[-1].isspace():
         error(line_number, 'whitespace/end_of_line', 4,
               'Line ends in whitespace.  Consider deleting these extra spaces.')
-    # There are certain situations we allow one space, notably for labels
-    elif ((initial_spaces >= 1 and initial_spaces <= 3)
-          and not match(r'\s*\w+\s*:\s*$', cleansed_line)):
-        error(line_number, 'whitespace/indent', 3,
-              'Weird number of spaces at line-start.  '
-              'Are you using a 4-space indent?')
-    # Labels should always be indented at least one space.
-    elif not initial_spaces and line[:2] != '//':
-        label_match = match(r'(?P<label>[^:]+):\s*$', line)
-
-        if label_match:
-            label = label_match.group('label')
-            # Only throw errors for stuff that is definitely not a goto label,
-            # because goto labels can in fact occur at the start of the line.
-            if label in ['public', 'private', 'protected'] or label.find(' ') != -1:
-                error(line_number, 'whitespace/labels', 4,
-                      'Labels should always be indented at least one space.  '
-                      'If this is a member-initializer list in a constructor, '
-                      'the colon should be on the line after the definition header.')
 
     if (cleansed_line.count(';') > 1
         # for loops are allowed two ;'s (and may run over two lines).
@@ -2567,7 +2629,10 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
         and not (match(r'.*\(.*\).*{.*.}', line)
                  and class_state.classinfo_stack
                  and line.count('{') == line.count('}'))
-        and not cleansed_line.startswith('#define ')):
+        and not cleansed_line.startswith('#define ')
+        # It's ok to use use WTF_MAKE_NONCOPYABLE and WTF_MAKE_FAST_ALLOCATED macros in 1 line
+        and not (cleansed_line.find("WTF_MAKE_NONCOPYABLE") != -1
+                 and cleansed_line.find("WTF_MAKE_FAST_ALLOCATED") != -1)):
         error(line_number, 'whitespace/newline', 4,
               'More than one command on the same line')
 
@@ -2578,6 +2643,7 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
 
     # Some more style checks
     check_namespace_indentation(clean_lines, line_number, file_extension, file_state, error)
+    check_directive_indentation(clean_lines, line_number, file_state, error)
     check_using_std(clean_lines, line_number, file_state, error)
     check_max_min_macros(clean_lines, line_number, file_state, error)
     check_ctype_functions(clean_lines, line_number, file_state, error)
@@ -2588,6 +2654,8 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
     check_check(clean_lines, line_number, error)
     check_for_comparisons_to_zero(clean_lines, line_number, error)
     check_for_null(clean_lines, line_number, file_state, error)
+    check_indentation_amount(clean_lines, line_number, error)
+    check_enum_casing(clean_lines, line_number, enum_state, error)
 
 
 _RE_PATTERN_INCLUDE_NEW_STYLE = re.compile(r'#include +"[^/]+\.h"')
@@ -3024,6 +3092,11 @@ def check_language(filename, clean_lines, line_number, file_extension, include_s
 
     check_identifier_name_in_declaration(filename, line_number, line, file_state, error)
 
+    # Check for unsigned int (should be just 'unsigned')
+    if search(r'\bunsigned int\b', line):
+        error(line_number, 'runtime/unsigned', 1,
+              'Omit int when using unsigned')
+
     # Check that we're not using static_cast<Text*>.
     if search(r'\bstatic_cast<Text\*>', line):
         error(line_number, 'readability/check', 4,
@@ -3137,11 +3210,13 @@ def check_identifier_name_in_declaration(filename, line_number, line, file_state
                 and not modified_identifier.startswith('Eina_')
                 and not modified_identifier.startswith('Evas_')
                 and not modified_identifier.startswith('Ewk_')
+                and not modified_identifier.startswith('cti_')
                 and not modified_identifier.find('::qt_') >= 0
                 and not modified_identifier.find('::_q_') >= 0
                 and not modified_identifier == "const_iterator"
-                and not modified_identifier == "vm_throw"):
-                error(line_number, 'readability/naming', 4, identifier + " is incorrectly named. Don't use underscores in your identifier names.")
+                and not modified_identifier == "vm_throw"
+                and not modified_identifier == "DFG_OPERATION"):
+                error(line_number, 'readability/naming/underscores', 4, identifier + " is incorrectly named. Don't use underscores in your identifier names.")
 
         # Check for variables named 'l', these are too easy to confuse with '1' in some fonts
         if modified_identifier == 'l':
@@ -3451,7 +3526,7 @@ def check_for_include_what_you_use(filename, clean_lines, include_state, error):
 
 def process_line(filename, file_extension,
                  clean_lines, line, include_state, function_state,
-                 class_state, file_state, error):
+                 class_state, file_state, enum_state, error):
     """Processes a single line in the file.
 
     Args:
@@ -3466,6 +3541,8 @@ def process_line(filename, file_extension,
                    the current stack of nested class declarations being parsed.
       file_state: A _FileState instance which maintains information about
                   the state of things in the file.
+      enum_state: A _EnumState instance which maintains an enum declaration
+                  state.
       error: A callable to which errors are reported, which takes arguments:
              line number, error level, and message
 
@@ -3481,7 +3558,7 @@ def process_line(filename, file_extension,
     check_pass_ptr_usage(clean_lines, line, function_state, error)
     check_for_leaky_patterns(clean_lines, line, function_state, error)
     check_for_multiline_comments_and_strings(clean_lines, line, error)
-    check_style(clean_lines, line, file_extension, class_state, file_state, error)
+    check_style(clean_lines, line, file_extension, class_state, file_state, enum_state, error)
     check_language(filename, clean_lines, line, file_extension, include_state,
                    file_state, error)
     check_for_non_standard_constructs(clean_lines, line, class_state, error)
@@ -3514,9 +3591,11 @@ def _process_lines(filename, file_extension, lines, error, min_confidence):
     remove_multi_line_comments(lines, error)
     clean_lines = CleansedLines(lines)
     file_state = _FileState(clean_lines, file_extension)
+    enum_state = _EnumState()
     for line in xrange(clean_lines.num_lines()):
         process_line(filename, file_extension, clean_lines, line,
-                     include_state, function_state, class_state, file_state, error)
+                     include_state, function_state, class_state, file_state,
+                     enum_state, error)
     class_state.check_finished(error)
 
     check_for_include_what_you_use(filename, clean_lines, include_state, error)
@@ -3558,12 +3637,14 @@ class CppChecker(object):
         'readability/comparison_to_zero',
         'readability/constructors',
         'readability/control_flow',
+        'readability/enum_casing',
         'readability/fn_size',
         'readability/function',
         'readability/multiline_comment',
         'readability/multiline_string',
         'readability/parameter_name',
         'readability/naming',
+        'readability/naming/underscores',
         'readability/null',
         'readability/pass_ptr',
         'readability/streams',
@@ -3588,6 +3669,7 @@ class CppChecker(object):
         'runtime/sizeof',
         'runtime/string',
         'runtime/threadsafe_fn',
+        'runtime/unsigned',
         'runtime/virtual',
         'whitespace/blank_line',
         'whitespace/braces',
@@ -3597,7 +3679,6 @@ class CppChecker(object):
         'whitespace/end_of_line',
         'whitespace/ending_newline',
         'whitespace/indent',
-        'whitespace/labels',
         'whitespace/line_length',
         'whitespace/newline',
         'whitespace/operators',

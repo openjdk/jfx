@@ -38,15 +38,16 @@
 #include "Arena.h"
 #include <wtf/FastAllocBase.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/PassRefPtr.h>
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
-static const size_t gMaxRecycledSize = 400;
+static const size_t gMaxRecycledSize = 1024;
 
-class RenderArena {
-    WTF_MAKE_NONCOPYABLE(RenderArena); WTF_MAKE_FAST_ALLOCATED;
+class RenderArena : public RefCounted<RenderArena> {
 public:
-    RenderArena(unsigned arenaSize = 4096);
+    static PassRefPtr<RenderArena> create() { return adoptRef(new RenderArena); }
     ~RenderArena();
 
     // Memory management functions
@@ -57,12 +58,17 @@ public:
     size_t totalRenderArenaAllocatedBytes() const { return m_totalAllocated; }
 
 private:
+    RenderArena(unsigned arenaSize = 8192);
+    
     // Underlying arena pool
     ArenaPool m_pool;
 
-    // The recycler array is sparse with the indices being multiples of 4,
-    // i.e., 0, 4, 8, 12, 16, 20, ...
-    void* m_recyclers[gMaxRecycledSize >> 2];
+    // The mask used to secure the recycled freelist pointers.
+    uintptr_t m_mask;
+    // The recycler array is sparse with the indices being multiples of the
+    // rounding size, sizeof(void*), i.e., 0, 4, 8, 12, 16, 20, ... on 32-bit.
+    static const size_t kRecyclerShift = (sizeof(void*) == 8) ? 3 : 2;
+    void* m_recyclers[gMaxRecycledSize >> kRecyclerShift];
 
     size_t m_totalSize;
     size_t m_totalAllocated;

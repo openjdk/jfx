@@ -25,14 +25,12 @@
 
 package javafx.scene.shape;
 
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-
 import com.sun.javafx.geom.CubicCurve2D;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGCubicCurve;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGCubicCurve;
+import com.sun.javafx.sg.prism.NGNode;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
 import javafx.scene.paint.Paint;
 
 
@@ -448,12 +446,8 @@ public class CubicCurve extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGCubicCurve();
-    }
-
-    PGCubicCurve getPGCubicCurve() {
-        return (PGCubicCurve)impl_getPGNode();
+    @Override protected NGNode impl_createPeer() {
+        return new NGCubicCurve();
     }
 
     /**
@@ -461,11 +455,11 @@ public class CubicCurve extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_updatePG() {
-        super.impl_updatePG();
+    @Override public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            PGCubicCurve peer = getPGCubicCurve();
+            final NGCubicCurve peer = impl_getPeer();
             peer.updateCubicCurve((float)getStartX(),
                 (float)getStartY(),
                 (float)getEndX(),

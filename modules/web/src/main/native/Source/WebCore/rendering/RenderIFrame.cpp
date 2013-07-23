@@ -33,6 +33,7 @@
 #include "Page.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include <wtf/StackStats.h>
 
 namespace WebCore {
 
@@ -41,46 +42,6 @@ using namespace HTMLNames;
 RenderIFrame::RenderIFrame(Element* element)
     : RenderFrameBase(element)
 {
-}
-
-void RenderIFrame::computeLogicalHeight()
-{
-    RenderPart::computeLogicalHeight();
-    if (!flattenFrame())
-         return;
-
-    HTMLIFrameElement* frame = static_cast<HTMLIFrameElement*>(node());
-    bool isScrollable = frame->scrollingMode() != ScrollbarAlwaysOff;
-
-    if (isScrollable || !style()->height().isFixed()) {
-        FrameView* view = static_cast<FrameView*>(widget());
-        if (!view)
-            return;
-        int border = borderTop() + borderBottom();
-        setHeight(max<LayoutUnit>(height(), view->contentsHeight() + border));
-    }
-}
-
-void RenderIFrame::computeLogicalWidth()
-{
-    // When we're seamless, we behave like a block. Thankfully RenderBox has all the right logic for this.
-    if (isSeamless())
-        return RenderBox::computeLogicalWidth();
-
-    RenderPart::computeLogicalWidth();
-    if (!flattenFrame())
-        return;
-
-    HTMLIFrameElement* frame = static_cast<HTMLIFrameElement*>(node());
-    bool isScrollable = frame->scrollingMode() != ScrollbarAlwaysOff;
-
-    if (isScrollable || !style()->width().isFixed()) {
-        FrameView* view = static_cast<FrameView*>(widget());
-        if (!view)
-            return;
-        LayoutUnit border = borderLeft() + borderRight();
-        setWidth(max<LayoutUnit>(width(), view->contentsWidth() + border));
-    }
 }
 
 bool RenderIFrame::shouldComputeSizeAsReplaced() const
@@ -103,7 +64,7 @@ LayoutUnit RenderIFrame::minPreferredLogicalWidth() const
     if (!childRoot)
         return 0;
 
-    return childRoot->minPreferredLogicalWidth();
+    return childRoot->minPreferredLogicalWidth() + borderAndPaddingLogicalWidth();
 }
 
 LayoutUnit RenderIFrame::maxPreferredLogicalWidth() const
@@ -115,7 +76,7 @@ LayoutUnit RenderIFrame::maxPreferredLogicalWidth() const
     if (!childRoot)
         return 0;
 
-    return childRoot->maxPreferredLogicalWidth();
+    return childRoot->maxPreferredLogicalWidth() + borderAndPaddingLogicalWidth();
 }
 
 bool RenderIFrame::isSeamless() const
@@ -123,12 +84,17 @@ bool RenderIFrame::isSeamless() const
     return node() && node()->hasTagName(iframeTag) && static_cast<HTMLIFrameElement*>(node())->shouldDisplaySeamlessly();
 }
 
+bool RenderIFrame::requiresLayer() const
+{
+    return RenderFrameBase::requiresLayer() || style()->resize() != RESIZE_NONE;
+}
+
 RenderView* RenderIFrame::contentRootRenderer() const
 {
     // FIXME: Is this always a valid cast? What about plugins?
     ASSERT(!widget() || widget()->isFrameView());
-    FrameView* childFrameView = static_cast<FrameView*>(widget());
-    return childFrameView ? static_cast<RenderView*>(childFrameView->frame()->contentRenderer()) : 0;
+    FrameView* childFrameView = toFrameView(widget());
+    return childFrameView ? childFrameView->frame()->contentRenderer() : 0;
 }
 
 bool RenderIFrame::flattenFrame() const
@@ -162,7 +128,7 @@ bool RenderIFrame::flattenFrame() const
 
 void RenderIFrame::layoutSeamlessly()
 {
-    computeLogicalWidth();
+    updateLogicalWidth();
     // FIXME: Containers set their height to 0 before laying out their kids (as we're doing here)
     // however, this causes FrameView::layout() to add vertical scrollbars, incorrectly inflating
     // the resulting contentHeight(). We'll need to make FrameView::layout() smarter.
@@ -170,38 +136,36 @@ void RenderIFrame::layoutSeamlessly()
     updateWidgetPosition(); // Tell the Widget about our new width/height (it will also layout the child document).
 
     // Laying out our kids is normally responsible for adjusting our height, so we set it here.
-    // Replaced elements do not respect padding, so we just add border to the child's height.
-    // FIXME: It's possible that seamless iframes (since they act like divs) *should* respect padding.
-    FrameView* childFrameView = static_cast<FrameView*>(widget());
+    // Replaced elements normally do not respect padding, but seamless elements should: we'll add
+    // both padding and border to the child's logical height here.
+    FrameView* childFrameView = toFrameView(widget());
     if (childFrameView) // Widget should never be null during layout(), but just in case.
-        setLogicalHeight(childFrameView->contentsHeight() + borderTop() + borderBottom());
-    computeLogicalHeight();
+        setLogicalHeight(childFrameView->contentsHeight() + borderTop() + borderBottom() + paddingTop() + paddingBottom());
+    updateLogicalHeight();
 
     updateWidgetPosition(); // Notify the Widget of our final height.
 
     // Assert that the child document did a complete layout.
-    RenderView* childRoot = childFrameView ? static_cast<RenderView*>(childFrameView->frame()->contentRenderer()) : 0;
+    RenderView* childRoot = childFrameView ? childFrameView->frame()->contentRenderer() : 0;
     ASSERT(!childFrameView || !childFrameView->layoutPending());
     ASSERT_UNUSED(childRoot, !childRoot || !childRoot->needsLayout());
 }
 
 void RenderIFrame::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
-    if (flattenFrame()) {
-        RenderPart::computeLogicalWidth();
-        RenderPart::computeLogicalHeight();
-        layoutWithFlattening(style()->width().isFixed(), style()->height().isFixed());
-        // FIXME: Is early return really OK here? What about transform/overflow code below?
-        return;
-    } else if (isSeamless()) {
+    if (isSeamless()) {
         layoutSeamlessly();
         // Do not return so as to share the layer and overflow updates below.
     } else {
-        computeLogicalWidth();
+        updateLogicalWidth();
         // No kids to layout as a replaced element.
-        computeLogicalHeight();
+        updateLogicalHeight();
+
+        if (flattenFrame())
+            layoutWithFlattening(style()->width().isFixed(), style()->height().isFixed());
     }
 
     m_overflow.clear();

@@ -5,7 +5,6 @@
 #define JavaRef_h
 
 #include <jni.h>
-#include <wtf/AlwaysInline.h>
 
 extern JavaVM* jvm;
 

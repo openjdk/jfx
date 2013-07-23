@@ -39,14 +39,11 @@
 #include <runtime/JSArray.h>
 #include <runtime/JSLock.h>
 
-#if ENABLE(JAVA_JSC)
+
     #include "JSNode.h"
     #include "Node.h"
     #include "com_sun_webkit_dom_JSObject.h"
     #define JSOBJECT_CLASSNAME "com/sun/webkit/dom/JSObject"
-#else
-    #define JSOBJECT_CLASSNAME "sun/plugin/javascript/webkit/JSObject"
-#endif
 
 namespace JSC {
 
@@ -72,7 +69,7 @@ static jobject convertArrayInstanceToJavaArray(ExecState* exec, JSArray* jsArray
                     env->NewStringUTF(""));
                 for (unsigned i = 0; i < length; i++) {
                     JSValue item = jsArray->get(exec, i);
-                    UString stringValue = item.toString(exec)->value(exec);
+                    String stringValue = item.toString(exec)->value(exec);
                     env->SetObjectArrayElement(jarray, i,
                         env->functions->NewString(env, (const jchar *)stringValue.characters(), stringValue.length()));
                 }
@@ -107,7 +104,7 @@ static jobject convertArrayInstanceToJavaArray(ExecState* exec, JSArray* jsArray
             jarray = (jobjectArray)env->NewCharArray(length);
             for (unsigned i = 0; i < length; i++) {
                 JSValue item = jsArray->get(exec, i);
-                UString stringValue = item.toString(exec)->value(exec);
+                String stringValue = item.toString(exec)->value(exec);
                 jchar value = 0;
                 if (stringValue.length() > 0)
                     value = ((const jchar*)stringValue.characters())[0];
@@ -181,7 +178,7 @@ static jobject convertArrayInstanceToJavaArray(ExecState* exec, JSArray* jsArray
     return jarray;
 }
 
-#if ENABLE(JAVA_JSC)
+
 jobject convertUndefinedToJObject() {
     static JGObject jgoUndefined;
     if (!jgoUndefined) {
@@ -193,7 +190,7 @@ jobject convertUndefinedToJObject() {
     }
     return jgoUndefined;
 }
-#endif
+
 
 jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue value, JavaType javaType, const char* javaClassName)
 {
@@ -222,24 +219,10 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                     RuntimeArray* imp = static_cast<RuntimeArray*>(object);
                     JavaArray* array = static_cast<JavaArray*>(imp->getConcreteArray());
                     result.l = array->javaArray();
-#if !ENABLE(JAVA_JSC)
-                } else if (object->classInfo() == &JSArray::s_info) {
-                    // Input is a Javascript Array. We need to create it to a Java Array.
-                    result.l = convertArrayInstanceToJavaArray(exec, asArray(value), javaClassName);
-#endif
                 } else if ((!result.l && (!strcmp(javaClassName, "java.lang.Object")))
                            || (!strcmp(javaClassName, "netscape.javascript.JSObject"))) {
                     // Wrap objects in JSObject instances.
                     JNIEnv* env = getJNIEnv();
-#if !ENABLE(JAVA_JSC)
-                    jclass jsObjectClass = env->FindClass("sun/plugin/javascript/webkit/JSObject");
-                    jmethodID constructorID = env->GetMethodID(jsObjectClass, "<init>", "(J)V");
-                    if (constructorID) {
-                        jlong nativeHandle = ptr_to_jlong(object);
-                        rootObject->gcProtect(object);
-                        result.l = env->NewObject(jsObjectClass, constructorID, nativeHandle);
-                    }
-#else
                     if (object->inherits(&WebCore::JSNode::s_info)) {
                         WebCore::JSNode* jsnode = static_cast<WebCore::JSNode*>(object);
                         static JGClass nodeImplClass = env->FindClass("com/sun/webkit/dom/NodeImpl");
@@ -262,26 +245,17 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                                 com_sun_webkit_dom_JSObject_JS_CONTEXT_OBJECT);
                         }
                     }
-#endif
                 }
             }
 
             // Create an appropriate Java object if target type is java.lang.Object.
             if (!result.l && !strcmp(javaClassName, "java.lang.Object")) {
                 if (value.isString()) {
-                    UString stringValue = asString(value)->value(exec);
+                    String stringValue = asString(value)->value(exec);
                     JNIEnv* env = getJNIEnv();
                     jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.characters(), stringValue.length());
                     result.l = javaString;
                 } else if (value.isNumber()) {
-#if !ENABLE(JAVA_JSC)
-                    double doubleValue = value.asNumber();
-                    JNIEnv* env = getJNIEnv();
-                    jclass clazz = env->FindClass("java/lang/Double");
-                    jmethodID constructor = env->GetMethodID(clazz, "<init>", "(D)V");
-                    jobject javaDouble = env->functions->NewObject(env, clazz, constructor, doubleValue);
-                    result.l = javaDouble;
-#else
                     JNIEnv* env = getJNIEnv();
                     if (value.isInt32()) {
                         static JGClass clazz(env->FindClass("java/lang/Integer"));
@@ -294,29 +268,15 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                         jobject javaDouble = env->CallStaticObjectMethod(clazz, meth, doubleValue);
                         result.l = javaDouble;
                     }
-#endif
                 } else if (value.isBoolean()) {
                     bool boolValue = value.asBoolean();
                     JNIEnv* env = getJNIEnv();
-#if ENABLE(JAVA_JSC)
                     static JGClass clazz(env->FindClass("java/lang/Boolean"));
                     jmethodID meth = env->GetStaticMethodID(clazz, "valueOf", "(Z)Ljava/lang/Boolean;");
                     jobject javaBoolean = env->CallStaticObjectMethod(clazz, meth, boolValue);
-#else
-                    jclass clazz = env->FindClass("java/lang/Boolean");
-                    jmethodID constructor = env->GetMethodID(clazz, "<init>", "(Z)V");
-                    jobject javaBoolean = env->functions->NewObject(env, clazz, constructor, boolValue);
-#endif
                     result.l = javaBoolean;
                 } else if (value.isUndefined()) {
-#if ENABLE(JAVA_JSC)
                     result.l = convertUndefinedToJObject();
-#else
-                    UString stringValue = "undefined";
-                    JNIEnv* env = getJNIEnv();
-                    jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.characters(), stringValue.length());
-                    result.l = javaString;
-#endif
                 }
             }
 
@@ -324,7 +284,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
             // converting from a null.
             if (!result.l && !strcmp(javaClassName, "java.lang.String")) {
                 if (!value.isNull()) {
-                    UString stringValue = value.toString(exec)->value(exec);
+                    String stringValue = value.toString(exec)->value(exec);
                     JNIEnv* env = getJNIEnv();
                     jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.characters(), stringValue.length());
                     result.l = javaString;
@@ -464,9 +424,7 @@ jthrowable dispatchJNICall(int count, RootObject* rootObject, jobject obj, bool 
         {
         }
         break;
-#if ENABLE(JAVA_JSC)
     case JavaTypeArray:
-#endif
     case JavaTypeObject:
         result.l = r;
         break;

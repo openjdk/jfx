@@ -71,6 +71,11 @@ namespace WebCore {
     macro(focus) \
     macro(focusin) \
     macro(focusout) \
+    macro(gesturetap) \
+    macro(gesturetapdown) \
+    macro(gesturescrollstart) \
+    macro(gesturescrollend) \
+    macro(gesturescrollupdate) \
     macro(hashchange) \
     macro(input) \
     macro(invalid) \
@@ -79,9 +84,13 @@ namespace WebCore {
     macro(keyup) \
     macro(levelchange) \
     macro(load) \
+    macro(loading) \
+    macro(loadingdone) \
     macro(loadstart) \
     macro(message) \
     macro(mousedown) \
+    macro(mouseenter) \
+    macro(mouseleave) \
     macro(mousemove) \
     macro(mouseout) \
     macro(mouseover) \
@@ -110,8 +119,9 @@ namespace WebCore {
     macro(textInput) \
     macro(unload) \
     macro(updateready) \
+    macro(upgradeneeded) \
     macro(versionchange) \
-    macro(webkitvisibilitychange) \
+    macro(visibilitychange) \
     macro(write) \
     macro(writeend) \
     macro(writestart) \
@@ -120,7 +130,6 @@ namespace WebCore {
     macro(DOMActivate) \
     macro(DOMFocusIn) \
     macro(DOMFocusOut) \
-    macro(DOMAttrModified) \
     macro(DOMCharacterDataModified) \
     macro(DOMNodeInserted) \
     macro(DOMNodeInsertedIntoDocument) \
@@ -157,6 +166,8 @@ namespace WebCore {
     macro(webkitbeginfullscreen) \
     macro(webkitendfullscreen) \
     \
+    macro(webkitaddsourcebuffer) \
+    macro(webkitremovesourcebuffer) \
     macro(webkitsourceopen) \
     macro(webkitsourceended) \
     macro(webkitsourceclose) \
@@ -175,6 +186,7 @@ namespace WebCore {
     macro(webkitAnimationIteration) \
     \
     macro(webkitTransitionEnd) \
+    macro(transitionend) \
     \
     macro(orientationchange) \
     \
@@ -202,9 +214,11 @@ namespace WebCore {
     macro(audioend) \
     macro(result) \
     macro(nomatch) \
-    macro(resultdeleted) \
     macro(start) \
     macro(end) \
+    macro(mark) \
+    macro(boundary) \
+    macro(resume) \
     \
     macro(webglcontextlost) \
     macro(webglcontextrestored) \
@@ -215,20 +229,30 @@ namespace WebCore {
     macro(connecting) \
     macro(addstream) \
     macro(removestream) \
-    macro(statechange) \
+    macro(signalingstatechange) \
     macro(removetrack) \
+    macro(mute) \
+    macro(unmute) \
+    macro(iceconnectionstatechange) \
+    macro(icecandidate) \
+    macro(negotiationneeded) \
+    macro(datachannel) \
+    macro(tonechange) \
     \
     macro(show) \
     \
-    macro(webkitpointerlocklost) \
     macro(webkitpointerlockchange) \
     macro(webkitpointerlockerror) \
     \
-    macro(webkitRegionLayoutUpdate) \
+    macro(webkitregionlayoutupdate) \
     \
     macro(webkitnetworkinfochange) \
     \
     macro(webkitresourcetimingbufferfull) \
+    \
+    macro(webkitdeviceproximity) \
+    \
+    macro(securitypolicyviolation) \
     \
 
 // end of DOM_EVENT_NAMES_FOR_EACH
@@ -256,6 +280,15 @@ namespace WebCore {
                 || eventType == touchmoveEvent
                 || eventType == touchendEvent
                 || eventType == touchcancelEvent;
+        }
+
+        inline bool isGestureEventType(const AtomicString& eventType) const
+        {
+            return eventType == gesturetapEvent
+                || eventType == gesturetapdownEvent
+                || eventType == gesturescrollstartEvent
+                || eventType == gesturescrollendEvent
+                || eventType == gesturescrollupdateEvent;
         }
 
         Vector<AtomicString> touchEventNames() const

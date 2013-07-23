@@ -31,6 +31,7 @@
 #include "CSSFontSelector.h"
 #include "Document.h"
 #include "FontDescription.h"
+#include "RuntimeEnabledFeatures.h"
 #include "SegmentedFontData.h"
 #include "SimpleFontData.h"
 
@@ -72,6 +73,19 @@ bool CSSSegmentedFontFace::isValid() const
 void CSSSegmentedFontFace::fontLoaded(CSSFontFace*)
 {
     pruneTable();
+
+#if ENABLE(FONT_LOAD_EVENTS)
+    if (RuntimeEnabledFeatures::fontLoadEventsEnabled() && !isLoading()) {
+        Vector<RefPtr<LoadFontCallback> > callbacks;
+        m_callbacks.swap(callbacks);
+        for (size_t index = 0; index < callbacks.size(); ++index) {
+            if (checkFont())
+                callbacks[index]->notifyLoaded();
+            else
+                callbacks[index]->notifyError();
+        }
+    }
+#endif
 }
 
 void CSSSegmentedFontFace::appendFontFace(PassRefPtr<CSSFontFace> fontFace)
@@ -81,8 +95,9 @@ void CSSSegmentedFontFace::appendFontFace(PassRefPtr<CSSFontFace> fontFace)
     m_fontFaces.append(fontFace);
 }
 
-static void appendFontDataWithInvalidUnicodeRangeIfLoading(SegmentedFontData* newFontData, const SimpleFontData* faceFontData, const Vector<CSSFontFace::UnicodeRange>& ranges)
+static void appendFontDataWithInvalidUnicodeRangeIfLoading(SegmentedFontData* newFontData, PassRefPtr<SimpleFontData> prpFaceFontData, const Vector<CSSFontFace::UnicodeRange>& ranges)
 {
+    RefPtr<SimpleFontData> faceFontData = prpFaceFontData;
     if (faceFontData->isLoading()) {
         newFontData->appendRange(FontDataRange(0, 0, faceFontData));
         return;
@@ -98,19 +113,23 @@ static void appendFontDataWithInvalidUnicodeRangeIfLoading(SegmentedFontData* ne
         newFontData->appendRange(FontDataRange(ranges[j].from(), ranges[j].to(), faceFontData));
 }
 
-FontData* CSSSegmentedFontFace::getFontData(const FontDescription& fontDescription)
+PassRefPtr<FontData> CSSSegmentedFontFace::getFontData(const FontDescription& fontDescription)
 {
     if (!isValid())
         return 0;
 
     FontTraitsMask desiredTraitsMask = fontDescription.traitsMask();
-    unsigned hashKey = ((fontDescription.computedPixelSize() + 1) << (FontTraitsMaskWidth + 1)) | ((fontDescription.orientation() == Vertical ? 1 : 0) << FontTraitsMaskWidth) | desiredTraitsMask;
+    unsigned hashKey = ((fontDescription.computedPixelSize() + 1) << (FontTraitsMaskWidth + FontWidthVariantWidth + 1))
+        | ((fontDescription.orientation() == Vertical ? 1 : 0) << (FontTraitsMaskWidth + FontWidthVariantWidth))
+        | fontDescription.widthVariant() << FontTraitsMaskWidth
+        | desiredTraitsMask;
 
-    SegmentedFontData*& fontData = m_fontDataTable.add(hashKey, 0).iterator->second;
-    if (fontData)
-        return fontData;
+    RefPtr<SegmentedFontData>& fontData = m_fontDataTable.add(hashKey, 0).iterator->value;
+    if (fontData && fontData->numRanges())
+        return fontData; // No release, we have a reference to an object in the cache which should retain the ref count it has.
 
-    OwnPtr<SegmentedFontData> newFontData = adoptPtr(new SegmentedFontData);
+    if (!fontData)
+        fontData = SegmentedFontData::create();
 
     unsigned size = m_fontFaces.size();
     for (unsigned i = 0; i < size; i++) {
@@ -119,19 +138,51 @@ FontData* CSSSegmentedFontFace::getFontData(const FontDescription& fontDescripti
         FontTraitsMask traitsMask = m_fontFaces[i]->traitsMask();
         bool syntheticBold = !(traitsMask & (FontWeight600Mask | FontWeight700Mask | FontWeight800Mask | FontWeight900Mask)) && (desiredTraitsMask & (FontWeight600Mask | FontWeight700Mask | FontWeight800Mask | FontWeight900Mask));
         bool syntheticItalic = !(traitsMask & FontStyleItalicMask) && (desiredTraitsMask & FontStyleItalicMask);
-        if (const SimpleFontData* faceFontData = m_fontFaces[i]->getFontData(fontDescription, syntheticBold, syntheticItalic)) {
+        if (RefPtr<SimpleFontData> faceFontData = m_fontFaces[i]->getFontData(fontDescription, syntheticBold, syntheticItalic)) {
             ASSERT(!faceFontData->isSegmented());
-            appendFontDataWithInvalidUnicodeRangeIfLoading(newFontData.get(), faceFontData, m_fontFaces[i]->ranges());
+            appendFontDataWithInvalidUnicodeRangeIfLoading(fontData.get(), faceFontData.release(), m_fontFaces[i]->ranges());
         }
     }
-    if (newFontData->numRanges()) {
-        if (Document* document = m_fontSelector->document()) {
-            fontData = newFontData.get();
-            document->registerCustomFont(newFontData.release());
-        }
+    if (fontData->numRanges())
+        return fontData; // No release, we have a reference to an object in the cache which should retain the ref count it has.
+
+    return 0;
     }
 
-    return fontData;
+#if ENABLE(FONT_LOAD_EVENTS)
+bool CSSSegmentedFontFace::isLoading() const
+{
+    unsigned size = m_fontFaces.size();
+    for (unsigned i = 0; i < size; i++) {
+        if (m_fontFaces[i]->loadState() == CSSFontFace::Loading)
+            return true;
+    }
+    return false;
 }
+
+bool CSSSegmentedFontFace::checkFont() const
+{
+    unsigned size = m_fontFaces.size();
+    for (unsigned i = 0; i < size; i++) {
+        if (m_fontFaces[i]->loadState() != CSSFontFace::Loaded)
+            return false;
+}
+    return true;
+}
+
+void CSSSegmentedFontFace::loadFont(const FontDescription& fontDescription, PassRefPtr<LoadFontCallback> callback)
+{
+    getFontData(fontDescription); // Kick off the load.
+
+    if (callback) {
+        if (isLoading())
+            m_callbacks.append(callback);
+        else if (checkFont())
+            callback->notifyLoaded();
+        else
+            callback->notifyError();
+    }
+}
+#endif
 
 }

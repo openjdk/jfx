@@ -25,30 +25,44 @@
 package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGCamera;
-import com.sun.javafx.sg.PGSubScene;
-import com.sun.javafx.sg.PGNode;
-import com.sun.prism.RTTexture;
+import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
+import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
+import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
-import com.sun.prism.camera.PrismCameraImpl;
 
 /**
  * @author Thor Johannesson
  */
-public class NGSubScene extends NGNode implements PGSubScene {
+public class NGSubScene extends NGNode {
 
     private int rtWidth, rtHeight;
     private RTTexture rtt;
+    // ressolveRTT is a temporary render target to "resolve" a msaa render buffer
+    // into a normal color render target.
+    // REMIND: resolveRTT could be a single shared scratch rtt
+    private RTTexture resolveRTT = null;
     private NGNode root = null;
     private boolean renderSG = true;
+    // Depth and antiAliasing are immutable states
+    private final boolean depthBuffer;
+    private final boolean antiAliasing;
 
-    public void setRoot(PGNode root) {
-        this.root = (NGNode)root;
+    public NGSubScene(boolean depthBuffer, boolean antiAliasing) {
+        this.depthBuffer = depthBuffer;
+        this.antiAliasing = antiAliasing;
+    }
+
+    private NGSubScene() {
+        this(false, false);
+    }
+
+    public void setRoot(NGNode root) {
+        this.root = root;
     }
 
     private Paint fillPaint;
@@ -57,9 +71,9 @@ public class NGSubScene extends NGNode implements PGSubScene {
     }
 
     private PrismCameraImpl camera;
-    public void setCamera(PGCamera camera) {
+    public void setCamera(NGCamera camera) {
         if (camera != null) {
-            this.camera = ((NGCamera) camera).getCameraImpl();
+            this.camera = camera.getCameraImpl();
         } else {
             this.camera = PrismDefaultCamera.getInstance();
         }
@@ -83,14 +97,8 @@ public class NGSubScene extends NGNode implements PGSubScene {
         }
     }
 
-    boolean depthBuffer = false;
-    public void setDepthBuffer(boolean depthBuffer) {
-        this.depthBuffer = depthBuffer;
-    }
-
     private Object lights[];
 
-    @Override
     public Object[] getLights() { return lights; }
 
     public void setLights(Object[] lights) {
@@ -128,18 +136,24 @@ public class NGSubScene extends NGNode implements PGSubScene {
         return false;
     }
 
+    private boolean isOpaque = false;
     private void applyBackgroundFillPaint(Graphics g) {
+        isOpaque = true;
         if (fillPaint != null) {
             if (fillPaint instanceof Color) {
-                g.clear((Color)fillPaint);
+                Color fillColor = (Color)fillPaint;
+                isOpaque = (fillColor.getAlpha() >= 1.0);
+                g.clear(fillColor);
             } else {
                 if (!fillPaint.isOpaque()) {
                     g.clear();
+                    isOpaque = false;
                 }
                 g.setPaint(fillPaint);
                 g.fillRect(0, 0, rtt.getContentWidth(), rtt.getContentHeight());
             }
         } else {
+            isOpaque = false;
             // Default is transparent
             g.clear();
         }
@@ -159,7 +173,8 @@ public class NGSubScene extends NGNode implements PGSubScene {
             if (rtt == null) {
                 ResourceFactory factory = g.getResourceFactory();
                 rtt = factory.createRTTexture(rtWidth, rtHeight,
-                                              Texture.WrapMode.CLAMP_NOT_NEEDED);
+                                              Texture.WrapMode.CLAMP_NOT_NEEDED,
+                                              antiAliasing);
             }
             Graphics rttGraphics = rtt.createGraphics();
             rttGraphics.setLights(lights);
@@ -175,9 +190,48 @@ public class NGSubScene extends NGNode implements PGSubScene {
             root.clearDirtyTree();
             renderSG = false;
         }
-        g.drawTexture(rtt, rtt.getContentX(), rtt.getContentY(),
-                      rtt.getContentWidth(), rtt.getContentHeight());
+        if (antiAliasing) {
+            int x0 = rtt.getContentX();
+            int y0 = rtt.getContentY();
+            int x1 = x0 + rtt.getContentWidth();
+            int y1 = y0 + rtt.getContentHeight();
+            if ((isOpaque || g.getCompositeMode() == CompositeMode.SRC)
+                    && g.getTransformNoClone().isTranslateOrIdentity()) {
+                // Round translation to closest pixel
+                int tx = (int)(g.getTransformNoClone().getMxt() + 0.5);
+                int ty = (int)(g.getTransformNoClone().getMyt() + 0.5);
+                // Blit SubScene directly to scene surface
+                g.blit(rtt, null, x0, y0, x1, y1,
+                            x0 + tx, y0 + ty, x1 + tx, y1 + ty);
+            } else {
+                if (resolveRTT != null &&
+                        (resolveRTT.getContentWidth() < rtt.getContentWidth() ||
+                        (resolveRTT.getContentHeight() < rtt.getContentHeight())))
+                {
+                    // If msaa rtt is larger than resolve buffer, then dispose
+                    resolveRTT.dispose();
+                    resolveRTT = null;
+                }
+                if (resolveRTT == null || resolveRTT.isSurfaceLost()) {
+                    resolveRTT = g.getResourceFactory().createRTTexture(rtWidth, rtHeight,
+                            Texture.WrapMode.CLAMP_NOT_NEEDED, false);
+                } else {
+                    resolveRTT.lock();
+                }
+                g.blit(rtt, resolveRTT, x0, y0, x1, y1,
+                        x0, y0, x1, y1);
+                g.drawTexture(resolveRTT, rtt.getContentX(), rtt.getContentY(),
+                        rtt.getContentWidth(), rtt.getContentHeight());
+                resolveRTT.unlock();
+            }
+        } else {
+            g.drawTexture(rtt, rtt.getContentX(), rtt.getContentY(),
+                          rtt.getContentWidth(), rtt.getContentHeight());
+        }
         rtt.unlock();
     }
 
+    public PrismCameraImpl getCamera() {
+        return camera;
+    }
 }

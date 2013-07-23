@@ -178,16 +178,16 @@ void GraphicsContext::drawEllipse(const IntRect& rect)
 }
 
 // FIXME: This function needs to be adjusted to match the functionality on the Mac side.
-void GraphicsContext::strokeArc(const IntRect& rect, int startAngle, int angleSpan)
-{
-    if (paintingDisabled() || strokeStyle() == NoStroke)
-        return;
-
-    platformContext()->rq().freeSpace(28)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_STROKEARC
-    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height()
-    << (jint)startAngle << (jint)angleSpan;
-}
+//void GraphicsContext::strokeArc(const IntRect& rect, int startAngle, int angleSpan)
+//{
+//    if (paintingDisabled() || strokeStyle() == NoStroke)
+//        return;
+//
+//    platformContext()->rq().freeSpace(28)
+//    << (jint)com_sun_webkit_graphics_GraphicsDecoder_STROKEARC
+//    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height()
+//    << (jint)startAngle << (jint)angleSpan;
+//}
 
 void GraphicsContext::drawConvexPolygon(size_t npoints, const FloatPoint* points, bool shouldAntialias)
 {
@@ -492,7 +492,9 @@ void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_TEXT_MODE
     << (jint)(mode & TextModeFill)
     << (jint)(mode & TextModeStroke)
-    << (jint)(mode & TextModeClip);
+    << (jint)0;
+    //utatodo:
+    //<< (jint)(mode & TextModeClip);
 }
 
 void GraphicsContext::setPlatformStrokeStyle(StrokeStyle style)
@@ -556,18 +558,18 @@ void GraphicsContext::concatCTM(const AffineTransform& at)
     << (float)at.a() << (float)at.b() << (float)at.c() << (float)at.d() << (float)at.e() << (float)at.f();
 }
 
-void GraphicsContext::addInnerRoundedRectClip(const IntRect& r, int thickness)
-{
-    if (paintingDisabled())
-        return;
-
-    FloatRect rect(r);
-    Path path;
-    path.addEllipse(rect);
-    rect.inflate(-thickness);
-    path.addEllipse(rect);
-    clipPath(path, RULE_EVENODD);
-}
+//void GraphicsContext::addInnerRoundedRectClip(const IntRect& r, int thickness)
+//{
+//    if (paintingDisabled())
+//        return;
+//
+//    FloatRect rect(r);
+//    Path path;
+//    path.addEllipse(rect);
+//    rect.inflate(-thickness);
+//    path.addEllipse(rect);
+//    clipPath(path, RULE_EVENODD);
+//}
 
 void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Color& color, ColorSpace)
 {
@@ -706,7 +708,7 @@ float GraphicsContext::getAlpha()
     return m_state.globalAlpha;
 }
 
-void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op)
+void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendMode bm)
 {
     if (paintingDisabled())
         return;
@@ -714,6 +716,7 @@ void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op)
     platformContext()->rq().freeSpace(8)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETCOMPOSITE
     << (jint)op;
+    //utatodo: add BlendMode
 }
 
 void GraphicsContext::strokePath(const Path& path)
@@ -752,14 +755,14 @@ static void setClipPath(
     << jint(isOut);
 }
 
-void GraphicsContext::canvasClip(const Path& path)
+void GraphicsContext::canvasClip(const Path& path, WindRule fillRule)
 {
-    clip(path);
+    clip(path, fillRule);
 }
 
-void GraphicsContext::clip(const Path& path)
+void GraphicsContext::clip(const Path& path, WindRule wrule)
 {
-    setClipPath(*this, path, fillRule(), false);
+    setClipPath(*this, path, wrule, false);
 }
 
 void GraphicsContext::clipPath(const Path &path, WindRule wrule)
@@ -856,10 +859,30 @@ void GraphicsContext::fillRoundedRect(const IntRect& rect, const IntSize& topLef
     << (jint)color.rgb();
 }
 
-AffineTransform GraphicsContext::getCTM() const
+#if ENABLE(3D_RENDERING) && USE(TEXTURE_MAPPER)
+TransformationMatrix GraphicsContext::get3DTransform() const
+{
+    // FIXME: Can we approximate the transformation better than this?
+    return getCTM().toTransformationMatrix();
+}
+
+void GraphicsContext::concat3DTransform(const TransformationMatrix& transform)
+{
+    concatCTM(transform.toAffineTransform());
+}
+
+void GraphicsContext::set3DTransform(const TransformationMatrix& transform)
+{
+    setCTM(transform.toAffineTransform());
+}
+#endif
+
+//utatodo: do we need the Java-only m_state.transform?
+AffineTransform GraphicsContext::getCTM(IncludeDeviceScale) const
 {
     return m_state.transform;
 }
+
 
 void GraphicsContext::setCTM(const AffineTransform& tm)
 {

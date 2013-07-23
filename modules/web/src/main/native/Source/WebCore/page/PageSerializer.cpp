@@ -52,6 +52,7 @@
 #include "Page.h"
 #include "StyleCachedImage.h"
 #include "StyleImage.h"
+#include "StylePropertySet.h"
 #include "StyleRule.h"
 #include "StyleSheetContents.h"
 #include "Text.h"
@@ -73,9 +74,9 @@ static bool isCharsetSpecifyingNode(Node* node)
     HTMLMetaCharsetParser::AttributeList attributes;
     if (element->hasAttributes()) {
         for (unsigned i = 0; i < element->attributeCount(); ++i) {
-            Attribute* item = element->attributeItem(i);
+            const Attribute* attribute = element->attributeItem(i);
             // FIXME: We should deal appropriately with the attribute if they have a namespace.
-            attributes.append(std::make_pair(item->name().toString(), item->value().string()));
+            attributes.append(std::make_pair(attribute->name().toString(), attribute->value().string()));
         }
     }
     TextEncoding textEncoding = HTMLMetaCharsetParser::encodingFromMetaAttributes(attributes);
@@ -149,7 +150,7 @@ void SerializerMarkupAccumulator::appendCustomAttributes(StringBuilder& out, Ele
     if (!element->isFrameOwnerElement())
         return;
 
-    HTMLFrameOwnerElement* frameOwner = static_cast<HTMLFrameOwnerElement*>(element);
+    HTMLFrameOwnerElement* frameOwner = toFrameOwnerElement(element);
     Frame* frame = frameOwner->contentFrame();
     if (!frame)
         return;
@@ -266,16 +267,16 @@ void PageSerializer::serializeCSSStyleSheet(CSSStyleSheet* styleSheet, const KUR
         }
         Document* document = styleSheet->ownerDocument();
         // Some rules have resources associated with them that we need to retrieve.
-        if (rule->isImportRule()) {
+        if (rule->type() == CSSRule::IMPORT_RULE) {
             CSSImportRule* importRule = static_cast<CSSImportRule*>(rule);            
             KURL importURL = document->completeURL(importRule->href());
             if (m_resourceURLs.contains(importURL))
                 continue;
             serializeCSSStyleSheet(importRule->styleSheet(), importURL);
-        } else if (rule->isFontFaceRule()) {
+        } else if (rule->type() == CSSRule::FONT_FACE_RULE) {
             // FIXME: Add support for font face rule. It is not clear to me at this point if the actual otf/eot file can
             // be retrieved from the CSSFontFaceRule object.
-        } else if (rule->isStyleRule())
+        } else if (rule->type() == CSSRule::STYLE_RULE)
             retrieveResourcesForRule(static_cast<CSSStyleRule*>(rule)->styleRule(), document);
     }
 
@@ -298,8 +299,17 @@ void PageSerializer::addImageToResources(CachedImage* image, RenderObject* image
     if (!image || image->image() == Image::nullImage())
         return;
 
+    RefPtr<SharedBuffer> data = imageRenderer ? image->imageForRenderer(imageRenderer)->data() : 0;
+    if (!data)
+        data = image->image()->data();
+
+    if (!data) {
+        LOG_ERROR("No data for image %s", url.string().utf8().data());
+        return;
+    }
+
     String mimeType = image->response().mimeType();
-    m_resources->append(Resource(url, mimeType, imageRenderer ? image->imageForRenderer(imageRenderer)->data() : image->image()->data()));
+    m_resources->append(Resource(url, mimeType, data));
     m_resourceURLs.add(url);
 }
 
@@ -339,7 +349,7 @@ KURL PageSerializer::urlForBlankFrame(Frame* frame)
 {
     HashMap<Frame*, KURL>::iterator iter = m_blankFrameURLs.find(frame);
     if (iter != m_blankFrameURLs.end())
-        return iter->second;
+        return iter->value;
     String url = "wyciwyg://frame/" + String::number(m_blankFrameCounter++);
     KURL fakeURL(ParsedURLString, url);
     m_blankFrameURLs.add(frame, fakeURL);

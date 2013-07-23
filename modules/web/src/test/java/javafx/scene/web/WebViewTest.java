@@ -24,7 +24,7 @@ public class WebViewTest extends TestBase {
         setZoom(view, ZOOM);
         checkZoom(view, ZOOM);
 
-        load(new File("test/html/ipsum.html"));
+        load(new File("src/test/resources/html/ipsum.html"));
 
         checkFontScale(view, SCALE);
         checkZoom(view, ZOOM);

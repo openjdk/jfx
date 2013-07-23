@@ -25,21 +25,21 @@
 
 package javafx.scene.shape;
 
-import static org.junit.Assert.assertEquals;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.pgstub.SVGPathImpl;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGSVGPath;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.NodeTest;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
 
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.pgstub.StubSVGPath;
+import static org.junit.Assert.*;
 
 public class SVGPathTest {
     
     @Test public void testBoundPropertySync_Content() throws Exception {
-        SVGPath svgPath = new SVGPath();
+        StubSVGPath svgPath = new StubSVGPath();
         svgPath.setContent("M40,60 C42,48 44,30 25,32");
 
         StringProperty content = new SimpleStringProperty();
@@ -48,14 +48,13 @@ public class SVGPathTest {
         content.set(s);
         NodeTest.syncNode(svgPath);
 
-        StubSVGPath.SVGPathImpl geometry = (StubSVGPath.SVGPathImpl)
-                ((StubSVGPath) svgPath.impl_getPGSVGPath()).getGeometry();
+        SVGPathImpl geometry = ((StubNGSVGPath) svgPath.impl_getPeer()).geometry;
         assertEquals(s, geometry.getContent());
     }
 
     @Test
     public void testDefaultValues() {
-        SVGPath svgPath = new SVGPath();
+        StubSVGPath svgPath = new StubSVGPath();
         assertEquals("", svgPath.getContent());
         assertEquals("", svgPath.contentProperty().get());
         assertEquals(FillRule.NON_ZERO, svgPath.getFillRule());
@@ -63,26 +62,57 @@ public class SVGPathTest {
     }
 
     @Test public void testFillRuleSync() {
-        SVGPath svgPath = new SVGPath();
+        StubSVGPath svgPath = new StubSVGPath();
         svgPath.setContent("M40,60 C42,48 44,30 25,32");
         svgPath.setFillRule(FillRule.EVEN_ODD);
-        StubSVGPath peer = (StubSVGPath) svgPath.impl_getPGSVGPath();
+        StubNGSVGPath peer = svgPath.impl_getPeer();
         peer.setAcceptsPath2dOnUpdate(true);
 
         NodeTest.syncNode(svgPath);
-        Path2D geometry = (Path2D)((StubSVGPath)svgPath.impl_getPGSVGPath()).getGeometry();
-        assertEquals(Path2D.WIND_EVEN_ODD, geometry.getWindingRule());
+        Path2D path = peer.path;
+        assertEquals(Path2D.WIND_EVEN_ODD, path.getWindingRule());
 
         svgPath.setFillRule(FillRule.NON_ZERO);
         NodeTest.syncNode(svgPath);
         // internal shape might have changed, getting it again
-        geometry = (Path2D)((StubSVGPath)svgPath.impl_getPGSVGPath()).getGeometry();
-        assertEquals(Path2D.WIND_NON_ZERO, geometry.getWindingRule());
+        path = peer.path;
+        assertEquals(Path2D.WIND_NON_ZERO, path.getWindingRule());
     }
 
     @Test public void toStringShouldReturnNonEmptyString() {
-        String s = new SVGPath().toString();
+        String s = new StubSVGPath().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
+    }
+
+    private class StubSVGPath extends SVGPath {
+        @Override
+        protected NGNode impl_createPeer() {
+            return new StubNGSVGPath();
+        }
+    }
+
+    private class StubNGSVGPath extends NGSVGPath {
+        private SVGPathImpl geometry;
+        private Path2D path;
+        private boolean acceptsPath2dOnUpdate = false;
+
+        @Override
+        public void setContent(Object content) {
+            if (acceptsPath2dOnUpdate) {
+                path = (Path2D) content;
+            } else {
+                geometry = (SVGPathImpl) content;
+            }
+        }
+
+        public void setAcceptsPath2dOnUpdate(boolean acceptsPath2dOnUpdate) {
+            this.acceptsPath2dOnUpdate = acceptsPath2dOnUpdate;
+        }
+
+        @Override
+        public boolean acceptsPath2dOnUpdate() {
+            return acceptsPath2dOnUpdate;
+        }
     }
 }

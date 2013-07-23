@@ -103,16 +103,24 @@ protected:
 
 #endif
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
     virtual double animationRepeatIntervalForProgressBar(RenderProgress*) const;
     virtual double animationDurationForProgressBar(RenderProgress*) const;
     virtual void adjustProgressBarStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintProgressBar(RenderObject*, const PaintInfo&, const IntRect&);
 #endif
 
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
     virtual bool supportsMeter(ControlPart) const;
     virtual bool paintMeter(RenderObject*, const PaintInfo&, const IntRect&);
+#endif
+
+#if ENABLE(DATALIST_ELEMENT)
+    // Returns size of one slider tick mark for a horizontal track.
+    // For vertical tracks we rotate it and use it. i.e. Width is always length along the track.
+    virtual IntSize sliderTickSize() const {return IntSize(0, 0); }
+    // Returns the distance of slider tick origin from the slider track center.
+    virtual int sliderTickOffsetFromTrackCenter() const { return 0; };
 #endif
 
     virtual void adjustSliderThumbSize(RenderStyle*, Element*) const;

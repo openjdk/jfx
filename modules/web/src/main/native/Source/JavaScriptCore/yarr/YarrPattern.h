@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Peter Varga (pvarga@inf.u-szeged.hu), University of Szeged
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,10 +27,12 @@
 #ifndef YarrPattern_h
 #define YarrPattern_h
 
-#include <runtime/UString.h>
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 #include <wtf/unicode/Unicode.h>
 
 namespace JSC { namespace Yarr {
@@ -48,37 +50,28 @@ struct CharacterRange {
     }
 };
 
-struct CharacterClassTable : RefCounted<CharacterClassTable> {
-    const char* m_table;
-    bool m_inverted;
-    static PassRefPtr<CharacterClassTable> create(const char* table, bool inverted)
-    {
-        return adoptRef(new CharacterClassTable(table, inverted));
-    }
-
-private:
-    CharacterClassTable(const char* table, bool inverted)
-        : m_table(table)
-        , m_inverted(inverted)
-    {
-    }
-};
-
 struct CharacterClass {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     // All CharacterClass instances have to have the full set of matches and ranges,
-    // they may have an optional table for faster lookups (which must match the
+    // they may have an optional m_table for faster lookups (which must match the
     // specified matches and ranges)
-    CharacterClass(PassRefPtr<CharacterClassTable> table)
+    CharacterClass()
+        : m_table(0)
+    {
+    }
+    CharacterClass(const char* table, bool inverted)
         : m_table(table)
+        , m_tableInverted(inverted)
     {
     }
     Vector<UChar> m_matches;
     Vector<CharacterRange> m_ranges;
     Vector<UChar> m_matchesUnicode;
     Vector<CharacterRange> m_rangesUnicode;
-    RefPtr<CharacterClassTable> m_table;
+
+    const char* m_table;
+    bool m_tableInverted;
 };
 
 enum QuantifierType {
@@ -275,19 +268,14 @@ public:
     {
     }
     
-    ~PatternDisjunction()
-    {
-        deleteAllValues(m_alternatives);
-    }
-
     PatternAlternative* addNewAlternative()
     {
         PatternAlternative* alternative = new PatternAlternative(this);
-        m_alternatives.append(alternative);
+        m_alternatives.append(adoptPtr(alternative));
         return alternative;
     }
 
-    Vector<PatternAlternative*> m_alternatives;
+    Vector<OwnPtr<PatternAlternative> > m_alternatives;
     PatternAlternative* m_parent;
     unsigned m_minimumSize;
     unsigned m_callFrameSize;
@@ -316,13 +304,7 @@ struct TermChain {
 };
 
 struct YarrPattern {
-    JS_EXPORT_PRIVATE YarrPattern(const UString& pattern, bool ignoreCase, bool multiline, const char** error);
-
-    ~YarrPattern()
-    {
-        deleteAllValues(m_disjunctions);
-        deleteAllValues(m_userCharacterClasses);
-    }
+    JS_EXPORT_PRIVATE YarrPattern(const String& pattern, bool ignoreCase, bool multiline, const char** error);
 
     void reset()
     {
@@ -340,9 +322,7 @@ struct YarrPattern {
         nonspacesCached = 0;
         nonwordcharCached = 0;
 
-        deleteAllValues(m_disjunctions);
         m_disjunctions.clear();
-        deleteAllValues(m_userCharacterClasses);
         m_userCharacterClasses.clear();
     }
 
@@ -354,43 +334,43 @@ struct YarrPattern {
     CharacterClass* newlineCharacterClass()
     {
         if (!newlineCached)
-            m_userCharacterClasses.append(newlineCached = newlineCreate());
+            m_userCharacterClasses.append(adoptPtr(newlineCached = newlineCreate()));
         return newlineCached;
     }
     CharacterClass* digitsCharacterClass()
     {
         if (!digitsCached)
-            m_userCharacterClasses.append(digitsCached = digitsCreate());
+            m_userCharacterClasses.append(adoptPtr(digitsCached = digitsCreate()));
         return digitsCached;
     }
     CharacterClass* spacesCharacterClass()
     {
         if (!spacesCached)
-            m_userCharacterClasses.append(spacesCached = spacesCreate());
+            m_userCharacterClasses.append(adoptPtr(spacesCached = spacesCreate()));
         return spacesCached;
     }
     CharacterClass* wordcharCharacterClass()
     {
         if (!wordcharCached)
-            m_userCharacterClasses.append(wordcharCached = wordcharCreate());
+            m_userCharacterClasses.append(adoptPtr(wordcharCached = wordcharCreate()));
         return wordcharCached;
     }
     CharacterClass* nondigitsCharacterClass()
     {
         if (!nondigitsCached)
-            m_userCharacterClasses.append(nondigitsCached = nondigitsCreate());
+            m_userCharacterClasses.append(adoptPtr(nondigitsCached = nondigitsCreate()));
         return nondigitsCached;
     }
     CharacterClass* nonspacesCharacterClass()
     {
         if (!nonspacesCached)
-            m_userCharacterClasses.append(nonspacesCached = nonspacesCreate());
+            m_userCharacterClasses.append(adoptPtr(nonspacesCached = nonspacesCreate()));
         return nonspacesCached;
     }
     CharacterClass* nonwordcharCharacterClass()
     {
         if (!nonwordcharCached)
-            m_userCharacterClasses.append(nonwordcharCached = nonwordcharCreate());
+            m_userCharacterClasses.append(adoptPtr(nonwordcharCached = nonwordcharCreate()));
         return nonwordcharCached;
     }
 
@@ -401,11 +381,11 @@ struct YarrPattern {
     unsigned m_numSubpatterns;
     unsigned m_maxBackReference;
     PatternDisjunction* m_body;
-    Vector<PatternDisjunction*, 4> m_disjunctions;
-    Vector<CharacterClass*> m_userCharacterClasses;
+    Vector<OwnPtr<PatternDisjunction>, 4> m_disjunctions;
+    Vector<OwnPtr<CharacterClass> > m_userCharacterClasses;
 
 private:
-    const char* compile(const UString& patternString);
+    const char* compile(const String& patternString);
 
     CharacterClass* newlineCached;
     CharacterClass* digitsCached;

@@ -38,6 +38,7 @@
 #include <glib/gi18n-lib.h>
 #include <glib/gstdio.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/gobject/GOwnPtr.h>
 #include <wtf/gobject/GRefPtr.h>
 #include <wtf/text/CString.h>
 
@@ -263,7 +264,7 @@ static void webkit_download_class_init(WebKitDownloadClass* downloadClass)
     // Properties.
 
     /**
-     * WebKitDownload:network-request
+     * WebKitDownload:network-request:
      *
      * The #WebKitNetworkRequest instance associated with the download.
      *
@@ -278,7 +279,7 @@ static void webkit_download_class_init(WebKitDownloadClass* downloadClass)
                                                         (GParamFlags)(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY)));
 
     /**
-     * WebKitDownload:network-response
+     * WebKitDownload:network-response:
      *
      * The #WebKitNetworkResponse instance associated with the download.
      *
@@ -293,7 +294,7 @@ static void webkit_download_class_init(WebKitDownloadClass* downloadClass)
                                                         (GParamFlags)(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY)));
 
     /**
-     * WebKitDownload:destination-uri
+     * WebKitDownload:destination-uri:
      *
      * The URI of the save location for this download.
      *
@@ -308,7 +309,7 @@ static void webkit_download_class_init(WebKitDownloadClass* downloadClass)
                                                         WEBKIT_PARAM_READWRITE));
 
     /**
-     * WebKitDownload:suggested-filename
+     * WebKitDownload:suggested-filename:
      *
      * The file name suggested as default when saving
      *
@@ -356,7 +357,7 @@ static void webkit_download_class_init(WebKitDownloadClass* downloadClass)
                                                       WEBKIT_PARAM_READABLE));
 
     /**
-     * WebKitDownload:current-size
+     * WebKitDownload:current-size:
      *
      * The length of the data already downloaded
      *
@@ -371,7 +372,7 @@ static void webkit_download_class_init(WebKitDownloadClass* downloadClass)
                                                         WEBKIT_PARAM_READABLE));
 
     /**
-     * WebKitDownload:total-size
+     * WebKitDownload:total-size:
      *
      * The total size of the file
      *
@@ -459,21 +460,22 @@ static gboolean webkit_download_open_stream_for_uri(WebKitDownload* download, co
     g_return_val_if_fail(uri, FALSE);
 
     WebKitDownloadPrivate* priv = download->priv;
-    GFile* file = g_file_new_for_uri(uri);
-    GError* error = NULL;
+    GRefPtr<GFile> file = adoptGRef(g_file_new_for_uri(uri));
+    GOwnPtr<GError> error;
 
     if (append)
-        priv->outputStream = g_file_append_to(file, G_FILE_CREATE_NONE, NULL, &error);
+        priv->outputStream = g_file_append_to(file.get(), G_FILE_CREATE_NONE, NULL, &error.outPtr());
     else
-        priv->outputStream = g_file_replace(file, NULL, TRUE, G_FILE_CREATE_NONE, NULL, &error);
-
-    g_object_unref(file);
+        priv->outputStream = g_file_replace(file.get(), NULL, TRUE, G_FILE_CREATE_NONE, NULL, &error.outPtr());
 
     if (error) {
         webkitDownloadEmitError(download, downloadDestinationError(core(priv->networkResponse), error->message));
-        g_error_free(error);
         return FALSE;
     }
+
+    GRefPtr<GFileInfo> info = adoptGRef(g_file_info_new());
+    g_file_info_set_attribute_string(info.get(), "metadata::download-uri", webkit_download_get_uri(download));
+    g_file_set_attributes_async(file.get(), info.get(), G_FILE_QUERY_INFO_NONE, G_PRIORITY_DEFAULT, 0, 0, 0);
 
     return TRUE;
 }
@@ -696,21 +698,17 @@ void webkit_download_set_destination_uri(WebKitDownload* download, const gchar* 
         if (downloading)
             webkit_download_close_stream(download);
 
-        GFile* src = g_file_new_for_uri(priv->destinationURI);
-        GFile* dest = g_file_new_for_uri(destination_uri);
-        GError* error = NULL;
+        GRefPtr<GFile> src = adoptGRef(g_file_new_for_uri(priv->destinationURI));
+        GRefPtr<GFile> dest = adoptGRef(g_file_new_for_uri(destination_uri));
+        GOwnPtr<GError> error;
 
-        g_file_move(src, dest, G_FILE_COPY_BACKUP, NULL, NULL, NULL, &error);
-
-        g_object_unref(src);
-        g_object_unref(dest);
+        g_file_move(src.get(), dest.get(), G_FILE_COPY_BACKUP, 0, 0, 0, &error.outPtr());
 
         g_free(priv->destinationURI);
         priv->destinationURI = g_strdup(destination_uri);
 
         if (error) {
             webkitDownloadEmitError(download, downloadDestinationError(core(priv->networkResponse), error->message));
-            g_error_free(error);
             return;
         }
 
@@ -862,14 +860,13 @@ static void webkit_download_received_data(WebKitDownload* download, const gchar*
     ASSERT(priv->outputStream);
 
     gsize bytes_written;
-    GError* error = NULL;
+    GOwnPtr<GError> error;
 
     g_output_stream_write_all(G_OUTPUT_STREAM(priv->outputStream),
-                              data, length, &bytes_written, NULL, &error);
+                              data, length, &bytes_written, NULL, &error.outPtr());
 
     if (error) {
         webkitDownloadEmitError(download, downloadDestinationError(core(priv->networkResponse), error->message));
-        g_error_free(error);
         return;
     }
 

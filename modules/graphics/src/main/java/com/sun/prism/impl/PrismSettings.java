@@ -58,7 +58,6 @@ public final class PrismSettings {
     public static final boolean doPiscesText;
     public static final boolean doOpenPiscesText;
     public static final boolean doNativePisces;
-    public static final boolean doT2KText;
     public static final String refType;
     public static final boolean forceRepaint;
     public static final boolean isEmbededDevice;
@@ -225,15 +224,12 @@ public final class PrismSettings {
             doNativePisces = Boolean.parseBoolean(npprop);
         }
 
-        /* Setting for text. t2k is the default.
+        /* Setting for text.
          */
-        String text = systemProperties.getProperty("prism.text", "t2k");
+        String text = systemProperties.getProperty("prism.text", "");
         doPiscesText = "pisces".equals(text);
         doOpenPiscesText = "openpisces".equals(text);
-        doT2KText = !doPiscesText && !doOpenPiscesText;
-        if (doT2KText) {
-             text = "t2k";
-        }
+
         String primtex = systemProperties.getProperty("prism.primtextures");
         if (primtex == null) {
             primTextureSize = PlatformUtil.isEmbedded() ? -1 : 0;
@@ -272,7 +268,11 @@ public final class PrismSettings {
                 System.out.print(s+" ");
             }
             System.out.println("");
-            System.out.println("Using " + text + " for text rasterization");
+            if (PrismSettings.doPiscesText || PrismSettings.doOpenPiscesText) {
+                System.out.println("Using " + text + " for text rasterization");
+            } else {
+                System.out.println("Using platform text rasterizer");
+            }
             String piscestype = (doNativePisces ? "native" : "java");
             System.out.println("Using " + piscestype + "-based Pisces rasterizer");
             printBooleanOption(dirtyOptsEnabled, "Using dirty region optimizations");
@@ -315,7 +315,7 @@ public final class PrismSettings {
                              ? getInt(systemProperties, "prism.mintexturesize",
                                       0, "Try -Dprism.mintexturesize=<number>")
                              : 0;
-        
+
         minRTTSize = getInt(systemProperties, "prism.minrttsize",
                                       isEmbededDevice ? 16 : 0, "Try -Dprism.minrttsize=<number>");
 

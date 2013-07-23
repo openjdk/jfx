@@ -599,6 +599,11 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 getChildren().setAll(graphic, text);
             }
         }
+
+        // Fix for RT-31120
+        if (graphic != null) {
+            graphic.impl_processCSS(false);
+        }
     }
 
     /**
@@ -931,8 +936,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             text.setText("");
         } else {
             updateDisplayedText(w, h); // Have to do this just in case it needs to be recomputed
-            textWidth  = Math.min(text.getLayoutBounds().getWidth(),  wrapWidth);
-            textHeight = Math.min(text.getLayoutBounds().getHeight(), wrapHeight);
+            textWidth  = snapSize(Math.min(text.getLayoutBounds().getWidth(),  wrapWidth));
+            textHeight = snapSize(Math.min(text.getLayoutBounds().getHeight(), wrapHeight));
         }
 
         final double gap = (ignoreText || ignoreGraphic) ? 0 : labeled.getGraphicTextGap();

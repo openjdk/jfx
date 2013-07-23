@@ -277,7 +277,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             .append("</converter>")
             .append(newline);
         outdent();
-        sbuf.append(spaces()).append("</Value>").append(newline);
+        sbuf.append(spaces()).append("</Value>");
         return sbuf.toString();
     }
 
@@ -475,7 +475,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
     final static private byte SIZE = 9;
 
 
-    public void writeBinary(DataOutputStream os, StringStore stringStore)
+    public final void writeBinary(DataOutputStream os, StringStore stringStore)
         throws IOException {
 
         os.writeBoolean(lookup);
@@ -608,7 +608,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         }
     }
 
-    public static ParsedValueImpl readBinary(DataInputStream is, String[] strings)
+    public static ParsedValueImpl readBinary(int bssVersion, DataInputStream is, String[] strings)
             throws IOException {
 
         final boolean lookup = is.readBoolean();
@@ -619,19 +619,23 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         final int valType = is.readByte();
 
         if (valType == VALUE) {
-            final ParsedValueImpl value = ParsedValueImpl.readBinary(is, strings);
+            final ParsedValueImpl value = ParsedValueImpl.readBinary(bssVersion, is, strings);
             return new ParsedValueImpl(value, converter, lookup);
 
         } else if (valType == VALUE_ARRAY) {
-            int vtype = is.readByte();
+            if (bssVersion == 4) {
+                // This byte was used to denote whether or not array was all nulls.
+                // But really, just need to know nVals
+                is.readByte();
+            }
             final int nVals = is.readInt();
-            final ParsedValueImpl[] values = (vtype != NULL_VALUE)
+            final ParsedValueImpl[] values = (nVals > 0)
                     ? new ParsedValueImpl[nVals]
                     : null;
             for (int v=0; v<nVals; v++) {
-                vtype = is.readByte();
+                int vtype = is.readByte();
                 if (vtype == VALUE) {
-                    values[v] = ParsedValueImpl.readBinary(is, strings);
+                    values[v] = ParsedValueImpl.readBinary(bssVersion, is, strings);
                 } else {
                     values[v] = null;
                 }
@@ -639,26 +643,36 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             return new ParsedValueImpl(values, converter, lookup);
 
         } else if (valType == ARRAY_OF_VALUE_ARRAY) {
-            int vtype = is.readByte();
+            if (bssVersion == 4) {
+                // This byte was used to denote whether or not array was all nulls.
+                // But really, just need to know nLayers
+                is.readByte();
+            }
+
             final int nLayers = is.readInt();
-            final ParsedValueImpl[][] layers = (vtype != NULL_VALUE)
-                    ? new ParsedValueImpl[nLayers][]
-                    : null;
+            final ParsedValueImpl[][] layers = nLayers > 0 ? new ParsedValueImpl[nLayers][0] : null;
+
             for (int l=0; l<nLayers; l++) {
-                vtype = is.readByte();
+                if (bssVersion == 4) {
+                    // was used to denote whether or not array was all nulls
+                    // but really just need to know nVals
+                    is.readByte();
+                }
                 final int nVals = is.readInt();
-                layers[l] = (vtype != NULL_VALUE)
-                    ? new ParsedValueImpl[nVals] 
-                    : null;
+
+                layers[l] = nVals > 0 ? new ParsedValueImpl[nVals] : null;
+
                 for (int v=0; v<nVals; v++) {
-                    vtype = is.readByte();
+                    int vtype = is.readByte();
                     if (vtype == VALUE) {
-                        layers[l][v] = ParsedValueImpl.readBinary(is, strings);
+                        layers[l][v] = ParsedValueImpl.readBinary(bssVersion, is, strings);
                     } else {
                         layers[l][v] = null;
                     }
                 }
+
             }
+
             return new ParsedValueImpl(layers, converter, lookup);
 
         } else if (valType == COLOR) {
@@ -671,6 +685,24 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         } else if (valType == ENUM) {
             final int nameIndex = is.readShort();
             final String ename = strings[nameIndex];
+
+            if (bssVersion == 2) {
+                // RT-31022
+                // Once upon a time, the enum's class name was added to the
+                // StringStore and the class name's index was written to the
+                // stream. Then the writeShort of the class name's index was
+                // removed but the binary css version wasn't incremented.
+                // So if we're trying to read a version 2 stream, then we'll
+                // read this short value. If the stream is actually a the
+                // version without this short value, then the data will get
+                // out of sync with the deserialization code and an exception
+                // will be thrown, at which point we can try a different
+                // version.
+                //
+                int bad = is.readShort();
+                if (bad >= strings.length) throw new IllegalArgumentException("bad version " + bssVersion);
+            }
+
             ParsedValueImpl value = new ParsedValueImpl(ename, converter, lookup);
             return value;
 

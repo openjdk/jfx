@@ -40,7 +40,6 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.CssError;
 import javafx.css.CssMetaData;
@@ -693,7 +692,7 @@ public abstract class Control extends Region implements Skinnable {
             Constructor<?> skinConstructor = null;
             for (Constructor<?> c : constructors) {
                 Class<?>[] parameterTypes = c.getParameterTypes();
-                if (parameterTypes.length == 1 && Control.class.isAssignableFrom(parameterTypes[0])) {
+                if (parameterTypes.length == 1 && Skinnable.class.isAssignableFrom(parameterTypes[0])) {
                     skinConstructor = c;
                     break;
                 }
@@ -703,7 +702,7 @@ public abstract class Control extends Region implements Skinnable {
                 final String msg =
                     "No valid constructor defined in '" + skinClassName + "' for control " + control +
                         ".\r\nYou must provide a constructor that accepts a single "
-                        + "Control parameter in " + skinClassName + ".";
+                        + "Skinnable (e.g. Control or PopupControl) parameter in " + skinClassName + ".";
                 final List<CssError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssError error = new CssError(msg);
@@ -891,13 +890,4 @@ public abstract class Control extends Region implements Skinnable {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.TRUE;
     }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated public AccessibleProvider impl_getAccessible() {
-        return null; // return a valid value for specific controls accessible objects
-    }
-
 }

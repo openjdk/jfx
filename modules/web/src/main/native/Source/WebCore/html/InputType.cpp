@@ -40,6 +40,7 @@
 #include "ElementShadow.h"
 #include "EmailInputType.h"
 #include "ExceptionCode.h"
+#include "ExceptionCodePlaceholder.h"
 #include "FileInputType.h"
 #include "FileList.h"
 #include "FormController.h"
@@ -48,12 +49,13 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "HTMLShadowElement.h"
 #include "HiddenInputType.h"
 #include "ImageInputType.h"
+#include "InputTypeNames.h"
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
 #include "MonthInputType.h"
+#include "NodeRenderStyle.h"
 #include "NumberInputType.h"
 #include "Page.h"
 #include "PasswordInputType.h"
@@ -68,6 +70,7 @@
 #include "ShadowRoot.h"
 #include "SubmitInputType.h"
 #include "TelephoneInputType.h"
+#include "TextBreakIterator.h"
 #include "TextInputType.h"
 #include "TimeInputType.h"
 #include "URLInputType.h"
@@ -83,7 +86,7 @@ using namespace HTMLNames;
 using namespace std;
 
 typedef PassOwnPtr<InputType> (*InputTypeFactoryFunction)(HTMLInputElement*);
-typedef HashMap<String, InputTypeFactoryFunction, CaseFoldingHash> InputTypeFactoryMap;
+typedef HashMap<AtomicString, InputTypeFactoryFunction, CaseFoldingHash> InputTypeFactoryMap;
 
 static PassOwnPtr<InputTypeFactoryMap> createInputTypeFactoryMap()
 {
@@ -97,10 +100,12 @@ static PassOwnPtr<InputTypeFactoryMap> createInputTypeFactoryMap()
     if (RuntimeEnabledFeatures::inputTypeDateEnabled())
         map->add(InputTypeNames::date(), DateInputType::create);
 #endif
-#if ENABLE(INPUT_TYPE_DATETIME)
+#if ENABLE(INPUT_TYPE_DATETIME_INCOMPLETE)
+    if (RuntimeEnabledFeatures::inputTypeDateTimeEnabled())
     map->add(InputTypeNames::datetime(), DateTimeInputType::create);
 #endif
 #if ENABLE(INPUT_TYPE_DATETIMELOCAL)
+    if (RuntimeEnabledFeatures::inputTypeDateTimeLocalEnabled())
     map->add(InputTypeNames::datetimelocal(), DateTimeLocalInputType::create);
 #endif
     map->add(InputTypeNames::email(), EmailInputType::create);
@@ -108,6 +113,7 @@ static PassOwnPtr<InputTypeFactoryMap> createInputTypeFactoryMap()
     map->add(InputTypeNames::hidden(), HiddenInputType::create);
     map->add(InputTypeNames::image(), ImageInputType::create);
 #if ENABLE(INPUT_TYPE_MONTH)
+    if (RuntimeEnabledFeatures::inputTypeMonthEnabled())
     map->add(InputTypeNames::month(), MonthInputType::create);
 #endif
     map->add(InputTypeNames::number(), NumberInputType::create);
@@ -119,17 +125,19 @@ static PassOwnPtr<InputTypeFactoryMap> createInputTypeFactoryMap()
     map->add(InputTypeNames::submit(), SubmitInputType::create);
     map->add(InputTypeNames::telephone(), TelephoneInputType::create);
 #if ENABLE(INPUT_TYPE_TIME)
+    if (RuntimeEnabledFeatures::inputTypeTimeEnabled())
     map->add(InputTypeNames::time(), TimeInputType::create);
 #endif
     map->add(InputTypeNames::url(), URLInputType::create);
 #if ENABLE(INPUT_TYPE_WEEK)
+    if (RuntimeEnabledFeatures::inputTypeWeekEnabled())
     map->add(InputTypeNames::week(), WeekInputType::create);
 #endif
     // No need to register "text" because it is the default type.
     return map.release();
 }
 
-PassOwnPtr<InputType> InputType::create(HTMLInputElement* element, const String& typeName)
+PassOwnPtr<InputType> InputType::create(HTMLInputElement* element, const AtomicString& typeName)
 {
     static const InputTypeFactoryMap* factoryMap = createInputTypeFactoryMap().leakPtr();
     PassOwnPtr<InputType> (*factory)(HTMLInputElement*) = typeName.isEmpty() ? 0 : factoryMap->get(typeName);
@@ -251,6 +259,11 @@ bool InputType::valueMissing(const String&) const
     return false;
 }
 
+bool InputType::hasBadInput() const
+{
+    return false;
+}
+
 bool InputType::patternMismatch(const String&) const
 {
     return false;
@@ -339,6 +352,12 @@ bool InputType::stepMismatch(const String& value) const
     return createStepRange(RejectAny).stepMismatch(numericValue);
 }
 
+String InputType::badInputText() const
+{
+    ASSERT_NOT_REACHED();
+    return validationMessageTypeMismatchText();
+}
+
 String InputType::typeMismatchText() const
 {
     return validationMessageTypeMismatchText();
@@ -354,7 +373,10 @@ String InputType::validationMessage() const
     const String value = element()->value();
 
     // The order of the following checks is meaningful. e.g. We'd like to show the
-    // valueMissing message even if the control has other validation errors.
+    // badInput message even if the control has other validation errors.
+    if (hasBadInput())
+        return badInputText();
+
     if (valueMissing(value))
         return valueMissingText();
 
@@ -418,10 +440,6 @@ void InputType::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent*)
 {
 }
 
-void InputType::handleWheelEvent(WheelEvent*)
-{
-}
-
 #if ENABLE(TOUCH_EVENTS)
 void InputType::handleTouchEvent(TouchEvent*)
 {
@@ -447,27 +465,27 @@ RenderObject* InputType::createRenderer(RenderArena*, RenderStyle* style) const
     return RenderObject::createObject(element(), style);
 }
 
+PassRefPtr<RenderStyle> InputType::customStyleForRenderer(PassRefPtr<RenderStyle> originalStyle)
+{
+    return originalStyle;
+}
+
+void InputType::blur()
+{
+    element()->defaultBlur();
+}
+
 void InputType::createShadowSubtree()
 {
 }
 
 void InputType::destroyShadowSubtree()
 {
-    ElementShadow* shadow = element()->shadow();
-    if (!shadow)
+    ShadowRoot* root = element()->userAgentShadowRoot();
+    if (!root)
         return;
 
-    ShadowRoot* root = shadow->oldestShadowRoot();
-    ASSERT(root->type() == ShadowRoot::UserAgentShadowRoot);
-    root->removeAllChildren();
-
-    // It's ok to clear contents of all other ShadowRoots because they must have
-    // been created by TextFieldDecorationElement, and we don't allow adding
-    // AuthorShadowRoot to HTMLInputElement.
-    while ((root = root->youngerShadowRoot())) {
-        root->removeAllChildren();
-        root->appendChild(HTMLShadowElement::create(shadowTag, element()->document()));
-    }
+    root->removeChildren();
 }
 
 Decimal InputType::parseToNumber(const String&, const Decimal& defaultValue) const
@@ -503,11 +521,16 @@ void InputType::dispatchSimulatedClickIfActive(KeyboardEvent* event) const
 Chrome* InputType::chrome() const
 {
     if (Page* page = element()->document()->page())
-        return page->chrome();
+        return &page->chrome();
     return 0;
 }
 
 bool InputType::canSetStringValue() const
+{
+    return true;
+}
+
+bool InputType::hasCustomFocusLogic() const
 {
     return true;
 }
@@ -527,7 +550,7 @@ bool InputType::shouldUseInputMethod() const
     return false;
 }
 
-void InputType::handleFocusEvent()
+void InputType::handleFocusEvent(Node*, FocusDirection)
 {
 }
 
@@ -557,10 +580,6 @@ void InputType::altAttributeChanged()
 }
 
 void InputType::srcAttributeChanged()
-{
-}
-
-void InputType::willMoveToNewOwnerDocument()
 {
 }
 
@@ -640,8 +659,19 @@ void InputType::setValue(const String& sanitizedValue, bool valueChanged, TextFi
 {
     element()->setValueInternal(sanitizedValue, eventBehavior);
     element()->setNeedsStyleRecalc();
-    if (valueChanged && eventBehavior != DispatchNoEvent)
+    if (!valueChanged)
+        return;
+    switch (eventBehavior) {
+    case DispatchChangeEvent:
         element()->dispatchFormControlChangeEvent();
+        break;
+    case DispatchInputAndChangeEvent:
+        element()->dispatchFormControlInputEvent();
+        element()->dispatchFormControlChangeEvent();
+        break;
+    case DispatchNoEvent:
+        break;
+    }
 }
 
 bool InputType::canSetValue(const String&)
@@ -668,24 +698,9 @@ String InputType::visibleValue() const
     return element()->value();
 }
 
-String InputType::convertFromVisibleValue(const String& visibleValue) const
-{
-    return visibleValue;
-}
-
-bool InputType::isAcceptableValue(const String&)
-{
-    return true;
-}
-
 String InputType::sanitizeValue(const String& proposedValue) const
 {
     return proposedValue;
-}
-
-bool InputType::hasUnacceptableValue()
-{
-    return false;
 }
 
 bool InputType::receiveDroppedFiles(const DragData*)
@@ -855,17 +870,20 @@ bool InputType::supportsPlaceholder() const
     return false;
 }
 
-bool InputType::usesFixedPlaceholder() const
+bool InputType::supportsReadOnly() const
 {
     return false;
 }
 
-String InputType::fixedPlaceholder()
+void InputType::updateInnerTextValue()
 {
-    return String();
 }
 
 void InputType::updatePlaceholderText()
+{
+}
+
+void InputType::attributeChanged()
 {
 }
 
@@ -881,8 +899,17 @@ void InputType::readonlyAttributeChanged()
 {
 }
 
+void InputType::requiredAttributeChanged()
+{
+}
+
+void InputType::valueAttributeChanged()
+{
+}
+
 void InputType::subtreeHasChanged()
 {
+    ASSERT_NOT_REACHED();
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -897,7 +924,28 @@ String InputType::defaultToolTip() const
     return String();
 }
 
+#if ENABLE(DATALIST_ELEMENT)
+void InputType::listAttributeTargetChanged()
+{
+}
+
+Decimal InputType::findClosestTickMarkValue(const Decimal&)
+{
+    ASSERT_NOT_REACHED();
+    return Decimal::nan();
+}
+#endif
+
+void InputType::updateClearButtonVisibility()
+{
+}
+
 bool InputType::supportsIndeterminateAppearance() const
+{
+    return false;
+}
+
+bool InputType::supportsSelectionAPI() const
 {
     return false;
 }
@@ -952,8 +1000,8 @@ void InputType::applyStep(int count, AnyStepHandling anyStepHandling, TextFieldE
 
     setValueAsDecimal(newValue, eventBehavior, ec);
 
-    if (AXObjectCache::accessibilityEnabled())
-         element()->document()->axObjectCache()->postNotification(element()->renderer(), AXObjectCache::AXValueChanged, true);
+    if (AXObjectCache* cache = element()->document()->existingAXObjectCache())
+        cache->postNotification(element(), AXObjectCache::AXValueChanged, true);
 }
 
 bool InputType::getAllowedValueStep(Decimal* step) const
@@ -1042,20 +1090,17 @@ void InputType::stepUpFromRenderer(int n)
     String currentStringValue = element()->value();
     Decimal current = parseToNumberOrNaN(currentStringValue);
     if (!current.isFinite()) {
-        ExceptionCode ec;
         current = defaultValueForStepUp();
         const Decimal nextDiff = step * n;
         if (current < stepRange.minimum() - nextDiff)
             current = stepRange.minimum() - nextDiff;
         if (current > stepRange.maximum() - nextDiff)
             current = stepRange.maximum() - nextDiff;
-        setValueAsDecimal(current, DispatchInputAndChangeEvent, ec);
+        setValueAsDecimal(current, DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
     }
-    if ((sign > 0 && current < stepRange.minimum()) || (sign < 0 && current > stepRange.maximum())) {
-        ExceptionCode ec;
-        setValueAsDecimal(sign > 0 ? stepRange.minimum() : stepRange.maximum(), DispatchInputAndChangeEvent, ec);
-    } else {
-        ExceptionCode ec;
+    if ((sign > 0 && current < stepRange.minimum()) || (sign < 0 && current > stepRange.maximum()))
+        setValueAsDecimal(sign > 0 ? stepRange.minimum() : stepRange.maximum(), DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
+    else {
         if (stepMismatch(element()->value())) {
             ASSERT(!step.isZero());
             const Decimal base = stepRange.stepBase();
@@ -1072,160 +1117,22 @@ void InputType::stepUpFromRenderer(int n)
             if (newValue > stepRange.maximum())
                 newValue = stepRange.maximum();
 
-            setValueAsDecimal(newValue, n == 1 || n == -1 ? DispatchInputAndChangeEvent : DispatchNoEvent, ec);
+            setValueAsDecimal(newValue, n == 1 || n == -1 ? DispatchInputAndChangeEvent : DispatchNoEvent, IGNORE_EXCEPTION);
             if (n > 1)
-                applyStep(n - 1, AnyIsDefaultStep, DispatchInputAndChangeEvent, ec);
+                applyStep(n - 1, AnyIsDefaultStep, DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
             else if (n < -1)
-                applyStep(n + 1, AnyIsDefaultStep, DispatchInputAndChangeEvent, ec);
+                applyStep(n + 1, AnyIsDefaultStep, DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
         } else
-            applyStep(n, AnyIsDefaultStep, DispatchInputAndChangeEvent, ec);
+            applyStep(n, AnyIsDefaultStep, DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
     }
 }
 
-namespace InputTypeNames {
-
-// The type names must be lowercased because they will be the return values of
-// input.type and input.type must be lowercase according to DOM Level 2.
-
-const AtomicString& button()
+void InputType::observeFeatureIfVisible(FeatureObserver::Feature feature) const
 {
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("button"));
-    return name;
+    if (RenderStyle* style = element()->renderStyle()) {
+        if (style->visibility() != HIDDEN)
+            FeatureObserver::observe(element()->document(), feature);
+    }
 }
 
-const AtomicString& checkbox()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("checkbox"));
-    return name;
-}
-
-#if ENABLE(INPUT_TYPE_COLOR)
-const AtomicString& color()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("color"));
-    return name;
-}
-#endif
-
-const AtomicString& date()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("date"));
-    return name;
-}
-
-const AtomicString& datetime()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("datetime"));
-    return name;
-}
-
-const AtomicString& datetimelocal()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("datetime-local"));
-    return name;
-}
-
-const AtomicString& email()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("email"));
-    return name;
-}
-
-const AtomicString& file()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("file"));
-    return name;
-}
-
-const AtomicString& hidden()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("hidden"));
-    return name;
-}
-
-const AtomicString& image()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("image"));
-    return name;
-}
-
-const AtomicString& month()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("month"));
-    return name;
-}
-
-const AtomicString& number()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("number"));
-    return name;
-}
-
-const AtomicString& password()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("password"));
-    return name;
-}
-
-const AtomicString& radio()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("radio"));
-    return name;
-}
-
-const AtomicString& range()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("range"));
-    return name;
-}
-
-const AtomicString& reset()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("reset"));
-    return name;
-}
-
-const AtomicString& search()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("search"));
-    return name;
-}
-
-const AtomicString& submit()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("submit"));
-    return name;
-}
-
-const AtomicString& telephone()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("tel"));
-    return name;
-}
-
-const AtomicString& text()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("text"));
-    return name;
-}
-
-const AtomicString& time()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("time"));
-    return name;
-}
-
-const AtomicString& url()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("url"));
-    return name;
-}
-
-const AtomicString& week()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("week"));
-    return name;
-}
-
-} // namespace WebCore::InputTypeNames
 } // namespace WebCore

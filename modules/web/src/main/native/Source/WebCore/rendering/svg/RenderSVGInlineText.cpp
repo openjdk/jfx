@@ -158,7 +158,7 @@ bool RenderSVGInlineText::characterStartsNewTextChunk(int position) const
     if (it == m_layoutAttributes.characterDataMap().end())
         return false;
 
-    return it->second.x != SVGTextLayoutAttributes::emptyValue() || it->second.y != SVGTextLayoutAttributes::emptyValue();
+    return it->value.x != SVGTextLayoutAttributes::emptyValue() || it->value.y != SVGTextLayoutAttributes::emptyValue();
 }
 
 VisiblePosition RenderSVGInlineText::positionForPoint(const LayoutPoint& point)
@@ -228,8 +228,7 @@ void RenderSVGInlineText::computeNewScaledFontForStyle(RenderObject* renderer, c
     Document* document = renderer->document();
     ASSERT(document);
     
-    StyleResolver* styleResolver = document->styleResolver();
-    ASSERT(styleResolver);
+    StyleResolver* styleResolver = document->ensureStyleResolver();
 
     // Alter font-size to the right on-screen value to avoid scaling the glyphs themselves, except when GeometricPrecision is specified
     scalingFactor = SVGRenderingContext::calculateScreenFontSizeScalingFactor(renderer);

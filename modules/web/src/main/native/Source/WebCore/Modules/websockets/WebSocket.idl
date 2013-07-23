@@ -29,16 +29,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module websockets {
-
-    interface [
+[
+    EnabledAtRuntime,
         Conditional=WEB_SOCKETS,
         ActiveDOMObject,
-        CustomConstructor,
-        ConstructorParameters=1,
+    Constructor(DOMString url),
+    Constructor(DOMString url, sequence<DOMString> protocols),
+    Constructor(DOMString url, DOMString protocol),
+    ConstructorRaisesException,
+    CallWith=ScriptExecutionContext,
         EventTarget,
-        JSNoStaticTables
-    ] WebSocket {
+    JSNoStaticTables,
+] interface WebSocket {
         readonly attribute DOMString URL; // Lowercased .url is the one in the spec, but leaving .URL for compatibility reasons.
         readonly attribute DOMString url;
 
@@ -57,33 +59,29 @@ module websockets {
         attribute EventListener onerror;
         attribute EventListener onclose;
 
-        readonly attribute [TreatReturnedNullStringAs=Undefined] DOMString protocol;
-        readonly attribute [TreatReturnedNullStringAs=Undefined] DOMString extensions;
+    [TreatReturnedNullStringAs=Undefined] readonly attribute DOMString protocol;
+    [TreatReturnedNullStringAs=Undefined] readonly attribute DOMString extensions;
 
-        attribute [TreatReturnedNullStringAs=Undefined] DOMString binaryType
-            setter raises(DOMException);
+    attribute DOMString binaryType;
 
-        // FIXME: Use overloading provided by our IDL code generator.
-        // According to Web IDL specification, overloaded function with DOMString argument
-        // should accept anything that can be converted to a string (including numbers,
-        // booleans, null, undefined and objects except ArrayBuffer and Blob). Current code
-        // generator does not handle this rule correctly.
-        // boolean send(in ArrayBuffer data) raises(DOMException);
-        // boolean send(in Blob data) raises(DOMException);
-        // boolean send(in DOMString data) raises(DOMException);
-        [Custom] boolean send(in DOMString data) raises(DOMException);
+    void send(ArrayBuffer data)
+        raises(DOMException);
+    void send(ArrayBufferView data)
+        raises(DOMException);
+    void send(Blob data)
+        raises(DOMException);
+    void send(DOMString data)
+        raises(DOMException);
 
-        // FIXME: Implement and apply [Clamp] attribute instead of [Custom].
-        [Custom] void close(in [Optional] unsigned short code, in [Optional] DOMString reason) raises(DOMException);
+    void close([Clamp] optional unsigned short code, optional DOMString reason) raises(DOMException);
 
         // EventTarget interface
-        void addEventListener(in DOMString type,
-                              in EventListener listener,
-                              in [Optional] boolean useCapture);
-        void removeEventListener(in DOMString type,
-                                 in EventListener listener,
-                                 in [Optional] boolean useCapture);
-        boolean dispatchEvent(in Event evt)
+    void addEventListener(DOMString type,
+                          EventListener listener,
+                          optional boolean useCapture);
+    void removeEventListener(DOMString type,
+                             EventListener listener,
+                             optional boolean useCapture);
+    boolean dispatchEvent(Event evt)
             raises(EventException);
     };
-}

@@ -32,6 +32,13 @@ namespace WebCore {
 
     typedef DOMWindow AbstractView;
 
+struct UIEventInit : public EventInit {
+    UIEventInit();
+
+    RefPtr<AbstractView> view;
+    int detail;
+};
+
     class UIEvent : public Event {
     public:
         static PassRefPtr<UIEvent> create()
@@ -42,6 +49,10 @@ namespace WebCore {
         {
             return adoptRef(new UIEvent(type, canBubble, cancelable, view, detail));
         }
+    static PassRefPtr<UIEvent> create(const AtomicString& type, const UIEventInit& initializer)
+    {
+        return adoptRef(new UIEvent(type, initializer));
+    }
         virtual ~UIEvent();
 
         void initUIEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<AbstractView>, int detail);
@@ -66,28 +77,11 @@ namespace WebCore {
     protected:
         UIEvent();
         UIEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<AbstractView>, int detail);
+    UIEvent(const AtomicString&, const UIEventInit&);
 
     private:
         RefPtr<AbstractView> m_view;
         int m_detail;
-    };
-
-    class FocusInEventDispatchMediator : public EventDispatchMediator {
-    public:
-        static PassRefPtr<FocusInEventDispatchMediator> create(PassRefPtr<Event>, PassRefPtr<Node> oldFocusedNode);
-    private:
-        explicit FocusInEventDispatchMediator(PassRefPtr<Event>, PassRefPtr<Node> oldFocusedNode);
-        virtual bool dispatchEvent(EventDispatcher*) const;
-        RefPtr<Node> m_oldFocusedNode;
-    };
-
-    class FocusOutEventDispatchMediator : public EventDispatchMediator {
-    public:
-        static PassRefPtr<FocusOutEventDispatchMediator> create(PassRefPtr<Event>, PassRefPtr<Node> newFocusedNode);
-    private:
-        explicit FocusOutEventDispatchMediator(PassRefPtr<Event>, PassRefPtr<Node> newFocusedNode);
-        virtual bool dispatchEvent(EventDispatcher*) const;
-        RefPtr<Node> m_newFocusedNode;
     };
 
 } // namespace WebCore

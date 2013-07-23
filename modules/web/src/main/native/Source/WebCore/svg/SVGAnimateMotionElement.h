@@ -27,17 +27,19 @@
 
 namespace WebCore {
             
-class SVGAnimateMotionElement : public SVGAnimationElement {
+class SVGAnimateMotionElement FINAL : public SVGAnimationElement {
 public:
     static PassRefPtr<SVGAnimateMotionElement> create(const QualifiedName&, Document*);
+    void updateAnimationPath();
 
 private:
     SVGAnimateMotionElement(const QualifiedName&, Document*);
 
     virtual bool hasValidAttributeType();
+    virtual bool hasValidAttributeName();
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
     virtual void resetAnimatedType();
     virtual void clearAnimatedType(SVGElement* targetElement);
@@ -47,7 +49,6 @@ private:
     virtual void calculateAnimatedValue(float percentage, unsigned repeatCount, SVGSMILElement* resultElement);
     virtual void applyResultsToTarget();
     virtual float calculateDistance(const String& fromString, const String& toString);
-    virtual Path animationPath() const;
 
     enum RotateMode {
         RotateAngle,
@@ -59,12 +60,15 @@ private:
 
     bool m_hasToPointAtEndOfDuration;
 
+    virtual void updateAnimationMode() OVERRIDE;
+
     // Note: we do not support percentage values for to/from coords as the spec implies we should (opera doesn't either)
     FloatPoint m_fromPoint;
     FloatPoint m_toPoint;
     FloatPoint m_toPointAtEndOfDuration;
 
     Path m_path;
+    Path m_animationPath;
 };
     
 } // namespace WebCore

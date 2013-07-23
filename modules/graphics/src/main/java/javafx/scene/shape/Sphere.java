@@ -31,9 +31,8 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGSphere;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGSphere;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Point2D;
@@ -134,8 +133,8 @@ public class Sphere extends Shape3D {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGSphere();
+    protected NGNode impl_createPeer() {
+        return new NGSphere();
     }
 
     /**
@@ -143,10 +142,10 @@ public class Sphere extends Shape3D {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
         if (impl_isDirty(DirtyBits.MESH_GEOM)) {
-            PGSphere pgSphere = (PGSphere) impl_getPGNode();
+            final NGSphere pgSphere = impl_getPeer();
             final float r = (float) getRadius();
             if (r < 0) {
                 pgSphere.updateMesh(null);

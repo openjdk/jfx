@@ -32,6 +32,7 @@
 #include "URLInputType.h"
 
 #include "HTMLInputElement.h"
+#include "InputTypeNames.h"
 #include "LocalizedStrings.h"
 #include "KURL.h"
 #include <wtf/PassOwnPtr.h>
@@ -41,6 +42,12 @@ namespace WebCore {
 PassOwnPtr<InputType> URLInputType::create(HTMLInputElement* element)
 {
     return adoptPtr(new URLInputType(element));
+}
+
+void URLInputType::attach()
+{
+    TextFieldInputType::attach();
+    observeFeatureIfVisible(FeatureObserver::InputTypeURL);
 }
 
 const AtomicString& URLInputType::formControlType() const

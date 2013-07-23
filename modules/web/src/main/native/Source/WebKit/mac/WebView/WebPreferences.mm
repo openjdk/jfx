@@ -31,6 +31,7 @@
 #import "WebPreferenceKeysPrivate.h"
 
 #import "WebApplicationCache.h"
+#import "WebFrameNetworkingContext.h"
 #import "WebKitLogging.h"
 #import "WebKitNSStringExtras.h"
 #import "WebKitSystemBits.h"
@@ -38,9 +39,13 @@
 #import "WebKitVersionChecks.h"
 #import "WebNSDictionaryExtras.h"
 #import "WebNSURLExtras.h"
+#import "WebSystemInterface.h"
 #import <WebCore/ApplicationCacheStorage.h>
-#import <WebCore/CookieStorageCFNet.h>
+#import <WebCore/NetworkStorageSession.h>
 #import <WebCore/ResourceHandle.h>
+#import <WebCore/RunLoop.h>
+#import <runtime/InitializeThreading.h>
+#import <wtf/MainThread.h>
 #import <wtf/RetainPtr.h>
 
 using namespace WebCore;
@@ -214,8 +219,8 @@ public:
         return nil;
 
     _private = new WebPreferencesPrivate;
-    _private->values.adoptNS([[NSMutableDictionary alloc] init]);
-    _private->identifier.adoptNS([anIdentifier copy]);
+    _private->values = adoptNS([[NSMutableDictionary alloc] init]);
+    _private->identifier = adoptNS([anIdentifier copy]);
     _private->automaticallyDetectsCacheModel = YES;
 
     [[self class] _setInstance:self forIdentifier:_private->identifier.get()];
@@ -251,9 +256,9 @@ public:
         }
 
         if ([identifier isKindOfClass:[NSString class]])
-            _private->identifier.adoptNS([identifier copy]);
+            _private->identifier = adoptNS([identifier copy]);
         if ([values isKindOfClass:[NSDictionary class]])
-            _private->values.adoptNS([values mutableCopy]); // ensure dictionary is mutable
+            _private->values = adoptNS([values mutableCopy]); // ensure dictionary is mutable
 
         LOG(Encoding, "Identifier = %@, Values = %@\n", _private->identifier.get(), _private->values.get());
     } @catch(id) {
@@ -302,6 +307,10 @@ public:
 // if we ever have more than one WebPreferences object, this would move to init
 + (void)initialize
 {
+    JSC::initializeThreading();
+    WTF::initializeMainThreadToProcessMainThread();
+    WebCore::RunLoop::initializeMainRunLoop();
+
     NSDictionary *dict = [NSDictionary dictionaryWithObjectsAndKeys:
         @"Times",                       WebKitStandardFontPreferenceKey,
         @"Courier",                     WebKitFixedFontPreferenceKey,
@@ -345,11 +354,7 @@ public:
         @"0",                           WebKitPDFScaleFactorPreferenceKey,
         @"0",                           WebKitUseSiteSpecificSpoofingPreferenceKey,
         [NSNumber numberWithInt:WebKitEditableLinkDefaultBehavior], WebKitEditableLinkBehaviorPreferenceKey,
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         [NSNumber numberWithInt:WebTextDirectionSubmenuAutomaticallyIncluded],
-#else
-        [NSNumber numberWithInt:WebTextDirectionSubmenuNeverIncluded],
-#endif
                                         WebKitTextDirectionSubmenuInclusionBehaviorPreferenceKey,
         [NSNumber numberWithBool:NO],   WebKitDOMPasteAllowedPreferenceKey,
         [NSNumber numberWithBool:YES],  WebKitUsesPageCachePreferenceKey,
@@ -369,6 +374,7 @@ public:
         // CSS Shaders also need WebGL enabled (which is disabled by default), so we can keep it enabled for now.
         [NSNumber numberWithBool:YES], WebKitCSSCustomFilterEnabledPreferenceKey,
         [NSNumber numberWithBool:YES], WebKitCSSRegionsEnabledPreferenceKey,
+        [NSNumber numberWithBool:YES], WebKitCSSCompositingEnabledPreferenceKey,
         [NSNumber numberWithBool:NO],  WebKitCSSGridLayoutEnabledPreferenceKey,
         [NSNumber numberWithBool:NO],  WebKitAcceleratedDrawingEnabledPreferenceKey,
         [NSNumber numberWithBool:NO],  WebKitCanvasUsesAcceleratedDrawingPreferenceKey,
@@ -398,9 +404,21 @@ public:
         [NSNumber numberWithBool:NO],   WebKitShouldRespectImageOrientationKey,
         [NSNumber numberWithBool:YES],  WebKitRequestAnimationFrameEnabledPreferenceKey,
         [NSNumber numberWithBool:NO],   WebKitWantsBalancedSetDefersLoadingBehaviorKey,
+        [NSNumber numberWithBool:NO],   WebKitDiagnosticLoggingEnabledKey,
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+        [NSNumber numberWithBool:NO],
+#else
+        [NSNumber numberWithBool:YES],
+#endif
+                                        WebKitScreenFontSubstitutionEnabledKey,
+        [NSNumber numberWithInt:WebAllowAllStorage], WebKitStorageBlockingPolicyKey,
+        [NSNumber numberWithBool:NO],   WebKitPlugInSnapshottingEnabledPreferenceKey,
 
         [NSNumber numberWithLongLong:ApplicationCacheStorage::noQuota()], WebKitApplicationCacheTotalQuota,
         [NSNumber numberWithLongLong:ApplicationCacheStorage::noQuota()], WebKitApplicationCacheDefaultOriginQuota,
+        [NSNumber numberWithBool:YES],  WebKitQTKitEnabledPreferenceKey,
+        [NSNumber numberWithBool:NO], WebKitHiddenPageDOMTimerThrottlingEnabledPreferenceKey,
+        [NSNumber numberWithBool:NO], WebKitHiddenPageCSSAnimationSuspensionEnabledPreferenceKey,
         nil];
 
 
@@ -1059,8 +1077,7 @@ public:
 
 - (NSTimeInterval)_backForwardCacheExpirationInterval
 {
-    // FIXME: There's probably no good reason to read from the standard user defaults instead of self.
-    return (NSTimeInterval)[[NSUserDefaults standardUserDefaults] floatForKey:WebKitBackForwardCacheExpirationIntervalKey];
+    return (NSTimeInterval)[self _floatValueForKey:WebKitBackForwardCacheExpirationIntervalKey];
 }
 
 - (float)PDFScaleFactor
@@ -1276,21 +1293,13 @@ static NSString *classIBCreatorID = nil;
 
 + (void)_switchNetworkLoaderToNewTestingSession
 {
-#if USE(CFURLSTORAGESESSIONS)
-    // Set a private session for testing to avoid interfering with global cookies. This should be different from private browsing session.
-    RetainPtr<CFURLStorageSessionRef> session = ResourceHandle::createPrivateBrowsingStorageSession(CFSTR("WebKit Testing Session"));
-    ResourceHandle::setDefaultStorageSession(session.get());
-#endif
+    InitWebCoreSystemInterface();
+    NetworkStorageSession::switchToNewTestingSession();
 }
 
 + (void)_setCurrentNetworkLoaderSessionCookieAcceptPolicy:(NSHTTPCookieAcceptPolicy)policy
 {
-    [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookieAcceptPolicy:policy];
-
-#if USE(CFURLSTORAGESESSIONS)
-    if (RetainPtr<CFHTTPCookieStorageRef> cookieStorage = currentCFHTTPCookieStorage())
-        WKSetHTTPCookieAcceptPolicy(cookieStorage.get(), policy);
-#endif
+    WKSetHTTPCookieAcceptPolicy(NetworkStorageSession::defaultStorageSession().cookieStorage().get(), policy);
 }
 
 - (BOOL)isDOMPasteAllowed
@@ -1381,6 +1390,16 @@ static NSString *classIBCreatorID = nil;
 - (void)setCSSRegionsEnabled:(BOOL)enabled
 {
     [self _setBoolValue:enabled forKey:WebKitCSSRegionsEnabledPreferenceKey];
+}
+
+- (BOOL)cssCompositingEnabled
+{
+    return [self _boolValueForKey:WebKitCSSCompositingEnabledPreferenceKey];
+}
+
+- (void)setCSSCompositingEnabled:(BOOL)enabled
+{
+    [self _setBoolValue:enabled forKey:WebKitCSSCompositingEnabledPreferenceKey];
 }
 
 - (BOOL)cssGridLayoutEnabled
@@ -1568,6 +1587,16 @@ static NSString *classIBCreatorID = nil;
     return [self _boolValueForKey:WebKitAVFoundationEnabledKey];
 }
 
+- (void)setQTKitEnabled:(BOOL)flag
+{
+    [self _setBoolValue:flag forKey:WebKitQTKitEnabledPreferenceKey];
+}
+
+- (BOOL)isQTKitEnabled
+{
+    return [self _boolValueForKey:WebKitQTKitEnabledPreferenceKey];
+}
+
 - (void)setHixie76WebSocketProtocolEnabled:(BOOL)flag
 {
 }
@@ -1605,6 +1634,16 @@ static NSString *classIBCreatorID = nil;
 - (void)setMockScrollbarsEnabled:(BOOL)flag
 {
     [self _setBoolValue:flag forKey:WebKitMockScrollbarsEnabledPreferenceKey];
+}
+
+- (BOOL)seamlessIFramesEnabled
+{
+    return [self _boolValueForKey:WebKitSeamlessIFramesEnabledPreferenceKey];
+}
+
+- (void)setSeamlessIFramesEnabled:(BOOL)flag
+{
+    [self _setBoolValue:flag forKey:WebKitSeamlessIFramesEnabledPreferenceKey];
 }
 
 - (NSString *)pictographFontFamily
@@ -1726,6 +1765,79 @@ static NSString *classIBCreatorID = nil;
 - (NSTimeInterval)incrementalRenderingSuppressionTimeoutInSeconds
 {
     return [self _floatValueForKey:WebKitIncrementalRenderingSuppressionTimeoutInSecondsKey];
+}
+
+- (BOOL)diagnosticLoggingEnabled
+{
+    return [self _boolValueForKey:WebKitDiagnosticLoggingEnabledKey];
+}
+
+- (void)setDiagnosticLoggingEnabled:(BOOL)enabled
+{
+    [self _setBoolValue:enabled forKey:WebKitDiagnosticLoggingEnabledKey];
+}
+
+static bool needsScreenFontsEnabledQuirk()
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    static bool is1PasswordNeedingScreenFontsQuirk = WKExecutableWasLinkedOnOrBeforeMountainLion()
+        && [[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"ws.agile.1Password"];
+    return is1PasswordNeedingScreenFontsQuirk;
+#else
+    return NO;
+#endif
+}
+
+- (BOOL)screenFontSubstitutionEnabled
+{
+    if (needsScreenFontsEnabledQuirk())
+        return YES;
+    return [self _boolValueForKey:WebKitScreenFontSubstitutionEnabledKey];
+}
+
+- (void)setScreenFontSubstitutionEnabled:(BOOL)enabled
+{
+    [self _setBoolValue:enabled forKey:WebKitScreenFontSubstitutionEnabledKey];
+}
+
+- (void)setStorageBlockingPolicy:(WebStorageBlockingPolicy)storageBlockingPolicy
+{
+    [self _setIntegerValue:storageBlockingPolicy forKey:WebKitStorageBlockingPolicyKey];
+}
+
+- (WebStorageBlockingPolicy)storageBlockingPolicy
+{
+    return static_cast<WebStorageBlockingPolicy>([self _integerValueForKey:WebKitStorageBlockingPolicyKey]);
+}
+
+- (BOOL)plugInSnapshottingEnabled
+{
+    return [self _boolValueForKey:WebKitPlugInSnapshottingEnabledPreferenceKey];
+}
+
+- (void)setPlugInSnapshottingEnabled:(BOOL)enabled
+{
+    [self _setBoolValue:enabled forKey:WebKitPlugInSnapshottingEnabledPreferenceKey];
+}
+
+- (BOOL)hiddenPageDOMTimerThrottlingEnabled
+{
+    return [self _boolValueForKey:WebKitHiddenPageDOMTimerThrottlingEnabledPreferenceKey];
+}
+
+- (void)setHiddenPageDOMTimerThrottlingEnabled:(BOOL)enabled
+{
+    [self _setBoolValue:enabled forKey:WebKitHiddenPageDOMTimerThrottlingEnabledPreferenceKey];
+}
+
+- (BOOL)hiddenPageCSSAnimationSuspensionEnabled
+{
+    return [self _boolValueForKey:WebKitHiddenPageCSSAnimationSuspensionEnabledPreferenceKey];
+}
+
+- (void)setHiddenPageCSSAnimationSuspensionEnabled:(BOOL)enabled
+{
+    [self _setBoolValue:enabled forKey:WebKitHiddenPageCSSAnimationSuspensionEnabledPreferenceKey];
 }
 
 @end

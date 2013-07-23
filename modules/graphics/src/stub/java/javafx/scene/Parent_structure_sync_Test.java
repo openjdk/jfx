@@ -26,17 +26,14 @@
 package javafx.scene;
 
 import com.sun.javafx.pgstub.StubToolkit;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.tk.Toolkit;
 import javafx.scene.shape.Rectangle;
-
+import javafx.stage.Stage;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.tk.Toolkit;
-import javafx.stage.Stage;
+import static org.junit.Assert.*;
 
 /**
  * Tests to make sure the synchronization of children between a Parent and PGGroup
@@ -45,7 +42,7 @@ import javafx.stage.Stage;
 public class Parent_structure_sync_Test {
     private Rectangle r1, r2, r3, r4, r5;
     private Parent parent;
-    private PGGroup pg;
+    private NGGroup peer;
     
     @Before public void setup() {
         parent = new Group();
@@ -54,7 +51,7 @@ public class Parent_structure_sync_Test {
         r3 = new Rectangle(0, 0, 10, 10);
         r4 = new Rectangle(0, 0, 10, 10);
         r5 = new Rectangle(0, 0, 10, 10);
-        pg = (PGGroup) parent.impl_getPGNode();
+        peer = parent.impl_getPeer();
 
         Scene scene = new Scene(parent);
         Stage stage = new Stage();
@@ -69,23 +66,23 @@ public class Parent_structure_sync_Test {
     }
     
     @Test public void emptyParentShouldHaveEmptyPGGroup() {
-        assertTrue(pg.getChildren().isEmpty());
+        assertTrue(peer.getChildren().isEmpty());
     }
     
     @Test public void childAddedToEmptyParentShouldBeInPGGroup() {
         parent.getChildren().add(r1);
         sync();
-        assertEquals(1, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
+        assertEquals(1, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
     }
     
     @Test public void childrenAddedToEmptyParentShouldAllBeInPGGroup() {
         parent.getChildren().addAll(r1, r2, r3);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
     
     @Test public void addingAChildToTheBack() {
@@ -93,11 +90,11 @@ public class Parent_structure_sync_Test {
         sync();
         parent.getChildren().add(0, r1);
         sync();
-        assertEquals(4, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
+        assertEquals(4, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
     }
 
     @Test public void addingAChildToTheFront() {
@@ -105,11 +102,11 @@ public class Parent_structure_sync_Test {
         sync();
         parent.getChildren().add(r4);
         sync();
-        assertEquals(4, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
+        assertEquals(4, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
     }
     
     @Test public void addingAChildToTheCenter() {
@@ -117,11 +114,11 @@ public class Parent_structure_sync_Test {
         sync();
         parent.getChildren().add(2, r3);
         sync();
-        assertEquals(4, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
+        assertEquals(4, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
     }
     
     @Test public void removingAChildFromTheFront() {
@@ -129,10 +126,10 @@ public class Parent_structure_sync_Test {
         sync();
         parent.getChildren().remove(3);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
     
     @Test public void removingAChildFromTheBack() {
@@ -140,10 +137,10 @@ public class Parent_structure_sync_Test {
         sync();
         parent.getChildren().remove(0);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
     
     @Test public void removingAChildFromTheCenter() {
@@ -151,10 +148,10 @@ public class Parent_structure_sync_Test {
         sync();
         parent.getChildren().remove(2);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
     
     @Test public void movingAChildFromTheBackToTheFront() {
@@ -162,11 +159,11 @@ public class Parent_structure_sync_Test {
         sync();
         r4.toFront();
         sync();
-        assertEquals(4, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
+        assertEquals(4, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
     }
     
     @Test public void movingAChildFromTheBackToTheFrontAndAddingAChild() {
@@ -175,12 +172,12 @@ public class Parent_structure_sync_Test {
         r4.toFront();
         parent.getChildren().add(r5);
         sync();
-        assertEquals(5, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
-        assertSame(r5.impl_getPGNode(), pg.getChildren().get(4));
+        assertEquals(5, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
+        assertSame(r5.impl_getPeer(), peer.getChildren().get(4));
     }
     
     @Test public void movingAChildFromTheBackToTheFrontAndRemovingAChild() {
@@ -189,10 +186,10 @@ public class Parent_structure_sync_Test {
         r3.toFront();
         parent.getChildren().remove(1);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
     
     @Test public void movingAChildFromTheBackToTheFrontAndThenRemovingTheChild() {
@@ -201,10 +198,10 @@ public class Parent_structure_sync_Test {
         r4.toFront();
         parent.getChildren().remove(3);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
 
     @Test public void movingAChildFromTheCenterToTheFront() {
@@ -212,11 +209,11 @@ public class Parent_structure_sync_Test {
         sync();
         r4.toFront();
         sync();
-        assertEquals(4, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
+        assertEquals(4, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
     }
     
     @Test public void movingAChildFromTheCenterToTheBack() {
@@ -224,11 +221,11 @@ public class Parent_structure_sync_Test {
         sync();
         r1.toBack();
         sync();
-        assertEquals(4, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
+        assertEquals(4, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
     }
     
     @Test public void movingAChildFromTheCenterToTheFrontAndAddingAChild() {
@@ -237,12 +234,12 @@ public class Parent_structure_sync_Test {
         r4.toFront();
         parent.getChildren().add(r5);
         sync();
-        assertEquals(5, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
-        assertSame(r5.impl_getPGNode(), pg.getChildren().get(4));
+        assertEquals(5, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
+        assertSame(r5.impl_getPeer(), peer.getChildren().get(4));
     }
     
     @Test public void movingAChildFromTheCenterToTheFrontAndRemovingAChild() {
@@ -251,10 +248,10 @@ public class Parent_structure_sync_Test {
         r3.toFront();
         parent.getChildren().remove(2);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
     
     @Test public void movingAChildFromTheCenterToTheFrontAndThenRemovingTheChild() {
@@ -263,10 +260,10 @@ public class Parent_structure_sync_Test {
         r4.toFront();
         parent.getChildren().remove(3);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
 
     @Test public void movingAChildFromTheFrontToTheBack() {
@@ -274,11 +271,11 @@ public class Parent_structure_sync_Test {
         sync();
         r1.toBack();
         sync();
-        assertEquals(4, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
+        assertEquals(4, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
     }
     
     @Test public void movingAChildFromTheFrontToTheBackAndAddingAChild() {
@@ -287,12 +284,12 @@ public class Parent_structure_sync_Test {
         r1.toBack();
         parent.getChildren().add(r5);
         sync();
-        assertEquals(5, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
-        assertSame(r4.impl_getPGNode(), pg.getChildren().get(3));
-        assertSame(r5.impl_getPGNode(), pg.getChildren().get(4));
+        assertEquals(5, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+        assertSame(r4.impl_getPeer(), peer.getChildren().get(3));
+        assertSame(r5.impl_getPeer(), peer.getChildren().get(4));
     }
     
     @Test public void movingAChildFromTheFrontToTheBackAndRemovingAChild() {
@@ -301,10 +298,10 @@ public class Parent_structure_sync_Test {
         r1.toBack();
         parent.getChildren().remove(3);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
     
     @Test public void movingAChildFromTheFrontToTheBackAndThenRemovingTheChild() {
@@ -313,9 +310,9 @@ public class Parent_structure_sync_Test {
         r4.toBack();
         parent.getChildren().remove(0);
         sync();
-        assertEquals(3, pg.getChildren().size());
-        assertSame(r1.impl_getPGNode(), pg.getChildren().get(0));
-        assertSame(r2.impl_getPGNode(), pg.getChildren().get(1));
-        assertSame(r3.impl_getPGNode(), pg.getChildren().get(2));
+        assertEquals(3, peer.getChildren().size());
+        assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
+        assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
+        assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
     }
 }

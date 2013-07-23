@@ -23,11 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG&FILTERS
-    ] SVGFESpotLightElement : SVGElement {
+] interface SVGFESpotLightElement : SVGElement {
         readonly attribute SVGAnimatedNumber x;
         readonly attribute SVGAnimatedNumber y;
         readonly attribute SVGAnimatedNumber z;
@@ -38,4 +36,3 @@ module svg {
         readonly attribute SVGAnimatedNumber limitingConeAngle;
     };
 
-}

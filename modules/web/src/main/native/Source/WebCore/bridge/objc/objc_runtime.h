@@ -90,11 +90,11 @@ private:
     RetainPtr<ObjectStructPtr> _array;
 };
 
-class ObjcFallbackObjectImp : public JSNonFinalObject {
+class ObjcFallbackObjectImp : public JSDestructibleObject {
 public:
-    typedef JSNonFinalObject Base;
+    typedef JSDestructibleObject Base;
 
-    static ObjcFallbackObjectImp* create(ExecState* exec, JSGlobalObject* globalObject, ObjcInstance* instance, const UString& propertyName)
+    static ObjcFallbackObjectImp* create(ExecState* exec, JSGlobalObject* globalObject, ObjcInstance* instance, const String& propertyName)
     {
         // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
         Structure* domStructure = WebCore::deprecatedGetDOMStructure<ObjcFallbackObjectImp>(exec);
@@ -105,23 +105,23 @@ public:
 
     static const ClassInfo s_info;
 
-    const UString& propertyName() const { return _item; }
+    const String& propertyName() const { return m_item; }
 
     static ObjectPrototype* createPrototype(ExecState*, JSGlobalObject* globalObject)
     {
         return globalObject->objectPrototype();
     }
 
-    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
     }
 
 protected:
     void finishCreation(JSGlobalObject*);
 
 private:
-    ObjcFallbackObjectImp(JSGlobalObject*, Structure*, ObjcInstance*, const UString& propertyName);
+    ObjcFallbackObjectImp(JSGlobalObject*, Structure*, ObjcInstance*, const String& propertyName);
     static void destroy(JSCell*);
     static const unsigned StructureFlags = OverridesGetOwnPropertySlot | JSObject::StructureFlags;
     static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
@@ -134,7 +134,7 @@ private:
     bool toBoolean(ExecState*) const; // FIXME: Currently this is broken because none of the superclasses are marked virtual. We need to solve this in the longer term.
 
     RefPtr<ObjcInstance> _instance;
-    UString _item;
+    String m_item;
 };
 
 } // namespace Bindings

@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2003, 2006, 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Xidorn Quan (quanxunzhen@gmail.com)
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,17 +62,22 @@ void RoundedRect::Radii::scale(float factor)
 
 void RoundedRect::Radii::expand(int topWidth, int bottomWidth, int leftWidth, int rightWidth)
 {
+    if (m_topLeft.width() > 0 && m_topLeft.height() > 0) {
     m_topLeft.setWidth(max<int>(0, m_topLeft.width() + leftWidth));
     m_topLeft.setHeight(max<int>(0, m_topLeft.height() + topWidth));
-
+    }
+    if (m_topRight.width() > 0 && m_topRight.height() > 0) {
     m_topRight.setWidth(max<int>(0, m_topRight.width() + rightWidth));
     m_topRight.setHeight(max<int>(0, m_topRight.height() + topWidth));
-
+    }
+    if (m_bottomLeft.width() > 0 && m_bottomLeft.height() > 0) {
     m_bottomLeft.setWidth(max<int>(0, m_bottomLeft.width() + leftWidth));
     m_bottomLeft.setHeight(max<int>(0, m_bottomLeft.height() + bottomWidth));
-
+    }
+    if (m_bottomRight.width() > 0 && m_bottomRight.height() > 0) {
     m_bottomRight.setWidth(max<int>(0, m_bottomRight.width() + rightWidth));
     m_bottomRight.setHeight(max<int>(0, m_bottomRight.height() + bottomWidth));
+}
 }
 
 void RoundedRect::inflateWithRadii(int size)
@@ -158,8 +164,75 @@ bool RoundedRect::isRenderable() const
 {
     return m_radii.topLeft().width() + m_radii.topRight().width() <= m_rect.width()
         && m_radii.bottomLeft().width() + m_radii.bottomRight().width() <= m_rect.width()
-        && m_radii.topLeft().height() + m_radii.topRight().height() <= m_rect.height()
-        && m_radii.bottomLeft().height() + m_radii.bottomRight().height() <= m_rect.height();
+        && m_radii.topLeft().height() + m_radii.bottomLeft().height() <= m_rect.height()
+        && m_radii.topRight().height() + m_radii.bottomRight().height() <= m_rect.height();
+}
+
+void RoundedRect::adjustRadii()
+{
+    int maxRadiusWidth = std::max(m_radii.topLeft().width() + m_radii.topRight().width(), m_radii.bottomLeft().width() + m_radii.bottomRight().width());
+    int maxRadiusHeight = std::max(m_radii.topLeft().height() + m_radii.bottomLeft().height(), m_radii.topRight().height() + m_radii.bottomRight().height());
+
+    if (maxRadiusWidth <= 0 || maxRadiusHeight <= 0) {
+        m_radii.scale(0.0f);
+        return;
+    }
+    float widthRatio = static_cast<float>(m_rect.width()) / maxRadiusWidth;
+    float heightRatio = static_cast<float>(m_rect.height()) / maxRadiusHeight;
+    m_radii.scale(widthRatio < heightRatio ? widthRatio : heightRatio);
+}
+
+bool RoundedRect::intersectsQuad(const FloatQuad& quad) const
+{
+    FloatRect rect(m_rect);
+    if (!quad.intersectsRect(rect))
+        return false;
+
+    const IntSize& topLeft = m_radii.topLeft();
+    if (!topLeft.isEmpty()) {
+        FloatRect rect(m_rect.x(), m_rect.y(), topLeft.width(), topLeft.height());
+        if (quad.intersectsRect(rect)) {
+            FloatPoint center(m_rect.x() + topLeft.width(), m_rect.y() + topLeft.height());
+            FloatSize size(topLeft.width(), topLeft.height());
+            if (!quad.intersectsEllipse(center, size))
+                return false;
+        }
+    }
+
+    const IntSize& topRight = m_radii.topRight();
+    if (!topRight.isEmpty()) {
+        FloatRect rect(m_rect.maxX() - topRight.width(), m_rect.y(), topRight.width(), topRight.height());
+        if (quad.intersectsRect(rect)) {
+            FloatPoint center(m_rect.maxX() - topRight.width(), m_rect.y() + topRight.height());
+            FloatSize size(topRight.width(), topRight.height());
+            if (!quad.intersectsEllipse(center, size))
+                return false;
+        }
+    }
+
+    const IntSize& bottomLeft = m_radii.bottomLeft();
+    if (!bottomLeft.isEmpty()) {
+        FloatRect rect(m_rect.x(), m_rect.maxY() - bottomLeft.height(), bottomLeft.width(), bottomLeft.height());
+        if (quad.intersectsRect(rect)) {
+            FloatPoint center(m_rect.x() + bottomLeft.width(), m_rect.maxY() - bottomLeft.height());
+            FloatSize size(bottomLeft.width(), bottomLeft.height());
+            if (!quad.intersectsEllipse(center, size))
+                return false;
+        }
+    }
+
+    const IntSize& bottomRight = m_radii.bottomRight();
+    if (!bottomRight.isEmpty()) {
+        FloatRect rect(m_rect.maxX() - bottomRight.width(), m_rect.maxY() - bottomRight.height(), bottomRight.width(), bottomRight.height());
+        if (quad.intersectsRect(rect)) {
+            FloatPoint center(m_rect.maxX() - bottomRight.width(), m_rect.maxY() - bottomRight.height());
+            FloatSize size(bottomRight.width(), bottomRight.height());
+            if (!quad.intersectsEllipse(center, size))
+                return false;
+        }
+    }
+
+    return true;
 }
 
 } // namespace WebCore

@@ -26,11 +26,11 @@
 #include "Length.h"
 
 #include "CalculationValue.h"
-#include "PlatformString.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/Assertions.h>
 #include <wtf/OwnArrayPtr.h>
 #include <wtf/text/StringBuffer.h>
+#include <wtf/text/WTFString.h>
 
 using namespace WTF;
 
@@ -151,6 +151,7 @@ PassOwnArrayPtr<Length> newLengthArray(const String& string, int& len)
 }
         
 class CalculationValueHandleMap {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     CalculationValueHandleMap() 
         : m_index(1) 
@@ -202,7 +203,7 @@ Length::Length(PassRefPtr<CalculationValue> calc)
     m_intValue = calcHandles().insert(calc);
 }
         
-Length Length::blendCalculation(const Length& from, double progress) const
+Length Length::blendMixedTypes(const Length& from, double progress) const
 {
     if (progress <= 0.0)
         return from;
@@ -210,17 +211,7 @@ Length Length::blendCalculation(const Length& from, double progress) const
     if (progress >= 1.0)
         return *this;
         
-    // FIXME: https://webkit.org/b/90037 - some of these allocations can be eliminated
-    OwnPtr<CalcExpressionNode> startScale = adoptPtr(new CalcExpressionNumber(1.0 - progress));
-    OwnPtr<CalcExpressionNode> startLength = adoptPtr(new CalcExpressionLength(from));
-    OwnPtr<CalcExpressionNode> startNode = adoptPtr(new CalcExpressionBinaryOperation(startScale.release(), startLength.release(), CalcMultiply));
-    
-    OwnPtr<CalcExpressionNode> endScale = adoptPtr(new CalcExpressionNumber(progress));
-    OwnPtr<CalcExpressionNode> endLength = adoptPtr(new CalcExpressionLength(*this));
-    OwnPtr<CalcExpressionNode> endNode = adoptPtr(new CalcExpressionBinaryOperation(endScale.release(), endLength.release(), CalcMultiply));
-    
-    OwnPtr<CalcExpressionNode> blend = adoptPtr(new CalcExpressionBinaryOperation(startNode.release(), endNode.release(), CalcAdd));
-        
+    OwnPtr<CalcExpressionNode> blend = adoptPtr(new CalcExpressionBlendLength(from, *this, progress));
     return Length(CalculationValue::create(blend.release(), CalculationRangeAll));
 }
           
@@ -249,7 +240,7 @@ float Length::nonNanCalculatedValue(int maxValue) const
 {
     ASSERT(isCalculated());
     float result = calculationValue()->evaluate(maxValue);
-    if (isnan(result))
+    if (std::isnan(result))
         return 0;
     return result;
 }

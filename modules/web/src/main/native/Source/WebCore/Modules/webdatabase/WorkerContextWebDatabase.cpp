@@ -31,11 +31,10 @@
 
 #include "WorkerContextWebDatabase.h"
 
-#include "AbstractDatabase.h"
 #include "Database.h"
 #include "DatabaseCallback.h"
+#include "DatabaseManager.h"
 #include "DatabaseSync.h"
-#include "DatabaseTracker.h"
 #include "SecurityOrigin.h"
 #include "WorkerContext.h"
 
@@ -43,22 +42,33 @@ namespace WebCore {
 
 PassRefPtr<Database> WorkerContextWebDatabase::openDatabase(WorkerContext* context, const String& name, const String& version, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback> creationCallback, ExceptionCode& ec)
 {
-    if (!context->securityOrigin()->canAccessDatabase() || !AbstractDatabase::isAvailable()) {
+    DatabaseManager& dbManager = DatabaseManager::manager();
+    RefPtr<Database> database;
+    DatabaseError error = DatabaseError::None;
+    if (dbManager.isAvailable() && context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        database = dbManager.openDatabase(context, name, version, displayName, estimatedSize, creationCallback, error);
+        ASSERT(database || error != DatabaseError::None);
+        ec = DatabaseManager::exceptionCodeForDatabaseError(error);
+    } else
         ec = SECURITY_ERR;
-        return 0;
-    }
 
-    return Database::openDatabase(context, name, version, displayName, estimatedSize, creationCallback, ec);
+    return database.release();
 }
 
 PassRefPtr<DatabaseSync> WorkerContextWebDatabase::openDatabaseSync(WorkerContext* context, const String& name, const String& version, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback> creationCallback, ExceptionCode& ec)
 {
-    if (!context->securityOrigin()->canAccessDatabase() || !AbstractDatabase::isAvailable()) {
-        ec = SECURITY_ERR;
-        return 0;
-    }
+    DatabaseManager& dbManager = DatabaseManager::manager();
+    RefPtr<DatabaseSync> database;
+    DatabaseError error =  DatabaseError::None;
+    if (dbManager.isAvailable() && context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        database = dbManager.openDatabaseSync(context, name, version, displayName, estimatedSize, creationCallback, error);
 
-    return DatabaseSync::openDatabaseSync(context, name, version, displayName, estimatedSize, creationCallback, ec);
+        ASSERT(database || error != DatabaseError::None);
+        ec = DatabaseManager::exceptionCodeForDatabaseError(error);
+    } else
+        ec = SECURITY_ERR;
+
+    return database.release();
 }
 
 } // namespace WebCore

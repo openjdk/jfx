@@ -28,12 +28,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module html {
-    exception [
+[
+    NoInterfaceObject,
         Conditional=BLOB|FILE_SYSTEM,
         DoNotCheckConstants,
-        JSNoStaticTables
-    ] FileException {
+    JSNoStaticTables,
+    ImplementationLacksVTable
+] exception FileException {
 
         readonly attribute unsigned short   code;
         readonly attribute DOMString        name;
@@ -58,4 +59,3 @@ module html {
         const unsigned short TYPE_MISMATCH_ERR = 11;
         const unsigned short PATH_EXISTS_ERR = 12;
     };
-}

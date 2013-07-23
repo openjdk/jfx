@@ -3,7 +3,6 @@
  */
 #include "config.h"
 
-#include <wtf/AlwaysInline.h>
 #include <wtf/java/JavaRef.h>
 #include "UnicodeJava.h"
 

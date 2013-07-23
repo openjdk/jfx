@@ -43,16 +43,28 @@ public:
     void adopt(CSSSelectorList& list);
     void adoptSelectorVector(Vector<OwnPtr<CSSParserSelector> >& selectorVector);
 
-    CSSSelector* first() const { return m_selectorArray ? m_selectorArray : 0; }
-    static CSSSelector* next(CSSSelector*);
+    bool isValid() const { return !!m_selectorArray; }
+    const CSSSelector* first() const { return m_selectorArray; }
+    static const CSSSelector* next(const CSSSelector*);
     bool hasOneSelector() const { return m_selectorArray && !next(m_selectorArray); }
+    const CSSSelector* selectorAt(size_t index) const { return &m_selectorArray[index]; }
+
+    size_t indexOfNextSelectorAfter(size_t index) const
+    {
+        const CSSSelector* current = selectorAt(index);
+        current = next(current);
+        if (!current)
+            return notFound;
+        return current - m_selectorArray;
+    }
 
     bool selectorsNeedNamespaceResolution();
-    bool hasUnknownPseudoElements() const;
+    bool hasInvalidSelector() const;
 
     String selectorsText() const;
 
 private:
+    unsigned length() const;
     void deleteSelectors();
 
     // End of a multipart selector is indicated by m_isLastInTagHistory bit in the last item.
@@ -60,7 +72,7 @@ private:
     CSSSelector* m_selectorArray;
 };
 
-inline CSSSelector* CSSSelectorList::next(CSSSelector* current)
+inline const CSSSelector* CSSSelectorList::next(const CSSSelector* current)
 {
     // Skip subparts of compound selectors.
     while (!current->isLastInTagHistory())

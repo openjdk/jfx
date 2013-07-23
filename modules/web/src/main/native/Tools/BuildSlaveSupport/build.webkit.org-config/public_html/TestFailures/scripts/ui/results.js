@@ -187,7 +187,7 @@ function isAnyReftest(testName, resultsByTest)
     return Object.keys(resultsByTest[testName]).map(function(builder) {
         return resultsByTest[testName][builder];
     }).some(function(resultNode) {
-        return resultNode.is_reftest || resultNode.is_mismatch_reftest
+        return resultNode.reftest_type && resultNode.reftest_type.length;
     });
 }
 
@@ -207,7 +207,7 @@ ui.results.FlakinessData = base.extends('iframe', {
         // Check for null event.origin so that the unittests can get past this point.
         // FIXME: Is this safe? In practice, there's no meaningful harm that can come from
         // a malicious page sending us heightChanged commands, so it doesn't really matter.
-        if (event.origin !== 'null' && event.origin != 'http://test-results.appspot.com') {
+        if (event.origin !== 'null' && event.origin != 'http://webkit-test-results.appspot.com') {
             console.log('Invalid origin: ' + event.origin);
             return;
         }

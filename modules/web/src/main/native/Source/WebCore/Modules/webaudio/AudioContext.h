@@ -31,7 +31,6 @@
 #include "AudioDestinationNode.h"
 #include "EventListener.h"
 #include "EventTarget.h"
-#include "HRTFDatabaseLoader.h"
 #include <wtf/HashSet.h>
 #include <wtf/MainThread.h>
 #include <wtf/OwnPtr.h>
@@ -49,11 +48,14 @@ class AudioBuffer;
 class AudioBufferCallback;
 class AudioBufferSourceNode;
 class MediaElementAudioSourceNode;
+class MediaStreamAudioDestinationNode;
+class MediaStreamAudioSourceNode;
+class HRTFDatabaseLoader;
 class HTMLMediaElement;
-class AudioChannelMerger;
-class AudioChannelSplitter;
-class AudioGainNode;
-class AudioPannerNode;
+class ChannelMergerNode;
+class ChannelSplitterNode;
+class GainNode;
+class PannerNode;
 class AudioListener;
 class AudioSummingJunction;
 class BiquadFilterNode;
@@ -61,10 +63,10 @@ class DelayNode;
 class Document;
 class ConvolverNode;
 class DynamicsCompressorNode;
-class RealtimeAnalyserNode;
+class AnalyserNode;
 class WaveShaperNode;
-class JavaScriptAudioNode;
-class Oscillator;
+class ScriptProcessorNode;
+class OscillatorNode;
 class WaveTable;
 
 // AudioContext is the cornerstone of the web audio API and all AudioNodes are created from it.
@@ -115,23 +117,27 @@ public:
 #if ENABLE(VIDEO)
     PassRefPtr<MediaElementAudioSourceNode> createMediaElementSource(HTMLMediaElement*, ExceptionCode&);
 #endif
-    PassRefPtr<AudioGainNode> createGainNode();
+#if ENABLE(MEDIA_STREAM)
+    PassRefPtr<MediaStreamAudioSourceNode> createMediaStreamSource(MediaStream*, ExceptionCode&);
+    PassRefPtr<MediaStreamAudioDestinationNode> createMediaStreamDestination();
+#endif
+    PassRefPtr<GainNode> createGain();
     PassRefPtr<BiquadFilterNode> createBiquadFilter();
     PassRefPtr<WaveShaperNode> createWaveShaper();
-    PassRefPtr<DelayNode> createDelayNode();
-    PassRefPtr<DelayNode> createDelayNode(double maxDelayTime);
-    PassRefPtr<AudioPannerNode> createPanner();
+    PassRefPtr<DelayNode> createDelay(ExceptionCode&);
+    PassRefPtr<DelayNode> createDelay(double maxDelayTime, ExceptionCode&);
+    PassRefPtr<PannerNode> createPanner();
     PassRefPtr<ConvolverNode> createConvolver();
     PassRefPtr<DynamicsCompressorNode> createDynamicsCompressor();    
-    PassRefPtr<RealtimeAnalyserNode> createAnalyser();
-    PassRefPtr<JavaScriptAudioNode> createJavaScriptNode(size_t bufferSize, ExceptionCode&);
-    PassRefPtr<JavaScriptAudioNode> createJavaScriptNode(size_t bufferSize, size_t numberOfInputChannels, ExceptionCode&);
-    PassRefPtr<JavaScriptAudioNode> createJavaScriptNode(size_t bufferSize, size_t numberOfInputChannels, size_t numberOfOutputChannels, ExceptionCode&);
-    PassRefPtr<AudioChannelSplitter> createChannelSplitter(ExceptionCode&);
-    PassRefPtr<AudioChannelSplitter> createChannelSplitter(size_t numberOfOutputs, ExceptionCode&);
-    PassRefPtr<AudioChannelMerger> createChannelMerger(ExceptionCode&);
-    PassRefPtr<AudioChannelMerger> createChannelMerger(size_t numberOfInputs, ExceptionCode&);
-    PassRefPtr<Oscillator> createOscillator();
+    PassRefPtr<AnalyserNode> createAnalyser();
+    PassRefPtr<ScriptProcessorNode> createScriptProcessor(size_t bufferSize, ExceptionCode&);
+    PassRefPtr<ScriptProcessorNode> createScriptProcessor(size_t bufferSize, size_t numberOfInputChannels, ExceptionCode&);
+    PassRefPtr<ScriptProcessorNode> createScriptProcessor(size_t bufferSize, size_t numberOfInputChannels, size_t numberOfOutputChannels, ExceptionCode&);
+    PassRefPtr<ChannelSplitterNode> createChannelSplitter(ExceptionCode&);
+    PassRefPtr<ChannelSplitterNode> createChannelSplitter(size_t numberOfOutputs, ExceptionCode&);
+    PassRefPtr<ChannelMergerNode> createChannelMerger(ExceptionCode&);
+    PassRefPtr<ChannelMergerNode> createChannelMerger(size_t numberOfInputs, ExceptionCode&);
+    PassRefPtr<OscillatorNode> createOscillator();
     PassRefPtr<WaveTable> createWaveTable(Float32Array* real, Float32Array* imag, ExceptionCode&);
 
     // When a source node has no more processing to do (has finished playing), then it tells the context to dereference it.
@@ -242,22 +248,29 @@ public:
     
     static unsigned s_hardwareContextCount;
     
-private:
-    AudioContext(Document*);
+protected:
+    explicit AudioContext(Document*);
     AudioContext(Document*, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
+    
+    static bool isSampleRateRangeGood(float sampleRate);
+    
+private:
     void constructCommon();
 
     void lazyInitialize();
     void uninitialize();
-    static void uninitializeDispatch(void* userData);
+
+    // ScriptExecutionContext calls stop twice.
+    // We'd like to schedule only one stop action for them.
+    bool m_isStopScheduled;
+    static void stopDispatch(void* userData);
+    void clear();
 
     void scheduleNodeDeletion();
     static void deleteMarkedNodesDispatch(void* userData);
     
     bool m_isInitialized;
     bool m_isAudioThreadFinished;
-
-    Document* m_document;
 
     // The context itself keeps a reference to all source nodes.  The source nodes, then reference all nodes they're connected to.
     // In turn, these nodes reference all nodes they're connected to.  All nodes are ultimately connected to the AudioDestinationNode.
@@ -282,6 +295,11 @@ private:
     Vector<AudioNode*> m_referencedNodes;
 
     // Accumulate nodes which need to be deleted here.
+    // This is copied to m_nodesToDelete at the end of a render cycle in handlePostRenderTasks(), where we're assured of a stable graph
+    // state which will have no references to any of the nodes in m_nodesToDelete once the context lock is released
+    // (when handlePostRenderTasks() has completed).
+    Vector<AudioNode*> m_nodesMarkedForDeletion;
+
     // They will be scheduled for deletion (on the main thread) at the end of a render cycle (in realtime thread).
     Vector<AudioNode*> m_nodesToDelete;
     bool m_isDeletionScheduled;

@@ -29,14 +29,15 @@
 #if ENABLE(WORKERS)
 
 #include "NavigatorBase.h"
-#include "PlatformString.h"
+#include "Supplementable.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-    class WorkerNavigator : public NavigatorBase, public RefCounted<WorkerNavigator> {
+class WorkerNavigator : public NavigatorBase, public RefCounted<WorkerNavigator>, public Supplementable<WorkerNavigator> {
     public:
         static PassRefPtr<WorkerNavigator> create(const String& userAgent) { return adoptRef(new WorkerNavigator(userAgent)); }
         virtual ~WorkerNavigator();
@@ -44,7 +45,7 @@ namespace WebCore {
         virtual String userAgent() const;
 
     private:
-        WorkerNavigator(const String&);
+    explicit WorkerNavigator(const String&);
 
         String m_userAgent;
     };

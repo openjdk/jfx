@@ -23,7 +23,6 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(
         bool bold,
         bool italic,
         FontOrientation,
-        TextOrientation,
         FontWidthVariant,
         FontRenderingMode)
 {

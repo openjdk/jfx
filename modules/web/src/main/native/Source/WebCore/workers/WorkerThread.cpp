@@ -30,26 +30,20 @@
 
 #include "WorkerThread.h"
 
-#include "DatabaseContext.h"
 #include "DedicatedWorkerContext.h"
 #include "InspectorInstrumentation.h"
 #include "KURL.h"
-#include "PlatformString.h"
 #include "ScriptSourceCode.h"
 #include "ScriptValue.h"
+#include "SecurityOrigin.h"
 #include "ThreadGlobalData.h"
-
 #include <utility>
 #include <wtf/Noncopyable.h>
+#include <wtf/text/WTFString.h>
 
 #if ENABLE(SQL_DATABASE)
+#include "DatabaseManager.h"
 #include "DatabaseTask.h"
-#include "DatabaseTracker.h"
-#endif
-
-#if PLATFORM(CHROMIUM)
-#include <public/Platform.h>
-#include <public/WebWorkerRunLoop.h>
 #endif
 
 #if PLATFORM(JAVA)
@@ -59,26 +53,30 @@ extern JavaVM* jvm;
 
 namespace WebCore {
 
-static Mutex& threadCountMutex()
+static Mutex& threadSetMutex()
 {
     AtomicallyInitializedStatic(Mutex&, mutex = *new Mutex);
     return mutex;
 }
 
-unsigned WorkerThread::m_threadCount = 0;
+static HashSet<WorkerThread*>& workerThreads()
+{
+    DEFINE_STATIC_LOCAL(HashSet<WorkerThread*>, threads, ());
+    return threads;
+}
 
 unsigned WorkerThread::workerThreadCount()
 {
-    MutexLocker lock(threadCountMutex());
-    return m_threadCount;
+    MutexLocker lock(threadSetMutex());
+    return workerThreads().size();
 }
 
 struct WorkerThreadStartupData {
     WTF_MAKE_NONCOPYABLE(WorkerThreadStartupData); WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<WorkerThreadStartupData> create(const KURL& scriptURL, const String& userAgent, const GroupSettings* settings, const String& sourceCode, WorkerThreadStartMode startMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType)
+    static PassOwnPtr<WorkerThreadStartupData> create(const KURL& scriptURL, const String& userAgent, const GroupSettings* settings, const String& sourceCode, WorkerThreadStartMode startMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, const SecurityOrigin* topOrigin)
     {
-        return adoptPtr(new WorkerThreadStartupData(scriptURL, userAgent, settings, sourceCode, startMode, contentSecurityPolicy, contentSecurityPolicyType));
+        return adoptPtr(new WorkerThreadStartupData(scriptURL, userAgent, settings, sourceCode, startMode, contentSecurityPolicy, contentSecurityPolicyType, topOrigin));
     }
 
     KURL m_scriptURL;
@@ -88,17 +86,19 @@ public:
     WorkerThreadStartMode m_startMode;
     String m_contentSecurityPolicy;
     ContentSecurityPolicy::HeaderType m_contentSecurityPolicyType;
+    RefPtr<SecurityOrigin> m_topOrigin;
 private:
-    WorkerThreadStartupData(const KURL& scriptURL, const String& userAgent, const GroupSettings*, const String& sourceCode, WorkerThreadStartMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType);
+    WorkerThreadStartupData(const KURL& scriptURL, const String& userAgent, const GroupSettings*, const String& sourceCode, WorkerThreadStartMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, const SecurityOrigin* topOrigin);
 };
 
-WorkerThreadStartupData::WorkerThreadStartupData(const KURL& scriptURL, const String& userAgent, const GroupSettings* settings, const String& sourceCode, WorkerThreadStartMode startMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType)
+WorkerThreadStartupData::WorkerThreadStartupData(const KURL& scriptURL, const String& userAgent, const GroupSettings* settings, const String& sourceCode, WorkerThreadStartMode startMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, const SecurityOrigin* topOrigin)
     : m_scriptURL(scriptURL.copy())
     , m_userAgent(userAgent.isolatedCopy())
     , m_sourceCode(sourceCode.isolatedCopy())
     , m_startMode(startMode)
     , m_contentSecurityPolicy(contentSecurityPolicy.isolatedCopy())
     , m_contentSecurityPolicyType(contentSecurityPolicyType)
+    , m_topOrigin(topOrigin ? topOrigin->isolatedCopy() : 0)
 {
     if (!settings)
         return;
@@ -109,24 +109,24 @@ WorkerThreadStartupData::WorkerThreadStartupData(const KURL& scriptURL, const St
     m_groupSettings->setIndexedDBDatabasePath(settings->indexedDBDatabasePath().isolatedCopy());
 }
 
-WorkerThread::WorkerThread(const KURL& scriptURL, const String& userAgent, const GroupSettings* settings, const String& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerReportingProxy& workerReportingProxy, WorkerThreadStartMode startMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType)
+WorkerThread::WorkerThread(const KURL& scriptURL, const String& userAgent, const GroupSettings* settings, const String& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerReportingProxy& workerReportingProxy, WorkerThreadStartMode startMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, const SecurityOrigin* topOrigin)
     : m_threadID(0)
     , m_workerLoaderProxy(workerLoaderProxy)
     , m_workerReportingProxy(workerReportingProxy)
-    , m_startupData(WorkerThreadStartupData::create(scriptURL, userAgent, settings, sourceCode, startMode, contentSecurityPolicy, contentSecurityPolicyType))
+    , m_startupData(WorkerThreadStartupData::create(scriptURL, userAgent, settings, sourceCode, startMode, contentSecurityPolicy, contentSecurityPolicyType, topOrigin))
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     , m_notificationClient(0)
 #endif
 {
-    MutexLocker lock(threadCountMutex());
-    m_threadCount++;
+    MutexLocker lock(threadSetMutex());
+    workerThreads().add(this);
 }
 
 WorkerThread::~WorkerThread()
 {
-    MutexLocker lock(threadCountMutex());
-    ASSERT(m_threadCount > 0);
-    m_threadCount--;
+    MutexLocker lock(threadSetMutex());
+    ASSERT(workerThreads().contains(this));
+    workerThreads().remove(this);
 }
 
 bool WorkerThread::start()
@@ -151,7 +151,7 @@ void WorkerThread::workerThread()
 {
     {
         MutexLocker lock(m_threadCreationMutex);
-        m_workerContext = createWorkerContext(m_startupData->m_scriptURL, m_startupData->m_userAgent, m_startupData->m_groupSettings.release(), m_startupData->m_contentSecurityPolicy, m_startupData->m_contentSecurityPolicyType);
+        m_workerContext = createWorkerContext(m_startupData->m_scriptURL, m_startupData->m_userAgent, m_startupData->m_groupSettings.release(), m_startupData->m_contentSecurityPolicy, m_startupData->m_contentSecurityPolicyType, m_startupData->m_topOrigin.release());
 
         if (m_runLoop.terminated()) {
             // The worker was terminated before the thread had a chance to run. Since the context didn't exist yet,
@@ -159,11 +159,6 @@ void WorkerThread::workerThread()
            m_workerContext->script()->forbidExecution();
         }
     }
-#if PLATFORM(CHROMIUM)
-    // The corresponding call to didStopWorkerRunLoop is in
-    // ~WorkerScriptController.
-    WebKit::Platform::current()->didStartWorkerRunLoop(WebKit::WebWorkerRunLoop(&m_runLoop));
-#endif
 
 #if PLATFORM(JAVA)
     {
@@ -218,7 +213,7 @@ public:
 
     virtual void performTask(ScriptExecutionContext *context)
     {
-        ASSERT(context->isWorkerContext());
+        ASSERT_WITH_SECURITY_IMPLICATION(context->isWorkerContext());
         WorkerContext* workerContext = static_cast<WorkerContext*>(context);
 #if ENABLE(INSPECTOR)
         workerContext->clearInspector();
@@ -239,13 +234,13 @@ public:
 
     virtual void performTask(ScriptExecutionContext *context)
     {
-        ASSERT(context->isWorkerContext());
+        ASSERT_WITH_SECURITY_IMPLICATION(context->isWorkerContext());
         WorkerContext* workerContext = static_cast<WorkerContext*>(context);
 
 #if ENABLE(SQL_DATABASE)
         // FIXME: Should we stop the databases as part of stopActiveDOMObjects() below?
         DatabaseTaskSynchronizer cleanupSync;
-        DatabaseContext::stopDatabases(workerContext, &cleanupSync);
+        DatabaseManager::manager().stopDatabases(workerContext, &cleanupSync);
 #endif
 
         workerContext->stopActiveDOMObjects();
@@ -280,12 +275,26 @@ void WorkerThread::stop()
         m_workerContext->script()->scheduleExecutionTermination();
 
 #if ENABLE(SQL_DATABASE)
-        DatabaseTracker::tracker().interruptAllDatabasesForContext(m_workerContext.get());
+        DatabaseManager::manager().interruptAllDatabasesForContext(m_workerContext.get());
 #endif
-        m_runLoop.postTask(WorkerThreadShutdownStartTask::create());
+        m_runLoop.postTaskAndTerminate(WorkerThreadShutdownStartTask::create());
+        return;
     }
 
     m_runLoop.terminate();
+}
+
+class ReleaseFastMallocFreeMemoryTask : public ScriptExecutionContext::Task {
+    virtual void performTask(ScriptExecutionContext*) OVERRIDE { WTF::releaseFastMallocFreeMemory(); }
+};
+
+void WorkerThread::releaseFastMallocFreeMemoryInAllThreads()
+{
+    MutexLocker lock(threadSetMutex());
+    HashSet<WorkerThread*>& threads = workerThreads();
+    HashSet<WorkerThread*>::iterator end = threads.end();
+    for (HashSet<WorkerThread*>::iterator it = threads.begin(); it != end; ++it)
+        (*it)->runLoop().postTask(adoptPtr(new ReleaseFastMallocFreeMemoryTask));
 }
 
 } // namespace WebCore

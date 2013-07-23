@@ -37,10 +37,10 @@ class NSView;
 namespace WebCore {
 
     class ChromeClient;
-#if ENABLE(INPUT_TYPE_COLOR)
     class ColorChooser;
     class ColorChooserClient;
-#endif
+class DateTimeChooser;
+class DateTimeChooserClient;
     class FileChooser;
     class FileIconLoader;
     class FloatRect;
@@ -53,8 +53,10 @@ namespace WebCore {
     class Page;
     class PopupMenu;
     class PopupMenuClient;
+class PopupOpeningObserver;
     class SearchPopupMenu;
 
+struct DateTimeChooserParameters;
     struct FrameLoadRequest;
     struct ViewportArguments;
     struct WindowFeatures;
@@ -68,23 +70,22 @@ namespace WebCore {
         ChromeClient* client() { return m_client; }
 
         // HostWindow methods.
-
         virtual void invalidateRootView(const IntRect&, bool) OVERRIDE;
         virtual void invalidateContentsAndRootView(const IntRect&, bool) OVERRIDE;
-        virtual void invalidateContentsForSlowScroll(const IntRect&, bool);
-        virtual void scroll(const IntSize&, const IntRect&, const IntRect&);
+    virtual void invalidateContentsForSlowScroll(const IntRect&, bool) OVERRIDE;
+    virtual void scroll(const IntSize&, const IntRect&, const IntRect&) OVERRIDE;
 #if USE(TILED_BACKING_STORE)
-        virtual void delegatedScrollRequested(const IntPoint& scrollPoint);
+    virtual void delegatedScrollRequested(const IntPoint& scrollPoint) OVERRIDE;
 #endif
         virtual IntPoint screenToRootView(const IntPoint&) const OVERRIDE;
         virtual IntRect rootViewToScreen(const IntRect&) const OVERRIDE;
-        virtual PlatformPageClient platformPageClient() const;
-        virtual void scrollbarsModeDidChange() const;
-        virtual void setCursor(const Cursor&);
-        virtual void setCursorHiddenUntilMouseMoves(bool);
+    virtual PlatformPageClient platformPageClient() const OVERRIDE;
+    virtual void scrollbarsModeDidChange() const OVERRIDE;
+    virtual void setCursor(const Cursor&) OVERRIDE;
+    virtual void setCursorHiddenUntilMouseMoves(bool) OVERRIDE;
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
-        virtual void scheduleAnimation();
+    virtual void scheduleAnimation() OVERRIDE;
 #endif
 
         void scrollRectIntoView(const IntRect&) const;
@@ -128,7 +129,7 @@ namespace WebCore {
         void setResizable(bool) const;
 
         bool canRunBeforeUnloadConfirmPanel();
-        bool runBeforeUnloadConfirmPanel(const String& message, Frame* frame);
+    bool runBeforeUnloadConfirmPanel(const String& message, Frame*);
 
         void closeWindowSoon();
 
@@ -146,8 +147,14 @@ namespace WebCore {
 
         void print(Frame*);
 
+    void enableSuddenTermination();
+    void disableSuddenTermination();
+
 #if ENABLE(INPUT_TYPE_COLOR)
         PassOwnPtr<ColorChooser> createColorChooser(ColorChooserClient*, const Color& initialColor);
+#endif
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    PassRefPtr<DateTimeChooser> openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&);
 #endif
 
         void runOpenPanel(Frame*, PassRefPtr<FileChooser>);
@@ -170,12 +177,18 @@ namespace WebCore {
         PassRefPtr<PopupMenu> createPopupMenu(PopupMenuClient*) const;
         PassRefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient*) const;
 
+    void registerPopupOpeningObserver(PopupOpeningObserver*);
+    void unregisterPopupOpeningObserver(PopupOpeningObserver*);
+
     private:
         Chrome(Page*, ChromeClient*);
+    void notifyPopupOpeningObservers() const;
 
         Page* m_page;
         ChromeClient* m_client;
+    Vector<PopupOpeningObserver*> m_popupOpeningObservers;
     };
+
 }
 
 #endif // Chrome_h

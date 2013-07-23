@@ -22,7 +22,7 @@
 #ifndef MarkedBlock_h
 #define MarkedBlock_h
 
-#include "CardSet.h"
+#include "BlockAllocator.h"
 #include "HeapBlock.h"
 
 #include "WeakSet.h"
@@ -39,7 +39,7 @@
 
 #if HEAP_LOG_BLOCK_STATE_TRANSITIONS
 #define HEAP_LOG_BLOCK_STATE_TRANSITION(block) do {                     \
-        dataLog(                                                    \
+        dataLogF(                                                    \
             "%s:%d %s: block %s = %p, %d\n",                            \
             __FILE__, __LINE__, __FUNCTION__,                           \
             #block, (block), (block)->m_state);                         \
@@ -52,6 +52,7 @@ namespace JSC {
     
     class Heap;
     class JSCell;
+    class MarkedAllocator;
 
     typedef uintptr_t Bits;
 
@@ -67,22 +68,14 @@ namespace JSC {
     // size is equal to the difference between the cell size and the object
     // size.
 
-    class MarkedBlock : public HeapBlock {
-        friend class WTF::DoublyLinkedListNode<MarkedBlock>;
+    class MarkedBlock : public HeapBlock<MarkedBlock> {
     public:
-        // Ensure natural alignment for native types whilst recognizing that the smallest
-        // object the heap will commonly allocate is four words.
-        static const size_t atomSize = 4 * sizeof(void*);
-        static const size_t atomShift = 5;
+        static const size_t atomSize = 8; // bytes
         static const size_t blockSize = 64 * KB;
         static const size_t blockMask = ~(blockSize - 1); // blockSize must be a power of two.
 
-        static const size_t atomsPerBlock = blockSize / atomSize; // ~0.4% overhead
+        static const size_t atomsPerBlock = blockSize / atomSize;
         static const size_t atomMask = atomsPerBlock - 1;
-        static const int cardShift = 8; // This is log2 of bytes per card.
-        static const size_t bytesPerCard = 1 << cardShift;
-        static const int cardCount = blockSize / bytesPerCard;
-        static const int cardMask = cardCount - 1;
 
         struct FreeCell {
             FreeCell* next;
@@ -113,8 +106,8 @@ namespace JSC {
             ReturnType m_count;
         };
 
-        static MarkedBlock* create(const PageAllocationAligned&, Heap*, size_t cellSize, bool cellsNeedDestruction);
-        static PageAllocationAligned destroy(MarkedBlock*);
+        enum DestructorType { None, ImmortalStructure, Normal };
+        static MarkedBlock* create(DeadBlock*, MarkedAllocator*, size_t cellSize, DestructorType);
 
         static bool isAtomAligned(const void*);
         static MarkedBlock* blockFor(const void*);
@@ -122,7 +115,9 @@ namespace JSC {
         
         void lastChanceToFinalize();
 
+        MarkedAllocator* allocator() const;
         Heap* heap() const;
+        VM* vm() const;
         WeakSet& weakSet();
         
         enum SweepMode { SweepOnly, SweepToFreeList };
@@ -137,14 +132,14 @@ namespace JSC {
         // cell liveness data. To restore accurate cell liveness data, call one
         // of these functions:
         void didConsumeFreeList(); // Call this once you've allocated all the items in the free list.
-        void zapFreeList(const FreeList&); // Call this to undo the free list.
+        void canonicalizeCellLivenessData(const FreeList&);
 
         void clearMarks();
         size_t markCount();
         bool isEmpty();
 
         size_t cellSize();
-        bool cellsNeedDestruction();
+        DestructorType destructorType();
 
         size_t size();
         size_t capacity();
@@ -154,56 +149,31 @@ namespace JSC {
         bool isLive(const JSCell*);
         bool isLiveCell(const void*);
         void setMarked(const void*);
+        void clearMarked(const void*);
+
+        bool isNewlyAllocated(const void*);
+        void setNewlyAllocated(const void*);
+        void clearNewlyAllocated(const void*);
         
         bool needsSweeping();
 
-#if ENABLE(GGC)
-        void setDirtyObject(const void* atom)
-        {
-            ASSERT(MarkedBlock::blockFor(atom) == this);
-            m_cards.markCardForAtom(atom);
-        }
-
-        uint8_t* addressOfCardFor(const void* atom)
-        {
-            ASSERT(MarkedBlock::blockFor(atom) == this);
-            return &m_cards.cardForAtom(atom);
-        }
-
-        static inline size_t offsetOfCards()
-        {
-            return OBJECT_OFFSETOF(MarkedBlock, m_cards);
-        }
-
-        static inline size_t offsetOfMarks()
-        {
-            return OBJECT_OFFSETOF(MarkedBlock, m_marks);
-        }
-
-        typedef Vector<JSCell*, 32> DirtyCellVector;
-        inline void gatherDirtyCells(DirtyCellVector&);
-        template <int size> inline void gatherDirtyCellsWithSize(DirtyCellVector&);
-#endif
-
         template <typename Functor> void forEachCell(Functor&);
+        template <typename Functor> void forEachLiveCell(Functor&);
+        template <typename Functor> void forEachDeadCell(Functor&);
 
     private:
         static const size_t atomAlignmentMask = atomSize - 1; // atomSize must be a power of two.
 
-        enum BlockState { New, FreeListed, Allocated, Marked, Zapped };
-        template<bool destructorCallNeeded> FreeList sweepHelper(SweepMode = SweepOnly);
+        enum BlockState { New, FreeListed, Allocated, Marked };
+        template<DestructorType> FreeList sweepHelper(SweepMode = SweepOnly);
 
         typedef char Atom[atomSize];
 
-        MarkedBlock(const PageAllocationAligned&, Heap*, size_t cellSize, bool cellsNeedDestruction);
+        MarkedBlock(Region*, MarkedAllocator*, size_t cellSize, DestructorType);
         Atom* atoms();
         size_t atomNumber(const void*);
         void callDestructor(JSCell*);
-        template<BlockState, SweepMode, bool destructorCallNeeded> FreeList specializedSweep();
-        
-#if ENABLE(GGC)
-        CardSet<bytesPerCard, blockSize> m_cards;
-#endif
+        template<BlockState, SweepMode, DestructorType> FreeList specializedSweep();
 
         size_t m_atomsPerCell;
         size_t m_endAtom; // This is a fuzzy end. Always test for < m_endAtom.
@@ -212,7 +182,10 @@ namespace JSC {
 #else
         WTF::Bitmap<atomsPerBlock, WTF::BitmapNotAtomic> m_marks;
 #endif
-        bool m_cellsNeedDestruction;
+        OwnPtr<WTF::Bitmap<atomsPerBlock> > m_newlyAllocated;
+
+        DestructorType m_destructorType;
+        MarkedAllocator* m_allocator;
         BlockState m_state;
         WeakSet m_weakSet;
     };
@@ -257,9 +230,19 @@ namespace JSC {
         sweep();
     }
 
+    inline MarkedAllocator* MarkedBlock::allocator() const
+    {
+        return m_allocator;
+    }
+
     inline Heap* MarkedBlock::heap() const
     {
         return m_weakSet.heap();
+    }
+
+    inline VM* MarkedBlock::vm() const
+    {
+        return m_weakSet.vm();
     }
 
     inline WeakSet& MarkedBlock::weakSet()
@@ -296,6 +279,7 @@ namespace JSC {
 
         ASSERT(m_state != New && m_state != FreeListed);
         m_marks.clearAll();
+        m_newlyAllocated.clear();
 
         // This will become true at the end of the mark phase. We set it now to
         // avoid an extra pass to do so later.
@@ -309,7 +293,7 @@ namespace JSC {
 
     inline bool MarkedBlock::isEmpty()
     {
-        return m_marks.isEmpty() && m_weakSet.isEmpty();
+        return m_marks.isEmpty() && m_weakSet.isEmpty() && (!m_newlyAllocated || m_newlyAllocated->isEmpty());
     }
 
     inline size_t MarkedBlock::cellSize()
@@ -317,9 +301,9 @@ namespace JSC {
         return m_atomsPerCell * atomSize;
     }
 
-    inline bool MarkedBlock::cellsNeedDestruction()
+    inline MarkedBlock::DestructorType MarkedBlock::destructorType()
     {
-        return m_cellsNeedDestruction; 
+        return m_destructorType; 
     }
 
     inline size_t MarkedBlock::size()
@@ -329,7 +313,7 @@ namespace JSC {
 
     inline size_t MarkedBlock::capacity()
     {
-        return m_allocation.size();
+        return region()->blockSize();
     }
 
     inline size_t MarkedBlock::atomNumber(const void* p)
@@ -352,31 +336,43 @@ namespace JSC {
         m_marks.set(atomNumber(p));
     }
 
+    inline void MarkedBlock::clearMarked(const void* p)
+    {
+        ASSERT(m_marks.get(atomNumber(p)));
+        m_marks.clear(atomNumber(p));
+    }
+
+    inline bool MarkedBlock::isNewlyAllocated(const void* p)
+    {
+        return m_newlyAllocated->get(atomNumber(p));
+    }
+
+    inline void MarkedBlock::setNewlyAllocated(const void* p)
+    {
+        m_newlyAllocated->set(atomNumber(p));
+    }
+
+    inline void MarkedBlock::clearNewlyAllocated(const void* p)
+    {
+        m_newlyAllocated->clear(atomNumber(p));
+    }
+
     inline bool MarkedBlock::isLive(const JSCell* cell)
     {
         switch (m_state) {
         case Allocated:
             return true;
-        case Zapped:
-            if (isZapped(cell)) {
-                // Object dead in previous collection, not allocated since previous collection: mark bit should not be set.
-                ASSERT(!m_marks.get(atomNumber(cell)));
-                return false;
-            }
-            
-            // Newly allocated objects: mark bit not set.
-            // Objects that survived prior collection: mark bit set.
-            return true;
+
         case Marked:
-            return m_marks.get(atomNumber(cell));
+            return m_marks.get(atomNumber(cell)) || (m_newlyAllocated && isNewlyAllocated(cell));
 
         case New:
         case FreeListed:
-            ASSERT_NOT_REACHED();
-            return false;
-        }
-
-        ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
+                return false;
+            }
+            
+        RELEASE_ASSERT_NOT_REACHED();
         return false;
     }
 
@@ -399,7 +395,26 @@ namespace JSC {
     {
         for (size_t i = firstAtom(); i < m_endAtom; i += m_atomsPerCell) {
             JSCell* cell = reinterpret_cast_ptr<JSCell*>(&atoms()[i]);
+            functor(cell);
+        }
+    }
+
+    template <typename Functor> inline void MarkedBlock::forEachLiveCell(Functor& functor)
+    {
+        for (size_t i = firstAtom(); i < m_endAtom; i += m_atomsPerCell) {
+            JSCell* cell = reinterpret_cast_ptr<JSCell*>(&atoms()[i]);
             if (!isLive(cell))
+                continue;
+
+            functor(cell);
+        }
+    }
+
+    template <typename Functor> inline void MarkedBlock::forEachDeadCell(Functor& functor)
+    {
+        for (size_t i = firstAtom(); i < m_endAtom; i += m_atomsPerCell) {
+            JSCell* cell = reinterpret_cast_ptr<JSCell*>(&atoms()[i]);
+            if (isLive(cell))
                 continue;
 
             functor(cell);
@@ -408,89 +423,8 @@ namespace JSC {
 
     inline bool MarkedBlock::needsSweeping()
     {
-        return m_state == Marked || m_state == Zapped;
+        return m_state == Marked;
     }
-
-#if ENABLE(GGC)
-template <int _cellSize> void MarkedBlock::gatherDirtyCellsWithSize(DirtyCellVector& dirtyCells)
-{
-    if (m_cards.testAndClear(0)) {
-        char* ptr = reinterpret_cast<char*>(&atoms()[firstAtom()]);
-        const char* end = reinterpret_cast<char*>(this) + bytesPerCard;
-        while (ptr < end) {
-            JSCell* cell = reinterpret_cast<JSCell*>(ptr);
-            if (isMarked(cell))
-                dirtyCells.append(cell);
-            ptr += _cellSize;
-        }
-    }
-    
-    const size_t cellOffset = firstAtom() * atomSize % _cellSize;
-    for (size_t i = 1; i < m_cards.cardCount; i++) {
-        if (!m_cards.testAndClear(i))
-            continue;
-        char* ptr = reinterpret_cast<char*>(this) + i * bytesPerCard + cellOffset;
-        char* end = reinterpret_cast<char*>(this) + (i + 1) * bytesPerCard;
-        
-        while (ptr < end) {
-            JSCell* cell = reinterpret_cast<JSCell*>(ptr);
-            if (isMarked(cell))
-                dirtyCells.append(cell);
-            ptr += _cellSize;
-        }
-    }
-}
-
-void MarkedBlock::gatherDirtyCells(DirtyCellVector& dirtyCells)
-{
-    COMPILE_ASSERT((int)m_cards.cardCount == (int)cardCount, MarkedBlockCardCountsMatch);
-
-    ASSERT(m_state != New && m_state != FreeListed);
-    
-    // This is an optimisation to avoid having to walk the set of marked
-    // blocks twice during GC.
-    m_state = Marked;
-    
-    if (isEmpty())
-        return;
-    
-    size_t cellSize = this->cellSize();
-    if (cellSize == 32) {
-        gatherDirtyCellsWithSize<32>(dirtyCells);
-        return;
-    }
-    if (cellSize == 64) {
-        gatherDirtyCellsWithSize<64>(dirtyCells);
-        return;
-    }
-
-    const size_t firstCellOffset = firstAtom() * atomSize % cellSize;
-    
-    if (m_cards.testAndClear(0)) {
-        char* ptr = reinterpret_cast<char*>(this) + firstAtom() * atomSize;
-        char* end = reinterpret_cast<char*>(this) + bytesPerCard;
-        while (ptr < end) {
-            JSCell* cell = reinterpret_cast<JSCell*>(ptr);
-            if (isMarked(cell))
-                dirtyCells.append(cell);
-            ptr += cellSize;
-        }
-    }
-    for (size_t i = 1; i < m_cards.cardCount; i++) {
-        if (!m_cards.testAndClear(i))
-            continue;
-        char* ptr = reinterpret_cast<char*>(this) + firstCellOffset + cellSize * ((i * bytesPerCard + cellSize - 1 - firstCellOffset) / cellSize);
-        char* end = reinterpret_cast<char*>(this) + std::min((i + 1) * bytesPerCard, m_endAtom * atomSize);
-        
-        while (ptr < end) {
-            JSCell* cell = reinterpret_cast<JSCell*>(ptr);
-            if (isMarked(cell))
-                dirtyCells.append(cell);
-            ptr += cellSize;
-        }
-    }
-}
-#endif
 
 } // namespace JSC
 

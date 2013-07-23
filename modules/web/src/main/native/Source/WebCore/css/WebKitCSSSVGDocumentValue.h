@@ -27,11 +27,11 @@
 
 #include "CSSValue.h"
 #include "CachedResourceHandle.h"
-#include "CachedSVGDocument.h"
 
 namespace WebCore {
 
 class CachedResourceLoader;
+class CachedSVGDocument;
 
 class WebKitCSSSVGDocumentValue : public CSSValue {
 public:
@@ -44,6 +44,7 @@ public:
     String customCssText() const;
     const String& url() const { return m_url; }
     bool loadRequested() const { return m_loadRequested; }
+    bool equals(const WebKitCSSSVGDocumentValue&) const;
 
 private:
     WebKitCSSSVGDocumentValue(const String& url);

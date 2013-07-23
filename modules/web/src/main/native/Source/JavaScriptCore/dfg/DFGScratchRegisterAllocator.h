@@ -127,21 +127,26 @@ public:
     {
         unsigned count = 0;
         for (unsigned i = GPRInfo::numberOfRegisters; i--;) {
-            if (m_usedRegisters.getGPRByIndex(i))
-                jit.storePtr(GPRInfo::toRegister(i), scratchBuffer->m_buffer + (count++));
+            if (m_usedRegisters.getGPRByIndex(i)) {
+#if USE(JSVALUE64)
+                jit.store64(GPRInfo::toRegister(i), static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) + (count++));
+#else
+                jit.store32(GPRInfo::toRegister(i), static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) + (count++));
+#endif
+            }
             if (scratchGPR == InvalidGPRReg && !m_lockedRegisters.getGPRByIndex(i) && !m_scratchRegisters.getGPRByIndex(i))
                 scratchGPR = GPRInfo::toRegister(i);
         }
-        ASSERT(scratchGPR != InvalidGPRReg);
+        RELEASE_ASSERT(scratchGPR != InvalidGPRReg);
         for (unsigned i = FPRInfo::numberOfRegisters; i--;) {
             if (m_usedRegisters.getFPRByIndex(i)) {
-                jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->m_buffer + (count++)), scratchGPR);
+                jit.move(MacroAssembler::TrustedImmPtr(static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) + (count++)), scratchGPR);
                 jit.storeDouble(FPRInfo::toRegister(i), scratchGPR);
             }
         }
-        ASSERT(count * sizeof(JSValue) == desiredScratchBufferSize());
+        RELEASE_ASSERT(count * sizeof(JSValue) == desiredScratchBufferSize());
         
-        jit.move(MacroAssembler::TrustedImmPtr(&scratchBuffer->m_activeLength), scratchGPR);
+        jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->activeLengthPtr()), scratchGPR);
         jit.storePtr(MacroAssembler::TrustedImmPtr(static_cast<size_t>(count * sizeof(JSValue))), scratchGPR);
     }
     
@@ -156,24 +161,29 @@ public:
                 break;
             }
         }
-        ASSERT(scratchGPR != InvalidGPRReg);
+        RELEASE_ASSERT(scratchGPR != InvalidGPRReg);
         
-        jit.move(MacroAssembler::TrustedImmPtr(&scratchBuffer->m_activeLength), scratchGPR);
+        jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->activeLengthPtr()), scratchGPR);
         jit.storePtr(MacroAssembler::TrustedImmPtr(0), scratchGPR);
 
         // Restore double registers first.
         unsigned count = m_usedRegisters.numberOfSetGPRs();
         for (unsigned i = FPRInfo::numberOfRegisters; i--;) {
             if (m_usedRegisters.getFPRByIndex(i)) {
-                jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->m_buffer + (count++)), scratchGPR);
+                jit.move(MacroAssembler::TrustedImmPtr(static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) + (count++)), scratchGPR);
                 jit.loadDouble(scratchGPR, FPRInfo::toRegister(i));
             }
         }
         
         count = 0;
         for (unsigned i = GPRInfo::numberOfRegisters; i--;) {
-            if (m_usedRegisters.getGPRByIndex(i))
-                jit.loadPtr(scratchBuffer->m_buffer + (count++), GPRInfo::toRegister(i));
+            if (m_usedRegisters.getGPRByIndex(i)) {
+#if USE(JSVALUE64)
+                jit.load64(static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) + (count++), GPRInfo::toRegister(i));
+#else
+                jit.load32(static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) + (count++), GPRInfo::toRegister(i));
+#endif
+            }
         }
     }
     

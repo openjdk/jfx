@@ -20,10 +20,6 @@
 #include "GraphicsContext.h"
 #include <wtf/Noncopyable.h>
 
-#if USE(SKIA)
-#include "skia/ext/skia_utils_mac.h"
-#endif
-
 OBJC_CLASS NSGraphicsContext;
 
 namespace WebCore {
@@ -39,34 +35,20 @@ public:
 private:
     GraphicsContext* m_savedGraphicsContext;
     NSGraphicsContext* m_savedNSGraphicsContext;
-#if USE(SKIA)
-    gfx::SkiaBitLocker m_skiaBitLocker;
-#endif
+    bool m_didSetGraphicsContext;
 };
 
 class ContextContainer {
     WTF_MAKE_NONCOPYABLE(ContextContainer);
 public:
-#if USE(SKIA)
-    ContextContainer(GraphicsContext*);
-    
-    // This synchronizes the CGContext to reflect the current SkCanvas state.
-    // The implementation may not return the same CGContext each time.
-    CGContextRef context() { return m_skiaBitLocker.cgContext(); }
-#else
     ContextContainer(GraphicsContext* graphicsContext)
         : m_graphicsContext(graphicsContext->platformContext())
     {
     }
 
     CGContextRef context() { return m_graphicsContext; }
-#endif
 private:
-#if USE(SKIA)
-    gfx::SkiaBitLocker m_skiaBitLocker;
-#else
     PlatformGraphicsContext* m_graphicsContext;
-#endif
 };
 
 }

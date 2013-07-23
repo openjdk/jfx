@@ -30,6 +30,7 @@
 #include "runtime_object.h"
 #include <heap/StrongInlines.h>
 #include <heap/Weak.h>
+#include <heap/WeakInlines.h>
 #include <runtime/JSGlobalObject.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
@@ -85,7 +86,7 @@ PassRefPtr<RootObject> RootObject::create(const void* nativeHandle, JSGlobalObje
 RootObject::RootObject(const void* nativeHandle, JSGlobalObject* globalObject)
     : m_isValid(true)
     , m_nativeHandle(nativeHandle)
-    , m_globalObject(globalObject->globalData(), globalObject)
+    , m_globalObject(globalObject->vm(), globalObject)
 {
     ASSERT(globalObject);
     rootObjectSet()->add(this);
@@ -105,7 +106,7 @@ void RootObject::invalidate()
     {
         HashMap<RuntimeObject*, JSC::Weak<RuntimeObject> >::iterator end = m_runtimeObjects.end();
         for (HashMap<RuntimeObject*, JSC::Weak<RuntimeObject> >::iterator it = m_runtimeObjects.begin(); it != end; ++it) {
-            RuntimeObject* runtimeObject = it->second.get();
+            RuntimeObject* runtimeObject = it->value.get();
             if (!runtimeObject) // Skip zombies.
                 continue;
             runtimeObject->invalidate();
@@ -129,7 +130,7 @@ void RootObject::invalidate()
 
     ProtectCountSet::iterator end = m_protectCountSet.end();
     for (ProtectCountSet::iterator it = m_protectCountSet.begin(); it != end; ++it)
-        JSC::gcUnprotect(it->first);
+        JSC::gcUnprotect(it->key);
     m_protectCountSet.clear();
 
     rootObjectSet()->remove(this);
@@ -140,7 +141,7 @@ void RootObject::gcProtect(JSObject* jsObject)
     ASSERT(m_isValid);
     
     if (!m_protectCountSet.contains(jsObject)) {
-        JSC::JSLockHolder holder(&globalObject()->globalData());
+        JSC::JSLockHolder holder(&globalObject()->vm());
         JSC::gcProtect(jsObject);
     }
     m_protectCountSet.add(jsObject);
@@ -154,7 +155,7 @@ void RootObject::gcUnprotect(JSObject* jsObject)
         return;
 
     if (m_protectCountSet.count(jsObject) == 1) {
-        JSC::JSLockHolder holder(&globalObject()->globalData());
+        JSC::JSLockHolder holder(&globalObject()->vm());
         JSC::gcUnprotect(jsObject);
     }
     m_protectCountSet.remove(jsObject);
@@ -180,10 +181,10 @@ JSGlobalObject* RootObject::globalObject() const
 
 void RootObject::updateGlobalObject(JSGlobalObject* globalObject)
 {
-    m_globalObject.set(globalObject->globalData(), globalObject);
+    m_globalObject.set(globalObject->vm(), globalObject);
 }
 
-void RootObject::addRuntimeObject(JSGlobalData&, RuntimeObject* object)
+void RootObject::addRuntimeObject(VM&, RuntimeObject* object)
 {
     ASSERT(m_isValid);
     weakAdd(m_runtimeObjects, object, JSC::PassWeak<RuntimeObject>(object, this));

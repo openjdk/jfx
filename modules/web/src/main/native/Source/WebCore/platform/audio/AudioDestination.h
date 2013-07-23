@@ -31,17 +31,21 @@
 
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class AudioSourceProvider;
+class AudioIOCallback;
 
-// Abstraction for an audio output to the audio hardware
-// An AudioSourceProvider is called back periodically to provide the rendered audio stream.
+// AudioDestination is an abstraction for audio hardware I/O.
+// The audio hardware periodically calls the AudioIOCallback render() method asking it to render/output the next render quantum of audio.
+// It optionally will pass in local/live audio input when it calls render().
 
 class AudioDestination {
 public:
-    static PassOwnPtr<AudioDestination> create(AudioSourceProvider&, float sampleRate);
+    // Pass in (numberOfInputChannels > 0) if live/local audio input is desired.
+    // Port-specific device identification information for live/local input streams can be passed in the inputDeviceId.
+    static PassOwnPtr<AudioDestination> create(AudioIOCallback&, const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate);
 
     virtual ~AudioDestination() { }
 
@@ -52,6 +56,14 @@ public:
     // Sample-rate conversion may happen in AudioDestination to the hardware sample-rate
     virtual float sampleRate() const = 0;
     static float hardwareSampleRate();
+
+    // maxChannelCount() returns the total number of output channels of the audio hardware.
+    // A value of 0 indicates that the number of channels cannot be configured and
+    // that only stereo (2-channel) destinations can be created.
+    // The numberOfOutputChannels parameter of AudioDestination::create() is allowed to
+    // be a value: 1 <= numberOfOutputChannels <= maxChannelCount(),
+    // or if maxChannelCount() equals 0, then numberOfOutputChannels must be 2.
+    static unsigned long maxChannelCount();
 };
 
 } // namespace WebCore

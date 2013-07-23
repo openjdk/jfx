@@ -42,14 +42,14 @@ public:
     virtual ~WorkerContextIndexedDatabase();
     static WorkerContextIndexedDatabase* from(ScriptExecutionContext*);
 
-    static IDBFactory* webkitIndexedDB(ScriptExecutionContext*);
+    static IDBFactory* indexedDB(ScriptExecutionContext*);
 
 private:
-    explicit WorkerContextIndexedDatabase(ScriptExecutionContext*);
+    WorkerContextIndexedDatabase();
 
-    IDBFactory* webkitIndexedDB();
+    IDBFactory* indexedDB();
+    static const char* supplementName();
 
-    ScriptExecutionContext* m_context;
     RefPtr<IDBFactoryBackendInterface> m_factoryBackend;
     RefPtr<IDBFactory> m_idbFactory;
 };

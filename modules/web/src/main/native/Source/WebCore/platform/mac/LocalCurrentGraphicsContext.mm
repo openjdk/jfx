@@ -22,17 +22,10 @@
 
 #include <AppKit/NSGraphicsContext.h>
 
-#if USE(SKIA)
-#include "platform_canvas.h"
-#include "PlatformContextSkia.h"
-#endif
-
 namespace WebCore {
 
 LocalCurrentGraphicsContext::LocalCurrentGraphicsContext(GraphicsContext* graphicsContext)
-#if USE(SKIA)
-    : m_skiaBitLocker(graphicsContext->platformContext()->canvas())
-#endif
+    : m_didSetGraphicsContext(false)
 {
     m_savedGraphicsContext = graphicsContext;
     graphicsContext->save();
@@ -46,35 +39,23 @@ LocalCurrentGraphicsContext::LocalCurrentGraphicsContext(GraphicsContext* graphi
     m_savedNSGraphicsContext = [[NSGraphicsContext currentContext] retain];
     NSGraphicsContext* newContext = [NSGraphicsContext graphicsContextWithGraphicsPort:cgContext flipped:YES];
     [NSGraphicsContext setCurrentContext:newContext];
+    m_didSetGraphicsContext = true;
 }
 
 LocalCurrentGraphicsContext::~LocalCurrentGraphicsContext()
 {
-    m_savedGraphicsContext->restore();
-
-    if (m_savedNSGraphicsContext) {
+    if (m_didSetGraphicsContext) {
         [NSGraphicsContext setCurrentContext:m_savedNSGraphicsContext];
         [m_savedNSGraphicsContext release];
     }
+
+    m_savedGraphicsContext->restore();
 }
 
 CGContextRef LocalCurrentGraphicsContext::cgContext()
 {
-#if USE(SKIA)
-    // This synchronizes the CGContext to reflect the current SkCanvas state.
-    // The implementation may not return the same CGContext each time.
-    CGContextRef cgContext = m_skiaBitLocker.cgContext();
-#else
     CGContextRef cgContext = m_savedGraphicsContext->platformContext();
-#endif
     return cgContext;
 }
-
-#if USE(SKIA)
-ContextContainer::ContextContainer(GraphicsContext* graphicsContext) 
-    : m_skiaBitLocker(graphicsContext->platformContext()->canvas())
-{
-}
-#endif
 
 }

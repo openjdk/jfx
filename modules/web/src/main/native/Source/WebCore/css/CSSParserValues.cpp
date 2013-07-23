@@ -67,35 +67,92 @@ PassRefPtr<CSSValue> CSSParserValue::createCSSValue()
 {
     RefPtr<CSSValue> parsedValue;
     if (id)
-        parsedValue = CSSPrimitiveValue::createIdentifier(id);
-    else if (unit == CSSPrimitiveValue::CSS_IDENT)
-        parsedValue = CSSPrimitiveValue::create(string, CSSPrimitiveValue::CSS_PARSER_IDENTIFIER);
-    else if (unit == CSSPrimitiveValue::CSS_NUMBER && isInt)
-        parsedValue = CSSPrimitiveValue::create(fValue, CSSPrimitiveValue::CSS_PARSER_INTEGER);
-    else if (unit == CSSParserValue::Operator) {
+        return CSSPrimitiveValue::createIdentifier(id);
+    
+    if (unit == CSSParserValue::Operator) {
         RefPtr<CSSPrimitiveValue> primitiveValue = CSSPrimitiveValue::createIdentifier(iValue);
         primitiveValue->setPrimitiveType(CSSPrimitiveValue::CSS_PARSER_OPERATOR);
-        parsedValue = primitiveValue;
-    } else if (unit == CSSParserValue::Function)
-        parsedValue = CSSFunctionValue::create(function);
-    else if (unit == CSSPrimitiveValue::CSS_STRING
-             || unit == CSSPrimitiveValue::CSS_URI
+        return primitiveValue;
+    }
+    if (unit == CSSParserValue::Function)
+        return CSSFunctionValue::create(function);
+    if (unit >= CSSParserValue::Q_EMS)
+        return CSSPrimitiveValue::createAllowingMarginQuirk(fValue, CSSPrimitiveValue::CSS_EMS);
+
+    CSSPrimitiveValue::UnitTypes primitiveUnit = static_cast<CSSPrimitiveValue::UnitTypes>(unit);
+    switch (primitiveUnit) {
+    case CSSPrimitiveValue::CSS_IDENT:
+        return CSSPrimitiveValue::create(string, CSSPrimitiveValue::CSS_PARSER_IDENTIFIER);
+    case CSSPrimitiveValue::CSS_NUMBER:
+        return CSSPrimitiveValue::create(fValue, isInt ? CSSPrimitiveValue::CSS_PARSER_INTEGER : CSSPrimitiveValue::CSS_NUMBER);
+    case CSSPrimitiveValue::CSS_STRING:
+    case CSSPrimitiveValue::CSS_URI:
 #if ENABLE(CSS_VARIABLES)
-             || unit == CSSPrimitiveValue::CSS_VARIABLE_NAME
+    case CSSPrimitiveValue::CSS_VARIABLE_NAME:
 #endif
-             || unit == CSSPrimitiveValue::CSS_PARSER_HEXCOLOR)
-        parsedValue = CSSPrimitiveValue::create(string, (CSSPrimitiveValue::UnitTypes)unit);
-    else if (unit >= CSSPrimitiveValue::CSS_NUMBER && unit <= CSSPrimitiveValue::CSS_KHZ)
-        parsedValue = CSSPrimitiveValue::create(fValue, (CSSPrimitiveValue::UnitTypes)unit);
-    else if (unit >= CSSPrimitiveValue::CSS_TURN && unit <= CSSPrimitiveValue::CSS_REMS) // CSS3 Values and Units
-        parsedValue = CSSPrimitiveValue::create(fValue, (CSSPrimitiveValue::UnitTypes)unit);
-    else if (unit >= CSSParserValue::Q_EMS)
-        parsedValue = CSSPrimitiveValue::createAllowingMarginQuirk(fValue, CSSPrimitiveValue::CSS_EMS);
-    return parsedValue;
+    case CSSPrimitiveValue::CSS_PARSER_HEXCOLOR:
+        return CSSPrimitiveValue::create(string, primitiveUnit);
+    case CSSPrimitiveValue::CSS_PERCENTAGE:
+    case CSSPrimitiveValue::CSS_EMS:
+    case CSSPrimitiveValue::CSS_EXS:
+    case CSSPrimitiveValue::CSS_PX:
+    case CSSPrimitiveValue::CSS_CM:
+    case CSSPrimitiveValue::CSS_MM:
+    case CSSPrimitiveValue::CSS_IN:
+    case CSSPrimitiveValue::CSS_PT:
+    case CSSPrimitiveValue::CSS_PC:
+    case CSSPrimitiveValue::CSS_DEG:
+    case CSSPrimitiveValue::CSS_RAD:
+    case CSSPrimitiveValue::CSS_GRAD:
+    case CSSPrimitiveValue::CSS_MS:
+    case CSSPrimitiveValue::CSS_S:
+    case CSSPrimitiveValue::CSS_HZ:
+    case CSSPrimitiveValue::CSS_KHZ:
+    case CSSPrimitiveValue::CSS_VW:
+    case CSSPrimitiveValue::CSS_VH:
+    case CSSPrimitiveValue::CSS_VMIN:
+    case CSSPrimitiveValue::CSS_VMAX:
+    case CSSPrimitiveValue::CSS_TURN:
+    case CSSPrimitiveValue::CSS_REMS:
+    case CSSPrimitiveValue::CSS_CHS:
+        return CSSPrimitiveValue::create(fValue, primitiveUnit);
+    case CSSPrimitiveValue::CSS_UNKNOWN:
+    case CSSPrimitiveValue::CSS_DIMENSION:
+    case CSSPrimitiveValue::CSS_ATTR:
+    case CSSPrimitiveValue::CSS_COUNTER:
+    case CSSPrimitiveValue::CSS_RECT:
+    case CSSPrimitiveValue::CSS_RGBCOLOR:
+    case CSSPrimitiveValue::CSS_DPPX:
+    case CSSPrimitiveValue::CSS_DPI:
+    case CSSPrimitiveValue::CSS_DPCM:
+    case CSSPrimitiveValue::CSS_PAIR:
+#if ENABLE(DASHBOARD_SUPPORT)
+    case CSSPrimitiveValue::CSS_DASHBOARD_REGION:
+#endif
+    case CSSPrimitiveValue::CSS_UNICODE_RANGE:
+    case CSSPrimitiveValue::CSS_PARSER_OPERATOR:
+    case CSSPrimitiveValue::CSS_PARSER_INTEGER:
+    case CSSPrimitiveValue::CSS_PARSER_IDENTIFIER:
+    case CSSPrimitiveValue::CSS_COUNTER_NAME:
+    case CSSPrimitiveValue::CSS_SHAPE:
+    case CSSPrimitiveValue::CSS_QUAD:
+    case CSSPrimitiveValue::CSS_CALC:
+    case CSSPrimitiveValue::CSS_CALC_PERCENTAGE_WITH_NUMBER:
+    case CSSPrimitiveValue::CSS_CALC_PERCENTAGE_WITH_LENGTH:
+        return 0;
+    }
+
+    ASSERT_NOT_REACHED();
+    return 0;
 }
 
 CSSParserSelector::CSSParserSelector()
     : m_selector(adoptPtr(fastNew<CSSSelector>()))
+{
+}
+
+CSSParserSelector::CSSParserSelector(const QualifiedName& tagQName)
+    : m_selector(adoptPtr(new CSSSelector(tagQName)))
 {
 }
 
@@ -121,6 +178,26 @@ void CSSParserSelector::adoptSelectorVector(Vector<OwnPtr<CSSParserSelector> >& 
     m_selector->setSelectorList(adoptPtr(selectorList));
 }
 
+bool CSSParserSelector::isSimple() const
+{
+    if (m_selector->selectorList() || m_selector->matchesPseudoElement())
+        return false;
+
+    if (!m_tagHistory)
+        return true;
+
+    if (m_selector->m_match == CSSSelector::Tag) {
+        // We can't check against anyQName() here because namespace may not be nullAtom.
+        // Example:
+        //     @namespace "http://www.w3.org/2000/svg";
+        //     svg:not(:root) { ...
+        if (m_selector->tagQName().localName() == starAtom)
+            return m_tagHistory->isSimple();
+    }
+
+    return false;
+}
+
 void CSSParserSelector::insertTagHistory(CSSSelector::Relation before, PassOwnPtr<CSSParserSelector> selector, CSSSelector::Relation after)
 {
     if (m_tagHistory)
@@ -137,6 +214,17 @@ void CSSParserSelector::appendTagHistory(CSSSelector::Relation relation, PassOwn
         end = end->tagHistory();
     end->setRelation(relation);
     end->setTagHistory(selector);
+}
+
+void CSSParserSelector::prependTagSelector(const QualifiedName& tagQName, bool tagIsForNamespaceRule)
+{
+    OwnPtr<CSSParserSelector> second = adoptPtr(new CSSParserSelector);
+    second->m_selector = m_selector.release();
+    second->m_tagHistory = m_tagHistory.release();
+    m_tagHistory = second.release();
+
+    m_selector = adoptPtr(new CSSSelector(tagQName, tagIsForNamespaceRule));
+    m_selector->m_relation = CSSSelector::SubSelector;
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2009, 2011, 2012 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,11 +25,15 @@
 
 #include "RenderStyle.h"
 #include <wtf/OwnPtr.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 class HTMLImageLoader;
 class FrameLoader;
+class Image;
+class MouseEvent;
+class Widget;
 
 enum PluginCreationOption {
     CreateAnyWidgetType,
@@ -48,15 +52,52 @@ public:
 
     RenderEmbeddedObject* renderEmbeddedObject() const;
 
+    virtual void setDisplayState(DisplayState) OVERRIDE;
+
     virtual void updateWidget(PluginCreationOption) = 0;
 
     const String& serviceType() const { return m_serviceType; }
     const String& url() const { return m_url; }
+    const KURL& loadedUrl() const { return m_loadedUrl; }
+
+    const String loadedMimeType() const
+    {
+        String mimeType = serviceType();
+        if (mimeType.isEmpty())
+            mimeType = mimeTypeFromURL(m_loadedUrl);
+        return mimeType;
+    }
+
     bool shouldPreferPlugInsForImages() const { return m_shouldPreferPlugInsForImages; }
 
     // Public for FrameView::addWidgetToUpdate()
     bool needsWidgetUpdate() const { return m_needsWidgetUpdate; }
     void setNeedsWidgetUpdate(bool needsWidgetUpdate) { m_needsWidgetUpdate = needsWidgetUpdate; }
+
+    void userDidClickSnapshot(PassRefPtr<MouseEvent>, bool forwardEvent);
+    void checkSnapshotStatus();
+    Image* snapshotImage() const { return m_snapshotImage.get(); }
+    void restartSnapshottedPlugIn();
+
+    // Plug-in URL might not be the same as url() with overriding parameters.
+    void subframeLoaderWillCreatePlugIn(const KURL& plugInURL);
+    void subframeLoaderDidCreatePlugIn(const Widget*);
+
+    void setIsPrimarySnapshottedPlugIn(bool);
+    bool partOfSnapshotOverlay(Node*);
+
+    bool needsCheckForSizeChange() const { return m_needsCheckForSizeChange; }
+    void setNeedsCheckForSizeChange() { m_needsCheckForSizeChange = true; }
+    void checkSizeChangeForSnapshotting();
+
+    enum SnapshotDecision {
+        SnapshotNotYetDecided,
+        NeverSnapshot,
+        Snapshotted,
+        MaySnapshotWhenResized,
+        MaySnapshotWhenContentIsSet
+    };
+    SnapshotDecision snapshotDecision() const { return m_snapshotDecision; }
 
 protected:
     HTMLPlugInImageElement(const QualifiedName& tagName, Document*, bool createdByParser, PreferPlugInsForImagesOption);
@@ -66,6 +107,7 @@ protected:
     OwnPtr<HTMLImageLoader> m_imageLoader;
     String m_serviceType;
     String m_url;
+    KURL m_loadedUrl;
     
     static void updateWidgetCallback(Node*, unsigned = 0);
     virtual void attach();
@@ -81,20 +123,66 @@ protected:
 
     virtual PassRefPtr<RenderStyle> customStyleForRenderer() OVERRIDE;
 
+    virtual bool isRestartedPlugin() const OVERRIDE { return m_isRestartedPlugin; }
+
 private:
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
     virtual bool willRecalcStyle(StyleChange);
     
+    void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
+
     virtual void finishParsingChildren();
 
     void updateWidgetIfNecessary();
-    virtual bool useFallbackContent() const { return false; }
+
+    virtual void updateSnapshot(PassRefPtr<Image>) OVERRIDE;
+    virtual void dispatchPendingMouseClick() OVERRIDE;
+    void simulatedMouseClickTimerFired(DeferrableOneShotTimer<HTMLPlugInImageElement>*);
+
+    void swapRendererTimerFired(Timer<HTMLPlugInImageElement>*);
+
+    void restartSimilarPlugIns();
+
+    virtual bool isPlugInImageElement() const OVERRIDE { return true; }
+
+    void removeSnapshotTimerFired(Timer<HTMLPlugInImageElement>*);
     
     bool m_needsWidgetUpdate;
     bool m_shouldPreferPlugInsForImages;
     bool m_needsDocumentActivationCallbacks;
     RefPtr<RenderStyle> m_customStyleForPageCache;
+    RefPtr<MouseEvent> m_pendingClickEventFromSnapshot;
+    DeferrableOneShotTimer<HTMLPlugInImageElement> m_simulatedMouseClickTimer;
+    Timer<HTMLPlugInImageElement> m_swapRendererTimer;
+    Timer<HTMLPlugInImageElement> m_removeSnapshotTimer;
+    RefPtr<Image> m_snapshotImage;
+    bool m_createdDuringUserGesture;
+    bool m_isRestartedPlugin;
+    bool m_needsCheckForSizeChange;
+    bool m_plugInWasCreated;
+    bool m_deferredPromotionToPrimaryPlugIn;
+    IntSize m_sizeWhenSnapshotted;
+    SnapshotDecision m_snapshotDecision;
 };
+
+inline HTMLPlugInImageElement* toHTMLPlugInImageElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isPluginElement());
+    HTMLPlugInElement* plugInElement = static_cast<HTMLPlugInElement*>(node);
+    ASSERT_WITH_SECURITY_IMPLICATION(plugInElement->isPlugInImageElement());
+    return static_cast<HTMLPlugInImageElement*>(plugInElement);
+}
+
+inline const HTMLPlugInImageElement* toHTMLPlugInImageElement(const Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isPluginElement());
+    const HTMLPlugInElement* plugInElement = static_cast<const HTMLPlugInElement*>(node);
+    ASSERT_WITH_SECURITY_IMPLICATION(plugInElement->isPlugInImageElement());
+    return static_cast<const HTMLPlugInImageElement*>(plugInElement);
+}
+
+// This will catch anyone doing an unnecessary cast.
+void toHTMLPlugInImageElement(const HTMLPlugInImageElement*);
 
 } // namespace WebCore
 

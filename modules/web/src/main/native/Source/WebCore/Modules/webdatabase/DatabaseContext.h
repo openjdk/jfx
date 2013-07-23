@@ -30,38 +30,51 @@
 
 #if ENABLE(SQL_DATABASE)
 
-#include "Supplementable.h"
+#include "ActiveDOMObject.h"
+#include "DatabaseDetails.h"
+#include <wtf/Assertions.h>
+#include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
 class Database;
+class DatabaseBackendContext;
 class DatabaseTaskSynchronizer;
 class DatabaseThread;
 class ScriptExecutionContext;
 
-class DatabaseContext : public Supplement<ScriptExecutionContext> {
+class DatabaseContext : public ThreadSafeRefCounted<DatabaseContext>, ActiveDOMObject {
 public:
     virtual ~DatabaseContext();
-    static DatabaseContext* from(ScriptExecutionContext*);
 
+    // For life-cycle management (inherited from ActiveDOMObject):
+    virtual void contextDestroyed();
+    virtual void stop();
+
+    PassRefPtr<DatabaseBackendContext> backend();
     DatabaseThread* databaseThread();
 
     void setHasOpenDatabases() { m_hasOpenDatabases = true; }
-
-    static bool hasOpenDatabases(ScriptExecutionContext*);
+    bool hasOpenDatabases() { return m_hasOpenDatabases; }
 
     // When the database cleanup is done, cleanupSync will be signalled.
-    static void stopDatabases(ScriptExecutionContext*, DatabaseTaskSynchronizer*);
+    bool stopDatabases(DatabaseTaskSynchronizer*);
 
     bool allowDatabaseAccess() const;
-    void databaseExceededQuota(const String& name);
+    void databaseExceededQuota(const String& name, DatabaseDetails);
 
 private:
     explicit DatabaseContext(ScriptExecutionContext*);
 
-    ScriptExecutionContext* m_scriptExecutionContext;
+    void stopDatabases() { stopDatabases(0); }
+
     RefPtr<DatabaseThread> m_databaseThread;
     bool m_hasOpenDatabases; // This never changes back to false, even after the database thread is closed.
+    bool m_isRegistered;
+    bool m_hasRequestedTermination;
+
+    friend class DatabaseBackendContext;
+    friend class DatabaseManager;
 };
 
 } // namespace WebCore

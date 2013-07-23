@@ -29,6 +29,9 @@
 
 #include "CSSParser.h"
 #include "CachedResourceLoader.h"
+#include "CachedResourceRequest.h"
+#include "CachedResourceRequestInitiators.h"
+#include "CachedSVGDocument.h"
 #include "Document.h"
 
 namespace WebCore {
@@ -51,7 +54,8 @@ CachedSVGDocument* WebKitCSSSVGDocumentValue::load(CachedResourceLoader* loader)
     if (!m_loadRequested) {
         m_loadRequested = true;
 
-        ResourceRequest request(loader->document()->completeURL(m_url));
+        CachedResourceRequest request(ResourceRequest(loader->document()->completeURL(m_url)));
+        request.setInitiator(cachedResourceRequestInitiators().css);
         m_document = loader->requestSVGDocument(request);
     }
 
@@ -61,6 +65,11 @@ CachedSVGDocument* WebKitCSSSVGDocumentValue::load(CachedResourceLoader* loader)
 String WebKitCSSSVGDocumentValue::customCssText() const
 {
     return quoteCSSStringIfNeeded(m_url);
+}
+
+bool WebKitCSSSVGDocumentValue::equals(const WebKitCSSSVGDocumentValue& other) const
+{
+    return m_url == other.m_url;
 }
 
 } // namespace WebCore

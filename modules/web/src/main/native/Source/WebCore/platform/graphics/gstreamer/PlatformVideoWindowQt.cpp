@@ -19,7 +19,7 @@
 
 #include "config.h"
 #include "PlatformVideoWindow.h"
-#if ENABLE(VIDEO) && USE(GSTREAMER) && !defined(GST_API_VERSION_1)
+#if ENABLE(VIDEO) && USE(GSTREAMER) && USE(NATIVE_FULLSCREEN_VIDEO)
 
 #include "HTMLVideoElement.h"
 #include "PlatformVideoWindowPrivate.h"
@@ -38,12 +38,7 @@ static const int gHideMouseCursorDelay = 3000;
 FullScreenVideoWindow::FullScreenVideoWindow()
     : m_mediaElement(0)
 {
-#if !HAVE(QT5)
-    setAttribute(Qt::WA_NativeWindow);
-    setAttribute(Qt::WA_NoSystemBackground, true);
-    setAttribute(Qt::WA_PaintOnScreen, true);
-#endif
-    setWindowModality(Qt::ApplicationModal);
+    setModality(Qt::ApplicationModal);
 
 #ifndef QT_NO_CURSOR
     m_cursorTimer.setSingleShot(true);
@@ -65,7 +60,7 @@ void FullScreenVideoWindow::keyPressEvent(QKeyEvent* ev)
             m_mediaElement->play();
     } else if (ev->key() == Qt::Key_Escape)
         emit closed();
-    Base::keyPressEvent(ev);
+    QWindow::keyPressEvent(ev);
 }
 
 bool FullScreenVideoWindow::event(QEvent* ev)
@@ -83,10 +78,6 @@ bool FullScreenVideoWindow::event(QEvent* ev)
 #ifndef QT_NO_CURSOR
         m_cursorTimer.stop();
 #endif
-#if !HAVE(QT5)
-        setMouseTracking(false);
-        releaseMouse();
-#endif
 #ifndef QT_NO_CURSOR
         QGuiApplication::restoreOverrideCursor();
 #endif
@@ -94,19 +85,13 @@ bool FullScreenVideoWindow::event(QEvent* ev)
     default:
         break;
     }
-    return Base::event(ev);
+    return QWindow::event(ev);
 }
 
 void FullScreenVideoWindow::showFullScreen()
 {
-    Base::showFullScreen();
-#if !HAVE(QT5)
-    setMouseTracking(true);
-#endif
+    QWindow::showFullScreen();
     raise();
-#if !HAVE(QT5)
-    setFocus();
-#endif
     hideCursor();
 }
 
@@ -128,16 +113,10 @@ void FullScreenVideoWindow::showCursor()
 
 PlatformVideoWindow::PlatformVideoWindow()
 {
-    Base* win = new FullScreenVideoWindow();
+    QWindow* win = new FullScreenVideoWindow();
     m_window = win;
-    win->setWindowFlags(win->windowFlags() | Qt::FramelessWindowHint);
+    win->setFlags(win->flags() | Qt::FramelessWindowHint);
     // FIXME: Port to Qt 5.
-#if !HAVE(QT5)
-    QPalette p;
-    p.setColor(QPalette::Base, Qt::black);
-    p.setColor(QPalette::Window, Qt::black);
-    win->setPalette(p);
-#endif
     win->showFullScreen();
     m_videoWindowId = win->winId();
 }
@@ -151,4 +130,4 @@ PlatformVideoWindow::~PlatformVideoWindow()
 void PlatformVideoWindow::prepareForOverlay(GstMessage*)
 {
 }
-#endif // ENABLE(VIDEO) && USE(GSTREAMER) && !defined(GST_API_VERSION_1)
+#endif // ENABLE(VIDEO) && USE(GSTREAMER) && USE(NATIVE_FULLSCREEN_VIDEO)

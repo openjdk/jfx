@@ -1,4 +1,10 @@
+/*
+ * Copyright (c) 2012-2013, Oracle and/or its affiliates. All rights reserved.
+ */
 #include "config.h"
+
+#include "Document.h"
+
 #include "SchemeRegistry.h"
 #include "StorageAreaJava.h"
 
@@ -75,20 +81,12 @@ StorageAreaJava::StorageAreaJava(StorageAreaJava* area)
     ASSERT(!m_isShutdown);
 }
 
-static bool privateBrowsingEnabled(Frame* frame)
+static bool privateBrowsingEnabled(Frame* sourceFrame)
 {
-#if PLATFORM(CHROMIUM)
-    // The frame pointer can be NULL in Chromium since this call is made in a different
-    // process from where the Frame object exists.  Luckily, private browseing is
-    // implemented differently in Chromium, so it'd never return true anyway.
-    ASSERT(!frame);
-    return false;
-#else
-    return frame->page() && frame->page()->settings()->privateBrowsingEnabled();
-#endif
+    return sourceFrame->page() && sourceFrame->page()->settings()->privateBrowsingEnabled();
 }
 
-unsigned StorageAreaJava::length(Frame*) const
+unsigned StorageAreaJava::length()
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
@@ -96,7 +94,7 @@ unsigned StorageAreaJava::length(Frame*) const
     return m_storageMap->length();
 }
 
-String StorageAreaJava::key(unsigned index, Frame*) const
+String StorageAreaJava::key(unsigned index)
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
@@ -104,7 +102,7 @@ String StorageAreaJava::key(unsigned index, Frame*) const
     return m_storageMap->key(index);
 }
 
-String StorageAreaJava::getItem(const String& key, Frame*) const
+String StorageAreaJava::item(const String& key)
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
@@ -112,41 +110,35 @@ String StorageAreaJava::getItem(const String& key, Frame*) const
     return m_storageMap->getItem(key);
 }
 
-void StorageAreaJava::setItem(const String& key, const String& value, ExceptionCode& ec, Frame* frame)
+void StorageAreaJava::setItem(Frame* sourceFrame, const String& key, const String& value, bool& quotaException)
 {
     ASSERT(!m_isShutdown);
     ASSERT(!value.isNull());
     blockUntilImportComplete();
 
-    if (privateBrowsingEnabled(frame)) {
-        ec = QUOTA_EXCEEDED_ERR;
+    if (privateBrowsingEnabled(sourceFrame)) {
+        quotaException = true;
         return;
     }
 
     String oldValue;
-    bool quotaException;
     RefPtr<StorageMap> newMap = m_storageMap->setItem(key, value, oldValue, quotaException);
     if (newMap)
         m_storageMap = newMap.release();
 
-    if (quotaException) {
-        ec = QUOTA_EXCEEDED_ERR;
-        return;
-    }
-
 /*
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleItemForSync(key, value);
-    StorageEventDispatcher::dispatch(key, oldValue, value, m_storageType, m_securityOrigin.get(), frame);
+    StorageEventDispatcher::dispatch(key, oldValue, value, m_storageType, m_securityOrigin.get(), sourceFrame);
 */
 }
 
-void StorageAreaJava::removeItem(const String& key, Frame* frame)
+void StorageAreaJava::removeItem(Frame* sourceFrame, const String& key)
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
-    if (privateBrowsingEnabled(frame))
+    if (privateBrowsingEnabled(sourceFrame))
         return;
 
     String oldValue;
@@ -157,16 +149,16 @@ void StorageAreaJava::removeItem(const String& key, Frame* frame)
 /*
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleItemForSync(key, String());
-    StorageEventDispatcher::dispatch(key, oldValue, String(), m_storageType, m_securityOrigin.get(), frame);
+    StorageEventDispatcher::dispatch(key, oldValue, String(), m_storageType, m_securityOrigin.get(), sourceFrame);
 */
 }
 
-void StorageAreaJava::clear(Frame* frame)
+void StorageAreaJava::clear(Frame* sourceFrame)
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
-    if (privateBrowsingEnabled(frame))
+    if (privateBrowsingEnabled(sourceFrame))
         return;
 
     if (!m_storageMap->length())
@@ -177,11 +169,11 @@ void StorageAreaJava::clear(Frame* frame)
 /*
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleClear();
-    StorageEventDispatcher::dispatch(String(), String(), String(), m_storageType, m_securityOrigin.get(), frame);
+    StorageEventDispatcher::dispatch(String(), String(), String(), m_storageType, m_securityOrigin.get(), sourceFrame);
 */
 }
 
-bool StorageAreaJava::contains(const String& key, Frame*) const
+bool StorageAreaJava::contains(const String& key)
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
@@ -189,21 +181,26 @@ bool StorageAreaJava::contains(const String& key, Frame*) const
     return m_storageMap->contains(key);
 }
 
-bool StorageAreaJava::disabledByPrivateBrowsingInFrame(const Frame* frame) const
+bool StorageAreaJava::canAccessStorage(Frame* sourceFrame)
 {
-    if (!frame->page() || !frame->page()->settings()->privateBrowsingEnabled())
+    if (!sourceFrame->page() || !sourceFrame->page()->settings()->privateBrowsingEnabled())
         return false;
     if (m_storageType != LocalStorage)
         return true;
-    return !SchemeRegistry::allowsLocalStorageAccessInPrivateBrowsing(frame->document()->securityOrigin()->protocol());
+    return !SchemeRegistry::allowsLocalStorageAccessInPrivateBrowsing(sourceFrame->document()->securityOrigin()->protocol());
 }
 
 
-void StorageAreaJava::importItem(const String& key, const String& value)
+StorageType StorageAreaJava::storageType() const
 {
-    ASSERT(!m_isShutdown);
-    m_storageMap->importItem(key, value);
+    return m_storageType;
 }
+
+size_t StorageAreaJava::memoryBytesUsedByCache()
+{
+    return 0;
+}
+
 
 void StorageAreaJava::close()
 {

@@ -30,18 +30,22 @@
 
 namespace WebCore {
 
+class FloatPoint;
 class GraphicsContext;
 class GraphicsLayer;
 class IntPoint;
 class IntRect;
-class FloatPoint;
+class TransformationMatrix;
 
-enum GraphicsLayerPaintingPhase {
+enum GraphicsLayerPaintingPhaseFlags {
     GraphicsLayerPaintBackground = (1 << 0),
     GraphicsLayerPaintForeground = (1 << 1),
     GraphicsLayerPaintMask = (1 << 2),
-    GraphicsLayerPaintAll = (GraphicsLayerPaintBackground | GraphicsLayerPaintForeground | GraphicsLayerPaintMask)
+    GraphicsLayerPaintOverflowContents = (1 << 3),
+    GraphicsLayerPaintCompositedScroll = (1 << 4),
+    GraphicsLayerPaintAllWithOverflowClip = (GraphicsLayerPaintBackground | GraphicsLayerPaintForeground | GraphicsLayerPaintMask)
 };
+typedef unsigned GraphicsLayerPaintingPhase;
 
 enum AnimatedPropertyID {
     AnimatedPropertyInvalid,
@@ -55,26 +59,36 @@ class GraphicsLayerClient {
 public:
     virtual ~GraphicsLayerClient() {}
 
-    virtual bool shouldUseTileCache(const GraphicsLayer*) const { return false; }
-    virtual bool usingTileCache(const GraphicsLayer*) const { return false; }
+    virtual bool shouldUseTiledBacking(const GraphicsLayer*) const { return false; }
+    virtual void tiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/) { }
     
     // Callback for when hardware-accelerated animation started.
     virtual void notifyAnimationStarted(const GraphicsLayer*, double time) = 0;
 
-    // Notification that a layer property changed that requires a subsequent call to syncCompositingState()
+    // Notification that a layer property changed that requires a subsequent call to flushCompositingState()
     // to appear on the screen.
-    virtual void notifySyncRequired(const GraphicsLayer*) = 0;
+    virtual void notifyFlushRequired(const GraphicsLayer*) = 0;
+    
+    // Notification that this layer requires a flush before the next display refresh.
+    virtual void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) { }
     
     virtual void paintContents(const GraphicsLayer*, GraphicsContext&, GraphicsLayerPaintingPhase, const IntRect& inClip) = 0;
     virtual void didCommitChangesForLayer(const GraphicsLayer*) const { }
+
+    // Provides current transform (taking transform-origin and animations into account). Input matrix has been
+    // initialized to identity already. Returns false if the layer has no transform.
+    virtual bool getCurrentTransform(const GraphicsLayer*, TransformationMatrix&) const { return false; }
+
+    // Allows the client to modify a layer position used during the visibleRect calculation, for example to ignore
+    // scroll overhang.
+    virtual void customPositionForVisibleRectComputation(const GraphicsLayer*, FloatPoint&) const { }
 
     // Multiplier for backing store size, related to high DPI.
     virtual float deviceScaleFactor() const { return 1; }
     // Page scale factor.
     virtual float pageScaleFactor() const { return 1; }
 
-    virtual bool showDebugBorders(const GraphicsLayer*) const = 0;
-    virtual bool showRepaintCounter(const GraphicsLayer*) const = 0;
+    virtual bool isTrackingRepaints() const { return false; }
 
 #ifndef NDEBUG
     // RenderLayerBacking overrides this to verify that it is not

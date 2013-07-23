@@ -28,6 +28,7 @@
 
 #include <stdio.h>
 #include <wtf/Assertions.h>
+#include <wtf/PrintStream.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -110,19 +111,19 @@ public:
 
     bool quickGet(size_t bit) const
     {
-        ASSERT(bit < size());
+        ASSERT_WITH_SECURITY_IMPLICATION(bit < size());
         return !!(bits()[bit / bitsInPointer()] & (static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1))));
     }
     
     void quickSet(size_t bit)
     {
-        ASSERT(bit < size());
+        ASSERT_WITH_SECURITY_IMPLICATION(bit < size());
         bits()[bit / bitsInPointer()] |= (static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1)));
     }
     
     void quickClear(size_t bit)
     {
-        ASSERT(bit < size());
+        ASSERT_WITH_SECURITY_IMPLICATION(bit < size());
         bits()[bit / bitsInPointer()] &= ~(static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1)));
     }
     
@@ -168,7 +169,7 @@ public:
             clear(bit);
     }
     
-    void dump(FILE* out);
+    void dump(PrintStream& out);
     
 private:
     static unsigned bitsInPointer()

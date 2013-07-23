@@ -30,7 +30,8 @@
 
 #include "EWebKit.h"
 
-#include <ctype.h>
+#include "url_bar.h"
+#include "url_utils.h"
 #include <Ecore.h>
 #include <Ecore_Evas.h>
 #include <Ecore_File.h>
@@ -38,6 +39,7 @@
 #include <Ecore_X.h>
 #include <Edje.h>
 #include <Evas.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
@@ -54,7 +56,7 @@
 #define info(format, args...)       \
     do {                            \
         if (verbose)                \
-            printf(format, ##args); \
+            printf(format"\n", ##args); \
     } while (0)
 
 #define MIN_ZOOM_LEVEL 0
@@ -114,6 +116,8 @@ static const Ecore_Getopt options = {
         ECORE_GETOPT_CHOICE
             ('b', "backing-store", "choose backing store to use.", backingStores),
         ECORE_GETOPT_STORE_DEF_BOOL
+            ('c', "encoding-detector", "enable/disable encoding detector", 0),
+        ECORE_GETOPT_STORE_DEF_BOOL
             ('f', "flattening", "frame flattening.", 0),
         ECORE_GETOPT_STORE_DEF_BOOL
             ('F', "fullscreen", "fullscreen mode.", 0),
@@ -122,6 +126,8 @@ static const Ecore_Getopt options = {
              ecore_getopt_callback_geometry_parse, NULL),
         ECORE_GETOPT_STORE_STR
             ('t', "theme", "path to read the theme file from."),
+        ECORE_GETOPT_STORE_DEF_BOOL
+            ('T', "tiled-backing-store", "enable/disable WebCore's tiled backingstore(ewk_view_single only)", 0),
         ECORE_GETOPT_STORE_STR
             ('U', "user-agent", "custom user agent string to use."),
         ECORE_GETOPT_COUNT
@@ -138,20 +144,48 @@ static const Ecore_Getopt options = {
     }
 };
 
+typedef struct _User_Arguments {
+    char *engine;
+    Eina_Bool quitOption;
+    char *backingStore;
+    Eina_Bool enableEncodingDetector;
+    Eina_Bool enableTiledBackingStore;
+    Eina_Bool isFlattening;
+    Eina_Bool isFullscreen;
+    Eina_Rectangle geometry;
+    char *theme;
+    char *userAgent;
+    char *databasePath;
+} User_Arguments;
+
 typedef struct _ELauncher {
     Ecore_Evas *ee;
     Evas *evas;
-    Evas_Object *bg;
     Evas_Object *browser;
-    const char *theme;
-    const char *userAgent;
-    const char *backingStore;
-    unsigned char isFlattening;
+    Url_Bar *url_bar;
+    User_Arguments *userArgs;
 } ELauncher;
 
-static void browserDestroy(Ecore_Evas *ee);
+static void windowDestroy(Ecore_Evas *ee);
 static void closeWindow(Ecore_Evas *ee);
-static int browserCreate(const char *url, const char *theme, const char *userAgent, Eina_Rectangle geometry, const char *engine, const char *backingStore, unsigned char isFlattening, unsigned char isFullscreen, const char *databasePath);
+static int browserCreate(const char *url, User_Arguments *userArgs);
+static int webInspectorCreate(ELauncher *appBrowser);
+static ELauncher *windowCreate(User_Arguments *userArgs);
+
+static ELauncher *
+find_app_from_ee(Ecore_Evas *ee)
+{
+    Eina_List *l;
+    void *data;
+
+    EINA_LIST_FOREACH(windows, l, data)
+    {
+        ELauncher *app = (ELauncher *) data;
+        if (app->ee == ee)
+            return app;
+    }
+    return NULL;
+}
 
 static void
 print_history(Eina_List *list)
@@ -211,21 +245,34 @@ zoom_level_set(Evas_Object *webview, int level)
 }
 
 static void
-on_ecore_evas_resize(Ecore_Evas *ee)
+on_browser_ecore_evas_resize(Ecore_Evas *ee)
 {
+    ELauncher *app;
     Evas_Object *webview;
-    Evas_Object *bg;
     int w, h;
 
     ecore_evas_geometry_get(ee, NULL, NULL, &w, &h);
 
-    bg = evas_object_name_find(ecore_evas_get(ee), "bg");
-    evas_object_move(bg, 0, 0);
-    evas_object_resize(bg, w, h);
+    /* Resize URL bar */
+    app = find_app_from_ee(ee);
+    url_bar_width_set(app->url_bar, w);
 
     webview = evas_object_name_find(ecore_evas_get(ee), "browser");
-    evas_object_move(webview, 10, 10);
-    evas_object_resize(webview, w - 20, h - 20);
+    evas_object_move(webview, 0, URL_BAR_HEIGHT);
+    evas_object_resize(webview, w, h - URL_BAR_HEIGHT);
+}
+
+static void
+on_inspector_ecore_evas_resize(Ecore_Evas *ee)
+{
+    Evas_Object *webview;
+    int w, h;
+
+    ecore_evas_geometry_get(ee, NULL, NULL, &w, &h);
+
+    webview = evas_object_name_find(ecore_evas_get(ee), "inspector");
+    evas_object_move(webview, 0, 0);
+    evas_object_resize(webview, w, h);
 }
 
 static void
@@ -276,16 +323,16 @@ on_load_finished(void *user_data, Evas_Object *webview, void *event_info)
     const Ewk_Frame_Load_Error *err = (const Ewk_Frame_Load_Error *)event_info;
 
     if (!err)
-        info("Succeeded loading page.\n");
+        info("Succeeded loading page.");
     else if (err->is_cancellation)
-        info("Load was cancelled.\n");
+        info("Load was cancelled.");
     else
-        info("Failed loading page: %d %s \"%s\", url=%s\n",
+        info("Failed loading page: %d %s \"%s\", url=%s",
              err->code, err->domain, err->description, err->failing_url);
 
     currentZoom = ewk_view_zoom_get(webview);
     currentZoomLevel = nearest_zoom_level_get(currentZoom);
-    info("WebCore Zoom=%f, currentZoomLevel=%d\n", currentZoom, currentZoomLevel);
+    info("WebCore Zoom=%f, currentZoomLevel=%d", currentZoom, currentZoomLevel);
 }
 
 static void
@@ -382,8 +429,13 @@ static void
 on_tooltip_text_set(void* user_data, Evas_Object* webview, void* event_info)
 {
     const char *text = (const char *)event_info;
-    if (text && *text != '\0')
-        info("%s\n", text);
+    info("Tooltip is set: %s", text);
+}
+
+static void
+on_tooltip_text_unset(void* user_data, Evas_Object* webview, void* event_info)
+{
+    info("Tooltip is unset");
 }
 
 static void
@@ -391,34 +443,44 @@ on_inputmethod_changed(void* user_data, Evas_Object* webview, void* event_info)
 {
     Eina_Bool active = (Eina_Bool)(long)event_info;
     unsigned int imh;
-    info("Keyboard changed: %d\n", active);
+    info("Keyboard changed: %d", active);
 
     if (!active)
         return;
 
     imh = ewk_view_imh_get(webview);
-    info("    Keyboard flags: %#.2x\n", imh);
+    info("    Keyboard flags: %#.2x", imh);
 
+}
+
+static void
+on_url_changed(void* user_data, Evas_Object* webview, void* event_info)
+{
+    ELauncher *app = (ELauncher *)user_data;
+    url_bar_url_set(app->url_bar, ewk_view_uri_get(app->browser));
 }
 
 static void
 on_mouse_down(void* data, Evas* e, Evas_Object* webview, void* event_info)
 {
     Evas_Event_Mouse_Down *ev = (Evas_Event_Mouse_Down*) event_info;
-    if (ev->button == 2)
+
+    if (ev->button == 1)
+        evas_object_focus_set(webview, EINA_TRUE);
+    else if (ev->button == 2)
         evas_object_focus_set(webview, !evas_object_focus_get(webview));
 }
 
 static void
 on_focus_out(void *data, Evas *e, Evas_Object *obj, void *event_info)
 {
-    info("the webview lost keyboard focus\n");
+    info("the webview lost keyboard focus");
 }
 
 static void
 on_focus_in(void *data, Evas *e, Evas_Object *obj, void *event_info)
 {
-    info("the webview gained keyboard focus\n");
+    info("the webview gained keyboard focus");
 }
 
 static void
@@ -437,7 +499,7 @@ on_key_down(void *data, Evas *e, Evas_Object *obj, void *event_info)
     if (!strcmp(ev->key, "Escape")) {
         closeWindow(app->ee);
     } else if (!strcmp(ev->key, "F1")) {
-        info("Back (F1) was pressed\n");
+        info("Back (F1) was pressed");
         if (ewk_view_back_possible(obj)) {
             Ewk_History *history = ewk_view_history_get(obj);
             Eina_List *list = ewk_history_back_list_get(history);
@@ -445,9 +507,9 @@ on_key_down(void *data, Evas *e, Evas_Object *obj, void *event_info)
             ewk_history_item_list_free(list);
             ewk_view_back(obj);
         } else
-            info("Back ignored: No back history\n");
+            info("Back ignored: No back history");
     } else if (!strcmp(ev->key, "F2")) {
-        info("Forward (F2) was pressed\n");
+        info("Forward (F2) was pressed");
         if (ewk_view_forward_possible(obj)) {
             Ewk_History *history = ewk_view_history_get(obj);
             Eina_List *list = ewk_history_forward_list_get(history);
@@ -455,7 +517,7 @@ on_key_down(void *data, Evas *e, Evas_Object *obj, void *event_info)
             ewk_history_item_list_free(list);
             ewk_view_forward(obj);
         } else
-            info("Forward ignored: No forward history\n");
+            info("Forward ignored: No forward history");
     } else if (!strcmp(ev->key, "F3")) {
         currentEncoding++;
         currentEncoding %= (sizeof(encodings) / sizeof(encodings[0]));
@@ -508,29 +570,30 @@ on_key_down(void *data, Evas *e, Evas_Object *obj, void *event_info)
         }
 
     } else if (!strcmp(ev->key, "F5")) {
-        info("Reload (F5) was pressed, reloading.\n");
+        info("Reload (F5) was pressed, reloading.");
         ewk_view_reload(obj);
     } else if (!strcmp(ev->key, "F6")) {
-        info("Stop (F6) was pressed, stop loading.\n");
+        info("Stop (F6) was pressed, stop loading.");
         ewk_view_stop(obj);
     } else if (!strcmp(ev->key, "F12")) {
         Eina_Bool status = ewk_view_setting_spatial_navigation_get(obj);
         ewk_view_setting_spatial_navigation_set(obj, !status);
-        info("Command::keyboard navigation toggle\n");
-    } else if (!strcmp(ev->key, "F7")) {
-        info("Zoom out (F7) was pressed.\n");
+        info("Command::keyboard navigation toggle");
+    } else if ((!strcmp(ev->key, "minus") || !strcmp(ev->key, "KP_Subtract")) && ctrlPressed) {
         if (currentZoomLevel > MIN_ZOOM_LEVEL && zoom_level_set(obj, currentZoomLevel - 1))
             currentZoomLevel--;
-    } else if (!strcmp(ev->key, "F8")) {
-        info("Zoom in (F8) was pressed.\n");
+        info("Zoom out (Ctrl + '-') was pressed, zoom level became %.2f", zoomLevels[currentZoomLevel] / 100.0);
+    } else if ((!strcmp(ev->key, "equal") || !strcmp(ev->key, "KP_Add")) && ctrlPressed) {
         if (currentZoomLevel < MAX_ZOOM_LEVEL && zoom_level_set(obj, currentZoomLevel + 1))
             currentZoomLevel++;
-    } else if (!strcmp(ev->key, "F9")) {
-        info("Create new window (F9) was pressed.\n");
-        Eina_Rectangle geometry = {0, 0, 0, 0};
-        browserCreate("http://www.google.com",
-                       app->theme, app->userAgent, geometry, NULL,
-                       app->backingStore, app->isFlattening, 0, NULL);
+        info("Zoom in (Ctrl + '+') was pressed, zoom level became %.2f", zoomLevels[currentZoomLevel] / 100.0);
+    } else if (!strcmp(ev->key, "0") && ctrlPressed) {
+        if (zoom_level_set(obj, DEFAULT_ZOOM_LEVEL))
+            currentZoomLevel = DEFAULT_ZOOM_LEVEL;
+        info("Zoom to default (Ctrl + '0') was pressed, zoom level became %.2f", zoomLevels[currentZoomLevel] / 100.0);
+    } else if (!strcmp(ev->key, "n") && ctrlPressed) {
+        info("Create new window (Ctrl+n) was pressed.");
+        browserCreate("http://www.google.com", app->userArgs);
     } else if (!strcmp(ev->key, "g") && ctrlPressed ) {
         Evas_Coord x, y, w, h;
         Evas_Object *frame = ewk_view_frame_main_get(obj);
@@ -541,7 +604,7 @@ on_key_down(void *data, Evas *e, Evas_Object *obj, void *event_info)
         y -= h;
         w *= 4;
         h *= 4;
-        info("Pre-render %d,%d + %dx%d\n", x, y, w, h);
+        info("Pre-render %d,%d + %dx%d", x, y, w, h);
         ewk_view_pre_render_region(obj, x, y, w, h, zoom);
     } else if (!strcmp(ev->key, "r") && ctrlPressed) {
         info("Pre-render 1 extra column/row with current zoom");
@@ -586,6 +649,15 @@ on_key_down(void *data, Evas *e, Evas_Object *obj, void *event_info)
 
         ewk_security_origin_free(origin);
         ewk_web_database_list_free(databaseList);
+    } else if (!strcmp(ev->key, "i") && ctrlPressed) {
+        Evas_Object *inspector_view = ewk_view_inspector_view_get(obj);
+        if (inspector_view) {
+            info("Web Inspector close");
+            ewk_view_inspector_close(obj);
+        } else {
+            info("Web Inspector show");
+            ewk_view_inspector_show(obj);
+        }
     }
 }
 
@@ -599,6 +671,42 @@ on_browser_del(void *data, Evas *evas, Evas_Object *browser, void *event)
     evas_object_event_callback_del(app->browser, EVAS_CALLBACK_FOCUS_IN, on_focus_in);
     evas_object_event_callback_del(app->browser, EVAS_CALLBACK_FOCUS_OUT, on_focus_out);
     evas_object_event_callback_del(app->browser, EVAS_CALLBACK_DEL, on_browser_del);
+}
+
+static void
+on_inspector_view_create(void *user_data, Evas_Object *webview, void *event_info)
+{
+    ELauncher *app_browser = (ELauncher *)user_data;
+
+    webInspectorCreate(app_browser);
+}
+
+static void
+on_inspector_view_close(void *user_data, Evas_Object *webview, void *event_info)
+{
+    Eina_List *l;
+    void *app;
+    ELauncher *app_browser = (ELauncher *)user_data;
+    Evas_Object *inspector_view = (Evas_Object *)event_info;
+
+    ewk_view_inspector_view_set(app_browser->browser, NULL);
+
+    EINA_LIST_FOREACH(windows, l, app)
+        if (((ELauncher *)app)->browser == inspector_view)
+            break;
+
+    windows = eina_list_remove(windows, app);
+    windowDestroy(((ELauncher *)app)->ee);
+    free(app);
+}
+
+static void
+on_inspector_view_destroyed(Ecore_Evas *ee)
+{
+    ELauncher *app;
+
+    app = find_app_from_ee(ee);
+    evas_object_smart_callback_call(app->browser, "inspector,view,destroy", NULL);
 }
 
 static int
@@ -623,105 +731,147 @@ quit(Eina_Bool success, const char *msg)
 }
 
 static int
-browserCreate(const char *url, const char *theme, const char *userAgent, Eina_Rectangle geometry, const char *engine, const char *backingStore, unsigned char isFlattening, unsigned char isFullscreen, const char *databasePath)
+browserCreate(const char *url, User_Arguments *userArgs)
 {
-    if ((geometry.w <= 0) && (geometry.h <= 0)) {
-        geometry.w = DEFAULT_WIDTH;
-        geometry.h = DEFAULT_HEIGHT;
-    }
+    ELauncher *appBrowser = windowCreate(userArgs);
+    if (!appBrowser)
+        return quit(EINA_FALSE, "ERROR: could not create a browser window\n");
 
-    ELauncher *app = (ELauncher*) malloc(sizeof(ELauncher));
-    if (!app)
-        return quit(EINA_FALSE, "ERROR: could not create EWebLauncher window\n");
+    ecore_evas_title_set(appBrowser->ee, "EFL Test Launcher");
+    ecore_evas_callback_resize_set(appBrowser->ee, on_browser_ecore_evas_resize);
+    ecore_evas_callback_delete_request_set(appBrowser->ee, closeWindow);
 
-    app->ee = ecore_evas_new(engine, 0, 0, geometry.w, geometry.h, NULL);
+    evas_object_name_set(appBrowser->browser, "browser");
 
-    if (!app->ee)
-        return quit(EINA_FALSE, "ERROR: could not construct evas-ecore\n");
+    evas_object_smart_callback_add(appBrowser->browser, "inputmethod,changed", on_inputmethod_changed, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "inspector,view,close", on_inspector_view_close, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "inspector,view,create", on_inspector_view_create, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "load,error", on_load_error, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "load,finished", on_load_finished, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "load,progress", on_progress, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "menubar,visible,get", on_menubar_visible_get, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "menubar,visible,set", on_menubar_visible_set, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "scrollbars,visible,get", on_scrollbars_visible_get, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "scrollbars,visible,set", on_scrollbars_visible_set, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "statusbar,visible,get", on_statusbar_visible_get, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "statusbar,visible,set", on_statusbar_visible_set, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "title,changed", on_title_changed, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "toolbars,visible,get", on_toolbars_visible_get, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "toolbars,visible,set", on_toolbars_visible_set, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "tooltip,text,set", on_tooltip_text_set, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "tooltip,text,unset", on_tooltip_text_unset, appBrowser);
+    evas_object_smart_callback_add(appBrowser->browser, "uri,changed", on_url_changed, appBrowser);
 
-    if (isFullscreen)
-        ecore_evas_fullscreen_set(app->ee, EINA_TRUE);
+    evas_object_event_callback_add(appBrowser->browser, EVAS_CALLBACK_DEL, on_browser_del, appBrowser);
+    evas_object_event_callback_add(appBrowser->browser, EVAS_CALLBACK_FOCUS_IN, on_focus_in, appBrowser);
+    evas_object_event_callback_add(appBrowser->browser, EVAS_CALLBACK_FOCUS_OUT, on_focus_out, appBrowser);
+    evas_object_event_callback_add(appBrowser->browser, EVAS_CALLBACK_KEY_DOWN, on_key_down, appBrowser);
+    evas_object_event_callback_add(appBrowser->browser, EVAS_CALLBACK_MOUSE_DOWN, on_mouse_down, appBrowser);
 
-    ecore_evas_title_set(app->ee, "EFL Test Launcher");
-    ecore_evas_callback_resize_set(app->ee, on_ecore_evas_resize);
-    ecore_evas_callback_delete_request_set(app->ee, closeWindow);
+    ewk_view_setting_enable_developer_extras_set(appBrowser->browser, EINA_TRUE);
 
-    app->evas = ecore_evas_get(app->ee);
+    appBrowser->url_bar = url_bar_add(appBrowser->browser, DEFAULT_WIDTH);
 
-    if (!app->evas)
-        return quit(EINA_FALSE, "ERROR: could not get evas from evas-ecore\n");
+    evas_object_move(appBrowser->browser, 0, URL_BAR_HEIGHT);
+    evas_object_resize(appBrowser->browser, userArgs->geometry.w, userArgs->geometry.h - URL_BAR_HEIGHT);
 
-    app->theme = theme;
-    app->userAgent = userAgent;
-    app->backingStore = backingStore;
-    app->isFlattening = isFlattening;
+    ewk_view_uri_set(appBrowser->browser, url);
 
-    app->bg = evas_object_rectangle_add(app->evas);
-    evas_object_name_set(app->bg, "bg");
-    evas_object_color_set(app->bg, 255, 0, 255, 255);
-    evas_object_move(app->bg, 0, 0);
-    evas_object_resize(app->bg, geometry.w, geometry.h);
-    evas_object_layer_set(app->bg, EVAS_LAYER_MIN);
-    evas_object_show(app->bg);
+    evas_object_show(appBrowser->browser);
+    ecore_evas_show(appBrowser->ee);
 
-    if (backingStore && !strcasecmp(backingStore, "tiled")) {
-        app->browser = ewk_view_tiled_add(app->evas);
-        info("backing store: tiled\n");
-    } else {
-        app->browser = ewk_view_single_add(app->evas);
-        info("backing store: single\n");
-    }
-
-    ewk_view_theme_set(app->browser, theme);
-    if (userAgent)
-        ewk_view_setting_user_agent_set(app->browser, userAgent);
-    ewk_view_setting_local_storage_database_path_set(app->browser, databasePath);
-    ewk_view_setting_enable_frame_flattening_set(app->browser, isFlattening);
-    
-    evas_object_name_set(app->browser, "browser");
-
-    evas_object_smart_callback_add(app->browser, "title,changed", on_title_changed, app);
-    evas_object_smart_callback_add(app->browser, "load,progress", on_progress, app);
-    evas_object_smart_callback_add(app->browser, "load,finished", on_load_finished, app);
-    evas_object_smart_callback_add(app->browser, "load,error", on_load_error, app);
-
-    evas_object_smart_callback_add(app->browser, "toolbars,visible,set", on_toolbars_visible_set, app);
-    evas_object_smart_callback_add(app->browser, "toolbars,visible,get", on_toolbars_visible_get, app);
-    evas_object_smart_callback_add(app->browser, "statusbar,visible,set", on_statusbar_visible_set, app);
-    evas_object_smart_callback_add(app->browser, "statusbar,visible,get", on_statusbar_visible_get, app);
-    evas_object_smart_callback_add(app->browser, "scrollbars,visible,set", on_scrollbars_visible_set, app);
-    evas_object_smart_callback_add(app->browser, "scrollbars,visible,get", on_scrollbars_visible_get, app);
-    evas_object_smart_callback_add(app->browser, "menubar,visible,set", on_menubar_visible_set, app);
-    evas_object_smart_callback_add(app->browser, "menubar,visible,get", on_menubar_visible_get, app);
-    evas_object_smart_callback_add(app->browser, "tooltip,text,set", on_tooltip_text_set, app);
-    evas_object_smart_callback_add(app->browser, "inputmethod,changed", on_inputmethod_changed, app);
-
-/*     ewk_callback_resize_requested_add(app->browser, on_resize_requested, app->ee); */
-
-    evas_object_event_callback_add(app->browser, EVAS_CALLBACK_KEY_DOWN, on_key_down, app);
-    evas_object_event_callback_add(app->browser, EVAS_CALLBACK_MOUSE_DOWN, on_mouse_down, app);
-    evas_object_event_callback_add(app->browser, EVAS_CALLBACK_FOCUS_IN, on_focus_in, app);
-    evas_object_event_callback_add(app->browser, EVAS_CALLBACK_FOCUS_OUT, on_focus_out, app);
-    evas_object_event_callback_add(app->browser, EVAS_CALLBACK_DEL, on_browser_del, app);
-
-    evas_object_move(app->browser, 10, 10);
-    evas_object_resize(app->browser, geometry.w - 20, geometry.h - 20);
-
-    if (url && (url[0] != '\0'))
-        ewk_view_uri_set(app->browser, url);
-
-    evas_object_show(app->browser);
-    ecore_evas_show(app->ee);
-
-    evas_object_focus_set(app->browser, EINA_TRUE);
-
-    windows = eina_list_append(windows, app);
+    evas_object_focus_set(appBrowser->browser, EINA_TRUE);
 
     return 1;
 }
 
+static int
+webInspectorCreate(ELauncher *appBrowser)
+{
+    ELauncher *appInspector = windowCreate(appBrowser->userArgs);
+    if (!appInspector)
+        return quit(EINA_FALSE, "ERROR: could not create an inspector window\n");
+
+    ecore_evas_title_set(appInspector->ee, "Web Inspector");
+    ecore_evas_callback_resize_set(appInspector->ee, on_inspector_ecore_evas_resize);
+    ecore_evas_callback_delete_request_set(appInspector->ee, on_inspector_view_destroyed);
+
+    evas_object_name_set(appInspector->browser, "inspector");
+
+    evas_object_move(appInspector->browser, 0, 0);
+    evas_object_resize(appInspector->browser, appInspector->userArgs->geometry.w, appInspector->userArgs->geometry.h);
+
+    evas_object_show(appInspector->browser);
+    ecore_evas_show(appInspector->ee);
+
+    evas_object_focus_set(appInspector->browser, EINA_TRUE);
+
+    ewk_view_inspector_view_set(appBrowser->browser, appInspector->browser);
+
+    return 1;
+}
+
+static ELauncher *
+windowCreate(User_Arguments *userArgs)
+{
+    ELauncher *app = (ELauncher *)malloc(sizeof(ELauncher));
+    if (!app) {
+        quit(EINA_FALSE, "ERROR: could not create an ELauncher\n");
+        return NULL;
+    }
+
+#if defined(WTF_USE_ACCELERATED_COMPOSITING) && defined(HAVE_ECORE_X)
+    if (userArgs->engine)
+#endif
+        app->ee = ecore_evas_new(userArgs->engine, 0, 0, userArgs->geometry.w, userArgs->geometry.h, NULL);
+#if defined(WTF_USE_ACCELERATED_COMPOSITING) && defined(HAVE_ECORE_X)
+    else {
+        const char* engine = "opengl_x11";
+        app->ee = ecore_evas_new(engine, 0, 0, userArgs->geometry.w, userArgs->geometry.h, NULL);
+    }
+#endif
+    if (!app->ee) {
+        quit(EINA_FALSE, "ERROR: could not construct evas-ecore\n");
+        return NULL;
+    }
+
+    if (userArgs->isFullscreen)
+        ecore_evas_fullscreen_set(app->ee, EINA_TRUE);
+
+    app->evas = ecore_evas_get(app->ee);
+    if (!app->evas) {
+        quit(EINA_FALSE, "ERROR: could not get evas from evas-ecore\n");
+        return NULL;
+    }
+
+    if (userArgs->backingStore && !strcasecmp(userArgs->backingStore, "tiled")) {
+        app->browser = ewk_view_tiled_add(app->evas);
+        info("backing store: tiled");
+    } else {
+        app->browser = ewk_view_single_add(app->evas);
+        info("backing store: single");
+
+        ewk_view_setting_tiled_backing_store_enabled_set(app->browser, userArgs->enableTiledBackingStore);
+    }
+
+    ewk_view_theme_set(app->browser, themePath);
+    if (userArgs->userAgent)
+        ewk_view_setting_user_agent_set(app->browser, userArgs->userAgent);
+
+    ewk_view_setting_local_storage_database_path_set(app->browser, userArgs->databasePath);
+    ewk_view_setting_enable_frame_flattening_set(app->browser, userArgs->isFlattening);
+    ewk_view_setting_encoding_detector_set(app->browser, userArgs->enableEncodingDetector);
+
+    app->userArgs = userArgs;
+    app->url_bar = NULL;
+
+    windows = eina_list_append(windows, app);
+
+    return app;
+}
+
 static void
-browserDestroy(Ecore_Evas *ee)
+windowDestroy(Ecore_Evas *ee)
 {
     ecore_evas_free(ee);
     if (!eina_list_count(windows))
@@ -731,15 +881,14 @@ browserDestroy(Ecore_Evas *ee)
 static void
 closeWindow(Ecore_Evas *ee)
 {
-    Eina_List *l;
-    void *app;
-    EINA_LIST_FOREACH(windows, l, app)
-    {
-        if (((ELauncher*) app)->ee == ee)
-            break;
-    }
+    ELauncher *app;
+
+    app = find_app_from_ee(ee);
+    ewk_view_inspector_close(app->browser);
+
     windows = eina_list_remove(windows, app);
-    browserDestroy(ee);
+    url_bar_del(app->url_bar);
+    windowDestroy(ee);
     free(app);
 }
 
@@ -749,6 +898,8 @@ main_signal_exit(void *data, int ev_type, void *ev)
     ELauncher *app;
     while (windows) {
         app = (ELauncher*) eina_list_data_get(windows);
+        ewk_view_inspector_close(app->browser);
+
         ecore_evas_free(app->ee);
         windows = eina_list_remove(windows, app);
     }
@@ -760,14 +911,15 @@ main_signal_exit(void *data, int ev_type, void *ev)
 static char *
 findThemePath(const char *theme)
 {
-    const char *defaultTheme = DATA_DIR"/default.edj";
+    const char *default_theme = TEST_THEME_DIR "/default.edj";
     char *rpath;
     struct stat st;
 
     if (!theme)
-        theme = defaultTheme;
+        theme = default_theme;
 
     rpath = ecore_file_realpath(theme);
+
     if (!strlen(rpath) || stat(rpath, &st)) {
         free(rpath);
         return NULL;
@@ -777,82 +929,93 @@ findThemePath(const char *theme)
 }
 
 int
-main(int argc, char *argv[])
+parseUserArguments(int argc, char *argv[], User_Arguments *userArgs)
 {
-    const char *default_url = "http://www.google.com/";
-
-    Eina_Rectangle geometry = {0, 0, 0, 0};
-    char *url = NULL;
-    char *userAgent = NULL;
-    const char *tmp;
-    const char *proxyUri;
-    char path[PATH_MAX];
-
-    char *engine = NULL;
-    char *theme = NULL;
-    char *backingStore = (char *)backingStores[1];
-
-    unsigned char quitOption = 0;
-    unsigned char isFlattening = 0;
-    unsigned char isFullscreen = 0;
     int args;
 
+    userArgs->engine = NULL;
+    userArgs->quitOption = EINA_FALSE;
+    userArgs->backingStore = (char *)backingStores[1];
+    userArgs->enableEncodingDetector = EINA_FALSE;
+    userArgs->enableTiledBackingStore = EINA_FALSE;
+    userArgs->isFlattening = EINA_FALSE;
+    userArgs->isFullscreen = EINA_FALSE;
+    userArgs->geometry.x = 0;
+    userArgs->geometry.y = 0;
+    userArgs->geometry.w = 0;
+    userArgs->geometry.h = 0;
+    userArgs->theme = NULL;
+    userArgs->userAgent = NULL;
+
     Ecore_Getopt_Value values[] = {
-        ECORE_GETOPT_VALUE_STR(engine),
-        ECORE_GETOPT_VALUE_BOOL(quitOption),
-        ECORE_GETOPT_VALUE_STR(backingStore),
-        ECORE_GETOPT_VALUE_BOOL(isFlattening),
-        ECORE_GETOPT_VALUE_BOOL(isFullscreen),
-        ECORE_GETOPT_VALUE_PTR_CAST(geometry),
-        ECORE_GETOPT_VALUE_STR(theme),
-        ECORE_GETOPT_VALUE_STR(userAgent),
+        ECORE_GETOPT_VALUE_STR(userArgs->engine),
+        ECORE_GETOPT_VALUE_BOOL(userArgs->quitOption),
+        ECORE_GETOPT_VALUE_STR(userArgs->backingStore),
+        ECORE_GETOPT_VALUE_BOOL(userArgs->enableEncodingDetector),
+        ECORE_GETOPT_VALUE_BOOL(userArgs->isFlattening),
+        ECORE_GETOPT_VALUE_BOOL(userArgs->isFullscreen),
+        ECORE_GETOPT_VALUE_PTR_CAST(userArgs->geometry),
+        ECORE_GETOPT_VALUE_STR(userArgs->theme),
+        ECORE_GETOPT_VALUE_BOOL(userArgs->enableTiledBackingStore),
+        ECORE_GETOPT_VALUE_STR(userArgs->userAgent),
         ECORE_GETOPT_VALUE_INT(verbose),
-        ECORE_GETOPT_VALUE_BOOL(quitOption),
-        ECORE_GETOPT_VALUE_BOOL(quitOption),
-        ECORE_GETOPT_VALUE_BOOL(quitOption),
-        ECORE_GETOPT_VALUE_BOOL(quitOption),
+        ECORE_GETOPT_VALUE_BOOL(userArgs->quitOption),
+        ECORE_GETOPT_VALUE_BOOL(userArgs->quitOption),
+        ECORE_GETOPT_VALUE_BOOL(userArgs->quitOption),
+        ECORE_GETOPT_VALUE_BOOL(userArgs->quitOption),
         ECORE_GETOPT_VALUE_NONE
     };
-
-    if (!ecore_evas_init())
-        return EXIT_FAILURE;
-
-    if (!edje_init()) {
-        ecore_evas_shutdown();
-        return EXIT_FAILURE;
-    }
-
-    if (!ecore_file_init()) {
-        edje_shutdown();
-        ecore_evas_shutdown();
-        return EXIT_FAILURE;
-    }
 
     ecore_app_args_set(argc, (const char**) argv);
     args = ecore_getopt_parse(&options, values, argc, argv);
 
+    themePath = findThemePath(userArgs->theme);
+
+    if ((userArgs->geometry.w <= 0) || (userArgs->geometry.h <= 0)) {
+        userArgs->geometry.w = DEFAULT_WIDTH;
+        userArgs->geometry.h = DEFAULT_HEIGHT;
+    }
+
+    return args;
+}
+
+int
+main(int argc, char *argv[])
+{
+    const char *default_url = "http://www.google.com/";
+    const char *tmp;
+    const char *proxyUri;
+    char path[PATH_MAX];
+    int args;
+
+    User_Arguments userArgs;
+
+    if (!ewk_init())
+        return EXIT_FAILURE;
+
+    if (!ecore_file_init()) {
+        ewk_shutdown();
+        return EXIT_FAILURE;
+    }
+
+    args = parseUserArguments(argc, argv, &userArgs);
     if (args < 0)
        return quit(EINA_FALSE, "ERROR: could not parse options.\n");
 
-    if (quitOption)
+    if (userArgs.quitOption)
         return quit(EINA_TRUE, NULL);
 
-    if (args < argc)
-        url = argv[args];
-    else
-        url = (char*) default_url;
-
-    themePath = findThemePath(theme);
     if (!themePath)
         return quit(EINA_FALSE, "ERROR: could not find theme.\n");
 
-    ewk_init();
     tmp = getenv("TMPDIR");
     if (!tmp)
         tmp = "/tmp";
     snprintf(path, sizeof(path), "%s/.ewebkit-%u", tmp, getuid());
     if (!ecore_file_mkpath(path))
         return quit(EINA_FALSE, "ERROR: could not create settings database directory.\n");
+
+    userArgs.databasePath = path;
 
     ewk_settings_icon_database_path_set(path);
     ewk_settings_web_database_path_set(path);
@@ -861,11 +1024,18 @@ main(int argc, char *argv[])
     if (proxyUri)
         ewk_network_proxy_uri_set(proxyUri);
 
-    browserCreate(url, themePath, userAgent, geometry, engine, backingStore, isFlattening, isFullscreen, path);
+    if (args < argc) {
+        char *url = url_from_user_input(argv[args]);
+        browserCreate(url, &userArgs);
+        free(url);
+    } else
+        browserCreate(default_url, &userArgs);
+
     ecore_event_handler_add(ECORE_EVENT_SIGNAL_EXIT, main_signal_exit, &windows);
 
     ecore_main_loop_begin();
 
+    ecore_file_shutdown();
     ewk_shutdown();
 
     return quit(EINA_TRUE, NULL);

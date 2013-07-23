@@ -32,6 +32,7 @@ namespace WebCore {
 
 TransformState& TransformState::operator=(const TransformState& other)
 {
+    m_accumulatedOffset = other.m_accumulatedOffset;
     m_mapPoint = other.m_mapPoint;
     m_mapQuad = other.m_mapQuad;
     if (m_mapPoint)
@@ -49,40 +50,74 @@ TransformState& TransformState::operator=(const TransformState& other)
     return *this;
 }
 
-void TransformState::move(LayoutUnit x, LayoutUnit y, TransformAccumulation accumulate)
+void TransformState::translateTransform(const LayoutSize& offset)
 {
+    if (m_direction == ApplyTransformDirection)
+        m_accumulatedTransform->translateRight(offset.width(), offset.height());
+    else
+        m_accumulatedTransform->translate(offset.width(), offset.height());
+}
+
+void TransformState::translateMappedCoordinates(const LayoutSize& offset)
+{
+    LayoutSize adjustedOffset = (m_direction == ApplyTransformDirection) ? offset : -offset;
+    if (m_mapPoint)
+        m_lastPlanarPoint.move(adjustedOffset);
+    if (m_mapQuad)
+        m_lastPlanarQuad.move(adjustedOffset);
+}
+
+void TransformState::move(const LayoutSize& offset, TransformAccumulation accumulate)
+{
+    if (accumulate == FlattenTransform && !m_accumulatedTransform)
+        m_accumulatedOffset += offset;
+    else {
+        applyAccumulatedOffset();
     if (m_accumulatingTransform && m_accumulatedTransform) {
         // If we're accumulating into an existing transform, apply the translation.
-        if (m_direction == ApplyTransformDirection)
-            m_accumulatedTransform->translateRight(x, y);
-        else
-            m_accumulatedTransform->translate(x, y);
+            translateTransform(offset);
         
         // Then flatten if necessary.
         if (accumulate == FlattenTransform)
             flatten();
-    } else {
-        // Just move the point and, optionally, the quad.
-        if (m_direction == UnapplyInverseTransformDirection) {
-            x = -x;
-            y = -y;
-        }
-        if (m_mapPoint)
-            m_lastPlanarPoint.move(x, y);
-        if (m_mapQuad)
-            m_lastPlanarQuad.move(x, y);
+        } else
+            // Just move the point and/or quad.
+            translateMappedCoordinates(offset);
     }
     m_accumulatingTransform = accumulate == AccumulateTransform;
 }
 
-// FIXME: We transform AffineTransform to TransformationMatrix. This is rather inefficient.
-void TransformState::applyTransform(const AffineTransform& transformFromContainer, TransformAccumulation accumulate)
+void TransformState::applyAccumulatedOffset()
 {
-    applyTransform(transformFromContainer.toTransformationMatrix(), accumulate);
+    LayoutSize offset = m_accumulatedOffset;
+    m_accumulatedOffset = LayoutSize();
+    if (!offset.isZero()) {
+        if (m_accumulatedTransform) {
+            translateTransform(offset);
+            flatten();
+        } else
+            translateMappedCoordinates(offset);
+    }
 }
 
-void TransformState::applyTransform(const TransformationMatrix& transformFromContainer, TransformAccumulation accumulate)
+// FIXME: We transform AffineTransform to TransformationMatrix. This is rather inefficient.
+void TransformState::applyTransform(const AffineTransform& transformFromContainer, TransformAccumulation accumulate, bool* wasClamped)
 {
+    applyTransform(transformFromContainer.toTransformationMatrix(), accumulate, wasClamped);
+}
+
+void TransformState::applyTransform(const TransformationMatrix& transformFromContainer, TransformAccumulation accumulate, bool* wasClamped)
+{
+    if (wasClamped)
+        *wasClamped = false;
+
+    if (transformFromContainer.isIntegerTranslation()) {
+        move(LayoutSize(transformFromContainer.e(), transformFromContainer.f()), accumulate);
+        return;
+    }
+
+    applyAccumulatedOffset();
+
     // If we have an accumulated transform from last time, multiply in this transform
     if (m_accumulatedTransform) {
         if (m_direction == ApplyTransformDirection)
@@ -96,44 +131,59 @@ void TransformState::applyTransform(const TransformationMatrix& transformFromCon
     
     if (accumulate == FlattenTransform) {
         const TransformationMatrix* finalTransform = m_accumulatedTransform ? m_accumulatedTransform.get() : &transformFromContainer;
-        flattenWithTransform(*finalTransform);
+        flattenWithTransform(*finalTransform, wasClamped);
     }
     m_accumulatingTransform = accumulate == AccumulateTransform;
 }
 
-void TransformState::flatten()
+void TransformState::flatten(bool* wasClamped)
 {
+    if (wasClamped)
+        *wasClamped = false;
+
+    applyAccumulatedOffset();
+
     if (!m_accumulatedTransform) {
         m_accumulatingTransform = false;
         return;
     }
     
-    flattenWithTransform(*m_accumulatedTransform);
+    flattenWithTransform(*m_accumulatedTransform, wasClamped);
 }
 
-FloatPoint TransformState::mappedPoint() const
+FloatPoint TransformState::mappedPoint(bool* wasClamped) const
 {
+    if (wasClamped)
+        *wasClamped = false;
+
+    FloatPoint point = m_lastPlanarPoint;
+    point.move((m_direction == ApplyTransformDirection) ? m_accumulatedOffset : -m_accumulatedOffset);
     if (!m_accumulatedTransform)
-        return m_lastPlanarPoint;
+        return point;
 
     if (m_direction == ApplyTransformDirection)
-        return m_accumulatedTransform->mapPoint(m_lastPlanarPoint);
+        return m_accumulatedTransform->mapPoint(point);
 
-    return m_accumulatedTransform->inverse().projectPoint(m_lastPlanarPoint);
+    return m_accumulatedTransform->inverse().projectPoint(point, wasClamped);
 }
 
-FloatQuad TransformState::mappedQuad() const
+FloatQuad TransformState::mappedQuad(bool* wasClamped) const
 {
+    if (wasClamped)
+        *wasClamped = false;
+
+    FloatQuad quad = m_lastPlanarQuad;
+    quad.move((m_direction == ApplyTransformDirection) ? m_accumulatedOffset : -m_accumulatedOffset);
     if (!m_accumulatedTransform)
-        return m_lastPlanarQuad;
+        return quad;
 
     if (m_direction == ApplyTransformDirection)
-        return m_accumulatedTransform->mapQuad(m_lastPlanarQuad);
+        return m_accumulatedTransform->mapQuad(quad);
 
-    return m_accumulatedTransform->inverse().projectQuad(m_lastPlanarQuad);
+    return m_accumulatedTransform->inverse().projectQuad(quad, wasClamped);
 }
 
-void TransformState::flattenWithTransform(const TransformationMatrix& t)
+void TransformState::flattenWithTransform(const TransformationMatrix& t, bool* wasClamped)
 {
     if (m_direction == ApplyTransformDirection) {
         if (m_mapPoint)
@@ -145,7 +195,7 @@ void TransformState::flattenWithTransform(const TransformationMatrix& t)
         if (m_mapPoint)
             m_lastPlanarPoint = inverseTransform.projectPoint(m_lastPlanarPoint);
         if (m_mapQuad)
-            m_lastPlanarQuad = inverseTransform.projectQuad(m_lastPlanarQuad);
+            m_lastPlanarQuad = inverseTransform.projectQuad(m_lastPlanarQuad, wasClamped);
     }
 
     // We could throw away m_accumulatedTransform if we wanted to here, but that

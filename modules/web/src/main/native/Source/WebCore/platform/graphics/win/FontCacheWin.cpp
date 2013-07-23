@@ -54,7 +54,7 @@ void FontCache::platformInit()
 #endif
 }
 
-IMLangFontLink2* FontCache::getFontLinkInterface()
+IMLangFontLinkType* FontCache::getFontLinkInterface()
 {
     static IMultiLanguage *multiLanguage;
     if (!multiLanguage) {
@@ -62,7 +62,7 @@ IMLangFontLink2* FontCache::getFontLinkInterface()
             return 0;
     }
 
-    static IMLangFontLink2* langFontLink;
+    static IMLangFontLinkType* langFontLink;
     if (!langFontLink) {
         if (multiLanguage->QueryInterface(&langFontLink) != S_OK)
             return 0;
@@ -136,7 +136,7 @@ static const Vector<DWORD, 4>& getCJKCodePageMasks()
     static bool initialized;
     if (!initialized) {
         initialized = true;
-        IMLangFontLink2* langFontLink = fontCache()->getFontLinkInterface();
+        IMLangFontLinkType* langFontLink = fontCache()->getFontLinkInterface();
         if (!langFontLink)
             return codePageMasks;
 
@@ -173,7 +173,7 @@ static bool currentFontContainsCharacter(HDC hdc, UChar character)
     return i && glyphset->ranges[i - 1].wcLow + glyphset->ranges[i - 1].cGlyphs > character;
 }
 
-static HFONT createMLangFont(IMLangFontLink2* langFontLink, HDC hdc, DWORD codePageMask, UChar character = 0)
+static HFONT createMLangFont(IMLangFontLinkType* langFontLink, HDC hdc, DWORD codePageMask, UChar character = 0)
 {
     HFONT MLangFont;
     HFONT hfont = 0;
@@ -186,16 +186,16 @@ static HFONT createMLangFont(IMLangFontLink2* langFontLink, HDC hdc, DWORD codeP
     return hfont;
 }
 
-const SimpleFontData* FontCache::getFontDataForCharacters(const Font& font, const UChar* characters, int length)
+PassRefPtr<SimpleFontData> FontCache::systemFallbackForCharacters(const FontDescription& description, const SimpleFontData* originalFontData, bool, const UChar* characters, int length)
 {
     UChar character = characters[0];
-    SimpleFontData* fontData = 0;
+    RefPtr<SimpleFontData> fontData;
     HWndDC hdc(0);
-    HFONT primaryFont = font.primaryFont()->fontDataForCharacter(character)->platformData().hfont();
+    HFONT primaryFont = originalFontData->platformData().hfont();
     HGDIOBJ oldFont = SelectObject(hdc, primaryFont);
     HFONT hfont = 0;
 
-    if (IMLangFontLink2* langFontLink = getFontLinkInterface()) {
+    if (IMLangFontLinkType* langFontLink = getFontLinkInterface()) {
         // Try MLang font linking first.
         DWORD codePages = 0;
         langFontLink->GetCharCodePages(character, &codePages);
@@ -284,7 +284,7 @@ const SimpleFontData* FontCache::getFontDataForCharacters(const Font& font, cons
 
     if (hfont) {
         if (!familyName.isEmpty()) {
-            FontPlatformData* result = getCachedFontPlatformData(font.fontDescription(), familyName);
+            FontPlatformData* result = getCachedFontPlatformData(description, familyName);
             if (result)
                 fontData = getCachedFontData(result, DoNotRetain);
         }
@@ -293,24 +293,19 @@ const SimpleFontData* FontCache::getFontDataForCharacters(const Font& font, cons
         DeleteObject(hfont);
     }
 
-    return fontData;
+    return fontData.release();
 }
 
-SimpleFontData* FontCache::getSimilarFontPlatformData(const Font& font)
-{
-    return 0;
-}
-
-SimpleFontData* FontCache::fontDataFromDescriptionAndLogFont(const FontDescription& fontDescription, ShouldRetain shouldRetain, const LOGFONT& font, AtomicString& outFontFamilyName)
+PassRefPtr<SimpleFontData> FontCache::fontDataFromDescriptionAndLogFont(const FontDescription& fontDescription, ShouldRetain shouldRetain, const LOGFONT& font, AtomicString& outFontFamilyName)
 {
     AtomicString familyName = String(font.lfFaceName, wcsnlen(font.lfFaceName, LF_FACESIZE));
-    SimpleFontData* fontData = getCachedFontData(fontDescription, familyName, false, shouldRetain);
+    RefPtr<SimpleFontData> fontData = getCachedFontData(fontDescription, familyName, false, shouldRetain);
     if (fontData)
         outFontFamilyName = familyName;
-    return fontData;
+    return fontData.release();
 }
 
-SimpleFontData* FontCache::getLastResortFallbackFont(const FontDescription& fontDescription, ShouldRetain shouldRetain)
+PassRefPtr<SimpleFontData> FontCache::getLastResortFallbackFont(const FontDescription& fontDescription, ShouldRetain shouldRetain)
 {
     DEFINE_STATIC_LOCAL(AtomicString, fallbackFontName, ());
     if (!fallbackFontName.isEmpty())
@@ -323,17 +318,17 @@ SimpleFontData* FontCache::getLastResortFallbackFont(const FontDescription& font
     // Sorted by most to least glyphs according to http://en.wikipedia.org/wiki/Unicode_typefaces
     // Start with Times New Roman also since it is the default if the user doesn't change prefs.
     static AtomicString fallbackFonts[] = {
-        AtomicString("Times New Roman"),
-        AtomicString("Microsoft Sans Serif"),
-        AtomicString("Tahoma"),
-        AtomicString("Lucida Sans Unicode"),
-        AtomicString("Arial")
+        AtomicString("Times New Roman", AtomicString::ConstructFromLiteral),
+        AtomicString("Microsoft Sans Serif", AtomicString::ConstructFromLiteral),
+        AtomicString("Tahoma", AtomicString::ConstructFromLiteral),
+        AtomicString("Lucida Sans Unicode", AtomicString::ConstructFromLiteral),
+        AtomicString("Arial", AtomicString::ConstructFromLiteral)
     };
-    SimpleFontData* simpleFont;
+    RefPtr<SimpleFontData> simpleFont;
     for (size_t i = 0; i < WTF_ARRAY_LENGTH(fallbackFonts); ++i) {
-        if (simpleFont = getCachedFontData(fontDescription, fallbackFonts[i]), false, shouldRetain) {
+        if (simpleFont = getCachedFontData(fontDescription, fallbackFonts[i], false, shouldRetain)) {
             fallbackFontName = fallbackFonts[i];
-            return simpleFont;
+            return simpleFont.release();
         }
     }
 
@@ -342,7 +337,7 @@ SimpleFontData* FontCache::getLastResortFallbackFont(const FontDescription& font
         LOGFONT defaultGUILogFont;
         GetObject(defaultGUIFont, sizeof(defaultGUILogFont), &defaultGUILogFont);
         if (simpleFont = fontDataFromDescriptionAndLogFont(fontDescription, shouldRetain, defaultGUILogFont, fallbackFontName))
-            return simpleFont;
+            return simpleFont.release();
     }
 
     // Fall back to Non-client metrics fonts.
@@ -350,15 +345,15 @@ SimpleFontData* FontCache::getLastResortFallbackFont(const FontDescription& font
     nonClientMetrics.cbSize = sizeof(nonClientMetrics);
     if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(nonClientMetrics), &nonClientMetrics, 0)) {
         if (simpleFont = fontDataFromDescriptionAndLogFont(fontDescription, shouldRetain, nonClientMetrics.lfMessageFont, fallbackFontName))
-            return simpleFont;
+            return simpleFont.release();
         if (simpleFont = fontDataFromDescriptionAndLogFont(fontDescription, shouldRetain, nonClientMetrics.lfMenuFont, fallbackFontName))
-            return simpleFont;
+            return simpleFont.release();
         if (simpleFont = fontDataFromDescriptionAndLogFont(fontDescription, shouldRetain, nonClientMetrics.lfStatusFont, fallbackFontName))
-            return simpleFont;
+            return simpleFont.release();
         if (simpleFont = fontDataFromDescriptionAndLogFont(fontDescription, shouldRetain, nonClientMetrics.lfCaptionFont, fallbackFontName))
-            return simpleFont;
+            return simpleFont.release();
         if (simpleFont = fontDataFromDescriptionAndLogFont(fontDescription, shouldRetain, nonClientMetrics.lfSmCaptionFont, fallbackFontName))
-            return simpleFont;
+            return simpleFont.release();
     }
     
     ASSERT_NOT_REACHED();
@@ -545,7 +540,7 @@ void FontCache::getTraitsInFamily(const AtomicString& familyName, Vector<unsigne
     copyToVector(procData.m_traitsMasks, traitsMasks);
 }
 
-FontPlatformData* FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
+PassOwnPtr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
 {
     bool isLucidaGrande = false;
     static AtomicString lucidaStr("Lucida Grande");
@@ -563,7 +558,7 @@ FontPlatformData* FontCache::createFontPlatformData(const FontDescription& fontD
                                 fontDescription.computedPixelSize() * (useGDI ? 1 : 32), useGDI);
 
     if (!hfont)
-        return 0;
+        return nullptr;
 
     if (isLucidaGrande)
         useGDI = false; // Never use GDI for Lucida Grande.
@@ -588,10 +583,10 @@ FontPlatformData* FontCache::createFontPlatformData(const FontDescription& fontD
         // font.
         delete result;
         DeleteObject(hfont);
-        return 0;
+        return nullptr;
     }        
 
-    return result;
+    return adoptPtr(result);
 }
 
 }

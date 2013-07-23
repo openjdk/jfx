@@ -30,8 +30,9 @@
 #if ENABLE(INDEXED_DATABASE)
 
 #include "IDBBackingStore.h"
-#include "IDBCursor.h"
 #include "IDBCursorBackendInterface.h"
+#include "IDBTransactionBackendImpl.h"
+#include "SharedBuffer.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
@@ -39,45 +40,48 @@
 namespace WebCore {
 
 class IDBDatabaseBackendImpl;
-class IDBIndexBackendImpl;
 class IDBKeyRange;
-class IDBObjectStoreBackendInterface;
-class IDBTransactionBackendInterface;
-class SerializedScriptValue;
 
 class IDBCursorBackendImpl : public IDBCursorBackendInterface {
 public:
-    static PassRefPtr<IDBCursorBackendImpl> create(PassRefPtr<IDBBackingStore::Cursor> cursor, IDBCursor::Direction direction, CursorType cursorType, IDBTransactionBackendInterface* transaction, IDBObjectStoreBackendInterface* objectStore)
+    static PassRefPtr<IDBCursorBackendImpl> create(PassRefPtr<IDBBackingStore::Cursor> cursor, IndexedDB::CursorType cursorType, IDBTransactionBackendImpl* transaction, int64_t objectStoreId)
     {
-        return adoptRef(new IDBCursorBackendImpl(cursor, direction, cursorType, transaction, objectStore));
+        return adoptRef(new IDBCursorBackendImpl(cursor, cursorType, IDBDatabaseBackendInterface::NormalTask, transaction, objectStoreId));
+    }
+    static PassRefPtr<IDBCursorBackendImpl> create(PassRefPtr<IDBBackingStore::Cursor> cursor, IndexedDB::CursorType cursorType, IDBDatabaseBackendInterface::TaskType taskType, IDBTransactionBackendImpl* transaction, int64_t objectStoreId)
+    {
+        return adoptRef(new IDBCursorBackendImpl(cursor, cursorType, taskType, transaction, objectStoreId));
     }
     virtual ~IDBCursorBackendImpl();
 
-    virtual PassRefPtr<IDBKey> key() const;
-    virtual PassRefPtr<IDBKey> primaryKey() const;
-    virtual PassRefPtr<SerializedScriptValue> value() const;
-    virtual void update(PassRefPtr<SerializedScriptValue>, PassRefPtr<IDBCallbacks>, ExceptionCode&);
+    // IDBCursorBackendInterface
     virtual void advance(unsigned long, PassRefPtr<IDBCallbacks>, ExceptionCode&);
     virtual void continueFunction(PassRefPtr<IDBKey>, PassRefPtr<IDBCallbacks>, ExceptionCode&);
     virtual void deleteFunction(PassRefPtr<IDBCallbacks>, ExceptionCode&);
     virtual void prefetchContinue(int numberToFetch, PassRefPtr<IDBCallbacks>, ExceptionCode&);
     virtual void prefetchReset(int usedPrefetches, int unusedPrefetches);
+    virtual void postSuccessHandlerCallback() { }
+
+    PassRefPtr<IDBKey> key() const { return m_cursor->key(); }
+    PassRefPtr<IDBKey> primaryKey() const { return m_cursor->primaryKey(); }
+    PassRefPtr<SharedBuffer> value() const { return (m_cursorType == IndexedDB::CursorKeyOnly) ? 0 : m_cursor->value(); }
     void close();
-    virtual void postSuccessHandlerCallback() { ASSERT_NOT_REACHED(); }
 
 private:
-    IDBCursorBackendImpl(PassRefPtr<IDBBackingStore::Cursor>, IDBCursor::Direction, CursorType, IDBTransactionBackendInterface*, IDBObjectStoreBackendInterface*);
+    IDBCursorBackendImpl(PassRefPtr<IDBBackingStore::Cursor>, IndexedDB::CursorType, IDBDatabaseBackendInterface::TaskType, IDBTransactionBackendImpl*, int64_t objectStoreId);
 
-    static void advanceInternal(ScriptExecutionContext*, PassRefPtr<IDBCursorBackendImpl>, unsigned long, PassRefPtr<IDBCallbacks>);
-    static void continueFunctionInternal(ScriptExecutionContext*, PassRefPtr<IDBCursorBackendImpl>, PassRefPtr<IDBKey>, PassRefPtr<IDBCallbacks>);
-    static void prefetchContinueInternal(ScriptExecutionContext*, PassRefPtr<IDBCursorBackendImpl>, int numberToFetch, PassRefPtr<IDBCallbacks>);
+    class CursorIterationOperation;
+    class CursorAdvanceOperation;
+    class CursorPrefetchIterationOperation;
 
-    RefPtr<IDBBackingStore::Cursor> m_cursor;
-    RefPtr<IDBBackingStore::Cursor> m_savedCursor;
-    IDBCursor::Direction m_direction;
-    CursorType m_cursorType;
-    RefPtr<IDBTransactionBackendInterface> m_transaction;
-    RefPtr<IDBObjectStoreBackendInterface> m_objectStore;
+    IDBDatabaseBackendInterface::TaskType m_taskType;
+    IndexedDB::CursorType m_cursorType;
+    const RefPtr<IDBDatabaseBackendImpl> m_database;
+    const RefPtr<IDBTransactionBackendImpl> m_transaction;
+    const int64_t m_objectStoreId;
+
+    RefPtr<IDBBackingStore::Cursor> m_cursor; // Must be destroyed before m_transaction.
+    RefPtr<IDBBackingStore::Cursor> m_savedCursor; // Must be destroyed before m_transaction.
     
     bool m_closed;
 };

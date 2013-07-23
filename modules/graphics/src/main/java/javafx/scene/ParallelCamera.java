@@ -29,9 +29,8 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGParallelCamera;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGParallelCamera;
 
 /**
  * Specifies a parallel camera for rendering a scene without perspective correction. 
@@ -63,11 +62,11 @@ public class ParallelCamera extends Camera {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        PGParallelCamera pgCamera = Toolkit.getToolkit().createPGParallelCamera();
-        pgCamera.setNearClip((float) getNearClip());
-        pgCamera.setFarClip((float) getFarClip());
-        return pgCamera;
+    protected NGNode impl_createPeer() {
+        final NGParallelCamera peer = new NGParallelCamera();
+        peer.setNearClip((float) getNearClip());
+        peer.setFarClip((float) getFarClip());
+        return peer;
     }
 
     @Override

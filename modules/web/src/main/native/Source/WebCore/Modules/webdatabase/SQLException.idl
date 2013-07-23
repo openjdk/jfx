@@ -28,13 +28,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-
-    exception [
+[
         Conditional=SQL_DATABASE,
         JSNoStaticTables,
-        DoNotCheckConstants
-    ] SQLException {
+    DoNotCheckConstants,
+    ImplementationLacksVTable
+] exception SQLException {
         readonly attribute unsigned long code;
         readonly attribute DOMString message;
 
@@ -48,4 +47,3 @@ module storage {
         const unsigned short CONSTRAINT_ERR = 6;
         const unsigned short TIMEOUT_ERR = 7;
     };
-}

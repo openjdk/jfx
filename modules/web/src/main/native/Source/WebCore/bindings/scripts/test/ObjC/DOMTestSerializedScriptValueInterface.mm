@@ -32,19 +32,15 @@
 
 #import "DOMTestSerializedScriptValueInterface.h"
 
-#import "Array.h"
-#import "DOMArrayInternal.h"
 #import "DOMBlobInternal.h"
 #import "DOMCSSRuleInternal.h"
 #import "DOMCSSValueInternal.h"
 #import "DOMEventInternal.h"
-#import "DOMMessagePortArrayInternal.h"
 #import "DOMNodeInternal.h"
 #import "DOMStyleSheetInternal.h"
 #import "DOMTestSerializedScriptValueInterfaceInternal.h"
 #import "ExceptionHandlers.h"
 #import "JSMainThreadExecState.h"
-#import "MessagePortArray.h"
 #import "SerializedScriptValue.h"
 #import "TestSerializedScriptValueInterface.h"
 #import "ThreadCheck.h"
@@ -107,28 +103,10 @@
     IMPL->setCachedValue(WebCore::SerializedScriptValue::create(WTF::String(newCachedValue)));
 }
 
-- (DOMMessagePortArray *)ports
-{
-    WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(IMPL->ports()));
-}
-
 - (NSString *)cachedReadonlyValue
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->cachedReadonlyValue()->toString();
-}
-
-- (void)acceptTransferList:(NSString *)data transferList:(DOMArray *)transferList
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->acceptTransferList(WebCore::SerializedScriptValue::create(WTF::String(data)), core(transferList));
-}
-
-- (void)multiTransferList:(NSString *)first tx:(DOMArray *)tx second:(NSString *)second txx:(DOMArray *)txx
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->multiTransferList(WebCore::SerializedScriptValue::create(WTF::String(first)), core(tx), WebCore::SerializedScriptValue::create(WTF::String(second)), core(txx));
 }
 
 @end

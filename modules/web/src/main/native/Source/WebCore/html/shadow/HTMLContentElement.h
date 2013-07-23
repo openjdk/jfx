@@ -31,30 +31,69 @@
 #ifndef HTMLContentElement_h
 #define HTMLContentElement_h
 
+#include "CSSSelectorList.h"
 #include "InsertionPoint.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
-class HTMLContentElement : public InsertionPoint {
+#if ENABLE(SHADOW_DOM)
+
+class HTMLContentElement FINAL : public InsertionPoint {
 public:
+    static const QualifiedName& contentTagName(Document*);
     static PassRefPtr<HTMLContentElement> create(const QualifiedName&, Document*);
     static PassRefPtr<HTMLContentElement> create(Document*);
 
     virtual ~HTMLContentElement();
 
-    const AtomicString& select() const;
     void setSelect(const AtomicString&);
-    virtual bool isSelectValid() const;
+    const AtomicString& select() const;
 
-    bool doesSelectFromHostChildren() const { return true; }
+    virtual MatchType matchTypeFor(Node*) OVERRIDE;
+    virtual const CSSSelectorList& selectorList() OVERRIDE;
+    virtual Type insertionPointType() const OVERRIDE { return HTMLContentElementType; }
+    virtual bool canAffectSelector() const OVERRIDE { return true; }
+    virtual bool isSelectValid();
 
 protected:
     HTMLContentElement(const QualifiedName&, Document*);
 
 private:
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    void ensureSelectParsed();
+    bool validateSelect() const;
+
+    bool m_shouldParseSelectorList;
+    bool m_isValidSelector;
+    CSSSelectorList m_selectorList;
 };
+
+inline void HTMLContentElement::setSelect(const AtomicString& selectValue)
+{
+    setAttribute(HTMLNames::selectAttr, selectValue);
+    m_shouldParseSelectorList = true;
+}
+
+inline const CSSSelectorList& HTMLContentElement::selectorList()
+{
+    ensureSelectParsed();
+    return m_selectorList;
+}
+
+inline bool isHTMLContentElement(const Node* node)
+{
+    ASSERT(node);
+    return node->isInsertionPoint() && toInsertionPoint(node)->insertionPointType() == InsertionPoint::HTMLContentElementType;
+}
+
+inline HTMLContentElement* toHTMLContentElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLContentElement(node));
+    return static_cast<HTMLContentElement*>(node);
+}
+
+#endif // if ENABLE(SHADOW_DOM)
 
 }
 

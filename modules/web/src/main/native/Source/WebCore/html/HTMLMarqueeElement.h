@@ -30,7 +30,7 @@ namespace WebCore {
 
 class RenderMarquee;
 
-class HTMLMarqueeElement : public HTMLElement, private ActiveDOMObject {
+class HTMLMarqueeElement FINAL : public HTMLElement, private ActiveDOMObject {
 public:
     static PassRefPtr<HTMLMarqueeElement> create(const QualifiedName&, Document*);
 
@@ -54,7 +54,7 @@ private:
     HTMLMarqueeElement(const QualifiedName&, Document*);
 
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
     // ActiveDOMObject
     virtual bool canSuspend() const;

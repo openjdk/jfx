@@ -33,6 +33,7 @@ use strict;
 use File::Path;
 use File::Basename;
 use Getopt::Long;
+use Text::ParseWords;
 use Cwd;
 
 use IDLParser;
@@ -49,7 +50,8 @@ my $preprocessor;
 my $writeDependencies;
 my $verbose;
 my $supplementalDependencyFile;
-my $additionalIdlFilesList;
+my $additionalIdlFiles;
+my $idlAttributesFile;
 
 GetOptions('include=s@' => \@idlDirectories,
            'outputDir=s' => \$outputDirectory,
@@ -62,7 +64,8 @@ GetOptions('include=s@' => \@idlDirectories,
            'verbose' => \$verbose,
            'write-dependencies' => \$writeDependencies,
            'supplementalDependencyFile=s' => \$supplementalDependencyFile,
-           'additionalIdlFilesList=s' => \$additionalIdlFilesList);
+           'additionalIdlFiles=s' => \$additionalIdlFiles,
+           'idlAttributesFile=s' => \$idlAttributesFile);
 
 my $targetIdlFile = $ARGV[0];
 
@@ -102,19 +105,12 @@ if ($supplementalDependencyFile) {
     }
     close FH;
 
-    # The file $additionalIdlFilesList contains one IDL file per line:
-    # P.idl
-    # Q.idl
-    # ...
-    # These IDL files are ones which should not be included in DerivedSources*.cpp
-    # (i.e. they are not described in the supplemental dependency file)
-    # but should generate .h and .cpp files.
-    if (!$idlFound and $additionalIdlFilesList) {
-        open FH, "< $additionalIdlFilesList" or die "Cannot open $additionalIdlFilesList\n";
-        my @idlFiles = <FH>;
-        chomp(@idlFiles);
+    # $additionalIdlFiles is list of IDL files which should not be included in
+    # DerivedSources*.cpp (i.e. they are not described in the supplemental
+    # dependency file) but should generate .h and .cpp files.
+    if (!$idlFound and $additionalIdlFiles) {
+        my @idlFiles = shellwords($additionalIdlFiles);
         $idlFound = grep { $_ and basename($_) eq basename($targetIdlFile) } @idlFiles;
-        close FH;
     }
 
     if (!$idlFound) {
@@ -130,6 +126,11 @@ if ($supplementalDependencyFile) {
 my $targetParser = IDLParser->new(!$verbose);
 my $targetDocument = $targetParser->Parse($targetIdlFile, $defines, $preprocessor);
 
+if ($idlAttributesFile) {
+    my $idlAttributes = loadIDLAttributes($idlAttributesFile);
+    checkIDLAttributes($idlAttributes, $targetDocument, basename($targetIdlFile));
+}
+
 foreach my $idlFile (@supplementedIdlFiles) {
     next if $idlFile eq $targetIdlFile;
 
@@ -137,61 +138,60 @@ foreach my $idlFile (@supplementedIdlFiles) {
     my $parser = IDLParser->new(!$verbose);
     my $document = $parser->Parse($idlFile, $defines, $preprocessor);
 
-    foreach my $dataNode (@{$document->classes}) {
-        if ($dataNode->extendedAttributes->{"Supplemental"} and $dataNode->extendedAttributes->{"Supplemental"} eq $targetInterfaceName) {
+    foreach my $interface (@{$document->interfaces}) {
+        if ($interface->isPartial and $interface->name eq $targetInterfaceName) {
             my $targetDataNode;
-            foreach my $class (@{$targetDocument->classes}) {
-                if ($class->name eq $targetInterfaceName) {
-                    $targetDataNode = $class;
+            foreach my $interface (@{$targetDocument->interfaces}) {
+                if ($interface->name eq $targetInterfaceName) {
+                    $targetDataNode = $interface;
                     last;
                 }
             }
             die "Not found an interface ${targetInterfaceName} in ${targetInterfaceName}.idl." unless defined $targetDataNode;
 
-            # Support [Supplemental] for attributes.
-            foreach my $attribute (@{$dataNode->attributes}) {
+            # Support for attributes of partial interfaces.
+            foreach my $attribute (@{$interface->attributes}) {
                 # Record that this attribute is implemented by $interfaceName.
                 $attribute->signature->extendedAttributes->{"ImplementedBy"} = $interfaceName;
 
                 # Add interface-wide extended attributes to each attribute.
-                foreach my $extendedAttributeName (keys %{$dataNode->extendedAttributes}) {
-                    next if ($extendedAttributeName eq "Supplemental");
-                    $attribute->signature->extendedAttributes->{$extendedAttributeName} = $dataNode->extendedAttributes->{$extendedAttributeName};
+                foreach my $extendedAttributeName (keys %{$interface->extendedAttributes}) {
+                    $attribute->signature->extendedAttributes->{$extendedAttributeName} = $interface->extendedAttributes->{$extendedAttributeName};
                 }
                 push(@{$targetDataNode->attributes}, $attribute);
             }
 
-            # Support [Supplemental] for methods.
-            foreach my $function (@{$dataNode->functions}) {
+            # Support for methods of partial interfaces.
+            foreach my $function (@{$interface->functions}) {
                 # Record that this method is implemented by $interfaceName.
                 $function->signature->extendedAttributes->{"ImplementedBy"} = $interfaceName;
 
                 # Add interface-wide extended attributes to each method.
-                foreach my $extendedAttributeName (keys %{$dataNode->extendedAttributes}) {
-                    next if ($extendedAttributeName eq "Supplemental");
-                    $function->signature->extendedAttributes->{$extendedAttributeName} = $dataNode->extendedAttributes->{$extendedAttributeName};
+                foreach my $extendedAttributeName (keys %{$interface->extendedAttributes}) {
+                    $function->signature->extendedAttributes->{$extendedAttributeName} = $interface->extendedAttributes->{$extendedAttributeName};
                 }
                 push(@{$targetDataNode->functions}, $function);
             }
 
-            # Support [Supplemental] for constants.
-            foreach my $constant (@{$dataNode->constants}) {
+            # Support for constants of partial interfaces.
+            foreach my $constant (@{$interface->constants}) {
                 # Record that this constant is implemented by $interfaceName.
                 $constant->extendedAttributes->{"ImplementedBy"} = $interfaceName;
 
                 # Add interface-wide extended attributes to each constant.
-                foreach my $extendedAttributeName (keys %{$dataNode->extendedAttributes}) {
-                    next if ($extendedAttributeName eq "Supplemental");
-                    $constant->extendedAttributes->{$extendedAttributeName} = $dataNode->extendedAttributes->{$extendedAttributeName};
+                foreach my $extendedAttributeName (keys %{$interface->extendedAttributes}) {
+                    $constant->extendedAttributes->{$extendedAttributeName} = $interface->extendedAttributes->{$extendedAttributeName};
                 }
                 push(@{$targetDataNode->constants}, $constant);
             }
+        } else {
+            die "$idlFile is not a supplemental dependency of $targetIdlFile. There maybe a bug in the the supplemental dependency generator (preprocess-idls.pl).\n";
         }
     }
 }
 
 # Generate desired output for the target IDL file.
-my $codeGen = CodeGenerator->new(\@idlDirectories, $generator, $outputDirectory, $outputHeadersDirectory, 0, $preprocessor, $writeDependencies, $verbose);
+my $codeGen = CodeGenerator->new(\@idlDirectories, $generator, $outputDirectory, $outputHeadersDirectory, 0, $preprocessor, $writeDependencies, $verbose, $targetIdlFile);
 $codeGen->ProcessDocument($targetDocument, $defines);
 
 sub generateEmptyHeaderAndCpp
@@ -214,4 +214,87 @@ sub generateEmptyHeaderAndCpp
     open FH, "> ${outputDirectory}/${cppName}" or die "Cannot open $cppName\n";
     print FH $contents;
     close FH;
+}
+
+sub loadIDLAttributes
+{
+    my $idlAttributesFile = shift;
+
+    my %idlAttributes;
+    open FH, "<", $idlAttributesFile or die "Couldn't open $idlAttributesFile: $!";
+    while (my $line = <FH>) {
+        chomp $line;
+        next if $line =~ /^\s*#/;
+        next if $line =~ /^\s*$/;
+
+        if ($line =~ /^\s*([^=\s]*)\s*=?\s*(.*)/) {
+            my $name = $1;
+            $idlAttributes{$name} = {};
+            if ($2) {
+                foreach my $rightValue (split /\|/, $2) {
+                    $rightValue =~ s/^\s*|\s*$//g;
+                    $rightValue = "VALUE_IS_MISSING" unless $rightValue;
+                    $idlAttributes{$name}{$rightValue} = 1;
+                }
+            } else {
+                $idlAttributes{$name}{"VALUE_IS_MISSING"} = 1;
+            }
+        } else {
+            die "The format of " . basename($idlAttributesFile) . " is wrong: line $.\n";
+        }
+    }
+    close FH;
+
+    return \%idlAttributes;
+}
+
+sub checkIDLAttributes
+{
+    my $idlAttributes = shift;
+    my $document = shift;
+    my $idlFile = shift;
+
+    foreach my $interface (@{$document->interfaces}) {
+        checkIfIDLAttributesExists($idlAttributes, $interface->extendedAttributes, $idlFile);
+
+        foreach my $attribute (@{$interface->attributes}) {
+            checkIfIDLAttributesExists($idlAttributes, $attribute->signature->extendedAttributes, $idlFile);
+        }
+
+        foreach my $function (@{$interface->functions}) {
+            checkIfIDLAttributesExists($idlAttributes, $function->signature->extendedAttributes, $idlFile);
+            foreach my $parameter (@{$function->parameters}) {
+                checkIfIDLAttributesExists($idlAttributes, $parameter->extendedAttributes, $idlFile);
+            }
+        }
+    }
+}
+
+sub checkIfIDLAttributesExists
+{
+    my $idlAttributes = shift;
+    my $extendedAttributes = shift;
+    my $idlFile = shift;
+
+    my $error;
+    OUTER: for my $name (keys %$extendedAttributes) {
+        if (!exists $idlAttributes->{$name}) {
+            $error = "Unknown IDL attribute [$name] is found at $idlFile.";
+            last OUTER;
+        }
+        if ($idlAttributes->{$name}{"*"}) {
+            next;
+        }
+        for my $rightValue (split /\s*\|\s*/, $extendedAttributes->{$name}) {
+            if (!exists $idlAttributes->{$name}{$rightValue}) {
+                $error = "Unknown IDL attribute [$name=" . $extendedAttributes->{$name} . "] is found at $idlFile.";
+                last OUTER;
+            }
+        }
+    }
+    if ($error) {
+        die "IDL ATTRIBUTE CHECKER ERROR: $error
+If you want to add a new IDL attribute, you need to add it to WebCore/bindings/scripts/IDLAttributes.txt and add explanations to the WebKit IDL document (https://trac.webkit.org/wiki/WebKitIDL).
+";
+    }
 }

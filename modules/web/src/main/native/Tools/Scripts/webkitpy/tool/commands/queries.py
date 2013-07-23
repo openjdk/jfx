@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import fnmatch
+import logging
 import re
 
 from datetime import datetime
@@ -43,29 +44,27 @@ from webkitpy.common.net.buildbot import BuildBot
 from webkitpy.common.net.regressionwindow import RegressionWindow
 from webkitpy.common.system.crashlogs import CrashLogs
 from webkitpy.common.system.user import User
+from webkitpy.tool.commands.abstractsequencedcommand import AbstractSequencedCommand
 from webkitpy.tool.grammar import pluralize
-from webkitpy.tool.multicommandtool import AbstractDeclarativeCommand
-from webkitpy.common.system.deprecated_logging import log
-from webkitpy.layout_tests.models.test_expectations import TestExpectations, TestExpectationSerializer
-from webkitpy.layout_tests.port import port_options
+from webkitpy.tool.multicommandtool import Command
+from webkitpy.layout_tests.models.test_expectations import TestExpectations
+from webkitpy.port import platform_options, configuration_options
+
+_log = logging.getLogger(__name__)
 
 
-class SuggestReviewers(AbstractDeclarativeCommand):
+class SuggestReviewers(AbstractSequencedCommand):
     name = "suggest-reviewers"
     help_text = "Suggest reviewers for a patch based on recent changes to the modified files."
+    steps = [
+        steps.SuggestReviewers,
+    ]
 
-    def __init__(self):
-        options = [
-            steps.Options.git_commit,
-        ]
-        AbstractDeclarativeCommand.__init__(self, options=options)
-
-    def execute(self, options, args, tool):
-        reviewers = tool.checkout().suggested_reviewers(options.git_commit)
-        print "\n".join([reviewer.full_name for reviewer in reviewers])
+    def _prepare_state(self, options, args, tool):
+        options.suggest_reviewers = True
 
 
-class BugsToCommit(AbstractDeclarativeCommand):
+class BugsToCommit(Command):
     name = "bugs-to-commit"
     help_text = "List bugs in the commit-queue"
 
@@ -76,36 +75,36 @@ class BugsToCommit(AbstractDeclarativeCommand):
             print "%s" % bug_id
 
 
-class PatchesInCommitQueue(AbstractDeclarativeCommand):
+class PatchesInCommitQueue(Command):
     name = "patches-in-commit-queue"
     help_text = "List patches in the commit-queue"
 
     def execute(self, options, args, tool):
         patches = tool.bugs.queries.fetch_patches_from_commit_queue()
-        log("Patches in commit queue:")
+        _log.info("Patches in commit queue:")
         for patch in patches:
             print patch.url()
 
 
-class PatchesToCommitQueue(AbstractDeclarativeCommand):
+class PatchesToCommitQueue(Command):
     name = "patches-to-commit-queue"
     help_text = "Patches which should be added to the commit queue"
     def __init__(self):
         options = [
             make_option("--bugs", action="store_true", dest="bugs", help="Output bug links instead of patch links"),
         ]
-        AbstractDeclarativeCommand.__init__(self, options=options)
+        Command.__init__(self, options=options)
 
     @staticmethod
     def _needs_commit_queue(patch):
         if patch.commit_queue() == "+": # If it's already cq+, ignore the patch.
-            log("%s already has cq=%s" % (patch.id(), patch.commit_queue()))
+            _log.info("%s already has cq=%s" % (patch.id(), patch.commit_queue()))
             return False
 
         # We only need to worry about patches from contributers who are not yet committers.
         committer_record = CommitterList().committer_by_email(patch.attacher_email())
         if committer_record:
-            log("%s committer = %s" % (patch.id(), committer_record))
+            _log.info("%s committer = %s" % (patch.id(), committer_record))
         return not committer_record
 
     def execute(self, options, args, tool):
@@ -121,7 +120,7 @@ class PatchesToCommitQueue(AbstractDeclarativeCommand):
                 print "%s" % tool.bugs.attachment_url_for_id(patch.id(), action="edit")
 
 
-class PatchesToReview(AbstractDeclarativeCommand):
+class PatchesToReview(Command):
     name = "patches-to-review"
     help_text = "List bugs which have attachments pending review"
 
@@ -134,7 +133,7 @@ class PatchesToReview(AbstractDeclarativeCommand):
             make_option("--cc-email",
                         help="Specifies the email on the CC field (defaults to your bugzilla login email)"),
         ]
-        AbstractDeclarativeCommand.__init__(self, options=options)
+        Command.__init__(self, options=options)
 
     def _print_report(self, report, cc_email, print_all):
         if print_all:
@@ -174,7 +173,8 @@ class PatchesToReview(AbstractDeclarativeCommand):
         report = self._generate_report(bugs, options.include_cq_denied)
         self._print_report(report, cc_email, options.all)
 
-class WhatBroke(AbstractDeclarativeCommand):
+
+class WhatBroke(Command):
     name = "what-broke"
     help_text = "Print failing buildbots (%s) and what revisions broke them" % config_urls.buildbot_url
 
@@ -220,7 +220,7 @@ class WhatBroke(AbstractDeclarativeCommand):
             print "All builders are passing!"
 
 
-class ResultsFor(AbstractDeclarativeCommand):
+class ResultsFor(Command):
     name = "results-for"
     help_text = "Print a list of failures for the passed revision from bots on %s" % config_urls.buildbot_url
     argument_names = "REVISION"
@@ -242,7 +242,7 @@ class ResultsFor(AbstractDeclarativeCommand):
             self._print_layout_test_results(build.layout_test_results())
 
 
-class FailureReason(AbstractDeclarativeCommand):
+class FailureReason(Command):
     name = "failure-reason"
     help_text = "Lists revisions where individual test failures started at %s" % config_urls.buildbot_url
 
@@ -328,7 +328,7 @@ class FailureReason(AbstractDeclarativeCommand):
         return self._explain_failures_for_builder(builder, start_revision=int(start_revision))
 
 
-class FindFlakyTests(AbstractDeclarativeCommand):
+class FindFlakyTests(Command):
     name = "find-flaky-tests"
     help_text = "Lists tests that often fail for a single build at %s" % config_urls.buildbot_url
 
@@ -397,7 +397,7 @@ class FindFlakyTests(AbstractDeclarativeCommand):
         return self._walk_backwards_from(builder, latest_revision, limit=int(limit))
 
 
-class TreeStatus(AbstractDeclarativeCommand):
+class TreeStatus(Command):
     name = "tree-status"
     help_text = "Print the status of the %s buildbots" % config_urls.buildbot_url
     long_help = """Fetches build status from http://build.webkit.org/one_box_per_builder
@@ -409,7 +409,7 @@ and displayes the status of each builder."""
             print "%s : %s" % (status_string.ljust(4), builder["name"])
 
 
-class CrashLog(AbstractDeclarativeCommand):
+class CrashLog(Command):
     name = "crash-log"
     help_text = "Print the newest crash log for the given process"
     long_help = """Finds the newest crash log matching the given process name
@@ -424,7 +424,7 @@ and PID and prints it to stdout."""
         print crash_logs.find_newest_log(args[0], pid)
 
 
-class PrintExpectations(AbstractDeclarativeCommand):
+class PrintExpectations(Command):
     name = 'print-expectations'
     help_text = 'Print the expected result for the given test(s) on the given port(s)'
 
@@ -440,13 +440,15 @@ class PrintExpectations(AbstractDeclarativeCommand):
                         help='Print a CSV-style report that includes the port name, modifiers, tests, and expectations'),
             make_option('-f', '--full', action='store_true', default=False,
                         help='Print a full TestExpectations-style line for every match'),
-        ] + port_options(platform='port/platform to use. Use glob-style wildcards for multiple ports (implies --csv)')
+            make_option('--paths', action='store_true', default=False,
+                        help='display the paths for all applicable expectation files'),
+        ] + platform_options(use_globs=True)
 
-        AbstractDeclarativeCommand.__init__(self, options=options)
+        Command.__init__(self, options=options)
         self._expectation_models = {}
 
     def execute(self, options, args, tool):
-        if not args and not options.all:
+        if not options.paths and not args and not options.all:
             print "You must either specify one or more test paths or --all."
             return
 
@@ -465,15 +467,23 @@ class PrintExpectations(AbstractDeclarativeCommand):
             default_port = tool.port_factory.get(options=options)
             port_names = [default_port.name()]
 
-        serializer = TestExpectationSerializer()
-        tests = default_port.tests(args)
+        if options.paths:
+            files = default_port.expectations_files()
+            layout_tests_dir = default_port.layout_tests_dir()
+            for file in files:
+                if file.startswith(layout_tests_dir):
+                    file = file.replace(layout_tests_dir, 'LayoutTests')
+                print file
+            return
+
+        tests = set(default_port.tests(args))
         for port_name in port_names:
             model = self._model(options, port_name, tests)
             tests_to_print = self._filter_tests(options, model, tests)
             lines = [model.get_expectation_line(test) for test in sorted(tests_to_print)]
             if port_name != port_names[0]:
                 print
-            print '\n'.join(self._format_lines(options, port_name, serializer, lines))
+            print '\n'.join(self._format_lines(options, port_name, lines))
 
     def _filter_tests(self, options, model, tests):
         filtered_tests = set()
@@ -487,28 +497,25 @@ class PrintExpectations(AbstractDeclarativeCommand):
             filtered_tests.difference_update(model.get_test_set_for_keyword(keyword))
         return filtered_tests
 
-    def _format_lines(self, options, port_name, serializer, lines):
+    def _format_lines(self, options, port_name, lines):
         output = []
         if options.csv:
             for line in lines:
-                output.append("%s,%s" % (port_name, serializer.to_csv(line)))
+                output.append("%s,%s" % (port_name, line.to_csv()))
         elif lines:
             include_modifiers = options.full
             include_expectations = options.full or len(options.include_keyword) != 1 or len(options.exclude_keyword)
             output.append("// For %s" % port_name)
             for line in lines:
-                output.append("%s" % serializer.to_string(line, include_modifiers, include_expectations, include_comment=False))
+                output.append("%s" % line.to_string(None, include_modifiers, include_expectations, include_comment=False))
         return output
 
     def _model(self, options, port_name, tests):
         port = self._tool.port_factory.get(port_name, options)
-        expectations_path = port.path_to_test_expectations_file()
-        if not expectations_path in self._expectation_models:
-            self._expectation_models[expectations_path] = TestExpectations(port, tests).model()
-        return self._expectation_models[expectations_path]
+        return TestExpectations(port, tests).model()
 
 
-class PrintBaselines(AbstractDeclarativeCommand):
+class PrintBaselines(Command):
     name = 'print-baselines'
     help_text = 'Prints the baseline locations for given test(s) on the given port(s)'
 
@@ -520,8 +527,8 @@ class PrintBaselines(AbstractDeclarativeCommand):
                         help='Print a CSV-style report that includes the port name, test_name, test platform, baseline type, baseline location, and baseline platform'),
             make_option('--include-virtual-tests', action='store_true',
                         help='Include virtual tests'),
-        ] + port_options(platform='port/platform to use. Use glob-style wildcards for multiple ports (implies --csv)')
-        AbstractDeclarativeCommand.__init__(self, options=options)
+        ] + platform_options(use_globs=True)
+        Command.__init__(self, options=options)
         self._platform_regexp = re.compile('platform/([^\/]+)/(.+)')
 
     def execute(self, options, args, tool):

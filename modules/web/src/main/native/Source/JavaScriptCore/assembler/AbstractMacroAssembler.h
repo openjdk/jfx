@@ -31,7 +31,6 @@
 #include "MacroAssemblerCodeRef.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/UnusedParam.h>
 
 #if ENABLE(ASSEMBLER)
 
@@ -46,12 +45,30 @@
 
 namespace JSC {
 
+inline bool isARMv7s()
+{
+#if CPU(APPLE_ARMV7S)
+    return true;
+#else
+    return false;
+#endif
+}
+
+inline bool isX86()
+{
+#if CPU(X86_64) || CPU(X86)
+    return true;
+#else
+    return false;
+#endif
+}
+
 class JumpReplacementWatchpoint;
 class LinkBuffer;
 class RepatchBuffer;
 class Watchpoint;
 namespace DFG {
-class CorrectableJumpPoint;
+struct OSRExit;
 }
 
 template <class AssemblerType>
@@ -261,6 +278,50 @@ public:
 
     };
 
+    // TrustedImm64:
+    //
+    // A 64bit immediate operand to an instruction - this is wrapped in a
+    // class requiring explicit construction in order to prevent RegisterIDs
+    // (which are implemented as an enum) from accidentally being passed as
+    // immediate values.
+    struct TrustedImm64 {
+        TrustedImm64() { }
+        
+        explicit TrustedImm64(int64_t value)
+            : m_value(value)
+        {
+        }
+
+#if CPU(X86_64)
+        explicit TrustedImm64(TrustedImmPtr ptr)
+            : m_value(ptr.asIntptr())
+        {
+        }
+#endif
+
+        int64_t m_value;
+    };
+
+    struct Imm64 : 
+#if ENABLE(JIT_CONSTANT_BLINDING)
+        private TrustedImm64 
+#else
+        public TrustedImm64
+#endif
+    {
+        explicit Imm64(int64_t value)
+            : TrustedImm64(value)
+        {
+        }
+#if CPU(X86_64)
+        explicit Imm64(TrustedImmPtr ptr)
+            : TrustedImm64(ptr)
+        {
+        }
+#endif
+        const TrustedImm64& asTrustedImm64() const { return *this; }
+    };
+    
     // Section 2: MacroAssembler code buffer handles
     //
     // The following types are used to reference items in the code buffer
@@ -276,7 +337,7 @@ public:
     class Label {
         template<class TemplateAssemblerType>
         friend class AbstractMacroAssembler;
-        friend class DFG::CorrectableJumpPoint;
+        friend struct DFG::OSRExit;
         friend class Jump;
         friend class JumpReplacementWatchpoint;
         friend class MacroAssemblerCodeRef;
@@ -457,7 +518,7 @@ public:
         template<class TemplateAssemblerType>
         friend class AbstractMacroAssembler;
         friend class Call;
-        friend class DFG::CorrectableJumpPoint;
+        friend struct DFG::OSRExit;
         friend class LinkBuffer;
     public:
         Jump()
@@ -466,7 +527,7 @@ public:
 
 #if CPU(ARM_THUMB2)
         // Fixme: this information should be stored in the instruction stream, not in the Jump object.
-        Jump(AssemblerLabel jmp, ARMv7Assembler::JumpType type, ARMv7Assembler::Condition condition = ARMv7Assembler::ConditionInvalid)
+        Jump(AssemblerLabel jmp, ARMv7Assembler::JumpType type = ARMv7Assembler::JumpNoCondition, ARMv7Assembler::Condition condition = ARMv7Assembler::ConditionInvalid)
             : m_label(jmp)
             , m_type(type)
             , m_condition(condition)
@@ -485,8 +546,19 @@ public:
         }
 #endif
 
+        Label label() const
+        {
+            Label result;
+            result.m_label = m_label;
+            return result;
+        }
+
         void link(AbstractMacroAssembler<AssemblerType>* masm) const
         {
+#if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
+            masm->checkRegisterAllocationAgainstBranchRange(m_label.m_offset, masm->debugOffset());
+#endif
+
 #if CPU(ARM_THUMB2)
             masm->m_assembler.linkJump(m_label, masm->m_assembler.label(), m_type, m_condition);
 #elif CPU(SH4)
@@ -498,6 +570,10 @@ public:
 
         void linkTo(Label label, AbstractMacroAssembler<AssemblerType>* masm) const
         {
+#if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
+            masm->checkRegisterAllocationAgainstBranchRange(label.m_label.m_offset, m_label.m_offset);
+#endif
+
 #if CPU(ARM_THUMB2)
             masm->m_assembler.linkJump(m_label, label.m_label, m_type, m_condition);
 #else
@@ -541,7 +617,14 @@ public:
         friend class LinkBuffer;
 
     public:
-        typedef Vector<Jump, 16> JumpVector;
+        typedef Vector<Jump, 2> JumpVector;
+        
+        JumpList() { }
+        
+        JumpList(Jump jump)
+        {
+            append(jump);
+        }
 
         void link(AbstractMacroAssembler<AssemblerType>* masm)
         {
@@ -564,7 +647,7 @@ public:
             m_jumps.append(jump);
         }
 
-        void append(JumpList& other)
+        void append(const JumpList& other)
         {
             m_jumps.append(other.m_jumps.begin(), other.m_jumps.size());
         }
@@ -579,7 +662,7 @@ public:
             m_jumps.clear();
         }
 
-        const JumpVector& jumps() { return m_jumps; }
+        const JumpVector& jumps() const { return m_jumps; }
 
     private:
         JumpVector m_jumps;
@@ -606,6 +689,12 @@ public:
         return Label(this);
     }
 
+    void padBeforePatch()
+    {
+        // Rely on the fact that asking for a label already does the padding.
+        (void)label();
+    }
+    
     Label watchpointLabel()
     {
         Label result;
@@ -618,6 +707,44 @@ public:
         m_assembler.align(16);
         return Label(this);
     }
+
+#if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
+    class RegisterAllocationOffset {
+    public:
+        RegisterAllocationOffset(unsigned offset)
+            : m_offset(offset)
+        {
+        }
+
+        void check(unsigned low, unsigned high)
+        {
+            RELEASE_ASSERT_WITH_MESSAGE(!(low <= m_offset && m_offset <= high), "Unsafe branch over register allocation at instruction offset %u in jump offset range %u..%u", m_offset, low, high);
+        }
+
+    private:
+        unsigned m_offset;
+    };
+
+    void addRegisterAllocationAtOffset(unsigned offset)
+    {
+        m_registerAllocationForOffsets.append(RegisterAllocationOffset(offset));
+    }
+
+    void clearRegisterAllocationOffsets()
+    {
+        m_registerAllocationForOffsets.clear();
+    }
+
+    void checkRegisterAllocationAgainstBranchRange(unsigned offset1, unsigned offset2)
+    {
+        if (offset1 > offset2)
+            std::swap(offset1, offset2);
+
+        size_t size = m_registerAllocationForOffsets.size();
+        for (size_t i = 0; i < size; ++i)
+            m_registerAllocationForOffsets[i].check(offset1, offset2);
+    }
+#endif
 
     template<typename T, typename U>
     static ptrdiff_t differenceBetween(T from, U to)
@@ -650,6 +777,10 @@ protected:
     }
 
     WeakRandom m_randomSource;
+
+#if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
+    Vector<RegisterAllocationOffset, 10> m_registerAllocationForOffsets;
+#endif
 
 #if ENABLE(JIT_CONSTANT_BLINDING)
     static bool scratchRegisterForBlinding() { return false; }

@@ -1,6 +1,11 @@
 noinst_PROGRAMS += \
+	Programs/ImageDiff
+
+if ENABLE_WEBKIT1
+noinst_PROGRAMS += \
 	Programs/DumpRenderTree \
 	Programs/GtkLauncher
+endif
 
 # GtkLauncher
 Programs_GtkLauncher_CPPFLAGS = \
@@ -8,6 +13,7 @@ Programs_GtkLauncher_CPPFLAGS = \
 	-I$(srcdir)/Source/WebCore/platform/network/soup/cache/ \
 	-I$(top_builddir)/Source/WebKit/gtk \
 	-I$(top_builddir)/DerivedSources \
+	-DWEBKIT_EXEC_PATH=\"${shell pwd}/$(top_builddir)/Programs/\" \
 	$(global_cppflags) \
 	$(javascriptcore_cppflags)
 
@@ -20,16 +26,20 @@ Programs_GtkLauncher_CFLAGS = \
 	-ansi \
 	-fno-strict-aliasing \
 	$(global_cflags) \
+	$(FREETYPE_CFLAGS) \
 	$(GTK_CFLAGS) \
-	$(LIBSOUP_CFLAGS)
+	$(LIBSOUP_CFLAGS) \
+	$(GSTREAMER_CFLAGS)
 
 Programs_GtkLauncher_LDADD = \
 	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
 	libjavascriptcoregtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
+	$(FREETYPE_LIBS) \
 	$(GTK_LIBS) \
 	$(GLIB_LIBS) \
 	$(LIBSOUP_LIBS) \
-	$(WINMM_LIBS)
+	$(WINMM_LIBS) \
+	$(GSTREAMER_LIBS)
 
 Programs_GtkLauncher_LDFLAGS = \
 	-no-fast-install \
@@ -43,30 +53,41 @@ noinst_LTLIBRARIES += libWebCoreInternals.la
 libWebCoreInternals_la_SOURCES = \
 	Source/WebCore/bindings/js/JSDOMWrapper.cpp \
 	Source/WebCore/bindings/js/JSDOMWrapper.h \
+	Source/WebCore/testing/MallocStatistics.h \
 	Source/WebCore/testing/Internals.cpp \
 	Source/WebCore/testing/Internals.h \
 	Source/WebCore/testing/InternalSettings.cpp \
 	Source/WebCore/testing/InternalSettings.h \
-	Source/WebCore/testing/MockPagePopupDriver.cpp \
-	Source/WebCore/testing/MockPagePopupDriver.h \
+	Source/WebCore/testing/TypeConversions.h \
 	Source/WebCore/testing/js/WebCoreTestSupport.cpp \
 	Source/WebCore/testing/js/WebCoreTestSupport.h
 
 libwebcoreinternals_built_sources += \
+	DerivedSources/WebCore/InternalSettingsGenerated.cpp \
+	DerivedSources/WebCore/InternalSettingsGenerated.h   \
+	DerivedSources/WebCore/JSMallocStatistics.cpp \
+	DerivedSources/WebCore/JSMallocStatistics.h   \
 	DerivedSources/WebCore/JSInternals.cpp \
 	DerivedSources/WebCore/JSInternals.h   \
 	DerivedSources/WebCore/JSInternalSettings.cpp \
-	DerivedSources/WebCore/JSInternalSettings.h
+	DerivedSources/WebCore/JSInternalSettings.h   \
+	DerivedSources/WebCore/JSInternalSettingsGenerated.cpp \
+	DerivedSources/WebCore/JSInternalSettingsGenerated.h \
+	DerivedSources/WebCore/JSTypeConversions.cpp \
+	DerivedSources/WebCore/JSTypeConversions.h
 
 nodist_libWebCoreInternals_la_SOURCES = $(libwebcoreinternals_built_sources)
 BUILT_SOURCES += $(libwebcoreinternals_built_sources)
 
 libWebCoreInternals_la_CPPFLAGS = \
 	$(global_cppflags) \
+	$(platform_cppflags) \
+	$(platformgtk_cppflags) \
 	$(webcore_cppflags) \
 	$(webcoregtk_cppflags) \
 	$(javascriptcore_cppflags) \
 	$(CAIRO_CFLAGS) \
+	$(FREETYPE_CFLAGS) \
 	$(LIBSOUP_CFLAGS) \
 	$(PANGO_CFLAGS) \
 	-I$(top_builddir)/DerivedSources \
@@ -85,6 +106,7 @@ Programs_DumpRenderTree_CPPFLAGS = \
 	$(global_cppflags) \
 	-DTOP_LEVEL_DIR=\"${shell pwd}/${srcdir}\" \
 	-I$(srcdir)/Tools/DumpRenderTree \
+	-I$(srcdir)/Tools/DumpRenderTree/atk \
 	-I$(srcdir)/Tools/DumpRenderTree/cairo \
 	-I$(srcdir)/Tools/DumpRenderTree/gtk \
 	-I$(srcdir)/Source/WebKit/gtk \
@@ -93,6 +115,8 @@ Programs_DumpRenderTree_CPPFLAGS = \
 	-I$(top_builddir)/DerivedSources \
 	-I$(top_builddir)/Source/WebKit/gtk \
 	$(javascriptcore_cppflags) \
+	$(platform_cppflags) \
+	$(platformgtk_cppflags) \
 	$(webcore_cppflags)
 
 if TARGET_X11
@@ -102,7 +126,9 @@ Programs_DumpRenderTree_CPPFLAGS += \
 endif
 
 Programs_DumpRenderTree_SOURCES = \
+	Source/WebCore/platform/gtk/GtkVersioning.c \
 	Tools/DumpRenderTree/DumpRenderTree.h \
+	Tools/DumpRenderTree/DumpRenderTreeCommon.cpp \
 	Tools/DumpRenderTree/DumpRenderTreePrefix.h \
 	Tools/DumpRenderTree/AccessibilityController.cpp \
 	Tools/DumpRenderTree/AccessibilityController.h \
@@ -115,18 +141,20 @@ Programs_DumpRenderTree_SOURCES = \
 	Tools/DumpRenderTree/GCController.cpp \
 	Tools/DumpRenderTree/GCController.h \
 	Tools/DumpRenderTree/JavaScriptThreading.h \
-	Tools/DumpRenderTree/LayoutTestController.cpp \
-	Tools/DumpRenderTree/LayoutTestController.h \
+	Tools/DumpRenderTree/TestRunner.cpp \
+	Tools/DumpRenderTree/TestRunner.h \
 	Tools/DumpRenderTree/PixelDumpSupport.cpp \
 	Tools/DumpRenderTree/PixelDumpSupport.h \
 	Tools/DumpRenderTree/WorkQueue.cpp \
 	Tools/DumpRenderTree/WorkQueue.h \
 	Tools/DumpRenderTree/WorkQueueItem.h \
 	Tools/DumpRenderTree/config.h \
+	Tools/DumpRenderTree/atk/AccessibilityCallbacks.h \
+	Tools/DumpRenderTree/atk/AccessibilityCallbacksAtk.cpp \
+	Tools/DumpRenderTree/atk/AccessibilityControllerAtk.cpp \
+	Tools/DumpRenderTree/atk/AccessibilityUIElementAtk.cpp \
 	Tools/DumpRenderTree/cairo/PixelDumpSupportCairo.cpp \
 	Tools/DumpRenderTree/cairo/PixelDumpSupportCairo.h \
-	Tools/DumpRenderTree/gtk/AccessibilityCallbacks.h \
-	Tools/DumpRenderTree/gtk/AccessibilityCallbacks.cpp \
 	Tools/DumpRenderTree/gtk/AccessibilityControllerGtk.cpp \
 	Tools/DumpRenderTree/gtk/AccessibilityUIElementGtk.cpp \
 	Tools/DumpRenderTree/gtk/DumpRenderTree.cpp \
@@ -136,14 +164,13 @@ Programs_DumpRenderTree_SOURCES = \
 	Tools/DumpRenderTree/gtk/EventSender.h \
 	Tools/DumpRenderTree/gtk/EventSender.cpp \
 	Tools/DumpRenderTree/gtk/GCControllerGtk.cpp \
-	Tools/DumpRenderTree/gtk/LayoutTestControllerGtk.cpp \
+	Tools/DumpRenderTree/gtk/TestRunnerGtk.cpp \
 	Tools/DumpRenderTree/gtk/PixelDumpSupportGtk.cpp \
 	Tools/DumpRenderTree/gtk/SelfScrollingWebKitWebView.cpp \
 	Tools/DumpRenderTree/gtk/SelfScrollingWebKitWebView.h \
 	Tools/DumpRenderTree/gtk/TextInputController.h \
 	Tools/DumpRenderTree/gtk/TextInputController.cpp \
-	Tools/DumpRenderTree/gtk/WorkQueueItemGtk.cpp \
-	Source/WebCore/platform/gtk/GtkVersioning.c
+	Tools/DumpRenderTree/gtk/WorkQueueItemGtk.cpp
 
 Programs_DumpRenderTree_CXXFLAGS = \
 	$(global_cxxflags) \
@@ -160,6 +187,9 @@ Programs_DumpRenderTree_CFLAGS = \
 Programs_DumpRenderTree_LDADD = \
 	libjavascriptcoregtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
 	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
+	libPlatform.la \
+	libPlatformGtk.la \
+	libWebCorePlatform.la \
 	libWebCoreModules.la \
 	libWebCoreInternals.la \
 	$(GLOBALDEPS_LIBS) \
@@ -176,10 +206,35 @@ Programs_DumpRenderTree_LDFLAGS = \
 	-no-fast-install \
 	-no-install
 
+# ImageDiff
+Programs_ImageDiff_CPPFLAGS = $(global_cppflags)
+
+Programs_ImageDiff_SOURCES = \
+   Tools/ImageDiff/gtk/ImageDiff.cpp
+
+Programs_ImageDiff_CXXFLAGS = \
+   $(global_cxxflags) \
+   $(global_cppflags) \
+   $(Programs_ImageDiff_CFLAGS)
+
+Programs_ImageDiff_CFLAGS = \
+   -fno-strict-aliasing \
+   $(global_cflags) \
+   $(GLOBALDEPS_CFLAGS) \
+   $(GTK_CFLAGS)
+
+Programs_ImageDiff_LDADD = \
+   $(GTK_LIBS)
+
+Programs_ImageDiff_LDFLAGS = \
+   -no-fast-install \
+   -no-install
+
 # clean target
 CLEANFILES += \
 	Programs/DumpRenderTree \
-	Programs/GtkLauncher
+	Programs/GtkLauncher \
+	Programs/ImageDiff
 
 if TARGET_X11
 
@@ -216,14 +271,18 @@ TestNetscapePlugin_libtestnetscapeplugin_la_SOURCES = \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/GetURLWithJavaScriptURL.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/GetURLWithJavaScriptURLDestroyingPlugin.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/GetUserAgentWithNullNPPFromNPPNew.cpp \
+	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/LogNPPSetWindow.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/NPDeallocateCalledBeforeNPShutdown.cpp \
+	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/NPPNewFails.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/NPPSetWindowCalledDuringDestruction.cpp \
+    Tools/DumpRenderTree/TestNetscapePlugIn/Tests/NPRuntimeCallsWithNullNPP.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/NPRuntimeObjectFromDestroyedPlugin.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/NPRuntimeRemoveProperty.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/NullNPPGetValuePointer.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/PassDifferentNPPStruct.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/PluginScriptableNPObjectInvokeDefault.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/PrivateBrowsing.cpp \
+	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/ToStringAndValueOfObject.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/x11/CallInvalidateRectWithNullNPPArgument.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/PluginTest.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/PluginTest.h \
@@ -246,13 +305,14 @@ CLEANFILES += TestNetscapePlugin/libtestnetscapeplugin.la
 endif
 
 check-local:
-	$(top_srcdir)/Tools/Scripts/run-gtk-tests
+	$(top_srcdir)/Tools/Scripts/run-gtk-tests --timeout=-1
 
 EXTRA_DIST += \
 	Tools/gtk/common.py \
+	Tools/gtk/generate-feature-defines-files \
 	Tools/gtk/generate-gtkdoc \
 	Tools/gtk/gtkdoc.py \
-	Tools/gtk/run-api-tests \
+	Tools/jhbuild/jhbuildutils.py \
 	Tools/Scripts/VCSUtils.pm \
 	Tools/Scripts/run-gtk-tests \
 	Tools/Scripts/webkit-build-directory \
@@ -262,26 +322,26 @@ docs: docs-build.stamp
 .PHONY : docs
 DISTCLEANFILES += docs-build.stamp
 
-if ENABLE_WEBKIT2
-docs-build.stamp: \
-	Source/WebKit/gtk/docs/webkitenvironment.xml \
-	Source/WebKit/gtk/docs/webkitgtk-docs.sgml \
-	Source/WebKit/gtk/docs/webkitgtk-sections.txt \
+docs_build_stamp_list = \
+	Source/WebKit/gtk/docs/webkitenvironment.xml
+
+if ENABLE_WEBKIT1
+docs_build_stamp_list += \
 	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
+	Source/WebKit/gtk/docs/webkitgtk-docs.sgml \
+	Source/WebKit/gtk/docs/webkitgtk-sections.txt
+endif
+
+if ENABLE_WEBKIT2
+docs_build_stamp_list += \
 	libwebkit2gtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
 	Source/WebKit2/UIProcess/API/gtk/docs/webkit2gtk-docs.sgml \
 	Source/WebKit2/UIProcess/API/gtk/docs/webkit2gtk-sections.txt
-	$(srcdir)/Tools/gtk/generate-gtkdoc
-	@touch docs-build.stamp
-else
-docs-build.stamp: \
-	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
-	Source/WebKit/gtk/docs/webkitenvironment.xml \
-	Source/WebKit/gtk/docs/webkitgtk-docs.sgml \
-	Source/WebKit/gtk/docs/webkitgtk-sections.txt
-	$(srcdir)/Tools/gtk/generate-gtkdoc
-	@touch docs-build.stamp
 endif
+
+docs-build.stamp: $(docs_build_stamp_list)
+	CC=$(CC) $(srcdir)/Tools/gtk/generate-gtkdoc
+	@touch docs-build.stamp
 
 clean-local: doc-clean-local
 doc-clean-local:
@@ -296,6 +356,7 @@ doc-maintainer-clean-local: clean
 	-@rmdir Documentation
 
 install-data-local:
+if ENABLE_WEBKIT1
 	@installfiles=`echo ./Documentation/webkitgtk/html/*`; \
 	if test "$$installfiles" = './Documentation/webkitgtk/html/*'; \
 	then echo 1>&2 'No documentation to install' ; \
@@ -316,6 +377,7 @@ install-data-local:
 	      $${installdir}/webkitgtk-$(DOC_MODULE_VERSION).devhelp2; \
 	  fi; \
 	fi
+endif
 if ENABLE_WEBKIT2
 	@installfiles=`echo ./Documentation/webkit2gtk/html/*`; \
 	if test "$$installfiles" = './Documentation/webkit2gtk/html/*'; \
@@ -341,6 +403,7 @@ endif
 	@$(AM_V_GEN)$(PYTHON) $(srcdir)/Tools/gtk/generate-gtkdoc --rebase --virtual-root=$${DESTDIR}
 
 uninstall-local:
+if ENABLE_WEBKIT1
 	@DOC_MODULE_VERSION=`cat ./Documentation/webkitgtk/version.xml`; \
 	if test -n "$(DOC_MODULE_VERSION)"; then \
 	  installdir="$(DESTDIR)$(HTML_DIR)/webkitgtk-$(DOC_MODULE_VERSION)"; \
@@ -348,6 +411,7 @@ uninstall-local:
 	  installdir="$(DESTDIR)$(HTML_DIR)/webkitgtk"; \
 	fi; \
 	rm -rf $${installdir}
+endif
 if ENABLE_WEBKIT2
 	@DOC_MODULE_VERSION=`cat ./Documentation/webkit2gtk/version.xml`; \
 	if test -n "$(DOC_MODULE_VERSION)"; then \
@@ -359,6 +423,6 @@ if ENABLE_WEBKIT2
 endif
 
 if ENABLE_GTK_DOC
-all: docs-build.stamp
+noinst_DATA += docs-build.stamp
 endif
 

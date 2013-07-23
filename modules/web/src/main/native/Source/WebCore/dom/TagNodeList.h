@@ -24,29 +24,31 @@
 #ifndef TagNodeList_h
 #define TagNodeList_h
 
-#include "DynamicNodeList.h"
+#include "Element.h"
+#include "LiveNodeList.h"
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
 
     // NodeList that limits to a particular tag.
-    class TagNodeList : public DynamicSubtreeNodeList {
+class TagNodeList : public LiveNodeList {
     public:
         static PassRefPtr<TagNodeList> create(PassRefPtr<Node> rootNode, const AtomicString& namespaceURI, const AtomicString& localName)
         {
             ASSERT(namespaceURI != starAtom);
-            return adoptRef(new TagNodeList(rootNode, namespaceURI, localName));
+        return adoptRef(new TagNodeList(rootNode, TagNodeListType, namespaceURI, localName));
         }
 
-        static PassRefPtr<TagNodeList> create(PassRefPtr<Node> rootNode, const AtomicString& localName)
+    static PassRefPtr<TagNodeList> create(PassRefPtr<Node> rootNode, CollectionType type, const AtomicString& localName)
         {
-            return adoptRef(new TagNodeList(rootNode, starAtom, localName));
+        ASSERT_UNUSED(type, type == TagNodeListType);
+        return adoptRef(new TagNodeList(rootNode, TagNodeListType, starAtom, localName));
         }
 
         virtual ~TagNodeList();
 
     protected:
-        TagNodeList(PassRefPtr<Node> rootNode, const AtomicString& namespaceURI, const AtomicString& localName);
+    TagNodeList(PassRefPtr<Node> rootNode, CollectionType, const AtomicString& namespaceURI, const AtomicString& localName);
 
         virtual bool nodeMatches(Element*) const;
 
@@ -56,10 +58,13 @@ namespace WebCore {
 
     class HTMLTagNodeList : public TagNodeList {
     public:
-        static PassRefPtr<HTMLTagNodeList> create(PassRefPtr<Node> rootNode, const AtomicString& localName)
+    static PassRefPtr<HTMLTagNodeList> create(PassRefPtr<Node> rootNode, CollectionType type, const AtomicString& localName)
         {
+        ASSERT_UNUSED(type, type == HTMLTagNodeListType);
             return adoptRef(new HTMLTagNodeList(rootNode, localName));
         }
+
+    bool nodeMatchesInlined(Element*) const;
 
     private:
         HTMLTagNodeList(PassRefPtr<Node> rootNode, const AtomicString& localName);
@@ -68,6 +73,19 @@ namespace WebCore {
 
         AtomicString m_loweredLocalName;
     };
+
+inline bool HTMLTagNodeList::nodeMatchesInlined(Element* testNode) const
+{
+    // Implements http://dvcs.w3.org/hg/domcore/raw-file/tip/Overview.html#concept-getelementsbytagname
+    if (m_localName != starAtom) {
+        const AtomicString& localName = testNode->isHTMLElement() ? m_loweredLocalName : m_localName;
+        if (localName != testNode->localName())
+            return false;
+    }
+    ASSERT(m_namespaceURI == starAtom);
+    return true;
+}
+
 } // namespace WebCore
 
 #endif // TagNodeList_h

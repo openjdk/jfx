@@ -26,13 +26,19 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import java.io.*;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.css.StyleOrigin;
+
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A stylesheet which can apply properties to a tree of objects.  A stylesheet 
@@ -49,6 +55,12 @@ import javafx.css.StyleOrigin;
  */
 public class Stylesheet {
 
+    /**
+     * Version number of binary CSS format. The value is incremented whenever the format of the
+     * binary stream changes. This number does not correlate with JavaFX versions.
+     */
+    public final static int BINARY_CSS_VERSION = 4;
+            
     private final URL url;
     /** The URL from which the stylesheet was loaded.
      * @return The URL from which the stylesheet was loaded, or null if 
@@ -160,7 +172,7 @@ public class Stylesheet {
     }
 
     /** Returns a string representation of this object. */
-    public @Override String toString() {
+    @Override public String toString() {
         StringBuilder sbuf = new StringBuilder();
         sbuf.append("/* ");
         if (url != null) sbuf.append(url);
@@ -176,7 +188,7 @@ public class Stylesheet {
         return sbuf.toString();
     }
 
-    public void writeBinary(final DataOutputStream os, final StringStore stringStore)
+    public final void writeBinary(final DataOutputStream os, final StringStore stringStore)
         throws IOException 
     {
         int index = stringStore.addString(origin.name());
@@ -187,7 +199,7 @@ public class Stylesheet {
     
     // protected for unit testing 
     /** @treatAsPrivate public to allow unit testing */
-    public void readBinary(DataInputStream is, String[] strings)
+    public final void readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException 
     {
         this.stringStore = strings;
@@ -196,17 +208,17 @@ public class Stylesheet {
         final int nRules = is.readShort();
         List<Rule> persistedRules = new ArrayList<Rule>(nRules);
         for (int n=0; n<nRules; n++) {
-            persistedRules.add(Rule.readBinary(is,strings));
+            persistedRules.add(Rule.readBinary(bssVersion,is,strings));
         }
         this.rules.addAll(persistedRules);
         
     }
 
     private String[] stringStore;
-    String[] getStringStore() { return stringStore; };
+    final String[] getStringStore() { return stringStore; };
 
     /** Load a binary stylesheet file from a input stream */
-    public static Stylesheet loadBinary(URL url) {
+    public static Stylesheet loadBinary(URL url) throws IOException {
 
         if (url == null) return null;
 
@@ -221,33 +233,44 @@ public class Stylesheet {
 
             dataInputStream = new DataInputStream(bufferedInputStream);
             // read file version
-            final int version = dataInputStream.readShort();
-            if (version != 2)
-                throw new IOException(url.toString() + " wrong file version. got "
-                        + version + " expected 2");
+            final int bssVersion = dataInputStream.readShort();
+            if (bssVersion > Stylesheet.BINARY_CSS_VERSION) {
+                throw new IOException(url.toString() + " wrong binary CSS version: "
+                        + bssVersion + ". Expected version less than or equal to" +
+                        Stylesheet.BINARY_CSS_VERSION);
+            }
             // read strings
             final String[] strings = StringStore.readBinary(dataInputStream);
             // read binary data
             stylesheet = new Stylesheet(url);
-            stylesheet.readBinary(dataInputStream,strings);
+
+            boolean retry = false;
+            try {
+
+                dataInputStream.mark(Integer.MAX_VALUE);
+                stylesheet.readBinary(bssVersion, dataInputStream, strings);
+
+            } catch (Exception e) {
+
+                stylesheet = new Stylesheet(url);
+
+                dataInputStream.reset();
+
+                if (bssVersion == 2) {
+                    // RT-31022
+                    stylesheet.readBinary(3, dataInputStream, strings);
+                } else {
+                    stylesheet.readBinary(Stylesheet.BINARY_CSS_VERSION, dataInputStream, strings);
+                }
+            }
 
         } catch (FileNotFoundException fnfe) {
-            // This comes from url.openStream() and is expected. 
+            // This comes from url.openStream() and is expected.
             // It just means that the .bss file doesn't exist.
-        } catch (IOException ignored) {
-            // TODO: User logger here
-            System.err.println(ignored);
-            ignored.printStackTrace(System.err);
         } finally {
             try {
-                if (dataInputStream != null) {
-                    dataInputStream.close();
-                } else if (bufferedInputStream != null) {
-                    bufferedInputStream.close();
-                } else if (inputStream != null) {
-                    inputStream.close();
-                }
-            } catch(IOException ioe) {
+                if (dataInputStream != null) dataInputStream.close();
+            } catch (IOException ignored) {
             }
         }
 

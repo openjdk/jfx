@@ -23,8 +23,10 @@
 #define ContainerNodeAlgorithms_h
 
 #include "Document.h"
+#include "Frame.h"
 #include "HTMLFrameOwnerElement.h"
 #include "InspectorInstrumentation.h"
+#include "NodeTraversal.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
@@ -36,7 +38,6 @@ public:
     {
     }
 
-    void notifyInsertedIntoDocument(Node*);
     void notify(Node*);
 
 private:
@@ -46,6 +47,7 @@ private:
     void notifyNodeInsertedIntoTree(ContainerNode*);
 
     ContainerNode* m_insertionPoint;
+    Vector< RefPtr<Node> > m_postInsertionNotificationTargets;
 };
 
 class ChildNodeRemovalNotifier {
@@ -76,7 +78,7 @@ namespace Private {
 // Helper functions for TreeShared-derived classes, which have a 'Node' style interface
 // This applies to 'ContainerNode' and 'SVGElementInstance'
 template<class GenericNode, class GenericNodeContainer>
-inline void removeAllChildrenInContainer(GenericNodeContainer* container)
+inline void removeDetachedChildrenInContainer(GenericNodeContainer* container)
 {
     // List of nodes to be deleted.
     GenericNode* head = 0;
@@ -106,7 +108,7 @@ inline void removeAllChildrenInContainer(GenericNodeContainer* container)
 template<class GenericNode, class GenericNodeContainer>
 inline void appendChildToContainer(GenericNode* child, GenericNodeContainer* container)
 {
-    child->setParentOrHostNode(container);
+    child->setParentOrShadowHostNode(container);
 
     GenericNode* lastChild = container->lastChild();
     if (lastChild) {
@@ -118,7 +120,7 @@ inline void appendChildToContainer(GenericNode* child, GenericNodeContainer* con
     container->setLastChild(child);
 }
 
-// Helper methods for removeAllChildrenInContainer, hidden from WebCore namespace
+// Helper methods for removeDetachedChildrenInContainer, hidden from WebCore namespace
 namespace Private {
 
     template<class GenericNode, class GenericNodeContainer, bool dispatchRemovalNotification>
@@ -160,9 +162,11 @@ namespace Private {
             ASSERT(!n->m_deletionHasBegun);
 
             next = n->nextSibling();
-            n->setPreviousSibling(0);
             n->setNextSibling(0);
-            n->setParentOrHostNode(0);
+            n->setParentOrShadowHostNode(0);
+            container->setFirstChild(next);
+            if (next)
+                next->setPreviousSibling(0);
 
             if (!n->refCount()) {
 #ifndef NDEBUG
@@ -182,7 +186,6 @@ namespace Private {
             }
         }
 
-        container->setFirstChild(0);
         container->setLastChild(0);
     }
 
@@ -192,37 +195,25 @@ inline void ChildNodeInsertionNotifier::notifyNodeInsertedIntoDocument(Node* nod
 {
     ASSERT(m_insertionPoint->inDocument());
     RefPtr<Node> protect(node);
-    Node::InsertionNotificationRequest request = node->insertedInto(m_insertionPoint);
-
+    if (Node::InsertionShouldCallDidNotifySubtreeInsertions == node->insertedInto(m_insertionPoint))
+        m_postInsertionNotificationTargets.append(node);
     if (node->isContainerNode())
         notifyDescendantInsertedIntoDocument(toContainerNode(node));
-
-    if (request == Node::InsertionShouldCallDidNotifyDescendantInsertions)
-        node->didNotifyDescendantInsertions(m_insertionPoint);
 }
 
 inline void ChildNodeInsertionNotifier::notifyNodeInsertedIntoTree(ContainerNode* node)
 {
+    NoEventDispatchAssertion assertNoEventDispatch;
     ASSERT(!m_insertionPoint->inDocument());
-    forbidEventDispatch();
 
-    Node::InsertionNotificationRequest request = node->insertedInto(m_insertionPoint);
-
+    if (Node::InsertionShouldCallDidNotifySubtreeInsertions == node->insertedInto(m_insertionPoint))
+        m_postInsertionNotificationTargets.append(node);
     notifyDescendantInsertedIntoTree(node);
-    if (request == Node::InsertionShouldCallDidNotifyDescendantInsertions)
-        node->didNotifyDescendantInsertions(m_insertionPoint);
-
-    allowEventDispatch();
-}
-
-inline void ChildNodeInsertionNotifier::notifyInsertedIntoDocument(Node* node)
-{
-    notifyNodeInsertedIntoDocument(node);
 }
 
 inline void ChildNodeInsertionNotifier::notify(Node* node)
 {
-    ASSERT(!eventDispatchForbidden());
+    ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
 
 #if ENABLE(INSPECTOR)
     InspectorInstrumentation::didInsertDOMNode(node->document(), node);
@@ -235,6 +226,9 @@ inline void ChildNodeInsertionNotifier::notify(Node* node)
         notifyNodeInsertedIntoDocument(node);
     else if (node->isContainerNode())
         notifyNodeInsertedIntoTree(toContainerNode(node));
+
+    for (size_t i = 0; i < m_postInsertionNotificationTargets.size(); ++i)
+        m_postInsertionNotificationTargets[i]->didNotifySubtreeInsertions(m_insertionPoint);
 }
 
 
@@ -249,77 +243,97 @@ inline void ChildNodeRemovalNotifier::notifyNodeRemovedFromDocument(Node* node)
 
 inline void ChildNodeRemovalNotifier::notifyNodeRemovedFromTree(ContainerNode* node)
 {
+    NoEventDispatchAssertion assertNoEventDispatch;
     ASSERT(!m_insertionPoint->inDocument());
-    forbidEventDispatch();
 
     node->removedFrom(m_insertionPoint);
     notifyDescendantRemovedFromTree(node);
-
-    allowEventDispatch();
 }
 
 inline void ChildNodeRemovalNotifier::notify(Node* node)
 {
-    if (node->inDocument())
+    if (node->inDocument()) {
         notifyNodeRemovedFromDocument(node);
-    else if (node->isContainerNode())
+        node->document()->notifyRemovePendingSheetIfNeeded();
+    } else if (node->isContainerNode())
         notifyNodeRemovedFromTree(toContainerNode(node));
 }
 
 class ChildFrameDisconnector {
 public:
-    explicit ChildFrameDisconnector(Node* root);
-    void disconnect();
+    enum DisconnectPolicy {
+        RootAndDescendants,
+        DescendantsOnly
+    };
 
-private:
-    void collectDescendant(Node* root);
-    void collectDescendant(ElementShadow*);
-
-    class Target {
-    public:
-        Target(HTMLFrameOwnerElement* element)
-            : m_owner(element)
-            , m_ownerParent(element->parentNode())
+    explicit ChildFrameDisconnector(Node* root)
+        : m_root(root)
         {
         }
 
-        bool isValid() const { return m_owner->parentNode() == m_ownerParent; }
-        void disconnect();
+    void disconnect(DisconnectPolicy = RootAndDescendants);
 
     private:
-        RefPtr<HTMLFrameOwnerElement> m_owner;
-        ContainerNode* m_ownerParent;
+    void collectFrameOwners(Node* root);
+    void collectFrameOwners(ElementShadow*);
+    void disconnectCollectedFrameOwners();
+
+    Vector<RefPtr<HTMLFrameOwnerElement>, 10> m_frameOwners;
+    Node* m_root;
     };
 
-    Vector<Target, 10> m_list;
-};
+#ifndef NDEBUG
+unsigned assertConnectedSubrameCountIsConsistent(Node*);
+#endif
 
-inline ChildFrameDisconnector::ChildFrameDisconnector(Node* root)
+inline void ChildFrameDisconnector::collectFrameOwners(Node* root)
 {
-    collectDescendant(root);
+    if (!root->connectedSubframeCount())
+        return;
+
+    if (root->isHTMLElement() && root->isFrameOwnerElement())
+        m_frameOwners.append(toFrameOwnerElement(root));
+
+    for (Node* child = root->firstChild(); child; child = child->nextSibling())
+        collectFrameOwners(child);
+
+    ElementShadow* shadow = root->isElementNode() ? toElement(root)->shadow() : 0;
+    if (shadow)
+        collectFrameOwners(shadow);
 }
 
-inline void ChildFrameDisconnector::collectDescendant(Node* root)
+inline void ChildFrameDisconnector::disconnectCollectedFrameOwners()
 {
-    for (Node* node = root; node; node = node->traverseNextNode(root)) {
-        if (!node->isElementNode())
-            continue;
-        Element* element = toElement(node);
-        if (element->hasCustomCallbacks() && element->isFrameOwnerElement())
-            m_list.append(toFrameOwnerElement(element));
-        if (ElementShadow* shadow = element->shadow())
-            collectDescendant(shadow);
+    // Must disable frame loading in the subtree so an unload handler cannot
+    // insert more frames and create loaded frames in detached subtrees.
+    SubframeLoadingDisabler disabler(m_root);
+
+    for (unsigned i = 0; i < m_frameOwners.size(); ++i) {
+        HTMLFrameOwnerElement* owner = m_frameOwners[i].get();
+        // Don't need to traverse up the tree for the first owner since no
+        // script could have moved it.
+        if (!i || m_root->containsIncludingShadowDOM(owner))
+            owner->disconnectContentFrame();
     }
 }
 
-inline void ChildFrameDisconnector::disconnect()
+inline void ChildFrameDisconnector::disconnect(DisconnectPolicy policy)
 {
-    unsigned size = m_list.size();
-    for (unsigned i = 0; i < size; ++i) {
-        Target& target = m_list[i];
-        if (target.isValid())
-            target.disconnect();
+#ifndef NDEBUG
+    assertConnectedSubrameCountIsConsistent(m_root);
+#endif
+
+    if (!m_root->connectedSubframeCount())
+        return;
+
+    if (policy == RootAndDescendants)
+        collectFrameOwners(m_root);
+    else {
+        for (Node* child = m_root->firstChild(); child; child = child->nextSibling())
+            collectFrameOwners(child);
     }
+
+    disconnectCollectedFrameOwners();
 }
 
 } // namespace WebCore

@@ -26,12 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module css {
-
-    interface [
+[
             IndexedGetter,
-            DoNotCheckConstants
-    ] WebKitCSSTransformValue : CSSValueList {
+        DoNotCheckConstants,
+    ImplementationLacksVTable
+] interface WebKitCSSTransformValue : CSSValueList {
 
         // OperationTypes
 
@@ -60,4 +59,3 @@ module css {
         readonly attribute unsigned short operationType;
     };
 
-}

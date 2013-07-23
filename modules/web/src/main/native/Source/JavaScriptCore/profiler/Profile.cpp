@@ -32,18 +32,18 @@
 
 namespace JSC {
 
-PassRefPtr<Profile> Profile::create(const UString& title, unsigned uid)
+PassRefPtr<Profile> Profile::create(const String& title, unsigned uid)
 {
     return adoptRef(new Profile(title, uid));
 }
 
-Profile::Profile(const UString& title, unsigned uid)
+Profile::Profile(const String& title, unsigned uid)
     : m_title(title)
     , m_uid(uid)
 {
     // FIXME: When multi-threading is supported this will be a vector and calls
     // into the profiler will need to know which thread it is executing on.
-    m_head = ProfileNode::create(0, CallIdentifier("Thread_1", UString(), 0), 0, 0);
+    m_head = ProfileNode::create(0, CallIdentifier("Thread_1", String(), 0), 0, 0);
 }
 
 Profile::~Profile()
@@ -103,15 +103,15 @@ void Profile::restoreAll()
 #ifndef NDEBUG
 void Profile::debugPrintData() const
 {
-    dataLog("Call graph:\n");
+    dataLogF("Call graph:\n");
     m_head->debugPrintData(0);
 }
 
-typedef pair<StringImpl*, unsigned> NameCountPair;
+typedef WTF::KeyValuePair<FunctionCallHashCount::ValueType, unsigned> NameCountPair;
 
 static inline bool functionNameCountPairComparator(const NameCountPair& a, const NameCountPair& b)
 {
-    return a.second > b.second;
+    return a.value > b.value;
 }
 
 void Profile::debugPrintDataSampleStyle() const
@@ -119,18 +119,18 @@ void Profile::debugPrintDataSampleStyle() const
     typedef Vector<NameCountPair> NameCountPairVector;
 
     FunctionCallHashCount countedFunctions;
-    dataLog("Call graph:\n");
+    dataLogF("Call graph:\n");
     m_head->debugPrintDataSampleStyle(0, countedFunctions);
 
-    dataLog("\nTotal number in stack:\n");
+    dataLogF("\nTotal number in stack:\n");
     NameCountPairVector sortedFunctions(countedFunctions.size());
     copyToVector(countedFunctions, sortedFunctions);
 
     std::sort(sortedFunctions.begin(), sortedFunctions.end(), functionNameCountPairComparator);
     for (NameCountPairVector::iterator it = sortedFunctions.begin(); it != sortedFunctions.end(); ++it)
-        dataLog("        %-12d%s\n", (*it).second, UString((*it).first).utf8().data());
+        dataLogF("        %-12d%s\n", (*it).value, String((*it).key).utf8().data());
 
-    dataLog("\nSort by top of stack, same collapsed (when >= 5):\n");
+    dataLogF("\nSort by top of stack, same collapsed (when >= 5):\n");
 }
 #endif
 

@@ -37,6 +37,7 @@
 #include <WebCore/DOMWindow.h>
 #include <WebCore/Document.h>
 #include <WebCore/Element.h>
+#include <WebCore/Font.h>
 #include <WebCore/Frame.h>
 #include <WebCore/SimpleFontData.h>
 #include <WebCore/HTMLFormElement.h>
@@ -1254,7 +1255,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::font(WebFontDescription* webFontDescriptio
         return E_FAIL;
 
     FontDescription fontDescription = renderer->style()->font().fontDescription();
-    AtomicString family = fontDescription.family().family();
+    AtomicString family = fontDescription.firstFamily();
     webFontDescription->family = family.characters();
     webFontDescription->familyLength = family.length();
     webFontDescription->size = fontDescription.computedSize();

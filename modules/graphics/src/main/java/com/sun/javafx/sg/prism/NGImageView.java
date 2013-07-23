@@ -25,20 +25,19 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.sg.PGImageView;
 import com.sun.prism.Graphics;
 import com.sun.prism.Image;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
-import com.sun.prism.image.Coords;
-import com.sun.prism.image.CompoundCoords;
 import com.sun.prism.image.CachingCompoundImage;
+import com.sun.prism.image.CompoundCoords;
+import com.sun.prism.image.Coords;
 import com.sun.prism.image.ViewPort;
 
 /**
  */
 
-public class NGImageView extends NGNode implements PGImageView {
+public class NGImageView extends NGNode {
 
     private Image image;
     private CachingCompoundImage compoundImage;

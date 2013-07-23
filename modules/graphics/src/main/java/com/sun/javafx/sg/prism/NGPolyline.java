@@ -27,12 +27,11 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.sg.PGPolyline;
 
 /**
  *
  */
-public class NGPolyline extends NGShape implements PGPolyline {
+public class NGPolyline extends NGShape {
 
     private Path2D path = new Path2D();
 

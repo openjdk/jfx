@@ -358,7 +358,7 @@ public class ParsedValueTest {
             String[] strings = stringStore.strings.toArray(new String[]{});
             ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
             DataInputStream dis = new DataInputStream(bais);
-            ParsedValue<?,?> pv = ParsedValueImpl.readBinary(dis, strings);
+            ParsedValue<?,?> pv = ParsedValueImpl.readBinary(Stylesheet.BINARY_CSS_VERSION, dis, strings);
             org.junit.Assert.assertEquals(parsedValue, pv);
         } catch (IOException ioe) {
             org.junit.Assert.fail(parsedValue.toString());

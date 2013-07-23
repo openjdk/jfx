@@ -23,58 +23,41 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module window {
-    interface [
-        OmitConstructor
-    ] InternalSettings {
-        void setInspectorResourcesDataSizeLimits(in long maximumResourcesContentSize, in long maximumSingleResourceContentSize) raises(DOMException);
-        void setForceCompositingMode(in boolean enabled) raises(DOMException);
-        void setEnableCompositingForFixedPosition(in boolean enabled) raises(DOMException);
-        void setEnableCompositingForScrollableFrames(in boolean enabled) raises(DOMException);
-        void setAcceleratedDrawingEnabled(in boolean enabled) raises(DOMException);
-        void setAcceleratedFiltersEnabled(in boolean enabled) raises(DOMException);
-        void setMockScrollbarsEnabled(in boolean enabled) raises(DOMException);
-        void setPasswordEchoEnabled(in boolean enabled) raises(DOMException);
-        void setPasswordEchoDurationInSeconds(in double durationInSeconds) raises(DOMException);
-        void setFixedElementsLayoutRelativeToFrame(in boolean enabled) raises(DOMException);
-        void setUnifiedTextCheckingEnabled(in boolean enabled) raises (DOMException);
-        boolean unifiedTextCheckingEnabled() raises (DOMException);
-        void setPageScaleFactor(in float scaleFactor, in long x, in long y) raises(DOMException);
-        void setTouchEventEmulationEnabled(in boolean enabled) raises(DOMException);
-        void setDeviceSupportsTouch(in boolean enabled) raises(DOMException);
-        void setDeviceSupportsMouse(in boolean enabled) raises(DOMException);
-        void setShadowDOMEnabled(in boolean enabled) raises(DOMException);
-        void setStandardFontFamily(in DOMString family, in DOMString script) raises(DOMException);
-        void setSerifFontFamily(in DOMString family, in DOMString script) raises(DOMException);
-        void setSansSerifFontFamily(in DOMString family, in DOMString script) raises(DOMException);
-        void setFixedFontFamily(in DOMString family, in DOMString script) raises(DOMException);
-        void setCursiveFontFamily(in DOMString family, in DOMString script) raises(DOMException);
-        void setFantasyFontFamily(in DOMString family, in DOMString script) raises(DOMException);
-        void setPictographFontFamily(in DOMString family, in DOMString script) raises(DOMException);
-        void setTextAutosizingEnabled(in boolean enabled) raises(DOMException);
-        void setTextAutosizingWindowSizeOverride(in long width, in long height) raises(DOMException);
-        void setEnableScrollAnimator(in boolean enabled) raises(DOMException);
-        boolean scrollAnimatorEnabled() raises(DOMException);
-        void setCSSExclusionsEnabled(in boolean enabled) raises(DOMException);
-        void setCSSVariablesEnabled(in boolean enabled) raises(DOMException);
+[
+    NoInterfaceObject,
+    OmitConstructor,
+    JSGenerateToJSObject
+] interface InternalSettings : InternalSettingsGenerated {
+    void setMockScrollbarsEnabled(boolean enabled) raises(DOMException);
+    void setTouchEventEmulationEnabled(boolean enabled) raises(DOMException);
+    void setShadowDOMEnabled(boolean enabled) raises(DOMException);
+    void setAuthorShadowDOMForAnyElementEnabled(boolean isEnabled);
+    void setStyleScopedEnabled(boolean isEnabled);
+    void setStandardFontFamily(DOMString family, DOMString script) raises(DOMException);
+    void setSerifFontFamily(DOMString family, DOMString script) raises(DOMException);
+    void setSansSerifFontFamily(DOMString family, DOMString script) raises(DOMException);
+    void setFixedFontFamily(DOMString family, DOMString script) raises(DOMException);
+    void setCursiveFontFamily(DOMString family, DOMString script) raises(DOMException);
+    void setFantasyFontFamily(DOMString family, DOMString script) raises(DOMException);
+    void setPictographFontFamily(DOMString family, DOMString script) raises(DOMException);
+    void setTextAutosizingEnabled(boolean enabled) raises(DOMException);
+    void setTextAutosizingWindowSizeOverride(long width, long height) raises(DOMException);
+    void setTextAutosizingFontScaleFactor(float fontScaleFactor) raises(DOMException);
+    void setMediaTypeOverride(DOMString mediaTypeOverride) raises(DOMException);
+    void setCSSExclusionsEnabled(boolean enabled) raises(DOMException);
+    void setCSSVariablesEnabled(boolean enabled) raises(DOMException);
         boolean cssVariablesEnabled() raises(DOMException);
-        void setMediaPlaybackRequiresUserGesture(in boolean enabled) raises(DOMException);
-        void setEditingBehavior(in DOMString behavior) raises(DOMException);
-        void setFixedPositionCreatesStackingContext(in boolean creates) raises(DOMException);
-        void setSyncXHRInDocumentsEnabled(in boolean enabled) raises(DOMException);
-        void setJavaScriptProfilingEnabled(in boolean creates) raises(DOMException);
-        void setWindowFocusRestricted(in boolean restricted) raises(DOMException);
-        void setDialogElementEnabled(in boolean enabled) raises(DOMException);
+    void setCanStartMedia(boolean enabled) raises(DOMException);
+    void setEditingBehavior(DOMString behavior) raises(DOMException);
+    void setDialogElementEnabled(boolean enabled) raises(DOMException);
+    void setLangAttributeAwareFormControlUIEnabled(boolean enabled);
 
-        void setPagination(in DOMString mode, in long gap, in [Optional] long pageLength) raises(DOMException);
-        sequence<String> userPreferredLanguages();
-        void setUserPreferredLanguages(in sequence<String> languages);
-        void allowRoundingHacks();
-        void setEnableMockPagePopup(in boolean enabled) raises(DOMException);
-#if defined(ENABLE_VIDEO_TRACK) && ENABLE_VIDEO_TRACK
-        void setShouldDisplayTrackKind(in DOMString kind, in boolean enabled) raises (DOMException);
-        boolean shouldDisplayTrackKind(in DOMString trackKind) raises (DOMException);
-#endif
+    [Conditional=VIDEO_TRACK] void setShouldDisplayTrackKind(DOMString kind, boolean enabled) raises (DOMException);
+    [Conditional=VIDEO_TRACK] boolean shouldDisplayTrackKind(DOMString trackKind) raises (DOMException);
+    void setStorageBlockingPolicy(DOMString policy) raises(DOMException);
+    void setImagesEnabled(boolean enabled) raises(DOMException);
+    void setMinimumTimerInterval(double intervalInSeconds) raises(DOMException);
+    void setDefaultVideoPosterURL(DOMString poster) raises(DOMException);
+    void setTimeWithoutMouseMovementBeforeHidingControls(double time) raises(DOMException);
+    void setUseLegacyBackgroundSizeShorthandBehavior(boolean enabled) raises(DOMException);
     };
-}
-

@@ -32,7 +32,7 @@
 #define StyleGridItemData_h
 
 
-#include "Length.h"
+#include "GridPosition.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -46,7 +46,8 @@ public:
 
     bool operator==(const StyleGridItemData& o) const
     {
-        return m_gridColumn == o.m_gridColumn && m_gridRow == o.m_gridRow;
+        return m_gridStart == o.m_gridStart && m_gridEnd == o.m_gridEnd
+            && m_gridBefore == o.m_gridBefore && m_gridAfter == o.m_gridAfter;
     }
 
     bool operator!=(const StyleGridItemData& o) const
@@ -54,11 +55,10 @@ public:
         return !(*this == o);
     }
 
-    // FIXME: For the moment, we only support a subset of the grammar which correspond to:
-    // 'auto' | <length>
-    // When we add more of the syntax, we will need a dedicated GridPosition class.
-    Length m_gridColumn;
-    Length m_gridRow;
+    GridPosition m_gridStart;
+    GridPosition m_gridEnd;
+    GridPosition m_gridBefore;
+    GridPosition m_gridAfter;
 
 private:
     StyleGridItemData();

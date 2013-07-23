@@ -30,6 +30,7 @@
 #include "Document.h"
 #include "Element.h"
 #include "Frame.h"
+#include "FrameSelection.h"
 #include "Node.h"
 
 namespace WebCore {
@@ -62,9 +63,8 @@ String dispatchBeforeTextInsertedEvent(const String& text, const VisibleSelectio
     if (Node* startNode = selectionForInsertion.start().containerNode()) {
         if (startNode->rootEditableElement()) {
             // Send BeforeTextInsertedEvent. The event handler will update text if necessary.
-            ExceptionCode ec = 0;
             RefPtr<BeforeTextInsertedEvent> evt = BeforeTextInsertedEvent::create(text);
-            startNode->rootEditableElement()->dispatchEvent(evt, ec);
+            startNode->rootEditableElement()->dispatchEvent(evt, IGNORE_EXCEPTION);
             newText = evt->text();
         }
     }
@@ -78,8 +78,7 @@ bool canAppendNewLineFeedToSelection(const VisibleSelection& selection)
         return false;
     
     RefPtr<BeforeTextInsertedEvent> event = BeforeTextInsertedEvent::create(String("\n"));
-    ExceptionCode ec = 0;
-    node->dispatchEvent(event, ec);
+    node->dispatchEvent(event, IGNORE_EXCEPTION);
     return event->text().length();
 }
 

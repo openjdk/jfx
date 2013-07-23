@@ -25,13 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import java.io.File;
-import java.io.InputStream;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Future;
-
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import javafx.scene.input.Dragboard;
@@ -45,9 +38,19 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.SVGPath;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
+import java.io.File;
+import java.io.InputStream;
+import java.security.AccessControlContext;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Future;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Shape;
@@ -57,37 +60,6 @@ import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
-import com.sun.javafx.sg.PGAmbientLight;
-import com.sun.javafx.sg.PGArc;
-import com.sun.javafx.sg.PGBox;
-import com.sun.javafx.sg.PGCanvas;
-import com.sun.javafx.sg.PGCircle;
-import com.sun.javafx.sg.PGCubicCurve;
-import com.sun.javafx.sg.PGCylinder;
-import com.sun.javafx.sg.PGEllipse;
-import com.sun.javafx.sg.PGExternalNode;
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.sg.PGImageView;
-import com.sun.javafx.sg.PGLine;
-import com.sun.javafx.sg.PGMeshView;
-import com.sun.javafx.sg.PGParallelCamera;
-import com.sun.javafx.sg.PGPath;
-import com.sun.javafx.sg.PGPerspectiveCamera;
-import com.sun.javafx.sg.PGPhongMaterial;
-import com.sun.javafx.sg.PGPointLight;
-import com.sun.javafx.sg.PGPolygon;
-import com.sun.javafx.sg.PGPolyline;
-import com.sun.javafx.sg.PGQuadCurve;
-import com.sun.javafx.sg.PGRectangle;
-import com.sun.javafx.sg.PGRegion;
-import com.sun.javafx.sg.PGSVGPath;
-import com.sun.javafx.sg.PGShape.StrokeLineCap;
-import com.sun.javafx.sg.PGShape.StrokeLineJoin;
-import com.sun.javafx.sg.PGShape.StrokeType;
-import com.sun.javafx.sg.PGSphere;
-import com.sun.javafx.sg.PGSubScene;
-import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.FilterContext;
@@ -117,17 +89,17 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
+    public TKStage createTKStage(StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner) {
+    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner, AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public TKStage createTKEmbeddedStage(HostInterface host) {
+    public TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -297,6 +269,11 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
+    public boolean isNestedLoopRunning() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public AbstractMasterTimer getMasterTimer() {
         return null;
     }
@@ -308,91 +285,6 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public TextLayoutFactory getTextLayoutFactory() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGArc createPGArc() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGCircle createPGCircle() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGCubicCurve createPGCubicCurve() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGEllipse createPGEllipse() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGLine createPGLine() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGPath createPGPath() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGSVGPath createPGSVGPath() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGPolygon createPGPolygon() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGPolyline createPGPolyline() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGQuadCurve createPGQuadCurve() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGRectangle createPGRectangle() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGImageView createPGImageView() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGGroup createPGGroup() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGText createPGText() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGRegion createPGRegion() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGCanvas createPGCanvas() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGExternalNode createPGExternalNode() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -504,58 +396,4 @@ final public class DummyToolkit extends Toolkit {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override
-    public PGBox createPGBox() {
-        throw new UnsupportedOperationException("Not supported yet.");
     }
-
-    @Override
-    public PGCylinder createPGCylinder() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGSphere createPGSphere() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGTriangleMesh createPGTriangleMesh() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGMeshView createPGMeshView() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGPhongMaterial createPGPhongMaterial() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGAmbientLight createPGAmbientLight() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGPointLight createPGPointLight() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGParallelCamera createPGParallelCamera() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGSubScene createPGSubScene() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-}

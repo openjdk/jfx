@@ -17,9 +17,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module css {
-
-    interface CSSPrimitiveValue : CSSValue {
+[
+    ImplementationLacksVTable
+] interface CSSPrimitiveValue : CSSValue {
 
         // UnitTypes
         const unsigned short CSS_UNKNOWN    = 0;
@@ -51,16 +51,17 @@ module css {
         const unsigned short CSS_VW         = 26;
         const unsigned short CSS_VH         = 27;
         const unsigned short CSS_VMIN       = 28;
+    const unsigned short CSS_VMAX       = 29;
         
         readonly attribute unsigned short primitiveType;
 
-        [ObjCLegacyUnnamedParameters] void setFloatValue(in [Optional=DefaultIsUndefined] unsigned short unitType,
-                                          in [Optional=DefaultIsUndefined] float floatValue)
+    [ObjCLegacyUnnamedParameters] void setFloatValue([Default=Undefined] optional unsigned short unitType,
+                                      [Default=Undefined] optional float floatValue)
             raises(DOMException);
-        float getFloatValue(in [Optional=DefaultIsUndefined] unsigned short unitType)
+    float getFloatValue([Default=Undefined] optional unsigned short unitType)
             raises(DOMException);
-        [ObjCLegacyUnnamedParameters] void setStringValue(in [Optional=DefaultIsUndefined] unsigned short stringType, 
-                                           in [Optional=DefaultIsUndefined] DOMString stringValue)
+    [ObjCLegacyUnnamedParameters] void setStringValue([Default=Undefined] optional unsigned short stringType, 
+                                       [Default=Undefined] optional DOMString stringValue)
             raises(DOMException);
         DOMString getStringValue()
             raises(DOMException);
@@ -72,4 +73,3 @@ module css {
             raises(DOMException);
     };
 
-}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,32 +35,49 @@
 #include "DFGSlowPathGenerator.h"
 #include "DFGSpeculativeJIT.h"
 #include "DFGThunks.h"
-#include "JSGlobalData.h"
+#include "JSCJSValueInlines.h"
+#include "VM.h"
 #include "LinkBuffer.h"
 
 namespace JSC { namespace DFG {
 
 JITCompiler::JITCompiler(Graph& dfg)
-    : CCallHelpers(&dfg.m_globalData, dfg.m_codeBlock)
+    : CCallHelpers(&dfg.m_vm, dfg.m_codeBlock)
     , m_graph(dfg)
     , m_currentCodeOriginIndex(0)
 {
-    if (shouldShowDisassembly())
+    if (shouldShowDisassembly() || m_graph.m_vm.m_perBytecodeProfiler)
         m_disassembler = adoptPtr(new Disassembler(dfg));
 }
 
 void JITCompiler::linkOSRExits()
 {
+    ASSERT(codeBlock()->numberOfOSRExits() == m_exitCompilationInfo.size());
+    if (m_graph.m_compilation) {
     for (unsigned i = 0; i < codeBlock()->numberOfOSRExits(); ++i) {
         OSRExit& exit = codeBlock()->osrExit(i);
-        ASSERT(!exit.m_check.isSet() == (exit.m_watchpointIndex != std::numeric_limits<unsigned>::max()));
+            Vector<Label> labels;
+            if (exit.m_watchpointIndex == std::numeric_limits<unsigned>::max()) {
+                OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
+                for (unsigned j = 0; j < info.m_failureJumps.jumps().size(); ++j)
+                    labels.append(info.m_failureJumps.jumps()[j].label());
+            } else
+                labels.append(codeBlock()->watchpoint(exit.m_watchpointIndex).sourceLabel());
+            m_exitSiteLabels.append(labels);
+        }
+    }
+    
+    for (unsigned i = 0; i < codeBlock()->numberOfOSRExits(); ++i) {
+        OSRExit& exit = codeBlock()->osrExit(i);
+        JumpList& failureJumps = m_exitCompilationInfo[i].m_failureJumps;
+        ASSERT(failureJumps.empty() == (exit.m_watchpointIndex != std::numeric_limits<unsigned>::max()));
         if (exit.m_watchpointIndex == std::numeric_limits<unsigned>::max())
-            exit.m_check.initialJump().link(this);
+            failureJumps.link(this);
         else
             codeBlock()->watchpoint(exit.m_watchpointIndex).setDestination(label());
         jitAssertHasValidCallFrame();
-        store32(TrustedImm32(i), &globalData()->osrExitIndex);
-        exit.m_check.switchToLateJump(patchableJump());
+        store32(TrustedImm32(i), &vm()->osrExitIndex);
+        exit.setPatchableCodeOffset(patchableJump());
     }
 }
 
@@ -68,14 +85,14 @@ void JITCompiler::compileEntry()
 {
     // This code currently matches the old JIT. In the function header we need to
     // pop the return address (since we do not allow any recursion on the machine
-    // stack), and perform a fast register file check.
+    // stack), and perform a fast stack check.
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=56292
-    // We'll need to convert the remaining cti_ style calls (specifically the register file
+    // We'll need to convert the remaining cti_ style calls (specifically the stack
     // check) which will be dependent on stack layout. (We'd need to account for this in
     // both normal return code and when jumping to an exception handler).
     preserveReturnAddressAfterCall(GPRInfo::regT2);
-    emitPutToCallFrameHeader(GPRInfo::regT2, RegisterFile::ReturnPC);
-    emitPutImmediateToCallFrameHeader(m_codeBlock, RegisterFile::CodeBlock);
+    emitPutToCallFrameHeader(GPRInfo::regT2, JSStack::ReturnPC);
+    emitPutImmediateToCallFrameHeader(m_codeBlock, JSStack::CodeBlock);
 }
 
 void JITCompiler::compileBody(SpeculativeJIT& speculative)
@@ -128,7 +145,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
 {
     // Link the code, populate data in CodeBlock data structures.
 #if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLog("JIT code for %p start at [%p, %p). Size = %zu.\n", m_codeBlock, linkBuffer.debugAddress(), static_cast<char*>(linkBuffer.debugAddress()) + linkBuffer.debugSize(), linkBuffer.debugSize());
+    dataLogF("JIT code for %p start at [%p, %p). Size = %zu.\n", m_codeBlock, linkBuffer.debugAddress(), static_cast<char*>(linkBuffer.debugAddress()) + linkBuffer.debugSize(), linkBuffer.debugSize());
 #endif
 
     // Link all calls out from the JIT code to their respective functions.
@@ -145,7 +162,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         m_codeBlock->callReturnIndexVector().append(CallReturnOffsetToBytecodeOffset(returnAddressOffset, exceptionInfo));
     }
 
-    Vector<CodeOriginAtCallReturnOffset>& codeOrigins = m_codeBlock->codeOrigins();
+    Vector<CodeOriginAtCallReturnOffset, 0, UnsafeVectorOverflow>& codeOrigins = m_codeBlock->codeOrigins();
     codeOrigins.resize(m_exceptionChecks.size());
     
     for (unsigned i = 0; i < m_exceptionChecks.size(); ++i) {
@@ -188,24 +205,38 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         CallLinkInfo& info = m_codeBlock->callLinkInfo(i);
         info.callType = m_jsCalls[i].m_callType;
         info.isDFG = true;
-        info.bytecodeIndex = m_jsCalls[i].m_codeOrigin.bytecodeIndex;
-        linkBuffer.link(m_jsCalls[i].m_slowCall, FunctionPtr((m_globalData->getCTIStub(info.callType == CallLinkInfo::Construct ? linkConstructThunkGenerator : linkCallThunkGenerator)).code().executableAddress()));
+        info.codeOrigin = m_jsCalls[i].m_codeOrigin;
+        linkBuffer.link(m_jsCalls[i].m_slowCall, FunctionPtr((m_vm->getCTIStub(info.callType == CallLinkInfo::Construct ? linkConstructThunkGenerator : linkCallThunkGenerator)).code().executableAddress()));
         info.callReturnLocation = linkBuffer.locationOfNearCall(m_jsCalls[i].m_slowCall);
         info.hotPathBegin = linkBuffer.locationOf(m_jsCalls[i].m_targetToCheck);
         info.hotPathOther = linkBuffer.locationOfNearCall(m_jsCalls[i].m_fastCall);
+        info.calleeGPR = static_cast<unsigned>(m_jsCalls[i].m_callee);
     }
     
-    MacroAssemblerCodeRef osrExitThunk = globalData()->getCTIStub(osrExitGenerationThunkGenerator);
+    MacroAssemblerCodeRef osrExitThunk = vm()->getCTIStub(osrExitGenerationThunkGenerator);
     CodeLocationLabel target = CodeLocationLabel(osrExitThunk.code());
     for (unsigned i = 0; i < codeBlock()->numberOfOSRExits(); ++i) {
         OSRExit& exit = codeBlock()->osrExit(i);
-        linkBuffer.link(exit.m_check.lateJump(), target);
-        exit.m_check.correctLateJump(linkBuffer);
+        linkBuffer.link(exit.getPatchableCodeOffsetAsJump(), target);
+        exit.correctJump(linkBuffer);
         if (exit.m_watchpointIndex != std::numeric_limits<unsigned>::max())
             codeBlock()->watchpoint(exit.m_watchpointIndex).correctLabels(linkBuffer);
     }
     
-    codeBlock()->minifiedDFG().setOriginalGraphSize(m_graph.size());
+    if (m_graph.m_compilation) {
+        ASSERT(m_exitSiteLabels.size() == codeBlock()->numberOfOSRExits());
+        for (unsigned i = 0; i < m_exitSiteLabels.size(); ++i) {
+            Vector<Label>& labels = m_exitSiteLabels[i];
+            Vector<const void*> addresses;
+            for (unsigned j = 0; j < labels.size(); ++j)
+                addresses.append(linkBuffer.locationOf(labels[j]).executableAddress());
+            m_graph.m_compilation->addOSRExitSite(addresses);
+        }
+    } else
+        ASSERT(!m_exitSiteLabels.size());
+    
+    codeBlock()->saveCompilation(m_graph.m_compilation);
+    
     codeBlock()->shrinkToFit(CodeBlock::LateShrink);
 }
 
@@ -229,14 +260,16 @@ bool JITCompiler::compile(JITCode& entry)
     speculative.createOSREntries();
     setEndOfCode();
 
-    LinkBuffer linkBuffer(*m_globalData, this, m_codeBlock, JITCompilationCanFail);
+    LinkBuffer linkBuffer(*m_vm, this, m_codeBlock, JITCompilationCanFail);
     if (linkBuffer.didFailToAllocate())
         return false;
     link(linkBuffer);
     speculative.linkOSREntries(linkBuffer);
 
-    if (m_disassembler)
+    if (shouldShowDisassembly())
         m_disassembler->dump(linkBuffer);
+    if (m_graph.m_compilation)
+        m_disassembler->reportToProfiler(m_graph.m_compilation.get(), linkBuffer);
 
     entry = JITCode(
         linkBuffer.finalizeCodeWithoutDisassembly(),
@@ -256,12 +289,12 @@ bool JITCompiler::compileFunction(JITCode& entry, MacroAssemblerCodePtr& entryWi
     // If we needed to perform an arity check we will already have moved the return address,
     // so enter after this.
     Label fromArityCheck(this);
-    // Plant a check that sufficient space is available in the RegisterFile.
+    // Plant a check that sufficient space is available in the JSStack.
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=56291
     addPtr(TrustedImm32(m_codeBlock->m_numCalleeRegisters * sizeof(Register)), GPRInfo::callFrameRegister, GPRInfo::regT1);
-    Jump registerFileCheck = branchPtr(Below, AbsoluteAddress(m_globalData->interpreter->registerFile().addressOfEnd()), GPRInfo::regT1);
-    // Return here after register file check.
-    Label fromRegisterFileCheck = label();
+    Jump stackCheck = branchPtr(Below, AbsoluteAddress(m_vm->interpreter->stack().addressOfEnd()), GPRInfo::regT1);
+    // Return here after stack check.
+    Label fromStackCheck = label();
 
 
     // === Function body code generation ===
@@ -271,21 +304,21 @@ bool JITCompiler::compileFunction(JITCode& entry, MacroAssemblerCodePtr& entryWi
 
     // === Function footer code generation ===
     //
-    // Generate code to perform the slow register file check (if the fast one in
+    // Generate code to perform the slow stack check (if the fast one in
     // the function header fails), and generate the entry point with arity check.
     //
-    // Generate the register file check; if the fast check in the function head fails,
+    // Generate the stack check; if the fast check in the function head fails,
     // we need to call out to a helper function to check whether more space is available.
     // FIXME: change this from a cti call to a DFG style operation (normal C calling conventions).
-    registerFileCheck.link(this);
+    stackCheck.link(this);
     move(stackPointerRegister, GPRInfo::argumentGPR0);
     poke(GPRInfo::callFrameRegister, OBJECT_OFFSETOF(struct JITStackFrame, callFrame) / sizeof(void*));
 
     CallBeginToken token;
     beginCall(CodeOrigin(0), token);
-    Call callRegisterFileCheck = call();
-    notifyCall(callRegisterFileCheck, CodeOrigin(0), token);
-    jump(fromRegisterFileCheck);
+    Call callStackCheck = call();
+    notifyCall(callStackCheck, CodeOrigin(0), token);
+    jump(fromStackCheck);
     
     // The fast entry point into a function does not check the correct number of arguments
     // have been passed to the call (we only use the fast entry point where we can statically
@@ -295,7 +328,7 @@ bool JITCompiler::compileFunction(JITCode& entry, MacroAssemblerCodePtr& entryWi
     Label arityCheck = label();
     compileEntry();
 
-    load32(AssemblyHelpers::payloadFor((VirtualRegister)RegisterFile::ArgumentCount), GPRInfo::regT1);
+    load32(AssemblyHelpers::payloadFor((VirtualRegister)JSStack::ArgumentCount), GPRInfo::regT1);
     branch32(AboveOrEqual, GPRInfo::regT1, TrustedImm32(m_codeBlock->numParameters())).linkTo(fromArityCheck, this);
     move(stackPointerRegister, GPRInfo::argumentGPR0);
     poke(GPRInfo::callFrameRegister, OBJECT_OFFSETOF(struct JITStackFrame, callFrame) / sizeof(void*));
@@ -316,18 +349,20 @@ bool JITCompiler::compileFunction(JITCode& entry, MacroAssemblerCodePtr& entryWi
     setEndOfCode();
 
     // === Link ===
-    LinkBuffer linkBuffer(*m_globalData, this, m_codeBlock, JITCompilationCanFail);
+    LinkBuffer linkBuffer(*m_vm, this, m_codeBlock, JITCompilationCanFail);
     if (linkBuffer.didFailToAllocate())
         return false;
     link(linkBuffer);
     speculative.linkOSREntries(linkBuffer);
     
-    // FIXME: switch the register file check & arity check over to DFGOpertaion style calls, not JIT stubs.
-    linkBuffer.link(callRegisterFileCheck, cti_register_file_check);
+    // FIXME: switch the stack check & arity check over to DFGOpertaion style calls, not JIT stubs.
+    linkBuffer.link(callStackCheck, cti_stack_check);
     linkBuffer.link(callArityCheck, m_codeBlock->m_isConstructor ? cti_op_construct_arityCheck : cti_op_call_arityCheck);
     
-    if (m_disassembler)
+    if (shouldShowDisassembly())
         m_disassembler->dump(linkBuffer);
+    if (m_graph.m_compilation)
+        m_disassembler->reportToProfiler(m_graph.m_compilation.get(), linkBuffer);
 
     entryWithArityCheck = linkBuffer.locationOf(arityCheck);
     entry = JITCode(

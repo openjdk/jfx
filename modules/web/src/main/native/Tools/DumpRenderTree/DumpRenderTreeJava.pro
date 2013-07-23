@@ -36,6 +36,10 @@ win32-* {
     LIBS += -ladvapi32
 }
 
+mac* {
+    LIBS += -lobjc -framework AppKit
+}
+
 HEADERS += \
     GCController.h \
     LayoutTestController.h \
@@ -48,12 +52,12 @@ SOURCES += \
     ../../Source/WTF/wtf/Assertions.cpp \
     ../../Source/WTF/wtf/FastMalloc.cpp \
     GCController.cpp \
-    LayoutTestController.cpp \
+    TestRunner.cpp \
     WorkQueue.cpp \
     java/DumpRenderTree.cpp \
     java/GCControllerJava.cpp \
     java/JavaEnv.cpp \
-    java/LayoutTestControllerJava.cpp \
+    java/TestRunnerJava.cpp \
     java/WorkQueueItemJava.cpp \
     java/EventSender.cpp \
 

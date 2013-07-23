@@ -23,14 +23,13 @@
  * DAMAGE.
  */
 
-module dom {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=GAMEPAD,
-        IndexedGetter
-    ] GamepadList {
+    IndexedGetter,
+    ImplementationLacksVTable
+] interface GamepadList {
         readonly attribute unsigned long length;
-        Gamepad item(in [Optional=DefaultIsUndefined] unsigned long index);
+    Gamepad item([Default=Undefined] optional unsigned long index);
     };
 
-}

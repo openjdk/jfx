@@ -34,10 +34,11 @@ public:
     virtual void didReset();
     virtual bool isValid() const { return m_image; }
     inline GraphicsContext* graphicsContext() { return m_image ? m_image->context() : 0; }
-    virtual void updateContents(Image*, const IntRect&, const IntPoint&);
-    virtual void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine);
+    virtual void updateContents(Image*, const IntRect&, const IntPoint&, UpdateContentsFlag);
+    virtual void updateContents(TextureMapper*, GraphicsLayer*, const IntRect& target, const IntPoint& offset, UpdateContentsFlag);
+    virtual void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine, UpdateContentsFlag);
 #if ENABLE(CSS_FILTERS)
-    PassRefPtr<BitmapTexture> applyFilters(const BitmapTexture&, const FilterOperations&);
+    PassRefPtr<BitmapTexture> applyFilters(TextureMapper*, const FilterOperations&);
 #endif
 
 private:
@@ -47,16 +48,20 @@ private:
 
 
 class TextureMapperImageBuffer : public TextureMapper {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static PassOwnPtr<TextureMapper> create() { return adoptPtr(new TextureMapperImageBuffer); }
 
     // TextureMapper implementation
-    virtual void drawBorder(const Color& color, float borderWidth, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix = TransformationMatrix()) OVERRIDE { };
-    virtual void drawRepaintCounter(int value, int pointSize, const FloatPoint&, const TransformationMatrix& modelViewMatrix = TransformationMatrix()) OVERRIDE { };
-    virtual void drawTexture(const BitmapTexture&, const FloatRect& targetRect, const TransformationMatrix&, float opacity, const BitmapTexture* maskTexture, unsigned exposedEdges) OVERRIDE;
+    virtual void drawBorder(const Color&, float borderWidth, const FloatRect&, const TransformationMatrix&) OVERRIDE;
+    virtual void drawNumber(int number, const Color&, const FloatPoint&, const TransformationMatrix&) OVERRIDE;
+    virtual void drawTexture(const BitmapTexture&, const FloatRect& targetRect, const TransformationMatrix&, float opacity, unsigned exposedEdges) OVERRIDE;
+    virtual void drawSolidColor(const FloatRect&, const TransformationMatrix&, const Color&) OVERRIDE;
     virtual void beginClip(const TransformationMatrix&, const FloatRect&) OVERRIDE;
     virtual void bindSurface(BitmapTexture* surface) OVERRIDE { m_currentSurface = surface;}
     virtual void endClip() OVERRIDE { graphicsContext()->restore(); }
+    virtual IntRect clipBounds() OVERRIDE { return currentContext()->clipBounds(); }
+    virtual IntSize maxTextureSize() const;
     virtual PassRefPtr<BitmapTexture> createTexture() OVERRIDE { return BitmapTextureImageBuffer::create(); }
 
     inline GraphicsContext* currentContext()

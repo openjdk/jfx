@@ -6,11 +6,11 @@
 \.rej$
 \.conflict\~$
 ^\.ant-targets.*$
-\.idea/workspace.xml$
+^.idea/tasks.xml$
+^.idea/workspace.xml$
 ^\.gradle/
-^\.libs/
 ^buildSrc/\.gradle/
-^idea/out/
+^.idea/out/
 build/
 bin/
 dist/
@@ -24,6 +24,6 @@ syntax: glob
 */Release/*
 */Debug/*
 *~
-webview/native/LayoutTests
-webview/native/WebKitBuild
-webview/native/WebKitLibraries/import
+modules/web/src/main/native/LayoutTests
+modules/web/src/main/native/WebKitBuild
+modules/web/src/main/native/WebKitLibraries/import

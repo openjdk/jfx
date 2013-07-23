@@ -27,9 +27,11 @@
 
 #if ENABLE(INSPECTOR)
 
+#include "ConsoleAPITypes.h"
 #include "ConsoleTypes.h"
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
+#include "ScriptState.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
@@ -55,38 +57,45 @@ typedef String ErrorString;
 class InspectorConsoleAgent : public InspectorBaseAgent<InspectorConsoleAgent>, public InspectorBackendDispatcher::ConsoleCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorConsoleAgent);
 public:
-    InspectorConsoleAgent(InstrumentingAgents*, InspectorState*, InjectedScriptManager*);
+    InspectorConsoleAgent(InstrumentingAgents*, InspectorCompositeState*, InjectedScriptManager*);
     virtual ~InspectorConsoleAgent();
 
     virtual void enable(ErrorString*);
     virtual void disable(ErrorString*);
     virtual void clearMessages(ErrorString*);
+    bool enabled() { return m_enabled; }
     void reset();
 
     virtual void setFrontend(InspectorFrontend*);
     virtual void clearFrontend();
     virtual void restore();
 
-    void addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
-    void addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, const String& scriptId, unsigned lineNumber);
+    void addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, ScriptState*, PassRefPtr<ScriptArguments>, unsigned long requestIdentifier = 0);
+    void addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, const String& scriptId, unsigned lineNumber, unsigned columnNumber, ScriptState* = 0, unsigned long requestIdentifier = 0);
+
+    // FIXME: Remove once we no longer generate stacks outside of Inspector.
+    void addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, PassRefPtr<ScriptCallStack>, unsigned long requestIdentifier = 0);
+
     Vector<unsigned> consoleMessageArgumentCounts();
 
     void startTiming(const String& title);
     void stopTiming(const String& title, PassRefPtr<ScriptCallStack>);
-    void count(PassRefPtr<ScriptArguments>, PassRefPtr<ScriptCallStack>);
+    void count(ScriptState*, PassRefPtr<ScriptArguments>);
 
     void frameWindowDiscarded(DOMWindow*);
 
-    void resourceRetrievedByXMLHttpRequest(unsigned long identifier, const String& url, const String& sendURL, unsigned sendLineNumber);
-    void didReceiveResponse(unsigned long identifier, const ResourceResponse&);
-    void didFailLoading(unsigned long identifier, const ResourceError&);
+    void didFinishXHRLoading(unsigned long requestIdentifier, const String& url, const String& sendURL, unsigned sendLineNumber);
+    void didReceiveResponse(unsigned long requestIdentifier, const ResourceResponse&);
+    void didFailLoading(unsigned long requestIdentifier, const ResourceError&);
 #if ENABLE(JAVASCRIPT_DEBUGGER)
-    void addProfileFinishedMessageToConsole(PassRefPtr<ScriptProfile>, unsigned lineNumber, const String& sourceURL);
-    void addStartProfilingMessageToConsole(const String& title, unsigned lineNumber, const String& sourceURL);
+    void addProfileFinishedMessageToConsole(PassRefPtr<ScriptProfile>, unsigned lineNumber, unsigned columnNumber, const String& sourceURL);
+    void addStartProfilingMessageToConsole(const String& title, unsigned lineNumber, unsigned columnNumber, const String& sourceURL);
 #endif
     virtual void setMonitoringXHREnabled(ErrorString*, bool enabled);
     virtual void addInspectedNode(ErrorString*, int nodeId) = 0;
     virtual void addInspectedHeapObject(ErrorString*, int inspectedHeapObjectId);
+
+    virtual bool isWorkerAgent() = 0;
 
 protected:
     void addConsoleMessage(PassOwnPtr<ConsoleMessage>);
@@ -100,6 +109,9 @@ protected:
     int m_expiredConsoleMessageCount;
     HashMap<String, unsigned> m_counts;
     HashMap<String, double> m_times;
+    bool m_enabled;
+private:
+    static int s_enabledAgentCount;
 };
 
 } // namespace WebCore

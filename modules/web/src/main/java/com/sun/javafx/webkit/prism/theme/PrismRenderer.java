@@ -16,7 +16,7 @@ public final class PrismRenderer extends Renderer {
     protected void render(Control control, WCGraphicsContext g) {
         Scene.impl_setAllowPGAccess(true);
         // The peer is not modified.
-        NGNode peer = (NGNode)control.impl_getPGNode();
+        NGNode peer = control.impl_getPeer();
         Scene.impl_setAllowPGAccess(false);
 
         peer.render((Graphics)g.getPlatformGraphics());

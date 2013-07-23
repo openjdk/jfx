@@ -319,6 +319,12 @@ ContextInfo *eglContextFromConfig(EGLDisplay *dpy, EGLConfig config) {
                               GET_DLSYM(handle, "glBufferSubData");
     ctxInfo->glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)
                                   GET_DLSYM(handle, "glGetShaderInfoLog");
+    ctxInfo->glTexImage2DMultisample = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)
+                            GET_DLSYM(handle, "glTexImage2DMultisample");
+    ctxInfo->glRenderbufferStorageMultisample = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC)
+                            GET_DLSYM(handle, "glRenderbufferStorageMultisample");
+    ctxInfo->glBlitFramebuffer = (PFNGLBLITFRAMEBUFFERPROC)
+                            GET_DLSYM(handle, "glBlitFramebuffer");
 
     initState(ctxInfo);
     /* Releasing native resources */

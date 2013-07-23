@@ -27,9 +27,9 @@
 #include "BString.h"
 
 #include "KURL.h"
-#include "PlatformString.h"
 #include <windows.h>
 #include <wtf/text/AtomicString.h>
+#include <wtf/text/WTFString.h>
 
 #if USE(CF)
 #include <CoreFoundation/CoreFoundation.h>
@@ -84,14 +84,6 @@ BString::BString(const AtomicString& s)
         m_bstr = SysAllocStringLen(s.characters(), s.length());
 }
 
-BString::BString(const UString& s)
-{
-    if (s.isNull())
-        m_bstr = 0;
-    else
-        m_bstr = SysAllocStringLen(s.characters(), s.length());
-}
-
 #if USE(CF)
 BString::BString(CFStringRef cfstr)
     : m_bstr(0)
@@ -127,9 +119,14 @@ BString::BString(const BString& other)
 
 void BString::adoptBSTR(BSTR bstr)
 {
-    if (m_bstr)
         SysFreeString(m_bstr);
     m_bstr = bstr;
+}
+
+void BString::clear()
+{
+    SysFreeString(m_bstr);
+    m_bstr = 0;
 }
 
 BString& BString::operator=(const BString& other)

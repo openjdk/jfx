@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
 
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -51,6 +52,7 @@ import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.ChoiceBoxTableCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.ImageView;
 import javafx.util.Callback;
 
 import com.sun.javafx.tk.Toolkit;
@@ -1364,5 +1366,126 @@ public class TableViewTest {
         assertEquals(1, editingCell.getRow());
         assertEquals(firstNameCol, editingCell.getTableColumn());
         assertTrue(cell.isEditing());
+    }
+
+    @Test public void test_rt31471() {
+        Person jacobSmith;
+        final TableView<Person> tableView = new TableView<Person>();
+        tableView.setItems(FXCollections.observableArrayList(
+                jacobSmith = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                new Person("Jim", "Bob", "jim.bob@example.com")
+        ));
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        tableView.getColumns().add(firstNameCol);
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0);
+        assertEquals(jacobSmith, cell.getItem());
+
+        tableView.setFixedCellSize(50);
+
+        VirtualFlowTestUtils.getVirtualFlow(tableView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(jacobSmith, cell.getItem());
+        assertEquals(50, cell.getHeight(), 0.00);
+    }
+
+    private int rt_31200_count = 0;
+    @Test public void test_rt_31200_tableCell() {
+        rt_31200_count = 0;
+        final TableView<Person> tableView = new TableView<Person>();
+        tableView.setItems(FXCollections.observableArrayList(
+                new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                new Person("Jim", "Bob", "jim.bob@example.com")
+        ));
+
+        TableColumn<Person,String> firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        tableView.getColumns().add(firstNameCol);
+
+        firstNameCol.setCellFactory(new Callback<TableColumn<Person,String>, TableCell<Person, String>>() {
+            @Override
+            public TableCell<Person, String> call(TableColumn<Person,String> param) {
+                return new TableCell<Person, String>() {
+                    ImageView view = new ImageView();
+                    { setGraphic(view); };
+
+                    @Override
+                    protected void updateItem(String item, boolean empty) {
+                        if (getItem() == null ? item == null : getItem().equals(item)) {
+                            rt_31200_count++;
+                        }
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            view.setImage(null);
+                            setText(null);
+                        } else {
+                            setText(item);
+                        }
+                    }
+                };
+            }
+        });
+
+        StageLoader sl = new StageLoader(tableView);
+
+        assertEquals(0, rt_31200_count);
+
+        // resize the stage
+        sl.getStage().setHeight(250);
+        Toolkit.getToolkit().firePulse();
+        sl.getStage().setHeight(50);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(0, rt_31200_count);
+    }
+
+    @Test public void test_rt_31200_tableRow() {
+        rt_31200_count = 0;
+        final TableView<Person> tableView = new TableView<Person>();
+        tableView.setItems(FXCollections.observableArrayList(
+                new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                new Person("Jim", "Bob", "jim.bob@example.com")
+        ));
+
+        TableColumn<Person,String> firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        tableView.getColumns().add(firstNameCol);
+
+        tableView.setRowFactory(new Callback<TableView<Person>, TableRow<Person>>() {
+            @Override
+            public TableRow<Person> call(TableView<Person> param) {
+                return new TableRow<Person>() {
+                    ImageView view = new ImageView();
+                    { setGraphic(view); };
+
+                    @Override
+                    protected void updateItem(Person item, boolean empty) {
+                        if (getItem() == null ? item == null : getItem().equals(item)) {
+                            rt_31200_count++;
+                        }
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            view.setImage(null);
+                            setText(null);
+                        } else {
+                            setText(item.toString());
+                        }
+                    }
+                };
+            }
+        });
+
+        StageLoader sl = new StageLoader(tableView);
+
+        assertEquals(0, rt_31200_count);
+
+        // resize the stage
+        sl.getStage().setHeight(250);
+        Toolkit.getToolkit().firePulse();
+        sl.getStage().setHeight(50);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(0, rt_31200_count);
     }
 }

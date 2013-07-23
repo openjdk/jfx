@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.StringProperty;
@@ -45,8 +46,6 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.sg.PGNode;
-import javafx.beans.value.WritableValue;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -67,7 +66,7 @@ class TestNodeBase extends Node {
     }
 
     @Override
-    protected PGNode impl_createPGNode() {
+    protected NGNode impl_createPeer() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

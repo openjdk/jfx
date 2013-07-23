@@ -27,12 +27,9 @@
  */
 
 
-module window {
-
-    interface [
-        JSGenerateIsReachable=ImplFrame,
-        OmitConstructor
-    ] Screen {
+[
+    GenerateIsReachable=ImplFrame,
+] interface Screen {
         readonly attribute unsigned long height;
         readonly attribute unsigned long width;
         readonly attribute unsigned long colorDepth;
@@ -43,4 +40,3 @@ module window {
         readonly attribute unsigned long availWidth;
     };
 
-}

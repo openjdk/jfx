@@ -25,8 +25,8 @@
 /* alternate media controls - Extend fullscreen.css */
 
 video:-webkit-full-screen::-webkit-media-controls-panel {
-    -webkit-box-align: start !important;
-    -webkit-box-pack: end !important;
+    -webkit-align-items: flex-start !important;
+    -webkit-justify-content: flex-end !important;
     -webkit-appearance: none !important;
 
     padding: 12px 0 0 10px !important;
@@ -51,7 +51,7 @@ video:-webkit-full-screen::-webkit-media-controls-panel {
         inset 0  1px 0 0px   rgba(255, 255, 255, 0.15),
         inset 0 -1px 0 0px   rgba(202, 202, 202, 0.09),
         0  0   0 1px rgba(0, 0, 0, 0.5);
-    -webkit-border-radius: 8px !important;
+    border-radius: 8px !important;
 
     -webkit-transition: opacity 0.3s linear !important;
 }
@@ -125,7 +125,7 @@ video:-webkit-full-screen::-webkit-media-controls-rewind-button {
 
 video:-webkit-full-screen::-webkit-media-controls-seek-back-button {
     position: absolute;
-    display: -webkit-box;
+    display: -webkit-flex;
     width: 23px;
     height: 16px;
     left: 162px;
@@ -134,7 +134,7 @@ video:-webkit-full-screen::-webkit-media-controls-seek-back-button {
 
 video:-webkit-full-screen::-webkit-media-controls-return-to-realtime-button {
     position: absolute;
-    display: -webkit-box;
+    display: -webkit-flex;
     width: 29px;
     height: 16px;
     left: 262px;
@@ -143,7 +143,7 @@ video:-webkit-full-screen::-webkit-media-controls-return-to-realtime-button {
 
 video:-webkit-full-screen::-webkit-media-controls-seek-forward-button {
     position: absolute;
-    display: -webkit-box;
+    display: -webkit-flex;
     width: 23px;
     height: 16px;
     left: 262px;
@@ -165,4 +165,11 @@ video:-webkit-full-screen::-webkit-media-controls-status-display {
     bottom: 9px;
     left: 8px;
     right: 8px;
+}
+
+video:-webkit-full-screen::-webkit-media-controls-closed-captions-container {
+    bottom: 114px;
+    right: -webkit-calc(50% - 183px); /* 183px is 221px (half the media controller's width) minus 38px (the right position of the captions icon). */
+    max-width: -webkit-calc(50% + 173px); /* right + 10px */
+    max-height: -webkit-calc(100% - 124px); /* bottom + 10px */
 }

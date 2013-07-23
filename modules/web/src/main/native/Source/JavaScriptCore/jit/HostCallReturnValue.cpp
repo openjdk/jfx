@@ -27,10 +27,10 @@
 #include "HostCallReturnValue.h"
 
 #include "CallFrame.h"
-#include <wtf/InlineASM.h>
+#include "JSCJSValueInlines.h"
 #include "JSObject.h"
-#include "JSValueInlineMethods.h"
-#include "ScopeChain.h"
+#include <wtf/InlineASM.h>
+
 
 namespace JSC {
 

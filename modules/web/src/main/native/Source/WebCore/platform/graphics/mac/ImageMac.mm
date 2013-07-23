@@ -28,8 +28,8 @@
 
 #import "FloatRect.h"
 #import "GraphicsContext.h"
-#import "PlatformString.h"
 #import "SharedBuffer.h"
+#import <wtf/text/WTFString.h>
 
 @interface WebCoreBundleFinder : NSObject
 @end
@@ -88,9 +88,8 @@ CFDataRef BitmapImage::getTIFFRepresentation()
 
     unsigned numValidFrames = images.size();
     
-    RetainPtr<CFMutableDataRef> data(AdoptCF, CFDataCreateMutable(0, 0));
-    // FIXME:  Use type kCGImageTypeIdentifierTIFF constant once is becomes available in the API
-    RetainPtr<CGImageDestinationRef> destination(AdoptCF, CGImageDestinationCreateWithData(data.get(), CFSTR("public.tiff"), numValidFrames, 0));
+    RetainPtr<CFMutableDataRef> data = adoptCF(CFDataCreateMutable(0, 0));
+    RetainPtr<CGImageDestinationRef> destination = adoptCF(CGImageDestinationCreateWithData(data.get(), kUTTypeTIFF, numValidFrames, 0));
 
     if (!destination)
         return 0;
@@ -113,7 +112,7 @@ NSImage* BitmapImage::getNSImage()
     if (!data)
         return 0;
     
-    m_nsImage.adoptNS([[NSImage alloc] initWithData:(NSData*)data]);
+    m_nsImage = adoptNS([[NSImage alloc] initWithData:(NSData*)data]);
     return m_nsImage.get();
 }
 

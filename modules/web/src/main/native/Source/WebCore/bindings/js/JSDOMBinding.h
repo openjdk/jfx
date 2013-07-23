@@ -1,8 +1,10 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003, 2004, 2005, 2006, 2008, 2009 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003, 2004, 2005, 2006, 2008, 2009, 2013 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2009 Google, Inc. All rights reserved.
+ *  Copyright (C) 2012 Ericsson AB. All rights reserved.
+ *  Copyright (C) 2013 Michael Pruett <michael@68k.org>
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -22,37 +24,36 @@
 #ifndef JSDOMBinding_h
 #define JSDOMBinding_h
 
-#include "CSSImportRule.h"
-#include "CSSStyleDeclaration.h"
-#include "CSSStyleSheet.h"
+#include "BindingState.h"
 #include "JSDOMGlobalObject.h"
 #include "JSDOMWrapper.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
-#include "Element.h"
-#include "MediaList.h"
-#include "StylePropertySet.h"
-#include "StyledElement.h"
+#include "ScriptWrappable.h"
+#include "ScriptWrappableInlines.h"
+#include <heap/SlotVisitor.h>
 #include <heap/Weak.h>
+#include <heap/WeakInlines.h>
+#include <runtime/Error.h>
 #include <runtime/FunctionPrototype.h>
 #include <runtime/JSArray.h>
 #include <runtime/Lookup.h>
 #include <runtime/ObjectPrototype.h>
+#include <runtime/Operations.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/NullPtr.h>
 #include <wtf/Vector.h>
+
+namespace JSC {
+class HashEntry;
+}
 
 namespace WebCore {
 
 class DOMStringList;
 
-enum ParameterDefaultPolicy {
-    DefaultIsUndefined,
-    DefaultIsNullString
-};
-
-#define MAYBE_MISSING_PARAMETER(exec, index, policy) (((policy) == DefaultIsNullString && (index) >= (exec)->argumentCount()) ? (JSValue()) : ((exec)->argument(index)))
-
+    class CachedScript;
     class Frame;
     class KURL;
 
@@ -62,9 +63,9 @@ enum ParameterDefaultPolicy {
     class DOMConstructorObject : public JSDOMWrapper {
         typedef JSDOMWrapper Base;
     public:
-        static JSC::Structure* createStructure(JSC::JSGlobalData& globalData, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
+        static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
         {
-            return JSC::Structure::create(globalData, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), &s_info);
+            return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), &s_info);
         }
 
     protected:
@@ -82,7 +83,7 @@ enum ParameterDefaultPolicy {
     public:
         Document* document() const
         {
-            return static_cast<Document*>(scriptExecutionContext());
+            return toDocument(scriptExecutionContext());
         }
 
     protected:
@@ -93,7 +94,7 @@ enum ParameterDefaultPolicy {
 
         void finishCreation(JSDOMGlobalObject* globalObject)
         {
-            Base::finishCreation(globalObject->globalData());
+            Base::finishCreation(globalObject->vm());
             ASSERT(globalObject->scriptExecutionContext()->isDocument());
         }
     };
@@ -113,7 +114,7 @@ enum ParameterDefaultPolicy {
     {
         if (JSC::Structure* structure = getCachedDOMStructure(globalObject, &WrapperClass::s_info))
             return structure;
-        return cacheDOMStructure(globalObject, WrapperClass::createStructure(exec->globalData(), globalObject, WrapperClass::createPrototype(exec, globalObject)), &WrapperClass::s_info);
+        return cacheDOMStructure(globalObject, WrapperClass::createStructure(exec->vm(), globalObject, WrapperClass::createPrototype(exec, globalObject)), &WrapperClass::s_info);
     }
 
     template<class WrapperClass> inline JSC::Structure* deprecatedGetDOMStructure(JSC::ExecState* exec)
@@ -127,10 +128,32 @@ enum ParameterDefaultPolicy {
         return JSC::jsCast<JSC::JSObject*>(asObject(getDOMStructure<WrapperClass>(exec, JSC::jsCast<JSDOMGlobalObject*>(globalObject))->storedPrototype()));
     }
 
-    // Overload these functions to provide a fast path for wrapper access.
     inline JSDOMWrapper* getInlineCachedWrapper(DOMWrapperWorld*, void*) { return 0; }
-    inline bool setInlineCachedWrapper(DOMWrapperWorld*, void*, JSDOMWrapper*) { return false; }
+    inline bool setInlineCachedWrapper(DOMWrapperWorld*, void*, JSDOMWrapper*, JSC::WeakHandleOwner*, void*) { return false; }
     inline bool clearInlineCachedWrapper(DOMWrapperWorld*, void*, JSDOMWrapper*) { return false; }
+
+    inline JSDOMWrapper* getInlineCachedWrapper(DOMWrapperWorld* world, ScriptWrappable* domObject)
+    {
+        if (!world->isNormal())
+            return 0;
+        return domObject->wrapper();
+    }
+
+    inline bool setInlineCachedWrapper(DOMWrapperWorld* world, ScriptWrappable* domObject, JSDOMWrapper* wrapper, JSC::WeakHandleOwner* wrapperOwner, void* context)
+    {
+        if (!world->isNormal())
+            return false;
+        domObject->setWrapper(*world->vm(), wrapper, wrapperOwner, context);
+        return true;
+    }
+
+    inline bool clearInlineCachedWrapper(DOMWrapperWorld* world, ScriptWrappable* domObject, JSDOMWrapper* wrapper)
+    {
+        if (!world->isNormal())
+            return false;
+        domObject->clearWrapper(wrapper);
+        return true;
+    }
 
     template <typename DOMClass> inline JSDOMWrapper* getCachedWrapper(DOMWrapperWorld* world, DOMClass* domObject)
     {
@@ -141,9 +164,11 @@ enum ParameterDefaultPolicy {
 
     template <typename DOMClass> inline void cacheWrapper(DOMWrapperWorld* world, DOMClass* domObject, JSDOMWrapper* wrapper)
     {
-        if (setInlineCachedWrapper(world, domObject, wrapper))
+        JSC::WeakHandleOwner* owner = wrapperOwner(world, domObject);
+        void* context = wrapperContext(world, domObject);
+        if (setInlineCachedWrapper(world, domObject, wrapper, owner, context))
             return;
-        JSC::PassWeak<JSDOMWrapper> passWeak(wrapper, wrapperOwner(world, domObject), wrapperContext(world, domObject));
+        JSC::PassWeak<JSDOMWrapper> passWeak(wrapper, owner, context);
         weakAdd(world->m_wrappers, (void*)domObject, passWeak);
     }
 
@@ -175,68 +200,37 @@ enum ParameterDefaultPolicy {
         return createWrapper<WrapperClass>(exec, globalObject, domObject);
     }
 
-    inline void* root(Node* node)
+    template<class WrapperClass, class DOMClass> inline JSC::JSValue getExistingWrapper(JSC::ExecState* exec, DOMClass* domObject)
     {
-        if (node->inDocument())
-            return node->document();
-
-        while (node->parentOrHostNode())
-            node = node->parentOrHostNode();
-        return node;
+        ASSERT(domObject);
+        return getCachedWrapper(currentWorld(exec), domObject);
     }
 
-    inline void* root(StyleSheet*);
-
-    inline void* root(CSSRule* rule)
+    template<class WrapperClass, class DOMClass> inline JSC::JSValue createNewWrapper(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, DOMClass* domObject)
     {
-        if (rule->parentRule())
-            return root(rule->parentRule());
-        if (rule->parentStyleSheet())
-            return root(rule->parentStyleSheet());
-        return rule;
+        ASSERT(domObject);
+        ASSERT(!getCachedWrapper(currentWorld(exec), domObject));
+        return createWrapper<WrapperClass>(exec, globalObject, domObject);
     }
 
-    inline void* root(StyleSheet* styleSheet)
+    inline JSC::JSValue argumentOrNull(JSC::ExecState* exec, unsigned index)
     {
-        if (styleSheet->ownerRule())
-            return root(styleSheet->ownerRule());
-        if (styleSheet->ownerNode())
-            return root(styleSheet->ownerNode());
-        return styleSheet;
+        return index >= exec->argumentCount() ? JSC::JSValue() : exec->argument(index);
     }
 
-    inline void* root(CSSStyleDeclaration* style)
-    {
-        if (CSSRule* parentRule = style->parentRule())
-            return root(parentRule);
-        if (CSSStyleSheet* styleSheet = style->parentStyleSheet())
-            return root(styleSheet);
-        return style;
-    }
+    const JSC::HashTable* getHashTableForGlobalData(JSC::VM&, const JSC::HashTable* staticTable);
 
-    inline void* root(MediaList* mediaList)
-    {
-        if (CSSRule* parentRule = mediaList->parentRule())
-            return root(parentRule);
-        if (CSSStyleSheet* parentStyleSheet = mediaList->parentStyleSheet())
-            return root(parentStyleSheet);
-        return mediaList;
-    }
-
-    const JSC::HashTable* getHashTableForGlobalData(JSC::JSGlobalData&, const JSC::HashTable* staticTable);
-
-    void reportException(JSC::ExecState*, JSC::JSValue exception);
+    void reportException(JSC::ExecState*, JSC::JSValue exception, CachedScript* = 0);
     void reportCurrentException(JSC::ExecState*);
 
     // Convert a DOM implementation exception code into a JavaScript exception in the execution state.
     void setDOMException(JSC::ExecState*, ExceptionCode);
 
-    JSC::JSValue jsString(JSC::ExecState*, const String&); // empty if the string is null
-    JSC::JSValue jsStringSlowCase(JSC::ExecState*, JSStringCache&, StringImpl*);
+    JSC::JSValue jsStringWithCache(JSC::ExecState*, const String&);
     JSC::JSValue jsString(JSC::ExecState*, const KURL&); // empty if the URL is null
-    inline JSC::JSValue jsString(JSC::ExecState* exec, const AtomicString& s)
+    inline JSC::JSValue jsStringWithCache(JSC::ExecState* exec, const AtomicString& s)
     { 
-        return jsString(exec, s.string());
+        return jsStringWithCache(exec, s.string());
     }
         
     JSC::JSValue jsStringOrNull(JSC::ExecState*, const String&); // null if the string is null
@@ -245,19 +239,13 @@ enum ParameterDefaultPolicy {
     JSC::JSValue jsStringOrUndefined(JSC::ExecState*, const String&); // undefined if the string is null
     JSC::JSValue jsStringOrUndefined(JSC::ExecState*, const KURL&); // undefined if the URL is null
 
-    JSC::JSValue jsStringOrFalse(JSC::ExecState*, const String&); // boolean false if the string is null
-    JSC::JSValue jsStringOrFalse(JSC::ExecState*, const KURL&); // boolean false if the URL is null
-
     // See JavaScriptCore for explanation: Should be used for any string that is already owned by another
     // object, to let the engine know that collecting the JSString wrapper is unlikely to save memory.
     JSC::JSValue jsOwnedStringOrNull(JSC::ExecState*, const String&); 
 
     String propertyNameToString(JSC::PropertyName);
-    String ustringToString(const JSC::UString&);
-    JSC::UString stringToUString(const String&);
 
     AtomicString propertyNameToAtomicString(JSC::PropertyName);
-    AtomicString ustringToAtomicString(const JSC::UString&);
     AtomicStringImpl* findAtomicString(JSC::PropertyName);
 
     String valueToStringWithNullCheck(JSC::ExecState*, JSC::JSValue); // null if the value is null
@@ -266,14 +254,71 @@ enum ParameterDefaultPolicy {
     inline int32_t finiteInt32Value(JSC::JSValue value, JSC::ExecState* exec, bool& okay)
     {
         double number = value.toNumber(exec);
-        okay = isfinite(number);
+        okay = std::isfinite(number);
         return JSC::toInt32(number);
     }
+
+    enum IntegerConversionConfiguration {
+        NormalConversion,
+        EnforceRange,
+        // FIXME: Implement Clamp
+    };
+
+    int32_t toInt32EnforceRange(JSC::ExecState*, JSC::JSValue);
+    uint32_t toUInt32EnforceRange(JSC::ExecState*, JSC::JSValue);
+
+    /*
+        Convert a value to an integer as per <http://www.w3.org/TR/WebIDL/>.
+        The conversion fails if the value cannot be converted to a number or,
+        if EnforceRange is specified, the value is outside the range of the
+        destination integer type.
+    */
+    inline int32_t toInt32(JSC::ExecState* exec, JSC::JSValue value, IntegerConversionConfiguration configuration)
+    {
+        if (configuration == EnforceRange)
+            return toInt32EnforceRange(exec, value);
+        return value.toInt32(exec);
+    }
+
+    inline uint32_t toUInt32(JSC::ExecState* exec, JSC::JSValue value, IntegerConversionConfiguration configuration)
+    {
+        if (configuration == EnforceRange)
+            return toUInt32EnforceRange(exec, value);
+        return value.toUInt32(exec);
+    }
+
+    int64_t toInt64(JSC::ExecState*, JSC::JSValue, IntegerConversionConfiguration);
+    uint64_t toUInt64(JSC::ExecState*, JSC::JSValue, IntegerConversionConfiguration);
 
     // Returns a Date instance for the specified value, or null if the value is NaN or infinity.
     JSC::JSValue jsDateOrNull(JSC::ExecState*, double);
     // NaN if the value can't be converted to a date.
     double valueToDate(JSC::ExecState*, JSC::JSValue);
+
+    // Validates that the passed object is a sequence type per section 4.1.13 of the WebIDL spec.
+    inline JSC::JSObject* toJSSequence(JSC::ExecState* exec, JSC::JSValue value, unsigned& length)
+    {
+        JSC::JSObject* object = value.getObject();
+        if (!object) {
+            throwTypeError(exec);
+            return 0;
+        }
+
+        JSC::JSValue lengthValue = object->get(exec, exec->propertyNames().length);
+        if (exec->hadException())
+            return 0;
+
+        if (lengthValue.isUndefinedOrNull()) {
+            throwTypeError(exec);
+            return 0;
+        }
+
+        length = lengthValue.toUInt32(exec);
+        if (exec->hadException())
+            return 0;
+
+        return object;
+    }
 
     template <typename T>
     inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, PassRefPtr<T> ptr)
@@ -282,7 +327,7 @@ enum ParameterDefaultPolicy {
     }
 
     template <class T>
-    struct Traits {
+    struct JSValueTraits {
         static inline JSC::JSValue arrayJSValue(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, const T& value)
         {
             return toJS(exec, globalObject, WTF::getPtr(value));
@@ -290,15 +335,15 @@ enum ParameterDefaultPolicy {
     };
 
     template<>
-    struct Traits<String> {
+    struct JSValueTraits<String> {
         static inline JSC::JSValue arrayJSValue(JSC::ExecState* exec, JSDOMGlobalObject*, const String& value)
         {
-            return jsString(exec, stringToUString(value));
+            return jsStringWithCache(exec, value);
         }
     };
 
     template<>
-    struct Traits<float> {
+    struct JSValueTraits<float> {
         static inline JSC::JSValue arrayJSValue(JSC::ExecState*, JSDOMGlobalObject*, const float& value)
         {
             return JSC::jsNumber(value);
@@ -306,7 +351,7 @@ enum ParameterDefaultPolicy {
     };
 
     template<>
-    struct Traits<unsigned long> {
+    struct JSValueTraits<unsigned long> {
         static inline JSC::JSValue arrayJSValue(JSC::ExecState*, JSDOMGlobalObject*, const unsigned long& value)
         {
             return JSC::jsNumber(value);
@@ -318,74 +363,139 @@ enum ParameterDefaultPolicy {
     {
         JSC::MarkedArgumentBuffer list;
         typename Vector<T, inlineCapacity>::const_iterator end = iterator.end();        
-        typedef Traits<T> TraitsType;
+        typedef JSValueTraits<T> TraitsType;
 
         for (typename Vector<T, inlineCapacity>::const_iterator iter = iterator.begin(); iter != end; ++iter)
             list.append(TraitsType::arrayJSValue(exec, globalObject, *iter));
 
-        return JSC::constructArray(exec, globalObject, list);
+        return JSC::constructArray(exec, 0, globalObject, list);
     }
 
     JSC::JSValue jsArray(JSC::ExecState*, JSDOMGlobalObject*, PassRefPtr<DOMStringList>);
 
-    template <class T>
-    Vector<T> toNativeArray(JSC::ExecState* exec, JSC::JSValue value)
+    template<class T> struct NativeValueTraits;
+
+    template<>
+    struct NativeValueTraits<String> {
+        static inline bool nativeValue(JSC::ExecState* exec, JSC::JSValue jsValue, String& indexedValue)
+        {
+            indexedValue = jsValue.toString(exec)->value(exec);
+            return true;
+        }
+    };
+
+    template<>
+    struct NativeValueTraits<unsigned> {
+        static inline bool nativeValue(JSC::ExecState* exec, JSC::JSValue jsValue, unsigned& indexedValue)
+        {
+            if (!jsValue.isNumber())
+                return false;
+
+            indexedValue = jsValue.toUInt32(exec);
+            if (exec->hadException())
+                return false;
+
+            return true;
+        }
+    };
+
+    template<>
+    struct NativeValueTraits<float> {
+        static inline bool nativeValue(JSC::ExecState* exec, JSC::JSValue jsValue, float& indexedValue)
+        {
+            indexedValue = jsValue.toFloat(exec);
+            return !exec->hadException();
+        }
+    };
+
+    template <class T, class JST>
+    Vector<RefPtr<T> > toRefPtrNativeArray(JSC::ExecState* exec, JSC::JSValue value, T* (*toT)(JSC::JSValue value))
     {
         if (!isJSArray(value))
-            return Vector<T>();
+            return Vector<RefPtr<T> >();
 
-        Vector<T> result;
+        Vector<RefPtr<T> > result;
         JSC::JSArray* array = asArray(value);
-
-        for (unsigned i = 0; i < array->length(); ++i) {
-            String indexedValue = ustringToString(array->getIndex(i).toString(exec)->value(exec));
-            result.append(indexedValue);
+        for (size_t i = 0; i < array->length(); ++i) {
+            JSC::JSValue element = array->getIndex(exec, i);
+            if (element.inherits(&JST::s_info))
+                result.append((*toT)(element));
+            else {
+                throwVMError(exec, createTypeError(exec, "Invalid Array element type"));
+                return Vector<RefPtr<T> >();
+            }
         }
         return result;
     }
 
-    // Validates that the passed object is a sequence type per section 4.1.13 of the WebIDL spec.
-    JSC::JSObject* toJSSequence(JSC::ExecState*, JSC::JSValue, unsigned&);
+    template <class T>
+    Vector<T> toNativeArray(JSC::ExecState* exec, JSC::JSValue value)
+    {
+        unsigned length = 0;
+        if (isJSArray(value)) {
+            JSC::JSArray* array = asArray(value);
+            length = array->length();
+        } else
+            toJSSequence(exec, value, length);
 
-    // FIXME: Implement allowAccessToContext(JSC::ExecState*, ScriptExecutionContext*);
+        JSC::JSObject* object = value.getObject();
+        Vector<T> result;
+        typedef NativeValueTraits<T> TraitsType;
+
+        for (unsigned i = 0; i < length; ++i) {
+            T indexValue;
+            if (!TraitsType::nativeValue(exec, object->get(exec, i), indexValue))
+                return Vector<T>();
+            result.append(indexValue);
+        }
+        return result;
+    }
+
+    template <class T>
+    Vector<T> toNativeArguments(JSC::ExecState* exec, size_t startIndex = 0)
+    {
+        size_t length = exec->argumentCount();
+        ASSERT(startIndex <= length);
+
+        Vector<T> result;
+        typedef NativeValueTraits<T> TraitsType;
+
+        for (size_t i = startIndex; i < length; ++i) {
+            T indexValue;
+            if (!TraitsType::nativeValue(exec, exec->argument(i), indexValue))
+                return Vector<T>();
+            result.append(indexValue);
+        }
+        return result;
+    }
+
     bool shouldAllowAccessToNode(JSC::ExecState*, Node*);
     bool shouldAllowAccessToFrame(JSC::ExecState*, Frame*);
     bool shouldAllowAccessToFrame(JSC::ExecState*, Frame*, String& message);
-    // FIXME: Implement allowAccessToDOMWindow(JSC::ExecState*, DOMWindow*);
-
-    // FIXME: Remove these functions in favor of activeContext and
-    // firstContext, which return ScriptExecutionContext*. We prefer to use
-    // ScriptExecutionContext* as the context object in the bindings.
-    DOMWindow* activeDOMWindow(JSC::ExecState*);
-    DOMWindow* firstDOMWindow(JSC::ExecState*);
+    bool shouldAllowAccessToDOMWindow(BindingState*, DOMWindow*, String& message);
 
     void printErrorMessageForFrame(Frame*, const String& message);
     JSC::JSValue objectToStringFunctionGetter(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
 
-    inline JSC::JSValue jsString(JSC::ExecState* exec, const String& s)
+    inline JSC::JSValue jsStringWithCache(JSC::ExecState* exec, const String& s)
     {
         StringImpl* stringImpl = s.impl();
         if (!stringImpl || !stringImpl->length())
             return jsEmptyString(exec);
 
-        if (stringImpl->length() == 1 && stringImpl->characters()[0] <= 0xFF)
-            return jsString(exec, stringToUString(s));
+        if (stringImpl->length() == 1) {
+            UChar singleCharacter = (*stringImpl)[0u];
+            if (singleCharacter <= JSC::maxSingleCharacterString) {
+                JSC::VM* vm = &exec->vm();
+                return vm->smallStrings.singleCharacterString(vm, static_cast<unsigned char>(singleCharacter));
+            }
+        }
 
         JSStringCache& stringCache = currentWorld(exec)->m_stringCache;
-        if (JSC::JSString* string = stringCache.get(stringImpl))
-            return string;
-
-        return jsStringSlowCase(exec, stringCache, stringImpl);
-    }
-
-    inline String ustringToString(const JSC::UString& u)
-    {
-        return u.impl();
-    }
-
-    inline JSC::UString stringToUString(const String& s)
-    {
-        return JSC::UString(s.impl());
+        JSStringCache::AddResult addResult = stringCache.add(stringImpl, nullptr);
+        if (addResult.isNewEntry)
+            addResult.iterator->value = JSC::jsString(exec, String(stringImpl));
+        return JSC::JSValue(addResult.iterator->value.get());
     }
 
     inline String propertyNameToString(JSC::PropertyName propertyName)
@@ -393,33 +503,62 @@ enum ParameterDefaultPolicy {
         return propertyName.publicName();
     }
 
-    inline AtomicString ustringToAtomicString(const JSC::UString& u)
-    {
-        return AtomicString(u.impl());
-    }
-
     inline AtomicString propertyNameToAtomicString(JSC::PropertyName propertyName)
     {
         return AtomicString(propertyName.publicName());
     }
 
-    inline Vector<unsigned long> jsUnsignedLongArrayToVector(JSC::ExecState* exec, JSC::JSValue value)
+    template <class ThisImp>
+    inline const JSC::HashEntry* getStaticValueSlotEntryWithoutCaching(JSC::ExecState* exec, JSC::PropertyName propertyName)
     {
-        unsigned length;
-        JSC::JSObject* object = toJSSequence(exec, value, length);
-        if (exec->hadException())
-            return Vector<unsigned long>();
-
-        Vector<unsigned long> result;
-        for (unsigned i = 0; i < length; i++) {
-            JSC::JSValue indexedValue;
-            indexedValue = object->get(exec, i);
-            if (exec->hadException() || indexedValue.isUndefinedOrNull() || !indexedValue.isNumber())
-                return Vector<unsigned long>();
-            result.append(indexedValue.toUInt32(exec));
-        }
-        return result;
+        const JSC::HashEntry* entry = ThisImp::s_info.propHashTable(exec)->entry(exec, propertyName);
+        if (!entry) // not found, forward to parent
+            return getStaticValueSlotEntryWithoutCaching<typename ThisImp::Base>(exec, propertyName);
+        return entry;
     }
+
+    template <>
+    inline const JSC::HashEntry* getStaticValueSlotEntryWithoutCaching<JSDOMWrapper>(JSC::ExecState*, JSC::PropertyName)
+    {
+        return 0;
+        }
+
+    template<typename T>
+    class HasMemoryCostMemberFunction {
+        typedef char YesType;
+        struct NoType {
+            char padding[8];
+        };
+
+        struct BaseMixin {
+            size_t memoryCost();
+        };
+
+        struct Base : public T, public BaseMixin { };
+
+        template<typename U, U> struct
+        TypeChecker { };
+
+        template<typename U>
+        static NoType dummy(U*, TypeChecker<size_t (BaseMixin::*)(), &U::memoryCost>* = 0);
+        static YesType dummy(...);
+
+    public:
+        static const bool value = sizeof(dummy(static_cast<Base*>(0))) == sizeof(YesType);
+    };
+    template <typename T, bool hasReportCostFunction = HasMemoryCostMemberFunction<T>::value > struct ReportMemoryCost;
+    template <typename T> struct ReportMemoryCost<T, true> {
+        static void reportMemoryCost(JSC::ExecState* exec, T* impl)
+        {
+            exec->heap()->reportExtraMemoryCost(impl->memoryCost());
+    }
+    };
+    template <typename T> struct ReportMemoryCost<T, false> {
+        static void reportMemoryCost(JSC::ExecState*, T*)
+        {
+        }
+    };
+
 } // namespace WebCore
 
 #endif // JSDOMBinding_h

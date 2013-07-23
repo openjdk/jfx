@@ -30,45 +30,37 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGExternalNode;
+import com.sun.javafx.sg.prism.NGExternalNode;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
-
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.beans.value.ChangeListener;
-import javafx.geometry.Point2D;
-import javafx.scene.input.KeyCode;
+import javafx.stage.Window;
+import sun.awt.UngrabEvent;
+import sun.swing.JLightweightFrame;
+import sun.swing.LightweightContent;
 
-import javax.swing.JComponent;
-import javax.swing.SwingUtilities;
-import java.awt.AWTEvent;
-import java.awt.EventQueue;
-import java.awt.Toolkit;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
-
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
-
-import javafx.scene.Scene;
-import javafx.stage.Window;
-import sun.awt.UngrabEvent;
-
-import sun.swing.LightweightContent;
-import sun.swing.JLightweightFrame;
 
 /**
  * This class is used to embed a Swing content into a JavaFX application.
@@ -118,7 +110,7 @@ public class SwingNode extends Node {
     private volatile JComponent content;
     private volatile JLightweightFrame lwFrame;
 
-    private volatile PGExternalNode peer;
+    private volatile NGExternalNode peer;
 
     private final ReentrantLock paintLock = new ReentrantLock();
 
@@ -380,8 +372,8 @@ public class SwingNode extends Node {
     }
 
     @Override
-    protected PGNode impl_createPGNode() {
-        peer = com.sun.javafx.tk.Toolkit.getToolkit().createPGExternalNode();
+    protected NGNode impl_createPeer() {
+        peer = new NGExternalNode();
         peer.setLock(paintLock);
         for (Runnable request : peerRequests) {
             request.run();
@@ -414,8 +406,8 @@ public class SwingNode extends Node {
     }
 
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_VISIBLE)) {
             locateLwFrame(); // initialize location
@@ -535,7 +527,10 @@ public class SwingNode extends Node {
             Platform.runLater(new Runnable() {
                 @Override
                 public void run() {
-                    if (getScene() != null && getScene().getWindow() != null) {
+                    if (getScene() != null &&
+                        getScene().getWindow() != null &&
+                        getScene().getWindow().impl_getPeer() != null)
+                    {
                         getScene().getWindow().impl_getPeer().grabFocus();
                         grabbed = true;
                     }
@@ -555,7 +550,9 @@ public class SwingNode extends Node {
 
     private void ungrabFocus(boolean postUngrabEvent) {
         if (grabbed &&
-            getScene() != null && getScene().getWindow() != null)
+            getScene() != null &&
+            getScene().getWindow() != null &&
+            getScene().getWindow().impl_getPeer() != null)
         {
             skipBackwardUnrgabNotification = !postUngrabEvent;
             getScene().getWindow().impl_getPeer().ungrabFocus();
@@ -585,6 +582,10 @@ public class SwingNode extends Node {
             {
                 SwingNode.this.requestFocus();
             }
+            JLightweightFrame frame = lwFrame;
+            if (frame == null) {
+                return;
+            }
             int swingID = SwingEvents.fxMouseEventTypeToMouseID(event);
             if (swingID < 0) {
                 return;
@@ -596,7 +597,7 @@ public class SwingNode extends Node {
             long swingWhen = System.currentTimeMillis();
             java.awt.event.MouseEvent mouseEvent =
                     new java.awt.event.MouseEvent(
-                        lwFrame, swingID, swingWhen, swingModifiers,
+                        frame, swingID, swingWhen, swingModifiers,
                         (int)event.getX(), (int)event.getY(), (int)event.getScreenX(), (int)event.getSceneY(),
                         event.getClickCount(), swingPopupTrigger, swingButton);
             AccessController.doPrivileged(new PostEventAction(mouseEvent));
@@ -606,14 +607,12 @@ public class SwingNode extends Node {
     private class SwingKeyEventHandler implements EventHandler<KeyEvent> {
         @Override
         public void handle(KeyEvent event) {
-            if (event.getCharacter().isEmpty()) {
-                // TODO: should we post an "empty" character?
+            JLightweightFrame frame = lwFrame;
+            if (frame == null) {
                 return;
             }
-            // Let Ctrl+Tab, Shift+Strl+Tab traverse focus out.
-            if (event.getCode() == KeyCode.TAB && event.isControlDown()) {
-                Direction d = event.isShiftDown() ? Direction.PREVIOUS : Direction.NEXT;
-                getParent().getImpl_traversalEngine().trav(SwingNode.this, d);
+            if (event.getCharacter().isEmpty()) {
+                // TODO: should we post an "empty" character?
                 return;
             }
             // Don't let Arrows, Tab, Shift+Tab traverse focus out.
@@ -631,9 +630,18 @@ public class SwingNode extends Node {
             int swingModifiers = SwingEvents.fxKeyModsToKeyMods(event);
             int swingKeyCode = event.getCode().impl_getCode();
             char swingChar = event.getCharacter().charAt(0);
+
+            // A workaround. Some swing L&F's process mnemonics on KEY_PRESSED,
+            // for which swing provides a keychar. Extracting it from the text.
+            if (event.getEventType() == javafx.scene.input.KeyEvent.KEY_PRESSED) {
+                String text = event.getText();
+                if (text.length() == 1) {
+                    swingChar = text.charAt(0);
+                }
+            }
             long swingWhen = System.currentTimeMillis();
             java.awt.event.KeyEvent keyEvent = new java.awt.event.KeyEvent(
-                    lwFrame, swingID, swingWhen, swingModifiers,
+                    frame, swingID, swingWhen, swingModifiers,
                     swingKeyCode, swingChar);
             AccessController.doPrivileged(new PostEventAction(keyEvent));
         }

@@ -33,7 +33,8 @@
 #include "FrameView.h"
 #include "Node.h"
 #include "Page.h"
-#include "StyleResolver.h"
+#include "Settings.h"
+#include "VisitedLinkState.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
@@ -51,9 +52,11 @@ PassRefPtr<CachedPage> CachedPage::create(Page* page)
 
 CachedPage::CachedPage(Page* page)
     : m_timeStamp(currentTime())
+    , m_expirationTime(m_timeStamp + page->settings()->backForwardCacheExpirationInterval())
     , m_cachedMainFrame(CachedFrame::create(page->mainFrame()))
     , m_needStyleRecalcForVisitedLinks(false)
     , m_needsFullStyleRecalc(false)
+    , m_needsCaptionPreferencesChanged(false)
 {
 #ifndef NDEBUG
     cachedPageCounter.increment();
@@ -74,7 +77,7 @@ void CachedPage::restore(Page* page)
 {
     ASSERT(m_cachedMainFrame);
     ASSERT(page && page->mainFrame() && page->mainFrame() == m_cachedMainFrame->view()->frame());
-    ASSERT(!page->frameCount());
+    ASSERT(!page->subframeCount());
 
     m_cachedMainFrame->open();
     
@@ -83,18 +86,21 @@ void CachedPage::restore(Page* page)
     Document* focusedDocument = page->focusController()->focusedOrMainFrame()->document();
     if (Node* node = focusedDocument->focusedNode()) {
         if (node->isElementNode())
-            static_cast<Element*>(node)->updateFocusAppearance(true);
+            toElement(node)->updateFocusAppearance(true);
     }
 
     if (m_needStyleRecalcForVisitedLinks) {
-        for (Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-            if (StyleResolver* styleResolver = frame->document()->styleResolver())
-                styleResolver->allVisitedStateChanged();
-        }
+        for (Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext())
+            frame->document()->visitedLinkState()->invalidateStyleForAllLinks();
     }
 
     if (m_needsFullStyleRecalc)
         page->setNeedsRecalcStyleInAllFrames();
+
+#if ENABLE(VIDEO_TRACK)
+    if (m_needsCaptionPreferencesChanged)
+        page->captionPreferencesChanged();
+#endif
 
     clear();
 }
@@ -114,6 +120,11 @@ void CachedPage::destroy()
         m_cachedMainFrame->destroy();
 
     m_cachedMainFrame = 0;
+}
+
+bool CachedPage::hasExpired() const
+{
+    return currentTime() > m_expirationTime;
 }
 
 } // namespace WebCore

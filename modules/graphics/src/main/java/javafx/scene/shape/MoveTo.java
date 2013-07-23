@@ -25,11 +25,10 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
-
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.sg.PGPath;
 
 
 /**
@@ -149,7 +148,7 @@ public class MoveTo extends PathElement {
     }
 
     @Override
-    void addTo(PGPath pgPath) {
+    void addTo(NGPath pgPath) {
         if (isAbsolute()) {
             pgPath.addMoveTo((float)getX(), (float)getY());
         } else {

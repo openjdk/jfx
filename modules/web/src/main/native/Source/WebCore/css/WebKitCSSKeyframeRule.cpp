@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,14 +29,23 @@
 #include "PropertySetCSSStyleDeclaration.h"
 #include "StylePropertySet.h"
 #include "WebKitCSSKeyframesRule.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-StylePropertySet* StyleKeyframe::mutableProperties()
+StyleKeyframe::StyleKeyframe()
+{
+}
+
+StyleKeyframe::~StyleKeyframe()
+{
+}
+
+MutableStylePropertySet* StyleKeyframe::mutableProperties()
 {
     if (!m_properties->isMutable())
-        m_properties = m_properties->copy();
-    return m_properties.get();
+        m_properties = m_properties->mutableCopy();
+    return static_cast<MutableStylePropertySet*>(m_properties.get());
 }
     
 void StyleKeyframe::setProperties(PassRefPtr<StylePropertySet> properties)
@@ -76,17 +85,19 @@ void StyleKeyframe::parseKeyString(const String& s, Vector<float>& keys)
 
 String StyleKeyframe::cssText() const
 {
-    String result = keyText();
-
-    result += " { ";
-    result += m_properties->asText();
-    result += "}";
-
-    return result;
+    StringBuilder result;
+    result.append(keyText());
+    result.appendLiteral(" { ");
+    String decls = m_properties->asText();
+    result.append(decls);
+    if (!decls.isEmpty())
+        result.append(' ');
+    result.append('}');
+    return result.toString();
 }
 
 WebKitCSSKeyframeRule::WebKitCSSKeyframeRule(StyleKeyframe* keyframe, WebKitCSSKeyframesRule* parent)
-    : CSSRule(0, CSSRule::WEBKIT_KEYFRAME_RULE)
+    : CSSRule(0)
     , m_keyframe(keyframe)
 {
     setParentRule(parent);
@@ -98,11 +109,17 @@ WebKitCSSKeyframeRule::~WebKitCSSKeyframeRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleDeclaration* WebKitCSSKeyframeRule::style() const
+CSSStyleDeclaration* WebKitCSSKeyframeRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_keyframe->mutableProperties(), const_cast<WebKitCSSKeyframeRule*>(this));
+        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_keyframe->mutableProperties(), this);
     return m_propertiesCSSOMWrapper.get();
+}
+
+void WebKitCSSKeyframeRule::reattach(StyleRuleBase*)
+{
+    // No need to reattach, the underlying data is shareable on mutation.
+    ASSERT_NOT_REACHED();
 }
 
 } // namespace WebCore

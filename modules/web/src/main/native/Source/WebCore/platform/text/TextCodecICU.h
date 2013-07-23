@@ -28,7 +28,6 @@
 #define TextCodecICU_h
 
 #include "TextCodec.h"
-#include "TextEncoding.h"
 #include <unicode/utypes.h>
 
 typedef struct UConverter UConverter;
@@ -43,8 +42,8 @@ namespace WebCore {
         virtual ~TextCodecICU();
 
     private:
-        TextCodecICU(const TextEncoding&);
-        static PassOwnPtr<TextCodec> create(const TextEncoding&, const void*);
+        TextCodecICU(const char* encoding, const char* canonicalConverterName);
+        static PassOwnPtr<TextCodec> create(const TextEncoding&, const void* additionalData);
 
         virtual String decode(const char*, size_t length, bool flush, bool stopOnError, bool& sawError);
         virtual CString encode(const UChar*, size_t length, UnencodableHandling);
@@ -57,18 +56,19 @@ namespace WebCore {
         int decodeToBuffer(UChar* buffer, UChar* bufferLimit, const char*& source,
             const char* sourceLimit, int32_t* offsets, bool flush, UErrorCode& err);
 
-        TextEncoding m_encoding;
+        const char* const m_encodingName;
+        const char* const m_canonicalConverterName;
         mutable UConverter* m_converterICU;
         mutable bool m_needsGBKFallbacks;
     };
 
     struct ICUConverterWrapper {
+        WTF_MAKE_NONCOPYABLE(ICUConverterWrapper); WTF_MAKE_FAST_ALLOCATED;
+    public:
         ICUConverterWrapper() : converter(0) { }
         ~ICUConverterWrapper();
 
         UConverter* converter;
-
-        WTF_MAKE_NONCOPYABLE(ICUConverterWrapper);
     };
 
 } // namespace WebCore

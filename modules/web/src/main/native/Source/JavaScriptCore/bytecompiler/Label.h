@@ -37,6 +37,8 @@
 
 namespace JSC {
 
+    class BytecodeGenerator;
+
     class Label {
     public:
         explicit Label(BytecodeGenerator* generator)
@@ -66,6 +68,12 @@ namespace JSC {
         int refCount() const { return m_refCount; }
 
         bool isForward() const { return m_location == invalidLocation; }
+
+        int bind()
+        {
+            ASSERT(!isForward());
+            return bind(0, 0);
+        }
 
     private:
         typedef Vector<std::pair<int, int>, 8> JumpVector;

@@ -32,7 +32,6 @@
 #include <CoreFoundation/CFError.h>
 #include <CFNetwork/CFNetworkErrors.h>
 #include <wtf/RetainPtr.h>
-#include <wtf/UnusedParam.h>
 
 #if PLATFORM(WIN)
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
@@ -45,6 +44,8 @@ ResourceError::ResourceError(CFErrorRef cfError)
     , m_platformError(cfError)
 {
     m_isNull = !cfError;
+    if (!m_isNull)
+        m_isTimeout = CFErrorGetCode(m_platformError.get()) == kCFURLErrorTimedOut;
 }
 
 #if PLATFORM(WIN)
@@ -61,6 +62,11 @@ PCCERT_CONTEXT ResourceError::certificate() const
         return 0;
     
     return reinterpret_cast<PCCERT_CONTEXT>(CFDataGetBytePtr(m_certificate.get()));
+}
+
+void ResourceError::setCertificate(CFDataRef certificate)
+{
+    m_certificate = certificate;
 }
 #endif // PLATFORM(WIN)
 
@@ -91,7 +97,7 @@ void ResourceError::platformLazyInit()
 
     m_errorCode = CFErrorGetCode(m_platformError.get());
 
-    RetainPtr<CFDictionaryRef> userInfo(AdoptCF, CFErrorCopyUserInfo(m_platformError.get()));
+    RetainPtr<CFDictionaryRef> userInfo = adoptCF(CFErrorCopyUserInfo(m_platformError.get()));
     if (userInfo.get()) {
         CFStringRef failingURLString = (CFStringRef) CFDictionaryGetValue(userInfo.get(), failingURLStringKey);
         if (failingURLString)
@@ -99,7 +105,7 @@ void ResourceError::platformLazyInit()
         else {
             CFURLRef failingURL = (CFURLRef) CFDictionaryGetValue(userInfo.get(), failingURLKey);
             if (failingURL) {
-                RetainPtr<CFURLRef> absoluteURLRef(AdoptCF, CFURLCopyAbsoluteURL(failingURL));
+                RetainPtr<CFURLRef> absoluteURLRef = adoptCF(CFURLCopyAbsoluteURL(failingURL));
                 if (absoluteURLRef.get()) {
                     failingURLString = CFURLGetString(absoluteURLRef.get());
                     m_failingURL = String(failingURLString);
@@ -138,17 +144,15 @@ CFErrorRef ResourceError::cfError() const
     }
 
     if (!m_platformError) {
-        RetainPtr<CFMutableDictionaryRef> userInfo(AdoptCF, CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+        RetainPtr<CFMutableDictionaryRef> userInfo = adoptCF(CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
-        if (!m_localizedDescription.isEmpty()) {
-            RetainPtr<CFStringRef> localizedDescriptionString(AdoptCF, m_localizedDescription.createCFString());
-            CFDictionarySetValue(userInfo.get(), kCFErrorLocalizedDescriptionKey, localizedDescriptionString.get());
-        }
+        if (!m_localizedDescription.isEmpty())
+            CFDictionarySetValue(userInfo.get(), kCFErrorLocalizedDescriptionKey, m_localizedDescription.createCFString().get());
 
         if (!m_failingURL.isEmpty()) {
-            RetainPtr<CFStringRef> failingURLString(AdoptCF, m_failingURL.createCFString());
+            RetainPtr<CFStringRef> failingURLString = m_failingURL.createCFString();
             CFDictionarySetValue(userInfo.get(), failingURLStringKey, failingURLString.get());
-            RetainPtr<CFURLRef> url(AdoptCF, CFURLCreateWithString(0, failingURLString.get(), 0));
+            RetainPtr<CFURLRef> url = adoptCF(CFURLCreateWithString(0, failingURLString.get(), 0));
             CFDictionarySetValue(userInfo.get(), failingURLKey, url.get());
         }
 
@@ -157,8 +161,7 @@ CFErrorRef ResourceError::cfError() const
             wkSetSSLPeerCertificateData(userInfo.get(), m_certificate.get());
 #endif
         
-        RetainPtr<CFStringRef> domainString(AdoptCF, m_domain.createCFString());
-        m_platformError.adoptCF(CFErrorCreate(0, domainString.get(), m_errorCode, userInfo.get()));
+        m_platformError = adoptCF(CFErrorCreate(0, m_domain.createCFString().get(), m_errorCode, userInfo.get()));
     }
 
     return m_platformError.get();

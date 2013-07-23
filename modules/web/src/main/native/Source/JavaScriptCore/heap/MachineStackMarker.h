@@ -22,13 +22,8 @@
 #ifndef MachineThreads_h
 #define MachineThreads_h
 
-#if USE(PTHREADS)
-#include <pthread.h>
-#elif OS(WINDOWS)
-typedef DWORD pthread_key_t;
-#endif
-
 #include <wtf/Noncopyable.h>
+#include <wtf/ThreadSpecific.h>
 #include <wtf/ThreadingPrimitives.h>
 
 namespace JSC {
@@ -57,10 +52,12 @@ namespace JSC {
 
         void gatherFromOtherThread(ConservativeRoots&, Thread*);
 
-        Heap* m_heap;
         Mutex m_registeredThreadsMutex;
         Thread* m_registeredThreads;
-        pthread_key_t m_threadSpecific;
+        WTF::ThreadSpecificKey m_threadSpecific;
+#if !ASSERT_DISABLED
+        Heap* m_heap;
+#endif
     };
 
 } // namespace JSC

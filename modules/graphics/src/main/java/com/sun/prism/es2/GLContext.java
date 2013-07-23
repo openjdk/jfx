@@ -109,6 +109,8 @@ abstract class GLContext {
     private int[] boundTextures = new int[4];
     // depthTest is initialized to false in the native initState method
     private boolean depthTest = false;
+    private boolean msaa = false;
+    private int maxSampleSize = -1;
 
     private static native void nActiveTexture(long nativeCtxInfo, int texUnit);
     private static native void nBindFBO(long nativeCtxInfo, int nativeFBOID);
@@ -120,7 +122,9 @@ abstract class GLContext {
     private static native int nCompileShader(long nativeCtxInfo, String src,
             boolean vertex);
     private static native int nCreateDepthBuffer(long nativeCtxInfo, int width,
-            int height);
+            int height, int msaaSamples);
+    private static native int nCreateRenderBuffer(long nativeCtxInfo, int width,
+            int height, int msaaSamples);
     private static native int nCreateFBO(long nativeCtxInfo, int texID);
     private static native int nCreateProgram(long nativeCtxInfo,
             int vertexShaderID, int[] fragmentShaderID,
@@ -136,6 +140,7 @@ abstract class GLContext {
     private static native void nFinish();
     private static native int nGenAndBindTexture();
     private static native int nGetFBO();
+    private static native int nGetMaxSampleSize();
     private static native int nGetMaxTextureSize();
     private static native int nGetUniformLocation(long nativeCtxInfo,
             int programID, String name);
@@ -148,6 +153,7 @@ abstract class GLContext {
     private static native void nScissorTest(long nativeCtxInfo, boolean enable,
             int x, int y, int w, int h);
     private static native void nSetDepthTest(long nativeCtxInfo, boolean depthTest);
+    private static native void nSetMSAA(long nativeCtxInfo, boolean msaa);
     private static native void nTexParamsMinMax(int pname);
     private static native boolean nTexImage2D0(int target, int level, int internalFormat,
             int width, int height, int border, int format,
@@ -229,6 +235,9 @@ abstract class GLContext {
     private static native void nSetPointLight(long nativeCtxInfo, long nativeMeshViewInfo,
             int index, float x, float y, float z, float r, float g, float b, float w);
     private static native void nRenderMeshView(long nativeCtxInfo, long nativeMeshViewInfo);
+    private static native int  nBlit(long nativeCtxInfo, int srcFBO, int dstFBO,
+            int srcX0, int srcY0, int srcX1, int srcY1,
+            int dstX0, int dstY0, int dstX1, int dstY1);
 
     void activeTexture(int texUnit) {
         nActiveTexture(nativeCtxInfo, texUnit);
@@ -291,11 +300,21 @@ abstract class GLContext {
         return nCompileShader(nativeCtxInfo, shaderSource, vertex);
     }
 
-    int createDepthBuffer(int width, int height) {
-        return nCreateDepthBuffer(nativeCtxInfo, width, height);
+    int createDepthBuffer(int width, int height, int msaaSamples) {
+        return nCreateDepthBuffer(nativeCtxInfo, width, height, msaaSamples);
     }
 
-    int createFBO(int texID, int width, int height) {
+    int createRenderBuffer(int width, int height, int msaaSamples) {
+        return nCreateRenderBuffer(nativeCtxInfo, width, height, msaaSamples);
+    }
+
+    /**
+     * Will create FBO by generate new FBO and binding it.
+     * Note: Will not restore previously bound FBO.
+     * @param texID if defined, will attach texture to generated FBO
+     * @return FBO id
+     */
+    int createFBO(int texID) {
         return nCreateFBO(nativeCtxInfo, texID);
     }
 
@@ -345,6 +364,15 @@ abstract class GLContext {
 
     void deleteShader(int shadeID) {
         nDeleteShader(nativeCtxInfo, shadeID);
+    }
+
+    void blitFBO(int msaaFboID, int dstFboID,
+                 int srcX0, int srcY0, int srcX1, int srcY1,
+                 int dstX0, int dstY0, int dstX1, int dstY1)
+    {
+        nBlit(nativeCtxInfo, msaaFboID, dstFboID,
+              srcX0, srcY0, srcX1, srcY1,
+              dstX0, dstY0, dstX1, dstY1);
     }
 
     void deleteTexture(int tID) {
@@ -425,6 +453,19 @@ abstract class GLContext {
         }
     }
     /***********************************************************/
+
+    int getSampleSize() {
+        int maxSamples = getMaxSampleSize();
+        return maxSamples < 2 ? 0 : (maxSamples < 4 ? 2 : 4);
+    }
+
+    int getMaxSampleSize() {
+        if (maxSampleSize > -1) {
+            return maxSampleSize;
+        }
+        maxSampleSize = ES2Pipeline.antiAliasingSupported ? nGetMaxSampleSize() : 0;
+        return maxSampleSize;
+    }
 
     int getMaxTextureSize() {
         if (maxTextureSize > -1) {
@@ -521,6 +562,13 @@ abstract class GLContext {
         if (this.depthTest != depthTest) {
             nSetDepthTest(nativeCtxInfo, depthTest);
             this.depthTest = depthTest;
+        }
+    }
+
+    void updateMSAAState(boolean msaa) {
+        if (this.msaa != msaa) {
+            nSetMSAA(nativeCtxInfo, msaa);
+            this.msaa = msaa;
         }
     }
 

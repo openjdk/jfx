@@ -34,6 +34,7 @@ import time
 import urllib2
 import xml.dom.minidom
 
+from webkitpy.common.checkout.scm.detection import SCMDetector
 from webkitpy.common.net.file_uploader import FileUploader
 
 # A JSON results generator for generic tests.
@@ -149,7 +150,7 @@ class TestResult(object):
         return self.failed or self.modifier == self.DISABLED
 
 
-class JSONResultsGeneratorBase(object):
+class JSONResultsGenerator(object):
     """A JSON results generator for generic tests."""
 
     MAX_NUMBER_OF_BUILD_RESULTS_TO_LOG = 750
@@ -187,16 +188,12 @@ class JSONResultsGeneratorBase(object):
 
     URL_FOR_TEST_LIST_JSON = "http://%s/testfile?builder=%s&name=%s&testlistjson=1&testtype=%s&master=%s"
 
-    # FIXME: Remove generate_incremental_results once the reference to it in
-    # http://src.chromium.org/viewvc/chrome/trunk/tools/build/scripts/slave/gtest_slave_utils.py
-    # has been removed.
     def __init__(self, port, builder_name, build_name, build_number,
         results_file_base_path, builder_base_url,
         test_results_map, svn_repositories=None,
         test_results_server=None,
         test_type="",
-        master_name="",
-        generate_incremental_results=None):
+        master_name=""):
         """Modifies the results.json file. Grabs it off the archive directory
         if it is not found locally.
 
@@ -219,6 +216,7 @@ class JSONResultsGeneratorBase(object):
         """
         self._port = port
         self._filesystem = port._filesystem
+        self._executive = port._executive
         self._builder_name = builder_name
         self._build_name = build_name
         self._build_number = build_number
@@ -279,7 +277,8 @@ class JSONResultsGeneratorBase(object):
 
         results_for_builder = results_json[builder_name]
 
-        self._insert_generic_metadata(results_for_builder)
+        if builder_name:
+            self._insert_generic_metadata(results_for_builder)
 
         self._insert_failure_summaries(results_for_builder)
 
@@ -375,27 +374,20 @@ class JSONResultsGeneratorBase(object):
 
         return self.__class__.PASS_RESULT
 
-    # FIXME: Callers should use scm.py instead.
-    # FIXME: Identify and fix the run-time errors that were observed on Windows
-    # chromium buildbot when we had updated this code to use scm.py once before.
     def _get_svn_revision(self, in_directory):
         """Returns the svn revision for the given directory.
 
         Args:
           in_directory: The directory where svn is to be run.
         """
-        if self._filesystem.exists(self._filesystem.join(in_directory, '.svn')):
-            # Note: Not thread safe: http://bugs.python.org/issue2320
-            output = subprocess.Popen(["svn", "info", "--xml"],
-                                      cwd=in_directory,
-                                      shell=(sys.platform == 'win32'),
-                                      stdout=subprocess.PIPE).communicate()[0]
-            try:
-                dom = xml.dom.minidom.parseString(output)
-                return dom.getElementsByTagName('entry')[0].getAttribute(
-                    'revision')
-            except xml.parsers.expat.ExpatError:
-                return ""
+
+        # FIXME: We initialize this here in order to engage the stupid windows hacks :).
+        # We can't reuse an existing scm object because the specific directories may
+        # be part of other checkouts.
+        self._port.host.initialize_scm()
+        scm = SCMDetector(self._filesystem, self._executive).detect_scm_system(in_directory)
+        if scm:
+            return scm.svn_revision(in_directory)
         return ""
 
     def _get_archived_json_results(self):
@@ -528,17 +520,9 @@ class JSONResultsGeneratorBase(object):
 
         # Include SVN revisions for the given repositories.
         for (name, path) in self._svn_repositories:
-            # Note: for JSON file's backward-compatibility we use 'chrome' rather
-            # than 'chromium' here.
-            if name == 'chromium':
-                name = 'chrome'
-            self._insert_item_into_raw_list(results_for_builder,
-                self._get_svn_revision(path),
-                name + 'Revision')
+            self._insert_item_into_raw_list(results_for_builder, self._get_svn_revision(path), name.lower() + 'Revision')
 
-        self._insert_item_into_raw_list(results_for_builder,
-            int(time.time()),
-            self.TIME)
+        self._insert_item_into_raw_list(results_for_builder, int(time.time()), self.TIME)
 
     def _insert_test_time_and_result(self, test_name, tests):
         """ Insert a test item with its results to the given tests dictionary.
@@ -657,8 +641,3 @@ class JSONResultsGeneratorBase(object):
         """Returns whether all the results are of the given type
         (e.g. all passes)."""
         return len(results) == 1 and results[0][1] == type
-
-
-# Left here not to break anything.
-class JSONResultsGenerator(JSONResultsGeneratorBase):
-    pass

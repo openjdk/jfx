@@ -35,20 +35,22 @@ enum PrintColorAdjust {
 };
 
 // The difference between two styles.  The following values are used:
-// (1) StyleDifferenceEqual - The two styles are identical
-// (2) StyleDifferenceRecompositeLayer - The layer needs its position and transform updated, but no repaint
-// (3) StyleDifferenceRepaint - The object just needs to be repainted.
-// (4) StyleDifferenceRepaintLayer - The layer and its descendant layers needs to be repainted.
-// (5) StyleDifferenceLayoutPositionedMovementOnly - Only the position of this positioned object has been updated
-// (6) StyleDifferenceSimplifiedLayout - Only overflow needs to be recomputed
-// (7) StyleDifferenceSimplifiedLayoutAndPositionedMovement - Both positioned movement and simplified layout updates are required.
-// (8) StyleDifferenceLayout - A full layout is required.
+// - StyleDifferenceEqual - The two styles are identical
+// - StyleDifferenceRecompositeLayer - The layer needs its position and transform updated, but no repaint
+// - StyleDifferenceRepaint - The object just needs to be repainted.
+// - StyleDifferenceRepaintIfText - The object needs to be repainted if it contains text.
+// - StyleDifferenceRepaintLayer - The layer and its descendant layers needs to be repainted.
+// - StyleDifferenceLayoutPositionedMovementOnly - Only the position of this positioned object has been updated
+// - StyleDifferenceSimplifiedLayout - Only overflow needs to be recomputed
+// - StyleDifferenceSimplifiedLayoutAndPositionedMovement - Both positioned movement and simplified layout updates are required.
+// - StyleDifferenceLayout - A full layout is required.
 enum StyleDifference {
     StyleDifferenceEqual,
 #if USE(ACCELERATED_COMPOSITING)
     StyleDifferenceRecompositeLayer,
 #endif
     StyleDifferenceRepaint,
+    StyleDifferenceRepaintIfText,
     StyleDifferenceRepaintLayer,
     StyleDifferenceLayoutPositionedMovementOnly,
     StyleDifferenceSimplifiedLayout,
@@ -81,7 +83,7 @@ enum PseudoId {
     PUBLIC_PSEUDOID_MASK = ((1 << FIRST_INTERNAL_PSEUDOID) - 1) & ~((1 << FIRST_PUBLIC_PSEUDOID) - 1)
 };
 
-enum ColumnSpan { ColumnSpanOne = 0, ColumnSpanAll};
+enum ColumnSpan { ColumnSpanNone = 0, ColumnSpanAll };
 
 enum EBorderCollapse { BSEPARATE = 0, BCOLLAPSE = 1 };
 
@@ -94,7 +96,12 @@ enum EBorderPrecedence { BOFF, BTABLE, BCOLGROUP, BCOL, BROWGROUP, BROW, BCELL }
 enum OutlineIsAuto { AUTO_OFF = 0, AUTO_ON };
 
 enum EPosition {
-    StaticPosition, RelativePosition, AbsolutePosition, FixedPosition
+    StaticPosition = 0,
+    RelativePosition = 1,
+    AbsolutePosition = 2,
+    StickyPosition = 3,
+    // This value is required to pack our bits efficiently in RenderObject.
+    FixedPosition = 6
 };
 
 enum EFloat {
@@ -114,7 +121,7 @@ enum EBoxSizing { CONTENT_BOX, BORDER_BOX };
 // Random visual rendering model attributes. Not inherited.
 
 enum EOverflow {
-    OVISIBLE, OHIDDEN, OSCROLL, OAUTO, OOVERLAY, OMARQUEE
+    OVISIBLE, OHIDDEN, OSCROLL, OAUTO, OOVERLAY, OMARQUEE, OPAGEDX, OPAGEDY
 };
 
 enum EVerticalAlign {
@@ -128,11 +135,6 @@ enum EClear {
 
 enum ETableLayout {
     TAUTO, TFIXED
-};
-
-// CSS Text Layout Module Level 3: Vertical writing support
-enum WritingMode {
-    TopToBottomWritingMode, RightToLeftWritingMode, LeftToRightWritingMode, BottomToTopWritingMode
 };
 
 enum TextCombine {
@@ -158,6 +160,9 @@ enum EFillLayerType {
 // CSS3 Background Values
 enum EFillSizeType { Contain, Cover, SizeLength, SizeNone };
 
+// CSS3 Background Position
+enum BackgroundEdgeOrigin { TopEdge, RightEdge, BottomEdge, LeftEdge };
+
 // CSS3 Marquee Properties
 
 enum EMarqueeBehavior { MNONE, MSCROLL, MSLIDE, MALTERNATE };
@@ -176,7 +181,7 @@ enum EBoxDirection { BNORMAL, BREVERSE };
 enum EAlignContent { AlignContentFlexStart, AlignContentFlexEnd, AlignContentCenter, AlignContentSpaceBetween, AlignContentSpaceAround, AlignContentStretch };
 enum EAlignItems { AlignAuto, AlignFlexStart, AlignFlexEnd, AlignCenter, AlignStretch, AlignBaseline };
 enum EFlexDirection { FlowRow, FlowRowReverse, FlowColumn, FlowColumnReverse };
-enum EFlexWrap { FlexWrapNone, FlexWrap, FlexWrapReverse };
+enum EFlexWrap { FlexNoWrap, FlexWrap, FlexWrapReverse };
 enum EJustifyContent { JustifyFlexStart, JustifyFlexEnd, JustifyCenter, JustifySpaceBetween, JustifySpaceAround };
 
 enum ETextSecurity {
@@ -198,7 +203,7 @@ enum EUserDrag {
 // CSS3 User Select Values
 
 enum EUserSelect {
-    SELECT_NONE, SELECT_TEXT
+    SELECT_NONE, SELECT_TEXT, SELECT_ALL
 };
 
 // Word Break Values. Matches WinIE, rather than CSS3
@@ -207,16 +212,16 @@ enum EWordBreak {
     NormalWordBreak, BreakAllWordBreak, BreakWordBreak
 };
 
-enum EWordWrap {
-    NormalWordWrap, BreakWordWrap
+enum EOverflowWrap {
+    NormalOverflowWrap, BreakOverflowWrap
 };
 
 enum ENBSPMode {
     NBNORMAL, SPACE
 };
 
-enum EKHTMLLineBreak {
-    LBNORMAL, AFTER_WHITE_SPACE
+enum LineBreak {
+    LineBreakAuto, LineBreakLoose, LineBreakNormal, LineBreakStrict, LineBreakAfterWhiteSpace
 };
 
 enum EResize {
@@ -308,10 +313,6 @@ enum EListStyleType {
     NoneListStyle
 };
 
-enum StyleContentType {
-    CONTENT_NONE, CONTENT_OBJECT, CONTENT_TEXT, CONTENT_COUNTER, CONTENT_QUOTE
-};
-
 enum QuoteType {
     OPEN_QUOTE, CLOSE_QUOTE, NO_OPEN_QUOTE, NO_CLOSE_QUOTE
 };
@@ -338,12 +339,37 @@ enum ETextTransform {
     CAPITALIZE, UPPERCASE, LOWERCASE, TTNONE
 };
 
-static const size_t ETextDecorationBits = 4;
-enum ETextDecoration {
-    TDNONE = 0x0 , UNDERLINE = 0x1, OVERLINE = 0x2, LINE_THROUGH= 0x4, BLINK = 0x8
+static const size_t TextDecorationBits = 4;
+enum TextDecoration {
+    TextDecorationNone = 0x0, TextDecorationUnderline = 0x1, TextDecorationOverline = 0x2, TextDecorationLineThrough = 0x4, TextDecorationBlink = 0x8
 };
-inline ETextDecoration operator|(ETextDecoration a, ETextDecoration b) { return ETextDecoration(int(a) | int(b)); }
-inline ETextDecoration& operator|=(ETextDecoration& a, ETextDecoration b) { return a = a | b; }
+inline TextDecoration operator| (TextDecoration a, TextDecoration b) { return TextDecoration(int(a) | int(b)); }
+inline TextDecoration& operator|= (TextDecoration& a, TextDecoration b) { return a = a | b; }
+
+enum TextDecorationStyle {
+    TextDecorationStyleSolid,
+#if ENABLE(CSS3_TEXT)
+    TextDecorationStyleDouble,
+    TextDecorationStyleDotted,
+    TextDecorationStyleDashed,
+    TextDecorationStyleWavy
+#endif // CSS3_TEXT
+};
+
+#if ENABLE(CSS3_TEXT)
+enum TextAlignLast {
+    TextAlignLastAuto, TextAlignLastStart, TextAlignLastEnd, TextAlignLastLeft, TextAlignLastRight, TextAlignLastCenter, TextAlignLastJustify
+};
+
+enum TextUnderlinePosition {
+    // FIXME: Implement support for 'under left' and 'under right' values.
+    TextUnderlinePositionAuto = 0x1, TextUnderlinePositionAlphabetic = 0x2, TextUnderlinePositionUnder = 0x4
+};
+
+enum TextJustify {
+    TextJustifyAuto, TextJustifyNone, TextJustifyInterWord, TextJustifyInterIdeograph, TextJustifyInterCluster, TextJustifyDistribute, TextJustifyKashida
+};
+#endif // CSS3_TEXT
 
 enum EPageBreak {
     PBAUTO, PBALWAYS, PBAVOID
@@ -403,6 +429,13 @@ enum ECursor {
     CURSOR_NONE
 };
 
+#if ENABLE(CURSOR_VISIBILITY)
+enum CursorVisibility {
+    CursorVisibilityAuto,
+    CursorVisibilityAutoHide,
+};
+#endif
+
 // The order of this enum must match the order of the display values in CSSValueKeywords.in.
 enum EDisplay {
     INLINE, BLOCK, LIST_ITEM, RUN_IN, COMPACT, INLINE_BLOCK,
@@ -410,9 +443,7 @@ enum EDisplay {
     TABLE_HEADER_GROUP, TABLE_FOOTER_GROUP, TABLE_ROW,
     TABLE_COLUMN_GROUP, TABLE_COLUMN, TABLE_CELL,
     TABLE_CAPTION, BOX, INLINE_BOX,
-#if ENABLE(CSS3_FLEXBOX)
     FLEX, INLINE_FLEX,
-#endif
     GRID, INLINE_GRID,
     NONE
 };
@@ -446,9 +477,11 @@ enum TextEmphasisMark { TextEmphasisMarkNone, TextEmphasisMarkAuto, TextEmphasis
 
 enum TextEmphasisPosition { TextEmphasisPositionOver, TextEmphasisPositionUnder };
 
+enum TextOrientation { TextOrientationVerticalRight, TextOrientationUpright, TextOrientationSideways, TextOrientationSidewaysRight };
+
 enum TextOverflow { TextOverflowClip = 0, TextOverflowEllipsis };
 
-enum EImageRendering { ImageRenderingAuto, ImageRenderingOptimizeSpeed, ImageRenderingOptimizeQuality, ImageRenderingOptimizeContrast };
+enum EImageRendering { ImageRenderingAuto = 0, ImageRenderingOptimizeSpeed, ImageRenderingOptimizeQuality, ImageRenderingCrispEdges };
 
 enum ImageResolutionSource { ImageResolutionSpecified = 0, ImageResolutionFromImage };
 
@@ -469,6 +502,22 @@ enum LineAlign { LineAlignNone, LineAlignEdges };
 enum WrapFlow { WrapFlowAuto, WrapFlowBoth, WrapFlowStart, WrapFlowEnd, WrapFlowMaximum, WrapFlowClear };
 
 enum WrapThrough { WrapThroughWrap, WrapThroughNone };
+
+enum RubyPosition { RubyPositionBefore, RubyPositionAfter };
+
+enum GridAutoFlow { AutoFlowNone, AutoFlowColumn, AutoFlowRow };
+
+#if ENABLE(DRAGGABLE_REGION)
+enum DraggableRegionMode { DraggableRegionNone, DraggableRegionDrag, DraggableRegionNoDrag };
+#endif
+
+// Reasonable maximum to prevent insane font sizes from causing crashes on some platforms (such as Windows).
+static const float maximumAllowedFontSize = 1000000.0f;
+
+#if ENABLE(CSS3_TEXT)
+enum TextIndentLine { TextIndentFirstLine, TextIndentEachLine };
+enum TextIndentType { TextIndentNormal, TextIndentHanging };
+#endif
 
 } // namespace WebCore
 

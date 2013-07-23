@@ -1,11 +1,11 @@
 #if defined(WIN32) || defined(_WIN32)
 
 #ifndef WINVER
-#define WINVER 0x0500
+#define WINVER 0x0502
 #endif
 
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500
+#define _WIN32_WINNT 0x0502
 #endif
 
 #ifdef __cplusplus
@@ -52,7 +52,6 @@
 #include <platform/win/SystemInfo.h>
 #endif
 
-#include <wtf/AlwaysInline.h>
 #include <wtf/Assertions.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/DateMath.h>
@@ -69,9 +68,9 @@
 #include <wtf/HashTable.h>
 #include <wtf/HashTraits.h>
 #include <wtf/ListHashSet.h>
-#include <wtf/ListRefPtr.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/NullPtr.h>
 #include <wtf/OwnArrayPtr.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/OwnPtrCommon.h>
@@ -82,7 +81,6 @@
 #include <wtf/StringExtras.h>
 #include <wtf/TCPageMap.h>
 #include <wtf/TCSystemAlloc.h>
-#include <wtf/UnusedParam.h>
 #include <wtf/Vector.h>
 #include <wtf/VectorTraits.h>
 

@@ -32,21 +32,21 @@
 
 namespace JSC { namespace DFG {
 
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
 void Phase::beginPhase()
 {
-    dataLog("Beginning DFG phase %s.\n", m_name);
-    dataLog("Graph before %s:\n", m_name);
+    if (!shouldDumpGraphAtEachPhase())
+        return;
+    dataLog("Beginning DFG phase ", m_name, ".\n");
+    dataLog("Before ", m_name, ":\n");
     m_graph.dump();
 }
-#endif
 
-#if DFG_ENABLE(PER_PHASE_VALIDATION)
 void Phase::endPhase()
 {
+    if (!Options::validateGraphAtEachPhase())
+        return;
     validate(m_graph, DumpGraph);
 }
-#endif
 
 } } // namespace JSC::DFG
 

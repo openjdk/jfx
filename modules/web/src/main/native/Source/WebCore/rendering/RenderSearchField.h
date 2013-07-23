@@ -33,7 +33,7 @@ class SearchPopupMenu;
 
 class RenderSearchField : public RenderTextControlSingleLine, private PopupMenuClient {
 public:
-    RenderSearchField(Node*);
+    RenderSearchField(Element*);
     virtual ~RenderSearchField();
 
     void updateCancelButtonVisibility() const;
@@ -47,8 +47,8 @@ public:
 
 private:
     virtual void centerContainerIfNeeded(RenderBox*) const OVERRIDE;
-    virtual LayoutUnit computeControlHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const OVERRIDE;
-    virtual LayoutUnit computeHeightLimit() const OVERRIDE;
+    virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const OVERRIDE;
+    virtual LayoutUnit computeLogicalHeightLimit() const OVERRIDE;
     virtual void updateFromElement() OVERRIDE;
     EVisibility visibilityForCancelButton() const;
     const AtomicString& autosaveName() const;
@@ -92,7 +92,7 @@ private:
 
 inline RenderSearchField* toRenderSearchField(RenderObject* object)
 {
-    ASSERT(!object || object->isTextField());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTextField());
     return static_cast<RenderSearchField*>(object);
 }
 

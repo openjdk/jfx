@@ -28,14 +28,17 @@
 
 #include "CachedRawResource.h"
 #include "CachedResourceLoader.h"
+#include "CachedResourceRequest.h"
+#include "CachedResourceRequestInitiators.h"
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
+#include "IconController.h"
 #include "IconDatabase.h"
 #include "Logging.h"
+#include "ResourceBuffer.h"
 #include "ResourceRequest.h"
-#include "SharedBuffer.h"
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -59,14 +62,15 @@ void IconLoader::startLoading()
     if (m_resource || !m_frame->document())
         return;
 
-    ResourceRequest resourceRequest(m_frame->loader()->icon()->url());
-#if PLATFORM(BLACKBERRY)
-    resourceRequest.setTargetType(ResourceRequest::TargetIsFavicon);
-#endif
-    resourceRequest.setPriority(ResourceLoadPriorityLow);
+    CachedResourceRequest request(ResourceRequest(m_frame->loader()->icon()->url()), ResourceLoaderOptions(SendCallbacks, SniffContent, BufferData, DoNotAllowStoredCredentials, DoNotAskClientForAnyCredentials, DoSecurityCheck));
 
-    m_resource = m_frame->document()->cachedResourceLoader()->requestRawResource(resourceRequest,
-        ResourceLoaderOptions(SendCallbacks, SniffContent, BufferData, DoNotAllowStoredCredentials, DoNotAskClientForCrossOriginCredentials, DoSecurityCheck));
+#if PLATFORM(BLACKBERRY)
+    request.mutableResourceRequest().setTargetType(ResourceRequest::TargetIsFavicon);
+#endif
+    request.mutableResourceRequest().setPriority(ResourceLoadPriorityLow);
+    request.setInitiator(cachedResourceRequestInitiators().icon);
+
+    m_resource = m_frame->document()->cachedResourceLoader()->requestRawResource(request);
     if (m_resource)
         m_resource->addClient(this);
     else
@@ -87,17 +91,24 @@ void IconLoader::notifyFinished(CachedResource* resource)
 
     // If we got a status code indicating an invalid response, then lets
     // ignore the data and not try to decode the error page as an icon.
-    RefPtr<SharedBuffer> data = resource->data();
+    RefPtr<ResourceBuffer> data = resource->resourceBuffer();
     int status = resource->response().httpStatusCode();
     if (status && (status < 200 || status > 299))
         data = 0;
+
+    static const char pdfMagicNumber[] = "%PDF";
+    static unsigned pdfMagicNumberLength = sizeof(pdfMagicNumber) - 1;
+    if (data && data->size() >= pdfMagicNumberLength && !memcmp(data->data(), pdfMagicNumber, pdfMagicNumberLength)) {
+        LOG(IconDatabase, "IconLoader::finishLoading() - Ignoring icon at %s because it appears to be a PDF", resource->url().string().ascii().data());
+        data = 0;
+    }
 
     LOG(IconDatabase, "IconLoader::finishLoading() - Committing iconURL %s to database", resource->url().string().ascii().data());
     m_frame->loader()->icon()->commitToDatabase(resource->url());
     // Setting the icon data only after committing to the database ensures that the data is
     // kept in memory (so it does not have to be read from the database asynchronously), since
     // there is a page URL referencing it.
-    iconDatabase().setIconDataForIconURL(data, resource->url().string());
+    iconDatabase().setIconDataForIconURL(data ? data->sharedBuffer() : 0, resource->url().string());
     m_frame->loader()->client()->dispatchDidReceiveIcon();
     stopLoading();
 }

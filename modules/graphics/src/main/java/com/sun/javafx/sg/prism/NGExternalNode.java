@@ -25,20 +25,17 @@
 
 package com.sun.javafx.sg.prism;
 
+import java.nio.Buffer;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.UnaryOperator;
 import com.sun.javafx.geom.Rectangle;
-import com.sun.javafx.sg.PGExternalNode;
-
 import com.sun.prism.Graphics;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 
-import java.nio.Buffer;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.UnaryOperator;
-
-public class NGExternalNode extends NGNode implements PGExternalNode {
+public class NGExternalNode extends NGNode {
     
     private Texture dsttexture;
 
@@ -125,7 +122,6 @@ public class NGExternalNode extends NGNode implements PGExternalNode {
         return txt;
     }
 
-    @Override
     public void setLock(ReentrantLock lock) {
         this.bufferLock = lock;
     }
@@ -183,7 +179,6 @@ public class NGExternalNode extends NGNode implements PGExternalNode {
         }
     }
     
-    @Override
     public void setImageBuffer(Buffer buffer,
                                int x, int y, int width, int height,
                                int linestride)
@@ -192,7 +187,6 @@ public class NGExternalNode extends NGNode implements PGExternalNode {
         renderData.set(new RenderData(bufferData, x, y, width, height, true));
     }
 
-    @Override
     public void setImageBounds(final int x, final int y, final int width, final int height) {
         
         final boolean shrinked = width < bufferData.srcbounds.width ||
@@ -208,7 +202,6 @@ public class NGExternalNode extends NGNode implements PGExternalNode {
         });
     }
 
-    @Override
     public void repaintDirtyRegion(final int dirtyX, final int dirtyY,
                                    final int dirtyWidth, final int dirtyHeight)
     {
@@ -224,7 +217,6 @@ public class NGExternalNode extends NGNode implements PGExternalNode {
         });
     }
     
-    @Override
     public void markContentDirty() {
         visualsChanged();
     }

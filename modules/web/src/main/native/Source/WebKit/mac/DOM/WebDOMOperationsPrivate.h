@@ -31,16 +31,10 @@
 
 @interface DOMElement (WebDOMElementOperationsPrivate)
 + (DOMElement *)_DOMElementFromJSContext:(JSContextRef)context value:(JSValueRef)value;
-- (NSString *)_markerTextForListItem;
-@end
-
-@interface DOMDocument (WebDOMDocumentOperationsPrivate)
-- (NSArray *)_focusableNodes;
 @end
 
 @interface DOMHTMLInputElement (WebDOMHTMLInputElementOperationsPrivate)
 - (void)_setAutofilled:(BOOL)autofilled;
-- (void)_setValueForUser:(NSString *)value;
 @end
 
 @interface DOMNode (WebDOMNodeOperationsPendingPublic)

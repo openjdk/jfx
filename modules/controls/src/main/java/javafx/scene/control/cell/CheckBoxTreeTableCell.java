@@ -78,7 +78,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * column will be bound bidirectionally. This means that the  CheckBox in 
      * the cell will set/unset this property based on user interactions, and the 
      * CheckBox will reflect the state of the {@code ObservableValue<Boolean>}, 
-     * if it changes externally).</li>
+     * if it changes externally).
      * 
      * @return A {@link Callback} that will return a {@link TreeTableCell} that is 
      *      able to work on the type of element contained within the TreeTableColumn.
@@ -244,7 +244,9 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
         this.getStyleClass().add("check-box-tree-table-cell");
         
         this.checkBox = new CheckBox();
-        setGraphic(checkBox);
+
+        // by default the graphic is null until the cell stops being empty
+        setGraphic(null);
         
         setSelectedStateCallback(getSelectedProperty);
         setConverter(converter);

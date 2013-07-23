@@ -62,7 +62,7 @@ private:
     virtual bool isSVGText() const { return true; }
 
     virtual void paint(PaintInfo&, const LayoutPoint&);
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
     virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
     virtual VisiblePosition positionForPoint(const LayoutPoint&);
 
@@ -71,12 +71,12 @@ private:
 
     virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const;
 
-    virtual LayoutRect clippedOverflowRectForRepaint(RenderBoxModelObject* repaintContainer) const;
-    virtual void computeRectForRepaint(RenderBoxModelObject* repaintContainer, LayoutRect&, bool fixed = false) const;
-    virtual void computeFloatRectForRepaint(RenderBoxModelObject* repaintContainer, FloatRect&, bool fixed = false) const;
+    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE;
+    virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const OVERRIDE;
+    virtual void computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed = false) const OVERRIDE;
 
-    virtual void mapLocalToContainer(RenderBoxModelObject* repaintContainer, bool useTransforms, bool fixed, TransformState&, ApplyContainerFlipOrNot = ApplyContainerFlip, bool* wasFixed = 0) const;
-    virtual const RenderObject* pushMappingToContainer(const RenderBoxModelObject* ancestorToStopAt, RenderGeometryMap&) const;
+    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const OVERRIDE;
+    virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const OVERRIDE;
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0);
     virtual void removeChild(RenderObject*) OVERRIDE;
     virtual void willBeDestroyed() OVERRIDE;
@@ -104,13 +104,13 @@ private:
 
 inline RenderSVGText* toRenderSVGText(RenderObject* object)
 {
-    ASSERT(!object || object->isSVGText());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGText());
     return static_cast<RenderSVGText*>(object);
 }
 
 inline const RenderSVGText* toRenderSVGText(const RenderObject* object)
 {
-    ASSERT(!object || object->isSVGText());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGText());
     return static_cast<const RenderSVGText*>(object);
 }
 

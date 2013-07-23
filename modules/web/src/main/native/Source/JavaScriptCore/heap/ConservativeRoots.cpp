@@ -26,9 +26,9 @@
 #include "config.h"
 #include "ConservativeRoots.h"
 
-#include "CopiedSpace.h"
-#include "CopiedSpaceInlineMethods.h"
 #include "CodeBlock.h"
+#include "CopiedSpace.h"
+#include "CopiedSpaceInlines.h"
 #include "DFGCodeBlocks.h"
 #include "JSCell.h"
 #include "JSObject.h"
@@ -67,9 +67,7 @@ inline void ConservativeRoots::genericAddPointer(void* p, TinyBloomFilter filter
 {
     markHook.mark(p);
 
-    CopiedBlock* block;
-    if (m_copiedSpace->contains(p, block))
-        m_copiedSpace->pin(block);
+    m_copiedSpace->pinIfNecessary(p);
     
     MarkedBlock* candidate = MarkedBlock::blockFor(p);
     if (filter.ruleOut(reinterpret_cast<Bits>(candidate))) {

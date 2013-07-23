@@ -30,7 +30,7 @@
 #define DocumentWriter_h
 
 #include "KURL.h"
-#include "PlatformString.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -43,7 +43,7 @@ class TextResourceDecoder;
 class DocumentWriter {
     WTF_MAKE_NONCOPYABLE(DocumentWriter);
 public:
-    DocumentWriter(Frame*);
+    explicit DocumentWriter(Frame*);
 
     // This is only called by ScriptController::executeIfJavaScriptURL
     // and always contains the result of evaluating a javascript: url.

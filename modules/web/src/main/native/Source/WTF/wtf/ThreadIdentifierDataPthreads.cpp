@@ -36,7 +36,7 @@
 
 #include "Threading.h"
 
-#if OS(ANDROID) || OS(HURD)
+#if OS(HURD)
 // PTHREAD_KEYS_MAX is not defined in bionic nor in Hurd, so explicitly define it here.
 #define PTHREAD_KEYS_MAX 1024
 #else
@@ -47,11 +47,11 @@ namespace WTF {
 
 pthread_key_t ThreadIdentifierData::m_key = PTHREAD_KEYS_MAX;
 
-void clearPthreadHandleForIdentifier(ThreadIdentifier);
+void threadDidExit(ThreadIdentifier);
 
 ThreadIdentifierData::~ThreadIdentifierData()
 {
-    clearPthreadHandleForIdentifier(m_identifier);
+    threadDidExit(m_identifier);
 }
 
 void ThreadIdentifierData::initializeOnce()

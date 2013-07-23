@@ -28,11 +28,11 @@
 #ifndef PluginDatabase_h
 #define PluginDatabase_h
 
-#include "PlatformString.h"
 #include "PluginPackage.h"
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
     class Element;
@@ -42,7 +42,7 @@ namespace WebCore {
     class PluginDatabaseClient;
     class PluginPackage;
 
-    typedef HashSet<RefPtr<PluginPackage>, PluginPackageHash> PluginSet;
+    typedef HashSet<RefPtr<PluginPackage>, PluginPackageHash, PluginPackageHashTraits> PluginSet;
 
     class PluginDatabase {
         WTF_MAKE_NONCOPYABLE(PluginDatabase); WTF_MAKE_FAST_ALLOCATED;
@@ -75,6 +75,8 @@ namespace WebCore {
             m_pluginDirectories = directories;
         }
 
+        bool removeDisabledPluginFile(const String& fileName);
+        bool addDisabledPluginFile(const String& fileName);
         static Vector<String> defaultPluginDirectories();
         Vector<String> pluginDirectories() const { return m_pluginDirectories; }
 
@@ -89,6 +91,7 @@ namespace WebCore {
     private:
         void getPluginPathsInDirectories(HashSet<String>&) const;
         void getDeletedPlugins(PluginSet&) const;
+        bool fileExistsAndIsNotDisabled(const String&) const;
 
         // Returns whether the plugin was actually added or not (it won't be added if it's a duplicate of an existing plugin).
         bool add(PassRefPtr<PluginPackage>);
@@ -98,6 +101,7 @@ namespace WebCore {
         void updatePersistentMetadataCache();
 #endif
 
+        HashSet<String> m_disabledPluginFiles;
         Vector<String> m_pluginDirectories;
         HashSet<String> m_registeredMIMETypes;
         PluginSet m_plugins;

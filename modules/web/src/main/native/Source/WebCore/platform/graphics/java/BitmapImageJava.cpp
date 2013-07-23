@@ -52,9 +52,9 @@ void BitmapImage::checkForSolidColor()
 }
 
 void BitmapImage::draw(GraphicsContext *gc, const FloatRect &dstRect, const FloatRect &srcRect,
-                       ColorSpace cs, CompositeOperator co)
+                       ColorSpace cs, CompositeOperator co, BlendMode bm)
 {
-    Image::drawImage(gc, dstRect, srcRect, cs, co);
+    Image::drawImage(gc, dstRect, srcRect, cs, co, bm);
     startAnimation();
 }
 

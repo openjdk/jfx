@@ -97,9 +97,10 @@ private:
             return adoptRef(new SuccessCallbackImpl(helper));
         }
 
-        virtual void handleEvent()
+        virtual bool handleEvent()
         {
             m_helper->setError(0);
+            return true;
         }
 
         virtual bool handleEvent(CallbackArg* arg)
@@ -109,7 +110,7 @@ private:
         }
 
     private:
-        SuccessCallbackImpl(HelperType* helper)
+        explicit SuccessCallbackImpl(HelperType* helper)
             : m_helper(helper)
         {
         }
@@ -131,7 +132,7 @@ private:
         }
 
     private:
-        ErrorCallbackImpl(HelperType* helper)
+        explicit ErrorCallbackImpl(HelperType* helper)
             : m_helper(helper)
         {
         }

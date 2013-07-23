@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2009 Ericsson AB
- * All rights reserved.
+ * Copyright (C) 2009, 2012 Ericsson AB. All rights reserved.
  * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,6 +42,7 @@
 
 namespace WebCore {
 
+class Dictionary;
     class MessageEvent;
     class ResourceResponse;
     class TextResourceDecoder;
@@ -51,18 +51,18 @@ namespace WebCore {
     class EventSource : public RefCounted<EventSource>, public EventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
         WTF_MAKE_FAST_ALLOCATED;
     public:
-        static PassRefPtr<EventSource> create(ScriptExecutionContext*, const String& url, ExceptionCode&);
+    static PassRefPtr<EventSource> create(ScriptExecutionContext*, const String& url, const Dictionary&, ExceptionCode&);
         virtual ~EventSource();
 
         static const unsigned long long defaultReconnectDelay;
 
         String url() const;
+    bool withCredentials() const;
 
-        enum State {
-            CONNECTING = 0,
-            OPEN = 1,
-            CLOSED = 2,
-        };
+    typedef short State;
+    static const State CONNECTING = 0;
+    static const State OPEN = 1;
+    static const State CLOSED = 2;
 
         State readyState() const;
 
@@ -81,7 +81,7 @@ namespace WebCore {
         virtual void stop();
 
     private:
-        EventSource(const KURL&, ScriptExecutionContext*);
+    EventSource(ScriptExecutionContext*, const KURL&, const Dictionary&);
 
         virtual void refEventTarget() { ref(); }
         virtual void derefEventTarget() { deref(); }
@@ -92,22 +92,26 @@ namespace WebCore {
         virtual void didReceiveData(const char*, int);
         virtual void didFinishLoading(unsigned long, double);
         virtual void didFail(const ResourceError&);
+    virtual void didFailAccessControlCheck(const ResourceError&);
         virtual void didFailRedirectCheck();
 
         void connect();
         void networkRequestEnded();
+    void scheduleInitialConnect();
         void scheduleReconnect();
-        void reconnectTimerFired(Timer<EventSource>*);
+    void connectTimerFired(Timer<EventSource>*);
+    void abortConnectionAttempt();
         void parseEventStream();
-        void parseEventStreamLine(unsigned int pos, int fieldLength, int lineLength);
+    void parseEventStreamLine(unsigned pos, int fieldLength, int lineLength);
         PassRefPtr<MessageEvent> createMessageEvent();
 
         KURL m_url;
+    bool m_withCredentials;
         State m_state;
 
         RefPtr<TextResourceDecoder> m_decoder;
         RefPtr<ThreadableLoader> m_loader;
-        Timer<EventSource> m_reconnectTimer;
+    Timer<EventSource> m_connectTimer;
         Vector<UChar> m_receiveBuf;
         bool m_discardTrailingNewline;
         bool m_requestInFlight;
@@ -117,7 +121,7 @@ namespace WebCore {
         String m_currentlyParsedEventId;
         String m_lastEventId;
         unsigned long long m_reconnectDelay;
-        String m_origin;
+    String m_eventStreamOrigin;
         
         EventTargetData m_eventTargetData;
     };

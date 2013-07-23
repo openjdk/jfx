@@ -31,10 +31,10 @@
 
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
-#include "ResourceHandle.h"
 
-#if HAVE(NETWORK_CFDATA_ARRAY_CALLBACK)
+#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
 #include "InspectorInstrumentation.h"
+#include "ResourceBuffer.h"
 #endif
 
 #if USE(CFNETWORK)
@@ -53,7 +53,7 @@ CFCachedURLResponseRef ResourceLoader::willCacheResponse(ResourceHandle*, CFCach
     if (m_options.sendLoadCallbacks == DoNotSendCallbacks)
         return 0;
 
-    RetainPtr<NSCachedURLResponse> nsCachedResponse(AdoptNS, [[NSCachedURLResponse alloc] _initWithCFCachedURLResponse:cachedResponse]);
+    RetainPtr<NSCachedURLResponse> nsCachedResponse = adoptNS([[NSCachedURLResponse alloc] _initWithCFCachedURLResponse:cachedResponse]);
     return [frameLoader()->client()->willCacheResponse(documentLoader(), identifier(), nsCachedResponse.get()) _CFCachedURLResponse];
 }
 
@@ -68,7 +68,7 @@ NSCachedURLResponse* ResourceLoader::willCacheResponse(ResourceHandle*, NSCached
 
 #endif
 
-#if HAVE(NETWORK_CFDATA_ARRAY_CALLBACK)
+#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
 
 void ResourceLoader::didReceiveDataArray(CFArrayRef dataArray)
 {
@@ -81,9 +81,9 @@ void ResourceLoader::didReceiveDataArray(CFArrayRef dataArray)
         CFDataRef data = static_cast<CFDataRef>(CFArrayGetValueAtIndex(dataArray, i));
         int dataLen = static_cast<int>(CFDataGetLength(data));
 
-        if (m_options.shouldBufferData == BufferData) {
+        if (m_options.dataBufferingPolicy == BufferData) {
             if (!m_resourceData)
-                m_resourceData = SharedBuffer::create();
+                m_resourceData = ResourceBuffer::create();
             m_resourceData->append(data);
         }
 
@@ -97,7 +97,16 @@ void ResourceLoader::didReceiveDataArray(CFArrayRef dataArray)
 
 void ResourceLoader::didReceiveDataArray(ResourceHandle*, CFArrayRef dataArray)
 {
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willReceiveResourceData(m_frame.get(), identifier());
+    CFIndex arrayCount = CFArrayGetCount(dataArray);
+    CFIndex dataLength = 0;
+    for (CFIndex i = 0; i < arrayCount; ++i) {
+        CFDataRef data = static_cast<CFDataRef>(CFArrayGetValueAtIndex(dataArray, i));
+        dataLength += CFDataGetLength(data);
+    }
+
+    // FIXME: didReceiveData() passes encoded data length to InspectorInstrumentation, but it is not available here.
+    // This probably results in incorrect size being displayed in Web Inspector.
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willReceiveResourceData(m_frame.get(), identifier(), dataLength);
     didReceiveDataArray(dataArray);
     InspectorInstrumentation::didReceiveResourceData(cookie);
 }

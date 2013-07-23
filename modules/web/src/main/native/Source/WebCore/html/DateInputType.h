@@ -31,44 +31,44 @@
 #ifndef DateInputType_h
 #define DateInputType_h
 
-#include "BaseDateAndTimeInputType.h"
-#include <wtf/RefPtr.h>
-
 #if ENABLE(INPUT_TYPE_DATE)
+#include "BaseChooserOnlyDateAndTimeInputType.h"
+#include "BaseMultipleFieldsDateAndTimeInputType.h"
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-class CalendarPickerElement;
+class PickerIndicatorElement;
 
-class DateInputType : public BaseDateAndTimeInputType {
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+typedef BaseMultipleFieldsDateAndTimeInputType BaseDateInputType;
+#else
+typedef BaseChooserOnlyDateAndTimeInputType BaseDateInputType;
+#endif
+
+class DateInputType : public BaseDateInputType {
 public:
     static PassOwnPtr<InputType> create(HTMLInputElement*);
 
 private:
     DateInputType(HTMLInputElement*);
+    virtual void attach() OVERRIDE;
     virtual const AtomicString& formControlType() const OVERRIDE;
     virtual DateComponents::Type dateType() const OVERRIDE;
     virtual StepRange createStepRange(AnyStepHandling) const OVERRIDE;
     virtual bool parseToDateComponentsInternal(const UChar*, unsigned length, DateComponents*) const OVERRIDE;
     virtual bool setMillisecondToDateComponents(double, DateComponents*) const OVERRIDE;
     virtual bool isDateField() const OVERRIDE;
-#if ENABLE(CALENDAR_PICKER)
-    virtual void createShadowSubtree() OVERRIDE;
-    virtual void destroyShadowSubtree() OVERRIDE;
-    virtual void handleKeydownEvent(KeyboardEvent*) OVERRIDE;
-    virtual void handleBlurEvent() OVERRIDE;
-    virtual bool supportsPlaceholder() const OVERRIDE;
-    virtual bool usesFixedPlaceholder() const OVERRIDE;
-    virtual String fixedPlaceholder() OVERRIDE;
 
-    // TextFieldInputType functions
-    virtual bool needsContainer() const OVERRIDE;
-    virtual bool shouldHaveSpinButton() const OVERRIDE;
-
-    RefPtr<CalendarPickerElement> m_pickerElement;
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    // BaseMultipleFieldsDateAndTimeInputType functions
+    virtual String formatDateTimeFieldsState(const DateTimeFieldsState&) const OVERRIDE;
+    virtual void setupLayoutParameters(DateTimeEditElement::LayoutParameters&, const DateComponents&) const OVERRIDE;
+    virtual bool isValidFormat(bool hasYear, bool hasMonth, bool hasWeek, bool hasDay, bool hasAMPM, bool hasHour, bool hasMinute, bool hasSecond) const;
 #endif
 };
 
 } // namespace WebCore
+
 #endif
 #endif // DateInputType_h

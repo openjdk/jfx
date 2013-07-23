@@ -25,22 +25,19 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGCircle;
 import com.sun.prism.Graphics;
 import com.sun.prism.shape.ShapeRep;
 
 /**
  *
  */
-public class NGCircle extends NGShape implements PGCircle {
+public class NGCircle extends NGShape {
 
     private Ellipse2D ellipse = new Ellipse2D();
 
-    @Override public void updateCircle(float cx, float cy, float r) {
+    public void updateCircle(float cx, float cy, float r) {
         ellipse.x = cx - r;
         ellipse.y = cy - r;
         ellipse.width = r * 2f;

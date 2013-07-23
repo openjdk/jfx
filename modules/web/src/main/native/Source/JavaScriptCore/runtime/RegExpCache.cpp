@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010 University of Szeged
  * Copyright (C) 2010 Renata Hodovan (hodovan@inf.u-szeged.hu)
+ * Copyright (C) 2012 Apple Inc. All rights reserved.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,31 +27,32 @@
  */
 
 #include "config.h"
-
 #include "RegExpCache.h"
+
+#include "Operations.h"
 #include "RegExpObject.h"
 #include "StrongInlines.h"
 
 namespace JSC {
 
-RegExp* RegExpCache::lookupOrCreate(const UString& patternString, RegExpFlags flags)
+RegExp* RegExpCache::lookupOrCreate(const String& patternString, RegExpFlags flags)
 {
     RegExpKey key(flags, patternString);
     if (RegExp* regExp = m_weakCache.get(key))
         return regExp;
 
-    RegExp* regExp = RegExp::createWithoutCaching(*m_globalData, patternString, flags);
+    RegExp* regExp = RegExp::createWithoutCaching(*m_vm, patternString, flags);
 #if ENABLE(REGEXP_TRACING)
-    m_globalData->addRegExpToTrace(regExp);
+    m_vm->addRegExpToTrace(regExp);
 #endif
 
     weakAdd(m_weakCache, key, PassWeak<RegExp>(regExp, this));
     return regExp;
 }
 
-RegExpCache::RegExpCache(JSGlobalData* globalData)
+RegExpCache::RegExpCache(VM* vm)
     : m_nextEntryInStrongCache(0)
-    , m_globalData(globalData)
+    , m_vm(vm)
 {
 }
 
@@ -63,10 +65,10 @@ void RegExpCache::finalize(Handle<Unknown> handle, void*)
 
 void RegExpCache::addToStrongCache(RegExp* regExp)
 {
-    UString pattern = regExp->pattern();
+    String pattern = regExp->pattern();
     if (pattern.length() > maxStrongCacheablePatternLength)
         return;
-    m_strongCache[m_nextEntryInStrongCache].set(*m_globalData, regExp);
+    m_strongCache[m_nextEntryInStrongCache].set(*m_vm, regExp);
     m_nextEntryInStrongCache++;
     if (m_nextEntryInStrongCache == maxStrongCacheableEntries)
         m_nextEntryInStrongCache = 0;
@@ -80,7 +82,7 @@ void RegExpCache::invalidateCode()
 
     RegExpCacheMap::iterator end = m_weakCache.end();
     for (RegExpCacheMap::iterator it = m_weakCache.begin(); it != end; ++it) {
-        RegExp* regExp = it->second.get();
+        RegExp* regExp = it->value.get();
         if (!regExp) // Skip zombies.
             continue;
         regExp->invalidateCode();

@@ -114,9 +114,21 @@ String openTemporaryFile(const String&, PlatformFileHandle& handle)
     return String();
 }
 
+PlatformFileHandle openFile(const String& path, FileOpenMode mode)
+{
+    notImplemented();
+    return invalidPlatformFileHandle;
+}
+
 void closeFile(PlatformFileHandle&)
 {
     notImplemented();
+}
+
+int readFromFile(PlatformFileHandle handle, char* data, int length)
+{
+    notImplemented();
+    return -1;
 }
 
 int writeToFile(PlatformFileHandle, const char* data, int length)
@@ -148,6 +160,12 @@ String pathGetFileName(const String& path)
     CheckAndClearException(env);
 
     return String(env, result);
+}
+
+long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
+{
+    notImplemented();
+    return (long long)(-1);
 }
 
 } // namespace WebCore

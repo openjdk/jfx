@@ -30,7 +30,7 @@
 #include "DumpRenderTree.h"
 #include "DumpRenderTreeChrome.h"
 #include "DumpRenderTreeEfl.h"
-#include "LayoutTestController.h"
+#include "TestRunner.h"
 #include <EWebKit.h>
 #include <Ecore.h>
 #include <Eina.h>
@@ -55,10 +55,14 @@ static WTF::String urlSuitableForTestResult(const WTF::String& uriString)
     return (index == WTF::notFound) ? uriString : uriString.substring(index + 1);
 }
 
-static void onConsoleMessage(Ewk_View_Smart_Data*, const char* message, unsigned int lineNumber, const char*)
+static void onConsoleMessage(Ewk_View_Smart_Data* smartData, const char* message, unsigned lineNumber, const char*)
 {
+    Evas_Object* evasObject = smartData->self;
+    if (evas_object_data_get(evasObject, "ignore-console-messages"))
+        return;
+
     // Tests expect only the filename part of local URIs
-    WTF::String newMessage = message;
+    WTF::String newMessage = WTF::String::fromUTF8(message);
     if (!newMessage.isEmpty()) {
         const size_t fileProtocol = newMessage.find("file://");
         if (fileProtocol != WTF::notFound)
@@ -78,6 +82,7 @@ static void onConsoleMessage(Ewk_View_Smart_Data*, const char* message, unsigned
 static void onJavaScriptAlert(Ewk_View_Smart_Data*, Evas_Object*, const char* message)
 {
     printf("ALERT: %s\n", message);
+    fflush(stdout);
 }
 
 static Eina_Bool onJavaScriptConfirm(Ewk_View_Smart_Data*, Evas_Object*, const char* message)
@@ -86,16 +91,22 @@ static Eina_Bool onJavaScriptConfirm(Ewk_View_Smart_Data*, Evas_Object*, const c
     return EINA_TRUE;
 }
 
-static Eina_Bool onJavaScriptPrompt(Ewk_View_Smart_Data*, Evas_Object*, const char* message, const char* defaultValue, char** value)
+static Eina_Bool onBeforeUnloadConfirm(Ewk_View_Smart_Data*, Evas_Object*, const char* message)
+{
+    printf("CONFIRM NAVIGATION: %s\n", message);
+    return !gTestRunner->shouldStayOnPageAfterHandlingBeforeUnload();
+}
+
+static Eina_Bool onJavaScriptPrompt(Ewk_View_Smart_Data*, Evas_Object*, const char* message, const char* defaultValue, const char** value)
 {
     printf("PROMPT: %s, default text: %s\n", message, defaultValue);
-    *value = strdup(defaultValue);
+    *value = eina_stringshare_add(defaultValue);
     return EINA_TRUE;
 }
 
 static Evas_Object* onWindowCreate(Ewk_View_Smart_Data*, Eina_Bool, const Ewk_Window_Features*)
 {
-    return gLayoutTestController->canOpenWindows() ? browser->createNewWindow() : 0;
+    return gTestRunner->canOpenWindows() ? browser->createNewWindow() : 0;
 }
 
 static Eina_Bool onWindowCloseDelayed(void* data)
@@ -113,7 +124,7 @@ static void onWindowClose(Ewk_View_Smart_Data* smartData)
 
 static uint64_t onExceededDatabaseQuota(Ewk_View_Smart_Data* smartData, Evas_Object* frame, const char* databaseName, uint64_t currentSize, uint64_t expectedSize)
 {
-    if (!gLayoutTestController->dumpDatabaseCallbacks())
+    if (!gTestRunner->dumpDatabaseCallbacks())
         return 0;
 
     Ewk_Security_Origin* origin = ewk_frame_security_origin_get(frame);
@@ -129,7 +140,7 @@ static uint64_t onExceededDatabaseQuota(Ewk_View_Smart_Data* smartData, Evas_Obj
 
 static int64_t onExceededApplicationCacheQuota(Ewk_View_Smart_Data*, Ewk_Security_Origin *origin, int64_t defaultOriginQuota, int64_t totalSpaceNeeded)
 {
-    if (gLayoutTestController->dumpApplicationCacheDelegateCallbacks()) {
+    if (gTestRunner->dumpApplicationCacheDelegateCallbacks()) {
         // For example, numbers from 30000 - 39999 will output as 30000.
         // Rounding up or down does not really matter for these tests. It's
         // sufficient to just get a range of 10000 to determine if we were
@@ -142,21 +153,21 @@ static int64_t onExceededApplicationCacheQuota(Ewk_View_Smart_Data*, Ewk_Securit
                truncatedSpaceNeeded);
     }
 
-    if (gLayoutTestController->disallowIncreaseForApplicationCacheQuota())
+    if (gTestRunner->disallowIncreaseForApplicationCacheQuota())
         return 0;
 
     return defaultOriginQuota;
 }
 
-static bool shouldUseSingleBackingStore()
+static bool shouldUseTiledBackingStore()
 {
-    const char* useSingleBackingStore = getenv("DRT_USE_SINGLE_BACKING_STORE");
-    return useSingleBackingStore && *useSingleBackingStore == '1';
+    const char* useTiledBackingStore = getenv("DRT_USE_TILED_BACKING_STORE");
+    return useTiledBackingStore && *useTiledBackingStore == '1';
 }
 
 static bool chooseAndInitializeAppropriateSmartClass(Ewk_View_Smart_Class* api)
 {
-    return shouldUseSingleBackingStore() ? ewk_view_single_smart_set(api) : ewk_view_tiled_smart_set(api);
+    return !shouldUseTiledBackingStore() ? ewk_view_single_smart_set(api) : ewk_view_tiled_smart_set(api);
 }
 
 // Taken from the file "WebKit/Tools/DumpRenderTree/chromium/WebViewHost.cpp".
@@ -187,8 +198,8 @@ static Eina_Bool onNavigationPolicyDecision(Ewk_View_Smart_Data*, Ewk_Frame_Reso
     printf("Policy delegate: attempt to load %s with navigation type '%s'\n", urlSuitableForTestResult(request->url).utf8().data(),
            navigationTypeToString(navigationType));
 
-    if (gLayoutTestController)
-        gLayoutTestController->notifyDone();
+    if (gTestRunner)
+        gTestRunner->notifyDone();
 
     return policyDelegatePermissive;
 }
@@ -212,6 +223,7 @@ Evas_Object* drtViewAdd(Evas* evas)
     api.add_console_message = onConsoleMessage;
     api.run_javascript_alert = onJavaScriptAlert;
     api.run_javascript_confirm = onJavaScriptConfirm;
+    api.run_before_unload_confirm = onBeforeUnloadConfirm;
     api.run_javascript_prompt = onJavaScriptPrompt;
     api.window_create = onWindowCreate;
     api.window_close = onWindowClose;

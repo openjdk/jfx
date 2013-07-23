@@ -32,6 +32,7 @@
 package com.javafx.experiments.importers.obj;
 
 
+import com.javafx.experiments.importers.SmoothingGroups;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Material;
 import javafx.scene.paint.PhongMaterial;
@@ -63,6 +64,14 @@ public class PolyObjImporter {
             return uvIndex + uvs.size() / 2;
         } else {
             return uvIndex - 1;
+        }
+    }
+    
+    private int normalIndex(int normalIndex) {
+        if (normalIndex < 0) {
+            return normalIndex + normals.size() / 3;
+        } else {
+            return normalIndex - 1;
         }
     }
 
@@ -132,8 +141,11 @@ public class PolyObjImporter {
     private FloatArrayList uvs = new FloatArrayList();
     private List<int[]> faces = new ArrayList<>();
     private IntegerArrayList smoothingGroups = new IntegerArrayList();
+    private FloatArrayList normals = new FloatArrayList();
+    private List<int[]> faceNormals = new ArrayList<>();
     private Material material = new PhongMaterial(Color.WHITE);
     private int facesStart = 0;
+    private int facesNormalStart = 0;
     private int smoothingGroupsStart = 0;
     
     private void read(InputStream inputStream) throws IOException {
@@ -175,13 +187,16 @@ public class PolyObjImporter {
                 } else if (line.startsWith("f ")) {
                     String[] split = line.substring(2).trim().split(" +");
                     int[] faceIndexes = new int[split.length*2];
+                    int[] faceNormalIndexes = new int[split.length];
                     for (int i = 0; i < split.length; i++) {
                         String[] split2 = split[i].split("/");
                         faceIndexes[i*2] = vertexIndex(Integer.parseInt(split2[0]));
-                        faceIndexes[(i*2)+1] = (split2.length > 1) ? uvIndex(Integer.parseInt(split2[1])) : 0;
+                        faceIndexes[(i*2)+1] = (split2.length > 1 && split2[1].length()>0) ? uvIndex(Integer.parseInt(split2[1])) : -1;
+                        faceNormalIndexes[i] = (split2.length > 2 && split2[2].length()>0) ? normalIndex(Integer.parseInt(split2[2])) : -1;
                     }
                     faces.add(faceIndexes);
-//                        smoothingGroups.add(currentSmoothGroup); TODO
+                    faceNormals.add(faceNormalIndexes);
+                    smoothingGroups.add(currentSmoothGroup);
                 } else if (line.startsWith("s ")) {
                     if (line.substring(2).equals("off")) {
                         currentSmoothGroup = 0;
@@ -209,7 +224,13 @@ public class PolyObjImporter {
                 } else if (line.isEmpty() || line.startsWith("#")) {
                     // comments and empty lines are ignored
                 } else if (line.startsWith("vn ")) {
-                    // normals are ignored
+                    String[] split = line.substring(2).trim().split(" +");
+                    float x = Float.parseFloat(split[0]);
+                    float y = Float.parseFloat(split[1]);
+                    float z = Float.parseFloat(split[2]);
+                    normals.add(x);
+                    normals.add(y);
+                    normals.add(z);
                 } else {
                     log("line skipped: " + line);
                 }
@@ -233,13 +254,18 @@ public class PolyObjImporter {
         }
         Map<Integer, Integer> vertexMap = new HashMap<>(vertexes.size() / 2);
         Map<Integer, Integer> uvMap = new HashMap<>(uvs.size() / 2);
+        Map<Integer, Integer> normalMap = new HashMap<>(normals.size() / 2);
         FloatArrayList newVertexes = new FloatArrayList(vertexes.size() / 2);
         FloatArrayList newUVs = new FloatArrayList(uvs.size() / 2);
+        FloatArrayList newNormals = new FloatArrayList(normals.size() / 2);
+        boolean useNormals = true;
 
         int[][] faceArrays = new int[faces.size()-facesStart][];
+        int[][] faceNormalArrays = new int[faceNormals.size()-facesNormalStart][];
         
         for (int i = facesStart; i < faces.size();i++) {
             int[] faceIndexes = faces.get(i);
+            int[] faceNormalIndexes = faceNormals.get(i);
             for (int j=0;j<faceIndexes.length;j+=2){
                 int vi = faceIndexes[j];
                 Integer nvi = vertexMap.get(vi);
@@ -267,22 +293,43 @@ public class PolyObjImporter {
                 }
                 faceIndexes[j+1] = nuvi;
 //                faces.set(i + 1, nuvi);
+                
+                int ni = faceNormalIndexes[j/2];
+                Integer nni = normalMap.get(ni);
+                if (nni == null) {
+                    nni = newNormals.size() / 3;
+                    normalMap.put(ni, nni);
+                    if (ni >= 0 && normals.size() >= (ni+1)*3) {
+                        newNormals.add(normals.get(ni * 3));
+                        newNormals.add(normals.get(ni * 3 + 1));
+                        newNormals.add(normals.get(ni * 3 + 2));
+                    } else {
+                        useNormals = false;
+                        newNormals.add(0f);
+                        newNormals.add(0f);
+                        newNormals.add(0f);
+                    }
+                }
+                faceNormalIndexes[j/2] = nni;
             }
             faceArrays[i-facesStart] = faceIndexes;
+            faceNormalArrays[i-facesNormalStart] = faceNormalIndexes;
         }
-
-        // TODO
-//        mesh.setPoints(newVertexes.toFloatArray());
-//        mesh.setTexCoords(newUVs.toFloatArray());
-//        mesh.setFaces(((IntegerArrayList) faces.subList(facesStart, faces.size())).toIntArray());
-//        mesh.setFaceSmoothingGroups(((IntegerArrayList) smoothingGroups.subList(smoothingGroupsStart, smoothingGroups.size())).toIntArray());
-
 
         PolygonMesh mesh = new PolygonMesh(
                 newVertexes.toFloatArray(),
                 newUVs.toFloatArray(),
                 faceArrays
         );
+        
+        // Use normals if they are provided
+        if (useNormals) {
+            int[] smGroups = SmoothingGroups.calcSmoothGroups(faceArrays, faceNormalArrays, newNormals.toFloatArray());
+            mesh.getFaceSmoothingGroups().setAll(smGroups);
+        } else {
+            mesh.getFaceSmoothingGroups().setAll(((IntegerArrayList) smoothingGroups.subList(smoothingGroupsStart, smoothingGroups.size())).toIntArray());
+        }
+        
         if (debug) {
             System.out.println("mesh.points = " + mesh.getPoints());
             System.out.println("mesh.texCoords = " + mesh.getTexCoords());
@@ -308,6 +355,7 @@ public class PolyObjImporter {
         log("material diffuse map = " + ((PhongMaterial) material).getDiffuseMap());
         
         facesStart = faces.size();
+        facesNormalStart = faceNormals.size();
         smoothingGroupsStart = smoothingGroups.size();
     }
 

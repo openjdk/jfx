@@ -30,23 +30,42 @@
 
 namespace WebCore {
 
-    // extension: mouse wheel event
+class PlatformWheelEvent;
+
+struct WheelEventInit : public MouseEventInit {
+    WheelEventInit();
+
+    int wheelDeltaX;
+    int wheelDeltaY;
+    unsigned deltaMode;
+};
+
     class WheelEvent : public MouseEvent {
     public:
-        enum { tickMultiplier = 120 };
+    enum { TickMultiplier = 120 };
 
-        enum Granularity { Pixel, Line, Page };
+    enum DeltaMode {
+        DOM_DELTA_PIXEL = 0,
+        DOM_DELTA_LINE,
+        DOM_DELTA_PAGE
+    };
 
         static PassRefPtr<WheelEvent> create()
         {
             return adoptRef(new WheelEvent);
         }
+
+    static PassRefPtr<WheelEvent> create(const AtomicString& type, const WheelEventInit& initializer)
+    {
+        return adoptRef(new WheelEvent(type, initializer));
+    }
+
         static PassRefPtr<WheelEvent> create(const FloatPoint& wheelTicks,
-            const FloatPoint& rawDelta, Granularity granularity, PassRefPtr<AbstractView> view,
+        const FloatPoint& rawDelta, unsigned deltaMode, PassRefPtr<AbstractView> view,
             const IntPoint& screenLocation, const IntPoint& pageLocation,
             bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool directionInvertedFromDevice)
         {
-            return adoptRef(new WheelEvent(wheelTicks, rawDelta, granularity, view,
+        return adoptRef(new WheelEvent(wheelTicks, rawDelta, deltaMode, view,
                 screenLocation, pageLocation, ctrlKey, altKey, shiftKey, metaKey, directionInvertedFromDevice));
         }
 
@@ -63,7 +82,7 @@ namespace WebCore {
         int wheelDeltaY() const { return m_wheelDelta.y(); }
         int rawDeltaX() const { return m_rawDelta.x(); }
         int rawDeltaY() const { return m_rawDelta.y(); }
-        Granularity granularity() const { return m_granularity; }
+    unsigned deltaMode() const { return m_deltaMode; }
 
         bool webkitDirectionInvertedFromDevice() const { return m_directionInvertedFromDevice; }
         // Needed for Objective-C legacy support
@@ -74,14 +93,14 @@ namespace WebCore {
 
     private:
         WheelEvent();
+    WheelEvent(const AtomicString&, const WheelEventInit&);
         WheelEvent(const FloatPoint& wheelTicks, const FloatPoint& rawDelta,
-                   Granularity, PassRefPtr<AbstractView>,
-                   const IntPoint& screenLocation, const IntPoint& pageLocation,
+        unsigned, PassRefPtr<AbstractView>, const IntPoint& screenLocation, const IntPoint& pageLocation,
                    bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool directionInvertedFromDevice);
 
         IntPoint m_wheelDelta;
         IntPoint m_rawDelta;
-        Granularity m_granularity;
+    unsigned m_deltaMode;
         bool m_directionInvertedFromDevice;
     };
 
@@ -91,7 +110,7 @@ public:
 private:
     WheelEventDispatchMediator(const PlatformWheelEvent&, PassRefPtr<AbstractView>);
     WheelEvent* event() const;
-    virtual bool dispatchEvent(EventDispatcher*) const;
+    virtual bool dispatchEvent(EventDispatcher*) const OVERRIDE;
 };
 
 } // namespace WebCore

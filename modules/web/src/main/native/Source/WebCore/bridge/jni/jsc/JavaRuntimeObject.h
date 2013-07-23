@@ -52,7 +52,7 @@ public:
 
     static const ClassInfo s_info;
 
-    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    static Structure* createStructure(VM& globalData, JSGlobalObject* globalObject, JSValue prototype)
     {
         return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
     }

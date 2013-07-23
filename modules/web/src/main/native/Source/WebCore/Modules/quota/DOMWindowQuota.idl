@@ -23,14 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module window {
-
-    interface [
+[
         Conditional=QUOTA,
-        Supplemental=DOMWindow
-    ] DOMWindowQuota {
+] partial interface DOMWindow {
         readonly attribute StorageInfo webkitStorageInfo;
     };
-
-}
 

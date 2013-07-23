@@ -31,6 +31,9 @@
 // This source file coalesces the HTML elements into a single object file to
 // reduce bloat and allow us to link release builds on 32-bit Windows.
 
+// This file comes first due to the inclusion of conflicting X11 headers
+#include "HTMLPlugInElement.cpp"
+
 #include "HTMLAnchorElement.cpp"
 #include "HTMLAppletElement.cpp"
 #include "HTMLAreaElement.cpp"
@@ -66,7 +69,6 @@
 #include "HTMLIFrameElement.cpp"
 #include "HTMLImageElement.cpp"
 #include "HTMLInputElement.cpp"
-#include "HTMLIntentElement.cpp"
 #include "HTMLKeygenElement.cpp"
 #include "HTMLLIElement.cpp"
 #include "HTMLLabelElement.cpp"
@@ -85,14 +87,12 @@
 #include "HTMLOptionElement.cpp"
 #include "HTMLParagraphElement.cpp"
 #include "HTMLParamElement.cpp"
-#include "HTMLPlugInElement.cpp"
 #include "HTMLPlugInImageElement.cpp"
 #include "HTMLPreElement.cpp"
 #include "HTMLProgressElement.cpp"
 #include "HTMLQuoteElement.cpp"
 #include "HTMLScriptElement.cpp"
 #include "HTMLSelectElement.cpp"
-#include "HTMLShadowElement.cpp"
 #include "HTMLSourceElement.cpp"
 #include "HTMLSpanElement.cpp"
 #include "HTMLStyleElement.cpp"
@@ -104,8 +104,11 @@
 #include "HTMLTablePartElement.cpp"
 #include "HTMLTableRowElement.cpp"
 #include "HTMLTableSectionElement.cpp"
+#include "HTMLTemplateElement.cpp"
 #include "HTMLTextAreaElement.cpp"
 #include "HTMLTextFormControlElement.cpp"
 #include "HTMLTitleElement.cpp"
+#include "HTMLTrackElement.cpp"
 #include "HTMLUListElement.cpp"
 #include "HTMLVideoElement.cpp"
+

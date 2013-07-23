@@ -34,20 +34,17 @@
 
 #include "ScrollAnimatorNone.h"
 
-#include "ActivePlatformGestureAnimation.h"
 #include "FloatPoint.h"
 #include "NotImplemented.h"
 #include <wtf/OwnArrayPtr.h>
-#include "PlatformGestureEvent.h"
 #include "ScrollableArea.h"
 #include "ScrollbarTheme.h"
-#include "TouchpadFlingPlatformGestureCurve.h"
 #include <algorithm>
 #include <wtf/CurrentTime.h>
 #include <wtf/PassOwnPtr.h>
 
-#if PLATFORM(CHROMIUM)
-#include "TraceEvent.h"
+#if ENABLE(GESTURE_EVENTS)
+#include "PlatformGestureEvent.h"
 #endif
 
 using namespace std;
@@ -295,9 +292,9 @@ bool ScrollAnimatorNone::PerAxisData::updateDataFromParameters(float step, float
         // This needs to be as minimal as possible while not being intrusive to page up/down.
         double minCoastDelta = m_visibleLength;
 
-        if (abs(remainingDelta) > minCoastDelta) {
+        if (fabs(remainingDelta) > minCoastDelta) {
             double maxCoastDelta = parameters->m_maximumCoastTime * targetMaxCoastVelocity;
-            double coastFactor = min(1., (abs(remainingDelta) - minCoastDelta) / (maxCoastDelta - minCoastDelta));
+            double coastFactor = min(1., (fabs(remainingDelta) - minCoastDelta) / (maxCoastDelta - minCoastDelta));
 
             // We could play with the curve here - linear seems a little soft. Initial testing makes me want to feed into the sustain time more aggressively.
             double coastMinTimeLeft = min(parameters->m_maximumCoastTime, minTimeLeft + coastCurve(parameters->m_coastTimeCurve, coastFactor) * (parameters->m_maximumCoastTime - minTimeLeft));
@@ -388,9 +385,6 @@ ScrollAnimatorNone::ScrollAnimatorNone(ScrollableArea* scrollableArea)
 #else
     , m_animationActive(false)
 #endif
-    , m_firstVelocity(0)
-    , m_firstVelocitySet(false)
-    , m_firstVelocityIsVertical(false)
 {
 }
 
@@ -399,16 +393,38 @@ ScrollAnimatorNone::~ScrollAnimatorNone()
     stopAnimationTimerIfNeeded();
 }
 
-void ScrollAnimatorNone::fireUpAnAnimation(FloatPoint fp)
+ScrollAnimatorNone::Parameters ScrollAnimatorNone::parametersForScrollGranularity(ScrollGranularity granularity) const
 {
-    if (m_gestureAnimation)
-        m_gestureAnimation.clear();
-    m_gestureAnimation = ActivePlatformGestureAnimation::create(TouchpadFlingPlatformGestureCurve::create(fp), this);
-#if USE(REQUEST_ANIMATION_FRAME_TIMER)
-    startNextTimer(0);
+#if !PLATFORM(QT)
+    switch (granularity) {
+    case ScrollByDocument:
+        return Parameters(true, 20 * kTickTime, 10 * kTickTime, Cubic, 10 * kTickTime, Cubic, 10 * kTickTime, Linear, 1);
+    case ScrollByLine:
+        return Parameters(true, 10 * kTickTime, 7 * kTickTime, Cubic, 3 * kTickTime, Cubic, 3 * kTickTime, Linear, 1);
+    case ScrollByPage:
+        return Parameters(true, 15 * kTickTime, 10 * kTickTime, Cubic, 5 * kTickTime, Cubic, 5 * kTickTime, Linear, 1);
+    case ScrollByPixel:
+        return Parameters(true, 11 * kTickTime, 2 * kTickTime, Cubic, 3 * kTickTime, Cubic, 3 * kTickTime, Quadratic, 1.25);
+    default:
+        ASSERT_NOT_REACHED();
+    }
 #else
-    startNextTimer();
+    // This is a slightly different strategy for the animation with a steep attack curve and natural release curve.
+    // The fast acceleration makes the animation look more responsive to user input.
+    switch (granularity) {
+    case ScrollByDocument:
+        return Parameters(true, 20 * kTickTime, 10 * kTickTime, Cubic, 6 * kTickTime, Quadratic, 10 * kTickTime, Quadratic, 22 * kTickTime);
+    case ScrollByLine:
+        return Parameters(true, 6 * kTickTime, 5 * kTickTime, Cubic, 1 * kTickTime, Quadratic, 4 * kTickTime, Linear, 1);
+    case ScrollByPage:
+        return Parameters(true, 12 * kTickTime, 10 * kTickTime, Cubic, 3 * kTickTime, Quadratic, 6 * kTickTime, Linear, 1);
+    case ScrollByPixel:
+        return Parameters(true, 8 * kTickTime, 3 * kTickTime, Cubic, 2 * kTickTime, Quadratic, 5 * kTickTime, Quadratic, 1.25);
+    default:
+        ASSERT_NOT_REACHED();
+    }
 #endif
+    return Parameters();
 }
 
 bool ScrollAnimatorNone::scroll(ScrollbarOrientation orientation, ScrollGranularity granularity, float step, float multiplier)
@@ -416,43 +432,18 @@ bool ScrollAnimatorNone::scroll(ScrollbarOrientation orientation, ScrollGranular
     if (!m_scrollableArea->scrollAnimatorEnabled())
         return ScrollAnimator::scroll(orientation, granularity, step, multiplier);
 
-#if PLATFORM(CHROMIUM)
-    TRACE_EVENT("ScrollAnimatorNone::scroll", this, 0);
-#endif
-
     // FIXME: get the type passed in. MouseWheel could also be by line, but should still have different
     // animation parameters than the keyboard.
     Parameters parameters;
     switch (granularity) {
     case ScrollByDocument:
-        parameters = Parameters(true, 20 * kTickTime, 10 * kTickTime, Cubic, 10 * kTickTime, Cubic, 10 * kTickTime, Linear, 1);
-        break;
     case ScrollByLine:
-        parameters = Parameters(true, 10 * kTickTime, 7 * kTickTime, Cubic, 3 * kTickTime, Cubic, 3 * kTickTime, Linear, 1);
-        break;
     case ScrollByPage:
-        parameters = Parameters(true, 15 * kTickTime, 10 * kTickTime, Cubic, 5 * kTickTime, Cubic, 5 * kTickTime, Linear, 1);
-        break;
     case ScrollByPixel:
-        parameters = Parameters(true, 11 * kTickTime, 2 * kTickTime, Cubic, 3 * kTickTime, Cubic, 3 * kTickTime, Quadratic, 1.25);
+        parameters = parametersForScrollGranularity(granularity);
         break;
     case ScrollByPrecisePixel:
         return ScrollAnimator::scroll(orientation, granularity, step, multiplier);
-    case ScrollByPixelVelocity:
-        // FIXME: Generalize the scroll interface to support a richer set of parameters.
-        if (m_firstVelocitySet) {
-            float x = m_firstVelocityIsVertical ? multiplier : m_firstVelocity;
-            float y = m_firstVelocityIsVertical ? m_firstVelocity : multiplier;
-            FloatPoint fp(x, y);
-            fireUpAnAnimation(fp);
-            m_firstVelocitySet = false;
-            m_firstVelocityIsVertical = false;
-        } else {
-            m_firstVelocitySet = true;
-            m_firstVelocityIsVertical = orientation == VerticalScrollbar;
-            m_firstVelocity = multiplier;
-        }
-        return true;
     }
 
     // If the individual input setting is disabled, bail.
@@ -476,6 +467,8 @@ void ScrollAnimatorNone::scrollToOffsetWithoutAnimation(const FloatPoint& offset
 {
     stopAnimationTimerIfNeeded();
 
+    FloatSize delta = FloatSize(offset.x() - *m_horizontalData.m_currentPosition, offset.y() - *m_verticalData.m_currentPosition);
+
     m_horizontalData.reset();
     *m_horizontalData.m_currentPosition = offset.x();
     m_horizontalData.m_desiredPosition = offset.x();
@@ -484,14 +477,13 @@ void ScrollAnimatorNone::scrollToOffsetWithoutAnimation(const FloatPoint& offset
     *m_verticalData.m_currentPosition = offset.y();
     m_verticalData.m_desiredPosition = offset.y();
 
-    notifyPositionChanged();
+    notifyPositionChanged(delta);
 }
 
 #if !USE(REQUEST_ANIMATION_FRAME_TIMER)
 void ScrollAnimatorNone::cancelAnimations()
 {
     m_animationActive = false;
-    m_gestureAnimation.clear();
 }
 
 void ScrollAnimatorNone::serviceScrollAnimations()
@@ -531,10 +523,6 @@ void ScrollAnimatorNone::animationTimerFired(Timer<ScrollAnimatorNone>* timer)
 
 void ScrollAnimatorNone::animationTimerFired()
 {
-#if PLATFORM(CHROMIUM)
-    TRACE_EVENT("ScrollAnimatorNone::animationTimerFired", this, 0);
-#endif
-
     double currentTime = WTF::monotonicallyIncreasingTime();
     double deltaToNextFrame = ceil((currentTime - m_startTime) * kFrameRate) / kFrameRate - (currentTime - m_startTime);
     currentTime += deltaToNextFrame;
@@ -545,13 +533,6 @@ void ScrollAnimatorNone::animationTimerFired()
     if (m_verticalData.m_startTime && m_verticalData.animateScroll(currentTime))
         continueAnimation = true;
 
-    if (m_gestureAnimation) {
-        if (m_gestureAnimation->animate(currentTime))
-            continueAnimation = true;
-        else
-            m_gestureAnimation.clear();
-    }
-
     if (continueAnimation)
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
         startNextTimer(max(kMinimumTimerInterval, deltaToNextFrame));
@@ -561,10 +542,7 @@ void ScrollAnimatorNone::animationTimerFired()
         m_animationActive = false;
 #endif
 
-#if PLATFORM(CHROMIUM)
-    TRACE_EVENT("ScrollAnimatorNone::notifyPositionChanged", this, 0);
-#endif
-    notifyPositionChanged();
+    notifyPositionChanged(FloatSize());
 
     if (!continueAnimation)
         animationDidFinish();
@@ -600,12 +578,6 @@ void ScrollAnimatorNone::stopAnimationTimerIfNeeded()
 #else
         m_animationActive = false;
 #endif
-}
-
-void ScrollAnimatorNone::scrollBy(const IntPoint& location)
-{
-    m_currentPosX += location.x();
-    m_currentPosY += location.y();
 }
 
 } // namespace WebCore

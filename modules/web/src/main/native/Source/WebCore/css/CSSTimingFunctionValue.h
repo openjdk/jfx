@@ -40,6 +40,8 @@ public:
 
     String customCssText() const;
 
+    bool equals(const CSSLinearTimingFunctionValue&) const { return true; }
+
 private:
     CSSLinearTimingFunctionValue()
         : CSSValue(LinearTimingFunctionClass)
@@ -60,6 +62,8 @@ public:
     double y1() const { return m_y1; }
     double x2() const { return m_x2; }
     double y2() const { return m_y2; }
+
+    bool equals(const CSSCubicBezierTimingFunctionValue&) const;
 
 private:
     CSSCubicBezierTimingFunctionValue(double x1, double y1, double x2, double y2)
@@ -88,6 +92,8 @@ public:
     bool stepAtStart() const { return m_stepAtStart; }
 
     String customCssText() const;
+
+    bool equals(const CSSStepsTimingFunctionValue&) const;
 
 private:
     CSSStepsTimingFunctionValue(int steps, bool stepAtStart)

@@ -31,7 +31,10 @@ class HitTestRequest;
 class HitTestResult;
 class InlineTextBox;
 class RenderLineBoxList;
+class SimpleFontData;
 class VerticalPositionCache;
+
+struct GlyphOverflow;
 
 typedef HashMap<const InlineTextBox*, pair<Vector<const SimpleFontData*>, GlyphOverflow> > GlyphOverflowAndFallbackFontsMap;
 
@@ -77,7 +80,7 @@ public:
     InlineBox* firstChild() const { checkConsistency(); return m_firstChild; }
     InlineBox* lastChild() const { checkConsistency(); return m_lastChild; }
 
-    virtual bool isLeaf() const { return false; }
+    virtual bool isLeaf() const FINAL { return false; }
     
     InlineBox* firstLeafChild() const;
     InlineBox* lastLeafChild() const;
@@ -85,7 +88,7 @@ public:
     typedef void (*CustomInlineBoxRangeReverse)(void* userData, Vector<InlineBox*>::iterator first, Vector<InlineBox*>::iterator last);
     void collectLeafBoxesInLogicalOrder(Vector<InlineBox*>&, CustomInlineBoxRangeReverse customReverseImplementation = 0, void* userData = 0) const;
 
-    virtual void setConstructed()
+    virtual void setConstructed() FINAL
     {
         InlineBox::setConstructed();
         for (InlineBox* child = firstChild(); child; child = child->nextOnLine())
@@ -93,9 +96,9 @@ public:
     }
 
     void addToLine(InlineBox* child);
-    virtual void deleteLine(RenderArena*);
-    virtual void extractLine();
-    virtual void attachLine();
+    virtual void deleteLine(RenderArena*) FINAL;
+    virtual void extractLine() FINAL;
+    virtual void attachLine() FINAL;
     virtual void adjustPosition(float dx, float dy);
 
     virtual void extractLineBoxFromRenderObject();
@@ -106,13 +109,13 @@ public:
 
     IntRect roundedFrameRect() const;
     
-    virtual void paintBoxDecorations(PaintInfo&, const LayoutPoint&);
-    virtual void paintMask(PaintInfo&, const LayoutPoint&);
+    virtual void paintBoxDecorations(PaintInfo&, const LayoutPoint&) FINAL;
+    virtual void paintMask(PaintInfo&, const LayoutPoint&) FINAL;
     void paintFillLayers(const PaintInfo&, const Color&, const FillLayer*, const LayoutRect&, CompositeOperator = CompositeSourceOver);
     void paintFillLayer(const PaintInfo&, const Color&, const FillLayer*, const LayoutRect&, CompositeOperator = CompositeSourceOver);
     void paintBoxShadow(const PaintInfo&, RenderStyle*, ShadowStyle, const LayoutRect&);
     virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom);
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) OVERRIDE;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) OVERRIDE;
 
     bool boxShadowCanBeAppliedToBackground(const FillLayer&) const;
 
@@ -170,12 +173,21 @@ public:
     void determineSpacingForFlowBoxes(bool lastLine, bool isLogicallyLastRunWrapped, RenderObject* logicallyLastRunRenderer);
     LayoutUnit getFlowSpacingLogicalWidth();
     float placeBoxesInInlineDirection(float logicalLeft, bool& needsWordSpacing, GlyphOverflowAndFallbackFontsMap&);
+    float placeBoxRangeInInlineDirection(InlineBox* firstChild, InlineBox* lastChild, float& logicalLeft, float& minLogicalLeft, float& maxLogicalRight, bool& needsWordSpacing, GlyphOverflowAndFallbackFontsMap&);
+    void beginPlacingBoxRangesInInlineDirection(float logicalLeft) { setLogicalLeft(logicalLeft); }
+    void endPlacingBoxRangesInInlineDirection(float logicalLeft, float logicalRight, float minLogicalLeft, float maxLogicalRight)
+    {
+        setLogicalWidth(logicalRight - logicalLeft);
+        if (knownToHaveNoOverflow() && (minLogicalLeft < logicalLeft || maxLogicalRight > logicalRight))
+            clearKnownToHaveNoOverflow();
+    }
+
     void computeLogicalBoxHeights(RootInlineBox*, LayoutUnit& maxPositionTop, LayoutUnit& maxPositionBottom,
-                                  LayoutUnit& maxAscent, LayoutUnit& maxDescent, bool& setMaxAscent, bool& setMaxDescent,
+                                  int& maxAscent, int& maxDescent, bool& setMaxAscent, bool& setMaxDescent,
                                   bool strictMode, GlyphOverflowAndFallbackFontsMap&, FontBaseline, VerticalPositionCache&);
-    void adjustMaxAscentAndDescent(LayoutUnit& maxAscent, LayoutUnit& maxDescent,
-                                   LayoutUnit maxPositionTop, LayoutUnit maxPositionBottom);
-    void placeBoxesInBlockDirection(LayoutUnit logicalTop, LayoutUnit maxHeight, LayoutUnit maxAscent, bool strictMode, LayoutUnit& lineTop, LayoutUnit& lineBottom, bool& setLineTop,
+    void adjustMaxAscentAndDescent(int& maxAscent, int& maxDescent,
+                                   int maxPositionTop, int maxPositionBottom);
+    void placeBoxesInBlockDirection(LayoutUnit logicalTop, LayoutUnit maxHeight, int maxAscent, bool strictMode, LayoutUnit& lineTop, LayoutUnit& lineBottom, bool& setLineTop,
                                     LayoutUnit& lineTopIncludingMargins, LayoutUnit& lineBottomIncludingMargins, bool& hasAnnotationsBefore, bool& hasAnnotationsAfter, FontBaseline);
     void flipLinesInBlockDirection(LayoutUnit lineTop, LayoutUnit lineBottom);
     bool requiresIdeographicBaseline(const GlyphOverflowAndFallbackFontsMap&) const;
@@ -189,7 +201,7 @@ public:
 
     virtual RenderObject::SelectionState selectionState();
 
-    virtual bool canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidth) const OVERRIDE;
+    virtual bool canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidth) const OVERRIDE FINAL;
     virtual float placeEllipsisBox(bool ltr, float blockLeftEdge, float blockRightEdge, float ellipsisWidth, float &truncatedWidth, bool&) OVERRIDE;
 
     bool hasTextChildren() const { return m_hasTextChildren; }
@@ -206,16 +218,6 @@ public:
     LayoutRect layoutOverflowRect(LayoutUnit lineTop, LayoutUnit lineBottom) const
     { 
         return m_overflow ? m_overflow->layoutOverflowRect() : enclosingLayoutRect(frameRectIncludingLineHeight(lineTop, lineBottom));
-    }
-    LayoutUnit logicalLeftLayoutOverflow() const
-    {
-        return m_overflow ? (isHorizontal() ? m_overflow->layoutOverflowRect().x() : m_overflow->layoutOverflowRect().y()) :
-                            static_cast<LayoutUnit>(logicalLeft());
-    }
-    LayoutUnit logicalRightLayoutOverflow() const
-    {
-        return m_overflow ? (isHorizontal() ? m_overflow->layoutOverflowRect().maxX() : m_overflow->layoutOverflowRect().maxY()) :
-                            static_cast<LayoutUnit>(ceilf(logicalRight()));
     }
     LayoutUnit logicalTopLayoutOverflow(LayoutUnit lineTop) const
     {
@@ -297,7 +299,7 @@ private:
 protected:
     OwnPtr<RenderOverflow> m_overflow;
 
-    virtual bool isInlineFlowBox() const { return true; }
+    virtual bool isInlineFlowBox() const FINAL { return true; }
 
     InlineBox* m_firstChild;
     InlineBox* m_lastChild;
@@ -305,6 +307,11 @@ protected:
     InlineFlowBox* m_prevLineBox; // The previous box that also uses our RenderObject
     InlineFlowBox* m_nextLineBox; // The next box that also uses our RenderObject
 
+#if ENABLE(CSS3_TEXT)
+    // Maximum logicalTop among all children of an InlineFlowBox. Used to
+    // calculate the offset for TextUnderlinePositionUnder.
+    void computeMaxLogicalTop(float& maxLogicalTop) const;
+#endif // CSS3_TEXT
 private:
     unsigned m_includeLogicalLeftEdge : 1;
     unsigned m_includeLogicalRightEdge : 1;
@@ -336,13 +343,13 @@ private:
 
 inline InlineFlowBox* toInlineFlowBox(InlineBox* object)
 {
-    ASSERT(!object || object->isInlineFlowBox());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isInlineFlowBox());
     return static_cast<InlineFlowBox*>(object);
 }
 
 inline const InlineFlowBox* toInlineFlowBox(const InlineBox* object)
 {
-    ASSERT(!object || object->isInlineFlowBox());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isInlineFlowBox());
     return static_cast<const InlineFlowBox*>(object);
 }
 

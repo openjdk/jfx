@@ -34,18 +34,24 @@ class StyleSheet;
 template<typename T> class EventSender;
 typedef EventSender<HTMLStyleElement> StyleEventSender;
 
-class HTMLStyleElement : public HTMLElement, private StyleElement {
+class HTMLStyleElement FINAL : public HTMLElement, private StyleElement {
 public:
     static PassRefPtr<HTMLStyleElement> create(const QualifiedName&, Document*, bool createdByParser);
     virtual ~HTMLStyleElement();
 
     void setType(const AtomicString&);
 
-#if ENABLE(STYLE_SCOPED)
     bool scoped() const;
     void setScoped(bool);
     Element* scopingElement() const;
-#endif
+    bool isRegisteredAsScoped() const
+    {
+        // Note: We cannot rely on the 'scoped' attribute still being present when this method is invoked.
+        // Therefore we cannot rely on scoped()!
+        if (m_scopedStyleRegistrationState == NotRegistered)
+            return false;
+        return true;
+    }
 
     using StyleElement::sheet;
 
@@ -59,7 +65,7 @@ private:
     HTMLStyleElement(const QualifiedName&, Document*, bool createdByParser);
 
     // overload from HTMLElement
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
     virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
@@ -76,23 +82,19 @@ private:
     virtual const AtomicString& media() const;
     virtual const AtomicString& type() const;
 
-#if ENABLE(STYLE_SCOPED)
     void scopedAttributeChanged(bool);
     void registerWithScopingNode(bool);
     void unregisterWithScopingNode(ContainerNode*);
-#endif
 
     bool m_firedLoad;
     bool m_loadedSheet;
 
-#if ENABLE(STYLE_SCOPED)
     enum ScopedStyleRegistrationState {
         NotRegistered,
         RegisteredAsScoped,
         RegisteredInShadowRoot
     };
     ScopedStyleRegistrationState m_scopedStyleRegistrationState;
-#endif
 };
 
 } //namespace

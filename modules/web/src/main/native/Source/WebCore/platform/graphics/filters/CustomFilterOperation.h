@@ -31,63 +31,44 @@
 #define CustomFilterOperation_h
 
 #if ENABLE(CSS_SHADERS)
+#include "CustomFilterConstants.h"
+#include "CustomFilterParameterList.h"
 #include "CustomFilterProgram.h"
 #include "FilterOperation.h"
-
-#include <wtf/text/WTFString.h>
+#include "LayoutSize.h"
 
 namespace WebCore {
 
 // CSS Shaders
 
-class CustomFilterParameter;
-typedef Vector<RefPtr<CustomFilterParameter> > CustomFilterParameterList;
-
-bool customFilterParametersEqual(const CustomFilterParameterList&, const CustomFilterParameterList&);
-void blendCustomFilterParameters(const CustomFilterParameterList& listFrom, const CustomFilterParameterList& listTo, double progress, CustomFilterParameterList& resultList);
-
 class CustomFilterOperation : public FilterOperation {
 public:
-    enum MeshBoxType {
-        FILTER_BOX,
-        BORDER_BOX,
-        PADDING_BOX,
-        CONTENT_BOX
-    };
-    
-    enum MeshType {
-        ATTACHED,
-        DETACHED
-    };
-    
-    static PassRefPtr<CustomFilterOperation> create(PassRefPtr<CustomFilterProgram> program, const CustomFilterParameterList& sortedParameters, unsigned meshRows, unsigned meshColumns, MeshBoxType meshBoxType, MeshType meshType)
+    static PassRefPtr<CustomFilterOperation> create(PassRefPtr<CustomFilterProgram> program, const CustomFilterParameterList& sortedParameters, unsigned meshRows, unsigned meshColumns)
     {
-        return adoptRef(new CustomFilterOperation(program, sortedParameters, meshRows, meshColumns, meshBoxType, meshType));
-    }
-    
-    virtual PassRefPtr<FilterOperation> clone() const
-    {
-        // Some member vars (e.g., m_program) are not thread-safe, so
-        // we can't be cloned.
-        return 0;
+        return adoptRef(new CustomFilterOperation(program, sortedParameters, meshRows, meshColumns));
     }
     
     CustomFilterProgram* program() const { return m_program.get(); }
+    void setProgram(PassRefPtr<CustomFilterProgram> program) { m_program = program; }
     
-    const CustomFilterParameterList& parameters() { return m_parameters; }
+    const CustomFilterParameterList& parameters() const { return m_parameters; }
     
     unsigned meshRows() const { return m_meshRows; }
     unsigned meshColumns() const { return m_meshColumns; }
     
-    MeshBoxType meshBoxType() const { return m_meshBoxType; }
-    MeshType meshType() const { return m_meshType; }
+    CustomFilterMeshType meshType() const { return program() ? program()->meshType() : MeshTypeAttached; }
     
     virtual ~CustomFilterOperation();
     
     virtual bool affectsOpacity() const { return true; }
     virtual bool movesPixels() const { return true; }
+    virtual bool blendingNeedsRendererSize() const { return true; }
     
-    virtual PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false);
+    virtual PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, const LayoutSize&, bool blendToPassthrough = false);
+
+protected:
+    CustomFilterOperation(PassRefPtr<CustomFilterProgram>, const CustomFilterParameterList&, unsigned meshRows, unsigned meshColumns);
+    
 private:
     virtual bool operator==(const FilterOperation& o) const
     {
@@ -95,23 +76,17 @@ private:
             return false;
 
         const CustomFilterOperation* other = static_cast<const CustomFilterOperation*>(&o);
-        return *m_program.get() == *other->m_program.get()
+        return m_program.get() == other->m_program.get()
                && m_meshRows == other->m_meshRows
                && m_meshColumns == other->m_meshColumns
-               && m_meshBoxType == other->m_meshBoxType
-               && m_meshType == other->m_meshType
-               && customFilterParametersEqual(m_parameters, other->m_parameters);
+            && m_parameters == other->m_parameters;
     }
     
-    CustomFilterOperation(PassRefPtr<CustomFilterProgram>, const CustomFilterParameterList&, unsigned meshRows, unsigned meshColumns, MeshBoxType, MeshType);
-
     RefPtr<CustomFilterProgram> m_program;
     CustomFilterParameterList m_parameters;
     
     unsigned m_meshRows;
     unsigned m_meshColumns;
-    MeshBoxType m_meshBoxType;
-    MeshType m_meshType;
 };
 
 } // namespace WebCore

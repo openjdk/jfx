@@ -29,11 +29,10 @@
 #include "config.h"
 #include "JSVariableObject.h"
 
+#include "Operations.h"
+
 namespace JSC {
 
-void JSVariableObject::destroy(JSCell* cell)
-{
-    static_cast<JSVariableObject*>(cell)->JSVariableObject::~JSVariableObject();
-}
+const ClassInfo JSVariableObject::s_info = { "VariableObject", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSVariableObject) };
 
 } // namespace JSC

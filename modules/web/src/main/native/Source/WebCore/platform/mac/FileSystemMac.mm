@@ -29,12 +29,11 @@
 #import "config.h"
 #import "FileSystem.h"
 
-#import "PlatformString.h"
-//#import "WebCoreNSStringExtras.h"
 #import "WebCoreNSURLExtras.h"
 #import "WebCoreSystemInterface.h"
 #import <wtf/RetainPtr.h>
 #import <wtf/text/CString.h>
+#import <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -78,7 +77,7 @@ typedef struct MetaDataInfo
 static void* setMetaData(void* context)
 {
     MetaDataInfo *info = (MetaDataInfo *)context;
-    wkSetMetadataURL((NSString *)info->URLString, (NSString *)info->referrer, (NSString *)String(fileSystemRepresentation(info->path).data()));
+    wkSetMetadataURL((NSString *)info->URLString, (NSString *)info->referrer, (NSString *)String::fromUTF8(fileSystemRepresentation(info->path).data()));
     
     delete info;
     

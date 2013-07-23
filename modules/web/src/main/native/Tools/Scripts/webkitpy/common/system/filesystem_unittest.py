@@ -35,7 +35,7 @@ import os
 import stat
 import sys
 import tempfile
-import unittest
+import unittest2 as unittest
 
 from filesystem import FileSystem
 
@@ -60,19 +60,19 @@ class GenericFileSystemTests(object):
 
     def test_glob__trailing_asterisk(self):
         self.fs.chdir(self.generic_test_dir)
-        self.assertEquals(set(self.fs.glob('fo*')), set(['foo.txt', 'foobar', 'foodir']))
+        self.assertEqual(set(self.fs.glob('fo*')), set(['foo.txt', 'foobar', 'foodir']))
 
     def test_glob__leading_asterisk(self):
         self.fs.chdir(self.generic_test_dir)
-        self.assertEquals(set(self.fs.glob('*xt')), set(['foo.txt']))
+        self.assertEqual(set(self.fs.glob('*xt')), set(['foo.txt']))
 
     def test_glob__middle_asterisk(self):
         self.fs.chdir(self.generic_test_dir)
-        self.assertEquals(set(self.fs.glob('f*r')), set(['foobar', 'foodir']))
+        self.assertEqual(set(self.fs.glob('f*r')), set(['foobar', 'foodir']))
 
     def test_glob__period_is_escaped(self):
         self.fs.chdir(self.generic_test_dir)
-        self.assertEquals(set(self.fs.glob('foo.*')), set(['foo.txt']))
+        self.assertEqual(set(self.fs.glob('foo.*')), set(['foo.txt']))
 
 class RealFileSystemTest(unittest.TestCase, GenericFileSystemTests):
     def setUp(self):
@@ -94,7 +94,7 @@ class RealFileSystemTest(unittest.TestCase, GenericFileSystemTests):
         if sys.platform == 'win32':
             newdir = 'c:\\'
         fs.chdir(newdir)
-        self.assertEquals(fs.getcwd(), newdir)
+        self.assertEqual(fs.getcwd(), newdir)
         fs.chdir(cwd)
 
     def test_chdir__notexists(self):
@@ -246,20 +246,11 @@ class RealFileSystemTest(unittest.TestCase, GenericFileSystemTests):
 
         fs = FileSystem()
         self.assertTrue(fs.remove('filename', remove_with_exception))
-        self.assertEquals(-1, RealFileSystemTest._remove_failures)
+        self.assertEqual(-1, RealFileSystemTest._remove_failures)
 
     def test_sep(self):
         fs = FileSystem()
 
-        self.assertEquals(fs.sep, os.sep)
-        self.assertEquals(fs.join("foo", "bar"),
+        self.assertEqual(fs.sep, os.sep)
+        self.assertEqual(fs.join("foo", "bar"),
                           os.path.join("foo", "bar"))
-
-    def test_sep__is_readonly(self):
-        def assign_sep():
-            fs.sep = ' '
-        fs = FileSystem()
-        self.assertRaises(AttributeError, assign_sep)
-
-if __name__ == '__main__':
-    unittest.main()

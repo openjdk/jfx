@@ -18,13 +18,63 @@
  */
 
 #include "config.h"
+
+#if USE(ACCELERATED_COMPOSITING)
 #include "GraphicsLayerAnimation.h"
 
+#include "LayoutSize.h"
 #include "UnitBezier.h"
 #include <wtf/CurrentTime.h>
 
 namespace WebCore {
 
+#if ENABLE(CSS_FILTERS)
+static inline PassRefPtr<FilterOperation> blendFunc(FilterOperation* fromOp, FilterOperation* toOp, double progress, const IntSize& size, bool blendToPassthrough = false)
+{
+    ASSERT(toOp);
+    if (toOp->blendingNeedsRendererSize())
+        return toOp->blend(fromOp, progress, LayoutSize(size.width(), size.height()), blendToPassthrough);
+
+    return toOp->blend(fromOp, progress, blendToPassthrough);
+}
+
+
+static FilterOperations applyFilterAnimation(const FilterOperations& from, const FilterOperations& to, double progress, const IntSize& boxSize)
+{
+    // First frame of an animation.
+    if (!progress)
+        return from;
+
+    // Last frame of an animation.
+    if (progress == 1)
+        return to;
+
+    if (!from.isEmpty() && !to.isEmpty() && !from.operationsMatch(to))
+        return to;
+
+    FilterOperations result;
+
+    size_t fromSize = from.operations().size();
+    size_t toSize = to.operations().size();
+    size_t size = std::max(fromSize, toSize);
+    for (size_t i = 0; i < size; i++) {
+        RefPtr<FilterOperation> fromOp = (i < fromSize) ? from.operations()[i].get() : 0;
+        RefPtr<FilterOperation> toOp = (i < toSize) ? to.operations()[i].get() : 0;
+        RefPtr<FilterOperation> blendedOp = toOp ? blendFunc(fromOp.get(), toOp.get(), progress, boxSize) : (fromOp ? blendFunc(0, fromOp.get(), progress, boxSize, true) : 0);
+        if (blendedOp)
+            result.operations().append(blendedOp);
+        else {
+            RefPtr<FilterOperation> identityOp = PassthroughFilterOperation::create();
+            if (progress > 0.5)
+                result.operations().append(toOp ? toOp : identityOp);
+            else
+                result.operations().append(fromOp ? fromOp : identityOp);
+        }
+    }
+
+    return result;
+}
+#endif
 
 static bool shouldReverseAnimationValue(Animation::AnimationDirection direction, int loopCount)
 {
@@ -35,7 +85,7 @@ static bool shouldReverseAnimationValue(Animation::AnimationDirection direction,
     return false;
 }
 
-static double normalizedAnimationValue(double runningTime, double duration, Animation::AnimationDirection direction)
+static double normalizedAnimationValue(double runningTime, double duration, Animation::AnimationDirection direction, double iterationCount)
 {
     if (!duration)
         return 0;
@@ -43,25 +93,20 @@ static double normalizedAnimationValue(double runningTime, double duration, Anim
     const int loopCount = runningTime / duration;
     const double lastFullLoop = duration * double(loopCount);
     const double remainder = runningTime - lastFullLoop;
-    const double normalized = remainder / duration;
+    // Ignore remainder when we've reached the end of animation.
+    const double normalized = (loopCount == iterationCount) ? 1.0 : (remainder / duration);
 
     return shouldReverseAnimationValue(direction, loopCount) ? 1 - normalized : normalized;
 }
 
-#if PLATFORM(JAVA)
-static double normalizedAnimationEndValue(Animation* animation)
+static double normalizedAnimationValueForFillsForwards(double iterationCount, Animation::AnimationDirection direction)
 {
-    double fillModeEndValue = animation->isFillModeSet() && animation->fillMode() == AnimationFillModeBackwards ? 0 : 1;
-    if (animation->direction() == Animation::AnimationDirectionNormal) {
-        return fillModeEndValue;
-    } else if (animation->direction() == Animation::AnimationDirectionReverse) {
-        return 1 - fillModeEndValue;
-    } else {
-        return shouldReverseAnimationValue(animation->direction(), animation->iterationCount())
-                ? fillModeEndValue : 1 - fillModeEndValue;
+    if (direction == Animation::AnimationDirectionNormal)
+        return 1;
+    if (direction == Animation::AnimationDirectionReverse)
+        return 0;
+    return shouldReverseAnimationValue(direction, iterationCount) ? 1 : 0;
     }
-}
-#endif
 
 static float applyOpacityAnimation(float fromOpacity, float toOpacity, double progress)
 {
@@ -110,75 +155,92 @@ static inline float applyTimingFunction(const TimingFunction* timingFunction, fl
     return progress;
 }
 
-static TransformationMatrix applyTransformAnimation(const TransformOperations* from, const TransformOperations* to, double progress, const IntSize& boxSize, bool listsMatch)
+static TransformationMatrix applyTransformAnimation(const TransformOperations& from, const TransformOperations& to, double progress, const IntSize& boxSize, bool listsMatch)
 {
     TransformationMatrix matrix;
 
     // First frame of an animation.
     if (!progress) {
-        from->apply(boxSize, matrix);
+        from.apply(boxSize, matrix);
         return matrix;
     }
 
     // Last frame of an animation.
     if (progress == 1) {
-        to->apply(boxSize, matrix);
+        to.apply(boxSize, matrix);
         return matrix;
     }
 
     // If we have incompatible operation lists, we blend the resulting matrices.
     if (!listsMatch) {
         TransformationMatrix fromMatrix;
-        to->apply(boxSize, matrix);
-        from->apply(boxSize, fromMatrix);
+        to.apply(boxSize, matrix);
+        from.apply(boxSize, fromMatrix);
         matrix.blend(fromMatrix, progress);
         return matrix;
     }
 
     // Animation to "-webkit-transform: none".
-    if (!to->size()) {
-        TransformOperations blended(*from);
+    if (!to.size()) {
+        TransformOperations blended(from);
         for (size_t i = 0; i < blended.operations().size(); ++i)
             blended.operations()[i]->blend(0, progress, true)->apply(matrix, boxSize);
         return matrix;
     }
 
     // Animation from "-webkit-transform: none".
-    if (!from->size()) {
-        TransformOperations blended(*to);
+    if (!from.size()) {
+        TransformOperations blended(to);
         for (size_t i = 0; i < blended.operations().size(); ++i)
             blended.operations()[i]->blend(0, 1. - progress, true)->apply(matrix, boxSize);
         return matrix;
     }
 
     // Normal animation with a matching operation list.
-    TransformOperations blended(*to);
+    TransformOperations blended(to);
     for (size_t i = 0; i < blended.operations().size(); ++i)
-        blended.operations()[i]->blend(from->at(i), progress, !from->at(i))->apply(matrix, boxSize);
+        blended.operations()[i]->blend(from.at(i), progress, !from.at(i))->apply(matrix, boxSize);
     return matrix;
 }
 
+static const TimingFunction* timingFunctionForAnimationValue(const AnimationValue& animValue, const Animation* anim)
+{
+    if (animValue.timingFunction())
+        return animValue.timingFunction();
+    if (anim->timingFunction())
+        return anim->timingFunction().get();
 
-GraphicsLayerAnimation::GraphicsLayerAnimation(const KeyframeValueList& keyframes, const IntSize& boxSize, const Animation* animation, double timeOffset, bool listsMatch)
+    return CubicBezierTimingFunction::defaultTimingFunction();
+}
+
+GraphicsLayerAnimation::GraphicsLayerAnimation(const String& name, const KeyframeValueList& keyframes, const IntSize& boxSize, const Animation* animation, double startTime, bool listsMatch)
     : m_keyframes(keyframes)
     , m_boxSize(boxSize)
     , m_animation(Animation::create(animation))
+    , m_name(name)
     , m_listsMatch(listsMatch)
-    , m_startTime(WTF::currentTime() - timeOffset)
+    , m_startTime(startTime)
     , m_pauseTime(0)
+    , m_totalRunningTime(0)
+    , m_lastRefreshedTime(m_startTime)
     , m_state(PlayingState)
 {
 }
 
-void GraphicsLayerAnimation::applyInternal(Client* client, const AnimationValue* from, const AnimationValue* to, float progress)
+void GraphicsLayerAnimation::applyInternal(Client* client, const AnimationValue& from, const AnimationValue& to, float progress)
 {
     switch (m_keyframes.property()) {
     case AnimatedPropertyOpacity:
-        client->setAnimatedOpacity(applyOpacityAnimation((static_cast<const FloatAnimationValue*>(from)->value()), (static_cast<const FloatAnimationValue*>(to)->value()), progress));
+        client->setAnimatedOpacity(applyOpacityAnimation((static_cast<const FloatAnimationValue&>(from).value()), (static_cast<const FloatAnimationValue&>(to).value()), progress));
         return;
     case AnimatedPropertyWebkitTransform:
-        client->setAnimatedTransform(applyTransformAnimation(static_cast<const TransformAnimationValue*>(from)->value(), static_cast<const TransformAnimationValue*>(to)->value(), progress, m_boxSize, m_listsMatch));
+        client->setAnimatedTransform(applyTransformAnimation(static_cast<const TransformAnimationValue&>(from).value(), static_cast<const TransformAnimationValue&>(to).value(), progress, m_boxSize, m_listsMatch));
         return;
+#if ENABLE(CSS_FILTERS)
+    case AnimatedPropertyWebkitFilter:
+        client->setAnimatedFilters(applyFilterAnimation(static_cast<const FilterAnimationValue&>(from).value(), static_cast<const FilterAnimationValue&>(to).value(), progress, m_boxSize));
+        return;
+#endif
     default:
         ASSERT_NOT_REACHED();
     }
@@ -194,45 +256,35 @@ bool GraphicsLayerAnimation::isActive() const
 
 bool GraphicsLayerAnimations::hasActiveAnimationsOfType(AnimatedPropertyID type) const
 {
-    HashMap<String, Vector<GraphicsLayerAnimation> >::const_iterator end = m_animations.end();
-    for (HashMap<String, Vector<GraphicsLayerAnimation> >::const_iterator it = m_animations.begin(); it != end; ++it) {
-        const Vector<GraphicsLayerAnimation>& animations = it->second;
-        for (size_t i = 0; i < animations.size(); ++i) {
-            if (animations[i].isActive() && animations[i].property() == type)
+    for (size_t i = 0; i < m_animations.size(); ++i) {
+        if (m_animations[i].isActive() && m_animations[i].property() == type)
                 return true;
         }
-    }
     return false;
 }
 
 bool GraphicsLayerAnimations::hasRunningAnimations() const
 {
-    HashMap<String, Vector<GraphicsLayerAnimation> >::const_iterator end = m_animations.end();
-    for (HashMap<String, Vector<GraphicsLayerAnimation> >::const_iterator it = m_animations.begin(); it != end; ++it) {
-        const Vector<GraphicsLayerAnimation>& animations = it->second;
-        for (size_t i = 0; i < animations.size(); ++i) {
-            if (animations[i].state() == GraphicsLayerAnimation::PlayingState)
+    for (size_t i = 0; i < m_animations.size(); ++i) {
+        if (m_animations[i].state() == GraphicsLayerAnimation::PlayingState)
                 return true;
         }
-    }
 
     return false;
 }
 
 void GraphicsLayerAnimation::apply(Client* client)
 {
-    if (state() == StoppedState)
+    if (!isActive())
         return;
 
-    double totalRunningTime = m_state == PausedState ? m_pauseTime : WTF::currentTime() - m_startTime;
-    double normalizedValue = normalizedAnimationValue(totalRunningTime, m_animation->duration(), m_animation->direction());
+    double totalRunningTime = computeTotalRunningTime();
+    double normalizedValue = normalizedAnimationValue(totalRunningTime, m_animation->duration(), m_animation->direction(), m_animation->iterationCount());
 
     if (m_animation->iterationCount() != Animation::IterationCountInfinite && totalRunningTime >= m_animation->duration() * m_animation->iterationCount()) {
         setState(StoppedState);
-#if PLATFORM(JAVA)
-        // Animation has finished so we need to apply the end state
-        normalizedValue = normalizedAnimationEndValue(m_animation.get());
-#endif
+        if (m_animation->fillsForwards())
+            normalizedValue = normalizedAnimationValueForFillsForwards(m_animation->iterationCount(), m_animation->direction());
     }
 
     if (!normalizedValue) {
@@ -245,61 +297,109 @@ void GraphicsLayerAnimation::apply(Client* client)
         return;
     }
     if (m_keyframes.size() == 2) {
-        normalizedValue = applyTimingFunction(m_animation->timingFunction().get(), normalizedValue, m_animation->duration());
+        const TimingFunction* timingFunction = timingFunctionForAnimationValue(m_keyframes.at(0), m_animation.get());
+        normalizedValue = applyTimingFunction(timingFunction, normalizedValue, m_animation->duration());
         applyInternal(client, m_keyframes.at(0), m_keyframes.at(1), normalizedValue);
         return;
     }
 
     for (size_t i = 0; i < m_keyframes.size() - 1; ++i) {
-        const AnimationValue* from = m_keyframes.at(i);
-        const AnimationValue* to = m_keyframes.at(i + 1);
-        if (from->keyTime() > normalizedValue || to->keyTime() < normalizedValue)
+        const AnimationValue& from = m_keyframes.at(i);
+        const AnimationValue& to = m_keyframes.at(i + 1);
+        if (from.keyTime() > normalizedValue || to.keyTime() < normalizedValue)
             continue;
 
-        normalizedValue = (normalizedValue - from->keyTime()) / (to->keyTime() - from->keyTime());
-        normalizedValue = applyTimingFunction(from->timingFunction(), normalizedValue, m_animation->duration());
+        normalizedValue = (normalizedValue - from.keyTime()) / (to.keyTime() - from.keyTime());
+        const TimingFunction* timingFunction = timingFunctionForAnimationValue(from, m_animation.get());
+        normalizedValue = applyTimingFunction(timingFunction, normalizedValue, m_animation->duration());
         applyInternal(client, from, to, normalizedValue);
         break;
     }
 }
 
-void GraphicsLayerAnimation::pause(double offset)
+double GraphicsLayerAnimation::computeTotalRunningTime()
 {
-    // FIXME: should apply offset here.
-    setState(PausedState);
-    m_pauseTime = WTF::currentTime() - offset;
+    if (state() == PausedState)
+        return m_pauseTime;
+
+    double oldLastRefreshedTime = m_lastRefreshedTime;
+    m_lastRefreshedTime = WTF::currentTime();
+    m_totalRunningTime += m_lastRefreshedTime - oldLastRefreshedTime;
+    return m_totalRunningTime;
 }
 
-void GraphicsLayerAnimations::add(const String& name, const GraphicsLayerAnimation& animation)
+void GraphicsLayerAnimation::pause(double time)
 {
-    HashMap<String, Vector<GraphicsLayerAnimation> >::iterator it = m_animations.find(name);
-    if (it != m_animations.end()) {
-        it->second.append(animation);
-        return;
+    setState(PausedState);
+    m_pauseTime = time;
     }
 
-    Vector<GraphicsLayerAnimation> animations;
-    animations.append(animation);
-    m_animations.add(name, animations);
+void GraphicsLayerAnimation::resume()
+{
+    setState(PlayingState);
+    m_totalRunningTime = m_pauseTime;
+    m_lastRefreshedTime = WTF::currentTime();
+}
+
+void GraphicsLayerAnimations::add(const GraphicsLayerAnimation& animation)
+{
+    // Remove the old state if we are resuming a paused animation.
+    remove(animation.name(), animation.property());
+
+    m_animations.append(animation);
 }
 
 void GraphicsLayerAnimations::pause(const String& name, double offset)
 {
-    HashMap<String, Vector<GraphicsLayerAnimation> >::iterator it = m_animations.find(name);
-    if (it == m_animations.end())
-        return;
+    for (size_t i = 0; i < m_animations.size(); ++i) {
+        if (m_animations[i].name() == name)
+            m_animations[i].pause(offset);
+    }
+}
 
-    for (size_t i = 0; i < it->second.size(); i++) 
-        it->second[i].pause(offset);
+void GraphicsLayerAnimations::suspend(double offset)
+{
+    for (size_t i = 0; i < m_animations.size(); ++i)
+        m_animations[i].pause(offset);
+}
+
+void GraphicsLayerAnimations::resume()
+{
+    for (size_t i = 0; i < m_animations.size(); ++i)
+        m_animations[i].resume();
+}
+
+void GraphicsLayerAnimations::remove(const String& name)
+{
+    for (int i = m_animations.size() - 1; i >= 0; --i) {
+        if (m_animations[i].name() == name)
+            m_animations.remove(i);
+    }
+}
+
+void GraphicsLayerAnimations::remove(const String& name, AnimatedPropertyID property)
+{
+    for (int i = m_animations.size() - 1; i >= 0; --i) {
+        if (m_animations[i].name() == name && m_animations[i].property() == property)
+            m_animations.remove(i);
+    }
 }
 
 void GraphicsLayerAnimations::apply(GraphicsLayerAnimation::Client* client)
 {
-    HashMap<String, Vector<GraphicsLayerAnimation> >::iterator end = m_animations.end();
-    for (HashMap<String, Vector<GraphicsLayerAnimation> >::iterator it = m_animations.begin(); it != end; ++it) {
-        for (size_t i = 0; i < it->second.size(); ++i)
-            it->second[i].apply(client);
-    }
+    for (size_t i = 0; i < m_animations.size(); ++i)
+        m_animations[i].apply(client);
 }
 
+GraphicsLayerAnimations GraphicsLayerAnimations::getActiveAnimations() const
+{
+    GraphicsLayerAnimations active;
+    for (size_t i = 0; i < m_animations.size(); ++i) {
+        if (m_animations[i].isActive())
+            active.add(m_animations[i]);
 }
+    return active;
+}
+}
+#endif
+

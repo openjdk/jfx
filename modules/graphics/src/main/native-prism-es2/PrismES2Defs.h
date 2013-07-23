@@ -212,6 +212,9 @@ struct StateInfoRec {
     GLboolean cullEnable;
     GLenum cullMode;
     GLenum fillMode;
+
+    /* Currently bound fbo */
+    GLuint fbo;
 };
 
 /* Typedef for context properties struct */
@@ -313,6 +316,9 @@ struct ContextInfoRec {
     PFNGLGENBUFFERSPROC glGenBuffers;
     PFNGLBINDBUFFERPROC glBindBuffer;
     PFNGLBUFFERDATAPROC glBufferData;
+    PFNGLTEXIMAGE2DMULTISAMPLEPROC glTexImage2DMultisample;
+    PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC glRenderbufferStorageMultisample;
+    PFNGLBLITFRAMEBUFFERPROC glBlitFramebuffer;
 
     /* For state caching */
     StateInfo state;

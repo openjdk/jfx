@@ -26,14 +26,16 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import re
 import sys
 
-from webkitpy.tool.multicommandtool import AbstractDeclarativeCommand
-from webkitpy.common.system.deprecated_logging import log
+from webkitpy.tool.multicommandtool import Command
+
+_log = logging.getLogger(__name__)
 
 
-class OpenBugs(AbstractDeclarativeCommand):
+class OpenBugs(Command):
     name = "open-bugs"
     help_text = "Finds all bug numbers passed in arguments (or stdin if no args provided) and opens them in a web browser"
 
@@ -58,6 +60,6 @@ class OpenBugs(AbstractDeclarativeCommand):
             # This won't open bugs until stdin is closed but could be made to easily.  That would just make unit testing slightly harder.
             bug_ids = self._find_bugs_in_iterable(sys.stdin)
 
-        log("%s bugs found in input." % len(bug_ids))
+        _log.info("%s bugs found in input." % len(bug_ids))
 
         self._open_bugs(bug_ids)

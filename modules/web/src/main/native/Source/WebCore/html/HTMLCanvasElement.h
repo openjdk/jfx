@@ -31,8 +31,9 @@
 #include "FloatRect.h"
 #include "HTMLElement.h"
 #include "IntSize.h"
+#include <wtf/Forward.h>
 
-#if PLATFORM(CHROMIUM) || PLATFORM(QT)
+#if PLATFORM(QT)
 #define DefaultInterpolationQuality InterpolationMedium
 #elif USE(CG)
 #define DefaultInterpolationQuality InterpolationLow
@@ -61,7 +62,7 @@ public:
     virtual void canvasDestroyed(HTMLCanvasElement*) = 0;
 };
 
-class HTMLCanvasElement : public HTMLElement {
+class HTMLCanvasElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLCanvasElement> create(Document*);
     static PassRefPtr<HTMLCanvasElement> create(const QualifiedName&, Document*);
@@ -81,7 +82,7 @@ public:
 
     void setSize(const IntSize& newSize)
     { 
-        if (newSize == size())
+        if (newSize == size() && targetDeviceScaleFactor() == m_deviceScaleFactor)
             return;
         m_ignoreReset = true; 
         setWidth(newSize.width());
@@ -98,6 +99,7 @@ public:
 
     // Used for rendering
     void didDraw(const FloatRect&);
+    void notifyObserversCanvasChanged(const FloatRect&);
 
     void paint(GraphicsContext*, const LayoutRect&, bool useLowQualityScale = false);
 
@@ -122,8 +124,6 @@ public:
     void setOriginTainted() { m_originClean = false; }
     bool originClean() const { return m_originClean; }
 
-    StyleResolver* styleResolver();
-
     AffineTransform baseTransform() const;
 
 #if ENABLE(WEBGL)    
@@ -137,21 +137,24 @@ public:
 
     float deviceScaleFactor() const { return m_deviceScaleFactor; }
 
+    virtual bool canContainRangeEndPoint() const { return false; }
+
 private:
     HTMLCanvasElement(const QualifiedName&, Document*);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
     virtual void attach();
+    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
 
     void reset();
+
+    float targetDeviceScaleFactor() const;
 
     void createImageBuffer() const;
     void clearImageBuffer() const;
 
     void setSurfaceSize(const IntSize&);
-
-    bool shouldDefer() const;
 
     bool paintsIntoCanvasBuffer() const;
 

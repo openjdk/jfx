@@ -223,7 +223,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                             final InvalidationListener[] oldListeners = invalidationListeners;
                             if (locked) {
                                 invalidationListeners = new InvalidationListener[invalidationListeners.length];
-                                System.arraycopy(oldListeners, 0, invalidationListeners, 0, index+1);
+                                System.arraycopy(oldListeners, 0, invalidationListeners, 0, index);
                             }
                             if (numMoved > 0) {
                                 System.arraycopy(oldListeners, index+1, invalidationListeners, index, numMoved);
@@ -280,7 +280,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                             final SetChangeListener<? super E>[] oldListeners = changeListeners;
                             if (locked) {
                                 changeListeners = new SetChangeListener[changeListeners.length];
-                                System.arraycopy(oldListeners, 0, changeListeners, 0, index+1);
+                                System.arraycopy(oldListeners, 0, changeListeners, 0, index);
                             }
                             if (numMoved > 0) {
                                 System.arraycopy(oldListeners, index+1, changeListeners, index, numMoved);

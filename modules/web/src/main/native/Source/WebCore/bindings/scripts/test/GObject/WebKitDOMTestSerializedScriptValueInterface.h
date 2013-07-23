@@ -18,15 +18,19 @@
     Boston, MA 02110-1301, USA.
 */
 
+#if !defined(__WEBKITDOM_H_INSIDE__) && !defined(BUILDING_WEBKIT)
+#error "Only <webkitdom/webkitdom.h> can be included directly."
+#endif
+
 #ifndef WebKitDOMTestSerializedScriptValueInterface_h
 #define WebKitDOMTestSerializedScriptValueInterface_h
 
 #include <glib-object.h>
-#include <webkit/WebKitDOMObject.h>
-#include <webkit/webkitdefines.h>
-#include <webkit/webkitdomdefines.h>
+#include <webkitdom/WebKitDOMObject.h>
+#include <webkitdom/webkitdomdefines.h>
 
 G_BEGIN_DECLS
+
 #define WEBKIT_TYPE_DOM_TEST_SERIALIZED_SCRIPT_VALUE_INTERFACE            (webkit_dom_test_serialized_script_value_interface_get_type())
 #define WEBKIT_DOM_TEST_SERIALIZED_SCRIPT_VALUE_INTERFACE(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), WEBKIT_TYPE_DOM_TEST_SERIALIZED_SCRIPT_VALUE_INTERFACE, WebKitDOMTestSerializedScriptValueInterface))
 #define WEBKIT_DOM_TEST_SERIALIZED_SCRIPT_VALUE_INTERFACE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_TYPE_DOM_TEST_SERIALIZED_SCRIPT_VALUE_INTERFACE, WebKitDOMTestSerializedScriptValueInterfaceClass)
@@ -44,32 +48,6 @@ struct _WebKitDOMTestSerializedScriptValueInterfaceClass {
 
 WEBKIT_API GType
 webkit_dom_test_serialized_script_value_interface_get_type (void);
-
-/**
- * webkit_dom_test_serialized_script_value_interface_accept_transfer_list:
- * @self: A #WebKitDOMTestSerializedScriptValueInterface
- * @data: A #WebKitDOMSerializedScriptValue
- * @transferList: A #WebKitDOMArray
- *
- * Returns:
- *
-**/
-WEBKIT_API void
-webkit_dom_test_serialized_script_value_interface_accept_transfer_list(WebKitDOMTestSerializedScriptValueInterface* self, WebKitDOMSerializedScriptValue* data, WebKitDOMArray* transferList);
-
-/**
- * webkit_dom_test_serialized_script_value_interface_multi_transfer_list:
- * @self: A #WebKitDOMTestSerializedScriptValueInterface
- * @first: A #WebKitDOMSerializedScriptValue
- * @tx: A #WebKitDOMArray
- * @second: A #WebKitDOMSerializedScriptValue
- * @txx: A #WebKitDOMArray
- *
- * Returns:
- *
-**/
-WEBKIT_API void
-webkit_dom_test_serialized_script_value_interface_multi_transfer_list(WebKitDOMTestSerializedScriptValueInterface* self, WebKitDOMSerializedScriptValue* first, WebKitDOMArray* tx, WebKitDOMSerializedScriptValue* second, WebKitDOMArray* txx);
 
 /**
  * webkit_dom_test_serialized_script_value_interface_get_value:
@@ -122,16 +100,6 @@ webkit_dom_test_serialized_script_value_interface_get_cached_value(WebKitDOMTest
 **/
 WEBKIT_API void
 webkit_dom_test_serialized_script_value_interface_set_cached_value(WebKitDOMTestSerializedScriptValueInterface* self, WebKitDOMSerializedScriptValue* value);
-
-/**
- * webkit_dom_test_serialized_script_value_interface_get_ports:
- * @self: A #WebKitDOMTestSerializedScriptValueInterface
- *
- * Returns: (transfer none):
- *
-**/
-WEBKIT_API WebKitDOMMessagePortArray*
-webkit_dom_test_serialized_script_value_interface_get_ports(WebKitDOMTestSerializedScriptValueInterface* self);
 
 /**
  * webkit_dom_test_serialized_script_value_interface_get_cached_readonly_value:

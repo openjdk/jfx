@@ -32,7 +32,6 @@
 #include "c_instance.h"
 #include "c_runtime.h"
 #include "npruntime_impl.h"
-#include <runtime/ScopeChain.h>
 #include <runtime/Identifier.h>
 #include <runtime/JSGlobalObject.h>
 #include <runtime/JSObject.h>
@@ -71,33 +70,28 @@ CClass* CClass::classForIsA(NPClass* isa)
     return aClass;
 }
 
-MethodList CClass::methodsNamed(PropertyName propertyName, Instance* instance) const
+Method* CClass::methodNamed(PropertyName propertyName, Instance* instance) const
 {
-    UString name(propertyName.publicName());
+    String name(propertyName.publicName());
     
-    MethodList methodList;
-
-    Method* method = _methods.get(name.impl());
-    if (method) {
-        methodList.append(method);
-        return methodList;
-    }
+    if (Method* method = _methods.get(name.impl()))
+        return method;
 
     NPIdentifier ident = _NPN_GetStringIdentifier(name.ascii().data());
     const CInstance* inst = static_cast<const CInstance*>(instance);
     NPObject* obj = inst->getObject();
     if (_isa->hasMethod && _isa->hasMethod(obj, ident)){
-        Method* aMethod = new CMethod(ident); // deleted in the CClass destructor
-        _methods.set(name.impl(), aMethod);
-        methodList.append(aMethod);
+        Method* method = new CMethod(ident); // deleted in the CClass destructor
+        _methods.set(name.impl(), method);
+        return method;
     }
     
-    return methodList;
+    return 0;
 }
 
 Field* CClass::fieldNamed(PropertyName propertyName, Instance* instance) const
 {
-    UString name(propertyName.publicName());
+    String name(propertyName.publicName());
     
     Field* aField = _fields.get(name.impl());
     if (aField)

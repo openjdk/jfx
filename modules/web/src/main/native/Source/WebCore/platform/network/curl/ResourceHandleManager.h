@@ -29,7 +29,6 @@
 #define ResourceHandleManager_h
 
 #include "Frame.h"
-#include "PlatformString.h"
 #include "Timer.h"
 #include "ResourceHandleClient.h"
 
@@ -41,6 +40,7 @@
 #include <curl/curl.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -56,7 +56,11 @@ public:
     static ResourceHandleManager* sharedInstance();
     void add(ResourceHandle*);
     void cancel(ResourceHandle*);
+
+    CURLSH* getCurlShareHandle() const;
+
     void setCookieJarFileName(const char* cookieJarFileName);
+    const char* getCookieJarFileName() const;
 
     void dispatchSynchronousJob(ResourceHandle*);
 
@@ -79,6 +83,8 @@ private:
     bool startScheduledJobs();
 
     void initializeHandle(ResourceHandle*);
+
+    void initCookieSession();
 
     Timer<ResourceHandleManager> m_downloadTimer;
     CURLM* m_curlMultiHandle;

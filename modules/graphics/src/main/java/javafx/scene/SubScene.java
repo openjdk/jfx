@@ -25,6 +25,17 @@
 
 package javafx.scene;
 
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Point3D;
+import javafx.scene.input.PickResult;
+import javafx.scene.paint.Paint;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,20 +49,12 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.SubSceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.sg.PGLightBase;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGSubScene;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGLightBase;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.tk.Toolkit;
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Point3D;
-import javafx.scene.input.PickResult;
-import javafx.scene.paint.Paint;
+
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -73,9 +76,7 @@ public class SubScene extends Node {
      * @throws NullPointerException if root is null
      */
     public SubScene(Parent root, double width, double height) {
-        setRoot(root);
-        setWidth(width);
-        setHeight(height);
+        this(root, width, height, false, false);
     }
 
     /**
@@ -101,43 +102,53 @@ public class SubScene extends Node {
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      */
     public SubScene(Parent root, double width, double height,
-            boolean depthBuffer, boolean antiAliasing) {
-        this(root, width, height);
+            boolean depthBuffer, boolean antiAliasing)
+    {
         this.depthBuffer = depthBuffer;
+        this.antiAliasing = antiAliasing;
+        setRoot(root);
+        setWidth(width);
+        setHeight(height);
 
-        // NOTE: this block will be removed once implement anti-aliasing
-        if (antiAliasing) {
-            String logname = SubScene.class.getName();
-            PlatformLogger.getLogger(logname).warning("3D anti-aliasing is "
-                    + "not supported yet.");
-        }
-
-        if ((depthBuffer || antiAliasing)
-                && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+        if ((depthBuffer || antiAliasing) && !is3DSupported) {
             String logname = SubScene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
-            // TODO: 3D - ignore depthBuffer and antiAliasing at rendering time
         }
-        //TODO: 3D - verify that depthBuffer is working correctly
-        //TODO: 3D - complete antiAliasing
+        if (antiAliasing && !com.sun.prism.GraphicsPipeline.
+                getPipeline().isAntiAliasingSupported()) {
+            String logname = SubScene.class.getName();
+            PlatformLogger.getLogger(logname).warning("System can't support "
+                    + "antiAliasing");
+        }
     }
+
+    private static boolean is3DSupported =
+            Platform.isSupported(ConditionalFeature.SCENE3D);
+
+    private final boolean antiAliasing;
 
     /**
      * Return true if this {@code SubScene} is anti-aliased otherwise false.
      */
-    public boolean isAntiAliasing() {
-        throw new UnsupportedOperationException("Unsupported --- *** isAntiAliasing method ***");
+    public final boolean isAntiAliasing() {
+        return antiAliasing;
     }
 
-    private boolean depthBuffer = false;
+    private final boolean depthBuffer;
 
-    boolean isDepthBufferInteral() {
-        if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
-            return false;
-        }
+    /**
+     * Retrieves the depth buffer attribute for this SubScene.
+     * @return the depth buffer attribute.
+     */
+    public final boolean isDepthBuffer() {
         return depthBuffer;
     }
+
+    private boolean isDepthBufferInternal() {
+        return is3DSupported ? depthBuffer : false;
+    }
+
     /**
      * Defines the root {@code Node} of the SubScene scene graph.
      * If a {@code Group} is used as the root, the
@@ -260,7 +271,7 @@ public class SubScene extends Node {
                     Camera _value = get();
                     if (_value != null) {
                         if (_value instanceof PerspectiveCamera
-                                && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                                && !SubScene.is3DSupported) {
                             String logname = SubScene.class.getName();
                             PlatformLogger.getLogger(logname).warning("System can't support "
                                     + "ConditionalFeature.SCENE3D");
@@ -302,8 +313,7 @@ public class SubScene extends Node {
     Camera getEffectiveCamera() {
         final Camera cam = getCamera();
         if (cam == null
-                || (cam instanceof PerspectiveCamera
-                && !Platform.isSupported(ConditionalFeature.SCENE3D))) {
+                || (cam instanceof PerspectiveCamera && !is3DSupported)) {
             if (defaultCamera == null) {
                 defaultCamera = new ParallelCamera();
                 defaultCamera.setOwnerSubScene(this);
@@ -460,14 +470,14 @@ public class SubScene extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         // TODO deal with clip node
 
         dirtyNodes = dirtyLayout = false;
         if (isDirty()) {
-            PGSubScene peer = (PGSubScene) impl_getPGNode();
+            NGSubScene peer = impl_getPeer();
             final Camera cam = getEffectiveCamera();
             boolean contentChanged = false;
             if (cam.getSubScene() == null &&
@@ -476,7 +486,7 @@ public class SubScene extends Node {
                 // owner(subscene) must take care of syncing it. And when a
                 // property on the camera changes it will mark subscenes
                 // CONTENT_DIRTY.
-                cam.impl_syncPGNode();
+                cam.impl_syncPeer();
             }
             if (isDirty(SubSceneDirtyBits.FILL_DIRTY)) {
                 Object platformPaint = getFill() == null ? null :
@@ -484,18 +494,17 @@ public class SubScene extends Node {
                 peer.setFillPaint(platformPaint);
                 contentChanged = true;
             }
-            peer.setDepthBuffer(isDepthBufferInteral());
             if (isDirty(SubSceneDirtyBits.SIZE_DIRTY)) {
                 // Note change in size is a geom change and is handled by peer
                 peer.setWidth((float)getWidth());
                 peer.setHeight((float)getHeight());
             }
             if (isDirty(SubSceneDirtyBits.CAMERA_DIRTY)) {
-                peer.setCamera(cam.getPlatformCamera());
+                peer.setCamera((NGCamera) cam.impl_getPeer());
                 contentChanged = true;
             }
             if (isDirty(SubSceneDirtyBits.ROOT_SG_DIRTY)) {
-                peer.setRoot(getRoot().impl_getPGNode());
+                peer.setRoot(getRoot().impl_getPeer());
                 contentChanged = true;
             }
             contentChanged |= syncLights();
@@ -552,8 +561,12 @@ public class SubScene extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated    @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGSubScene();
+    protected NGNode impl_createPeer() {
+        if (!is3DSupported) {
+            return new NGSubScene(false, false);
+        }
+        return new NGSubScene(depthBuffer, antiAliasing &&
+                com.sun.prism.GraphicsPipeline.getPipeline().isAntiAliasingSupported());
     }
 
     /**
@@ -735,18 +748,18 @@ public class SubScene extends Node {
         if (!isDirty(SubSceneDirtyBits.LIGHTS_DIRTY)) {
             return lightOwnerChanged;
         }
-        PGSubScene pgSubScene = (PGSubScene) impl_getPGNode();
+        NGSubScene pgSubScene = impl_getPeer();
         Object peerLights[] = pgSubScene.getLights();
         if (!lights.isEmpty() || (peerLights != null)) {
             if (lights.isEmpty()) {
                 pgSubScene.setLights(null);
             } else {
                 if (peerLights == null || peerLights.length < lights.size()) {
-                    peerLights = new PGLightBase[lights.size()];
+                    peerLights = new NGLightBase[lights.size()];
                 }
                 int i = 0;
                 for (; i < lights.size(); i++) {
-                    peerLights[i] = lights.get(i).impl_getPGNode();
+                    peerLights[i] = lights.get(i).impl_getPeer();
                 }
                 // Clear the rest of the list
                 while (i < peerLights.length && peerLights[i] != null) {
@@ -766,7 +779,7 @@ public class SubScene extends Node {
 
             @Override
             public boolean isDepthBuffer(SubScene subScene) {
-                return subScene.isDepthBufferInteral();
+                return subScene.isDepthBufferInternal();
             };
 
             @Override

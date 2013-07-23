@@ -134,8 +134,16 @@ bool SVGFontData::applySVGGlyphSelection(WidthIterator& iterator, GlyphData& gly
     ASSERT(int(run.charactersLength()) >= currentCharacter);
 
     // Associate text with arabic forms, if needed.
-    String remainingTextInRun(run.data(currentCharacter), run.charactersLength() - currentCharacter);
-    remainingTextInRun = Font::normalizeSpaces(remainingTextInRun.characters(), remainingTextInRun.length());
+    String remainingTextInRun;
+
+    if (run.is8Bit()) {
+        remainingTextInRun = String(run.data8(currentCharacter), run.charactersLength() - currentCharacter);
+        remainingTextInRun = Font::normalizeSpaces(remainingTextInRun.characters8(), remainingTextInRun.length());
+    } else {
+        remainingTextInRun = String(run.data16(currentCharacter), run.charactersLength() - currentCharacter);
+        remainingTextInRun = Font::normalizeSpaces(remainingTextInRun.characters16(), remainingTextInRun.length());
+    }
+
     if (mirror)
         remainingTextInRun = createStringWithMirroredCharacters(remainingTextInRun.characters(), remainingTextInRun.length());
     if (!currentCharacter && arabicForms.isEmpty())
@@ -181,6 +189,16 @@ bool SVGFontData::applySVGGlyphSelection(WidthIterator& iterator, GlyphData& gly
         size_t glyphsSize = glyphs.size();
         for (size_t i = 0; i < glyphsSize; ++i)
             glyphs[i].unicodeStringLength = run.length();
+
+        // Do not check alt glyphs for compatibility. Just return the first one.
+        // Later code will fail if we do not do this and the glyph is incompatible.
+        if (glyphsSize) {
+            SVGGlyph& svgGlyph = glyphs[0];
+            iterator.setLastGlyphName(svgGlyph.glyphName);
+            glyphData.glyph = svgGlyph.tableEntry;
+            advanceLength = svgGlyph.unicodeStringLength;
+            return true;
+        }
     } else
         associatedFontElement->collectGlyphsForString(remainingTextInRun, glyphs);
 
@@ -273,18 +291,11 @@ String SVGFontData::createStringWithMirroredCharacters(const UChar* characters, 
     StringBuilder mirroredCharacters;
     mirroredCharacters.reserveCapacity(length);
 
-    UChar32 character;
     unsigned i = 0;
     while (i < length) {
+        UChar32 character;
         U16_NEXT(characters, i, length, character);
-        character = mirroredChar(character);
-
-        if (U16_LENGTH(character) == 1)
-            mirroredCharacters.append(static_cast<UChar>(character));
-        else {
-            mirroredCharacters.append(U16_LEAD(character));
-            mirroredCharacters.append(U16_TRAIL(character));
-        }
+        mirroredCharacters.append(mirroredChar(character));
     }
 
     return mirroredCharacters.toString();

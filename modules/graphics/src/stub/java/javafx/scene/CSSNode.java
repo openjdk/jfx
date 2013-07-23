@@ -25,33 +25,21 @@
 
 package javafx.scene;
 
-import com.sun.javafx.css.converters.InsetsConverter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.FloatProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleFloatProperty;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
-
-import javafx.css.StyleableFloatProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.sg.prism.NGNode;
+import javafx.beans.property.*;
+import javafx.css.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public  class CSSNode extends Node {
     
@@ -249,8 +237,8 @@ public  class CSSNode extends Node {
     }
 
     @Override
-    public PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGGroup();
+    public NGNode impl_createPeer() {
+        return new NGGroup();
     }
 
     public static class StyleableProperties {

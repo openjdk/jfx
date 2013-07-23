@@ -20,8 +20,6 @@
 #include "config.h"
 #include "webkiticondatabase.h"
 
-#include "DatabaseDetails.h"
-#include "DatabaseTracker.h"
 #include "FileSystem.h"
 #include "IconDatabase.h"
 #include "Image.h"
@@ -35,7 +33,7 @@
 #include <wtf/text/CString.h>
 
 /**
- * SECTION:webkitwebdatabase
+ * SECTION:webkiticondatabase
  * @short_description: A WebKit web application database
  *
  * #WebKitIconDatabase provides access to website icons, as shown

@@ -96,18 +96,6 @@ void defineProperty(String name, Properties props, String defaultValue) {
 }
 
 /**
- * Converts the simple name of a library to the full name. For example, on mac
- * the simple name "glass" becomes "libglass.dylib". On Linux or Solaris, it would
- * be "libglass.so", and on Windows "glass.dll".
- *
- * @param name The simple name of the library
- * @return The name of the shared library file
- */
-String library(String name) {
-    return "${IS_WINDOWS ? '' : 'lib'}$name.${IS_WINDOWS ? 'dll' : IS_MAC ? 'dylib' : 'so'}"
-}
-
-/**
  * Converts cygwin style paths to windows style paths, but with a forward slash.
  * This method is safe to call from any platform, and will only do work if
  * called on Windows (in all other cases it simply returns the supplied path.
@@ -148,6 +136,9 @@ class CompileTarget {
  * @param c The closure to call
  */
 void compileTargets(Closure c) {
+    if (COMPILE_TARGETS == "") {
+        return
+    }
     COMPILE_TARGETS.split(",").each { target ->
         CompileTarget ct = new CompileTarget();
         ct.name = target;
@@ -290,6 +281,11 @@ defineProperty("COMPILE_WEBKIT", "false")
 defineProperty("COMPILE_GSTREAMER", "false")
 if (COMPILE_WEBKIT instanceof String) ext.COMPILE_WEBKIT = Boolean.parseBoolean(COMPILE_WEBKIT)
 if (COMPILE_GSTREAMER instanceof String) ext.COMPILE_GSTREAMER = Boolean.parseBoolean(COMPILE_GSTREAMER)
+
+// COMPILE_PANGO specifies whether to build javafx-font-pango.
+defineProperty("COMPILE_PANGO", "false")
+if (COMPILE_PANGO instanceof String) ext.COMPILE_PANGO = Boolean.parseBoolean(COMPILE_PANGO)
+
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
@@ -453,7 +449,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
         // check that all the dirs are really there
         def List<String> errors = []
         packages.each { pkgname->
-            def String basename = pkgname.substring(0,pkgname.indexOf("."))
+            def String basename = pkgname.substring(0,pkgname.lastIndexOf("."))
             def File pkgdir = file("$destdir/$basename")
 
             if (!pkgdir.isDirectory()) {
@@ -494,6 +490,16 @@ if (COMPILE_TARGETS == "all") {
         logger.info("Applying COMPILE_FLAGS_FILE '$it'")
         apply from: it
     }
+}
+
+if (COMPILE_TARGETS != "") {
+    def tmp = []
+    COMPILE_TARGETS.split(",").each {target ->
+        if (project.ext["${target.toUpperCase()}"].canBuild) {
+            tmp.add(target)
+        }
+    }
+    COMPILE_TARGETS = tmp.collect { "${it.toLowerCase()}"}.join(",")
 }
 
 // Sanity check the expected properties all exist
@@ -629,18 +635,18 @@ ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
  * @param name The name of the project, such as "prism-common". This name is used
  *        in the name of the generated task, such as ccPrismCommon, and also
  *        in the name of the final library, such as libprism-common.dylib.
- * @param libName The name of the shared library we will create. Should be
- *        something like "prism-common", which we will turn into libprism-common.dylib
- *        or whatnot depending on the platform.
+ * @param optional If the task is optional or not
  */
-void addNative(Project project, String name) {
+void addNative(Project project, String name, boolean optional = false) {
     // TODO if we want to handle 32/64 bit windows in the same build,
     // Then we will need to modify the win compile target to be win32 or win64
     def capitalName = name.split("-").collect{it.capitalize()}.join()
     def nativeTask = project.task("native$capitalName", group: "Build") {
         description = "Generates JNI headers, compiles, and builds native dynamic library for $name for all compile targets"
     }
-    project.assemble.dependsOn(nativeTask)
+    if (!optional) {
+        project.assemble.dependsOn(nativeTask)
+    }
     // Each of the different compile targets will be placed in a sub directory
     // of these root dirs, with the name of the dir being the name of the target
     def headerRootDir = project.file("$project.buildDir/generated-src/headers/$name")
@@ -649,13 +655,22 @@ void addNative(Project project, String name) {
     // For each compile target, create a javah / cc / link triplet
     compileTargets { t ->
         def targetProperties = project.rootProject.ext[t.upper]
+        def library = targetProperties.library
         def properties = targetProperties.get(name)
         def nativeDir = file("$nativeRootDir/${t.name}")
         def headerDir = file("$headerRootDir/${t.name}")
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
             description = "Generates JNI Headers for ${name} for ${t.name}"
-            source(project.sourceSets.main.output.classesDir)
-            classpath = project.files(project.sourceSets.main.output.classesDir)
+            if (properties.javahSource == null) {
+                source(project.sourceSets.main.output.classesDir)
+            } else {
+                source(properties.javahSource)
+            }
+            if (properties.javahClasspath == null) {
+                classpath = project.files(project.sourceSets.main.output.classesDir)
+            } else {
+                classpath = project.files(properties.javahClasspath)
+            }
             if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
             output = headerDir
             include(properties.javahInclude)
@@ -690,6 +705,16 @@ void addNative(Project project, String name) {
                 }
                 linkTask.dependsOn rcTask;
             }
+        }
+
+        def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
+        if (useLipo) {
+            def lipoTask = project.task("lipo${t.capital}$capitalName", type: LipoTask, dependsOn: javahTask, group: "Build") {
+                description = "Creates native fat library for $name for ${t.name}"
+                libDir = file("$libRootDir/${t.name}")
+                lib = file("$libRootDir/${t.name}/${library(properties.lib)}")
+            }
+            nativeTask.dependsOn(lipoTask)
         }
     }
 }
@@ -751,10 +776,51 @@ task updateCacheIfNeeded() {
 *        Project definitions (dependencies, etc)                             *
 *****************************************************************************/
 
+void addJCov(p, test) {
+    test.doFirst {
+        def jcovJVMArgument =
+                "include=javafx," +
+                "include=com.sun.javafx," +
+                "include=com.sun.glass," +
+                "include=com.sun.openpisces," +
+                "include=com.sun.pisces," +
+                "include=com.sun.prism," +
+                "include=com.sun.scenario," +
+                "include=com.sun.webkit," +
+                "exclude=com," +
+                "exclude=java," +
+                "exclude=javax," +
+                "exclude=\"**.test\"," +
+                "exclude=\"**.*Test\"," +
+                "file=build/reports/jcov/report.xml," +
+                "merge=merge";
+        test.jvmArgs("-javaagent:${p.configurations.testCompile.files.find { it.name.startsWith('jcov') }}=$jcovJVMArgument");
+        p.mkdir p.file("build/reports/jcov")
+    }
+    test.doLast {
+        def reportFile = p.file("build/reports/jcov/report.xml")
+        if (reportFile.exists()) {
+            p.javaexec {
+                workingDir = p.file("build/reports/jcov")
+                classpath = p.files(p.configurations.testCompile.files.find { it.name.startsWith('jcov') })
+                main = "com.sun.tdk.jcov.Helper"
+                args = [
+                        "RepGen",
+                        "-exclude", "\"**.test\"",
+                        "-exclude", "\"**.*Test\"",
+                        "-output", ".",
+                        "-source", p.sourceSets.main.java.srcDirs.collect{p.file(it)}.join(":"),
+                        "report.xml"
+                ]
+            }
+        }
+    }
+}
+
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
-    // etc, except for the root project which we just want to ignore (and for now media and web...)
-    if (project == rootProject || project.name == "media" || project.name == "web") return
+    // etc, except for the root project which we just want to ignore (and for now media)
+    if (project == rootProject || project.name == "media") return
     // All of our projects are java projects
     apply plugin: "java"
     sourceCompatibility = 1.8
@@ -786,7 +852,8 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testCompile(group: "junit", name: "junit", version: "4.8.2");
+        testCompile group: "junit", name: "junit", version: "4.8.2"
+        if (BUILD_CLOSED) testCompile name: "jcov"
     }
 
     // At the moment the ASM library shipped with Gradle that is used to
@@ -805,6 +872,9 @@ allprojects {
         include("**/*Test.*");
         exclude("**/DepthTest.*");
         exclude("**/*Abstract*.*");
+        if (BUILD_CLOSED) {
+            addJCov(project, test)
+        }
     }
 
     // Exclude any non-public-API classes from having javadoc generated. This block is used
@@ -902,6 +972,11 @@ project(":graphics") {
     addNative(project, "font")
     addNative(project, "iio")
     addNative(project, "prismES2")
+
+    // Currently lets not build pango by default
+    if (IS_LINUX) {
+        addNative(project, "fontPango", !COMPILE_PANGO)
+    }
 
     if (IS_WINDOWS) {
         addNative(project, "prismD3D")
@@ -1043,6 +1118,7 @@ project(":graphics") {
         def upperTarget = t.upper
         def capitalTarget = t.capital
         def properties = rootProject.ext[upperTarget];
+        def library = properties.library
 
         def ccTask = task("compileDecoraNativeShaders$capitalTarget", type: CCTask, dependsOn: generateDecoraNativeHeaders) {
             description = "Compiles Decora SSE natives"
@@ -1121,6 +1197,9 @@ project(":graphics") {
         test.scanForTestClasses = false
         test.include "**/*Test.*"
         test.exclude "**/*Abstract*.*"
+        if (BUILD_CLOSED) {
+            addJCov(project, test)
+        }
     }
     test.dependsOn testWithoutStub, testWithStub
 
@@ -1128,30 +1207,28 @@ project(":graphics") {
     // available in some known location. Maybe in the future the Gradle plugins to each
     // of the IDEs will be good enough that we won't need this hack anymore.
     classes << {
-        // Copy all of the download libraries to .libs for the sake of the IDEs
-        File libsDir = rootProject.file(".libs");
-        if (!libsDir.exists()) {
-            libsDir.mkdirs();
-            for (File f : [configurations.compile.files, configurations.antlr3.files].flatten()) {
-                copy {
-                    into libsDir
-                    from f.getParentFile()
-                    include "**/plugin.jar"
-                    include "**/antlr-3.1.3.jar"
-                    include "**/stringtemplate-3.2.jar"
-                    include "**/antlr-runtime-3.1.3.jar"
-                    includeEmptyDirs = false
-                }
-                // Have to rename the swt jar because it is some platform specific name but
-                // for the sake of the IDEs we need to have a single stable name that works
-                // on every platform
-                copy {
-                    into libsDir
-                    from f.getParentFile()
-                    include "**/*swt*.jar"
-                    includeEmptyDirs = false
-                    rename ".*swt.*jar", "swt\\.jar"
-                }
+        // Copy all of the download libraries to the libs directory for the sake of the IDEs
+        File libsDir = rootProject.file("build/libs");
+        libsDir.mkdirs();
+        for (File f : [configurations.compile.files, configurations.antlr3.files].flatten()) {
+            copy {
+                into libsDir
+                from f.getParentFile()
+                include "**/plugin.jar"
+                include "**/antlr-3.1.3.jar"
+                include "**/stringtemplate-3.2.jar"
+                include "**/antlr-runtime-3.1.3.jar"
+                includeEmptyDirs = false
+            }
+            // Have to rename the swt jar because it is some platform specific name but
+            // for the sake of the IDEs we need to have a single stable name that works
+            // on every platform
+            copy {
+                into libsDir
+                from f.getParentFile()
+                include "**/*swt*.jar"
+                includeEmptyDirs = false
+                rename ".*swt.*jar", "swt-debug\\.jar"
             }
         }
     }
@@ -1236,7 +1313,7 @@ project(":builders") {
 
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
-                project(":controls"), project(":swt"), project(":swing")
+                project(":controls"), project(":swt"), project(":swing"), project(":web")
         testCompile project(":graphics").sourceSets.stub.output
     }
     test {
@@ -1432,18 +1509,16 @@ project(":fxpackager") {
     jar.dependsOn buildJavaFXPackager
 
     classes << {
-        // Copy all of the download libraries to .libs for the sake of the IDEs
-        File libsDir = rootProject.file(".libs");
+        // Copy all of the download libraries to libs directory for the sake of the IDEs
+        File libsDir = rootProject.file("build/libs");
         File antLib = new File(libsDir, "ant-1.8.2.jar")
-        if (!antLib.exists()) {
-            libsDir.mkdirs();
-            for (File f : configurations.compile.files) {
-                copy {
-                    into libsDir
-                    from f.getParentFile()
-                    include "**/ant-1.8.2.jar"
-                    includeEmptyDirs = false
-                }
+        libsDir.mkdirs();
+        for (File f : configurations.compile.files) {
+            copy {
+                into libsDir
+                from f.getParentFile()
+                include "**/ant-1.8.2.jar"
+                includeEmptyDirs = false
             }
         }
     }
@@ -1526,7 +1601,7 @@ task javadoc(type: Javadoc) {
     executable = JAVADOC
     def projectsToDocument = [
             project(":base"), project(":graphics"), project(":controls"),
-            project(":swing"), project(":swt"), project(":fxml")]
+            project(":swing"), project(":swt"), project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java, "$it.buildDir/generated-src/builders"]
     }));
@@ -1640,6 +1715,7 @@ task all() {
 
 compileTargets { t ->
     def targetProperties = project.ext[t.upper]
+    def library = targetProperties.library
     // The jfxrt task is responsible for creating the jfxrt.jar. A developer may
     // have multiple SDK's on their system at any one time, depending on which
     // cross compiles they have done. For example, I might have:
@@ -1670,6 +1746,13 @@ compileTargets { t ->
              "modules/graphics/build/resources/jsl-prism");
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
         if (COMPILE_SWT) from ("modules/swt/build/classes/main", "modules/swt/build/resources/main")
+        if (t.name == 'android') {
+            from ("modules/web/build/classes/android", "modules/web/build/resources/android")
+        } else if (t.name == 'ios') {
+            from ("modules/web/build/classes/ios", "modules/web/build/resources/ios")
+        } else {
+            from ("modules/web/build/classes/main", "modules/web/build/resources/main")
+        }
         exclude("js/**/*", // er...
                 "PrismLoaderBackend*", // More decora stuff
                 "**/*.stg",    // any glue files for decora must be excluded
@@ -1691,24 +1774,36 @@ compileTargets { t ->
             // TODO instead of using copy everywhere, I probably want to use "sync" instead?
             // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
             copy {
-                from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}",
-                     "modules/graphics/build/libs/prism/${t.name}/${library(targetProperties.prism.lib)}",
-                     "modules/graphics/build/libs/prismSW/${t.name}/${library(targetProperties.prismSW.lib)}",
-                     "modules/graphics/build/libs/font/${t.name}/${library(targetProperties.font.lib)}",
-                     "modules/graphics/build/libs/iio/${t.name}/${library(targetProperties.iio.lib)}");
-                def es2Variants = targetProperties.prismES2.containsKey("variants") ? targetProperties.prismES2.variants : [""];
-                es2Variants.each { variant ->
-                    def variantProperties = variant == "" ? targetProperties.prismES2 : targetProperties.prismES2.get(variant)
-                    from ("modules/graphics/build/libs/prismES2/${t.name}/${library(variantProperties.lib)}");
+                def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
+                from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
+                def libs = ['font', 'prism', 'prismSW', 'prismES2', 'glass', 'iio']
+                if (COMPILE_PANGO) {
+                    libs += 'fontPango';
                 }
-                def glassVariants = targetProperties.glass.containsKey("variants") ? targetProperties.glass.variants : [""];
-                glassVariants.each { variant ->
-                    def variantProperties = variant == "" ? targetProperties.glass : targetProperties.glass.get(variant)
-                    from ("modules/graphics/build/libs/glass/${t.name}/${library(variantProperties.lib)}");
+                libs.each { lib ->
+                    def variants = targetProperties[lib].containsKey('variants') && !useLipo ? targetProperties[lib].variants : [null]
+                    variants.each { variant ->
+                        def variantProperties = variant ? targetProperties[lib][variant] : targetProperties[lib]
+                        println "modules/graphics/build/libs/$lib/$t.name/${library(variantProperties.lib)}"
+                        from ("modules/graphics/build/libs/$lib/$t.name/${library(variantProperties.lib)}")
+                    }
                 }
                 if (IS_WINDOWS) {
                     from ("modules/graphics/build/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
-                    rename("lib(.*).dll", "\$1.dll");
+                }
+                if (COMPILE_WEBKIT) {
+                    from ("modules/web/build/libs/${library('jfxwebkit')}")
+                    if (IS_WINDOWS) {
+                        from ("modules/web/src/main/native/WebKitLibraries/import/runtime")
+                    }
+                } else {
+                    if (IS_MAC && COMPILE_TARGETS != "ios") from ("$LIBRARY_STUB/libjfxwebkit.dylib")
+                    else if (IS_WINDOWS) {
+                        from ("$LIBRARY_STUB/jfxwebkit.dll")
+                        from ("$LIBRARY_STUB/libxml2.dll")
+                        from ("$LIBRARY_STUB/libxslt.dll")
+                    }
+                    else from ("$LIBRARY_STUB/libjfxwebkit.so")
                 }
                 def libDest = targetProperties.libDest
                 into ("build/${t.name}-sdk/rt/$libDest")
@@ -1765,6 +1860,19 @@ compileTargets { t ->
         dependsOn(jfxrtTask)
         dependsOn(javadoc)
     }
+
+    def generateSymbols = targetProperties.containsKey('generateSymbols') ? targetProperties.generateSymbols : false
+    if (generateSymbols) {
+        def exportedSymbolsTask = project.task("exportedSymbols${t.capital}", type: ExportedSymbolsTask, dependsOn: sdkTask, group: "Build") {
+            description = "Generates exported symbols file for iOS build (from .a libraries)"
+            def libDirName = "build/${t.name}-sdk/rt/$targetProperties.libDest"
+            libDir = file("$libDirName")
+            outputFile = file("$libDirName/exported.symbols")
+            excludes = targetProperties.generateSymbolsExcludes
+        }
+        sdk.dependsOn(exportedSymbolsTask)
+    }
+
     sdk.dependsOn(sdkTask)
 }
 
@@ -1774,448 +1882,6 @@ compileTargets { t ->
     //    dependsOn sdk
     //    dependsOn subprojects.collect { project -> project.getTasksByName("check", true)}
     //}
-
-/******************************************************************************
- *                                                                            *
- *                 Generation of NetBeans Project Files                       *
- *                                                                            *
- *  This next section is responsible for setting up the work for generation   *
- *  of NetBeans project files. The developer needs to invoke                  *
- *                                                                            *
- *      gradle netbeans                                                       *
- *                                                                            *
- *  and all necessary project files will be generated. Note that unlike       *
- *  Eclipse and IDEA, NetBeans natively understands Gradle build files so     *
- *  the project files generated for NetBeans is limited to just shared        *
- *  configuration files. Make sure you have the latest stable release of      *
- *                                                                            *
- *  http://plugins.netbeans.org/plugin/44510/gradle-support                   *
- *                                                                            *
- *  for your version of the IDE.                                              *
- *                                                                            *
- *****************************************************************************/
-
-/*
-  <built-in-tasks>
-    <task>
-      <display-name>build</display-name>
-      <non-blocking>yes</non-blocking>
-      <task-names>
-        <name must-exist="no">build</name>
-      </task-names>
-      <task-jvm-args/>
-    </task>
-  </built-in-tasks>
-  <common-tasks>
-    <task>
-      <display-name>sdk</display-name>
-      <non-blocking>no</non-blocking>
-      <task-names>
-        <name must-exist="yes">tasks</name>
-      </task-names>
-      <task-jvm-args/>
-    </task>
-  </common-tasks>
-
- */
-
-task netBeans() {
-    description = "Creates the NetBeans project files for JavaFX"
-    group = "IDE"
-
-    doLast {
-        File nbGradleProperties = file(".nb-gradle-properties")
-        if (nbGradleProperties.exists()) nbGradleProperties.delete()
-        nbGradleProperties.createNewFile()
-        nbGradleProperties <<
-"""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<gradle-project-properties>
-  <!--DO NOT EDIT THIS FILE! - Used by the Gradle plugin of NetBeans.-->
-  <source-encoding>UTF-8</source-encoding>
-  <target-platform-name>j2se</target-platform-name>
-  <target-platform>1.7</target-platform>
-  <source-level>1.7</source-level>
-  <script-platform>
-    <spec-name>j2se</spec-name>
-    <spec-version>1.7</spec-version>
-  </script-platform>
-  <gradle-home>?VER=1.4</gradle-home>
-  <license-header>
-    <name>OpenJFX</name>
-    <template>.nb-openjfx-template-license</template>
-    <property name="organization">OpenJFX</property>
-  </license-header>
-</gradle-project-properties>"""
-
-        File nbGradleTemplate = file(".nb-openjfx-template-license")
-        if (nbGradleTemplate.exists()) nbGradleTemplate.delete()
-        nbGradleTemplate.createNewFile()
-        nbGradleTemplate <<
-"""My License will reign supreme!"""
-    }
-}
-
-task cleanNetBeans() {
-    description = "Deletes generated NetBeans files"
-    group = "IDE"
-    doLast {
-        file(".nb-gradle-properties").delete()
-    }
-}
-
-/******************************************************************************
- *                                                                            *
- *                   Generation of IDEA Project Files                         *
- *                                                                            *
- *  This next section is responsible for setting up the work for generation   *
- *  of IntelliJ IDEA project files. The developer needs to invoke             *
- *                                                                            *
- *      gradle idea                                                           *
- *                                                                            *
- *  and all necessary project files will be generated.                        *
- *                                                                            *
- *****************************************************************************/
-
-allprojects {
-    apply plugin: 'idea'
-    if (project == rootProject || project.name == "media" || project.name == "web") return
-
-    // Also need to un-exclude the build-dir since we put stuff in it, and then re-exclude other stuff
-    if (rootProject.BINARY_STUB != null) {
-        configurations {
-          binaryStub
-          binaryStub.extendsFrom(compile)
-        }
-
-        dependencies {
-          binaryStub rootProject.BINARY_STUB
-        }
-    }
-
-    idea {
-        module {
-            inheritOutputDirs = true;
-            excludeDirs -= buildDir;
-            excludeDirs += [
-                    new File(buildDir, "classes"),
-                    new File(buildDir, "dependency-cache"),
-                    new File(buildDir, "libs"),
-                    new File(buildDir, "resources"),
-                    new File(buildDir, "tmp")];
-
-            if (rootProject.BINARY_STUB != null) {
-                scopes.COMPILE.plus += configurations.binaryStub
-
-                // Some hackery. I have to make sure the binary stub is the VERY LAST entry
-                // in the class path or things will be somewhat unpredictable
-                iml {
-                    withXml { xmlProvider ->
-                        def root = xmlProvider.asNode();
-                        // Find the <root url=".../jfxrt.jar!/" />. Walk up 3 steps to <orderEntry>
-                        def orderEntry = root.depthFirst().find { it.name() == "root" }.parent().parent().parent(); // && it.@url.contains(rootProject.files(rootProject.BINARY_STUB))
-                        if (orderEntry.name() != "orderEntry") throw new Exception("Couldn't find the order entry");
-                        // Move that <orderEntry> to be the last child of its parent.
-                        def parent = orderEntry.parent();
-                        parent.remove(orderEntry);
-                        parent.append(orderEntry);
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * I want to keep all the project files and out directory and such all hidden from the filesystem
- * for the most part, so we don't have a lot of .iml files strewn about. So what we will do is
- * to redirect all of the .iml files into a .idea directory on the root project level, and stash the
- * out/ for all the projects there as well as the project module definition files.
- */
-idea {
-    project {
-        jdkName = "JavaFX 1.7"
-        languageLevel = "1.7"
-        wildcards += ["?*.css", "?*.bss", "?*.glsl", "?*.frag", "?*.ttf", "?*.txt", "?*.fxml"]
-        ipr {
-            withXml { xmlProvider ->
-                def root = xmlProvider.asNode();
-                def doc = root.depthFirst();
-
-                // Set the copyright
-                def copyrightManager = doc.find { it.name() == "component" && it.@name == "CopyrightManager" };
-                copyrightManager.@default="OpenJFX";
-                def module2copyright = copyrightManager.get("module2copyright");
-                module2copyright.replaceNode {
-                    copyright {
-                        option(name: "notice", value:
-"""Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
-DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-
-This code is free software; you can redistribute it and/or modify it
-under the terms of the GNU General Public License version 2 only, as
-published by the Free Software Foundation.  Oracle designates this
-particular file as subject to the "Classpath" exception as provided
-by Oracle in the LICENSE file that accompanied this code.
-
-This code is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-version 2 for more details (a copy is included in the LICENSE file that
-accompanied this code).
-
-You should have received a copy of the GNU General Public License version
-2 along with this work; if not, write to the Free Software Foundation,
-Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
-
-Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
-or visit www.oracle.com if you need additional information or have any
-questions.""");
-                        option(name: "keyword", value: "Copyright");
-                        option(name: "allowReplaceKeyword", value: "");
-                        option(name: "myName", value: "OpenJFX");
-                        option(name: "myLocal", value: "true");
-                    }
-                }
-
-                // Remove some setting and change the project output directory
-                def projectRootManager = doc.find { it.name() == "component" && it.@name == "ProjectRootManager" };
-                projectRootManager.attributes.remove("assert-jdk-15");
-                projectRootManager.children()[0].@url = "file://\$PROJECT_DIR\$/.idea-out";
-
-                // Add in some custom dictionary stuff so that people get fewer green-squigglies
-                // in their code. Nothing like a green squiggly to ruin my day.
-                copyrightManager.plus {
-                    component(name: "ProjectDictionaryState") {
-                        dictionary(name: "javafx") {
-                            words {
-                                w (text: "backoff")
-                                w (text: "blhr")
-                                w (text: "blvr")
-                                w (text: "brhr")
-                                w (text: "brvr")
-                                w (text: "gradle")
-                                w (text: "gzip")
-                                w (text: "halignment")
-                                w (text: "interpolator")
-                                w (text: "jfxrt")
-                                w (text: "multithreaded")
-                                w (text: "redoable")
-                                w (text: "resized")
-                                w (text: "squigglies")
-                                w (text: "subclassing")
-                                w (text: "timeline")
-                                w (text: "timeline's")
-                                w (text: "tlhr")
-                                w (text: "tlvr")
-                                w (text: "trhr")
-                                w (text: "trvr")
-                                w (text: "unmanaged")
-                                w (text: "unselect")
-                                w (text: "urlencoded")
-                                w (text: "valignment")
-                            }
-                        }
-                    }
-                }
-
-                // Setup some common project settings like tabs vs. spaces
-                copyrightManager.plus {
-                    component(name: "CodeStyleSettingsManager") {
-                        option(name: "PER_PROJECT_SETTINGS") {
-                            value {
-                                ADDITIONAL_INDENT_OPTIONS(fileType: "java") {
-                                    option (name: "IDENT_SIZE", value: "4")
-                                    option (name: "CONTINUATION_INDENT_SIZE", value: "8")
-                                    option (name: "TAB_SIZE", value: "4")
-                                    option (name: "USE_TAB_CHARACTER", value: "false")
-                                    option (name: "SMART_TABS", value: "false")
-                                    option (name: "LABEL_INDENT_SIZE", value: "0")
-                                    option (name: "LABEL_INDENT_ABSOLUTE", value: "false")
-                                    option (name: "USE_RELATIVE_INDENTS", value: "false")
-                                }
-                                ADDITIONAL_INDENT_OPTIONS(fileType: "xml") {
-                                    option (name: "IDENT_SIZE", value: "4")
-                                    option (name: "CONTINUATION_INDENT_SIZE", value: "8")
-                                    option (name: "TAB_SIZE", value: "4")
-                                    option (name: "USE_TAB_CHARACTER", value: "false")
-                                    option (name: "SMART_TABS", value: "false")
-                                    option (name: "LABEL_INDENT_SIZE", value: "0")
-                                    option (name: "LABEL_INDENT_ABSOLUTE", value: "false")
-                                    option (name: "USE_RELATIVE_INDENTS", value: "false")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-//project("buildSrc") {
-//    // Add antlr to the sources for IDEA
-//    idea {
-//        module {
-//            sourceDirs += file("$buildDir/generated-src/antlr")
-//        }
-//    }
-//}
-
-project(":base") {
-    // Add in the version-info generated sources for IDEA projects
-    idea {
-        module {
-            sourceDirs += file("$buildDir/generated-src/version-info")
-        }
-    }
-}
-
-// TODO need to do the iOS stuff (ios package of prism-es2-native, ios package of javafx-iio-native javafx-font-native)
-
-project(":graphics") {
-    idea {
-        module {
-            sourceDirs += [file("$buildDir/generated-src/headers"),
-                    file("src/main/native-decora"),
-                    file("src/main/native-glass/gtk"),
-                    file("src/main/native-glass/ios"),
-                    file("src/main/native-glass/lens"),
-                    file("src/main/native-glass/mac"),
-                    file("src/main/native-glass/win"),
-                    file("src/main/native-prism"),
-                    file("src/main/native-prism-sw")]
-            // TODO generated JSL directories need to be added
-//            sourceDirs += file("$buildDir/generated-src/jsl")
-//            sourceDirs += file("$buildDir/generated-src/jsl")
-            excludeDirs += new File(buildDir, "native");
-            testSourceDirs += [file("src/stub/java"), file("src/stub/resources")];
-        }
-    }
-}
-
-project(":controls") {
-    idea {
-        module {
-            sourceDirs += file("src/main/dt");
-        }
-    }
-}
-
-cleanIdeaWorkspace.group = "IDE"
-cleanIdeaWorkspace.description = "Deletes the javafx.ipw file"
-
-
-/******************************************************************************
- *                                                                            *
- *                   Generation of Eclipse Project Files                      *
- *                                                                            *
- *  This next section is responsible for setting up the work for generation   *
- *  of Eclipse project files. The developer needs to get the Gradle IDE from  *
- *  the SpringSource update site:                                             *
- *                                                                            *
- *      http://dist.springsource.com/release/TOOLS/gradle                     *
- *                                                                            *
- *  and all project files will be generated when javafx is imported into the  *
- *  workspace.  Note that 'gradle eclipse' does not generate good results at  *
- *  this time so the Eclipse plugin is recommended.                           *
- *                                                                            *
- *****************************************************************************/
-
-//TODO - default setting for Eclipse IDE (spaces vs. tabs etc.)
-allprojects {
-    apply plugin: "eclipse"
-    task afterEclipseImport {
-        ext.srcFile = file('.classpath')
-        inputs.file srcFile
-        outputs.dir srcFile
-        onlyIf { srcFile.exists() }
-        doLast {
-            def classpath = new XmlParser().parse(srcFile)
-
-            // Temporary code:  Until full support for JDK8 is released for Eclipse, some expressions
-            // involving generics won't compile.  Builders inclues some exmaples of this.  The fix is
-            // to use the jar that was compiled by the JDK rather than source from Eclipse
-            if (project.name == 'builders') {
-                Node source = classpath.classpathentry.find {it.@path == 'src/main/java'}
-                if (source) {
-                    source.@kind="lib"
-                    source.@exported="true"
-                    source.@path="build/libs/builders.jar"
-                    source.@sourcepath="src/main/java"
-                }
-            }
-
-            // Add an optional reference to the closed runtime repository and the generated source to graphics
-            if (project.name == "graphics") {
-                classpath.appendNode('classpathentry', [kind: 'src', exported: 'true', path: '/builders'])
-                classpath.appendNode('classpathentry', [kind: 'src', exported: 'true', path: 'build/generated-src/jsl-decora'])
-                classpath.appendNode('classpathentry', [kind: 'src', exported: 'true', path: 'build/generated-src/jsl-prism'])
-                classpath
-                    .appendNode('classpathentry', [kind: 'src', exported: 'true', path: '/rt-closed'])
-                    .appendNode('attributes')
-                    .appendNode('attribute', [name: 'optional', value: 'true'])
-            }
-
-            // Add an optional reference to the closed media repository
-            if (project.name == 'media') {
-                //TODO - remove rt when legacy build goes away
-                def list = ['jfxmedia/src', 'test/demos/JavaTestApps/src', 'test/perf/JFXMediaSystemTestApp/src', '/rt', '/rt-closed']
-                for (string in list) {
-                    Node node = classpath.classpathentry.find {it.@path == string}
-                    if (!node) {
-                        classpath
-                            .appendNode('classpathentry', [kind: 'src', exported: 'true', path: string])
-                            .appendNode('attributes')
-                            .appendNode('attribute', [name: 'optional', value: 'true'])
-                    }
-                }
-            }
-
-            // Temporary code: The Eclipse gradle plugin fails when BUILD_CLOSED = true.  This means
-            // that projects must be imported into Eclipse in two passes, first with BUILD_CLOSED = false, 
-            // then with BUILD_CLOSED = true.  The classpath to media and web need to be fixed up during
-            // the second pass when these projects are imported 
-            if (project.name == 'builders') {
-                Node node = classpath.classpathentry.find {it.@path == '/web'}
-                if (!node) {
-                    classpath
-                        .appendNode('classpathentry', [kind: 'src', exported: 'true', path: '/web'])
-                        .appendNode('attributes')
-                        .appendNode('attribute', [name: 'optional', value: 'true'])
-                }
-            }
-            if (project.name == 'media') {
-                Node node = classpath.classpathentry.find {it.@path == '/controls'}
-                if (!node) {
-                    classpath
-                        .appendNode('classpathentry', [kind: 'src', exported: 'true', path: '/controls'])
-                        .appendNode('attributes')
-                        .appendNode('attribute', [name: 'optional', value: 'true'])
-                }
-            }
-            if (project.name == 'web') {
-                def list = ['src/main/java', '/controls', '/media']
-                for (string in list) {
-                    Node node = classpath.classpathentry.find {it.@path == string}
-                    if (!node) {
-                        classpath
-                            .appendNode('classpathentry', [kind: 'src', exported: 'true', path: string])
-                            .appendNode('attributes')
-                            .appendNode('attribute', [name: 'optional', value: 'true'])
-                    }
-                }
-            }
-            
-            // Add the standard Eclipse JUnit class path entry
-            Node node = classpath.classpathentry.find {it.@path == 'org.eclipse.jdt.junit.JUNIT_CONTAINER/4'}
-            if (!node) {
-                classpath.appendNode('classpathentry', [kind: 'con', path: 'org.eclipse.jdt.junit.JUNIT_CONTAINER/4'])
-            }
-            def writer = new FileWriter(srcFile)
-            new XmlNodePrinter(new PrintWriter(writer)).print(classpath)
-         }
-    }
-}
 
 /*
  * This clause changes the way we handle a build.gradle within ./apps
@@ -2267,15 +1933,6 @@ childProjects["apps"].subprojects {
                     it.enabled = false
                 }
             }
-
-            if (BUILD_CLOSED && srcdir.exists()) {
-                def cptask = project.task('copyAppsArtifacts', type: Copy ) {
-                    dependsOn project.getPath() + ":jar"
-                    from project.jar.archivePath
-                    into "$rootProject.jfxArtifactsDir/apps/ga-samples"
-                }
-                rootProject.apps.dependsOn(cptask)
-            }
         }
     }
 }
@@ -2293,4 +1950,235 @@ childProjects["apps"].subprojects {
 
 if (BUILD_CLOSED) {
     apply from: supplementalBuildFile
+}
+
+// This project has to be defined after [supplementalBuildFile]
+// because it depends on media tasks
+project(":web") {
+    def platform = IS_MAC ? "mac" :
+            IS_WINDOWS ? (IS_64 ? "win-amd64" : "win-i586") :
+                IS_64 ? "linux-amd64" : "linux-i586"
+                
+    if (COMPILE_WEBKIT) {
+        configurations {
+            webkit
+        }
+        dependencies {
+            compile project(":base"), project(":graphics"), project(":controls")
+            webkit group: "com.sun.webkit", name: "webview-deps",
+                   version: "1.0", classifier: "$platform", ext: "zip"
+        }
+    }
+
+    compileJava.enabled = COMPILE_WEBKIT
+    if (BUILD_CLOSED) {
+        compileJava.dependsOn compileMediaJava
+        compileJava.classpath += files(
+                "../media/build/classes/main",
+                "$jfxTopDir/media/jfxmedia/dist/jfxmedia.jar")
+    }
+    
+    test {
+        classpath += files("../../../artifacts/sdk/rt/lib/ext/jfxrt.jar")
+        doFirst {
+            classpath.each { p ->
+                print "Test CLASSPATH: ${p.getPath()}\n"
+            }
+        }
+    }
+    
+    task generateHeaders(dependsOn: compileJava) {
+        doLast {
+            def classpath = files("$buildDir/classes/main",
+                                  project(":graphics").sourceSets.main.output.classesDir)
+            def dest = file("src/main/build/javah");
+            mkdir dest;
+            exec {
+                commandLine("$JAVAH", "-J-Djava.ext.dirs=", "-d", "$dest",
+                            "-classpath", "${classpath.asPath}");
+                args("java.lang.Character",
+                     "java.net.IDN",
+                     "com.sun.webkit.ContextMenu",
+                     "com.sun.webkit.ContextMenuItem",
+                     "com.sun.webkit.CursorManager",
+                     "com.sun.webkit.PageCache",
+                     "com.sun.webkit.PopupMenu",
+                     "com.sun.webkit.SharedBuffer",
+                     "com.sun.webkit.WebPage",
+                     "com.sun.webkit.LoadListenerClient",
+                     "com.sun.webkit.event.WCFocusEvent",
+                     "com.sun.webkit.event.WCKeyEvent",
+                     "com.sun.webkit.event.WCMouseEvent",
+                     "com.sun.webkit.event.WCMouseWheelEvent",
+                     "com.sun.webkit.graphics.GraphicsDecoder",
+                     "com.sun.webkit.graphics.RenderMediaControls",
+                     "com.sun.webkit.graphics.RenderTheme",
+                     "com.sun.webkit.graphics.ScrollBarTheme",
+                     "com.sun.webkit.graphics.WCMediaPlayer",
+                     "com.sun.webkit.graphics.WCGraphicsManager",
+                     "com.sun.webkit.graphics.WCRenderQueue",
+                     "com.sun.webkit.graphics.WCPath",
+                     "com.sun.webkit.graphics.WCPathIterator",
+                     "com.sun.webkit.Timer",
+                     "com.sun.webkit.WCFrameView",
+                     "com.sun.webkit.WCPasteboard",
+                     "com.sun.webkit.WCPluginWidget",
+                     "com.sun.webkit.dom.JSObject",
+                     "com.sun.webkit.network.SocketStreamHandle",
+                     "com.sun.webkit.network.URLLoader",
+                     "com.sun.webkit.text.TextBreakIterator",
+                     "com.sun.webkit.text.TextNormalizer");
+            }
+        }
+    }
+
+    def webkitOutputDir = "src/main/native/WebKitBuild/$CONF"
+
+    task compileNative(dependsOn: generateHeaders) {
+        doLast {
+            ant.unzip(src:  configurations.webkit.files.iterator().next(),
+                      dest: "src/main/native/WebKitLibraries")
+            exec {
+                println "Webkit configuration to use: $CONF"
+                workingDir("src/main/native")
+                commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$CONF")
+            }
+            exec {
+                workingDir("src/main/native")
+                if (IS_WINDOWS) {
+                    String qtDir = cygpath(System.getenv().get("QTSDK_DIR"))
+                    Map environmentSettings = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                    environmentSettings["JAVA_HOME"] = JAVA_HOME
+                    environmentSettings["PATH"] = "$WINDOWS_VS_PATH;$qtDir/bin;$qtDir/qt/bin"
+                    environmentSettings["QMAKESPEC"] = "win32-msvc2008"
+                    environment(environmentSettings)
+                    /* To build with ICU:
+                    1. Download http://javaweb.us.oracle.com/jcg/fx-webrevs/RT-17164/WebKitLibrariesICU.zip
+                    and unzip it to WebKitLibraries folder.
+                    2. Copy DLLs from
+                    WebKitLibrariesICU.zip\WebKitLibraries\import\runtime
+                    to %windir%\system32
+                    3. Uncomment the line below
+                     */
+                    // args("--icu-unicode")
+                } else if (IS_MAC) {
+                    environment([
+                        "QMAKESPEC"      : "macx-g++",
+                        "QMAKE_CFLAGS"   : "-m64",
+                        "QMAKE_LFLAGS"   : "-m64",
+                        "JAVA_HOME"      : JDK_HOME
+                    ])
+                // TODO need to re-enable. It looks like linux doesn't ever build
+                // webkit at all which is also not right.
+                // } else if (IS_LINUX && COMPILE_TARGETS != "linux") {
+                // We need some way to detect cross build here. The CompileTarget
+                // enum from rt/build.gradle is out of scope here, so I cannot write
+                //     COMPILE_TARGET != CompileTarget.LINUX
+                // Once web module is open sourced, this target will be moved into
+                // rt/build.gradle, thus eliminating the problem.
+                // For now, work around it with a name check.
+                //            } else if (IS_LINUX && (! "LINUX".equals(COMPILE_TARGET.name()))) {
+                //                // Linux cross build
+                //                mkdir "$webkitOutputDir"
+                //                File qmakeSpec = new File("$webkitOutputDir/qmake.conf")
+                //                qmakeSpec.append(
+                //"""TARGET_PLATFORM         = unix
+                //include(/usr/share/qt4/mkspecs/common/linux.conf)
+                //include(/usr/share/qt4/mkspecs/common/g++.conf)
+                //include(/usr/share/qt4/mkspecs/common/qws.conf)
+                //QMAKE_CC                = $crosstools.gcc.bin
+                //QMAKE_CXX               = $crosstools.gpp.bin
+                //QMAKE_LINK              = $crosstools.gpp.bin
+                //QMAKE_LINK_SHLIB        = $crosstools.gpp.bin
+                //QMAKE_AR                = $crosstools.ar.bin cqs
+                //QMAKE_OBJCOPY           = $crosstools.objcopy.bin
+                //QMAKE_STRIP             = $crosstools.strip.bin
+                //load(qt_config)""")
+                //                environment([
+                //                    "QMAKESPEC" : webkitOutputDir,
+                //                    "WK_CFLAGS" : crosstools.extra_cflags,
+                //                    "WK_LFLAGS" : crosstools.extra_ldflags,
+                //                    "PATH"      : "$cross.tools/bin:$PATH",
+                //                ])
+                //                args("--nocache")
+                } else {
+                    environment([
+                        "JAVA_HOME"   : JDK_HOME
+                    ])
+                }
+                commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio")
+            }
+            copy {
+                from "$webkitOutputDir/lib/libjfxwebkit.so"
+                from "$webkitOutputDir/lib/libjfxwebkit.dylib"
+                from "$webkitOutputDir/lib/jfxwebkit.dll"
+                into "build/libs"
+            }
+            copy {
+                from "$webkitOutputDir/lib/libDumpRenderTreeJava.so"
+                from "$webkitOutputDir/lib/libDumpRenderTreeJava.dylib"
+                from "$webkitOutputDir/lib/DumpRenderTreeJava.dll"
+                into "build/test"
+            }
+        }
+    }
+    
+    task compileGenerated(type: JavaCompile, dependsOn: compileNative) {
+        def gensrcDir = "$webkitOutputDir/WebCore/generated/java"
+        doFirst {
+            copy {
+                from "src/main/native/Source/WebCore/bindings/java/EventListenerImpl.java"
+                into "$gensrcDir/com/sun/webkit/dom"
+            }
+        }
+        classpath = files("$buildDir",
+                          project(":graphics").sourceSets.main.output.classesDir)
+        source gensrcDir
+        destinationDir = file("$buildDir/classes/main")
+        doLast {
+            copy {
+                from gensrcDir
+                into "build/resources/main"
+                exclude "**/*.java"
+            }
+        }
+    }
+
+    def drtClasses = "com/sun/javafx/webkit/drt/**"
+    jar.exclude(drtClasses)
+    task drtJar(type: Jar, dependsOn: compileJava) {
+        archiveName = "drt.jar"
+        destinationDir = file("$buildDir/test")
+        from "$buildDir/classes/main"
+        include drtClasses
+    }
+
+    task copyClassesFromBinaryStub << {
+        copy {
+            from zipTree(BINARY_STUB.getSingleFile())
+            into "$buildDir/classes/main"
+            include("javafx/scene/web/**",
+                "com/sun/javafx/scene/web/**",
+                "com/sun/webkit/**",
+                "com/sun/javafx/webkit/**",
+                "netscape/javascript/**",
+                "com/sun/javafx/sg/prism/NGWebView*")
+        }
+    }
+
+    if (COMPILE_WEBKIT) {
+        jar.dependsOn compileGenerated, drtJar
+    } else {
+        jar.dependsOn copyClassesFromBinaryStub
+    }
+
+    clean << {
+        project.delete(
+            "src/main/build",
+            "$webkitOutputDir",
+            "src/main/native/WebKitBuild/Tools",
+            "src/main/native/WebKitBuild/classes",
+            "src/main/native/dist",
+            "src/main/native/WebKitLibraries/import")
+    }
 }

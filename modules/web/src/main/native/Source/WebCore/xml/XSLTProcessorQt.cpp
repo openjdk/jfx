@@ -69,7 +69,7 @@ void XSLTMessageHandler::handleMessage(QtMsgType type, const QString& descriptio
     MessageLevel level;
     switch (type) {
     case QtDebugMsg:
-        level = TipMessageLevel;
+        level = DebugMessageLevel;
         break;
     case QtWarningMsg:
         level = WarningMessageLevel;
@@ -83,9 +83,8 @@ void XSLTMessageHandler::handleMessage(QtMsgType type, const QString& descriptio
         break;
     }
 
-    Console* console = m_document->frame()->domWindow()->console();
-    console->addMessage(XMLMessageSource, LogMessageType, level, description,
-                        sourceLocation.uri().toString(), sourceLocation.line());
+    Console* console = m_document->domWindow()->console();
+    console->addMessage(XMLMessageSource, level, description, sourceLocation.uri().toString(), sourceLocation.line(), sourceLocation.column());
 }
 
 class XSLTUriResolver : public QAbstractUriResolver {
@@ -143,7 +142,7 @@ bool XSLTProcessor::transformToString(Node* sourceNode, String&, String& resultS
 
     XSLTProcessor::ParameterMap::iterator end = m_parameters.end();
     for (XSLTProcessor::ParameterMap::iterator it = m_parameters.begin(); it != end; ++it)
-        query.bindVariable(QString(it->first), QXmlItem(QVariant(QString(it->second))));
+        query.bindVariable(QString(it->key), QXmlItem(QVariant(QString(it->value))));
 
     QString source;
     if (sourceIsDocument && ownerDocument->transformSource())

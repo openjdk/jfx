@@ -112,7 +112,7 @@
 }
 
 .network-item-view.visible {
-    display: -webkit-box;
+    display: -webkit-flex;
 }
 
 .network-item-view .tabbed-pane-header {
@@ -144,6 +144,10 @@
 .resource-headers-view .outline-disclosure .parent {
     -webkit-user-select: none;
     font-weight: bold;
+}
+
+.resource-headers-view .outline-disclosure .parent .section * {
+    font-weight: normal;
 }
 
 .resource-headers-view .outline-disclosure .children li {
@@ -189,10 +193,6 @@
     white-space: pre-wrap;
     word-break: break-all;
     margin-top: 1px;
-}
-
-.resource-headers-view .outline-disclosure .raw-form-data {
-    white-space: pre-wrap;
 }
 
 .resource-cookies-view {
@@ -295,7 +295,6 @@
 
 .resource-websocket .data-grid .data {
     background-image: none;
-    font-size: 11px;
 }
 
 .resource-websocket td {

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008, 2012 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -22,10 +22,11 @@
 
 #include "Executable.h"
 #include "JSFunction.h"
+#include "Operations.h"
 
 namespace JSC {
 
-void HashTable::createTable(JSGlobalData* globalData) const
+void HashTable::createTable(VM* vm) const
 {
     ASSERT(!table);
     int linkIndex = compactHashSizeMask + 1;
@@ -33,7 +34,7 @@ void HashTable::createTable(JSGlobalData* globalData) const
     for (int i = 0; i < compactSize; ++i)
         entries[i].setKey(0);
     for (int i = 0; values[i].key; ++i) {
-        StringImpl* identifier = Identifier::add(globalData, values[i].key).leakRef();
+        StringImpl* identifier = Identifier::add(vm, values[i].key).leakRef();
         int hashIndex = identifier->existingHash() & compactHashSizeMask;
         HashEntry* entry = &entries[hashIndex];
 
@@ -68,23 +69,22 @@ bool setUpStaticFunctionSlot(ExecState* exec, const HashEntry* entry, JSObject* 
 {
     ASSERT(thisObj->globalObject());
     ASSERT(entry->attributes() & Function);
-    WriteBarrierBase<Unknown>* location = thisObj->getDirectLocation(exec->globalData(), propertyName);
+    PropertyOffset offset = thisObj->getDirectOffset(exec->vm(), propertyName);
 
-    if (!location) {
+    if (!isValidOffset(offset)) {
         // If a property is ever deleted from an object with a static table, then we reify
         // all static functions at that time - after this we shouldn't be re-adding anything.
         if (thisObj->staticFunctionsReified())
             return false;
 
-        StringImpl* name = propertyName.publicName();
-        ASSERT(name);
-        
-        JSFunction* function = JSFunction::create(exec, thisObj->globalObject(), entry->functionLength(), name, entry->function(), entry->intrinsic());
-        thisObj->putDirect(exec->globalData(), propertyName, function, entry->attributes());
-        location = thisObj->getDirectLocation(exec->globalData(), propertyName);
+        thisObj->putDirectNativeFunction(
+            exec, thisObj->globalObject(), propertyName, entry->functionLength(),
+            entry->function(), entry->intrinsic(), entry->attributes());
+        offset = thisObj->getDirectOffset(exec->vm(), propertyName);
+        ASSERT(isValidOffset(offset));
     }
 
-    slot.setValue(thisObj, location->get(), thisObj->offsetForLocation(location));
+    slot.setValue(thisObj, thisObj->getDirect(offset), offset);
     return true;
 }
 

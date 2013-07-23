@@ -29,11 +29,11 @@
 #include "IntPoint.h"
 #include <wtf/Vector.h>
 
-#if USE(CG) || USE(SKIA_ON_MAC_CHROMIUM)
+#if USE(CG)
 typedef struct CGRect CGRect;
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN)) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
 #ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGRect NSRect;
 #else
@@ -65,21 +65,13 @@ class IntRect;
 typedef struct _cairo_rectangle_int cairo_rectangle_int_t;
 #endif
 
-#if PLATFORM(WX)
-class wxRect;
-#endif
-
-#if USE(SKIA)
-struct SkRect;
-struct SkIRect;
-#endif
-
 namespace WebCore {
 
 class FloatRect;
-class FractionalLayoutRect;
+class LayoutRect;
 
 class IntRect {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     IntRect() { }
     IntRect(const IntPoint& location, const IntSize& size)
@@ -88,7 +80,7 @@ public:
         : m_location(IntPoint(x, y)), m_size(IntSize(width, height)) { }
 
     explicit IntRect(const FloatRect&); // don't do this implicitly since it's lossy
-    explicit IntRect(const FractionalLayoutRect&); // don't do this implicitly since it's lossy
+    explicit IntRect(const LayoutRect&); // don't do this implicitly since it's lossy
         
     IntPoint location() const { return m_location; }
     IntSize size() const { return m_size; }
@@ -189,16 +181,9 @@ public:
     void scale(float s);
 
     IntSize differenceToPoint(const IntPoint&) const;
-    IntSize differenceFromCenterLineToPoint(const IntPoint&) const;
     int distanceSquaredToPoint(const IntPoint& p) const { return differenceToPoint(p).diagonalLengthSquared(); }
-    int distanceSquaredFromCenterLineToPoint(const IntPoint& p) const { return differenceFromCenterLineToPoint(p).diagonalLengthSquared(); }
 
     IntRect transposedRect() const { return IntRect(m_location.transposedPoint(), m_size.transposedSize()); }
-
-#if PLATFORM(WX)
-    IntRect(const wxRect&);
-    operator wxRect() const;
-#endif
 
 #if PLATFORM(WIN)
     IntRect(const RECT&);
@@ -221,18 +206,11 @@ public:
     operator cairo_rectangle_int_t() const;
 #endif
 
-#if USE(CG) || USE(SKIA_ON_MAC_CHROMIUM)
+#if USE(CG)
     operator CGRect() const;
 #endif
 
-#if USE(SKIA)
-    IntRect(const SkIRect&);
-    operator SkRect() const;
-    operator SkIRect() const;
-#endif
-
-#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) \
-        || (PLATFORM(CHROMIUM) && OS(DARWIN))  || (PLATFORM(QT) && USE(QTKIT))
+#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) || (PLATFORM(QT) && USE(QTKIT))
     operator NSRect() const;
 #endif
 
@@ -279,12 +257,11 @@ inline IntRect enclosingIntRect(const IntRect& rect)
     return rect;
 }
 
-#if USE(CG) || USE(SKIA_ON_MAC_CHROMIUM)
+#if USE(CG)
 IntRect enclosingIntRect(const CGRect&);
 #endif
 
-#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) \
-        || (PLATFORM(CHROMIUM) && OS(DARWIN)) || (PLATFORM(QT) && USE(QTKIT))
+#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) || (PLATFORM(QT) && USE(QTKIT))
 IntRect enclosingIntRect(const NSRect&);
 #endif
 

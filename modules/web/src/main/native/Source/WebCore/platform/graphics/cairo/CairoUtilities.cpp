@@ -78,6 +78,8 @@ void setPathOnCairoContext(cairo_t* to, cairo_t* from)
 
 void appendWebCorePathToCairoContext(cairo_t* context, const Path& path)
 {
+    if (path.isEmpty())
+        return;
     appendPathToCairoContext(context, path.platformPath()->context());
 }
 
@@ -129,12 +131,51 @@ cairo_operator_t toCairoOperator(CompositeOperator op)
         return CAIRO_OPERATOR_SOURCE;
     }
 }
+cairo_operator_t toCairoOperator(BlendMode blendOp)
+{
+    switch (blendOp) {
+    case BlendModeNormal:
+        return CAIRO_OPERATOR_OVER;
+    case BlendModeMultiply:
+        return CAIRO_OPERATOR_MULTIPLY;
+    case BlendModeScreen:
+        return CAIRO_OPERATOR_SCREEN;
+    case BlendModeOverlay:
+        return CAIRO_OPERATOR_OVERLAY;
+    case BlendModeDarken:
+        return CAIRO_OPERATOR_DARKEN;
+    case BlendModeLighten:
+        return CAIRO_OPERATOR_LIGHTEN;
+    case BlendModeColorDodge:
+        return CAIRO_OPERATOR_COLOR_DODGE;
+    case BlendModeColorBurn:
+        return CAIRO_OPERATOR_COLOR_BURN;
+    case BlendModeHardLight:
+        return CAIRO_OPERATOR_HARD_LIGHT;
+    case BlendModeSoftLight:
+        return CAIRO_OPERATOR_SOFT_LIGHT;
+    case BlendModeDifference:
+        return CAIRO_OPERATOR_DIFFERENCE;
+    case BlendModeExclusion:
+        return CAIRO_OPERATOR_EXCLUSION;
+    case BlendModeHue:
+        return CAIRO_OPERATOR_HSL_HUE;
+    case BlendModeSaturation:
+        return CAIRO_OPERATOR_HSL_SATURATION;
+    case BlendModeColor:
+        return CAIRO_OPERATOR_HSL_COLOR;
+    case BlendModeLuminosity:
+        return CAIRO_OPERATOR_HSL_LUMINOSITY;
+    default:
+        return CAIRO_OPERATOR_OVER;
+    }
+}
 
 void drawPatternToCairoContext(cairo_t* cr, cairo_surface_t* image, const IntSize& imageSize, const FloatRect& tileRect,
                                const AffineTransform& patternTransform, const FloatPoint& phase, cairo_operator_t op, const FloatRect& destRect)
 {
     // Avoid NaN
-    if (!isfinite(phase.x()) || !isfinite(phase.y()))
+    if (!std::isfinite(phase.x()) || !std::isfinite(phase.y()))
        return;
 
     cairo_save(cr);

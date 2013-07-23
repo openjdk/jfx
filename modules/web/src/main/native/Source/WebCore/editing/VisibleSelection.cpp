@@ -28,14 +28,15 @@
 
 #include "Document.h"
 #include "Element.h"
-#include "htmlediting.h"
+#include "Range.h"
 #include "TextIterator.h"
 #include "VisiblePosition.h"
-#include "visible_units.h"
-#include "Range.h"
+#include "VisibleUnits.h"
+#include "htmlediting.h"
 #include <stdio.h>
 #include <wtf/Assertions.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -206,7 +207,7 @@ static PassRefPtr<Range> makeSearchRange(const Position& pos)
     Node* de = d->documentElement();
     if (!de)
         return 0;
-    Node* boundary = n->enclosingBlockFlowElement();
+    Element* boundary = deprecatedEnclosingBlockFlowElement(n);
     if (!boundary)
         return 0;
 
@@ -564,14 +565,14 @@ void VisibleSelection::adjustSelectionToAvoidCrossingEditingBoundaries()
         if (endRoot || endEditableAncestor != baseEditableAncestor) {
             
             Position p = previousVisuallyDistinctCandidate(m_end);
-            Node* shadowAncestor = endRoot ? endRoot->shadowAncestorNode() : 0;
-            if (p.isNull() && endRoot && (shadowAncestor != endRoot))
+            Node* shadowAncestor = endRoot ? endRoot->shadowHost() : 0;
+            if (p.isNull() && shadowAncestor)
                 p = positionAfterNode(shadowAncestor);
             while (p.isNotNull() && !(lowestEditableAncestor(p.containerNode()) == baseEditableAncestor && !isEditablePosition(p))) {
                 Node* root = editableRootForPosition(p);
-                shadowAncestor = root ? root->shadowAncestorNode() : 0;
+                shadowAncestor = root ? root->shadowHost() : 0;
                 p = isAtomicNode(p.containerNode()) ? positionInParentBeforeNode(p.containerNode()) : previousVisuallyDistinctCandidate(p);
-                if (p.isNull() && (shadowAncestor != root))
+                if (p.isNull() && shadowAncestor)
                     p = positionAfterNode(shadowAncestor);
             }
             VisiblePosition previous(p);
@@ -593,14 +594,14 @@ void VisibleSelection::adjustSelectionToAvoidCrossingEditingBoundaries()
         Node* startEditableAncestor = lowestEditableAncestor(m_start.containerNode());      
         if (startRoot || startEditableAncestor != baseEditableAncestor) {
             Position p = nextVisuallyDistinctCandidate(m_start);
-            Node* shadowAncestor = startRoot ? startRoot->shadowAncestorNode() : 0;
-            if (p.isNull() && startRoot && (shadowAncestor != startRoot))
+            Node* shadowAncestor = startRoot ? startRoot->shadowHost() : 0;
+            if (p.isNull() && shadowAncestor)
                 p = positionBeforeNode(shadowAncestor);
             while (p.isNotNull() && !(lowestEditableAncestor(p.containerNode()) == baseEditableAncestor && !isEditablePosition(p))) {
                 Node* root = editableRootForPosition(p);
-                shadowAncestor = root ? root->shadowAncestorNode() : 0;
+                shadowAncestor = root ? root->shadowHost() : 0;
                 p = isAtomicNode(p.containerNode()) ? positionInParentAfterNode(p.containerNode()) : nextVisuallyDistinctCandidate(p);
-                if (p.isNull() && (shadowAncestor != root))
+                if (p.isNull() && shadowAncestor)
                     p = positionBeforeNode(shadowAncestor);
             }
             VisiblePosition next(p);
@@ -671,23 +672,23 @@ void VisibleSelection::debugPosition() const
 
 void VisibleSelection::formatForDebugger(char* buffer, unsigned length) const
 {
-    String result;
+    StringBuilder result;
     String s;
     
     if (isNone()) {
-        result = "<none>";
+        result.appendLiteral("<none>");
     } else {
         const int FormatBufferSize = 1024;
         char s[FormatBufferSize];
-        result += "from ";
+        result.appendLiteral("from ");
         start().formatForDebugger(s, FormatBufferSize);
-        result += s;
-        result += " to ";
+        result.append(s);
+        result.appendLiteral(" to ");
         end().formatForDebugger(s, FormatBufferSize);
-        result += s;
+        result.append(s);
     }
 
-    strncpy(buffer, result.utf8().data(), length - 1);
+    strncpy(buffer, result.toString().utf8().data(), length - 1);
 }
 
 void VisibleSelection::showTreeForThis() const

@@ -170,7 +170,7 @@ Color RenderThemeSafari::platformFocusRingColor() const
 
     if (!focusRingColor.isValid()) {
         if (STCopyThemeColorPtr()) {
-            RetainPtr<CGColorRef> color(AdoptCF, STCopyThemeColorPtr()(stFocusRingColorID, SafariTheme::ActiveState));
+            RetainPtr<CGColorRef> color = adoptCF(STCopyThemeColorPtr()(stFocusRingColorID, SafariTheme::ActiveState));
             focusRingColor = makeRGBAFromCGColor(color.get());
         }
         if (!focusRingColor.isValid())
@@ -239,7 +239,7 @@ void RenderThemeSafari::systemFont(int propId, FontDescription& fontDescription)
     if (fontSize) {
         cachedDesc->setIsAbsoluteSize(true);
         cachedDesc->setGenericFamily(FontDescription::NoFamily);
-        cachedDesc->firstFamily().setFamily("Lucida Grande");
+        cachedDesc->setOneFamily("Lucida Grande");
         cachedDesc->setSpecifiedSize(fontSize);
         cachedDesc->setWeight(FontWeightNormal);
         cachedDesc->setItalic(false);
@@ -312,7 +312,7 @@ IntRect RenderThemeSafari::inflateRect(const IntRect& r, const IntSize& size, co
     return result;
 }
 
-LayoutUnit RenderThemeSafari::baselinePosition(const RenderObject* o) const
+int RenderThemeSafari::baselinePosition(const RenderObject* o) const
 {
     if (!o->isBox())
         return 0;
@@ -390,7 +390,7 @@ void RenderThemeSafari::setFontFromControlSize(StyleResolver* styleResolver, Ren
     fontDescription.setGenericFamily(FontDescription::SerifFamily);
 
     float fontSize = systemFontSizeForControlSize(controlSize);
-    fontDescription.firstFamily().setFamily("Lucida Grande");
+    fontDescription.setOneFamily("Lucida Grande");
     fontDescription.setComputedSize(fontSize);
     fontDescription.setSpecifiedSize(fontSize);
 
@@ -760,44 +760,44 @@ void RenderThemeSafari::paintMenuListButtonGradients(RenderObject* o, const Pain
 
     FloatRect topGradient(r.x(), r.y(), r.width(), r.height() / 2.0f);
     struct CGFunctionCallbacks topCallbacks = { 0, TopGradientInterpolate, NULL };
-    RetainPtr<CGFunctionRef> topFunction(AdoptCF, CGFunctionCreate(NULL, 1, NULL, 4, NULL, &topCallbacks));
-    RetainPtr<CGShadingRef> topShading(AdoptCF, CGShadingCreateAxial(cspace, CGPointMake(topGradient.x(), topGradient.y()), CGPointMake(topGradient.x(), topGradient.maxY()), topFunction.get(), false, false));
+    RetainPtr<CGFunctionRef> topFunction = adoptCF(CGFunctionCreate(NULL, 1, NULL, 4, NULL, &topCallbacks));
+    RetainPtr<CGShadingRef> topShading = adoptCF(CGShadingCreateAxial(cspace, CGPointMake(topGradient.x(), topGradient.y()), CGPointMake(topGradient.x(), topGradient.maxY()), topFunction.get(), false, false));
 
     FloatRect bottomGradient(r.x() + radius, r.y() + r.height() / 2.0f, r.width() - 2.0f * radius, r.height() / 2.0f);
     struct CGFunctionCallbacks bottomCallbacks = { 0, BottomGradientInterpolate, NULL };
-    RetainPtr<CGFunctionRef> bottomFunction(AdoptCF, CGFunctionCreate(NULL, 1, NULL, 4, NULL, &bottomCallbacks));
-    RetainPtr<CGShadingRef> bottomShading(AdoptCF, CGShadingCreateAxial(cspace, CGPointMake(bottomGradient.x(),  bottomGradient.y()), CGPointMake(bottomGradient.x(), bottomGradient.maxY()), bottomFunction.get(), false, false));
+    RetainPtr<CGFunctionRef> bottomFunction = adoptCF(CGFunctionCreate(NULL, 1, NULL, 4, NULL, &bottomCallbacks));
+    RetainPtr<CGShadingRef> bottomShading = adoptCF(CGShadingCreateAxial(cspace, CGPointMake(bottomGradient.x(),  bottomGradient.y()), CGPointMake(bottomGradient.x(), bottomGradient.maxY()), bottomFunction.get(), false, false));
 
     struct CGFunctionCallbacks mainCallbacks = { 0, MainGradientInterpolate, NULL };
-    RetainPtr<CGFunctionRef> mainFunction(AdoptCF, CGFunctionCreate(NULL, 1, NULL, 4, NULL, &mainCallbacks));
-    RetainPtr<CGShadingRef> mainShading(AdoptCF, CGShadingCreateAxial(cspace, CGPointMake(r.x(),  r.y()), CGPointMake(r.x(), r.maxY()), mainFunction.get(), false, false));
+    RetainPtr<CGFunctionRef> mainFunction = adoptCF(CGFunctionCreate(NULL, 1, NULL, 4, NULL, &mainCallbacks));
+    RetainPtr<CGShadingRef> mainShading = adoptCF(CGShadingCreateAxial(cspace, CGPointMake(r.x(),  r.y()), CGPointMake(r.x(), r.maxY()), mainFunction.get(), false, false));
 
-    RetainPtr<CGShadingRef> leftShading(AdoptCF, CGShadingCreateAxial(cspace, CGPointMake(r.x(),  r.y()), CGPointMake(r.x() + radius, r.y()), mainFunction.get(), false, false));
+    RetainPtr<CGShadingRef> leftShading = adoptCF(CGShadingCreateAxial(cspace, CGPointMake(r.x(),  r.y()), CGPointMake(r.x() + radius, r.y()), mainFunction.get(), false, false));
 
-    RetainPtr<CGShadingRef> rightShading(AdoptCF, CGShadingCreateAxial(cspace, CGPointMake(r.maxX(),  r.y()), CGPointMake(r.maxX() - radius, r.y()), mainFunction.get(), false, false));
+    RetainPtr<CGShadingRef> rightShading = adoptCF(CGShadingCreateAxial(cspace, CGPointMake(r.maxX(),  r.y()), CGPointMake(r.maxX() - radius, r.y()), mainFunction.get(), false, false));
     paintInfo.context->save();
     CGContextClipToRect(context, bound.rect());
-    paintInfo.context->addRoundedRectClip(bound);
+    paintInfo.context->clipRoundedRect(bound);
     CGContextDrawShading(context, mainShading.get());
     paintInfo.context->restore();
 
     paintInfo.context->save();
     CGContextClipToRect(context, topGradient);
-    paintInfo.context->addRoundedRectClip(RoundedRect(enclosingIntRect(topGradient), bound.radii().topLeft(), bound.radii().topRight(), IntSize(), IntSize()));
+    paintInfo.context->clipRoundedRect(RoundedRect(enclosingIntRect(topGradient), bound.radii().topLeft(), bound.radii().topRight(), IntSize(), IntSize()));
     CGContextDrawShading(context, topShading.get());
     paintInfo.context->restore();
 
     if (!bottomGradient.isEmpty()) {
         paintInfo.context->save();
         CGContextClipToRect(context, bottomGradient);
-        paintInfo.context->addRoundedRectClip(RoundedRect(enclosingIntRect(bottomGradient), IntSize(), IntSize(), bound.radii().bottomLeft(), bound.radii().bottomRight()));
+        paintInfo.context->clipRoundedRect(RoundedRect(enclosingIntRect(bottomGradient), IntSize(), IntSize(), bound.radii().bottomLeft(), bound.radii().bottomRight()));
         CGContextDrawShading(context, bottomShading.get());
         paintInfo.context->restore();
     }
 
     paintInfo.context->save();
     CGContextClipToRect(context, bound.rect());
-    paintInfo.context->addRoundedRectClip(bound);
+    paintInfo.context->clipRoundedRect(bound);
     CGContextDrawShading(context, leftShading.get());
     CGContextDrawShading(context, rightShading.get());
     paintInfo.context->restore();
@@ -874,7 +874,7 @@ void RenderThemeSafari::adjustMenuListStyle(StyleResolver* styleResolver, Render
 
     // Set the foreground color to black or gray when we have the aqua look.
     // Cast to RGB32 is to work around a compiler bug.
-    style->setColor(e && e->isEnabledFormControl() ? static_cast<RGBA32>(Color::black) : Color::darkGray);
+    style->setColor(e && !e->isDisabledFormControl() ? static_cast<RGBA32>(Color::black) : Color::darkGray);
 
     // Set the button's vertical size.
     setButtonSize(style);
@@ -974,14 +974,14 @@ bool RenderThemeSafari::paintSliderTrack(RenderObject* o, const PaintInfo& paint
     CGContextClipToRect(context, bounds.rect());
 
     struct CGFunctionCallbacks mainCallbacks = { 0, TrackGradientInterpolate, NULL };
-    RetainPtr<CGFunctionRef> mainFunction(AdoptCF, CGFunctionCreate(NULL, 1, NULL, 4, NULL, &mainCallbacks));
+    RetainPtr<CGFunctionRef> mainFunction = adoptCF(CGFunctionCreate(NULL, 1, NULL, 4, NULL, &mainCallbacks));
     RetainPtr<CGShadingRef> mainShading;
     if (o->style()->appearance() == SliderVerticalPart)
-        mainShading.adoptCF(CGShadingCreateAxial(cspace, CGPointMake(bounds.rect().x(),  bounds.rect().maxY()), CGPointMake(bounds.rect().maxX(), bounds.rect().maxY()), mainFunction.get(), false, false));
+        mainShading = adoptCF(CGShadingCreateAxial(cspace, CGPointMake(bounds.rect().x(),  bounds.rect().maxY()), CGPointMake(bounds.rect().maxX(), bounds.rect().maxY()), mainFunction.get(), false, false));
     else
-        mainShading.adoptCF(CGShadingCreateAxial(cspace, CGPointMake(bounds.rect().x(),  bounds.rect().y()), CGPointMake(bounds.rect().x(), bounds.rect().maxY()), mainFunction.get(), false, false));
+        mainShading = adoptCF(CGShadingCreateAxial(cspace, CGPointMake(bounds.rect().x(),  bounds.rect().y()), CGPointMake(bounds.rect().x(), bounds.rect().maxY()), mainFunction.get(), false, false));
 
-    paintInfo.context->addRoundedRectClip(bounds);
+    paintInfo.context->clipRoundedRect(bounds);
     CGContextDrawShading(context, mainShading.get());
     paintInfo.context->restore();
     
@@ -1075,8 +1075,9 @@ bool RenderThemeSafari::paintSearchFieldCancelButton(RenderObject* o, const Pain
 {
     ASSERT(SafariThemeLibrary());
 
-    Node* input = o->node()->shadowAncestorNode();
-    ASSERT(input);
+    Node* input = o->node()->shadowHost();
+    if (!input)
+        input = o->node();
     RenderObject* renderer = input->renderer();
     ASSERT(renderer);
 
@@ -1129,8 +1130,9 @@ bool RenderThemeSafari::paintSearchFieldResultsDecoration(RenderObject* o, const
 {
     ASSERT(SafariThemeLibrary());
 
-    Node* input = o->node()->shadowAncestorNode();
-    ASSERT(input);
+    Node* input = o->node()->shadowHost();
+    if (!input)
+        input = o->node();
     RenderObject* renderer = input->renderer();
     ASSERT(renderer);
 
@@ -1152,8 +1154,9 @@ bool RenderThemeSafari::paintSearchFieldResultsButton(RenderObject* o, const Pai
 {
     ASSERT(SafariThemeLibrary());
 
-    Node* input = o->node()->shadowAncestorNode();
-    ASSERT(input);
+    Node* input = o->node()->shadowHost();
+    if (!input)
+        input = o->node();
     RenderObject* renderer = input->renderer();
     ASSERT(renderer);
 

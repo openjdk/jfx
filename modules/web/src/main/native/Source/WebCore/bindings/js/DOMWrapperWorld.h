@@ -23,7 +23,6 @@
 #define DOMWrapperWorld_h
 
 #include "JSDOMGlobalObject.h"
-#include <heap/Weak.h>
 #include <runtime/WeakGCMap.h>
 #include <wtf/Forward.h>
 
@@ -34,27 +33,13 @@ class JSDOMWrapper;
 class ScriptController;
 
 typedef HashMap<void*, JSC::Weak<JSDOMWrapper> > DOMObjectWrapperMap;
-typedef HashMap<StringImpl*, JSC::Weak<JSC::JSString>, PtrHash<StringImpl*> > JSStringCache;
-
-class JSStringOwner : public JSC::WeakHandleOwner {
-public:
-    JSStringOwner(DOMWrapperWorld*);
-    virtual void finalize(JSC::Handle<JSC::Unknown>, void* context);
-
-private:
-    DOMWrapperWorld* m_world;
-};
-
-inline JSStringOwner::JSStringOwner(DOMWrapperWorld* world)
-    : m_world(world)
-{
-}
+typedef JSC::WeakGCMap<StringImpl*, JSC::JSString, PtrHash<StringImpl*> > JSStringCache;
 
 class DOMWrapperWorld : public RefCounted<DOMWrapperWorld> {
 public:
-    static PassRefPtr<DOMWrapperWorld> create(JSC::JSGlobalData* globalData, bool isNormal = false)
+    static PassRefPtr<DOMWrapperWorld> create(JSC::VM* vm, bool isNormal = false)
     {
-        return adoptRef(new DOMWrapperWorld(globalData, isNormal));
+        return adoptRef(new DOMWrapperWorld(vm, isNormal));
     }
     ~DOMWrapperWorld();
 
@@ -71,20 +56,18 @@ public:
 
     bool isNormal() const { return m_isNormal; }
 
-    JSC::JSGlobalData* globalData() const { return m_globalData; }
-    JSStringOwner* stringWrapperOwner() { return &m_stringWrapperOwner; }
+    JSC::VM* vm() const { return m_vm; }
 
 protected:
-    DOMWrapperWorld(JSC::JSGlobalData*, bool isNormal);
+    DOMWrapperWorld(JSC::VM*, bool isNormal);
 
 private:
-    JSC::JSGlobalData* m_globalData;
+    JSC::VM* m_vm;
     HashSet<ScriptController*> m_scriptControllersWithWindowShells;
     bool m_isNormal;
-    JSStringOwner m_stringWrapperOwner;
 };
 
-DOMWrapperWorld* normalWorld(JSC::JSGlobalData&);
+DOMWrapperWorld* normalWorld(JSC::VM&);
 DOMWrapperWorld* mainThreadNormalWorld();
 inline DOMWrapperWorld* debuggerWorld() { return mainThreadNormalWorld(); }
 inline DOMWrapperWorld* pluginWorld() { return mainThreadNormalWorld(); }

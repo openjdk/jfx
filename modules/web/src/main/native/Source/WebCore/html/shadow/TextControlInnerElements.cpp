@@ -38,11 +38,12 @@
 #include "MouseEvent.h"
 #include "Page.h"
 #include "RenderSearchField.h"
+#include "RenderTextControl.h"
 #include "RenderView.h"
 #include "ScriptController.h"
-#include "ScrollbarTheme.h"
 #include "SpeechInput.h"
 #include "SpeechInputEvent.h"
+#include "StyleInheritedData.h"
 #include "TextEvent.h"
 #include "TextEventInputType.h"
 
@@ -50,10 +51,25 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
+TextControlInnerContainer::TextControlInnerContainer(Document* document)
+    : HTMLDivElement(divTag, document)
+{
+}
+
+PassRefPtr<TextControlInnerContainer> TextControlInnerContainer::create(Document* document)
+{
+    return adoptRef(new TextControlInnerContainer(document));
+}
+    
+RenderObject* TextControlInnerContainer::createRenderer(RenderArena* arena, RenderStyle*)
+{
+    return new (arena) RenderTextControlInnerContainer(this);
+}
+
 TextControlInnerElement::TextControlInnerElement(Document* document)
     : HTMLDivElement(divTag, document)
 {
-    setHasCustomCallbacks();
+    setHasCustomStyleCallbacks();
 }
 
 PassRefPtr<TextControlInnerElement> TextControlInnerElement::create(Document* document)
@@ -63,16 +79,16 @@ PassRefPtr<TextControlInnerElement> TextControlInnerElement::create(Document* do
 
 PassRefPtr<RenderStyle> TextControlInnerElement::customStyleForRenderer()
 {
-    RenderTextControlSingleLine* parentRenderer = toRenderTextControlSingleLine(shadowAncestorNode()->renderer());
+    RenderTextControlSingleLine* parentRenderer = toRenderTextControlSingleLine(shadowHost()->renderer());
     return parentRenderer->createInnerBlockStyle(parentRenderer->style());
 }
 
-// ----------------------------
+// ---------------------------
 
 inline TextControlInnerTextElement::TextControlInnerTextElement(Document* document)
     : HTMLDivElement(divTag, document)
 {
-    setHasCustomCallbacks();
+    setHasCustomStyleCallbacks();
 }
 
 PassRefPtr<TextControlInnerTextElement> TextControlInnerTextElement::create(Document* document)
@@ -86,11 +102,13 @@ void TextControlInnerTextElement::defaultEventHandler(Event* event)
     // Then we would add one to the text field's inner div, and we wouldn't need this subclass.
     // Or possibly we could just use a normal event listener.
     if (event->isBeforeTextInsertedEvent() || event->type() == eventNames().webkitEditableContentChangedEvent) {
-        Node* shadowAncestor = shadowAncestorNode();
-        // A TextControlInnerTextElement can be its own shadow ancestor if its been detached, but kept alive by an EditCommand.
-        // In this case, an undo/redo can cause events to be sent to the TextControlInnerTextElement.  
-        // To prevent an infinite loop, we must check for this case before sending the event up the chain.
-        if (shadowAncestor && shadowAncestor != this)
+        Element* shadowAncestor = shadowHost();
+        // A TextControlInnerTextElement can have no host if its been detached,
+        // but kept alive by an EditCommand. In this case, an undo/redo can
+        // cause events to be sent to the TextControlInnerTextElement. To
+        // prevent an infinite loop, we must check for this case before sending
+        // the event up the chain.
+        if (shadowAncestor)
             shadowAncestor->defaultEventHandler(event);
     }
     if (!event->defaultHandled())
@@ -99,18 +117,12 @@ void TextControlInnerTextElement::defaultEventHandler(Event* event)
 
 RenderObject* TextControlInnerTextElement::createRenderer(RenderArena* arena, RenderStyle*)
 {
-    bool multiLine = false;
-    Node* shadowAncestor = shadowAncestorNode();
-    if (shadowAncestor && shadowAncestor->renderer()) {
-        ASSERT(shadowAncestor->renderer()->isTextField() || shadowAncestor->renderer()->isTextArea());
-        multiLine = shadowAncestor->renderer()->isTextArea();
-    }
-    return new (arena) RenderTextControlInnerBlock(this, multiLine);
+    return new (arena) RenderTextControlInnerBlock(this);
 }
 
 PassRefPtr<RenderStyle> TextControlInnerTextElement::customStyleForRenderer()
 {
-    RenderTextControl* parentRenderer = toRenderTextControl(shadowAncestorNode()->renderer());
+    RenderTextControl* parentRenderer = toRenderTextControl(shadowHost()->renderer());
     return parentRenderer->createInnerTextStyle(parentRenderer->style());
 }
 
@@ -128,10 +140,10 @@ PassRefPtr<SearchFieldResultsButtonElement> SearchFieldResultsButtonElement::cre
 
 const AtomicString& SearchFieldResultsButtonElement::shadowPseudoId() const
 {
-    DEFINE_STATIC_LOCAL(AtomicString, resultsId, ("-webkit-search-results-button"));
-    DEFINE_STATIC_LOCAL(AtomicString, resultsDecorationId, ("-webkit-search-results-decoration"));
-    DEFINE_STATIC_LOCAL(AtomicString, decorationId, ("-webkit-search-decoration"));
-    Node* host = shadowAncestorNode();
+    DEFINE_STATIC_LOCAL(AtomicString, resultsId, ("-webkit-search-results-button", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(AtomicString, resultsDecorationId, ("-webkit-search-results-decoration", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(AtomicString, decorationId, ("-webkit-search-decoration", AtomicString::ConstructFromLiteral));
+    Element* host = shadowHost();
     if (!host)
         return resultsId;
     if (HTMLInputElement* input = host->toInputElement()) {
@@ -147,8 +159,8 @@ const AtomicString& SearchFieldResultsButtonElement::shadowPseudoId() const
 void SearchFieldResultsButtonElement::defaultEventHandler(Event* event)
 {
     // On mousedown, bring up a menu, if needed
-    HTMLInputElement* input = static_cast<HTMLInputElement*>(shadowAncestorNode());
-    if (event->type() == eventNames().mousedownEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == LeftButton) {
+    HTMLInputElement* input = static_cast<HTMLInputElement*>(shadowHost());
+    if (input && event->type() == eventNames().mousedownEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == LeftButton) {
         input->focus();
         input->select();
         RenderSearchField* renderer = toRenderSearchField(input->renderer());
@@ -161,6 +173,11 @@ void SearchFieldResultsButtonElement::defaultEventHandler(Event* event)
 
     if (!event->defaultHandled())
         HTMLDivElement::defaultEventHandler(event);
+}
+
+bool SearchFieldResultsButtonElement::willRespondToMouseClickEvents()
+{
+    return true;
 }
 
 // ----------------------------
@@ -178,7 +195,7 @@ PassRefPtr<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::creat
 
 const AtomicString& SearchFieldCancelButtonElement::shadowPseudoId() const
 {
-    DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-search-cancel-button"));
+    DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-search-cancel-button", AtomicString::ConstructFromLiteral));
     return pseudoId;
 }
 
@@ -195,8 +212,8 @@ void SearchFieldCancelButtonElement::detach()
 void SearchFieldCancelButtonElement::defaultEventHandler(Event* event)
 {
     // If the element is visible, on mouseup, clear the value, and set selection
-    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowAncestorNode()));
-    if (input->disabled() || input->isReadOnlyFormControl()) {
+    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowHost()));
+    if (!input || input->isDisabledOrReadOnly()) {
         if (!event->defaultHandled())
             HTMLDivElement::defaultEventHandler(event);
         return;
@@ -232,162 +249,14 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event* event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
-// ----------------------------
-
-inline SpinButtonElement::SpinButtonElement(Document* document, StepActionHandler& stepActionHandler)
-    : HTMLDivElement(divTag, document)
-    , m_stepActionHandler(&stepActionHandler)
-    , m_capturing(false)
-    , m_upDownState(Indeterminate)
-    , m_pressStartingState(Indeterminate)
-    , m_repeatingTimer(this, &SpinButtonElement::repeatingTimerFired)
+bool SearchFieldCancelButtonElement::willRespondToMouseClickEvents()
 {
+    const HTMLInputElement* input = static_cast<HTMLInputElement*>(shadowHost());
+    if (input && !input->isDisabledOrReadOnly())
+        return true;
+
+    return HTMLDivElement::willRespondToMouseClickEvents();
 }
-
-PassRefPtr<SpinButtonElement> SpinButtonElement::create(Document* document, StepActionHandler& stepActionHandler)
-{
-    return adoptRef(new SpinButtonElement(document, stepActionHandler));
-}
-
-const AtomicString& SpinButtonElement::shadowPseudoId() const
-{
-    DEFINE_STATIC_LOCAL(AtomicString, innerPseudoId, ("-webkit-inner-spin-button"));
-    return innerPseudoId;
-}
-
-void SpinButtonElement::detach()
-{
-    releaseCapture();
-    HTMLDivElement::detach();
-}
-
-void SpinButtonElement::defaultEventHandler(Event* event)
-{
-    if (!event->isMouseEvent()) {
-        if (!event->defaultHandled())
-            HTMLDivElement::defaultEventHandler(event);
-        return;
-    }
-
-    RenderBox* box = renderBox();
-    if (!box) {
-        if (!event->defaultHandled())
-            HTMLDivElement::defaultEventHandler(event);
-        return;
-    }
-
-    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowAncestorNode()));
-    if (input->disabled() || input->isReadOnlyFormControl()) {
-        if (!event->defaultHandled())
-            HTMLDivElement::defaultEventHandler(event);
-        return;
-    }
-
-    MouseEvent* mouseEvent = static_cast<MouseEvent*>(event);
-    IntPoint local = roundedIntPoint(box->absoluteToLocal(mouseEvent->absoluteLocation(), false, true));
-    if (mouseEvent->type() == eventNames().mousedownEvent && mouseEvent->button() == LeftButton) {
-        if (box->pixelSnappedBorderBoxRect().contains(local)) {
-            // The following functions of HTMLInputElement may run JavaScript
-            // code which detaches this shadow node. We need to take a reference
-            // and check renderer() after such function calls.
-            RefPtr<Node> protector(this);
-            input->focus();
-            input->select();
-            if (renderer()) {
-                if (m_upDownState != Indeterminate) {
-                    doStepAction(m_upDownState == Up ? 1 : -1);
-                    if (renderer())
-                        startRepeatingTimer();
-                }
-            }
-            event->setDefaultHandled();
-        }
-    } else if (mouseEvent->type() == eventNames().mouseupEvent && mouseEvent->button() == LeftButton)
-        stopRepeatingTimer();
-    else if (event->type() == eventNames().mousemoveEvent) {
-        if (box->pixelSnappedBorderBoxRect().contains(local)) {
-            if (!m_capturing) {
-                if (Frame* frame = document()->frame()) {
-                    frame->eventHandler()->setCapturingMouseEventsNode(this);
-                    m_capturing = true;
-                }
-            }
-            UpDownState oldUpDownState = m_upDownState;
-            m_upDownState = local.y() < box->height() / 2 ? Up : Down;
-            if (m_upDownState != oldUpDownState)
-                renderer()->repaint();
-        } else {
-            releaseCapture();
-            m_upDownState = Indeterminate;
-        }
-    }
-
-    if (!event->defaultHandled())
-        HTMLDivElement::defaultEventHandler(event);
-}
-
-void SpinButtonElement::doStepAction(int amount)
-{
-    if (!m_stepActionHandler)
-        return;
-
-    if (amount > 0)
-        m_stepActionHandler->spinButtonStepUp();
-    else if (amount < 0)
-        m_stepActionHandler->spinButtonStepDown();
-}
-
-void SpinButtonElement::releaseCapture()
-{
-    stopRepeatingTimer();
-    if (m_capturing) {
-        if (Frame* frame = document()->frame()) {
-            frame->eventHandler()->setCapturingMouseEventsNode(0);
-            m_capturing = false;
-        }
-    }
-}
-
-void SpinButtonElement::startRepeatingTimer()
-{
-    m_pressStartingState = m_upDownState;
-    ScrollbarTheme* theme = ScrollbarTheme::theme();
-    m_repeatingTimer.start(theme->initialAutoscrollTimerDelay(), theme->autoscrollTimerDelay());
-}
-
-void SpinButtonElement::stopRepeatingTimer()
-{
-    m_repeatingTimer.stop();
-}
-
-void SpinButtonElement::step(int amount)
-{
-    HTMLInputElement* input = static_cast<HTMLInputElement*>(shadowAncestorNode());
-    if (input->disabled() || input->isReadOnlyFormControl())
-        return;
-    // On Mac OS, NSStepper updates the value for the button under the mouse
-    // cursor regardless of the button pressed at the beginning. So the
-    // following check is not needed for Mac OS.
-#if !OS(MAC_OS_X)
-    if (m_upDownState != m_pressStartingState)
-        return;
-#endif
-    doStepAction(amount);
-}
-    
-void SpinButtonElement::repeatingTimerFired(Timer<SpinButtonElement>*)
-{
-    if (m_upDownState != Indeterminate)
-        step(m_upDownState == Up ? 1 : -1);
-}
-
-void SpinButtonElement::setHovered(bool flag)
-{
-    if (!flag)
-        m_upDownState = Indeterminate;
-    HTMLDivElement::setHovered(flag);
-}
-
 
 // ----------------------------
 
@@ -427,9 +296,9 @@ void InputFieldSpeechButtonElement::defaultEventHandler(Event* event)
     // The call to focus() below dispatches a focus event, and an event handler in the page might
     // remove the input element from DOM. To make sure it remains valid until we finish our work
     // here, we take a temporary reference.
-    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowAncestorNode()));
+    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowHost()));
 
-    if (input->disabled() || input->isReadOnlyFormControl()) {
+    if (!input || input->isDisabledOrReadOnly()) {
         if (!event->defaultHandled())
             HTMLDivElement::defaultEventHandler(event);
         return;
@@ -477,11 +346,20 @@ void InputFieldSpeechButtonElement::defaultEventHandler(Event* event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
+bool InputFieldSpeechButtonElement::willRespondToMouseClickEvents()
+{
+    const HTMLInputElement* input = static_cast<HTMLInputElement*>(shadowHost());
+    if (input && !input->isDisabledOrReadOnly())
+        return true;
+
+    return HTMLDivElement::willRespondToMouseClickEvents();
+}
+
 void InputFieldSpeechButtonElement::setState(SpeechInputState state)
 {
     if (m_state != state) {
         m_state = state;
-        shadowAncestorNode()->renderer()->repaint();
+        shadowHost()->renderer()->repaint();
     }
 }
 
@@ -507,8 +385,8 @@ void InputFieldSpeechButtonElement::setRecognitionResult(int, const SpeechInputR
     // The call to setValue() below dispatches an event, and an event handler in the page might
     // remove the input element from DOM. To make sure it remains valid until we finish our work
     // here, we take a temporary reference.
-    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowAncestorNode()));
-    if (input->disabled() || input->isReadOnlyFormControl())
+    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowHost()));
+    if (!input || input->isDisabledOrReadOnly())
         return;
 
     RefPtr<InputFieldSpeechButtonElement> holdRefButton(this);
@@ -560,11 +438,10 @@ void InputFieldSpeechButtonElement::startSpeechInput()
     if (m_state != Idle)
         return;
 
-    RefPtr<HTMLInputElement> input = static_cast<HTMLInputElement*>(shadowAncestorNode());
+    RefPtr<HTMLInputElement> input = static_cast<HTMLInputElement*>(shadowHost());
     AtomicString language = input->computeInheritedLanguage();
     String grammar = input->getAttribute(webkitgrammarAttr);
-    // FIXME: this should probably respect transforms
-    IntRect rect = pixelSnappedIntRect(renderer()->view()->frameView()->contentsToWindow(renderer()->absoluteBoundingBoxRectIgnoringTransforms()));
+    IntRect rect = document()->view()->contentsToRootView(pixelSnappedBoundingBox());
     if (speechInput()->startRecognition(m_listenerId, rect, language, grammar, document()->securityOrigin()))
         setState(Recording);
 }
@@ -577,7 +454,7 @@ void InputFieldSpeechButtonElement::stopSpeechInput()
 
 const AtomicString& InputFieldSpeechButtonElement::shadowPseudoId() const
 {
-    DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-input-speech-button"));
+    DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-input-speech-button", AtomicString::ConstructFromLiteral));
     return pseudoId;
 }
 

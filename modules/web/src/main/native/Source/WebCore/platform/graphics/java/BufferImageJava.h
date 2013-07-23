@@ -27,11 +27,14 @@ public:
     virtual void destroyDecodedData(bool destroyAll = true) { }
     virtual unsigned decodedSize() const { return 0; }
 
+    //utatodo: callback to Java
+    virtual bool currentFrameKnownToBeOpaque() { return false; /*!m_data->m_bitmap->hasAlpha() ;*/}
+
     virtual IntSize size() const { return IntSize(m_width, m_height); }
 
     virtual void draw(GraphicsContext* gc, const FloatRect& dstRect,
                       const FloatRect& srcRect, ColorSpace styleColorSpace,
-                      CompositeOperator op);
+                      CompositeOperator op, BlendMode bm);
 
     virtual void drawPattern(GraphicsContext* gc, const FloatRect& srcRect, const AffineTransform& patternTransform,
                              const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect);

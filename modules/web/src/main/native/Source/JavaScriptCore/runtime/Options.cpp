@@ -26,6 +26,7 @@
 #include "config.h"
 #include "Options.h"
 
+#include "HeapStatistics.h"
 #include <algorithm>
 #include <limits>
 #include <stdio.h>
@@ -39,10 +40,6 @@
 #if OS(DARWIN) && ENABLE(PARALLEL_GC)
 #include <sys/sysctl.h>
 #endif
-
-// Set to 1 to control the heuristics using environment variables.
-#define ENABLE_RUN_TIME_HEURISTICS 0
-
 
 namespace JSC {
 
@@ -74,10 +71,15 @@ static bool parse(const char* string, double& value)
     return sscanf(string, "%lf", &value) == 1;
 }
 
-#if ENABLE(RUN_TIME_HEURISTICS)
+static bool parse(const char* string, OptionRange& value)
+{
+    return value.init(string);
+}
+
 template<typename T>
 void overrideOptionWithHeuristic(T& variable, const char* name)
 {
+#if !OS(WINCE)
     const char* stringValue = getenv(name);
     if (!stringValue)
         return;
@@ -86,9 +88,8 @@ void overrideOptionWithHeuristic(T& variable, const char* name)
         return;
     
     fprintf(stderr, "WARNING: failed to parse %s=%s\n", name, stringValue);
-}
 #endif
-
+}
 
 static unsigned computeNumberOfGCMarkers(int maxNumberOfGCMarkers)
 {
@@ -101,9 +102,64 @@ static unsigned computeNumberOfGCMarkers(int maxNumberOfGCMarkers)
     ASSERT(cpusToUse >= 1);
     if (cpusToUse < 1)
         cpusToUse = 1;
+#else
+    UNUSED_PARAM(maxNumberOfGCMarkers);
 #endif
 
     return cpusToUse;
+}
+
+bool OptionRange::init(const char* rangeString)
+{
+    // rangeString should be in the form of [!]<low>[:<high>]
+    // where low and high are unsigned
+
+    bool invert = false;
+
+    if (m_state > Uninitialized)
+        return true;
+
+    if (!rangeString) {
+        m_state = InitError;
+        return false;
+    }
+
+    m_rangeString = rangeString;
+
+    if (*rangeString == '!') {
+        invert = true;
+        rangeString++;
+    }
+
+    int scanResult = sscanf(rangeString, " %u:%u", &m_lowLimit, &m_highLimit);
+
+    if (!scanResult || scanResult == EOF) {
+        m_state = InitError;
+        return false;
+    }
+
+    if (scanResult == 1)
+        m_highLimit = m_lowLimit;
+
+    if (m_lowLimit > m_highLimit) {
+        m_state = InitError;
+        return false;
+    }
+
+    m_state = invert ? Inverted : Normal;
+
+    return true;
+}
+
+bool OptionRange::isInRange(unsigned count)
+{
+    if (m_state < Normal)
+        return true;
+
+    if ((m_lowLimit <= count) && (count <= m_highLimit))
+        return m_state == Normal ? true : false;
+
+    return m_state == Normal ? false : true;
 }
 
 Options::Entry Options::s_options[Options::numberOfOptions];
@@ -124,18 +180,33 @@ void Options::initialize()
     JSC_OPTIONS(FOR_EACH_OPTION)
 #undef FOR_EACH_OPTION
         
+#if USE(CF) || OS(UNIX)
+    objectsAreImmortal() = !!getenv("JSImmortalZombieEnabled");
+    useZombieMode() = !!getenv("JSImmortalZombieEnabled") || !!getenv("JSZombieEnabled");
+
+    gcMaxHeapSize() = getenv("GCMaxHeapSize") ? HeapStatistics::parseMemoryAmount(getenv("GCMaxHeapSize")) : 0;
+    recordGCPauseTimes() = !!getenv("JSRecordGCPauseTimes");
+    logHeapStatisticsAtExit() = gcMaxHeapSize() || recordGCPauseTimes();
+#endif
+
     // Allow environment vars to override options if applicable.
     // The evn var should be the name of the option prefixed with
     // "JSC_".
-#if ENABLE(RUN_TIME_HEURISTICS)
 #define FOR_EACH_OPTION(type_, name_, defaultValue_) \
     overrideOptionWithHeuristic(name_(), "JSC_" #name_);
     JSC_OPTIONS(FOR_EACH_OPTION)
 #undef FOR_EACH_OPTION
-#endif // RUN_TIME_HEURISTICS
 
 #if 0
     ; // Deconfuse editors that do auto indentation
+#endif
+    
+#if !ENABLE(JIT)
+    useJIT() = false;
+    useDFGJIT() = false;
+#endif
+#if !ENABLE(YARR_JIT)
+    useRegExpJIT() = false;
 #endif
     
     // Do range checks where needed and make corrections to the options:
@@ -173,6 +244,7 @@ bool Options::setOption(const char* arg)
 #define FOR_EACH_OPTION(type_, name_, defaultValue_)    \
     if (!strncmp(arg, #name_, equalStr - arg)) {        \
         type_ value;                                    \
+        value = 0;                                      \
         bool success = parse(valueStr, value);          \
         if (success) {                                  \
             name_() = value;                            \
@@ -212,6 +284,9 @@ void Options::dumpOption(OptionID id, FILE* stream, const char* header, const ch
         break;
     case int32Type:
         fprintf(stream, "%d", s_options[id].u.int32Val);
+        break;
+    case optionRangeType:
+        fprintf(stream, "%s", s_options[id].u.optionRangeVal.rangeString());
         break;
     }
     fprintf(stream, "%s", footer);

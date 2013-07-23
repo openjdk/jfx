@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include <wtf/ASCIICType.h>
 #include "LinkBuffer.h"
+#include "Options.h"
 #include "Yarr.h"
 #include "YarrCanonicalizeUCS2.h"
 
@@ -39,7 +40,7 @@ namespace JSC { namespace Yarr {
 
 template<YarrJITCompileMode compileMode>
 class YarrGenerator : private MacroAssembler {
-    friend void jitCompile(JSGlobalData*, YarrCodeBlock& jitObject, const UString& pattern, unsigned& numSubpatterns, const char*& error, bool ignoreCase, bool multiline);
+    friend void jitCompile(VM*, YarrCodeBlock& jitObject, const String& pattern, unsigned& numSubpatterns, const char*& error, bool ignoreCase, bool multiline);
 
 #if CPU(ARM)
     static const RegisterID input = ARMRegisters::r0;
@@ -86,10 +87,20 @@ class YarrGenerator : private MacroAssembler {
     static const RegisterID returnRegister = X86Registers::eax;
     static const RegisterID returnRegister2 = X86Registers::edx;
 #elif CPU(X86_64)
+#if !OS(WINDOWS)
     static const RegisterID input = X86Registers::edi;
     static const RegisterID index = X86Registers::esi;
     static const RegisterID length = X86Registers::edx;
     static const RegisterID output = X86Registers::ecx;
+#else
+    // If the return value doesn't fit in 64bits, its destination is pointed by rcx and the parameters are shifted.
+    // http://msdn.microsoft.com/en-us/library/7572ztz4.aspx
+    COMPILE_ASSERT(sizeof(MatchResult) > sizeof(void*), MatchResult_does_not_fit_in_64bits);
+    static const RegisterID input = X86Registers::edx;
+    static const RegisterID index = X86Registers::r8;
+    static const RegisterID length = X86Registers::r9;
+    static const RegisterID output = X86Registers::r10;
+#endif
 
     static const RegisterID regT0 = X86Registers::eax;
     static const RegisterID regT1 = X86Registers::ebx;
@@ -168,8 +179,8 @@ class YarrGenerator : private MacroAssembler {
     void matchCharacterClass(RegisterID character, JumpList& matchDest, const CharacterClass* charClass)
     {
         if (charClass->m_table) {
-            ExtendedAddress tableEntry(character, reinterpret_cast<intptr_t>(charClass->m_table->m_table));
-            matchDest.append(branchTest8(charClass->m_table->m_inverted ? Zero : NonZero, tableEntry));
+            ExtendedAddress tableEntry(character, reinterpret_cast<intptr_t>(charClass->m_table));
+            matchDest.append(branchTest8(charClass->m_tableInverted ? Zero : NonZero, tableEntry));
             return;
         }
         Jump unicodeFail;
@@ -745,7 +756,11 @@ class YarrGenerator : private MacroAssembler {
         const RegisterID character = regT0;
         int maxCharactersAtOnce = m_charSize == Char8 ? 4 : 2;
         unsigned ignoreCaseMask = 0;
+#if CPU(BIG_ENDIAN)
+        int allCharacters = ch << (m_charSize == Char8 ? 24 : 16);
+#else
         int allCharacters = ch;
+#endif
         int numberCharacters;
         int startTermPosition = term->inputPosition;
 
@@ -754,7 +769,11 @@ class YarrGenerator : private MacroAssembler {
         ASSERT(!m_pattern.m_ignoreCase || isASCIIAlpha(ch) || isCanonicallyUnique(ch));
 
         if (m_pattern.m_ignoreCase && isASCIIAlpha(ch))
+#if CPU(BIG_ENDIAN)
+            ignoreCaseMask |= 32 << (m_charSize == Char8 ? 24 : 16);
+#else
             ignoreCaseMask |= 32;
+#endif
 
         for (numberCharacters = 1; numberCharacters < maxCharactersAtOnce && nextOp->m_op == OpTerm; ++numberCharacters, nextOp = &m_ops[opIndex + numberCharacters]) {
             PatternTerm* nextTerm = nextOp->m_term;
@@ -767,7 +786,11 @@ class YarrGenerator : private MacroAssembler {
 
             nextOp->m_isDeadCode = true;
 
+#if CPU(BIG_ENDIAN)
+            int shiftAmount = (m_charSize == Char8 ? 24 : 16) - ((m_charSize == Char8 ? 8 : 16) * numberCharacters);
+#else
             int shiftAmount = (m_charSize == Char8 ? 8 : 16) * numberCharacters;
+#endif
 
             UChar currentCharacter = nextTerm->patternCharacter;
 
@@ -1242,7 +1265,7 @@ class YarrGenerator : private MacroAssembler {
 
         case PatternTerm::TypeParenthesesSubpattern:
         case PatternTerm::TypeParentheticalAssertion:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
         case PatternTerm::TypeBackReference:
             m_shouldFallBack = true;
             break;
@@ -1308,7 +1331,7 @@ class YarrGenerator : private MacroAssembler {
 
         case PatternTerm::TypeParenthesesSubpattern:
         case PatternTerm::TypeParentheticalAssertion:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
 
         case PatternTerm::TypeDotStarEnclosure:
             backtrackDotStarEnclosure(opIndex);
@@ -2302,11 +2325,11 @@ class YarrGenerator : private MacroAssembler {
         m_ops.append(alternativeBeginOpCode);
         m_ops.last().m_previousOp = notFound;
         m_ops.last().m_term = term;
-        Vector<PatternAlternative*>& alternatives =  term->parentheses.disjunction->m_alternatives;
+        Vector<OwnPtr<PatternAlternative> >& alternatives =  term->parentheses.disjunction->m_alternatives;
         for (unsigned i = 0; i < alternatives.size(); ++i) {
             size_t lastOpIndex = m_ops.size() - 1;
 
-            PatternAlternative* nestedAlternative = alternatives[i];
+            PatternAlternative* nestedAlternative = alternatives[i].get();
             opCompileAlternative(nestedAlternative);
 
             size_t thisOpIndex = m_ops.size();
@@ -2353,11 +2376,11 @@ class YarrGenerator : private MacroAssembler {
         m_ops.append(OpSimpleNestedAlternativeBegin);
         m_ops.last().m_previousOp = notFound;
         m_ops.last().m_term = term;
-        Vector<PatternAlternative*>& alternatives =  term->parentheses.disjunction->m_alternatives;
+        Vector<OwnPtr<PatternAlternative> >& alternatives =  term->parentheses.disjunction->m_alternatives;
         for (unsigned i = 0; i < alternatives.size(); ++i) {
             size_t lastOpIndex = m_ops.size() - 1;
 
-            PatternAlternative* nestedAlternative = alternatives[i];
+            PatternAlternative* nestedAlternative = alternatives[i].get();
             opCompileAlternative(nestedAlternative);
 
             size_t thisOpIndex = m_ops.size();
@@ -2427,7 +2450,7 @@ class YarrGenerator : private MacroAssembler {
     // to return the failing result.
     void opCompileBody(PatternDisjunction* disjunction)
     {
-        Vector<PatternAlternative*>& alternatives =  disjunction->m_alternatives;
+        Vector<OwnPtr<PatternAlternative> >& alternatives = disjunction->m_alternatives;
         size_t currentAlternativeIndex = 0;
 
         // Emit the 'once through' alternatives.
@@ -2437,7 +2460,7 @@ class YarrGenerator : private MacroAssembler {
 
             do {
                 size_t lastOpIndex = m_ops.size() - 1;
-                PatternAlternative* alternative = alternatives[currentAlternativeIndex];
+                PatternAlternative* alternative = alternatives[currentAlternativeIndex].get();
                 opCompileAlternative(alternative);
 
                 size_t thisOpIndex = m_ops.size();
@@ -2472,7 +2495,7 @@ class YarrGenerator : private MacroAssembler {
         m_ops.last().m_previousOp = notFound;
         do {
             size_t lastOpIndex = m_ops.size() - 1;
-            PatternAlternative* alternative = alternatives[currentAlternativeIndex];
+            PatternAlternative* alternative = alternatives[currentAlternativeIndex].get();
             ASSERT(!alternative->onceThrough());
             opCompileAlternative(alternative);
 
@@ -2501,6 +2524,13 @@ class YarrGenerator : private MacroAssembler {
         push(X86Registers::ebp);
         move(stackPointerRegister, X86Registers::ebp);
         push(X86Registers::ebx);
+        // The ABI doesn't guarantee the upper bits are zero on unsigned arguments, so clear them ourselves.
+        zeroExtend32ToPtr(index, index);
+        zeroExtend32ToPtr(length, length);
+#if OS(WINDOWS)
+        if (compileMode == IncludeSubpatterns)
+            loadPtr(Address(X86Registers::ebp, 6 * sizeof(void*)), output);
+#endif
 #elif CPU(X86)
         push(X86Registers::ebp);
         move(stackPointerRegister, X86Registers::ebp);
@@ -2539,6 +2569,12 @@ class YarrGenerator : private MacroAssembler {
     void generateReturn()
     {
 #if CPU(X86_64)
+#if OS(WINDOWS)
+        // Store the return value in the allocated space pointed by rcx.
+        store64(returnRegister, Address(X86Registers::ecx));
+        store64(returnRegister2, Address(X86Registers::ecx, sizeof(void*)));
+        move(X86Registers::ecx, returnRegister);
+#endif
         pop(X86Registers::ebx);
         pop(X86Registers::ebp);
 #elif CPU(X86)
@@ -2572,7 +2608,7 @@ public:
     {
     }
 
-    void compile(JSGlobalData* globalData, YarrCodeBlock& jitObject)
+    void compile(VM* vm, YarrCodeBlock& jitObject)
     {
         generateEnter();
 
@@ -2606,7 +2642,7 @@ public:
         backtrack();
 
         // Link & finalize the code.
-        LinkBuffer linkBuffer(*globalData, this, REGEXP_CODE_ID);
+        LinkBuffer linkBuffer(*vm, this, REGEXP_CODE_ID);
         m_backtrackingState.linkDataLabels(linkBuffer);
 
         if (compileMode == MatchOnly) {
@@ -2653,12 +2689,12 @@ private:
     BacktrackingState m_backtrackingState;
 };
 
-void jitCompile(YarrPattern& pattern, YarrCharSize charSize, JSGlobalData* globalData, YarrCodeBlock& jitObject, YarrJITCompileMode mode)
+void jitCompile(YarrPattern& pattern, YarrCharSize charSize, VM* vm, YarrCodeBlock& jitObject, YarrJITCompileMode mode)
 {
     if (mode == MatchOnly)
-        YarrGenerator<MatchOnly>(pattern, charSize).compile(globalData, jitObject);
+        YarrGenerator<MatchOnly>(pattern, charSize).compile(vm, jitObject);
     else
-        YarrGenerator<IncludeSubpatterns>(pattern, charSize).compile(globalData, jitObject);
+        YarrGenerator<IncludeSubpatterns>(pattern, charSize).compile(vm, jitObject);
 }
 
 }}

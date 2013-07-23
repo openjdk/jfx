@@ -33,31 +33,27 @@
 
 #if ENABLE(SQL_DATABASE)
 
-#include "AbstractDatabase.h"
-#include "DatabaseContext.h"
+#include "DatabaseBackendBase.h"
+#include "DatabaseBackendContext.h"
+#include "DatabaseManager.h"
 #include "DatabaseTracker.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 
 namespace WebCore {
 
-void SQLTransactionClient::didCommitWriteTransaction(AbstractDatabase* database)
+void SQLTransactionClient::didCommitWriteTransaction(DatabaseBackendBase* database)
 {
     DatabaseTracker::tracker().scheduleNotifyDatabaseChanged(
         database->securityOrigin(), database->stringIdentifier());
 }
 
-void SQLTransactionClient::didExecuteStatement(AbstractDatabase* database)
+bool SQLTransactionClient::didExceedQuota(DatabaseBackendBase* database)
 {
-    DatabaseTracker::tracker().databaseChanged(database);
-}
-
-bool SQLTransactionClient::didExceedQuota(AbstractDatabase* database)
-{
-    ASSERT(database->scriptExecutionContext()->isContextThread());
-    unsigned long long currentQuota = DatabaseTracker::tracker().quotaForOrigin(database->securityOrigin());
-    database->databaseContext()->databaseExceededQuota(database->stringIdentifier());
-    unsigned long long newQuota = DatabaseTracker::tracker().quotaForOrigin(database->securityOrigin());
+    ASSERT(database->databaseContext()->scriptExecutionContext()->isContextThread());
+    unsigned long long currentQuota = DatabaseManager::manager().quotaForOrigin(database->securityOrigin());
+    database->databaseContext()->databaseExceededQuota(database->stringIdentifier(), database->details());
+    unsigned long long newQuota = DatabaseManager::manager().quotaForOrigin(database->securityOrigin());
     return (newQuota > currentQuota);
 }
 

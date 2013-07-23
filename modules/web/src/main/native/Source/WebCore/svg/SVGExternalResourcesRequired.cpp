@@ -24,14 +24,15 @@
 #include "SVGExternalResourcesRequired.h"
 
 #include "Attr.h"
+#include "SVGElement.h"
 #include "SVGNames.h"
 
 namespace WebCore {
 
-bool SVGExternalResourcesRequired::parseAttribute(const Attribute& attribute)
+bool SVGExternalResourcesRequired::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == SVGNames::externalResourcesRequiredAttr) {
-        setExternalResourcesRequiredBaseValue(attribute.value() == "true");
+    if (name == SVGNames::externalResourcesRequiredAttr) {
+        setExternalResourcesRequiredBaseValue(value == "true");
         return true;
     }
 
@@ -103,7 +104,7 @@ void SVGExternalResourcesRequired::insertedIntoDocument(SVGElement* targetElemen
     if (externalResourcesRequiredBaseValue())
         return;
     setHaveFiredLoadEvent(true);
-    targetElement->sendSVGLoadEventIfPossible();
+    targetElement->sendSVGLoadEventIfPossibleAsynchronously();
 }
 
 void SVGExternalResourcesRequired::finishParsingChildren()

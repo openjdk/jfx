@@ -28,11 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-    interface [
+[
         Conditional=FILE_SYSTEM,
-        Callback
-    ] EntriesCallback {
-        boolean handleEvent(in EntryArray entries);
+] callback interface EntriesCallback {
+    boolean handleEvent(EntryArray entries);
     };
-}

@@ -105,15 +105,14 @@ public class SubdivisionMesh extends PolygonMesh {
         }
         
         if (pointValuesDirty || subdivisionLevelDirty) {
-            float[] points = symbolicMeshes.get(subdivisionLevel).points.data;
-            getPoints().setAll(points, 0, points.length);
+            getPoints().setAll(symbolicMeshes.get(subdivisionLevel).points.data);
         }
         
         if (subdivisionLevelDirty) {
             faces = symbolicMeshes.get(subdivisionLevel).faces;
             numEdgesInFaces = -1;
-            float[] texCoords = symbolicMeshes.get(subdivisionLevel).texCoords;
-            getTexCoords().setAll(texCoords, 0, texCoords.length);
+            getFaceSmoothingGroups().setAll(symbolicMeshes.get(subdivisionLevel).faceSmoothingGroups);
+            getTexCoords().setAll(symbolicMeshes.get(subdivisionLevel).texCoords);
         }
         
         meshDirty = false;

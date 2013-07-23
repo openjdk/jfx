@@ -31,9 +31,8 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.sg.PGCylinder;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGCylinder;
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Point2D;
@@ -166,21 +165,21 @@ public class Cylinder extends Shape3D {
      */
     @Deprecated   
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
         if (impl_isDirty(DirtyBits.MESH_GEOM)) {
-            PGCylinder pgCylinder = (PGCylinder) impl_getPGNode();
+            final NGCylinder peer = impl_getPeer();
             final float h = (float) getHeight();
             final float r = (float) getRadius();
             if (h < 0 || r < 0) {
-                pgCylinder.updateMesh(null);
+                peer.updateMesh(null);
             } else {
                 if (key == 0) {
                     key = generateKey(h, r, divisions);
                 }
                 mesh = manager.getCylinderMesh(h, r, divisions, key);
                 mesh.impl_updatePG();
-                pgCylinder.updateMesh(mesh.impl_getPGTriangleMesh());
+                peer.updateMesh(mesh.impl_getPGTriangleMesh());
             }
         }
     }
@@ -191,8 +190,8 @@ public class Cylinder extends Shape3D {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGCylinder();
+    protected NGNode impl_createPeer() {
+        return new NGCylinder();
     }
 
     /**

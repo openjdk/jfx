@@ -38,11 +38,6 @@ namespace WebCore {
 class TextureMapperPlatformLayer;
 typedef TextureMapperPlatformLayer PlatformLayer;
 };
-#elif PLATFORM(CHROMIUM)
-namespace WebCore {
-class LayerChromium;
-typedef LayerChromium PlatformLayer;
-}
 #elif PLATFORM(GTK)
 #if USE(TEXTURE_MAPPER_CAIRO) || USE(TEXTURE_MAPPER_GL)
 namespace WebCore {
@@ -60,6 +55,18 @@ namespace WebCore {
 class TextureMapperPlatformLayer;
 typedef TextureMapperPlatformLayer PlatformLayer;
 };
+#elif PLATFORM(EFL)
+#if USE(TEXTURE_MAPPER)
+namespace WebCore {
+class TextureMapperPlatformLayer;
+typedef TextureMapperPlatformLayer PlatformLayer;
+};
+#endif
+#elif PLATFORM(BLACKBERRY)
+namespace WebCore {
+class LayerWebKitThread;
+typedef LayerWebKitThread PlatformLayer;
+}
 #else
 typedef void* PlatformLayer;
 #endif

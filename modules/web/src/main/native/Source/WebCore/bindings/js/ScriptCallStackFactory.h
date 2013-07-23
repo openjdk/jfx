@@ -32,9 +32,12 @@
 #define ScriptCallStackFactory_h
 
 #include <wtf/Forward.h>
+#include <wtf/RefCountedArray.h>
 
 namespace JSC {
 class ExecState;
+class JSValue;
+struct StackFrame;
 }
 
 namespace WebCore {
@@ -44,7 +47,8 @@ class ScriptCallStack;
 
 PassRefPtr<ScriptCallStack> createScriptCallStack(size_t maxStackSize, bool emptyStackIsAllowed);
 PassRefPtr<ScriptCallStack> createScriptCallStack(JSC::ExecState*, size_t maxStackSize);
-PassRefPtr<ScriptCallStack> createScriptCallStackForInspector(JSC::ExecState*);
+PassRefPtr<ScriptCallStack> createScriptCallStackFromException(JSC::ExecState*, JSC::JSValue& exception, size_t maxStackSize);
+PassRefPtr<ScriptCallStack> createScriptCallStackForConsole(JSC::ExecState*);
 PassRefPtr<ScriptArguments> createScriptArguments(JSC::ExecState*, unsigned skipArgumentCount);
 
 } // namespace WebCore

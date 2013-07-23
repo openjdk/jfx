@@ -24,6 +24,7 @@
 
 #include "RenderSVGPath.h"
 #include "SVGStyledElement.h"
+#include <wtf/StackStats.h>
 
 namespace WebCore {
 
@@ -34,6 +35,7 @@ RenderSVGHiddenContainer::RenderSVGHiddenContainer(SVGStyledElement* element)
 
 void RenderSVGHiddenContainer::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
     SVGRenderSupport::layoutChildren(this, selfNeedsLayout()); 
     setNeedsLayout(false);    

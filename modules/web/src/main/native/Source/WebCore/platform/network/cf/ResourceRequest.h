@@ -28,17 +28,12 @@
 #define ResourceRequest_h
 
 #include "ResourceRequestBase.h"
-
 #include <wtf/RetainPtr.h>
-#if USE(CFNETWORK)
-typedef const struct _CFURLRequest* CFURLRequestRef;
-#endif
 
 OBJC_CLASS NSURLRequest;
 
-#if USE(CFURLSTORAGESESSIONS) && PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
-typedef struct __CFURLStorageSession* CFURLStorageSessionRef;
-#elif USE(CFURLSTORAGESESSIONS)
+#if PLATFORM(MAC) || USE(CFNETWORK)
+typedef const struct _CFURLRequest* CFURLRequestRef;
 typedef const struct __CFURLStorageSession* CFURLStorageSessionRef;
 #endif
 
@@ -81,22 +76,29 @@ namespace WebCore {
             updateNSURLRequest();
 #endif
         }
-
-
-        CFURLRequestRef cfURLRequest() const;
 #else
         ResourceRequest(NSURLRequest *nsRequest)
             : ResourceRequestBase()
-            , m_nsRequest(nsRequest) { }
+            , m_nsRequest(nsRequest)
+        {
+        }
 
+        void updateFromDelegatePreservingOldHTTPBody(const ResourceRequest&);
 #endif
 
 #if PLATFORM(MAC)
         void applyWebArchiveHackForMail();
-        NSURLRequest *nsURLRequest() const;
+        NSURLRequest *nsURLRequest(HTTPBodyUpdatePolicy) const;
 #endif
 
-#if USE(CFURLSTORAGESESSIONS)
+#if ENABLE(CACHE_PARTITIONING)
+        static String partitionName(const String& domain);
+        const String& cachePartition() const { return m_cachePartition.isNull() ? emptyString() : m_cachePartition; }
+        void setCachePartition(const String& cachePartition) { m_cachePartition = partitionName(cachePartition); }
+#endif
+
+#if PLATFORM(MAC) || USE(CFNETWORK)
+        CFURLRequestRef cfURLRequest(HTTPBodyUpdatePolicy) const;
         void setStorageSession(CFURLStorageSessionRef);
 #endif
 
@@ -112,9 +114,11 @@ namespace WebCore {
 
         void doUpdatePlatformRequest();
         void doUpdateResourceRequest();
+        void doUpdatePlatformHTTPBody();
+        void doUpdateResourceHTTPBody();
 
-        PassOwnPtr<CrossThreadResourceRequestData> doPlatformCopyData(PassOwnPtr<CrossThreadResourceRequestData> data) const { return data; }
-        void doPlatformAdopt(PassOwnPtr<CrossThreadResourceRequestData>) { }
+        PassOwnPtr<CrossThreadResourceRequestData> doPlatformCopyData(PassOwnPtr<CrossThreadResourceRequestData>) const;
+        void doPlatformAdopt(PassOwnPtr<CrossThreadResourceRequestData>);
 
 #if USE(CFNETWORK)
         RetainPtr<CFURLRequestRef> m_cfRequest;
@@ -122,11 +126,17 @@ namespace WebCore {
 #if PLATFORM(MAC)
         RetainPtr<NSURLRequest> m_nsRequest;
 #endif
+#if ENABLE(CACHE_PARTITIONING)
+        String m_cachePartition;
+#endif
 
         static bool s_httpPipeliningEnabled;
     };
 
     struct CrossThreadResourceRequestData : public CrossThreadResourceRequestDataBase {
+#if ENABLE(CACHE_PARTITIONING)
+        String m_cachePartition;
+#endif
     };
 
 } // namespace WebCore

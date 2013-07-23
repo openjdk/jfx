@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-class SVGEllipseElement : public SVGStyledTransformableElement,
+class SVGEllipseElement FINAL : public SVGStyledTransformableElement,
                           public SVGTests,
                           public SVGLangSpace,
                           public SVGExternalResourcesRequired {
@@ -42,10 +42,10 @@ private:
     SVGEllipseElement(const QualifiedName&, Document*);
     
     virtual bool isValid() const { return SVGTests::isValid(); }
-    virtual bool supportsFocus() const { return true; }
+    virtual bool supportsFocus() const OVERRIDE { return true; }
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual void svgAttributeChanged(const QualifiedName&);
 
     virtual bool selfHasRelativeLengths() const;

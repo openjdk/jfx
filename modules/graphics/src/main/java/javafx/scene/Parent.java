@@ -25,10 +25,6 @@
 
 package javafx.scene;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -36,6 +32,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
@@ -52,17 +52,18 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-
-import static com.sun.javafx.logging.PulseLogger.*;
+import com.sun.javafx.scene.LayoutFlags;
+import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
  * The base class for all nodes that have children in the scene graph.
@@ -103,18 +104,18 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_updatePG() {
-        super.impl_updatePG();
+    @Override public void impl_updatePeer() {
+        super.impl_updatePeer();
+        final NGGroup peer = impl_getPeer();
 
         if (Utils.assertionEnabled()) {
-            List<PGNode> pgnodes = getPGGroup().getChildren();
+            List<NGNode> pgnodes = peer.getChildren();
             if (pgnodes.size() != pgChildrenSize) {
                 java.lang.System.err.println("*** pgnodes.size() [" + pgnodes.size() + "] != pgChildrenSize [" + pgChildrenSize + "]");
             }
         }
 
         if (impl_isDirty(DirtyBits.PARENT_CHILDREN)) {
-            PGGroup peer = getPGGroup();
             // Whether a permutation, or children having been added or
             // removed, we'll want to clear out the PG side starting
             // from startIdx. We know that everything up to but not
@@ -122,7 +123,7 @@ public abstract class Parent extends Node {
             // sides, so we only need to update the remaining portion.
             peer.clearFrom(startIdx);
             for (int idx = startIdx; idx < children.size(); idx++) {
-                peer.add(idx, children.get(idx).impl_getPGNode());
+                peer.add(idx, children.get(idx).impl_getPeer());
             }
             if (removedChildrenExceedsThreshold) {
                 peer.markDirty();
@@ -130,7 +131,7 @@ public abstract class Parent extends Node {
             } else {
                 if (removed != null && !removed.isEmpty()) {
                     for(int i = 0; i < removed.size(); i++) {
-                        peer.addToRemoved(removed.get(i).impl_getPGNode());
+                        peer.addToRemoved(removed.get(i).impl_getPeer());
                     }
                 }
             }
@@ -164,7 +165,8 @@ public abstract class Parent extends Node {
 
     void validatePG() {
         boolean assertionFailed = false;
-        List<PGNode> pgnodes = getPGGroup().getChildren();
+        final NGGroup peer = impl_getPeer();
+        List<NGNode> pgnodes = peer.getChildren();
         if (pgnodes.size() != children.size()) {
             java.lang.System.err.println("*** pgnodes.size validatePG() [" + pgnodes.size() + "] != children.size() [" + children.size() + "]");
             assertionFailed = true;
@@ -175,7 +177,7 @@ public abstract class Parent extends Node {
                     java.lang.System.err.println("*** this=" + this + " validatePG children[" + idx + "].parent= " + n.getParent());
                     assertionFailed = true;
                 }
-                if (n.impl_getPGNode() != pgnodes.get(idx)) {
+                if (n.impl_getPeer() != pgnodes.get(idx)) {
                     java.lang.System.err.println("*** pgnodes[" + idx + "] validatePG != children[" + idx + "]");
                     assertionFailed = true;
                 }
@@ -636,28 +638,19 @@ public abstract class Parent extends Node {
             children.get(i).setScenes(newScene, newSubScene);
         }
 
-        // If this node was in the old scene's dirty layout
-        // list, then remove it from that list so that it is
-        // not processed on the next pulse
-        final boolean awaitingLayout = isNeedsLayout();
+        final boolean awaitingLayout = layoutFlag != LayoutFlags.CLEAN;
 
         sceneRoot = (newSubScene != null && newSubScene.getRoot() == this) ||
                     (newScene != null && newScene.getRoot() == this);
         layoutRoot = !isManaged() || sceneRoot;
 
+
         if (awaitingLayout) {
-            boolean sceneChanged = oldScene != newScene;
-            if (oldScene != null && sceneChanged) {
-                oldScene.removeFromDirtyLayoutList(this);
-            }
             // If this node is dirty and the new scene or subScene is not null
             // then add this node to the new scene's dirty list
             if (newScene != null && layoutRoot) {
                 if (newSubScene != null) {
                     newSubScene.setDirtyLayout(this);
-                }
-                if (sceneChanged) {
-                    newScene.addToDirtyLayoutList(this);
                 }
             }
         }
@@ -772,18 +765,37 @@ public abstract class Parent extends Node {
      * Indicates that this Node and its subnodes requires a layout pass on
      * the next pulse.
      */
-    private ReadOnlyBooleanWrapper needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", true);
+    private ReadOnlyBooleanWrapper needsLayout;
+    LayoutFlags layoutFlag = LayoutFlags.CLEAN;
 
     protected final void setNeedsLayout(boolean value) {
-        needsLayout.set(value);
+        if (value) {
+            markDirtyLayout(true);
+        } else if (layoutFlag == LayoutFlags.NEEDS_LAYOUT) {
+            boolean hasBranch = false;
+            for (int i = 0, max = children.size(); i < max; i++) {
+                final Node child = children.get(i);
+                if (child instanceof Parent) {
+                    if (((Parent)child).layoutFlag != LayoutFlags.CLEAN) {
+                        hasBranch = true;
+                        break;
+                    }
+
+                }
+            }
+            setLayoutFlag(hasBranch ? LayoutFlags.DIRTY_BRANCH : LayoutFlags.CLEAN);
+        }
     }
 
     public final boolean isNeedsLayout() {
-        return needsLayout.get();
+        return layoutFlag == LayoutFlags.NEEDS_LAYOUT;
     }
 
     public final ReadOnlyBooleanProperty needsLayoutProperty() {
-        return needsLayout.getReadOnlyProperty();
+        if (needsLayout == null) {
+            needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", layoutFlag == LayoutFlags.NEEDS_LAYOUT);
+        }
+        return needsLayout;
     }
 
     /**
@@ -800,6 +812,30 @@ public abstract class Parent extends Node {
     private double minWidthCache = -1;
     private double minHeightCache = -1;
 
+    private void setLayoutFlag(LayoutFlags flag) {
+        if (needsLayout != null) {
+            needsLayout.set(flag == LayoutFlags.NEEDS_LAYOUT);
+        }
+        layoutFlag = flag;
+    }
+
+    private void markDirtyLayoutBranch() {
+        Parent parent = getParent();
+        while (parent != null && parent.layoutFlag == LayoutFlags.CLEAN) {
+            parent.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
+            parent = parent.getParent();
+        }
+    }
+
+    private void markDirtyLayout(boolean local) {
+        setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
+        if (local || layoutRoot) {
+            markDirtyLayoutBranch();
+        } else {
+            requestParentLayout();
+        }
+    }
+
     /**
      * Requests a layout pass to be performed before the next scene is
      * rendered. This is batched up asynchronously to happen once per
@@ -811,18 +847,12 @@ public abstract class Parent extends Node {
      * @since JavaFX 8.0
      */
     public void requestLayout() {
-        if (!isNeedsLayout()) {
+        if (layoutFlag != LayoutFlags.NEEDS_LAYOUT) {
             prefWidthCache = -1;
             prefHeightCache = -1;
             minWidthCache = -1;
             minHeightCache = -1;
-            PlatformLogger logger = Logging.getLayoutLogger();
-            if (logger.isLoggable(Level.FINER)) {
-                logger.finer(this.toString());
-            }
-
-            setNeedsLayout(true);
-            requestParentLayout();
+            markDirtyLayout(false);
         } else {
             clearSizeCache();
         }
@@ -838,16 +868,7 @@ public abstract class Parent extends Node {
      * when it's parent recomputes the layout with the new hints.
      */
     protected final void requestParentLayout() {
-        if (layoutRoot) {
-            final Scene scene = getScene();
-            final SubScene subScene = getSubScene();
-            if (subScene != null) {
-                subScene.setDirtyLayout(this);
-            }
-            if (scene != null) {
-                scene.addToDirtyLayoutList(this);
-            }
-        } else {
+        if (!layoutRoot) {
             final Parent parent = getParent();
             if (parent != null && !parent.performingLayout) {
                 parent.requestLayout();
@@ -1018,31 +1039,23 @@ public abstract class Parent extends Node {
      * Executes a top-down layout pass on the scene graph under this parent.
      */
     public final void layout() {
-        if (isNeedsLayout()) {
-            if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.fxIncrementCounter("Parent#layout() on dirty Node");
-            performingLayout = true;
-
-            PlatformLogger logger = Logging.getLayoutLogger();
-            if (logger.isLoggable(Level.FINE)) {
-                logger.fine(this+" size: "+
-                        getLayoutBounds().getWidth()+" x "+getLayoutBounds().getHeight());
-            }
-
-            // layout the children in this parent.
-            layoutChildren();
-
-            // Perform layout on each child, hoping it has random access performance!
-            for (int i=0, max=children.size(); i<max; i++) {
-                final Node child = children.get(i);
-                if (child instanceof Parent) {
-                    ((Parent) child).layout();
+        switch(layoutFlag) {
+            case CLEAN:
+                break;
+            case NEEDS_LAYOUT:
+                performingLayout = true;
+                layoutChildren();
+                // Intended fall-through
+            case DIRTY_BRANCH:
+                for (int i = 0, max = children.size(); i < max; i++) {
+                    final Node child = children.get(i);
+                    if (child instanceof Parent) {
+                        ((Parent)child).layout();
+                    }
                 }
-            }
-            setNeedsLayout(false);
-
-            performingLayout = false;
-        } else {
-            if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.fxIncrementCounter("Parent#layout() on clean Node");
+                setLayoutFlag(LayoutFlags.CLEAN);
+                performingLayout = false;
+                break;
         }
     }
 
@@ -1074,7 +1087,7 @@ public abstract class Parent extends Node {
      * whenever the sceneRoot field changes, or whenever the managed
      * property changes.
      */
-    private boolean layoutRoot = false;
+    boolean layoutRoot = false;
     @Override final void notifyManagedChanged() {
         layoutRoot = !isManaged() || sceneRoot;
     }
@@ -1217,6 +1230,7 @@ public abstract class Parent extends Node {
      * Constructs a new {@code Parent}.
      */
     protected Parent() {
+        layoutFlag = LayoutFlags.NEEDS_LAYOUT;
     }
 
     /**
@@ -1224,12 +1238,8 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected @Override PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGGroup();
-    }
-
-    PGGroup getPGGroup() {
-        return ((PGGroup) impl_getPGNode());
+    @Override protected NGNode impl_createPeer() {
+        return new NGGroup();
     }
 
     @Override

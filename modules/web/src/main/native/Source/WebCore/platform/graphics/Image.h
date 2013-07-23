@@ -30,8 +30,9 @@
 #include "Color.h"
 #include "ColorSpace.h"
 #include "GraphicsTypes.h"
-#include "ImageSource.h"
+#include "ImageOrientation.h"
 #include "IntRect.h"
+#include "NativeImagePtr.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -52,12 +53,22 @@ typedef SIZE* LPSIZE;
 typedef struct HBITMAP__ *HBITMAP;
 #endif
 
+#if PLATFORM(QT)
+#include <QPixmap>
+#endif
+
 #if PLATFORM(GTK)
 typedef struct _GdkPixbuf GdkPixbuf;
 #endif
 
-#if PLATFORM(JAVA)
-#include "RQRef.h"
+#if PLATFORM(EFL)
+#if USE(EO)
+typedef struct _Eo Evas;
+typedef struct _Eo Evas_Object;
+#else
+typedef struct _Evas Evas;
+typedef struct _Evas_Object Evas_Object;
+#endif
 #endif
 
 namespace WebCore {
@@ -88,7 +99,7 @@ public:
 
     virtual bool isSVGImage() const { return false; }
     virtual bool isBitmapImage() const { return false; }
-    virtual bool currentFrameHasAlpha() { return false; }
+    virtual bool currentFrameKnownToBeOpaque() = 0;
 
     // Derived classes should override this if they can assure that 
     // the image contains only resources from its own security origin.
@@ -117,7 +128,7 @@ public:
     virtual void destroyDecodedData(bool destroyAll = true) = 0;
     virtual unsigned decodedSize() const = 0;
 
-    SharedBuffer* data() { return m_data.get(); }
+    SharedBuffer* data() { return m_encodedImageData.get(); }
 
     // Animation begins whenever someone draws the image, so startAnimation() is not normally called.
     // It will automatically pause once all observers no longer want to render the image anywhere.
@@ -131,7 +142,7 @@ public:
 
     enum TileRule { StretchTile, RoundTile, SpaceTile, RepeatTile };
 
-    virtual NativeImagePtr nativeImageForCurrentFrame() { return 0; }
+    virtual PassNativeImagePtr nativeImageForCurrentFrame() { return 0; }
     
 #if PLATFORM(MAC)
     // Accessors for native image formats.
@@ -158,15 +169,19 @@ public:
 
 #if PLATFORM(JAVA)
     virtual NativeImagePtr javaImage() { return nativeImageForCurrentFrame(); }
-    virtual void drawImage(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator);
+    virtual void drawImage(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode);
 #endif
 
 #if PLATFORM(QT)
-    static void setPlatformResource(const char* name, const QImage&);
+    static void setPlatformResource(const char* name, const QPixmap&);
+#endif
+
+#if PLATFORM(EFL)
+    virtual Evas_Object* getEvasObject(Evas*) { return 0; }
 #endif
 
     virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform,
-                             const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect);
+        const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal);
 
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
     FloatRect adjustSourceRectForDownSampling(const FloatRect& srcRect, const IntSize& scaledSize) const;
@@ -185,9 +200,10 @@ protected:
 #if PLATFORM(WIN)
     virtual void drawFrameMatchingSourceSize(GraphicsContext*, const FloatRect& dstRect, const IntSize& srcSize, ColorSpace styleColorSpace, CompositeOperator) { }
 #endif
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator) = 0;
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, RespectImageOrientationEnum);
-    void drawTiled(GraphicsContext*, const FloatRect& dstRect, const FloatPoint& srcPoint, const FloatSize& tileSize, ColorSpace styleColorSpace, CompositeOperator);
+    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode) = 0;
+    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, RespectImageOrientationEnum);
+    void drawTiled(GraphicsContext*, const FloatRect& dstRect, const FloatPoint& srcPoint, const FloatSize& tileSize, ColorSpace styleColorSpace,
+        CompositeOperator , BlendMode);
     void drawTiled(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, ColorSpace styleColorSpace, CompositeOperator);
 
     // Supporting tiled drawing
@@ -195,7 +211,7 @@ protected:
     virtual Color solidColor() const { return Color(); }
     
 private:
-    RefPtr<SharedBuffer> m_data; // The encoded raw data for the image. 
+    RefPtr<SharedBuffer> m_encodedImageData;
     ImageObserver* m_imageObserver;
 };
 

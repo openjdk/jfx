@@ -20,21 +20,46 @@
 #ifndef TextureMapperPlatformLayer_h
 #define TextureMapperPlatformLayer_h
 
+#if USE(GRAPHICS_SURFACE)
+#include "GraphicsSurface.h"
+#endif
+
+#include "TextureMapper.h"
 #include "TransformationMatrix.h"
 
 namespace WebCore {
 
-class TextureMapper;
-class BitmapTexture;
-
 class TextureMapperPlatformLayer {
 public:
+    class Client {
+    public:
+        virtual void setPlatformLayerNeedsDisplay() = 0;
+    };
+
+    TextureMapperPlatformLayer() : m_client(0) { }
     virtual ~TextureMapperPlatformLayer() { }
-    virtual void paintToTextureMapper(TextureMapper*, const FloatRect&, const TransformationMatrix& modelViewMatrix = TransformationMatrix(), float opacity = 1.0, BitmapTexture* mask = 0) = 0;
+    virtual void paintToTextureMapper(TextureMapper*, const FloatRect&, const TransformationMatrix& modelViewMatrix = TransformationMatrix(), float opacity = 1.0) = 0;
     virtual void swapBuffers() { }
+    virtual void drawBorder(TextureMapper* textureMapper, const Color& color, float borderWidth, const FloatRect& targetRect, const TransformationMatrix& transform)
+    {
+        textureMapper->drawBorder(color, borderWidth, targetRect, transform);
+    }
+    void setClient(TextureMapperPlatformLayer::Client* client)
+    {
+        m_client = client;
+    }
 #if USE(GRAPHICS_SURFACE)
+    virtual IntSize platformLayerSize() const { return IntSize(); }
     virtual uint32_t copyToGraphicsSurface() { return 0; }
+    virtual GraphicsSurfaceToken graphicsSurfaceToken() const { return GraphicsSurfaceToken(); }
+    virtual GraphicsSurface::Flags graphicsSurfaceFlags() const { return  GraphicsSurface::SupportsTextureTarget | GraphicsSurface::SupportsSharing; }
 #endif
+
+protected:
+    TextureMapperPlatformLayer::Client* client() { return m_client; }
+
+private:
+    TextureMapperPlatformLayer::Client* m_client;
 };
 
 };

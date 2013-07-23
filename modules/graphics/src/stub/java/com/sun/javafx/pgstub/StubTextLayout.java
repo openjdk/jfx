@@ -25,18 +25,13 @@
 
 package com.sun.javafx.pgstub;
 
-import javafx.scene.shape.PathElement;
-import javafx.scene.text.Font;
-
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.scene.text.HitInfo;
-import com.sun.javafx.scene.text.TextLayout;
-import com.sun.javafx.scene.text.TextLine;
-import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.scene.text.*;
+import javafx.scene.shape.PathElement;
+import javafx.scene.text.Font;
 
 public class StubTextLayout implements TextLayout {
 
@@ -50,7 +45,8 @@ public class StubTextLayout implements TextLayout {
     @Override
     public boolean setContent(String text, Object font) {
         this.text = text;
-        this.font = (Font)font;
+        final StubFontLoader.StubFont stub = ((StubFontLoader.StubFont)font);
+        this.font = stub == null ? null : stub.font;
         return true;
     }
 

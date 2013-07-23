@@ -44,14 +44,6 @@ struct HTMLConstructionSiteTask {
     {
     }
 
-    void take(HTMLConstructionSiteTask& other)
-    {
-        parent = other.parent.release();
-        nextChild = other.nextChild.release();
-        child = other.child.release();
-        selfClosing = other.selfClosing;
-    }
-
     RefPtr<ContainerNode> parent;
     RefPtr<Node> nextChild;
     RefPtr<Node> child;
@@ -80,33 +72,35 @@ class HTMLFormElement;
 class HTMLConstructionSite {
     WTF_MAKE_NONCOPYABLE(HTMLConstructionSite);
 public:
-    HTMLConstructionSite(Document*, unsigned maximumDOMTreeDepth);
-    HTMLConstructionSite(DocumentFragment*, FragmentScriptingPermission, unsigned maximumDOMTreeDepth);
+    HTMLConstructionSite(Document*, ParserContentPolicy, unsigned maximumDOMTreeDepth);
+    HTMLConstructionSite(DocumentFragment*, ParserContentPolicy, unsigned maximumDOMTreeDepth);
     ~HTMLConstructionSite();
 
     void detach();
     void executeQueuedTasks();
 
-    void insertDoctype(AtomicHTMLToken&);
-    void insertComment(AtomicHTMLToken&);
-    void insertCommentOnDocument(AtomicHTMLToken&);
-    void insertCommentOnHTMLHtmlElement(AtomicHTMLToken&);
-    void insertHTMLElement(AtomicHTMLToken&);
-    void insertSelfClosingHTMLElement(AtomicHTMLToken&);
-    void insertFormattingElement(AtomicHTMLToken&);
-    void insertHTMLHeadElement(AtomicHTMLToken&);
-    void insertHTMLBodyElement(AtomicHTMLToken&);
-    void insertHTMLFormElement(AtomicHTMLToken&, bool isDemoted = false);
-    void insertScriptElement(AtomicHTMLToken&);
+    void setDefaultCompatibilityMode();
+    void finishedParsing();
+
+    void insertDoctype(AtomicHTMLToken*);
+    void insertComment(AtomicHTMLToken*);
+    void insertCommentOnDocument(AtomicHTMLToken*);
+    void insertCommentOnHTMLHtmlElement(AtomicHTMLToken*);
+    void insertHTMLElement(AtomicHTMLToken*);
+    void insertSelfClosingHTMLElement(AtomicHTMLToken*);
+    void insertFormattingElement(AtomicHTMLToken*);
+    void insertHTMLHeadElement(AtomicHTMLToken*);
+    void insertHTMLBodyElement(AtomicHTMLToken*);
+    void insertHTMLFormElement(AtomicHTMLToken*, bool isDemoted = false);
+    void insertScriptElement(AtomicHTMLToken*);
     void insertTextNode(const String&, WhitespaceMode = WhitespaceUnknown);
-    void insertForeignElement(AtomicHTMLToken&, const AtomicString& namespaceURI);
+    void insertForeignElement(AtomicHTMLToken*, const AtomicString& namespaceURI);
 
-    void insertHTMLHtmlStartTagBeforeHTML(AtomicHTMLToken&);
-    void insertHTMLHtmlStartTagInBody(AtomicHTMLToken&);
-    void insertHTMLBodyStartTagInBody(AtomicHTMLToken&);
+    void insertHTMLHtmlStartTagBeforeHTML(AtomicHTMLToken*);
+    void insertHTMLHtmlStartTagInBody(AtomicHTMLToken*);
+    void insertHTMLBodyStartTagInBody(AtomicHTMLToken*);
 
-    PassRefPtr<Element> createHTMLElement(AtomicHTMLToken&);
-    PassRefPtr<Element> createHTMLElementFromElementRecord(HTMLElementStack::ElementRecord*);
+    PassRefPtr<HTMLStackItem> createElementFromSavedToken(HTMLStackItem*);
 
     bool shouldFosterParent() const;
     void fosterParent(PassRefPtr<Node>);
@@ -117,19 +111,27 @@ public:
     void generateImpliedEndTags();
     void generateImpliedEndTagsWithExclusion(const AtomicString& tagName);
 
+    bool inQuirksMode();
+
     bool isEmpty() const { return !m_openElements.stackDepth(); }
+    HTMLElementStack::ElementRecord* currentElementRecord() const { return m_openElements.topRecord(); }
     Element* currentElement() const { return m_openElements.top(); }
     ContainerNode* currentNode() const { return m_openElements.topNode(); }
-    Element* oneBelowTop() const { return m_openElements.oneBelowTop(); }
-
+    HTMLStackItem* currentStackItem() const { return m_openElements.topStackItem(); }
+    HTMLStackItem* oneBelowTop() const { return m_openElements.oneBelowTop(); }
+    Document* ownerDocumentForCurrentNode();
     HTMLElementStack* openElements() const { return &m_openElements; }
     HTMLFormattingElementList* activeFormattingElements() const { return &m_activeFormattingElements; }
+    bool currentIsRootNode() { return m_openElements.topNode() == m_openElements.rootNode(); }
 
-    Element* head() const { return m_head.get(); }
+    Element* head() const { return m_head->element(); }
+    HTMLStackItem* headStackItem() const { return m_head.get(); }
 
     void setForm(HTMLFormElement*);
     HTMLFormElement* form() const { return m_form.get(); }
     PassRefPtr<HTMLFormElement> takeForm();
+
+    ParserContentPolicy parserContentPolicy() { return m_parserContentPolicy; }
 
     class RedirectToFosterParentGuard {
         WTF_MAKE_NONCOPYABLE(RedirectToFosterParentGuard);
@@ -156,14 +158,17 @@ private:
     // tokens produce only one DOM mutation.
     typedef Vector<HTMLConstructionSiteTask, 1> AttachmentQueue;
 
+    void setCompatibilityMode(Document::CompatibilityMode);
+    void setCompatibilityModeFromDoctype(const String& name, const String& publicId, const String& systemId);
+
     void attachLater(ContainerNode* parent, PassRefPtr<Node> child, bool selfClosing = false);
 
     void findFosterSite(HTMLConstructionSiteTask&);
 
-    PassRefPtr<Element> createHTMLElementFromSavedElement(Element*);
-    PassRefPtr<Element> createElement(AtomicHTMLToken&, const AtomicString& namespaceURI);
+    PassRefPtr<Element> createHTMLElement(AtomicHTMLToken*);
+    PassRefPtr<Element> createElement(AtomicHTMLToken*, const AtomicString& namespaceURI);
 
-    void mergeAttributesFromTokenIntoElement(AtomicHTMLToken&, Element*);
+    void mergeAttributesFromTokenIntoElement(AtomicHTMLToken*, Element*);
     void dispatchDocumentElementAvailableIfNeeded();
 
     Document* m_document;
@@ -173,14 +178,14 @@ private:
     // and a Document in all other cases.
     ContainerNode* m_attachmentRoot;
     
-    RefPtr<Element> m_head;
+    RefPtr<HTMLStackItem> m_head;
     RefPtr<HTMLFormElement> m_form;
     mutable HTMLElementStack m_openElements;
     mutable HTMLFormattingElementList m_activeFormattingElements;
 
     AttachmentQueue m_attachmentQueue;
 
-    FragmentScriptingPermission m_fragmentScriptingPermission;
+    ParserContentPolicy m_parserContentPolicy;
     bool m_isParsingFragment;
 
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#parsing-main-intable
@@ -190,6 +195,8 @@ private:
     bool m_redirectAttachToFosterParent;
 
     unsigned m_maximumDOMTreeDepth;
+
+    bool m_inQuirksMode;
 };
 
 } // namespace WebCore

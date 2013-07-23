@@ -54,27 +54,31 @@ WebInspector.GoToLineDialog = function(view)
 
 /**
  * @param {WebInspector.Panel} panel
+ * @param {function():?WebInspector.View} viewGetter
  */
 WebInspector.GoToLineDialog.install = function(panel, viewGetter)
 {
-    function showGoToLineDialog()
-    {
-         var view = viewGetter();
-         if (view)
-             WebInspector.GoToLineDialog._show(view);
+    var goToLineShortcut = WebInspector.GoToLineDialog.createShortcut();
+    panel.registerShortcuts([goToLineShortcut], WebInspector.GoToLineDialog._show.bind(null, viewGetter));
     }
 
-    var goToLineShortcut = WebInspector.GoToLineDialog.createShortcut();
-    panel.registerShortcut(goToLineShortcut.key, showGoToLineDialog);
-}
-
-WebInspector.GoToLineDialog._show = function(sourceView)
+/**
+ * @param {function():?WebInspector.View} viewGetter
+ * @param {Event=} event
+ * @return {boolean}
+ */
+WebInspector.GoToLineDialog._show = function(viewGetter, event)
 {
+    var sourceView = viewGetter();
     if (!sourceView || !sourceView.canHighlightLine())
-        return;
+        return false;
     WebInspector.Dialog.show(sourceView.element, new WebInspector.GoToLineDialog(sourceView));
+    return true;
 }
 
+/**
+ * @return {!WebInspector.KeyboardShortcut.Descriptor}
+ */
 WebInspector.GoToLineDialog.createShortcut = function()
 {
     var isMac = WebInspector.isMac();
@@ -108,7 +112,7 @@ WebInspector.GoToLineDialog.prototype = {
     onEnter: function()
     {
         this._applyLineNumber();
-    }
-}
+    },
 
-WebInspector.GoToLineDialog.prototype.__proto__ = WebInspector.DialogDelegate.prototype;
+    __proto__: WebInspector.DialogDelegate.prototype
+    }

@@ -193,12 +193,7 @@ public class AccessibleStage implements AccessibleProvider,
             }
             // use the logic for instanceof later when public API is reviewed. For now use reflection
             try {
-                Method method = n.getClass().getMethod("impl_getAccessible");
-                if( method != null)
-                    curaccNode = (AccessibleNode)method.invoke(n) ;
-                /* if( n instanceof Accessible ) { // use this logic later when public API is reviewed. For now use reflection above
-                * Accessible aN = (Accessible)n;
-                curaccNode = (AccessibleNode)aN.impl_getAccessible() ; */
+                curaccNode = (AccessibleNode)n.impl_getAccessible() ; 
                 if ( curaccNode != null ) { // Control has an accessible implementation
                     if (logger.isLoggable(Level.FINER)) {
                         logger.finer(this.toString()+ "initAccessibleHierarchy: Found Accessible.");
@@ -206,7 +201,6 @@ public class AccessibleStage implements AccessibleProvider,
                         logger.finer(this.toString()+ "  control type=" + curaccNode.getPropertyValue(PropertyIds.CONTROL_TYPE));
                     }
                     // get native accessible for this node from glass
-                  //  curaccNode.accElement = AccessibleBaseProvider.createProvider(curaccNode);
                     curaccNode.accElement = stage.impl_getPeer().accessibleCreateBasicProvider(curaccNode);
                     curaccNode.accController = this;
                     currChildren.add(curaccNode);

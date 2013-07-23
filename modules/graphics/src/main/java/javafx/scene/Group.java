@@ -30,6 +30,7 @@ import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.collections.ObservableList;
+import javafx.geometry.Bounds;
 
 
 
@@ -152,34 +153,29 @@ public  class Group extends Parent {
         return super.getChildren();
     }
 
+
     @Override
-    protected double computePrefWidth(double height) {
-        if (isAutoSizeChildren()) {
-            return super.computePrefWidth(height);
-        } else {
-            return getLayoutBounds().getWidth();
-        }
+    protected Bounds impl_computeLayoutBounds() {
+        layout(); // Needs to done prematurely, as we otherwise don't know the bounds of the children
+        return super.impl_computeLayoutBounds();
     }
-    
-    
-    @Override
-    protected double computePrefHeight(double width) {
-        if (isAutoSizeChildren()) {
-            return super.computePrefHeight(width);
-        } else {
-            return getLayoutBounds().getHeight();
-        }
-    }
-    
+
     /**
      * Group defines the preferred width as simply being the width of its layout bounds, which
      * in turn is simply the sum of the positions & widths of all of its children. That is,
      * the preferred width is the one that it is at, because a Group cannot be resized.
      *
+     * Note: as the layout bounds in autosize Group depend on the Group to be already laid-out,
+     * this call will do the layout of the Group if necessary.
+     *
      * @param height This parameter is ignored by Group
      * @return The layout bounds width
      */
-    @Override public double prefWidth(double height) {
+    @Override
+    public double prefWidth(double height) {
+        if (isAutoSizeChildren()) {
+            layout();
+        }
         return getLayoutBounds().getWidth();
     }
 
@@ -188,12 +184,20 @@ public  class Group extends Parent {
      * in turn is simply the sum of the positions & heights of all of its children. That is,
      * the preferred height is the one that it is at, because a Group cannot be resized.
      *
+     * Note: as the layout bounds in autosize Group depend on the Group to be already laid-out,
+     * this call will do the layout of the Group if necessary.
+     *
      * @param width This parameter is ignored by Group
      * @return The layout bounds height
      */
-    @Override public double prefHeight(double width) {
+    @Override
+    public double prefHeight(double width) {
+        if (isAutoSizeChildren()) {
+            layout();
+        }
         return getLayoutBounds().getHeight();
     }
+
 
     @Override
     public double minHeight(double width) {

@@ -37,12 +37,6 @@
 
 namespace WebCore {
     
-static inline bool shouldDispatchScrollEventSynchronously(Document* document)
-{
-    ASSERT_ARG(document, document);
-    return applicationIsSafari() && (document->url().protocolIs("feed") || document->url().protocolIs("feeds"));
-}
-
 class DocumentEventQueueTimer : public SuspendableTimer {
     WTF_MAKE_NONCOPYABLE(DocumentEventQueueTimer);
 public:
@@ -95,11 +89,6 @@ void DocumentEventQueue::enqueueOrDispatchScrollEvent(PassRefPtr<Node> target, S
     bool canBubble = targetType == ScrollEventDocumentTarget;
     RefPtr<Event> scrollEvent = Event::create(eventNames().scrollEvent, canBubble, false /* non cancelleable */);
      
-    if (shouldDispatchScrollEventSynchronously(target->document())) {
-        target->dispatchEvent(scrollEvent.release());
-        return;
-    }
-
     if (!m_nodesWithQueuedScrollEvents.add(target.get()).isNewEntry)
         return;
 
@@ -138,7 +127,7 @@ void DocumentEventQueue::pendingEventTimerFired()
     RefPtr<DocumentEventQueue> protector(this);
 
     while (!m_queuedEvents.isEmpty()) {
-        ListHashSet<RefPtr<Event> >::iterator iter = m_queuedEvents.begin();
+        ListHashSet<RefPtr<Event>, 16>::iterator iter = m_queuedEvents.begin();
         RefPtr<Event> event = *iter;
         m_queuedEvents.remove(iter);
         if (!event)

@@ -26,11 +26,7 @@
 #include "config.h"
 #include "CookieStorage.h"
 
-#include "CookieStorageCFNet.h"
-
-#if USE(CFNETWORK) || USE(CFURLSTORAGESESSIONS)
-
-#include "ResourceHandle.h"
+#include "NetworkStorageSession.h"
 #include <wtf/MainThread.h>
 
 #if PLATFORM(MAC)
@@ -41,75 +37,16 @@
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #endif
 
-#if USE(PLATFORM_STRATEGIES)
-#include "CookiesStrategy.h"
-#include "PlatformStrategies.h"
-#endif
-
-#endif
-
 namespace WebCore {
 
 #if PLATFORM(WIN)
 
-static RetainPtr<CFHTTPCookieStorageRef>& cookieStorageOverride()
-{
-    DEFINE_STATIC_LOCAL(RetainPtr<CFHTTPCookieStorageRef>, cookieStorage, ());
-    return cookieStorage;
-}
-
-#endif
-
-#if USE(CFNETWORK) || USE(CFURLSTORAGESESSIONS)
-
-RetainPtr<CFHTTPCookieStorageRef> currentCFHTTPCookieStorage()
-{
-#if PLATFORM(WIN)
-    if (RetainPtr<CFHTTPCookieStorageRef>& override = cookieStorageOverride())
-        return override;
-#endif
-
-#if USE(CFNETWORK) || USE(CFURLSTORAGESESSIONS)
-    if (CFURLStorageSessionRef session = ResourceHandle::currentStorageSession())
-        return RetainPtr<CFHTTPCookieStorageRef>(AdoptCF, wkCopyHTTPCookieStorage(session));
-#endif
-
-#if USE(CFNETWORK)
-    return wkGetDefaultHTTPCookieStorage();
-#else
-    // When using NSURLConnection, we also use its default cookie storage.
-    return 0;
-#endif
-}
-
-#endif // USE(CFNETWORK) || USE(CFURLSTORAGESESSIONS)
-
-#if USE(CFNETWORK) && PLATFORM(WIN)
-
-void overrideCookieStorage(CFHTTPCookieStorageRef cookieStorage)
-{
-    ASSERT(isMainThread());
-    // FIXME: Why don't we retain it? The only caller is an API method that takes cookie storage as a raw argument.
-    cookieStorageOverride().adoptCF(cookieStorage);
-}
-
-void setCookieStoragePrivateBrowsingEnabled(bool)
-{
-    ASSERT(isMainThread());
-
-    // Nothing to do here - we'll just use a private session from ResourceHandle.
-
-    // FIXME: When Private Browsing is enabled, the Private Browsing Cookie Storage should be
-    // observed for changes, not the default Cookie Storage.
-}
+static CookieChangeCallbackPtr cookieChangeCallback;
 
 static void notifyCookiesChangedOnMainThread(void*)
 {
     ASSERT(isMainThread());
-
-#if USE(PLATFORM_STRATEGIES)
-    platformStrategies()->cookiesStrategy()->notifyCookiesChanged();
-#endif
+    cookieChangeCallback();
 }
 
 static void notifyCookiesChanged(CFHTTPCookieStorageRef, void *)
@@ -128,14 +65,17 @@ static inline CFRunLoopRef cookieStorageObserverRunLoop()
     return loaderRunLoop();
 }
 
-void startObservingCookieChanges()
+void startObservingCookieChanges(CookieChangeCallbackPtr callback)
 {
     ASSERT(isMainThread());
+
+    ASSERT(!cookieChangeCallback);
+    cookieChangeCallback = callback;
 
     CFRunLoopRef runLoop = cookieStorageObserverRunLoop();
     ASSERT(runLoop);
 
-    RetainPtr<CFHTTPCookieStorageRef> cookieStorage = currentCFHTTPCookieStorage();
+    RetainPtr<CFHTTPCookieStorageRef> cookieStorage = NetworkStorageSession::defaultStorageSession().cookieStorage();
     ASSERT(cookieStorage);
 
     CFHTTPCookieStorageScheduleWithRunLoop(cookieStorage.get(), runLoop, kCFRunLoopCommonModes);
@@ -146,16 +86,18 @@ void stopObservingCookieChanges()
 {
     ASSERT(isMainThread());
 
+    cookieChangeCallback = 0;
+
     CFRunLoopRef runLoop = cookieStorageObserverRunLoop();
     ASSERT(runLoop);
 
-    RetainPtr<CFHTTPCookieStorageRef> cookieStorage = currentCFHTTPCookieStorage();
+    RetainPtr<CFHTTPCookieStorageRef> cookieStorage = NetworkStorageSession::defaultStorageSession().cookieStorage();
     ASSERT(cookieStorage);
 
     CFHTTPCookieStorageRemoveObserver(cookieStorage.get(), runLoop, kCFRunLoopDefaultMode, notifyCookiesChanged, 0);
     CFHTTPCookieStorageUnscheduleFromRunLoop(cookieStorage.get(), runLoop, kCFRunLoopCommonModes);
 }
 
-#endif // USE(CFNETWORK) && PLATFORM(WIN)
+#endif // PLATFORM(WIN)
 
 } // namespace WebCore

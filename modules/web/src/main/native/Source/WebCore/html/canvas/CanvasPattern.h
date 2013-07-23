@@ -26,25 +26,24 @@
 #ifndef CanvasPattern_h
 #define CanvasPattern_h
 
-#include "Pattern.h"
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
     class Image;
+class Pattern;
 
     typedef int ExceptionCode;
 
     class CanvasPattern : public RefCounted<CanvasPattern> {
     public:
-        static void parseRepetitionType(const String&, bool& repeatX, bool& repeatY, ExceptionCode&);
+    static PassRefPtr<CanvasPattern> create(PassRefPtr<Image>, bool repeatX, bool repeatY, bool originClean);
+    ~CanvasPattern();
 
-        static PassRefPtr<CanvasPattern> create(PassRefPtr<Image> image, bool repeatX, bool repeatY, bool originClean)
-        {
-            return adoptRef(new CanvasPattern(image, repeatX, repeatY, originClean));
-        }
+        static void parseRepetitionType(const String&, bool& repeatX, bool& repeatY, ExceptionCode&);
 
         Pattern* pattern() const { return m_pattern.get(); }
 

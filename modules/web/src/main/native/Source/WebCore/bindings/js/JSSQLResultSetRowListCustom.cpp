@@ -35,6 +35,7 @@
 #include "ExceptionCode.h"
 #include "SQLValue.h"
 #include "SQLResultSetRowList.h"
+#include <runtime/ObjectConstructor.h>
 
 using namespace JSC;
 
@@ -63,7 +64,7 @@ JSValue JSSQLResultSetRowList::item(ExecState* exec)
 
         switch (value.type()) {
             case SQLValue::StringValue:
-              jsValue = jsString(exec, value.string());
+              jsValue = jsStringWithCache(exec, value.string());
               break;
           case SQLValue::NullValue:
               jsValue = jsNull();
@@ -75,7 +76,7 @@ JSValue JSSQLResultSetRowList::item(ExecState* exec)
               ASSERT_NOT_REACHED();
         }
 
-        object->putDirect(exec->globalData(), Identifier(exec, stringToUString(m_impl->columnNames()[i])), jsValue, DontDelete | ReadOnly);
+        object->putDirect(exec->vm(), Identifier(exec, m_impl->columnNames()[i]), jsValue, DontDelete | ReadOnly);
     }
 
     return object;

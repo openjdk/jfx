@@ -26,32 +26,33 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.system.filesystem_mock import MockFileSystem
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.common.net.layouttestresults import LayoutTestResults
-from webkitpy.tool.bot.layouttestresultsreader import *
-from webkitpy.tool.mocktool import MockTool
+from webkitpy.common.host_mock import MockHost
+
+from .layouttestresultsreader import LayoutTestResultsReader
 
 
 class LayoutTestResultsReaderTest(unittest.TestCase):
     def test_missing_layout_test_results(self):
-        tool = MockTool()
-        reader = LayoutTestResultsReader(tool, "/var/logs")
+        host = MockHost()
+        reader = LayoutTestResultsReader(host, "/mock-results", "/var/logs")
         layout_tests_results_path = '/mock-results/full_results.json'
         unit_tests_results_path = '/mock-results/webkit_unit_tests_output.xml'
-        tool.filesystem = MockFileSystem({layout_tests_results_path: None,
+        host.filesystem = MockFileSystem({layout_tests_results_path: None,
                                           unit_tests_results_path: None})
         # Make sure that our filesystem mock functions as we expect.
-        self.assertRaises(IOError, tool.filesystem.read_text_file, layout_tests_results_path)
-        self.assertRaises(IOError, tool.filesystem.read_text_file, unit_tests_results_path)
-        # layout_test_results shouldn't raise even if the results.html file is missing.
-        self.assertEquals(reader.results(), None)
+        self.assertRaises(IOError, host.filesystem.read_text_file, layout_tests_results_path)
+        self.assertRaises(IOError, host.filesystem.read_text_file, unit_tests_results_path)
+        # layout_test_results shouldn't raise even if the results.json file is missing.
+        self.assertIsNone(reader.results())
 
     def test_create_unit_test_results(self):
-        tool = MockTool()
-        reader = LayoutTestResultsReader(tool, "/var/logs")
+        host = MockHost()
+        reader = LayoutTestResultsReader(host, "/mock-results", "/var/logs")
         unit_tests_results_path = '/mock-results/webkit_unit_tests_output.xml'
         no_failures_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <testsuites tests="3" failures="0" disabled="0" errors="0" time="11.35" name="AllTests">
@@ -61,45 +62,59 @@ class LayoutTestResultsReaderTest(unittest.TestCase):
     <testcase name="CrashIfSettingUnsetRowIndex" status="run" time="0.123" classname="RenderTableCellDeathTest" />
   </testsuite>
 </testsuites>"""
-        tool.filesystem = MockFileSystem({unit_tests_results_path: no_failures_xml})
-        self.assertEquals(reader._create_unit_test_results(), [])
+        host.filesystem = MockFileSystem({unit_tests_results_path: no_failures_xml})
+        self.assertEqual(reader._create_unit_test_results(), [])
 
     def test_missing_unit_test_results_path(self):
-        tool = MockTool()
-        tool.port().unit_tests_results_path = lambda: None
-        reader = LayoutTestResultsReader(tool, "/var/logs")
+        host = MockHost()
+        reader = LayoutTestResultsReader(host, "/mock-results", "/var/logs")
         reader._create_layout_test_results = lambda: LayoutTestResults([])
+        reader._create_unit_test_results = lambda: None
         # layout_test_results shouldn't raise even if the unit tests xml file is missing.
-        self.assertNotEquals(reader.results(), None)
-        self.assertEquals(reader.results().failing_tests(), [])
+        self.assertIsNotNone(reader.results(), None)
+        self.assertEqual(reader.results().failing_tests(), [])
 
 
     def test_layout_test_results(self):
-        reader = LayoutTestResultsReader(MockTool(), "/var/logs")
+        reader = LayoutTestResultsReader(MockHost(), "/mock-results", "/var/logs")
         reader._read_file_contents = lambda path: None
-        self.assertEquals(reader.results(), None)
+        self.assertIsNone(reader.results())
         reader._read_file_contents = lambda path: ""
-        self.assertEquals(reader.results(), None)
+        self.assertIsNone(reader.results())
         reader._create_layout_test_results = lambda: LayoutTestResults([])
         results = reader.results()
-        self.assertNotEquals(results, None)
-        self.assertEquals(results.failure_limit_count(), 30)  # This value matches RunTests.NON_INTERACTIVE_FAILURE_LIMIT_COUNT
+        self.assertIsNotNone(results)
+        self.assertEqual(results.failure_limit_count(), 30)  # This value matches RunTests.NON_INTERACTIVE_FAILURE_LIMIT_COUNT
 
     def test_archive_last_layout_test_results(self):
-        tool = MockTool()
-        reader = LayoutTestResultsReader(tool, "/var/logs")
-        patch = tool.bugs.fetch_attachment(10001)
-        tool.filesystem = MockFileSystem()
-        # Should fail because the results_directory does not exist.
-        expected_stderr = "/mock-results does not exist, not archiving.\n"
-        archive = OutputCapture().assert_outputs(self, reader.archive, [patch], expected_stderr=expected_stderr)
-        self.assertEqual(archive, None)
-
+        host = MockHost()
         results_directory = "/mock-results"
-        # Sanity check what we assume our mock results directory is.
-        self.assertEqual(reader._results_directory(), results_directory)
-        tool.filesystem.maybe_make_directory(results_directory)
-        self.assertTrue(tool.filesystem.exists(results_directory))
+        reader = LayoutTestResultsReader(host, results_directory, "/var/logs")
+        patch = host.bugs.fetch_attachment(10001)
+        host.filesystem = MockFileSystem()
+        # Should fail because the results_directory does not exist.
+        expected_logs = "/mock-results does not exist, not archiving.\n"
+        archive = OutputCapture().assert_outputs(self, reader.archive, [patch], expected_logs=expected_logs)
+        self.assertIsNone(archive)
 
-        self.assertNotEqual(reader.archive(patch), None)
-        self.assertFalse(tool.filesystem.exists(results_directory))
+        host.filesystem.maybe_make_directory(results_directory)
+        self.assertTrue(host.filesystem.exists(results_directory))
+
+        self.assertIsNotNone(reader.archive(patch))
+        self.assertFalse(host.filesystem.exists(results_directory))
+
+    def test_archive_last_layout_test_results_with_relative_path(self):
+        host = MockHost()
+        results_directory = "/mock-checkout/layout-test-results"
+
+        host.filesystem.maybe_make_directory(results_directory)
+        host.filesystem.maybe_make_directory('/var/logs')
+        self.assertTrue(host.filesystem.exists(results_directory))
+
+        host.filesystem.chdir('/var')
+        reader = LayoutTestResultsReader(host, results_directory, 'logs')
+        patch = host.bugs.fetch_attachment(10001)
+        # Should fail because the results_directory does not exist.
+        self.assertIsNotNone(reader.archive(patch))
+        self.assertEqual(host.workspace.source_path, results_directory)
+        self.assertEqual(host.workspace.zip_path, '/var/logs/50000-layout-test-results.zip')

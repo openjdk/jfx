@@ -31,13 +31,13 @@
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
 #include "PlatformCAAnimation.h"
-#include "PlatformString.h"
 #include <wtf/HashMap.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -52,7 +52,7 @@ public:
     virtual GraphicsLayer::CompositingCoordinatesOrientation platformCALayerContentsOrientation() const = 0;
     virtual void platformCALayerPaintContents(GraphicsContext&, const IntRect& inClip) = 0;
     virtual bool platformCALayerShowDebugBorders() const = 0;
-    virtual bool platformCALayerShowRepaintCounter() const = 0;
+    virtual bool platformCALayerShowRepaintCounter(PlatformCALayer*) const = 0;
     virtual int platformCALayerIncrementRepaintCount() = 0;
     
     virtual bool platformCALayerContentsOpaque() const = 0;

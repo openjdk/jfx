@@ -2,17 +2,19 @@ package com.javafx.experiments.shape3d;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableFloatArray;
+import javafx.collections.ObservableIntegerArray;
 
 /**
  * A Mesh where each face can be a Polygon
  *
- * TODO convert to using ObservableFloatArray and ObservableIntegerArray
+ * TODO convert to using ObservableIntegerArray
  */
 public class PolygonMesh {
     private final ObservableFloatArray points = FXCollections.observableFloatArray();
     private final ObservableFloatArray texCoords = FXCollections.observableFloatArray();
-    public int[][] faces;
-    protected int numEdgesInFaces = -1;
+    public int[][] faces = new int[0][0];
+    private final ObservableIntegerArray faceSmoothingGroups = FXCollections.observableIntegerArray();
+    protected int numEdgesInFaces = -1; // TODO invalidate automatically by listening to faces (whenever it is an observable)
 
     public PolygonMesh() {}
 
@@ -30,6 +32,10 @@ public class PolygonMesh {
         return texCoords;
     }
     
+    public ObservableIntegerArray getFaceSmoothingGroups() {
+        return faceSmoothingGroups;
+    }
+     
     public int getNumEdgesInFaces() {
         if (numEdgesInFaces == -1) {
             numEdgesInFaces = 0;

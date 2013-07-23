@@ -26,14 +26,12 @@
 package javafx.scene.shape;
 
 
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-
 import com.sun.javafx.geom.QuadCurve2D;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGQuadCurve;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGQuadCurve;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
 import javafx.scene.paint.Paint;
 
 
@@ -335,12 +333,8 @@ public  class QuadCurve extends Shape {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGQuadCurve();
-    }
-
-    PGQuadCurve getPGQuadCurve() {
-        return (PGQuadCurve)impl_getPGNode();
+    protected NGNode impl_createPeer() {
+        return new NGQuadCurve();
     }
 
     /**
@@ -365,11 +359,11 @@ public  class QuadCurve extends Shape {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            PGQuadCurve peer = getPGQuadCurve();
+            final NGQuadCurve peer = impl_getPeer();
             peer.updateQuadCurve((float)getStartX(),
                 (float)getStartY(),
                 (float)getEndX(),

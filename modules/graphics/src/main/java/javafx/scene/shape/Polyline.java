@@ -25,26 +25,18 @@
 
 package javafx.scene.shape;
 
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-import javafx.scene.paint.Color;
-
 import com.sun.javafx.collections.TrackableObservableList;
-import javafx.css.CssMetaData;
-import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGPolyline;
-import com.sun.javafx.sg.PGShape.Mode;
-import com.sun.javafx.tk.Toolkit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import javafx.beans.value.WritableValue;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGPolyline;
+import com.sun.javafx.sg.prism.NGShape;
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
 import javafx.css.StyleableProperty;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
 /**
@@ -118,12 +110,8 @@ public  class Polyline extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGPolyline();
-    }
-
-    PGPolyline getPGPolyline() {
-        return (PGPolyline)impl_getPGNode();
+    protected NGNode impl_createPeer() {
+        return new NGPolyline();
     }
 
     /**
@@ -132,12 +120,12 @@ public  class Polyline extends Shape {
      */
     @Deprecated
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        if (impl_mode == Mode.EMPTY || getPoints().size() <= 1) {
+        if (impl_mode == NGShape.Mode.EMPTY || getPoints().size() <= 1) {
             return bounds.makeEmpty();
         }
 
         if (getPoints().size() == 2) {
-            if (impl_mode == Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+            if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
                 return bounds.makeEmpty();
             }
             double upad = getStrokeWidth();
@@ -175,8 +163,8 @@ public  class Polyline extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
             final int numValidPoints = getPoints().size() & ~1;
@@ -184,7 +172,8 @@ public  class Polyline extends Shape {
             for (int i = 0; i < numValidPoints; i++) {
                 points_array[i] = (float)getPoints().get(i).doubleValue();
             }
-            getPGPolyline().updatePolyline(points_array);
+            final NGPolyline peer = impl_getPeer();
+            peer.updatePolyline(points_array);
         }
     }
 

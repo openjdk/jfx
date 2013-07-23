@@ -58,18 +58,16 @@ void HTMLScriptElement::childrenChanged(bool changedByParser, Node* beforeChange
     ScriptElement::childrenChanged();
 }
 
-void HTMLScriptElement::parseAttribute(const Attribute& attribute)
+void HTMLScriptElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == srcAttr)
-        handleSourceAttribute(attribute.value());
-    else if (attribute.name() == asyncAttr)
+    if (name == srcAttr)
+        handleSourceAttribute(value);
+    else if (name == asyncAttr)
         handleAsyncAttribute();
-    else if (attribute.name() == onloadAttr)
-        setAttributeEventListener(eventNames().loadEvent, createAttributeEventListener(this, attribute));
-    else if (attribute.name() == onbeforeloadAttr)
-        setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, attribute));
+    else if (name == onbeforeloadAttr)
+        setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, name, value));
     else
-        HTMLElement::parseAttribute(attribute);
+        HTMLElement::parseAttribute(name, value);
 }
 
 Node::InsertionNotificationRequest HTMLScriptElement::insertedInto(ContainerNode* insertionPoint)
@@ -83,18 +81,17 @@ void HTMLScriptElement::setText(const String &value)
 {
     RefPtr<Node> protectFromMutationEvents(this);
 
-    ExceptionCode ec = 0;
     int numChildren = childNodeCount();
 
     if (numChildren == 1 && firstChild()->isTextNode()) {
-        toText(firstChild())->setData(value, ec);
+        toText(firstChild())->setData(value, IGNORE_EXCEPTION);
         return;
     }
 
     if (numChildren > 0)
         removeChildren();
 
-    appendChild(document()->createTextNode(value.impl()), ec);
+    appendChild(document()->createTextNode(value.impl()), IGNORE_EXCEPTION);
 }
 
 void HTMLScriptElement::setAsync(bool async)

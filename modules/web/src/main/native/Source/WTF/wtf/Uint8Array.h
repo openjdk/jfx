@@ -39,12 +39,20 @@ public:
     static inline PassRefPtr<Uint8Array> create(const unsigned char* array, unsigned length);
     static inline PassRefPtr<Uint8Array> create(PassRefPtr<ArrayBuffer>, unsigned byteOffset, unsigned length);
 
-    // Can’t use "using" here due to a bug in the RVCT compiler.
-    bool set(TypedArrayBase<unsigned char>* array, unsigned offset) { return TypedArrayBase<unsigned char>::set(array, offset); }
-    void set(unsigned index, double value) { IntegralTypedArrayBase<unsigned char>::set(index, value); }
+    // Should only be used when it is known the entire array will be filled. Do
+    // not return these results directly to JavaScript without filling first.
+    static inline PassRefPtr<Uint8Array> createUninitialized(unsigned length);
+
+    using TypedArrayBase<unsigned char>::set;
+    using IntegralTypedArrayBase<unsigned char>::set;
 
     inline PassRefPtr<Uint8Array> subarray(int start) const;
     inline PassRefPtr<Uint8Array> subarray(int start, int end) const;
+
+    virtual ViewType getType() const
+    {
+        return TypeUint8;
+    }
 
 protected:
     inline Uint8Array(PassRefPtr<ArrayBuffer>,
@@ -52,9 +60,6 @@ protected:
                            unsigned length);
     // Make constructor visible to superclass.
     friend class TypedArrayBase<unsigned char>;
-
-    // Overridden from ArrayBufferView.
-    virtual bool isUnsignedByteArray() const { return true; }
 };
 
 PassRefPtr<Uint8Array> Uint8Array::create(unsigned length)
@@ -70,6 +75,11 @@ PassRefPtr<Uint8Array> Uint8Array::create(const unsigned char* array, unsigned l
 PassRefPtr<Uint8Array> Uint8Array::create(PassRefPtr<ArrayBuffer> buffer, unsigned byteOffset, unsigned length)
 {
     return TypedArrayBase<unsigned char>::create<Uint8Array>(buffer, byteOffset, length);
+}
+
+PassRefPtr<Uint8Array> Uint8Array::createUninitialized(unsigned length)
+{
+    return TypedArrayBase<unsigned char>::createUninitialized<Uint8Array>(length);
 }
 
 Uint8Array::Uint8Array(PassRefPtr<ArrayBuffer> buffer, unsigned byteOffset, unsigned length)

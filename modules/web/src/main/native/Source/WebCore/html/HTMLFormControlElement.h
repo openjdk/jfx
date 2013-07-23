@@ -58,28 +58,22 @@ public:
     virtual bool formControlValueMatchesRenderer() const { return m_valueMatchesRenderer; }
     virtual void setFormControlValueMatchesRenderer(bool b) { m_valueMatchesRenderer = b; }
 
-    virtual bool wasChangedSinceLastFormControlChangeEvent() const;
-    virtual void setChangedSinceLastFormControlChangeEvent(bool);
+    bool wasChangedSinceLastFormControlChangeEvent() const { return m_wasChangedSinceLastFormControlChangeEvent; }
+    void setChangedSinceLastFormControlChangeEvent(bool);
 
     virtual void dispatchFormControlChangeEvent();
-    virtual void dispatchFormControlInputEvent();
+    void dispatchFormControlInputEvent();
 
-    virtual bool disabled() const;
-    void setDisabled(bool);
+    virtual bool isDisabledFormControl() const OVERRIDE;
 
-    virtual bool isFocusable() const;
+    virtual bool isFocusable() const OVERRIDE;
     virtual bool isEnumeratable() const { return false; }
 
-    // Determines whether or not a control will be automatically focused.
-    virtual bool autofocus() const;
-
-    bool required() const;
+    bool isRequired() const;
 
     const AtomicString& type() const { return formControlType(); }
 
-    virtual const AtomicString& formControlType() const OVERRIDE = 0;
-    virtual bool isEnabledFormControl() const { return !disabled(); }
-    virtual bool isReadOnlyFormControl() const { return readOnly(); }
+    virtual const AtomicString& formControlType() const = 0;
 
     virtual bool canTriggerImplicitSubmission() const { return false; }
 
@@ -99,7 +93,8 @@ public:
     void setNeedsValidityCheck();
     virtual void setCustomValidity(const String&) OVERRIDE;
 
-    bool readOnly() const { return m_readOnly; }
+    bool isReadOnly() const { return m_isReadOnly; }
+    bool isDisabledOrReadOnly() const { return isDisabledFormControl() || m_isReadOnly; }
 
     bool hasAutofocused() { return m_hasAutofocused; }
     void setAutofocused() { m_hasAutofocused = true; }
@@ -112,7 +107,7 @@ public:
 protected:
     HTMLFormControlElement(const QualifiedName& tagName, Document*, HTMLFormElement*);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual void requiredAttributeChanged();
     virtual void disabledAttributeChanged();
     virtual void attach();
@@ -120,9 +115,9 @@ protected:
     virtual void removedFrom(ContainerNode*) OVERRIDE;
     virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
 
-    virtual bool supportsFocus() const;
-    virtual bool isKeyboardFocusable(KeyboardEvent*) const;
-    virtual bool isMouseFocusable() const;
+    virtual bool supportsFocus() const OVERRIDE;
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
+    virtual bool isMouseFocusable() const OVERRIDE;
 
     virtual void didRecalcStyle(StyleChange) OVERRIDE;
 
@@ -139,19 +134,19 @@ private:
     virtual void derefFormAssociatedElement() { deref(); }
 
     virtual bool isFormControlElement() const { return true; }
+    virtual bool alwaysCreateUserAgentShadowRoot() const OVERRIDE { return true; }
 
-    virtual short tabIndex() const;
+    virtual short tabIndex() const OVERRIDE FINAL;
 
     virtual HTMLFormElement* virtualForm() const;
     virtual bool isDefaultButtonForForm() const;
     virtual bool isValidFormControlElement();
-    String visibleValidationMessage() const;
     void updateAncestorDisabledState() const;
 
     OwnPtr<ValidationMessage> m_validationMessage;
     bool m_disabled : 1;
-    bool m_readOnly : 1;
-    bool m_required : 1;
+    bool m_isReadOnly : 1;
+    bool m_isRequired : 1;
     bool m_valueMatchesRenderer : 1;
 
     enum AncestorDisabledState { AncestorDisabledStateUnknown, AncestorDisabledStateEnabled, AncestorDisabledStateDisabled };
@@ -173,6 +168,20 @@ private:
 
     bool m_hasAutofocused : 1;
 };
+
+inline bool isHTMLFormControlElement(const Node* node)
+{
+    return node->isElementNode() && toElement(node)->isFormControlElement();
+}
+
+inline HTMLFormControlElement* toHTMLFormControlElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLFormControlElement(node));
+    return static_cast<HTMLFormControlElement*>(node);
+}
+
+// This will catch anyone doing an unnecessary cast.
+void toHTMLFormControlElement(const HTMLFormControlElement*);
 
 } // namespace
 

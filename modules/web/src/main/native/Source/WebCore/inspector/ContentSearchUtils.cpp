@@ -36,6 +36,7 @@
 #include "RegularExpression.h"
 
 #include <wtf/BumpPointerAllocator.h>
+#include <wtf/StdLibExtras.h>
 #include <yarr/Yarr.h>
 
 using namespace std;
@@ -63,38 +64,65 @@ static String createSearchRegexSource(const String& text)
     return result;
 }
 
+static inline size_t sizetExtractor(const size_t* value)
+{
+    return *value;
+}
+
+TextPosition textPositionFromOffset(size_t offset, const Vector<size_t>& lineEndings)
+{
+    const size_t* foundLineEnding = approximateBinarySearch<size_t, size_t>(lineEndings, lineEndings.size(), offset, sizetExtractor);
+    size_t lineIndex = foundLineEnding - &lineEndings.at(0);
+    if (offset > *foundLineEnding)
+        ++lineIndex;
+    size_t lineStartOffset = lineIndex > 0 ? lineEndings.at(lineIndex - 1) + 1 : 0;
+    size_t column = offset - lineStartOffset;
+    return TextPosition(OrdinalNumber::fromZeroBasedInt(lineIndex), OrdinalNumber::fromZeroBasedInt(column));
+}
+
 static Vector<pair<int, String> > getRegularExpressionMatchesByLines(const RegularExpression& regex, const String& text)
 {
     Vector<pair<int, String> > result;
     if (text.isEmpty())
         return result;
 
-    int lineNumber = 0;
+    OwnPtr<Vector<size_t> > endings(lineEndings(text));
+    size_t size = endings->size();
     unsigned start = 0;
-    while (start < text.length()) {
-        size_t lineEnd = text.find('\n', start);
-        if (lineEnd == notFound)
-            lineEnd = text.length();
-        else
-            lineEnd++;
-
+    for (size_t lineNumber = 0; lineNumber < size; ++lineNumber) {
+        size_t lineEnd = endings->at(lineNumber);
         String line = text.substring(start, lineEnd - start);
-        if (line.endsWith("\r\n"))
-            line = line.left(line.length() - 2);
-        if (line.endsWith('\n'))
+        if (line.endsWith('\r'))
             line = line.left(line.length() - 1);
 
         int matchLength;
         if (regex.match(line, 0, &matchLength) != -1)
             result.append(pair<int, String>(lineNumber, line));
 
-        start = lineEnd;
-        lineNumber++;
+        start = lineEnd + 1;
     }
     return result;
 }
 
-static PassRefPtr<TypeBuilder::Page::SearchMatch> buildObjectForSearchMatch(int lineNumber, String lineContent)
+PassOwnPtr<Vector<size_t> > lineEndings(const String& text)
+{
+    OwnPtr<Vector<size_t> > result(adoptPtr(new Vector<size_t>()));
+
+    unsigned start = 0;
+    while (start < text.length()) {
+        size_t lineEnd = text.find('\n', start);
+        if (lineEnd == notFound)
+            break;
+
+        result->append(lineEnd);
+        start = lineEnd + 1;
+    }
+    result->append(text.length());
+
+    return result.release();
+}
+
+static PassRefPtr<TypeBuilder::Page::SearchMatch> buildObjectForSearchMatch(int lineNumber, const String& lineContent)
 {
     return TypeBuilder::Page::SearchMatch::create()
         .setLineNumber(lineNumber)
@@ -140,11 +168,22 @@ PassRefPtr<TypeBuilder::Array<TypeBuilder::Page::SearchMatch> > searchInTextByLi
     return result;
 }
 
-static String findMagicComment(const String& content, const String& name)
+static String scriptCommentPattern(const String& name)
 {
-    String patternString = "//@[\040\t]" + name + "=[\040\t]*([^\\s\'\"]*)[\040\t]*$";
+    // "//# <name>=<value>" and deprecated "//@"
+    return "//[#@][\040\t]" + name + "=[\040\t]*([^\\s\'\"]*)[\040\t]*$";
+}
+
+static String stylesheetCommentPattern(const String& name)
+{
+    // "/*# <name>=<value> */" and deprecated "/*@"
+    return "/\\*[#@][\040\t]" + name + "=[\040\t]*([^\\s\'\"]*)[\040\t]*\\*/";
+}
+
+static String findMagicComment(const String& content, const String& patternString)
+{
     const char* error = 0;
-    JSC::Yarr::YarrPattern pattern(JSC::UString(patternString.impl()), false, true, &error);
+    JSC::Yarr::YarrPattern pattern(patternString, false, true, &error);
     ASSERT(!error);
     BumpPointerAllocator regexAllocator;
     OwnPtr<JSC::Yarr::BytecodePattern> bytecodePattern = JSC::Yarr::byteCompile(pattern, &regexAllocator);
@@ -153,21 +192,26 @@ static String findMagicComment(const String& content, const String& name)
     ASSERT(pattern.m_numSubpatterns == 1);
     Vector<int, 4> matches;
     matches.resize(4);
-    unsigned result = JSC::Yarr::interpret(bytecodePattern.get(), JSC::UString(content.impl()), 0, reinterpret_cast<unsigned*>(matches.data()));
+    unsigned result = JSC::Yarr::interpret(bytecodePattern.get(), content, 0, reinterpret_cast<unsigned*>(matches.data()));
     if (result == JSC::Yarr::offsetNoMatch)
         return String();
     ASSERT(matches[2] > 0 && matches[3] > 0);
     return content.substring(matches[2], matches[3] - matches[2]);
 }
 
-String findSourceURL(const String& content)
+String findScriptSourceURL(const String& content)
 {
-    return findMagicComment(content, "sourceURL");
+    return findMagicComment(content, scriptCommentPattern("sourceURL"));
 }
 
-String findSourceMapURL(const String& content)
+String findScriptSourceMapURL(const String& content)
 {
-    return findMagicComment(content, "sourceMappingURL");
+    return findMagicComment(content, scriptCommentPattern("sourceMappingURL"));
+}
+
+String findStylesheetSourceMapURL(const String& content)
+{
+    return findMagicComment(content, stylesheetCommentPattern("sourceMappingURL"));
 }
 
 } // namespace ContentSearchUtils

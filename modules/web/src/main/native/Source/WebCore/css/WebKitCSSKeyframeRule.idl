@@ -26,8 +26,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module css {
-
     // Introduced in DOM Level ?:
     interface WebKitCSSKeyframeRule : CSSRule {
 
@@ -36,4 +34,3 @@ module css {
 
     };
 
-}

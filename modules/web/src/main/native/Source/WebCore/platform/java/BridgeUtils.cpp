@@ -16,14 +16,13 @@
 #include "JSDOMGlobalObject.h"
 #include "JSMainThreadExecState.h"
 #include "JSNode.h"
-#include "PlatformString.h"
 #include "ScriptController.h"
-#include "runtime/UString.h"
 #include "runtime_array.h"
 #include "runtime_object.h"
 #include "runtime_root.h"
 #include <runtime/JSArray.h>
 #include <runtime/JSLock.h>
+#include <wtf/text/WTFString.h>
 #include "com_sun_webkit_dom_JSObject.h"
 
 #if 1
@@ -390,9 +389,8 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_JSObject_toStringImpl
 
     JSC::ExecState* exec = toJS(ctx);
 
-    return WebCore::ustringToString(
-        toJS(object)->toString(exec)->value(exec)
-    ).toJavaString(env).releaseLocal();
+    return toJS(object)->toString(exec)->value(exec)
+        .toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT jobject JNICALL Java_com_sun_webkit_dom_JSObject_callImpl

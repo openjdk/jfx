@@ -25,26 +25,28 @@
 
 package javafx.scene.shape;
 
-import com.sun.javafx.geom.transform.Affine3D;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.Property;
+import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-import javafx.scene.Node;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
-
-import com.sun.javafx.Utils;
-import com.sun.javafx.beans.event.AbstractNotifyListener;
-import com.sun.javafx.collections.TrackableObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
+import javafx.css.StyleableProperty;
+import javafx.scene.Node;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import com.sun.javafx.Utils;
+import com.sun.javafx.beans.event.AbstractNotifyListener;
+import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.PaintConverter;
@@ -52,19 +54,14 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.Area;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PathIterator;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGShape;
-import com.sun.javafx.sg.PGShape.Mode;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.Observable;
-import javafx.beans.property.Property;
-import javafx.collections.ListChangeListener.Change;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
 
 
 /**
@@ -124,48 +121,13 @@ public abstract class Shape extends Node {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
+    protected NGNode impl_createPeer() {
         throw new AssertionError(
             "Subclasses of Shape must implement impl_createPGNode");
     }
 
-    PGShape getPGShape() {
-        return (PGShape) impl_getPGNode();
-    }
-
-    com.sun.javafx.sg.PGShape.StrokeType toPGStrokeType(StrokeType t) {
-        if (t == StrokeType.INSIDE) {
-            return PGShape.StrokeType.INSIDE;
-        } else if (t == StrokeType.OUTSIDE) {
-            return PGShape.StrokeType.OUTSIDE;
-        } else {
-            return PGShape.StrokeType.CENTERED;
-        }
-    }
-
-    com.sun.javafx.sg.PGShape.StrokeLineCap toPGLineCap(StrokeLineCap t) {
-        if (t == StrokeLineCap.SQUARE) {
-            return PGShape.StrokeLineCap.SQUARE;
-        } else if (t == StrokeLineCap.BUTT) {
-            return PGShape.StrokeLineCap.BUTT;
-        } else {
-            return PGShape.StrokeLineCap.ROUND;
-        }
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected com.sun.javafx.sg.PGShape.StrokeLineJoin toPGLineJoin(StrokeLineJoin t) {
-        if (t == StrokeLineJoin.MITER) {
-            return PGShape.StrokeLineJoin.MITER;
-        } else if (t == StrokeLineJoin.BEVEL) {
-            return PGShape.StrokeLineJoin.BEVEL;
-        } else {
-            return PGShape.StrokeLineJoin.ROUND;
-        }
+    StrokeLineJoin convertLineJoin(StrokeLineJoin t) {
+        return t;
     }
 
     public final void setStrokeType(StrokeType value) {
@@ -350,15 +312,15 @@ public abstract class Shape extends Node {
         return getStrokeAttributes().dashArrayProperty();
     }
 
-    private PGShape.Mode computeMode() {
+    private NGShape.Mode computeMode() {
         if (getFill() != null && getStroke() != null) {
-            return PGShape.Mode.STROKE_FILL;
+            return NGShape.Mode.STROKE_FILL;
         } else if (getFill() != null) {
-            return PGShape.Mode.FILL;
+            return NGShape.Mode.FILL;
         } else if (getStroke() != null) {
-            return PGShape.Mode.STROKE;
+            return NGShape.Mode.STROKE;
         } else {
-            return PGShape.Mode.EMPTY;
+            return NGShape.Mode.EMPTY;
         }
     }
 
@@ -367,10 +329,10 @@ public abstract class Shape extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected PGShape.Mode impl_mode = Mode.FILL;
+    protected NGShape.Mode impl_mode = NGShape.Mode.FILL;
 
     private void checkModeChanged() {
-        PGShape.Mode newMode = computeMode();
+        NGShape.Mode newMode = computeMode();
         if (impl_mode != newMode) {
             impl_mode = newMode;
 
@@ -909,6 +871,7 @@ public abstract class Shape extends Node {
     private static final double MIN_STROKE_MITER_LIMIT = 1.0f;
 
     private void updatePGShape() {
+        final NGShape peer = impl_getPeer();
         if (strokeAttributesDirty && (getStroke() != null)) {
             // set attributes of stroke only when stroke paint is not null
             final float[] pgDashArray =
@@ -916,12 +879,12 @@ public abstract class Shape extends Node {
                             ? toPGDashArray(getStrokeDashArray())
                             : DEFAULT_PG_STROKE_DASH_ARRAY;
 
-            getPGShape().setDrawStroke(
+            peer.setDrawStroke(
                         (float)Utils.clampMin(getStrokeWidth(),
                                               MIN_STROKE_WIDTH),
-                        toPGStrokeType(getStrokeType()),
-                        toPGLineCap(getStrokeLineCap()),
-                        toPGLineJoin(getStrokeLineJoin()),
+                        getStrokeType(),
+                        getStrokeLineCap(),
+                        convertLineJoin(getStrokeLineJoin()),
                         (float)Utils.clampMin(getStrokeMiterLimit(),
                                               MIN_STROKE_MITER_LIMIT),
                         pgDashArray, (float)getStrokeDashOffset());
@@ -930,23 +893,23 @@ public abstract class Shape extends Node {
         }
 
         if (impl_isDirty(DirtyBits.SHAPE_MODE)) {
-            getPGShape().setMode(impl_mode);
+            peer.setMode(impl_mode);
         }
 
         if (impl_isDirty(DirtyBits.SHAPE_FILL)) {
             Paint localFill = getFill();
-            getPGShape().setFillPaint(localFill == null ? null :
+            peer.setFillPaint(localFill == null ? null :
                     Toolkit.getPaintAccessor().getPlatformPaint(localFill));
         }
 
         if (impl_isDirty(DirtyBits.SHAPE_STROKE)) {
             Paint localStroke = getStroke();
-            getPGShape().setDrawPaint(localStroke == null ? null :
+            peer.setDrawPaint(localStroke == null ? null :
                     Toolkit.getPaintAccessor().getPlatformPaint(localStroke));
         }
 
         if (impl_isDirty(DirtyBits.NODE_SMOOTH)) {
-            getPGShape().setAntialiased(isSmooth());
+            peer.setAntialiased(isSmooth());
         }
     }
 
@@ -981,8 +944,8 @@ public abstract class Shape extends Node {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
         updatePGShape();
     }
 
@@ -1086,7 +1049,7 @@ public abstract class Shape extends Node {
                                 com.sun.javafx.geom.Shape s)
     {
         // empty mode means no bounds!
-        if (impl_mode == Mode.EMPTY) {
+        if (impl_mode == NGShape.Mode.EMPTY) {
             return bounds.makeEmpty();
         }
 
@@ -1094,18 +1057,18 @@ public abstract class Shape extends Node {
             Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
             Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY,
         };
-        boolean includeShape = (impl_mode != Mode.STROKE);
-        boolean includeStroke = (impl_mode != Mode.FILL);
+        boolean includeShape = (impl_mode != NGShape.Mode.STROKE);
+        boolean includeStroke = (impl_mode != NGShape.Mode.FILL);
         if (includeStroke && (getStrokeType() == StrokeType.INSIDE)) {
             includeShape = true;
             includeStroke = false;
         }
 
         if (includeStroke) {
-            PGShape.StrokeType type = toPGStrokeType(getStrokeType());
+            final StrokeType type = getStrokeType();
             double sw = Utils.clampMin(getStrokeWidth(), MIN_STROKE_WIDTH);
-            PGShape.StrokeLineCap cap = toPGLineCap(getStrokeLineCap());
-            PGShape.StrokeLineJoin join = toPGLineJoin(getStrokeLineJoin());
+            StrokeLineCap cap = getStrokeLineCap();
+            StrokeLineJoin join = convertLineJoin(getStrokeLineJoin());
             float miterlimit =
                 (float) Utils.clampMin(getStrokeMiterLimit(), MIN_STROKE_MITER_LIMIT);
             // Note that we ignore dashing for computing bounds and testing
@@ -1137,12 +1100,12 @@ public abstract class Shape extends Node {
 
     boolean computeShapeContains(double localX, double localY,
                                  com.sun.javafx.geom.Shape s) {
-        if (impl_mode == Mode.EMPTY) {
+        if (impl_mode == NGShape.Mode.EMPTY) {
             return false;
         }
 
-        boolean includeShape = (impl_mode != Mode.STROKE);
-        boolean includeStroke = (impl_mode != Mode.FILL);
+        boolean includeShape = (impl_mode != NGShape.Mode.STROKE);
+        boolean includeStroke = (impl_mode != NGShape.Mode.FILL);
         if (includeStroke && includeShape &&
             (getStrokeType() == StrokeType.INSIDE))
         {
@@ -1156,10 +1119,10 @@ public abstract class Shape extends Node {
         }
 
         if (includeStroke) {
-            PGShape.StrokeType type = toPGStrokeType(getStrokeType());
+            StrokeType type = getStrokeType();
             double sw = Utils.clampMin(getStrokeWidth(), MIN_STROKE_WIDTH);
-            PGShape.StrokeLineCap cap = toPGLineCap(getStrokeLineCap());
-            PGShape.StrokeLineJoin join = toPGLineJoin(getStrokeLineJoin());
+            StrokeLineCap cap = getStrokeLineCap();
+            StrokeLineJoin join = convertLineJoin(getStrokeLineJoin());
             float miterlimit =
                 (float) Utils.clampMin(getStrokeMiterLimit(), MIN_STROKE_MITER_LIMIT);
             // Note that we ignore dashing for computing bounds and testing
@@ -1675,25 +1638,22 @@ public abstract class Shape extends Node {
     }
 
     private Area getTransformedArea(final BaseTransform transform) {
-        if (impl_mode == Mode.EMPTY) {
+        if (impl_mode == NGShape.Mode.EMPTY) {
             return new Area();
         }
 
         final com.sun.javafx.geom.Shape fillShape = impl_configShape();
-        if ((impl_mode == Mode.FILL)
-                || (impl_mode == Mode.STROKE_FILL)
+        if ((impl_mode == NGShape.Mode.FILL)
+                || (impl_mode == NGShape.Mode.STROKE_FILL)
                        && (getStrokeType() == StrokeType.INSIDE)) {
             return createTransformedArea(fillShape, transform);
         }
 
-        final PGShape.StrokeType strokeType =
-                toPGStrokeType(getStrokeType());
+        final StrokeType strokeType = getStrokeType();
         final double strokeWidth =
                 Utils.clampMin(getStrokeWidth(), MIN_STROKE_WIDTH);
-        final PGShape.StrokeLineCap strokeLineCap =
-                toPGLineCap(getStrokeLineCap());
-        final PGShape.StrokeLineJoin strokeLineJoin =
-                toPGLineJoin(getStrokeLineJoin());
+        final StrokeLineCap strokeLineCap = getStrokeLineCap();
+        final StrokeLineJoin strokeLineJoin = convertLineJoin(getStrokeLineJoin());
         final float strokeMiterLimit =
                 (float) Utils.clampMin(getStrokeMiterLimit(),
                                        MIN_STROKE_MITER_LIMIT);
@@ -1708,7 +1668,7 @@ public abstract class Shape extends Node {
                         strokeLineJoin, strokeMiterLimit,
                         dashArray, (float) getStrokeDashOffset());
 
-        if (impl_mode == Mode.STROKE) {
+        if (impl_mode == NGShape.Mode.STROKE) {
             return createTransformedArea(strokeShape, transform);
         }
 

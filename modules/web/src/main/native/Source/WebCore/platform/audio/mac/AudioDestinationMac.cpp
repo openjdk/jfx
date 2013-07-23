@@ -32,48 +32,57 @@
 
 #include "AudioDestinationMac.h"
 
-#include "AudioSourceProvider.h"
+#include "AudioIOCallback.h"
+#include "AudioSessionManager.h"
 #include "FloatConversion.h"
+#include "Logging.h"
+#include "VectorMath.h"
 #include <CoreAudio/AudioHardware.h>
 
 namespace WebCore {
 
 const int kBufferSize = 128;
+const float kLowThreshold = -1;
+const float kHighThreshold = 1;
 
 // Factory method: Mac-implementation
-PassOwnPtr<AudioDestination> AudioDestination::create(AudioSourceProvider& provider, float sampleRate)
+PassOwnPtr<AudioDestination> AudioDestination::create(AudioIOCallback& callback, const String&, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
 {
-    return adoptPtr(new AudioDestinationMac(provider, sampleRate));
+    // FIXME: make use of inputDeviceId as appropriate.
+
+    // FIXME: Add support for local/live audio input.
+    if (numberOfInputChannels)
+        LOG(Media, "AudioDestination::create(%u, %u, %f) - unhandled input channels", numberOfInputChannels, numberOfOutputChannels, sampleRate);
+
+    // FIXME: Add support for multi-channel (> stereo) output.
+    if (numberOfOutputChannels != 2)
+        LOG(Media, "AudioDestination::create(%u, %u, %f) - unhandled output channels", numberOfInputChannels, numberOfOutputChannels, sampleRate);
+
+    return adoptPtr(new AudioDestinationMac(callback, sampleRate));
 }
 
 float AudioDestination::hardwareSampleRate()
 {
     // Determine the default output device's sample-rate.
-    AudioDeviceID deviceID = kAudioDeviceUnknown;
-    UInt32 infoSize = sizeof(deviceID);
-
-    AudioObjectPropertyAddress defaultOutputDeviceAddress = { kAudioHardwarePropertyDefaultOutputDevice, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster };
-    OSStatus result = AudioObjectGetPropertyData(kAudioObjectSystemObject, &defaultOutputDeviceAddress, 0, 0, &infoSize, (void*)&deviceID);
-    if (result)
-        return 0; // error
-
-    Float64 nominalSampleRate;
-    infoSize = sizeof(Float64);
-
-    AudioObjectPropertyAddress nominalSampleRateAddress = { kAudioDevicePropertyNominalSampleRate, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster };
-    result = AudioObjectGetPropertyData(deviceID, &nominalSampleRateAddress, 0, 0, &infoSize, (void*)&nominalSampleRate);
-    if (result)
-        return 0; // error
-
-    return narrowPrecisionToFloat(nominalSampleRate);
+    return AudioSession::sharedSession().sampleRate();
 }
 
-AudioDestinationMac::AudioDestinationMac(AudioSourceProvider& provider, float sampleRate)
+unsigned long AudioDestination::maxChannelCount()
+{
+    // FIXME: query the default audio hardware device to return the actual number
+    // of channels of the device. Also see corresponding FIXME in create().
+    // There is a small amount of code which assumes stereo in AudioDestinationMac which
+    // can be upgraded.
+    return 0;
+}
+
+AudioDestinationMac::AudioDestinationMac(AudioIOCallback& callback, float sampleRate)
     : m_outputUnit(0)
-    , m_provider(provider)
-    , m_renderBus(2, kBufferSize, false)
+    , m_callback(callback)
+    , m_renderBus(AudioBus::create(2, kBufferSize, false))
     , m_sampleRate(sampleRate)
     , m_isPlaying(false)
+    , m_audioSessionManagerToken(AudioSessionManagerToken::create(AudioSessionManager::WebAudio))
 {
     // Open and initialize DefaultOutputUnit
     AudioComponent comp;
@@ -125,11 +134,6 @@ void AudioDestinationMac::configure()
 
     result = AudioUnitSetProperty(m_outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, (void*)&streamFormat, sizeof(AudioStreamBasicDescription));
     ASSERT(!result);
-
-    // Set the buffer frame size.
-    UInt32 bufferSize = kBufferSize;
-    result = AudioUnitSetProperty(m_outputUnit, kAudioDevicePropertyBufferFrameSize, kAudioUnitScope_Output, 0, (void*)&bufferSize, sizeof(bufferSize));
-    ASSERT(!result);
 }
 
 void AudioDestinationMac::start()
@@ -152,10 +156,17 @@ void AudioDestinationMac::stop()
 OSStatus AudioDestinationMac::render(UInt32 numberOfFrames, AudioBufferList* ioData)
 {
     AudioBuffer* buffers = ioData->mBuffers;
-    m_renderBus.setChannelMemory(0, (float*)buffers[0].mData, numberOfFrames);
-    m_renderBus.setChannelMemory(1, (float*)buffers[1].mData, numberOfFrames);
+    m_renderBus->setChannelMemory(0, (float*)buffers[0].mData, numberOfFrames);
+    m_renderBus->setChannelMemory(1, (float*)buffers[1].mData, numberOfFrames);
 
-    m_provider.provideInput(&m_renderBus, numberOfFrames);
+    // FIXME: Add support for local/live audio input.
+    m_callback.render(0, m_renderBus.get(), numberOfFrames);
+
+    // Clamp values at 0db (i.e., [-1.0, 1.0])
+    for (unsigned i = 0; i < m_renderBus->numberOfChannels(); ++i) {
+        AudioChannel* channel = m_renderBus->channel(i);
+        VectorMath::vclip(channel->data(), 1, &kLowThreshold, &kHighThreshold, channel->mutableData(), 1, numberOfFrames);
+    }
 
     return noErr;
 }

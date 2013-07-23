@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,12 +33,13 @@
 #define EditingStyle_h
 
 #include "CSSPropertyNames.h"
-#include "PlatformString.h"
 #include "WritingDirection.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TriState.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -48,6 +50,7 @@ class CSSValue;
 class Document;
 class Element;
 class HTMLElement;
+class MutableStylePropertySet;
 class Node;
 class Position;
 class QualifiedName;
@@ -55,8 +58,6 @@ class RenderStyle;
 class StylePropertySet;
 class StyledElement;
 class VisibleSelection;
-
-enum TriState { FalseTriState, TrueTriState, MixedTriState };
 
 class EditingStyle : public RefCounted<EditingStyle> {
 public:
@@ -98,10 +99,10 @@ public:
 
     ~EditingStyle();
 
-    StylePropertySet* style() { return m_mutableStyle.get(); }
+    MutableStylePropertySet* style() { return m_mutableStyle.get(); }
     bool textDirection(WritingDirection&) const;
     bool isEmpty() const;
-    void setStyle(PassRefPtr<StylePropertySet>);
+    void setStyle(PassRefPtr<MutableStylePropertySet>);
     void overrideWithStyle(const StylePropertySet*);
     void clear();
     PassRefPtr<EditingStyle> copy() const;
@@ -150,8 +151,8 @@ private:
     EditingStyle();
     EditingStyle(Node*, PropertiesToInclude);
     EditingStyle(const Position&, PropertiesToInclude);
-    EditingStyle(const StylePropertySet*);
-    EditingStyle(const CSSStyleDeclaration*);
+    explicit EditingStyle(const StylePropertySet*);
+    explicit EditingStyle(const CSSStyleDeclaration*);
     EditingStyle(CSSPropertyID, const String& value);
     void init(Node*, PropertiesToInclude);
     void removeTextFillAndStrokeColorsIfNeeded(RenderStyle*);
@@ -163,7 +164,7 @@ private:
     void mergeInlineAndImplicitStyleOfElement(StyledElement*, CSSPropertyOverrideMode, PropertiesToInclude);
     void mergeStyle(const StylePropertySet*, CSSPropertyOverrideMode);
 
-    RefPtr<StylePropertySet> m_mutableStyle;
+    RefPtr<MutableStylePropertySet> m_mutableStyle;
     bool m_shouldUseFixedDefaultFontSize;
     float m_fontSizeDelta;
 
@@ -173,6 +174,15 @@ private:
 
 class StyleChange {
 public:
+    StyleChange()
+        : m_applyBold(false)
+        , m_applyItalic(false)
+        , m_applyUnderline(false)
+        , m_applyLineThrough(false)
+        , m_applySubscript(false)
+        , m_applySuperscript(false)
+    { }
+
     StyleChange(EditingStyle*, const Position&);
 
     String cssStyle() const { return m_cssStyle; }
@@ -208,7 +218,7 @@ public:
         return !(*this == other);
     }
 private:
-    void extractTextStyles(Document*, StylePropertySet*, bool shouldUseFixedFontDefaultSize);
+    void extractTextStyles(Document*, MutableStylePropertySet*, bool shouldUseFixedFontDefaultSize);
 
     String m_cssStyle;
     bool m_applyBold;

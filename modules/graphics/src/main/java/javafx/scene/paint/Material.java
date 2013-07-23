@@ -25,7 +25,7 @@
 
 package javafx.scene.paint;
 
-import com.sun.javafx.sg.PGPhongMaterial;
+import com.sun.javafx.sg.prism.NGPhongMaterial;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -93,5 +93,5 @@ public abstract class Material {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    abstract public PGPhongMaterial impl_getPGMaterial();
+    abstract public NGPhongMaterial impl_getNGMaterial();
 }

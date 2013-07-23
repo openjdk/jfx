@@ -28,13 +28,12 @@
 #ifndef IDBFactory_h
 #define IDBFactory_h
 
-#include "DOMStringList.h"
-#include "IDBFactoryBackendInterface.h"
-#include "IDBRequest.h"
-#include "PlatformString.h"
+#include "IDBOpenDBRequest.h"
+#include "ScriptWrappable.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/WTFString.h>
 
 #if ENABLE(INDEXED_DATABASE)
 
@@ -43,12 +42,11 @@ namespace WebCore {
 class IDBKey;
 class IDBKeyRange;
 class IDBFactoryBackendInterface;
-class IDBVersionChangeRequest;
 class ScriptExecutionContext;
 
 typedef int ExceptionCode;
 
-class IDBFactory : public RefCounted<IDBFactory> {
+class IDBFactory : public ScriptWrappable, public RefCounted<IDBFactory> {
 public:
     static PassRefPtr<IDBFactory> create(IDBFactoryBackendInterface* factory)
     {
@@ -56,15 +54,18 @@ public:
     }
     ~IDBFactory();
 
-    PassRefPtr<IDBRequest> getDatabaseNames(ScriptExecutionContext*);
+    PassRefPtr<IDBRequest> getDatabaseNames(ScriptExecutionContext*, ExceptionCode&);
 
-    PassRefPtr<IDBRequest> open(ScriptExecutionContext*, const String& name, ExceptionCode&);
-    PassRefPtr<IDBVersionChangeRequest> deleteDatabase(ScriptExecutionContext*, const String& name, ExceptionCode&);
+    PassRefPtr<IDBOpenDBRequest> open(ScriptExecutionContext*, const String& name, ExceptionCode&);
+    PassRefPtr<IDBOpenDBRequest> open(ScriptExecutionContext*, const String& name, unsigned long long version, ExceptionCode&);
+    PassRefPtr<IDBOpenDBRequest> deleteDatabase(ScriptExecutionContext*, const String& name, ExceptionCode&);
 
-    short cmp(PassRefPtr<IDBKey> first, PassRefPtr<IDBKey> second, ExceptionCode&);
+    short cmp(ScriptExecutionContext*, const ScriptValue& first, const ScriptValue& second, ExceptionCode&);
 
 private:
     IDBFactory(IDBFactoryBackendInterface*);
+
+    PassRefPtr<IDBOpenDBRequest> openInternal(ScriptExecutionContext*, const String& name, int64_t version, ExceptionCode&);
 
     RefPtr<IDBFactoryBackendInterface> m_backend;
 };

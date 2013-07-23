@@ -150,7 +150,10 @@ protected:
         ASSERT(animatedTypes[0].properties.size() == 1);
         ASSERT(type);
         ASSERT(type->type() == m_type);
-        (type->*getter)() = castAnimatedPropertyToActualType<AnimValType>(animatedTypes[0].properties[0].get())->currentBaseValue();
+        typename AnimValType::ContentType& animatedTypeValue = (type->*getter)();
+        animatedTypeValue = castAnimatedPropertyToActualType<AnimValType>(animatedTypes[0].properties[0].get())->currentBaseValue();
+
+        executeAction<AnimValType>(StartAnimationAction, animatedTypes, 0, &animatedTypeValue);
     }
 
     template<typename AnimValType>
@@ -198,6 +201,9 @@ protected:
         pair<typename AnimValType1::ContentType, typename AnimValType2::ContentType>& animatedTypeValue = (type->*getter)();
         animatedTypeValue.first = castAnimatedPropertyToActualType<AnimValType1>(animatedTypes[0].properties[0].get())->currentBaseValue();
         animatedTypeValue.second = castAnimatedPropertyToActualType<AnimValType2>(animatedTypes[0].properties[1].get())->currentBaseValue();
+
+        executeAction<AnimValType1>(StartAnimationAction, animatedTypes, 0, &animatedTypeValue.first);
+        executeAction<AnimValType2>(StartAnimationAction, animatedTypes, 1, &animatedTypeValue.second);
     }
 
     template<typename AnimValType1, typename AnimValType2>
@@ -256,12 +262,13 @@ private:
 
         SVGElementAnimatedPropertyList::const_iterator end = animatedTypes.end();
         for (SVGElementAnimatedPropertyList::const_iterator it = animatedTypes.begin(); it != end; ++it) {
-            ASSERT(whichProperty < it->properties.size());
+            ASSERT_WITH_SECURITY_IMPLICATION(whichProperty < it->properties.size());
             AnimValType* property = castAnimatedPropertyToActualType<AnimValType>(it->properties[whichProperty].get());
 
             switch (action) {
             case StartAnimationAction:
                 ASSERT(type);
+                if (!property->isAnimating())
                 property->animationStarted(type);
                 break;
             case StopAnimationAction:

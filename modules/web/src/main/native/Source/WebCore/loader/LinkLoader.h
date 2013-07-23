@@ -41,15 +41,15 @@
 
 namespace WebCore {
 
+class Document;
+class KURL;
 struct LinkRelAttribute;
-#if ENABLE(LINK_PRERENDER)
-class PrerenderHandle;
-#endif
 
-// The LinkLoader can load link rel types icon, dns-prefetch, subresource, prefetch and prerender.
+// The LinkLoader can load link rel types icon, dns-prefetch, subresource and prefetch.
 class LinkLoader : public CachedResourceClient {
+
 public:
-    LinkLoader(LinkLoaderClient*);
+    explicit LinkLoader(LinkLoaderClient*);
     virtual ~LinkLoader();
 
     // from CachedResourceClient
@@ -67,10 +67,6 @@ private:
     CachedResourceHandle<CachedResource> m_cachedLinkResource;
     Timer<LinkLoader> m_linkLoadTimer;
     Timer<LinkLoader> m_linkLoadingErrorTimer;
-
-#if ENABLE(LINK_PRERENDER)
-    RefPtr<PrerenderHandle> m_prerenderHandle;
-#endif
 };
     
 }

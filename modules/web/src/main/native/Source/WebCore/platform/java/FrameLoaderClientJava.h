@@ -12,12 +12,13 @@
 #include "FrameView.h"
 #include "FormState.h"
 #include "HTMLFrameOwnerElement.h"
-#include "JavaEnv.h"
-// #include "PluginWidgetJava.h"
+
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "Widget.h"
 #include "PluginWidgetJava.h"
+
+#include "JavaEnv.h"
 
 namespace WebCore {
 
@@ -108,6 +109,7 @@ namespace WebCore {
         virtual PassRefPtr<Frame> createFrame(const KURL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
                                    const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight);
         virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const KURL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually);
+        virtual void recreatePlugin(Widget*) { }
         virtual void redirectDataToPlugin(Widget* pluginWidget);
         virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const KURL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues);
         virtual String overrideMediaType() const;
@@ -175,7 +177,7 @@ namespace WebCore {
         virtual void didFinishLoad();
         virtual void prepareForDataSourceReplacement();
 
-        virtual WTF::PassRefPtr<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&);
+        virtual PassRefPtr<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&);
         virtual void setTitle(const StringWithDirection& title, const KURL&);
 
         virtual String userAgent(const KURL&);
@@ -185,6 +187,8 @@ namespace WebCore {
         virtual void transitionToCommittedForNewPage();
 
         virtual bool canCachePage() const;
+        virtual void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&);
+
         virtual void didSaveToPageCache();
         virtual void didRestoreFromPageCache();
 

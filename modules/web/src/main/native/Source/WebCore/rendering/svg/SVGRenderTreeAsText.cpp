@@ -134,10 +134,10 @@ static void writeIfNotDefault(TextStream& ts, const char* name, ValueType value,
 
 TextStream& operator<<(TextStream& ts, const FloatRect& r)
 {
-    ts << "at (" << formatNumberRespectingIntegers(r.x()); 
-    ts << "," << formatNumberRespectingIntegers(r.y());
-    ts << ") size " << formatNumberRespectingIntegers(r.width());
-    ts << "x" << formatNumberRespectingIntegers(r.height());
+    ts << "at (" << TextStream::FormatNumberRespectingIntegers(r.x());
+    ts << "," << TextStream::FormatNumberRespectingIntegers(r.y());
+    ts << ") size " << TextStream::FormatNumberRespectingIntegers(r.width());
+    ts << "x" << TextStream::FormatNumberRespectingIntegers(r.height());
     return ts;
 }
 
@@ -262,7 +262,7 @@ static void writeSVGPaintingResource(TextStream& ts, RenderSVGResource* resource
     else if (resource->resourceType() == RadialGradientResourceType)
         ts << "[type=RADIAL-GRADIENT]";
 
-    ts << " [id=\"" << static_cast<SVGElement*>(node)->getIdAttribute() << "\"]";
+    ts << " [id=\"" << toSVGElement(node)->getIdAttribute() << "\"]";
 }
 
 static void writeStyle(TextStream& ts, const RenderObject& object)
@@ -285,7 +285,7 @@ static void writeStyle(TextStream& ts, const RenderObject& object)
             ts << " [stroke={" << s;
             writeSVGPaintingResource(ts, strokePaintingResource);
 
-            SVGLengthContext lengthContext(static_cast<SVGElement*>(shape.node()));
+            SVGLengthContext lengthContext(toSVGElement(shape.node()));
             double dashOffset = svgStyle->strokeDashOffset().value(lengthContext);
             double strokeWidth = svgStyle->strokeWidth().value(lengthContext);
             const Vector<SVGLength>& dashes = svgStyle->strokeDashArray();
@@ -336,7 +336,7 @@ static TextStream& operator<<(TextStream& ts, const RenderSVGShape& shape)
     writePositionAndStyle(ts, shape);
 
     ASSERT(shape.node()->isSVGElement());
-    SVGElement* svgElement = static_cast<SVGElement*>(shape.node());
+    SVGElement* svgElement = toSVGElement(shape.node());
     SVGLengthContext lengthContext(svgElement);
 
     if (svgElement->hasTagName(SVGNames::rectTag)) {
@@ -493,7 +493,7 @@ void writeSVGResourceContainer(TextStream& ts, const RenderObject& object, int i
 {
     writeStandardPrefix(ts, object, indent);
 
-    Element* element = static_cast<Element*>(object.node());
+    Element* element = toElement(object.node());
     const AtomicString& id = element->getIdAttribute();
     writeNameAndQuotedValue(ts, "id", id);    
 
@@ -573,9 +573,9 @@ void writeSVGResourceContainer(TextStream& ts, const RenderObject& object, int i
         FloatPoint focalPoint = gradient->focalPoint(attributes);
         FloatPoint centerPoint = gradient->centerPoint(attributes);
         float radius = gradient->radius(attributes);
-        gradient->adjustFocalPointIfNeeded(radius, centerPoint, focalPoint);
+        float focalRadius = gradient->focalRadius(attributes);
 
-        ts << " [center=" << centerPoint << "] [focal=" << focalPoint << "] [radius=" << radius << "]\n";
+        ts << " [center=" << centerPoint << "] [focal=" << focalPoint << "] [radius=" << radius << "] [focalRadius=" << focalRadius << "]\n";
     } else
         ts << "\n";
     writeChildren(ts, object, indent);

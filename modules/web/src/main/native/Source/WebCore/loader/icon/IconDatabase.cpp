@@ -29,7 +29,6 @@
 
 #if ENABLE(ICONDATABASE)
 
-#include "AutodrainedPool.h"
 #include "DocumentLoader.h"
 #include "FileSystem.h"
 #include "IconDatabaseClient.h"
@@ -40,6 +39,7 @@
 #include "SQLiteStatement.h"
 #include "SQLiteTransaction.h"
 #include "SuddenTermination.h"
+#include <wtf/AutodrainedPool.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
@@ -52,7 +52,7 @@
 #define IS_ICON_SYNC_THREAD() (m_syncThread == currentThread())
 #define ASSERT_ICON_SYNC_THREAD() ASSERT(IS_ICON_SYNC_THREAD())
 
-#if PLATFORM(QT) || PLATFORM(GTK) || PLATFORM(WIN_CAIRO)
+#if PLATFORM(QT) || PLATFORM(GTK)
 #define CAN_THEME_URL_ICON
 #endif
 
@@ -73,6 +73,12 @@ static const int updateTimerDelay = 5;
 
 static bool checkIntegrityOnOpen = false;
 
+#if PLATFORM(GTK)
+// We are not interested in icons that have been unused for more than
+// 30 days, delete them even if they have not been explicitly released.
+static const int notUsedIconExpirationTime = 60*60*24*30;
+#endif
+
 #if !LOG_DISABLED || !ERROR_DISABLED
 static String urlForLogging(const String& url)
 {
@@ -85,8 +91,8 @@ static String urlForLogging(const String& url)
 #endif
 
 class DefaultIconDatabaseClient : public IconDatabaseClient {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    virtual bool performImport() { return true; }
     virtual void didImportIconURLForPageURL(const String&) { } 
     virtual void didImportIconDataForPageURL(const String&) { }
     virtual void didChangeIconForPageURL(const String&) { }
@@ -186,7 +192,7 @@ void IconDatabase::removeAllIcons()
         HashMap<String, PageURLRecord*>::iterator iter = m_pageURLToRecordMap.begin();
         HashMap<String, PageURLRecord*>::iterator end = m_pageURLToRecordMap.end();
         for (; iter != end; ++iter)
-            (*iter).second->setIconRecord(0);
+            (*iter).value->setIconRecord(0);
             
         // Clear the iconURL -> IconRecord map
         m_iconURLToRecordMap.clear();
@@ -293,7 +299,7 @@ Image* IconDatabase::synchronousIconForPageURL(const String& pageURLOriginal, co
     return iconRecord->image(size);
 }
 
-NativeImagePtr IconDatabase::synchronousNativeIconForPageURL(const String& pageURLOriginal, const IntSize& size)
+PassNativeImagePtr IconDatabase::synchronousNativeIconForPageURL(const String& pageURLOriginal, const IntSize& size)
 {
     Image* icon = synchronousIconForPageURL(pageURLOriginal, size);
     if (!icon)
@@ -580,15 +586,11 @@ void IconDatabase::setIconDataForIconURL(PassRefPtr<SharedBuffer> dataOriginal, 
         // Start the timer to commit this change - or further delay the timer if it was already started
         scheduleOrDeferSyncTimer();
 
-        // Informal testing shows that draining the autorelease pool every 25 iterations is about as low as we can go
-        // before performance starts to drop off, but we don't want to increase this number because then accumulated memory usage will go up        
-        AutodrainedPool pool(25);
-
         for (unsigned i = 0; i < pageURLs.size(); ++i) {
+            AutodrainedPool pool;
+
             LOG(IconDatabase, "Dispatching notification that retaining pageURL %s has a new icon", urlForLogging(pageURLs[i]).ascii().data());
             m_client->didChangeIconForPageURL(pageURLs[i]);
-
-            pool.cycle();
         }
     }
 }
@@ -779,7 +781,7 @@ size_t IconDatabase::iconRecordCountWithData()
     HashMap<String, IconRecord*>::iterator end = m_iconURLToRecordMap.end();
     
     for (; i != end; ++i)
-        result += ((*i).second->imageDataStatus() == ImageDataStatusPresent);
+        result += ((*i).value->imageDataStatus() == ImageDataStatusPresent);
             
     return result;
 }
@@ -798,8 +800,6 @@ IconDatabase::IconDatabase()
     , m_retainOrReleaseIconRequested(false)
     , m_initialPruningComplete(false)
     , m_client(defaultClient())
-    , m_imported(false)
-    , m_isImportedSet(false)
 {
     LOG(IconDatabase, "Creating IconDatabase %p", this);
     ASSERT(isMainThread());
@@ -807,7 +807,7 @@ IconDatabase::IconDatabase()
 
 IconDatabase::~IconDatabase()
 {
-    ASSERT_NOT_REACHED();
+    ASSERT(!isOpen());
 }
 
 void IconDatabase::notifyPendingLoadDecisionsOnMainThread(void* context)
@@ -904,7 +904,7 @@ String IconDatabase::databasePath() const
 
 String IconDatabase::defaultDatabaseFilename()
 {
-    DEFINE_STATIC_LOCAL(String, defaultDatabaseFilename, ("WebpageIcons.db"));
+    DEFINE_STATIC_LOCAL(String, defaultDatabaseFilename, (ASCIILiteral("WebpageIcons.db")));
     return defaultDatabaseFilename.isolatedCopy();
 }
 
@@ -960,27 +960,6 @@ PageURLRecord* IconDatabase::getOrCreatePageURLRecord(const String& pageURL)
 // ************************
 // *** Sync Thread Only ***
 // ************************
-
-void IconDatabase::importIconURLForPageURL(const String& iconURL, const String& pageURL)
-{
-    ASSERT_ICON_SYNC_THREAD();
-    
-    // This function is only for setting actual existing url mappings so assert that neither of these URLs are empty
-    ASSERT(!iconURL.isEmpty());
-    ASSERT(!pageURL.isEmpty());
-    ASSERT(documentCanHaveIcon(pageURL));
-    
-    setIconURLForPageURLInSQLDatabase(iconURL, pageURL);    
-}
-
-void IconDatabase::importIconDataForIconURL(PassRefPtr<SharedBuffer> data, const String& iconURL)
-{
-    ASSERT_ICON_SYNC_THREAD();
-    
-    ASSERT(!iconURL.isEmpty());
-
-    writeIconSnapshotToSQLDatabase(IconSnapshot(iconURL, (int)currentTime(), data.get()));
-}
 
 bool IconDatabase::shouldStopThreadActivity() const
 {
@@ -1054,32 +1033,6 @@ void IconDatabase::iconDatabaseSyncThread()
     timeStamp = newStamp;
 #endif 
 
-    if (!imported()) {
-        LOG(IconDatabase, "(THREAD) Performing Safari2 import procedure");
-        SQLiteTransaction importTransaction(m_syncDB);
-        importTransaction.begin();
-        
-        // Commit the transaction only if the import completes (the import should be atomic)
-        if (m_client->performImport()) {
-            setImported(true);
-            importTransaction.commit();
-        } else {
-            LOG(IconDatabase, "(THREAD) Safari 2 import was cancelled");
-            importTransaction.rollback();
-        }
-        
-        if (shouldStopThreadActivity()) {
-            syncThreadMainLoop();
-            return;
-        }
-            
-#if !LOG_DISABLED
-        newStamp = currentTime();
-        LOG(IconDatabase, "(THREAD) performImport() took %.4f seconds, now %.4f seconds from thread start", newStamp - timeStamp, newStamp - startTime);
-        timeStamp = newStamp;
-#endif 
-    }
-        
     // Uncomment the following line to simulate a long lasting URL import (*HUGE* icon databases, or network home directories)
     // while (currentTime() - timeStamp < 10);
 
@@ -1257,19 +1210,26 @@ void IconDatabase::performURLImport()
 {
     ASSERT_ICON_SYNC_THREAD();
 
-    SQLiteStatement query(m_syncDB, "SELECT PageURL.url, IconInfo.url, IconInfo.stamp FROM PageURL INNER JOIN IconInfo ON PageURL.iconID=IconInfo.iconID;");
+# if PLATFORM(GTK)
+    // Do not import icons not used in the last 30 days. They will be automatically pruned later if nobody retains them.
+    // Note that IconInfo.stamp is only set when the icon data is retrieved from the server (and thus is not updated whether
+    // we use it or not). This code works anyway because the IconDatabase downloads icons again if they are older than 4 days,
+    // so if the timestamp goes back in time more than those 30 days we can be sure that the icon was not used at all.
+    String importQuery = String::format("SELECT PageURL.url, IconInfo.url, IconInfo.stamp FROM PageURL INNER JOIN IconInfo ON PageURL.iconID=IconInfo.iconID WHERE IconInfo.stamp > %.0f;", floor(currentTime() - notUsedIconExpirationTime));
+#else
+    String importQuery("SELECT PageURL.url, IconInfo.url, IconInfo.stamp FROM PageURL INNER JOIN IconInfo ON PageURL.iconID=IconInfo.iconID;");
+#endif
+
+    SQLiteStatement query(m_syncDB, importQuery);
     
     if (query.prepare() != SQLResultOk) {
         LOG_ERROR("Unable to prepare icon url import query");
         return;
     }
     
-    // Informal testing shows that draining the autorelease pool every 25 iterations is about as low as we can go
-    // before performance starts to drop off, but we don't want to increase this number because then accumulated memory usage will go up
-    AutodrainedPool pool(25);
-        
     int result = query.step();
     while (result == SQLResultRow) {
+        AutodrainedPool pool;
         String pageURL = query.getColumnText(0);
         String iconURL = query.getColumnText(1);
 
@@ -1311,8 +1271,6 @@ void IconDatabase::performURLImport()
             if (m_pageURLsPendingImport.contains(pageURL)) {
                 dispatchDidImportIconURLForPageURLOnMainThread(pageURL);
                 m_pageURLsPendingImport.remove(pageURL);
-            
-                pool.cycle();
             }
         }
         
@@ -1383,12 +1341,12 @@ void IconDatabase::performURLImport()
     LOG(IconDatabase, "Notifying %lu interested page URLs that their icon URL is known due to the import", static_cast<unsigned long>(urlsToNotify.size()));
     // Now that we don't hold any locks, perform the actual notifications
     for (unsigned i = 0; i < urlsToNotify.size(); ++i) {
+        AutodrainedPool pool;
+
         LOG(IconDatabase, "Notifying icon info known for pageURL %s", urlsToNotify[i].ascii().data());
         dispatchDidImportIconURLForPageURLOnMainThread(urlsToNotify[i]);
         if (shouldStopThreadActivity())
             return;
-
-        pool.cycle();
     }
     
     // Notify the client that the URL import is complete in case it's managing its own pending notifications.
@@ -1540,13 +1498,13 @@ void IconDatabase::performPendingRetainAndReleaseOperations()
     }
 
     for (HashCountedSet<String>::const_iterator it = toRetain.begin(), end = toRetain.end(); it != end; ++it) {
-        ASSERT(!it->first.impl() || it->first.impl()->hasOneRef());
-        performRetainIconForPageURL(it->first, it->second);
+        ASSERT(!it->key.impl() || it->key.impl()->hasOneRef());
+        performRetainIconForPageURL(it->key, it->value);
     }
 
     for (HashCountedSet<String>::const_iterator it = toRelease.begin(), end = toRelease.end(); it != end; ++it) {
-        ASSERT(!it->first.impl() || it->first.impl()->hasOneRef());
-        performReleaseIconForPageURL(it->first, it->second);
+        ASSERT(!it->key.impl() || it->key.impl()->hasOneRef());
+        performReleaseIconForPageURL(it->key, it->value);
     }
 }
 
@@ -1632,20 +1590,14 @@ bool IconDatabase::readFromDatabase()
         if (shouldStopThreadActivity())
             return didAnyWork;
         
-        // Informal testing shows that draining the autorelease pool every 25 iterations is about as low as we can go
-        // before performance starts to drop off, but we don't want to increase this number because then accumulated memory usage will go up
-        AutodrainedPool pool(25);
-
         // Now that we don't hold any locks, perform the actual notifications
-        HashSet<String>::iterator iter = urlsToNotify.begin();
-        HashSet<String>::iterator end = urlsToNotify.end();
-        for (unsigned iteration = 0; iter != end; ++iter, ++iteration) {
-            LOG(IconDatabase, "Notifying icon received for pageURL %s", urlForLogging(*iter).ascii().data());
-            dispatchDidImportIconDataForPageURLOnMainThread(*iter);
+        for (HashSet<String>::const_iterator it = urlsToNotify.begin(), end = urlsToNotify.end(); it != end; ++it) {
+            AutodrainedPool pool;
+
+            LOG(IconDatabase, "Notifying icon received for pageURL %s", urlForLogging(*it).ascii().data());
+            dispatchDidImportIconDataForPageURLOnMainThread(*it);
             if (shouldStopThreadActivity())
                 return didAnyWork;
-            
-            pool.cycle();
         }
 
         LOG(IconDatabase, "Done notifying %i pageURLs who just received their icons", urlsToNotify.size());
@@ -1895,54 +1847,6 @@ void* IconDatabase::cleanupSyncThread()
     
     m_syncThreadRunning = false;
     return 0;
-}
-
-bool IconDatabase::imported()
-{
-    ASSERT_ICON_SYNC_THREAD();
-    
-    if (m_isImportedSet)
-        return m_imported;
-        
-    SQLiteStatement query(m_syncDB, "SELECT IconDatabaseInfo.value FROM IconDatabaseInfo WHERE IconDatabaseInfo.key = \"ImportedSafari2Icons\";");
-    if (query.prepare() != SQLResultOk) {
-        LOG_ERROR("Unable to prepare imported statement");
-        return false;
-    }
-    
-    int result = query.step();
-    if (result == SQLResultRow)
-        result = query.getColumnInt(0);
-    else {
-        if (result != SQLResultDone)
-            LOG_ERROR("imported statement failed");
-        result = 0;
-    }
-    
-    m_isImportedSet = true;
-    return m_imported = result;
-}
-
-void IconDatabase::setImported(bool import)
-{
-    ASSERT_ICON_SYNC_THREAD();
-
-    m_imported = import;
-    m_isImportedSet = true;
-    
-    String queryString = import ?
-        "INSERT INTO IconDatabaseInfo (key, value) VALUES (\"ImportedSafari2Icons\", 1);" :
-        "INSERT INTO IconDatabaseInfo (key, value) VALUES (\"ImportedSafari2Icons\", 0);";
-        
-    SQLiteStatement query(m_syncDB, queryString);
-    
-    if (query.prepare() != SQLResultOk) {
-        LOG_ERROR("Unable to prepare set imported statement");
-        return;
-    }    
-    
-    if (query.step() != SQLResultDone)
-        LOG_ERROR("set imported statement failed");
 }
 
 // readySQLiteStatement() handles two things
@@ -2216,6 +2120,7 @@ void IconDatabase::setWasExcludedFromBackup()
 }
 
 class ClientWorkItem {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ClientWorkItem(IconDatabaseClient* client)
         : m_client(client)

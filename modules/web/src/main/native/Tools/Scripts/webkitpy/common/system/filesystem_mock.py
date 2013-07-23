@@ -36,6 +36,9 @@ from webkitpy.common.system import path
 
 
 class MockFileSystem(object):
+    sep = '/'
+    pardir = '..'
+
     def __init__(self, files=None, dirs=None, cwd='/'):
         """Initializes a "mock" filesystem that can be used to completely
         stub out a filesystem.
@@ -48,7 +51,6 @@ class MockFileSystem(object):
         self.files = files or {}
         self.written_files = {}
         self.last_tmpdir = None
-        self._sep = '/'
         self.current_tmpno = 0
         self.cwd = cwd
         self.dirs = set(dirs or [])
@@ -58,11 +60,6 @@ class MockFileSystem(object):
             while not d in self.dirs:
                 self.dirs.add(d)
                 d = self.dirname(d)
-
-    def _get_sep(self):
-        return self._sep
-
-    sep = property(_get_sep, doc="pathname separator")
 
     def clear_written_files(self):
         # This function can be used to track what is written between steps in a test.
@@ -111,9 +108,9 @@ class MockFileSystem(object):
         if not self.exists(source):
             self._raise_not_found(source)
         if self.isdir(source):
-            raise IOError(errno.EISDIR, source, os.strerror(errno.ISDIR))
+            raise IOError(errno.EISDIR, source, os.strerror(errno.EISDIR))
         if self.isdir(destination):
-            raise IOError(errno.EISDIR, destination, os.strerror(errno.ISDIR))
+            raise IOError(errno.EISDIR, destination, os.strerror(errno.EISDIR))
         if not self.exists(self.dirname(destination)):
             raise IOError(errno.ENOENT, destination, os.strerror(errno.ENOENT))
 
@@ -343,8 +340,8 @@ class MockFileSystem(object):
         path = self.abspath(path)
 
         if not path.lower().startswith(start.lower()):
-            # Then path is outside the directory given by start.
-            return None  # FIXME: os.relpath still returns a path here.
+            # path is outside the directory given by start; compute path from root
+            return '../' * start.count('/') + path
 
         rel_path = path[len(start):]
 
@@ -359,7 +356,8 @@ class MockFileSystem(object):
         else:
             # We are in the case typified by the following example:
             # path = "/tmp/foobar", start = "/tmp/foo" -> rel_path = "bar"
-            return None
+            # FIXME: We return a less-than-optimal result here.
+            return '../' * start.count('/') + path
 
         return rel_path
 
@@ -378,6 +376,16 @@ class MockFileSystem(object):
 
         self.dirs = set(filter(lambda d: not d.startswith(path), self.dirs))
 
+    def copytree(self, source, destination):
+        source = self.normpath(source)
+        destination = self.normpath(destination)
+
+        for source_file in self.files:
+            if source_file.startswith(source):
+                destination_path = self.join(destination, self.relpath(source_file, source))
+                self.maybe_make_directory(self.dirname(destination_path))
+                self.files[destination_path] = self.files[source_file]
+
     def split(self, path):
         idx = path.rfind(self.sep)
         if idx == -1:
@@ -387,7 +395,7 @@ class MockFileSystem(object):
     def splitext(self, path):
         idx = path.rfind('.')
         if idx == -1:
-            idx = 0
+            idx = len(path)
         return (path[0:idx], path[idx:])
 
 
@@ -444,7 +452,7 @@ class ReadableBinaryFileObject(object):
 
 class ReadableTextFileObject(ReadableBinaryFileObject):
     def __init__(self, fs, path, data):
-        super(ReadableTextFileObject, self).__init__(fs, path, StringIO.StringIO(data))
+        super(ReadableTextFileObject, self).__init__(fs, path, StringIO.StringIO(data.decode("utf-8")))
 
     def close(self):
         self.data.close()

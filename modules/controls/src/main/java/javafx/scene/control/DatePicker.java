@@ -389,6 +389,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                     new DateTimeFormatterBuilder().parseLenient()
                                                   .appendPattern(pattern)
                                                   .toFormatter()
+                                                  .withChronology(chrono)
                                                   .withDecimalStyle(DecimalStyle.of(locale));
                 TemporalAccessor temporal = df.parse(text);
                 ChronoLocalDate cDate = chrono.date(temporal);

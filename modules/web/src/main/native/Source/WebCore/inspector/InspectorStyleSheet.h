@@ -31,13 +31,13 @@
 #include "InspectorStyleTextEditor.h"
 #include "InspectorTypeBuilder.h"
 #include "InspectorValues.h"
-#include "PlatformString.h"
 
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 class ParsedStyleSheet;
 
@@ -146,13 +146,19 @@ public:
     bool setPropertyText(unsigned index, const String& text, bool overwrite, String* oldText, ExceptionCode&);
     bool toggleProperty(unsigned index, bool disable, ExceptionCode&);
 
+    bool getText(String* result) const;
+    bool setText(const String&, ExceptionCode&);
+
 private:
     InspectorStyle(const InspectorCSSId& styleId, PassRefPtr<CSSStyleDeclaration> style, InspectorStyleSheet* parentStyleSheet);
 
-    bool styleText(String* result) const;
+    // FIXME: Remove these aliases and update all the current call sites to use the new public methods.
+    bool styleText(String* result) const { return getText(result); }
+    bool applyStyleText(const String& text) { ExceptionCode ec = 0; return setText(text, ec); }
+
     bool populateAllProperties(Vector<InspectorStyleProperty>* result) const;
     PassRefPtr<TypeBuilder::CSS::CSSStyle> styleWithProperties() const;
-    bool applyStyleText(const String&);
+    PassRefPtr<CSSRuleSourceData> extractSourceData() const;
     String shorthandValue(const String& shorthandProperty) const;
     String shorthandPriority(const String& shorthandProperty) const;
     Vector<String> longhandProperties(const String& shorthandProperty) const;
@@ -185,7 +191,7 @@ public:
     String finalURL() const;
     CSSStyleSheet* pageStyleSheet() const { return m_pageStyleSheet.get(); }
     void reparseStyleSheet(const String&);
-    bool setText(const String&);
+    bool setText(const String&, ExceptionCode&);
     String ruleSelector(const InspectorCSSId&, ExceptionCode&);
     bool setRuleSelector(const InspectorCSSId&, const String& selector, ExceptionCode&);
     CSSStyleRule* addRule(const String& selector, ExceptionCode&);
@@ -195,6 +201,7 @@ public:
     PassRefPtr<TypeBuilder::CSS::CSSStyleSheetHeader> buildObjectForStyleSheetInfo();
     PassRefPtr<TypeBuilder::CSS::CSSRule> buildObjectForRule(CSSStyleRule*);
     PassRefPtr<TypeBuilder::CSS::CSSStyle> buildObjectForStyle(CSSStyleDeclaration*);
+    bool setStyleText(const InspectorCSSId&, const String& text, String* oldText, ExceptionCode&);
     bool setPropertyText(const InspectorCSSId&, unsigned propertyIndex, const String& text, bool overwrite, String* oldPropertyText, ExceptionCode&);
     bool toggleProperty(const InspectorCSSId&, unsigned propertyIndex, bool disable, ExceptionCode&);
 
@@ -219,12 +226,15 @@ protected:
     virtual void forgetInspectorStyle(CSSStyleDeclaration* style);
 
     // Also accessed by friend class InspectorStyle.
-    virtual bool setStyleText(CSSStyleDeclaration*, const String&);
+    virtual bool setStyleText(CSSStyleDeclaration*, const String&, ExceptionCode&);
+    virtual PassOwnPtr<Vector<size_t> > lineEndings() const;
 
 private:
+    typedef Vector<RefPtr<CSSStyleRule> > CSSStyleRuleVector;
     friend class InspectorStyle;
 
-    static void collectFlatRules(PassRefPtr<CSSRuleList>, Vector<CSSStyleRule*>* result);
+    static void collectFlatRules(PassRefPtr<CSSRuleList>, CSSStyleRuleVector* result);
+    bool checkPageStyleSheet(ExceptionCode&) const;
     bool ensureText() const;
     bool ensureSourceData();
     void ensureFlatRules() const;
@@ -234,6 +244,7 @@ private:
     bool resourceStyleSheetText(String* result) const;
     bool inlineStyleSheetText(String* result) const;
     PassRefPtr<TypeBuilder::Array<TypeBuilder::CSS::CSSRule> > buildArrayForRuleList(CSSRuleList*);
+    PassRefPtr<TypeBuilder::CSS::SelectorList> buildObjectForSelectorList(CSSStyleRule*);
 
     InspectorPageAgent* m_pageAgent;
     String m_id;
@@ -243,7 +254,7 @@ private:
     bool m_isRevalidating;
     ParsedStyleSheet* m_parsedStyleSheet;
     InspectorStyleMap m_inspectorStyles;
-    mutable Vector<CSSStyleRule*> m_flatRules;
+    mutable CSSStyleRuleVector m_flatRules;
     Listener* m_listener;
 };
 
@@ -267,7 +278,8 @@ protected:
     virtual void forgetInspectorStyle(CSSStyleDeclaration*) { }
 
     // Also accessed by friend class InspectorStyle.
-    virtual bool setStyleText(CSSStyleDeclaration*, const String&);
+    virtual bool setStyleText(CSSStyleDeclaration*, const String&, ExceptionCode&);
+    virtual PassOwnPtr<Vector<size_t> > lineEndings() const;
 
 private:
     CSSStyleDeclaration* inlineStyle() const;

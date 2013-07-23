@@ -35,6 +35,7 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "Icon.h"
+#include "InputTypeNames.h"
 #include "LocalizedStrings.h"
 #include "RenderFileUploadControl.h"
 #include "ScriptController.h"
@@ -81,19 +82,40 @@ UploadButtonElement::UploadButtonElement(Document* document)
 
 const AtomicString& UploadButtonElement::shadowPseudoId() const
 {
-    DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-file-upload-button"));
+    DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-file-upload-button", AtomicString::ConstructFromLiteral));
     return pseudoId;
-}
-
-inline FileInputType::FileInputType(HTMLInputElement* element)
-    : BaseClickableWithKeyInputType(element)
-    , m_fileList(FileList::create())
-{
 }
 
 PassOwnPtr<InputType> FileInputType::create(HTMLInputElement* element)
 {
     return adoptPtr(new FileInputType(element));
+}
+
+FileInputType::FileInputType(HTMLInputElement* element)
+    : BaseClickableWithKeyInputType(element)
+    , m_fileList(FileList::create())
+{
+}
+
+FileInputType::~FileInputType()
+{
+    if (m_fileChooser)
+        m_fileChooser->invalidate();
+
+    if (m_fileIconLoader)
+        m_fileIconLoader->invalidate();
+}
+
+Vector<FileChooserFileInfo> FileInputType::filesFromFormControlState(const FormControlState& state)
+{
+    Vector<FileChooserFileInfo> files;
+    for (size_t i = 0; i < state.valueSize(); i += 2) {
+        if (!state[i + 1].isEmpty())
+            files.append(FileChooserFileInfo(state[i], state[i + 1]));
+        else
+            files.append(FileChooserFileInfo(state[i]));
+    }
+    return files;
 }
 
 const AtomicString& FileInputType::formControlType() const
@@ -118,14 +140,7 @@ void FileInputType::restoreFormControlState(const FormControlState& state)
 {
     if (state.valueSize() % 2)
         return;
-    Vector<FileChooserFileInfo> files;
-    for (size_t i = 0; i < state.valueSize(); i += 2) {
-        if (!state[i + 1].isEmpty())
-            files.append(FileChooserFileInfo(state[i], state[i + 1]));
-        else
-            files.append(FileChooserFileInfo(state[i]));
-    }
-    filesChosen(files);
+    filesChosen(filesFromFormControlState(state));
 }
 
 bool FileInputType::appendFormData(FormDataList& encoding, bool multipart) const
@@ -159,7 +174,7 @@ bool FileInputType::appendFormData(FormDataList& encoding, bool multipart) const
 
 bool FileInputType::valueMissing(const String& value) const
 {
-    return element()->required() && value.isEmpty();
+    return element()->isRequired() && value.isEmpty();
 }
 
 String FileInputType::valueMissingText() const
@@ -169,7 +184,7 @@ String FileInputType::valueMissingText() const
 
 void FileInputType::handleDOMActivateEvent(Event* event)
 {
-    if (element()->disabled())
+    if (element()->isDisabledFormControl())
         return;
 
     if (!ScriptController::processingUserGesture())
@@ -190,8 +205,11 @@ void FileInputType::handleDOMActivateEvent(Event* event)
 #if ENABLE(MEDIA_CAPTURE)
         settings.capture = input->capture();
 #endif
-        chrome->runOpenPanel(input->document()->frame(), newFileChooser(settings));
+
+        applyFileChooserSettings(settings);
+        chrome->runOpenPanel(input->document()->frame(), m_fileChooser);
     }
+
     event->setDefaultHandled();
 }
 
@@ -284,7 +302,7 @@ PassRefPtr<FileList> FileInputType::createFileList(const Vector<FileChooserFileI
 #endif
 
     for (size_t i = 0; i < size; i++)
-        fileList->append(File::createWithName(files[i].path, files[i].displayName));
+        fileList->append(File::createWithName(files[i].path, files[i].displayName, File::AllContentTypes));
     return fileList;
 }
 
@@ -296,14 +314,21 @@ bool FileInputType::isFileUpload() const
 void FileInputType::createShadowSubtree()
 {
     ASSERT(element()->shadow());
-    ExceptionCode ec = 0;
-    element()->shadow()->oldestShadowRoot()->appendChild(element()->multiple() ? UploadButtonElement::createForMultiple(element()->document()): UploadButtonElement::create(element()->document()), ec);
+    element()->userAgentShadowRoot()->appendChild(element()->multiple() ? UploadButtonElement::createForMultiple(element()->document()): UploadButtonElement::create(element()->document()), IGNORE_EXCEPTION);
+}
+
+void FileInputType::disabledAttributeChanged()
+{
+    ASSERT(element()->shadow());
+    UploadButtonElement* button = static_cast<UploadButtonElement*>(element()->userAgentShadowRoot()->firstChild());
+    if (button)
+        button->setBooleanAttribute(disabledAttr, element()->isDisabledFormControl());
 }
 
 void FileInputType::multipleAttributeChanged()
 {
     ASSERT(element()->shadow());
-    UploadButtonElement* button = static_cast<UploadButtonElement*>(element()->shadow()->oldestShadowRoot()->firstChild());
+    UploadButtonElement* button = static_cast<UploadButtonElement*>(element()->userAgentShadowRoot()->firstChild());
     if (button)
         button->setValue(element()->multiple() ? fileButtonChooseMultipleFilesLabel() : fileButtonChooseFileLabel());
 }
@@ -313,8 +338,24 @@ void FileInputType::requestIcon(const Vector<String>& paths)
     if (!paths.size())
         return;
 
-    if (Chrome* chrome = this->chrome())
-        chrome->loadIconForFiles(paths, newFileIconLoader());
+    Chrome* chrome = this->chrome();
+    if (!chrome)
+        return;
+
+    if (m_fileIconLoader)
+        m_fileIconLoader->invalidate();
+
+    m_fileIconLoader = FileIconLoader::create(this);
+
+    chrome->loadIconForFiles(paths, m_fileIconLoader.get());
+}
+
+void FileInputType::applyFileChooserSettings(const FileChooserSettings& settings)
+{
+    if (m_fileChooser)
+        m_fileChooser->invalidate();
+
+    m_fileChooser = FileChooser::create(this, settings);
 }
 
 void FileInputType::setFiles(PassRefPtr<FileList> files)
@@ -366,7 +407,10 @@ void FileInputType::filesChosen(const Vector<FileChooserFileInfo>& files)
 #if ENABLE(DIRECTORY_UPLOAD)
 void FileInputType::receiveDropForDirectoryUpload(const Vector<String>& paths)
 {
-    if (Chrome* chrome = this->chrome()) {
+    Chrome* chrome = this->chrome();
+    if (!chrome)
+        return;
+
         FileChooserSettings settings;
         HTMLInputElement* input = element();
         settings.allowsDirectoryUpload = true;
@@ -374,8 +418,9 @@ void FileInputType::receiveDropForDirectoryUpload(const Vector<String>& paths)
         settings.selectedFiles.append(paths[0]);
         settings.acceptMIMETypes = input->acceptMIMETypes();
         settings.acceptFileExtensions = input->acceptFileExtensions();
-        chrome->enumerateChosenDirectory(newFileChooser(settings));
-    }
+
+    applyFileChooserSettings(settings);
+    chrome->enumerateChosenDirectory(m_fileChooser);
 }
 #endif
 
@@ -452,5 +497,6 @@ String FileInputType::defaultToolTip() const
     }
     return names.toString();
 }
+
 
 } // namespace WebCore

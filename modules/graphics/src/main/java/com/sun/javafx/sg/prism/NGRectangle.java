@@ -25,29 +25,29 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.geom.*;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGShape;
-import com.sun.prism.RectShadowGraphics;
-import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.RectangularShape;
+import com.sun.javafx.geom.RoundRectangle2D;
+import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.PGRectangle;
-import com.sun.prism.Graphics;
 import com.sun.prism.BasicStroke;
+import com.sun.prism.Graphics;
+import com.sun.prism.RectShadowGraphics;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 import com.sun.prism.shape.ShapeRep;
 import com.sun.scenario.effect.Effect;
-import static com.sun.javafx.sg.PGShape.Mode.*;
-import static com.sun.javafx.geom.transform.BaseTransform.*;
+import static com.sun.javafx.geom.transform.BaseTransform.TYPE_MASK_SCALE;
+import static com.sun.javafx.geom.transform.BaseTransform.TYPE_QUADRANT_ROTATION;
+import static com.sun.javafx.geom.transform.BaseTransform.TYPE_TRANSLATION;
 
 /**
  */
-public class NGRectangle extends NGShape implements PGRectangle {
+public class NGRectangle extends NGShape {
 
     private RoundRectangle2D rrect = new RoundRectangle2D();
 
-    @Override public void updateRectangle(float x, float y, float width, float height,
+    public void updateRectangle(float x, float y, float width, float height,
                                           float arcWidth, float arcHeight) {
         rrect.x = x;
         rrect.y = y;
@@ -78,7 +78,7 @@ public class NGRectangle extends NGShape implements PGRectangle {
     }
 
     @Override
-    public void setClipNode(PGNode clipNode) {
+    public void setClipNode(NGNode clipNode) {
         invalidateOpaqueRegion();
         super.setClipNode(clipNode);
     }
@@ -99,7 +99,7 @@ public class NGRectangle extends NGShape implements PGRectangle {
         // compute opaque region
         final Mode mode = getMode();
         final Paint fillPaint = getFillPaint();
-        final PGNode clip = getClipNode();
+        final NGNode clip = (NGNode) getClipNode();
         final Effect effect = getEffect();
         if ((effect == null || !effect.reducesOpaquePixels()) &&
                 getOpacity() == 1f &&
@@ -121,7 +121,7 @@ public class NGRectangle extends NGShape implements PGRectangle {
                     opaqueRegion.deriveWithNewBounds(x, y, 0, x + width, y + height, 0);
                 }
                 if (clip != null) {
-                    opaqueRegion.intersectWith(((NGRectangle)clip).getOpaqueRegion());
+                    opaqueRegion.intersectWith((clip).getOpaqueRegion());
                 }
                 return opaqueRegion;
             }
@@ -286,7 +286,7 @@ public class NGRectangle extends NGShape implements PGRectangle {
         // With more work we could optimize the case of a Rectangle with a
         // Rectangle as a clip, but that would likely slow down some more
         // common cases with an optimization of questionable value.
-        if (mode != FILL || getClipNode() != null || (getEffect() != null && getEffect().reducesOpaquePixels()) ||
+        if (mode != NGShape.Mode.FILL || getClipNode() != null || (getEffect() != null && getEffect().reducesOpaquePixels()) ||
             getOpacity() < 1f || (!permitRoundedRectangle && isRounded()) || !fillPaint.isOpaque())
         {
             return false;

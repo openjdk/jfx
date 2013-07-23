@@ -401,6 +401,7 @@ final class CSSLexer {
                 case '/':                    
                     ch = readChar();
                     if (ch == '*') skipComment();
+                    else if (ch == '/') skipEOL();
                     else {
                         text.append('/').append((char)ch);
                         int temp = offset;
@@ -561,6 +562,22 @@ final class CSSLexer {
         }
     }
 
+    private void skipEOL() throws IOException {
+
+        int lastc = ch;
+
+        while (ch != -1) {
+
+            ch = readChar();
+
+            // EOL is cr, lf, or crlf
+            if ((ch == '\n') || (lastc == '\r' && ch != '\n')) {
+                    break;
+            }
+        }
+
+    }
+
     private int pos = 0;
     private int offset = 0;
     private int line = 1;
@@ -692,6 +709,14 @@ final class CSSLexer {
                         if (ch == '*') {
                             skipComment();
                              if (ch != -1) {
+                                continue;
+                            } else {
+                                token = Token.EOF_TOKEN;
+                                return token;
+                            }
+                        } else if (ch == '/') {
+                            skipEOL();
+                            if (ch != -1) {
                                 continue;
                             } else {
                                 token = Token.EOF_TOKEN;

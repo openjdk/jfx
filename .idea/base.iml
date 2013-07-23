@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/modules/base">
+      <sourceFolder url="file://$MODULE_DIR$/modules/base/build/generated-src/version-info" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/base/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/base/src/main/resources" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/base/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/base/src/test/resources" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/base/build/classes" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/base/build/dependency-cache" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/base/build/libs" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/base/build/tmp" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="buildSrc" exported="" />
+    <orderEntry type="inheritedJdk" />
+  </component>
+</module>
+

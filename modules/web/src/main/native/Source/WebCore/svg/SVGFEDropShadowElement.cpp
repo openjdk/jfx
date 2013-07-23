@@ -66,13 +66,13 @@ PassRefPtr<SVGFEDropShadowElement> SVGFEDropShadowElement::create(const Qualifie
 
 const AtomicString& SVGFEDropShadowElement::stdDeviationXIdentifier()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGStdDeviationX"));
+    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGStdDeviationX", AtomicString::ConstructFromLiteral));
     return s_identifier;
 }
 
 const AtomicString& SVGFEDropShadowElement::stdDeviationYIdentifier()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGStdDeviationY"));
+    DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGStdDeviationY", AtomicString::ConstructFromLiteral));
     return s_identifier;
 }
 
@@ -95,15 +95,14 @@ bool SVGFEDropShadowElement::isSupportedAttribute(const QualifiedName& attrName)
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGFEDropShadowElement::parseAttribute(const Attribute& attribute)
+void SVGFEDropShadowElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(attribute.name())) {
-        SVGFilterPrimitiveStandardAttributes::parseAttribute(attribute);
+    if (!isSupportedAttribute(name)) {
+        SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
         return;
     }
 
-    const AtomicString& value = attribute.value();
-    if (attribute.name() == SVGNames::stdDeviationAttr) {
+    if (name == SVGNames::stdDeviationAttr) {
         float x, y;
         if (parseNumberOptionalNumber(value, x, y)) {
             setStdDeviationXBaseValue(x);
@@ -112,18 +111,18 @@ void SVGFEDropShadowElement::parseAttribute(const Attribute& attribute)
         return;
     }
 
-    if (attribute.name() == SVGNames::inAttr) {
+    if (name == SVGNames::inAttr) {
         setIn1BaseValue(value);
         return;
     }
 
-    if (attribute.name() == SVGNames::dxAttr) {
-        setDxBaseValue(attribute.value().toFloat());
+    if (name == SVGNames::dxAttr) {
+        setDxBaseValue(value.toFloat());
         return;
     }
 
-    if (attribute.name() == SVGNames::dyAttr) {
-        setDyBaseValue(attribute.value().toFloat());
+    if (name == SVGNames::dyAttr) {
+        setDyBaseValue(value.toFloat());
         return;
     }
 
@@ -156,6 +155,9 @@ PassRefPtr<FilterEffect> SVGFEDropShadowElement::build(SVGFilterBuilder* filterB
     if (!renderer)
         return 0;
     
+    if (stdDeviationX() < 0 || stdDeviationY() < 0)
+        return 0;
+
     ASSERT(renderer->style());
     const SVGRenderStyle* svgStyle = renderer->style()->svgStyle();
     

@@ -24,12 +24,8 @@
 
 #include "WebDOMTestSerializedScriptValueInterface.h"
 
-#include "Array.h"
-#include "MessagePortArray.h"
 #include "SerializedScriptValue.h"
 #include "TestSerializedScriptValueInterface.h"
-#include "WebDOMArray.h"
-#include "WebDOMMessagePortArray.h"
 #include "WebExceptionHandler.h"
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
@@ -119,36 +115,12 @@ void WebDOMTestSerializedScriptValueInterface::setCachedValue(const WebDOMString
     impl()->setCachedValue(WebCore::SerializedScriptValue::create(WTF::String(newCachedValue)));
 }
 
-WebDOMMessagePortArray WebDOMTestSerializedScriptValueInterface::ports() const
-{
-    if (!impl())
-        return WebDOMMessagePortArray();
-
-    return toWebKit(WTF::getPtr(impl()->ports()));
-}
-
 WebDOMString WebDOMTestSerializedScriptValueInterface::cachedReadonlyValue() const
 {
     if (!impl())
         return WebDOMString();
 
     return impl()->cachedReadonlyValue()->toString();
-}
-
-void WebDOMTestSerializedScriptValueInterface::acceptTransferList(const WebDOMString& data, const WebDOMArray& transferList)
-{
-    if (!impl())
-        return;
-
-    impl()->acceptTransferList(WebCore::SerializedScriptValue::create(WTF::String(data)), toWebCore(transferList));
-}
-
-void WebDOMTestSerializedScriptValueInterface::multiTransferList(const WebDOMString& first, const WebDOMArray& tx, const WebDOMString& second, const WebDOMArray& txx)
-{
-    if (!impl())
-        return;
-
-    impl()->multiTransferList(WebCore::SerializedScriptValue::create(WTF::String(first)), toWebCore(tx), WebCore::SerializedScriptValue::create(WTF::String(second)), toWebCore(txx));
 }
 
 WebCore::TestSerializedScriptValueInterface* toWebCore(const WebDOMTestSerializedScriptValueInterface& wrapper)

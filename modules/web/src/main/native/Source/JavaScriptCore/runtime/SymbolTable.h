@@ -30,15 +30,31 @@
 #define SymbolTable_h
 
 #include "JSObject.h"
-#include "UString.h"
 #include "Watchpoint.h"
-#include <wtf/AlwaysInline.h>
 #include <wtf/HashTraits.h>
+#include <wtf/text/StringImpl.h>
 
 namespace JSC {
 
     class Watchpoint;
     class WatchpointSet;
+
+struct SlowArgument {
+    enum Status {
+        Normal = 0,
+        Captured = 1,
+        Deleted = 2
+    };
+
+    SlowArgument()
+        : status(Normal)
+        , index(0)
+    {
+    }
+
+    Status status;
+    int index; // If status is 'Deleted', index is bogus.
+};
 
     static ALWAYS_INLINE int missingSymbolMarker() { return std::numeric_limits<int>::max(); }
 
@@ -76,7 +92,7 @@ namespace JSC {
         class Fast {
         public:
             Fast()
-                : m_bits(0)
+            : m_bits(SlimFlag)
             {
             }
             
@@ -87,7 +103,7 @@ namespace JSC {
         
             bool isNull() const
             {
-                return !m_bits;
+            return !(m_bits & ~SlimFlag);
             }
 
             int getIndex() const
@@ -112,7 +128,7 @@ namespace JSC {
 
             bool isFat() const
             {
-                return m_bits & FatFlag;
+            return !(m_bits & SlimFlag);
             }
             
         private:
@@ -121,19 +137,19 @@ namespace JSC {
         };
 
         SymbolTableEntry()
-            : m_bits(0)
+        : m_bits(SlimFlag)
         {
         }
 
         SymbolTableEntry(int index)
-            : m_bits(0)
+        : m_bits(SlimFlag)
         {
             ASSERT(isValidIndex(index));
             pack(index, false, false);
         }
 
         SymbolTableEntry(int index, unsigned attributes)
-            : m_bits(0)
+        : m_bits(SlimFlag)
         {
             ASSERT(isValidIndex(index));
             pack(index, attributes & ReadOnly, attributes & DontEnum);
@@ -145,7 +161,7 @@ namespace JSC {
         }
         
         SymbolTableEntry(const SymbolTableEntry& other)
-            : m_bits(0)
+        : m_bits(SlimFlag)
         {
             *this = other;
         }
@@ -161,7 +177,7 @@ namespace JSC {
         
         bool isNull() const
         {
-            return !bits();
+        return !(bits() & ~SlimFlag);
         }
 
         int getIndex() const
@@ -179,7 +195,7 @@ namespace JSC {
             Fast result;
             wasFat = isFat();
             if (wasFat)
-                result.m_bits = fatEntry()->m_bits;
+            result.m_bits = fatEntry()->m_bits | SlimFlag;
             else
                 result.m_bits = m_bits;
             return result;
@@ -229,7 +245,7 @@ namespace JSC {
         }
         
     private:
-        static const intptr_t FatFlag = 0x1;
+    static const intptr_t SlimFlag = 0x1;
         static const intptr_t ReadOnlyFlag = 0x2;
         static const intptr_t DontEnumFlag = 0x4;
         static const intptr_t NotNullFlag = 0x8;
@@ -239,7 +255,7 @@ namespace JSC {
             WTF_MAKE_FAST_ALLOCATED;
         public:
             FatEntry(intptr_t bits)
-                : m_bits(bits | FatFlag)
+            : m_bits(bits & ~SlimFlag)
             {
             }
             
@@ -253,19 +269,19 @@ namespace JSC {
         
         bool isFat() const
         {
-            return m_bits & FatFlag;
+        return !(m_bits & SlimFlag);
         }
         
         const FatEntry* fatEntry() const
         {
             ASSERT(isFat());
-            return bitwise_cast<const FatEntry*>(m_bits & ~FatFlag);
+        return bitwise_cast<const FatEntry*>(m_bits);
         }
         
         FatEntry* fatEntry()
         {
             ASSERT(isFat());
-            return bitwise_cast<FatEntry*>(m_bits & ~FatFlag);
+        return bitwise_cast<FatEntry*>(m_bits);
         }
         
         FatEntry* inflate()
@@ -298,12 +314,13 @@ namespace JSC {
             freeFatEntrySlow();
         }
         
-        void freeFatEntrySlow();
+    JS_EXPORT_PRIVATE void freeFatEntrySlow();
 
         void pack(int index, bool readOnly, bool dontEnum)
         {
+        ASSERT(!isFat());
             intptr_t& bitsRef = bits();
-            bitsRef = (static_cast<intptr_t>(index) << FlagBits) | NotNullFlag;
+        bitsRef = (static_cast<intptr_t>(index) << FlagBits) | NotNullFlag | SlimFlag;
             if (readOnly)
                 bitsRef |= ReadOnlyFlag;
             if (dontEnum)
@@ -319,18 +336,68 @@ namespace JSC {
     };
 
     struct SymbolTableIndexHashTraits : HashTraits<SymbolTableEntry> {
-        static const bool emptyValueIsZero = true;
-        static const bool needsDestruction = false;
+    static const bool needsDestruction = true;
     };
 
     typedef HashMap<RefPtr<StringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<StringImpl> >, SymbolTableIndexHashTraits> SymbolTable;
 
-    class SharedSymbolTable : public SymbolTable, public RefCounted<SharedSymbolTable> {
-        WTF_MAKE_FAST_ALLOCATED;
+class SharedSymbolTable : public JSCell, public SymbolTable {
     public:
-        static PassRefPtr<SharedSymbolTable> create() { return adoptRef(new SharedSymbolTable); }
+    typedef JSCell Base;
+
+    static SharedSymbolTable* create(VM& vm)
+    {
+        SharedSymbolTable* sharedSymbolTable = new (NotNull, allocateCell<SharedSymbolTable>(vm.heap)) SharedSymbolTable(vm);
+        sharedSymbolTable->finishCreation(vm);
+        return sharedSymbolTable;
+    }
+    static const bool needsDestruction = true;
+    static const bool hasImmortalStructure = true;
+    static void destroy(JSCell*);
+
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        return Structure::create(vm, globalObject, prototype, TypeInfo(LeafType, StructureFlags), &s_info);
+    }
+
+    bool usesNonStrictEval() { return m_usesNonStrictEval; }
+    void setUsesNonStrictEval(bool usesNonStrictEval) { m_usesNonStrictEval = usesNonStrictEval; }
+
+    int captureStart() { return m_captureStart; }
+    void setCaptureStart(int captureStart) { m_captureStart = captureStart; }
+
+    int captureEnd() { return m_captureEnd; }
+    void setCaptureEnd(int captureEnd) { m_captureEnd = captureEnd; }
+
+    int captureCount() { return m_captureEnd - m_captureStart; }
+
+    int parameterCount() { return m_parameterCountIncludingThis - 1; }
+    int parameterCountIncludingThis() { return m_parameterCountIncludingThis; }
+    void setParameterCountIncludingThis(int parameterCountIncludingThis) { m_parameterCountIncludingThis = parameterCountIncludingThis; }
+
+    // 0 if we don't capture any arguments; parameterCount() in length if we do.
+    const SlowArgument* slowArguments() { return m_slowArguments.get(); }
+    void setSlowArguments(PassOwnArrayPtr<SlowArgument> slowArguments) { m_slowArguments = slowArguments; }
+
+    static JS_EXPORTDATA const ClassInfo s_info;
+
     private:
-        SharedSymbolTable() { turnOffVerifier(); }
+    SharedSymbolTable(VM& vm)
+        : JSCell(vm, vm.sharedSymbolTableStructure.get())
+        , m_parameterCountIncludingThis(0)
+        , m_usesNonStrictEval(false)
+        , m_captureStart(0)
+        , m_captureEnd(0)
+    {
+    }
+
+    int m_parameterCountIncludingThis;
+    bool m_usesNonStrictEval;
+
+    int m_captureStart;
+    int m_captureEnd;
+
+    OwnArrayPtr<SlowArgument> m_slowArguments;
     };
     
 } // namespace JSC

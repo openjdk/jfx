@@ -30,14 +30,14 @@
 
 #include "DFGAssemblyHelpers.h"
 #include "DFGSpeculativeJIT.h"
+#include "JSCellInlines.h"
 
 namespace JSC { namespace DFG {
 
-OSRExit::OSRExit(ExitKind kind, JSValueSource jsValueSource, MethodOfGettingAValueProfile valueProfile, MacroAssembler::Jump check, SpeculativeJIT* jit, unsigned streamIndex, unsigned recoveryIndex)
+OSRExit::OSRExit(ExitKind kind, JSValueSource jsValueSource, MethodOfGettingAValueProfile valueProfile, SpeculativeJIT* jit, unsigned streamIndex, unsigned recoveryIndex)
     : m_jsValueSource(jsValueSource)
     , m_valueProfile(valueProfile)
-    , m_check(check)
-    , m_nodeIndex(jit->m_compileIndex)
+    , m_patchableCodeOffset(0)
     , m_codeOrigin(jit->m_codeOriginForOSR)
     , m_codeOriginForExitProfile(m_codeOrigin)
     , m_recoveryIndex(recoveryIndex)
@@ -50,11 +50,30 @@ OSRExit::OSRExit(ExitKind kind, JSValueSource jsValueSource, MethodOfGettingAVal
     ASSERT(m_codeOrigin.isSet());
 }
 
-bool OSRExit::considerAddingAsFrequentExitSiteSlow(CodeBlock* dfgCodeBlock, CodeBlock* profiledCodeBlock)
+void OSRExit::setPatchableCodeOffset(MacroAssembler::PatchableJump check)
 {
-    if (static_cast<double>(m_count) / dfgCodeBlock->osrExitCounter() <= Options::osrExitProminenceForFrequentExitSite())
-        return false;
+    m_patchableCodeOffset = check.m_jump.m_label.m_offset;
+}
     
+MacroAssembler::Jump OSRExit::getPatchableCodeOffsetAsJump() const
+{
+    return MacroAssembler::Jump(AssemblerLabel(m_patchableCodeOffset));
+}
+
+CodeLocationJump OSRExit::codeLocationForRepatch(CodeBlock* dfgCodeBlock) const
+{
+    return CodeLocationJump(dfgCodeBlock->getJITCode().dataAddressAtOffset(m_patchableCodeOffset));
+}
+
+void OSRExit::correctJump(LinkBuffer& linkBuffer)
+{
+    MacroAssembler::Label label;
+    label.m_label.m_offset = m_patchableCodeOffset;
+    m_patchableCodeOffset = linkBuffer.offsetOf(label);
+}
+
+bool OSRExit::considerAddingAsFrequentExitSiteSlow(CodeBlock* profiledCodeBlock)
+{
     FrequentExitSite exitSite;
     
     if (m_kind == ArgumentsEscaped) {
@@ -64,7 +83,7 @@ bool OSRExit::considerAddingAsFrequentExitSiteSlow(CodeBlock* dfgCodeBlock, Code
     } else
         exitSite = FrequentExitSite(m_codeOriginForExitProfile.bytecodeIndex, m_kind);
     
-    return baselineCodeBlockForOriginAndBaselineCodeBlock(m_codeOrigin, profiledCodeBlock)->addFrequentExitSite(exitSite);
+    return baselineCodeBlockForOriginAndBaselineCodeBlock(m_codeOriginForExitProfile, profiledCodeBlock)->addFrequentExitSite(exitSite);
 }
 
 } } // namespace JSC::DFG

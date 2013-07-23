@@ -32,14 +32,9 @@ OBJC_CLASS NSImage;
 #elif PLATFORM(WIN)
 typedef struct HICON__* HICON;
 #elif PLATFORM(QT)
-#include <QImage>
+#include <QIcon>
 #elif PLATFORM(GTK)
 typedef struct _GdkPixbuf GdkPixbuf;
-#elif PLATFORM(EFL)
-typedef struct _Evas_Object Evas_Object;
-#elif PLATFORM(CHROMIUM)
-#include "Image.h"
-#include "PlatformIcon.h"
 #elif PLATFORM(JAVA)
 #include "jni.h"
 #include "RQRef.h"
@@ -60,8 +55,6 @@ public:
 
 #if PLATFORM(WIN)
     static PassRefPtr<Icon> create(HICON hIcon) { return adoptRef(new Icon(hIcon)); }
-#elif PLATFORM(CHROMIUM)
-    static PassRefPtr<Icon> create(PassRefPtr<PlatformIcon> icon) { return adoptRef(new Icon(icon)); }
 #endif
 
 private:
@@ -73,16 +66,13 @@ private:
     HICON m_hIcon;
 #elif PLATFORM(QT)
     Icon();
-    QImage m_image;
+    QIcon m_icon;
 #elif PLATFORM(GTK)
     Icon();
     GdkPixbuf* m_icon;
 #elif PLATFORM(EFL)
     Icon();
     Evas_Object* m_icon;
-#elif PLATFORM(CHROMIUM)
-    Icon(PassRefPtr<PlatformIcon>);
-    RefPtr<PlatformIcon> m_icon;
 #elif PLATFORM(JAVA)
     Icon(const JLObject &jicon);
     RefPtr<RQRef> m_jicon;

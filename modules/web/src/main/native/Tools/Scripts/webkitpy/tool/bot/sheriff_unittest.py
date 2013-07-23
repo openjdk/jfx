@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.net.buildbot import Builder
 from webkitpy.common.system.outputcapture import OutputCapture
@@ -65,7 +65,7 @@ class SheriffTest(unittest.TestCase):
             sheriff.post_blame_comment_on_bug(commit_info, builders, ["mock-test-1"])
             sheriff.post_blame_comment_on_bug(commit_info, builders, ["mock-test-1", "mock-test-2"])
 
-        expected_stderr = u"""MOCK bug comment: bug_id=1234, cc=['watcher@example.com']
+        expected_logs = u"""MOCK bug comment: bug_id=1234, cc=['watcher@example.com']
 --- Begin comment ---
 http://trac.webkit.org/changeset/4321 might have broken Foo and Bar
 --- End comment ---
@@ -86,4 +86,4 @@ mock-test-2
 --- End comment ---
 
 """
-        OutputCapture().assert_outputs(self, run, expected_stderr=expected_stderr)
+        OutputCapture().assert_outputs(self, run, expected_logs=expected_logs)

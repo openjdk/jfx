@@ -63,18 +63,18 @@ bool SVGGElement::isSupportedAttribute(const QualifiedName& attrName)
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGGElement::parseAttribute(const Attribute& attribute)
+void SVGGElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(attribute.name())) {
-        SVGStyledTransformableElement::parseAttribute(attribute);
+    if (!isSupportedAttribute(name)) {
+        SVGStyledTransformableElement::parseAttribute(name, value);
         return;
     }
 
-    if (SVGTests::parseAttribute(attribute))
+    if (SVGTests::parseAttribute(name, value))
         return;
-    if (SVGLangSpace::parseAttribute(attribute))
+    if (SVGLangSpace::parseAttribute(name, value))
         return;
-    if (SVGExternalResourcesRequired::parseAttribute(attribute))
+    if (SVGExternalResourcesRequired::parseAttribute(name, value))
         return;
 
     ASSERT_NOT_REACHED();
@@ -112,7 +112,7 @@ bool SVGGElement::rendererIsNeeded(const NodeRenderingContext&)
 {
     // Unlike SVGStyledElement::rendererIsNeeded(), we still create renderers, even if
     // display is set to 'none' - which is special to SVG <g> container elements.
-    return parentOrHostElement() && parentOrHostElement()->isSVGElement();
+    return parentOrShadowHostElement() && parentOrShadowHostElement()->isSVGElement();
 }
 
 }

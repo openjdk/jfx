@@ -25,10 +25,6 @@
 
 package com.sun.javafx.css;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
 import javafx.css.ParsedValue;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
@@ -37,14 +33,11 @@ import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
-
-import org.junit.Test;
-
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.css.parser.StopConverter;
-import javafx.scene.paint.LinearGradientBuilder;
-import javafx.scene.paint.RadialGradientBuilder;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 
 public class PaintTypeTest {
@@ -201,37 +194,27 @@ public class PaintTypeTest {
         ParsedValue value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "radial-gradient(focus-angle 90deg, focus-distance 50%, radius 50, red, green, blue)");
         RadialGradient result = (RadialGradient)((Paint[])value.convert(null))[0];
-        RadialGradientBuilder builder = RadialGradientBuilder.create();
-        RadialGradient expResult =
-            builder.focusAngle(90)
-                   .focusDistance(.5)
-                   .radius(50)
-                   .proportional(false)
-                   .stops(new Stop(0, Color.RED),
-                          new Stop(.5, Color.GREEN),
-                          new Stop(1.0,Color.BLUE))
-            .build();
-        assertEquals(expResult,result);
+        RadialGradient expected = new RadialGradient(90, .5, 0, 0, 50,
+                false, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0,Color.BLUE));
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "radial-gradient(focus-angle 1.5708rad, focus-distance 50%, radius 50, red, green, blue)");
         result = (RadialGradient)((Paint[])value.convert(null))[0];
-        assertEquals(expResult,result);
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "radial-gradient(center 0% 10%, radius 50%, reflect, red, green, blue)");
         result = (RadialGradient)((Paint[])value.convert(null))[0];
-        builder = RadialGradientBuilder.create();
-        expResult =
-            builder.centerX(0).centerY(.1)
-                   .radius(.5)
-                   .proportional(true)
-                   .cycleMethod(CycleMethod.REFLECT)
-                   .stops(new Stop(0, Color.RED),
-                          new Stop(.5, Color.GREEN),
-                          new Stop(1.0,Color.BLUE))
-            .build();
-        assertEquals(expResult,result);
+        expected = new RadialGradient(0, 0, 0, .1, .5,
+                true, CycleMethod.REFLECT,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0,Color.BLUE));
+        assertEquals(expected,result);
     }
 
     @Test
@@ -245,71 +228,92 @@ public class PaintTypeTest {
         ParsedValue value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "linear-gradient(to top, red, green, blue)");
         LinearGradient result = (LinearGradient)((Paint[])value.convert(null))[0];
-        LinearGradientBuilder builder = LinearGradientBuilder.create();
-        LinearGradient expResult =
-            builder.startX(0).endX(0).startY(1).endY(0)
-                   .proportional(true)
-                   .stops(new Stop(0, Color.RED),
-                          new Stop(.5, Color.GREEN),
-                          new Stop(1.0,Color.BLUE))
-            .build();
-        assertEquals(expResult,result);
+        LinearGradient expected = new LinearGradient(0, 1, 0, 0,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0, Color.BLUE));
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "linear-gradient(to bottom, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
-        expResult = builder.startX(0).endX(0).startY(0).endY(1).build();
-        assertEquals(expResult,result);
+        expected = new LinearGradient(0, 0, 0, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0, Color.BLUE));
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "linear-gradient(to left, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
-        expResult = builder.startX(1).endX(0).startY(0).endY(0).build();
-        assertEquals(expResult,result);
+        expected = new LinearGradient(1, 0, 0, 0,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0, Color.BLUE));
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "linear-gradient(to right, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
-        expResult = builder.startX(0).endX(1).startY(0).endY(0).build();
-        assertEquals(expResult,result);
+        expected = new LinearGradient(0, 0, 1, 0,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0, Color.BLUE));
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "linear-gradient(to bottom left, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
-        expResult = builder.startX(1).endX(0).startY(0).endY(1).build();
-        assertEquals(expResult,result);
+        expected = new LinearGradient(1, 0, 0, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0, Color.BLUE));
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "linear-gradient(to bottom right, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
-        expResult = builder.startX(0).endX(1).startY(0).endY(1).build();
-        assertEquals(expResult,result);
+        expected = new LinearGradient(0, 0, 1, 1,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0, Color.BLUE));
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "linear-gradient(to top left, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
-        expResult = builder.startX(1).endX(0).startY(1).endY(0).build();
-        assertEquals(expResult,result);
+        expected = new LinearGradient(1, 1, 0, 0,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0, Color.BLUE));
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "linear-gradient(to top right, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
-        expResult = builder.startX(0).endX(1).startY(1).endY(0).build();
-        assertEquals(expResult,result);
+        expected = new LinearGradient(0, 1, 1, 0,
+                true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0, Color.BLUE));
+        assertEquals(expected,result);
 
         value = CSSParser.getInstance().parseExpr("-fx-background-color",
                 "linear-gradient(from 10% 10% to 90% 90%, reflect, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
-        builder = LinearGradientBuilder.create();
-        expResult =
-            builder.startX(.1).endX(.9).startY(.1).endY(.9)
-                   .proportional(true)
-                   .cycleMethod(CycleMethod.REFLECT)
-                   .stops(new Stop(0, Color.RED),
-                          new Stop(.5, Color.GREEN),
-                          new Stop(1.0,Color.BLUE))
-            .build();
-        assertEquals(expResult,result);
+        expected = new LinearGradient(.1, .1, .9, .9,
+                true, CycleMethod.REFLECT,
+                new Stop(0, Color.RED),
+                new Stop(.5, Color.GREEN),
+                new Stop(1.0, Color.BLUE));
+        assertEquals(expected,result);
   }
 
 }

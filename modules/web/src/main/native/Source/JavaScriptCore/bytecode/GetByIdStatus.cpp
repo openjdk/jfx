@@ -27,7 +27,10 @@
 #include "GetByIdStatus.h"
 
 #include "CodeBlock.h"
+#include "JSScope.h"
+#include "LLIntData.h"
 #include "LowLevelInterpreter.h"
+#include "Operations.h"
 
 namespace JSC {
 
@@ -39,8 +42,8 @@ GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned
 #if ENABLE(LLINT)
     Instruction* instruction = profiledBlock->instructions().begin() + bytecodeIndex;
     
-    if (instruction[0].u.opcode == llint_op_method_check)
-        instruction++;
+    if (instruction[0].u.opcode == LLInt::getOpcode(llint_op_get_array_length))
+        return GetByIdStatus(NoInformation, false);
 
     Structure* structure = instruction[4].u.structure.get();
     if (!structure)
@@ -49,7 +52,9 @@ GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned
     unsigned attributesIgnored;
     JSCell* specificValue;
     PropertyOffset offset = structure->get(
-        *profiledBlock->globalData(), ident, attributesIgnored, specificValue);
+        *profiledBlock->vm(), ident, attributesIgnored, specificValue);
+    if (structure->isDictionary())
+        specificValue = 0;
     if (!isValidOffset(offset))
         return GetByIdStatus(NoInformation, false);
     
@@ -75,6 +80,7 @@ void GetByIdStatus::computeForChain(GetByIdStatus& result, CodeBlock* profiledBl
     Structure* currentStructure = structure;
     JSObject* currentObject = 0;
     for (unsigned i = 0; i < result.m_chain.size(); ++i) {
+        ASSERT(!currentStructure->isDictionary());
         currentObject = asObject(currentStructure->prototypeForLookup(profiledBlock));
         currentStructure = result.m_chain[i];
         if (currentObject->structure() != currentStructure)
@@ -87,7 +93,9 @@ void GetByIdStatus::computeForChain(GetByIdStatus& result, CodeBlock* profiledBl
     JSCell* specificValue;
         
     result.m_offset = currentStructure->get(
-        *profiledBlock->globalData(), ident, attributesIgnored, specificValue);
+        *profiledBlock->vm(), ident, attributesIgnored, specificValue);
+    if (currentStructure->isDictionary())
+        specificValue = 0;
     if (!isValidOffset(result.m_offset))
         return;
         
@@ -117,6 +125,9 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, unsigned bytec
     if (!stubInfo.seen)
         return computeFromLLInt(profiledBlock, bytecodeIndex, ident);
     
+    if (stubInfo.resetByGC)
+        return GetByIdStatus(TakesSlowPath, true);
+
     PolymorphicAccessStructureList* list;
     int listSize;
     switch (stubInfo.accessType) {
@@ -144,7 +155,7 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, unsigned bytec
     
     // Finally figure out if we can derive an access strategy.
     GetByIdStatus result;
-    result.m_wasSeenInJIT = true;
+    result.m_wasSeenInJIT = true; // This is interesting for bytecode dumping only.
     switch (stubInfo.accessType) {
     case access_unset:
         return computeFromLLInt(profiledBlock, bytecodeIndex, ident);
@@ -154,7 +165,9 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, unsigned bytec
         unsigned attributesIgnored;
         JSCell* specificValue;
         result.m_offset = structure->get(
-            *profiledBlock->globalData(), ident, attributesIgnored, specificValue);
+            *profiledBlock->vm(), ident, attributesIgnored, specificValue);
+        if (structure->isDictionary())
+            specificValue = 0;
         
         if (isValidOffset(result.m_offset)) {
             result.m_structureSet.add(structure);
@@ -177,7 +190,9 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, unsigned bytec
             unsigned attributesIgnored;
             JSCell* specificValue;
             PropertyOffset myOffset = structure->get(
-                *profiledBlock->globalData(), ident, attributesIgnored, specificValue);
+                *profiledBlock->vm(), ident, attributesIgnored, specificValue);
+            if (structure->isDictionary())
+                specificValue = 0;
             
             if (!isValidOffset(myOffset)) {
                 result.m_offset = invalidOffset;
@@ -239,6 +254,36 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, unsigned bytec
 #else // ENABLE(JIT)
     return GetByIdStatus(NoInformation, false);
 #endif // ENABLE(JIT)
+}
+
+GetByIdStatus GetByIdStatus::computeFor(VM& vm, Structure* structure, Identifier& ident)
+{
+    // For now we only handle the super simple self access case. We could handle the
+    // prototype case in the future.
+    
+    if (PropertyName(ident).asIndex() != PropertyName::NotAnIndex)
+        return GetByIdStatus(TakesSlowPath);
+    
+    if (structure->typeInfo().overridesGetOwnPropertySlot())
+        return GetByIdStatus(TakesSlowPath);
+    
+    if (!structure->propertyAccessesAreCacheable())
+        return GetByIdStatus(TakesSlowPath);
+    
+    GetByIdStatus result;
+    result.m_wasSeenInJIT = false; // To my knowledge nobody that uses computeFor(VM&, Structure*, Identifier&) reads this field, but I might as well be honest: no, it wasn't seen in the JIT, since I computed it statically.
+    unsigned attributes;
+    JSCell* specificValue;
+    result.m_offset = structure->get(vm, ident, attributes, specificValue);
+    if (!isValidOffset(result.m_offset))
+        return GetByIdStatus(TakesSlowPath); // It's probably a prototype lookup. Give up on life for now, even though we could totally be way smarter about it.
+    if (attributes & Accessor)
+        return GetByIdStatus(MakesCalls);
+    if (structure->isDictionary())
+        specificValue = 0;
+    result.m_structureSet.add(structure);
+    result.m_specificValue = JSValue(specificValue);
+    return result;
 }
 
 } // namespace JSC

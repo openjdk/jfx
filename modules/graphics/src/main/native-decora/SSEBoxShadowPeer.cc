@@ -29,6 +29,7 @@
  */
 
 #include <jni.h>
+#include "SSEUtils.h"
 #include "com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer.h"
 
 JNIEXPORT void JNICALL

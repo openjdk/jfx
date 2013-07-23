@@ -26,6 +26,7 @@
 #include "CSSStyleSheet.h"
 #include "CachedCSSStyleSheet.h"
 #include "Document.h"
+#include "MediaList.h"
 #include "Node.h"
 #include "SecurityOrigin.h"
 #include "StylePropertySet.h"
@@ -53,10 +54,9 @@ unsigned StyleSheetContents::estimatedSizeInBytes() const
     return size;
 }
 
-StyleSheetContents::StyleSheetContents(StyleRuleImport* ownerRule, const String& originalURL, const KURL& finalURL, const CSSParserContext& context)
+StyleSheetContents::StyleSheetContents(StyleRuleImport* ownerRule, const String& originalURL, const CSSParserContext& context)
     : m_ownerRule(ownerRule)
     , m_originalURL(originalURL)
-    , m_finalURL(finalURL)
     , m_loadCompleted(false)
     , m_isUserStyleSheet(ownerRule && ownerRule->parentStyleSheet() && ownerRule->parentStyleSheet()->isUserStyleSheet())
     , m_hasSyntacticallyValidCSSHeader(true)
@@ -72,7 +72,6 @@ StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
     : RefCounted<StyleSheetContents>()
     , m_ownerRule(0)
     , m_originalURL(o.m_originalURL)
-    , m_finalURL(o.m_finalURL)
     , m_encodingFromCharsetRule(o.m_encodingFromCharsetRule)
     , m_importRules(o.m_importRules.size())
     , m_childRules(o.m_childRules.size())
@@ -134,12 +133,19 @@ void StyleSheetContents::parserAppendRule(PassRefPtr<StyleRuleBase> rule)
         m_importRules.last()->requestStyleSheet();
         return;
     }
+
+#if ENABLE(RESOLUTION_MEDIA_QUERY)
+    // Add warning message to inspector if dpi/dpcm values are used for screen media.
+    if (rule->isMediaRule())
+        reportMediaQueryWarningIfNeeded(singleOwnerDocument(), static_cast<StyleRuleMedia*>(rule.get())->mediaQueries());
+#endif
+
     m_childRules.append(rule);
 }
 
 StyleRuleBase* StyleSheetContents::ruleAt(unsigned index) const
 {
-    ASSERT(index < ruleCount());
+    ASSERT_WITH_SECURITY_IMPLICATION(index < ruleCount());
     
     unsigned childVectorIndex = index;
     if (hasCharsetRule()) {
@@ -189,7 +195,7 @@ void StyleSheetContents::parserSetEncodingFromCharsetRule(const String& encoding
 bool StyleSheetContents::wrapperInsertRule(PassRefPtr<StyleRuleBase> rule, unsigned index)
 {
     ASSERT(m_isMutable);
-    ASSERT(index <= ruleCount());
+    ASSERT_WITH_SECURITY_IMPLICATION(index <= ruleCount());
     // Parser::parseRule doesn't currently allow @charset so we don't need to deal with it.
     ASSERT(!rule->isCharsetRule());
     
@@ -225,7 +231,7 @@ bool StyleSheetContents::wrapperInsertRule(PassRefPtr<StyleRuleBase> rule, unsig
 void StyleSheetContents::wrapperDeleteRule(unsigned index)
 {
     ASSERT(m_isMutable);
-    ASSERT(index < ruleCount());
+    ASSERT_WITH_SECURITY_IMPLICATION(index < ruleCount());
 
     unsigned childVectorIndex = index;
     if (hasCharsetRule()) {
@@ -249,7 +255,10 @@ void StyleSheetContents::parserAddNamespace(const AtomicString& prefix, const At
 {
     if (uri.isNull() || prefix.isNull())
         return;
-    m_namespaces.add(prefix, uri);
+    PrefixNamespaceURIMap::AddResult result = m_namespaces.add(prefix, uri);
+    if (result.isNewEntry)
+        return;
+    result.iterator->value = uri;
 }
 
 const AtomicString& StyleSheetContents::determineNamespace(const AtomicString& prefix)
@@ -261,7 +270,7 @@ const AtomicString& StyleSheetContents::determineNamespace(const AtomicString& p
     PrefixNamespaceURIMap::const_iterator it = m_namespaces.find(prefix);
     if (it == m_namespaces.end())
         return nullAtom;
-    return it->second;
+    return it->value;
 }
 
 void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cachedStyleSheet, const SecurityOrigin* securityOrigin)
@@ -273,13 +282,13 @@ void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
     String sheetText = cachedStyleSheet->sheetText(enforceMIMEType, &hasValidMIMEType);
 
     CSSParser p(parserContext());
-    p.parseSheet(this, sheetText, 0);
+    p.parseSheet(this, sheetText, 0, 0, true);
 
     // If we're loading a stylesheet cross-origin, and the MIME type is not standard, require the CSS
     // to at least start with a syntactically valid CSS rule.
     // This prevents an attacker playing games by injecting CSS strings into HTML, XML, JSON, etc. etc.
     if (!hasValidMIMEType && !hasSyntacticallyValidCSSHeader()) {
-        bool isCrossOriginCSS = !securityOrigin || !securityOrigin->canRequest(finalURL());
+        bool isCrossOriginCSS = !securityOrigin || !securityOrigin->canRequest(baseURL());
         if (isCrossOriginCSS) {
             clearRules();
             return;
@@ -287,11 +296,10 @@ void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
     }
     if (m_parserContext.needsSiteSpecificQuirks && isStrictParserMode(m_parserContext.mode)) {
         // Work around <https://bugs.webkit.org/show_bug.cgi?id=28350>.
-        DEFINE_STATIC_LOCAL(const String, slashKHTMLFixesDotCss, ("/KHTMLFixes.css"));
-        DEFINE_STATIC_LOCAL(const String, mediaWikiKHTMLFixesStyleSheet, ("/* KHTML fix stylesheet */\n/* work around the horizontal scrollbars */\n#column-content { margin-left: 0; }\n\n"));
+        DEFINE_STATIC_LOCAL(const String, mediaWikiKHTMLFixesStyleSheet, (ASCIILiteral("/* KHTML fix stylesheet */\n/* work around the horizontal scrollbars */\n#column-content { margin-left: 0; }\n\n")));
         // There are two variants of KHTMLFixes.css. One is equal to mediaWikiKHTMLFixesStyleSheet,
         // while the other lacks the second trailing newline.
-        if (finalURL().string().endsWith(slashKHTMLFixesDotCss) && !sheetText.isNull() && mediaWikiKHTMLFixesStyleSheet.startsWith(sheetText)
+        if (baseURL().string().endsWith("/KHTMLFixes.css") && !sheetText.isNull() && mediaWikiKHTMLFixesStyleSheet.startsWith(sheetText)
             && sheetText.length() >= mediaWikiKHTMLFixesStyleSheet.length() - 1)
             clearRules();
     }
@@ -299,13 +307,13 @@ void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
 
 bool StyleSheetContents::parseString(const String& sheetText)
 {
-    return parseStringAtLine(sheetText, 0);
+    return parseStringAtLine(sheetText, 0, false);
 }
 
-bool StyleSheetContents::parseStringAtLine(const String& sheetText, int startLineNumber)
+bool StyleSheetContents::parseStringAtLine(const String& sheetText, int startLineNumber, bool createdByParser)
 {
     CSSParser p(parserContext());
-    p.parseSheet(this, sheetText, startLineNumber);
+    p.parseSheet(this, sheetText, startLineNumber, 0, createdByParser);
 
     return true;
 }
@@ -323,6 +331,8 @@ void StyleSheetContents::checkLoaded()
 {
     if (isLoading())
         return;
+
+    RefPtr<StyleSheetContents> protect(this);
 
     // Avoid |this| being deleted by scripts that run via
     // ScriptableDocumentParser::executeScriptsWaitingForStylesheets().
@@ -409,6 +419,61 @@ void StyleSheetContents::addSubresourceStyleURLs(ListHashSet<KURL>& urls)
     }
 }
 
+static bool childRulesHaveFailedOrCanceledSubresources(const Vector<RefPtr<StyleRuleBase> >& rules)
+{
+    for (unsigned i = 0; i < rules.size(); ++i) {
+        const StyleRuleBase* rule = rules[i].get();
+        switch (rule->type()) {
+        case StyleRuleBase::Style:
+            if (static_cast<const StyleRule*>(rule)->properties()->hasFailedOrCanceledSubresources())
+                return true;
+            break;
+        case StyleRuleBase::FontFace:
+            if (static_cast<const StyleRuleFontFace*>(rule)->properties()->hasFailedOrCanceledSubresources())
+                return true;
+            break;
+        case StyleRuleBase::Media:
+            if (childRulesHaveFailedOrCanceledSubresources(static_cast<const StyleRuleMedia*>(rule)->childRules()))
+                return true;
+            break;
+        case StyleRuleBase::Region:
+            if (childRulesHaveFailedOrCanceledSubresources(static_cast<const StyleRuleRegion*>(rule)->childRules()))
+                return true;
+            break;
+#if ENABLE(SHADOW_DOM)
+        case StyleRuleBase::HostInternal:
+            if (childRulesHaveFailedOrCanceledSubresources(static_cast<const StyleRuleHost*>(rule)->childRules()))
+                return true;
+            break;
+#endif
+        case StyleRuleBase::Import:
+            ASSERT_NOT_REACHED();
+        case StyleRuleBase::Page:
+        case StyleRuleBase::Keyframes:
+        case StyleRuleBase::Unknown:
+        case StyleRuleBase::Charset:
+        case StyleRuleBase::Keyframe:
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+        case StyleRuleBase::Supports:
+#endif
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+        case StyleRuleBase::Viewport:
+#endif
+#if ENABLE(CSS_SHADERS)
+        case StyleRuleBase::Filter:
+#endif
+            break;
+        }
+    }
+    return false;
+}
+
+bool StyleSheetContents::hasFailedOrCanceledSubresources() const
+{
+    ASSERT(isCacheable());
+    return childRulesHaveFailedOrCanceledSubresources(m_childRules);
+}
+
 StyleSheetContents* StyleSheetContents::parentStyleSheet() const
 {
     return m_ownerRule ? m_ownerRule->parentStyleSheet() : 0;
@@ -439,6 +504,12 @@ void StyleSheetContents::removedFromMemoryCache()
     ASSERT(m_isInMemoryCache);
     ASSERT(isCacheable());
     m_isInMemoryCache = false;
+}
+
+void StyleSheetContents::shrinkToFit()
+{
+    m_importRules.shrinkToFit();
+    m_childRules.shrinkToFit();
 }
 
 }

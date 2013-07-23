@@ -28,29 +28,30 @@
 
 #include "AXObjectCache.h"
 #include "Document.h"
-#include "EditingText.h"
 #include "Editor.h"
+#include "ExceptionCodePlaceholder.h"
 #include "Frame.h"
 #include "HTMLBRElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLElementFactory.h"
-#include "HTMLTextFormControlElement.h"
 #include "HTMLInterchange.h"
 #include "HTMLLIElement.h"
 #include "HTMLNames.h"
-#include "HTMLObjectElement.h"
 #include "HTMLOListElement.h"
+#include "HTMLObjectElement.h"
 #include "HTMLParagraphElement.h"
+#include "HTMLTextFormControlElement.h"
 #include "HTMLUListElement.h"
+#include "NodeTraversal.h"
 #include "PositionIterator.h"
-#include "RenderObject.h"
 #include "Range.h"
+#include "RenderObject.h"
 #include "ShadowRoot.h"
 #include "Text.h"
 #include "TextIterator.h"
 #include "VisiblePosition.h"
 #include "VisibleSelection.h"
-#include "visible_units.h"
+#include "VisibleUnits.h"
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -96,8 +97,7 @@ int comparePositions(const Position& a, const Position& b)
             bias = 1;
     }
 
-    ExceptionCode ec;
-    int result = Range::compareBoundaryPoints(nodeA, offsetA, nodeB, offsetB, ec);
+    int result = Range::compareBoundaryPoints(nodeA, offsetA, nodeB, offsetB, IGNORE_EXCEPTION);
     return result ? result : bias;
 }
 
@@ -199,7 +199,7 @@ Element* unsplittableElementForPosition(const Position& p)
 {
     // Since enclosingNodeOfType won't search beyond the highest root editable node,
     // this code works even if the closest table cell was outside of the root editable node.
-    Element* enclosingCell = static_cast<Element*>(enclosingNodeOfType(p, &isTableCell));
+    Element* enclosingCell = toElement(enclosingNodeOfType(p, &isTableCell));
     if (enclosingCell)
         return enclosingCell;
 
@@ -558,8 +558,7 @@ PassRefPtr<Range> extendRangeToWrappingNodes(PassRefPtr<Range> range, const Rang
     ASSERT(range);
     ASSERT(maximumRange);
 
-    ExceptionCode ec = 0;
-    Node* ancestor = range->commonAncestorContainer(ec);// find the cloeset common ancestor
+    Node* ancestor = range->commonAncestorContainer(IGNORE_EXCEPTION); // Find the closest common ancestor.
     Node* highestNode = 0;
     // traverse through ancestors as long as they are contained within the range, content-editable, and below rootNode (could be =0).
     while (ancestor && ancestor->rendererIsEditable() && isNodeVisiblyContainedWithin(ancestor, maximumRange) && ancestor != rootNode) {
@@ -572,7 +571,7 @@ PassRefPtr<Range> extendRangeToWrappingNodes(PassRefPtr<Range> range, const Rang
 
     // Create new range with the highest editable node contained within the range
     RefPtr<Range> extendedRange = Range::create(range->ownerDocument());
-    extendedRange->selectNode(highestNode, ec);
+    extendedRange->selectNode(highestNode, IGNORE_EXCEPTION);
     return extendedRange.release();
 }
 
@@ -581,7 +580,7 @@ bool isListElement(Node *n)
     return (n && (n->hasTagName(ulTag) || n->hasTagName(olTag) || n->hasTagName(dlTag)));
 }
 
-bool isListItem(Node *n)
+bool isListItem(const Node *n)
 {
     return n && n->renderer() && n->renderer()->isListItem();
 }
@@ -646,12 +645,12 @@ static bool hasARenderedDescendant(Node* node, Node* excludedNode)
 {
     for (Node* n = node->firstChild(); n;) {
         if (n == excludedNode) {
-            n = n->traverseNextSibling(node);
+            n = NodeTraversal::nextSkippingChildren(n, node);
             continue;
         }
         if (n->renderer())
             return true;
-        n = n->traverseNextNode(node);
+        n = NodeTraversal::next(n, node);
     }
     return false;
 }
@@ -672,18 +671,19 @@ Node* highestNodeToRemoveInPruning(Node* node)
 
 Node* enclosingTableCell(const Position& p)
 {
-    return static_cast<Element*>(enclosingNodeOfType(p, isTableCell));
+    return toElement(enclosingNodeOfType(p, isTableCell));
 }
 
-Node* enclosingAnchorElement(const Position& p)
+Element* enclosingAnchorElement(const Position& p)
 {
     if (p.isNull())
         return 0;
     
-    Node* node = p.deprecatedNode();
-    while (node && !(node->isElementNode() && node->isLink()))
-        node = node->parentNode();
-    return node;
+    for (Node* node = p.deprecatedNode(); node; node = node->parentNode()) {
+        if (node->isElementNode() && node->isLink())
+            return toElement(node);
+    }
+    return 0;
 }
 
 HTMLElement* enclosingList(Node* node)
@@ -856,7 +856,7 @@ bool isEmptyTableCell(const Node* node)
 
 PassRefPtr<HTMLElement> createDefaultParagraphElement(Document* document)
 {
-    switch (document->frame()->editor()->defaultParagraphSeparator()) {
+    switch (document->frame()->editor().defaultParagraphSeparator()) {
     case EditorParagraphSeparatorIsDiv:
         return HTMLDivElement::create(document);
     case EditorParagraphSeparatorIsP:
@@ -939,9 +939,7 @@ PassRefPtr<Element> createTabSpanElement(Document* document, PassRefPtr<Node> pr
     if (!tabTextNode)
         tabTextNode = document->createEditingTextNode("\t");
 
-    ExceptionCode ec = 0;
-    spanElement->appendChild(tabTextNode.release(), ec);
-    ASSERT(ec == 0);
+    spanElement->appendChild(tabTextNode.release(), ASSERT_NO_EXCEPTION);
 
     return spanElement.release();
 }
@@ -994,15 +992,15 @@ void updatePositionForNodeRemoval(Position& position, Node* node)
     case Position::PositionIsOffsetInAnchor:
         if (position.containerNode() == node->parentNode() && static_cast<unsigned>(position.offsetInContainerNode()) > node->nodeIndex())
             position.moveToOffset(position.offsetInContainerNode() - 1);
-        else if (node->contains(position.containerNode()) || node->contains(position.containerNode()->shadowAncestorNode()))
+        else if (node->containsIncludingShadowDOM(position.containerNode()))
             position = positionInParentBeforeNode(node);
         break;
     case Position::PositionIsAfterAnchor:
-        if (node->contains(position.anchorNode()) || node->contains(position.anchorNode()->shadowAncestorNode()))
+        if (node->containsIncludingShadowDOM(position.anchorNode()))
             position = positionInParentAfterNode(node);
         break;
     case Position::PositionIsBeforeAnchor:
-        if (node->contains(position.anchorNode()) || node->contains(position.anchorNode()->shadowAncestorNode()))
+        if (node->containsIncludingShadowDOM(position.anchorNode()))
             position = positionInParentBeforeNode(node);
         break;
     }
@@ -1092,7 +1090,6 @@ VisibleSelection selectionForParagraphIteration(const VisibleSelection& original
 // opertion is unreliable. TextIterator's TextIteratorEmitsCharactersBetweenAllVisiblePositions mode needs to be fixed, 
 // or these functions need to be changed to iterate using actual VisiblePositions.
 // FIXME: Deploy these functions everywhere that TextIterators are used to convert between VisiblePositions and indices.
- 
 int indexForVisiblePosition(const VisiblePosition& visiblePosition, RefPtr<ContainerNode>& scope)
 {
     if (visiblePosition.isNull())
@@ -1100,7 +1097,7 @@ int indexForVisiblePosition(const VisiblePosition& visiblePosition, RefPtr<Conta
 
     Position p(visiblePosition.deepEquivalent());
     Document* document = p.anchorNode()->document();
-    ShadowRoot* shadowRoot = p.anchorNode()->shadowRoot();
+    ShadowRoot* shadowRoot = p.anchorNode()->containingShadowRoot();
 
     if (shadowRoot)
         scope = shadowRoot;
@@ -1136,8 +1133,7 @@ bool isNodeVisiblyContainedWithin(Node* node, const Range* selectedRange)
     ASSERT(node);
     ASSERT(selectedRange);
     // If the node is inside the range, then it surely is contained within
-    ExceptionCode ec = 0;
-    if (selectedRange->compareNode(node, ec) == Range::NODE_INSIDE)
+    if (selectedRange->compareNode(node, IGNORE_EXCEPTION) == Range::NODE_INSIDE)
         return true;
 
     bool startIsVisuallySame = visiblePositionBeforeNode(node) == selectedRange->startPosition();
@@ -1187,61 +1183,6 @@ bool isNonTableCellHTMLBlockElement(const Node* node)
         || node->hasTagName(h5Tag);
 }
 
-PassRefPtr<Range> avoidIntersectionWithNode(const Range* range, Node* node)
-{
-    if (!range)
-        return 0;
-
-    Document* document = range->ownerDocument();
-
-    Node* startContainer = range->startContainer();
-    int startOffset = range->startOffset();
-    Node* endContainer = range->endContainer();
-    int endOffset = range->endOffset();
-
-    if (!startContainer)
-        return 0;
-
-    ASSERT(endContainer);
-
-    if (startContainer == node || startContainer->isDescendantOf(node)) {
-        ASSERT(node->parentNode());
-        startContainer = node->parentNode();
-        startOffset = node->nodeIndex();
-    }
-    if (endContainer == node || endContainer->isDescendantOf(node)) {
-        ASSERT(node->parentNode());
-        endContainer = node->parentNode();
-        endOffset = node->nodeIndex();
-    }
-
-    return Range::create(document, startContainer, startOffset, endContainer, endOffset);
-}
-
-VisibleSelection avoidIntersectionWithNode(const VisibleSelection& selection, Node* node)
-{
-    if (selection.isNone())
-        return VisibleSelection(selection);
-
-    VisibleSelection updatedSelection(selection);
-    Node* base = selection.base().deprecatedNode();
-    Node* extent = selection.extent().deprecatedNode();
-    ASSERT(base);
-    ASSERT(extent);
-
-    if (base == node || base->isDescendantOf(node)) {
-        ASSERT(node->parentNode());
-        updatedSelection.setBase(positionInParentBeforeNode(node));
-    }
-
-    if (extent == node || extent->isDescendantOf(node)) {
-        ASSERT(node->parentNode());
-        updatedSelection.setExtent(positionInParentBeforeNode(node));
-    }
-
-    return updatedSelection;
-}
-
 Position adjustedSelectionStartForStyleComputation(const VisibleSelection& selection)
 {
     // This function is used by range style computations to avoid bugs like:
@@ -1265,6 +1206,28 @@ Position adjustedSelectionStartForStyleComputation(const VisibleSelection& selec
     // otherwise, make sure to be at the start of the first selected node,
     // instead of possibly at the end of the last node before the selection
     return visiblePosition.deepEquivalent().downstream();
+}
+
+// FIXME: Should this be deprecated like deprecatedEnclosingBlockFlowElement is?
+bool isBlockFlowElement(const Node* node)
+{
+    if (!node->isElementNode())
+        return false;
+    RenderObject* renderer = node->renderer();
+    return renderer && renderer->isBlockFlow();
+}
+
+Element* deprecatedEnclosingBlockFlowElement(Node* node)
+{
+    if (!node)
+        return 0;
+    if (isBlockFlowElement(node))
+        return toElement(node);
+    while ((node = node->parentNode())) {
+        if (isBlockFlowElement(node) || node->hasTagName(bodyTag))
+            return toElement(node);
+    }
+    return 0;
 }
 
 } // namespace WebCore

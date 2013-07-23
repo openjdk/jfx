@@ -69,6 +69,12 @@ bool AccessibilityListBoxOption::isEnabled() const
     if (m_optionElement->hasTagName(optgroupTag))
         return false;
     
+    if (equalIgnoringCase(getAttribute(aria_disabledAttr), "true"))
+        return false;
+
+    if (m_optionElement->hasAttribute(disabledAttr))
+        return false;
+    
     return true;
 }
     
@@ -114,12 +120,12 @@ LayoutRect AccessibilityListBoxOption::elementRect() const
     return rect;
 }
 
-bool AccessibilityListBoxOption::accessibilityIsIgnored() const
+bool AccessibilityListBoxOption::computeAccessibilityIsIgnored() const
 {
     if (!m_optionElement)
         return true;
     
-    if (equalIgnoringCase(getAttribute(aria_hiddenAttr), "true"))
+    if (accessibilityIsIgnoredByDefault())
         return true;
     
     return parentObject()->accessibilityIsIgnored();
@@ -133,11 +139,11 @@ bool AccessibilityListBoxOption::canSetSelectedAttribute() const
     if (!m_optionElement->hasTagName(optionTag))
         return false;
     
-    if (m_optionElement->disabled())
+    if (m_optionElement->isDisabledFormControl())
         return false;
     
     HTMLSelectElement* selectElement = listBoxOptionParentNode();
-    if (selectElement && selectElement->disabled())
+    if (selectElement && selectElement->isDisabledFormControl())
         return false;
     
     return true;
@@ -172,7 +178,7 @@ AccessibilityObject* AccessibilityListBoxOption::parentObject() const
     if (!parentNode)
         return 0;
     
-    return m_optionElement->document()->axObjectCache()->getOrCreate(parentNode->renderer());
+    return m_optionElement->document()->axObjectCache()->getOrCreate(parentNode);
 }
 
 void AccessibilityListBoxOption::setSelected(bool selected)

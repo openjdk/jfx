@@ -62,11 +62,10 @@ public:
     {
     }
 
-#if PLATFORM(EFL)
-    PlatformTouchPoint(unsigned id, const IntPoint& windowPos, State);
-#elif PLATFORM(JAVA)
+#if PLATFORM(JAVA)
     PlatformTouchPoint(unsigned id, State, const IntPoint& pos, const IntPoint& screenPos);
-#elif PLATFORM(BLACKBERRY)
+#endif
+#if PLATFORM(BLACKBERRY)
     PlatformTouchPoint(const BlackBerry::Platform::TouchPoint&);
 #endif
 

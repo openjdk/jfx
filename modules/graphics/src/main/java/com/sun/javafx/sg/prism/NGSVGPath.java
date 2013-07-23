@@ -26,12 +26,11 @@
 package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.sg.PGSVGPath;
 
 /**
  *
  */
-public class NGSVGPath extends NGShape implements PGSVGPath {
+public class NGSVGPath extends NGShape {
 
     private Shape path;
 

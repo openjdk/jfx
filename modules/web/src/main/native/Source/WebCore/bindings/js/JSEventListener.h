@@ -22,8 +22,10 @@
 
 #include "EventListener.h"
 #include "JSDOMWindow.h"
+#include <heap/PassWeak.h>
 #include <heap/StrongInlines.h>
 #include <heap/Weak.h>
+#include <heap/WeakInlines.h>
 
 namespace WebCore {
 
@@ -54,7 +56,7 @@ namespace WebCore {
         DOMWrapperWorld* isolatedWorld() const { return m_isolatedWorld.get(); }
 
         JSC::JSObject* wrapper() const { return m_wrapper.get(); }
-        void setWrapper(JSC::JSGlobalData&, JSC::JSObject* wrapper) const { m_wrapper = JSC::PassWeak<JSC::JSObject>(wrapper); }
+        void setWrapper(JSC::VM&, JSC::JSObject* wrapper) const { m_wrapper = JSC::PassWeak<JSC::JSObject>(wrapper); }
 
     private:
         virtual JSC::JSObject* initializeJSFunction(ScriptExecutionContext*) const;
@@ -66,7 +68,7 @@ namespace WebCore {
         virtual void handleEvent(ScriptExecutionContext*, Event*);
 
     private:
-        mutable JSC::WriteBarrier<JSC::JSObject> m_jsFunction;
+        mutable JSC::Weak<JSC::JSObject> m_jsFunction;
         mutable JSC::Weak<JSC::JSObject> m_wrapper;
 
         bool m_isAttribute;
@@ -78,16 +80,20 @@ namespace WebCore {
         // initializeJSFunction can trigger code that deletes this event listener
         // before we're done. It should always return 0 in this case.
         RefPtr<JSEventListener> protect(const_cast<JSEventListener*>(this));
-        JSC::Strong<JSC::JSObject> wrapper(*m_isolatedWorld->globalData(), m_wrapper.get());
+        JSC::Strong<JSC::JSObject> wrapper(*m_isolatedWorld->vm(), m_wrapper.get());
 
         if (!m_jsFunction) {
             JSC::JSObject* function = initializeJSFunction(scriptExecutionContext);
-            m_jsFunction.setMayBeNull(*scriptExecutionContext->globalData(), m_wrapper.get(), function);
+            JSC::Heap::writeBarrier(m_wrapper.get(), function);
+            m_jsFunction = JSC::PassWeak<JSC::JSObject>(function);
         }
 
         // Verify that we have a valid wrapper protecting our function from
-        // garbage collection.
-        ASSERT(m_wrapper || !m_jsFunction);
+        // garbage collection. That is except for when we're not in the normal
+        // world and can have zombie m_jsFunctions.
+        ASSERT(!m_isolatedWorld->isNormal() || m_wrapper || !m_jsFunction);
+
+        // If m_wrapper is 0, then m_jsFunction is zombied, and should never be accessed.
         if (!m_wrapper)
             return 0;
 

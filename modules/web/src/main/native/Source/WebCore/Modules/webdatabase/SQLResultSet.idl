@@ -26,13 +26,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module storage {
-
-    interface [
+[
+    NoInterfaceObject,
         Conditional=SQL_DATABASE,
         OmitConstructor,
-        JSNoStaticTables
-    ] SQLResultSet {
+    JSNoStaticTables,
+    ImplementationLacksVTable
+] interface SQLResultSet {
         readonly attribute SQLResultSetRowList rows;
 
 #if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
@@ -45,4 +45,3 @@ module storage {
 #endif
         readonly attribute long rowsAffected;
     };
-}

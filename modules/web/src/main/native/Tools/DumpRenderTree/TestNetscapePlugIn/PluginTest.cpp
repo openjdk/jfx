@@ -166,6 +166,16 @@ void PluginTest::NPN_InvalidateRect(NPRect* invalidRect)
     browser->invalidaterect(m_npp, invalidRect);
 }
 
+bool PluginTest::NPN_Invoke(NPObject *npobj, NPIdentifier methodName, const NPVariant *args, uint32_t argCount, NPVariant *result)
+{
+    return browser->invoke(m_npp, npobj, methodName, args, argCount, result);
+}
+
+void* PluginTest::NPN_MemAlloc(uint32_t size)
+{
+    return browser->memalloc(size);
+}
+
 // NPRuntime NPN functions.
 
 NPIdentifier PluginTest::NPN_GetStringIdentifier(const NPUTF8 *name)
@@ -208,14 +218,14 @@ void PluginTest::NPN_ReleaseObject(NPObject* npObject)
     browser->releaseobject(npObject);
 }
 
-bool PluginTest::NPN_GetProperty(NPObject* npObject, NPIdentifier propertyName, NPVariant* value)
-{
-    return browser->getproperty(m_npp, npObject, propertyName, value);
-}
-
 bool PluginTest::NPN_RemoveProperty(NPObject* npObject, NPIdentifier propertyName)
 {
     return browser->removeproperty(m_npp, npObject, propertyName);
+}
+
+void PluginTest::NPN_ReleaseVariantValue(NPVariant* variant)
+{
+    browser->releasevariantvalue(variant);
 }
 
 #ifdef XP_MACOSX
@@ -252,14 +262,19 @@ void PluginTest::log(const char* format, ...)
     va_end(args);
 }
 
+NPNetscapeFuncs* PluginTest::netscapeFuncs()
+{
+    return browser;
+}
+
 void PluginTest::waitUntilDone()
 {
-    executeScript("layoutTestController.waitUntilDone()");
+    executeScript("testRunner.waitUntilDone()");
 }
 
 void PluginTest::notifyDone()
 {
-    executeScript("layoutTestController.notifyDone()");
+    executeScript("testRunner.notifyDone()");
 }
 
 void PluginTest::registerCreateTestFunction(const string& identifier, CreateTestFunction createTestFunction)

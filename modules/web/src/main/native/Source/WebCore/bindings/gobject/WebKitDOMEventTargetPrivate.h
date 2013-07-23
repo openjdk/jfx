@@ -20,13 +20,15 @@
 #ifndef WebKitDOMEventTargetPrivate_h
 #define WebKitDOMEventTargetPrivate_h
 
-#include "EventTarget.h"
-#include <glib-object.h>
-#include <webkit/WebKitDOMEventTarget.h>
+#include <webkitdom/WebKitDOMEventTarget.h>
+
+namespace WebCore {
+class EventTarget;
+}
 
 namespace WebKit {
-WebCore::EventTarget*
-core(WebKitDOMEventTarget *request);
+WebKitDOMEventTarget* kit(WebCore::EventTarget*);
+WebCore::EventTarget* core(WebKitDOMEventTarget*);
 } // namespace WebKit
 
 #endif /* WebKitDOMEventTargetPrivate_h */

@@ -82,7 +82,8 @@ public class CompositeStrike implements FontStrike {
     }
 
     public int getAAMode() {
-        if (PrismFontLoader.isLCDTextSupported()) {
+        PrismFontFactory factory = PrismFontFactory.getFontFactory();
+        if (factory.isLCDTextSupported()) {
             return this.aaMode;
         } else {
             return FontResource.AA_GREYSCALE;

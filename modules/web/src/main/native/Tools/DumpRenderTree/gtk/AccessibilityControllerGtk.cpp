@@ -35,22 +35,7 @@
 #include <atk/atk.h>
 #include <gtk/gtk.h>
 #include <webkit/webkit.h>
-
-static bool loggingAccessibilityEvents = false;
-
-AccessibilityController::AccessibilityController()
-{
-}
-
-AccessibilityController::~AccessibilityController()
-{
-}
-
-AccessibilityUIElement AccessibilityController::elementAtPoint(int x, int y)
-{
-    // FIXME: implement
-    return 0;
-}
+#include <wtf/gobject/GOwnPtr.h>
 
 AccessibilityUIElement AccessibilityController::focusedElement()
 {
@@ -70,38 +55,20 @@ AccessibilityUIElement AccessibilityController::rootElement()
     return AccessibilityUIElement(accessible);
 }
 
-void AccessibilityController::setLogFocusEvents(bool)
+AccessibilityUIElement AccessibilityController::accessibleElementById(JSStringRef id)
 {
-}
+    AtkObject* root = DumpRenderTreeSupportGtk::getRootAccessibleElement(mainFrame);
+    if (!root)
+        return 0;
 
-void AccessibilityController::setLogScrollingStartEvents(bool)
-{
-}
+    size_t bufferSize = JSStringGetMaximumUTF8CStringSize(id);
+    GOwnPtr<gchar> idBuffer(static_cast<gchar*>(g_malloc(bufferSize)));
+    JSStringGetUTF8CString(id, idBuffer.get(), bufferSize);
 
-void AccessibilityController::setLogValueChangeEvents(bool)
-{
-}
+    AtkObject* result = childElementById(root, idBuffer.get());
+    if (ATK_IS_OBJECT(result))
+        return AccessibilityUIElement(result);
 
-void AccessibilityController::setLogAccessibilityEvents(bool logAccessibilityEvents)
-{
-    if (logAccessibilityEvents == loggingAccessibilityEvents)
-        return;
+    return 0;
 
-    if (!logAccessibilityEvents) {
-        disconnectAccessibilityCallbacks();
-        loggingAccessibilityEvents = false;
-        return;
-    }
-
-    connectAccessibilityCallbacks();
-    loggingAccessibilityEvents = true;
-}
-
-bool AccessibilityController::addNotificationListener(JSObjectRef)
-{
-    return false;
-}
-
-void AccessibilityController::removeNotificationListener()
-{
 }

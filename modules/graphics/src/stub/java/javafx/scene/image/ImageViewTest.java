@@ -25,30 +25,28 @@
 
 package javafx.scene.image;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertEquals;
-
 import com.sun.javafx.pgstub.StubImageLoaderFactory;
 import com.sun.javafx.pgstub.StubPlatformImageInfo;
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.sg.prism.NGImageView;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-
-import java.util.Comparator;
-
 import javafx.geometry.Rectangle2D;
 import javafx.scene.NodeTest;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Comparator;
+
+import static org.junit.Assert.*;
 
 public final class ImageViewTest {
     private ImageView imageView;
 
     @Before
     public void setUp() {
-        imageView = new ImageView();
+        imageView = new StubImageView();
         imageView.setImage(TestImages.TEST_IMAGE_100x200);
     }
 
@@ -166,4 +164,47 @@ public final class ImageViewTest {
         assertBoundsEqual(box(0, 0, 100, 200), imageView.getBoundsInLocal());
     }
     */
+
+    public class StubImageView extends ImageView {
+        public StubImageView() {
+            super();
+        }
+
+        @Override
+        protected NGNode impl_createPeer() {
+            return new StubNGImageView();
+        }
+    }
+
+    public class StubNGImageView extends NGImageView {
+        // for tests
+        private Object image;
+        private float x;
+        private float y;
+        private boolean smooth;
+
+        private float cw;
+        private float ch;
+        private Rectangle2D viewport;
+
+        @Override public void setImage(Object image) { this.image = image; }
+        public Object getImage() { return image; }
+        @Override public void setX(float x) { this.x = x; }
+        public float getX() { return x; }
+        @Override public void setY(float y) { this.y = y; }
+        public float getY() { return y; }
+
+        @Override public void setViewport(float vx, float vy, float vw, float vh,
+                                float cw, float ch) {
+            this.viewport = new Rectangle2D(vx, vy, vw, vh);
+            this.cw = cw;
+            this.ch = ch;
+        }
+
+        @Override public void setSmooth(boolean smooth) { this.smooth = smooth; }
+        public boolean isSmooth() { return this.smooth; }
+        public Rectangle2D getViewport() { return viewport; }
+        public float getContentWidth() { return cw; }
+        public float getContentHeight() { return ch; }
+    }
 }

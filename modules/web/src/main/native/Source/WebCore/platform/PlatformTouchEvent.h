@@ -32,10 +32,6 @@ class QTouchEvent;
 QT_END_NAMESPACE
 #endif
 
-#if PLATFORM(EFL)
-typedef struct _Eina_List Eina_List;
-#endif
-
 #if PLATFORM(JAVA)
 #include <jni.h>
 #endif
@@ -64,10 +60,8 @@ public:
     {
     }
 
-#if PLATFORM(EFL)
-    PlatformTouchEvent(const Eina_List*, const IntPoint, PlatformEvent::Type, PlatformEvent::Modifiers);
-#elif PLATFORM(BLACKBERRY)
-    PlatformTouchEvent(BlackBerry::Platform::TouchEvent*);
+#if PLATFORM(BLACKBERRY)
+    explicit PlatformTouchEvent(BlackBerry::Platform::TouchEvent*);
 #elif PLATFORM(JAVA)
     PlatformTouchEvent(JNIEnv* env, jint id, jobject touchData,
             jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jfloat timestamp);

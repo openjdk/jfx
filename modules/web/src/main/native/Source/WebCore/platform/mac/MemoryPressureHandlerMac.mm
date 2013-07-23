@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011, 2012 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,12 +26,18 @@
 #import "config.h"
 #import "MemoryPressureHandler.h"
 
+#import <WebCore/CSSValuePool.h>
 #import <WebCore/GCController.h>
 #import <WebCore/FontCache.h>
 #import <WebCore/MemoryCache.h>
 #import <WebCore/PageCache.h>
+#import <WebCore/LayerPool.h>
+#import <WebCore/ScrollingThread.h>
+#import <WebCore/StorageThread.h>
+#import <WebCore/WorkerThread.h>
 #import <wtf/CurrentTime.h>
 #import <wtf/FastMalloc.h>
+#import <wtf/Functional.h>
 
 #if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #import "WebCoreSystemInterface.h"
@@ -83,15 +89,19 @@ void MemoryPressureHandler::uninstall()
     if (!m_installed)
         return;
 
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (_cache_event_source) {
     dispatch_source_cancel(_cache_event_source);
     dispatch_release(_cache_event_source);
     _cache_event_source = 0;
+        }
 
     if (_timer_event_source) {
         dispatch_source_cancel(_timer_event_source);
         dispatch_release(_timer_event_source);
         _timer_event_source = 0;
     }
+    });
 
     m_installed = false;
     
@@ -124,7 +134,7 @@ void MemoryPressureHandler::respondToMemoryPressure()
 
     double startTime = monotonicallyIncreasingTime();
 
-    releaseMemory(false);
+    m_lowMemoryHandler(false);
 
     unsigned holdOffTime = (monotonicallyIncreasingTime() - startTime) * s_holdOffMultiplier;
 
@@ -132,24 +142,35 @@ void MemoryPressureHandler::respondToMemoryPressure()
 }
 #endif // !PLATFORM(IOS)
 
-void MemoryPressureHandler::releaseMemory(bool critical)
+void MemoryPressureHandler::releaseMemory(bool)
 {
     int savedPageCacheCapacity = pageCache()->capacity();
-    pageCache()->setCapacity(critical ? 0 : pageCache()->pageCount() / 2);
+    pageCache()->setCapacity(0);
     pageCache()->setCapacity(savedPageCacheCapacity);
-    pageCache()->releaseAutoreleasedPagesNow();
 
     NSURLCache *nsurlCache = [NSURLCache sharedURLCache];
     NSUInteger savedNsurlCacheMemoryCapacity = [nsurlCache memoryCapacity];
-    [nsurlCache setMemoryCapacity:critical ? 0 : [nsurlCache currentMemoryUsage] / 2];
+    [nsurlCache setMemoryCapacity:0];
     [nsurlCache setMemoryCapacity:savedNsurlCacheMemoryCapacity];
 
     fontCache()->purgeInactiveFontData();
 
-    memoryCache()->pruneToPercentage(critical ? 0 : 0.5f);
+    memoryCache()->pruneToPercentage(0);
+
+    LayerPool::sharedPool()->drain();
+
+    cssValuePool().drain();
 
     gcController().discardAllCompiledCode();
 
+    // FastMalloc has lock-free thread specific caches that can only be cleared from the thread itself.
+    StorageThread::releaseFastMallocFreeMemoryInAllThreads();
+#if ENABLE(WORKERS)
+    WorkerThread::releaseFastMallocFreeMemoryInAllThreads();
+#endif
+#if ENABLE(THREADED_SCROLLING)
+    ScrollingThread::dispatch(bind(WTF::releaseFastMallocFreeMemory));
+#endif
     WTF::releaseFastMallocFreeMemory();
 }
 #endif

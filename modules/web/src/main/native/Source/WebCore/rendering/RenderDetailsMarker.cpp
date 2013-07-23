@@ -19,9 +19,8 @@
  */
 
 #include "config.h"
+#if ENABLE(DETAILS_ELEMENT) || ENABLE(INPUT_MULTIPLE_FIELDS_UI)
 #include "RenderDetailsMarker.h"
-
-#if ENABLE(DETAILS) || ENABLE(CALENDAR_PICKER)
 
 #include "Element.h"
 #include "GraphicsContext.h"
@@ -32,8 +31,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderDetailsMarker::RenderDetailsMarker(Node* node)
-    : RenderBlock(node)
+RenderDetailsMarker::RenderDetailsMarker(Element* element)
+    : RenderBlock(element)
 {
 }
 

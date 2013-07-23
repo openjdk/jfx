@@ -45,19 +45,15 @@ public:
 
     // Like appendData, but optimized for the parser (e.g., no mutation events).
     // Returns how much could be added before length limit was met.
-    unsigned parserAppendData(const UChar*, unsigned dataLength, unsigned lengthLimit);
-
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
+    unsigned parserAppendData(const String& string, unsigned offset, unsigned lengthLimit);
 
 protected:
     CharacterData(Document* document, const String& text, ConstructionType type)
         : Node(document, type)
         , m_data(!text.isNull() ? text : emptyString())
     {
-        ASSERT(type == CreateOther || type == CreateText);
+        ASSERT(type == CreateOther || type == CreateText || type == CreateEditingText);
     }
-
-    virtual bool rendererIsNeeded(const NodeRenderingContext&);
 
     void setDataWithoutUpdate(const String& data)
     {
@@ -67,13 +63,12 @@ protected:
     void dispatchModifiedEvent(const String& oldValue);
 
 private:
-    virtual String nodeValue() const;
-    virtual void setNodeValue(const String&, ExceptionCode&);
-    virtual bool isCharacterDataNode() const { return true; }
-    virtual int maxCharacterOffset() const;
-    virtual bool offsetInCharacters() const;
+    virtual String nodeValue() const OVERRIDE FINAL;
+    virtual void setNodeValue(const String&, ExceptionCode&) OVERRIDE FINAL;
+    virtual bool isCharacterDataNode() const OVERRIDE FINAL { return true; }
+    virtual int maxCharacterOffset() const OVERRIDE FINAL;
+    virtual bool offsetInCharacters() const OVERRIDE FINAL;
     void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength);
-    void updateRenderer(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData);
     void checkCharDataOperation(unsigned offset, ExceptionCode&);
 
     String m_data;

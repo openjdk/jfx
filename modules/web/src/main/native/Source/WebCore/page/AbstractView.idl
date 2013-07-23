@@ -24,15 +24,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module views {
-
     // Introduced in DOM Level 2:
-    interface [
+[
+    NoInterfaceObject,
         ObjCCustomImplementation,
         OmitConstructor
-    ] AbstractView {
+] interface AbstractView {
         readonly attribute Document document;
         readonly attribute StyleMedia styleMedia;
     };
 
-}

@@ -26,7 +26,7 @@
 package javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.sg.PGPath;
+import com.sun.javafx.sg.prism.NGPath;
 
 /**
  * A path element which closes the current path.   
@@ -41,7 +41,7 @@ public class ClosePath extends PathElement {
      * {@inheritDoc}
      */        
     @Override 
-    void addTo(PGPath pgPath) {
+    void addTo(NGPath pgPath) {
         pgPath.addClosePath();
     }
 

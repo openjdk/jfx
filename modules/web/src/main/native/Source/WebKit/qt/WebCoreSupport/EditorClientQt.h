@@ -36,18 +36,18 @@
 #include <wtf/RefCounted.h>
 
 class QWebPage;
+class QWebPageAdapter;
 
 namespace WebCore {
 
 class EditorClientQt : public EditorClient {
 public:
-    EditorClientQt(QWebPage* page);
+    EditorClientQt(QWebPageAdapter*);
     
     virtual void pageDestroyed();
     virtual void frameWillDetachPage(Frame*) { }
     
     virtual bool shouldDeleteRange(Range*);
-    virtual bool shouldShowDeleteInterface(HTMLElement*);
     virtual bool smartInsertDeleteEnabled(); 
     virtual void toggleSmartInsertDelete();
     virtual bool isSelectTrailingWhitespaceEnabled(); 
@@ -72,7 +72,9 @@ public:
     virtual void respondToChangedContents();
     virtual void respondToChangedSelection(Frame*);
     virtual void didEndEditing();
+    virtual void willWriteSelectionToPasteboard(Range*);
     virtual void didWriteSelectionToPasteboard();
+    virtual void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData);
     virtual void didSetSelectionTypesForPasteboard();
     
     virtual void registerUndoStep(PassRefPtr<UndoStep>);
@@ -105,6 +107,8 @@ public:
     virtual void setInputMethodState(bool enabled);
     virtual TextCheckerClient* textChecker() { return &m_textCheckerClient; }
 
+    virtual bool supportsGlobalSelection() OVERRIDE;
+
     bool isEditing() const;
 
     static bool dumpEditingCallbacks;
@@ -112,7 +116,7 @@ public:
 
 private:
     TextCheckerClientQt m_textCheckerClient;
-    QWebPage* m_page;
+    QWebPageAdapter* m_page;
     bool m_editing;
     bool m_inUndoRedo; // our undo stack works differently - don't re-enter!
 };

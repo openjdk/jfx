@@ -92,7 +92,12 @@ static unsigned urlHostHash(const KURL& url)
     unsigned hostStart = url.hostStart();
     unsigned hostEnd = url.hostEnd();
     
-    return AlreadyHashed::avoidDeletedValue(StringHasher::computeHash(url.string().characters() + hostStart, hostEnd - hostStart));
+    const String& urlString = url.string();
+
+    if (urlString.is8Bit())
+        return AlreadyHashed::avoidDeletedValue(StringHasher::computeHashAndMaskTop8Bits(urlString.characters8() + hostStart, hostEnd - hostStart));
+    
+    return AlreadyHashed::avoidDeletedValue(StringHasher::computeHashAndMaskTop8Bits(urlString.characters16() + hostStart, hostEnd - hostStart));
 }
 
 ApplicationCacheGroup* ApplicationCacheStorage::loadCacheGroup(const KURL& manifestURL)
@@ -137,8 +142,8 @@ ApplicationCacheGroup* ApplicationCacheStorage::findOrCreateCacheGroup(const KUR
     CacheGroupMap::AddResult result = m_cachesInMemory.add(manifestURL, 0);
     
     if (!result.isNewEntry) {
-        ASSERT(result.iterator->second);
-        return result.iterator->second;
+        ASSERT(result.iterator->value);
+        return result.iterator->value;
     }
 
     // Look up the group in the database
@@ -150,7 +155,7 @@ ApplicationCacheGroup* ApplicationCacheStorage::findOrCreateCacheGroup(const KUR
         m_cacheHostSet.add(urlHostHash(manifestURL));
     }
     
-    result.iterator->second = group;
+    result.iterator->value = group;
     
     return group;
 }
@@ -197,7 +202,7 @@ ApplicationCacheGroup* ApplicationCacheStorage::cacheGroupForURL(const KURL& url
     // Check if a cache already exists in memory.
     CacheGroupMap::const_iterator end = m_cachesInMemory.end();
     for (CacheGroupMap::const_iterator it = m_cachesInMemory.begin(); it != end; ++it) {
-        ApplicationCacheGroup* group = it->second;
+        ApplicationCacheGroup* group = it->value;
 
         ASSERT(!group->isObsolete());
 
@@ -268,7 +273,7 @@ ApplicationCacheGroup* ApplicationCacheStorage::fallbackCacheGroupForURL(const K
     // Check if an appropriate cache already exists in memory.
     CacheGroupMap::const_iterator end = m_cachesInMemory.end();
     for (CacheGroupMap::const_iterator it = m_cachesInMemory.begin(); it != end; ++it) {
-        ApplicationCacheGroup* group = it->second;
+        ApplicationCacheGroup* group = it->value;
         
         ASSERT(!group->isObsolete());
 
@@ -713,13 +718,13 @@ bool ApplicationCacheStorage::store(ApplicationCache* cache, ResourceStorageIDJo
     {
         ApplicationCache::ResourceMap::const_iterator end = cache->end();
         for (ApplicationCache::ResourceMap::const_iterator it = cache->begin(); it != end; ++it) {
-            unsigned oldStorageID = it->second->storageID();
-            if (!store(it->second.get(), cacheStorageID))
+            unsigned oldStorageID = it->value->storageID();
+            if (!store(it->value.get(), cacheStorageID))
                 return false;
 
             // Storing the resource succeeded. Log its old storageID in case
             // it needs to be restored later.
-            storageIDJournal->add(it->second.get(), oldStorageID);
+            storageIDJournal->add(it->value.get(), oldStorageID);
         }
     }
     
@@ -839,10 +844,10 @@ bool ApplicationCacheStorage::store(ApplicationCacheResource* resource, unsigned
     
     HTTPHeaderMap::const_iterator end = resource->response().httpHeaderFields().end();
     for (HTTPHeaderMap::const_iterator it = resource->response().httpHeaderFields().begin(); it!= end; ++it) {
-        stringBuilder.append(it->first);
-        stringBuilder.append((UChar)':');
-        stringBuilder.append(it->second);
-        stringBuilder.append((UChar)'\n');
+        stringBuilder.append(it->key);
+        stringBuilder.append(':');
+        stringBuilder.append(it->value);
+        stringBuilder.append('\n');
     }
     
     String headers = stringBuilder.toString();
@@ -1052,7 +1057,8 @@ bool ApplicationCacheStorage::storeNewestCache(ApplicationCacheGroup* group)
     return storeNewestCache(group, 0, ignoredFailureReason);
 }
 
-static inline void parseHeader(const UChar* header, size_t headerLength, ResourceResponse& response)
+template <typename CharacterType>
+static inline void parseHeader(const CharacterType* header, size_t headerLength, ResourceResponse& response)
 {
     size_t pos = find(header, headerLength, ':');
     ASSERT(pos != notFound);
@@ -1070,13 +1076,20 @@ static inline void parseHeaders(const String& headers, ResourceResponse& respons
     while ((endPos = headers.find('\n', startPos)) != notFound) {
         ASSERT(startPos != endPos);
 
-        parseHeader(headers.characters() + startPos, endPos - startPos, response);
+        if (headers.is8Bit())
+            parseHeader(headers.characters8() + startPos, endPos - startPos, response);
+        else
+            parseHeader(headers.characters16() + startPos, endPos - startPos, response);
         
         startPos = endPos + 1;
     }
     
-    if (startPos != headers.length())
-        parseHeader(headers.characters(), headers.length(), response);
+    if (startPos != headers.length()) {
+        if (headers.is8Bit())
+            parseHeader(headers.characters8(), headers.length(), response);
+        else
+            parseHeader(headers.characters16(), headers.length(), response);
+    }
 }
     
 PassRefPtr<ApplicationCache> ApplicationCacheStorage::loadCache(unsigned storageID)
@@ -1241,7 +1254,7 @@ void ApplicationCacheStorage::empty()
     // until a cache update process has been initiated.
     CacheGroupMap::const_iterator end = m_cachesInMemory.end();
     for (CacheGroupMap::const_iterator it = m_cachesInMemory.begin(); it != end; ++it)
-        it->second->clearStorageID();
+        it->value->clearStorageID();
     
     checkForDeletedResources();
 }
@@ -1303,7 +1316,7 @@ bool ApplicationCacheStorage::storeCopyOfCache(const String& cacheDirectory, App
     // Traverse the cache and add copies of all resources.
     ApplicationCache::ResourceMap::const_iterator end = cache->end();
     for (ApplicationCache::ResourceMap::const_iterator it = cache->begin(); it != end; ++it) {
-        ApplicationCacheResource* resource = it->second.get();
+        ApplicationCacheResource* resource = it->value.get();
         
         RefPtr<ApplicationCacheResource> resourceCopy = ApplicationCacheResource::create(resource->url(), resource->response(), resource->type(), resource->data(), resource->path());
         
@@ -1499,7 +1512,7 @@ long long ApplicationCacheStorage::flatFileAreaSize()
     return totalSize;
 }
 
-void ApplicationCacheStorage::getOriginsWithCache(HashSet<RefPtr<SecurityOrigin>, SecurityOriginHash>& origins)
+void ApplicationCacheStorage::getOriginsWithCache(HashSet<RefPtr<SecurityOrigin> >& origins)
 {
     Vector<KURL> urls;
     if (!manifestURLs(&urls)) {

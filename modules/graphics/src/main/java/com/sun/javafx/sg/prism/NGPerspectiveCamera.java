@@ -25,14 +25,13 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.sg.PGPerspectiveCamera;
 import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 
 /**
  * TODO: 3D - Need documentation
  * (RT-26534) Implement 3D Camera support for FX 8
  */
-public class NGPerspectiveCamera extends NGCamera implements PGPerspectiveCamera {
+public class NGPerspectiveCamera extends NGCamera {
 
     public NGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
         setCameraImpl(new PrismPerspectiveCameraImpl(fixedEyeAtCameraZero));       

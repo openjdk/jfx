@@ -46,12 +46,15 @@ public:
     virtual ~OfflineAudioDestinationNode();
     
     // AudioNode   
-    virtual void initialize();
-    virtual void uninitialize();
+    virtual void initialize() OVERRIDE;
+    virtual void uninitialize() OVERRIDE;
+
+    // AudioDestinationNode
+    virtual void enableInput(const String&) OVERRIDE { }
+    virtual void startRendering() OVERRIDE;
+
     virtual float sampleRate() const { return m_renderTarget->sampleRate(); }
 
-    void startRendering();
-    
 private:
     OfflineAudioDestinationNode(AudioContext*, AudioBuffer* renderTarget);
 
@@ -59,13 +62,13 @@ private:
     RefPtr<AudioBuffer> m_renderTarget;
     
     // Temporary AudioBus for each render quantum.
-    OwnPtr<AudioBus> m_renderBus;
+    RefPtr<AudioBus> m_renderBus;
     
     // Rendering thread.
     volatile ThreadIdentifier m_renderThread;
     bool m_startedRendering;
-    static void renderEntry(void* threadData);
-    void render();
+    static void offlineRenderEntry(void* threadData);
+    void offlineRender();
     
     // For completion callback on main thread.
     static void notifyCompleteDispatch(void* userData);

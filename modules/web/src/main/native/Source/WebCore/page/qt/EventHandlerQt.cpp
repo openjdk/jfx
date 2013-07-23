@@ -50,12 +50,6 @@
 #include "RenderWidget.h"
 #include "Scrollbar.h"
 
-#if !HAVE(QT5)
-QT_BEGIN_NAMESPACE
-Q_GUI_EXPORT extern bool qt_tab_all_widgets; // from qapplication.cpp
-QT_END_NAMESPACE
-#endif
-
 namespace WebCore {
 
 #if defined(Q_WS_MAC)
@@ -66,11 +60,7 @@ const double EventHandler::TextDragDelay = 0.0;
 
 bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
 {
-#if HAVE(QT5)
     return !isKeyboardOptionTab(event);
-#else
-    return (isKeyboardOptionTab(event) ? !qt_tab_all_widgets : qt_tab_all_widgets);
-#endif
 }
 
 void EventHandler::focusDocumentView()
@@ -101,7 +91,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widge
     if (!widget->isFrameView())
         return false;
 
-    return static_cast<FrameView*>(widget)->frame()->eventHandler()->handleWheelEvent(event);
+    return toFrameView(widget)->frame()->eventHandler()->handleWheelEvent(event);
 }
 
 PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const

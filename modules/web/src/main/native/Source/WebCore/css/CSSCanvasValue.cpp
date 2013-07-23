@@ -28,6 +28,7 @@
 
 #include "ImageBuffer.h"
 #include "RenderObject.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -39,24 +40,26 @@ CSSCanvasValue::~CSSCanvasValue()
 
 String CSSCanvasValue::customCssText() const
 {
-    String result = "-webkit-canvas(";
-    result += m_name  + ")";
-    return result;
+    StringBuilder result;
+    result.appendLiteral("-webkit-canvas(");
+    result.append(m_name);
+    result.append(')');
+    return result.toString();
 }
 
 void CSSCanvasValue::canvasChanged(HTMLCanvasElement*, const FloatRect& changedRect)
 {
     IntRect imageChangeRect = enclosingIntRect(changedRect);
-    RenderObjectSizeCountMap::const_iterator end = clients().end();
-    for (RenderObjectSizeCountMap::const_iterator curr = clients().begin(); curr != end; ++curr)
-        const_cast<RenderObject*>(curr->first)->imageChanged(static_cast<WrappedImagePtr>(this), &imageChangeRect);
+    HashCountedSet<RenderObject*>::const_iterator end = clients().end();
+    for (HashCountedSet<RenderObject*>::const_iterator curr = clients().begin(); curr != end; ++curr)
+        const_cast<RenderObject*>(curr->key)->imageChanged(static_cast<WrappedImagePtr>(this), &imageChangeRect);
 }
 
 void CSSCanvasValue::canvasResized(HTMLCanvasElement*)
 {
-    RenderObjectSizeCountMap::const_iterator end = clients().end();
-    for (RenderObjectSizeCountMap::const_iterator curr = clients().begin(); curr != end; ++curr)
-        const_cast<RenderObject*>(curr->first)->imageChanged(static_cast<WrappedImagePtr>(this));
+    HashCountedSet<RenderObject*>::const_iterator end = clients().end();
+    for (HashCountedSet<RenderObject*>::const_iterator curr = clients().begin(); curr != end; ++curr)
+        const_cast<RenderObject*>(curr->key)->imageChanged(static_cast<WrappedImagePtr>(this));
 }
 
 void CSSCanvasValue::canvasDestroyed(HTMLCanvasElement* element)
@@ -90,6 +93,11 @@ PassRefPtr<Image> CSSCanvasValue::image(RenderObject* renderer, const IntSize& /
     if (!elt || !elt->buffer())
         return 0;
     return elt->copiedImage();
+}
+
+bool CSSCanvasValue::equals(const CSSCanvasValue& other) const
+{
+    return m_name == other.m_name;
 }
 
 } // namespace WebCore

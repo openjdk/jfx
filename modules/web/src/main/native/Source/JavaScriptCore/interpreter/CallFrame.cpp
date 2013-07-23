@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2013 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "CodeBlock.h"
 #include "Interpreter.h"
+#include "Operations.h"
 
 namespace JSC {
 
@@ -36,16 +37,16 @@ void CallFrame::dumpCaller()
 {
     int signedLineNumber;
     intptr_t sourceID;
-    UString urlString;
+    String urlString;
     JSValue function;
     
     interpreter()->retrieveLastCaller(this, signedLineNumber, sourceID, urlString, function);
-    dataLog("Callpoint => %s:%d\n", urlString.utf8().data(), signedLineNumber);
+    dataLogF("Callpoint => %s:%d\n", urlString.utf8().data(), signedLineNumber);
 }
 
-RegisterFile* CallFrame::registerFile()
+JSStack* CallFrame::stack()
 {
-    return &interpreter()->registerFile();
+    return &interpreter()->stack();
 }
 
 #endif
@@ -120,9 +121,22 @@ CallFrame* CallFrame::trueCallFrame(AbstractPC pc)
         ReturnAddressPtr currentReturnPC = pc.jitReturnAddress();
         
         bool hasCodeOrigin = machineCodeBlock->codeOriginForReturn(currentReturnPC, codeOrigin);
-        ASSERT_UNUSED(hasCodeOrigin, hasCodeOrigin);
+        ASSERT(hasCodeOrigin);
+        if (!hasCodeOrigin) {
+            // In release builds, if we find ourselves in a situation where the return PC doesn't
+            // correspond to a valid CodeOrigin, we return zero instead of continuing. Some of
+            // the callers of trueCallFrame() will be able to recover and do conservative things,
+            // while others will crash.
+            return 0;
+        }
     } else {
         unsigned index = codeOriginIndexForDFG();
+        ASSERT(machineCodeBlock->canGetCodeOrigin(index));
+        if (!machineCodeBlock->canGetCodeOrigin(index)) {
+            // See above. In release builds, we try to protect ourselves from crashing even
+            // though stack walking will be goofed up.
+            return 0;
+        }
         codeOrigin = machineCodeBlock->codeOrigin(index);
     }
 
@@ -138,8 +152,8 @@ CallFrame* CallFrame::trueCallFrame(AbstractPC pc)
         
         // Fill in the inlinedCaller
         inlinedCaller->setCodeBlock(machineCodeBlock);
-        
-        inlinedCaller->setScopeChain(calleeAsFunction->scope());
+        if (calleeAsFunction)
+            inlinedCaller->setScope(calleeAsFunction->scope());
         if (nextInlineCallFrame)
             inlinedCaller->setCallerFrame(this + nextInlineCallFrame->stackOffset);
         else
@@ -147,6 +161,7 @@ CallFrame* CallFrame::trueCallFrame(AbstractPC pc)
         
         inlinedCaller->setInlineCallFrame(inlineCallFrame);
         inlinedCaller->setArgumentCountIncludingThis(inlineCallFrame->arguments.size());
+        if (calleeAsFunction)
         inlinedCaller->setCallee(calleeAsFunction);
         
         inlineCallFrame = nextInlineCallFrame;
@@ -157,6 +172,9 @@ CallFrame* CallFrame::trueCallFrame(AbstractPC pc)
         
 CallFrame* CallFrame::trueCallerFrame()
 {
+    if (!codeBlock())
+        return callerFrame()->removeHostCallFrameFlag();
+
     // this -> The callee; this is either an inlined callee in which case it already has
     //    a pointer to the true caller. Otherwise it contains current PC in the machine
     //    caller.

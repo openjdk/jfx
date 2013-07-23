@@ -27,18 +27,20 @@
 #ifndef XPathStep_h
 #define XPathStep_h
 
-#include "Node.h"
 #include "XPathExpressionNode.h"
 #include "XPathNodeSet.h"
 
 namespace WebCore {
+
+class Node;
 
     namespace XPath {
 
         class Predicate;
         
         class Step : public ParseNode {
-            WTF_MAKE_NONCOPYABLE(Step); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(Step);
+    WTF_MAKE_FAST_ALLOCATED;
         public:
             enum Axis {
                 AncestorAxis, AncestorOrSelfAxis, AttributeAxis,
@@ -74,7 +76,7 @@ namespace WebCore {
                 Vector<Predicate*> m_mergedPredicates;
             };
 
-            Step(Axis, const NodeTest& nodeTest, const Vector<Predicate*>& predicates = Vector<Predicate*>());
+    Step(Axis, const NodeTest&, const Vector<Predicate*>& predicates = Vector<Predicate*>());
             ~Step();
 
             void optimize();
@@ -98,8 +100,9 @@ namespace WebCore {
         };
 
         void optimizeStepPair(Step*, Step*, bool& dropSecondStep);
-    }
 
-}
+} // namespace XPath
+
+} // namespace WebCore
 
 #endif // XPathStep_h

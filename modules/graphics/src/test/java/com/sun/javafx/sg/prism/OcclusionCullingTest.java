@@ -27,12 +27,12 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.NodePath;
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.prism.NodePath;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
 import static com.sun.javafx.sg.prism.NodeTestUtils.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -101,7 +101,7 @@ public class OcclusionCullingTest {
         assertTrue(group.rendered());
         if (group instanceof TestNGGroup) {
             boolean foundRoot = false;
-            for (PGNode p : ((TestNGGroup)group).getChildren()) {
+            for (NGNode p : ((TestNGGroup)group).getChildren()) {
                 TestNGNode n = (TestNGNode) p;
                 if (n == root.getCurrentNode()) {
                     foundRoot = true;
@@ -119,7 +119,7 @@ public class OcclusionCullingTest {
     private void checkRendered(TestNGNode node, boolean rendered) {
         assertEquals(rendered, node.rendered());
         if (node instanceof TestNGGroup) {
-             for (PGNode p : ((TestNGGroup)node).getChildren()) {
+             for (NGNode p : ((TestNGGroup)node).getChildren()) {
                  checkRendered((TestNGNode)p, rendered);
              }
         }

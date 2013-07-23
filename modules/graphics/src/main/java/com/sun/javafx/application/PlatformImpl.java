@@ -177,6 +177,11 @@ public class PlatformImpl {
                 numWindows.set(windows.size());
                 checkIdle();
             }
+
+            @Override
+            public void exitedLastNestedLoop() {
+                checkIdle();
+            }
         };
         Toolkit.getToolkit().addTkListener(toolkitListener);
 
@@ -335,8 +340,10 @@ public class PlatformImpl {
 
             // In case there is an event in process, allow for it to show
             // another window. If no new window is shown before all pending
-            // runnables (including this one) are done, then we will shutdown.
-            if (lastWindowClosed && pendingRunnables.get() == 0) {
+            // runnables (including this one) are done and there is no running
+            // nested loops, then we will shutdown.
+            if (lastWindowClosed && pendingRunnables.get() == 0
+                    && !Toolkit.getToolkit().isNestedLoopRunning()) {
 //                System.err.println("Last window closed and no pending runnables");
                 if (reallyIdle.getAndSet(true)) {
 //                    System.err.println("Really idle now");

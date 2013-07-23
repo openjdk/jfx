@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -34,27 +34,18 @@ namespace JSC {
     public:
         typedef StringObject Base;
 
-        static StringPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
-        {
-            JSString* empty = jsEmptyString(exec);
-            StringPrototype* prototype = new (NotNull, allocateCell<StringPrototype>(*exec->heap())) StringPrototype(exec, structure);
-            prototype->finishCreation(exec, globalObject, empty);
-            return prototype;
-        }
+        static StringPrototype* create(ExecState*, JSGlobalObject*, Structure*);
 
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
-
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
         }
 
         static const ClassInfo s_info;
 
     protected:
         void finishCreation(ExecState*, JSGlobalObject*, JSString*);
-        static const unsigned StructureFlags = OverridesGetOwnPropertySlot | StringObject::StructureFlags;
+        static const unsigned StructureFlags = StringObject::StructureFlags;
 
     };
 

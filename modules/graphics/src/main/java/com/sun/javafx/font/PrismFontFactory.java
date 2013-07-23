@@ -46,22 +46,24 @@ import com.sun.javafx.text.GlyphLayout;
 public abstract class PrismFontFactory implements FontFactory {
 
     public static boolean debugFonts = false;
-    public static boolean doCoreText = false;
-    public static boolean doDirectWrite = false;
     public static final boolean isWindows;
     public static final boolean isLinux;
     public static final boolean isMacOSX;
     public static final boolean isIOS;
     public static final boolean isAndroid;
+    public static final boolean isEmbedded;
+    public static boolean useNativeRasterizer;
     private static boolean subPixelEnabled;
+    private static boolean lcdEnabled;
+    private static float lcdContrast = -1;
     private static String jreFontDir;
     private static final String jreDefaultFont   = "Lucida Sans Regular";
     private static final String jreDefaultFontLC = "lucida sans regular";
     private static final String jreDefaultFontFile = "LucidaSansRegular.ttf";
-
     private static final String T2K_FACTORY = "com.sun.javafx.font.t2k.T2KFactory";
     private static final String CT_FACTORY = "com.sun.javafx.font.coretext.CTFactory";
     private static final String DW_FACTORY = "com.sun.javafx.font.directwrite.DWFactory";
+    private static final String PANGO_FACTORY = "com.sun.javafx.font.pango.PangoFactory";
 
     /* We need two maps. One to hold pointers to the raw fonts, another
      * to hold pointers to the composite resources. Top level look ups
@@ -82,8 +84,9 @@ public abstract class PrismFontFactory implements FontFactory {
         isLinux   = PlatformUtil.isLinux();
         isIOS     = PlatformUtil.isIOS();
         isAndroid = PlatformUtil.isAndroid();
+        isEmbedded = PlatformUtil.isEmbedded();
 
-        String prismText = AccessController.doPrivileged(
+        AccessController.doPrivileged(
             new PrivilegedAction<String>() {
                 public String run() {
                     NativeLibLoader.loadLibrary("javafx-font");
@@ -104,18 +107,32 @@ public abstract class PrismFontFactory implements FontFactory {
                     }
                     s = System.getProperty("prism.subpixeltext");
                     subPixelEnabled = s == null || s.equalsIgnoreCase("true");
-                    String defaultFactory = "t2k";
-                    if (isMacOSX) defaultFactory = "coretext";
-                    if (isWindows) defaultFactory = "directwrite";
-                    return System.getProperty("prism.text", defaultFactory).toLowerCase();
+
+                    useNativeRasterizer = isMacOSX || isWindows;
+                    String defPrismText = useNativeRasterizer ? "native" : "t2k";
+                    String prismText = System.getProperty("prism.text", defPrismText);
+                    if (useNativeRasterizer) {
+                        useNativeRasterizer = !prismText.equals("t2k");
+                    } else {
+                        useNativeRasterizer = prismText.equals("native");
+                    }
+                    if (isAndroid) useNativeRasterizer = false;
+
+                    boolean lcdTextOff = (isMacOSX && !useNativeRasterizer) ||
+                                         isIOS || isAndroid || isEmbedded;
+                    String defLCDProp = lcdTextOff ? "false" : "true";
+                    String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
+                    lcdEnabled = lcdProp.equals("true");
+                    return null;
                 }
             });
-        if (isMacOSX || isIOS) {
-            doCoreText = prismText.equals("native") || prismText.equals("coretext");
-        }
-        if (isWindows) {
-            doDirectWrite = prismText.equals("native") || prismText.equals("directwrite");
-        }
+    }
+
+    private static String getNativeFactoryName() {
+        if (isWindows) return DW_FACTORY;
+        if (isMacOSX || isIOS) return CT_FACTORY;
+        if (isLinux) return PANGO_FACTORY;
+        return null;
     }
 
     static PrismFontFactory theFontFactory = null;
@@ -123,20 +140,34 @@ public abstract class PrismFontFactory implements FontFactory {
         if (theFontFactory != null) {
             return theFontFactory;
         }
-        String factoryClass = T2K_FACTORY;
-        if (doCoreText) factoryClass = CT_FACTORY;
-        if (doDirectWrite) factoryClass = DW_FACTORY;
+        String factoryClass = null;
+        if (useNativeRasterizer) {
+            factoryClass = getNativeFactoryName();
+        }
+        if (factoryClass == null) {
+            useNativeRasterizer = false;
+            factoryClass = T2K_FACTORY;
+        }
         if (debugFonts) {
             System.err.println("Loading FontFactory " + factoryClass);
         }
         theFontFactory = getFontFactory(factoryClass);
         if (theFontFactory == null) {
-            if (!factoryClass.equalsIgnoreCase(T2K_FACTORY)) {
-                if (debugFonts) {
-                    System.err.println("*** Loading primary font factory failed. ***");
-                    System.err.println("*** Fallbacking to T2K ***");
-                }
-                theFontFactory = getFontFactory(T2K_FACTORY);
+            if (useNativeRasterizer) {
+                // If native failed use T2K (i.e. Windows Vista)
+                useNativeRasterizer = false;
+                factoryClass = T2K_FACTORY;
+            } else {
+                // If T2K failed use native (i.e. OpenJFX build)
+                useNativeRasterizer = true;
+                factoryClass = getNativeFactoryName();
+            }
+            if (factoryClass != null) {
+                theFontFactory = getFontFactory(factoryClass);
+            }
+            if (debugFonts) {
+                System.err.println("*** Loading primary font factory failed. ***");
+                System.err.println("*** Fallbacking to " + factoryClass  + " ***");
             }
         }
         return theFontFactory;
@@ -203,10 +234,10 @@ public abstract class PrismFontFactory implements FontFactory {
     }
 
     PrismFontFile createFontResource(String name, String filename,
-                                          boolean register,
-                                          boolean embedded,
-                                          boolean copy,
-                                          boolean tracked) {
+                                     boolean register,
+                                     boolean embedded,
+                                     boolean copy,
+                                     boolean tracked) {
         if (filename == null) {
             return null;
         } else {
@@ -228,8 +259,8 @@ public abstract class PrismFontFactory implements FontFactory {
                             }
                         } else {
                             fr = createFontFile(name, filename, index,
-                                                embedded,
-                                                register, copy, tracked);
+                                                register, embedded,
+                                                copy, tracked);
                         }
                     } catch (Exception e) {
                         if (PrismFontFactory.debugFonts) {
@@ -1269,6 +1300,29 @@ public abstract class PrismFontFactory implements FontFactory {
         return subPixelEnabled;
     }
 
+    public boolean isLCDTextSupported() {
+        return lcdEnabled;
+    }
+
+    public static float getLCDContrast() {
+        if (lcdContrast == -1) {
+            if (isWindows) {
+                lcdContrast = getLCDContrastWin32() / 1000f;
+            } else {
+                /* REMIND: When using CoreText it likely already applies gamma
+                 * correction to the glyph images. The current implementation does
+                 * not take this into account when rasterizing the glyph. Thus,
+                 * it is possible gamma correction is been applied twice to the
+                 * final result.
+                 * Consider using "1" for lcdContrast possibly produces visually
+                 * more appealing results (although not strictly correct).
+                 */
+                lcdContrast = 1.3f;
+            }
+        }
+        return lcdContrast;
+    }
+
     private static Thread fileCloser = null;
 
     private synchronized void addFileCloserHook() {
@@ -1467,7 +1521,7 @@ public abstract class PrismFontFactory implements FontFactory {
          * know to reference the file directly.
          */
         PrismFontFile fr = createFontResource(name, path, register,
-                                            true, copy, tracked);
+                                              true, copy, tracked);
         if (fr == null) {
             return null; // yes, this means the caller needs to handle null.
         }
@@ -1736,7 +1790,7 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
-    static native int getLCDContrast();
+    static native int getLCDContrastWin32();
     private static native int getSystemFontSizeNative();
     private static native String getSystemFontNative();
     private static float systemFontSize;

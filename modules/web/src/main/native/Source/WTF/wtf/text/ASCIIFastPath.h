@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Nokia Corporation and/or its subsidiary(-ies).
  *
  * This library is free software; you can redistribute it and/or
@@ -22,7 +22,12 @@
 #ifndef ASCIIFastPath_h
 #define ASCIIFastPath_h
 
+#if OS(DARWIN) && (CPU(X86) || CPU(X86_64))
+#include <emmintrin.h>
+#endif
 #include <stdint.h>
+#include <wtf/Alignment.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/unicode/Unicode.h>
 
 namespace WTF {
@@ -81,7 +86,7 @@ inline bool charactersAreAllASCII(const CharacterType* characters, size_t length
     const CharacterType* wordEnd = alignToMachineWord(end);
     const size_t loopIncrement = sizeof(MachineWord) / sizeof(CharacterType);
     while (characters < wordEnd) {
-        allCharBits |= *(reinterpret_cast<const MachineWord*>(characters));
+        allCharBits |= *(reinterpret_cast_ptr<const MachineWord*>(characters));
         characters += loopIncrement;
     }
 
@@ -95,6 +100,69 @@ inline bool charactersAreAllASCII(const CharacterType* characters, size_t length
     return !(allCharBits & nonASCIIBitMask);
 }
 
+inline void copyLCharsFromUCharSource(LChar* destination, const UChar* source, size_t length)
+{
+#if OS(DARWIN) && (CPU(X86) || CPU(X86_64))
+    const uintptr_t memoryAccessSize = 16; // Memory accesses on 16 byte (128 bit) alignment
+    const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+
+    size_t i = 0;
+    for (;i < length && !isAlignedTo<memoryAccessMask>(&source[i]); ++i) {
+        ASSERT(!(source[i] & 0xff00));
+        destination[i] = static_cast<LChar>(source[i]);
+    }
+
+    const uintptr_t sourceLoadSize = 32; // Process 32 bytes (16 UChars) each iteration
+    const size_t ucharsPerLoop = sourceLoadSize / sizeof(UChar);
+    if (length > ucharsPerLoop) {
+        const size_t endLength = length - ucharsPerLoop + 1;
+        for (; i < endLength; i += ucharsPerLoop) {
+#ifndef NDEBUG
+            for (unsigned checkIndex = 0; checkIndex < ucharsPerLoop; ++checkIndex)
+                ASSERT(!(source[i+checkIndex] & 0xff00));
+#endif
+            __m128i first8UChars = _mm_load_si128(reinterpret_cast<const __m128i*>(&source[i]));
+            __m128i second8UChars = _mm_load_si128(reinterpret_cast<const __m128i*>(&source[i+8]));
+            __m128i packedChars = _mm_packus_epi16(first8UChars, second8UChars);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(&destination[i]), packedChars);
+        }
+    }
+
+    for (; i < length; ++i) {
+        ASSERT(!(source[i] & 0xff00));
+        destination[i] = static_cast<LChar>(source[i]);
+    }
+#elif COMPILER(GCC) && CPU(ARM_NEON) && !(PLATFORM(BIG_ENDIAN) || PLATFORM(MIDDLE_ENDIAN)) && defined(NDEBUG)
+    const LChar* const end = destination + length;
+    const uintptr_t memoryAccessSize = 8;
+
+    if (length >= (2 * memoryAccessSize) - 1) {
+        // Prefix: align dst on 64 bits.
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        while (!isAlignedTo<memoryAccessMask>(destination))
+            *destination++ = static_cast<LChar>(*source++);
+
+        // Vector interleaved unpack, we only store the lower 8 bits.
+        const uintptr_t lengthLeft = end - destination;
+        const LChar* const simdEnd = end - (lengthLeft % memoryAccessSize);
+        do {
+            asm("vld2.8   { d0-d1 }, [%[SOURCE]] !\n\t"
+                "vst1.8   { d0 }, [%[DESTINATION],:64] !\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "d0", "d1");
+        } while (destination != simdEnd);
+    }
+
+    while (destination != end)
+        *destination++ = static_cast<LChar>(*source++);
+#else
+    for (size_t i = 0; i < length; ++i) {
+        ASSERT(!(source[i] & 0xff00));
+        destination[i] = static_cast<LChar>(source[i]);
+    }
+#endif
+}
 
 } // namespace WTF
 

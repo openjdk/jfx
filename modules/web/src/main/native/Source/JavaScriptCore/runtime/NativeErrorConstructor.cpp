@@ -25,10 +25,10 @@
 #include "JSFunction.h"
 #include "JSString.h"
 #include "NativeErrorPrototype.h"
+#include "Operations.h"
 
 namespace JSC {
 
-ASSERT_CLASS_FITS_IN_CELL(NativeErrorConstructor);
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(NativeErrorConstructor);
 
 const ClassInfo NativeErrorConstructor::s_info = { "Function", &InternalFunction::s_info, 0, 0, CREATE_METHOD_TABLE(NativeErrorConstructor) };
@@ -44,8 +44,8 @@ void NativeErrorConstructor::visitChildren(JSCell* cell, SlotVisitor& visitor)
     ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
+
     InternalFunction::visitChildren(thisObject, visitor);
-    if (thisObject->m_errorStructure)
         visitor.append(&thisObject->m_errorStructure);
 }
 

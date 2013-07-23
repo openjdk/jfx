@@ -30,6 +30,7 @@
 #include "DataURL.h"
 #include "HTTPParsers.h"
 #include "MIMETypeRegistry.h"
+#include "NetworkingContext.h"
 #include "NotImplemented.h"
 #include "ResourceError.h"
 #include "ResourceHandleClient.h"
@@ -38,7 +39,6 @@
 #include "Timer.h"
 
 #include <wtf/MainThread.h>
-#include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
 
 #include <windows.h>
@@ -264,7 +264,7 @@ bool ResourceHandle::onRequestComplete()
     return false;
 }
 
-bool ResourceHandle::start(NetworkingContext* context)
+bool ResourceHandle::start()
 {
     if (firstRequest().url().isLocalFile() || firstRequest().url().protocolIsData()) {
         ref(); // balanced by deref in fileLoadTimer
@@ -276,7 +276,7 @@ bool ResourceHandle::start(NetworkingContext* context)
     }
 
     if (!d->m_internetHandle)
-        d->m_internetHandle = asynchronousInternetHandle(context->userAgent());
+        d->m_internetHandle = asynchronousInternetHandle(d->m_context->userAgent());
 
     if (!d->m_internetHandle)
         return false;
@@ -323,15 +323,15 @@ bool ResourceHandle::start(NetworkingContext* context)
     const HTTPHeaderMap& httpHeaderFields = firstRequest().httpHeaderFields();
 
     for (HTTPHeaderMap::const_iterator it = httpHeaderFields.begin(); it != httpHeaderFields.end(); ++it) {
-        if (equalIgnoringCase(it->first, "Accept") || equalIgnoringCase(it->first, "Referer") || equalIgnoringCase(it->first, "User-Agent"))
+        if (equalIgnoringCase(it->key, "Accept") || equalIgnoringCase(it->key, "Referer") || equalIgnoringCase(it->key, "User-Agent"))
             continue;
 
         if (!httpHeaders.isEmpty())
             httpHeaders.append('\n');
 
-        httpHeaders.append(it->first.characters(), it->first.length());
+        httpHeaders.append(it->key.characters(), it->key.length());
         httpHeaders.append(':');
-        httpHeaders.append(it->second.characters(), it->second.length());
+        httpHeaders.append(it->value.characters(), it->value.length());
     }
 
     INTERNET_BUFFERSW internetBuffers;
@@ -413,27 +413,21 @@ void ResourceHandle::cancel()
         d->m_fileLoadTimer.stop();
 }
 
-void ResourceHandle::loadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
     UNUSED_PARAM(storedCredentials);
 
     WebCoreSynchronousLoader syncLoader(error, response, data, request.httpUserAgent());
-    ResourceHandle handle(request, &syncLoader, true, false);
+    ResourceHandle handle(context, request, &syncLoader, true, false);
 
     handle.setSynchronousInternetHandle(syncLoader.internetHandle());
-    handle.start(context);
+    handle.start();
 }
 
 void ResourceHandle::setSynchronousInternetHandle(HINTERNET internetHandle)
 {
     d->m_internetHandle = internetHandle;
     d->m_loadSynchronously = true;
-}
-
-bool ResourceHandle::willLoadFromCache(ResourceRequest&, Frame*)
-{
-    notImplemented();
-    return false;
 }
 
 void prefetchDNS(const String&)

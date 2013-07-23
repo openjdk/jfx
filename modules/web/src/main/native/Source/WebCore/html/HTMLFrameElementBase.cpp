@@ -66,21 +66,9 @@ bool HTMLFrameElementBase::isURLAllowed() const
             return false;
     }
 
-    if (Frame* parentFrame = document()->frame()) {
-        if (parentFrame->page()->frameCount() >= Page::maxNumberOfFrames)
-            return false;
-    }
-
-    // We allow one level of self-reference because some sites depend on that.
-    // But we don't allow more than one.
-    bool foundSelfReference = false;
-    for (Frame* frame = document()->frame(); frame; frame = frame->tree()->parent()) {
-        if (equalIgnoringFragmentIdentifier(frame->document()->url(), completeURL)) {
-            if (foundSelfReference)
-                return false;
-            foundSelfReference = true;
-        }
-    }
+    Frame* parentFrame = document()->frame();
+    if (parentFrame)
+        return parentFrame->isURLAllowed(completeURL);
     
     return true;
 }
@@ -102,47 +90,47 @@ void HTMLFrameElementBase::openURL(bool lockHistory, bool lockBackForwardList)
         contentFrame()->setInViewSourceMode(viewSourceMode());
 }
 
-void HTMLFrameElementBase::parseAttribute(const Attribute& attribute)
+void HTMLFrameElementBase::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == srcdocAttr)
+    if (name == srcdocAttr)
         setLocation("about:srcdoc");
-    else if (attribute.name() == srcAttr && !fastHasAttribute(srcdocAttr))
-        setLocation(stripLeadingAndTrailingHTMLSpaces(attribute.value()));
-    else if (isIdAttributeName(attribute.name())) {
+    else if (name == srcAttr && !fastHasAttribute(srcdocAttr))
+        setLocation(stripLeadingAndTrailingHTMLSpaces(value));
+    else if (isIdAttributeName(name)) {
         // Important to call through to base for the id attribute so the hasID bit gets set.
-        HTMLFrameOwnerElement::parseAttribute(attribute);
-        m_frameName = attribute.value();
-    } else if (attribute.name() == nameAttr) {
-        m_frameName = attribute.value();
+        HTMLFrameOwnerElement::parseAttribute(name, value);
+        m_frameName = value;
+    } else if (name == nameAttr) {
+        m_frameName = value;
         // FIXME: If we are already attached, this doesn't actually change the frame's name.
         // FIXME: If we are already attached, this doesn't check for frame name
         // conflicts and generate a unique frame name.
-    } else if (attribute.name() == marginwidthAttr) {
-        m_marginWidth = attribute.value().toInt();
+    } else if (name == marginwidthAttr) {
+        m_marginWidth = value.toInt();
         // FIXME: If we are already attached, this has no effect.
-    } else if (attribute.name() == marginheightAttr) {
-        m_marginHeight = attribute.value().toInt();
+    } else if (name == marginheightAttr) {
+        m_marginHeight = value.toInt();
         // FIXME: If we are already attached, this has no effect.
-    } else if (attribute.name() == scrollingAttr) {
+    } else if (name == scrollingAttr) {
         // Auto and yes both simply mean "allow scrolling." No means "don't allow scrolling."
-        if (equalIgnoringCase(attribute.value(), "auto") || equalIgnoringCase(attribute.value(), "yes"))
+        if (equalIgnoringCase(value, "auto") || equalIgnoringCase(value, "yes"))
             m_scrolling = document()->frameElementsShouldIgnoreScrolling() ? ScrollbarAlwaysOff : ScrollbarAuto;
-        else if (equalIgnoringCase(attribute.value(), "no"))
+        else if (equalIgnoringCase(value, "no"))
             m_scrolling = ScrollbarAlwaysOff;
         // FIXME: If we are already attached, this has no effect.
-    } else if (attribute.name() == viewsourceAttr) {
-        m_viewSource = !attribute.isNull();
+#if ENABLE(VIEWSOURCE_ATTRIBUTE)
+    } else if (name == viewsourceAttr) {
+        m_viewSource = !value.isNull();
         if (contentFrame())
             contentFrame()->setInViewSourceMode(viewSourceMode());
-    } else if (attribute.name() == onloadAttr)
-        setAttributeEventListener(eventNames().loadEvent, createAttributeEventListener(this, attribute));
-    else if (attribute.name() == onbeforeloadAttr)
-        setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, attribute));
-    else if (attribute.name() == onbeforeunloadAttr) {
+#endif
+    } else if (name == onbeforeloadAttr)
+        setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, name, value));
+    else if (name == onbeforeunloadAttr) {
         // FIXME: should <frame> elements have beforeunload handlers?
-        setAttributeEventListener(eventNames().beforeunloadEvent, createAttributeEventListener(this, attribute));
+        setAttributeEventListener(eventNames().beforeunloadEvent, createAttributeEventListener(this, name, value));
     } else
-        HTMLFrameOwnerElement::parseAttribute(attribute);
+        HTMLFrameOwnerElement::parseAttribute(name, value);
 }
 
 void HTMLFrameElementBase::setNameAndOpenURL()
@@ -157,16 +145,20 @@ Node::InsertionNotificationRequest HTMLFrameElementBase::insertedInto(ContainerN
 {
     HTMLFrameOwnerElement::insertedInto(insertionPoint);
     if (insertionPoint->inDocument())
-        return InsertionShouldCallDidNotifyDescendantInsertions;
+        return InsertionShouldCallDidNotifySubtreeInsertions;
     return InsertionDone;
 }
 
-void HTMLFrameElementBase::didNotifyDescendantInsertions(ContainerNode* insertionPoint)
+void HTMLFrameElementBase::didNotifySubtreeInsertions(ContainerNode*)
 {
-    ASSERT_UNUSED(insertionPoint, insertionPoint->inDocument());
+    if (!inDocument())
+        return;
 
     // DocumentFragments don't kick of any loads.
     if (!document()->frame())
+        return;
+
+    if (!SubframeLoadingDisabler::canLoadFrame(this))
         return;
 
     // JavaScript in src=javascript: and beforeonload can access the renderer
@@ -228,6 +220,11 @@ void HTMLFrameElementBase::setFocus(bool received)
 bool HTMLFrameElementBase::isURLAttribute(const Attribute& attribute) const
 {
     return attribute.name() == srcAttr || HTMLFrameOwnerElement::isURLAttribute(attribute);
+}
+
+bool HTMLFrameElementBase::isHTMLContentAttribute(const Attribute& attribute) const
+{
+    return attribute.name() == srcdocAttr || HTMLFrameOwnerElement::isHTMLContentAttribute(attribute);
 }
 
 int HTMLFrameElementBase::width()

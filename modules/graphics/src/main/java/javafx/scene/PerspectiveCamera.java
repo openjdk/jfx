@@ -30,9 +30,8 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGPerspectiveCamera;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGPerspectiveCamera;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -82,7 +81,7 @@ import sun.util.logging.PlatformLogger;
  * 
  * @since JavaFX 2.0
  */
-public  class PerspectiveCamera extends Camera {   
+public class PerspectiveCamera extends Camera {
 
     private boolean fixedEyeAtCameraZero = false;
 
@@ -233,12 +232,12 @@ public  class PerspectiveCamera extends Camera {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        PGPerspectiveCamera pgCamera = Toolkit.getToolkit().createPGPerspectiveCamera(fixedEyeAtCameraZero);    
-        pgCamera.setNearClip((float) getNearClip());
-        pgCamera.setFarClip((float) getFarClip());
-        pgCamera.setFieldOfView((float) getFieldOfView());
-        return pgCamera;
+    protected NGNode impl_createPeer() {
+        NGPerspectiveCamera peer = new NGPerspectiveCamera(fixedEyeAtCameraZero);
+        peer.setNearClip((float) getNearClip());
+        peer.setFarClip((float) getFarClip());
+        peer.setFieldOfView((float) getFieldOfView());
+        return peer;
     }
 
     /**
@@ -247,9 +246,9 @@ public  class PerspectiveCamera extends Camera {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
-        PGPerspectiveCamera pgPerspectiveCamera = (PGPerspectiveCamera)impl_getPGNode();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
+        NGPerspectiveCamera pgPerspectiveCamera = impl_getPeer();
         if (impl_isDirty(DirtyBits.NODE_CAMERA)) {
             pgPerspectiveCamera.setVerticalFieldOfView(isVerticalFieldOfView());
             pgPerspectiveCamera.setFieldOfView((float) getFieldOfView());

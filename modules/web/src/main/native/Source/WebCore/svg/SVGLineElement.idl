@@ -23,15 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG
-    ] SVGLineElement : SVGElement,
+] interface SVGLineElement : SVGStyledElement,
                                                  SVGTests,
                                                  SVGLangSpace,
                                                  SVGExternalResourcesRequired,
-                                                 SVGStylable,
                                                  SVGTransformable {
         readonly attribute SVGAnimatedLength x1;
         readonly attribute SVGAnimatedLength y1;
@@ -39,4 +36,3 @@ module svg {
         readonly attribute SVGAnimatedLength y2;
     };
 
-}

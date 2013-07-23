@@ -25,8 +25,10 @@
 #include "config.h"
 #include "HTMLLegendElement.h"
 
+#include "HTMLFieldSetElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLNames.h"
+#include "NodeTraversal.h"
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -48,40 +50,49 @@ PassRefPtr<HTMLLegendElement> HTMLLegendElement::create(const QualifiedName& tag
 HTMLFormControlElement* HTMLLegendElement::associatedControl()
 {
     // Check if there's a fieldset belonging to this legend.
-    ContainerNode* fieldset = parentNode();
+    Element* fieldset = parentElement();
     while (fieldset && !fieldset->hasTagName(fieldsetTag))
-        fieldset = fieldset->parentNode();
+        fieldset = fieldset->parentElement();
     if (!fieldset)
         return 0;
 
     // Find first form element inside the fieldset that is not a legend element.
     // FIXME: Should we consider tabindex?
-    Node* node = fieldset;
-    while ((node = node->traverseNextNode(fieldset))) {
-        if (node->isElementNode()) {
-            Element* element = static_cast<Element*>(node);
+    Element* element = fieldset;
+    while ((element = ElementTraversal::next(element, fieldset))) {
             if (element->isFormControlElement())
                 return static_cast<HTMLFormControlElement*>(element);
         }
-    }
 
     return 0;
 }
 
-void HTMLLegendElement::focus(bool)
+void HTMLLegendElement::focus(bool, FocusDirection direction)
 {
     if (isFocusable())
-        Element::focus();
+        Element::focus(true, direction);
         
     // To match other browsers' behavior, never restore previous selection.
     if (HTMLFormControlElement* control = associatedControl())
-        control->focus(false);
+        control->focus(false, direction);
 }
 
 void HTMLLegendElement::accessKeyAction(bool sendMouseEvents)
 {
     if (HTMLFormControlElement* control = associatedControl())
         control->accessKeyAction(sendMouseEvents);
+}
+    
+HTMLFormElement* HTMLLegendElement::virtualForm() const
+{
+    // According to the specification, If the legend has a fieldset element as
+    // its parent, then the form attribute must return the same value as the
+    // form attribute on that fieldset element. Otherwise, it must return null.
+    ContainerNode* fieldset = parentNode();
+    if (!fieldset || !fieldset->hasTagName(fieldsetTag))
+        return 0;
+
+    return static_cast<HTMLFieldSetElement*>(fieldset)->form();
 }
     
 } // namespace

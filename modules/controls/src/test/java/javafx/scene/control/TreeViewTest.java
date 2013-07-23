@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.runtime.VersionInfo;
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.scene.control.test.Employee;
@@ -58,6 +59,7 @@ import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -1056,5 +1058,59 @@ public class TreeViewTest {
 
         treeView.setShowRoot(false);
         assertEquals("Child 1", cell.getText());
+    }
+
+    @Test public void test_rt31471() {
+        installChildren();
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertEquals("Root", cell.getItem());
+
+        treeView.setFixedCellSize(50);
+
+        VirtualFlowTestUtils.getVirtualFlow(treeView).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals("Root", cell.getItem());
+        assertEquals(50, cell.getHeight(), 0.00);
+    }
+
+    private int rt_31200_count = 0;
+    @Test public void test_rt_31200_tableRow() {
+        installChildren();
+        treeView.setCellFactory(new Callback<TreeView<String>, TreeCell<String>>() {
+            @Override
+            public TreeCell<String> call(TreeView<String> param) {
+                return new TreeCell<String>() {
+                    ImageView view = new ImageView();
+                    { setGraphic(view); };
+
+                    @Override
+                    protected void updateItem(String item, boolean empty) {
+                        if (getItem() == null ? item == null : getItem().equals(item)) {
+                            rt_31200_count++;
+                        }
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            view.setImage(null);
+                            setText(null);
+                        } else {
+                            setText(item.toString());
+                        }
+                    }
+                };
+            }
+        });
+
+        StageLoader sl = new StageLoader(treeView);
+
+        assertEquals(0, rt_31200_count);
+
+        // resize the stage
+        sl.getStage().setHeight(250);
+        Toolkit.getToolkit().firePulse();
+        sl.getStage().setHeight(50);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(0, rt_31200_count);
     }
 }

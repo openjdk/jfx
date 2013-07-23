@@ -33,30 +33,23 @@
 
 #if ENABLE(SQL_DATABASE)
 
-#include "AbstractDatabase.h"
-#include "PlatformString.h"
+#include "DatabaseBackendSync.h"
+#include "DatabaseBase.h"
+#include "DatabaseBasicTypes.h"
 #include <wtf/Forward.h>
-#ifndef NDEBUG
-#include "SecurityOrigin.h"
-#endif
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class DatabaseCallback;
 class SQLTransactionSync;
 class SQLTransactionSyncCallback;
-class ScriptExecutionContext;
-class SecurityOrigin;
-
-typedef int ExceptionCode;
 
 // Instances of this class should be created and used only on the worker's context thread.
-class DatabaseSync : public AbstractDatabase {
+class DatabaseSync : public DatabaseBase, public DatabaseBackendSync {
 public:
     virtual ~DatabaseSync();
 
-    static PassRefPtr<DatabaseSync> openDatabaseSync(ScriptExecutionContext*, const String& name, const String& expectedVersion,
-                                                     const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback>, ExceptionCode&);
     void changeVersion(const String& oldVersion, const String& newVersion, PassRefPtr<SQLTransactionSyncCallback>, ExceptionCode&);
     void transaction(PassRefPtr<SQLTransactionSyncCallback>, ExceptionCode&);
     void readTransaction(PassRefPtr<SQLTransactionSyncCallback>, ExceptionCode&);
@@ -76,11 +69,17 @@ public:
     }
 
 private:
-    DatabaseSync(ScriptExecutionContext*, const String& name, const String& expectedVersion,
-                 const String& displayName, unsigned long estimatedSize);
+    DatabaseSync(PassRefPtr<DatabaseBackendContext>, const String& name,
+        const String& expectedVersion, const String& displayName, unsigned long estimatedSize);
+    PassRefPtr<DatabaseBackendSync> backend();
+    static PassRefPtr<DatabaseSync> create(ScriptExecutionContext*, PassRefPtr<DatabaseBackendBase>);
+
     void runTransaction(PassRefPtr<SQLTransactionSyncCallback>, bool readOnly, ExceptionCode&);
 
     String m_lastErrorMessage;
+
+    friend class DatabaseManager;
+    friend class DatabaseServer; // FIXME: remove this when the backend has been split out.
 };
 
 } // namespace WebCore

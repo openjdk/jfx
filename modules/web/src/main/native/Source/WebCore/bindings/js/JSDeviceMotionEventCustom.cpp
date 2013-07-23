@@ -31,6 +31,7 @@
 
 #include "DeviceMotionData.h"
 #include "DeviceMotionEvent.h"
+#include <runtime/ObjectConstructor.h>
 
 using namespace JSC;
 
@@ -115,18 +116,18 @@ static PassRefPtr<DeviceMotionData::RotationRate> readRotationRateArgument(JSVal
 static JSObject* createAccelerationObject(const DeviceMotionData::Acceleration* acceleration, ExecState* exec)
 {
     JSObject* object = constructEmptyObject(exec);
-    object->putDirect(exec->globalData(), Identifier(exec, "x"), acceleration->canProvideX() ? jsNumber(acceleration->x()) : jsNull());
-    object->putDirect(exec->globalData(), Identifier(exec, "y"), acceleration->canProvideY() ? jsNumber(acceleration->y()) : jsNull());
-    object->putDirect(exec->globalData(), Identifier(exec, "z"), acceleration->canProvideZ() ? jsNumber(acceleration->z()) : jsNull());
+    object->putDirect(exec->vm(), Identifier(exec, "x"), acceleration->canProvideX() ? jsNumber(acceleration->x()) : jsNull());
+    object->putDirect(exec->vm(), Identifier(exec, "y"), acceleration->canProvideY() ? jsNumber(acceleration->y()) : jsNull());
+    object->putDirect(exec->vm(), Identifier(exec, "z"), acceleration->canProvideZ() ? jsNumber(acceleration->z()) : jsNull());
     return object;
 }
 
 static JSObject* createRotationRateObject(const DeviceMotionData::RotationRate* rotationRate, ExecState* exec)
 {
     JSObject* object = constructEmptyObject(exec);
-    object->putDirect(exec->globalData(), Identifier(exec, "alpha"), rotationRate->canProvideAlpha() ? jsNumber(rotationRate->alpha()) : jsNull());
-    object->putDirect(exec->globalData(), Identifier(exec, "beta"),  rotationRate->canProvideBeta()  ? jsNumber(rotationRate->beta())  : jsNull());
-    object->putDirect(exec->globalData(), Identifier(exec, "gamma"), rotationRate->canProvideGamma() ? jsNumber(rotationRate->gamma()) : jsNull());
+    object->putDirect(exec->vm(), Identifier(exec, "alpha"), rotationRate->canProvideAlpha() ? jsNumber(rotationRate->alpha()) : jsNull());
+    object->putDirect(exec->vm(), Identifier(exec, "beta"),  rotationRate->canProvideBeta()  ? jsNumber(rotationRate->beta())  : jsNull());
+    object->putDirect(exec->vm(), Identifier(exec, "gamma"), rotationRate->canProvideGamma() ? jsNumber(rotationRate->gamma()) : jsNull());
     return object;
 }
 
@@ -164,9 +165,9 @@ JSValue JSDeviceMotionEvent::interval(ExecState*) const
 
 JSValue JSDeviceMotionEvent::initDeviceMotionEvent(ExecState* exec)
 {
-    const String& type = ustringToString(exec->argument(0).toString(exec)->value(exec));
-    bool bubbles = exec->argument(1).toBoolean();
-    bool cancelable = exec->argument(2).toBoolean();
+    const String type = exec->argument(0).toString(exec)->value(exec);
+    bool bubbles = exec->argument(1).toBoolean(exec);
+    bool cancelable = exec->argument(2).toBoolean(exec);
 
     // If any of the parameters are null or undefined, mark them as not provided.
     // Otherwise, use the standard JavaScript conversion.

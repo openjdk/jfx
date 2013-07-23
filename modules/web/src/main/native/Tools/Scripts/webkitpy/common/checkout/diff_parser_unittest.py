@@ -26,54 +26,93 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import cStringIO as StringIO
+import unittest2 as unittest
 import diff_parser
 import re
 
 from webkitpy.common.checkout.diff_test_data import DIFF_TEST_DATA
 
 class DiffParserTest(unittest.TestCase):
+    maxDiff = None
+
     def test_diff_parser(self, parser = None):
         if not parser:
             parser = diff_parser.DiffParser(DIFF_TEST_DATA.splitlines())
-        self.assertEquals(3, len(parser.files))
+        self.assertEqual(3, len(parser.files))
 
         self.assertTrue('WebCore/rendering/style/StyleFlexibleBoxData.h' in parser.files)
         diff = parser.files['WebCore/rendering/style/StyleFlexibleBoxData.h']
-        self.assertEquals(7, len(diff.lines))
+        self.assertEqual(7, len(diff.lines))
         # The first two unchaged lines.
-        self.assertEquals((47, 47), diff.lines[0][0:2])
-        self.assertEquals('', diff.lines[0][2])
-        self.assertEquals((48, 48), diff.lines[1][0:2])
-        self.assertEquals('    unsigned align : 3; // EBoxAlignment', diff.lines[1][2])
+        self.assertEqual((47, 47), diff.lines[0][0:2])
+        self.assertEqual('', diff.lines[0][2])
+        self.assertEqual((48, 48), diff.lines[1][0:2])
+        self.assertEqual('    unsigned align : 3; // EBoxAlignment', diff.lines[1][2])
         # The deleted line
-        self.assertEquals((50, 0), diff.lines[3][0:2])
-        self.assertEquals('    unsigned orient: 1; // EBoxOrient', diff.lines[3][2])
+        self.assertEqual((50, 0), diff.lines[3][0:2])
+        self.assertEqual('    unsigned orient: 1; // EBoxOrient', diff.lines[3][2])
 
         # The first file looks OK. Let's check the next, more complicated file.
         self.assertTrue('WebCore/rendering/style/StyleRareInheritedData.cpp' in parser.files)
         diff = parser.files['WebCore/rendering/style/StyleRareInheritedData.cpp']
         # There are 3 chunks.
-        self.assertEquals(7 + 7 + 9, len(diff.lines))
+        self.assertEqual(7 + 7 + 9, len(diff.lines))
         # Around an added line.
-        self.assertEquals((60, 61), diff.lines[9][0:2])
-        self.assertEquals((0, 62), diff.lines[10][0:2])
-        self.assertEquals((61, 63), diff.lines[11][0:2])
+        self.assertEqual((60, 61), diff.lines[9][0:2])
+        self.assertEqual((0, 62), diff.lines[10][0:2])
+        self.assertEqual((61, 63), diff.lines[11][0:2])
         # Look through the last chunk, which contains both add's and delete's.
-        self.assertEquals((81, 83), diff.lines[14][0:2])
-        self.assertEquals((82, 84), diff.lines[15][0:2])
-        self.assertEquals((83, 85), diff.lines[16][0:2])
-        self.assertEquals((84, 0), diff.lines[17][0:2])
-        self.assertEquals((0, 86), diff.lines[18][0:2])
-        self.assertEquals((0, 87), diff.lines[19][0:2])
-        self.assertEquals((85, 88), diff.lines[20][0:2])
-        self.assertEquals((86, 89), diff.lines[21][0:2])
-        self.assertEquals((87, 90), diff.lines[22][0:2])
+        self.assertEqual((81, 83), diff.lines[14][0:2])
+        self.assertEqual((82, 84), diff.lines[15][0:2])
+        self.assertEqual((83, 85), diff.lines[16][0:2])
+        self.assertEqual((84, 0), diff.lines[17][0:2])
+        self.assertEqual((0, 86), diff.lines[18][0:2])
+        self.assertEqual((0, 87), diff.lines[19][0:2])
+        self.assertEqual((85, 88), diff.lines[20][0:2])
+        self.assertEqual((86, 89), diff.lines[21][0:2])
+        self.assertEqual((87, 90), diff.lines[22][0:2])
 
         # Check if a newly added file is correctly handled.
         diff = parser.files['LayoutTests/platform/mac/fast/flexbox/box-orient-button-expected.checksum']
-        self.assertEquals(1, len(diff.lines))
-        self.assertEquals((0, 1), diff.lines[0][0:2])
+        self.assertEqual(1, len(diff.lines))
+        self.assertEqual((0, 1), diff.lines[0][0:2])
+
+    def test_diff_converter(self):
+        comment_lines = [
+            "Hey guys,\n",
+            "\n",
+            "See my awesome patch below!\n",
+            "\n",
+            " - Cool Hacker\n",
+            "\n",
+            ]
+
+        revision_lines = [
+            "Subversion Revision 289799\n",
+            ]
+
+        svn_diff_lines = [
+            "Index: Tools/Scripts/webkitpy/common/checkout/diff_parser.py\n",
+            "===================================================================\n",
+            "--- Tools/Scripts/webkitpy/common/checkout/diff_parser.py\n",
+            "+++ Tools/Scripts/webkitpy/common/checkout/diff_parser.py\n",
+            "@@ -59,6 +59,7 @@ def git_diff_to_svn_diff(line):\n",
+            ]
+        self.assertEqual(diff_parser.get_diff_converter(svn_diff_lines), diff_parser.svn_diff_to_svn_diff)
+        self.assertEqual(diff_parser.get_diff_converter(comment_lines + svn_diff_lines), diff_parser.svn_diff_to_svn_diff)
+        self.assertEqual(diff_parser.get_diff_converter(revision_lines + svn_diff_lines), diff_parser.svn_diff_to_svn_diff)
+
+        git_diff_lines = [
+            "diff --git a/Tools/Scripts/webkitpy/common/checkout/diff_parser.py b/Tools/Scripts/webkitpy/common/checkout/diff_parser.py\n",
+            "index 3c5b45b..0197ead 100644\n",
+            "--- a/Tools/Scripts/webkitpy/common/checkout/diff_parser.py\n",
+            "+++ b/Tools/Scripts/webkitpy/common/checkout/diff_parser.py\n",
+            "@@ -59,6 +59,7 @@ def git_diff_to_svn_diff(line):\n",
+            ]
+        self.assertEqual(diff_parser.get_diff_converter(git_diff_lines), diff_parser.git_diff_to_svn_diff)
+        self.assertEqual(diff_parser.get_diff_converter(comment_lines + git_diff_lines), diff_parser.git_diff_to_svn_diff)
+        self.assertEqual(diff_parser.get_diff_converter(revision_lines + git_diff_lines), diff_parser.git_diff_to_svn_diff)
 
     def test_git_mnemonicprefix(self):
         p = re.compile(r' ([a|b])/')
@@ -90,5 +129,47 @@ class DiffParserTest(unittest.TestCase):
             patch = p.sub(lambda x: " %s/" % prefix[x.group(1)], DIFF_TEST_DATA)
             self.test_diff_parser(diff_parser.DiffParser(patch.splitlines()))
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_git_diff_to_svn_diff(self):
+        output = """\
+Index: Tools/Scripts/webkitpy/common/checkout/diff_parser.py
+===================================================================
+--- Tools/Scripts/webkitpy/common/checkout/diff_parser.py
++++ Tools/Scripts/webkitpy/common/checkout/diff_parser.py
+@@ -59,6 +59,7 @@ def git_diff_to_svn_diff(line):
+ A
+ B
+ C
++D
+ E
+ F
+"""
+
+        inputfmt = StringIO.StringIO("""\
+diff --git a/Tools/Scripts/webkitpy/common/checkout/diff_parser.py b/Tools/Scripts/webkitpy/common/checkout/diff_parser.py
+index 2ed552c4555db72df16b212547f2c125ae301a04..72870482000c0dba64ce4300ed782c03ee79b74f 100644
+--- a/Tools/Scripts/webkitpy/common/checkout/diff_parser.py
++++ b/Tools/Scripts/webkitpy/common/checkout/diff_parser.py
+@@ -59,6 +59,7 @@ def git_diff_to_svn_diff(line):
+ A
+ B
+ C
++D
+ E
+ F
+""")
+        shortfmt = StringIO.StringIO("""\
+diff --git a/Tools/Scripts/webkitpy/common/checkout/diff_parser.py b/Tools/Scripts/webkitpy/common/checkout/diff_parser.py
+index b48b162..f300960 100644
+--- a/Tools/Scripts/webkitpy/common/checkout/diff_parser.py
++++ b/Tools/Scripts/webkitpy/common/checkout/diff_parser.py
+@@ -59,6 +59,7 @@ def git_diff_to_svn_diff(line):
+ A
+ B
+ C
++D
+ E
+ F
+""")
+
+        self.assertMultiLineEqual(output, ''.join(diff_parser.git_diff_to_svn_diff(x) for x in shortfmt.readlines()))
+        self.assertMultiLineEqual(output, ''.join(diff_parser.git_diff_to_svn_diff(x) for x in inputfmt.readlines()))

@@ -18,10 +18,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module css {
-
     // Introduced in DOM Level 2:
-    interface RGBColor {
+[
+    ImplementationLacksVTable
+] interface RGBColor {
         readonly attribute CSSPrimitiveValue  red;
         readonly attribute CSSPrimitiveValue  green;
         readonly attribute CSSPrimitiveValue  blue;
@@ -35,4 +35,3 @@ module css {
 #endif
     };
 
-}

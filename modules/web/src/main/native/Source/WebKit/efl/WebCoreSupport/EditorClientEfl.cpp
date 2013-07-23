@@ -23,6 +23,7 @@
 #include "config.h"
 #include "EditorClientEfl.h"
 
+#include "Document.h"
 #include "DumpRenderTreeSupportEfl.h"
 #include "Editor.h"
 #include "EflKeyboardUtilities.h"
@@ -60,11 +61,6 @@ bool EditorClientEfl::shouldDeleteRange(Range* range)
     return true;
 }
 
-bool EditorClientEfl::shouldShowDeleteInterface(HTMLElement*)
-{
-    return false;
-}
-
 bool EditorClientEfl::isContinuousSpellCheckingEnabled()
 {
     notImplemented();
@@ -97,7 +93,8 @@ bool EditorClientEfl::shouldEndEditing(Range* range)
 
 bool EditorClientEfl::shouldInsertText(const String& text, Range* range, EditorInsertAction action)
 {
-    Ewk_Should_Insert_Text_Event shouldInsertTextEvent = { text.utf8().data(), range, action };
+    CString protectedText = text.utf8();
+    Ewk_Should_Insert_Text_Event shouldInsertTextEvent = { protectedText.data(), range, action };
     evas_object_smart_callback_call(m_view, "editorclient,text,insert", &shouldInsertTextEvent);
     return true;
 }
@@ -145,20 +142,13 @@ void EditorClientEfl::respondToChangedSelection(Frame* coreFrame)
     if (!coreFrame)
         return;
 
-    if (coreFrame->editor() && coreFrame->editor()->ignoreCompositionSelectionChange())
+    if (coreFrame->editor().ignoreCompositionSelectionChange())
         return;
 
     Evas_Object* webFrame = EWKPrivate::kitFrame(coreFrame);
     ewk_frame_editor_client_selection_changed(webFrame);
 
-    if (!coreFrame->editor()->hasComposition() || coreFrame->editor()->ignoreCompositionSelectionChange())
-        return;
-
-    unsigned start;
-    unsigned end;
-
-    if (!coreFrame->editor()->getCompositionSelection(start, end))
-        coreFrame->editor()->cancelComposition();
+    coreFrame->editor().cancelCompositionIfSelectionIsInvalid();
 }
 
 void EditorClientEfl::didEndEditing()
@@ -169,6 +159,14 @@ void EditorClientEfl::didEndEditing()
 void EditorClientEfl::didWriteSelectionToPasteboard()
 {
     notImplemented();
+}
+
+void EditorClientEfl::willWriteSelectionToPasteboard(WebCore::Range*)
+{
+}
+
+void EditorClientEfl::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>&, Vector<RefPtr<WebCore::SharedBuffer> >&)
+{
 }
 
 void EditorClientEfl::didSetSelectionTypesForPasteboard()
@@ -246,28 +244,20 @@ void EditorClientEfl::pageDestroyed()
     delete this;
 }
 
-void EditorClientEfl::setSmartInsertDeleteEnabled(bool enabled)
-{
-    m_smartInsertDeleteEnabled = enabled;
-    if (enabled)
-        setSelectTrailingWhitespaceEnabled(false);
-}
-
 bool EditorClientEfl::smartInsertDeleteEnabled()
 {
-    return m_smartInsertDeleteEnabled;
-}
-
-void EditorClientEfl::setSelectTrailingWhitespaceEnabled(bool enabled)
-{
-    m_selectTrailingWhitespaceEnabled = enabled;
-    if (enabled)
-        setSmartInsertDeleteEnabled(false);
+    WebCore::Page* corePage = EWKPrivate::corePage(m_view);
+    if (!corePage)
+        return false;
+    return corePage->settings()->smartInsertDeleteEnabled();
 }
 
 bool EditorClientEfl::isSelectTrailingWhitespaceEnabled()
 {
-    return m_selectTrailingWhitespaceEnabled;
+    WebCore::Page* corePage = EWKPrivate::corePage(m_view);
+    if (!corePage)
+        return false;
+    return corePage->settings()->selectTrailingWhitespaceEnabled();
 }
 
 void EditorClientEfl::toggleContinuousSpellChecking()
@@ -334,7 +324,7 @@ bool EditorClientEfl::handleEditingKeyboardEvent(KeyboardEvent* event)
         }
     }
 
-    Editor::Command command = frame->editor()->command(interpretKeyEvent(event));
+    Editor::Command command = frame->editor().command(interpretKeyEvent(event));
 
     if (keyEvent->type() == PlatformEvent::RawKeyDown) {
         // WebKit doesn't have enough information about mode to decide how commands that just insert text if executed via Editor should be treated,
@@ -347,7 +337,7 @@ bool EditorClientEfl::handleEditingKeyboardEvent(KeyboardEvent* event)
         return true;
 
     // Don't allow text insertion for nodes that cannot edit.
-    if (!frame->editor()->canEdit())
+    if (!frame->editor().canEdit())
         return false;
 
     // Don't insert null or control characters as they can result in unexpected behaviour
@@ -358,7 +348,7 @@ bool EditorClientEfl::handleEditingKeyboardEvent(KeyboardEvent* event)
     if (keyEvent->ctrlKey() || keyEvent->altKey())
         return false;
 
-    return frame->editor()->insertText(event->keyEvent()->text(), event);
+    return frame->editor().insertText(event->keyEvent()->text(), event);
 }
 
 void EditorClientEfl::handleKeyboardEvent(KeyboardEvent* event)
@@ -367,15 +357,13 @@ void EditorClientEfl::handleKeyboardEvent(KeyboardEvent* event)
         event->setDefaultHandled();
 }
 
-void EditorClientEfl::handleInputMethodKeydown(KeyboardEvent* event)
+void EditorClientEfl::handleInputMethodKeydown(KeyboardEvent*)
 {
 }
 
 EditorClientEfl::EditorClientEfl(Evas_Object* view)
     : m_isInRedo(false)
     , m_view(view)
-    , m_selectTrailingWhitespaceEnabled(false)
-    , m_smartInsertDeleteEnabled(false)
 {
     notImplemented();
 }
@@ -466,7 +454,7 @@ bool EditorClientEfl::spellingUIIsShowing()
     return false;
 }
 
-void EditorClientEfl::getGuessesForWord(const String& word, const String& context, Vector<String>& guesses)
+void EditorClientEfl::getGuessesForWord(const String& /*word*/, const String& /*context*/, Vector<String>& /*guesses*/)
 {
     notImplemented();
 }

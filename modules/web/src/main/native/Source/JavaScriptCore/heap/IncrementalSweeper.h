@@ -39,23 +39,29 @@ class Heap;
     
 class IncrementalSweeper : public HeapTimer {
 public:
-    static IncrementalSweeper* create(Heap*);
-    void startSweeping(const HashSet<MarkedBlock*>& blockSnapshot);
+    static PassOwnPtr<IncrementalSweeper> create(Heap*);
+    void startSweeping(Vector<MarkedBlock*>&);
     virtual void doWork();
+    void sweepNextBlock();
+    void willFinishSweeping();
 
 private:
+#if USE(CF) || PLATFORM(BLACKBERRY) || PLATFORM(QT)
 #if USE(CF)
     IncrementalSweeper(Heap*, CFRunLoopRef);
+#else
+    IncrementalSweeper(Heap*);
+#endif
     
     void doSweep(double startTime);
     void scheduleTimer();
     void cancelTimer();
     
     unsigned m_currentBlockToSweepIndex;
-    Vector<MarkedBlock*> m_blocksToSweep;
+    Vector<MarkedBlock*>& m_blocksToSweep;
 #else
     
-    IncrementalSweeper(JSGlobalData*);
+    IncrementalSweeper(VM*);
     
 #endif
 };

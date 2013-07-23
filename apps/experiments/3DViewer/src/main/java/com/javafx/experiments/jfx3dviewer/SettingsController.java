@@ -47,7 +47,9 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
 import com.javafx.experiments.shape3d.SubdivisionMesh;
+import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
+import javafx.beans.property.DoubleProperty;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -109,6 +111,10 @@ public class SettingsController implements Initializable {
     public ListView<Transform> transformsList;
     public TitledPane x6;
     public Label selectedNodeLabel;
+    public Slider nearClipSlider;
+    public Slider farClipSlider;
+    public Label nearClipLabel;
+    public Label farClipLabel;
     
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
@@ -225,6 +231,12 @@ public class SettingsController implements Initializable {
         // wire up settings in CAMERA
         fovSlider.setValue(contentModel.getCamera().getFieldOfView());
         contentModel.getCamera().fieldOfViewProperty().bind(fovSlider.valueProperty());
+        nearClipSlider.setValue(Math.log10(contentModel.getCamera().getNearClip()));
+        farClipSlider.setValue(Math.log10(contentModel.getCamera().getFarClip()));
+        nearClipLabel.textProperty().bind(Bindings.format(nearClipLabel.getText(), contentModel.getCamera().nearClipProperty()));
+        farClipLabel.textProperty().bind(Bindings.format(farClipLabel.getText(), contentModel.getCamera().farClipProperty()));
+        contentModel.getCamera().nearClipProperty().bind(new Power10DoubleBinding(nearClipSlider.valueProperty()));
+        contentModel.getCamera().farClipProperty().bind(new Power10DoubleBinding(farClipSlider.valueProperty()));
 
         hierarachyTreeTable.rootProperty().bind(new ObjectBinding<TreeItem<Node>>() {
 
@@ -394,19 +406,35 @@ public class SettingsController implements Initializable {
                     getChildren().add(new TreeItemImpl(n));
                 }
             }
-//            node.setOnMouseClicked(new EventHandler<MouseEvent>() {
-//
-//                @Override
-//                public void handle(MouseEvent t) {
-//                    System.out.println("node.setOnMouseClicked t = " + t);
-//                    TreeItem<Node> parent = getParent();
-//                    while (parent != null) {
-//                        parent.setExpanded(true);
-//                        parent = parent.getParent();
-//                    }
-//                    hierarachyTreeTable.getSelectionModel().select(TreeItemImpl.this);
-//                }
-//            });
+            node.setOnMouseClicked(new EventHandler<MouseEvent>() {
+
+                @Override
+                public void handle(MouseEvent t) {
+                    TreeItem<Node> parent = getParent();
+                    while (parent != null) {
+                        parent.setExpanded(true);
+                        parent = parent.getParent();
+                    }
+                    hierarachyTreeTable.getSelectionModel().select(TreeItemImpl.this);
+                    hierarachyTreeTable.scrollTo(hierarachyTreeTable.getSelectionModel().getSelectedIndex());
+                    t.consume();
+                }
+            });
+        }
+    }
+
+    private class Power10DoubleBinding extends DoubleBinding {
+
+        private DoubleProperty prop;
+
+        public Power10DoubleBinding(DoubleProperty prop) {
+            this.prop = prop;
+            bind(prop);
+        }
+
+        @Override
+        protected double computeValue() {
+            return Math.pow(10, prop.getValue());
         }
     }
 }

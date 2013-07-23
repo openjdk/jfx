@@ -35,9 +35,9 @@
 #include "GlyphBuffer.h"
 #include "Gradient.h"
 #include "GraphicsContext.h"
-#include "PlatformContextCairo.h"
 #include "ImageBuffer.h"
 #include "Pattern.h"
+#include "PlatformContextCairo.h"
 #include "ShadowBlur.h"
 #include "SimpleFontData.h"
 
@@ -69,7 +69,7 @@ static void drawGlyphsShadow(GraphicsContext* graphicsContext, const FloatPoint&
     if (!(graphicsContext->textDrawingMode() & TextModeFill) || shadow.type() == ShadowBlur::NoShadow)
         return;
 
-    if (!shadow.mustUseShadowBlur(graphicsContext)) {
+    if (!graphicsContext->mustUseShadowBlur()) {
         // Optimize non-blurry shadows, by just drawing text without the ShadowBlur.
         cairo_t* context = graphicsContext->platformContext()->cr();
         cairo_save(context);
@@ -105,7 +105,7 @@ void Font::drawGlyphs(GraphicsContext* context, const SimpleFontData* font, cons
     for (int i = 0; i < numGlyphs; i++) {
         glyphs[i].x = offset;
         glyphs[i].y = point.y();
-        offset += glyphBuffer.advanceAt(from + i);
+        offset += glyphBuffer.advanceAt(from + i).width();
     }
 
     PlatformContextCairo* platformContext = context->platformContext();

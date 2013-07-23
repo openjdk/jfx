@@ -41,7 +41,9 @@ public:
 
 private:
     NumberInputType(HTMLInputElement* element) : TextFieldInputType(element) { }
+    virtual void attach() OVERRIDE;
     virtual const AtomicString& formControlType() const OVERRIDE;
+    virtual void setValue(const String&, bool valueChanged, TextFieldEventBehavior) OVERRIDE;
     virtual double valueAsDouble() const OVERRIDE;
     virtual void setValueAsDouble(double, TextFieldEventBehavior, ExceptionCode&) const OVERRIDE;
     virtual void setValueAsDecimal(const Decimal&, TextFieldEventBehavior, ExceptionCode&) const OVERRIDE;
@@ -51,16 +53,14 @@ private:
     virtual bool isSteppable() const OVERRIDE;
     virtual StepRange createStepRange(AnyStepHandling) const OVERRIDE;
     virtual void handleKeydownEvent(KeyboardEvent*) OVERRIDE;
-    virtual void handleWheelEvent(WheelEvent*) OVERRIDE;
     virtual Decimal parseToNumber(const String&, const Decimal&) const OVERRIDE;
     virtual String serialize(const Decimal&) const OVERRIDE;
-    virtual void handleBlurEvent() OVERRIDE;
     virtual String localizeValue(const String&) const OVERRIDE;
     virtual String visibleValue() const OVERRIDE;
     virtual String convertFromVisibleValue(const String&) const OVERRIDE;
-    virtual bool isAcceptableValue(const String&) OVERRIDE;
     virtual String sanitizeValue(const String&) const OVERRIDE;
-    virtual bool hasUnacceptableValue() OVERRIDE;
+    virtual bool hasBadInput() const OVERRIDE;
+    virtual String badInputText() const OVERRIDE;
     virtual bool shouldRespectSpeechAttribute() OVERRIDE;
     virtual bool supportsPlaceholder() const OVERRIDE;
     virtual bool isNumberField() const OVERRIDE;

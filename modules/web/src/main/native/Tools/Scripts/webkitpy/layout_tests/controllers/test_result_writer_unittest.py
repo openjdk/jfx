@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2011 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,13 +23,13 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.host_mock import MockHost
 from webkitpy.layout_tests.controllers import test_result_writer
 from webkitpy.layout_tests.models import test_failures
-from webkitpy.layout_tests.port.driver import DriverOutput
-from webkitpy.layout_tests.port.test import TestPort
+from webkitpy.port.driver import DriverOutput
+from webkitpy.port.test import TestPort
 
 
 class TestResultWriterTest(unittest.TestCase):
@@ -42,7 +41,7 @@ class TestResultWriterTest(unittest.TestCase):
         class ImageDiffTestPort(TestPort):
             def diff_image(self, expected_contents, actual_contents, tolerance=None):
                 used_tolerance_values.append(tolerance)
-                return (True, 1)
+                return (True, 1, None)
 
         host = MockHost()
         port = ImageDiffTestPort(host)
@@ -51,10 +50,6 @@ class TestResultWriterTest(unittest.TestCase):
         driver_output1 = DriverOutput('text1', 'image1', 'imagehash1', 'audio1')
         driver_output2 = DriverOutput('text2', 'image2', 'imagehash2', 'audio2')
         failures = [test_failures.FailureReftestMismatch(test_reference_file)]
-        test_result_writer.write_test_result(host.filesystem, ImageDiffTestPort(host), test_name,
+        test_result_writer.write_test_result(host.filesystem, ImageDiffTestPort(host), port.results_directory(), test_name,
                                              driver_output1, driver_output2, failures)
         self.assertEqual([0], used_tolerance_values)
-
-
-if __name__ == '__main__':
-    unittest.main()

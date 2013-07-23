@@ -28,7 +28,7 @@
 
 #include "JSObject.h"
 #include "PolymorphicPutByIdList.h"
-#include "ScopeChain.h"
+
 
 namespace JSC {
 
@@ -63,7 +63,7 @@ void StructureStubInfo::deref()
         // These instructions don't have to release any allocated memory
         return;
     default:
-        ASSERT_NOT_REACHED();
+        RELEASE_ASSERT_NOT_REACHED();
     }
 }
 

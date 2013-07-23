@@ -28,11 +28,11 @@
 #ifndef DatabaseAuthorizer_h
 #define DatabaseAuthorizer_h
 
-#include "PlatformString.h"
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -104,7 +104,7 @@ public:
     bool hadDeletes() const { return m_hadDeletes; }
 
 private:
-    DatabaseAuthorizer(const String& databaseInfoTableName);
+    explicit DatabaseAuthorizer(const String& databaseInfoTableName);
     void addWhitelistedFunctions();
     int denyBasedOnTableName(const String&) const;
     int updateDeletesBasedOnTableName(const String&);

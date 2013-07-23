@@ -27,8 +27,8 @@
 #ifndef HTMLElementStack_h
 #define HTMLElementStack_h
 
-#include "Element.h"
 #include "HTMLNames.h"
+#include "HTMLStackItem.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OwnPtr.h>
@@ -51,27 +51,28 @@ public:
     ~HTMLElementStack();
 
     class ElementRecord {
-        WTF_MAKE_NONCOPYABLE(ElementRecord);
+        WTF_MAKE_NONCOPYABLE(ElementRecord); WTF_MAKE_FAST_ALLOCATED;
     public:
         ~ElementRecord(); // Public for ~PassOwnPtr()
     
-        Element* element() const { return toElement(m_node.get()); }
-        ContainerNode* node() const { return m_node.get(); }
-        void replaceElement(PassRefPtr<Element>);
+        Element* element() const { return m_item->element(); }
+        ContainerNode* node() const { return m_item->node(); }
+        const AtomicString& namespaceURI() const { return m_item->namespaceURI(); }
+        PassRefPtr<HTMLStackItem> stackItem() const { return m_item; }
+        void replaceElement(PassRefPtr<HTMLStackItem>);
 
         bool isAbove(ElementRecord*) const;
 
         ElementRecord* next() const { return m_next.get(); }
-
     private:
         friend class HTMLElementStack;
 
-        ElementRecord(PassRefPtr<ContainerNode>, PassOwnPtr<ElementRecord>);
+        ElementRecord(PassRefPtr<HTMLStackItem>, PassOwnPtr<ElementRecord>);
 
         PassOwnPtr<ElementRecord> releaseNext() { return m_next.release(); }
         void setNext(PassOwnPtr<ElementRecord> next) { m_next = next; }
 
-        RefPtr<ContainerNode> m_node;
+        RefPtr<HTMLStackItem> m_item;
         OwnPtr<ElementRecord> m_next;
     };
 
@@ -91,24 +92,32 @@ public:
         return m_top->node();
     }
 
-    Element* oneBelowTop() const;
+    HTMLStackItem* topStackItem() const
+    {
+        ASSERT(m_top->stackItem());
+        return m_top->stackItem().get();
+    }
+
+    HTMLStackItem* oneBelowTop() const;
     ElementRecord* topRecord() const;
-    Element* bottom() const;
     ElementRecord* find(Element*) const;
+    ElementRecord* furthestBlockForFormattingElement(Element*) const;
     ElementRecord* topmost(const AtomicString& tagName) const;
 
-    void insertAbove(PassRefPtr<Element>, ElementRecord*);
+    void insertAbove(PassRefPtr<HTMLStackItem>, ElementRecord*);
 
-    void push(PassRefPtr<Element>);
-    void pushRootNode(PassRefPtr<ContainerNode>);
-    void pushHTMLHtmlElement(PassRefPtr<Element>);
-    void pushHTMLHeadElement(PassRefPtr<Element>);
-    void pushHTMLBodyElement(PassRefPtr<Element>);
+    void push(PassRefPtr<HTMLStackItem>);
+    void pushRootNode(PassRefPtr<HTMLStackItem>);
+    void pushHTMLHtmlElement(PassRefPtr<HTMLStackItem>);
+    void pushHTMLHeadElement(PassRefPtr<HTMLStackItem>);
+    void pushHTMLBodyElement(PassRefPtr<HTMLStackItem>);
 
     void pop();
     void popUntil(const AtomicString& tagName);
     void popUntil(Element*);
     void popUntilPopped(const AtomicString& tagName);
+    void popUntilPopped(const QualifiedName& tagName) { popUntilPopped(tagName.localName()); }
+
     void popUntilPopped(Element*);
     void popUntilNumberedHeaderElementPopped();
     void popUntilTableScopeMarker(); // "clear the stack back to a table context" in the spec.
@@ -119,8 +128,8 @@ public:
     void popHTMLBodyElement();
     void popAll();
 
-    static bool isMathMLTextIntegrationPoint(ContainerNode*);
-    static bool isHTMLIntegrationPoint(ContainerNode*);
+    static bool isMathMLTextIntegrationPoint(HTMLStackItem*);
+    static bool isHTMLIntegrationPoint(HTMLStackItem*);
 
     void remove(Element*);
     void removeHTMLHeadElement(Element*);
@@ -144,7 +153,9 @@ public:
 
     bool hasOnlyOneElement() const;
     bool secondElementIsHTMLBodyElement() const;
-
+#if ENABLE(TEMPLATE_ELEMENT)
+    bool hasTemplateInHTMLScope() const;
+#endif
     Element* htmlElement() const;
     Element* headElement() const;
     Element* bodyElement() const;
@@ -156,8 +167,8 @@ public:
 #endif
 
 private:
-    void pushCommon(PassRefPtr<ContainerNode>);
-    void pushRootNodeCommon(PassRefPtr<ContainerNode>);
+    void pushCommon(PassRefPtr<HTMLStackItem>);
+    void pushRootNodeCommon(PassRefPtr<HTMLStackItem>);
     void popCommon();
     void removeNonTopCommon(Element*);
 
@@ -174,15 +185,6 @@ private:
     unsigned m_stackDepth;
 };
     
-inline bool isInHTMLNamespace(Node* node)
-{
-    // A DocumentFragment takes the place of the document element when parsing
-    // fragments and should be considered in the HTML namespace.
-    return node->namespaceURI() == HTMLNames::xhtmlNamespaceURI
-        || node->nodeType() == Node::DOCUMENT_FRAGMENT_NODE; // FIXME: Does this also apply to ShadowRoot?
-}
-
-
 } // namespace WebCore
 
 #endif // HTMLElementStack_h

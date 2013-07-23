@@ -32,40 +32,13 @@
 #include "Arguments.h"
 #include "Interpreter.h"
 #include "JSFunction.h"
+#include "Operations.h"
 
 using namespace std;
 
 namespace JSC {
 
-ASSERT_CLASS_FITS_IN_CELL(JSActivation);
-
 const ClassInfo JSActivation::s_info = { "JSActivation", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSActivation) };
-
-JSActivation::JSActivation(CallFrame* callFrame, FunctionExecutable* functionExecutable)
-    : Base(callFrame->globalData(), callFrame->globalData().activationStructure.get(), functionExecutable->symbolTable(), callFrame->registers())
-    , m_numCapturedArgs(max(callFrame->argumentCount(), functionExecutable->parameterCount()))
-    , m_numCapturedVars(functionExecutable->capturedVariableCount())
-    , m_isTornOff(false)
-    , m_requiresDynamicChecks(functionExecutable->usesEval() && !functionExecutable->isStrictMode())
-    , m_argumentsRegister(functionExecutable->generatedBytecode().argumentsRegister())
-{
-}
-
-void JSActivation::finishCreation(CallFrame* callFrame)
-{
-    Base::finishCreation(callFrame->globalData());
-    ASSERT(inherits(&s_info));
-
-    // We have to manually ref and deref the symbol table as JSVariableObject
-    // doesn't know about SharedSymbolTable
-    static_cast<SharedSymbolTable*>(m_symbolTable)->ref();
-    callFrame->globalData().heap.addFinalizer(this, &finalize);
-}
-
-void JSActivation::finalize(JSCell* cell)
-{
-    static_cast<SharedSymbolTable*>(jsCast<JSActivation*>(cell)->m_symbolTable)->deref();
-}
 
 void JSActivation::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
@@ -75,39 +48,48 @@ void JSActivation::visitChildren(JSCell* cell, SlotVisitor& visitor)
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
 
-    // No need to mark our registers if they're still in the RegisterFile.
-    WriteBarrier<Unknown>* registerArray = thisObject->m_registerArray.get();
-    if (!registerArray)
+    // No need to mark our registers if they're still in the JSStack.
+    if (!thisObject->isTornOff())
         return;
     
-    visitor.appendValues(registerArray, thisObject->m_numCapturedArgs);
-
-    // Skip 'this' and call frame, except for callee and scope chain.
-    int offset = CallFrame::offsetFor(thisObject->m_numCapturedArgs + 1);
-    visitor.append(registerArray + offset + RegisterFile::ScopeChain);
-    visitor.append(registerArray + offset + RegisterFile::Callee);
-    
-    visitor.appendValues(registerArray + offset, thisObject->m_numCapturedVars);
+    for (int i = 0; i < thisObject->symbolTable()->captureCount(); ++i)
+        visitor.append(&thisObject->storage()[i]);
 }
 
 inline bool JSActivation::symbolTableGet(PropertyName propertyName, PropertySlot& slot)
 {
-    SymbolTableEntry entry = symbolTable().inlineGet(propertyName.publicName());
+    SymbolTableEntry entry = symbolTable()->inlineGet(propertyName.publicName());
     if (entry.isNull())
         return false;
-    if (m_isTornOff && entry.getIndex() >= m_numCapturedVars)
+
+    // Defend against the inspector asking for a var after it has been optimized out.
+    if (isTornOff() && !isValid(entry))
         return false;
 
     slot.setValue(registerAt(entry.getIndex()).get());
     return true;
 }
 
+inline bool JSActivation::symbolTableGet(PropertyName propertyName, PropertyDescriptor& descriptor)
+{
+    SymbolTableEntry entry = symbolTable()->inlineGet(propertyName.publicName());
+    if (entry.isNull())
+        return false;
+
+    // Defend against the inspector asking for a var after it has been optimized out.
+    if (isTornOff() && !isValid(entry))
+        return false;
+
+    descriptor.setDescriptor(registerAt(entry.getIndex()).get(), entry.getAttributes());
+    return true;
+}
+
 inline bool JSActivation::symbolTablePut(ExecState* exec, PropertyName propertyName, JSValue value, bool shouldThrow)
 {
-    JSGlobalData& globalData = exec->globalData();
+    VM& vm = exec->vm();
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(this));
 
-    SymbolTableEntry entry = symbolTable().inlineGet(propertyName.publicName());
+    SymbolTableEntry entry = symbolTable()->inlineGet(propertyName.publicName());
     if (entry.isNull())
         return false;
     if (entry.isReadOnly()) {
@@ -115,58 +97,68 @@ inline bool JSActivation::symbolTablePut(ExecState* exec, PropertyName propertyN
             throwTypeError(exec, StrictModeReadonlyPropertyWriteError);
         return true;
     }
-    if (m_isTornOff && entry.getIndex() >= m_numCapturedVars)
+
+    // Defend against the inspector asking for a var after it has been optimized out.
+    if (isTornOff() && !isValid(entry))
         return false;
 
-    registerAt(entry.getIndex()).set(globalData, this, value);
+    registerAt(entry.getIndex()).set(vm, this, value);
     return true;
 }
 
-void JSActivation::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
+void JSActivation::getOwnNonIndexPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
     JSActivation* thisObject = jsCast<JSActivation*>(object);
-    SymbolTable::const_iterator end = thisObject->symbolTable().end();
-    for (SymbolTable::const_iterator it = thisObject->symbolTable().begin(); it != end; ++it) {
-        if (it->second.getAttributes() & DontEnum && mode != IncludeDontEnumProperties)
+
+    if (mode == IncludeDontEnumProperties && !thisObject->isTornOff())
+        propertyNames.add(exec->propertyNames().arguments);
+
+    SymbolTable::const_iterator end = thisObject->symbolTable()->end();
+    for (SymbolTable::const_iterator it = thisObject->symbolTable()->begin(); it != end; ++it) {
+        if (it->value.getAttributes() & DontEnum && mode != IncludeDontEnumProperties)
             continue;
-        if (it->second.getIndex() >= thisObject->m_numCapturedVars)
+        if (!thisObject->isValid(it->value))
             continue;
-        propertyNames.add(Identifier(exec, it->first.get()));
+        propertyNames.add(Identifier(exec, it->key.get()));
     }
-    // Skip the JSVariableObject implementation of getOwnPropertyNames
-    JSObject::getOwnPropertyNames(thisObject, exec, propertyNames, mode);
+    // Skip the JSVariableObject implementation of getOwnNonIndexPropertyNames
+    JSObject::getOwnNonIndexPropertyNames(thisObject, exec, propertyNames, mode);
 }
 
-inline bool JSActivation::symbolTablePutWithAttributes(JSGlobalData& globalData, PropertyName propertyName, JSValue value, unsigned attributes)
+inline bool JSActivation::symbolTablePutWithAttributes(VM& vm, PropertyName propertyName, JSValue value, unsigned attributes)
 {
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(this));
 
-    SymbolTable::iterator iter = symbolTable().find(propertyName.publicName());
-    if (iter == symbolTable().end())
+    SymbolTable::iterator iter = symbolTable()->find(propertyName.publicName());
+    if (iter == symbolTable()->end())
         return false;
-    SymbolTableEntry& entry = iter->second;
+    SymbolTableEntry& entry = iter->value;
     ASSERT(!entry.isNull());
-    if (entry.getIndex() >= m_numCapturedVars)
+    if (!isValid(entry))
         return false;
 
     entry.setAttributes(attributes);
-    registerAt(entry.getIndex()).set(globalData, this, value);
+    registerAt(entry.getIndex()).set(vm, this, value);
     return true;
 }
 
 bool JSActivation::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
     JSActivation* thisObject = jsCast<JSActivation*>(cell);
+
     if (propertyName == exec->propertyNames().arguments) {
+        // Defend against the inspector asking for the arguments object after it has been optimized out.
+        if (!thisObject->isTornOff()) {
         slot.setCustom(thisObject, thisObject->getArgumentsGetter());
         return true;
+    }
     }
 
     if (thisObject->symbolTableGet(propertyName, slot))
         return true;
 
-    if (WriteBarrierBase<Unknown>* location = thisObject->getDirectLocation(exec->globalData(), propertyName)) {
-        slot.setValue(location->get());
+    if (JSValue value = thisObject->getDirect(exec->vm(), propertyName)) {
+        slot.setValue(value);
         return true;
     }
 
@@ -175,6 +167,26 @@ bool JSActivation::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyNam
     ASSERT(!thisObject->hasGetterSetterProperties());
     ASSERT(thisObject->prototype().isNull());
     return false;
+}
+
+bool JSActivation::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
+{
+    JSActivation* thisObject = jsCast<JSActivation*>(object);
+
+    if (propertyName == exec->propertyNames().arguments) {
+        // Defend against the inspector asking for the arguments object after it has been optimized out.
+        if (!thisObject->isTornOff()) {
+            PropertySlot slot;
+            JSActivation::getOwnPropertySlot(thisObject, exec, propertyName, slot);
+            descriptor.setDescriptor(slot.getValue(exec, propertyName), DontEnum);
+            return true;
+        }
+    }
+
+    if (thisObject->symbolTableGet(propertyName, descriptor))
+        return true;
+
+    return Base::getOwnPropertyDescriptor(object, exec, propertyName, descriptor);
 }
 
 void JSActivation::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
@@ -189,7 +201,7 @@ void JSActivation::put(JSCell* cell, ExecState* exec, PropertyName propertyName,
     // properties are non-standard extensions that other implementations do not
     // expose in the activation object.
     ASSERT(!thisObject->hasGetterSetterProperties());
-    thisObject->putOwnDataProperty(exec->globalData(), propertyName, value, slot);
+    thisObject->putOwnDataProperty(exec->vm(), propertyName, value, slot);
 }
 
 // FIXME: Make this function honor ReadOnly (const) and DontEnum
@@ -198,7 +210,7 @@ void JSActivation::putDirectVirtual(JSObject* object, ExecState* exec, PropertyN
     JSActivation* thisObject = jsCast<JSActivation*>(object);
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(thisObject));
 
-    if (thisObject->symbolTablePutWithAttributes(exec->globalData(), propertyName, value, attributes))
+    if (thisObject->symbolTablePutWithAttributes(exec->vm(), propertyName, value, attributes))
         return;
 
     // We don't call through to JSObject because __proto__ and getter/setter
@@ -223,14 +235,17 @@ JSObject* JSActivation::toThisObject(JSCell*, ExecState* exec)
 
 JSValue JSActivation::argumentsGetter(ExecState*, JSValue slotBase, PropertyName)
 {
-    JSActivation* activation = asActivation(slotBase);
+    JSActivation* activation = jsCast<JSActivation*>(slotBase);
+    if (activation->isTornOff())
+        return jsUndefined();
+
     CallFrame* callFrame = CallFrame::create(reinterpret_cast<Register*>(activation->m_registers));
-    int argumentsRegister = activation->m_argumentsRegister;
+    int argumentsRegister = callFrame->codeBlock()->argumentsRegister();
     if (JSValue arguments = callFrame->uncheckedR(argumentsRegister).jsValue())
         return arguments;
     int realArgumentsRegister = unmodifiedArgumentsRegister(argumentsRegister);
 
-    JSValue arguments = JSValue(Arguments::create(callFrame->globalData(), callFrame));
+    JSValue arguments = JSValue(Arguments::create(callFrame->vm(), callFrame));
     callFrame->uncheckedR(argumentsRegister) = arguments;
     callFrame->uncheckedR(realArgumentsRegister) = arguments;
 

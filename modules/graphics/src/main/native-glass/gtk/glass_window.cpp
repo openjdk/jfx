@@ -85,10 +85,31 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
     }
 }
 
+void WindowContextBase::increment_events_counter() {
+    ++events_processing_cnt;
+}
+
+void WindowContextBase::decrement_events_counter() {
+    --events_processing_cnt;
+}
+
+size_t WindowContextBase::get_events_count() {
+    return events_processing_cnt;
+}
+
+bool WindowContextBase::is_dead() {
+    return can_be_deleted;
+}
+
 void destroy_and_delete_ctx(WindowContext* ctx) {
     if (ctx) {
         ctx->process_destroy();
-        delete ctx;
+
+        if (!ctx->get_events_count()) {
+            delete ctx;
+        } 
+        // else: ctx will be deleted in EventsCounterHelper after completing
+        // an event processing
     }
 }
 
@@ -106,8 +127,20 @@ void WindowContextBase::process_destroy() {
 
     if (jwindow) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyDestroy);
-        CHECK_JNI_EXCEPTION(mainEnv)
+        EXCEPTION_OCCURED(mainEnv);
     }
+
+    if (jview) {
+        mainEnv->DeleteGlobalRef(jview);
+        jview = NULL;
+    }
+
+    if (jwindow) {
+        mainEnv->DeleteGlobalRef(jwindow);
+        jwindow = NULL;
+    }
+
+    can_be_deleted = true;
 }
 
 void WindowContextBase::process_delete() {
@@ -321,11 +354,7 @@ void WindowContextBase::process_key(GdkEventKey* event) {
                     glassModifier);
             CHECK_JNI_EXCEPTION(mainEnv)
 
-            if (!jview) {
-                return;
-            }
-
-            if (key > 0) { // TYPED events should only be sent for printable characters.
+            if (jview && key > 0) { // TYPED events should only be sent for printable characters.
                 mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                         com_sun_glass_events_KeyEvent_TYPED,
                         com_sun_glass_events_KeyEvent_VK_UNDEFINED,
@@ -462,20 +491,14 @@ void WindowContextBase::set_background(float r, float g, float b) {
 }
 
 WindowContextBase::~WindowContextBase() {
-    if (jview) {
-        mainEnv->DeleteGlobalRef(jview);
-    }
     if (xim.ic) {
         XDestroyIC(xim.ic);
     }
     if (xim.im) {
         XCloseIM(xim.im);
     }
-    gtk_widget_destroy(gtk_widget);
 
-    if (jwindow) {
-        mainEnv->DeleteGlobalRef(jwindow);
-    }
+    gtk_widget_destroy(gtk_widget);
 }
 
 ////////////////////////////// WindowContextTop /////////////////////////////////
@@ -1193,10 +1216,15 @@ void WindowContextTop::set_owner(WindowContext * owner_ctx) {
     owner = owner_ctx;
 }
 
-WindowContextTop::~WindowContextTop() {
+void WindowContextTop::process_destroy() {
     if (owner) {
         owner->remove_child(this);
     }
+
+    WindowContextBase::process_destroy();
+}
+
+WindowContextTop::~WindowContextTop() {
     if (xshape.surface) {
         cairo_surface_destroy(xshape.surface);
         XFreePixmap(GDK_DISPLAY_XDISPLAY(gdk_display_get_default()), xshape.pixmap);
@@ -1285,10 +1313,12 @@ void WindowContextPlug::process_state(GdkEventWindowState *event) {
             }
         }
 
-        mainEnv->CallVoidMethod(jwindow,
-                jGtkWindowNotifyStateChanged,
-                stateChangeEvent);
-        CHECK_JNI_EXCEPTION(mainEnv);
+        if (jwindow) {
+            mainEnv->CallVoidMethod(jwindow,
+                    jGtkWindowNotifyStateChanged,
+                    stateChangeEvent);
+            CHECK_JNI_EXCEPTION(mainEnv);
+        }
     }
 }
 
@@ -1450,11 +1480,13 @@ void WindowContextChild::process_configure(GdkEventConfigure* event) {
 
     gtk_widget_set_size_request(gtk_widget, event->width, event->height);
 
-    mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
-            com_sun_glass_events_WindowEvent_RESIZE,
-            event->width,
-            event->height);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    if (jwindow) {
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
+                com_sun_glass_events_WindowEvent_RESIZE,
+                event->width,
+                event->height);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 void WindowContextChild::process_state(GdkEventWindowState *event) {
@@ -1479,10 +1511,12 @@ void WindowContextChild::process_state(GdkEventWindowState *event) {
             CHECK_JNI_EXCEPTION(mainEnv);
         }
 
-        mainEnv->CallVoidMethod(jwindow,
-                jGtkWindowNotifyStateChanged,
-                stateChangeEvent);
-        CHECK_JNI_EXCEPTION(mainEnv);
+        if (jwindow) {
+            mainEnv->CallVoidMethod(jwindow,
+                    jGtkWindowNotifyStateChanged,
+                    stateChangeEvent);
+            CHECK_JNI_EXCEPTION(mainEnv);
+        }
     }
 }
 
@@ -1509,10 +1543,12 @@ void WindowContextChild::set_bounds(int x, int y, bool xSet, bool ySet, int w, i
     if (x > 0 || y > 0 || xSet || ySet) {
         gint newX, newY;
         gdk_window_get_origin(gdk_window, &newX, &newY);
-        mainEnv->CallVoidMethod(jwindow,
-                jWindowNotifyMove,
-                newX, newY);
-        CHECK_JNI_EXCEPTION(mainEnv)
+        if (jwindow) {
+            mainEnv->CallVoidMethod(jwindow,
+                    jWindowNotifyMove,
+                    newX, newY);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
     }
 
     // As we have no frames, there's no difference between the calls
@@ -1592,8 +1628,10 @@ void WindowContextChild::enter_fullscreen() {
     full_screen_window->set_visible(true);
     full_screen_window->enter_fullscreen();
 
-    mainEnv->CallVoidMethod(jwindow, jWindowNotifyDelegatePtr, (jlong)full_screen_window);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    if (jwindow) {
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyDelegatePtr, (jlong)full_screen_window);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 
     if (jview) {
         this->view = (GlassView*)mainEnv->GetLongField(jview, jViewPtr);
@@ -1631,14 +1669,14 @@ void WindowContextChild::exit_fullscreen() {
     
     full_screen_window->set_visible(false);
 
-    delete full_screen_window;
+    destroy_and_delete_ctx(full_screen_window);
     full_screen_window = NULL;
     this->view = NULL;
 }
 
-WindowContextChild::~WindowContextChild() {
+void WindowContextChild::process_destroy() {
     if (full_screen_window) {
-        delete full_screen_window;
+        destroy_and_delete_ctx(full_screen_window);
     }
 
     std::vector<WindowContextChild*> &embedded_children =
@@ -1649,4 +1687,6 @@ WindowContextChild::~WindowContextChild() {
     if (pos != embedded_children.end()) {
         embedded_children.erase((pos));
     }
+
+    WindowContextBase::process_destroy();
 }

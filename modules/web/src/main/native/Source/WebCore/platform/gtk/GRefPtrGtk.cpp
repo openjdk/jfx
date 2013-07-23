@@ -23,6 +23,12 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
+#if ENABLE(CREDENTIAL_STORAGE)
+#define SECRET_WITH_UNSTABLE 1
+#define SECRET_API_SUBJECT_TO_CHANGE 1
+#include <libsecret/secret.h>
+#endif
+
 namespace WTF {
 
 template <> GtkTargetList* refGPtr(GtkTargetList* ptr)
@@ -37,6 +43,21 @@ template <> void derefGPtr(GtkTargetList* ptr)
     if (ptr)
         gtk_target_list_unref(ptr);
 }
+
+#if ENABLE(CREDENTIAL_STORAGE)
+template <> SecretValue* refGPtr(SecretValue* ptr)
+{
+    if (ptr)
+        secret_value_ref(ptr);
+    return ptr;
+}
+
+template <> void derefGPtr(SecretValue* ptr)
+{
+    if (ptr)
+        secret_value_unref(ptr);
+}
+#endif
 
 #ifdef GTK_API_VERSION_2
 template <> GdkCursor* refGPtr(GdkCursor* ptr)

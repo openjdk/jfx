@@ -5,6 +5,10 @@ import os
 import StringIO
 import unittest
 
+# Show DepricationWarnings come from buildbot - it isn't default with Python 2.7 or newer.
+# See https://bugs.webkit.org/show_bug.cgi?id=90161 for details.
+import warnings
+warnings.simplefilter('default')
 
 class BuildBotConfigLoader(object):
     def _add_webkitpy_to_sys_path(self):
@@ -47,18 +51,41 @@ class BuildBotConfigLoader(object):
 
 class MasterCfgTest(unittest.TestCase):
     def test_nrwt_leaks_parsing(self):
-        run_webkit_tests = RunWebKitTests()
+        run_webkit_tests = RunWebKitTests()  # pylint is confused by the way we import the module ... pylint: disable-msg=E0602
         log_text = """
-2011-08-09 10:05:18,580 29486 mac.py:275 INFO leaks found for a total of 197,936 bytes!
-2011-08-09 10:05:18,580 29486 mac.py:276 INFO 1 unique leaks found!
+12:44:24.295 77706 13981 total leaks found for a total of 197,936 bytes!
+12:44:24.295 77706 1 unique leaks found!
 """
         expected_incorrect_lines = [
-            'leaks found for a total of 197,936 bytes!',
+            '13981 total leaks found for a total of 197,936 bytes!',
             '1 unique leaks found!',
         ]
         run_webkit_tests._parseNewRunWebKitTestsOutput(log_text)
-        self.assertEquals(run_webkit_tests.incorrectLayoutLines, expected_incorrect_lines)
+        self.assertEqual(run_webkit_tests.incorrectLayoutLines, expected_incorrect_lines)
 
+    def test_nrwt_missing_results(self):
+        run_webkit_tests = RunWebKitTests()  # pylint is confused by the way we import the module ... pylint: disable-msg=E0602
+        log_text = """
+Expected to fail, but passed: (2)
+  animations/additive-transform-animations.html
+  animations/cross-fade-webkit-mask-box-image.html
+
+Unexpected flakiness: text-only failures (2)
+  fast/events/touch/touch-inside-iframe.html [ Failure Pass ]
+  http/tests/inspector-enabled/console-clear-arguments-on-frame-navigation.html [ Failure Pass ]
+
+Unexpected flakiness: timeouts (1)
+  svg/text/foreignObject-repaint.xml [ Timeout Pass ]
+
+Regressions: Unexpected missing results (1)
+  svg/custom/zero-path-square-cap-rendering2.svg [ Missing ]
+
+Regressions: Unexpected text-only failures (1)
+  svg/custom/zero-path-square-cap-rendering2.svg [ Failure ]
+"""
+        run_webkit_tests._parseNewRunWebKitTestsOutput(log_text)
+        self.assertEqual(set(run_webkit_tests.incorrectLayoutLines),
+            set(['2 new passes', '3 flakes', '1 missing results', '1 failures']))
 
 class StubStdio(object):
     def __init__(self, stdio):
@@ -326,6 +353,31 @@ Tests that timed out:
   WebKit2.WebKit2.ResponsivenessTimerDoesntFireEarly
   WebKit2.WebKit2.WebArchive
 """)
+
+
+class SVNMirrorTest(unittest.TestCase):
+    def setUp(self):
+        self.config = json.load(open('config.json'))
+
+    def get_SVNMirrorFromConfig(self, builderName):
+        SVNMirror = None
+        for builder in self.config['builders']:
+            if builder['name'] == builderName:
+                SVNMirror = builder.pop('SVNMirror', 'http://svn.webkit.org/repository/webkit/')
+        return SVNMirror
+
+    def test_CheckOutSource(self):
+        # SVN mirror feature isn't unittestable now with source.oldsource.SVN(==source.SVN) , only with source.svn.SVN(==SVN)
+        # https://bugs.webkit.org/show_bug.cgi?id=85887
+        if issubclass(CheckOutSource, source.SVN):
+            return
+
+        # Compare CheckOutSource.baseURL with SVNMirror (or with the default URL) in config.json for all builders
+        for builder in c['builders']:
+            for buildStepFactory, kwargs in builder['factory'].steps:
+                if str(buildStepFactory).split('.')[-1] == 'CheckOutSource':
+                        CheckOutSourceInstance = buildStepFactory(**kwargs)
+                        self.assertEqual(CheckOutSourceInstance.baseURL, self.get_SVNMirrorFromConfig(builder['name']))
 
 
 class BuildStepsConstructorTest(unittest.TestCase):

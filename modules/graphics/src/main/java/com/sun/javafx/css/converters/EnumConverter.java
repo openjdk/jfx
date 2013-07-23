@@ -30,6 +30,8 @@ import com.sun.javafx.css.StyleConverterImpl;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
@@ -115,6 +117,7 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<S
             converter = new EnumConverter<com.sun.javafx.cursor.CursorType>(com.sun.javafx.cursor.CursorType.class);
             break;
         case "javafx.scene.layout.BackgroundRepeat" :
+        case "com.sun.javafx.scene.layout.region.Repeat" :
             converter = new EnumConverter<javafx.scene.layout.BackgroundRepeat>(javafx.scene.layout.BackgroundRepeat.class);
             break;
         case "javafx.geometry.HPos" :

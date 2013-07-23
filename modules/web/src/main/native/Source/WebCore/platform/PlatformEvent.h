@@ -52,11 +52,13 @@ public:
         GestureScrollBegin,
         GestureScrollEnd,
         GestureScrollUpdate,
+        GestureScrollUpdateWithoutPropagation,
         GestureTap,
         GestureTapDown,
-        GestureDoubleTap,
+        GestureTapDownCancel,
         GestureTwoFingerTap,
         GestureLongPress,
+        GestureLongTap,
         GesturePinchBegin,
         GesturePinchEnd,
         GesturePinchUpdate,
@@ -96,7 +98,7 @@ protected:
     {
     }
 
-    PlatformEvent(Type type)
+    explicit PlatformEvent(Type type)
         : m_type(type)
         , m_modifiers(0)
         , m_timestamp(0)

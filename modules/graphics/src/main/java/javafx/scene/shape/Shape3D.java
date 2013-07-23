@@ -31,8 +31,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGPhongMaterial;
-import com.sun.javafx.sg.PGShape3D;
+import com.sun.javafx.sg.prism.NGShape3D;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -215,8 +214,8 @@ public abstract class Shape3D extends Node {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         // TODO: 3D - Why do we have separate dirty bits for MATERIAL
         // and MATERIAL_PROPERTY ?
@@ -224,21 +223,21 @@ public abstract class Shape3D extends Node {
         if (impl_isDirty(DirtyBits.MATERIAL_PROPERTY) && material != null) {
             material.impl_updatePG();
         }
-        PGShape3D pgShape3D = (PGShape3D) impl_getPGNode();
+        final NGShape3D peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.MATERIAL)) {
             if (material != null) {
                 material.impl_updatePG(); // new material should be updated
-                pgShape3D.setMaterial((PGPhongMaterial) material.impl_getPGMaterial());
+                peer.setMaterial(material.impl_getNGMaterial());
             } else {
                 DEFAULT_MATERIAL.impl_updatePG();
-                pgShape3D.setMaterial(DEFAULT_MATERIAL.impl_getPGMaterial());
+                peer.setMaterial(DEFAULT_MATERIAL.impl_getNGMaterial());
             }
         }
         if (impl_isDirty(DirtyBits.NODE_DRAWMODE)) {
-            pgShape3D.setDrawMode(getDrawMode());
+            peer.setDrawMode(getDrawMode());
         }
         if (impl_isDirty(DirtyBits.NODE_CULLFACE)) {
-            pgShape3D.setCullFace(getCullFace());
+            peer.setCullFace(getCullFace());
         }
     }
 

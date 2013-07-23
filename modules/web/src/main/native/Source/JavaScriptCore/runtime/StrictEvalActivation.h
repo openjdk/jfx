@@ -26,33 +26,33 @@
 #ifndef StrictEvalActivation_h
 #define StrictEvalActivation_h
 
-#include "JSObject.h"
+#include "JSScope.h"
 
 namespace JSC {
 
-class StrictEvalActivation : public JSNonFinalObject {
+class StrictEvalActivation : public JSScope {
 public:
-    typedef JSNonFinalObject Base;
+    typedef JSScope Base;
 
     static StrictEvalActivation* create(ExecState* exec)
     {
         StrictEvalActivation* activation = new (NotNull, allocateCell<StrictEvalActivation>(*exec->heap())) StrictEvalActivation(exec);
-        activation->finishCreation(exec->globalData());
+        activation->finishCreation(exec->vm());
         return activation;
     }
 
     static bool deleteProperty(JSCell*, ExecState*, PropertyName);
     static JSObject* toThisObject(JSCell*, ExecState*);
 
-    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
     }
 
     static const ClassInfo s_info;
 
 protected:
-    static const unsigned StructureFlags = IsEnvironmentRecord | JSNonFinalObject::StructureFlags;
+    static const unsigned StructureFlags = IsEnvironmentRecord | Base::StructureFlags;
 
 private:
     StrictEvalActivation(ExecState*);

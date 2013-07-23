@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2010, 2012, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,7 +83,10 @@ public:
             return;
         }
 
-        append(other.characters(), other.m_length);
+        if (other.is8Bit())
+            append(other.characters8(), other.m_length);
+        else
+            append(other.characters16(), other.m_length);
     }
 
     void append(const String& string, unsigned offset, unsigned length)
@@ -108,9 +111,17 @@ public:
 
     void append(UChar c)
     {
-        if (m_buffer && !m_is8Bit && m_length < m_buffer->length() && m_string.isNull())
+        if (m_buffer && m_length < m_buffer->length() && m_string.isNull()) {
+            if (!m_is8Bit) {
             m_bufferCharacters16[m_length++] = c;
-        else
+                return;
+            }
+
+            if (!(c & ~0xff)) {
+                m_bufferCharacters8[m_length++] = static_cast<LChar>(c);
+                return;
+            }
+        }
             append(&c, 1);
     }
 
@@ -130,6 +141,26 @@ public:
         append(static_cast<LChar>(c));
     }
 
+    void append(UChar32 c)
+    {
+        if (U_IS_BMP(c)) {
+            append(static_cast<UChar>(c));
+            return;
+        }
+        append(U16_LEAD(c));
+        append(U16_TRAIL(c));
+    }
+
+    template<unsigned charactersCount>
+    ALWAYS_INLINE void appendLiteral(const char (&characters)[charactersCount]) { append(characters, charactersCount - 1); }
+
+    WTF_EXPORT_PRIVATE void appendNumber(int);
+    WTF_EXPORT_PRIVATE void appendNumber(unsigned int);
+    WTF_EXPORT_PRIVATE void appendNumber(long);
+    WTF_EXPORT_PRIVATE void appendNumber(unsigned long);
+    WTF_EXPORT_PRIVATE void appendNumber(long long);
+    WTF_EXPORT_PRIVATE void appendNumber(unsigned long long);
+
     String toString()
     {
         shrinkToFit();
@@ -148,11 +179,14 @@ public:
     AtomicString toAtomicString() const
     {
         if (!m_length)
-            return AtomicString();
+            return emptyAtom;
 
         // If the buffer is sufficiently over-allocated, make a new AtomicString from a copy so its buffer is not so large.
-        if (canShrink())
-            return AtomicString(characters(), length());
+        if (canShrink()) {
+            if (is8Bit())
+                return AtomicString(characters8(), length());
+            return AtomicString(characters16(), length());            
+        }
 
         if (!m_string.isNull())
             return AtomicString(m_string);
@@ -183,7 +217,7 @@ public:
 
     UChar operator[](unsigned i) const
     {
-        ASSERT(i < m_length);
+        ASSERT_WITH_SECURITY_IMPLICATION(i < m_length);
         if (m_is8Bit)
             return characters8()[i];
         return characters16()[i];

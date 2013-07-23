@@ -39,6 +39,7 @@ public class DWGlyph implements Glyph {
     private float pixelXAdvance, pixelYAdvance;
     private RECT rect;
     private boolean drawShapes;
+    byte[] pixelData;
 
     private static final boolean CACHE_TARGET = true;
     private static IWICBitmap cachedBitmap;
@@ -101,6 +102,10 @@ public class DWGlyph implements Glyph {
         int textureType = OS.DWRITE_TEXTURE_CLEARTYPE_3x1;
         IDWriteGlyphRunAnalysis runAnalysis = createAnalysis(subPixelX, subPixelY);
         rect = runAnalysis.GetAlphaTextureBounds(textureType);
+        if ((rect.right - rect.left == 0) ||
+            (rect.bottom - rect.top == 0)) {
+            return new byte[0];
+        }
         byte[] buffer = runAnalysis.CreateAlphaTexture(textureType, rect);
         runAnalysis.Release();
         return buffer;
@@ -264,7 +269,10 @@ public class DWGlyph implements Glyph {
 
     @Override
     public byte[] getPixelData(float x, float y) {
-        return isLCDGlyph() ? getLCDMask(x, y) : getGrayMask(x, y);
+        if (pixelData == null) {
+            pixelData = isLCDGlyph() ? getLCDMask(x, y) : getGrayMask(x, y);
+        }
+        return pixelData;
     }
 
     @Override

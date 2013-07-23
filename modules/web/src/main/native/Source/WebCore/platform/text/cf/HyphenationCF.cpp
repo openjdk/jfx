@@ -26,7 +26,7 @@
 #include "config.h"
 #include "Hyphenation.h"
 
-#if (!PLATFORM(MAC) && !PLATFORM(CHROMIUM)) || PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#if !PLATFORM(MAC) || PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 #include "AtomicStringKeyedMRUCache.h"
 #include "TextBreakIteratorInternalICU.h"
@@ -38,7 +38,7 @@ namespace WebCore {
 template<>
 RetainPtr<CFLocaleRef> AtomicStringKeyedMRUCache<RetainPtr<CFLocaleRef> >::createValueForNullKey()
 {
-    RetainPtr<CFLocaleRef> locale(AdoptCF, CFLocaleCopyCurrent());
+    RetainPtr<CFLocaleRef> locale = adoptCF(CFLocaleCopyCurrent());
 
     return CFStringIsHyphenationAvailableForLocale(locale.get()) ? locale : 0;
 }
@@ -46,8 +46,7 @@ RetainPtr<CFLocaleRef> AtomicStringKeyedMRUCache<RetainPtr<CFLocaleRef> >::creat
 template<>
 RetainPtr<CFLocaleRef> AtomicStringKeyedMRUCache<RetainPtr<CFLocaleRef> >::createValueForKey(const AtomicString& localeIdentifier)
 {
-    RetainPtr<CFStringRef> cfLocaleIdentifier(AdoptCF, localeIdentifier.createCFString());
-    RetainPtr<CFLocaleRef> locale(AdoptCF, CFLocaleCreate(kCFAllocatorDefault, cfLocaleIdentifier.get()));
+    RetainPtr<CFLocaleRef> locale = adoptCF(CFLocaleCreate(kCFAllocatorDefault, localeIdentifier.string().createCFString().get()));
 
     return CFStringIsHyphenationAvailableForLocale(locale.get()) ? locale : 0;
 }
@@ -65,7 +64,7 @@ bool canHyphenate(const AtomicString& localeIdentifier)
 
 size_t lastHyphenLocation(const UChar* characters, size_t length, size_t beforeIndex, const AtomicString& localeIdentifier)
 {
-    RetainPtr<CFStringRef> string(AdoptCF, CFStringCreateWithCharactersNoCopy(kCFAllocatorDefault, reinterpret_cast<const UniChar*>(characters), length, kCFAllocatorNull));
+    RetainPtr<CFStringRef> string = adoptCF(CFStringCreateWithCharactersNoCopy(kCFAllocatorDefault, reinterpret_cast<const UniChar*>(characters), length, kCFAllocatorNull));
 
     RetainPtr<CFLocaleRef> locale = cfLocaleCache().get(localeIdentifier);
     ASSERT(locale);
@@ -77,4 +76,4 @@ size_t lastHyphenLocation(const UChar* characters, size_t length, size_t beforeI
 
 } // namespace WebCore
 
-#endif // (!PLATFORM(MAC) && !PLATFORM(CHROMIUM)) || PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#endif // !PLATFORM(MAC) || PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070

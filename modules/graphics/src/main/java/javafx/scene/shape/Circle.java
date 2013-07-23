@@ -25,20 +25,16 @@
 
 package javafx.scene.shape;
 
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.scene.paint.Paint;
-
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGCircle;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGShape.Mode;
-import com.sun.javafx.tk.Toolkit;
-
-
+import com.sun.javafx.sg.prism.NGCircle;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.scene.paint.Paint;
 
 /**
  * The {@code Circle} class creates a new circle
@@ -235,24 +231,8 @@ public class Circle extends Shape {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    @Override protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGCircle();
-    }
-
-    PGCircle getPGCircle() {
-        return (PGCircle)impl_getPGNode();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected com.sun.javafx.sg.PGShape.StrokeLineJoin toPGLineJoin(StrokeLineJoin t) {
+    @Override StrokeLineJoin convertLineJoin(StrokeLineJoin t) {
         // The MITER join style can produce anomalous results for very thin or
         // very wide ellipses when the bezier curves that approximate the arcs
         // become so distorted that they shoot out MITER-like extensions.  This
@@ -267,7 +247,16 @@ public class Circle extends Shape {
         // fixed and balanced aspect ratio, but why waste time computing a
         // conversion of a MITER join style when it has no advantage for
         // circles and technically requires more computation?
-        return com.sun.javafx.sg.PGShape.StrokeLineJoin.BEVEL;
+        return StrokeLineJoin.BEVEL;
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override protected NGNode impl_createPeer() {
+        return new NGCircle();
     }
 
     /**
@@ -279,7 +268,7 @@ public class Circle extends Shape {
         // if there is no fill or stroke, then there are no bounds. The bounds
         // must be marked empty in this case to distinguish it from 0,0,0,0
         // which would actually contribute to the bounds of a group.
-        if (impl_mode == Mode.EMPTY) {
+        if (impl_mode == NGShape.Mode.EMPTY) {
             return bounds.makeEmpty();
         }
 
@@ -292,7 +281,7 @@ public class Circle extends Shape {
             double tCY = cX * tx.getMyx() + cY * tx.getMyy() + tx.getMyt();
             double r = getRadius();
 
-            if (impl_mode != Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
+            if (impl_mode != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
                 double upad = getStrokeWidth();
                 if (getStrokeType() == StrokeType.CENTERED) {
                     upad /= 2.0f;
@@ -309,7 +298,7 @@ public class Circle extends Shape {
             final double width = 2.0 * r;
             final double height = width;
             double upad;
-            if (impl_mode == Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+            if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
                 upad = 0.0f;
             } else {
                 upad = getStrokeWidth();
@@ -340,11 +329,11 @@ public class Circle extends Shape {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override public void impl_updatePG() {
-        super.impl_updatePG();
+    @Override public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            PGCircle peer = getPGCircle();
+            final NGCircle peer = impl_getPeer();
             peer.updateCircle((float)getCenterX(),
                 (float)getCenterY(),
                 (float)getRadius());

@@ -28,6 +28,9 @@
 
 #include "IntPoint.h"
 #include "PlatformEvent.h"
+#if OS(WINDOWS) && !PLATFORM(JAVA)
+#include "WindowsExtras.h"
+#endif
 
 #if PLATFORM(GTK)
 typedef struct _GdkEventScroll GdkEventScroll;
@@ -35,21 +38,6 @@ typedef struct _GdkEventScroll GdkEventScroll;
 
 #if PLATFORM(EFL)
 typedef struct _Evas_Event_Mouse_Wheel Evas_Event_Mouse_Wheel;
-#endif
-
-#if PLATFORM(WIN)
-typedef struct HWND__* HWND;
-typedef unsigned WPARAM;
-typedef long LPARAM;
-#endif
-
-#if PLATFORM(WX)
-class wxMouseEvent;
-class wxPoint;
-#endif
-
-#if PLATFORM(HAIKU)
-class BMessage;
 #endif
 
 namespace WebCore {
@@ -65,10 +53,9 @@ namespace WebCore {
     enum PlatformWheelEventGranularity {
         ScrollByPageWheelEvent,
         ScrollByPixelWheelEvent,
-        ScrollByPixelVelocityWheelEvent
     };
 
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
+#if PLATFORM(MAC)
     enum PlatformWheelEventPhase {
         PlatformWheelEventPhaseNone        = 0,
         PlatformWheelEventPhaseBegan       = 1 << 0,
@@ -90,10 +77,8 @@ namespace WebCore {
             , m_wheelTicksY(0)
             , m_granularity(ScrollByPixelWheelEvent)
             , m_directionInvertedFromDevice(false)
-#if PLATFORM(MAC) || PLATFORM(CHROMIUM)
+#if PLATFORM(MAC)
             , m_hasPreciseScrollingDeltas(false)
-#endif
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
             , m_phase(PlatformWheelEventPhaseNone)
             , m_momentumPhase(PlatformWheelEventPhaseNone)
             , m_scrollCount(0)
@@ -113,10 +98,8 @@ namespace WebCore {
             , m_wheelTicksY(wheelTicksY)
             , m_granularity(granularity)
             , m_directionInvertedFromDevice(false)
-#if PLATFORM(MAC) || PLATFORM(CHROMIUM)
+#if PLATFORM(MAC)
             , m_hasPreciseScrollingDeltas(false)
-#endif
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
            , m_phase(PlatformWheelEventPhaseNone)
             , m_momentumPhase(PlatformWheelEventPhaseNone)
             , m_scrollCount(0)
@@ -152,22 +135,24 @@ namespace WebCore {
         bool directionInvertedFromDevice() const { return m_directionInvertedFromDevice; }
 
 #if PLATFORM(GTK)
-        PlatformWheelEvent(GdkEventScroll*);
+        explicit PlatformWheelEvent(GdkEventScroll*);
 #endif
 
 #if PLATFORM(EFL)
-        PlatformWheelEvent(const Evas_Event_Mouse_Wheel*);
+        explicit PlatformWheelEvent(const Evas_Event_Mouse_Wheel*);
 #endif
 
-#if PLATFORM(MAC) || PLATFORM(CHROMIUM)
+#if PLATFORM(MAC)
        bool hasPreciseScrollingDeltas() const { return m_hasPreciseScrollingDeltas; }
-#endif
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
+        void setHasPreciseScrollingDeltas(bool b) { m_hasPreciseScrollingDeltas = b; }
         PlatformWheelEventPhase phase() const { return m_phase; }
         PlatformWheelEventPhase momentumPhase() const { return m_momentumPhase; }
         unsigned scrollCount() const { return m_scrollCount; }
         float unacceleratedScrollingDeltaX() const { return m_unacceleratedScrollingDeltaX; }
         float unacceleratedScrollingDeltaY() const { return m_unacceleratedScrollingDeltaY; }
+        bool useLatchedEventNode() const { return m_momentumPhase == PlatformWheelEventPhaseBegan || m_momentumPhase == PlatformWheelEventPhaseChanged; }
+#else
+        bool useLatchedEventNode() const { return false; }
 #endif
 
 #if PLATFORM(WIN)
@@ -175,20 +160,12 @@ namespace WebCore {
         PlatformWheelEvent(HWND, const FloatSize& delta, const FloatPoint& location);
 #endif
 
-#if PLATFORM(WX)
-        PlatformWheelEvent(const wxMouseEvent&, const wxPoint&);
-#endif
 #if PLATFORM(JAVA)
         PlatformWheelEvent(const IntPoint& pos, const IntPoint& globalPos,
                            float deltaX, float deltaY,
                            bool shift, bool ctrl, bool alt, bool meta);
 
 #endif
-
-#if PLATFORM(HAIKU)
-        PlatformWheelEvent(BMessage*);
-#endif
-
     protected:
         IntPoint m_position;
         IntPoint m_globalPosition;
@@ -198,10 +175,8 @@ namespace WebCore {
         float m_wheelTicksY;
         PlatformWheelEventGranularity m_granularity;
         bool m_directionInvertedFromDevice;
-#if PLATFORM(MAC) || PLATFORM(CHROMIUM)
+#if PLATFORM(MAC)
         bool m_hasPreciseScrollingDeltas;
-#endif
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
          PlatformWheelEventPhase m_phase;
         PlatformWheelEventPhase m_momentumPhase;
         unsigned m_scrollCount;

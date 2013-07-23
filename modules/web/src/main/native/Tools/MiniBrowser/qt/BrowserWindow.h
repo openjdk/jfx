@@ -45,18 +45,19 @@ public:
     void load(const QString& url);
     void reload();
     void focusAddressBar();
+    void toggleFind();
     QQuickWebView* webView() const;
     QQuickWebViewExperimental* webViewExperimental() const;
 
     void updateVisualMockTouchPoints(const QList<QTouchEvent::TouchPoint>& touchPoints);
 
-public slots:
+public Q_SLOTS:
     BrowserWindow* newWindow(const QString& url = "about:blank");
 
-protected slots:
+protected Q_SLOTS:
     void screenshot();
 
-private slots:
+private Q_SLOTS:
     void onTitleChanged(QString);
 
 private:
@@ -67,6 +68,7 @@ private:
     virtual void wheelEvent(QWheelEvent*);
 
     WindowOptions* m_windowOptions;
+    QHash<int, QQuickItem*> m_activeMockComponents;
     QVector<qreal> m_zoomLevels;
     unsigned m_currentZoomLevel;
 };

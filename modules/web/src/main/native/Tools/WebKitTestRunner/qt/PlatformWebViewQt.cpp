@@ -34,6 +34,8 @@
 #include <QEventLoop>
 #include <QQmlProperty>
 #include <QtQuick/QQuickView>
+#include <QtQuick/private/qquickwindow_p.h>
+#include <WebKit2/WKImageQt.h>
 #include <qpa/qwindowsysteminterface.h>
 
 namespace WTR {
@@ -48,7 +50,7 @@ public:
         connect(this, SIGNAL(statusChanged(QQuickView::Status)), SLOT(handleStatusChanged(QQuickView::Status)));
     }
 
-private slots:
+private Q_SLOTS:
     void handleStatusChanged(QQuickView::Status status)
     {
         if (status != QQuickView::Ready)
@@ -60,6 +62,15 @@ private slots:
         m_view->setParentItem(rootObject());
         QQmlProperty::write(m_view, "anchors.fill", qVariantFromValue(rootObject()));
 
+        if (PlatformWebView::windowShapshotEnabled()) {
+            setSurfaceType(OpenGLSurface);
+            create();
+#if QT_VERSION < QT_VERSION_CHECK(5, 1, 0)
+            QQuickWindowPrivate::get(this)->setRenderWithoutShowing(true);
+#endif
+        } else
+            m_view->experimental()->setRenderToOffscreenBuffer(true);
+
         QWindowSystemInterface::handleWindowActivated(this);
         m_view->page()->setFocus(true);
     }
@@ -68,15 +79,20 @@ private:
     QQuickWebView* m_view;
 };
 
-PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef)
-    : m_view(new QQuickWebView(contextRef, pageGroupRef))
-    , m_window(new WrapperWindow(m_view))
-    , m_windowIsKey(true)
+PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef, WKPageRef /* relatedPage */, WKDictionaryRef options)
+    : m_windowIsKey(true)
+    , m_options(options)
     , m_modalEventLoop(0)
 {
-    QQuickWebViewExperimental experimental(m_view);
-    experimental.setRenderToOffscreenBuffer(true);
+    WKRetainPtr<WKStringRef> useFixedLayoutKey(AdoptWK, WKStringCreateWithUTF8CString("UseFixedLayout"));
+    m_usingFixedLayout = options ? WKBooleanGetValue(static_cast<WKBooleanRef>(WKDictionaryGetItemForKey(options, useFixedLayoutKey.get()))) : false;
+    QQuickWebViewExperimental::setFlickableViewportEnabled(m_usingFixedLayout);
+
+    m_view = new QQuickWebView(contextRef, pageGroupRef);
     m_view->setAllowAnyHTTPSCertificateForLocalHost(true);
+    m_view->componentComplete();
+
+    m_window = new WrapperWindow(m_view);
 }
 
 PlatformWebView::~PlatformWebView()
@@ -93,7 +109,8 @@ void PlatformWebView::resizeTo(unsigned width, unsigned height)
     // resized to what the layout test expects.
     if (!m_window->handle()) {
         QRect newGeometry(m_window->x(), m_window->y(), width, height);
-        QWindowSystemInterface::handleSynchronousGeometryChange(m_window, newGeometry);
+        QWindowSystemInterface::handleGeometryChange(m_window, newGeometry);
+        QWindowSystemInterface::flushWindowSystemEvents();
     }
 
     m_window->resize(width, height);
@@ -106,7 +123,7 @@ WKPageRef PlatformWebView::page()
 
 void PlatformWebView::focus()
 {
-    m_view->setFocus(Qt::OtherFocusReason);
+    m_view->setFocus(true);
 }
 
 WKRect PlatformWebView::windowFrame()
@@ -149,9 +166,29 @@ void PlatformWebView::makeWebViewFirstResponder()
 
 WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
 {
-    // FIXME: implement to capture pixels in the UI process,
-    // which may be necessary to capture things like 3D transforms.
-    return 0;
+    return adoptWK(WKImageCreateFromQImage(m_window->grabWindow()));
+}
+
+bool PlatformWebView::windowShapshotEnabled()
+{
+    // We need a way to disable UI side rendering for tests because it is
+    // too slow without appropriate hardware.
+    static bool result;
+    static bool hasChecked = false;
+    if (!hasChecked)
+        result = qgetenv("QT_WEBKIT_DISABLE_UIPROCESS_DUMPPIXELS") != "1";
+    return result;
+}
+
+bool PlatformWebView::viewSupportsOptions(WKDictionaryRef options) const
+{
+    WKRetainPtr<WKStringRef> useFixedLayoutKey(AdoptWK, WKStringCreateWithUTF8CString("UseFixedLayout"));
+
+    return m_usingFixedLayout == (options ? WKBooleanGetValue(static_cast<WKBooleanRef>(WKDictionaryGetItemForKey(options, useFixedLayoutKey.get()))) : false);
+}
+
+void PlatformWebView::didInitializeClients()
+{
 }
 
 } // namespace WTR

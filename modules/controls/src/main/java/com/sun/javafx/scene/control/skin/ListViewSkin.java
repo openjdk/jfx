@@ -55,7 +55,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
      */
     // FIXME this should not be a StackPane
     private StackPane placeholderRegion;
-    private Label placeholderLabel;
+    private Node placeholderNode;
+//    private Label placeholderLabel;
     private static final String EMPTY_LIST_TEXT = ControlResources.getString("ListView.noContent");
 
     private ObservableList<T> listViewItems;
@@ -237,22 +238,19 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         boolean visible = getItemCount() == 0;
         
         if (visible) {
-            if (placeholderRegion == null) {
-                placeholderRegion = new StackPane();
-                placeholderRegion.getStyleClass().setAll("placeholder");
-                getChildren().add(placeholderRegion);
+            placeholderNode = getSkinnable().getPlaceholder();
+            if (placeholderNode == null && (EMPTY_LIST_TEXT != null && ! EMPTY_LIST_TEXT.isEmpty())) {
+                placeholderNode = new Label();
+                ((Label)placeholderNode).setText(EMPTY_LIST_TEXT);
             }
-            
-            Node placeholderNode = getSkinnable().getPlaceholder();
 
-            if (placeholderNode == null) {
-                if (placeholderLabel == null) {
-                    placeholderLabel = new Label();
+            if (placeholderNode != null) {
+                if (placeholderRegion == null) {
+                    placeholderRegion = new StackPane();
+                    placeholderRegion.getStyleClass().setAll("placeholder");
+                    getChildren().add(placeholderRegion);
                 }
-                placeholderLabel.setText(EMPTY_LIST_TEXT);
 
-                placeholderRegion.getChildren().setAll(placeholderLabel);
-            } else {
                 placeholderRegion.getChildren().setAll(placeholderNode);
             }
         }
@@ -320,7 +318,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         
         if (getItemCount() == 0) {
             // show message overlay instead of empty listview
-            placeholderRegion.resizeRelocate(x, y, w, h);
+            if (placeholderRegion != null) {
+                placeholderRegion.resizeRelocate(x, y, w, h);
+            }
         } else {
             flow.resizeRelocate(x, y, w, h);
         }
@@ -329,17 +329,16 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         checkState();
 
-        double pw = 0.0;
         if (getItemCount() == 0) {
             if (placeholderRegion == null) {
                 updatePlaceholderRegionVisibility();
             }
             if (placeholderRegion != null) {
-                pw = placeholderRegion.prefWidth(height) + leftInset + rightInset;
+                return placeholderRegion.prefWidth(height) + leftInset + rightInset;
             }
         }
 
-        return Math.max(pw, computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset) * 0.618033987);
+        return computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset) * 0.618033987;
     }
 
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {

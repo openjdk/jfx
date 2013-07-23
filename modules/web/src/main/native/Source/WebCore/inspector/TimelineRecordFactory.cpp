@@ -35,8 +35,10 @@
 #include "TimelineRecordFactory.h"
 
 #include "Event.h"
+#include "FloatQuad.h"
 #include "InspectorValues.h"
 #include "IntRect.h"
+#include "LayoutRect.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "ScriptCallStack.h"
@@ -55,6 +57,14 @@ PassRefPtr<InspectorObject> TimelineRecordFactory::createGenericRecord(double st
         if (stackTrace && stackTrace->size())
             record->setValue("stackTrace", stackTrace->buildInspectorArray());
     }
+    return record.release();
+}
+
+PassRefPtr<InspectorObject> TimelineRecordFactory::createBackgroundRecord(double startTime, const String& threadName)
+{
+    RefPtr<InspectorObject> record = InspectorObject::create();
+    record->setNumber("startTime", startTime);
+    record->setString("thread", threadName);
     return record.release();
 }
 
@@ -169,20 +179,39 @@ PassRefPtr<InspectorObject> TimelineRecordFactory::createReceiveResourceData(con
     return data.release();
 }
     
-PassRefPtr<InspectorObject> TimelineRecordFactory::createPaintData(const LayoutRect& rect)
+PassRefPtr<InspectorObject> TimelineRecordFactory::createLayoutData(unsigned dirtyObjects, unsigned totalObjects, bool partialLayout)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setNumber("x", rect.x());
-    data->setNumber("y", rect.y());
-    data->setNumber("width", rect.width());
-    data->setNumber("height", rect.height());
+    data->setNumber("dirtyObjects", dirtyObjects);
+    data->setNumber("totalObjects", totalObjects);
+    data->setBoolean("partialLayout", partialLayout);
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelineRecordFactory::createParseHTMLData(unsigned int length, unsigned int startLine)
+PassRefPtr<InspectorObject> TimelineRecordFactory::createDecodeImageData(const String& imageType)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setNumber("length", length);
+    data->setString("imageType", imageType);
+    return data.release();
+}
+
+PassRefPtr<InspectorObject> TimelineRecordFactory::createResizeImageData(bool shouldCache)
+{
+    RefPtr<InspectorObject> data = InspectorObject::create();
+    data->setBoolean("cached", shouldCache);
+    return data.release();
+}
+
+PassRefPtr<InspectorObject> TimelineRecordFactory::createMarkData(bool isMainFrame)
+{
+    RefPtr<InspectorObject> data = InspectorObject::create();
+    data->setBoolean("isMainFrame", isMainFrame);
+    return data.release();
+}
+
+PassRefPtr<InspectorObject> TimelineRecordFactory::createParseHTMLData(unsigned startLine)
+{
+    RefPtr<InspectorObject> data = InspectorObject::create();
     data->setNumber("startLine", startLine);
     return data.release();
 }
@@ -192,6 +221,32 @@ PassRefPtr<InspectorObject> TimelineRecordFactory::createAnimationFrameData(int 
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setNumber("id", callbackId);
     return data.release();
+}
+
+static PassRefPtr<InspectorArray> createQuad(const FloatQuad& quad)
+{
+    RefPtr<InspectorArray> array = InspectorArray::create();
+    array->pushNumber(quad.p1().x());
+    array->pushNumber(quad.p1().y());
+    array->pushNumber(quad.p2().x());
+    array->pushNumber(quad.p2().y());
+    array->pushNumber(quad.p3().x());
+    array->pushNumber(quad.p3().y());
+    array->pushNumber(quad.p4().x());
+    array->pushNumber(quad.p4().y());
+    return array.release();
+}
+
+PassRefPtr<InspectorObject> TimelineRecordFactory::createPaintData(const FloatQuad& quad)
+{
+    RefPtr<InspectorObject> data = InspectorObject::create();
+    data->setArray("clip", createQuad(quad));
+    return data.release();
+}
+
+void TimelineRecordFactory::appendLayoutRoot(InspectorObject* data, const FloatQuad& quad)
+{
+    data->setArray("root", createQuad(quad));
 }
 
 } // namespace WebCore

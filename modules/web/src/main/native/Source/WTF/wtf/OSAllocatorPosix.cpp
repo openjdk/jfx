@@ -26,27 +26,40 @@
 #include "config.h"
 #include "OSAllocator.h"
 
+#if OS(UNIX)
+
 #include "PageAllocation.h"
 #include <errno.h>
 #include <sys/mman.h>
 #include <wtf/Assertions.h>
-#include <wtf/UnusedParam.h>
 
 namespace WTF {
 
 void* OSAllocator::reserveUncommitted(size_t bytes, Usage usage, bool writable, bool executable, bool includesGuardPages)
 {
 #if OS(QNX)
+    UNUSED_PARAM(usage);
+    UNUSED_PARAM(writable);
+    UNUSED_PARAM(executable);
+    UNUSED_PARAM(includesGuardPages);
+
     // Reserve memory with PROT_NONE and MAP_LAZY so it isn't committed now.
     void* result = mmap(0, bytes, PROT_NONE, MAP_LAZY | MAP_PRIVATE | MAP_ANON, -1, 0);
     if (result == MAP_FAILED)
         CRASH();
-#else // OS(QNX)
+#elif OS(LINUX)
+    UNUSED_PARAM(usage);
+    UNUSED_PARAM(writable);
+    UNUSED_PARAM(executable);
+    UNUSED_PARAM(includesGuardPages);
 
-    void* result = reserveAndCommit(bytes, usage, writable, executable, includesGuardPages);
-#if OS(LINUX)
+    void* result = mmap(0, bytes, PROT_NONE, MAP_NORESERVE | MAP_PRIVATE | MAP_ANON, -1, 0);
+    if (result == MAP_FAILED)
+        CRASH();
     madvise(result, bytes, MADV_DONTNEED);
-#elif HAVE(MADV_FREE_REUSE)
+#else
+    void* result = reserveAndCommit(bytes, usage, writable, executable, includesGuardPages);
+#if HAVE(MADV_FREE_REUSE)
     // To support the "reserve then commit" model, we have to initially decommit.
     while (madvise(result, bytes, MADV_FREE_REUSABLE) == -1 && errno == EAGAIN) { }
 #endif
@@ -71,21 +84,10 @@ void* OSAllocator::reserveAndCommit(size_t bytes, Usage usage, bool writable, bo
         flags |= MAP_JIT;
 #endif
 
-#if (OS(LINUX) && CPU(X86_64))
-    // Linux distros usually do not allow overcommit by default, so
-    // JSC's strategy of mmaping a large amount of memory upfront
-    // won't work very well on some systems. Fortunately there's a
-    // flag we can pass to mmap to disable the overcommit check for
-    // this particular call, so we can get away with it as long as the
-    // overcommit flag value in /proc/sys/vm/overcommit_memory is 0
-    // ('heuristic') and not 2 (always check). 0 is the usual default
-    // value, so this should work well in general.
-    flags |= MAP_NORESERVE;
-#endif
-
 #if OS(DARWIN)
     int fd = usage;
 #else
+    UNUSED_PARAM(usage);
     int fd = -1;
 #endif
 
@@ -112,7 +114,7 @@ void* OSAllocator::reserveAndCommit(size_t bytes, Usage usage, bool writable, bo
 
     result = mmap(result, bytes, protection, flags, fd, 0);
     if (result == MAP_FAILED) {
-    #if ENABLE(CLASSIC_INTERPRETER) || ENABLE(LLINT)
+#if ENABLE(LLINT)
         if (executable)
             result = 0;
         else
@@ -141,8 +143,13 @@ void OSAllocator::commit(void* address, size_t bytes, bool writable, bool execut
     if (MAP_FAILED == mmap(address, bytes, protection, MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0))
         CRASH();
 #elif OS(LINUX)
-    UNUSED_PARAM(writable);
-    UNUSED_PARAM(executable);
+    int protection = PROT_READ;
+    if (writable)
+        protection |= PROT_WRITE;
+    if (executable)
+        protection |= PROT_EXEC;
+    if (mprotect(address, bytes, protection))
+        CRASH();
     madvise(address, bytes, MADV_WILLNEED);
 #elif HAVE(MADV_FREE_REUSE)
     UNUSED_PARAM(writable);
@@ -164,6 +171,8 @@ void OSAllocator::decommit(void* address, size_t bytes)
     mmap(address, bytes, PROT_NONE, MAP_FIXED | MAP_LAZY | MAP_PRIVATE | MAP_ANON, -1, 0);
 #elif OS(LINUX)
     madvise(address, bytes, MADV_DONTNEED);
+    if (mprotect(address, bytes, PROT_NONE))
+        CRASH();
 #elif HAVE(MADV_FREE_REUSE)
     while (madvise(address, bytes, MADV_FREE_REUSABLE) == -1 && errno == EAGAIN) { }
 #elif HAVE(MADV_FREE)
@@ -184,3 +193,5 @@ void OSAllocator::releaseDecommitted(void* address, size_t bytes)
 }
 
 } // namespace WTF
+
+#endif // OS(UNIX)

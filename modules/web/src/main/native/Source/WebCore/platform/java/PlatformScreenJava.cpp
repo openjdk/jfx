@@ -3,6 +3,7 @@
  */
 #include "config.h"
 
+#include "FloatRect.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "HostWindow.h"

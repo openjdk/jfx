@@ -41,7 +41,7 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.font.PrismFontUtils;
+import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.AffineBase;
 import com.sun.prism.CompositeMode;
@@ -1580,6 +1580,18 @@ public abstract class BaseShaderGraphics
                   bs.getMiterLimit() >= SQRT_2)));
     }
 
+    public void blit(RTTexture srcTex, RTTexture dstTex,
+                     int srcX0, int srcY0, int srcX1, int srcY1,
+                     int dstX0, int dstY0, int dstX1, int dstY1) {
+        if (dstTex == null) {
+            context.setRenderTarget(this);
+        } else {
+            context.setRenderTarget((BaseGraphics)dstTex.createGraphics());
+        }
+        context.blit(srcTex, dstTex, srcX0, srcY0, srcX1, srcY1,
+                dstX0, dstY0, dstX1, dstY1);
+    }
+
     public void drawRect(float x, float y, float w, float h) {
         if (w < 0 || h < 0) {
             return;
@@ -1908,7 +1920,8 @@ public abstract class BaseShaderGraphics
         // FontStrike supports LCD, SRC_OVER CompositeMode and Paint is a COLOR
         boolean lcdSupported = blendMode == CompositeMode.SRC_OVER &&
                                textColor != null &&
-                               xform.is2D();
+                               xform.is2D() &&
+                               !getRenderTarget().isAntiAliasing();
 
         /* If the surface can't support LCD text we need to replace an
          * LCD mode strike with the equivalent grey scale one.
@@ -1988,8 +2001,7 @@ public abstract class BaseShaderGraphics
             } else {
                 initLCDSampleRT();
             }
-
-            float invgamma = PrismFontUtils.getLCDContrast();
+            float invgamma = PrismFontFactory.getLCDContrast();
             float gamma = 1.0f/invgamma;
             textColor = new Color((float)Math.pow(textColor.getRed(),   invgamma),
                                   (float)Math.pow(textColor.getGreen(), invgamma),

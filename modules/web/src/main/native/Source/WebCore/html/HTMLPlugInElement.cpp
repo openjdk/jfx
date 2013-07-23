@@ -24,17 +24,23 @@
 #include "HTMLPlugInElement.h"
 
 #include "Attribute.h"
+#include "BridgeJSC.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "CSSPropertyNames.h"
 #include "Document.h"
+#include "Event.h"
+#include "EventHandler.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "HTMLNames.h"
 #include "Page.h"
+#include "PluginViewBase.h"
 #include "RenderEmbeddedObject.h"
+#include "RenderSnapshottedPlugIn.h"
 #include "RenderWidget.h"
+#include "ScriptController.h"
 #include "Settings.h"
 #include "Widget.h"
 
@@ -53,6 +59,7 @@ HTMLPlugInElement::HTMLPlugInElement(const QualifiedName& tagName, Document* doc
     , m_NPObject(0)
 #endif
     , m_isCapturingMouseEvents(false)
+    , m_displayState(Playing)
 {
 }
 
@@ -66,6 +73,24 @@ HTMLPlugInElement::~HTMLPlugInElement()
         m_NPObject = 0;
     }
 #endif
+}
+
+bool HTMLPlugInElement::canProcessDrag() const
+{
+    const PluginViewBase* plugin = pluginWidget() && pluginWidget()->isPluginViewBase() ? static_cast<const PluginViewBase*>(pluginWidget()) : 0;
+    return plugin ? plugin->canProcessDrag() : false;
+}
+
+bool HTMLPlugInElement::willRespondToMouseClickEvents()
+{
+    if (isDisabledFormControl())
+        return false;
+    RenderObject* r = renderer();
+    if (!r)
+        return false;
+    if (!r->isEmbeddedObject() && !r->isWidget())
+        return false;
+    return true;
 }
 
 void HTMLPlugInElement::detach()
@@ -93,7 +118,7 @@ void HTMLPlugInElement::resetInstance()
     m_instance.clear();
 }
 
-PassScriptInstance HTMLPlugInElement::getInstance()
+PassRefPtr<JSC::Bindings::Instance> HTMLPlugInElement::getInstance()
 {
     Frame* frame = document()->frame();
     if (!frame)
@@ -125,7 +150,7 @@ bool HTMLPlugInElement::guardedDispatchBeforeLoadEvent(const String& sourceURL)
     return beforeLoadAllowedLoad;
 }
 
-Widget* HTMLPlugInElement::pluginWidget()
+Widget* HTMLPlugInElement::pluginWidget() const
 {
     if (m_inBeforeLoadEventHandler) {
         // The plug-in hasn't loaded yet, and it makes no sense to try to load if beforeload handler happened to touch the plug-in element.
@@ -147,22 +172,22 @@ bool HTMLPlugInElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLFrameOwnerElement::isPresentationAttribute(name);
 }
 
-void HTMLPlugInElement::collectStyleForAttribute(const Attribute& attribute, StylePropertySet* style)
+void HTMLPlugInElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
 {
-    if (attribute.name() == widthAttr)
-        addHTMLLengthToStyle(style, CSSPropertyWidth, attribute.value());
-    else if (attribute.name() == heightAttr)
-        addHTMLLengthToStyle(style, CSSPropertyHeight, attribute.value());
-    else if (attribute.name() == vspaceAttr) {
-        addHTMLLengthToStyle(style, CSSPropertyMarginTop, attribute.value());
-        addHTMLLengthToStyle(style, CSSPropertyMarginBottom, attribute.value());
-    } else if (attribute.name() == hspaceAttr) {
-        addHTMLLengthToStyle(style, CSSPropertyMarginLeft, attribute.value());
-        addHTMLLengthToStyle(style, CSSPropertyMarginRight, attribute.value());
-    } else if (attribute.name() == alignAttr)
-        applyAlignmentAttributeToStyle(attribute, style);
+    if (name == widthAttr)
+        addHTMLLengthToStyle(style, CSSPropertyWidth, value);
+    else if (name == heightAttr)
+        addHTMLLengthToStyle(style, CSSPropertyHeight, value);
+    else if (name == vspaceAttr) {
+        addHTMLLengthToStyle(style, CSSPropertyMarginTop, value);
+        addHTMLLengthToStyle(style, CSSPropertyMarginBottom, value);
+    } else if (name == hspaceAttr) {
+        addHTMLLengthToStyle(style, CSSPropertyMarginLeft, value);
+        addHTMLLengthToStyle(style, CSSPropertyMarginRight, value);
+    } else if (name == alignAttr)
+        applyAlignmentAttributeToStyle(value, style);
     else
-        HTMLFrameOwnerElement::collectStyleForAttribute(attribute, style);
+        HTMLFrameOwnerElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
 void HTMLPlugInElement::defaultEventHandler(Event* event)
@@ -174,9 +199,20 @@ void HTMLPlugInElement::defaultEventHandler(Event* event)
     // FIXME: Mouse down and scroll events are passed down to plug-in via custom code in EventHandler; these code paths should be united.
 
     RenderObject* r = renderer();
-    if (r && r->isEmbeddedObject() && toRenderEmbeddedObject(r)->showsUnavailablePluginIndicator()) {
+    if (r && r->isEmbeddedObject()) {
+        if (toRenderEmbeddedObject(r)->showsUnavailablePluginIndicator()) {
         toRenderEmbeddedObject(r)->handleUnavailablePluginIndicatorEvent(event);
         return;
+    }
+
+        if (r->isSnapshottedPlugIn() && displayState() < Restarting) {
+            toRenderSnapshottedPlugIn(r)->handleEvent(event);
+            HTMLFrameOwnerElement::defaultEventHandler(event);
+            return;
+        }
+
+        if (displayState() < Playing)
+            return;
     }
 
     if (!r || !r->isWidget())
@@ -188,6 +224,34 @@ void HTMLPlugInElement::defaultEventHandler(Event* event)
     if (event->defaultHandled())
         return;
     HTMLFrameOwnerElement::defaultEventHandler(event);
+}
+
+bool HTMLPlugInElement::isKeyboardFocusable(KeyboardEvent* event) const
+{
+    UNUSED_PARAM(event);
+    if (!document()->page())
+        return false;
+
+    const PluginViewBase* plugin = pluginWidget() && pluginWidget()->isPluginViewBase() ? static_cast<const PluginViewBase*>(pluginWidget()) : 0;
+    if (plugin)
+        return plugin->supportsKeyboardFocus();
+
+    return false;
+}
+
+bool HTMLPlugInElement::isPluginElement() const
+{
+    return true;
+}
+
+bool HTMLPlugInElement::supportsFocus() const
+{
+    if (HTMLFrameOwnerElement::supportsFocus())
+        return true;
+
+    if (useFallbackContent() || !renderer() || !renderer()->isEmbeddedObject())
+        return false;
+    return !toRenderEmbeddedObject(renderer())->showsUnavailablePluginIndicator();
 }
 
 #if ENABLE(NETSCAPE_PLUGIN_API)

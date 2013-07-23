@@ -28,6 +28,10 @@
 
 namespace WebCore {
 
+DOMStringMap::DOMStringMap()
+{
+}
+
 DOMStringMap::~DOMStringMap()
 {
 }

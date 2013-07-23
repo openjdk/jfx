@@ -39,7 +39,6 @@
 
 #include <heap/Strong.h>
 #include <runtime/JSLock.h>
-#include <runtime/UString.h>
 
 using namespace JSC;
 
@@ -50,16 +49,14 @@ bool ScriptValue::getString(ScriptState* scriptState, String& result) const
     if (!m_value)
         return false;
     JSLockHolder lock(scriptState);
-    UString ustring;
-    if (!m_value.get().getString(scriptState, ustring))
+    if (!m_value.get().getString(scriptState, result))
         return false;
-    result = ustringToString(ustring);
     return true;
 }
 
 String ScriptValue::toString(ScriptState* scriptState) const
 {
-    String result = ustringToString(m_value.get().toString(scriptState)->value(scriptState));
+    String result = m_value.get().toString(scriptState)->value(scriptState);
     // Handle the case where an exception is thrown as part of invoking toString on the object.
     if (scriptState->hadException())
         scriptState->clearException();
@@ -108,15 +105,14 @@ PassRefPtr<SerializedScriptValue> ScriptValue::serialize(ScriptState* scriptStat
 
 PassRefPtr<SerializedScriptValue> ScriptValue::serialize(ScriptState* scriptState, MessagePortArray* messagePorts, ArrayBufferArray* arrayBuffers, bool& didThrow)
 {
-    JSValueRef exception = 0;
-    RefPtr<SerializedScriptValue> serializedValue = SerializedScriptValue::create(toRef(scriptState), toRef(scriptState, jsValue()), messagePorts, arrayBuffers, &exception);
-    didThrow = exception ? true : false;
+    RefPtr<SerializedScriptValue> serializedValue = SerializedScriptValue::create(scriptState, jsValue(), messagePorts, arrayBuffers);
+    didThrow = scriptState->hadException();
     return serializedValue.release();
 }
 
 ScriptValue ScriptValue::deserialize(ScriptState* scriptState, SerializedScriptValue* value, SerializationErrorMode throwExceptions)
 {
-    return ScriptValue(scriptState->globalData(), value->deserialize(scriptState, scriptState->lexicalGlobalObject(), 0, throwExceptions));
+    return ScriptValue(scriptState->vm(), value->deserialize(scriptState, scriptState->lexicalGlobalObject(), 0, throwExceptions));
 }
 
 #if ENABLE(INSPECTOR)
@@ -138,7 +134,7 @@ static PassRefPtr<InspectorValue> jsToInspectorValue(ScriptState* scriptState, J
     if (value.isNumber())
         return InspectorBasicValue::create(value.asNumber());
     if (value.isString()) {
-        UString s = value.getString(scriptState);
+        String s = value.getString(scriptState);
         return InspectorString::create(String(s.characters(), s.length()));
     }
     if (value.isObject()) {
@@ -147,7 +143,7 @@ static PassRefPtr<InspectorValue> jsToInspectorValue(ScriptState* scriptState, J
             JSArray* array = asArray(value);
             unsigned length = array->length();
             for (unsigned i = 0; i < length; i++) {
-                JSValue element = array->getIndex(i);
+                JSValue element = array->getIndex(scriptState, i);
                 RefPtr<InspectorValue> elementValue = jsToInspectorValue(scriptState, element, maxDepth);
                 if (!elementValue)
                     return 0;

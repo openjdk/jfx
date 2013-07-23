@@ -24,6 +24,7 @@
 #include "config.h"
 #include "LengthFunctions.h"
 
+#include "LayoutUnit.h"
 #include "Length.h"
 #include "RenderView.h"
 
@@ -54,20 +55,26 @@ LayoutUnit minimumValueForLength(const Length& length, LayoutUnit maximumValue, 
     case ViewportPercentageWidth:
         if (renderView)
             return static_cast<LayoutUnit>(renderView->viewportSize().width() * length.viewportPercentageLength() / 100.0f);
-        return ZERO_LAYOUT_UNIT;
+        return 0;
     case ViewportPercentageHeight:
         if (renderView)
             return static_cast<LayoutUnit>(renderView->viewportSize().height() * length.viewportPercentageLength() / 100.0f);
-        return ZERO_LAYOUT_UNIT;
+        return 0;
     case ViewportPercentageMin:
         if (renderView) {
             IntSize viewportSize = renderView->viewportSize();
             return static_cast<LayoutUnit>(std::min(viewportSize.width(), viewportSize.height()) * length.viewportPercentageLength() / 100.0f);
         }
-        return ZERO_LAYOUT_UNIT;
+        return 0;
+    case ViewportPercentageMax:
+        if (renderView) {
+            IntSize viewportSize = renderView->viewportSize();
+            return static_cast<LayoutUnit>(std::max(viewportSize.width(), viewportSize.height()) * length.viewportPercentageLength() / 100.0f);
+        }
+        return 0;
     case FillAvailable:
     case Auto:
-        return ZERO_LAYOUT_UNIT;
+        return 0;
     case Relative:
     case Intrinsic:
     case MinIntrinsic:
@@ -76,10 +83,10 @@ LayoutUnit minimumValueForLength(const Length& length, LayoutUnit maximumValue, 
     case FitContent:
     case Undefined:
         ASSERT_NOT_REACHED();
-        return ZERO_LAYOUT_UNIT;
+        return 0;
     }
     ASSERT_NOT_REACHED();
-    return ZERO_LAYOUT_UNIT;
+    return 0;
 }
 
 LayoutUnit valueForLength(const Length& length, LayoutUnit maximumValue, RenderView* renderView, bool roundPercentages)
@@ -91,6 +98,7 @@ LayoutUnit valueForLength(const Length& length, LayoutUnit maximumValue, RenderV
     case ViewportPercentageWidth:
     case ViewportPercentageHeight:
     case ViewportPercentageMin:
+    case ViewportPercentageMax:
         return minimumValueForLength(length, maximumValue, renderView, roundPercentages);
     case FillAvailable:
     case Auto:
@@ -103,10 +111,10 @@ LayoutUnit valueForLength(const Length& length, LayoutUnit maximumValue, RenderV
     case FitContent:
     case Undefined:
         ASSERT_NOT_REACHED();
-        return ZERO_LAYOUT_UNIT;
+        return 0;
     }
     ASSERT_NOT_REACHED();
-    return ZERO_LAYOUT_UNIT;
+    return 0;
 }
 
 // FIXME: when subpixel layout is supported this copy of floatValueForLength() can be removed. See bug 71143.
@@ -134,6 +142,12 @@ float floatValueForLength(const Length& length, LayoutUnit maximumValue, RenderV
         if (renderView) {
             IntSize viewportSize = renderView->viewportSize();
             return static_cast<int>(std::min(viewportSize.width(), viewportSize.height()) * length.viewportPercentageLength() / 100.0f);
+        }
+        return 0;
+    case ViewportPercentageMax:
+        if (renderView) {
+            IntSize viewportSize = renderView->viewportSize();
+            return static_cast<int>(std::max(viewportSize.width(), viewportSize.height()) * length.viewportPercentageLength() / 100.0f);
         }
         return 0;
     case Relative:
@@ -174,6 +188,12 @@ float floatValueForLength(const Length& length, float maximumValue, RenderView* 
         if (renderView) {
             IntSize viewportSize = renderView->viewportSize();
             return static_cast<int>(std::min(viewportSize.width(), viewportSize.height()) * length.viewportPercentageLength() / 100.0f);
+        }
+        return 0;
+    case ViewportPercentageMax:
+        if (renderView) {
+            IntSize viewportSize = renderView->viewportSize();
+            return static_cast<int>(std::max(viewportSize.width(), viewportSize.height()) * length.viewportPercentageLength() / 100.0f);
         }
         return 0;
     case Relative:

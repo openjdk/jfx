@@ -27,11 +27,12 @@
 #include "Element.h"
 #include "FormatBlockCommand.h"
 #include "Document.h"
+#include "ExceptionCodePlaceholder.h"
 #include "htmlediting.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "Range.h"
-#include "visible_units.h"
+#include "VisibleUnits.h"
 
 namespace WebCore {
 
@@ -41,7 +42,7 @@ static Node* enclosingBlockToSplitTreeTo(Node* startNode);
 static bool isElementForFormatBlock(const QualifiedName& tagName);
 static inline bool isElementForFormatBlock(Node* node)
 {
-    return node->isElementNode() && isElementForFormatBlock(static_cast<Element*>(node)->tagQName());
+    return node->isElementNode() && isElementForFormatBlock(toElement(node)->tagQName());
 }
 
 FormatBlockCommand::FormatBlockCommand(Document* document, const QualifiedName& tagName) 
@@ -68,7 +69,7 @@ void FormatBlockCommand::formatRange(const Position& start, const Position& end,
     Element* refNode = enclosingBlockFlowElement(end);
     Element* root = editableRootForPosition(start);
     // Root is null for elements with contenteditable=false.
-    if (!root)
+    if (!root || !refNode)
         return;
     if (isElementForFormatBlock(refNode->tagQName()) && start == startOfBlock(start)
         && (end == endOfBlock(end) || isNodeVisiblyContainedWithin(refNode, range.get()))
@@ -100,8 +101,7 @@ Element* FormatBlockCommand::elementForFormatBlockCommand(Range* range)
     if (!range)
         return 0;
 
-    ExceptionCode ec;
-    Node* commonAncestor = range->commonAncestorContainer(ec);
+    Node* commonAncestor = range->commonAncestorContainer(IGNORE_EXCEPTION);
     while (commonAncestor && !isElementForFormatBlock(commonAncestor))
         commonAncestor = commonAncestor->parentNode();
 
@@ -136,6 +136,7 @@ bool isElementForFormatBlock(const QualifiedName& tagName)
         blockTags.add(h6Tag);
         blockTags.add(headerTag);
         blockTags.add(hgroupTag);
+        blockTags.add(mainTag);
         blockTags.add(navTag);
         blockTags.add(pTag);
         blockTags.add(preTag);

@@ -31,7 +31,7 @@ namespace WebCore {
 class BeforeTextInsertedEvent;
 class VisibleSelection;
 
-class HTMLTextAreaElement : public HTMLTextFormControlElement {
+class HTMLTextAreaElement FINAL : public HTMLTextFormControlElement {
 public:
     static PassRefPtr<HTMLTextAreaElement> create(const QualifiedName&, Document*, HTMLFormElement*);
 
@@ -65,7 +65,8 @@ private:
 
     enum WrapMethod { NoWrap, SoftWrap, HardWrap };
 
-    void createShadowSubtree();
+    virtual void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
+    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
 
     void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent*) const;
     static String sanitizeUserInputValue(const String&, unsigned maxLength);
@@ -79,7 +80,7 @@ private:
     virtual bool isEmptyValue() const { return value().isEmpty(); }
 
     virtual bool isOptionalFormControl() const { return !isRequiredFormControl(); }
-    virtual bool isRequiredFormControl() const { return required(); }
+    virtual bool isRequiredFormControl() const { return isRequired(); }
 
     virtual void defaultEventHandler(Event*);
     
@@ -96,32 +97,40 @@ private:
     virtual bool isTextFormControl() const { return true; }
 
     virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
     virtual bool appendFormData(FormDataList&, bool);
     virtual void reset();
-    virtual bool isMouseFocusable() const;
-    virtual bool isKeyboardFocusable(KeyboardEvent*) const;
+    virtual bool hasCustomFocusLogic() const OVERRIDE;
+    virtual bool isMouseFocusable() const OVERRIDE;
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
     virtual void updateFocusAppearance(bool restorePreviousSelection);
 
     virtual void accessKeyAction(bool sendMouseEvents);
 
     virtual bool shouldUseInputMethod();
     virtual void attach() OVERRIDE;
+    virtual bool matchesReadOnlyPseudoClass() const OVERRIDE;
+    virtual bool matchesReadWritePseudoClass() const OVERRIDE;
 
-    bool valueMissing(const String& value) const { return isRequiredFormControl() && !disabled() && !readOnly() && value.isEmpty(); }
+    bool valueMissing(const String& value) const { return isRequiredFormControl() && !isDisabledOrReadOnly() && value.isEmpty(); }
     bool tooLong(const String&, NeedsToCheckDirtyFlag) const;
 
     int m_rows;
     int m_cols;
     WrapMethod m_wrap;
-    RefPtr<HTMLElement> m_placeholder;
+    HTMLElement* m_placeholder;
     mutable String m_value;
     mutable bool m_isDirty;
     mutable bool m_wasModifiedByUser;
 };
+
+inline bool isHTMLTextAreaElement(Node* node)
+{
+    return node->hasTagName(HTMLNames::textareaTag);
+}
 
 } //namespace
 

@@ -33,8 +33,8 @@
 #include "XMLErrors.h"
 #include <wtf/HashMap.h>
 #include <wtf/OwnPtr.h>
+#include <wtf/text/AtomicStringHash.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringHash.h>
 
 #if USE(QXMLSTREAM)
 #include <qxmlstream.h>
@@ -79,9 +79,9 @@ class Text;
         {
             return adoptRef(new XMLDocumentParser(document, view));
         }
-        static PassRefPtr<XMLDocumentParser> create(DocumentFragment* fragment, Element* element, FragmentScriptingPermission permission)
+        static PassRefPtr<XMLDocumentParser> create(DocumentFragment* fragment, Element* element, ParserContentPolicy parserContentPolicy)
         {
-            return adoptRef(new XMLDocumentParser(fragment, element, permission));
+            return adoptRef(new XMLDocumentParser(fragment, element, parserContentPolicy));
         }
 
         ~XMLDocumentParser();
@@ -92,7 +92,7 @@ class Text;
         void setIsXHTMLDocument(bool isXHTML) { m_isXHTMLDocument = isXHTML; }
         bool isXHTMLDocument() const { return m_isXHTMLDocument; }
 
-        static bool parseDocumentFragment(const String&, DocumentFragment*, Element* parent = 0, FragmentScriptingPermission = AllowScriptingContent);
+        static bool parseDocumentFragment(const String&, DocumentFragment*, Element* parent = 0, ParserContentPolicy = AllowScriptingContent);
 
         // Used by the XMLHttpRequest to check if the responseXML was well formed.
         virtual bool wellFormed() const { return !m_sawError; }
@@ -103,13 +103,12 @@ class Text;
 
     private:
         XMLDocumentParser(Document*, FrameView* = 0);
-        XMLDocumentParser(DocumentFragment*, Element*, FragmentScriptingPermission);
+        XMLDocumentParser(DocumentFragment*, Element*, ParserContentPolicy);
 
         // From DocumentParser
         virtual void insert(const SegmentedString&);
-        virtual void append(const SegmentedString&);
+        virtual void append(PassRefPtr<StringImpl>);
         virtual void finish();
-        virtual bool finishWasCalled();
         virtual bool isWaitingForScripts() const;
         virtual void stopParsing();
         virtual void detach();
@@ -177,7 +176,7 @@ public:
 
         FrameView* m_view;
 
-        String m_originalSourceForTransform;
+        SegmentedString m_originalSourceForTransform;
 
 #if USE(QXMLSTREAM)
         QXmlStreamReader m_stream;
@@ -216,7 +215,6 @@ public:
         typedef HashMap<AtomicString, AtomicString> PrefixForNamespaceMap;
         PrefixForNamespaceMap m_prefixToNamespaceMap;
         SegmentedString m_pendingSrc;
-        FragmentScriptingPermission m_scriptingPermission;
     };
 
 #if ENABLE(XSLT)

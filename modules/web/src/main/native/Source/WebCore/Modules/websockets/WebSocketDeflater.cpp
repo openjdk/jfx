@@ -71,7 +71,7 @@ WebSocketDeflater::~WebSocketDeflater()
 {
     int result = deflateEnd(m_stream.get());
     if (result != Z_OK)
-        LOG(Network, "deflateEnd() failed: %d", result);
+        LOG(Network, "WebSocketDeflater %p Destructor deflateEnd() failed: %d is returned", this, result);
 }
 
 static void setStreamParameter(z_stream* stream, const char* inputData, size_t inputLength, char* outputData, size_t outputLength)
@@ -148,7 +148,7 @@ WebSocketInflater::~WebSocketInflater()
 {
     int result = inflateEnd(m_stream.get());
     if (result != Z_OK)
-        LOG(Network, "inflateEnd() failed: %d", result);
+        LOG(Network, "WebSocketInflater %p Destructor inflateEnd() failed: %d is returned", this, result);
 }
 
 bool WebSocketInflater::addBytes(const char* data, size_t length)
@@ -168,8 +168,15 @@ bool WebSocketInflater::addBytes(const char* data, size_t length)
         m_buffer.shrink(writePosition + availableCapacity - m_stream->avail_out);
         if (result == Z_BUF_ERROR)
             continue;
+        if (result == Z_STREAM_END) {
+            // Received a block with BFINAL set to 1. Reset decompression state.
+            if (inflateReset(m_stream.get()) != Z_OK)
+                return false;
+            continue;
+        }
         if (result != Z_OK)
             return false;
+        ASSERT(remainingLength > m_stream->avail_in);
     }
     ASSERT(consumedSoFar == length);
     return true;
@@ -195,6 +202,7 @@ bool WebSocketInflater::finish()
             continue;
         if (result != Z_OK && result != Z_STREAM_END)
             return false;
+        ASSERT(remainingLength > m_stream->avail_in);
     }
     ASSERT(consumedSoFar == strippedLength);
 

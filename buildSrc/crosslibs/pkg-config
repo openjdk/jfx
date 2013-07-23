@@ -1,0 +1,38 @@
+#!/bin/bash
+
+dir=${0%/*}
+if [[ "$dir" == */bin ]]
+then
+   dir=${dir%/bin}
+else
+   dir=${dir}/../
+fi
+
+SYSROOT=`cd ${dir} ; pwd`
+
+if [[ "$dir" == /* ]]
+then
+  SYSROOT=${dir}
+else
+  SYSROOT=${PWD}/${dir}
+fi
+
+export PKG_CONFIG_DIR=
+export PKG_CONFIG_LIBDIR=${SYSROOT}/usr/lib/arm-linux-gnueabihf/pkgconfig:${SYSROOT}/usr/lib/pkgconfig:${SYSROOT}/usr/share/pkgconfig
+
+export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=true
+export PKG_CONFIG_ALLOW_SYSTEM_LIBS=true
+
+export PKG_CONFIG_TOP_BUILD_DIR=${SYSROOT}
+
+version=`pkg-config --version`
+if [[ "$version" > 0.22 ]]
+then
+    export PKG_CONFIG_SYSROOT_DIR=${SYSROOT}
+    exec pkg-config $@
+else
+    exec pkg-config \
+   --define-variable=prefix=$SYSROOT/usr \
+   "$@"
+fi
+

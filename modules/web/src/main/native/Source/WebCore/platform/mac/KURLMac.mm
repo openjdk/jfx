@@ -34,7 +34,7 @@ using namespace WTF;
 namespace WebCore {
 
 typedef Vector<char, 512> CharBuffer;
-extern CFURLRef createCFURLFromBuffer(const CharBuffer& buffer);
+extern RetainPtr<CFURLRef> createCFURLFromBuffer(const CharBuffer& buffer);
 
 KURL::KURL(NSURL *url)
 {
@@ -48,42 +48,28 @@ KURL::KURL(NSURL *url)
     char* bytes = &buffer[0];
     CFURLGetBytes(reinterpret_cast<CFURLRef>(url), reinterpret_cast<UInt8*>(bytes), bytesLength);
     bytes[bytesLength] = '\0';
-#if !USE(WTFURL)
     parse(bytes);
-#else
-    m_urlImpl = adoptRef(new KURLWTFURLImpl());
-    String urlString(bytes, bytesLength);
-    m_urlImpl->m_parsedURL = ParsedURL(urlString);
-    if (!m_urlImpl->m_parsedURL.isValid())
-        m_urlImpl->m_invalidUrlString = urlString;
-#endif // USE(WTFURL)
 }
 
 KURL::operator NSURL *() const
 {
-    return HardAutorelease(createCFURL());
+    return HardAutorelease(createCFURL().leakRef());
 }
 
 // We use the toll-free bridge between NSURL and CFURL to
 // create a CFURLRef supporting both empty and null values.
-CFURLRef KURL::createCFURL() const
+RetainPtr<CFURLRef> KURL::createCFURL() const
 {
     if (isNull())
         return 0;
 
-    if (isEmpty())
-        return reinterpret_cast<CFURLRef>([[NSURL alloc] initWithString:@""]);
+    if (isEmpty()) {
+        RetainPtr<NSURL> emptyNSURL = adoptNS([[NSURL alloc] initWithString:@""]);
+        return reinterpret_cast<CFURLRef>(emptyNSURL.get());
+    }
 
     CharBuffer buffer;
-#if !USE(WTFURL)
     copyToBuffer(buffer);
-#else
-    String urlString = string();
-    buffer.resize(urlString.length());
-    size_t length = urlString.length();
-    for (size_t i = 0; i < length; i++)
-        buffer[i] = static_cast<char>(urlString[i]);
-#endif
     return createCFURLFromBuffer(buffer);
 }
 

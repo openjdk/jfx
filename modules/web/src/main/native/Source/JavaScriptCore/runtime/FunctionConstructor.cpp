@@ -29,13 +29,12 @@
 #include "JSString.h"
 #include "Lexer.h"
 #include "Nodes.h"
+#include "Operations.h"
 #include "Parser.h"
-#include "UStringBuilder.h"
-#include "UStringConcatenate.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace JSC {
 
-ASSERT_CLASS_FITS_IN_CELL(FunctionConstructor);
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(FunctionConstructor);
 
 const ClassInfo FunctionConstructor::s_info = { "Function", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(FunctionConstructor) };
@@ -47,11 +46,11 @@ FunctionConstructor::FunctionConstructor(JSGlobalObject* globalObject, Structure
 
 void FunctionConstructor::finishCreation(ExecState* exec, FunctionPrototype* functionPrototype)
 {
-    Base::finishCreation(exec->globalData(), functionPrototype->classInfo()->className);
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().prototype, functionPrototype, DontEnum | DontDelete | ReadOnly);
+    Base::finishCreation(exec->vm(), functionPrototype->classInfo()->className);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().prototype, functionPrototype, DontEnum | DontDelete | ReadOnly);
 
     // Number of arguments for constructor
-    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().length, jsNumber(1), ReadOnly | DontDelete | DontEnum);
+    putDirectWithoutTransition(exec->vm(), exec->propertyNames().length, jsNumber(1), ReadOnly | DontDelete | DontEnum);
 }
 
 static EncodedJSValue JSC_HOST_CALL constructWithFunctionConstructor(ExecState* exec)
@@ -80,38 +79,37 @@ CallType FunctionConstructor::getCallData(JSCell*, CallData& callData)
 }
 
 // ECMA 15.3.2 The Function Constructor
-JSObject* constructFunction(ExecState* exec, JSGlobalObject* globalObject, const ArgList& args, const Identifier& functionName, const UString& sourceURL, const TextPosition& position)
+JSObject* constructFunction(ExecState* exec, JSGlobalObject* globalObject, const ArgList& args, const Identifier& functionName, const String& sourceURL, const TextPosition& position)
 {
     if (!globalObject->evalEnabled())
-        return throwError(exec, createEvalError(exec, "Function constructor is disabled"));
+        return throwError(exec, createEvalError(exec, globalObject->evalDisabledErrorMessage()));
     return constructFunctionSkippingEvalEnabledCheck(exec, globalObject, args, functionName, sourceURL, position);
 }
 
-JSObject* constructFunctionSkippingEvalEnabledCheck(ExecState* exec, JSGlobalObject* globalObject, const ArgList& args, const Identifier& functionName, const UString& sourceURL, const TextPosition& position)
+JSObject* constructFunctionSkippingEvalEnabledCheck(ExecState* exec, JSGlobalObject* globalObject, const ArgList& args, const Identifier& functionName, const String& sourceURL, const TextPosition& position)
 {
     // Functions need to have a space following the opening { due to for web compatibility
     // see https://bugs.webkit.org/show_bug.cgi?id=24350
     // We also need \n before the closing } to handle // comments at the end of the last line
-    UString program;
+    String program;
     if (args.isEmpty())
-        program = "(function() { \n})";
+        program = ASCIILiteral("(function() { \n})");
     else if (args.size() == 1)
-        program = makeUString("(function() { ", args.at(0).toString(exec)->value(exec), "\n})");
+        program = makeString("(function() { ", args.at(0).toString(exec)->value(exec), "\n})");
     else {
-        UStringBuilder builder;
-        builder.append("(function(");
+        StringBuilder builder;
+        builder.appendLiteral("(function(");
         builder.append(args.at(0).toString(exec)->value(exec));
         for (size_t i = 1; i < args.size() - 1; i++) {
-            builder.append(",");
+            builder.append(',');
             builder.append(args.at(i).toString(exec)->value(exec));
         }
-        builder.append(") { ");
+        builder.appendLiteral(") { ");
         builder.append(args.at(args.size() - 1).toString(exec)->value(exec));
-        builder.append("\n})");
-        program = builder.toUString();
+        builder.appendLiteral("\n})");
+        program = builder.toString();
     }
 
-    JSGlobalData& globalData = globalObject->globalData();
     SourceCode source = makeSource(program, sourceURL, position);
     JSObject* exception = 0;
     FunctionExecutable* function = FunctionExecutable::fromGlobalCode(functionName, exec, exec->dynamicGlobalObject()->debugger(), source, &exception);
@@ -120,14 +118,13 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(ExecState* exec, JSGlobalObj
         return throwError(exec, exception);
     }
 
-    ScopeChainNode* scopeChain = ScopeChainNode::create(exec, 0, globalObject, &globalData, globalObject, exec->globalThisValue());
-    return JSFunction::create(exec, function, scopeChain);
+    return JSFunction::create(exec, function, globalObject);
 }
 
 // ECMA 15.3.2 The Function Constructor
 JSObject* constructFunction(ExecState* exec, JSGlobalObject* globalObject, const ArgList& args)
 {
-    return constructFunction(exec, globalObject, args, Identifier(exec, "anonymous"), UString(), TextPosition::minimumPosition());
+    return constructFunction(exec, globalObject, args, Identifier(exec, "anonymous"), String(), TextPosition::minimumPosition());
 }
 
 } // namespace JSC

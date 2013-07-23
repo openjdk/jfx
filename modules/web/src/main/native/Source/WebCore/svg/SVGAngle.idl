@@ -20,11 +20,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG
-    ] SVGAngle { 
+] interface SVGAngle { 
         // Angle Unit Types
         const unsigned short SVG_ANGLETYPE_UNKNOWN = 0;
         const unsigned short SVG_ANGLETYPE_UNSPECIFIED = 1;
@@ -33,17 +31,16 @@ module svg {
         const unsigned short SVG_ANGLETYPE_GRAD = 4;
 
         readonly attribute unsigned short unitType;
-        attribute [StrictTypeChecking] float value;
-        attribute [StrictTypeChecking] float valueInSpecifiedUnits;
+    [StrictTypeChecking] attribute float value;
+    [StrictTypeChecking] attribute float valueInSpecifiedUnits;
 
-        attribute [TreatNullAs=NullString] DOMString valueAsString
+    [TreatNullAs=NullString] attribute DOMString valueAsString
             setter raises(DOMException);
 
-        [StrictTypeChecking] void newValueSpecifiedUnits(in unsigned short unitType, in float valueInSpecifiedUnits)
+    [StrictTypeChecking] void newValueSpecifiedUnits(unsigned short unitType, float valueInSpecifiedUnits)
             raises(DOMException);
 
-        [StrictTypeChecking] void convertToSpecifiedUnits(in unsigned short unitType)
+    [StrictTypeChecking] void convertToSpecifiedUnits(unsigned short unitType)
             raises(DOMException);
     };
 
-}

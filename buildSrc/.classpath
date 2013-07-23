@@ -3,13 +3,12 @@
   <classpathentry kind="src" path="build/generated-src/antlr"/>
   <classpathentry kind="src" path="src/main/java"/>
   <classpathentry kind="src" path="src/test/java"/>
-  <classpathentry kind="lib" exported="true" path="../.libs/ant-1.8.2.jar"/>
-  <classpathentry kind="lib" exported="true" path="../.libs/antlr-3.1.3.jar"/>
-  <classpathentry kind="lib" exported="true" path="../.libs/antlr-runtime-3.1.3.jar"/>
-  <classpathentry kind="lib" exported="true" path="../.libs/plugin.jar"/>
-  <classpathentry kind="lib" exported="true" path="../.libs/stringtemplate-3.2.jar"/>
-  <classpathentry kind="lib" exported="true" path="../.libs/swt.jar"/>
-  <classpathentry kind="lib" exported="true" path="../../caches/sdk/rt/lib/ext/jfxrt.jar"/>
+  <classpathentry kind="lib" exported="true" path="../build/libs/ant-1.8.2.jar"/>
+  <classpathentry kind="lib" exported="true" path="../build/libs/antlr-3.1.3.jar"/>
+  <classpathentry kind="lib" exported="true" path="../build/libs/antlr-runtime-3.1.3.jar"/>
+  <classpathentry kind="lib" exported="true" path="../build/libs/plugin.jar"/>
+  <classpathentry kind="lib" exported="true" path="../build/libs/stringtemplate-3.2.jar"/>
+  <classpathentry kind="lib" exported="true" path="../build/libs/swt-debug.jar"/>
   <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
   <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
   <classpathentry kind="output" path="bin"/>

@@ -25,33 +25,20 @@
 
 package javafx.scene.image;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import com.sun.javafx.pgstub.*;
+import com.sun.javafx.test.PropertyInvalidationCounter;
+import com.sun.javafx.tk.Toolkit;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.junit.Before;
-import org.junit.Test;
-
-import com.sun.javafx.pgstub.StubAsyncImageLoader;
-import com.sun.javafx.pgstub.StubImageLoader;
-import com.sun.javafx.pgstub.StubImageLoaderFactory;
-import com.sun.javafx.pgstub.StubPlatformImage;
-import com.sun.javafx.pgstub.StubPlatformImageInfo;
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.test.PropertyInvalidationCounter;
-import com.sun.javafx.tk.Toolkit;
-
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import org.junit.Ignore;
+import static org.junit.Assert.*;
 
 public final class ImageTest {
     private final StubToolkit toolkit;
@@ -481,7 +468,7 @@ public final class ImageTest {
 
     @Test(expected=NullPointerException.class)
     public void createImageAsyncFromNullUrlTest() {
-        new Image((String) null, true);
+        new Image(null, true);
     }
 
     @Test(expected=NullPointerException.class)
@@ -491,31 +478,31 @@ public final class ImageTest {
 
     @Test(expected=IllegalArgumentException.class)
     public void createImageFromEmptyUrlTest() {
-        new Image((String) "");
+        new Image("");
     }
 
     @Test(expected=IllegalArgumentException.class)
     public void createImageAsyncFromEmptyUrlTest() {
-        new Image((String) "", true);
+        new Image("", true);
     }
 
     @Test(expected=IllegalArgumentException.class)
     public void createImageFromInvalidUrlTest() {
-        new Image((String) ":");
+        new Image(":");
     }
 
     @Test(expected=IllegalArgumentException.class)
     public void createImageAsyncFromInvalidUrlTest() {
-        new Image((String) ":", true);
+        new Image(":", true);
     }
 
     @Test(expected=IllegalArgumentException.class)
     public void createImageFromUnsupportedUrlTest() {
-        new Image((String) "unsupported:image.png");
+        new Image("unsupported:image.png");
     }
 
     @Test(expected=IllegalArgumentException.class)
     public void createImageAsyncFromUnsupportedUrlTest() {
-        new Image((String) "unsupported:image.png", true);
+        new Image("unsupported:image.png", true);
     }
 }

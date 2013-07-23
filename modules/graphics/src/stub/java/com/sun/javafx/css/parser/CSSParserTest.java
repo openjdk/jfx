@@ -26,15 +26,20 @@
 package com.sun.javafx.css.parser;
 
 import com.sun.javafx.css.*;
-import java.io.*;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.List;
+
 import javafx.css.ParsedValue;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -176,7 +181,7 @@ public class CSSParserTest {
             DataInputStream dis = new DataInputStream(bais);
             
             Stylesheet restored = new Stylesheet();
-            restored.readBinary(dis, stringStore.strings.toArray(new String[stringStore.strings.size()]));
+            restored.readBinary(Stylesheet.BINARY_CSS_VERSION, dis, stringStore.strings.toArray(new String[stringStore.strings.size()]));
             
             List<Rule> cssRules = stylesheet.getRules();
             List<Rule> bssRules = restored.getRules();
@@ -235,6 +240,5 @@ public class CSSParserTest {
         }
         
     }
-    
     
 }

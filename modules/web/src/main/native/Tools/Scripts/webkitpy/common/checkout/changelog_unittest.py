@@ -26,17 +26,17 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import codecs
-import os
-import tempfile
-import unittest
+import unittest2 as unittest
 
 from StringIO import StringIO
 
+from webkitpy.common.system.filesystem_mock import MockFileSystem
 from webkitpy.common.checkout.changelog import *
 
 
 class ChangeLogTest(unittest.TestCase):
+
+    _changelog_path = 'Tools/ChangeLog'
 
     _example_entry = u'''2009-08-17  Peter Kasting  <pkasting@google.com>
 
@@ -181,7 +181,7 @@ class ChangeLogTest(unittest.TestCase):
 
         '''
 
-        self.assertEquals(56988, parse_bug_id_from_changelog(commit_text))
+        self.assertEqual(56988, parse_bug_id_from_changelog(commit_text))
 
         commit_text = '''
 2011-03-23  Ojan Vafai  <ojan@chromium.org>
@@ -194,7 +194,7 @@ class ChangeLogTest(unittest.TestCase):
 
         '''
 
-        self.assertEquals(12345, parse_bug_id_from_changelog(commit_text))
+        self.assertEqual(12345, parse_bug_id_from_changelog(commit_text))
 
         commit_text = '''
 2011-03-31  Adam Roben  <aroben@apple.com>
@@ -213,7 +213,7 @@ class ChangeLogTest(unittest.TestCase):
 
         '''
 
-        self.assertEquals(57569, parse_bug_id_from_changelog(commit_text))
+        self.assertEqual(57569, parse_bug_id_from_changelog(commit_text))
 
         commit_text = '''
 2011-03-29  Timothy Hatcher  <timothy@apple.com>
@@ -230,24 +230,38 @@ class ChangeLogTest(unittest.TestCase):
         extract-localizable-strings does not complain about unbalanced single quotes.
         '''
 
-        self.assertEquals(57354, parse_bug_id_from_changelog(commit_text))
+        self.assertEqual(57354, parse_bug_id_from_changelog(commit_text))
 
     def test_parse_log_entries_from_changelog(self):
         changelog_file = StringIO(self._example_changelog)
         parsed_entries = list(ChangeLog.parse_entries_from_file(changelog_file))
-        self.assertEquals(len(parsed_entries), 9)
-        self.assertEquals(parsed_entries[0].reviewer_text(), "David Levin")
-        self.assertEquals(parsed_entries[1].author_email(), "ddkilzer@apple.com")
-        self.assertEquals(parsed_entries[2].reviewer_text(), "Mark Rowe")
-        self.assertEquals(parsed_entries[2].touched_files(), ["DumpRenderTree/mac/DumpRenderTreeWindow.mm"])
-        self.assertEquals(parsed_entries[3].author_name(), "Benjamin Poulain")
-        self.assertEquals(parsed_entries[3].touched_files(), ["platform/cf/KURLCFNet.cpp", "platform/mac/KURLMac.mm",
+        self.assertEqual(len(parsed_entries), 9)
+        self.assertEqual(parsed_entries[0].date_line(), u"2009-08-17  Tor Arne Vestb\xf8  <vestbo@webkit.org>")
+        self.assertEqual(parsed_entries[0].date(), "2009-08-17")
+        self.assertEqual(parsed_entries[0].reviewer_text(), "David Levin")
+        self.assertEqual(parsed_entries[0].is_touched_files_text_clean(), False)
+        self.assertEqual(parsed_entries[1].date_line(), "2009-08-16  David Kilzer  <ddkilzer@apple.com>")
+        self.assertEqual(parsed_entries[1].date(), "2009-08-16")
+        self.assertEqual(parsed_entries[1].author_email(), "ddkilzer@apple.com")
+        self.assertEqual(parsed_entries[1].touched_files_text(), "        * Scripts/bugzilla-tool:\n        * Scripts/modules/scm.py:\n")
+        self.assertEqual(parsed_entries[1].is_touched_files_text_clean(), True)
+        self.assertEqual(parsed_entries[2].reviewer_text(), "Mark Rowe")
+        self.assertEqual(parsed_entries[2].touched_files(), ["DumpRenderTree/mac/DumpRenderTreeWindow.mm"])
+        self.assertEqual(parsed_entries[2].touched_functions(), {"DumpRenderTree/mac/DumpRenderTreeWindow.mm": ["-[DumpRenderTreeWindow close]"]})
+        self.assertEqual(parsed_entries[2].is_touched_files_text_clean(), False)
+        self.assertEqual(parsed_entries[3].author_name(), "Benjamin Poulain")
+        self.assertEqual(parsed_entries[3].touched_files(), ["platform/cf/KURLCFNet.cpp", "platform/mac/KURLMac.mm",
             "WebCoreSupport/ChromeClientEfl.cpp", "ewk/ewk_private.h", "ewk/ewk_view.cpp"])
-        self.assertEquals(parsed_entries[4].reviewer_text(), "David Hyatt")
-        self.assertEquals(parsed_entries[5].reviewer_text(), "Adam Roben")
-        self.assertEquals(parsed_entries[6].reviewer_text(), "Tony Chang")
-        self.assertEquals(parsed_entries[7].reviewer_text(), None)
-        self.assertEquals(parsed_entries[8].reviewer_text(), 'Darin Adler')
+        self.assertEqual(parsed_entries[3].touched_functions(), {"platform/cf/KURLCFNet.cpp": ["WebCore::createCFURLFromBuffer", "WebCore::KURL::createCFURL"],
+            "platform/mac/KURLMac.mm": ["WebCore::KURL::operator NSURL *", "WebCore::KURL::createCFURL"],
+            "WebCoreSupport/ChromeClientEfl.cpp": ["WebCore::ChromeClientEfl::closeWindowSoon"], "ewk/ewk_private.h": [], "ewk/ewk_view.cpp": []})
+        self.assertEqual(parsed_entries[3].bug_description(), "[Mac] ResourceRequest's nsURLRequest() does not differentiate null and empty URLs with CFNetwork")
+        self.assertEqual(parsed_entries[4].reviewer_text(), "David Hyatt")
+        self.assertIsNone(parsed_entries[4].bug_description())
+        self.assertEqual(parsed_entries[5].reviewer_text(), "Adam Roben")
+        self.assertEqual(parsed_entries[6].reviewer_text(), "Tony Chang")
+        self.assertIsNone(parsed_entries[7].reviewer_text())
+        self.assertEqual(parsed_entries[8].reviewer_text(), 'Darin Adler')
 
     def test_parse_log_entries_from_annotated_file(self):
         # Note that there are trailing spaces on some of the lines intentionally.
@@ -285,28 +299,28 @@ class ChangeLogTest(unittest.TestCase):
             u"99187 andreas.kling@nokia.com \n")
 
         parsed_entries = list(ChangeLog.parse_entries_from_file(changelog_file))
-        self.assertEquals(parsed_entries[0].revision(), 100000)
-        self.assertEquals(parsed_entries[0].reviewer_text(), "Zoltan Herczeg")
-        self.assertEquals(parsed_entries[0].author_name(), u"Csaba Osztrogon\u00e1c")
-        self.assertEquals(parsed_entries[0].author_email(), "ossy@webkit.org")
-        self.assertEquals(parsed_entries[1].revision(), 93798)
-        self.assertEquals(parsed_entries[1].author_name(), "Alexey Proskuryakov")
-        self.assertEquals(parsed_entries[2].revision(), 99190)
-        self.assertEquals(parsed_entries[2].author_name(), "Andreas Kling")
-        self.assertEquals(parsed_entries[3].revision(), 99187)
-        self.assertEquals(parsed_entries[3].author_name(), "Andreas Kling")
+        self.assertEqual(parsed_entries[0].revision(), 100000)
+        self.assertEqual(parsed_entries[0].reviewer_text(), "Zoltan Herczeg")
+        self.assertEqual(parsed_entries[0].author_name(), u"Csaba Osztrogon\u00e1c")
+        self.assertEqual(parsed_entries[0].author_email(), "ossy@webkit.org")
+        self.assertEqual(parsed_entries[1].revision(), 93798)
+        self.assertEqual(parsed_entries[1].author_name(), "Alexey Proskuryakov")
+        self.assertEqual(parsed_entries[2].revision(), 99190)
+        self.assertEqual(parsed_entries[2].author_name(), "Andreas Kling")
+        self.assertEqual(parsed_entries[3].revision(), 99187)
+        self.assertEqual(parsed_entries[3].author_name(), "Andreas Kling")
 
     def _assert_parse_reviewer_text_and_list(self, text, expected_reviewer_text, expected_reviewer_text_list=None):
         reviewer_text, reviewer_text_list = ChangeLogEntry._parse_reviewer_text(text)
-        self.assertEquals(reviewer_text, expected_reviewer_text)
+        self.assertEqual(reviewer_text, expected_reviewer_text)
         if expected_reviewer_text_list:
-            self.assertEquals(reviewer_text_list, expected_reviewer_text_list)
+            self.assertEqual(reviewer_text_list, expected_reviewer_text_list)
         else:
-            self.assertEquals(reviewer_text_list, [expected_reviewer_text])
+            self.assertEqual(reviewer_text_list, [expected_reviewer_text])
 
     def _assert_parse_reviewer_text_list(self, text, expected_reviewer_text_list):
         reviewer_text, reviewer_text_list = ChangeLogEntry._parse_reviewer_text(text)
-        self.assertEquals(reviewer_text_list, expected_reviewer_text_list)
+        self.assertEqual(reviewer_text_list, expected_reviewer_text_list)
 
     def test_parse_reviewer_text(self):
         self._assert_parse_reviewer_text_and_list('  reviewed  by Ryosuke Niwa,   Oliver Hunt, and  Dimitri Glazkov',
@@ -388,8 +402,8 @@ class ChangeLogTest(unittest.TestCase):
 
     def _assert_fuzzy_reviewer_match(self, reviewer_text, expected_text_list, expected_contributors):
         unused, reviewer_text_list = ChangeLogEntry._parse_reviewer_text(reviewer_text)
-        self.assertEquals(reviewer_text_list, expected_text_list)
-        self.assertEquals(self._entry_with_reviewer(reviewer_text).reviewers(), self._contributors(expected_contributors))
+        self.assertEqual(reviewer_text_list, expected_text_list)
+        self.assertEqual(self._entry_with_reviewer(reviewer_text).reviewers(), self._contributors(expected_contributors))
 
     def test_fuzzy_reviewer_match__none(self):
         self._assert_fuzzy_reviewer_match('Reviewed by BUILD FIX', ['BUILD FIX'], [])
@@ -427,7 +441,7 @@ class ChangeLogTest(unittest.TestCase):
 
     def _assert_parse_authors(self, author_text, expected_contributors):
         parsed_authors = [(author['name'], author['email']) for author in self._entry_with_author(author_text).authors()]
-        self.assertEquals(parsed_authors, expected_contributors)
+        self.assertEqual(parsed_authors, expected_contributors)
 
     def test_parse_authors(self):
         self._assert_parse_authors(u'Aaron Colwell  <acolwell@chromium.org>', [(u'Aaron Colwell', u'acolwell@chromium.org')])
@@ -439,6 +453,10 @@ class ChangeLogTest(unittest.TestCase):
             [('New Contributor', 'new@webkit.org'), ('Noob', 'noob@webkit.org')])
         self._assert_parse_authors('Adam Barth  <abarth@webkit.org> && Benjamin Poulain  <bpoulain@apple.com>',
             [('Adam Barth', 'abarth@webkit.org'), ('Benjamin Poulain', 'bpoulain@apple.com')])
+        self._assert_parse_authors(u'Pawe\u0142 Hajdan, Jr.  <phajdan.jr@chromium.org>',
+            [(u'Pawe\u0142 Hajdan, Jr.', u'phajdan.jr@chromium.org')])
+        self._assert_parse_authors(u'Pawe\u0142 Hajdan, Jr.  <phajdan.jr@chromium.org>, Adam Barth  <abarth@webkit.org>',
+            [(u'Pawe\u0142 Hajdan, Jr.', u'phajdan.jr@chromium.org'), (u'Adam Barth', u'abarth@webkit.org')])
 
     def _assert_has_valid_reviewer(self, reviewer_line, expected):
         self.assertEqual(self._entry_with_reviewer(reviewer_line).has_valid_reviewer(), expected)
@@ -454,15 +472,59 @@ class ChangeLogTest(unittest.TestCase):
         self._assert_has_valid_reviewer("Rubber stamped by Eric Seidel.", True)
         self._assert_has_valid_reviewer("Unreviewed build fix.", True)
 
+    def test_is_touched_files_text_clean(self):
+        tests = [
+        ('''2013-01-30  Timothy Loh  <timloh@chromium.com>
+
+        Make ChangeLogEntry detect annotations by prepare-ChangeLog (Added/Removed/Copied from/Renamed from) as clean.
+        https://bugs.webkit.org/show_bug.cgi?id=108433
+
+        * Scripts/webkitpy/common/checkout/changelog.py:
+        (ChangeLogEntry.is_touched_files_text_clean):
+        * Scripts/webkitpy/common/checkout/changelog_unittest.py:
+        (test_is_touched_files_text_clean):
+''', True),
+        ('''2013-01-10  Alan Cutter  <alancutter@chromium.org>
+
+        Perform some file operations (automatically added comments).
+
+        * QueueStatusServer/config/charts.py: Copied from Tools/QueueStatusServer/model/queuelog.py.
+        (get_time_unit):
+        * QueueStatusServer/handlers/queuecharts.py: Added.
+        (QueueCharts):
+        * Scripts/webkitpy/tool/bot/testdata/webkit_sheriff_0.js: Removed.
+        * EWSTools/build-vm.sh: Renamed from Tools/EWSTools/cold-boot.sh.
+''', True),
+        ('''2013-01-30  Timothy Loh  <timloh@chromium.com>
+
+        Add unit test (manually added comment).
+
+        * Scripts/webkitpy/common/checkout/changelog_unittest.py:
+        (test_is_touched_files_text_clean): Added.
+''', False),
+        ('''2013-01-30  Timothy Loh  <timloh@chromium.com>
+
+        Add file (manually added comment).
+
+        * Scripts/webkitpy/common/checkout/super_changelog.py: Copied from the internet.
+''', False),
+        ]
+
+        for contents, expected_result in tests:
+            entry = ChangeLogEntry(contents)
+            self.assertEqual(entry.is_touched_files_text_clean(), expected_result)
+
     def test_latest_entry_parse(self):
         changelog_contents = u"%s\n%s" % (self._example_entry, self._example_changelog)
         changelog_file = StringIO(changelog_contents)
         latest_entry = ChangeLog.parse_latest_entry_from_file(changelog_file)
-        self.assertEquals(latest_entry.contents(), self._example_entry)
-        self.assertEquals(latest_entry.author_name(), "Peter Kasting")
-        self.assertEquals(latest_entry.author_email(), "pkasting@google.com")
-        self.assertEquals(latest_entry.reviewer_text(), u"Tor Arne Vestb\xf8")
-        self.assertEquals(latest_entry.touched_files(), ["DumpRenderTree/win/DumpRenderTree.vcproj", "DumpRenderTree/win/ImageDiff.vcproj", "DumpRenderTree/win/TestNetscapePlugin/TestNetscapePlugin.vcproj"])
+        self.assertEqual(latest_entry.contents(), self._example_entry)
+        self.assertEqual(latest_entry.author_name(), "Peter Kasting")
+        self.assertEqual(latest_entry.author_email(), "pkasting@google.com")
+        self.assertEqual(latest_entry.reviewer_text(), u"Tor Arne Vestb\xf8")
+        touched_files = ["DumpRenderTree/win/DumpRenderTree.vcproj", "DumpRenderTree/win/ImageDiff.vcproj", "DumpRenderTree/win/TestNetscapePlugin/TestNetscapePlugin.vcproj"]
+        self.assertEqual(latest_entry.touched_files(), touched_files)
+        self.assertEqual(latest_entry.touched_functions(), dict((f, []) for f in touched_files))
 
         self.assertTrue(latest_entry.reviewer())  # Make sure that our UTF8-based lookup of Tor works.
 
@@ -470,21 +532,8 @@ class ChangeLogTest(unittest.TestCase):
         changelog_contents = u"%s\n%s" % (self._example_entry, self._rolled_over_footer)
         changelog_file = StringIO(changelog_contents)
         latest_entry = ChangeLog.parse_latest_entry_from_file(changelog_file)
-        self.assertEquals(latest_entry.contents(), self._example_entry)
-        self.assertEquals(latest_entry.author_name(), "Peter Kasting")
-
-    @staticmethod
-    def _write_tmp_file_with_contents(byte_array):
-        assert(isinstance(byte_array, str))
-        (file_descriptor, file_path) = tempfile.mkstemp() # NamedTemporaryFile always deletes the file on close in python < 2.6
-        with os.fdopen(file_descriptor, "w") as file:
-            file.write(byte_array)
-        return file_path
-
-    @staticmethod
-    def _read_file_contents(file_path, encoding):
-        with codecs.open(file_path, "r", encoding) as file:
-            return file.read()
+        self.assertEqual(latest_entry.contents(), self._example_entry)
+        self.assertEqual(latest_entry.author_name(), "Peter Kasting")
 
     # FIXME: We really should be getting this from prepare-ChangeLog itself.
     _new_entry_boilerplate = '''2009-08-19  Eric Seidel  <eric@webkit.org>
@@ -536,50 +585,83 @@ class ChangeLogTest(unittest.TestCase):
 '''
 
     def test_set_reviewer(self):
+        fs = MockFileSystem()
+
         changelog_contents = u"%s\n%s" % (self._new_entry_boilerplate_with_bugurl, self._example_changelog)
-        changelog_path = self._write_tmp_file_with_contents(changelog_contents.encode("utf-8"))
         reviewer_name = 'Test Reviewer'
-        ChangeLog(changelog_path).set_reviewer(reviewer_name)
-        actual_contents = self._read_file_contents(changelog_path, "utf-8")
+        fs.write_text_file(self._changelog_path, changelog_contents)
+        ChangeLog(self._changelog_path, fs).set_reviewer(reviewer_name)
+        actual_contents = fs.read_text_file(self._changelog_path)
         expected_contents = changelog_contents.replace('NOBODY (OOPS!)', reviewer_name)
-        os.remove(changelog_path)
-        self.assertEquals(actual_contents.splitlines(), expected_contents.splitlines())
+        self.assertEqual(actual_contents.splitlines(), expected_contents.splitlines())
 
         changelog_contents_without_reviewer_line = u"%s\n%s" % (self._new_entry_boilerplate_without_reviewer_line, self._example_changelog)
-        changelog_path = self._write_tmp_file_with_contents(changelog_contents_without_reviewer_line.encode("utf-8"))
-        ChangeLog(changelog_path).set_reviewer(reviewer_name)
-        actual_contents = self._read_file_contents(changelog_path, "utf-8")
-        os.remove(changelog_path)
-        self.assertEquals(actual_contents.splitlines(), expected_contents.splitlines())
+        fs.write_text_file(self._changelog_path, changelog_contents_without_reviewer_line)
+        ChangeLog(self._changelog_path, fs).set_reviewer(reviewer_name)
+        actual_contents = fs.read_text_file(self._changelog_path)
+        self.assertEqual(actual_contents.splitlines(), expected_contents.splitlines())
 
         changelog_contents_without_reviewer_line = u"%s\n%s" % (self._new_entry_boilerplate_without_reviewer_multiple_bugurl, self._example_changelog)
-        changelog_path = self._write_tmp_file_with_contents(changelog_contents_without_reviewer_line.encode("utf-8"))
-        ChangeLog(changelog_path).set_reviewer(reviewer_name)
-        actual_contents = self._read_file_contents(changelog_path, "utf-8")
+        fs.write_text_file(self._changelog_path, changelog_contents_without_reviewer_line)
+        ChangeLog(self._changelog_path, fs).set_reviewer(reviewer_name)
+        actual_contents = fs.read_text_file(self._changelog_path)
         changelog_contents = u"%s\n%s" % (self._new_entry_boilerplate_with_multiple_bugurl, self._example_changelog)
         expected_contents = changelog_contents.replace('NOBODY (OOPS!)', reviewer_name)
-        os.remove(changelog_path)
-        self.assertEquals(actual_contents.splitlines(), expected_contents.splitlines())
+        self.assertEqual(actual_contents.splitlines(), expected_contents.splitlines())
 
     def test_set_short_description_and_bug_url(self):
+        fs = MockFileSystem()
+
         changelog_contents = u"%s\n%s" % (self._new_entry_boilerplate_with_bugurl, self._example_changelog)
-        changelog_path = self._write_tmp_file_with_contents(changelog_contents.encode("utf-8"))
+        fs.write_text_file(self._changelog_path, changelog_contents)
         short_description = "A short description"
         bug_url = "http://example.com/b/2344"
-        ChangeLog(changelog_path).set_short_description_and_bug_url(short_description, bug_url)
-        actual_contents = self._read_file_contents(changelog_path, "utf-8")
+        ChangeLog(self._changelog_path, fs).set_short_description_and_bug_url(short_description, bug_url)
+        actual_contents = fs.read_text_file(self._changelog_path)
         expected_message = "%s\n        %s" % (short_description, bug_url)
         expected_contents = changelog_contents.replace("Need a short description (OOPS!).", expected_message)
-        os.remove(changelog_path)
-        self.assertEquals(actual_contents.splitlines(), expected_contents.splitlines())
+        self.assertEqual(actual_contents.splitlines(), expected_contents.splitlines())
 
         changelog_contents = u"%s\n%s" % (self._new_entry_boilerplate, self._example_changelog)
-        changelog_path = self._write_tmp_file_with_contents(changelog_contents.encode("utf-8"))
+        fs.write_text_file(self._changelog_path, changelog_contents)
         short_description = "A short description 2"
         bug_url = "http://example.com/b/2345"
-        ChangeLog(changelog_path).set_short_description_and_bug_url(short_description, bug_url)
-        actual_contents = self._read_file_contents(changelog_path, "utf-8")
+        ChangeLog(self._changelog_path, fs).set_short_description_and_bug_url(short_description, bug_url)
+        actual_contents = fs.read_text_file(self._changelog_path)
         expected_message = "%s\n        %s" % (short_description, bug_url)
         expected_contents = changelog_contents.replace("Need a short description (OOPS!).\n        Need the bug URL (OOPS!).", expected_message)
-        os.remove(changelog_path)
-        self.assertEquals(actual_contents.splitlines(), expected_contents.splitlines())
+        self.assertEqual(actual_contents.splitlines(), expected_contents.splitlines())
+
+    def test_delete_entries(self):
+        fs = MockFileSystem()
+        fs.write_text_file(self._changelog_path, self._example_changelog)
+        ChangeLog(self._changelog_path, fs).delete_entries(8)
+        actual_contents = fs.read_text_file(self._changelog_path)
+        expected_contents = """2011-10-11  Antti Koivisto  <antti@apple.com>
+
+       Resolve regular and visited link style in a single pass
+       https://bugs.webkit.org/show_bug.cgi?id=69838
+
+       Reviewed by Darin Adler
+
+       We can simplify and speed up selector matching by removing the recursive matching done
+       to generate the style for the :visited pseudo selector. Both regular and visited link style
+       can be generated in a single pass through the style selector.
+
+== Rolled over to ChangeLog-2009-06-16 ==
+"""
+        self.assertEqual(actual_contents.splitlines(), expected_contents.splitlines())
+
+        ChangeLog(self._changelog_path, fs).delete_entries(2)
+        actual_contents = fs.read_text_file(self._changelog_path)
+        expected_contents = "== Rolled over to ChangeLog-2009-06-16 ==\n"
+        self.assertEqual(actual_contents.splitlines(), expected_contents.splitlines())
+
+
+    def test_prepend_text(self):
+        fs = MockFileSystem()
+        fs.write_text_file(self._changelog_path, self._example_changelog)
+        ChangeLog(self._changelog_path, fs).prepend_text(self._example_entry + "\n")
+        actual_contents = fs.read_text_file(self._changelog_path)
+        expected_contents = self._example_entry + "\n" + self._example_changelog
+        self.assertEqual(actual_contents.splitlines(), expected_contents.splitlines())

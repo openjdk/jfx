@@ -25,17 +25,15 @@
 
 package javafx.scene.shape;
 
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.PGEllipse;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGShape.Mode;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.sg.prism.NGEllipse;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
 import javafx.scene.paint.Paint;
 
 
@@ -254,21 +252,13 @@ public class Ellipse extends Shape {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGEllipse();
-    }
-
-    PGEllipse getPGEllipse() {
-        return (PGEllipse)impl_getPGNode();
+    protected NGNode impl_createPeer() {
+        return new NGEllipse();
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    @Override
-    protected com.sun.javafx.sg.PGShape.StrokeLineJoin toPGLineJoin(StrokeLineJoin t) {
+    @Override StrokeLineJoin convertLineJoin(StrokeLineJoin t) {
         // The MITER join style can produce anomalous results for very thin or
         // very wide ellipses when the bezier curves that approximate the arcs
         // become so distorted that they shoot out MITER-like extensions.  This
@@ -279,7 +269,7 @@ public class Ellipse extends Shape {
         // ellipse.  The BEVEL join style is more predictable for
         // anomalous angles and is the simplest join style to compute in
         // the stroking code.
-        return com.sun.javafx.sg.PGShape.StrokeLineJoin.BEVEL;
+        return StrokeLineJoin.BEVEL;
     }
 
     /**
@@ -292,7 +282,7 @@ public class Ellipse extends Shape {
         // if there is no fill or stroke, then there are no bounds. The bounds
         // must be marked empty in this case to distinguish it from 0,0,0,0
         // which would actually contribute to the bounds of a group.
-        if (impl_mode == Mode.EMPTY) {
+        if (impl_mode == NGShape.Mode.EMPTY) {
             return bounds.makeEmpty();
         }
         if ((tx.getType() & NON_RECTILINEAR_TYPE_MASK) != 0) {
@@ -306,7 +296,7 @@ public class Ellipse extends Shape {
         final double height = 2.0f * getRadiusY();
         double upad;
         double dpad;
-        if (impl_mode == Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+        if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
             upad = dpad = 0.0f;
         } else {
             upad = getStrokeWidth();
@@ -339,11 +329,11 @@ public class Ellipse extends Shape {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            PGEllipse peer = getPGEllipse();
+            NGEllipse peer = impl_getPeer();
             peer.updateEllipse((float)getCenterX(),
                 (float)getCenterY(),
                 (float)getRadiusX(),

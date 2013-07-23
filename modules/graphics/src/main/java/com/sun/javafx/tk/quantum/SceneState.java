@@ -50,6 +50,11 @@ class SceneState extends PresentableState {
         scene = vs;
     }
 
+    @Override
+    public boolean isAntiAliasing() {
+        return scene.isAntiAliasing();
+    }
+
     /**
      * Returns the glass scene for the view state
      * .

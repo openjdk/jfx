@@ -29,6 +29,7 @@
 #include "FloatPoint.h"
 #include "FloatQuad.h"
 #include "IntSize.h"
+#include "LayoutSize.h"
 #include "RenderObject.h"
 #include "TransformationMatrix.h"
 #include <wtf/OwnPtr.h>
@@ -36,6 +37,9 @@
 namespace WebCore {
 
 class RenderLayer;
+class RenderLayerModelObject;
+class RenderView;
+class TransformState;
 
 // Stores data about how to map from one renderer to its container.
 struct RenderGeometryMapStep {
@@ -70,17 +74,32 @@ struct RenderGeometryMapStep {
 class RenderGeometryMap {
     WTF_MAKE_NONCOPYABLE(RenderGeometryMap);
 public:
-    RenderGeometryMap();
+    RenderGeometryMap(MapCoordinatesFlags = UseTransforms);
     ~RenderGeometryMap();
 
-    FloatPoint absolutePoint(const FloatPoint&) const;
-    FloatRect absoluteRect(const FloatRect&) const;
+    MapCoordinatesFlags mapCoordinatesFlags() const { return m_mapCoordinatesFlags; }
+
+    FloatPoint absolutePoint(const FloatPoint& p) const
+    {
+        return mapToContainer(p, 0);
+    }
+
+    FloatRect absoluteRect(const FloatRect& rect) const
+    {
+        return mapToContainer(rect, 0).boundingBox();
+    }
+
+    // Map to a container. Will assert that the container has been pushed onto this map.
+    // A null container maps through the RenderView (including its scale transform, if any).
+    // If the container is the RenderView, the scroll offset is applied, but not the scale.
+    FloatPoint mapToContainer(const FloatPoint&, const RenderLayerModelObject*) const;
+    FloatQuad mapToContainer(const FloatRect&, const RenderLayerModelObject*) const;
     
     // Called by code walking the renderer or layer trees.
     void pushMappingsToAncestor(const RenderLayer*, const RenderLayer* ancestorLayer);
     void popMappingsToAncestor(const RenderLayer*);
-    void pushMappingsToAncestor(const RenderObject*, const RenderBoxModelObject* ancestorRenderer);
-    void popMappingsToAncestor(const RenderBoxModelObject*);
+    void pushMappingsToAncestor(const RenderObject*, const RenderLayerModelObject* ancestorRenderer);
+    void popMappingsToAncestor(const RenderLayerModelObject*);
     
     // The following methods should only be called by renderers inside a call to pushMappingsToAncestor().
 
@@ -93,7 +112,7 @@ public:
     void pushView(const RenderView*, const LayoutSize& scrollOffset, const TransformationMatrix* = 0);
 
 private:
-    void mapToAbsolute(TransformState&) const;
+    void mapToContainer(TransformState&, const RenderLayerModelObject* container = 0) const;
 
     void stepInserted(const RenderGeometryMapStep&);
     void stepRemoved(const RenderGeometryMapStep&);
@@ -110,6 +129,7 @@ private:
     int m_fixedStepsCount;
     RenderGeometryMapSteps m_mapping;
     LayoutSize m_accumulatedOffset;
+    MapCoordinatesFlags m_mapCoordinatesFlags;
 };
 
 } // namespace WebCore

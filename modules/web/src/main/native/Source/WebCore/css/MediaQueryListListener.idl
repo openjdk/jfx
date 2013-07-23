@@ -17,13 +17,12 @@
  *  Boston, MA 02110-1301, USA.
  */
 
-module view {
-    interface [
+[
+    NoInterfaceObject,
         JSNoStaticTables,
         ObjCProtocol,
         CPPPureInterface,
         OmitConstructor
-    ] MediaQueryListListener {
-        void queryChanged(in [Optional=DefaultIsUndefined] MediaQueryList list);
+] interface MediaQueryListListener {
+    void queryChanged([Default=Undefined] optional MediaQueryList list);
     };
-}

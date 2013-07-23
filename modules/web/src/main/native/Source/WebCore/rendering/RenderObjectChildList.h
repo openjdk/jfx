@@ -26,13 +26,11 @@
 #ifndef RenderObjectChildList_h
 #define RenderObjectChildList_h
 
-#include "RenderStyleConstants.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 class RenderObject;
-class RenderStyle;
 
 class RenderObjectChildList {
 public:
@@ -52,17 +50,14 @@ public:
     
     void destroyLeftoverChildren();
 
-    RenderObject* removeChildNode(RenderObject* owner, RenderObject*, bool fullRemove = true);
-    void appendChildNode(RenderObject* owner, RenderObject*, bool fullAppend = true);
-    void insertChildNode(RenderObject* owner, RenderObject* child, RenderObject* before, bool fullInsert = true);
-
-    void updateBeforeAfterContent(RenderObject* owner, PseudoId type, const RenderObject* styledObject = 0);
-    RenderObject* beforePseudoElementRenderer(const RenderObject* owner) const;
-    RenderObject* afterPseudoElementRenderer(const RenderObject* owner) const;
+    RenderObject* removeChildNode(RenderObject* owner, RenderObject*, bool notifyRenderer = true);
+    void insertChildNode(RenderObject* owner, RenderObject* newChild, RenderObject* beforeChild, bool notifyRenderer = true);
+    void appendChildNode(RenderObject* owner, RenderObject* newChild, bool notifyRenderer = true)
+    {
+        insertChildNode(owner, newChild, 0, notifyRenderer);
+    }
 
 private:
-    void updateBeforeAfterStyle(RenderObject* child, PseudoId type, RenderStyle* pseudoElementStyle);
-
     RenderObject* m_firstChild;
     RenderObject* m_lastChild;
 };

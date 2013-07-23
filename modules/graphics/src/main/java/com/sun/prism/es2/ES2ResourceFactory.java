@@ -105,7 +105,11 @@ public class ES2ResourceFactory extends BaseShaderFactory {
     }
 
     public RTTexture createRTTexture(int width, int height, WrapMode wrapMode) {
-        return ES2RTTexture.create(context, width, height, wrapMode);
+        return createRTTexture(width, height, wrapMode, false);
+    }
+
+    public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean antiAliasing) {
+        return ES2RTTexture.create(context, width, height, wrapMode, antiAliasing);
     }
 
     public boolean isFormatSupported(PixelFormat format) {

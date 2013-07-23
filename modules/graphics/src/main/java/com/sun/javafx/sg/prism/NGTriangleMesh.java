@@ -27,14 +27,13 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.collections.FloatArraySyncer;
 import com.sun.javafx.collections.IntegerArraySyncer;
-import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.prism.Mesh;
 import com.sun.prism.ResourceFactory;
 
 /**
  * TODO: 3D - Need documentation
  */
-public class NGTriangleMesh implements PGTriangleMesh {
+public class NGTriangleMesh {
     private boolean meshDirty = true;
     private Mesh mesh;
 

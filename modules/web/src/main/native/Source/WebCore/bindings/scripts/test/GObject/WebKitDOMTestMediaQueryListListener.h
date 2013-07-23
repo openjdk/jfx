@@ -18,15 +18,19 @@
     Boston, MA 02110-1301, USA.
 */
 
+#if !defined(__WEBKITDOM_H_INSIDE__) && !defined(BUILDING_WEBKIT)
+#error "Only <webkitdom/webkitdom.h> can be included directly."
+#endif
+
 #ifndef WebKitDOMTestMediaQueryListListener_h
 #define WebKitDOMTestMediaQueryListListener_h
 
 #include <glib-object.h>
-#include <webkit/WebKitDOMObject.h>
-#include <webkit/webkitdefines.h>
-#include <webkit/webkitdomdefines.h>
+#include <webkitdom/WebKitDOMObject.h>
+#include <webkitdom/webkitdomdefines.h>
 
 G_BEGIN_DECLS
+
 #define WEBKIT_TYPE_DOM_TEST_MEDIA_QUERY_LIST_LISTENER            (webkit_dom_test_media_query_list_listener_get_type())
 #define WEBKIT_DOM_TEST_MEDIA_QUERY_LIST_LISTENER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), WEBKIT_TYPE_DOM_TEST_MEDIA_QUERY_LIST_LISTENER, WebKitDOMTestMediaQueryListListener))
 #define WEBKIT_DOM_TEST_MEDIA_QUERY_LIST_LISTENER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_TYPE_DOM_TEST_MEDIA_QUERY_LIST_LISTENER, WebKitDOMTestMediaQueryListListenerClass)

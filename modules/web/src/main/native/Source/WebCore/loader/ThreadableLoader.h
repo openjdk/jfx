@@ -31,13 +31,15 @@
 #ifndef ThreadableLoader_h
 #define ThreadableLoader_h
 
-#include "ResourceHandle.h"
 #include "ResourceLoaderOptions.h"
-#include "SecurityOrigin.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
+
+#if ENABLE(RESOURCE_TIMING)
+#include <wtf/text/AtomicString.h>
+#endif
 
 namespace WebCore {
 
@@ -45,6 +47,7 @@ namespace WebCore {
     class ResourceRequest;
     class ResourceResponse;
     class ScriptExecutionContext;
+    class SecurityOrigin;
     class ThreadableLoaderClient;
     
     enum CrossOriginRequestPolicy {
@@ -60,10 +63,15 @@ namespace WebCore {
     };
 
     struct ThreadableLoaderOptions : public ResourceLoaderOptions {
-        ThreadableLoaderOptions() : preflightPolicy(ConsiderPreflight), crossOriginRequestPolicy(DenyCrossOriginRequests) { }
+        ThreadableLoaderOptions();
+        ~ThreadableLoaderOptions();
+
         PreflightPolicy preflightPolicy; // If AccessControl is used, how to determine if a preflight is needed.
         CrossOriginRequestPolicy crossOriginRequestPolicy;
         RefPtr<SecurityOrigin> securityOrigin;
+#if ENABLE(RESOURCE_TIMING)
+        AtomicString initiator;
+#endif
     };
 
     // Useful for doing loader operations from any thread (not threadsafe, 

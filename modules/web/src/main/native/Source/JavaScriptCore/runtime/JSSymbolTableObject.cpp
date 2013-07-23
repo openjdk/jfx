@@ -31,58 +31,47 @@
 
 #include "JSActivation.h"
 #include "JSGlobalObject.h"
-#include "JSStaticScopeObject.h"
+#include "JSNameScope.h"
+#include "Operations.h"
 #include "PropertyNameArray.h"
 
 namespace JSC {
 
-void JSSymbolTableObject::destroy(JSCell* cell)
+void JSSymbolTableObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
-    static_cast<JSSymbolTableObject*>(cell)->JSSymbolTableObject::~JSSymbolTableObject();
+    JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
+    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
+
+    Base::visitChildren(thisObject, visitor);
+    visitor.append(&thisObject->m_symbolTable);
 }
 
 bool JSSymbolTableObject::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
 {
     JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(cell);
-    if (thisObject->symbolTable().contains(propertyName.publicName()))
+    if (thisObject->symbolTable()->contains(propertyName.publicName()))
         return false;
 
     return JSObject::deleteProperty(thisObject, exec, propertyName);
 }
 
-void JSSymbolTableObject::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
+void JSSymbolTableObject::getOwnNonIndexPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
     JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(object);
-    SymbolTable::const_iterator end = thisObject->symbolTable().end();
-    for (SymbolTable::const_iterator it = thisObject->symbolTable().begin(); it != end; ++it) {
-        if (!(it->second.getAttributes() & DontEnum) || (mode == IncludeDontEnumProperties))
-            propertyNames.add(Identifier(exec, it->first.get()));
+    SymbolTable::const_iterator end = thisObject->symbolTable()->end();
+    for (SymbolTable::const_iterator it = thisObject->symbolTable()->begin(); it != end; ++it) {
+        if (!(it->value.getAttributes() & DontEnum) || (mode == IncludeDontEnumProperties))
+            propertyNames.add(Identifier(exec, it->key.get()));
     }
     
-    JSObject::getOwnPropertyNames(thisObject, exec, propertyNames, mode);
+    JSObject::getOwnNonIndexPropertyNames(thisObject, exec, propertyNames, mode);
 }
 
 void JSSymbolTableObject::putDirectVirtual(JSObject*, ExecState*, PropertyName, JSValue, unsigned)
 {
-    ASSERT_NOT_REACHED();
-}
-
-bool JSSymbolTableObject::isDynamicScope(bool& requiresDynamicChecks) const
-{
-    switch (structure()->typeInfo().type()) {
-    case GlobalObjectType:
-        return static_cast<const JSGlobalObject*>(this)->isDynamicScope(requiresDynamicChecks);
-    case ActivationObjectType:
-        return static_cast<const JSActivation*>(this)->isDynamicScope(requiresDynamicChecks);
-    case StaticScopeObjectType:
-        return static_cast<const JSStaticScopeObject*>(this)->isDynamicScope(requiresDynamicChecks);
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-
-    return false;
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace JSC
-

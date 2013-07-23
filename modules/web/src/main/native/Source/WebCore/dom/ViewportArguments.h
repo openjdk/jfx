@@ -6,6 +6,7 @@
  * Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
+ * Copyright (C) 2012 Intel Corporation. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -38,20 +39,18 @@ enum ViewportErrorCode {
     UnrecognizedViewportArgumentKeyError,
     UnrecognizedViewportArgumentValueError,
     TruncatedViewportArgumentValueError,
-    MaximumScaleTooLargeError,
-    TargetDensityDpiUnsupported
+    MaximumScaleTooLargeError
 };
 
 struct ViewportAttributes {
     FloatSize layoutSize;
-
-    float devicePixelRatio;
 
     float initialScale;
     float minimumScale;
     float maximumScale;
 
     float userScalable;
+    float orientation;
 };
 
 struct ViewportArguments {
@@ -64,44 +63,64 @@ struct ViewportArguments {
         HandheldFriendlyMeta,
         MobileOptimizedMeta,
 #endif
-        ViewportMeta
+        ViewportMeta,
+        CSSDeviceAdaptation
     } type;
 
     enum {
         ValueAuto = -1,
-        ValueDesktopWidth = -2,
-        ValueDeviceWidth = -3,
-        ValueDeviceHeight = -4,
+        ValueDeviceWidth = -2,
+        ValueDeviceHeight = -3,
+        ValuePortrait = -4,
+        ValueLandscape = -5
     };
 
     ViewportArguments(Type type = Implicit)
         : type(type)
-        , initialScale(ValueAuto)
-        , minimumScale(ValueAuto)
-        , maximumScale(ValueAuto)
         , width(ValueAuto)
+        , minWidth(ValueAuto)
+        , maxWidth(ValueAuto)
         , height(ValueAuto)
-        , userScalable(ValueAuto)
+        , minHeight(ValueAuto)
+        , maxHeight(ValueAuto)
+        , zoom(ValueAuto)
+        , minZoom(ValueAuto)
+        , maxZoom(ValueAuto)
+        , userZoom(ValueAuto)
+        , orientation(ValueAuto)
     {
     }
 
-    float initialScale;
-    float minimumScale;
-    float maximumScale;
+    // All arguments are in CSS units.
+    ViewportAttributes resolve(const FloatSize& initialViewportSize, const FloatSize& deviceSize, int defaultWidth) const;
+
     float width;
+    float minWidth;
+    float maxWidth;
     float height;
-    float userScalable;
+    float minHeight;
+    float maxHeight;
+    float zoom;
+    float minZoom;
+    float maxZoom;
+    float userZoom;
+    float orientation;
 
     bool operator==(const ViewportArguments& other) const
     {
         // Used for figuring out whether to reset the viewport or not,
         // thus we are not taking type into account.
-        return initialScale == other.initialScale
-            && minimumScale == other.minimumScale
-            && maximumScale == other.maximumScale
-            && width == other.width
+        return width == other.width
+            && minWidth == other.minWidth
+            && maxWidth == other.maxWidth
             && height == other.height
-            && userScalable == other.userScalable;
+            && minHeight == other.minHeight
+            && maxHeight == other.maxHeight
+            && zoom == other.zoom
+            && minZoom == other.minZoom
+            && maxZoom == other.maxZoom
+            && userZoom == other.userZoom
+            && orientation == other.orientation;
     }
 
     bool operator!=(const ViewportArguments& other) const
@@ -109,14 +128,16 @@ struct ViewportArguments {
         return !(*this == other);
     }
 
+#if PLATFORM(BLACKBERRY) || PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(QT)
     // FIXME: We're going to keep this constant around until all embedders
     // refactor their code to no longer need it.
     static const float deprecatedTargetDPI;
+#endif
 };
 
 ViewportAttributes computeViewportAttributes(ViewportArguments args, int desktopWidth, int deviceWidth, int deviceHeight, float devicePixelRatio, IntSize visibleViewport);
 
-void restrictMinimumScaleFactorToViewportSize(ViewportAttributes& result, IntSize visibleViewport);
+void restrictMinimumScaleFactorToViewportSize(ViewportAttributes& result, IntSize visibleViewport, float devicePixelRatio);
 void restrictScaleFactorToInitialScaleIfNotUserScalable(ViewportAttributes& result);
 float computeMinimumScaleFactorForContentContained(const ViewportAttributes& result, const IntSize& viewportSize, const IntSize& contentSize);
 

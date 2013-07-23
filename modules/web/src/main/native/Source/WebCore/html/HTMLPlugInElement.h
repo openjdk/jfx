@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2006, 2007, 2008, 2009, 2012 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,12 +24,17 @@
 #define HTMLPlugInElement_h
 
 #include "HTMLFrameOwnerElement.h"
-#include "ImageLoaderClient.h"
-#include "ScriptInstance.h"
+#include "Image.h"
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
 struct NPObject;
 #endif
+
+namespace JSC {
+namespace Bindings {
+class Instance;
+}
+}
 
 namespace WebCore {
 
@@ -37,15 +42,28 @@ class RenderEmbeddedObject;
 class RenderWidget;
 class Widget;
 
-class HTMLPlugInElement : public HTMLFrameOwnerElement, public ImageLoaderClientBase<HTMLPlugInElement> {
+class HTMLPlugInElement : public HTMLFrameOwnerElement {
 public:
     virtual ~HTMLPlugInElement();
 
     void resetInstance();
 
-    PassScriptInstance getInstance();
+    PassRefPtr<JSC::Bindings::Instance> getInstance();
 
-    Widget* pluginWidget();
+    Widget* pluginWidget() const;
+
+    enum DisplayState {
+        WaitingForSnapshot,
+        DisplayingSnapshot,
+        Restarting,
+        RestartingWithPendingMouseClick,
+        Playing
+    };
+    DisplayState displayState() const { return m_displayState; }
+    virtual void setDisplayState(DisplayState state) { m_displayState = state; }
+    virtual void updateSnapshot(PassRefPtr<Image>) { }
+    virtual void dispatchPendingMouseClick() { }
+    virtual bool isRestartedPlugin() const { return false; }
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
     NPObject* getNPObject();
@@ -56,31 +74,63 @@ public:
 
     bool canContainRangeEndPoint() const { return false; }
 
+    bool canProcessDrag() const;
+
+    virtual bool willRespondToMouseClickEvents() OVERRIDE;
+
+    virtual bool isPlugInImageElement() const { return false; }
+
 protected:
     HTMLPlugInElement(const QualifiedName& tagName, Document*);
 
     virtual void detach();
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
-    bool m_inBeforeLoadEventHandler;
+    virtual bool useFallbackContent() const { return false; }
+
     // Subclasses should use guardedDispatchBeforeLoadEvent instead of calling dispatchBeforeLoadEvent directly.
     bool guardedDispatchBeforeLoadEvent(const String& sourceURL);
+
+    bool m_inBeforeLoadEventHandler;
 
 private:
     bool dispatchBeforeLoadEvent(const String& sourceURL); // Not implemented, generates a compile error if subclasses call this by mistake.
 
+    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
+
     virtual void defaultEventHandler(Event*);
 
-    virtual RenderWidget* renderWidgetForJSBindings() = 0;
+    virtual RenderWidget* renderWidgetForJSBindings() const = 0;
 
-private:
-    mutable ScriptInstance m_instance;
+    virtual bool supportsFocus() const OVERRIDE;
+
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
+    virtual bool isPluginElement() const;
+
+    RefPtr<JSC::Bindings::Instance> m_instance;
 #if ENABLE(NETSCAPE_PLUGIN_API)
     NPObject* m_NPObject;
 #endif
     bool m_isCapturingMouseEvents;
+
+    DisplayState m_displayState;
 };
+
+inline HTMLPlugInElement* toHTMLPlugInElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isPluginElement());
+    return static_cast<HTMLPlugInElement*>(node);
+}
+
+inline const HTMLPlugInElement* toHTMLPlugInElement(const Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isPluginElement());
+    return static_cast<const HTMLPlugInElement*>(node);
+}
+
+// This will catch anyone doing an unnecessary cast.
+void toHTMLPlugInElement(const HTMLPlugInElement*);
 
 } // namespace WebCore
 

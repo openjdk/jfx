@@ -21,14 +21,17 @@
 #include "config.h"
 #include "ErrorInstance.h"
 
+#include "JSScope.h"
+#include "Operations.h"
+
 namespace JSC {
 
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(ErrorInstance);
 
 const ClassInfo ErrorInstance::s_info = { "Error", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(ErrorInstance) };
 
-ErrorInstance::ErrorInstance(JSGlobalData& globalData, Structure* structure)
-    : JSNonFinalObject(globalData, structure)
+ErrorInstance::ErrorInstance(VM& vm, Structure* structure)
+    : JSNonFinalObject(vm, structure)
     , m_appendSourceToMessage(false)
 {
 }

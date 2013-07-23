@@ -4,7 +4,7 @@
 #ifndef TextNormalizerJava_h
 #define TextNormalizerJava_h
 
-#include "PlatformString.h"
+#include <wtf/text/WTFString.h>
 
 #include "com_sun_webkit_text_TextNormalizer.h"
 #define JNI_EXPAND(n) com_sun_webkit_text_TextNormalizer_##n

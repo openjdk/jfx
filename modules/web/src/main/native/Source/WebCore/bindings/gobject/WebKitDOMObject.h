@@ -25,9 +25,8 @@
 #ifndef WebKitDOMObject_h
 #define WebKitDOMObject_h
 
-#include "glib-object.h"
-#include "webkit/webkitdomdefines.h"
-#include <webkit/webkitdefines.h>
+#include <glib-object.h>
+#include <webkitdom/webkitdomdefines.h>
 
 G_BEGIN_DECLS
 

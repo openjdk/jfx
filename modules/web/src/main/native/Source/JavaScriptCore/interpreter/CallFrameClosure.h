@@ -33,9 +33,8 @@ struct CallFrameClosure {
     CallFrame* newCallFrame;
     JSFunction* function;
     FunctionExecutable* functionExecutable;
-    JSGlobalData* globalData;
-    Register* oldEnd;
-    ScopeChainNode* scopeChain;
+    VM* vm;
+    JSScope* scope;
     int parameterCountIncludingThis;
     int argumentCountIncludingThis;
     
@@ -51,8 +50,12 @@ struct CallFrameClosure {
 
     void resetCallFrame()
     {
-        newCallFrame->setScopeChain(scopeChain);
-        for (int i = argumentCountIncludingThis; i < parameterCountIncludingThis; ++i)
+        newCallFrame->setScope(scope);
+        // setArgument() takes an arg index that starts from 0 for the first
+        // argument after the 'this' value. Since both argumentCountIncludingThis
+        // and parameterCountIncludingThis includes the 'this' value, we need to
+        // subtract 1 from them to make i a valid argument index for setArgument().
+        for (int i = argumentCountIncludingThis-1; i < parameterCountIncludingThis-1; ++i)
             newCallFrame->setArgument(i, jsUndefined());
     }
 };

@@ -27,14 +27,19 @@
 #define PublicURLManager_h
 
 #if ENABLE(BLOB)
-#include "PlatformString.h"
 #include "ScriptExecutionContext.h"
 #include "ThreadableBlobRegistry.h"
 #include <wtf/HashSet.h>
+#include <wtf/text/WTFString.h>
 
 #if ENABLE(MEDIA_STREAM)
 #include "MediaStream.h"
 #include "MediaStreamRegistry.h"
+#endif
+
+#if ENABLE(MEDIA_SOURCE)
+#include "MediaSource.h"
+#include "MediaSourceRegistry.h"
 #endif
 
 namespace WebCore {
@@ -42,7 +47,7 @@ namespace WebCore {
 class ScriptExecutionContext;
 
 class PublicURLManager {
-
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static PassOwnPtr<PublicURLManager> create() { return adoptPtr(new PublicURLManager); }
     void contextDestroyed()
@@ -56,17 +61,28 @@ public:
         for (HashSet<String>::iterator iter = m_streamURLs.begin(); iter != streamURLsEnd; ++iter)
             MediaStreamRegistry::registry().unregisterMediaStreamURL(KURL(ParsedURLString, *iter));
 #endif
+#if ENABLE(MEDIA_SOURCE)
+        HashSet<String>::iterator sourceURLsEnd = m_sourceURLs.end();
+        for (HashSet<String>::iterator iter = m_sourceURLs.begin(); iter != sourceURLsEnd; ++iter)
+            MediaSourceRegistry::registry().unregisterMediaSourceURL(KURL(ParsedURLString, *iter));
+#endif
     }
 
     HashSet<String>& blobURLs() { return m_blobURLs; }
 #if ENABLE(MEDIA_STREAM)
     HashSet<String>& streamURLs() { return m_streamURLs; }
 #endif
+#if ENABLE(MEDIA_SOURCE)
+    HashSet<String>& sourceURLs() { return m_sourceURLs; }
+#endif
 
 private:
     HashSet<String> m_blobURLs;
 #if ENABLE(MEDIA_STREAM)
     HashSet<String> m_streamURLs;
+#endif
+#if ENABLE(MEDIA_SOURCE)
+    HashSet<String> m_sourceURLs;
 #endif
 };
 

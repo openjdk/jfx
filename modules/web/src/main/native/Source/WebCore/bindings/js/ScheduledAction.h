@@ -21,12 +21,12 @@
 #define ScheduledAction_h
 
 #include "JSDOMBinding.h"
-#include "PlatformString.h"
 #include <heap/Strong.h>
 #include <heap/StrongInlines.h>
 #include <runtime/JSCell.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
     class JSGlobalObject;
@@ -53,7 +53,7 @@ namespace WebCore {
     private:
         ScheduledAction(JSC::ExecState*, JSC::JSValue function, DOMWrapperWorld* isolatedWorld);
         ScheduledAction(const String& code, DOMWrapperWorld* isolatedWorld)
-            : m_function(*isolatedWorld->globalData())
+            : m_function(*isolatedWorld->vm())
             , m_code(code)
             , m_isolatedWorld(isolatedWorld)
         {

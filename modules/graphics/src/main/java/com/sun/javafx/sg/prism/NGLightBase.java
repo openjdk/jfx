@@ -27,16 +27,13 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.BaseNode;
-import com.sun.javafx.sg.PGGroup;
-import com.sun.javafx.sg.PGLightBase;
 import com.sun.prism.Graphics;
 import com.sun.prism.paint.Color;
 
 /**
  * TODO: 3D - Need documentation
  */
-public class NGLightBase extends NGNode implements PGLightBase {
+public class NGLightBase extends NGNode {
 
     private Color DEFAULT_COLOR = Color.WHITE;
     private Color color = DEFAULT_COLOR;
@@ -116,8 +113,8 @@ public class NGLightBase extends NGNode implements PGLightBase {
         } else {
             for (int i = 0; i < scopedNodes.length; i++) {
                 Object scopedNode = scopedNodes[i];
-                if (scopedNode instanceof PGGroup) {
-                    BaseNode parent = n3d.getParent();
+                if (scopedNode instanceof NGGroup) {
+                    NGNode parent = n3d.getParent();
                     while (parent != null) {
                         if (scopedNode == parent) {
                             return true;

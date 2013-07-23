@@ -25,27 +25,24 @@
 
 package javafx.scene.shape;
 
-import java.util.List;
-
+import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.PathUtils;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.paint.Color;
-
-import com.sun.javafx.collections.TrackableObservableList;
-import javafx.css.CssMetaData;
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.shape.PathUtils;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGPath;
-import com.sun.javafx.tk.Toolkit;
-import java.util.Collection;
-import javafx.css.StyleableProperty;
 import javafx.scene.paint.Paint;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * The {@code Path} class represents a simple shape
@@ -118,14 +115,6 @@ public class Path extends Shape {
     public Path(Collection<? extends PathElement> elements) {
         if (elements != null) {
             this.elements.addAll(elements);
-        }
-    }
-
-    static com.sun.javafx.sg.PGPath.FillRule toPGFillRule(FillRule rule) {
-        if (rule == FillRule.NON_ZERO) {
-            return PGPath.FillRule.NON_ZERO;
-        } else {
-            return PGPath.FillRule.EVEN_ODD;
         }
     }
 
@@ -246,17 +235,8 @@ public class Path extends Shape {
      */
     @Deprecated
     @Override
-    protected PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGPath();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public PGPath impl_getPGPath() {
-        return (PGPath)impl_getPGNode();
+    protected NGNode impl_createPeer() {
+        return new NGPath();
     }
 
     /**
@@ -315,17 +295,17 @@ public class Path extends Shape {
      */
     @Deprecated
     @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
+    public void impl_updatePeer() {
+        super.impl_updatePeer();
 
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
-            PGPath peer = impl_getPGPath();
+            NGPath peer = impl_getPeer();
             if (peer.acceptsPath2dOnUpdate()) {
                 peer.updateWithPath2d(impl_configShape());
             } else {
                 peer.reset();
                 if (isPathValid) {
-                    peer.setFillRule(toPGFillRule(getFillRule()));
+                    peer.setFillRule(getFillRule());
                     for (final PathElement elt : getElements()) {
                         elt.addTo(peer);
                     }

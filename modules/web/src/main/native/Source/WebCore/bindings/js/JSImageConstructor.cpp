@@ -30,7 +30,6 @@ using namespace JSC;
 
 namespace WebCore {
 
-ASSERT_CLASS_FITS_IN_CELL(JSImageConstructor);
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(JSImageConstructor);
 
 const ClassInfo JSImageConstructor::s_info = { "ImageConstructor", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSImageConstructor) };
@@ -44,7 +43,7 @@ void JSImageConstructor::finishCreation(ExecState* exec, JSDOMGlobalObject* glob
 {
     Base::finishCreation(globalObject);
     ASSERT(inherits(&s_info));
-    putDirect(exec->globalData(), exec->propertyNames().prototype, JSHTMLImageElementPrototype::self(exec, globalObject), None);
+    putDirect(exec->vm(), exec->propertyNames().prototype, JSHTMLImageElementPrototype::self(exec, globalObject), None);
 }
 
 static EncodedJSValue JSC_HOST_CALL constructImage(ExecState* exec)

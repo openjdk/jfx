@@ -76,7 +76,7 @@ NSMethodSignature* ObjcMethod::getMethodSignature() const
 
 ObjcField::ObjcField(Ivar ivar) 
     : _ivar(ivar)
-    , _name(AdoptCF, CFStringCreateWithCString(0, ivar_getName(_ivar), kCFStringEncodingASCII))
+    , _name(adoptCF(CFStringCreateWithCString(0, ivar_getName(_ivar), kCFStringEncodingASCII)))
 {
 }
 
@@ -188,12 +188,12 @@ unsigned int ObjcArray::getLength() const
     return [_array.get() count];
 }
 
-const ClassInfo ObjcFallbackObjectImp::s_info = { "ObjcFallbackObject", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(ObjcFallbackObjectImp) };
+const ClassInfo ObjcFallbackObjectImp::s_info = { "ObjcFallbackObject", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(ObjcFallbackObjectImp) };
 
-ObjcFallbackObjectImp::ObjcFallbackObjectImp(JSGlobalObject* globalObject, Structure* structure, ObjcInstance* i, const UString& propertyName)
-    : JSNonFinalObject(globalObject->globalData(), structure)
+ObjcFallbackObjectImp::ObjcFallbackObjectImp(JSGlobalObject* globalObject, Structure* structure, ObjcInstance* i, const String& propertyName)
+    : JSDestructibleObject(globalObject->vm(), structure)
     , _instance(i)
-    , _item(propertyName)
+    , m_item(propertyName)
 {
 }
 
@@ -204,7 +204,7 @@ void ObjcFallbackObjectImp::destroy(JSCell* cell)
 
 void ObjcFallbackObjectImp::finishCreation(JSGlobalObject* globalObject)
 {
-    Base::finishCreation(globalObject->globalData());
+    Base::finishCreation(globalObject->vm());
     ASSERT(inherits(&s_info));
 }
 
@@ -247,9 +247,8 @@ static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(ExecState* exec)
     if ([targetObject respondsToSelector:@selector(invokeUndefinedMethodFromWebScript:withArguments:)]){
         ObjcClass* objcClass = static_cast<ObjcClass*>(objcInstance->getClass());
         OwnPtr<ObjcMethod> fallbackMethod(adoptPtr(new ObjcMethod(objcClass->isa(), @selector(invokeUndefinedMethodFromWebScript:withArguments:))));
-        const UString& nameIdentifier = static_cast<ObjcFallbackObjectImp*>(exec->callee())->propertyName();
-        RetainPtr<CFStringRef> name(AdoptCF, CFStringCreateWithCharacters(0, nameIdentifier.characters(), nameIdentifier.length()));
-        fallbackMethod->setJavaScriptName(name.get());
+        const String& nameIdentifier = static_cast<ObjcFallbackObjectImp*>(exec->callee())->propertyName();
+        fallbackMethod->setJavaScriptName(nameIdentifier.createCFString().get());
         result = objcInstance->invokeObjcMethod(exec, fallbackMethod.get());
     }
             
@@ -276,7 +275,7 @@ bool ObjcFallbackObjectImp::deleteProperty(JSCell*, ExecState*, PropertyName)
 JSValue ObjcFallbackObjectImp::defaultValue(const JSObject* object, ExecState* exec, PreferredPrimitiveType)
 {
     const ObjcFallbackObjectImp* thisObject = jsCast<const ObjcFallbackObjectImp*>(object);
-    return thisObject->_instance->getValueOfUndefinedField(exec, Identifier(exec, thisObject->_item));
+    return thisObject->_instance->getValueOfUndefinedField(exec, Identifier(exec, thisObject->m_item));
 }
 
 bool ObjcFallbackObjectImp::toBoolean(ExecState *) const

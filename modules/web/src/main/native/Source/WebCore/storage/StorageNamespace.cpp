@@ -26,23 +26,24 @@
 #include "config.h"
 #include "StorageNamespace.h"
 
-#include "StorageNamespaceImpl.h"
-
-#if PLATFORM(CHROMIUM)
-#error "Chromium should not compile this file and instead define its own version of these factories that navigate the multi-process boundry."
-#endif
+#include "PlatformStrategies.h"
+#include "StorageStrategy.h"
 
 namespace WebCore {
 
-PassRefPtr<StorageNamespace> StorageNamespace::localStorageNamespace(const String& path, unsigned quota)
+PassRefPtr<StorageNamespace> StorageNamespace::localStorageNamespace(PageGroup* pageGroup)
 {
-    return StorageNamespaceImpl::localStorageNamespace(path, quota);
+    return platformStrategies()->storageStrategy()->localStorageNamespace(pageGroup);
 }
 
-// The page argument is only used by the Chromium port.
-PassRefPtr<StorageNamespace> StorageNamespace::sessionStorageNamespace(Page*, unsigned quota)
+PassRefPtr<StorageNamespace> StorageNamespace::transientLocalStorageNamespace(PageGroup* pageGroup, SecurityOrigin* securityOrigin)
 {
-    return StorageNamespaceImpl::sessionStorageNamespace(quota);
+    return platformStrategies()->storageStrategy()->transientLocalStorageNamespace(pageGroup, securityOrigin);
+}
+
+PassRefPtr<StorageNamespace> StorageNamespace::sessionStorageNamespace(Page* page)
+{
+    return platformStrategies()->storageStrategy()->sessionStorageNamespace(page);
 }
 
 } // namespace WebCore

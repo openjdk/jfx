@@ -24,31 +24,24 @@ use File::Basename;
 use Getopt::Long;
 use Cwd;
 
-use IDLParser;
-
 my $defines;
 my $preprocessor;
-my $verbose;
 my $idlFilesList;
-my $idlAttributesFile;
 my $supplementalDependencyFile;
+my $windowConstructorsFile;
 my $supplementalMakefileDeps;
 
 GetOptions('defines=s' => \$defines,
            'preprocessor=s' => \$preprocessor,
-           'verbose' => \$verbose,
            'idlFilesList=s' => \$idlFilesList,
-           'idlAttributesFile=s' => \$idlAttributesFile,
            'supplementalDependencyFile=s' => \$supplementalDependencyFile,
+           'windowConstructorsFile=s' => \$windowConstructorsFile,
            'supplementalMakefileDeps=s' => \$supplementalMakefileDeps);
 
 die('Must specify #define macros using --defines.') unless defined($defines);
 die('Must specify an output file using --supplementalDependencyFile.') unless defined($supplementalDependencyFile);
+die('Must specify an output file using --windowConstructorsFile.') unless defined($windowConstructorsFile);
 die('Must specify the file listing all IDLs using --idlFilesList.') unless defined($idlFilesList);
-
-if ($verbose) {
-    print "Resolving [Supplemental=XXX] dependencies in all IDL files.\n";
-}
 
 open FH, "< $idlFilesList" or die "Cannot open $idlFilesList\n";
 my @idlFiles = <FH>;
@@ -56,40 +49,50 @@ chomp(@idlFiles);
 close FH;
 
 # Parse all IDL files.
-my %documents;
 my %interfaceNameToIdlFile;
 my %idlFileToInterfaceName;
-foreach my $idlFile (@idlFiles) {
+my %supplementalDependencies;
+my %supplementals;
+my $constructorAttributesCode = "";
+# Get rid of duplicates in idlFiles array.
+my %idlFileHash = map { $_, 1 } @idlFiles;
+foreach my $idlFile (keys %idlFileHash) {
     $idlFile =~ s/\s*$//g;
     my $fullPath = Cwd::realpath($idlFile);
-    my $parser = IDLParser->new(!$verbose);
-    $documents{$fullPath} = $parser->Parse($idlFile, $defines, $preprocessor);
+    my $idlFileContents = getFileContents($fullPath);
+    my $partialInterfaceName = getPartialInterfaceNameFromIDL($idlFileContents);
+    if ($partialInterfaceName) {
+        $supplementalDependencies{$fullPath} = $partialInterfaceName;
+        next;
+    }
     my $interfaceName = fileparse(basename($idlFile), ".idl");
-    $interfaceNameToIdlFile{$interfaceName} = $fullPath;
-    $idlFileToInterfaceName{$fullPath} = $interfaceName;
-}
-
-# Runs the IDL attribute checker.
-my $idlAttributes = loadIDLAttributes($idlAttributesFile);
-foreach my $idlFile (keys %documents) {
-    checkIDLAttributes($idlAttributes, $documents{$idlFile}, basename($idlFile));
-}
-
-# Resolves [Supplemental=XXX] dependencies.
-my %supplementals;
-foreach my $idlFile (keys %documents) {
-    $supplementals{$idlFile} = [];
-}
-foreach my $idlFile (keys %documents) {
-    foreach my $dataNode (@{$documents{$idlFile}->classes}) {
-        if ($dataNode->extendedAttributes->{"Supplemental"}) {
-            my $targetIdlFile = $interfaceNameToIdlFile{$dataNode->extendedAttributes->{"Supplemental"}};
-            push(@{$supplementals{$targetIdlFile}}, $idlFile);
-            # Treats as if this IDL file does not exist.
-            delete $supplementals{$idlFile};
+    unless (isCallbackInterfaceFromIDL($idlFileContents)) {
+        my $extendedAttributes = getInterfaceExtendedAttributesFromIDL($idlFileContents);
+        unless ($extendedAttributes->{"NoInterfaceObject"}) {
+            $constructorAttributesCode .= GenerateConstructorAttribute($interfaceName, $extendedAttributes);
         }
     }
+    $interfaceNameToIdlFile{$interfaceName} = $fullPath;
+    $idlFileToInterfaceName{$fullPath} = $interfaceName;
+    $supplementals{$fullPath} = [];
 }
+
+# Generate DOMWindow Constructors partial interface.
+open PARTIAL_WINDOW_FH, "> $windowConstructorsFile" or die "Cannot open $windowConstructorsFile\n";
+print PARTIAL_WINDOW_FH "partial interface DOMWindow {\n";
+print PARTIAL_WINDOW_FH $constructorAttributesCode;
+print PARTIAL_WINDOW_FH "};\n";
+close PARTIAL_WINDOW_FH;
+my $fullPath = Cwd::realpath($windowConstructorsFile);
+$supplementalDependencies{$fullPath} = "DOMWindow" if $interfaceNameToIdlFile{"DOMWindow"};
+
+# Resolves partial interfaces dependencies.
+foreach my $idlFile (keys %supplementalDependencies) {
+    my $baseFile = $supplementalDependencies{$idlFile};
+    my $targetIdlFile = $interfaceNameToIdlFile{$baseFile};
+            push(@{$supplementals{$targetIdlFile}}, $idlFile);
+            delete $supplementals{$idlFile};
+        }
 
 # Outputs the dependency.
 # The format of a supplemental dependency file:
@@ -130,86 +133,90 @@ if ($supplementalMakefileDeps) {
     close MAKE_FH;
 }
 
-
-sub loadIDLAttributes
+sub GenerateConstructorAttribute
 {
-    my $idlAttributesFile = shift;
-
-    my %idlAttributes;
-    open FH, "<", $idlAttributesFile or die "Couldn't open $idlAttributesFile: $!";
-    while (my $line = <FH>) {
-        chomp $line;
-        next if $line =~ /^\s*#/;
-        next if $line =~ /^\s*$/;
-
-        if ($line =~ /^\s*([^=\s]*)\s*=?\s*(.*)/) {
-            my $name = $1;
-            $idlAttributes{$name} = {};
-            if ($2) {
-                foreach my $rightValue (split /\|/, $2) {
-                    $rightValue =~ s/^\s*|\s*$//g;
-                    $rightValue = "VALUE_IS_MISSING" unless $rightValue;
-                    $idlAttributes{$name}{$rightValue} = 1;
-                }
-            } else {
-                $idlAttributes{$name}{"VALUE_IS_MISSING"} = 1;
-            }
-        } else {
-            die "The format of " . basename($idlAttributesFile) . " is wrong: line $.\n";
-        }
-    }
-    close FH;
-
-    return \%idlAttributes;
-}
-
-sub checkIDLAttributes
-{
-    my $idlAttributes = shift;
-    my $document = shift;
-    my $idlFile = shift;
-
-    foreach my $dataNode (@{$document->classes}) {
-        checkIfIDLAttributesExists($idlAttributes, $dataNode->extendedAttributes, $idlFile);
-
-        foreach my $attribute (@{$dataNode->attributes}) {
-            checkIfIDLAttributesExists($idlAttributes, $attribute->signature->extendedAttributes, $idlFile);
-        }
-
-        foreach my $function (@{$dataNode->functions}) {
-            checkIfIDLAttributesExists($idlAttributes, $function->signature->extendedAttributes, $idlFile);
-            foreach my $parameter (@{$function->parameters}) {
-                checkIfIDLAttributesExists($idlAttributes, $parameter->extendedAttributes, $idlFile);
-            }
-        }
-    }
-}
-
-sub checkIfIDLAttributesExists
-{
-    my $idlAttributes = shift;
+    my $interfaceName = shift;
     my $extendedAttributes = shift;
+
+    my $code = "    ";
+    my @extendedAttributesList;
+    foreach my $attributeName (keys %{$extendedAttributes}) {
+      next unless ($attributeName eq "Conditional" || $attributeName eq "EnabledAtRuntime" || $attributeName eq "EnabledPerContext");
+      my $extendedAttribute = $attributeName;
+      $extendedAttribute .= "=" . $extendedAttributes->{$attributeName} unless $extendedAttributes->{$attributeName} eq "VALUE_IS_MISSING";
+      push(@extendedAttributesList, $extendedAttribute);
+    }
+    $code .= "[" . join(', ', @extendedAttributesList) . "] " if @extendedAttributesList;
+
+    my $originalInterfaceName = $interfaceName;
+    $interfaceName = $extendedAttributes->{"InterfaceName"} if $extendedAttributes->{"InterfaceName"};
+    $code .= "attribute " . $originalInterfaceName . "Constructor $interfaceName;\n";
+
+    # In addition to the regular property, for every [NamedConstructor] extended attribute on an interface,
+    # a corresponding property MUST exist on the ECMAScript global object.
+    if ($extendedAttributes->{"NamedConstructor"}) {
+        my $constructorName = $extendedAttributes->{"NamedConstructor"};
+        $constructorName =~ s/\(.*//g; # Extract function name.
+        $code .= "    ";
+        $code .= "[" . join(', ', @extendedAttributesList) . "] " if @extendedAttributesList;
+        $code .= "attribute " . $originalInterfaceName . "NamedConstructor $constructorName;\n";
+                }
+    return $code;
+}
+
+sub getFileContents
+{
     my $idlFile = shift;
 
-    my $error;
-    OUTER: for my $name (keys %$extendedAttributes) {
-        if (!exists $idlAttributes->{$name}) {
-            $error = "Unknown IDL attribute [$name] is found at $idlFile.";
-            last OUTER;
+    open FILE, "<", $idlFile;
+    my @lines = <FILE>;
+    close FILE;
+
+    # Filter out preprocessor lines.
+    @lines = grep(!/^\s*#/, @lines);
+
+    return join('', @lines);
         }
-        if ($idlAttributes->{$name}{"*"}) {
-            next;
-        }
-        for my $rightValue (split /\s*\|\s*/, $extendedAttributes->{$name}) {
-            if (!exists $idlAttributes->{$name}{$rightValue}) {
-                $error = "Unknown IDL attribute [$name=" . $extendedAttributes->{$name} . "] is found at $idlFile.";
-                last OUTER;
-            }
-        }
-    }
-    if ($error) {
-        die "IDL ATTRIBUTE CHECKER ERROR: $error
-If you want to add a new IDL attribute, you need to add it to WebCore/bindings/scripts/IDLAttributes.txt and add explanations to the WebKit IDL document (https://trac.webkit.org/wiki/WebKitIDL).
-";
+
+sub getPartialInterfaceNameFromIDL
+{
+    my $fileContents = shift;
+
+    if ($fileContents =~ /partial\s+interface\s+(\w+)/gs) {
+        return $1;
     }
 }
+
+sub isCallbackInterfaceFromIDL
+{
+    my $fileContents = shift;
+    return ($fileContents =~ /callback\s+interface\s+\w+/gs);
+}
+
+sub trim
+{
+    my $string = shift;
+    $string =~ s/^\s+|\s+$//g;
+    return $string;
+        }
+
+sub getInterfaceExtendedAttributesFromIDL
+{
+    my $fileContents = shift;
+
+    my $extendedAttributes = {};
+
+    if ($fileContents =~ /\[(.*)\]\s+(interface|exception)\s+(\w+)/gs) {
+        my @parts = split(',', $1);
+        foreach my $part (@parts) {
+            my @keyValue = split('=', $part);
+            my $key = trim($keyValue[0]);
+            next unless length($key);
+            my $value = "VALUE_IS_MISSING";
+            $value = trim($keyValue[1]) if @keyValue > 1;
+            $extendedAttributes->{$key} = $value;
+        }
+            }
+
+    return $extendedAttributes;
+        }

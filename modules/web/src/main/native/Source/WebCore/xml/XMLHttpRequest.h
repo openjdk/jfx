@@ -2,6 +2,7 @@
  *  Copyright (C) 2003, 2006, 2008 Apple Inc. All rights reserved.
  *  Copyright (C) 2005, 2006 Alexey Proskuryakov <ap@nypop.com>
  *  Copyright (C) 2011 Google Inc. All rights reserved.
+ *  Copyright (C) 2012 Intel Corporation
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -27,7 +28,7 @@
 #include "EventTarget.h"
 #include "FormData.h"
 #include "ResourceResponse.h"
-#include "SecurityOrigin.h"
+#include "ScriptWrappable.h"
 #include "ThreadableLoaderClient.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
 #include <wtf/OwnPtr.h>
@@ -45,10 +46,10 @@ class SharedBuffer;
 class TextResourceDecoder;
 class ThreadableLoader;
 
-class XMLHttpRequest : public RefCounted<XMLHttpRequest>, public EventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
+class XMLHttpRequest : public ScriptWrappable, public RefCounted<XMLHttpRequest>, public EventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassRefPtr<XMLHttpRequest> create(ScriptExecutionContext*, PassRefPtr<SecurityOrigin> = 0);
+    static PassRefPtr<XMLHttpRequest> create(ScriptExecutionContext*);
     ~XMLHttpRequest();
 
     // These exact numeric values are important because JS expects them.
@@ -69,6 +70,9 @@ public:
     };
 
     virtual void contextDestroyed();
+#if ENABLE(XHR_TIMEOUT)
+    virtual void didTimeout();
+#endif
     virtual bool canSuspend() const;
     virtual void suspend(ReasonForSuspension);
     virtual void resume();
@@ -104,6 +108,12 @@ public:
     Document* optionalResponseXML() const { return m_responseDocument.get(); }
     Blob* responseBlob(ExceptionCode&);
     Blob* optionalResponseBlob() const { return m_responseBlob.get(); }
+#if ENABLE(XHR_TIMEOUT)
+    unsigned long timeout() const { return m_timeoutMilliseconds; }
+    void setTimeout(unsigned long timeout, ExceptionCode&);
+#endif
+
+    void sendFromInspector(PassRefPtr<FormData>, ExceptionCode&);
 
     // Expose HTTP validation methods for other untrusted requests.
     static bool isAllowedHTTPMethod(const String&);
@@ -131,12 +141,15 @@ public:
     DEFINE_ATTRIBUTE_EVENT_LISTENER(loadend);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(loadstart);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(progress);
+#if ENABLE(XHR_TIMEOUT)
+    DEFINE_ATTRIBUTE_EVENT_LISTENER(timeout);
+#endif
 
     using RefCounted<XMLHttpRequest>::ref;
     using RefCounted<XMLHttpRequest>::deref;
 
 private:
-    XMLHttpRequest(ScriptExecutionContext*, PassRefPtr<SecurityOrigin>);
+    XMLHttpRequest(ScriptExecutionContext*);
 
     virtual void refEventTarget() { ref(); }
     virtual void derefEventTarget() { deref(); }
@@ -189,6 +202,9 @@ private:
     String m_mimeTypeOverride;
     bool m_async;
     bool m_includeCredentials;
+#if ENABLE(XHR_TIMEOUT)
+    unsigned long m_timeoutMilliseconds;
+#endif
     RefPtr<Blob> m_responseBlob;
 
     RefPtr<ThreadableLoader> m_loader;
@@ -226,8 +242,6 @@ private:
 
     // An enum corresponding to the allowed string values for the responseType attribute.
     ResponseTypeCode m_responseTypeCode;
-
-    RefPtr<SecurityOrigin> m_securityOrigin;
 };
 
 } // namespace WebCore

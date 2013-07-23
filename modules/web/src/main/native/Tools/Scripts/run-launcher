@@ -69,21 +69,18 @@ if (isQt()) {
         } else {
             unshift(@ARGV, catdir($launcherPath, "Programs", "GtkLauncher"));
         }
-        $launcherPath = catdir(sourceDir(), "Tools", "gtk", "run-with-jhbuild");
+        $launcherPath = catdir(sourceDir(), "Tools", "jhbuild", "jhbuild-wrapper");
+        unshift(@ARGV, ("--gtk", "run"));
     }
-    
+
     if (isEfl()) {
-        unshift(@ARGV, catdir($launcherPath, "bin", "EWebLauncher"));
-        $launcherPath = catdir(sourceDir(), "Tools", "efl", "run-with-jhbuild");
-    }
-    
-    if (isWx()) {
-        if (isDarwin()) {
-            $launcherPath = catdir($launcherPath, 'wxBrowser.app', 'Contents', 'MacOS', 'wxBrowser');
+        if (isWK2()) {
+            unshift(@ARGV, catdir($launcherPath, "bin", "MiniBrowser"));
         } else {
-            $ENV{LD_LIBRARY_PATH} = $ENV{LD_LIBRARY_PATH} ? "$productDir:$ENV{LD_LIBRARY_PATH}" : $productDir;
-            $launcherPath = catdir($launcherPath, 'wxBrowser');
+            unshift(@ARGV, catdir($launcherPath, "bin", "EWebLauncher"));
         }
+        $launcherPath = catdir(sourceDir(), "Tools", "jhbuild", "jhbuild-wrapper");
+        unshift(@ARGV, ("--efl", "run"));
     }
 
     print "Starting webkit launcher.\n";

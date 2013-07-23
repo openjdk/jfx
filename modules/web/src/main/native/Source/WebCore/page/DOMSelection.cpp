@@ -36,11 +36,11 @@
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "Node.h"
-#include "PlatformString.h"
 #include "Range.h"
 #include "TextIterator.h"
 #include "TreeScope.h"
 #include "htmlediting.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -53,10 +53,7 @@ static Node* selectionShadowAncestor(Frame* frame)
     if (!node->isInShadowTree())
         return 0;
 
-    Node* shadowAncestor = node->shadowAncestorNode();
-    while (shadowAncestor->isInShadowTree())
-        shadowAncestor = shadowAncestor->shadowAncestorNode();
-    return shadowAncestor;
+    return frame->document()->ancestorInThisScope(node);
 }
 
 DOMSelection::DOMSelection(const TreeScope* treeScope)
@@ -400,11 +397,10 @@ void DOMSelection::addRange(Range* r)
     }
 
     RefPtr<Range> range = selection->selection().toNormalizedRange();
-    ExceptionCode ec = 0;
-    if (r->compareBoundaryPoints(Range::START_TO_START, range.get(), ec) == -1) {
+    if (r->compareBoundaryPoints(Range::START_TO_START, range.get(), IGNORE_EXCEPTION) == -1) {
         // We don't support discontiguous selection. We don't do anything if r and range don't intersect.
-        if (r->compareBoundaryPoints(Range::START_TO_END, range.get(), ec) > -1) {
-            if (r->compareBoundaryPoints(Range::END_TO_END, range.get(), ec) == -1)
+        if (r->compareBoundaryPoints(Range::START_TO_END, range.get(), IGNORE_EXCEPTION) > -1) {
+            if (r->compareBoundaryPoints(Range::END_TO_END, range.get(), IGNORE_EXCEPTION) == -1)
                 // The original range and r intersect.
                 selection->setSelection(VisibleSelection(r->startPosition(), range->endPosition(), DOWNSTREAM));
             else
@@ -413,8 +409,9 @@ void DOMSelection::addRange(Range* r)
         }
     } else {
         // We don't support discontiguous selection. We don't do anything if r and range don't intersect.
+        ExceptionCode ec = 0;
         if (r->compareBoundaryPoints(Range::END_TO_START, range.get(), ec) < 1 && !ec) {
-            if (r->compareBoundaryPoints(Range::END_TO_END, range.get(), ec) == -1)
+            if (r->compareBoundaryPoints(Range::END_TO_END, range.get(), IGNORE_EXCEPTION) == -1)
                 // The original range contains r.
                 selection->setSelection(VisibleSelection(range.get()));
             else
@@ -441,15 +438,12 @@ void DOMSelection::deleteFromDocument()
     if (!selectedRange)
         return;
 
-    ExceptionCode ec = 0;
-    selectedRange->deleteContents(ec);
-    ASSERT(!ec);
+    selectedRange->deleteContents(ASSERT_NO_EXCEPTION);
 
-    setBaseAndExtent(selectedRange->startContainer(ec), selectedRange->startOffset(ec), selectedRange->startContainer(ec), selectedRange->startOffset(ec), ec);
-    ASSERT(!ec);
+    setBaseAndExtent(selectedRange->startContainer(ASSERT_NO_EXCEPTION), selectedRange->startOffset(), selectedRange->startContainer(), selectedRange->startOffset(), ASSERT_NO_EXCEPTION);
 }
 
-bool DOMSelection::containsNode(const Node* n, bool allowPartial) const
+bool DOMSelection::containsNode(Node* n, bool allowPartial) const
 {
     if (!m_frame)
         return false;
@@ -459,27 +453,28 @@ bool DOMSelection::containsNode(const Node* n, bool allowPartial) const
     if (!n || m_frame->document() != n->document() || selection->isNone())
         return false;
 
-    ContainerNode* parentNode = n->parentNode();
-    unsigned nodeIndex = n->nodeIndex();
+    RefPtr<Node> node = n;
     RefPtr<Range> selectedRange = selection->selection().toNormalizedRange();
 
-    if (!parentNode)
+    ContainerNode* parentNode = node->parentNode();
+    if (!parentNode || !parentNode->inDocument())
         return false;
+    unsigned nodeIndex = node->nodeIndex();
 
     ExceptionCode ec = 0;
-    bool nodeFullySelected = Range::compareBoundaryPoints(parentNode, nodeIndex, selectedRange->startContainer(ec), selectedRange->startOffset(ec), ec) >= 0 && !ec
-        && Range::compareBoundaryPoints(parentNode, nodeIndex + 1, selectedRange->endContainer(ec), selectedRange->endOffset(ec), ec) <= 0 && !ec;
+    bool nodeFullySelected = Range::compareBoundaryPoints(parentNode, nodeIndex, selectedRange->startContainer(), selectedRange->startOffset(), ec) >= 0 && !ec
+        && Range::compareBoundaryPoints(parentNode, nodeIndex + 1, selectedRange->endContainer(), selectedRange->endOffset(), ec) <= 0 && !ec;
     ASSERT(!ec);
     if (nodeFullySelected)
         return true;
 
-    bool nodeFullyUnselected = (Range::compareBoundaryPoints(parentNode, nodeIndex, selectedRange->endContainer(ec), selectedRange->endOffset(ec), ec) > 0 && !ec)
-        || (Range::compareBoundaryPoints(parentNode, nodeIndex + 1, selectedRange->startContainer(ec), selectedRange->startOffset(ec), ec) < 0 && !ec);
+    bool nodeFullyUnselected = (Range::compareBoundaryPoints(parentNode, nodeIndex, selectedRange->endContainer(), selectedRange->endOffset(), ec) > 0 && !ec)
+        || (Range::compareBoundaryPoints(parentNode, nodeIndex + 1, selectedRange->startContainer(), selectedRange->startOffset(), ec) < 0 && !ec);
     ASSERT(!ec);
     if (nodeFullyUnselected)
         return false;
 
-    return allowPartial || n->isTextNode();
+    return allowPartial || node->isTextNode();
 }
 
 void DOMSelection::selectAllChildren(Node* n, ExceptionCode& ec)

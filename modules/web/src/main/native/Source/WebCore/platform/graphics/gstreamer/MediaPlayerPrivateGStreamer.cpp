@@ -3,7 +3,7 @@
  * Copyright (C) 2007 Collabora Ltd.  All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2009 Gustavo Noronha Silva <gns@gnome.org>
- * Copyright (C) 2009, 2010 Igalia S.L
+ * Copyright (C) 2009, 2010, 2011, 2012, 2013 Igalia S.L
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,30 +26,19 @@
 
 #if ENABLE(VIDEO) && USE(GSTREAMER)
 
-#include "ColorSpace.h"
-#include "Document.h"
-#include "Frame.h"
-#include "FrameView.h"
-#include "GStreamerGWorld.h"
 #include "GStreamerUtilities.h"
 #include "GStreamerVersioning.h"
-#include "GraphicsContext.h"
-#include "GraphicsTypes.h"
-#include "ImageGStreamer.h"
-#include "ImageOrientation.h"
-#include "IntRect.h"
 #include "KURL.h"
+#include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "MediaPlayer.h"
 #include "NotImplemented.h"
 #include "SecurityOrigin.h"
 #include "TimeRanges.h"
-#include "VideoSinkGStreamer.h"
 #include "WebKitWebSourceGStreamer.h"
 #include <gst/gst.h>
-#include <gst/video/video.h>
+#include <gst/pbutils/missing-plugins.h>
 #include <limits>
-#include <math.h>
 #include <wtf/gobject/GOwnPtr.h>
 #include <wtf/text/CString.h>
 
@@ -74,26 +63,25 @@ typedef enum {
     GST_PLAY_FLAG_BUFFERING     = 0x000000100
 } GstPlayFlags;
 
+// gPercentMax is used when parsing buffering ranges with
+// gst_query_parse_nth_buffering_range as there was a bug in GStreamer
+// 0.10 that was using 100 instead of GST_FORMAT_PERCENT_MAX. This was
+// corrected in 1.0. gst_query_parse_buffering_range worked as
+// expected with GST_FORMAT_PERCENT_MAX in both cases.
 #ifdef GST_API_VERSION_1
 static const char* gPlaybinName = "playbin";
+static const gint64 gPercentMax = GST_FORMAT_PERCENT_MAX;
 #else
 static const char* gPlaybinName = "playbin2";
+static const gint64 gPercentMax = 100;
 #endif
+
+GST_DEBUG_CATEGORY_EXTERN(webkit_media_player_debug);
+#define GST_CAT_DEFAULT webkit_media_player_debug
 
 using namespace std;
 
 namespace WebCore {
-
-static int greatestCommonDivisor(int a, int b)
-{
-    while (b) {
-        int temp = a;
-        a = b;
-        b = temp % b;
-    }
-
-    return ABS(a);
-}
 
 static gboolean mediaPlayerPrivateMessageCallback(GstBus*, GstMessage* message, MediaPlayerPrivateGStreamer* player)
 {
@@ -103,32 +91,6 @@ static gboolean mediaPlayerPrivateMessageCallback(GstBus*, GstMessage* message, 
 static void mediaPlayerPrivateSourceChangedCallback(GObject*, GParamSpec*, MediaPlayerPrivateGStreamer* player)
 {
     player->sourceChanged();
-}
-
-static void mediaPlayerPrivateVolumeChangedCallback(GObject*, GParamSpec*, MediaPlayerPrivateGStreamer* player)
-{
-    // This is called when playbin receives the notify::volume signal.
-    player->volumeChanged();
-}
-
-static gboolean mediaPlayerPrivateVolumeChangeTimeoutCallback(MediaPlayerPrivateGStreamer* player)
-{
-    // This is the callback of the timeout source created in ::volumeChanged.
-    player->notifyPlayerOfVolumeChange();
-    return FALSE;
-}
-
-static void mediaPlayerPrivateMuteChangedCallback(GObject*, GParamSpec*, MediaPlayerPrivateGStreamer* player)
-{
-    // This is called when playbin receives the notify::mute signal.
-    player->muteChanged();
-}
-
-static gboolean mediaPlayerPrivateMuteChangeTimeoutCallback(MediaPlayerPrivateGStreamer* player)
-{
-    // This is the callback of the timeout source created in ::muteChanged.
-    player->notifyPlayerOfMute();
-    return FALSE;
 }
 
 static void mediaPlayerPrivateVideoSinkCapsChangedCallback(GObject*, GParamSpec*, MediaPlayerPrivateGStreamer* player)
@@ -153,6 +115,16 @@ static gboolean mediaPlayerPrivateAudioChangeTimeoutCallback(MediaPlayerPrivateG
     return FALSE;
 }
 
+#ifdef GST_API_VERSION_1
+static void setAudioStreamPropertiesCallback(GstChildProxy*, GObject* object, gchar*,
+    MediaPlayerPrivateGStreamer* player)
+#else
+static void setAudioStreamPropertiesCallback(GstChildProxy*, GObject* object, MediaPlayerPrivateGStreamer* player)
+#endif
+{
+    player->setAudioStreamProperties(object);
+}
+
 static gboolean mediaPlayerPrivateVideoChangeTimeoutCallback(MediaPlayerPrivateGStreamer* player)
 {
     // This is the callback of the timeout source created in ::videoChanged.
@@ -160,9 +132,36 @@ static gboolean mediaPlayerPrivateVideoChangeTimeoutCallback(MediaPlayerPrivateG
     return FALSE;
 }
 
-static void mediaPlayerPrivateRepaintCallback(WebKitVideoSink*, GstBuffer *buffer, MediaPlayerPrivateGStreamer* playerPrivate)
+static void mediaPlayerPrivatePluginInstallerResultFunction(GstInstallPluginsReturn result, gpointer userData)
 {
-    playerPrivate->triggerRepaint(buffer);
+    MediaPlayerPrivateGStreamer* player = reinterpret_cast<MediaPlayerPrivateGStreamer*>(userData);
+    player->handlePluginInstallerResult(result);
+}
+
+static GstClockTime toGstClockTime(float time)
+{
+    // Extract the integer part of the time (seconds) and the fractional part (microseconds). Attempt to
+    // round the microseconds so no floating point precision is lost and we can perform an accurate seek.
+    float seconds;
+    float microSeconds = modf(time, &seconds) * 1000000;
+    GTimeVal timeValue;
+    timeValue.tv_sec = static_cast<glong>(seconds);
+    timeValue.tv_usec = static_cast<glong>(roundf(microSeconds / 10000) * 10000);
+    return GST_TIMEVAL_TO_TIME(timeValue);
+}
+
+void MediaPlayerPrivateGStreamer::setAudioStreamProperties(GObject* object)
+{
+    if (g_strcmp0(G_OBJECT_TYPE_NAME(object), "GstPulseSink"))
+        return;
+
+    const char* role = m_player->mediaPlayerClient() && m_player->mediaPlayerClient()->mediaPlayerIsVideo()
+        ? "video" : "music";
+    GstStructure* structure = gst_structure_new("stream-properties", "media.role", G_TYPE_STRING, role, NULL);
+    g_object_set(object, "stream-properties", structure, NULL);
+    gst_structure_free(structure);
+    GOwnPtr<gchar> elementName(gst_element_get_name(GST_ELEMENT(object)));
+    LOG_MEDIA_MESSAGE("Set media.role as %s at %s", role, elementName.get());
 }
 
 PassOwnPtr<MediaPlayerPrivateInterface> MediaPlayerPrivateGStreamer::create(MediaPlayer* player)
@@ -182,8 +181,10 @@ bool initializeGStreamerAndRegisterWebKitElements()
         return false;
 
     GRefPtr<GstElementFactory> srcFactory = gst_element_factory_find("webkitwebsrc");
-    if (!srcFactory)
+    if (!srcFactory) {
+        GST_DEBUG_CATEGORY_INIT(webkit_media_player_debug, "webkitmediaplayer", 0, "WebKit media player");
         return gst_element_register(0, "webkitwebsrc", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_WEB_SRC);
+    }
 
     return true;
 }
@@ -198,24 +199,20 @@ bool MediaPlayerPrivateGStreamer::isAvailable()
 }
 
 MediaPlayerPrivateGStreamer::MediaPlayerPrivateGStreamer(MediaPlayer* player)
-    : m_player(player)
-    , m_playBin(0)
-    , m_webkitVideoSink(0)
-    , m_fpsSink(0)
+    : MediaPlayerPrivateGStreamerBase(player)
     , m_source(0)
     , m_seekTime(0)
     , m_changingRate(false)
     , m_endTime(numeric_limits<float>::infinity())
-    , m_networkState(MediaPlayer::Empty)
-    , m_readyState(MediaPlayer::HaveNothing)
+    , m_isEndReached(false)
     , m_isStreaming(false)
-    , m_size(IntSize())
-    , m_buffer(0)
     , m_mediaLocations(0)
     , m_mediaLocationCurrentIndex(0)
     , m_resetPipeline(false)
     , m_paused(true)
     , m_seeking(false)
+    , m_seekIsPending(false)
+    , m_timeOfOverlappingSeek(-1)
     , m_buffering(false)
     , m_playbackRate(1)
     , m_errorOccured(false)
@@ -224,20 +221,21 @@ MediaPlayerPrivateGStreamer::MediaPlayerPrivateGStreamer(MediaPlayer* player)
     , m_fillTimer(this, &MediaPlayerPrivateGStreamer::fillTimerFired)
     , m_maxTimeLoaded(0)
     , m_bufferingPercentage(0)
-    , m_preload(MediaPlayer::Auto)
+    , m_preload(player->preload())
     , m_delayingLoad(false)
     , m_mediaDurationKnown(true)
     , m_maxTimeLoadedAtLastDidLoadingProgress(0)
-    , m_volumeTimerHandler(0)
-    , m_muteTimerHandler(0)
+    , m_volumeAndMuteInitialized(false)
     , m_hasVideo(false)
     , m_hasAudio(false)
     , m_audioTimerHandler(0)
     , m_videoTimerHandler(0)
     , m_webkitAudioSink(0)
+    , m_totalBytes(-1)
+    , m_preservesPitch(false)
+    , m_requestedState(GST_STATE_VOID_PENDING)
+    , m_missingPlugins(false)
 {
-    if (initializeGStreamerAndRegisterWebKitElements())
-        createGSTPlayBin();
 }
 
 MediaPlayerPrivateGStreamer::~MediaPlayerPrivateGStreamer()
@@ -245,35 +243,31 @@ MediaPlayerPrivateGStreamer::~MediaPlayerPrivateGStreamer()
     if (m_fillTimer.isActive())
         m_fillTimer.stop();
 
-    if (m_buffer)
-        gst_buffer_unref(m_buffer);
-    m_buffer = 0;
-
     if (m_mediaLocations) {
         gst_structure_free(m_mediaLocations);
         m_mediaLocations = 0;
     }
 
-#ifndef GST_API_VERSION_1
-    if (m_videoSinkBin) {
-        gst_object_unref(m_videoSinkBin);
-        m_videoSinkBin = 0;
-    }
-#endif
+    if (m_autoAudioSink)
+        g_signal_handlers_disconnect_by_func(G_OBJECT(m_autoAudioSink.get()),
+            reinterpret_cast<gpointer>(setAudioStreamPropertiesCallback), this);
 
     if (m_playBin) {
-        gst_element_set_state(m_playBin, GST_STATE_NULL);
-        gst_object_unref(GST_OBJECT(m_playBin));
-        m_playBin = 0;
+        GRefPtr<GstBus> bus = webkitGstPipelineGetBus(GST_PIPELINE(m_playBin.get()));
+        ASSERT(bus);
+        g_signal_handlers_disconnect_by_func(bus.get(), reinterpret_cast<gpointer>(mediaPlayerPrivateMessageCallback), this);
+        gst_bus_remove_signal_watch(bus.get());
+
+        g_signal_handlers_disconnect_by_func(m_playBin.get(), reinterpret_cast<gpointer>(mediaPlayerPrivateSourceChangedCallback), this);
+        g_signal_handlers_disconnect_by_func(m_playBin.get(), reinterpret_cast<gpointer>(mediaPlayerPrivateVideoChangedCallback), this);
+        g_signal_handlers_disconnect_by_func(m_playBin.get(), reinterpret_cast<gpointer>(mediaPlayerPrivateAudioChangedCallback), this);
+
+        gst_element_set_state(m_playBin.get(), GST_STATE_NULL);
+        m_playBin.clear();
     }
 
-    m_player = 0;
-
-    if (m_muteTimerHandler)
-        g_source_remove(m_muteTimerHandler);
-
-    if (m_volumeTimerHandler)
-        g_source_remove(m_volumeTimerHandler);
+    GRefPtr<GstPad> videoSinkPad = adoptGRef(gst_element_get_static_pad(m_webkitVideoSink.get(), "sink"));
+    g_signal_handlers_disconnect_by_func(videoSinkPad.get(), reinterpret_cast<gpointer>(mediaPlayerPrivateVideoSinkCapsChangedCallback), this);
 
     if (m_videoTimerHandler)
         g_source_remove(m_videoTimerHandler);
@@ -284,6 +278,8 @@ MediaPlayerPrivateGStreamer::~MediaPlayerPrivateGStreamer()
 
 void MediaPlayerPrivateGStreamer::load(const String& url)
 {
+    if (!initializeGStreamerAndRegisterWebKitElements())
+        return;
 
     KURL kurl(KURL(), url);
     String cleanUrl(url);
@@ -292,54 +288,85 @@ void MediaPlayerPrivateGStreamer::load(const String& url)
     if (kurl.isLocalFile())
         cleanUrl = cleanUrl.substring(0, kurl.pathEnd());
 
-    g_object_set(m_playBin, "uri", cleanUrl.utf8().data(), NULL);
+    if (!m_playBin) {
+        createGSTPlayBin();
+        setDownloadBuffering();
+    }
 
-    LOG_VERBOSE(Media, "Load %s", cleanUrl.utf8().data());
+    ASSERT(m_playBin);
+
+    m_url = KURL(KURL(), cleanUrl);
+    g_object_set(m_playBin.get(), "uri", cleanUrl.utf8().data(), NULL);
+
+    INFO_MEDIA_MESSAGE("Load %s", cleanUrl.utf8().data());
 
     if (m_preload == MediaPlayer::None) {
-        LOG_VERBOSE(Media, "Delaying load.");
+        LOG_MEDIA_MESSAGE("Delaying load.");
         m_delayingLoad = true;
     }
 
-    // GStreamer needs to have the pipeline set to a paused state to
-    // start providing anything useful.
-    gst_element_set_state(m_playBin, GST_STATE_PAUSED);
+    // Reset network and ready states. Those will be set properly once
+    // the pipeline pre-rolled.
+    m_networkState = MediaPlayer::Loading;
+    m_player->networkStateChanged();
+    m_readyState = MediaPlayer::HaveNothing;
+    m_player->readyStateChanged();
+    m_volumeAndMuteInitialized = false;
 
     if (!m_delayingLoad)
         commitLoad();
 }
 
+#if ENABLE(MEDIA_SOURCE)
+void MediaPlayerPrivateGStreamer::load(const String& url, PassRefPtr<MediaSource>)
+{
+    notImplemented();
+}
+#endif
+
 void MediaPlayerPrivateGStreamer::commitLoad()
 {
     ASSERT(!m_delayingLoad);
-    LOG_VERBOSE(Media, "Committing load.");
+    LOG_MEDIA_MESSAGE("Committing load.");
+
+    // GStreamer needs to have the pipeline set to a paused state to
+    // start providing anything useful.
+    gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
+
     updateStates();
 }
 
 float MediaPlayerPrivateGStreamer::playbackPosition() const
 {
-    float ret = 0.0f;
-
-    GstQuery* query = gst_query_new_position(GST_FORMAT_TIME);
-    if (!gst_element_query(m_playBin, query)) {
-        LOG_VERBOSE(Media, "Position query failed...");
-        gst_query_unref(query);
-        return ret;
+    if (m_isEndReached) {
+        // Position queries on a null pipeline return 0. If we're at
+        // the end of the stream the pipeline is null but we want to
+        // report either the seek time or the duration because this is
+        // what the Media element spec expects us to do.
+        if (m_seeking)
+            return m_seekTime;
+        if (m_mediaDuration)
+            return m_mediaDuration;
+        return 0;
     }
 
-    gint64 position;
+    // Position is only available if no async state change is going on and the state is either paused or playing.
+    gint64 position = GST_CLOCK_TIME_NONE;
+    GstQuery* query= gst_query_new_position(GST_FORMAT_TIME);
+    if (gst_element_query(m_playBin.get(), query))
     gst_query_parse_position(query, 0, &position);
 
-    // Position is available only if the pipeline is not in GST_STATE_NULL or
-    // GST_STATE_READY state.
-    if (position != static_cast<gint64>(GST_CLOCK_TIME_NONE))
-        ret = static_cast<double>(position) / GST_SECOND;
+    float result = 0.0f;
+    if (static_cast<GstClockTime>(position) != GST_CLOCK_TIME_NONE)
+        result = static_cast<double>(position) / GST_SECOND;
+    else if (m_canFallBackToLastFinishedSeekPositon)
+        result = m_seekTime;
 
-    LOG_VERBOSE(Media, "Position %" GST_TIME_FORMAT, GST_TIME_ARGS(position));
+    LOG_MEDIA_MESSAGE("Position %" GST_TIME_FORMAT, GST_TIME_ARGS(position));
 
     gst_query_unref(query);
 
-    return ret;
+    return result;
 }
 
 bool MediaPlayerPrivateGStreamer::changePipelineState(GstState newState)
@@ -349,22 +376,27 @@ bool MediaPlayerPrivateGStreamer::changePipelineState(GstState newState)
     GstState currentState;
     GstState pending;
 
-    gst_element_get_state(m_playBin, &currentState, &pending, 0);
-    if (currentState != newState && pending != newState) {
-        GstStateChangeReturn ret = gst_element_set_state(m_playBin, newState);
+    gst_element_get_state(m_playBin.get(), &currentState, &pending, 0);
+    if (currentState == newState || pending == newState) {
+        LOG_MEDIA_MESSAGE("Rejected state change to %s from %s with %s pending", gst_element_state_get_name(newState),
+            gst_element_state_get_name(currentState), gst_element_state_get_name(pending));
+        return true;
+    }
+
+    LOG_MEDIA_MESSAGE("Changing state change to %s from %s with %s pending", gst_element_state_get_name(newState),
+        gst_element_state_get_name(currentState), gst_element_state_get_name(pending));
+
+    GstStateChangeReturn setStateResult = gst_element_set_state(m_playBin.get(), newState);
         GstState pausedOrPlaying = newState == GST_STATE_PLAYING ? GST_STATE_PAUSED : GST_STATE_PLAYING;
-        if (currentState != pausedOrPlaying && ret == GST_STATE_CHANGE_FAILURE) {
+    if (currentState != pausedOrPlaying && setStateResult == GST_STATE_CHANGE_FAILURE) {
             loadingFailed(MediaPlayer::Empty);
             return false;
         }
-    }
     return true;
 }
 
 void MediaPlayerPrivateGStreamer::prepareToPlay()
 {
-    m_isEndReached = false;
-
     if (m_delayingLoad) {
         m_delayingLoad = false;
         commitLoad();
@@ -373,14 +405,19 @@ void MediaPlayerPrivateGStreamer::prepareToPlay()
 
 void MediaPlayerPrivateGStreamer::play()
 {
-    if (changePipelineState(GST_STATE_PLAYING))
-        LOG_VERBOSE(Media, "Play");
+    if (changePipelineState(GST_STATE_PLAYING)) {
+        m_isEndReached = false;
+        LOG_MEDIA_MESSAGE("Play");
+    }
 }
 
 void MediaPlayerPrivateGStreamer::pause()
 {
+    if (m_isEndReached)
+        return;
+
     if (changePipelineState(GST_STATE_PAUSED))
-        LOG_VERBOSE(Media, "Pause");
+        INFO_MEDIA_MESSAGE("Pause");
 }
 
 float MediaPlayerPrivateGStreamer::duration() const
@@ -402,18 +439,19 @@ float MediaPlayerPrivateGStreamer::duration() const
     gint64 timeLength = 0;
 
 #ifdef GST_API_VERSION_1
-    bool failure = !gst_element_query_duration(m_playBin, timeFormat, &timeLength) || static_cast<guint64>(timeLength) == GST_CLOCK_TIME_NONE;
+    bool failure = !gst_element_query_duration(m_playBin.get(), timeFormat, &timeLength) || static_cast<guint64>(timeLength) == GST_CLOCK_TIME_NONE;
 #else
-    bool failure = !gst_element_query_duration(m_playBin, &timeFormat, &timeLength) || timeFormat != GST_FORMAT_TIME || static_cast<guint64>(timeLength) == GST_CLOCK_TIME_NONE;
+    bool failure = !gst_element_query_duration(m_playBin.get(), &timeFormat, &timeLength) || timeFormat != GST_FORMAT_TIME || static_cast<guint64>(timeLength) == GST_CLOCK_TIME_NONE;
 #endif
     if (failure) {
-        LOG_VERBOSE(Media, "Time duration query failed.");
+        LOG_MEDIA_MESSAGE("Time duration query failed for %s", m_url.string().utf8().data());
         return numeric_limits<float>::infinity();
     }
 
-    LOG_VERBOSE(Media, "Duration: %" GST_TIME_FORMAT, GST_TIME_ARGS(timeLength));
+    LOG_MEDIA_MESSAGE("Duration: %" GST_TIME_FORMAT, GST_TIME_ARGS(timeLength));
 
-    return static_cast<double>(timeLength) / GST_SECOND;
+    m_mediaDuration = static_cast<double>(timeLength) / GST_SECOND;
+    return m_mediaDuration;
     // FIXME: handle 3.14.9.5 properly
 }
 
@@ -437,116 +475,78 @@ float MediaPlayerPrivateGStreamer::currentTime() const
         return 0.0f;
 
     return playbackPosition();
-
 }
 
 void MediaPlayerPrivateGStreamer::seek(float time)
 {
-    // Avoid useless seeking.
-    if (time == playbackPosition())
-        return;
-
     if (!m_playBin)
         return;
 
     if (m_errorOccured)
         return;
 
-    // Extract the integer part of the time (seconds) and the
-    // fractional part (microseconds). Attempt to round the
-    // microseconds so no floating point precision is lost and we can
-    // perform an accurate seek.
-    float seconds;
-    float microSeconds = modf(time, &seconds) * 1000000;
-    GTimeVal timeValue;
-    timeValue.tv_sec = static_cast<glong>(seconds);
-    timeValue.tv_usec = static_cast<glong>(roundf(microSeconds / 10000) * 10000);
+    INFO_MEDIA_MESSAGE("[Seek] seek attempt to %f secs", time);
 
-    GstClockTime clockTime = GST_TIMEVAL_TO_TIME(timeValue);
-    LOG_VERBOSE(Media, "Seek: %" GST_TIME_FORMAT, GST_TIME_ARGS(clockTime));
+    // Avoid useless seeking.
+    if (time == currentTime())
+        return;
 
-    if (!gst_element_seek(m_playBin, m_player->rate(),
-            GST_FORMAT_TIME,
-            (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
-            GST_SEEK_TYPE_SET, clockTime,
-            GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE))
-        LOG_VERBOSE(Media, "Seek to %f failed", time);
-    else {
+    if (isLiveStream())
+        return;
+
+    GstClockTime clockTime = toGstClockTime(time);
+    INFO_MEDIA_MESSAGE("[Seek] seeking to %" GST_TIME_FORMAT " (%f)", GST_TIME_ARGS(clockTime), time);
+
+    if (m_seeking) {
+        if (m_seekIsPending) {
+            m_seekTime = time;
+            return;
+        }
+        m_timeOfOverlappingSeek = time;
+    }
+
+    GstState state;
+    GstStateChangeReturn getStateResult = gst_element_get_state(m_playBin.get(), &state, 0, 0);
+    if (getStateResult == GST_STATE_CHANGE_FAILURE || getStateResult == GST_STATE_CHANGE_NO_PREROLL) {
+        LOG_MEDIA_MESSAGE("[Seek] cannot seek, current state change is %s", gst_element_state_change_return_get_name(getStateResult));
+        return;
+    }
+    if (getStateResult == GST_STATE_CHANGE_ASYNC || state < GST_STATE_PAUSED || m_isEndReached) {
+        m_seekIsPending = true;
+        if (m_isEndReached) {
+            LOG_MEDIA_MESSAGE("[Seek] reset pipeline");
+            m_resetPipeline = true;
+            changePipelineState(GST_STATE_PAUSED);
+        }
+    } else {
+        // We can seek now.
+        if (!gst_element_seek(m_playBin.get(), m_player->rate(), GST_FORMAT_TIME, static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
+            GST_SEEK_TYPE_SET, clockTime, GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) {
+            LOG_MEDIA_MESSAGE("[Seek] seeking to %f failed", time);
+            return;
+        }
+    }
+
         m_seeking = true;
         m_seekTime = time;
-    }
+    m_isEndReached = false;
 }
 
 bool MediaPlayerPrivateGStreamer::paused() const
 {
+    if (m_isEndReached) {
+        LOG_MEDIA_MESSAGE("Ignoring pause at EOS");
+        return true;
+    }
+
     GstState state;
-    gst_element_get_state(m_playBin, &state, 0, 0);
+    gst_element_get_state(m_playBin.get(), &state, 0, 0);
     return state == GST_STATE_PAUSED;
 }
 
 bool MediaPlayerPrivateGStreamer::seeking() const
 {
     return m_seeking;
-}
-
-// Returns the size of the video
-IntSize MediaPlayerPrivateGStreamer::naturalSize() const
-{
-    if (!hasVideo())
-        return IntSize();
-
-    if (!m_videoSize.isEmpty())
-        return m_videoSize;
-
-    GstCaps* caps = webkitGstGetPadCaps(m_videoSinkPad.get());
-    if (!caps)
-        return IntSize();
-
-
-    // TODO: handle possible clean aperture data. See
-    // https://bugzilla.gnome.org/show_bug.cgi?id=596571
-    // TODO: handle possible transformation matrix. See
-    // https://bugzilla.gnome.org/show_bug.cgi?id=596326
-
-    // Get the video PAR and original size, if this fails the
-    // video-sink has likely not yet negotiated its caps.
-    int pixelAspectRatioNumerator, pixelAspectRatioDenominator, stride;
-    IntSize originalSize;
-    GstVideoFormat format;
-    if (!getVideoSizeAndFormatFromCaps(caps, originalSize, format, pixelAspectRatioNumerator, pixelAspectRatioDenominator, stride))
-        return IntSize();
-
-    LOG_VERBOSE(Media, "Original video size: %dx%d", originalSize.width(), originalSize.height());
-    LOG_VERBOSE(Media, "Pixel aspect ratio: %d/%d", pixelAspectRatioNumerator, pixelAspectRatioDenominator);
-
-    // Calculate DAR based on PAR and video size.
-    int displayWidth = originalSize.width() * pixelAspectRatioNumerator;
-    int displayHeight = originalSize.height() * pixelAspectRatioDenominator;
-
-    // Divide display width and height by their GCD to avoid possible overflows.
-    int displayAspectRatioGCD = greatestCommonDivisor(displayWidth, displayHeight);
-    displayWidth /= displayAspectRatioGCD;
-    displayHeight /= displayAspectRatioGCD;
-
-    // Apply DAR to original video size. This is the same behavior as in xvimagesink's setcaps function.
-    guint64 width = 0, height = 0;
-    if (!(originalSize.height() % displayHeight)) {
-        LOG_VERBOSE(Media, "Keeping video original height");
-        width = gst_util_uint64_scale_int(originalSize.height(), displayWidth, displayHeight);
-        height = static_cast<guint64>(originalSize.height());
-    } else if (!(originalSize.width() % displayWidth)) {
-        LOG_VERBOSE(Media, "Keeping video original width");
-        height = gst_util_uint64_scale_int(originalSize.width(), displayHeight, displayWidth);
-        width = static_cast<guint64>(originalSize.width());
-    } else {
-        LOG_VERBOSE(Media, "Approximating while keeping original video height");
-        width = gst_util_uint64_scale_int(originalSize.height(), displayWidth, displayHeight);
-        height = static_cast<guint64>(originalSize.height());
-    }
-
-    LOG_VERBOSE(Media, "Natural size: %" G_GUINT64_FORMAT "x%" G_GUINT64_FORMAT, width, height);
-    m_videoSize = IntSize(static_cast<int>(width), static_cast<int>(height));
-    return m_videoSize;
 }
 
 void MediaPlayerPrivateGStreamer::videoChanged()
@@ -562,7 +562,7 @@ void MediaPlayerPrivateGStreamer::notifyPlayerOfVideo()
 
     gint videoTracks = 0;
     if (m_playBin)
-        g_object_get(m_playBin, "n-video", &videoTracks, NULL);
+        g_object_get(m_playBin.get(), "n-video", &videoTracks, NULL);
 
     m_hasVideo = videoTracks > 0;
 
@@ -584,40 +584,9 @@ void MediaPlayerPrivateGStreamer::notifyPlayerOfAudio()
 
     gint audioTracks = 0;
     if (m_playBin)
-        g_object_get(m_playBin, "n-audio", &audioTracks, NULL);
+        g_object_get(m_playBin.get(), "n-audio", &audioTracks, NULL);
     m_hasAudio = audioTracks > 0;
     m_player->mediaPlayerClient()->mediaPlayerEngineUpdated(m_player);
-}
-
-void MediaPlayerPrivateGStreamer::setVolume(float volume)
-{
-    if (!m_playBin)
-        return;
-
-    gst_stream_volume_set_volume(GST_STREAM_VOLUME(m_playBin), GST_STREAM_VOLUME_FORMAT_CUBIC,
-                                 static_cast<double>(volume));
-}
-
-void MediaPlayerPrivateGStreamer::notifyPlayerOfVolumeChange()
-{
-    m_volumeTimerHandler = 0;
-
-    if (!m_player || !m_playBin)
-        return;
-    double volume;
-    volume = gst_stream_volume_get_volume(GST_STREAM_VOLUME(m_playBin), GST_STREAM_VOLUME_FORMAT_CUBIC);
-    // get_volume() can return values superior to 1.0 if the user
-    // applies software user gain via third party application (GNOME
-    // volume control for instance).
-    volume = CLAMP(volume, 0.0, 1.0);
-    m_player->volumeChanged(static_cast<float>(volume));
-}
-
-void MediaPlayerPrivateGStreamer::volumeChanged()
-{
-    if (m_volumeTimerHandler)
-        g_source_remove(m_volumeTimerHandler);
-    m_volumeTimerHandler = g_timeout_add(0, reinterpret_cast<GSourceFunc>(mediaPlayerPrivateVolumeChangeTimeoutCallback), this);
 }
 
 void MediaPlayerPrivateGStreamer::setRate(float rate)
@@ -629,19 +598,19 @@ void MediaPlayerPrivateGStreamer::setRate(float rate)
     GstState state;
     GstState pending;
 
-    gst_element_get_state(m_playBin, &state, &pending, 0);
+    gst_element_get_state(m_playBin.get(), &state, &pending, 0);
     if ((state != GST_STATE_PLAYING && state != GST_STATE_PAUSED)
         || (pending == GST_STATE_PAUSED))
         return;
 
-    if (m_isStreaming)
+    if (isLiveStream())
         return;
 
     m_playbackRate = rate;
     m_changingRate = true;
 
     if (!rate) {
-        gst_element_set_state(m_playBin, GST_STATE_PAUSED);
+        gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
         return;
     }
 
@@ -650,11 +619,11 @@ void MediaPlayerPrivateGStreamer::setRate(float rate)
     gint64 start, end;
     bool mute = false;
 
-    LOG_VERBOSE(Media, "Set Rate to %f", rate);
+    INFO_MEDIA_MESSAGE("Set Rate to %f", rate);
     if (rate > 0) {
-        // Mute the sound if the playback rate is too extreme.
-        // TODO: in other cases we should perform pitch adjustments.
-        mute = (bool) (rate < 0.8 || rate > 2);
+        // Mute the sound if the playback rate is too extreme and
+        // audio pitch is not adjusted.
+        mute = (!m_preservesPitch && (rate < 0.8 || rate > 2));
         start = currentPosition;
         end = GST_CLOCK_TIME_NONE;
     } else {
@@ -669,49 +638,44 @@ void MediaPlayerPrivateGStreamer::setRate(float rate)
             end = currentPosition;
     }
 
-    LOG_VERBOSE(Media, "Need to mute audio: %d", (int) mute);
+    INFO_MEDIA_MESSAGE("Need to mute audio?: %d", (int) mute);
 
-    if (!gst_element_seek(m_playBin, rate, GST_FORMAT_TIME, flags,
+    if (!gst_element_seek(m_playBin.get(), rate, GST_FORMAT_TIME, flags,
                           GST_SEEK_TYPE_SET, start,
                           GST_SEEK_TYPE_SET, end))
-        LOG_VERBOSE(Media, "Set rate to %f failed", rate);
+        ERROR_MEDIA_MESSAGE("Set rate to %f failed", rate);
     else
-        g_object_set(m_playBin, "mute", mute, NULL);
+        g_object_set(m_playBin.get(), "mute", mute, NULL);
 }
 
-MediaPlayer::NetworkState MediaPlayerPrivateGStreamer::networkState() const
+void MediaPlayerPrivateGStreamer::setPreservesPitch(bool preservesPitch)
 {
-    return m_networkState;
-}
-
-MediaPlayer::ReadyState MediaPlayerPrivateGStreamer::readyState() const
-{
-    return m_readyState;
+    m_preservesPitch = preservesPitch;
 }
 
 PassRefPtr<TimeRanges> MediaPlayerPrivateGStreamer::buffered() const
 {
     RefPtr<TimeRanges> timeRanges = TimeRanges::create();
-    if (m_errorOccured || m_isStreaming)
+    if (m_errorOccured || isLiveStream())
         return timeRanges.release();
 
 #if GST_CHECK_VERSION(0, 10, 31)
     float mediaDuration(duration());
-    if (!mediaDuration || isinf(mediaDuration))
+    if (!mediaDuration || std::isinf(mediaDuration))
         return timeRanges.release();
 
     GstQuery* query = gst_query_new_buffering(GST_FORMAT_PERCENT);
 
-    if (!gst_element_query(m_playBin, query)) {
+    if (!gst_element_query(m_playBin.get(), query)) {
         gst_query_unref(query);
         return timeRanges.release();
     }
 
-    gint64 rangeStart = 0, rangeStop = 0;
     for (guint index = 0; index < gst_query_get_n_buffering_ranges(query); index++) {
+    gint64 rangeStart = 0, rangeStop = 0;
         if (gst_query_parse_nth_buffering_range(query, index, &rangeStart, &rangeStop))
-            timeRanges->add(static_cast<float>((rangeStart * mediaDuration) / 100),
-                            static_cast<float>((rangeStop * mediaDuration) / 100));
+            timeRanges->add(static_cast<float>((rangeStart * mediaDuration) / gPercentMax),
+                static_cast<float>((rangeStop * mediaDuration) / gPercentMax));
     }
 
     // Fallback to the more general maxTimeLoaded() if no range has
@@ -723,7 +687,7 @@ PassRefPtr<TimeRanges> MediaPlayerPrivateGStreamer::buffered() const
     gst_query_unref(query);
 #else
     float loaded = maxTimeLoaded();
-    if (!m_errorOccured && !m_isStreaming && loaded > 0)
+    if (!m_errorOccured && !isLiveStream() && loaded > 0)
         timeRanges->add(0, loaded);
 #endif
     return timeRanges.release();
@@ -737,6 +701,9 @@ gboolean MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
     bool issueError = true;
     bool attemptNextLocation = false;
     const GstStructure* structure = gst_message_get_structure(message);
+    GstState requestedState, currentState;
+
+    m_canFallBackToLastFinishedSeekPositon = false;
 
     if (structure) {
         const gchar* messageTypeName = gst_structure_get_name(structure);
@@ -749,14 +716,20 @@ gboolean MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
         }
     }
 
+    // We ignore state changes from internal elements. They are forwarded to playbin2 anyway.
+    bool messageSourceIsPlaybin = GST_MESSAGE_SRC(message) == reinterpret_cast<GstObject*>(m_playBin.get());
+
+    LOG_MEDIA_MESSAGE("Message %s received from element %s", GST_MESSAGE_TYPE_NAME(message), GST_MESSAGE_SRC_NAME(message));
     switch (GST_MESSAGE_TYPE(message)) {
     case GST_MESSAGE_ERROR:
         if (m_resetPipeline)
             break;
+        if (m_missingPlugins)
+            break;
         gst_message_parse_error(message, &err.outPtr(), &debug.outPtr());
-        LOG_VERBOSE(Media, "Error: %d, %s", err->code,  err->message);
+        ERROR_MEDIA_MESSAGE("Error %d: %s (url=%s)", err->code, err->message, m_url.string().utf8().data());
 
-        GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN(m_playBin), GST_DEBUG_GRAPH_SHOW_ALL, "webkit-video.error");
+        GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN(m_playBin.get()), GST_DEBUG_GRAPH_SHOW_ALL, "webkit-video.error");
 
         error = MediaPlayer::Empty;
         if (err->code == GST_STREAM_ERROR_CODEC_NOT_FOUND
@@ -770,7 +743,7 @@ gboolean MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
             // this case the HTMLMediaElement will emit a stalled
             // event.
             if (err->code == GST_STREAM_ERROR_TYPE_NOT_FOUND) {
-                LOG_VERBOSE(Media, "Decode error, let the Media element emit a stalled event.");
+                ERROR_MEDIA_MESSAGE("Decode error, let the Media element emit a stalled event.");
                 break;
             }
             error = MediaPlayer::DecodeError;
@@ -784,46 +757,72 @@ gboolean MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
             loadingFailed(error);
         break;
     case GST_MESSAGE_EOS:
-        LOG_VERBOSE(Media, "End of Stream");
         didEnd();
         break;
-    case GST_MESSAGE_STATE_CHANGED:
-        // Ignore state changes if load is delayed (preload=none). The
-        // player state will be updated once commitLoad() is called.
-        if (m_delayingLoad) {
-            LOG_VERBOSE(Media, "Media load has been delayed. Ignoring state changes for now");
+    case GST_MESSAGE_ASYNC_DONE:
+        if (!messageSourceIsPlaybin || m_delayingLoad)
             break;
-        }
-
-        // Ignore state changes from internal elements. They are
-        // forwarded to playbin2 anyway.
-        if (GST_MESSAGE_SRC(message) == reinterpret_cast<GstObject*>(m_playBin)) {
+        asyncStateChangeDone();
+        break;
+    case GST_MESSAGE_STATE_CHANGED: {
+        if (!messageSourceIsPlaybin || m_delayingLoad)
+            break;
             updateStates();
 
             // Construct a filename for the graphviz dot file output.
-            GstState oldState, newState;
-            gst_message_parse_state_changed(message, &oldState, &newState, 0);
+        GstState newState;
+        gst_message_parse_state_changed(message, &currentState, &newState, 0);
+        CString dotFileName = String::format("webkit-video.%s_%s", gst_element_state_get_name(currentState), gst_element_state_get_name(newState)).utf8();
+        GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN(m_playBin.get()), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.data());
 
-            CString dotFileName = String::format("webkit-video.%s_%s",
-                                                 gst_element_state_get_name(oldState),
-                                                 gst_element_state_get_name(newState)).utf8();
-
-            GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN(m_playBin), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.data());
-        }
         break;
+        }
     case GST_MESSAGE_BUFFERING:
         processBufferingStats(message);
         break;
+#ifdef GST_API_VERSION_1
+    case GST_MESSAGE_DURATION_CHANGED:
+#else
     case GST_MESSAGE_DURATION:
-        LOG_VERBOSE(Media, "Duration changed");
+#endif
+        if (messageSourceIsPlaybin)
         durationChanged();
         break;
+    case GST_MESSAGE_REQUEST_STATE:
+        gst_message_parse_request_state(message, &requestedState);
+        gst_element_get_state(m_playBin.get(), &currentState, NULL, 250);
+        if (requestedState < currentState) {
+            GOwnPtr<gchar> elementName(gst_element_get_name(GST_ELEMENT(message)));
+            INFO_MEDIA_MESSAGE("Element %s requested state change to %s", elementName.get(),
+                gst_element_state_get_name(requestedState));
+            m_requestedState = requestedState;
+            changePipelineState(requestedState);
+        }
+        break;
+    case GST_MESSAGE_ELEMENT:
+        if (gst_is_missing_plugin_message(message)) {
+            gchar* detail = gst_missing_plugin_message_get_installer_detail(message);
+            gchar* detailArray[2] = {detail, 0};
+            GstInstallPluginsReturn result = gst_install_plugins_async(detailArray, 0, mediaPlayerPrivatePluginInstallerResultFunction, this);
+            m_missingPlugins = result == GST_INSTALL_PLUGINS_STARTED_OK;
+            g_free(detail);
+        }
+        break;
     default:
-        LOG_VERBOSE(Media, "Unhandled GStreamer message type: %s",
+        LOG_MEDIA_MESSAGE("Unhandled GStreamer message type: %s",
                     GST_MESSAGE_TYPE_NAME(message));
         break;
     }
     return TRUE;
+}
+
+void MediaPlayerPrivateGStreamer::handlePluginInstallerResult(GstInstallPluginsReturn result)
+{
+    m_missingPlugins = false;
+    if (result == GST_INSTALL_PLUGINS_SUCCESS) {
+        gst_element_set_state(m_playBin.get(), GST_STATE_READY);
+        gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
+    }
 }
 
 void MediaPlayerPrivateGStreamer::processBufferingStats(GstMessage* message)
@@ -834,7 +833,7 @@ void MediaPlayerPrivateGStreamer::processBufferingStats(GstMessage* message)
     const GstStructure *structure = gst_message_get_structure(message);
     gst_structure_get_int(structure, "buffer-percent", &m_bufferingPercentage);
 
-    LOG_VERBOSE(Media, "[Buffering] Buffering: %d%%.", m_bufferingPercentage);
+    LOG_MEDIA_MESSAGE("[Buffering] Buffering: %d%%.", m_bufferingPercentage);
 
     GstBufferingMode mode;
     gst_message_parse_buffering_stats(message, &mode, 0, 0, 0);
@@ -846,7 +845,7 @@ void MediaPlayerPrivateGStreamer::processBufferingStats(GstMessage* message)
     // This is on-disk buffering, that allows us to download much more
     // than needed for right now.
     if (!m_startedBuffering) {
-        LOG_VERBOSE(Media, "[Buffering] Starting on-disk buffering.");
+        LOG_MEDIA_MESSAGE("[Buffering] Starting on-disk buffering.");
 
         m_startedBuffering = true;
 
@@ -855,13 +854,18 @@ void MediaPlayerPrivateGStreamer::processBufferingStats(GstMessage* message)
 
         m_fillTimer.startRepeating(0.2);
     }
+
+    if (!m_paused && m_bufferingPercentage < 100) {
+        LOG_MEDIA_MESSAGE("[Buffering] Download in progress, pausing pipeline.");
+        gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
+    }
 }
 
 void MediaPlayerPrivateGStreamer::fillTimerFired(Timer<MediaPlayerPrivateGStreamer>*)
 {
     GstQuery* query = gst_query_new_buffering(GST_FORMAT_PERCENT);
 
-    if (!gst_element_query(m_playBin, query)) {
+    if (!gst_element_query(m_playBin.get(), query)) {
         gst_query_unref(query);
         return;
     }
@@ -875,7 +879,7 @@ void MediaPlayerPrivateGStreamer::fillTimerFired(Timer<MediaPlayerPrivateGStream
     if (stop != -1)
         fillStatus = 100.0 * stop / GST_FORMAT_PERCENT_MAX;
 
-    LOG_VERBOSE(Media, "[Buffering] Download buffer filled up to %f%%", fillStatus);
+    LOG_MEDIA_MESSAGE("[Buffering] Download buffer filled up to %f%%", fillStatus);
 
     if (!m_mediaDuration)
         durationChanged();
@@ -887,7 +891,7 @@ void MediaPlayerPrivateGStreamer::fillTimerFired(Timer<MediaPlayerPrivateGStream
             m_maxTimeLoaded = m_mediaDuration;
         else
             m_maxTimeLoaded = static_cast<float>((fillStatus * m_mediaDuration) / 100.0);
-        LOG_VERBOSE(Media, "[Buffering] Updated maxTimeLoaded: %f", m_maxTimeLoaded);
+        LOG_MEDIA_MESSAGE("[Buffering] Updated maxTimeLoaded: %f", m_maxTimeLoaded);
     }
 
     if (fillStatus != 100.0) {
@@ -908,9 +912,9 @@ float MediaPlayerPrivateGStreamer::maxTimeSeekable() const
     if (m_errorOccured)
         return 0.0f;
 
-    LOG_VERBOSE(Media, "maxTimeSeekable");
+    LOG_MEDIA_MESSAGE("maxTimeSeekable");
     // infinite duration means live stream
-    if (isinf(duration()))
+    if (std::isinf(duration()))
         return 0.0f;
 
     return duration();
@@ -924,7 +928,7 @@ float MediaPlayerPrivateGStreamer::maxTimeLoaded() const
     float loaded = m_maxTimeLoaded;
     if (!loaded && !m_fillTimer.isActive())
         loaded = duration();
-    LOG_VERBOSE(Media, "maxTimeLoaded: %f", loaded);
+    LOG_MEDIA_MESSAGE("maxTimeLoaded: %f", loaded);
     return loaded;
 }
 
@@ -935,16 +939,19 @@ bool MediaPlayerPrivateGStreamer::didLoadingProgress() const
     float currentMaxTimeLoaded = maxTimeLoaded();
     bool didLoadingProgress = currentMaxTimeLoaded != m_maxTimeLoadedAtLastDidLoadingProgress;
     m_maxTimeLoadedAtLastDidLoadingProgress = currentMaxTimeLoaded;
-    LOG_VERBOSE(Media, "didLoadingProgress: %d", didLoadingProgress);
+    LOG_MEDIA_MESSAGE("didLoadingProgress: %d", didLoadingProgress);
     return didLoadingProgress;
 }
 
 unsigned MediaPlayerPrivateGStreamer::totalBytes() const
 {
-    if (!m_source)
+    if (m_errorOccured)
         return 0;
 
-    if (m_errorOccured)
+    if (m_totalBytes != -1)
+        return m_totalBytes;
+
+    if (!m_source)
         return 0;
 
     GstFormat fmt = GST_FORMAT_BYTES;
@@ -954,8 +961,10 @@ unsigned MediaPlayerPrivateGStreamer::totalBytes() const
 #else
     if (gst_element_query_duration(m_source.get(), &fmt, &length)) {
 #endif
-        LOG_VERBOSE(Media, "totalBytes %" G_GINT64_FORMAT, length);
-        return static_cast<unsigned>(length);
+        INFO_MEDIA_MESSAGE("totalBytes %" G_GINT64_FORMAT, length);
+        m_totalBytes = static_cast<unsigned>(length);
+        m_isStreaming = !length;
+        return m_totalBytes;
     }
 
     // Fall back to querying the source pads manually.
@@ -1002,49 +1011,10 @@ unsigned MediaPlayerPrivateGStreamer::totalBytes() const
 
     gst_iterator_free(iter);
 
-    LOG_VERBOSE(Media, "totalBytes %" G_GINT64_FORMAT, length);
-
-    return static_cast<unsigned>(length);
-}
-
-unsigned MediaPlayerPrivateGStreamer::decodedFrameCount() const
-{
-    guint64 decodedFrames = 0;
-    if (m_fpsSink)
-        g_object_get(m_fpsSink, "frames-rendered", &decodedFrames, NULL);
-    return static_cast<unsigned>(decodedFrames);
-}
-
-unsigned MediaPlayerPrivateGStreamer::droppedFrameCount() const
-{
-    guint64 framesDropped = 0;
-    if (m_fpsSink)
-        g_object_get(m_fpsSink, "frames-dropped", &framesDropped, NULL);
-    return static_cast<unsigned>(framesDropped);
-}
-
-unsigned MediaPlayerPrivateGStreamer::audioDecodedByteCount() const
-{
-    GstQuery* query = gst_query_new_position(GST_FORMAT_BYTES);
-    gint64 position = 0;
-
-    if (m_webkitAudioSink && gst_element_query(m_webkitAudioSink.get(), query))
-        gst_query_parse_position(query, 0, &position);
-
-    gst_query_unref(query);
-    return static_cast<unsigned>(position);
-}
-
-unsigned MediaPlayerPrivateGStreamer::videoDecodedByteCount() const
-{
-    GstQuery* query = gst_query_new_position(GST_FORMAT_BYTES);
-    gint64 position = 0;
-
-    if (gst_element_query(m_webkitVideoSink, query))
-        gst_query_parse_position(query, 0, &position);
-
-    gst_query_unref(query);
-    return static_cast<unsigned>(position);
+    INFO_MEDIA_MESSAGE("totalBytes %" G_GINT64_FORMAT, length);
+    m_totalBytes = static_cast<unsigned>(length);
+    m_isStreaming = !length;
+    return m_totalBytes;
 }
 
 void MediaPlayerPrivateGStreamer::updateAudioSink()
@@ -1054,17 +1024,21 @@ void MediaPlayerPrivateGStreamer::updateAudioSink()
 
     GstElement* sinkPtr = 0;
 
-    g_object_get(m_playBin, "audio-sink", &sinkPtr, NULL);
+    g_object_get(m_playBin.get(), "audio-sink", &sinkPtr, NULL);
     m_webkitAudioSink = adoptGRef(sinkPtr);
 
 }
 
+GstElement* MediaPlayerPrivateGStreamer::audioSink() const
+{
+    return m_webkitAudioSink.get();
+}
 
 void MediaPlayerPrivateGStreamer::sourceChanged()
 {
     GstElement* srcPtr = 0;
 
-    g_object_get(m_playBin, "source", &srcPtr, NULL);
+    g_object_get(m_playBin.get(), "source", &srcPtr, NULL);
     m_source = adoptGRef(srcPtr);
 
     if (WEBKIT_IS_WEB_SRC(m_source.get()))
@@ -1077,7 +1051,33 @@ void MediaPlayerPrivateGStreamer::cancelLoad()
         return;
 
     if (m_playBin)
-        gst_element_set_state(m_playBin, GST_STATE_NULL);
+        gst_element_set_state(m_playBin.get(), GST_STATE_NULL);
+}
+
+void MediaPlayerPrivateGStreamer::asyncStateChangeDone()
+{
+    if (!m_playBin || m_errorOccured)
+        return;
+
+    if (m_seeking) {
+        if (m_seekIsPending)
+            updateStates();
+        else {
+            LOG_MEDIA_MESSAGE("[Seek] seeked to %f", m_seekTime);
+            m_seeking = false;
+            if (m_timeOfOverlappingSeek != -1) {
+                seek(m_timeOfOverlappingSeek);
+                m_timeOfOverlappingSeek = -1;
+                return;
+            }
+
+            // The pipeline can still have a pending state. In this case a position query will fail.
+            // Right now we can use m_seekTime as a fallback.
+            m_canFallBackToLastFinishedSeekPositon = true;
+            timeChanged();
+        }
+    } else
+        updateStates();
 }
 
 void MediaPlayerPrivateGStreamer::updateStates()
@@ -1093,27 +1093,24 @@ void MediaPlayerPrivateGStreamer::updateStates()
     GstState state;
     GstState pending;
 
-    GstStateChangeReturn ret = gst_element_get_state(m_playBin,
-        &state, &pending, 250 * GST_NSECOND);
+    GstStateChangeReturn getStateResult = gst_element_get_state(m_playBin.get(), &state, &pending, 250 * GST_NSECOND);
 
-    bool shouldUpdateAfterSeek = false;
-    switch (ret) {
+    bool shouldUpdatePlaybackState = false;
+    switch (getStateResult) {
     case GST_STATE_CHANGE_SUCCESS:
-        LOG_VERBOSE(Media, "State: %s, pending: %s",
-            gst_element_state_get_name(state),
-            gst_element_state_get_name(pending));
+        LOG_MEDIA_MESSAGE("State: %s, pending: %s", gst_element_state_get_name(state), gst_element_state_get_name(pending));
 
-        m_resetPipeline = state <= GST_STATE_READY;
+        if (state <= GST_STATE_READY) {
+            m_resetPipeline = true;
+            m_mediaDuration = 0;
+        } else
+            cacheDuration();
 
         // Try to figure out ready and network states.
         if (state == GST_STATE_READY) {
             m_readyState = MediaPlayer::HaveMetadata;
             m_networkState = MediaPlayer::Empty;
-            // Cache the duration without emiting the durationchange
-            // event because it's taken care of by the media element
-            // in this precise case.
-            cacheDuration();
-        } else if (maxTimeLoaded() == duration()) {
+        } else if ((state == GST_STATE_NULL) || (maxTimeLoaded() == duration())) {
             m_networkState = MediaPlayer::Loaded;
             m_readyState = MediaPlayer::HaveEnoughData;
         } else {
@@ -1132,16 +1129,23 @@ void MediaPlayerPrivateGStreamer::updateStates()
         if (state == GST_STATE_PAUSED) {
             if (!m_webkitAudioSink)
                 updateAudioSink();
+
+            if (!m_volumeAndMuteInitialized) {
+                notifyPlayerOfVolumeChange();
+                notifyPlayerOfMute();
+                m_volumeAndMuteInitialized = true;
+            }
+
             if (m_buffering && m_bufferingPercentage == 100) {
                 m_buffering = false;
                 m_bufferingPercentage = 0;
                 m_readyState = MediaPlayer::HaveEnoughData;
 
-                LOG_VERBOSE(Media, "[Buffering] Complete.");
+                LOG_MEDIA_MESSAGE("[Buffering] Complete.");
 
                 if (!m_paused) {
-                    LOG_VERBOSE(Media, "[Buffering] Restarting playback.");
-                    gst_element_set_state(m_playBin, GST_STATE_PLAYING);
+                    LOG_MEDIA_MESSAGE("[Buffering] Restarting playback.");
+                    gst_element_set_state(m_playBin.get(), GST_STATE_PLAYING);
                 }
             } else if (!m_buffering && (currentTime() < duration())) {
                 m_paused = true;
@@ -1150,13 +1154,13 @@ void MediaPlayerPrivateGStreamer::updateStates()
             m_readyState = MediaPlayer::HaveEnoughData;
             m_paused = false;
 
-            if (m_buffering) {
+            if (m_buffering && !isLiveStream()) {
                 m_readyState = MediaPlayer::HaveCurrentData;
                 m_networkState = MediaPlayer::Loading;
 
-                LOG_VERBOSE(Media, "[Buffering] Pausing stream for buffering.");
+                LOG_MEDIA_MESSAGE("[Buffering] Pausing stream for buffering.");
 
-                gst_element_set_state(m_playBin, GST_STATE_PAUSED);
+                gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
             }
         } else
             m_paused = true;
@@ -1170,36 +1174,38 @@ void MediaPlayerPrivateGStreamer::updateStates()
             m_changingRate = false;
         }
 
-        if (m_seeking) {
-            shouldUpdateAfterSeek = true;
-            m_seeking = false;
+        if (m_requestedState == GST_STATE_PAUSED && state == GST_STATE_PAUSED) {
+            shouldUpdatePlaybackState = true;
+            LOG_MEDIA_MESSAGE("Requested state change to %s was completed", gst_element_state_get_name(state));
         }
 
         break;
     case GST_STATE_CHANGE_ASYNC:
-        LOG_VERBOSE(Media, "Async: State: %s, pending: %s",
-            gst_element_state_get_name(state),
-            gst_element_state_get_name(pending));
+        LOG_MEDIA_MESSAGE("Async: State: %s, pending: %s", gst_element_state_get_name(state), gst_element_state_get_name(pending));
         // Change in progress
 
-        if (!m_isStreaming && !m_buffering)
-            return;
-
-        if (m_seeking) {
-            shouldUpdateAfterSeek = true;
-            m_seeking = false;
+        // On-disk buffering was attempted but the media is live. This
+        // can't work so disable on-disk buffering and reset the
+        // pipeline.
+        if (state == GST_STATE_READY && isLiveStream() && m_preload == MediaPlayer::Auto) {
+            setPreload(MediaPlayer::None);
+            gst_element_set_state(m_playBin.get(), GST_STATE_NULL);
+            gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
         }
+
+        // A live stream was paused, reset the pipeline.
+        if (state == GST_STATE_PAUSED && pending == GST_STATE_PLAYING && isLiveStream()) {
+            gst_element_set_state(m_playBin.get(), GST_STATE_NULL);
+            gst_element_set_state(m_playBin.get(), GST_STATE_PLAYING);
+        }
+
         break;
     case GST_STATE_CHANGE_FAILURE:
-        LOG_VERBOSE(Media, "Failure: State: %s, pending: %s",
-            gst_element_state_get_name(state),
-            gst_element_state_get_name(pending));
+        LOG_MEDIA_MESSAGE("Failure: State: %s, pending: %s", gst_element_state_get_name(state), gst_element_state_get_name(pending));
         // Change failed
         return;
     case GST_STATE_CHANGE_NO_PREROLL:
-        LOG_VERBOSE(Media, "No preroll: State: %s, pending: %s",
-            gst_element_state_get_name(state),
-            gst_element_state_get_name(pending));
+        LOG_MEDIA_MESSAGE("No preroll: State: %s, pending: %s", gst_element_state_get_name(state), gst_element_state_get_name(pending));
 
         if (state == GST_STATE_READY)
             m_readyState = MediaPlayer::HaveNothing;
@@ -1211,36 +1217,37 @@ void MediaPlayerPrivateGStreamer::updateStates()
         } else if (state == GST_STATE_PLAYING)
             m_paused = false;
 
-        if (m_seeking) {
-            shouldUpdateAfterSeek = true;
-            m_seeking = false;
             if (!m_paused)
-                gst_element_set_state(m_playBin, GST_STATE_PLAYING);
-        } else if (!m_paused)
-            gst_element_set_state(m_playBin, GST_STATE_PLAYING);
+            gst_element_set_state(m_playBin.get(), GST_STATE_PLAYING);
 
         m_networkState = MediaPlayer::Loading;
         break;
     default:
-        LOG_VERBOSE(Media, "Else : %d", ret);
+        LOG_MEDIA_MESSAGE("Else : %d", getStateResult);
         break;
     }
 
-    if (seeking())
-        m_readyState = MediaPlayer::HaveNothing;
+    m_requestedState = GST_STATE_VOID_PENDING;
 
-    if (shouldUpdateAfterSeek)
-        timeChanged();
+    if (shouldUpdatePlaybackState)
+        m_player->playbackStateChanged();
 
     if (m_networkState != oldNetworkState) {
-        LOG_VERBOSE(Media, "Network State Changed from %u to %u",
-            oldNetworkState, m_networkState);
+        LOG_MEDIA_MESSAGE("Network State Changed from %u to %u", oldNetworkState, m_networkState);
         m_player->networkStateChanged();
     }
     if (m_readyState != oldReadyState) {
-        LOG_VERBOSE(Media, "Ready State Changed from %u to %u",
-            oldReadyState, m_readyState);
+        LOG_MEDIA_MESSAGE("Ready State Changed from %u to %u", oldReadyState, m_readyState);
         m_player->readyStateChanged();
+    }
+
+    if (m_seekIsPending && getStateResult == GST_STATE_CHANGE_SUCCESS && (state == GST_STATE_PAUSED || state == GST_STATE_PLAYING)) {
+        LOG_MEDIA_MESSAGE("[Seek] committing pending seek to %f", m_seekTime);
+        m_seekIsPending = false;
+        m_seeking = gst_element_seek(m_playBin.get(), m_player->rate(), GST_FORMAT_TIME, static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
+            GST_SEEK_TYPE_SET, toGstClockTime(m_seekTime), GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+        if (!m_seeking)
+            LOG_MEDIA_MESSAGE("[Seek] seeking to %f failed", m_seekTime);
     }
 }
 
@@ -1301,23 +1308,12 @@ bool MediaPlayerPrivateGStreamer::loadNextLocation()
         // Found a candidate. new-location is not always an absolute url
         // though. We need to take the base of the current url and
         // append the value of new-location to it.
+        KURL baseUrl = gst_uri_is_valid(newLocation) ? KURL() : m_url;
+        KURL newUrl = KURL(baseUrl, newLocation);
 
-        gchar* currentLocation = 0;
-        g_object_get(m_playBin, "uri", &currentLocation, NULL);
-
-        KURL currentUrl(KURL(), currentLocation);
-        g_free(currentLocation);
-
-        KURL newUrl;
-
-        if (gst_uri_is_valid(newLocation))
-            newUrl = KURL(KURL(), newLocation);
-        else
-            newUrl = KURL(KURL(), currentUrl.baseAsString() + newLocation);
-
-        RefPtr<SecurityOrigin> securityOrigin = SecurityOrigin::create(currentUrl);
+        RefPtr<SecurityOrigin> securityOrigin = SecurityOrigin::create(m_url);
         if (securityOrigin->canRequest(newUrl)) {
-            LOG_VERBOSE(Media, "New media url: %s", newUrl.string().utf8().data());
+            INFO_MEDIA_MESSAGE("New media url: %s", newUrl.string().utf8().data());
 
             // Reset player states.
             m_networkState = MediaPlayer::Loading;
@@ -1327,17 +1323,19 @@ bool MediaPlayerPrivateGStreamer::loadNextLocation()
 
             // Reset pipeline state.
             m_resetPipeline = true;
-            gst_element_set_state(m_playBin, GST_STATE_READY);
+            gst_element_set_state(m_playBin.get(), GST_STATE_READY);
 
             GstState state;
-            gst_element_get_state(m_playBin, &state, 0, 0);
+            gst_element_get_state(m_playBin.get(), &state, 0, 0);
             if (state <= GST_STATE_READY) {
                 // Set the new uri and start playing.
-                g_object_set(m_playBin, "uri", newUrl.string().utf8().data(), NULL);
-                gst_element_set_state(m_playBin, GST_STATE_PLAYING);
+                g_object_set(m_playBin.get(), "uri", newUrl.string().utf8().data(), NULL);
+                m_url = newUrl;
+                gst_element_set_state(m_playBin.get(), GST_STATE_PLAYING);
                 return true;
             }
-        }
+        } else
+            INFO_MEDIA_MESSAGE("Not allowed to load new media location: %s", newUrl.string().utf8().data());
     }
     m_mediaLocationCurrentIndex--;
     return false;
@@ -1349,11 +1347,6 @@ void MediaPlayerPrivateGStreamer::loadStateChanged()
     updateStates();
 }
 
-void MediaPlayerPrivateGStreamer::sizeChanged()
-{
-    notImplemented();
-}
-
 void MediaPlayerPrivateGStreamer::timeChanged()
 {
     updateStates();
@@ -1362,44 +1355,39 @@ void MediaPlayerPrivateGStreamer::timeChanged()
 
 void MediaPlayerPrivateGStreamer::didEnd()
 {
-    // EOS was reached but the position is not always 0 in case of
-    // reverse playback. So to not confuse the HTMLMediaElement, we
-    // synchronize position and duration values.
+    // Synchronize position and duration values to not confuse the
+    // HTMLMediaElement. In some cases like reverse playback the
+    // position is not always reported as 0 for instance.
     float now = currentTime();
-    if (now > 0 && m_playbackRate < 0) {
-        m_mediaDuration = now;
+    if (now > 0 && now <= duration() && m_mediaDuration != now) {
         m_mediaDurationKnown = true;
+        m_mediaDuration = now;
         m_player->durationChanged();
     }
 
     m_isEndReached = true;
-
     timeChanged();
+
+    if (!m_player->mediaPlayerClient()->mediaPlayerIsLooping()) {
+        m_paused = true;
+        gst_element_set_state(m_playBin.get(), GST_STATE_NULL);
+    }
 }
 
 void MediaPlayerPrivateGStreamer::cacheDuration()
 {
-    // Reset cached media duration
-    m_mediaDuration = 0;
+    if (m_mediaDuration || !m_mediaDurationKnown)
+        return;
 
-    // And re-cache it if possible.
-    GstState state;
-    gst_element_get_state(m_playBin, &state, 0, 0);
     float newDuration = duration();
-
-    if (state <= GST_STATE_READY) {
-        // Don't set m_mediaDurationKnown yet if the pipeline is not
-        // paused. This allows duration() query to fail at least once
-        // before playback starts and duration becomes known.
-        if (!isinf(newDuration))
-            m_mediaDuration = newDuration;
-    } else {
-        m_mediaDurationKnown = !isinf(newDuration);
-        if (m_mediaDurationKnown)
-            m_mediaDuration = newDuration;
+    if (std::isinf(newDuration)) {
+        // Only pretend that duration is not available if the the query failed in a stable pipeline state.
+    GstState state;
+        if (gst_element_get_state(m_playBin.get(), &state, 0, 0) == GST_STATE_CHANGE_SUCCESS && state > GST_STATE_READY)
+            m_mediaDurationKnown = false;
+        return;
     }
 
-    if (!isinf(newDuration))
         m_mediaDuration = newDuration;
 }
 
@@ -1415,38 +1403,6 @@ void MediaPlayerPrivateGStreamer::durationChanged()
         m_player->durationChanged();
 }
 
-bool MediaPlayerPrivateGStreamer::supportsMuting() const
-{
-    return true;
-}
-
-void MediaPlayerPrivateGStreamer::setMuted(bool muted)
-{
-    if (!m_playBin)
-        return;
-
-    g_object_set(m_playBin, "mute", muted, NULL);
-}
-
-void MediaPlayerPrivateGStreamer::notifyPlayerOfMute()
-{
-    m_muteTimerHandler = 0;
-
-    if (!m_player || !m_playBin)
-        return;
-
-    gboolean muted;
-    g_object_get(m_playBin, "mute", &muted, NULL);
-    m_player->muteChanged(static_cast<bool>(muted));
-}
-
-void MediaPlayerPrivateGStreamer::muteChanged()
-{
-    if (m_muteTimerHandler)
-        g_source_remove(m_muteTimerHandler);
-    m_muteTimerHandler = g_timeout_add(0, reinterpret_cast<GSourceFunc>(mediaPlayerPrivateMuteChangeTimeoutCallback), this);
-}
-
 void MediaPlayerPrivateGStreamer::loadingFailed(MediaPlayer::NetworkState error)
 {
     m_errorOccured = true;
@@ -1460,46 +1416,6 @@ void MediaPlayerPrivateGStreamer::loadingFailed(MediaPlayer::NetworkState error)
     }
 }
 
-void MediaPlayerPrivateGStreamer::setSize(const IntSize& size)
-{
-    m_size = size;
-}
-
-void MediaPlayerPrivateGStreamer::setVisible(bool visible)
-{
-}
-
-
-void MediaPlayerPrivateGStreamer::triggerRepaint(GstBuffer* buffer)
-{
-    g_return_if_fail(GST_IS_BUFFER(buffer));
-    gst_buffer_replace(&m_buffer, buffer);
-    m_player->repaint();
-}
-
-void MediaPlayerPrivateGStreamer::paint(GraphicsContext* context, const IntRect& rect)
-{
-    if (context->paintingDisabled())
-        return;
-
-    if (!m_player->visible())
-        return;
-
-    if (!m_buffer)
-        return;
-
-    GstCaps* caps = webkitGstGetPadCaps(m_videoSinkPad.get());
-    if (!caps)
-        return;
-
-    RefPtr<ImageGStreamer> gstImage = ImageGStreamer::createImage(m_buffer, caps);
-    if (!gstImage)
-        return;
-
-    context->drawImage(reinterpret_cast<Image*>(gstImage->image().get()), ColorSpaceSRGB,
-                       rect, gstImage->rect(), CompositeCopy, DoNotRespectImageOrientation, false);
-}
-
 static HashSet<String> mimeTypeCache()
 {
     initializeGStreamerAndRegisterWebKitElements();
@@ -1509,7 +1425,9 @@ static HashSet<String> mimeTypeCache()
 
     if (typeListInitialized)
         return cache;
-    const char* mimeTypes[] = {"application/ogg",
+
+    const char* mimeTypes[] = {
+        "application/ogg",
                                "application/vnd.apple.mpegurl",
                                "application/vnd.rn-realmedia",
                                "application/x-3gp",
@@ -1526,8 +1444,10 @@ static HashSet<String> mimeTypeCache()
                                "audio/mp4",
                                "audio/mpeg",
                                "audio/ogg",
+        "audio/opus",
                                "audio/qcelp",
                                "audio/riff-midi",
+        "audio/speex",
                                "audio/wav",
                                "audio/webm",
                                "audio/x-ac3",
@@ -1592,7 +1512,8 @@ static HashSet<String> mimeTypeCache()
                                "video/x-msvideo",
                                "video/x-mve",
                                "video/x-nuv",
-                               "video/x-vcd"};
+        "video/x-vcd"
+    };
 
     for (unsigned i = 0; i < (sizeof(mimeTypes) / sizeof(*mimeTypes)); ++i)
         cache.add(String(mimeTypes[i]));
@@ -1617,43 +1538,30 @@ MediaPlayer::SupportsType MediaPlayerPrivateGStreamer::supportsType(const String
     return MediaPlayer::IsNotSupported;
 }
 
-bool MediaPlayerPrivateGStreamer::hasSingleSecurityOrigin() const
+void MediaPlayerPrivateGStreamer::setDownloadBuffering()
 {
-    return true;
-}
+    if (!m_playBin)
+        return;
 
-bool MediaPlayerPrivateGStreamer::supportsFullscreen() const
-{
-#if PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
-    // See <rdar://problem/7389945>
-    return false;
-#else
-    return true;
-#endif
+    GstPlayFlags flags;
+    g_object_get(m_playBin.get(), "flags", &flags, NULL);
+    if (m_preload == MediaPlayer::Auto) {
+        LOG_MEDIA_MESSAGE("Enabling on-disk buffering");
+        g_object_set(m_playBin.get(), "flags", flags | GST_PLAY_FLAG_DOWNLOAD, NULL);
+    } else {
+        LOG_MEDIA_MESSAGE("Disabling on-disk buffering");
+        g_object_set(m_playBin.get(), "flags", flags & ~GST_PLAY_FLAG_DOWNLOAD, NULL);
 }
-
-PlatformMedia MediaPlayerPrivateGStreamer::platformMedia() const
-{
-    PlatformMedia p;
-#ifndef GST_API_VERSION_1
-    p.type = PlatformMedia::GStreamerGWorldType;
-    p.media.gstreamerGWorld = m_gstGWorld.get();
-#endif
-    return p;
 }
 
 void MediaPlayerPrivateGStreamer::setPreload(MediaPlayer::Preload preload)
 {
-    ASSERT(m_playBin);
+    if (preload == MediaPlayer::Auto && isLiveStream())
+        return;
 
     m_preload = preload;
 
-    GstPlayFlags flags;
-    g_object_get(m_playBin, "flags", &flags, NULL);
-    if (preload == MediaPlayer::None)
-        g_object_set(m_playBin, "flags", flags & ~GST_PLAY_FLAG_DOWNLOAD, NULL);
-    else
-        g_object_set(m_playBin, "flags", flags | GST_PLAY_FLAG_DOWNLOAD, NULL);
+    setDownloadBuffering();
 
     if (m_delayingLoad && m_preload != MediaPlayer::None) {
         m_delayingLoad = false;
@@ -1661,118 +1569,78 @@ void MediaPlayerPrivateGStreamer::setPreload(MediaPlayer::Preload preload)
     }
 }
 
+void MediaPlayerPrivateGStreamer::createAudioSink()
+{
+    // Construct audio sink if pitch preserving is enabled.
+    if (!m_preservesPitch)
+        return;
+
+    if (!m_playBin)
+        return;
+
+    GstElement* scale = gst_element_factory_make("scaletempo", 0);
+    if (!scale) {
+        GST_WARNING("Failed to create scaletempo");
+        return;
+    }
+
+    GstElement* convert = gst_element_factory_make("audioconvert", 0);
+    GstElement* resample = gst_element_factory_make("audioresample", 0);
+    GstElement* sink = gst_element_factory_make("autoaudiosink", 0);
+
+    m_autoAudioSink = sink;
+
+    g_signal_connect(sink, "child-added", G_CALLBACK(setAudioStreamPropertiesCallback), this);
+
+    GstElement* audioSink = gst_bin_new("audio-sink");
+    gst_bin_add_many(GST_BIN(audioSink), scale, convert, resample, sink, NULL);
+
+    if (!gst_element_link_many(scale, convert, resample, sink, NULL)) {
+        GST_WARNING("Failed to link audio sink elements");
+        gst_object_unref(audioSink);
+        return;
+    }
+
+    GRefPtr<GstPad> pad = adoptGRef(gst_element_get_static_pad(scale, "sink"));
+    gst_element_add_pad(audioSink, gst_ghost_pad_new("sink", pad.get()));
+
+    g_object_set(m_playBin.get(), "audio-sink", audioSink, NULL);
+}
+
 void MediaPlayerPrivateGStreamer::createGSTPlayBin()
 {
     ASSERT(!m_playBin);
+
+    // gst_element_factory_make() returns a floating reference so
+    // we should not adopt.
     m_playBin = gst_element_factory_make(gPlaybinName, "play");
+    setStreamVolumeElement(GST_STREAM_VOLUME(m_playBin.get()));
 
-#ifndef GST_API_VERSION_1
-    m_gstGWorld = GStreamerGWorld::createGWorld(m_playBin);
-#endif
+    GRefPtr<GstBus> bus = webkitGstPipelineGetBus(GST_PIPELINE(m_playBin.get()));
+    gst_bus_add_signal_watch(bus.get());
+    g_signal_connect(bus.get(), "message", G_CALLBACK(mediaPlayerPrivateMessageCallback), this);
 
-    GstBus* bus = gst_pipeline_get_bus(GST_PIPELINE(m_playBin));
-    gst_bus_add_signal_watch(bus);
-    g_signal_connect(bus, "message", G_CALLBACK(mediaPlayerPrivateMessageCallback), this);
-    gst_object_unref(bus);
+    g_object_set(m_playBin.get(), "mute", m_player->muted(), NULL);
 
-    g_object_set(m_playBin, "mute", m_player->muted(), NULL);
+    g_signal_connect(m_playBin.get(), "notify::source", G_CALLBACK(mediaPlayerPrivateSourceChangedCallback), this);
+    g_signal_connect(m_playBin.get(), "video-changed", G_CALLBACK(mediaPlayerPrivateVideoChangedCallback), this);
+    g_signal_connect(m_playBin.get(), "audio-changed", G_CALLBACK(mediaPlayerPrivateAudioChangedCallback), this);
 
-    g_signal_connect(m_playBin, "notify::volume", G_CALLBACK(mediaPlayerPrivateVolumeChangedCallback), this);
-    g_signal_connect(m_playBin, "notify::source", G_CALLBACK(mediaPlayerPrivateSourceChangedCallback), this);
-    g_signal_connect(m_playBin, "notify::mute", G_CALLBACK(mediaPlayerPrivateMuteChangedCallback), this);
-    g_signal_connect(m_playBin, "video-changed", G_CALLBACK(mediaPlayerPrivateVideoChangedCallback), this);
-    g_signal_connect(m_playBin, "audio-changed", G_CALLBACK(mediaPlayerPrivateAudioChangedCallback), this);
+    GstElement* videoElement = createVideoSink(m_playBin.get());
 
-#ifndef GST_API_VERSION_1
-    m_webkitVideoSink = webkitVideoSinkNew(m_gstGWorld.get());
-#else
-    m_webkitVideoSink = webkitVideoSinkNew();
-#endif
-    m_videoSinkPad = adoptGRef(gst_element_get_static_pad(m_webkitVideoSink, "sink"));
+    g_object_set(m_playBin.get(), "video-sink", videoElement, NULL);
 
-    g_signal_connect(m_webkitVideoSink, "repaint-requested", G_CALLBACK(mediaPlayerPrivateRepaintCallback), this);
-
-
-#ifndef GST_API_VERSION_1
-    m_videoSinkBin = gst_bin_new("sink");
-
-    GstElement* videoTee = gst_element_factory_make("tee", "videoTee");
-    GstElement* queue = gst_element_factory_make("queue", 0);
-
-    // Take ownership.
-    gst_object_ref_sink(m_videoSinkBin);
-
-    // Build a new video sink consisting of a bin containing a tee
-    // (meant to distribute data to multiple video sinks) and our
-    // internal video sink. For fullscreen we create an autovideosink
-    // and initially block the data flow towards it and configure it
-
-    gst_bin_add_many(GST_BIN(m_videoSinkBin), videoTee, queue, NULL);
-
-    // Link a new src pad from tee to queue1.
-    GRefPtr<GstPad> srcPad = adoptGRef(gst_element_get_request_pad(videoTee, "src%d"));
-    GRefPtr<GstPad> sinkPad = adoptGRef(gst_element_get_static_pad(queue, "sink"));
-    gst_pad_link(srcPad.get(), sinkPad.get());
-#endif
-
-    GstElement* actualVideoSink = 0;
-    m_fpsSink = gst_element_factory_make("fpsdisplaysink", "sink");
-    if (m_fpsSink) {
-        // The verbose property has been added in -bad 0.10.22. Making
-        // this whole code depend on it because we don't want
-        // fpsdiplaysink to spit data on stdout.
-        GstElementFactory* factory = GST_ELEMENT_FACTORY(GST_ELEMENT_GET_CLASS(m_fpsSink)->elementfactory);
-        if (gst_plugin_feature_check_version(GST_PLUGIN_FEATURE(factory), 0, 10, 22)) {
-            g_object_set(m_fpsSink, "silent", TRUE , NULL);
-
-            // Turn off text overlay unless logging is enabled.
-#if LOG_DISABLED
-            g_object_set(m_fpsSink, "text-overlay", FALSE , NULL);
-#else
-            WTFLogChannel* channel = getChannelFromName("Media");
-            if (channel->state != WTFLogChannelOn)
-                g_object_set(m_fpsSink, "text-overlay", FALSE , NULL);
-#endif // LOG_DISABLED
-
-            if (g_object_class_find_property(G_OBJECT_GET_CLASS(m_fpsSink), "video-sink")) {
-                g_object_set(m_fpsSink, "video-sink", m_webkitVideoSink, NULL);
-#ifndef GST_API_VERSION_1
-                gst_bin_add(GST_BIN(m_videoSinkBin), m_fpsSink);
-#endif
-                actualVideoSink = m_fpsSink;
-            } else
-                m_fpsSink = 0;
-        } else
-            m_fpsSink = 0;
-    }
-
-    if (!m_fpsSink) {
-#ifndef GST_API_VERSION_1
-        gst_bin_add(GST_BIN(m_videoSinkBin), m_webkitVideoSink);
-#endif
-        actualVideoSink = m_webkitVideoSink;
-    }
-
-    ASSERT(actualVideoSink);
-
-#ifndef GST_API_VERSION_1
-    // Faster elements linking.
-    gst_element_link_pads_full(queue, "src", actualVideoSink, "sink", GST_PAD_LINK_CHECK_NOTHING);
-
-    // Add a ghostpad to the bin so it can proxy to tee.
-    GRefPtr<GstPad> pad = adoptGRef(gst_element_get_static_pad(videoTee, "sink"));
-    gst_element_add_pad(m_videoSinkBin, gst_ghost_pad_new("sink", pad.get()));
-
-    // Set the bin as video sink of playbin.
-    g_object_set(m_playBin, "video-sink", m_videoSinkBin, NULL);
-#else
-    g_object_set(m_playBin, "video-sink", actualVideoSink, NULL);
-#endif
-
-    GRefPtr<GstPad> videoSinkPad = adoptGRef(gst_element_get_static_pad(m_webkitVideoSink, "sink"));
+    GRefPtr<GstPad> videoSinkPad = adoptGRef(gst_element_get_static_pad(m_webkitVideoSink.get(), "sink"));
     if (videoSinkPad)
         g_signal_connect(videoSinkPad.get(), "notify::caps", G_CALLBACK(mediaPlayerPrivateVideoSinkCapsChangedCallback), this);
 
+    createAudioSink();
+}
+
+void MediaPlayerPrivateGStreamer::simulateAudioInterruption()
+{
+    GstMessage* message = gst_message_new_request_state(GST_OBJECT(m_playBin.get()), GST_STATE_PAUSED);
+    gst_element_post_message(m_playBin.get(), message);
 }
 
 }

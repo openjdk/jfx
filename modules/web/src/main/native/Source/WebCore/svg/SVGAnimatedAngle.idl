@@ -23,13 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
-        Conditional=SVG
-    ] SVGAnimatedAngle {
+[
+    Conditional=SVG,
+    SkipVTableValidation
+] interface SVGAnimatedAngle {
         readonly attribute SVGAngle baseVal;
         readonly attribute SVGAngle animVal;
     };
 
-}

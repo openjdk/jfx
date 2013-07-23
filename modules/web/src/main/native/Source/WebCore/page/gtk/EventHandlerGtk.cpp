@@ -26,7 +26,7 @@
 #include "config.h"
 #include "EventHandler.h"
 
-#include "ClipboardGtk.h"
+#include "Clipboard.h"
 #include "FloatPoint.h"
 #include "FocusController.h"
 #include "Frame.h"
@@ -59,7 +59,7 @@ void EventHandler::focusDocumentView()
 bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestResults& event)
 {
     // Figure out which view to send the event to.
-    RenderObject* target = targetNode(event) ? targetNode(event)->renderer() : 0;
+    RenderObject* target = event.targetNode() ? event.targetNode()->renderer() : 0;
     if (!target || !target->isWidget())
         return false;
     return passMouseDownEventToWidget(toRenderWidget(target)->widget());
@@ -91,12 +91,12 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widge
     if (!widget->isFrameView())
         return false;
 
-    return static_cast<FrameView*>(widget)->frame()->eventHandler()->handleWheelEvent(event);
+    return toFrameView(widget)->frame()->eventHandler()->handleWheelEvent(event);
 }
 
 PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
 {
-    return ClipboardGtk::create(ClipboardWritable, DataObjectGtk::create(), Clipboard::DragAndDrop, m_frame);
+    return Clipboard::createForDragAndDrop();
 }
 
 bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& mev, Frame* subframe)

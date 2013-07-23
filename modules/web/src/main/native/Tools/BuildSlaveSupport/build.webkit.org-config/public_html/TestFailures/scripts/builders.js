@@ -56,7 +56,9 @@ function didFail(step)
         // FIXME: Do build.webkit.org bots output this marker when the tests fail to run?
         return step.text.indexOf(kCrashedOrHungOutputMarker) != -1;
     }
-    return step.results[0] > 0 && step.text.indexOf('warning') == -1;
+    // The first item in step.results is the success of the step:
+    // 0 == pass, 1 == warning, 2 == fail
+    return step.results[0] == 2;
 }
 
 function failingSteps(buildInfo)
@@ -95,7 +97,7 @@ function fetchMostRecentBuildInfoByBuilder(platform, callback)
         var builderNames = Object.keys(builderStatus);
         var requestTracker = new base.RequestTracker(builderNames.length, callback, [buildInfoByBuilder]);
         builderNames.forEach(function(builderName) {
-            if (!config.kPlatforms[config.currentPlatform].builderApplies(builderName)) {
+            if (!config.builderApplies(builderName)) {
                 requestTracker.requestComplete();
                 return;
             }
@@ -126,8 +128,8 @@ builders.cachedBuildInfos = function(platform, builderName, callback)
     var builderInfoURL = urlForBuilderInfo(platform, builderName);
     net.get(builderInfoURL, function(builderInfo) {
         var selectURL = urlForBuilderInfo(platform, builderName) + 'builds';
-        // // FIXME: limit to some reasonable number?
-        var selectParams = { select : builderInfo.cachedBuilds };
+        var start = Math.max(0, builderInfo.cachedBuilds.length - config.kBuildNumberLimit);
+        var selectParams = { select : builderInfo.cachedBuilds.slice(start) };
         var traditionalEncoding = true;
         selectURL += '?' + $.param(selectParams, traditionalEncoding);
         net.get(selectURL, callback);

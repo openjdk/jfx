@@ -25,6 +25,8 @@
 #include "CSSStyleSheet.h"
 #include "CachedCSSStyleSheet.h"
 #include "CachedResourceLoader.h"
+#include "CachedResourceRequest.h"
+#include "CachedResourceRequestInitiators.h"
 #include "Document.h"
 #include "SecurityOrigin.h"
 #include "StyleSheetContents.h"
@@ -68,7 +70,7 @@ void StyleRuleImport::setCSSStyleSheet(const String& href, const KURL& baseURL, 
     if (!baseURL.isNull())
         context.baseURL = baseURL;
 
-    m_styleSheet = StyleSheetContents::create(this, href, baseURL, context);
+    m_styleSheet = StyleSheetContents::create(this, href, context);
 
     Document* document = m_parentStyleSheet ? m_parentStyleSheet->singleOwnerDocument() : 0;
     m_styleSheet->parseAuthorStyleSheet(cachedStyleSheet, document ? document->securityOrigin() : 0);
@@ -98,25 +100,29 @@ void StyleRuleImport::requestStyleSheet()
     if (!cachedResourceLoader)
         return;
 
-    String absHref = m_strHref;
-    if (!m_parentStyleSheet->finalURL().isNull())
+    KURL absURL;
+    if (!m_parentStyleSheet->baseURL().isNull())
         // use parent styleheet's URL as the base URL
-        absHref = KURL(m_parentStyleSheet->finalURL(), m_strHref).string();
+        absURL = KURL(m_parentStyleSheet->baseURL(), m_strHref);
+    else
+        absURL = document->completeURL(m_strHref);
 
     // Check for a cycle in our import chain.  If we encounter a stylesheet
     // in our parent chain with the same URL, then just bail.
     StyleSheetContents* rootSheet = m_parentStyleSheet;
     for (StyleSheetContents* sheet = m_parentStyleSheet; sheet; sheet = sheet->parentStyleSheet()) {
-        if (absHref == sheet->finalURL().string() || absHref == sheet->originalURL())
+        if (equalIgnoringFragmentIdentifier(absURL, sheet->baseURL())
+            || equalIgnoringFragmentIdentifier(absURL, document->completeURL(sheet->originalURL())))
             return;
         rootSheet = sheet;
     }
 
-    ResourceRequest request(document->completeURL(absHref));
+    CachedResourceRequest request(ResourceRequest(absURL), m_parentStyleSheet->charset());
+    request.setInitiator(cachedResourceRequestInitiators().css);
     if (m_parentStyleSheet->isUserStyleSheet())
-        m_cachedSheet = cachedResourceLoader->requestUserCSSStyleSheet(request, m_parentStyleSheet->charset());
+        m_cachedSheet = cachedResourceLoader->requestUserCSSStyleSheet(request);
     else
-        m_cachedSheet = cachedResourceLoader->requestCSSStyleSheet(request, m_parentStyleSheet->charset());
+        m_cachedSheet = cachedResourceLoader->requestCSSStyleSheet(request);
     if (m_cachedSheet) {
         // if the import rule is issued dynamically, the sheet may be
         // removed from the pending sheet count, so let the doc know

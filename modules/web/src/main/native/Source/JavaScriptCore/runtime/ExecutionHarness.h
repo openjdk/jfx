@@ -36,32 +36,36 @@
 namespace JSC {
 
 template<typename CodeBlockType>
-inline bool prepareForExecution(ExecState* exec, OwnPtr<CodeBlockType>& codeBlock, JITCode& jitCode, JITCode::JITType jitType)
+inline bool prepareForExecution(ExecState* exec, OwnPtr<CodeBlockType>& codeBlock, JITCode& jitCode, JITCode::JITType jitType, unsigned bytecodeIndex)
 {
 #if ENABLE(LLINT)
     if (JITCode::isBaselineCode(jitType)) {
         // Start off in the low level interpreter.
-        LLInt::getEntrypoint(exec->globalData(), codeBlock.get(), jitCode);
+        LLInt::getEntrypoint(exec->vm(), codeBlock.get(), jitCode);
         codeBlock->setJITCode(jitCode, MacroAssemblerCodePtr());
+        if (exec->vm().m_perBytecodeProfiler)
+            exec->vm().m_perBytecodeProfiler->ensureBytecodesFor(codeBlock.get());
         return true;
     }
 #endif // ENABLE(LLINT)
-    return jitCompileIfAppropriate(exec, codeBlock, jitCode, jitType, JITCode::isBaselineCode(jitType) ? JITCompilationMustSucceed : JITCompilationCanFail);
+    return jitCompileIfAppropriate(exec, codeBlock, jitCode, jitType, bytecodeIndex, JITCode::isBaselineCode(jitType) ? JITCompilationMustSucceed : JITCompilationCanFail);
 }
 
-inline bool prepareFunctionForExecution(ExecState* exec, OwnPtr<FunctionCodeBlock>& codeBlock, JITCode& jitCode, MacroAssemblerCodePtr& jitCodeWithArityCheck, SharedSymbolTable*& symbolTable, JITCode::JITType jitType, CodeSpecializationKind kind)
+inline bool prepareFunctionForExecution(ExecState* exec, OwnPtr<FunctionCodeBlock>& codeBlock, JITCode& jitCode, MacroAssemblerCodePtr& jitCodeWithArityCheck, JITCode::JITType jitType, unsigned bytecodeIndex, CodeSpecializationKind kind)
 {
 #if ENABLE(LLINT)
     if (JITCode::isBaselineCode(jitType)) {
         // Start off in the low level interpreter.
-        LLInt::getFunctionEntrypoint(exec->globalData(), kind, jitCode, jitCodeWithArityCheck);
+        LLInt::getFunctionEntrypoint(exec->vm(), kind, jitCode, jitCodeWithArityCheck);
         codeBlock->setJITCode(jitCode, jitCodeWithArityCheck);
+        if (exec->vm().m_perBytecodeProfiler)
+            exec->vm().m_perBytecodeProfiler->ensureBytecodesFor(codeBlock.get());
         return true;
     }
 #else
     UNUSED_PARAM(kind);
 #endif // ENABLE(LLINT)
-    return jitCompileFunctionIfAppropriate(exec, codeBlock, jitCode, jitCodeWithArityCheck, symbolTable, jitType, JITCode::isBaselineCode(jitType) ? JITCompilationMustSucceed : JITCompilationCanFail);
+    return jitCompileFunctionIfAppropriate(exec, codeBlock, jitCode, jitCodeWithArityCheck, jitType, bytecodeIndex, JITCode::isBaselineCode(jitType) ? JITCompilationMustSucceed : JITCompilationCanFail);
 }
 
 } // namespace JSC

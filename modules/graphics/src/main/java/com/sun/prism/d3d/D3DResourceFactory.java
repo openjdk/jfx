@@ -252,6 +252,11 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     @Override
     public D3DRTTexture createRTTexture(int width, int height, WrapMode wrapMode) {
+        return createRTTexture(width, height, wrapMode, false);
+    }
+
+    @Override
+    public D3DRTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean antiAliasing) {
         if (PrismSettings.verbose && context.isLost()) {
             System.err.println("RT Texture allocation while the device is lost");
         }
@@ -301,7 +306,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         if (pResource != 0L) {
             int width = D3DResourceFactory.nGetTextureWidth(pResource);
             int height = D3DResourceFactory.nGetTextureHeight(pResource);
-            D3DRTTexture rtt = createRTTexture(width, height, WrapMode.CLAMP_NOT_NEEDED);
+            D3DRTTexture rtt = createRTTexture(width, height, WrapMode.CLAMP_NOT_NEEDED, pState.isAntiAliasing());
 
             if (rtt != null) {
                 return new D3DSwapChain(context, pResource, rtt);

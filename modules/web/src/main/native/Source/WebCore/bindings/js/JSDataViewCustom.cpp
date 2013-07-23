@@ -73,7 +73,7 @@ static JSValue getDataViewMember(ExecState* exec, DataView* imp, DataViewAccessT
 
     bool littleEndian = false;
     if (exec->argumentCount() > 1 && (type == AccessDataViewMemberAsFloat32 || type == AccessDataViewMemberAsFloat64)) {
-        littleEndian = exec->argument(1).toBoolean();
+        littleEndian = exec->argument(1).toBoolean(exec);
         if (exec->hadException())
             return jsUndefined();
     }
@@ -89,7 +89,7 @@ static JSValue getDataViewMember(ExecState* exec, DataView* imp, DataViewAccessT
     case AccessDataViewMemberAsFloat32:
     case AccessDataViewMemberAsFloat64: {
         double value = (type == AccessDataViewMemberAsFloat32) ? imp->getFloat32(byteOffset, littleEndian, ec) : imp->getFloat64(byteOffset, littleEndian, ec);
-        result = isnan(value) ? jsNaN() : jsNumber(value);
+        result = std::isnan(value) ? jsNaN() : jsNumber(value);
         break;
     } default:
         ASSERT_NOT_REACHED();

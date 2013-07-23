@@ -24,19 +24,22 @@
 
 #include "ExceptionHelpers.h"
 #include "Interpreter.h"
+#include "JSCJSValueInlines.h"
+#include "JSProxy.h"
 #include "JSString.h"
-#include "JSValueInlineMethods.h"
+#include "StructureInlines.h"
 
 namespace JSC {
 
     NEVER_INLINE JSValue jsAddSlowCase(CallFrame*, JSValue, JSValue);
     JSValue jsTypeStringForValue(CallFrame*, JSValue);
-    bool jsIsObjectType(JSValue);
+JSValue jsTypeStringForValue(VM&, JSGlobalObject*, JSValue);
+bool jsIsObjectType(CallFrame*, JSValue);
     bool jsIsFunctionType(JSValue);
 
     ALWAYS_INLINE JSValue jsString(ExecState* exec, JSString* s1, JSString* s2)
     {
-        JSGlobalData& globalData = exec->globalData();
+    VM& vm = exec->vm();
 
         unsigned length1 = s1->length();
         if (!length1)
@@ -47,35 +50,35 @@ namespace JSC {
         if ((length1 + length2) < length1)
             return throwOutOfMemoryError(exec);
 
-        return JSRopeString::create(globalData, s1, s2);
+    return JSRopeString::create(vm, s1, s2);
     }
 
-    ALWAYS_INLINE JSValue jsString(ExecState* exec, const UString& u1, const UString& u2, const UString& u3)
+ALWAYS_INLINE JSValue jsString(ExecState* exec, const String& u1, const String& u2, const String& u3)
     {
-        JSGlobalData* globalData = &exec->globalData();
+    VM* vm = &exec->vm();
 
         unsigned length1 = u1.length();
         unsigned length2 = u2.length();
         unsigned length3 = u3.length();
         if (!length1)
-            return jsString(exec, jsString(globalData, u2), jsString(globalData, u3));
+        return jsString(exec, jsString(vm, u2), jsString(vm, u3));
         if (!length2)
-            return jsString(exec, jsString(globalData, u1), jsString(globalData, u3));
+        return jsString(exec, jsString(vm, u1), jsString(vm, u3));
         if (!length3)
-            return jsString(exec, jsString(globalData, u1), jsString(globalData, u2));
+        return jsString(exec, jsString(vm, u1), jsString(vm, u2));
 
         if ((length1 + length2) < length1)
             return throwOutOfMemoryError(exec);
         if ((length1 + length2 + length3) < length3)
             return throwOutOfMemoryError(exec);
 
-        return JSRopeString::create(exec->globalData(), jsString(globalData, u1), jsString(globalData, u2), jsString(globalData, u3));
+    return JSRopeString::create(exec->vm(), jsString(vm, u1), jsString(vm, u2), jsString(vm, u3));
     }
 
     ALWAYS_INLINE JSValue jsString(ExecState* exec, Register* strings, unsigned count)
     {
-        JSGlobalData* globalData = &exec->globalData();
-        JSRopeString::RopeBuilder ropeBuilder(*globalData);
+    VM* vm = &exec->vm();
+    JSRopeString::RopeBuilder ropeBuilder(*vm);
 
         unsigned oldLength = 0;
 
@@ -85,6 +88,7 @@ namespace JSC {
 
             if (ropeBuilder.length() < oldLength) // True for overflow
                 return throwOutOfMemoryError(exec);
+        oldLength = ropeBuilder.length();
         }
 
         return ropeBuilder.release();
@@ -92,8 +96,8 @@ namespace JSC {
 
     ALWAYS_INLINE JSValue jsStringFromArguments(ExecState* exec, JSValue thisValue)
     {
-        JSGlobalData* globalData = &exec->globalData();
-        JSRopeString::RopeBuilder ropeBuilder(*globalData);
+    VM* vm = &exec->vm();
+    JSRopeString::RopeBuilder ropeBuilder(*vm);
         ropeBuilder.append(thisValue.toString(exec));
 
         unsigned oldLength = 0;
@@ -104,108 +108,10 @@ namespace JSC {
 
             if (ropeBuilder.length() < oldLength) // True for overflow
                 return throwOutOfMemoryError(exec);
+        oldLength = ropeBuilder.length();
         }
 
         return ropeBuilder.release();
-    }
-
-    // ECMA 11.9.3
-    inline bool JSValue::equal(ExecState* exec, JSValue v1, JSValue v2)
-    {
-        if (v1.isInt32() && v2.isInt32())
-            return v1 == v2;
-
-        return equalSlowCase(exec, v1, v2);
-    }
-
-    ALWAYS_INLINE bool JSValue::equalSlowCaseInline(ExecState* exec, JSValue v1, JSValue v2)
-    {
-        do {
-            if (v1.isNumber() && v2.isNumber())
-                return v1.asNumber() == v2.asNumber();
-
-            bool s1 = v1.isString();
-            bool s2 = v2.isString();
-            if (s1 && s2)
-                return asString(v1)->value(exec) == asString(v2)->value(exec);
-
-            if (v1.isUndefinedOrNull()) {
-                if (v2.isUndefinedOrNull())
-                    return true;
-                if (!v2.isCell())
-                    return false;
-                return v2.asCell()->structure()->typeInfo().masqueradesAsUndefined();
-            }
-
-            if (v2.isUndefinedOrNull()) {
-                if (!v1.isCell())
-                    return false;
-                return v1.asCell()->structure()->typeInfo().masqueradesAsUndefined();
-            }
-
-            if (v1.isObject()) {
-                if (v2.isObject())
-                    return v1 == v2;
-                JSValue p1 = v1.toPrimitive(exec);
-                if (exec->hadException())
-                    return false;
-                v1 = p1;
-                if (v1.isInt32() && v2.isInt32())
-                    return v1 == v2;
-                continue;
-            }
-
-            if (v2.isObject()) {
-                JSValue p2 = v2.toPrimitive(exec);
-                if (exec->hadException())
-                    return false;
-                v2 = p2;
-                if (v1.isInt32() && v2.isInt32())
-                    return v1 == v2;
-                continue;
-            }
-
-            if (s1 || s2) {
-                double d1 = v1.toNumber(exec);
-                double d2 = v2.toNumber(exec);
-                return d1 == d2;
-            }
-
-            if (v1.isBoolean()) {
-                if (v2.isNumber())
-                    return static_cast<double>(v1.asBoolean()) == v2.asNumber();
-            } else if (v2.isBoolean()) {
-                if (v1.isNumber())
-                    return v1.asNumber() == static_cast<double>(v2.asBoolean());
-            }
-
-            return v1 == v2;
-        } while (true);
-    }
-
-    // ECMA 11.9.3
-    ALWAYS_INLINE bool JSValue::strictEqualSlowCaseInline(ExecState* exec, JSValue v1, JSValue v2)
-    {
-        ASSERT(v1.isCell() && v2.isCell());
-
-        if (v1.asCell()->isString() && v2.asCell()->isString())
-            return asString(v1)->value(exec) == asString(v2)->value(exec);
-
-        return v1 == v2;
-    }
-
-    inline bool JSValue::strictEqual(ExecState* exec, JSValue v1, JSValue v2)
-    {
-        if (v1.isInt32() && v2.isInt32())
-            return v1 == v2;
-
-        if (v1.isNumber() && v2.isNumber())
-            return v1.asNumber() == v2.asNumber();
-
-        if (!v1.isCell() || !v2.isCell())
-            return v1 == v2;
-
-        return strictEqualSlowCaseInline(exec, v1, v2);
     }
 
     // See ES5 11.8.1/11.8.2/11.8.5 for definition of leftFirst, this value ensures correct
@@ -221,7 +127,7 @@ namespace JSC {
             return v1.asNumber() < v2.asNumber();
 
         if (isJSString(v1) && isJSString(v2))
-            return asString(v1)->value(callFrame) < asString(v2)->value(callFrame);
+        return codePointCompareLessThan(asString(v1)->value(callFrame), asString(v2)->value(callFrame));
 
         double n1;
         double n2;
@@ -239,7 +145,7 @@ namespace JSC {
 
         if (wasNotString1 | wasNotString2)
             return n1 < n2;
-        return asString(p1)->value(callFrame) < asString(p2)->value(callFrame);
+    return codePointCompareLessThan(asString(p1)->value(callFrame), asString(p2)->value(callFrame));
     }
 
     // See ES5 11.8.3/11.8.4/11.8.5 for definition of leftFirst, this value ensures correct
@@ -255,7 +161,7 @@ namespace JSC {
             return v1.asNumber() <= v2.asNumber();
 
         if (isJSString(v1) && isJSString(v2))
-            return !(asString(v2)->value(callFrame) < asString(v1)->value(callFrame));
+        return !codePointCompareLessThan(asString(v2)->value(callFrame), asString(v1)->value(callFrame));
 
         double n1;
         double n2;
@@ -273,7 +179,7 @@ namespace JSC {
 
         if (wasNotString1 | wasNotString2)
             return n1 <= n2;
-        return !(asString(p2)->value(callFrame) < asString(p1)->value(callFrame));
+    return !codePointCompareLessThan(asString(p2)->value(callFrame), asString(p1)->value(callFrame));
     }
 
     // Fast-path choices here are based on frequency data from SunSpider:
@@ -297,28 +203,36 @@ namespace JSC {
         return jsAddSlowCase(callFrame, v1, v2);
     }
 
-    inline size_t normalizePrototypeChain(CallFrame* callFrame, JSValue base, JSValue slotBase, const Identifier& propertyName, PropertyOffset& slotOffset)
+#define InvalidPrototypeChain (std::numeric_limits<size_t>::max())
+
+inline size_t normalizePrototypeChainForChainAccess(CallFrame* callFrame, JSValue base, JSValue slotBase, const Identifier& propertyName, PropertyOffset& slotOffset)
     {
         JSCell* cell = base.asCell();
         size_t count = 0;
 
         while (slotBase != cell) {
+        if (cell->isProxy())
+            return InvalidPrototypeChain;
+            
+        if (cell->structure()->typeInfo().hasImpureGetOwnPropertySlot())
+            return InvalidPrototypeChain;
+            
             JSValue v = cell->structure()->prototypeForLookup(callFrame);
 
             // If we didn't find slotBase in base's prototype chain, then base
             // must be a proxy for another object.
 
             if (v.isNull())
-                return 0;
+            return InvalidPrototypeChain;
 
             cell = v.asCell();
 
             // Since we're accessing a prototype in a loop, it's a good bet that it
             // should not be treated as a dictionary.
             if (cell->structure()->isDictionary()) {
-                asObject(cell)->flattenDictionaryObject(callFrame->globalData());
+            asObject(cell)->flattenDictionaryObject(callFrame->vm());
                 if (slotBase == cell)
-                    slotOffset = cell->structure()->get(callFrame->globalData(), propertyName);
+                slotOffset = cell->structure()->get(callFrame->vm(), propertyName); 
             }
 
             ++count;
@@ -332,6 +246,9 @@ namespace JSC {
     {
         size_t count = 0;
         while (1) {
+        if (base->isProxy())
+            return InvalidPrototypeChain;
+            
             JSValue v = base->structure()->prototypeForLookup(callFrame);
             if (v.isNull())
                 return count;
@@ -341,39 +258,29 @@ namespace JSC {
             // Since we're accessing a prototype in a loop, it's a good bet that it
             // should not be treated as a dictionary.
             if (base->structure()->isDictionary())
-                asObject(base)->flattenDictionaryObject(callFrame->globalData());
+            asObject(base)->flattenDictionaryObject(callFrame->vm());
 
             ++count;
         }
     }
 
-    ALWAYS_INLINE JSValue resolveBase(CallFrame* callFrame, Identifier& property, ScopeChainNode* scopeChain, bool isStrictPut)
+inline bool isPrototypeChainNormalized(JSGlobalObject* globalObject, Structure* structure)
     {
-        ScopeChainIterator iter = scopeChain->begin();
-        ScopeChainIterator next = iter;
-        ++next;
-        ScopeChainIterator end = scopeChain->end();
-        ASSERT(iter != end);
+    for (;;) {
+        if (structure->typeInfo().type() == ProxyType)
+            return false;
 
-        PropertySlot slot;
-        JSObject* base;
-        while (true) {
-            base = iter->get();
-            if (next == end) {
-                if (isStrictPut && !base->getPropertySlot(callFrame, property, slot))
-                    return JSValue();
-                return base;
+        JSValue v = structure->prototypeForLookup(globalObject);
+        if (v.isNull())
+            return true;
+            
+        structure = v.asCell()->structure();
+            
+        if (structure->isDictionary())
+            return false;
             }
-            if (base->getPropertySlot(callFrame, property, slot))
-                return base;
-
-            iter = next;
-            ++next;
         }
 
-        ASSERT_NOT_REACHED();
-        return JSValue();
-    }
 } // namespace JSC
 
 #endif // Operations_h

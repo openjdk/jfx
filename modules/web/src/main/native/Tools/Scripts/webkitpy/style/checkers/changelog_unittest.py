@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Copyright (C) 2010 Apple Inc. All rights reserved.
 # Copyright (C) 2011 Patrick Gansterer <paroga@paroga.com>
 #
@@ -26,7 +24,7 @@
 """Unit test for changelog.py."""
 
 import changelog
-import unittest
+import unittest2 as unittest
 
 
 class ChangeLogCheckerTest(unittest.TestCase):
@@ -44,8 +42,8 @@ class ChangeLogCheckerTest(unittest.TestCase):
 
         def handle_style_error(line_number, category, confidence, message):
             self.had_error = True
-            self.assertEquals(expected_line_number, line_number)
-            self.assertEquals(expected_category, category)
+            self.assertEqual(expected_line_number, line_number)
+            self.assertEqual(expected_category, category)
         self.lines_to_check = set(lines_to_check)
         checker = changelog.ChangeLogChecker('ChangeLog', handle_style_error, self.mock_should_line_be_checked)
         checker.check(changelog_data.split('\n'))
@@ -59,9 +57,9 @@ class ChangeLogCheckerTest(unittest.TestCase):
 
     def test_init(self):
         checker = changelog.ChangeLogChecker('ChangeLog', self.mock_handle_style_error, self.mock_should_line_be_checked)
-        self.assertEquals(checker.file_path, 'ChangeLog')
-        self.assertEquals(checker.handle_style_error, self.mock_handle_style_error)
-        self.assertEquals(checker.should_line_be_checked, self.mock_should_line_be_checked)
+        self.assertEqual(checker.file_path, 'ChangeLog')
+        self.assertEqual(checker.handle_style_error, self.mock_handle_style_error)
+        self.assertEqual(checker.should_line_be_checked, self.mock_should_line_be_checked)
 
     def test_missing_bug_number(self):
         self.assert_error(1, range(1, 20), 'changelog/bugnumber',
@@ -182,6 +180,3 @@ class ChangeLogCheckerTest(unittest.TestCase):
                              '        * Source/WebKit/foo.cpp:    \n'
                              '        * Source/WebKit/bar.cpp:\n'
                              '        * Source/WebKit/foobar.cpp: Description\n')
-
-if __name__ == '__main__':
-    unittest.main()

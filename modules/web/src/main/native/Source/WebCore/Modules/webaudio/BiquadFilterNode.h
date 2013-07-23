@@ -51,12 +51,14 @@ public:
         return adoptRef(new BiquadFilterNode(context, sampleRate));      
     }
     
-    unsigned short type() { return biquadProcessor()->type(); }
-    void setType(unsigned short type, ExceptionCode&);
+    String type() const;
+    bool setType(unsigned); // Returns true on success.
+    void setType(const String&);
 
     AudioParam* frequency() { return biquadProcessor()->parameter1(); }
     AudioParam* q() { return biquadProcessor()->parameter2(); }
     AudioParam* gain() { return biquadProcessor()->parameter3(); }
+    AudioParam* detune() { return biquadProcessor()->parameter4(); }
 
     // Get the magnitude and phase response of the filter at the given
     // set of frequencies (in Hz). The phase response is in radians.

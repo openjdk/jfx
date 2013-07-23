@@ -22,14 +22,13 @@
 #define WebKitDOMTestSerializedScriptValueInterfacePrivate_h
 
 #include "TestSerializedScriptValueInterface.h"
-#include <glib-object.h>
-#include <webkit/WebKitDOMObject.h>
+#include <webkitdom/WebKitDOMTestSerializedScriptValueInterface.h>
 #if ENABLE(Condition1) || ENABLE(Condition2)
 
 namespace WebKit {
 WebKitDOMTestSerializedScriptValueInterface* wrapTestSerializedScriptValueInterface(WebCore::TestSerializedScriptValueInterface*);
-WebCore::TestSerializedScriptValueInterface* core(WebKitDOMTestSerializedScriptValueInterface* request);
-WebKitDOMTestSerializedScriptValueInterface* kit(WebCore::TestSerializedScriptValueInterface* node);
+WebKitDOMTestSerializedScriptValueInterface* kit(WebCore::TestSerializedScriptValueInterface*);
+WebCore::TestSerializedScriptValueInterface* core(WebKitDOMTestSerializedScriptValueInterface*);
 } // namespace WebKit
 
 #endif /* ENABLE(Condition1) || ENABLE(Condition2) */

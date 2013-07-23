@@ -34,30 +34,45 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.shape.Rectangle;
 
-/**
- */
 public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBehaviorBase<C>> extends CellSkinBase<C,B> {
-    
-    protected abstract ReadOnlyDoubleProperty columnWidthProperty(); // tableColumn.widthProperty()
-    protected abstract BooleanProperty columnVisibleProperty(); // tableColumn.visibleProperty()
-    
+
+    /***************************************************************************
+     *                                                                         *
+     * Static Fields                                                           *
+     *                                                                         *
+     **************************************************************************/
+
     // This property is set on the cell when we want to know its actual
     // preferred width, not the width of the associated TableColumn.
     // This is primarily used in NestedTableColumnHeader such that user double
-    // clicks result in the column being resized to fit the widest content in 
+    // clicks result in the column being resized to fit the widest content in
     // the column
     static final String DEFER_TO_PARENT_PREF_WIDTH = "deferToParentPrefWidth";
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Private Fields                                                          *
+     *                                                                         *
+     **************************************************************************/
+
+    // Equivalent to tableColumn.widthProperty()
+    protected abstract ReadOnlyDoubleProperty columnWidthProperty();
+
+    // Equivalent to tableColumn.visibleProperty()
+    protected abstract BooleanProperty columnVisibleProperty();
+    
     boolean isDeferToParentForPrefWidth = false;
-    
-    private InvalidationListener columnWidthListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            getSkinnable().requestLayout();
-        }
-    };
-    
-    private WeakInvalidationListener weakColumnWidthListener =
-            new WeakInvalidationListener(columnWidthListener);
-    
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+
     public TableCellSkinBase(final C control, final B behavior) {
         super(control, behavior);
         
@@ -86,7 +101,32 @@ public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBeh
             isDeferToParentForPrefWidth = true;
         }
     }
-    
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Listeners                                                               *
+     *                                                                         *
+     **************************************************************************/
+
+    private InvalidationListener columnWidthListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            getSkinnable().requestLayout();
+        }
+    };
+
+    private WeakInvalidationListener weakColumnWidthListener =
+            new WeakInvalidationListener(columnWidthListener);
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Public Methods                                                          *
+     *                                                                         *
+     **************************************************************************/
+
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if ("VISIBLE".equals(p)) {

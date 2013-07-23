@@ -24,18 +24,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module window {
-
-    interface [
+[
         Conditional=NOTIFICATIONS|LEGACY_NOTIFICATIONS,
-        Supplemental=DOMWindow
-    ] DOMWindowNotifications {
+] partial interface DOMWindow {
 #if defined(ENABLE_LEGACY_NOTIFICATIONS) && ENABLE_LEGACY_NOTIFICATIONS
-        readonly attribute [V8EnabledAtRuntime] NotificationCenter webkitNotifications;
-#endif
-#if defined(ENABLE_NOTIFICATIONS) && ENABLE_NOTIFICATIONS
-        attribute NotificationConstructor Notification;
+    readonly attribute NotificationCenter webkitNotifications;
 #endif
     };
 
-}

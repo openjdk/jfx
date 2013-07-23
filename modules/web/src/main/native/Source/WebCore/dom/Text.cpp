@@ -23,15 +23,19 @@
 #include "Text.h"
 
 #include "ExceptionCode.h"
+#include "ExceptionCodePlaceholder.h"
 #include "NodeRenderingContext.h"
 #include "RenderCombineText.h"
 #include "RenderText.h"
+#include "ShadowRoot.h"
 
 #if ENABLE(SVG)
 #include "RenderSVGInlineText.h"
 #include "SVGNames.h"
 #endif
 
+#include "StyleInheritedData.h"
+#include "StyleResolver.h"
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -41,7 +45,12 @@ namespace WebCore {
 
 PassRefPtr<Text> Text::create(Document* document, const String& data)
 {
-    return adoptRef(new Text(document, data));
+    return adoptRef(new Text(document, data, CreateText));
+}
+
+PassRefPtr<Text> Text::createEditingText(Document* document, const String& data)
+{
+    return adoptRef(new Text(document, data, CreateEditingText));
 }
 
 PassRefPtr<Text> Text::splitText(unsigned offset, ExceptionCode& ec)
@@ -148,11 +157,10 @@ PassRefPtr<Text> Text::replaceWholeText(const String& newText, ExceptionCode&)
 
     RefPtr<Text> protectedThis(this); // Mutation event handlers could cause our last ref to go away
     RefPtr<ContainerNode> parent = parentNode(); // Protect against mutation handlers moving this node during traversal
-    ExceptionCode ignored = 0;
     for (RefPtr<Node> n = startText; n && n != this && n->isTextNode() && n->parentNode() == parent;) {
         RefPtr<Node> nodeToRemove(n.release());
         n = nodeToRemove->nextSibling();
-        parent->removeChild(nodeToRemove.get(), ignored);
+        parent->removeChild(nodeToRemove.get(), IGNORE_EXCEPTION);
     }
 
     if (this != endText) {
@@ -160,17 +168,17 @@ PassRefPtr<Text> Text::replaceWholeText(const String& newText, ExceptionCode&)
         for (RefPtr<Node> n = nextSibling(); n && n != onePastEndText && n->isTextNode() && n->parentNode() == parent;) {
             RefPtr<Node> nodeToRemove(n.release());
             n = nodeToRemove->nextSibling();
-            parent->removeChild(nodeToRemove.get(), ignored);
+            parent->removeChild(nodeToRemove.get(), IGNORE_EXCEPTION);
         }
     }
 
     if (newText.isEmpty()) {
         if (parent && parentNode() == parent)
-            parent->removeChild(this, ignored);
+            parent->removeChild(this, IGNORE_EXCEPTION);
         return 0;
     }
 
-    setData(newText, ignored);
+    setData(newText, IGNORE_EXCEPTION);
     return protectedThis.release();
 }
 
@@ -189,9 +197,15 @@ PassRefPtr<Node> Text::cloneNode(bool /*deep*/)
     return create(document(), data());
 }
 
-bool Text::rendererIsNeeded(const NodeRenderingContext& context)
+bool Text::textRendererIsNeeded(NodeRenderingContext& context)
 {
-    if (!CharacterData::rendererIsNeeded(context))
+    if (isEditingText())
+        return true;
+
+    if (!length())
+        return false;
+
+    if (context.style()->display() == NONE)
         return false;
 
     bool onlyWS = containsOnlyWhitespace();
@@ -230,14 +244,31 @@ bool Text::rendererIsNeeded(const NodeRenderingContext& context)
     return true;
 }
 
-RenderObject* Text::createRenderer(RenderArena* arena, RenderStyle* style)
-{
 #if ENABLE(SVG)
-    Node* parentOrHost = parentOrHostNode();
-    if (parentOrHost->isSVGElement() && !parentOrHost->hasTagName(SVGNames::foreignObjectTag))
-        return new (arena) RenderSVGInlineText(this, dataImpl());
+static bool isSVGShadowText(Text* text)
+{
+    Node* parentNode = text->parentNode();
+    return parentNode->isShadowRoot() && toShadowRoot(parentNode)->host()->hasTagName(SVGNames::trefTag);
+}
+
+static bool isSVGText(Text* text)
+{
+    Node* parentOrShadowHostNode = text->parentOrShadowHostNode();
+    return parentOrShadowHostNode->isSVGElement() && !parentOrShadowHostNode->hasTagName(SVGNames::foreignObjectTag);
+}
 #endif
 
+void Text::createTextRendererIfNeeded()
+{
+    NodeRenderingContext(this).createRendererForTextIfNeeded();
+}
+
+RenderText* Text::createTextRenderer(RenderArena* arena, RenderStyle* style)
+{
+#if ENABLE(SVG)
+    if (isSVGText(this) || isSVGShadowText(this))
+        return new (arena) RenderSVGInlineText(this, dataImpl());
+#endif
     if (style->hasTextCombine())
         return new (arena) RenderCombineText(this, dataImpl());
 
@@ -246,27 +277,41 @@ RenderObject* Text::createRenderer(RenderArena* arena, RenderStyle* style)
 
 void Text::attach()
 {
-    createRendererIfNeeded();
+    createTextRendererIfNeeded();
     CharacterData::attach();
 }
 
 void Text::recalcTextStyle(StyleChange change)
 {
-    if (hasCustomCallbacks())
-        willRecalcTextStyle(change);
+    RenderText* renderer = toRenderText(this->renderer());
 
-    if (change != NoChange && parentNode() && parentNode()->renderer()) {
-        if (renderer())
-            renderer()->setStyle(parentNode()->renderer()->style());
-    }
+    if (change != NoChange && renderer)
+        renderer->setStyle(document()->ensureStyleResolver()->styleForText(this));
+
     if (needsStyleRecalc()) {
-        if (renderer()) {
-            if (renderer()->isText())
-                toRenderText(renderer())->setText(dataImpl());
-        } else
+        if (renderer)
+            renderer->setText(dataImpl());
+        else
             reattach();
     }
     clearNeedsStyleRecalc();
+}
+
+void Text::updateTextRenderer(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData)
+{
+    if (!attached())
+        return;
+    RenderText* textRenderer = toRenderText(renderer());
+    if (!textRenderer) {
+        reattach();
+        return;
+    }
+    NodeRenderingContext renderingContext(this, textRenderer->style());
+    if (!textRendererIsNeeded(renderingContext)) {
+        reattach();
+        return;
+    }
+    textRenderer->setTextWithOffset(dataImpl(), offsetOfReplacedData, lengthOfReplacedData);
 }
 
 bool Text::childTypeAllowed(NodeType) const
@@ -287,36 +332,28 @@ PassRefPtr<Text> Text::createWithLengthLimit(Document* document, const String& d
         return create(document, data);
 
     RefPtr<Text> result = Text::create(document, String());
-    result->parserAppendData(data.characters() + start, dataLength - start, maxChars);
+    result->parserAppendData(data, start, maxChars);
 
     return result;
-}
-
-void Text::willRecalcTextStyle(StyleChange)
-{
-    ASSERT_NOT_REACHED();
 }
 
 #ifndef NDEBUG
 void Text::formatForDebugger(char *buffer, unsigned length) const
 {
-    String result;
+    StringBuilder result;
     String s;
     
-    s = nodeName();
-    if (s.length() > 0) {
-        result += s;
-    }
+    result.append(nodeName());
           
     s = data();
     if (s.length() > 0) {
-        if (result.length() > 0)
-            result += "; ";
-        result += "value=";
-        result += s;
+        if (result.length())
+            result.appendLiteral("; ");
+        result.appendLiteral("value=");
+        result.append(s);
     }
           
-    strncpy(buffer, result.utf8().data(), length - 1);
+    strncpy(buffer, result.toString().utf8().data(), length - 1);
 }
 #endif
 

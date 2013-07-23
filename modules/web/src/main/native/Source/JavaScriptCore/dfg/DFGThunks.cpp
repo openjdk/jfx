@@ -36,16 +36,21 @@
 
 namespace JSC { namespace DFG {
 
-MacroAssemblerCodeRef osrExitGenerationThunkGenerator(JSGlobalData* globalData)
+MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
 {
     MacroAssembler jit;
     
     size_t scratchSize = sizeof(EncodedJSValue) * (GPRInfo::numberOfRegisters + FPRInfo::numberOfRegisters);
-    ScratchBuffer* scratchBuffer = globalData->scratchBufferForSize(scratchSize);
+    ScratchBuffer* scratchBuffer = vm->scratchBufferForSize(scratchSize);
     EncodedJSValue* buffer = static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer());
     
-    for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i)
-        jit.storePtr(GPRInfo::toRegister(i), buffer + i);
+    for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i) {
+#if USE(JSVALUE64)
+        jit.store64(GPRInfo::toRegister(i), buffer + i);
+#else
+        jit.store32(GPRInfo::toRegister(i), buffer + i);
+#endif
+    }
     for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
         jit.move(MacroAssembler::TrustedImmPtr(buffer + GPRInfo::numberOfRegisters + i), GPRInfo::regT0);
         jit.storeDouble(FPRInfo::toRegister(i), GPRInfo::regT0);
@@ -71,12 +76,17 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(JSGlobalData* globalData)
         jit.move(MacroAssembler::TrustedImmPtr(buffer + GPRInfo::numberOfRegisters + i), GPRInfo::regT0);
         jit.loadDouble(GPRInfo::regT0, FPRInfo::toRegister(i));
     }
-    for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i)
-        jit.loadPtr(buffer + i, GPRInfo::toRegister(i));
+    for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i) {
+#if USE(JSVALUE64)
+        jit.load64(buffer + i, GPRInfo::toRegister(i));
+#else
+        jit.load32(buffer + i, GPRInfo::toRegister(i));
+#endif
+    }
     
-    jit.jump(MacroAssembler::AbsoluteAddress(&globalData->osrExitJumpDestination));
+    jit.jump(MacroAssembler::AbsoluteAddress(&vm->osrExitJumpDestination));
     
-    LinkBuffer patchBuffer(*globalData, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
     
     patchBuffer.link(functionCall, compileOSRExit);
     
@@ -98,9 +108,9 @@ inline void emitPointerValidation(CCallHelpers& jit, GPRReg pointerGPR)
 #endif
 }
 
-MacroAssemblerCodeRef throwExceptionFromCallSlowPathGenerator(JSGlobalData* globalData)
+MacroAssemblerCodeRef throwExceptionFromCallSlowPathGenerator(VM* vm)
 {
-    CCallHelpers jit(globalData);
+    CCallHelpers jit(vm);
     
     // We will jump to here if the JIT code thinks it's making a call, but the
     // linking helper (C++ code) decided to throw an exception instead. We will
@@ -113,9 +123,13 @@ MacroAssemblerCodeRef throwExceptionFromCallSlowPathGenerator(JSGlobalData* glob
     jit.loadPtr(
         CCallHelpers::Address(
             GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * RegisterFile::CallerFrame),
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::CallerFrame),
         GPRInfo::callFrameRegister);
+#if USE(JSVALUE64)
+    jit.peek64(GPRInfo::nonPreservedNonReturnGPR, JITSTACKFRAME_ARGS_INDEX);
+#else
     jit.peek(GPRInfo::nonPreservedNonReturnGPR, JITSTACKFRAME_ARGS_INDEX);
+#endif
     jit.setupArgumentsWithExecState(GPRInfo::nonPreservedNonReturnGPR);
     jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(lookupExceptionHandler)), GPRInfo::nonArgGPR0);
     emitPointerValidation(jit, GPRInfo::nonArgGPR0);
@@ -123,12 +137,12 @@ MacroAssemblerCodeRef throwExceptionFromCallSlowPathGenerator(JSGlobalData* glob
     emitPointerValidation(jit, GPRInfo::returnValueGPR2);
     jit.jump(GPRInfo::returnValueGPR2);
     
-    LinkBuffer patchBuffer(*globalData, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
     return FINALIZE_CODE(patchBuffer, ("DFG throw exception from call slow path thunk"));
 }
 
 static void slowPathFor(
-    CCallHelpers& jit, JSGlobalData* globalData, P_DFGOperation_E slowPathFunction)
+    CCallHelpers& jit, VM* vm, P_DFGOperation_E slowPathFunction)
 {
     jit.preserveReturnAddressAfterCall(GPRInfo::nonArgGPR2);
     emitPointerValidation(jit, GPRInfo::nonArgGPR2);
@@ -136,9 +150,13 @@ static void slowPathFor(
         GPRInfo::nonArgGPR2,
         CCallHelpers::Address(
             GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * RegisterFile::ReturnPC));
-    jit.storePtr(GPRInfo::callFrameRegister, &globalData->topCallFrame);
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ReturnPC));
+    jit.storePtr(GPRInfo::callFrameRegister, &vm->topCallFrame);
+#if USE(JSVALUE64)
+    jit.poke64(GPRInfo::nonPreservedNonReturnGPR, JITSTACKFRAME_ARGS_INDEX);
+#else
     jit.poke(GPRInfo::nonPreservedNonReturnGPR, JITSTACKFRAME_ARGS_INDEX);
+#endif
     jit.setupArgumentsExecState();
     jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(slowPathFunction)), GPRInfo::nonArgGPR0);
     emitPointerValidation(jit, GPRInfo::nonArgGPR0);
@@ -151,13 +169,13 @@ static void slowPathFor(
     jit.loadPtr(
         CCallHelpers::Address(
             GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * RegisterFile::ReturnPC),
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ReturnPC),
         GPRInfo::nonPreservedNonReturnGPR);
     jit.storePtr(
         CCallHelpers::TrustedImmPtr(0),
         CCallHelpers::Address(
             GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * RegisterFile::ReturnPC));
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ReturnPC));
     emitPointerValidation(jit, GPRInfo::nonPreservedNonReturnGPR);
     jit.restoreReturnAddressBeforeReturn(GPRInfo::nonPreservedNonReturnGPR);
     emitPointerValidation(jit, GPRInfo::returnValueGPR);
@@ -165,7 +183,7 @@ static void slowPathFor(
 }
 
 static MacroAssemblerCodeRef linkForThunkGenerator(
-    JSGlobalData* globalData, CodeSpecializationKind kind)
+    VM* vm, CodeSpecializationKind kind)
 {
     // The return address is on the stack or in the link register. We will hence
     // save the return address to the call frame while we make a C++ function call
@@ -175,34 +193,46 @@ static MacroAssemblerCodeRef linkForThunkGenerator(
     // and all other registers to be available for use. We use JITStackFrame::args
     // to save important information across calls.
     
-    CCallHelpers jit(globalData);
+    CCallHelpers jit(vm);
     
-    slowPathFor(jit, globalData, kind == CodeForCall ? operationLinkCall : operationLinkConstruct);
+    slowPathFor(jit, vm, kind == CodeForCall ? operationLinkCall : operationLinkConstruct);
     
-    LinkBuffer patchBuffer(*globalData, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
     return FINALIZE_CODE(
         patchBuffer,
         ("DFG link %s slow path thunk", kind == CodeForCall ? "call" : "construct"));
 }
 
-MacroAssemblerCodeRef linkCallThunkGenerator(JSGlobalData* globalData)
+MacroAssemblerCodeRef linkCallThunkGenerator(VM* vm)
 {
-    return linkForThunkGenerator(globalData, CodeForCall);
+    return linkForThunkGenerator(vm, CodeForCall);
 }
 
-MacroAssemblerCodeRef linkConstructThunkGenerator(JSGlobalData* globalData)
+MacroAssemblerCodeRef linkConstructThunkGenerator(VM* vm)
 {
-    return linkForThunkGenerator(globalData, CodeForConstruct);
+    return linkForThunkGenerator(vm, CodeForConstruct);
+}
+
+// For closure optimizations, we only include calls, since if you're using closures for
+// object construction then you're going to lose big time anyway.
+MacroAssemblerCodeRef linkClosureCallThunkGenerator(VM* vm)
+{
+    CCallHelpers jit(vm);
+    
+    slowPathFor(jit, vm, operationLinkClosureCall);
+    
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    return FINALIZE_CODE(patchBuffer, ("DFG link closure call slow path thunk"));
 }
 
 static MacroAssemblerCodeRef virtualForThunkGenerator(
-    JSGlobalData* globalData, CodeSpecializationKind kind)
+    VM* vm, CodeSpecializationKind kind)
 {
     // The return address is on the stack, or in the link register. We will hence
     // jump to the callee, or save the return address to the call frame while we
     // make a C++ function call to the appropriate DFG operation.
 
-    CCallHelpers jit(globalData);
+    CCallHelpers jit(vm);
     
     CCallHelpers::JumpList slowCase;
 
@@ -211,7 +241,7 @@ static MacroAssemblerCodeRef virtualForThunkGenerator(
     
 #if USE(JSVALUE64)
     slowCase.append(
-        jit.branchTestPtr(
+        jit.branchTest64(
             CCallHelpers::NonZero, GPRInfo::nonArgGPR0, GPRInfo::tagMaskRegister));
 #else
     slowCase.append(
@@ -219,10 +249,11 @@ static MacroAssemblerCodeRef virtualForThunkGenerator(
             CCallHelpers::NotEqual, GPRInfo::nonArgGPR1,
             CCallHelpers::TrustedImm32(JSValue::CellTag)));
 #endif
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::nonArgGPR0, JSCell::structureOffset()), GPRInfo::nonArgGPR2);
     slowCase.append(
         jit.branchPtr(
             CCallHelpers::NotEqual,
-            CCallHelpers::Address(GPRInfo::nonArgGPR0, JSCell::classInfoOffset()),
+            CCallHelpers::Address(GPRInfo::nonArgGPR2, Structure::classInfoOffset()),
             CCallHelpers::TrustedImmPtr(&JSFunction::s_info)));
     
     // Now we know we have a JSFunction.
@@ -244,23 +275,23 @@ static MacroAssemblerCodeRef virtualForThunkGenerator(
         CCallHelpers::Address(GPRInfo::nonArgGPR0, JSFunction::offsetOfScopeChain()),
         GPRInfo::nonArgGPR1);
 #if USE(JSVALUE64)
-    jit.storePtr(
+    jit.store64(
         GPRInfo::nonArgGPR1,
         CCallHelpers::Address(
             GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * RegisterFile::ScopeChain));
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ScopeChain));
 #else
     jit.storePtr(
         GPRInfo::nonArgGPR1,
         CCallHelpers::Address(
             GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * RegisterFile::ScopeChain +
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ScopeChain +
             OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.payload)));
     jit.store32(
         CCallHelpers::TrustedImm32(JSValue::CellTag),
         CCallHelpers::Address(
             GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * RegisterFile::ScopeChain +
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ScopeChain +
             OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag)));
 #endif
     
@@ -276,22 +307,22 @@ static MacroAssemblerCodeRef virtualForThunkGenerator(
     
     // Here we don't know anything, so revert to the full slow path.
     
-    slowPathFor(jit, globalData, kind == CodeForCall ? operationVirtualCall : operationVirtualConstruct);
+    slowPathFor(jit, vm, kind == CodeForCall ? operationVirtualCall : operationVirtualConstruct);
     
-    LinkBuffer patchBuffer(*globalData, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
     return FINALIZE_CODE(
         patchBuffer,
         ("DFG virtual %s slow path thunk", kind == CodeForCall ? "call" : "construct"));
 }
 
-MacroAssemblerCodeRef virtualCallThunkGenerator(JSGlobalData* globalData)
+MacroAssemblerCodeRef virtualCallThunkGenerator(VM* vm)
 {
-    return virtualForThunkGenerator(globalData, CodeForCall);
+    return virtualForThunkGenerator(vm, CodeForCall);
 }
 
-MacroAssemblerCodeRef virtualConstructThunkGenerator(JSGlobalData* globalData)
+MacroAssemblerCodeRef virtualConstructThunkGenerator(VM* vm)
 {
-    return virtualForThunkGenerator(globalData, CodeForConstruct);
+    return virtualForThunkGenerator(vm, CodeForConstruct);
 }
 
 } } // namespace JSC::DFG

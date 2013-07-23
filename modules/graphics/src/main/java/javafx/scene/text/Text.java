@@ -25,45 +25,9 @@
 
 package javafx.scene.text;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javafx.beans.DefaultProperty;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.binding.DoubleBinding;
-import javafx.beans.binding.ObjectBinding;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.IntegerPropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.StringProperty;
-import javafx.beans.property.StringPropertyBase;
-import javafx.geometry.BoundingBox;
-import javafx.geometry.Bounds;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Point2D;
-import javafx.geometry.VPos;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
-import javafx.scene.shape.PathElement;
-import javafx.scene.shape.Shape;
-import javafx.scene.shape.StrokeType;
-
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
+import com.sun.javafx.accessible.AccessibleNode;
+import com.sun.javafx.accessible.AccessibleText;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -72,22 +36,29 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.TransformedShape;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.accessible.AccessibleText;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.scene.text.HitInfo;
-import com.sun.javafx.scene.text.TextLayout;
-import com.sun.javafx.scene.text.TextLayoutFactory;
-import com.sun.javafx.scene.text.TextSpan;
-import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.PGShape.Mode;
+import com.sun.javafx.scene.text.*;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
+import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.accessible.AccessibleNode;
-import javafx.css.FontCssMetaData;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
+import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.binding.DoubleBinding;
+import javafx.beans.binding.ObjectBinding;
+import javafx.beans.property.*;
+import javafx.css.*;
+import javafx.geometry.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.Shape;
+import javafx.scene.shape.StrokeType;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * The {@code Text} class defines a node that displays a text.
@@ -134,12 +105,8 @@ public class Text extends Shape {
      */
     @Deprecated
     @Override
-    protected final PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGText();
-    }
-
-    private PGText getPGText() {
-        return (PGText) impl_getPGNode();
+    protected final NGNode impl_createPeer() {
+        return new NGText();
     }
 
     /**
@@ -363,6 +330,9 @@ public class Text extends Shape {
         TextLayout layout = getTextLayout();
         /* TextLayout has the text shape cached */
         int type = TextLayout.TYPE_TEXT;
+        if (isStrikethrough()) type |= TextLayout.TYPE_STRIKETHROUGH;
+        if (isUnderline()) type |= TextLayout.TYPE_UNDERLINE;
+        
         TextSpan filter = null;
         if (isSpan()) {
             /* Spans are always relative to the top */
@@ -1176,7 +1146,7 @@ public class Text extends Shape {
     public final BaseBounds impl_computeGeomBounds(BaseBounds bounds,
                                                    BaseTransform tx) {
         if (isSpan()) {
-            if (impl_mode != Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
+            if (impl_mode != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
                 return super.impl_computeGeomBounds(bounds, tx);
             }
             TextLayout layout = getTextLayout();
@@ -1191,7 +1161,7 @@ public class Text extends Shape {
         }
 
         if (getBoundsType() == TextBoundsType.VISUAL) {
-            if (getTextInternal().length() == 0 || impl_mode == Mode.EMPTY) {
+            if (getTextInternal().length() == 0 || impl_mode == NGShape.Mode.EMPTY) {
                 return bounds.makeEmpty();
             }
 
@@ -1223,7 +1193,7 @@ public class Text extends Shape {
         textBounds = new RectBounds(x, y, x + width, y + height);
 
         /* handle stroked text */
-        if (impl_mode != Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
+        if (impl_mode != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
             bounds =
                 super.impl_computeGeomBounds(bounds,
                                              BaseTransform.IDENTITY_TRANSFORM);
@@ -1259,7 +1229,7 @@ public class Text extends Shape {
     @Deprecated
     @Override
     public final com.sun.javafx.geom.Shape impl_configShape() {
-        if (impl_mode == Mode.EMPTY || getTextInternal().length() == 0) {
+        if (impl_mode == NGShape.Mode.EMPTY || getTextInternal().length() == 0) {
             return new Path2D();
         }
         com.sun.javafx.geom.Shape shape = getShape();
@@ -1468,7 +1438,7 @@ public class Text extends Shape {
 
     @SuppressWarnings("deprecation")
     private void updatePGText() {
-        PGText peer = getPGText();
+        final NGText peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.TEXT_ATTRS)) {
             peer.setUnderline(isUnderline());
             peer.setStrikethrough(isStrikethrough());
@@ -1513,8 +1483,8 @@ public class Text extends Shape {
      */
     @Deprecated
     @Override
-    public final void impl_updatePG() {
-        super.impl_updatePG();
+    public final void impl_updatePeer() {
+        super.impl_updatePeer();
         updatePGText();
     }
 

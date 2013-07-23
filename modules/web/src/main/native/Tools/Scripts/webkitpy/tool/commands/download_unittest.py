@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.thirdparty.mock import Mock
@@ -43,15 +43,15 @@ class AbstractRolloutPrepCommandTest(unittest.TestCase):
         command.bind_to_tool(tool)
         output = OutputCapture()
 
-        expected_stderr = "Preparing rollout for bug 50000.\n"
-        commit_info = output.assert_outputs(self, command._commit_info, [1234], expected_stderr=expected_stderr)
+        expected_logs = "Preparing rollout for bug 50000.\n"
+        commit_info = output.assert_outputs(self, command._commit_info, [1234], expected_logs=expected_logs)
         self.assertTrue(commit_info)
 
         mock_commit_info = Mock()
         mock_commit_info.bug_id = lambda: None
         tool._checkout.commit_info_for_revision = lambda revision: mock_commit_info
-        expected_stderr = "Unable to parse bug number from diff.\n"
-        commit_info = output.assert_outputs(self, command._commit_info, [1234], expected_stderr=expected_stderr)
+        expected_logs = "Unable to parse bug number from diff.\n"
+        commit_info = output.assert_outputs(self, command._commit_info, [1234], expected_logs=expected_logs)
         self.assertEqual(commit_info, mock_commit_info)
 
     def test_prepare_state(self):
@@ -90,51 +90,73 @@ class DownloadCommandsTest(CommandsTest):
         return options
 
     def test_build(self):
-        expected_stderr = "Updating working directory\nBuilding WebKit\n"
-        self.assert_execute_outputs(Build(), [], options=self._default_options(), expected_stderr=expected_stderr)
+        expected_logs = "Updating working directory\nBuilding WebKit\n"
+        self.assert_execute_outputs(Build(), [], options=self._default_options(), expected_logs=expected_logs)
 
     def test_build_and_test(self):
-        expected_stderr = "Updating working directory\nBuilding WebKit\nRunning Python unit tests\nRunning Perl unit tests\nRunning JavaScriptCore tests\nRunning WebKit unit tests\nRunning run-webkit-tests\n"
-        self.assert_execute_outputs(BuildAndTest(), [], options=self._default_options(), expected_stderr=expected_stderr)
+        expected_logs = """Updating working directory
+Building WebKit
+Running Python unit tests
+Running Perl unit tests
+Running JavaScriptCore tests
+Running bindings generation tests
+Running WebKit unit tests
+Running run-webkit-tests
+"""
+        self.assert_execute_outputs(BuildAndTest(), [], options=self._default_options(), expected_logs=expected_logs)
 
     def test_apply_attachment(self):
         options = self._default_options()
         options.update = True
         options.local_commit = True
-        expected_stderr = "Updating working directory\nProcessing 1 patch from 1 bug.\nProcessing patch 10000 from bug 50000.\n"
-        self.assert_execute_outputs(ApplyAttachment(), [10000], options=options, expected_stderr=expected_stderr)
+        expected_logs = "Updating working directory\nProcessing 1 patch from 1 bug.\nProcessing patch 10000 from bug 50000.\n"
+        self.assert_execute_outputs(ApplyAttachment(), [10000], options=options, expected_logs=expected_logs)
 
     def test_apply_from_bug(self):
         options = self._default_options()
         options.update = True
         options.local_commit = True
 
-        expected_stderr = "Updating working directory\n0 reviewed patches found on bug 50001.\nNo reviewed patches found, looking for unreviewed patches.\n1 patch found on bug 50001.\nProcessing 1 patch from 1 bug.\nProcessing patch 10002 from bug 50001.\n"
-        self.assert_execute_outputs(ApplyFromBug(), [50001], options=options, expected_stderr=expected_stderr)
+        expected_logs = "Updating working directory\n0 reviewed patches found on bug 50001.\nNo reviewed patches found, looking for unreviewed patches.\n1 patch found on bug 50001.\nProcessing 1 patch from 1 bug.\nProcessing patch 10002 from bug 50001.\n"
+        self.assert_execute_outputs(ApplyFromBug(), [50001], options=options, expected_logs=expected_logs)
 
-        expected_stderr = "Updating working directory\n2 reviewed patches found on bug 50000.\nProcessing 2 patches from 1 bug.\nProcessing patch 10000 from bug 50000.\nProcessing patch 10001 from bug 50000.\n"
-        self.assert_execute_outputs(ApplyFromBug(), [50000], options=options, expected_stderr=expected_stderr)
+        expected_logs = "Updating working directory\n2 reviewed patches found on bug 50000.\nProcessing 2 patches from 1 bug.\nProcessing patch 10000 from bug 50000.\nProcessing patch 10001 from bug 50000.\n"
+        self.assert_execute_outputs(ApplyFromBug(), [50000], options=options, expected_logs=expected_logs)
 
     def test_apply_watch_list(self):
-        expected_stderr = """Processing 1 patch from 1 bug.
+        expected_logs = """Processing 1 patch from 1 bug.
 Updating working directory
-MOCK run_and_throw_if_fail: ['mock-update-webkit'], cwd=/mock-checkout\nProcessing patch 10000 from bug 50000.
+MOCK run_and_throw_if_fail: ['mock-update-webkit'], cwd=/mock-checkout
+Processing patch 10000 from bug 50000.
 MockWatchList: determine_cc_and_messages
+No bug was updated because no id was given.
+Result of watchlist: cc "abarth@webkit.org, eric@webkit.org, levin@chromium.org" messages "Message1.
+
+Message2."
 """
-        self.assert_execute_outputs(ApplyWatchList(), [10000], options=self._default_options(), expected_stderr=expected_stderr, tool=MockTool(log_executive=True))
+        self.assert_execute_outputs(ApplyWatchList(), [10000], options=self._default_options(), expected_logs=expected_logs, tool=MockTool(log_executive=True))
 
     def test_land(self):
-        expected_stderr = "Building WebKit\nRunning Python unit tests\nRunning Perl unit tests\nRunning JavaScriptCore tests\nRunning WebKit unit tests\nRunning run-webkit-tests\nCommitted r49824: <http://trac.webkit.org/changeset/49824>\nUpdating bug 50000\n"
+        expected_logs = """Building WebKit
+Running Python unit tests
+Running Perl unit tests
+Running JavaScriptCore tests
+Running bindings generation tests
+Running WebKit unit tests
+Running run-webkit-tests
+Committed r49824: <http://trac.webkit.org/changeset/49824>
+Updating bug 50000
+"""
         mock_tool = MockTool()
         mock_tool.scm().create_patch = Mock(return_value="Patch1\nMockPatch\n")
         mock_tool.checkout().modified_changelogs = Mock(return_value=[])
-        self.assert_execute_outputs(Land(), [50000], options=self._default_options(), expected_stderr=expected_stderr, tool=mock_tool)
+        self.assert_execute_outputs(Land(), [50000], options=self._default_options(), expected_logs=expected_logs, tool=mock_tool)
         # Make sure we're not calling expensive calls too often.
         self.assertEqual(mock_tool.scm().create_patch.call_count, 0)
         self.assertEqual(mock_tool.checkout().modified_changelogs.call_count, 1)
 
-    def test_land_cowboy(self):
-        expected_stderr = """MOCK run_and_throw_if_fail: ['mock-prepare-ChangeLog', '--email=MOCK email', '--merge-base=None', 'MockFile1'], cwd=/mock-checkout
+    def test_land_cowhand(self):
+        expected_logs = """MOCK run_and_throw_if_fail: ['mock-prepare-ChangeLog', '--email=MOCK email', '--merge-base=None', 'MockFile1'], cwd=/mock-checkout
 MOCK run_and_throw_if_fail: ['mock-check-webkit-style', '--git-commit', 'MOCK git commit', '--diff-files', 'MockFile1', '--filter', '-changelog'], cwd=/mock-checkout
 MOCK run_command: ['ruby', '-I', '/mock-checkout/Websites/bugs.webkit.org/PrettyPatch', '/mock-checkout/Websites/bugs.webkit.org/PrettyPatch/prettify.rb'], cwd=None, input=Patch1
 MOCK: user.open_url: file://...
@@ -147,6 +169,8 @@ Running Perl unit tests
 MOCK run_and_throw_if_fail: ['mock-test-webkitperl'], cwd=/mock-checkout
 Running JavaScriptCore tests
 MOCK run_and_throw_if_fail: ['mock-run-javacriptcore-tests'], cwd=/mock-checkout
+Running bindings generation tests
+MOCK run_and_throw_if_fail: ['mock-run-bindings-tests'], cwd=/mock-checkout
 Running WebKit unit tests
 MOCK run_and_throw_if_fail: ['mock-run-webkit-unit-tests'], cwd=/mock-checkout
 Running run-webkit-tests
@@ -156,46 +180,59 @@ Committed r49824: <http://trac.webkit.org/changeset/49824>
 No bug id provided.
 """
         mock_tool = MockTool(log_executive=True)
-        self.assert_execute_outputs(LandCowboy(), [50000], options=self._default_options(), expected_stderr=expected_stderr, tool=mock_tool)
+        self.assert_execute_outputs(LandCowhand(), [50000], options=self._default_options(), expected_logs=expected_logs, tool=mock_tool)
+
+        expected_logs = "land-cowboy is deprecated, use land-cowhand instead.\n" + expected_logs
+        self.assert_execute_outputs(LandCowboy(), [50000], options=self._default_options(), expected_logs=expected_logs, tool=mock_tool)
 
     def test_land_red_builders(self):
-        expected_stderr = 'Building WebKit\nRunning Python unit tests\nRunning Perl unit tests\nRunning JavaScriptCore tests\nRunning WebKit unit tests\nRunning run-webkit-tests\nCommitted r49824: <http://trac.webkit.org/changeset/49824>\nUpdating bug 50000\n'
+        expected_logs = """Building WebKit
+Running Python unit tests
+Running Perl unit tests
+Running JavaScriptCore tests
+Running bindings generation tests
+Running WebKit unit tests
+Running run-webkit-tests
+Committed r49824: <http://trac.webkit.org/changeset/49824>
+Updating bug 50000
+"""
         mock_tool = MockTool()
         mock_tool.buildbot.light_tree_on_fire()
-        self.assert_execute_outputs(Land(), [50000], options=self._default_options(), expected_stderr=expected_stderr, tool=mock_tool)
+        self.assert_execute_outputs(Land(), [50000], options=self._default_options(), expected_logs=expected_logs, tool=mock_tool)
 
     def test_check_style(self):
-        expected_stderr = """Processing 1 patch from 1 bug.
+        expected_logs = """Processing 1 patch from 1 bug.
 Updating working directory
 MOCK run_and_throw_if_fail: ['mock-update-webkit'], cwd=/mock-checkout
 Processing patch 10000 from bug 50000.
 MOCK run_and_throw_if_fail: ['mock-check-webkit-style', '--git-commit', 'MOCK git commit', '--diff-files', 'MockFile1'], cwd=/mock-checkout
 """
-        self.assert_execute_outputs(CheckStyle(), [10000], options=self._default_options(), expected_stderr=expected_stderr, tool=MockTool(log_executive=True))
+        self.assert_execute_outputs(CheckStyle(), [10000], options=self._default_options(), expected_logs=expected_logs, tool=MockTool(log_executive=True))
 
     def test_build_attachment(self):
-        expected_stderr = "Processing 1 patch from 1 bug.\nUpdating working directory\nProcessing patch 10000 from bug 50000.\nBuilding WebKit\n"
-        self.assert_execute_outputs(BuildAttachment(), [10000], options=self._default_options(), expected_stderr=expected_stderr)
+        expected_logs = "Processing 1 patch from 1 bug.\nUpdating working directory\nProcessing patch 10000 from bug 50000.\nBuilding WebKit\n"
+        self.assert_execute_outputs(BuildAttachment(), [10000], options=self._default_options(), expected_logs=expected_logs)
 
     def test_land_attachment(self):
         # FIXME: This expected result is imperfect, notice how it's seeing the same patch as still there after it thought it would have cleared the flags.
-        expected_stderr = """Processing 1 patch from 1 bug.
+        expected_logs = """Processing 1 patch from 1 bug.
 Updating working directory
 Processing patch 10000 from bug 50000.
 Building WebKit
 Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
+Running bindings generation tests
 Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Not closing bug 50000 as attachment 10000 has review=+.  Assuming there are more patches to land from this bug.
 """
-        self.assert_execute_outputs(LandAttachment(), [10000], options=self._default_options(), expected_stderr=expected_stderr)
+        self.assert_execute_outputs(LandAttachment(), [10000], options=self._default_options(), expected_logs=expected_logs)
 
     def test_land_from_bug(self):
         # FIXME: This expected result is imperfect, notice how it's seeing the same patch as still there after it thought it would have cleared the flags.
-        expected_stderr = """2 reviewed patches found on bug 50000.
+        expected_logs = """2 reviewed patches found on bug 50000.
 Processing 2 patches from 1 bug.
 Updating working directory
 Processing patch 10000 from bug 50000.
@@ -203,6 +240,7 @@ Building WebKit
 Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
+Running bindings generation tests
 Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
@@ -213,16 +251,17 @@ Building WebKit
 Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
+Running bindings generation tests
 Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Not closing bug 50000 as attachment 10000 has review=+.  Assuming there are more patches to land from this bug.
 """
-        self.assert_execute_outputs(LandFromBug(), [50000], options=self._default_options(), expected_stderr=expected_stderr)
+        self.assert_execute_outputs(LandFromBug(), [50000], options=self._default_options(), expected_logs=expected_logs)
 
     def test_land_from_url(self):
         # FIXME: This expected result is imperfect, notice how it's seeing the same patch as still there after it thought it would have cleared the flags.
-        expected_stderr = """2 patches found on bug 50000.
+        expected_logs = """2 patches found on bug 50000.
 Processing 2 patches from 1 bug.
 Updating working directory
 Processing patch 10000 from bug 50000.
@@ -230,6 +269,7 @@ Building WebKit
 Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
+Running bindings generation tests
 Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
@@ -240,19 +280,20 @@ Building WebKit
 Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
+Running bindings generation tests
 Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Not closing bug 50000 as attachment 10000 has review=+.  Assuming there are more patches to land from this bug.
 """
-        self.assert_execute_outputs(LandFromURL(), ["https://bugs.webkit.org/show_bug.cgi?id=50000"], options=self._default_options(), expected_stderr=expected_stderr)
+        self.assert_execute_outputs(LandFromURL(), ["https://bugs.webkit.org/show_bug.cgi?id=50000"], options=self._default_options(), expected_logs=expected_logs)
 
     def test_prepare_rollout(self):
-        expected_stderr = "Preparing rollout for bug 50000.\nUpdating working directory\n"
-        self.assert_execute_outputs(PrepareRollout(), [852, "Reason"], options=self._default_options(), expected_stderr=expected_stderr)
+        expected_logs = "Preparing rollout for bug 50000.\nUpdating working directory\n"
+        self.assert_execute_outputs(PrepareRollout(), [852, "Reason"], options=self._default_options(), expected_logs=expected_logs)
 
     def test_create_rollout(self):
-        expected_stderr = """Preparing rollout for bug 50000.
+        expected_logs = """Preparing rollout for bug 50000.
 Updating working directory
 MOCK create_bug
 bug_title: REGRESSION(r852): Reason
@@ -272,11 +313,11 @@ If you would like to land the rollout faster, you can use the following command:
 where ATTACHMENT_ID is the ID of this attachment.
 -- End comment --
 """
-        self.assert_execute_outputs(CreateRollout(), [852, "Reason"], options=self._default_options(), expected_stderr=expected_stderr)
-        self.assert_execute_outputs(CreateRollout(), ["855 852 854", "Reason"], options=self._default_options(), expected_stderr=expected_stderr)
+        self.assert_execute_outputs(CreateRollout(), [852, "Reason"], options=self._default_options(), expected_logs=expected_logs)
+        self.assert_execute_outputs(CreateRollout(), ["855 852 854", "Reason"], options=self._default_options(), expected_logs=expected_logs)
 
     def test_create_rollout_resolved(self):
-        expected_stderr = """Preparing rollout for bug 50004.
+        expected_logs = """Preparing rollout for bug 50004.
 Updating working directory
 MOCK create_bug
 bug_title: REGRESSION(r3001): Reason
@@ -285,7 +326,7 @@ Reason
 component: MOCK component
 cc: MOCK cc
 blocked: 50004
-MOCK reopen_bug 50004 with comment 'Re-opened since this is blocked by 60001'
+MOCK reopen_bug 50004 with comment 'Re-opened since this is blocked by bug 60001'
 MOCK add_patch_to_bug: bug_id=60001, description=ROLLOUT of r3001, mark_for_review=False, mark_for_commit_queue=True, mark_for_landing=False
 -- Begin comment --
 Any committer can land this patch automatically by marking it commit-queue+.  The commit-queue will build and test the patch before landing to ensure that the rollout will be successful.  This process takes approximately 15 minutes.
@@ -297,10 +338,10 @@ If you would like to land the rollout faster, you can use the following command:
 where ATTACHMENT_ID is the ID of this attachment.
 -- End comment --
 """
-        self.assert_execute_outputs(CreateRollout(), [3001, "Reason"], options=self._default_options(), expected_stderr=expected_stderr)
+        self.assert_execute_outputs(CreateRollout(), [3001, "Reason"], options=self._default_options(), expected_logs=expected_logs)
 
     def test_rollout(self):
-        expected_stderr = """Preparing rollout for bug 50000.
+        expected_logs = """Preparing rollout for bug 50000.
 Updating working directory
 MOCK: user.open_url: file://...
 Was that diff correct?
@@ -312,5 +353,5 @@ Reason
 
 Committed r49824: <http://trac.webkit.org/changeset/49824>'
 """
-        self.assert_execute_outputs(Rollout(), [852, "Reason"], options=self._default_options(), expected_stderr=expected_stderr)
+        self.assert_execute_outputs(Rollout(), [852, "Reason"], options=self._default_options(), expected_logs=expected_logs)
 

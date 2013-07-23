@@ -66,16 +66,20 @@ public:
     bool isPrimitiveValue() const { return m_classType == PrimitiveClass; }
     bool isValueList() const { return m_classType >= ValueListClass; }
 
+    bool isBaseValueList() const { return m_classType == ValueListClass; }
+        
+
     bool isAspectRatioValue() const { return m_classType == AspectRatioClass; }
     bool isBorderImageSliceValue() const { return m_classType == BorderImageSliceClass; }
     bool isCursorImageValue() const { return m_classType == CursorImageClass; }
     bool isFontFeatureValue() const { return m_classType == FontFeatureClass; }
     bool isFontValue() const { return m_classType == FontClass; }
     bool isImageGeneratorValue() const { return m_classType >= CanvasClass && m_classType <= RadialGradientClass; }
+    bool isGradientValue() const { return m_classType >= LinearGradientClass && m_classType <= RadialGradientClass; }
 #if ENABLE(CSS_IMAGE_SET)
     bool isImageSetValue() const { return m_classType == ImageSetClass; }
 #endif
-    bool isImageValue() const { return m_classType == ImageClass || m_classType == CursorImageClass; }
+    bool isImageValue() const { return m_classType == ImageClass; }
     bool isImplicitInitialValue() const;
     bool isInheritedValue() const { return m_classType == InheritedClass; }
     bool isInitialValue() const { return m_classType == InitialClass; }
@@ -90,6 +94,9 @@ public:
 #if ENABLE(CSS_FILTERS)
     bool isWebKitCSSFilterValue() const { return m_classType == WebKitCSSFilterClass; }
 #if ENABLE(CSS_SHADERS)
+    bool isWebKitCSSArrayFunctionValue() const { return m_classType == WebKitCSSArrayFunctionValueClass; }
+    bool isWebKitCSSMatFunctionValue() const { return m_classType == WebKitCSSMatFunctionValueClass; }
+    bool isWebKitCSSMixFunctionValue() const { return m_classType == WebKitCSSMixFunctionValueClass; }
     bool isWebKitCSSShaderValue() const { return m_classType == WebKitCSSShaderClass; }
 #endif
 #endif // ENABLE(CSS_FILTERS)
@@ -116,9 +123,13 @@ public:
 
     void addSubresourceStyleURLs(ListHashSet<KURL>&, const StyleSheetContents*) const;
 
+    bool hasFailedOrCanceledSubresources() const;
+
+    bool equals(const CSSValue&) const;
+
 protected:
 
-    static const size_t ClassTypeBits = 5;
+    static const size_t ClassTypeBits = 6;
     enum ClassType {
         PrimitiveClass,
 
@@ -172,6 +183,11 @@ protected:
 #endif
 #if ENABLE(CSS_FILTERS)
         WebKitCSSFilterClass,
+#if ENABLE(CSS_SHADERS)
+        WebKitCSSArrayFunctionValueClass,
+        WebKitCSSMatFunctionValueClass,
+        WebKitCSSMixFunctionValueClass,
+#endif
 #endif
         WebKitCSSTransformClass,
         // Do not append non-list class types here.
@@ -221,6 +237,29 @@ protected:
 private:
     unsigned m_classType : ClassTypeBits; // ClassType
 };
+
+template<typename CSSValueType>
+inline bool compareCSSValueVector(const Vector<RefPtr<CSSValueType> >& firstVector, const Vector<RefPtr<CSSValueType> >& secondVector)
+{
+    size_t size = firstVector.size();
+    if (size != secondVector.size())
+        return false;
+
+    for (size_t i = 0; i < size; i++) {
+        const RefPtr<CSSValueType>& firstPtr = firstVector[i];
+        const RefPtr<CSSValueType>& secondPtr = secondVector[i];
+        if (firstPtr == secondPtr || (firstPtr && secondPtr && firstPtr->equals(*secondPtr)))
+            continue;
+        return false;
+    }
+    return true;
+}
+
+template<typename CSSValueType>
+inline bool compareCSSValuePtr(const RefPtr<CSSValueType>& first, const RefPtr<CSSValueType>& second)
+{
+    return first ? second && first->equals(*second) : !second;
+}
 
 } // namespace WebCore
 

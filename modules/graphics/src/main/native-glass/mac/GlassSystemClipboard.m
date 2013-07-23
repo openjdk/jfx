@@ -93,7 +93,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacSystemClipboard__1convert
         if (url != nil) {
             url = [url filePathURL];
             if (url != nil) {
-                path = [url absoluteString];
+                path = [url path];
             }
         }
         result = (*env) -> NewStringUTF(env, [path UTF8String]);

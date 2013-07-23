@@ -29,11 +29,7 @@
 #include "IntSize.h"
 #include <wtf/MathExtras.h>
 
-#if PLATFORM(QT)
-#include <QDataStream>
-#endif
-
-#if USE(CG) || USE(SKIA_ON_MAC_CHROMIUM)
+#if USE(CG)
 typedef struct CGPoint CGPoint;
 #endif
 
@@ -63,15 +59,6 @@ class IntPoint;
 }
 #elif PLATFORM(EFL)
 typedef struct _Evas_Point Evas_Point;
-#endif
-
-#if PLATFORM(WX)
-class wxPoint;
-#endif
-
-#if USE(SKIA)
-struct SkPoint;
-struct SkIPoint;
 #endif
 
 namespace WebCore {
@@ -123,7 +110,7 @@ public:
         return IntPoint(m_y, m_x);
     }
 
-#if USE(CG) || USE(SKIA_ON_MAC_CHROMIUM)
+#if USE(CG)
     explicit IntPoint(const CGPoint&); // don't do this implicitly since it's lossy
     operator CGPoint() const;
 #endif
@@ -150,17 +137,6 @@ public:
 #elif PLATFORM(EFL)
     explicit IntPoint(const Evas_Point&);
     operator Evas_Point() const;
-#endif
-
-#if PLATFORM(WX)
-    IntPoint(const wxPoint&);
-    operator wxPoint() const;
-#endif
-
-#if USE(SKIA)
-    IntPoint(const SkIPoint&);
-    operator SkIPoint() const;
-    operator SkPoint() const;
 #endif
 
 private:
@@ -214,12 +190,7 @@ inline bool operator!=(const IntPoint& a, const IntPoint& b)
     return a.x() != b.x() || a.y() != b.y();
 }
 
-inline IntPoint toPoint(const IntSize& size)
-{
-    return IntPoint(size.width(), size.height());
-}
-
-inline IntSize toSize(const IntPoint& a)
+inline IntSize toIntSize(const IntPoint& a)
 {
     return IntSize(a.x(), a.y());
 }
@@ -228,23 +199,6 @@ inline int IntPoint::distanceSquaredToPoint(const IntPoint& point) const
 {
     return ((*this) - point).diagonalLengthSquared();
 }
-
-#if PLATFORM(QT)
-inline QDataStream& operator<<(QDataStream& stream, const IntPoint& point)
-{
-    stream << point.x() << point.y();
-    return stream;
-}
-
-inline QDataStream& operator>>(QDataStream& stream, IntPoint& point)
-{
-    int x, y;
-    stream >> x >> y;
-    point.setX(x);
-    point.setY(y);
-    return stream;
-}
-#endif
 
 } // namespace WebCore
 

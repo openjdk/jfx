@@ -50,7 +50,9 @@ namespace WTF {
         // The needsDestruction flag is used to optimize destruction and rehashing.
         static const bool needsDestruction = true;
 
-        static const int minimumTableSize = 64;
+        // The starting table size. Can be overridden when we know beforehand that
+        // a hash table will have at least N entries.
+        static const int minimumTableSize = 8;
     };
 
     // Default integer traits disallow both 0 and -1 as keys (max value instead of -1 for unsigned).
@@ -76,12 +78,14 @@ namespace WTF {
         // Type for return value of functions that transfer ownership, such as take. 
         typedef T PassOutType;
         static PassOutType passOut(const T& value) { return value; }
+        static T& passOut(T& value) { return value; } // Overloaded to avoid copying of non-temporary values.
 
         // Type for return value of functions that do not transfer ownership, such as get.
         // FIXME: We could change this type to const T& for better performance if we figured out
         // a way to handle the return value from emptyValue, which is a temporary.
         typedef T PeekType;
         static PeekType peek(const T& value) { return value; }
+        static T& peek(T& value) { return value; } // Overloaded to avoid copying of non-temporary values.
     };
 
     template<typename T> struct HashTraits : GenericHashTraits<T> { };
@@ -136,12 +140,18 @@ namespace WTF {
     };
 
     template<typename P> struct HashTraits<RefPtr<P> > : SimpleClassHashTraits<RefPtr<P> > {
+        static P* emptyValue() { return 0; }
+
         typedef PassRefPtr<P> PassInType;
         static void store(PassRefPtr<P> value, RefPtr<P>& storage) { storage = value; }
 
-        // FIXME: We should change PassOutType to PassRefPtr for better performance.
-        // FIXME: We should consider changing PeekType to a raw pointer for better performance,
-        // but then callers won't need to call get; doing so will require updating many call sites.
+        typedef PassRefPtr<P> PassOutType;
+        static PassRefPtr<P> passOut(RefPtr<P>& value) { return value.release(); }
+        static PassRefPtr<P> passOut(P* value) { return value; }
+
+        typedef P* PeekType;
+        static PeekType peek(const RefPtr<P>& value) { return value.get(); }
+        static PeekType peek(P* value) { return value; }
     };
 
     template<> struct HashTraits<String> : SimpleClassHashTraits<String> {
@@ -162,8 +172,6 @@ namespace WTF {
     {
         return HashTraitsEmptyValueChecker<Traits, Traits::hasIsEmptyValueFunction>::isEmptyValue(value);
     }
-
-    // special traits for pairs, helpful for their use in HashMap implementation
 
     template<typename FirstTraitsArg, typename SecondTraitsArg>
     struct PairHashTraits : GenericHashTraits<std::pair<typename FirstTraitsArg::TraitType, typename SecondTraitsArg::TraitType> > {
@@ -186,9 +194,63 @@ namespace WTF {
     template<typename First, typename Second>
     struct HashTraits<std::pair<First, Second> > : public PairHashTraits<HashTraits<First>, HashTraits<Second> > { };
 
+    template<typename KeyTypeArg, typename ValueTypeArg>
+    struct KeyValuePair {
+        typedef KeyTypeArg KeyType;
+
+        KeyValuePair()
+        {
+        }
+
+        KeyValuePair(const KeyTypeArg& key, const ValueTypeArg& value)
+            : key(key)
+            , value(value)
+        {
+        }
+
+        template <typename OtherKeyType, typename OtherValueType>
+        KeyValuePair(const KeyValuePair<OtherKeyType, OtherValueType>& other)
+            : key(other.key)
+            , value(other.value)
+        {
+        }
+
+        KeyTypeArg key;
+        ValueTypeArg value;
+    };
+
+    template<typename KeyTraitsArg, typename ValueTraitsArg>
+    struct KeyValuePairHashTraits : GenericHashTraits<KeyValuePair<typename KeyTraitsArg::TraitType, typename ValueTraitsArg::TraitType> > {
+        typedef KeyTraitsArg KeyTraits;
+        typedef ValueTraitsArg ValueTraits;
+        typedef KeyValuePair<typename KeyTraits::TraitType, typename ValueTraits::TraitType> TraitType;
+        typedef KeyValuePair<typename KeyTraits::EmptyValueType, typename ValueTraits::EmptyValueType> EmptyValueType;
+
+        static const bool emptyValueIsZero = KeyTraits::emptyValueIsZero && ValueTraits::emptyValueIsZero;
+        static EmptyValueType emptyValue() { return KeyValuePair<typename KeyTraits::EmptyValueType, typename ValueTraits::EmptyValueType>(KeyTraits::emptyValue(), ValueTraits::emptyValue()); }
+
+        static const bool needsDestruction = KeyTraits::needsDestruction || ValueTraits::needsDestruction;
+
+        static const int minimumTableSize = KeyTraits::minimumTableSize;
+
+        static void constructDeletedValue(TraitType& slot) { KeyTraits::constructDeletedValue(slot.key); }
+        static bool isDeletedValue(const TraitType& value) { return KeyTraits::isDeletedValue(value.key); }
+    };
+
+    template<typename Key, typename Value>
+    struct HashTraits<KeyValuePair<Key, Value> > : public KeyValuePairHashTraits<HashTraits<Key>, HashTraits<Value> > { };
+
+    template<typename T>
+    struct NullableHashTraits : public HashTraits<T> {
+        static const bool emptyValueIsZero = false;
+        static T emptyValue() { return reinterpret_cast<T>(1); }
+    };
+
 } // namespace WTF
 
 using WTF::HashTraits;
 using WTF::PairHashTraits;
+using WTF::NullableHashTraits;
+using WTF::SimpleClassHashTraits;
 
 #endif // WTF_HashTraits_h

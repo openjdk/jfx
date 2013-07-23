@@ -41,6 +41,9 @@ if (!ARMV6SF.canBuild) {
     return;
 }
 
+// Lambda for naming the generated libs
+ARMV6SF.library = { name -> return "lib${name}.so" as String }
+
 // alias for this platform in legacy artifacts
 ARMV6SF.artifactsName = "armv6-vfp"
 
@@ -226,6 +229,31 @@ gtk.prism.order=sw
 gtk.com.sun.javafx.isEmbedded=true
 gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
 
+def pangoCCFlags = [extraCFlags, "-D_ENABLE_PANGO"];
+def pangoLinkFlags = [extraLFlags];
+setupTools("linux_pango_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--cflags", "pangoft2"
+            standardOutput = results
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--libs", "pangoft2"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        pangoCCFlags.addAll(properties.getProperty("cflags").split(" "))
+        pangoLinkFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
+
+
 def compiler = file("$compilerHome/bin/arm-none-linux-gnueabi-gcc").getAbsolutePath()
 def linker = file("$compilerHome/bin/arm-none-linux-gnueabi-g++").getAbsolutePath()
 
@@ -374,8 +402,8 @@ ARMV6SF.prismES2.eglx11.lib = "prism-es2-eglx11"
 def closedDir = file("$projectDir/../rt-closed")
 ARMV6SF.font = [:]
 ARMV6SF.font.javahInclude = [
-        "com/sun/javafx/font/**/*",
-        "com/sun/javafx/text/**/*"]
+    "com/sun/javafx/font/**/*",
+    "com/sun/javafx/text/**/*"]
 ARMV6SF.font.nativeSource = [file("modules/graphics/src/main/native-font")]
 ARMV6SF.font.compiler = compiler
 ARMV6SF.font.ccFlags = fontCFlags
@@ -394,3 +422,14 @@ ARMV6SF.fontT2K.ccFlags = fontCFlags
 ARMV6SF.fontT2K.linker = linker
 ARMV6SF.fontT2K.linkFlags = fontLFlags
 ARMV6SF.fontT2K.lib = "javafx-font-t2k"
+
+ARMV6SF.fontPango = [:]
+ARMV6SF.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]
+ARMV6SF.fontPango.nativeSource = [
+    "src/main/native-font/pango.c",
+    "src/main/native-font/freetype.c"]
+ARMV6SF.fontPango.compiler = compiler
+ARMV6SF.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
+ARMV6SF.fontPango.linker = linker
+ARMV6SF.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
+ARMV6SF.fontPango.lib = "javafx-font-pango"

@@ -34,7 +34,6 @@ use strict;
 use FindBin;
 use lib $FindBin::Bin;
 use File::Basename;
-use File::Path;
 use File::Spec;
 use Getopt::Long;
 use VCSUtils;
@@ -47,11 +46,7 @@ sub runGitUpdate();
 my $quiet = '';
 my $showHelp;
 my $useGYP = 0;
-my $useMake = 0;
-my $useNinja = 0;
 
-determineIsChromium();
-determineIsChromiumAndroid();
 determineIsQt();
 determineIsWinCairo();
 
@@ -61,17 +56,11 @@ my $getOptionsResult = GetOptions(
     'h|help'  => \$showHelp,
     'q|quiet' => \$quiet,
     'gyp' => \$useGYP,
-    'make' => \$useMake,
-    'ninja' => \$useNinja,
 ); 
 
 if (!$getOptionsResult || $showHelp) {
     print STDERR <<__END__;
 Usage: @{[ basename($0) ]} [options]
-  --chromium          also update dependencies of the chromium port
-  --make              generate the Makefile-based build system (Chromium only)
-  --ninja             generate the ninja-based build system (Chromium only)
-  --chromium-android  also update dependencies of the chromium port for Android
   -h|--help           show the help message
   -q|--quiet          pass -q to svn update for quiet updates
   --gyp               generate project files from gyp after update
@@ -79,15 +68,6 @@ Usage: @{[ basename($0) ]} [options]
 __END__
     exit 1;
 }
-
-if ($useMake) {
-    $ENV{"GYP_GENERATORS"} = "make";
-}
-if ($useNinja) {
-    $ENV{"GYP_GENERATORS"} = "ninja";
-}
-
-my $startTime = time();
 
 my @svnOptions = ();
 push @svnOptions, '-q' if $quiet;
@@ -104,18 +84,6 @@ if (-d "../Internal") {
     print "Updating Internal\n" unless $quiet;
     runSvnUpdate() if isSVNDirectory(".");
     runGitUpdate() if isGitDirectory(".");
-} elsif (isChromium()) {
-    # Workaround for https://bugs.webkit.org/show_bug.cgi?id=38926
-    # We should remove the following "if" block when we find a right fix.
-    if ((isCygwin() || isWindows()) && (stat("WebKit/chromium/features.gypi"))[9] >= $startTime) {
-        print "features.gypi has been updated. Cleaning the build directories.\n";
-        rmtree(["WebKit/chromium/Debug", "WebKit/chromium/Release"]);
-    }
-
-    my @chromiumUpdateArgs = ("perl", "Tools/Scripts/update-webkit-chromium");
-    push @chromiumUpdateArgs, "--chromium-android" if isChromiumAndroid();
-    push @chromiumUpdateArgs, "--force" if forceChromiumUpdate();
-    system(@chromiumUpdateArgs) == 0 or die $!;
 } elsif (isAppleWinWebKit()) {
     system("perl", "Tools/Scripts/update-webkit-auxiliary-libs") == 0 or die;
     if (isWinCairo()) {

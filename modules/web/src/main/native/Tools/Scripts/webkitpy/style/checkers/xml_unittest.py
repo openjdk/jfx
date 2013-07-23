@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Copyright (C) 2010 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +22,7 @@
 
 """Unit test for xml.py."""
 
-import unittest
+import unittest2 as unittest
 
 import xml
 
@@ -57,8 +55,8 @@ class XMLCheckerTest(unittest.TestCase):
     def assert_error(self, expected_line_number, expected_category, xml_data):
         def handle_style_error(mock_error_handler, line_number, category, confidence, message):
             mock_error_handler.had_error = True
-            self.assertEquals(expected_line_number, line_number)
-            self.assertEquals(expected_category, category)
+            self.assertEqual(expected_line_number, line_number)
+            self.assertEqual(expected_category, category)
 
         error_handler = MockErrorHandler(handle_style_error)
         error_handler.had_error = False
@@ -80,13 +78,10 @@ class XMLCheckerTest(unittest.TestCase):
     def test_init(self):
         error_handler = MockErrorHandler(self.mock_handle_style_error)
         checker = xml.XMLChecker('foo.xml', error_handler)
-        self.assertEquals(checker._handle_style_error, error_handler)
+        self.assertEqual(checker._handle_style_error, error_handler)
 
     def test_missing_closing_tag(self):
         self.assert_error(3, 'xml/syntax', '<foo>\n<bar>\n</foo>\n')
 
     def test_no_error(self):
         self.assert_no_error('<foo>\n</foo>')
-
-if __name__ == '__main__':
-    unittest.main()

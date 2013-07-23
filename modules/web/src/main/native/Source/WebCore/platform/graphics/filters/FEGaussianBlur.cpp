@@ -26,8 +26,9 @@
 
 #if ENABLE(FILTERS)
 #include "FEGaussianBlur.h"
-
+#if !PLATFORM(JAVA) || HAVE(ARM_NEON_INTRINSICS)
 #include "FEGaussianBlurNEON.h"
+#endif
 #include "Filter.h"
 #include "GraphicsContext.h"
 #include "RenderTreeAsText.h"
@@ -171,29 +172,25 @@ inline void FEGaussianBlur::platformApply(Uint8ClampedArray* srcPixelArray, Uint
 
         int jobs = parallelJobs.numberOfJobs();
         if (jobs > 1) {
-            int blockHeight = paintSize.height() / jobs;
-            --jobs;
-            for (int job = jobs; job >= 0; --job) {
+            // Split the job into "blockHeight"-sized jobs but there a few jobs that need to be slightly larger since
+            // blockHeight * jobs < total size. These extras are handled by the remainder "jobsWithExtra".
+            const int blockHeight = paintSize.height() / jobs;
+            const int jobsWithExtra = paintSize.height() % jobs;
+
+            int currentY = 0;
+            for (int job = 0; job < jobs; job++) {
                 PlatformApplyParameters& params = parallelJobs.parameter(job);
                 params.filter = this;
 
-                int startY;
-                int endY;
+                int startY = !job ? 0 : currentY - extraHeight;
+                currentY += job < jobsWithExtra ? blockHeight + 1 : blockHeight;
+                int endY = job == jobs - 1 ? currentY : currentY + extraHeight;
+
+                int blockSize = (endY - startY) * scanline;
                 if (!job) {
-                    startY = 0;
-                    endY = blockHeight + extraHeight;
                     params.srcPixelArray = srcPixelArray;
                     params.dstPixelArray = tmpPixelArray;
                 } else {
-                    if (job == jobs) {
-                        startY = job * blockHeight - extraHeight;
-                        endY = paintSize.height();
-                    } else {
-                        startY = job * blockHeight - extraHeight;
-                        endY = (job + 1) * blockHeight + extraHeight;
-                    }
-
-                    int blockSize = (endY - startY) * scanline;
                     params.srcPixelArray = Uint8ClampedArray::createUninitialized(blockSize);
                     params.dstPixelArray = Uint8ClampedArray::createUninitialized(blockSize);
                     memcpy(params.srcPixelArray->data(), srcPixelArray->data() + startY * scanline, blockSize);
@@ -208,20 +205,19 @@ inline void FEGaussianBlur::platformApply(Uint8ClampedArray* srcPixelArray, Uint
             parallelJobs.execute();
 
             // Copy together the parts of the image.
-            for (int job = jobs; job >= 1; --job) {
+            currentY = 0;
+            for (int job = 1; job < jobs; job++) {
                 PlatformApplyParameters& params = parallelJobs.parameter(job);
                 int sourceOffset;
                 int destinationOffset;
                 int size;
-                if (job == jobs) {
+                int adjustedBlockHeight = job < jobsWithExtra ? blockHeight + 1 : blockHeight;
+
+                currentY += adjustedBlockHeight;
                     sourceOffset = extraHeight * scanline;
-                    destinationOffset = job * blockHeight * scanline;
-                    size = (paintSize.height() - job * blockHeight) * scanline;
-                } else {
-                    sourceOffset = extraHeight * scanline;
-                    destinationOffset = job * blockHeight * scanline;
-                    size = blockHeight * scanline;
-                }
+                destinationOffset = currentY * scanline;
+                size = adjustedBlockHeight * scanline;
+
                 memcpy(srcPixelArray->data() + destinationOffset, params.srcPixelArray->data() + sourceOffset, size);
             }
             return;
@@ -235,6 +231,8 @@ inline void FEGaussianBlur::platformApply(Uint8ClampedArray* srcPixelArray, Uint
 
 void FEGaussianBlur::calculateUnscaledKernelSize(unsigned& kernelSizeX, unsigned& kernelSizeY, float stdX, float stdY)
 {
+    ASSERT(stdX >= 0 && stdY >= 0);
+
     kernelSizeX = 0;
     if (stdX)
         kernelSizeX = max<unsigned>(2, static_cast<unsigned>(floorf(stdX * gaussianKernelFactor() + 0.5f)));
@@ -260,19 +258,21 @@ void FEGaussianBlur::calculateKernelSize(Filter* filter, unsigned& kernelSizeX, 
 
 void FEGaussianBlur::determineAbsolutePaintRect()
 {
+    unsigned kernelSizeX = 0;
+    unsigned kernelSizeY = 0;
+    calculateKernelSize(filter(), kernelSizeX, kernelSizeY, m_stdX, m_stdY);
+
     FloatRect absolutePaintRect = inputEffect(0)->absolutePaintRect();
+
+    // We take the half kernel size and multiply it with three, because we run box blur three times.
+    absolutePaintRect.inflateX(3 * kernelSizeX * 0.5f);
+    absolutePaintRect.inflateY(3 * kernelSizeY * 0.5f);
+
     if (clipsToBounds())
         absolutePaintRect.intersect(maxEffectRect());
     else
         absolutePaintRect.unite(maxEffectRect());
 
-    unsigned kernelSizeX = 0;
-    unsigned kernelSizeY = 0;
-    calculateKernelSize(filter(), kernelSizeX, kernelSizeY, m_stdX, m_stdY);
-
-    // We take the half kernel size and multiply it with three, because we run box blur three times.
-    absolutePaintRect.inflateX(3 * kernelSizeX * 0.5f);
-    absolutePaintRect.inflateY(3 * kernelSizeY * 0.5f);
     setAbsolutePaintRect(enclosingIntRect(absolutePaintRect));
 }
 

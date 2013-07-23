@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Peter Kelly (pmk@post.com)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2013 Apple Inc. All rights reserved.
  *           (C) 2007 Eric Seidel (eric@webkit.org)
  *
  * This library is free software; you can redistribute it and/or
@@ -50,30 +50,30 @@ void NamedNodeMap::deref()
     m_element->deref();
 }
 
-PassRefPtr<Node> NamedNodeMap::getNamedItem(const String& name) const
+PassRefPtr<Node> NamedNodeMap::getNamedItem(const AtomicString& name) const
 {
     return m_element->getAttributeNode(name);
 }
 
-PassRefPtr<Node> NamedNodeMap::getNamedItemNS(const String& namespaceURI, const String& localName) const
+PassRefPtr<Node> NamedNodeMap::getNamedItemNS(const AtomicString& namespaceURI, const AtomicString& localName) const
 {
     return m_element->getAttributeNodeNS(namespaceURI, localName);
 }
 
-PassRefPtr<Node> NamedNodeMap::removeNamedItem(const String& name, ExceptionCode& ec)
+PassRefPtr<Node> NamedNodeMap::removeNamedItem(const AtomicString& name, ExceptionCode& ec)
 {
-    size_t index = m_element->getAttributeItemIndex(name, shouldIgnoreAttributeCase(m_element));
-    if (index == notFound) {
+    unsigned index = m_element->hasAttributes() ? m_element->getAttributeItemIndex(name, shouldIgnoreAttributeCase(m_element)) : ElementData::attributeNotFound;
+    if (index == ElementData::attributeNotFound) {
         ec = NOT_FOUND_ERR;
         return 0;
     }
     return m_element->detachAttribute(index);
 }
 
-PassRefPtr<Node> NamedNodeMap::removeNamedItemNS(const String& namespaceURI, const String& localName, ExceptionCode& ec)
+PassRefPtr<Node> NamedNodeMap::removeNamedItemNS(const AtomicString& namespaceURI, const AtomicString& localName, ExceptionCode& ec)
 {
-    size_t index = m_element->getAttributeItemIndex(QualifiedName(nullAtom, localName, namespaceURI));
-    if (index == notFound) {
+    unsigned index = m_element->hasAttributes() ? m_element->getAttributeItemIndex(QualifiedName(nullAtom, localName, namespaceURI)) : notFound;
+    if (index == ElementData::attributeNotFound) {
         ec = NOT_FOUND_ERR;
         return 0;
     }
@@ -108,8 +108,10 @@ PassRefPtr<Node> NamedNodeMap::item(unsigned index) const
     return m_element->ensureAttr(m_element->attributeItem(index)->name());
 }
 
-size_t NamedNodeMap::length() const
+unsigned NamedNodeMap::length() const
 {
+    if (!m_element->hasAttributes())
+        return 0;
     return m_element->attributeCount();
 }
 

@@ -25,21 +25,17 @@
 
 package javafx.scene.shape;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.PathIterator;
+import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
 import javafx.scene.NodeTest;
 import javafx.scene.Scene;
-
 import org.junit.Test;
 
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.PathIterator;
-import com.sun.javafx.pgstub.StubPath;
-import com.sun.javafx.sg.PGPath;
+import static org.junit.Assert.*;
 
 
 public class VLineToTest {
@@ -66,8 +62,8 @@ public class VLineToTest {
         NodeTest.syncNode(path);
 
         //check
-        PGPath pgPath = path.impl_getPGPath();
-        Path2D geometry = (Path2D)((StubPath)pgPath).getGeometry();
+        NGPath pgPath = path.impl_getPeer();
+        Path2D geometry = pgPath.getGeometry();
         float[] coords = new float[6];
         PathIterator it = geometry.getPathIterator(null);
         it.next(); //next is VLineTo segment

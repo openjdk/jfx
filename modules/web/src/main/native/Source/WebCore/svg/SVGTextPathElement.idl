@@ -23,11 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-module svg {
-
-    interface [
+[
         Conditional=SVG
-    ] SVGTextPathElement : SVGTextContentElement,
+] interface SVGTextPathElement : SVGTextContentElement,
                                                      SVGURIReference {    
         // textPath Method Types
         const unsigned short TEXTPATH_METHODTYPE_UNKNOWN   = 0;
@@ -44,4 +42,3 @@ module svg {
         readonly attribute SVGAnimatedEnumeration spacing;
     };
 
-}

@@ -27,8 +27,8 @@
 #define IDBDatabaseCallbacksImpl_h
 
 #include "IDBDatabaseCallbacks.h"
-#include "PlatformString.h"
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 #if ENABLE(INDEXED_DATABASE)
 
@@ -38,16 +38,22 @@ class IDBDatabase;
 
 class IDBDatabaseCallbacksImpl : public IDBDatabaseCallbacks {
 public:
-    static PassRefPtr<IDBDatabaseCallbacksImpl> create(IDBDatabase*);
+    static PassRefPtr<IDBDatabaseCallbacksImpl> create();
     virtual ~IDBDatabaseCallbacksImpl();
 
-    virtual void onVersionChange(const String& version);
-    void unregisterDatabase(IDBDatabase*);
+    // IDBDatabaseCallbacks
+    virtual void onForcedClose();
+    virtual void onVersionChange(int64_t oldVersion, int64_t newVersion);
+
+    virtual void onAbort(int64_t transactionId, PassRefPtr<IDBDatabaseError>);
+    virtual void onComplete(int64_t transactionId);
+
+    void connect(IDBDatabase*);
 
 private:
-    IDBDatabaseCallbacksImpl(IDBDatabase*);
+    IDBDatabaseCallbacksImpl();
 
-    // m_database has a RefPtr to this, so use a weak pointer to avoid a cycle.
+    // The initial IDBOpenDBRequest or final IDBDatabase maintains a RefPtr to this
     IDBDatabase* m_database;
 };
 

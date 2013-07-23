@@ -26,14 +26,17 @@
 #ifndef ResourceHandle_h
 #define ResourceHandle_h
 
-#include "AuthenticationChallenge.h"
 #include "AuthenticationClient.h"
 #include "HTTPHeaderMap.h"
-#include "NetworkingContext.h"
+#include "ResourceHandleTypes.h"
+#include "ResourceLoadPriority.h"
 #include <wtf/OwnPtr.h>
+#include <wtf/RefCounted.h>
 
 #if USE(SOUP)
+typedef struct _GTlsCertificate GTlsCertificate;
 typedef struct _SoupSession SoupSession;
+typedef struct _SoupRequest SoupRequest;
 #endif
 
 #if USE(CF)
@@ -47,15 +50,15 @@ typedef void* LPVOID;
 typedef LPVOID HINTERNET;
 #endif
 
-#if PLATFORM(MAC) || USE(CFURLSTORAGESESSIONS)
+#if PLATFORM(MAC) || USE(CFNETWORK)
 #include <wtf/RetainPtr.h>
 #endif
 
 #if PLATFORM(MAC)
+OBJC_CLASS NSCachedURLResponse;
 OBJC_CLASS NSData;
 OBJC_CLASS NSError;
 OBJC_CLASS NSURLConnection;
-OBJC_CLASS WebCoreResourceHandleAsDelegate;
 #ifndef __OBJC__
 typedef struct objc_object *id;
 #endif
@@ -67,36 +70,32 @@ typedef int CFHTTPCookieStorageAcceptPolicy;
 typedef struct OpaqueCFHTTPCookieStorage* CFHTTPCookieStorageRef;
 #endif
 
-#if USE(CFURLSTORAGESESSIONS) && PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
-typedef struct __CFURLStorageSession* CFURLStorageSessionRef;
-#elif USE(CFURLSTORAGESESSIONS)
+#if PLATFORM(MAC) || USE(CFNETWORK)
 typedef const struct __CFURLStorageSession* CFURLStorageSessionRef;
 #endif
 
-namespace WebCore {
+namespace WTF {
+class SchedulePair;
+}
 
+namespace WebCore {
 class AuthenticationChallenge;
 class Credential;
 class Frame;
 class KURL;
+class NetworkingContext;
 class ProtectionSpace;
 class ResourceError;
 class ResourceHandleClient;
 class ResourceHandleInternal;
 class ResourceRequest;
 class ResourceResponse;
-class SchedulePair;
 class SharedBuffer;
-
-enum StoredCredentials {
-    AllowStoredCredentials,
-    DoNotAllowStoredCredentials
-};
 
 template <typename T> class Timer;
 
 class ResourceHandle : public RefCounted<ResourceHandle>
-#if PLATFORM(MAC) || USE(CFNETWORK) || USE(CURL)
+#if PLATFORM(MAC) || USE(CFNETWORK) || USE(CURL) || USE(SOUP)
     , public AuthenticationClient
 #endif
     {
@@ -104,16 +103,13 @@ public:
     static PassRefPtr<ResourceHandle> create(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff);
     static void loadResourceSynchronously(NetworkingContext*, const ResourceRequest&, StoredCredentials, ResourceError&, ResourceResponse&, Vector<char>& data);
 
-    static bool willLoadFromCache(ResourceRequest&, Frame*);
-    static void cacheMetadata(const ResourceResponse&, const Vector<char>&);
-
     virtual ~ResourceHandle();
 
 #if PLATFORM(MAC) || USE(CFNETWORK)
     void willSendRequest(ResourceRequest&, const ResourceResponse& redirectResponse);
     bool shouldUseCredentialStorage();
 #endif
-#if PLATFORM(MAC) || USE(CFNETWORK) || USE(CURL)
+#if PLATFORM(MAC) || USE(CFNETWORK) || USE(CURL) || USE(SOUP)
     void didReceiveAuthenticationChallenge(const AuthenticationChallenge&);
     virtual void receivedCredential(const AuthenticationChallenge&, const Credential&);
     virtual void receivedRequestToContinueWithoutCredential(const AuthenticationChallenge&);
@@ -127,15 +123,15 @@ public:
 #if !USE(CFNETWORK)
     void didCancelAuthenticationChallenge(const AuthenticationChallenge&);
     NSURLConnection *connection() const;
-    WebCoreResourceHandleAsDelegate *delegate();
+    id delegate();
     void releaseDelegate();
-    id releaseProxy();
 #endif
 
-    void schedule(SchedulePair*);
-    void unschedule(SchedulePair*);
+    void schedule(WTF::SchedulePair*);
+    void unschedule(WTF::SchedulePair*);
 #endif
 #if USE(CFNETWORK)
+    CFURLStorageSessionRef storageSession() const;
     CFURLConnectionRef connection() const;
     CFURLConnectionRef releaseConnectionForDownload();
     static void setHostAllowsAnyHTTPSCertificate(const String&);
@@ -167,7 +163,16 @@ public:
 #endif
 
 #if USE(SOUP)
+    void continueDidReceiveAuthenticationChallenge(const Credential& credentialFromPersistentStorage);
+    void sendPendingRequest();
+    bool shouldUseCredentialStorage();
+    bool cancelledOrClientless();
+    void ensureReadBuffer();
     static SoupSession* defaultSession();
+    static uint64_t getSoupRequestInitiatingPageID(SoupRequest*);
+    static void setHostAllowsAnyHTTPSCertificate(const String&);
+    static void setClientCertificate(const String& host, GTlsCertificate*);
+    static void setIgnoreSSLErrors(bool);
 #endif
 
     // Used to work around the fact that you don't get any more NSURLConnection callbacks until you return from the one you're in.
@@ -181,26 +186,39 @@ public:
     ResourceHandleClient* client() const;
     void setClient(ResourceHandleClient*);
 
+    // Called in response to ResourceHandleClient::willSendRequestAsync().
+    void continueWillSendRequest(const ResourceRequest&);
+
+    // Called in response to ResourceHandleClient::didReceiveResponseAsync().
+    void continueDidReceiveResponse();
+
+    // Called in response to ResourceHandleClient::shouldUseCredentialStorageAsync().
+    void continueShouldUseCredentialStorage(bool);
+
+#if USE(PROTECTION_SPACE_AUTH_CALLBACK)
+    // Called in response to ResourceHandleClient::canAuthenticateAgainstProtectionSpaceAsync().
+    void continueCanAuthenticateAgainstProtectionSpace(bool);
+#endif
+
+#if PLATFORM(MAC)
+    // Called in response to ResourceHandleClient::willCacheResponseAsync().
+    void continueWillCacheResponse(NSCachedURLResponse *);
+#endif
+
     void setDefersLoading(bool);
 
 #if PLATFORM(BLACKBERRY)
-    void pauseLoad(bool);
+    void pauseLoad(bool); // FIXME: How is this different from setDefersLoading()?
 #endif
       
+    void didChangePriority(ResourceLoadPriority);
+
     ResourceRequest& firstRequest();
     const String& lastHTTPMethod() const;
 
     void fireFailure(Timer<ResourceHandle>*);
 
-#if USE(CFURLSTORAGESESSIONS)
-    static CFURLStorageSessionRef currentStorageSession();
-    static void setDefaultStorageSession(CFURLStorageSessionRef);
-    static CFURLStorageSessionRef defaultStorageSession();
-    static void setPrivateBrowsingEnabled(bool);
-
-    static void setPrivateBrowsingStorageSessionIdentifierBase(const String&);
-    static RetainPtr<CFURLStorageSessionRef> createPrivateBrowsingStorageSession(CFStringRef identifier);
-#endif // USE(CFURLSTORAGESESSIONS)
+    NetworkingContext* context() const;
 
     using RefCounted<ResourceHandle>::ref;
     using RefCounted<ResourceHandle>::deref;
@@ -209,15 +227,18 @@ public:
     static CFStringRef synchronousLoadRunLoopMode();
 #endif
 
-#if HAVE(NETWORK_CFDATA_ARRAY_CALLBACK)
+#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     void handleDataArray(CFArrayRef dataArray);
 #endif
 
     typedef PassRefPtr<ResourceHandle> (*BuiltinConstructor)(const ResourceRequest& request, ResourceHandleClient* client);
     static void registerBuiltinConstructor(const AtomicString& protocol, BuiltinConstructor);
 
+    typedef void (*BuiltinSynchronousLoader)(NetworkingContext*, const ResourceRequest&, StoredCredentials, ResourceError&, ResourceResponse&, Vector<char>& data);
+    static void registerBuiltinSynchronousLoader(const AtomicString& protocol, BuiltinSynchronousLoader);
+
 protected:
-    ResourceHandle(const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff);
+    ResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff);
 
 private:
     enum FailureType {
@@ -230,20 +251,16 @@ private:
 
     void scheduleFailure(FailureType);
 
-    bool start(NetworkingContext*);
+    bool start();
+    static void platformLoadResourceSynchronously(NetworkingContext*, const ResourceRequest&, StoredCredentials, ResourceError&, ResourceResponse&, Vector<char>& data);
 
     virtual void refAuthenticationClient() { ref(); }
     virtual void derefAuthenticationClient() { deref(); }
 
 #if PLATFORM(MAC) && !USE(CFNETWORK)
     void createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff);
-#elif USE(CF)
+#elif USE(CFNETWORK)
     void createCFURLConnection(bool shouldUseCredentialStorage, bool shouldContentSniff);
-#endif
-
-#if USE(CFURLSTORAGESESSIONS)
-    static String privateBrowsingStorageSessionIdentifierDefaultBase();
-    static CFURLStorageSessionRef privateBrowsingStorageSession();
 #endif
 
     friend class ResourceHandleInternal;

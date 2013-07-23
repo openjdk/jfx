@@ -272,6 +272,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLContext_nInitialize
             wglGetProcAddress("glBufferSubData");
     ctxInfo->glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)
             wglGetProcAddress("glGetShaderInfoLog");
+    ctxInfo->glTexImage2DMultisample = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)
+            wglGetProcAddress("glTexImage2DMultisample");
+    ctxInfo->glRenderbufferStorageMultisample = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC)
+            wglGetProcAddress("glRenderbufferStorageMultisample");
+    ctxInfo->glBlitFramebuffer = (PFNGLBLITFRAMEBUFFERPROC)
+            wglGetProcAddress("glBlitFramebuffer");
 
     if (isExtensionSupported(ctxInfo->wglExtensionStr,
             "WGL_EXT_swap_control")) {

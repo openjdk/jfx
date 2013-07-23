@@ -509,9 +509,41 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final boolean impl_isReorderable() {
         return reorderable == null ? true : reorderable.get();
     }
-    
-    
-    
+
+
+    // --- fixed
+    // (not used in JavaFX 8.0, but added for easier exploration of the domain
+    // for releases post-8.0, as well as open source projects)
+    private BooleanProperty fixed;
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final BooleanProperty impl_fixedProperty() {
+        if (fixed == null) {
+            fixed = new SimpleBooleanProperty(this, "fixed", false);
+        }
+        return fixed;
+    }
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final void impl_setFixed(boolean value) {
+        impl_fixedProperty().set(value);
+    }
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final boolean impl_isFixed() {
+        return fixed == null ? false : fixed.get();
+    }
+
+
     // --- Comparator
     /**
      * Comparator function used when sorting this table column. The two Objects

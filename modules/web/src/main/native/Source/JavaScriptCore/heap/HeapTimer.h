@@ -33,29 +33,35 @@
 #include <CoreFoundation/CoreFoundation.h>
 #elif PLATFORM(BLACKBERRY)
 #include <BlackBerryPlatformTimer.h>
+#elif PLATFORM(QT)
+#include <QBasicTimer>
+#include <QMutex>
+#include <QObject>
+#include <QThread>
 #endif
 
 namespace JSC {
 
-class JSGlobalData;
+class VM;
     
+#if PLATFORM(QT) && !USE(CF)
+class HeapTimer : public QObject {
+#else
 class HeapTimer {
+#endif
 public:
 #if USE(CF)
-    HeapTimer(JSGlobalData*, CFRunLoopRef);
+    HeapTimer(VM*, CFRunLoopRef);
     static void timerDidFire(CFRunLoopTimerRef, void*);
 #else
-    HeapTimer(JSGlobalData*);
+    HeapTimer(VM*);
 #endif
     
     virtual ~HeapTimer();
-
-    void didStartVMShutdown();
-    virtual void synchronize();
     virtual void doWork() = 0;
     
 protected:
-    JSGlobalData* m_globalData;
+    VM* m_vm;
 
 #if USE(CF)
     static const CFTimeInterval s_decade;
@@ -69,6 +75,12 @@ protected:
     void timerDidFire();
 
     BlackBerry::Platform::Timer<HeapTimer> m_timer;
+#elif PLATFORM(QT)
+    void timerEvent(QTimerEvent*);
+    void customEvent(QEvent*);
+    QBasicTimer m_timer;
+    QThread* m_newThread;
+    QMutex m_mutex;
 #endif
     
 private:
