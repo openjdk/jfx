@@ -97,7 +97,7 @@ public abstract class Application {
         AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
             public Boolean run() {
                 final String str =
-                        System.getProperty("glass.disableThreadChecks", "false");
+                        System.getProperty("glass.disableThreadChecks", "true");
                 return "true".equalsIgnoreCase(str);
             }
         });
