@@ -87,30 +87,6 @@ class FTFontFile extends PrismFontFile {
         }
     }
 
-    /* This is called only for fonts where a temp file was created */
-    @Override
-    protected synchronized void disposeOnShutdown() {
-        if (face != 0) {
-            OS.FT_Done_Face(face);
-            if (PrismFontFactory.debugFonts) {
-                System.err.println("Done Face=" + face);
-            }
-            face = 0;
-        }
-        if (library != 0) {
-            OS.FT_Done_FreeType(library);
-            if (PrismFontFactory.debugFonts) {
-                System.err.println("Done Library=" + library);
-            }
-            library = 0;
-        }
-        if (disposer != null) {
-            disposer.library = 0;
-            disposer.face = 0;
-            disposer = null;
-        }
-    }
-
     @Override
     protected PrismFontStrike<?> createStrike(float size, BaseTransform transform,
                                               int aaMode, FontStrikeDesc desc) {
