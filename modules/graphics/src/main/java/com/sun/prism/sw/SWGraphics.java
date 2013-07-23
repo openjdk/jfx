@@ -720,28 +720,6 @@ final class SWGraphics implements ReadbackGraphics {
                     ", selectStart: " + selectStart + ", selectEnd: " + selectEnd);
         }
 
-        int selectGlyphStart = -1;
-        int selectGlyphEnd = -1;
-        if ((selectColor != null) && (selectStart < selectEnd)) {
-            // convert selectStart / selectEnd from char indexes to glyph indexes
-            int i = 0;
-            while (i < gl.getGlyphCount()) {
-                if (gl.getCharOffset(i) >= selectStart) {
-                    selectGlyphStart = i;
-                    selectGlyphEnd = gl.getGlyphCount();
-                    break;
-                }
-                i++;
-            }
-            while (i < gl.getGlyphCount()) {
-                if (gl.getCharOffset(i) >= selectEnd) {
-                    selectGlyphEnd = i;
-                    break;
-                }
-                i++;
-            }
-        }
-
         final float bx, by, bw, bh;
         if (paint.isProportional()) {
             if (nodeBounds != null) {
@@ -760,75 +738,72 @@ final class SWGraphics implements ReadbackGraphics {
             bx = by = bw = bh = 0;
         }
 
-        // check for selection that is out of range of this line (TextArea)
-        if ((selectGlyphStart < 0 && selectGlyphEnd < 0)||(selectGlyphStart >= gl.getGlyphCount() && selectGlyphEnd >= gl.getGlyphCount())) {
-            this.drawStringInternal(gl, strike, x, y, 0, gl.getGlyphCount(), this.paint, bx, by, bw, bh);
+        final boolean drawAsMasks = tx.isTranslateOrIdentity() && (!strike.drawAsShapes());
+        final boolean doLCDText = drawAsMasks &&
+                (strike.getAAMode() == FontResource.AA_LCD) &&
+                getRenderTarget().isOpaque() &&
+                (this.paint.getType() == Paint.Type.COLOR) &&
+                tx.is2D();
+        BaseTransform glyphTx = null;
+
+        if (doLCDText) {
+            this.pr.setLCDGammaCorrection(1f / PrismFontFactory.getLCDContrast());
+        } else if (drawAsMasks) {
+            final FontResource fr = strike.getFontResource();
+            final float origSize = strike.getSize();
+            final BaseTransform origTx = strike.getTransform();
+            strike = fr.getStrike(origSize, origTx, FontResource.AA_GREYSCALE);
         } else {
-            if (selectGlyphStart > 0) {
-                this.drawStringInternal(gl, strike, x, y, 0, selectGlyphStart, this.paint, bx, by, bw, bh);
+            glyphTx = new Affine2D();
+        }
+
+        if (selectColor == null) {
+            this.setPaintBeforeDraw(this.paint, bx, by, bw, bh);
+            for (int i = 0; i < gl.getGlyphCount(); i++) {
+                this.drawGlyph(strike, gl, i, glyphTx, drawAsMasks, x, y);
             }
-            this.drawStringInternal(gl, strike, x, y,
-                                            Math.max(0, selectGlyphStart), Math.min(gl.getGlyphCount(), selectGlyphEnd),
-                                            selectColor, 0, 0, 0, 0);
-            if (selectGlyphEnd < gl.getGlyphCount()) {
-                this.drawStringInternal(gl, strike, x, y, selectGlyphEnd, gl.getGlyphCount(),
-                                        this.paint, bx, by, bw, bh);
+        } else {
+            for (int i = 0; i < gl.getGlyphCount(); i++) {
+                final int offset = gl.getCharOffset(i);
+                final boolean selected = selectStart <= offset && offset < selectEnd;
+                this.setPaintBeforeDraw(selected ? selectColor : this.paint, bx, by, bw, bh);
+                this.drawGlyph(strike, gl, i, glyphTx, drawAsMasks, x, y);
             }
         }
     }
 
-    private void  drawStringInternal(GlyphList gl, FontStrike strike, float x, float y, int strFrom, int strTo,
-                                     Paint p, float bx, float by, float bw, float bh)
+    private void drawGlyph(FontStrike strike, GlyphList gl, int idx, BaseTransform glyphTx,
+                           boolean drawAsMasks, float x, float y)
     {
-        this.setPaintBeforeDraw(p, bx, by, bw, bh);
-        if (tx.isTranslateOrIdentity() && (!strike.drawAsShapes())) {
-            final boolean doLCDText = (strike.getAAMode() == FontResource.AA_LCD) &&
-                    getRenderTarget().isOpaque() &&
-                    (p.getType() == Paint.Type.COLOR) &&
-                    tx.is2D();
 
-            if (doLCDText) {
-                this.pr.setLCDGammaCorrection(1f / PrismFontFactory.getLCDContrast());
-            } else {
-                final FontResource fr = strike.getFontResource();
-                final float origSize = strike.getSize();
-                final BaseTransform origTx = strike.getTransform();
-                strike = fr.getStrike(origSize, origTx, FontResource.AA_GREYSCALE);
-            }
-
-            for (int i = strFrom; i < strTo; i++) {
-                final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
-                final byte pixelData[] = g.getPixelData();
-                if (pixelData != null) {
-                    if (doLCDText && g.isLCDGlyph()) {
-                        final double posX = x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f;
-                        int subPosX = ((int)(3*posX)) % 3;
-                        if (subPosX < 0) {
-                            subPosX += 3;
-                        }
-                        this.pr.fillLCDAlphaMask(pixelData,
-                                (int)posX,
-                                (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
-                                subPosX,
-                                g.getWidth(), g.getHeight(),
-                                0, g.getWidth());
-                    } else {
-                        this.pr.fillAlphaMask(pixelData,
-                                (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f),
-                                (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
-                                g.getWidth(), g.getHeight(),
-                                0, g.getWidth());
+        final Glyph g = strike.getGlyph(gl.getGlyphCode(idx));
+        if (drawAsMasks) {
+            final byte pixelData[] = g.getPixelData();
+            if (pixelData != null) {
+                if (g.isLCDGlyph()) {
+                    final double posX = x + tx.getMxt() + g.getOriginX() + gl.getPosX(idx) + 0.5f;
+                    int subPosX = ((int)(3*posX)) % 3;
+                    if (subPosX < 0) {
+                        subPosX += 3;
                     }
+                    this.pr.fillLCDAlphaMask(pixelData,
+                            (int)posX,
+                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(idx) + 0.5f),
+                            subPosX,
+                            g.getWidth(), g.getHeight(),
+                            0, g.getWidth());
+                } else {
+                    this.pr.fillAlphaMask(pixelData,
+                            (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(idx) + 0.5f),
+                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(idx) + 0.5f),
+                            g.getWidth(), g.getHeight(),
+                            0, g.getWidth());
                 }
             }
         } else {
-            final BaseTransform glyphTx = new Affine2D();
-            for (int i = strFrom; i < strTo; i++) {
-                final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
-                glyphTx.setTransform(tx);
-                glyphTx.deriveWithTranslation(x + gl.getPosX(i), y + gl.getPosY(i));
-                this.paintShapePaintAlreadySet(g.getShape(), null, glyphTx);
-            }
+            glyphTx.setTransform(tx);
+            glyphTx.deriveWithTranslation(x + gl.getPosX(idx), y + gl.getPosY(idx));
+            this.paintShapePaintAlreadySet(g.getShape(), null, glyphTx);
         }
     }
 
