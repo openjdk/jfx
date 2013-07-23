@@ -186,6 +186,8 @@ protected:
     GtkWidget* gtk_widget;
     GdkWindow* gdk_window;
 
+    bool is_mouse_entered;
+
     static WindowContext * sm_grab_window;
 public:
     bool isEnabled();

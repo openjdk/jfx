@@ -302,7 +302,8 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
         if (enter) { // workaround for RT-21590
             state &= ~(GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK);
         }
-        
+
+        is_mouse_entered = enter;
         mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
                 enter ? com_sun_glass_events_MouseEvent_ENTER : com_sun_glass_events_MouseEvent_EXIT,
                 com_sun_glass_events_MouseEvent_BUTTON_NONE,
@@ -430,6 +431,18 @@ void WindowContextBase::set_visible(bool visible) {
         gtk_widget_show_all(gtk_widget);
     } else {
         gtk_widget_hide(gtk_widget);
+        if (jview && is_mouse_entered) {
+            is_mouse_entered = false;
+            mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+                    com_sun_glass_events_MouseEvent_EXIT,
+                    com_sun_glass_events_MouseEvent_BUTTON_NONE,
+                    0, 0,
+                    0, 0,
+                    0,
+                    JNI_FALSE,
+                    JNI_FALSE);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
     }
 }
 
