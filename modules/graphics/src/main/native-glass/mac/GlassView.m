@@ -71,100 +71,6 @@ static inline NSView<GlassView>* getGlassView(JNIEnv *env, jlong jPtr)
     }
 }
 
-#pragma mark --- Dispatcher
-
-static jlong Do_com_sun_glass_ui_mac_MacView__1create(JNIEnv *env, jobject jView, jobject jCapabilities)
-{
-    NSView<GlassView> *view = nil;
-    
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    {
-        // embed ourselves into GlassHostView, so we can later swap our view between windows (ex. fullscreen mode)
-        NSView *hostView = [[GlassHostView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)]; // alloc creates ref count of 1
-        [hostView setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
-        [hostView setAutoresizesSubviews:YES];
-        
-        view = [[GlassView3D alloc] initWithFrame:[hostView bounds] withJview:jView withJproperties:jCapabilities];
-        [view setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
-        
-        [hostView addSubview:view];
-        (*env)->SetLongField(env, jView, (*env)->GetFieldID(env, jViewClass, "ptr", "J"), ptr_to_jlong(view));
-    }
-    [pool drain];
-    
-    GLASS_CHECK_EXCEPTION(env);
-    
-    return ptr_to_jlong(view);
-}
-
-static void Do_com_sun_glass_ui_mac_MacView__1close(JNIEnv *env, jobject jView, jlong jPtr)
-{
-    NSView<GlassView> *view = getGlassView(env, jPtr);
-    NSView * host = [view superview];
-    if (host != nil) {
-        [view removeFromSuperview];
-        [host release];
-    }
-    [view release];
-}
-
-static void Do_com_sun_glass_ui_mac_MacView__1enterFullscreen(JNIEnv *env, jobject jView, jlong jPtr, jboolean jAnimate, jboolean jKeepRatio, jboolean jHideCursor)
-{
-    NSView<GlassView> *view = getGlassView(env, jPtr);
-    [view enterFullscreenWithAnimate:(jAnimate==JNI_TRUE) withKeepRatio:(jKeepRatio==JNI_TRUE) withHideCursor:(jHideCursor==JNI_TRUE)];
-}
-
-static void Do_com_sun_glass_ui_mac_MacView__1exitFullscreen(JNIEnv *env, jobject jView, jlong jPtr, jboolean jAnimate)
-{
-    NSView<GlassView> *view = getGlassView(env, jPtr);
-    [view exitFullscreenWithAnimate:(jAnimate==JNI_TRUE)];
-}
-
-@interface GlassViewDispatcher : NSObject
-{
-@public
-    jobject         jView;
-    jobject         jCapabilities;
-    jlong                jPtr;
-    jint                jX;
-    jint                jY;
-    jint                jW;
-    jint                jH;
-    jboolean         jAnimate;
-    jboolean         jKeepRatio;
-    jboolean         jHideCursor;
-    jlong                jlongReturn;
-}
-@end
-
-@implementation GlassViewDispatcher
-
-- (void)Do_com_sun_glass_ui_mac_MacView__1create
-{
-    GET_MAIN_JENV;
-    self->jlongReturn = Do_com_sun_glass_ui_mac_MacView__1create(env, self->jView, self->jCapabilities);
-}
-
-- (void)Do_com_sun_glass_ui_mac_MacView__1close
-{
-    GET_MAIN_JENV;
-    Do_com_sun_glass_ui_mac_MacView__1close(env, self->jView, self->jPtr);
-}
-
-- (void)Do_com_sun_glass_ui_mac_MacView__1enterFullscreen
-{
-    GET_MAIN_JENV;
-    Do_com_sun_glass_ui_mac_MacView__1enterFullscreen(env, self->jView, self->jPtr, self->jAnimate, self->jKeepRatio, self->jHideCursor);
-}
-
-- (void)Do_com_sun_glass_ui_mac_MacView__1exitFullscreen
-{
-    GET_MAIN_JENV;
-    Do_com_sun_glass_ui_mac_MacView__1exitFullscreen(env, self->jView, self->jPtr, self->jAnimate);
-}
-
-@end
-
 #pragma mark --- JNI
 
 /*
@@ -375,20 +281,20 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1create
         {
             jCapabilitiesRef = (*env)->NewGlobalRef(env, jCapabilities);
         }
-        {
-            if ([NSThread isMainThread] == YES)
-            {
-                value = Do_com_sun_glass_ui_mac_MacView__1create(env, jViewRef, jCapabilitiesRef);
-            }
-            else
-            {
-                GlassViewDispatcher *dispatcher = [[GlassViewDispatcher alloc] autorelease];
-                dispatcher->jView = jViewRef;
-                dispatcher->jCapabilities = jCapabilitiesRef;
-                [dispatcher performSelectorOnMainThread:@selector(Do_com_sun_glass_ui_mac_MacView__1create) withObject:dispatcher waitUntilDone:YES]; // block and wait for the return value
-                value = dispatcher->jlongReturn;
-            }
-        }
+
+        // embed ourselves into GlassHostView, so we can later swap our view between windows (ex. fullscreen mode)
+        NSView *hostView = [[GlassHostView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)]; // alloc creates ref count of 1
+        [hostView setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
+        [hostView setAutoresizesSubviews:YES];
+        
+        NSView* view = [[GlassView3D alloc] initWithFrame:[hostView bounds] withJview:jView withJproperties:jCapabilities];
+        [view setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
+        
+        [hostView addSubview:view];
+        (*env)->SetLongField(env, jView, (*env)->GetFieldID(env, jViewClass, "ptr", "J"), ptr_to_jlong(view));
+        
+        value = ptr_to_jlong(view);
+
         if (jCapabilities != NULL)
         {
             (*env)->DeleteGlobalRef(env, jCapabilitiesRef);
@@ -567,17 +473,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacView__1close
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        if ([NSThread isMainThread] == YES)
-        {
-            Do_com_sun_glass_ui_mac_MacView__1close(env, jView, jPtr);
+        NSView<GlassView> *view = getGlassView(env, jPtr);
+        NSView * host = [view superview];
+        if (host != nil) {
+            [view removeFromSuperview];
+            [host release];
         }
-        else
-        {
-            GlassViewDispatcher *dispatcher = [[GlassViewDispatcher alloc] autorelease];
-            dispatcher->jView = jView;
-            dispatcher->jPtr = jPtr;
-            [dispatcher performSelectorOnMainThread:@selector(Do_com_sun_glass_ui_mac_MacView__1close) withObject:dispatcher waitUntilDone:YES];
-        }
+        [view release];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -658,20 +560,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacView__1enterFullscreen
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        if ([NSThread isMainThread] == YES)
-        {
-            Do_com_sun_glass_ui_mac_MacView__1enterFullscreen(env, jView, jPtr, jAnimate, jKeepRatio, jHideCursor);
-        }
-        else
-        {
-            GlassViewDispatcher *dispatcher = [[GlassViewDispatcher alloc] autorelease];
-            dispatcher->jView = jView;
-            dispatcher->jPtr = jPtr;
-            dispatcher->jAnimate = jAnimate;
-            dispatcher->jKeepRatio = jKeepRatio;
-            dispatcher->jHideCursor = jHideCursor;
-            [dispatcher performSelectorOnMainThread:@selector(Do_com_sun_glass_ui_mac_MacView__1enterFullscreen) withObject:dispatcher waitUntilDone:YES]; // gznote: YES is safe, but NO would be an optimization
-        }
+        NSView<GlassView> *view = getGlassView(env, jPtr);
+        [view enterFullscreenWithAnimate:(jAnimate==JNI_TRUE) withKeepRatio:(jKeepRatio==JNI_TRUE) withHideCursor:(jHideCursor==JNI_TRUE)];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -692,18 +582,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1exitFullscreen
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        if ([NSThread isMainThread] == YES)
-        {
-            Do_com_sun_glass_ui_mac_MacView__1exitFullscreen(env, jView, jPtr, jAnimate);
-        }
-        else
-        {
-            GlassViewDispatcher *dispatcher = [[GlassViewDispatcher alloc] autorelease];
-            dispatcher->jView = jView;
-            dispatcher->jPtr = jPtr;
-            dispatcher->jAnimate = jAnimate;
-            [dispatcher performSelectorOnMainThread:@selector(Do_com_sun_glass_ui_mac_MacView__1exitFullscreen) withObject:dispatcher waitUntilDone:YES]; // gznote: YES is safe, but NO would be an optimization
-        }
+        NSView<GlassView> *view = getGlassView(env, jPtr);
+        [view exitFullscreenWithAnimate:(jAnimate==JNI_TRUE)];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

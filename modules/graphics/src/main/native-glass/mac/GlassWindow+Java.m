@@ -205,21 +205,6 @@ static NSWindow *s_grabWindow = nil;
     s_grabWindow = window;
 }
 
-- (void)_setLevel
-{
-    NSInteger level = NSNormalWindowLevel;
-    switch (self->_setLevel)
-    {
-        case com_sun_glass_ui_Window_Level_FLOATING:
-            level = NSFloatingWindowLevel;
-            break;
-        case com_sun_glass_ui_Window_Level_TOPMOST:
-            level = NSScreenSaverWindowLevel;
-            break;
-    }
-    [self->nsWindow setLevel:level];
-}
-
 - (void)_setResizable
 {
     NSUInteger mask = [self->nsWindow styleMask];
@@ -251,11 +236,6 @@ static NSWindow *s_grabWindow = nil;
     }
 }
 
-- (void)_setAlpha
-{
-    [self->nsWindow setAlphaValue:_setAlpha];
-}
-
 - (NSRect)_constrainFrame:(NSRect)frame
 {
     NSSize minSize = [self->nsWindow minSize];
@@ -285,13 +265,6 @@ static NSWindow *s_grabWindow = nil;
     return constrained;
 }
 
-- (void)_setFrame
-{
-    NSRect frame = NSMakeRect(self->_setFrameX, self->_setFrameY, self->_setFrameWidth, self->_setFrameHeight);
-    frame = [self _constrainFrame:frame];
-    [self _setFlipFrame:frame display:(self->_setFrameDisplay==JNI_TRUE) animate:(self->_setFrameAnimated==JNI_TRUE)];
-}
-
 - (void)_setVisible
 {
     if (self->isFocusable == YES && self->isEnabled == YES)
@@ -312,21 +285,9 @@ static NSWindow *s_grabWindow = nil;
 
 - (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate
 {
-    self->_setFrameX = (jint)rect.origin.x;
-    self->_setFrameY = (jint)rect.origin.y;
-    self->_setFrameWidth = (jint)rect.size.width;
-    self->_setFrameHeight = (jint)rect.size.height;
-    self->_setFrameDisplay = display;
-    self->_setFrameAnimated = animate;
-    
-    if ([NSThread isMainThread] == YES)
-    {
-        [self _setFrame];
-    }
-    else
-    {
-        [self performSelectorOnMainThread:@selector(_setFrame) withObject:nil waitUntilDone:YES];
-    }
+    NSRect frame = [self _constrainFrame:rect];
+    [self _setFlipFrame:frame display:(BOOL)display animate:(BOOL)animate];
+
 }
 
 - (void)_restorePreZoomedRect
@@ -348,27 +309,6 @@ static NSWindow *s_grabWindow = nil;
         screen = [[NSScreen screens] objectAtIndex: 0];
     }
     return screen;
-}
-
-- (void)_setEnabled:(NSNumber*)enabled
-{
-    self->isEnabled = [enabled boolValue];
-    
-    if (!self->isEnabled) {
-        self->enabledStyleMask = [self->nsWindow styleMask];
-        [self->nsWindow setStyleMask: (self->enabledStyleMask & ~(NSUInteger)(NSMiniaturizableWindowMask | NSResizableWindowMask))];
-        
-        //XXX: perhaps we could simply enable/disable the buttons w/o playing with the styles at all
-        NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
-        [zoomButton setEnabled:NO];
-    } else {
-        [self->nsWindow setStyleMask: self->enabledStyleMask];
-        
-        if (self->enabledStyleMask & NSResizableWindowMask) {
-            NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
-            [zoomButton setEnabled:YES];
-        }
-    }
 }
 
 #pragma mark --- Accessibility

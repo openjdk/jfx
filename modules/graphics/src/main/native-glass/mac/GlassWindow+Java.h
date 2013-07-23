@@ -40,16 +40,12 @@
 + (void)_resetGrab;
 - (void)_checkUngrab;
 - (void)_grabFocus;
-- (void)_setLevel;
 - (void)_setResizable;
-- (void)_setAlpha;
 - (NSRect)_constrainFrame:(NSRect)frame;
-- (void)_setFrame;
 - (void)_setVisible;
 - (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate;
 - (void)_restorePreZoomedRect;
 - (NSScreen*)_getScreen;
-- (void)_setEnabled:(NSNumber*)enabled;
 
 - (void)_initAccessibility;
 - (void)_setFlipFrame:(NSRect)frameRect display:(BOOL)displayFlag animate:(BOOL)animateFlag;
