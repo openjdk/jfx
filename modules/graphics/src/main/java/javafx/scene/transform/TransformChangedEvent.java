@@ -46,6 +46,9 @@ public final class TransformChangedEvent extends Event {
 // TODO: use EventTypeUtil once it's returned
 //            EventTypeUtil.registerInternalEventType(Event.ANY, "TRANSFORM_CHANGED");
 
+    /**
+     * Common supertype for all transform changed event types.
+     */
     public static final EventType<TransformChangedEvent> ANY =
             TRANSFORM_CHANGED;
 
