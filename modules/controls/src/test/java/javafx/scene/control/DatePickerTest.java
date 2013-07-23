@@ -74,6 +74,7 @@ public class DatePickerTest {
      ********************************************************************/
 
     @Before public void setup() {
+        Locale.setDefault(Locale.forLanguageTag("en-US"));
         datePicker = new DatePicker();
     }
 
@@ -379,7 +380,6 @@ public class DatePickerTest {
      ********************************************************************/
 
     @Test public void test_rt30549() {
-        Locale.setDefault(Locale.forLanguageTag("en-US"));
         StringConverter<LocalDate> converter = datePicker.getConverter();
 
         // Set a MinguoDate from a String
