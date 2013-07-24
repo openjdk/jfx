@@ -54,7 +54,7 @@ public final class TempState {
     public final BaseTransform pickTx = new Affine3D();
 
     /**
-     * A temporary affine transform used by the path animation helper to avoid
+     * A temporary affine transform used by the path transition to avoid
      * creating temporary garbage.
      */
     public final Affine3D leafTx = new Affine3D();
@@ -70,13 +70,13 @@ public final class TempState {
 
 
     /**
-     * A temporary general transform used by LOD helper method, in node, 
+     * A temporary general transform used by LOD helper method, in node,
      * to compute area in scene.
      */
     public final GeneralTransform3D projViewTx = new GeneralTransform3D();
 
    /**
-     * A temporary affine transform used by the LOD helper method to get an 
+     * A temporary affine transform used by the LOD helper method to get an
      * affine transform.
      */
     public final Affine3D tempTx = new Affine3D();
