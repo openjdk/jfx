@@ -45,7 +45,6 @@ import javafx.css.StyleableProperty;
 import javafx.event.WeakEventHandler;
 
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
-import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -195,7 +194,7 @@ import javafx.util.Callback;
  * required to create a TreeTableView instance. Running this code (assuming the
  * file system structure is probably built up in memory) will result in a TreeTableView being
  * shown with two columns for name and lastModified. Any other properties of the
- * File class will not be shown, as no TreeTableColumnss are defined for them.
+ * File class will not be shown, as no TreeTableColumns are defined for them.
  * 
  * <h3>TreeTableView support for classes that don't contain properties</h3>
  *
@@ -1519,7 +1518,7 @@ public class TreeTableView<S> extends Control {
      * Scrolls the TreeTableView so that the given column is visible within the viewport.
      * @param column The column that should be visible to the user.
      */
-    public void scrollToColumn(TableColumn<S, ?> column) {
+    public void scrollToColumn(TreeTableColumn<S, ?> column) {
         ControlUtils.scrollToColumn(this, column);
     }
     
@@ -1534,7 +1533,7 @@ public class TreeTableView<S> extends Control {
     }
     
     /**
-     * Called when there's a request to scroll a column into view using {@link #scrollToColumn(TableColumn)} 
+     * Called when there's a request to scroll a column into view using {@link #scrollToColumn(TreeTableColumn)}
      * or {@link #scrollToColumnIndex(int)}
      */
     private ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumn;
@@ -1677,7 +1676,7 @@ public class TreeTableView<S> extends Control {
     }
 
     /**
-     * Returns the TableColumn in the given column index, relative to all other
+     * Returns the TreeTableColumn in the given column index, relative to all other
      * visible leaf columns.
      */
     public TreeTableColumn<S,?> getVisibleLeafColumn(int column) {
@@ -1690,7 +1689,7 @@ public class TreeTableView<S> extends Control {
      * often than not it is not necessary to call this method directly, as it is
      * automatically called when the {@link #getSortOrder() sort order}, 
      * {@link #sortPolicyProperty() sort policy}, or the state of the 
-     * TableColumn {@link TableColumn#sortTypeProperty() sort type} properties 
+     * TreeTableColumn {@link TreeTableColumn#sortTypeProperty() sort type} properties
      * change. In other words, this method should only be called directly when
      * something external changes and a sort is required.
      */
@@ -2827,10 +2826,6 @@ public class TreeTableView<S> extends Control {
         private TreeTableColumn<S,?> getTableColumn(int pos) {
             return getTreeTableView().getVisibleLeafColumn(pos);
         }
-        
-//        private TableColumn<S,?> getTableColumn(TableColumn<S,?> column) {
-//            return getTableColumn(column, 0);
-//        }
 
         // Gets a table column to the left or right of the current one, given an offset
         private TreeTableColumn<S,?> getTableColumn(TreeTableColumn<S,?> column, int offset) {
