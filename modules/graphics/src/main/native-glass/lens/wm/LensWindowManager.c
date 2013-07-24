@@ -513,6 +513,7 @@ void glass_window_setBoundsImpl(JNIEnv *env,
                                                  y);
 
         windowHasBeenUpdated = JNI_TRUE;
+        lens_wm_repaint(env, window);
     }
 
     if (!windowHasBeenUpdated) {
@@ -525,10 +526,6 @@ void glass_window_setBoundsImpl(JNIEnv *env,
                                                    window->currentBounds.width,
                                                    window->currentBounds.height);
     }
-
-    //some time the order of the window rendering concluded by the events is wrong.
-    //so force repaint.
-   lens_wm_repaint(env, window);
 }
 
 
