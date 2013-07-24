@@ -184,10 +184,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_events_mac_NpapiEvent__1dispatchCocoaN
 
             if (event != nil)
             {
-                dispatch_async(dispatch_get_main_queue(),
-                   ^{
-                       [window->child sendEvent:event];
-                   });
+                [window->child sendEvent:event];
             }
         }
     }
@@ -241,10 +238,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_events_mac_NpapiEvent__1dispatchCocoaN
             if (event != nil)
             {
                 [event setNeedsKeyTyped:(jNeedsKeyTyped==JNI_TRUE)];
-                dispatch_async(dispatch_get_main_queue(),
-                               ^{
-                                   [window->child sendEvent:event];
-                               });
+                [window->child sendEvent:event];
             }
         }
     }
@@ -321,10 +315,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_events_mac_NpapiEvent__1dispatchCocoaN
                                                      isARepeat:NO
                                                        keyCode:0];
                 [event setSyntheticKeyTyped:YES];
-                dispatch_async(dispatch_get_main_queue(),
-                               ^{
-                                   [window->child sendEvent:event];
-                               });
+                [window->child sendEvent:event];
             }
         }
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/apps/toys/Shape3DToy">
+      <sourceFolder url="file://$MODULE_DIR$/apps/toys/Shape3DToy/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/toys/Shape3DToy/src/main/resources" isTestSource="false" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="base" />
+    <orderEntry type="module" module-name="controls" />
+    <orderEntry type="module" module-name="fxml" />
+    <orderEntry type="module" module-name="graphics" />
+    <orderEntry type="module" module-name="media" />
+    <orderEntry type="module" module-name="swing" />
+    <orderEntry type="module" module-name="swt" />
+    <orderEntry type="module" module-name="web" />
+    <orderEntry type="inheritedJdk" />
+  </component>
+</module>
+

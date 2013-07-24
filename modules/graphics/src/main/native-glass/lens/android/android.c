@@ -144,7 +144,7 @@ void init_ids(JNIEnv *env) {
 }
 
 void init_functions(JNIEnv *env) {
-    const char *libglass_name = "libglass-lens-eglfb.so";
+    const char *libglass_name = "libglass_lens_eglfb.so";
     jstring jldpath = (*env)->CallObjectMethod(env, jFXActivity, jFXActivity_getLDPath);
     const char *cpath = (*env)->GetStringUTFChars(env, jldpath, 0);
     int cpath_len = (*env)->GetStringUTFLength(env, jldpath);

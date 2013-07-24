@@ -10,6 +10,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="rt" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="module" module-name="builders" />
   </component>
 </module>
 

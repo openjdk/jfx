@@ -228,10 +228,10 @@ public class TestGraphics extends BaseGraphics {
         }
         @Override public Presentable createPresentable(PresentableState pstate) { return null; }
         @Override public VertexBuffer createVertexBuffer(int maxQuads) { return null; }
-        @Override public ShapeRep createPathRep(boolean needs3D) { return null; }
-        @Override public ShapeRep createRoundRectRep(boolean needs3D) { return null; }
-        @Override public ShapeRep createEllipseRep(boolean needs3D) { return null; }
-        @Override public ShapeRep createArcRep(boolean needs3D) { return null; }
+        @Override public ShapeRep createPathRep() { return null; }
+        @Override public ShapeRep createRoundRectRep() { return null; }
+        @Override public ShapeRep createEllipseRep() { return null; }
+        @Override public ShapeRep createArcRep() { return null; }
         @Override public void addFactoryListener(ResourceFactoryListener l) { }
         @Override public void removeFactoryListener(ResourceFactoryListener l) { }
         @Override public void dispose() { }

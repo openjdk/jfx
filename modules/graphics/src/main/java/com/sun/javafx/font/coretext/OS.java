@@ -36,7 +36,7 @@ class OS {
     static {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
            public Void run() {
-               NativeLibLoader.loadLibrary("javafx-font");
+               NativeLibLoader.loadLibrary("javafx_font");
                return null;
            }
         });
@@ -83,11 +83,10 @@ class OS {
     static final native double CTFontGetAdvancesForGlyphs(long font, int orientation, short glyphs, CGSize advances, long count);
     static final native CGRect CTFontGetBoundingRectsForGlyphs(long font, int orientation, short glyphs, CGRect boundingRects, long count);
     static final native boolean CTFontGetBoundingRectForGlyphUsingTables(long font, short glyphs, short format, int[] retArr);
-    static final native float[] CTRunGetAdvancesPtr(long run);
-    static final native int[] CTRunGetGlyphsPtr(long run);
-    static final native int[] CTRunGetStringIndicesPtr(long run);
+    static final native int CTRunGetGlyphs(long run, int slotMask, int start, int[] buffer);
+    static final native int CTRunGetStringIndices(long run, int start, int[] buffer);
     static final native CFRange CTRunGetStringRange(long run);
-    static final native float[] CTRunGetPositionsPtr(long run);
+    static final native int CTRunGetPositions(long run, int start, float[] buffer);
 
     /* one to one */
     static final native long kCFAllocatorDefault();
@@ -121,6 +120,8 @@ class OS {
     static final native boolean CTFontManagerRegisterFontsForURL(long fontURL, int scope, long error);
     static final native long CTLineCreateWithAttributedString(long string);
     static final native long CTLineGetGlyphRuns(long line);
+    static final native long CTLineGetGlyphCount(long line);
+    static final native double CTLineGetTypographicBounds(long line);
     static final native long CTRunGetGlyphCount(long run);
     static final native long CTRunGetAttributes(long run);
     static final native int CTRunGetStatus(long run);

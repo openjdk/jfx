@@ -228,17 +228,11 @@ public class NGText extends NGShape {
     private static int SHAPE_FILL  = 1 << 2;
     private static int TEXT        = 1 << 3;
     private static int DECORATION  = 1 << 4;
-    @Override protected void renderContent(Graphics g) {
+    @Override protected void renderContent2D(Graphics g, boolean printing) {
         if (mode == Mode.EMPTY) return;
         if (runs == null || runs.length == 0) return;
 
         BaseTransform tx = g.getTransformNoClone();
-        // Render this text node as geometry if it is 3D transformed
-        if (!tx.is2D()) {
-            super.renderContent(g);
-            return;
-        }
-
         FontStrike strike = getStrike(tx);
 
         if (strike.getAAMode() == FontResource.AA_LCD ||

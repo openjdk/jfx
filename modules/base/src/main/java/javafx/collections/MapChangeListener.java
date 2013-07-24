@@ -31,6 +31,7 @@ package javafx.collections;
  * @param <V> the value element type
  * @since JavaFX 2.0
  */
+@FunctionalInterface
 public interface MapChangeListener<K, V> {
 
     /**

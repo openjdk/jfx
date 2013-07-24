@@ -35,6 +35,7 @@ import java.util.List;
  * @see Change
  * @since JavaFX 2.0
  */
+@FunctionalInterface
 public interface ListChangeListener<E> {
 
     /**
@@ -59,6 +60,10 @@ public interface ListChangeListener<E> {
      * <li><b>Update change</b> : {@link #wasUpdated()} return true on an update change.
      * All elements between {@link #getFrom() from}(inclusive) and {@link #getTo() to}(exclusive) were updated.
      * </ul>
+     *
+     * <b>Important:</b> It's necessary to call {@link #next()} method before calling
+     * any other method of {@code Change}. The same applies after calling {@link #reset()}.
+     * The only methods that works at any time is {@link #getList()}.
      *
      *<p>
      * Typical usage is to observe changes on an ObservableList in order

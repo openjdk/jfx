@@ -42,6 +42,8 @@
 #include "X11/Xlib.h"
 #endif
 
+#define WARN_MISSING_SYMBOLS 0
+
 void *get_dlsym(void *handle, const char *symbol, int warn) {
     void *ret = dlsym(handle, symbol);
     if (!ret && warn) {
@@ -50,7 +52,7 @@ void *get_dlsym(void *handle, const char *symbol, int warn) {
     return ret;
 }
 
-#define GET_DLSYM(handle,symbol) get_dlsym(handle,symbol,1);
+#define GET_DLSYM(handle,symbol) get_dlsym(handle,symbol, WARN_MISSING_SYMBOLS);
 
 EGLSurface sharedWindowSurface = NULL;
 #ifdef ANDROID_NDK

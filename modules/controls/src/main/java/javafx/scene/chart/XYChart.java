@@ -72,10 +72,10 @@ import javafx.css.StyleableProperty;
  * Chart base class for all 2 axis charts. It is responsible for drawing the two
  * axes and the plot content. It contains a list of all content in the plot and
  * implementations of XYChart can add nodes to this list that need to be rendered.
- * 
- * <p>It is possible to install Tooltips on data items / symbols. 
+ *
+ * <p>It is possible to install Tooltips on data items / symbols.
  * For example the following code snippet installs Tooltip on the 1st data item.
- * 
+ *
  * <pre><code>
  *  XYChart.Data item = ( XYChart.Data)series.getData().get(0);
  *  Tooltip.install(item.getNode(), new Tooltip("Symbol-0"));
@@ -88,7 +88,7 @@ public abstract class XYChart<X,Y> extends Chart {
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
 
     // to indicate which colors are being used for the series
-    BitSet colorBits = new BitSet(8); 
+    BitSet colorBits = new BitSet(8);
     static String DEFAULT_COLOR = "default-color";
     Map<Series, Integer> seriesColorMap = new HashMap<Series, Integer>();
     private boolean rangeValid = false;
@@ -167,7 +167,7 @@ public abstract class XYChart<X,Y> extends Chart {
             requestChartLayout();
         }
     };
-    
+
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     private final Axis<X> xAxis;
@@ -188,8 +188,8 @@ public abstract class XYChart<X,Y> extends Chart {
             if(old != null) {
                 old.removeListener(seriesChanged);
                 // Set animated to false so we don't animate both remove and add
-                // at the same time. RT-14163 
-                // RT-21295 - disable animated only when current is also not null. 
+                // at the same time. RT-14163
+                // RT-21295 - disable animated only when current is also not null.
                 if (current != null && old.size() > 0) {
                     saveAnimationState = (old.get(0).getChart().getAnimated()) ? 1 : 2;
                     old.get(0).getChart().setAnimated(false);
@@ -237,7 +237,7 @@ public abstract class XYChart<X,Y> extends Chart {
     public final void setData(ObservableList<Series<X,Y>> value) { data.setValue(value); }
     public final ObjectProperty<ObservableList<Series<X,Y>>> dataProperty() { return data; }
 
-    /** True if vertical grid lines should be drawn */ 
+    /** True if vertical grid lines should be drawn */
     private BooleanProperty verticalGridLinesVisible = new StyleableBooleanProperty(true) {
         @Override protected void invalidated() {
             requestChartLayout();
@@ -283,11 +283,11 @@ public abstract class XYChart<X,Y> extends Chart {
         public String getName() {
             return "horizontalGridLinesVisible";
         }
-        
+
         @Override
         public CssMetaData<XYChart<?,?>,Boolean> getCssMetaData() {
             return StyleableProperties.HORIZONTAL_GRID_LINE_VISIBLE;
-        }        
+        }
     };
     public final boolean isHorizontalGridLinesVisible() { return horizontalGridLinesVisible.get(); }
     public final void setHorizontalGridLinesVisible(boolean value) { horizontalGridLinesVisible.set(value); }
@@ -312,7 +312,7 @@ public abstract class XYChart<X,Y> extends Chart {
         @Override
         public CssMetaData<XYChart<?,?>,Boolean> getCssMetaData() {
             return StyleableProperties.ALTERNATIVE_COLUMN_FILL_VISIBLE;
-        }        
+        }
     };
     public final boolean isAlternativeColumnFillVisible() { return alternativeColumnFillVisible.getValue(); }
     public final void setAlternativeColumnFillVisible(boolean value) { alternativeColumnFillVisible.setValue(value); }
@@ -337,7 +337,7 @@ public abstract class XYChart<X,Y> extends Chart {
         @Override
         public CssMetaData<XYChart<?,?>,Boolean> getCssMetaData() {
             return StyleableProperties.ALTERNATIVE_ROW_FILL_VISIBLE;
-        }                
+        }
     };
     public final boolean isAlternativeRowFillVisible() { return alternativeRowFillVisible.getValue(); }
     public final void setAlternativeRowFillVisible(boolean value) { alternativeRowFillVisible.setValue(value); }
@@ -367,7 +367,7 @@ public abstract class XYChart<X,Y> extends Chart {
         @Override
         public CssMetaData<XYChart<?,?>,Boolean> getCssMetaData() {
             return StyleableProperties.VERTICAL_ZERO_LINE_VISIBLE;
-        }                
+        }
     };
     public final boolean isVerticalZeroLineVisible() { return verticalZeroLineVisible.get(); }
     public final void setVerticalZeroLineVisible(boolean value) { verticalZeroLineVisible.set(value); }
@@ -397,7 +397,7 @@ public abstract class XYChart<X,Y> extends Chart {
         @Override
         public CssMetaData<XYChart<?,?>,Boolean> getCssMetaData() {
             return StyleableProperties.HORIZONTAL_ZERO_LINE_VISIBLE;
-        }                
+        }
     };
     public final boolean isHorizontalZeroLineVisible() { return horizontalZeroLineVisible.get(); }
     public final void setHorizontalZeroLineVisible(boolean value) { horizontalZeroLineVisible.set(value); }
@@ -478,15 +478,6 @@ public abstract class XYChart<X,Y> extends Chart {
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
 
-    @Override public void requestLayout() {
-        super.requestLayout();
-        // RT-22726 Charts legend does not resize correctly
-        Node legend = getLegend();
-        if (legend != null && legend instanceof Region) {
-            ((Region)legend).requestLayout();
-        }
-    }
-    
     /**
      * Gets the size of the data returning 0 if the data is null
      *
@@ -585,7 +576,7 @@ public abstract class XYChart<X,Y> extends Chart {
     protected abstract void dataItemRemoved(Data<X, Y> item, Series<X, Y> series);
 
     /**
-     * Called when a data item has changed, ie its xValue, yValue or extraValue has changed. 
+     * Called when a data item has changed, ie its xValue, yValue or extraValue has changed.
      *
      * @param item    The data item who was changed
      */
@@ -764,7 +755,7 @@ public abstract class XYChart<X,Y> extends Chart {
         if(getVerticalGridLinesVisible()) {
             for(int i=0; i < xaTickMarks.size(); i++) {
                 Axis.TickMark<X> tick = xaTickMarks.get(i);
-                double pixelOffset = (i==(xaTickMarks.size()-1)) ? -0.5 : 0.5; 
+                double pixelOffset = (i==(xaTickMarks.size()-1)) ? -0.5 : 0.5;
                 final double x = xa.getDisplayPosition(tick.getValue());
                 if ((x!=xAxisZero || !isVerticalZeroLineVisible()) && x > 0 && x <= xAxisWidth) {
                     verticalGridLines.getElements().add(new MoveTo(left+x+pixelOffset,top));
@@ -907,7 +898,7 @@ public abstract class XYChart<X,Y> extends Chart {
         }
         return count;
     }
-    
+
     /**
      * This should be called from seriesRemoved() when you are finished with any animation for deleting the series from
      * the chart. It will remove the series from showing up in the Iterator returned by getDisplayedSeriesIterator().
@@ -989,7 +980,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * to animate when data is added or removed.
      */
     protected final Y getCurrentDisplayedYValue(Data<X,Y> item) { return item.getCurrentY(); }
-    
+
     /**
      * Set the current displayed data value plotted on Y axis.
      *
@@ -1092,7 +1083,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 return (StyleableProperty<Boolean>)node.horizontalGridLinesVisibleProperty();
             }
         };
-        
+
         private static final CssMetaData<XYChart<?,?>,Boolean> HORIZONTAL_ZERO_LINE_VISIBLE =
             new CssMetaData<XYChart<?,?>,Boolean>("-fx-horizontal-zero-line-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
@@ -1108,7 +1099,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 return (StyleableProperty<Boolean>)node.horizontalZeroLineVisibleProperty();
             }
         };
-        
+
         private static final CssMetaData<XYChart<?,?>,Boolean> ALTERNATIVE_ROW_FILL_VISIBLE =
             new CssMetaData<XYChart<?,?>,Boolean>("-fx-alternative-row-fill-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
@@ -1124,7 +1115,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 return (StyleableProperty<Boolean>)node.alternativeRowFillVisibleProperty();
             }
         };
-        
+
         private static final CssMetaData<XYChart<?,?>,Boolean> VERTICAL_GRID_LINE_VISIBLE =
             new CssMetaData<XYChart<?,?>,Boolean>("-fx-vertical-grid-lines-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
@@ -1140,7 +1131,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 return (StyleableProperty<Boolean>)node.verticalGridLinesVisibleProperty();
             }
         };
-        
+
         private static final CssMetaData<XYChart<?,?>,Boolean> VERTICAL_ZERO_LINE_VISIBLE =
             new CssMetaData<XYChart<?,?>,Boolean>("-fx-vertical-zero-line-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
@@ -1156,7 +1147,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 return (StyleableProperty<Boolean>)node.verticalZeroLineVisibleProperty();
             }
         };
-        
+
         private static final CssMetaData<XYChart<?,?>,Boolean> ALTERNATIVE_COLUMN_FILL_VISIBLE =
             new CssMetaData<XYChart<?,?>,Boolean>("-fx-alternative-column-fill-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
@@ -1175,7 +1166,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Chart.getClassCssMetaData());
             styleables.add(HORIZONTAL_GRID_LINE_VISIBLE);
             styleables.add(HORIZONTAL_ZERO_LINE_VISIBLE);
@@ -1186,7 +1177,7 @@ public abstract class XYChart<X,Y> extends Chart {
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
- 
+
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
@@ -1262,9 +1253,9 @@ public abstract class XYChart<X,Y> extends Chart {
             if (currentX.get() == null ||
                     (series != null && series.getChart() == null)) currentX.setValue(value);
         }
-        /** 
+        /**
          * The generic data value to be plotted on the X axis.
-         * @return The XValue property         
+         * @return The XValue property
          */
         public final ObjectProperty<X> XValueProperty() { return xValue; }
 
@@ -1306,11 +1297,11 @@ public abstract class XYChart<X,Y> extends Chart {
             yValue.set(value);
             // handle the case where this is a init because the default constructor was used
             // and the case when series is not associated to a chart due to a remove series
-            if (currentY.get() == null || 
+            if (currentY.get() == null ||
                     (series != null && series.getChart() == null)) currentY.setValue(value);
-            
+
         }
-        /** 
+        /**
          * The generic data value to be plotted on the Y axis.
          * @return the YValue property
          */
@@ -1406,7 +1397,7 @@ public abstract class XYChart<X,Y> extends Chart {
         /**
          * Creates an instance of XYChart.Data object and initializes the X,Y
          * data values.
-         * 
+         *
          * @param xValue The X axis data value
          * @param yValue The Y axis data value
          */
@@ -1439,7 +1430,7 @@ public abstract class XYChart<X,Y> extends Chart {
         /**
          * Returns a string representation of this {@code Data} object.
          * @return a string representation of this {@code Data} object.
-         */ 
+         */
         @Override public String toString() {
             return "Data["+getXValue()+","+getYValue()+","+getExtraValue()+"]";
         }
@@ -1519,7 +1510,7 @@ public abstract class XYChart<X,Y> extends Chart {
                         }
                     }
                     // check cycle in the data list
-                    // if cycle exists, and the data is not set to be removed, 
+                    // if cycle exists, and the data is not set to be removed,
                     // eliminate loop and throw exception stating operation not permitted.
                     // RT-28880 : infinite loop when same data is added to two charts.
                     Data<X,Y> cycle = checkCycleInList();
@@ -1537,7 +1528,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 }
             }
         };
-        
+
         private Data<X,Y> checkCycleInList() {
             Data<X,Y> slow = null;
             Data<X,Y> fast = null;
@@ -1552,7 +1543,7 @@ public abstract class XYChart<X,Y> extends Chart {
             }
             return null;
         }
-        
+
         private void eliminateLoop(Data<X,Y> cycle) {
             Data<X,Y> slow = cycle;
             // Identify the data that is the start of the loop
@@ -1693,7 +1684,7 @@ public abstract class XYChart<X,Y> extends Chart {
         /**
          * Returns a string representation of this {@code Series} object.
          * @return a string representation of this {@code Series} object.
-         */ 
+         */
         @Override public String toString() {
             return "Series["+getName()+"]";
         }
@@ -1702,7 +1693,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
         /*
          * The following methods are for manipulating the pointers in the linked list
-         * when data is deleted. 
+         * when data is deleted.
          */
         private void removeDataItemRef(Data<X,Y> item) {
             if (begin == item) {
@@ -1733,5 +1724,5 @@ public abstract class XYChart<X,Y> extends Chart {
             return count;
         }
     }
-    
+
 }

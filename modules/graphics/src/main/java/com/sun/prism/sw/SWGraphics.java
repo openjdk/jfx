@@ -333,11 +333,19 @@ final class SWGraphics implements ReadbackGraphics {
                 }
 
                 paintTx.setTransform(tx);
-                if (lg.isProportional()) {
-                    paintTx.deriveWithConcatenation(width, 0, 0, height, x, y);
-                }
                 convertToPiscesTransform(paintTx, piscesTx);
-                this.pr.setLinearGradient((int)(TO_PISCES * lg.getX1()), (int)(TO_PISCES * lg.getY1()), (int)(TO_PISCES * lg.getX2()), (int)(TO_PISCES * lg.getY2()),
+
+                float x1 = lg.getX1();
+                float y1 = lg.getY1();
+                float x2 = lg.getX2();
+                float y2 = lg.getY2();
+                if (lg.isProportional()) {
+                    x1 = x + width * x1;
+                    y1 = y + height * y1;
+                    x2 = x + width * x2;
+                    y2 = y + height * y2;
+                }
+                this.pr.setLinearGradient((int)(TO_PISCES * x1), (int)(TO_PISCES * y1), (int)(TO_PISCES * x2), (int)(TO_PISCES * y2),
                     getFractions(lg), getARGB(lg, this.compositeAlpha), getPiscesGradientCycleMethod(lg.getSpreadMethod()), piscesTx);
                 break;
             case RADIAL_GRADIENT:
@@ -347,13 +355,29 @@ final class SWGraphics implements ReadbackGraphics {
                 }
 
                 paintTx.setTransform(tx);
+
+                float cx = rg.getCenterX();
+                float cy = rg.getCenterY();
+                float r = rg.getRadius();
                 if (rg.isProportional()) {
-                    paintTx.deriveWithConcatenation(width, 0, 0, height, x, y);
+                    float dim = Math.min(width, height);
+                    float bcx = x + width * 0.5f;
+                    float bcy = y + height * 0.5f;
+                    cx = bcx + (cx - 0.5f) * dim;
+                    cy = bcy + (cy - 0.5f) * dim;
+                    r *= dim;
+                    if (width != height && width != 0.0 && height != 0.0) {
+                        paintTx.deriveWithTranslation(bcx, bcy);
+                        paintTx.deriveWithConcatenation(width / dim, 0, 0, height / dim, 0, 0);
+                        paintTx.deriveWithTranslation(-bcx, -bcy);
+                    }
                 }
                 convertToPiscesTransform(paintTx, piscesTx);
-                final float fx = (float)(rg.getCenterX() + rg.getFocusDistance() * rg.getRadius() * Math.cos(Math.toRadians(rg.getFocusAngle())));
-                final float fy = (float)(rg.getCenterY() + rg.getFocusDistance() * rg.getRadius() * Math.sin(Math.toRadians(rg.getFocusAngle())));
-                this.pr.setRadialGradient((int) (TO_PISCES * rg.getCenterX()), (int) (TO_PISCES * rg.getCenterY()), (int) (TO_PISCES * fx), (int) (TO_PISCES * fy), (int) (TO_PISCES * rg.getRadius()),
+
+                final float fx = (float)(cx + rg.getFocusDistance() * r * Math.cos(Math.toRadians(rg.getFocusAngle())));
+                final float fy = (float)(cy + rg.getFocusDistance() * r * Math.sin(Math.toRadians(rg.getFocusAngle())));
+
+                this.pr.setRadialGradient((int) (TO_PISCES * cx), (int) (TO_PISCES * cy), (int) (TO_PISCES * fx), (int) (TO_PISCES * fy), (int) (TO_PISCES * r),
                         getFractions(rg), getARGB(rg, this.compositeAlpha), getPiscesGradientCycleMethod(rg.getSpreadMethod()), piscesTx);
                 break;
             case IMAGE_PATTERN:
@@ -584,8 +608,17 @@ final class SWGraphics implements ReadbackGraphics {
             }
             return;
         }
-
         this.setPaintFromShape(shape, tr, 0,0,0,0);
+        this.paintShapePaintAlreadySet(shape, st, tr);
+    }
+
+    private void paintShapePaintAlreadySet(Shape shape, BasicStroke st, BaseTransform tr) {
+        if (this.finalClip.isEmpty()) {
+            if (PrismSettings.debug) {
+                System.out.println("Final clip is empty: not rendering the shape: " + shape);
+            }
+            return;
+        }
 
         if (PrismSettings.debug) {
             System.out.println("GR: " + this);
@@ -687,28 +720,6 @@ final class SWGraphics implements ReadbackGraphics {
                     ", selectStart: " + selectStart + ", selectEnd: " + selectEnd);
         }
 
-        int selectGlyphStart = -1;
-        int selectGlyphEnd = -1;
-        if ((selectColor != null) && (selectStart < selectEnd)) {
-            // convert selectStart / selectEnd from char indexes to glyph indexes
-            int i = 0;
-            while (i < gl.getGlyphCount()) {
-                if (gl.getCharOffset(i) >= selectStart) {
-                    selectGlyphStart = i;
-                    selectGlyphEnd = gl.getGlyphCount();
-                    break;
-                }
-                i++;
-            }
-            while (i < gl.getGlyphCount()) {
-                if (gl.getCharOffset(i) >= selectEnd) {
-                    selectGlyphEnd = i;
-                    break;
-                }
-                i++;
-            }
-        }
-
         final float bx, by, bw, bh;
         if (paint.isProportional()) {
             if (nodeBounds != null) {
@@ -727,80 +738,73 @@ final class SWGraphics implements ReadbackGraphics {
             bx = by = bw = bh = 0;
         }
 
-        // check for selection that is out of range of this line (TextArea)
-        if ((selectGlyphStart < 0 && selectGlyphEnd < 0)||(selectGlyphStart >= gl.getGlyphCount() && selectGlyphEnd >= gl.getGlyphCount())) {
-            this.drawStringInternal(gl, strike, x, y, 0, gl.getGlyphCount(), this.paint, bx, by, bw, bh);
+        final boolean drawAsMasks = tx.isTranslateOrIdentity() && (!strike.drawAsShapes());
+        final boolean doLCDText = drawAsMasks &&
+                (strike.getAAMode() == FontResource.AA_LCD) &&
+                getRenderTarget().isOpaque() &&
+                (this.paint.getType() == Paint.Type.COLOR) &&
+                tx.is2D();
+        BaseTransform glyphTx = null;
+
+        if (doLCDText) {
+            this.pr.setLCDGammaCorrection(1f / PrismFontFactory.getLCDContrast());
+        } else if (drawAsMasks) {
+            final FontResource fr = strike.getFontResource();
+            final float origSize = strike.getSize();
+            final BaseTransform origTx = strike.getTransform();
+            strike = fr.getStrike(origSize, origTx, FontResource.AA_GREYSCALE);
         } else {
-            float advanceX = 0;
-            if (selectGlyphStart > 0) {
-                advanceX = this.drawStringInternal(gl, strike, x, y, 0, selectGlyphStart, this.paint, bx, by, bw, bh);
+            glyphTx = new Affine2D();
+        }
+
+        if (selectColor == null) {
+            this.setPaintBeforeDraw(this.paint, bx, by, bw, bh);
+            for (int i = 0; i < gl.getGlyphCount(); i++) {
+                this.drawGlyph(strike, gl, i, glyphTx, drawAsMasks, x, y);
             }
-            advanceX += this.drawStringInternal(gl, strike, x+advanceX, y,
-                                                Math.max(0, selectGlyphStart), Math.min(gl.getGlyphCount(), selectGlyphEnd),
-                                                selectColor, 0, 0, 0, 0);
-            if (selectGlyphEnd < gl.getGlyphCount()) {
-                this.drawStringInternal(gl, strike, x+advanceX, y, selectGlyphEnd, gl.getGlyphCount(),
-                                        this.paint, bx, by, bw, bh);
+        } else {
+            for (int i = 0; i < gl.getGlyphCount(); i++) {
+                final int offset = gl.getCharOffset(i);
+                final boolean selected = selectStart <= offset && offset < selectEnd;
+                this.setPaintBeforeDraw(selected ? selectColor : this.paint, bx, by, bw, bh);
+                this.drawGlyph(strike, gl, i, glyphTx, drawAsMasks, x, y);
             }
         }
     }
 
-    private float drawStringInternal(GlyphList gl, FontStrike strike, float x, float y, int strFrom, int strTo,
-                                     Paint p, float bx, float by, float bw, float bh)
+    private void drawGlyph(FontStrike strike, GlyphList gl, int idx, BaseTransform glyphTx,
+                           boolean drawAsMasks, float x, float y)
     {
-        float advanceX = 0;
-        if (tx.isTranslateOrIdentity() && (!strike.drawAsShapes())) {
-            final boolean doLCDText = (strike.getAAMode() == FontResource.AA_LCD) &&
-                    getRenderTarget().isOpaque() &&
-                    (p.getType() == Paint.Type.COLOR) &&
-                    tx.is2D();
 
-            if (doLCDText) {
-                this.pr.setLCDGammaCorrection(1f / PrismFontFactory.getLCDContrast());
-            } else {
-                final FontResource fr = strike.getFontResource();
-                final float origSize = strike.getSize();
-                final BaseTransform origTx = strike.getTransform();
-                strike = fr.getStrike(origSize, origTx, FontResource.AA_GREYSCALE);
-            }
-            this.setPaintBeforeDraw(p, bx, by, bw, bh);
-
-            for (int i = strFrom; i < strTo; i++) {
-                final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
-                final byte pixelData[] = g.getPixelData();
-                if (pixelData != null) {
-                    if (doLCDText && g.isLCDGlyph()) {
-                        final double posX = x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f;
-                        int subPosX = ((int)(3*posX)) % 3;
-                        if (subPosX < 0) {
-                            subPosX += 3;
-                        }
-                        this.pr.fillLCDAlphaMask(pixelData,
-                                (int)posX,
-                                (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
-                                subPosX,
-                                g.getWidth(), g.getHeight(),
-                                0, g.getWidth());
-                    } else {
-                        this.pr.fillAlphaMask(pixelData,
-                                (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f),
-                                (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
-                                g.getWidth(), g.getHeight(),
-                                0, g.getWidth());
+        final Glyph g = strike.getGlyph(gl.getGlyphCode(idx));
+        if (drawAsMasks) {
+            final byte pixelData[] = g.getPixelData();
+            if (pixelData != null) {
+                if (g.isLCDGlyph()) {
+                    final double posX = x + tx.getMxt() + g.getOriginX() + gl.getPosX(idx) + 0.5f;
+                    int subPosX = ((int)(3*posX)) % 3;
+                    if (subPosX < 0) {
+                        subPosX += 3;
                     }
+                    this.pr.fillLCDAlphaMask(pixelData,
+                            (int)posX,
+                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(idx) + 0.5f),
+                            subPosX,
+                            g.getWidth(), g.getHeight(),
+                            0, g.getWidth());
+                } else {
+                    this.pr.fillAlphaMask(pixelData,
+                            (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(idx) + 0.5f),
+                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(idx) + 0.5f),
+                            g.getWidth(), g.getHeight(),
+                            0, g.getWidth());
                 }
             }
         } else {
-            final BaseTransform glyphTx = tx.copy();
-            glyphTx.deriveWithTranslation(x, y);
-            for (int i = strFrom; i < strTo; i++) {
-                final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
-                this.paintShape(g.getShape(), null, glyphTx);
-                advanceX += g.getAdvance();
-                glyphTx.deriveWithTranslation(g.getAdvance(), 0);
-            }
+            glyphTx.setTransform(tx);
+            glyphTx.deriveWithTranslation(x + gl.getPosX(idx), y + gl.getPosY(idx));
+            this.paintShapePaintAlreadySet(g.getShape(), null, glyphTx);
         }
-        return advanceX;
     }
 
     public void drawTexture(Texture tex, float x, float y, float w, float h) {

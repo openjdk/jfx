@@ -544,31 +544,6 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
     return ptr_to_jlong(window->nsWindow);
 }
 
-
-
-@interface GlassWindowDispatcher : NSObject
-{
-@public
-    jobject         jWindow;
-    jobject         jView;
-    jlong                jOwnerPtr;
-    jlong                jScreenPtr;
-    jint                jStyleMask;
-    jboolean    jIsChild;
-    jlong                jlongReturn;
-}
-@end
-
-@implementation GlassWindowDispatcher
-
-- (void)_createWindowCommonDispatch
-{
-    GET_MAIN_JENV;
-    self->jlongReturn = _createWindowCommonDo(env, self->jWindow, self->jOwnerPtr, self->jScreenPtr, self->jStyleMask, self->jIsChild);
-}
-
-@end
-
 static jlong _createWindowCommon
 (JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask, jboolean jIsChild)
 {
@@ -580,21 +555,7 @@ static jlong _createWindowCommon
     GLASS_POOL_ENTER;
     {
         jobject jWindowRef = (*env)->NewGlobalRef(env, jWindow);
-        if ([NSThread isMainThread] == YES)
-        {
-            value = _createWindowCommonDo(env, jWindowRef, jOwnerPtr, jScreenPtr, jStyleMask, jIsChild);
-        }
-        else
-        {
-            GlassWindowDispatcher *dispatcher = [[GlassWindowDispatcher alloc] autorelease];
-            dispatcher->jWindow = jWindowRef;
-            dispatcher->jOwnerPtr = jOwnerPtr;
-            dispatcher->jScreenPtr = jScreenPtr;
-            dispatcher->jStyleMask = jStyleMask;
-            dispatcher->jIsChild = jIsChild;
-            [dispatcher performSelectorOnMainThread:@selector(_createWindowCommonDispatch) withObject:dispatcher waitUntilDone:YES]; // gznote: need to wait for return value
-            value = dispatcher->jlongReturn;
-        }
+        value = _createWindowCommonDo(env, jWindowRef, jOwnerPtr, jScreenPtr, jStyleMask, jIsChild);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -744,16 +705,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        window->_setLevel = jLevel;
-        
-        if ([NSThread isMainThread] == YES)
+        NSInteger level = NSNormalWindowLevel;
+        switch (jLevel)
         {
-            [window _setLevel];
+            case com_sun_glass_ui_Window_Level_FLOATING:
+                level = NSFloatingWindowLevel;
+                break;
+            case com_sun_glass_ui_Window_Level_TOPMOST:
+                level = NSScreenSaverWindowLevel;
+                break;
         }
-        else
-        {
-            [window performSelectorOnMainThread:@selector(_setLevel) withObject:nil waitUntilDone:YES];
-        }
+        [window->nsWindow setLevel:level];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -793,8 +755,23 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setEnabled
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        
-        GLASS_PERFORM_WITH_ARG(window, _setEnabled, [NSNumber numberWithBool: (BOOL)isEnabled], YES);
+        window->isEnabled = (BOOL)isEnabled;
+
+        if (!window->isEnabled) {
+            window->enabledStyleMask = [window->nsWindow styleMask];
+            [window->nsWindow setStyleMask: (window->enabledStyleMask & ~(NSUInteger)(NSMiniaturizableWindowMask | NSResizableWindowMask))];
+
+            //XXX: perhaps we could simply enable/disable the buttons w/o playing with the styles at all
+            NSButton *zoomButton = [window->nsWindow standardWindowButton:NSWindowZoomButton];
+            [zoomButton setEnabled:NO];
+        } else {
+            [window->nsWindow setStyleMask: window->enabledStyleMask];
+
+            if (window->enabledStyleMask & NSResizableWindowMask) {
+                NSButton *zoomButton = [window->nsWindow standardWindowButton:NSWindowZoomButton];
+                [zoomButton setEnabled:YES];
+            }
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -814,16 +791,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setAlpha
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        window->_setAlpha = jAlpha;
-        
-        if ([NSThread isMainThread] == YES)
-        {
-            [window _setAlpha];
-        }
-        else
-        {
-            [window performSelectorOnMainThread:@selector(_setAlpha) withObject:nil waitUntilDone:YES];
-        }
+        [window->nsWindow setAlphaValue:jAlpha];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -843,14 +811,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBackground
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        if ([NSThread isMainThread] == YES)
-        {
-            [window->nsWindow setBackgroundColor:[NSColor colorWithCalibratedRed:r green:g blue:b alpha:1.0f]];
-        }
-        else
-        {
-            [window->nsWindow performSelectorOnMainThread:@selector(setBackgroundColor:) withObject:[NSColor colorWithCalibratedRed:r green:g blue:b alpha:1.0f] waitUntilDone:YES];
-        }
+        [window->nsWindow setBackgroundColor:[NSColor colorWithCalibratedRed:r green:g blue:b alpha:1.0f]];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -914,18 +875,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
                     [window _setWindowFrameWithRect:NSMakeRect(windowFrame.origin.x, windowFrame.origin.y, windowFrame.size.width, windowFrame.size.height) withDisplay:JNI_TRUE withAnimate:JNI_FALSE];
                 }
                 
-                if ([NSThread isMainThread] == YES)
-                {
-                    [window->nsWindow setContentView:[window->view superview]]; // use our superview not ourselves!
-                    [window->nsWindow setInitialFirstResponder:window->view];
-                    [window->nsWindow makeFirstResponder:window->view];
-                }
-                else
-                {
-                    [window->nsWindow performSelectorOnMainThread:@selector(setContentView:) withObject:[window->view superview] waitUntilDone:YES];
-                    [window->nsWindow performSelectorOnMainThread:@selector(setInitialFirstResponder:) withObject:window->view waitUntilDone:YES];
-                    [window->nsWindow performSelectorOnMainThread:@selector(makeFirstResponder:) withObject:window->view waitUntilDone:YES];
-                }
+                [window->nsWindow setContentView:[window->view superview]]; // use our superview not ourselves!
+                [window->nsWindow setInitialFirstResponder:window->view];
+                [window->nsWindow makeFirstResponder:window->view];
             }
             window->suppressWindowMoveEvent = NO;
         }
@@ -955,16 +907,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMenubar
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         window->menubar = (GlassMenubar*)jlong_to_ptr(jMenubarPtr);
-        if ([NSThread isMainThread] == YES)
-        {
-            [NSApp setMainMenu:window->menubar->menu];
-            [[NSApp mainMenu] update];
-        }
-        else
-        {
-            [NSApp performSelectorOnMainThread:@selector(setMainMenu:) withObject:window->menubar->menu waitUntilDone:YES];
-            [[NSApp mainMenu] performSelectorOnMainThread:@selector(update) withObject:nil waitUntilDone:YES];
-        }
+        [NSApp setMainMenu:window->menubar->menu];
+        [[NSApp mainMenu] update];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -986,18 +930,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        if ([NSThread isMainThread] == YES)
-        {
-            // this call will always close the window
-            // without calling the windowShouldClose
-            [window->nsWindow close];
-        }
-        else
-        {
-            // this call will always close the window
-            // without calling the windowShouldClose
-            [window->nsWindow performSelectorOnMainThread:@selector(close) withObject:nil waitUntilDone:YES];
-        }
+        // this call will always close the window
+        // without calling the windowShouldClose
+        [window->nsWindow close];
         // The nsWindow is released automatically since we don't retain it
         // The window is released in the nsWindow -close override method
     }
@@ -1055,14 +990,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1grabFocus
     {
         GlassWindow * window = getGlassWindow(env, jPtr);
         //TODO: full screen
-        if ([NSThread isMainThread] == YES)
-        {
-            [window _grabFocus];
-        }
-        else
-        {
-            [window performSelectorOnMainThread:@selector(_grabFocus) withObject:nil waitUntilDone:YES];
-        }
+        [window _grabFocus];
         ret = JNI_TRUE;
     }
     GLASS_POOL_EXIT;
@@ -1086,14 +1014,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1ungrabFocus
     {
         GlassWindow * window = getGlassWindow(env, jPtr);
         //TODO; full screen
-        if ([NSThread isMainThread] == YES)
-        {
-            [window _ungrabFocus];
-        }
-        else
-        {
-            [window performSelectorOnMainThread:@selector(_ungrabFocus) withObject:nil waitUntilDone:YES];
-        }
+        [window _ungrabFocus];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1121,15 +1042,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
             
             if ([window->nsWindow styleMask] != NSBorderlessWindowMask)
             { 
-                if ([NSThread isMainThread] == YES)
-                {
-                    [window->nsWindow zoom:nil];
-                }
-                else
-                {
-                    [window->nsWindow performSelectorOnMainThread:@selector(zoom:) withObject:nil waitUntilDone:YES];
-                }
-                
+                [window->nsWindow zoom:nil];
                 // windowShouldZoom will be called automatically in this case
             }
             else
@@ -1143,14 +1056,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
         }
         else if ((maximize == JNI_FALSE) && (isZoomed == JNI_TRUE))
         {
-            if ([NSThread isMainThread] == YES)
-            {
-                [window _restorePreZoomedRect];
-            }
-            else
-            {
-                [window performSelectorOnMainThread:@selector(_restorePreZoomedRect) withObject:nil waitUntilDone:YES];
-            }
+            [window _restorePreZoomedRect];
         }
         
         window->suppressWindowResizeEvent = NO;
@@ -1285,35 +1191,16 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
         GlassWindow *window = getGlassWindow(env, jPtr);
         if (jVisible == JNI_TRUE)
         {
-            if ([NSThread isMainThread] == YES)
-            {
-                [window _setVisible];
-            }
-            else
-            {
-                [window performSelectorOnMainThread:@selector(_setVisible) withObject:nil waitUntilDone:YES];
-            }
+            [window _setVisible];
         }
         else
         {
-            if ([NSThread isMainThread] == YES)
+            [window _ungrabFocus];
+            if (window->owner != nil)
             {
-                [window _ungrabFocus];
-                if (window->owner != nil)
-                {
-                    [window->owner removeChildWindow:window->nsWindow];
-                }
-                [window->nsWindow orderOut:window->nsWindow];
+                [window->owner removeChildWindow:window->nsWindow];
             }
-            else
-            {
-                [window performSelectorOnMainThread:@selector(_ungrabFocus) withObject:nil waitUntilDone:YES];
-                if (window->owner != nil)
-                {
-                    [window->owner performSelectorOnMainThread:@selector(removeChildWindow:) withObject:window->nsWindow waitUntilDone:YES];
-                }
-                [window->nsWindow performSelectorOnMainThread:@selector(orderOut:) withObject:window->nsWindow waitUntilDone:YES];
-            }
+            [window->nsWindow orderOut:window->nsWindow];
         }
         now = [window->nsWindow isVisible] ? JNI_TRUE : JNI_FALSE;
         
@@ -1365,14 +1252,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setTitle
         
         NSString *title = [GlassHelper nsStringWithJavaString:jTitle withEnv:env];
         LOG("   title: %s", [title UTF8String]);
-        if ([NSThread isMainThread] == YES)
-        {
-            [window->nsWindow setTitle:title];
-        }
-        else
-        {
-            [window->nsWindow performSelectorOnMainThread:@selector(setTitle:) withObject:title waitUntilDone:YES];
-        }
+        [window->nsWindow setTitle:title];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1397,25 +1277,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1minimize
         
         if (jMiniaturize == JNI_TRUE)
         {
-            if ([NSThread isMainThread] == YES)
-            {
-                [window->nsWindow miniaturize:nil];
-            }
-            else
-            {
-                [window->nsWindow performSelectorOnMainThread:@selector(miniaturize:) withObject:nil waitUntilDone:YES];
-            }
+            [window->nsWindow miniaturize:nil];
         }
         else
         {
-            if ([NSThread isMainThread] == YES)
-            {
-                [window->nsWindow deminiaturize:nil];
-            }
-            else
-            {
-                [window->nsWindow performSelectorOnMainThread:@selector(deminiaturize:) withObject:nil waitUntilDone:YES];
-            }
+            [window->nsWindow deminiaturize:nil];
         }
     }
     GLASS_POOL_EXIT;
@@ -1448,28 +1314,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
                 // need an explicit window title for the rest of the code to work
                 if ([window->nsWindow title] == nil)
                 {
-                    if ([NSThread isMainThread] == YES)
-                    {
-                        [window->nsWindow setTitle:@"Untitled"];
-                    }
-                    else
-                    {
-                        [window->nsWindow performSelectorOnMainThread:@selector(setTitle:) withObject:@"Untitled" waitUntilDone:YES];
-                    }
+                    [window->nsWindow setTitle:@"Untitled"];
                 }
                 
                 // http://www.cocoabuilder.com/archive/cocoa/199554-nswindow-title-bar-icon-without-representedurl.html
-                if ([NSThread isMainThread] == YES)
-                {
-                    [window->nsWindow setRepresentedURL:[NSURL fileURLWithPath:[window->nsWindow title]]];
-                    [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:image];
-                }
-                else
-                {
-                    [window->nsWindow performSelectorOnMainThread:@selector(setRepresentedURL:) withObject:[NSURL fileURLWithPath:[window->nsWindow title]] waitUntilDone:YES];
-                    [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] performSelectorOnMainThread:@selector(setImage:) withObject:image waitUntilDone:YES];
-                }
-                
+                [window->nsWindow setRepresentedURL:[NSURL fileURLWithPath:[window->nsWindow title]]];
+                [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:image];
                 [image release];
             }
         }

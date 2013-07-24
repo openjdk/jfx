@@ -25,7 +25,6 @@
 
 package com.sun.prism.impl;
 
-import com.sun.javafx.PlatformUtil;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
@@ -33,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
+import com.sun.javafx.PlatformUtil;
 
 /**
  * Contains the runtime arguments used by Prism.
@@ -49,8 +49,6 @@ public final class PrismSettings {
     public static final boolean threadCheck;
     public static final boolean cacheSimpleShapes;
     public static final boolean cacheComplexShapes;
-    public static final boolean tessShapes;
-    public static final boolean tessShapesAA;
     public static final boolean useNewImageLoader;
     public static final List<String> tryOrder;
     public static final int numSamples;
@@ -153,11 +151,6 @@ public final class PrismSettings {
             cacheSimpleShapes = false;
             cacheComplexShapes = false;
         }
-
-        /* Shape tesselation options */
-        tessShapesAA = getBoolean(systemProperties, "prism.tessaa", false);
-        tessShapes = tessShapesAA || getBoolean(systemProperties, "prism.tess",
-                                                false);
 
         /* New javafx-iio image loader */
         useNewImageLoader = getBoolean(systemProperties, "prism.newiio", true);

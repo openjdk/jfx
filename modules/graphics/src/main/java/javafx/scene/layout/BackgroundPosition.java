@@ -62,15 +62,15 @@ public class BackgroundPosition {
      * The side along the horizontal axis to which the BackgroundImage is
      * anchored. This will only be LEFT or RIGHT and never null.
      */
-    final Side horizontalSide;
     public final Side getHorizontalSide() { return horizontalSide; }
+    final Side horizontalSide;
 
     /**
      * The side along the vertical axis to which the BackgroundImage is
      * anchored. This will only be TOP or BOTTOM and never null.
      */
-    final Side verticalSide;
     public final Side getVerticalSide() { return verticalSide; }
+    final Side verticalSide;
 
     /**
      * The value indicating the position of the BackgroundImage relative
@@ -80,8 +80,8 @@ public class BackgroundPosition {
      * {@link #isHorizontalAsPercentage() horizontalAsPercentage} property.
      * Negative values are acceptable.
      */
-    final double horizontalPosition;
     public final double getHorizontalPosition() { return horizontalPosition; }
+    final double horizontalPosition;
 
     /**
      * The value indicating the position of the BackgroundImage relative
@@ -90,22 +90,22 @@ public class BackgroundPosition {
      * {@link #isVerticalAsPercentage() verticalAsPercentage} property. Negative
      * values are acceptable.
      */
-    final double verticalPosition;
     public final double getVerticalPosition() { return verticalPosition; }
+    final double verticalPosition;
 
     /**
      * Specifies whether the {@link #getHorizontalPosition() horizontalPosition} should
      * be interpreted as a literal number or as a percentage.
      */
-    final boolean horizontalAsPercentage;
     public final boolean isHorizontalAsPercentage() { return horizontalAsPercentage; }
+    final boolean horizontalAsPercentage;
 
     /**
      * Specifies whether the {@link #getVerticalPosition() verticalPosition} should
      * be interpreted as a literal number or as a percentage.
      */
-    final boolean verticalAsPercentage;
     public final boolean isVerticalAsPercentage() { return verticalAsPercentage; }
+    final boolean verticalAsPercentage;
 
     /**
      * A cached has code value.

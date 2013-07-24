@@ -2287,6 +2287,42 @@ public class Mouse3DTest {
                 b, point(10, 40, -200), -199, NOFACE, point(0.6, 0.7));
     }
 
+    /*****************   subscene   ********************/
+
+    @Test
+    public void BoxShouldBePickedInsideSubScene() {
+        Group root = new Group();
+        Scene scene = new Scene(root, 800, 800, false);
+
+        Group subRoot = new Group();
+        SubScene sub = new SubScene(subRoot, 700, 700, true, false);
+        root.getChildren().add(sub);
+
+        PerspectiveCamera cam = new PerspectiveCamera(true);
+        sub.setCamera(cam);
+
+        Box b = new Box();
+        b.setTranslateZ(1.2);
+        subRoot.getChildren().add(b);
+
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        b.setOnMouseMoved(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                me.event = event;
+            }
+        });
+
+        me.event = null;
+
+        scene.impl_processMouseEvent(
+                MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED,
+                350, 350));
+
+        assertNotNull(me.event);
+    }
 
     /***************** helper stuff ********************/
 

@@ -25,18 +25,7 @@
 
 package com.sun.javafx.scene.control.infrastructure;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
 import javafx.beans.InvalidationListener;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -47,8 +36,13 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.Pagination;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Tab;
-
-import com.sun.javafx.binding.ExpressionHelper;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import com.sun.javafx.binding.ExpressionHelperUtility;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public final class ControlTestUtils {
     private ControlTestUtils() { }
@@ -193,21 +187,6 @@ public final class ControlTestUtils {
         return (ListChangeListener) getListener(bean, fieldName);
     }
 
-    public static int getListenerCount(ObservableList list) {
-//        ListenerList listeners = getListenerList(list);
-//        return listeners == null ? 0 : listeners.size();
-        return 0;
-    }
-
-    public static void assertValueListenersContains(ObservableValue value, ChangeListener listener) {
-        assertValueListenersContains("The listener " + listener + " was not contained in " + value, value, listener);
-    }
-
-    public static void assertValueListenersContains(String message, ObservableValue value, ChangeListener listener) {
-        List listeners = getObservableValueListeners(value);
-        assertTrue(message, listeners != null && listeners.contains(listener));
-    }
-
     public static void assertValueListenersContains(ObservableValue value, InvalidationListener listener) {
         assertValueListenersContains("The listener " + listener + " was not contained in " + value, value, listener);
     }
@@ -215,15 +194,6 @@ public final class ControlTestUtils {
     public static void assertValueListenersContains(String message, ObservableValue value, InvalidationListener listener) {
         List listeners = getObservableValueListeners(value);
         assertTrue(message, listeners != null && listeners.contains(listener));
-    }
-
-    public static void assertValueListenersDoesNotContain(ObservableValue value, ChangeListener listener) {
-        assertValueListenersDoesNotContain("The listener " + listener + " was contained in " + value, value, listener);
-    }
-
-    public static void assertValueListenersDoesNotContain(String message, ObservableValue value, ChangeListener listener) {
-        List listeners = getObservableValueListeners(value);
-        assertTrue(message, listeners == null || !listeners.contains(listener));
     }
 
     public static void assertValueListenersDoesNotContain(ObservableValue value, InvalidationListener listener) {
@@ -237,10 +207,6 @@ public final class ControlTestUtils {
 
     public static int getListenerCount(ObservableValue value) {
         return getObservableValueListeners(value).size();
-    }
-
-    public static ChangeListener getChangeListener(Object bean, String fieldName) {
-        return (ChangeListener) getListener(bean, fieldName);
     }
 
     public static InvalidationListener getInvalidationListener(Object bean, String fieldName) {
@@ -259,101 +225,10 @@ public final class ControlTestUtils {
         return null;
     }
 
-//    private static ListenerList getListenerList(ObservableList list) {
-//        try {
-//            Class clazz = ObservableListWrapper.class;
-//            Field field = clazz.getDeclaredField("observers");
-//            field.setAccessible(true);
-//            return (ListenerList) field.get(list);
-//        } catch (Exception e) {
-//            try {
-//                Class clazz = ReadOnlyUnbackedObservableList.class;
-//                Field field = clazz.getDeclaredField("observers");
-//                field.setAccessible(true);
-//                return (ListenerList) field.get(list);
-//            } catch (Exception ee) {
-//                e.printStackTrace();
-//                assertTrue(false);
-//            }
-//        }
-//        return null;
-//    }
-
     private static List getObservableValueListeners(ObservableValue value) {
-        // Try to look for the ExpressionHelper "helper" field
-        // Depending on the type of the helper, I have to look for different fields. If
-        // the helper is a Single* type, then I look for the field and if it is not null,
-        // then the count is 1, otherwise the count is 0. If it is instead a Multiple*
-        // type then I check size, or changeSize/invalidationSize fields.
-        try {
-            // TODO need to support more than just ObjectPropertyBase
-            Field helperField = getExpressionHelperField(value);
-            helperField.setAccessible(true);
-            ExpressionHelper helper = (ExpressionHelper) helperField.get(value);
-            if (helper == null) return Collections.emptyList();
-
-            Class singleInvalidationClass = Class.forName("com.sun.javafx.binding.ExpressionHelper$SingleInvalidation");
-            if (singleInvalidationClass.isAssignableFrom(helper.getClass())) {
-                Field field = singleInvalidationClass.getDeclaredField("listener");
-                field.setAccessible(true);
-                Object listener = field.get(helper);
-                return listener == null ? Collections.emptyList() : Arrays.asList(listener);
-            }
-
-            Class singleChangeClass = Class.forName("com.sun.javafx.binding.ExpressionHelper$SingleChange");
-            if (singleChangeClass.isAssignableFrom(helper.getClass())) {
-                Field field = singleChangeClass.getDeclaredField("listener");
-                field.setAccessible(true);
-                Object listener = field.get(helper);
-                return listener == null ? Collections.emptyList() : Arrays.asList(listener);
-            }
-
-            Class genericClass = Class.forName("com.sun.javafx.binding.ExpressionHelper$Generic");
-            if (genericClass.isAssignableFrom(helper.getClass())) {
-                List results = new ArrayList();
-                Field field = genericClass.getDeclaredField("invalidationListeners");
-                field.setAccessible(true);
-                InvalidationListener[] invalidationListeners = (InvalidationListener[])field.get(helper);
-                if (invalidationListeners != null) {
-                    results.addAll(Arrays.asList(invalidationListeners));
-                }
-
-                field = genericClass.getDeclaredField("changeListeners");
-                field.setAccessible(true);
-                ChangeListener[] changeListeners = (ChangeListener[])field.get(helper);
-                if (changeListeners != null) {
-                    results.addAll(Arrays.asList(changeListeners));
-                }
-                return results;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            assertTrue(false);
-        }
-
-        return Collections.emptyList();
-    }
-
-    private static List getListenersFromExpressionHelper(ExpressionHelper helper, Class clazz, String sizeName, String listenersName) throws Exception {
-        Field sizeField = clazz.getDeclaredField(sizeName);
-        sizeField.setAccessible(true);
-        Field listenersField = clazz.getDeclaredField(listenersName);
-        listenersField.setAccessible(true);
-        int size = (Integer)sizeField.get(helper);
-        Object[] listeners = (Object[])listenersField.get(helper);
-        Object[] results = new Object[size];
-        System.arraycopy(listeners, 0, results, 0, size);
-        return Arrays.asList(results);
-    }
-
-    private static Field getExpressionHelperField(ObservableValue value) throws Exception {
-        Class clazz = value.getClass();
-        while (clazz != Object.class) {
-            try {
-                return clazz.getDeclaredField("helper");
-            } catch (NoSuchFieldException ex) { }
-            clazz = clazz.getSuperclass();
-        }
-        return null;
+        ArrayList results = new ArrayList();
+        results.addAll(ExpressionHelperUtility.getChangeListeners(value));
+        results.addAll(ExpressionHelperUtility.getInvalidationListeners(value));
+        return results;
     }
 }

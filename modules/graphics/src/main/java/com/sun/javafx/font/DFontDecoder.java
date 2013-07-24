@@ -35,7 +35,7 @@ class DFontDecoder extends FontFileWriter {
     static {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
-                NativeLibLoader.loadLibrary("javafx-font");
+                NativeLibLoader.loadLibrary("javafx_font");
                 return null;
             }
         });

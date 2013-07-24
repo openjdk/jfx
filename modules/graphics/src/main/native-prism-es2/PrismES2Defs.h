@@ -110,11 +110,7 @@ typedef int intptr_t;
 #include "com_sun_prism_es2_GLDrawable.h"
 #include "com_sun_prism_es2_GLFactory.h"
 #include "com_sun_prism_es2_GLPixelFormat.h"
-#ifdef GRADLE_BUILD
-// This is a temporary build hack. When we're off ant and using Gradle, we can
-// get rid of this ifdef
 #include "com_sun_prism_es2_GLPixelFormat_Attributes.h"
-#endif
 
 /*
  * These match the constants in GLPixelFormat

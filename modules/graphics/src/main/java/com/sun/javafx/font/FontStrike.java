@@ -38,6 +38,7 @@ public interface FontStrike {
     public Metrics getMetrics();
     public Glyph getGlyph(char symbol);
     public Glyph getGlyph(int glyphCode);
+    public Glyph getGlyph(GlyphList gl, int glyphIndex);
     public void clearDesc(); // for cache management.
     public int getAAMode();
 

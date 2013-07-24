@@ -319,6 +319,10 @@ ext.IS_DOC_LINT = DOC_LINT != "none"
 defineProperty("USE_DEPEND", "true")
 ext.USE_DEPEND = Boolean.parseBoolean(USE_DEPEND)
 
+// Specifies whether to generate code coverage statistics when running tests
+defineProperty("JCOV", "false")
+ext.DO_JCOV = Boolean.parseBoolean(JCOV)
+
 // Define the number of threads to use when compiling (specifically for native compilation)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
@@ -853,7 +857,9 @@ allprojects {
     // setup this dependency here.
     dependencies {
         testCompile group: "junit", name: "junit", version: "4.8.2"
-        if (BUILD_CLOSED) testCompile name: "jcov"
+        if (BUILD_CLOSED && DO_JCOV)  {
+            testCompile name: "jcov"
+        }
     }
 
     // At the moment the ASM library shipped with Gradle that is used to
@@ -872,7 +878,7 @@ allprojects {
         include("**/*Test.*");
         exclude("**/DepthTest.*");
         exclude("**/*Abstract*.*");
-        if (BUILD_CLOSED) {
+        if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
     }
@@ -1197,7 +1203,7 @@ project(":graphics") {
         test.scanForTestClasses = false
         test.include "**/*Test.*"
         test.exclude "**/*Abstract*.*"
-        if (BUILD_CLOSED) {
+        if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
     }
@@ -1239,6 +1245,7 @@ project(":controls") {
         compile BUILD_SRC, project(":base"), project(":graphics"), project(":designTime")
         // TODO not sure how to specify this? processResources project(":base"), project(":graphics")
         testCompile project(":graphics").sourceSets.stub.output
+        testCompile project(":base").sourceSets.test.output
     }
 
     test {
@@ -1991,7 +1998,7 @@ project(":web") {
         doLast {
             def classpath = files("$buildDir/classes/main",
                                   project(":graphics").sourceSets.main.output.classesDir)
-            def dest = file("src/main/build/javah");
+            def dest = file("$buildDir/generated-src/headers");
             mkdir dest;
             exec {
                 commandLine("$JAVAH", "-J-Djava.ext.dirs=", "-d", "$dest",
@@ -2036,13 +2043,13 @@ project(":web") {
 
     task compileNative(dependsOn: generateHeaders) {
         doLast {
-            ant.unzip(src:  configurations.webkit.files.iterator().next(),
-                      dest: "src/main/native/WebKitLibraries")
             exec {
                 println "Webkit configuration to use: $CONF"
                 workingDir("src/main/native")
                 commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$CONF")
             }
+            ant.unzip(src:  configurations.webkit.files.iterator().next(),
+                      dest: "src/main/native/WebKitBuild")
             exec {
                 workingDir("src/main/native")
                 if (IS_WINDOWS) {
@@ -2174,11 +2181,24 @@ project(":web") {
 
     clean << {
         project.delete(
-            "src/main/build",
             "$webkitOutputDir",
             "src/main/native/WebKitBuild/Tools",
-            "src/main/native/WebKitBuild/classes",
-            "src/main/native/dist",
-            "src/main/native/WebKitLibraries/import")
+            "src/main/native/WebKitBuild/import")
     }
+}
+
+task showFlags {
+}
+
+compileTargets { t ->
+    // Every platform must define these variables
+    def props = project.ext[t.upper];
+    showFlags.dependsOn(
+        project.task("showFlags$t.upper") {
+            doLast() {
+                println "Properties set for $t.upper"
+                props.each { println it }
+            }
+        }
+    )
 }

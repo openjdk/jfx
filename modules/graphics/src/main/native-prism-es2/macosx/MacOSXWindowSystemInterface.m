@@ -29,11 +29,7 @@
 
 #import "../macosx-window-system.h"
 #import "com_sun_prism_es2_GLPixelFormat.h"
-#ifdef GRADLE_BUILD
-// This is a temporary build hack. When we're off ant and using Gradle, we can
-// get rid of this ifdef
 #import "com_sun_prism_es2_GLPixelFormat_Attributes.h"
-#endif
 
 void *createPixelFormat(jint *ivalues) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];

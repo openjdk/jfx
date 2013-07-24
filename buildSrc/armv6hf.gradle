@@ -123,10 +123,10 @@ def fontLFlags = [extraLFlags].flatten()
 def iioCFlags = [extraCFlags].flatten()
 def iioLFlags = [extraLFlags].flatten()
 
-def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX", "-DGRADLE_BUILD"].flatten()
+def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
 def es2EglfbLFlags = [extraLFlags].flatten()
 
-def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX", "-DGRADLE_BUILD"].flatten()
+def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX"].flatten()
 def es2X11LFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
 
 def mediaCFlags = [extraCFlags,
@@ -149,9 +149,9 @@ def webLFlags = [extraLFlags].flatten()
 //  libgstplugins-lite.so \
 //  libgstreamer-lite.so \
 //  libprism-es2-eglx11.so \
-//  libglass-lens-fb.so \
+//  libglass_lens_fb.so \
 
-setupTools("armv6-hf_tools",
+setupTools("armv6hf_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
@@ -216,18 +216,18 @@ gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
 
 def pangoCCFlags = [extraCFlags, "-D_ENABLE_PANGO"];
 def pangoLinkFlags = [extraLFlags];
-setupTools("linux_pango_tools",
+setupTools("armv6hf_pango_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--cflags", "pangoft2"
+            commandLine "$sdk/bin/pkg-config", "--cflags", "pangoft2"
             standardOutput = results
         }
         propFile << "cflags=" << results.toString().trim() << "\n";
 
         results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--libs", "pangoft2"
+            commandLine "$sdk/bin/pkg-config", "--libs", "pangoft2"
             standardOutput = results
         }
         propFile << "libs=" << results.toString().trim();
@@ -266,10 +266,10 @@ ARMV6HF.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.eglfb.compiler = compiler
-ARMV6HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
+ARMV6HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB"].flatten()
 ARMV6HF.glass.eglfb.linker = linker
 ARMV6HF.glass.eglfb.linkFlags = [lensLFlags].flatten()
-ARMV6HF.glass.eglfb.lib = "glass-lens-eglfb"
+ARMV6HF.glass.eglfb.lib = "glass_lens_eglfb"
 
 ARMV6HF.glass.directfb = [:]
 ARMV6HF.glass.directfb.nativeSource = [
@@ -280,10 +280,10 @@ ARMV6HF.glass.directfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c")]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.directfb.compiler = compiler
-ARMV6HF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb", "-DLINUX", "-DGRADLE_BUILD"].flatten()
+ARMV6HF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb", "-DLINUX"].flatten()
 ARMV6HF.glass.directfb.linker = linker
 ARMV6HF.glass.directfb.linkFlags = [lensLFlags].flatten()
-ARMV6HF.glass.directfb.lib = "glass-lens-dfb"
+ARMV6HF.glass.directfb.lib = "glass_lens_dfb"
 
 ARMV6HF.glass.fb = [:]
 ARMV6HF.glass.fb.nativeSource = [
@@ -294,10 +294,10 @@ ARMV6HF.glass.fb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.fb.compiler = compiler
-ARMV6HF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
+ARMV6HF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV6HF.glass.fb.linker = linker
 ARMV6HF.glass.fb.linkFlags = [lensLFlags].flatten()
-ARMV6HF.glass.fb.lib = "glass-lens-fb"
+ARMV6HF.glass.fb.lib = "glass_lens_fb"
 
 ARMV6HF.glass.eglx11 = [:]
 ARMV6HF.glass.eglx11.nativeSource = [
@@ -308,17 +308,17 @@ ARMV6HF.glass.eglx11.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c")]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.eglx11.compiler = compiler
-ARMV6HF.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
+ARMV6HF.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV6HF.glass.eglx11.linker = linker
 ARMV6HF.glass.eglx11.linkFlags = [lensLFlags].flatten()
-ARMV6HF.glass.eglx11.lib = "glass-lens-eglx11"
+ARMV6HF.glass.eglx11.lib = "glass_lens_eglx11"
 
 ARMV6HF.glass.gtk = [:]
 ARMV6HF.glass.gtk.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens"),
     file("modules/graphics/src/main/native-glass/lens/wm")]
 ARMV6HF.glass.gtk.compiler = compiler
-ARMV6HF.glass.gtk.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
+ARMV6HF.glass.gtk.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV6HF.glass.gtk.linker = linker
 ARMV6HF.glass.gtk.linkFlags = [lensLFlags, "-lstdc++"].flatten()
 ARMV6HF.glass.gtk.lib = "glass"
@@ -328,7 +328,7 @@ ARMV6HF.decora.compiler = compiler
 ARMV6HF.decora.ccFlags = extraCFlags
 ARMV6HF.decora.linker = linker
 ARMV6HF.decora.linkFlags = extraLFlags
-ARMV6HF.decora.lib = "decora-sse"
+ARMV6HF.decora.lib = "decora_sse"
 
 ARMV6HF.prism = [:]
 ARMV6HF.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -337,7 +337,7 @@ ARMV6HF.prism.compiler = compiler
 ARMV6HF.prism.ccFlags = [extraCFlags].flatten()
 ARMV6HF.prism.linker = linker
 ARMV6HF.prism.linkFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
-ARMV6HF.prism.lib = "prism-common"
+ARMV6HF.prism.lib = "prism_common"
 
 ARMV6HF.prismSW = [:]
 ARMV6HF.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -346,7 +346,7 @@ ARMV6HF.prismSW.compiler = compiler
 ARMV6HF.prismSW.ccFlags = [extraCFlags].flatten()
 ARMV6HF.prismSW.linker = linker
 ARMV6HF.prismSW.linkFlags = [extraLFlags].flatten()
-ARMV6HF.prismSW.lib = "prism-sw"
+ARMV6HF.prismSW.lib = "prism_sw"
 
 ARMV6HF.iio = [:]
 ARMV6HF.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
@@ -357,7 +357,7 @@ ARMV6HF.iio.compiler = compiler
 ARMV6HF.iio.ccFlags = iioCFlags
 ARMV6HF.iio.linker = linker
 ARMV6HF.iio.linkFlags = iioLFlags
-ARMV6HF.iio.lib = "javafx-iio"
+ARMV6HF.iio.lib = "javafx_iio"
 
 ARMV6HF.prismES2 = [:]
 ARMV6HF.prismES2.variants = ["eglfb", "eglx11"]
@@ -373,7 +373,7 @@ ARMV6HF.prismES2.eglfb.compiler = compiler
 ARMV6HF.prismES2.eglfb.ccFlags = es2EglfbCFlags
 ARMV6HF.prismES2.eglfb.linker = linker
 ARMV6HF.prismES2.eglfb.linkFlags = es2EglfbLFlags
-ARMV6HF.prismES2.eglfb.lib = "prism-es2-eglfb"
+ARMV6HF.prismES2.eglfb.lib = "prism_es2_eglfb"
 
 ARMV6HF.prismES2.eglx11 = [:]
 ARMV6HF.prismES2.eglx11.nativeSource = [
@@ -385,7 +385,7 @@ ARMV6HF.prismES2.eglx11.compiler = compiler
 ARMV6HF.prismES2.eglx11.ccFlags = es2X11CFlags
 ARMV6HF.prismES2.eglx11.linker = linker
 ARMV6HF.prismES2.eglx11.linkFlags = es2X11LFlags
-ARMV6HF.prismES2.eglx11.lib = "prism-es2-eglx11"
+ARMV6HF.prismES2.eglx11.lib = "prism_es2_eglx11"
 
 def closedDir = file("$projectDir/../rt-closed")
 ARMV6HF.font = [:]
@@ -397,7 +397,7 @@ ARMV6HF.font.compiler = compiler
 ARMV6HF.font.ccFlags = fontCFlags
 ARMV6HF.font.linker = linker
 ARMV6HF.font.linkFlags = fontLFlags
-ARMV6HF.font.lib = "javafx-font"
+ARMV6HF.font.lib = "javafx_font"
 
 ARMV6HF.fontT2K = [:]
 ARMV6HF.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
@@ -409,7 +409,7 @@ ARMV6HF.fontT2K.compiler = compiler
 ARMV6HF.fontT2K.ccFlags = fontCFlags
 ARMV6HF.fontT2K.linker = linker
 ARMV6HF.fontT2K.linkFlags = fontLFlags
-ARMV6HF.fontT2K.lib = "javafx-font-t2k"
+ARMV6HF.fontT2K.lib = "javafx_font_t2k"
 
 ARMV6HF.fontPango = [:]
 ARMV6HF.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]

@@ -56,12 +56,14 @@ public class EnsembleCompiletimeMain {
         System.out.println("==================================================================");
         File ensembleDir = new File(System.getProperty("user.dir"));
         System.out.println("ensembleDir = " + ensembleDir+" - "+ensembleDir.exists());
-        File generatedSrcDir = new File(ensembleDir,"src/generated/ensemble/generated");
+        File generatedSrcDir = new File(ensembleDir,"src/generated/java/ensemble/generated");
         System.out.println("generatedSrcDir = " + generatedSrcDir+" - "+generatedSrcDir.exists());
         generatedSrcDir.mkdirs();
         System.out.println("generatedSrcDir = " + generatedSrcDir.getAbsolutePath());
-        File samplesDir = new File(ensembleDir,"src/samples");
+        File samplesDir = new File(ensembleDir,"src/samples/java");
         System.out.println("samplesDir = " + samplesDir.getAbsolutePath());
+        File resourcesDir = new File(ensembleDir,"src/samples/resources");
+        System.out.println("resourcesDir = " + resourcesDir.getAbsolutePath());
         // process args
         boolean buildSearchIndex = false, buildSampleClass = false;
         for (int a=0; a< args.length; a++) {
@@ -71,7 +73,7 @@ public class EnsembleCompiletimeMain {
         System.out.println("buildSearchIndex = " + buildSearchIndex);
         System.out.println("buildSampleClass = " + buildSampleClass);
         // build samples list
-        List<Sample> allSamples = BuildSamplesList.build(samplesDir, buildSampleClass ? new File(generatedSrcDir,"Samples.java") : null);
+        List<Sample> allSamples = BuildSamplesList.build(samplesDir, resourcesDir, buildSampleClass ? new File(generatedSrcDir,"Samples.java") : null);
         System.out.println("TOTAL SAMPLES = " + allSamples.size());
         if (buildSampleClass) {
             System.out.println("==================================================================");

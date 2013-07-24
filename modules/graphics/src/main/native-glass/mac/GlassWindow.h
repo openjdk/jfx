@@ -61,13 +61,6 @@
     NSArray             *accChildren; // NSAccessibility children
     GlassAccessibleBaseProvider *accFocusElement ; // Focussed element
     BOOL                isAccessibleInitComplete ;
-    
-    jint                        _setFrameX, _setFrameY, _setFrameWidth, _setFrameHeight;
-    jboolean                    _setFrameDisplay, _setFrameAnimated;
-        
-    jint                        _setLevel;
-        
-    jfloat                        _setAlpha;
         
     BOOL                 isClosed;   
 }

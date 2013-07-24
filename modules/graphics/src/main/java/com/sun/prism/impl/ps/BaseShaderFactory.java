@@ -36,43 +36,23 @@ import com.sun.prism.impl.PrismSettings;
 public abstract class BaseShaderFactory extends BaseResourceFactory
     implements ShaderFactory
 {
-    public ShapeRep createPathRep(boolean needs3D) {
-        if (needs3D || PrismSettings.tessShapes) {
-            return PrismSettings.tessShapesAA ?
-                new AATessShapeRep() : new TessShapeRep();
-        } else {
-            return PrismSettings.cacheComplexShapes ?
+    public ShapeRep createPathRep() {
+        return PrismSettings.cacheComplexShapes ?
                 new CachingShapeRep() : new BasicShapeRep();
-        }
     }
 
-    public ShapeRep createRoundRectRep(boolean needs3D) {
-        if (needs3D || PrismSettings.tessShapes) {
-            return PrismSettings.tessShapesAA ?
-                new AATessRoundRectRep() : new TessRoundRectRep();
-        } else {
-            return PrismSettings.cacheSimpleShapes ?
-                new CachingRoundRectRep() : new BasicRoundRectRep();
-        }
+    public ShapeRep createRoundRectRep() {
+        return PrismSettings.cacheSimpleShapes ?
+            new CachingRoundRectRep() : new BasicRoundRectRep();
     }
 
-    public ShapeRep createEllipseRep(boolean needs3D) {
-        if (needs3D || PrismSettings.tessShapes) {
-            return PrismSettings.tessShapesAA ?
-                new AATessEllipseRep() : new TessEllipseRep();
-        } else {
-            return PrismSettings.cacheSimpleShapes ?
-                new CachingEllipseRep() : new BasicEllipseRep();
-        }
+    public ShapeRep createEllipseRep() {
+        return PrismSettings.cacheSimpleShapes ?
+            new CachingEllipseRep() : new BasicEllipseRep();
     }
 
-    public ShapeRep createArcRep(boolean needs3D) {
-        if (needs3D || PrismSettings.tessShapes) {
-            return PrismSettings.tessShapesAA ?
-                new AATessArcRep() : new TessArcRep();
-        } else {
-            return PrismSettings.cacheComplexShapes ?
-                new CachingShapeRep() : new BasicShapeRep();
-        }
+    public ShapeRep createArcRep() {
+        return PrismSettings.cacheComplexShapes ?
+            new CachingShapeRep() : new BasicShapeRep();
     }
 }

@@ -64,32 +64,6 @@ static jfieldID  jDelegateMenuField = 0;
     return self;
 }
 
-- (void)_insert
-{
-    GlassMenu *glassmenu = (GlassMenu *)jlong_to_ptr(self->_insertjMenuPtr);
-    
-    [self->menu insertItem:glassmenu->item atIndex:self->_insertjPos];
-    [self->menu setSubmenu:glassmenu->menu forItem:glassmenu->item];
-    
-    [glassmenu->menu setAutoenablesItems:YES];
-    
-    if ([[glassmenu->item title] compare:@"Apple"] == NSOrderedSame)
-    {
-        [NSApp performSelector:@selector(setAppleMenu:) withObject:glassmenu->item];
-    }
-    
-    [[NSApp mainMenu] update];
-}
-
-- (void)_remove
-{
-    GlassMenu *glassmenu = (GlassMenu *)jlong_to_ptr(self->_removejMenuPtr);
-    
-    [self->menu removeItem:glassmenu->item];
-    
-    [[NSApp mainMenu] update];
-}
-
 - (void)dealloc
 {
     NSLog(@"GlassMenubar dealloc: %p", self);
@@ -111,9 +85,7 @@ static jfieldID  jDelegateMenuField = 0;
         self->item = [[NSMenuItem allocWithZone:[NSMenu menuZone]] initWithTitle:title
                                                                           action:NULL
                                                                    keyEquivalent:@""];
-        self->_setEnabled = jenabled;
-        [self _setEnabled];
-        
+        [self->item setEnabled:(BOOL)jenabled];
         [self->item setTarget:self];
     }
     return self;
@@ -140,18 +112,13 @@ static jfieldID  jDelegateMenuField = 0;
                                                                    keyEquivalent:shortcut];
         if (jshortcut != '\0')
         {
-            self->_setShortcutShortcut = jshortcut;
-            self->_setShortcutModifiers = jmodifiers;
-            [self _setShortcut];
+            [self _setShortcut:jshortcut modifiers:jmodifiers];
         }
-        self->_setEnabled = jenabled;
-        self->_setChecked = jchecked;
-        [self _setEnabled];
-        [self _setChecked];
+        [self->item setEnabled:(BOOL)jenabled];
+        [self _setChecked:(BOOL)jchecked];
 
         if (jicon != NULL) {
-            self->_setPixels = jicon;
-            [self _setPixels];
+            [self _setPixels:jicon];
         }
         [self->item setTarget:self];
     }
@@ -225,89 +192,47 @@ static jfieldID  jDelegateMenuField = 0;
         GlassMenu *glassTargetItem = (GlassMenu *)[menuItem target];
         (*env)->CallVoidMethod(env, self->jCallback, jMenuValidateMethod, NULL);
 
-        return (glassTargetItem->_setEnabled==JNI_TRUE);
+        return ([glassTargetItem->item isEnabled]);
     } 
     return YES;
 }
 
-- (void)_insert
-{
-    if (self->menu == nil)
-    {
-        self->menu = [[NSMenu allocWithZone:[NSMenu menuZone]] initWithTitle:[self->item title]];
-        [self->menu setDelegate: self];
-    }
-    
-    if (self->_insertSubmenuPtr != 0)
-    {
-        GlassMenu *submenu = (GlassMenu *)jlong_to_ptr(self->_insertSubmenuPtr);
-        [self->menu insertItem:submenu->item atIndex:self->_insertPos];
-        [self->menu setSubmenu:submenu->menu forItem:submenu->item];
-        
-        [submenu->menu setAutoenablesItems:YES];
-    }
-    else
-    {
-        [self->menu addItem:[NSMenuItem separatorItem]];
-    }
-}
-
-- (void)_remove
-{
-    if (self->_removeSubmenuPtr != 0)
-    {
-        GlassMenu *submenu = (GlassMenu *)jlong_to_ptr(self->_removeSubmenuPtr);
-        [self->menu removeItem:submenu->item];
-    }
-    else
-    {
-        [self->menu removeItemAtIndex:self->_removePos];
-    }
-    [[NSApp mainMenu] update];
-}
-
-- (void)_setTitle
-{
-    GET_MAIN_JENV;
-    [self->item setTitle:[GlassHelper nsStringWithJavaString:self->_setTitle withEnv:env]];
-}
-
-- (void)_setShortcut
+- (void)_setShortcut:(jchar)jshortcut modifiers:(jint)jmodifiers
 {
     NSString *shortcut = @"";
-    if (self->_setShortcutShortcut != '\0')
+    if (jshortcut != '\0')
     {
-        shortcut = [NSString stringWithFormat:@"%c", self->_setShortcutShortcut];
-        LOG("_setShortcut %c", self->_setShortcutShortcut);
+        shortcut = [NSString stringWithFormat:@"%c", jshortcut];
+        LOG("_setShortcut %c", jshortcut);
     }
     
     NSUInteger modifier = 0;
-    if ((self->_setShortcutModifiers & com_sun_glass_events_KeyEvent_MODIFIER_COMMAND) != 0)
+    if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_COMMAND) != 0)
     {
         modifier = modifier | NSCommandKeyMask;
     }
-    if ((self->_setShortcutModifiers & com_sun_glass_events_KeyEvent_MODIFIER_SHIFT) != 0)
+    if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_SHIFT) != 0)
     {
         modifier = modifier | NSShiftKeyMask;
     }
-    if ((self->_setShortcutModifiers & com_sun_glass_events_KeyEvent_MODIFIER_CONTROL) != 0)
+    if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_CONTROL) != 0)
     {
         modifier = modifier | NSControlKeyMask;
     }
-    if ((self->_setShortcutModifiers & com_sun_glass_events_KeyEvent_MODIFIER_OPTION) != 0)
+    if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_OPTION) != 0)
     {
         modifier = modifier | NSAlternateKeyMask;
     }
-    if ((self->_setShortcutModifiers & com_sun_glass_events_KeyEvent_MODIFIER_FUNCTION) != 0)
+    if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_FUNCTION) != 0)
     {
         modifier = modifier | NSFunctionKeyMask;
-        if (self->_setShortcutShortcut >= com_sun_glass_events_KeyEvent_VK_F1 &&
-            self->_setShortcutShortcut <= com_sun_glass_events_KeyEvent_VK_F12) {
-            int delta = self->_setShortcutShortcut - com_sun_glass_events_KeyEvent_VK_F1;
+        if (jshortcut >= com_sun_glass_events_KeyEvent_VK_F1 &&
+            jshortcut <= com_sun_glass_events_KeyEvent_VK_F12) {
+            int delta = jshortcut - com_sun_glass_events_KeyEvent_VK_F1;
             shortcut = [NSString stringWithFormat:@"%C", (unsigned short)(NSF1FunctionKey + delta)];
-        } else if (self->_setShortcutShortcut >= com_sun_glass_events_KeyEvent_VK_F13 &&
-                   self->_setShortcutShortcut <= com_sun_glass_events_KeyEvent_VK_F24) {
-            int delta = self->_setShortcutShortcut - com_sun_glass_events_KeyEvent_VK_F13;
+        } else if (jshortcut >= com_sun_glass_events_KeyEvent_VK_F13 &&
+                   jshortcut <= com_sun_glass_events_KeyEvent_VK_F24) {
+            int delta = jshortcut - com_sun_glass_events_KeyEvent_VK_F13;
             shortcut = [NSString stringWithFormat:@"%C", (unsigned short)(NSF13FunctionKey + delta)];
         }
     }
@@ -315,138 +240,30 @@ static jfieldID  jDelegateMenuField = 0;
     [self->item setKeyEquivalentModifierMask:modifier];
 }
 
-- (void)_setEnabled
+- (void)_setChecked:(BOOL)checked
 {
-    if (self->_setEnabled == JNI_TRUE)
-    {
-        [self->item setEnabled:YES];
-    }
-    else
-    {
-        [self->item setEnabled:NO];
-    }
+    [self->item setState:(checked ? NSOnState : NSOffState)];
 }
 
-- (void)_setChecked
-{
-    if (self->_setChecked == JNI_TRUE)
-    {
-        [self->item setState:NSOnState];
-    }
-    else
-    {
-        [self->item setState:NSOffState];
-    }
-}
-
-- (void)_setCallback
+- (void)_setPixels:(jobject)pixels
 {
     GET_MAIN_JENV;
-    (*env)->DeleteGlobalRef(env, self->jCallback);
-    if (self->_setCallback != NULL)
+    if (pixels != NULL)
     {
-        self->jCallback = (*env)->NewGlobalRef(env, self->_setCallback);
-    }
-}
-
-- (void)_setPixels
-{
-    GET_MAIN_JENV;
-    if (self->_setPixels != NULL)
-    {
-        self->_setPixels = (*env)->NewGlobalRef(env, self->_setPixels);
+        pixels = (*env)->NewGlobalRef(env, pixels);
         NSImage *image = NULL;
-        (*env)->CallVoidMethod(env, self->_setPixels, jPixelsAttachData, ptr_to_jlong(&image));
+        (*env)->CallVoidMethod(env, pixels, jPixelsAttachData, ptr_to_jlong(&image));
         if (image != NULL)
         {
             [self->item setImage: image];
             [image release];
         }
-        (*env)->DeleteGlobalRef(env, self->_setPixels);
+        (*env)->DeleteGlobalRef(env, pixels);
     }
     else
     {
         [self->item setImage: nil];
     }
-}
-
-@end
-
-#pragma mark --- Dispatcher
-
-static jlong Do_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMenuBar
-(JNIEnv *env, jobject jMenuBarDelegate)
-{
-    GlassMenubar *menubar = [[GlassMenubar allocWithZone:[NSMenu menuZone]] init];
-    GLASS_CHECK_EXCEPTION(env);
-    return ptr_to_jlong(menubar);
-}
-
-static jlong Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenu
-(JNIEnv *env, jobject jMenuDelegate, jstring jTitle, jboolean jEnabled)
-{
-    GlassMenu *menu = [[GlassMenu alloc] initWithJavajdelegate:jMenuDelegate 
-                                                        jtitle:jTitle 
-                                                      jenabled:jEnabled];
-    GLASS_CHECK_EXCEPTION(env);
-    return ptr_to_jlong(menu);
-}
-
-static jlong Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenuItem
-(JNIEnv *env, jobject jMenuDelegate, jstring jTitle, jchar jShortcutKey, jint jShortcutModifiers,
- jobject jIcon, jboolean jEnabled, jboolean jChecked, jobject jCallback)
-{
-    GlassMenu *menuItem = [[GlassMenu alloc] initWithJavajdelegate:jMenuDelegate
-                                                            jtitle:jTitle jshortcut:jShortcutKey
-                                                        jmodifiers:jShortcutModifiers jicon:jIcon
-                                                          jenabled:jEnabled jchecked:jChecked
-                                                         jcallback:jCallback];
-    GLASS_CHECK_EXCEPTION(env);
-    return ptr_to_jlong(menuItem);
-}
-
-@interface GlassMenuDispatcher : NSObject
-{
-@public
-    jobject jMenuBarDelegate;
-    jobject jMenuDelegate;
-    jstring jTitle;
-    jchar jShortcutKey;
-    jint jShortcutModifiers;
-    jobject jIcon;
-    jboolean jEnabled;
-    jobject jVisible;
-    jboolean jChecked;
-    jobject jCallback;
-    jlong jlongReturn;
-}
-@end
-
-@implementation GlassMenuDispatcher
-
-- (void)Do_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMenuBar
-{
-    GET_MAIN_JENV;
-    self->jlongReturn = Do_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMenuBar(env, self->jMenuBarDelegate);
-}
-
-- (void)Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenu
-{
-    GET_MAIN_JENV;
-    self->jlongReturn = Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenu(env, 
-                                                                             self->jMenuDelegate, 
-                                                                             self->jTitle, 
-                                                                             self->jEnabled);
-}
-
-- (void)Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenuItem
-{
-    GET_MAIN_JENV;
-    self->jlongReturn = Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenuItem(env, self->jMenuDelegate,
-                                                                                 self->jTitle, self->jShortcutKey,
-                                                                                 self->jShortcutModifiers, self->jIcon,
-                                                                                 self->jEnabled, self->jChecked,
-                                                                                 self->jCallback);
 }
 
 @end
@@ -468,17 +285,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMen
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        if ([NSThread isMainThread] == YES)
-        {
-            value = Do_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMenuBar(env, jMenuBarDelegate);
-        }
-        else
-        {
-            GlassMenuDispatcher *dispatcher = [[GlassMenuDispatcher alloc] autorelease];
-            dispatcher->jMenuBarDelegate = jMenuBarDelegate;
-            [dispatcher performSelectorOnMainThread:@selector(Do_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMenuBar) withObject:dispatcher waitUntilDone:YES]; // gznote: need to wait for return value
-            value = dispatcher->jlongReturn;
-        }
+        GlassMenubar *menubar = [[GlassMenubar allocWithZone:[NSMenu menuZone]] init];
+        value = ptr_to_jlong(menubar);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -500,16 +308,19 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1insert
     GLASS_POOL_ENTER;
     {
         GlassMenubar *menubar = (GlassMenubar *)jlong_to_ptr(jMenubarPtr);
-        menubar->_insertjMenuPtr = jMenuPtr;
-        menubar->_insertjPos = jPos;
-        if ([NSThread isMainThread] == YES)
+        GlassMenu *glassmenu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
+
+        [menubar->menu insertItem:glassmenu->item atIndex:jPos];
+        [menubar->menu setSubmenu:glassmenu->menu forItem:glassmenu->item];
+
+        [glassmenu->menu setAutoenablesItems:YES];
+
+        if ([[glassmenu->item title] compare:@"Apple"] == NSOrderedSame)
         {
-            [menubar _insert];
+            [NSApp performSelector:@selector(setAppleMenu:) withObject:glassmenu->item];
         }
-        else
-        {
-            [menubar performSelectorOnMainThread:@selector(_insert) withObject:nil waitUntilDone:YES];
-        }
+        
+        [[NSApp mainMenu] update];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -529,16 +340,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1remove
     GLASS_POOL_ENTER;
     {
         GlassMenubar *menubar = (GlassMenubar *)jlong_to_ptr(jMenubarPtr);
-        menubar->_removejMenuPtr = jMenuPtr;
-        menubar->_removejPos = jPos;
-        if ([NSThread isMainThread] == YES)
-        {
-            [menubar _remove];
-        }
-        else
-        {
-            [menubar performSelectorOnMainThread:@selector(_remove) withObject:nil waitUntilDone:YES];
-        }
+        GlassMenu *glassmenu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
+        [menubar->menu removeItem:glassmenu->item];
+        [[NSApp mainMenu] update];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -577,19 +381,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1createMenu
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        if ([NSThread isMainThread] == YES)
-        {
-            value = Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenu(env, jMenuDelegate, jTitle, jEnabled);
-        }
-        else
-        {
-            GlassMenuDispatcher *dispatcher = [[GlassMenuDispatcher alloc] autorelease];
-            dispatcher->jMenuDelegate = jMenuDelegate;
-            dispatcher->jTitle = jTitle;
-            dispatcher->jEnabled = jEnabled;
-            [dispatcher performSelectorOnMainThread:@selector(Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenu) withObject:dispatcher waitUntilDone:YES]; // gznote: need to wait for return value
-            value = dispatcher->jlongReturn;
-        }
+        GlassMenu *menu = [[GlassMenu alloc] initWithJavajdelegate:jMenuDelegate
+                                                            jtitle:jTitle
+                                                          jenabled:jEnabled];
+        value = ptr_to_jlong(menu);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -613,24 +408,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1createMenuIt
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        if ([NSThread isMainThread] == YES)
-        {
-            value = Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenuItem(env, jMenuDelegate, jTitle, jShortcutKey, jShortcutModifiers, jIcon, jEnabled, jChecked, jCallback);
-        }
-        else
-        {
-            GlassMenuDispatcher *dispatcher = [[GlassMenuDispatcher alloc] autorelease];
-            dispatcher->jMenuDelegate = jMenuDelegate;
-            dispatcher->jTitle = jTitle;
-            dispatcher->jShortcutKey = jShortcutKey;
-            dispatcher->jShortcutModifiers = jShortcutModifiers;
-            dispatcher->jIcon = jIcon;
-            dispatcher->jEnabled = jEnabled;
-            dispatcher->jChecked = jChecked;
-            dispatcher->jCallback = jCallback;
-            [dispatcher performSelectorOnMainThread:@selector(Do_com_sun_glass_ui_mac_MacMenuDelegate__1createMenuItem) withObject:dispatcher waitUntilDone:YES]; // gznote: need to wait for return value
-            value = dispatcher->jlongReturn;
-        }
+        GlassMenu *menuItem = [[GlassMenu alloc] initWithJavajdelegate:jMenuDelegate
+                                                                jtitle:jTitle jshortcut:jShortcutKey
+                                                            jmodifiers:jShortcutModifiers jicon:jIcon
+                                                              jenabled:jEnabled jchecked:jChecked
+                                                             jcallback:jCallback];
+        value = ptr_to_jlong(menuItem);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -652,15 +435,23 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1insert
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        menu->_insertSubmenuPtr = jSubmenuPtr;
-        menu->_insertPos = jPos;
-        if ([NSThread isMainThread] == YES)
+        if (menu->menu == nil)
         {
-            [menu _insert];
+            menu->menu = [[NSMenu allocWithZone:[NSMenu menuZone]] initWithTitle:[menu->item title]];
+            [menu->menu setDelegate: menu];
+        }
+
+        if (jSubmenuPtr != 0)
+        {
+            GlassMenu *submenu = (GlassMenu *)jlong_to_ptr(jSubmenuPtr);
+            [menu->menu insertItem:submenu->item atIndex:jPos];
+            [menu->menu setSubmenu:submenu->menu forItem:submenu->item];
+
+            [submenu->menu setAutoenablesItems:YES];
         }
         else
         {
-            [menu performSelectorOnMainThread:@selector(_insert) withObject:nil waitUntilDone:YES];
+            [menu->menu addItem:[NSMenuItem separatorItem]];
         }
     }
     GLASS_POOL_EXIT;
@@ -681,16 +472,16 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1remove
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        menu->_removeSubmenuPtr = jSubmenuPtr;
-        menu->_removePos = jPos;
-        if ([NSThread isMainThread] == YES)
+        if (jSubmenuPtr != 0)
         {
-            [menu _remove];
+            GlassMenu *submenu = (GlassMenu *)jlong_to_ptr(jSubmenuPtr);
+            [menu->menu removeItem:submenu->item];
         }
         else
         {
-            [menu performSelectorOnMainThread:@selector(_remove) withObject:nil waitUntilDone:YES];
+            [menu->menu removeItemAtIndex:jPos];
         }
+        [[NSApp mainMenu] update];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -710,15 +501,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setTitle
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        menu->_setTitle = jTitle;
-        if ([NSThread isMainThread] == YES)
-        {
-            [menu _setTitle];
-        }
-        else
-        {
-            [menu performSelectorOnMainThread:@selector(_setTitle) withObject:nil waitUntilDone:YES];
-        }
+        [menu->item setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -738,16 +521,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setShortcut
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        menu->_setShortcutShortcut = jShortcut;
-        menu->_setShortcutModifiers = jModifiers;
-        if ([NSThread isMainThread] == YES)
-        {
-            [menu _setShortcut];
-        }
-        else
-        {
-            [menu performSelectorOnMainThread:@selector(_setShortcut) withObject:nil waitUntilDone:YES];
-        }
+        [menu _setShortcut:jShortcut modifiers:jModifiers];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -767,15 +541,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setEnabled
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        menu->_setEnabled = jEnabled;
-        if ([NSThread isMainThread] == YES)
-        {
-            [menu _setEnabled];
-        }
-        else
-        {
-            [menu performSelectorOnMainThread:@selector(_setEnabled) withObject:nil waitUntilDone:YES];
-        }
+        [menu->item setEnabled:(BOOL)jEnabled];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -795,15 +561,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setChecked
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        menu->_setChecked = jChecked;
-        if ([NSThread isMainThread] == YES)
-        {
-            [menu _setChecked];
-        }
-        else
-        {
-            [menu performSelectorOnMainThread:@selector(_setChecked) withObject:nil waitUntilDone:YES];
-        }
+        [menu _setChecked:(BOOL)jChecked];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -823,14 +581,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setCallback
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        menu->_setCallback = jCallback;
-        if ([NSThread isMainThread] == YES)
+        GET_MAIN_JENV;
+        (*env)->DeleteGlobalRef(env, menu->jCallback);
+        if (jCallback != NULL)
         {
-            [menu _setCallback];
-        }
-        else
-        {
-            [menu performSelectorOnMainThread:@selector(_setCallback) withObject:nil waitUntilDone:YES];
+            menu->jCallback = (*env)->NewGlobalRef(env, jCallback);
         }
     }
     GLASS_POOL_EXIT;
@@ -851,15 +606,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setPixels
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        menu->_setPixels = jPixels;
-        if ([NSThread isMainThread] == YES)
-        {
-            [menu _setPixels];
-        }
-        else
-        {
-            [menu performSelectorOnMainThread:@selector(_setPixels) withObject:nil waitUntilDone:YES];
-        }
+        [menu _setPixels:jPixels];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

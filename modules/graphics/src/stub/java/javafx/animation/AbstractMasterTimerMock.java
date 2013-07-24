@@ -39,7 +39,6 @@ public class AbstractMasterTimerMock extends AbstractMasterTimer {
     private long nanos;
     
     protected AbstractMasterTimerMock() {
-        super(true);
     }
 
     @Override

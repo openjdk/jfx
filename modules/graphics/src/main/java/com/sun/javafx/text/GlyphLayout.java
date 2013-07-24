@@ -99,7 +99,7 @@ public abstract class GlyphLayout {
                                  int start, int length,
                                  PGFont font, TextSpan span, byte level) {
         /* subclass can overwrite this method in order to handle complex text */
-        TextRun run = new TextRun(start, length, level, false, 0, span, 0, false);
+        TextRun run = new TextRun(start, length, level, true, 0, span, 0, false);
         layout.addTextRun(run);
         return run;
     }
@@ -117,9 +117,10 @@ public abstract class GlyphLayout {
 
     public int breakRuns(PrismTextLayout layout, char[] chars, int flags) {
         int length = chars.length;
-        boolean complexRun = false;
         boolean complex = false;
         boolean feature = false;
+        int scriptRun = ScriptMapper.COMMON;
+        int script = ScriptMapper.COMMON;
 
         boolean checkComplex = true;
         boolean checkBidi = true;
@@ -176,60 +177,68 @@ public abstract class GlyphLayout {
             char ch = chars[i];
             int codePoint = ch;
 
-            boolean delimiterChanged = ch == '\t' || ch == '\n' || ch == '\r';
-            boolean spanChanged = i >= spanEnd;
-            boolean levelChanged = i >= bidiEnd;
-            boolean complexChanged = false;
-
-            if (checkComplex) {
-                if (Character.isHighSurrogate(ch)) {
-                    /* Only merge surrogate when the pair is in the same span. */
-                    if (i + 1 < spanEnd && Character.isLowSurrogate(chars[i + 1])) {
-                        codePoint = Character.toCodePoint(ch, chars[++i]);
-                    }
-                }
-                if (Character.isWhitespace(codePoint)) {
-                    complex = feature || complexRun;
-                } else {
-                    complex = feature || ScriptMapper.isComplexCharCode(codePoint);
-                }
-                complexChanged = complex != complexRun;
-            }
-
-            if (delimiterChanged || spanChanged || levelChanged || complexChanged) {
-
-                /* Create text run */
+            /* special handling for delimiters */
+            if (ch == '\t' || ch == '\n' || ch == '\r') {
                 if (i != start) {
                     run = addTextRun(layout, chars, start, i - start,
-                                     font, span, bidiLevel, complexRun);
-                    if (complexRun) {
+                                     font, span, bidiLevel, complex);
+                    if (complex) {
                         flags |= FLAGS_HAS_COMPLEX;
+                        complex = false;
                     }
                     start = i;
                 }
-
-                if (delimiterChanged) {
+                i++;
+                /* Only merge \r\n when the are in the same text span */
+                if (ch == '\r' && i < spanEnd && chars[i] == '\n') {
                     i++;
-                    /* Only merge \r\n when the are in the same text span */
-                    if (ch == '\r' && i < spanEnd && chars[i] == '\n') {
-                        i++;
-                    }
+                }
 
-                    /* Create delimiter run */
-                    run = new TextRun(start, i - start, bidiLevel, false,
-                                      ScriptMapper.COMMON, span, 0, false);
-                    if (ch == '\t') {
-                        run.setTab();
-                        flags |= FLAGS_HAS_TABS;
-                    } else {
-                        run.setLinebreak();
+                /* Create delimiter run */
+                run = new TextRun(start, i - start, bidiLevel, false,
+                                  ScriptMapper.COMMON, span, 0, false);
+                if (ch == '\t') {
+                    run.setTab();
+                    flags |= FLAGS_HAS_TABS;
+                } else {
+                    run.setLinebreak();
+                }
+                layout.addTextRun(run);
+                start = i;
+            } else {
+                boolean spanChanged = i >= spanEnd;
+                boolean levelChanged = i >= bidiEnd;
+                boolean scriptChanged = false;
+                if (checkComplex) {
+                    if (Character.isHighSurrogate(ch)) {
+                        /* Only merge surrogate when the pair is in the same span. */
+                        if (i + 1 < spanEnd && Character.isLowSurrogate(chars[i + 1])) {
+                            codePoint = Character.toCodePoint(ch, chars[++i]);
+                        }
                     }
-                    layout.addTextRun(run);
+                    /* Check for script changes */
+                    script = ScriptMapper.getScript(codePoint);
+                    if (scriptRun > ScriptMapper.INHERITED  &&
+                        script > ScriptMapper.INHERITED &&
+                        script != scriptRun) {
+                        scriptChanged = true;
+                    }
+                    if (!complex) {
+                        complex = feature || ScriptMapper.isComplexCharCode(codePoint);
+                    }
+                }
 
-                    start = i;
-                    if (i == length) break;
-                    spanChanged = i >= spanEnd;
-                    levelChanged = i >= bidiEnd;
+                if (spanChanged || levelChanged || scriptChanged) {
+                    if (start != i) {
+                        /* Create text run */
+                        run = addTextRun(layout, chars, start, i - start,
+                                         font, span, bidiLevel, complex);
+                       if (complex) {
+                           flags |= FLAGS_HAS_COMPLEX;
+                           complex = false;
+                       }
+                       start = i;
+                    }
                 }
                 if (spanChanged) {
                     /* Only true for rich text (spans != null) */
@@ -255,33 +264,19 @@ public abstract class GlyphLayout {
                         flags |= FLAGS_HAS_BIDI;
                     }
                 }
-
-                if (complexChanged) {
-                    if (delimiterChanged) {
-                        ch = chars[i]; /* update ch because of delimiterChanged */
-                        if (Character.isHighSurrogate(ch)) {
-                            /* Only merge surrogate when the pair is in the same span */
-                            if (i + 1 < spanEnd && Character.isLowSurrogate(chars[i + 1])) {
-                                codePoint = Character.toCodePoint(ch, chars[++i]);
-                            }
-                        }
-                        if (Character.isWhitespace(codePoint)) {
-                            complex = feature || complexRun;
-                        } else {
-                            complex = feature || ScriptMapper.isComplexCharCode(codePoint);
-                        }
-                    }
-                    complexRun = complex;
+                if (scriptChanged) {
+                    scriptRun = script;
                 }
+
+                i++;
             }
-            if (!delimiterChanged) i++;
         }
 
         /* Create final text run */
         if (start < length) {
             addTextRun(layout, chars, start, length - start,
-                       font, span, bidiLevel, complexRun);
-            if (complexRun) {
+                       font, span, bidiLevel, complex);
+            if (complex) {
                 flags |= FLAGS_HAS_COMPLEX;
             }
         } else {

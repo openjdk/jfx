@@ -137,6 +137,11 @@
 
 #LINT = all
 
+# The following flag specifies whether to generate code coverage
+# statistics when running tests
+
+#JCOV = true
+
 # Define the number of threads to use when compiling native code. This value must be
 # > 0, or the build system will default to 1. If not specified, the number of compile
 # threads is determined based on the number of CPU cores on the machine. If this value

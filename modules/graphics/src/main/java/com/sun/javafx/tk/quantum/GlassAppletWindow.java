@@ -34,6 +34,7 @@ import com.sun.javafx.tk.TKStage;
 
 import java.lang.ref.WeakReference;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.stage.Stage;
 
@@ -62,11 +63,16 @@ class GlassAppletWindow implements AppletWindow {
     }
     
     @Override
-    public void setBackgroundColor(int color) {
-        float RR = (float)((color >> 16) & 0xff) / 255f;
-        float GG = (float)((color >> 8)  & 0xff) / 255f;
-        float BB = (float)(color & 0xff) / 255f;
-        glassWindow.setBackground(RR, GG, BB);
+    public void setBackgroundColor(final int color) {
+        Application.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                float RR = (float) ((color >> 16) & 0xff) / 255f;
+                float GG = (float) ((color >> 8) & 0xff) / 255f;
+                float BB = (float) (color & 0xff) / 255f;
+                glassWindow.setBackground(RR, GG, BB);
+            }
+        });
     }
 
     @Override
@@ -75,38 +81,81 @@ class GlassAppletWindow implements AppletWindow {
     }
 
     @Override
-    public void setVisible(boolean state) {
-        glassWindow.setVisible(state);
+    public void setVisible(final boolean state) {
+        Application.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                glassWindow.setVisible(state);
+            }
+        });
     }
 
     @Override
-    public void setSize(int width, int height) {
-        glassWindow.setSize(width, height);
+    public void setSize(final int width, final int height) {
+        Application.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                glassWindow.setSize(width, height);
+            }
+        });
     }
 
     @Override
     public int getWidth() {
-        return glassWindow.getWidth();
+        final AtomicInteger width = new AtomicInteger(0);
+        Application.invokeAndWait(new Runnable() {
+            @Override
+            public void run() {
+                width.set(glassWindow.getWidth());
+            }
+        });
+        return width.get();
     }
 
     @Override
     public int getHeight() {
-        return glassWindow.getHeight();
+        final AtomicInteger height = new AtomicInteger(0);
+        Application.invokeAndWait(new Runnable() {
+            @Override
+            public void run() {
+                height.set(glassWindow.getHeight());
+            }
+        });
+        return height.get();
     }
 
     @Override
-    public void setPosition(int x, int y) {
-        glassWindow.setPosition(x, y);
+    public void setPosition(final int x, final int y) {
+        Application.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                glassWindow.setPosition(x, y);
+            }
+        });
     }
 
     @Override
     public int getPositionX() {
-        return glassWindow.getX();
+        AtomicInteger x = new AtomicInteger(0);
+        Application.invokeAndWait(new Runnable() {
+            @Override
+            public void run() {
+                x.set(glassWindow.getX());
+            }
+        });
+        return x.get();
     }
 
     @Override
     public int getPositionY() {
-        return glassWindow.getY();
+        AtomicInteger y = new AtomicInteger(0);
+        Application.invokeAndWait(new Runnable() {
+            @Override
+            public void run() {
+                y.set(glassWindow.getY());
+            }
+        });
+        return y.get();
     }
 
     void dispose() {
@@ -131,17 +180,27 @@ class GlassAppletWindow implements AppletWindow {
     
     @Override
     public int getRemoteLayerId() {
-        View view = this.glassWindow.getView();
-        if (view != null) {
-            return view.getNativeRemoteLayerId(this.serverName);
-        } else {
-            return -1;
-        }
+        AtomicInteger id = new AtomicInteger(-1);
+        Application.invokeAndWait(new Runnable() {
+            @Override
+            public void run() {
+                View view = glassWindow.getView();
+                if (view != null) {
+                    id.set(view.getNativeRemoteLayerId(serverName));
+                }
+            }
+        });
+        return id.get();
     }
     
     @Override
-    public void dispatchEvent(Map eventInfo) {
-        this.glassWindow.dispatchNpapiEvent(eventInfo);
+    public void dispatchEvent(final Map eventInfo) {
+        Application.invokeAndWait(new Runnable() {
+            @Override
+            public void run() {
+                glassWindow.dispatchNpapiEvent(eventInfo);
+            }
+        });
     }
     
     /**

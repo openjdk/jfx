@@ -50,7 +50,7 @@ public class NGEllipse extends NGShape {
     }
 
     @Override
-    protected ShapeRep createShapeRep(Graphics g, boolean needs3D) {
-        return g.getResourceFactory().createEllipseRep(needs3D);
+    protected ShapeRep createShapeRep(Graphics g) {
+        return g.getResourceFactory().createEllipseRep();
     }
 }

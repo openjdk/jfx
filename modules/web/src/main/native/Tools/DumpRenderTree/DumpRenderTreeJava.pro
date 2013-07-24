@@ -26,8 +26,7 @@ INCLUDEPATH += \
     $$PWD/../../Source/WTF/ \
     $$PWD/../../Source/WTF/wtf \
     $$PWD/../../Source/WTF/wtf/java \
-    $$PWD/../../Source/JavaScriptCore/ForwardingHeaders \
-    $$PWD/../../../build/javah
+    $$PWD/../../Source/JavaScriptCore/ForwardingHeaders
 
 LIBS += -ljfxwebkit
 

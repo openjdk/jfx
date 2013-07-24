@@ -118,7 +118,7 @@ MAC.decora.linker = linker
 MAC.decora.linkFlags = ["-dynamiclib",
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-arch", "x86_64"].flatten()
-MAC.decora.lib = "decora-sse"
+MAC.decora.lib = "decora_sse"
 
 MAC.prism = [:]
 MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -133,7 +133,7 @@ MAC.prism.linker = linker
 MAC.prism.linkFlags = ["-dynamiclib",
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-arch", "x86_64"].flatten()
-MAC.prism.lib = "prism-common"
+MAC.prism.lib = "prism_common"
 
 MAC.prismSW = [:]
 MAC.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -142,7 +142,7 @@ MAC.prismSW.compiler = "cc"
 MAC.prismSW.ccFlags = [MAC.prism.ccFlags].flatten()
 MAC.prismSW.linker = linker
 MAC.prismSW.linkFlags = [MAC.prism.linkFlags].flatten()
-MAC.prismSW.lib = "prism-sw"
+MAC.prismSW.lib = "prism_sw"
 
 MAC.launcher = [:]
 MAC.launcher.compiler = compiler
@@ -159,7 +159,7 @@ MAC.iio.compiler = compiler
 MAC.iio.ccFlags = [ccFlags].flatten()
 MAC.iio.linker = linker
 MAC.iio.linkFlags = [linkFlags].flatten()
-MAC.iio.lib = "javafx-iio"
+MAC.iio.lib = "javafx_iio"
 
 MAC.prismES2 = [:]
 MAC.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
@@ -169,10 +169,10 @@ MAC.prismES2.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2/macosx")
 ]
 MAC.prismES2.compiler = compiler
-MAC.prismES2.ccFlags = ["-DMACOSX", "-DGRADLE_BUILD", ccFlags].flatten()
+MAC.prismES2.ccFlags = ["-DMACOSX", ccFlags].flatten()
 MAC.prismES2.linker = linker
 MAC.prismES2.linkFlags = [linkFlags].flatten()
-MAC.prismES2.lib = "prism-es2"
+MAC.prismES2.lib = "prism_es2"
 
 def closedDir = file("$projectDir/../rt-closed")
 MAC.font = [:]
@@ -184,7 +184,7 @@ MAC.font.compiler = compiler
 MAC.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 MAC.font.linker = linker
 MAC.font.linkFlags = [linkFlags].flatten()
-MAC.font.lib = "javafx-font"
+MAC.font.lib = "javafx_font"
 
 MAC.fontT2K = [:]
 MAC.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
@@ -196,4 +196,4 @@ MAC.fontT2K.compiler = compiler
 MAC.fontT2K.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 MAC.fontT2K.linker = linker
 MAC.fontT2K.linkFlags = [linkFlags].flatten()
-MAC.fontT2K.lib = "javafx-font-t2k"
+MAC.fontT2K.lib = "javafx_font_t2k"

@@ -53,16 +53,19 @@ public class BuildSamplesList {
     private static final Pattern findJavaDocComment = Pattern.compile("\\/\\*\\*(.*?)\\*\\/\\s*",Pattern.DOTALL);
     private static final Pattern findSharedResource = Pattern.compile("\"(/ensemble/samples/shared-resources/[^\"]+)\"",Pattern.DOTALL);
     private static File samplesSrcDir;
+    private static File samplesResourcesDir;
     private static List<Sample> highlightedSamples = new ArrayList<>();
     private static List<Sample> allSamples = new ArrayList<>();
     
-    public static List<Sample> build(File samplesSrcDir, File samplesSourceFile) {
-        BuildSamplesList.samplesSrcDir = samplesSrcDir;
+    public static List<Sample> build(File samplesSrcDir, File samplesResourcesDir, File samplesSourceFile) {
+        BuildSamplesList.samplesSrcDir = samplesSrcDir;       
         File samplesDir = new File(samplesSrcDir,"ensemble/samples");
+        BuildSamplesList.samplesResourcesDir = samplesResourcesDir; //Resources are in a different location from *.java files
+        File resourcesDir = new File(samplesResourcesDir, "ensemble/samples");
         SampleCategory rootCategory = new SampleCategory("ROOT","",null);
         for(File dir: samplesDir.listFiles()) {
             if (dir.getName().charAt(0) != '.' && !"shared-resources".equals(dir.getName())) {
-                processCategoryOrSampleDir(rootCategory, dir);
+                processCategoryOrSampleDir(rootCategory, dir, resourcesDir);
             }
         }
         // generate code chunks so we have all samples in ALL_SAMPLES
@@ -115,7 +118,7 @@ public class BuildSamplesList {
         return allSamples;
     }
     
-    private static void processCategoryOrSampleDir(SampleCategory category, File dir) {
+    private static void processCategoryOrSampleDir(SampleCategory category, File dir, File resourcesDir) {
         if (!dir.isDirectory()) {
             System.out.println("        found unexpected file: "+dir.getAbsolutePath());
             return;
@@ -129,13 +132,13 @@ public class BuildSamplesList {
             }
         }
         if (containsJavaFile) {
-            processSampleDir(category, dir);
+            processSampleDir(category, dir, resourcesDir);
         } else {
-            processCategoryDir(category, dir);
+            processCategoryDir(category, dir, resourcesDir);
         }
     }
     
-    private static void processCategoryDir(SampleCategory category, File dir) {
+    private static void processCategoryDir(SampleCategory category, File dir, File resourcesDir) {
         System.out.println("========= CATEGORY ["+formatName(dir.getName())+"] ===============");
         // create new category
         SampleCategory subCategory = new SampleCategory(
@@ -146,12 +149,12 @@ public class BuildSamplesList {
         // process each subdir
         for(File subDir: dir.listFiles()) {
             if (subDir.getName().charAt(0) != '.' && !"shared-resources".equals(subDir.getName())) {
-                processCategoryOrSampleDir(subCategory, subDir);
+                processCategoryOrSampleDir(subCategory, subDir, resourcesDir);
             }
         }
     }
     
-    private static void processSampleDir(SampleCategory category, File dir) {
+    private static void processSampleDir(SampleCategory category, File dir, File resourcesDir) {
         Sample sample = new Sample();
         Matcher matcher;
         System.out.println("============== SAMPLE ["+formatName(dir.getName())+"] ===============");
@@ -168,7 +171,7 @@ public class BuildSamplesList {
         if (appFile == null) {
             throw new IllegalArgumentException("Could not find JavaFX Application class for sample ["+dir.getName()+"] in ["+dir.getAbsolutePath()+"]");
         }
-        sample.mainFileUrl = calculateRelativePath(appFile);
+        sample.mainFileUrl = calculateRelativePath(appFile, samplesSrcDir);
         sample.appClass = sample.mainFileUrl.substring(1, sample.mainFileUrl.length()-5).replace('/', '.');
         // load app main file
         StringBuilder appFileContents = loadFile(appFile);
@@ -231,8 +234,10 @@ public class BuildSamplesList {
         }
         sample.description = descBuilder.toString();
         sample.ensemblePath = category.ensemblePath + "/" + sample.name;
-        // scan sample dir for resources
-        compileResources(sample, dir, true);
+        // scan sample dir for resources 
+        compileResources(sample, dir, true, samplesSrcDir);
+        // scan samples/resources dir for resources too
+        compileExtraResources(sample, resourcesDir, true, samplesResourcesDir); 
         // add sample to category
         System.out.println(sample);
         category.addSample(sample);
@@ -240,11 +245,11 @@ public class BuildSamplesList {
         allSamples.add(sample);
     }
     
-    private static void compileResources(Sample sample, File dir, boolean root) {
+    private static void compileResources(Sample sample, File dir, boolean root, File baseDir) {
         for (File file: dir.listFiles()) {
             if (file.getName().charAt(0) != '.') { // ignore hidden unix files
                 if (file.isDirectory()) {
-                    compileResources(sample, file, false);
+                    compileResources(sample, file, false, baseDir);
                 } else {
                     if (root && (file.getName().equalsIgnoreCase("preview.png") 
                             || file.getName().equalsIgnoreCase("preview@2x.png"))) {
@@ -259,14 +264,32 @@ public class BuildSamplesList {
                         }
                     }
                     // add file to resources list
-                    sample.resourceUrls.add(calculateRelativePath(file));
+                    sample.resourceUrls.add(calculateRelativePath(file, baseDir));
                 }
             }
         }
     }
-    
-    private static String calculateRelativePath(File file) {
-        return file.getAbsolutePath().substring(samplesSrcDir.getAbsolutePath().length()).replace('\\', '/');
+   
+  private static void compileExtraResources(Sample sample, File dir, boolean root, File baseDir) {
+      File specificResDir = new File(samplesResourcesDir, sample.baseUri.toString());
+        for (File file: specificResDir.listFiles()) {
+            if (file.getName().charAt(0) != '.') { // ignore hidden unix files
+                if (file.isDirectory()) {
+                    compileResources(sample, file, false, baseDir);
+                } else {
+                    if (file.getName().equalsIgnoreCase("preview.png")
+                            || file.getName().equalsIgnoreCase("preview@2x.png")) {
+                        continue; // ignore preview files
+                    }
+                    // add file to resources list
+                    sample.resourceUrls.add(calculateRelativePath(file, baseDir));
+                }
+            }
+        }
+    }
+     
+    private static String calculateRelativePath(File file, File baseDir) {
+        return file.getAbsolutePath().substring(baseDir.getAbsolutePath().length()).replace('\\', '/');
     }
     
     private static StringBuilder loadFile(File file) {

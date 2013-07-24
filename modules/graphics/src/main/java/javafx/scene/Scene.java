@@ -3356,8 +3356,9 @@ public class Scene implements EventTarget {
 
             @Override
             public void run() {
-                if (Scene.this.impl_peer != null) { // Make sure this is run only if
-                                                    // the peer is still alive
+                // Make sure this is run only if the peer is still alive
+                // and there is an event to deliver
+                if (Scene.this.impl_peer != null && lastEvent != null) {
                     process(lastEvent, true);
                 }
             }
@@ -3581,7 +3582,7 @@ public class Scene implements EventTarget {
                 handleEnterExit(e, tmpTargetWrapper);
             }
 
-            lastEvent = e;
+            lastEvent = e.getEventType() == MouseEvent.MOUSE_EXITED ? null : e;
             Scene.inMousePick = false;
         }
 

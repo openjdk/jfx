@@ -186,15 +186,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1set
                 cursor = [NSCursor performJavaSelector:@selector(javaMoveCursor)];
                 break;
         }
-        
-        if ([NSThread isMainThread] == YES)
-        {
-            [cursor set];
-        }
-        else
-        {
-            [cursor performSelectorOnMainThread:@selector(set) withObject:nil waitUntilDone:YES];
-        }
+        [cursor set];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

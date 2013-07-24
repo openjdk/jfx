@@ -109,7 +109,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         AccessController.doPrivileged(new PrivilegedAction<Object>() {
 
             public Object run() {
-                NativeLibLoader.loadLibrary("javafx-iio");
+                NativeLibLoader.loadLibrary("javafx_iio");
                 return null;
             }
         });

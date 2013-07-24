@@ -29,20 +29,10 @@
 @interface GlassMenubar : NSObject
 {
 @public
-        
         NSMenu        *menu;
-        
-        jlong        _insertjMenuPtr;
-        jint        _insertjPos;
-        
-        jlong        _removejMenuPtr;
-        jint        _removejPos;
 }
 
 - (id)init;
-
-- (void)_insert;
-- (void)_remove;
 
 @end
 
@@ -56,25 +46,6 @@
 
     NSMenuItem  *item;
     NSMenu      *menu;
-                
-    jlong       _insertSubmenuPtr;
-    jint        _insertPos;
-        
-    jlong       _removeSubmenuPtr;
-    jint        _removePos;
-        
-    jstring     _setTitle;
-        
-    jchar       _setShortcutShortcut;
-    jint        _setShortcutModifiers;
-        
-    jboolean        _setEnabled;
-        
-    jboolean        _setChecked;
-        
-    jobject     _setCallback;
-   
-    jobject     _setPixels;
 }
 
 // Menu
@@ -86,14 +57,8 @@
 - (id)initWithJavajdelegate:(jobject)jdelegate jtitle:(jstring)jtitle jshortcut:(jchar)jshortcut jmodifiers:(int)jmodifiers jicon:(jobject)jicon jenabled:(jboolean)jenabled jchecked:(jboolean)jchecked jcallback:(jobject)jcallback;
 
 - (void)action:(id)sender;
-
-- (void)_insert;
-- (void)_remove;
-- (void)_setTitle;
-- (void)_setShortcut;
-- (void)_setEnabled;
-- (void)_setChecked;
-- (void)_setCallback;
-- (void)_setPixels;
+- (void)_setShortcut:(jchar)jshortcut modifiers:(jint)jmodifiers;
+- (void)_setChecked:(BOOL)checked;
+- (void)_setPixels:(jobject)pixels;
 
 @end

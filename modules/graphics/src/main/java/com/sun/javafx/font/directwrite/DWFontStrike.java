@@ -31,8 +31,11 @@ import com.sun.javafx.font.Glyph;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.font.PrismFontStrike;
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.text.TextRun;
 
 class DWFontStrike extends PrismFontStrike<DWFontFile> {
     DWRITE_MATRIX matrix;
@@ -98,7 +101,21 @@ class DWFontStrike extends PrismFontStrike<DWFontFile> {
         return fontResource.getGlyphOutline(glyphCode, getSize());
     }
 
+    @Override public Glyph createGlyph(GlyphList gl, int gi) {
+        Point2D offset = (Point2D)((TextRun)gl).getGlyphData(gi);
+        float advanceOffset = offset != null ? offset.x : 0;
+        float ascenderOffset = offset != null ? offset.y : 0;
+        int gc = gl.getGlyphCode(gi);
+        if (PrismFontFactory.debugFonts) {
+            if (advanceOffset != 0 || ascenderOffset != 0) {
+                System.err.println("Setting glyph[" + Integer.toHexString(gc) +
+                                   "] offsets to " + offset);
+            }
+        }
+        return new DWGlyph(this, gc, advanceOffset, ascenderOffset, drawShapes);
+    }
+
     @Override protected Glyph createGlyph(int glyphCode) {
-        return new DWGlyph(this, glyphCode, drawShapes);
+        return new DWGlyph(this, glyphCode, 0, 0, drawShapes);
     }
 }

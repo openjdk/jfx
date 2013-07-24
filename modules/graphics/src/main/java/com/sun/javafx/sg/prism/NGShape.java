@@ -37,6 +37,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.PrinterGraphics;
+import com.sun.prism.RTTexture;
+import com.sun.prism.Texture;
 import com.sun.prism.paint.Paint;
 import com.sun.prism.shape.ShapeRep;
 import static com.sun.prism.shape.ShapeRep.InvalidationType.LOCATION;
@@ -47,11 +49,19 @@ import static com.sun.prism.shape.ShapeRep.InvalidationType.LOCATION_AND_GEOMETR
 public abstract class NGShape extends NGNode {
     public enum Mode { EMPTY, FILL, STROKE, STROKE_FILL }
 
+    /**
+     * We cache a representation of this shape into an image if we are
+     * rendering the shape with a 3D transform. We attempt to keep this
+     * cached image from render to render, and invalidate it if
+     * this NGShape changes either in geometry or visuals.
+     */
+    private RTTexture cached3D;
     protected Paint fillPaint;
     protected Paint drawPaint;
     protected BasicStroke drawStroke;
     protected Mode mode = Mode.FILL;
     protected ShapeRep shapeRep;
+
     //protected boolean antialiased;
 
     public void setMode(Mode mode) {
@@ -196,8 +206,19 @@ public abstract class NGShape extends NGNode {
 
     public abstract Shape getShape();
 
-    protected ShapeRep createShapeRep(Graphics g, boolean needs3D) {
-        return g.getResourceFactory().createPathRep(needs3D);
+    protected ShapeRep createShapeRep(Graphics g) {
+        return g.getResourceFactory().createPathRep();
+    }
+
+    @Override
+    protected void visualsChanged() {
+        super.visualsChanged();
+        // If there is a cached image, we have to forget about it
+        // and regenerate it when we paint if needs3D
+        if (cached3D != null) {
+            cached3D.dispose();
+            cached3D = null;
+        }
     }
 
     @Override
@@ -205,16 +226,72 @@ public abstract class NGShape extends NGNode {
         if (mode == Mode.EMPTY) {
             return;
         }
-        boolean needs3D = !g.getTransformNoClone().is2D();
-        ShapeRep localShapeRep =
-            (g instanceof PrinterGraphics ? null : this.shapeRep);
+
+        // Need to know whether we are being asked to print or not
+        final boolean printing = g instanceof PrinterGraphics;
+
+        // If a 3D transform is being used, then we're going to render to
+        // an intermediate texture before we then do the final render operation.
+        final boolean needs3D = !g.getTransformNoClone().is2D();
+
+        // If there is already a cached image, then we need to check that
+        // the surface is not lost, and that we haven't switched from a 3D
+        // rendering situation to a 2D one. In either case we need to throw
+        // away this cached image and build up a new one.
+        if (cached3D != null) {
+            cached3D.lock();
+            if (cached3D.isSurfaceLost() || !needs3D) {
+                cached3D.unlock();
+                cached3D.dispose();
+                cached3D = null;
+            }
+        }
+
+        if (needs3D) {
+            // For rendering the shape in 3D, we need to first render to the cached
+            // image, and then render that image in 3D
+            if (cached3D == null) {
+                final BaseTransform tx = g.getTransformNoClone();
+                final double scaleX = Math.hypot(tx.getMxx(), tx.getMyx());
+                final double scaleY = Math.hypot(tx.getMxy(), tx.getMyy());
+                cached3D = g.getResourceFactory().createRTTexture(
+                        (int) Math.ceil(contentBounds.getWidth() * scaleX),
+                        (int) Math.ceil(contentBounds.getHeight() * scaleY),
+                        Texture.WrapMode.CLAMP_TO_ZERO,
+                        false);
+                cached3D.contentsUseful();
+                final Graphics textureGraphics = cached3D.createGraphics();
+                // Have to move the origin such that when rendering to x=0, we actually end up rendering
+                // at x=bounds.getMinX(). Otherwise anything rendered to the left of the origin would be lost
+                textureGraphics.scale((float) scaleX, (float) scaleY);
+                textureGraphics.translate(-contentBounds.getMinX(), -contentBounds.getMinY());
+                renderContent2D(textureGraphics, printing);
+            }
+            // Now render the cached image in 3D
+            g.drawTexture(cached3D,
+                    contentBounds.getMinX(), contentBounds.getMinY(),
+                    contentBounds.getMaxX(), contentBounds.getMaxY(),
+                    cached3D.getContentX(), cached3D.getContentY(),
+                    cached3D.getContentX() + cached3D.getContentWidth(),
+                    cached3D.getContentY() + cached3D.getContentHeight());
+            cached3D.unlock();
+        } else {
+            // Just render in 2D like normal
+            renderContent2D(g, printing);
+        }
+    }
+
+    /**
+     * Renders the content as though it is 2D in all cases. In the case that a 3D
+     * transform is in use at the time an NGShape is rendered, it will render as 2D
+     * into a texture and then transform in 3D that texture.
+     *
+     * @param g The graphics object to render with
+     */
+    protected void renderContent2D(Graphics g, boolean printing) {
+        ShapeRep localShapeRep = printing ? null : this.shapeRep;
         if (localShapeRep == null) {
-            localShapeRep = createShapeRep(g, needs3D);
-        } else if (needs3D && !localShapeRep.is3DCapable()) {
-            // TODO: for now we only upgrade from 2D to 3D, i.e., we don't
-            // currently go back from a 3D rep to a 2D one... (RT-26983)
-            localShapeRep.dispose();
-            localShapeRep = createShapeRep(g, true);
+            localShapeRep = createShapeRep(g);
         }
         Shape shape = getShape();
         if (mode != Mode.STROKE) {
@@ -226,7 +303,8 @@ public abstract class NGShape extends NGNode {
             g.setStroke(drawStroke);
             localShapeRep.draw(g, shape, contentBounds);
         }
-        if (!(g instanceof PrinterGraphics)) {
+
+        if (!printing) {
             this.shapeRep = localShapeRep;
         }
     }
@@ -247,6 +325,12 @@ public abstract class NGShape extends NGNode {
         if (shapeRep != null) {
             shapeRep.invalidate(LOCATION_AND_GEOMETRY);
         }
+        // If there is a cached image, we have to forget about it
+        // and regenerate it when we paint if needs3D
+        if (cached3D != null) {
+            cached3D.dispose();
+            cached3D = null;
+        }
     }
 
     void locationChanged() {
@@ -255,7 +339,7 @@ public abstract class NGShape extends NGNode {
             shapeRep.invalidate(LOCATION);
         }
     }
-    
+
     static BaseBounds getRectShapeBounds(BaseBounds bounds,
                                        BaseTransform at, int atclass,
                                        float upad, float dpad,

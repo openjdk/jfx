@@ -76,11 +76,9 @@
     <target name="-pre-compile">
         <echo>Copying all sample source files to build dir</echo>
          <copy todir="${build.classes.dir}">
-            <fileset dir="${basedir}/src/samples">
+            <fileset dir="${basedir}/src/samples/java">
                 <include name="**/samples/**/*.java"/>
                 <include name="**/*.js"/> <!-- include javascript files -->
-                <include name="**/*.wav"/> <!-- include wav files -->
-                <include name="**/*.css"/> <!-- include css files -->
             </fileset>
         </copy>
     </target>

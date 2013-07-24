@@ -336,12 +336,6 @@ public class PieChart extends Chart {
 
     // -------------- METHODS --------------------------------------------------
 
-    @Override public void requestLayout() {
-        super.requestLayout();
-        // RT-22986 PieChart legend resize issue
-        if (legend != null) legend.requestLayout();
-    }
-    
     private void dataNameChanged(Data item) {
         item.textNode.setText(item.getName());
         requestChartLayout();
@@ -358,7 +352,7 @@ public class PieChart extends Chart {
             );
         } else {
             item.setCurrentPieValue(item.getPieValue());
-            requestChartLayout(); // RT-23091 
+            requestChartLayout(); // RT-23091
         }
     }
 
@@ -442,7 +436,7 @@ public class PieChart extends Chart {
             if(ptr != null) ptr.next = item.next;
         }
     }
-    
+
     private Timeline createDataRemoveTimeline(final Data item) {
         final Node shape = item.getNode();
         Timeline t = new Timeline();
@@ -583,7 +577,7 @@ public class PieChart extends Chart {
                 if (shouldShowLabels) {
                     double size = (isClockwise()) ? (-scale * Math.abs(item.getCurrentPieValue())) : (scale * Math.abs(item.getCurrentPieValue()));
                     final boolean isLeftSide = !(labelAngles[index] > -90 && labelAngles[index] < 90);
-                    
+
                     double sliceCenterEdgeX = calcX(labelAngles[index], pieRadius, centerX);
                     double sliceCenterEdgeY = calcY(labelAngles[index], pieRadius, centerY);
                     double xval = isLeftSide ?
@@ -859,7 +853,7 @@ public class PieChart extends Chart {
         private double getRadiusMultiplier() { return radiusMultiplier.getValue(); }
         private void setRadiusMultiplier(double value) { radiusMultiplier.setValue(value); }
         private DoubleProperty radiusMultiplierProperty() { return radiusMultiplier; }
-        
+
         /**
          * Readonly access to the node that represents the pie slice. You can use this to add mouse event listeners etc.
          */
@@ -867,7 +861,7 @@ public class PieChart extends Chart {
         public Node getNode() { return node.getValue(); }
         private void setNode(Node value) { node.setValue(value); }
         private ObjectProperty<Node> nodeProperty() { return node; }
-         
+
         // -------------- CONSTRUCTOR -------------------------------------------------
 
         /**
@@ -887,20 +881,20 @@ public class PieChart extends Chart {
         /**
          * Returns a string representation of this {@code Data} object.
          * @return a string representation of this {@code Data} object.
-         */ 
+         */
         @Override public java.lang.String toString() {
             return "Data["+getName()+","+getPieValue()+"]";
         }
     }
 
     // -------------- STYLESHEET HANDLING --------------------------------------
-    
+
     /**
       * Super-lazy instantiation pattern from Bill Pugh.
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final CssMetaData<PieChart,Boolean> CLOCKWISE = 
+         private static final CssMetaData<PieChart,Boolean> CLOCKWISE =
              new CssMetaData<PieChart,Boolean>("-fx-clockwise",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
@@ -914,8 +908,8 @@ public class PieChart extends Chart {
                 return (StyleableProperty<Boolean>)node.clockwiseProperty();
             }
         };
-         
-         private static final CssMetaData<PieChart,Boolean> LABELS_VISIBLE = 
+
+         private static final CssMetaData<PieChart,Boolean> LABELS_VISIBLE =
              new CssMetaData<PieChart,Boolean>("-fx-pie-label-visible",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
@@ -929,8 +923,8 @@ public class PieChart extends Chart {
                 return (StyleableProperty<Boolean>)node.labelsVisibleProperty();
             }
         };
-         
-         private static final CssMetaData<PieChart,Number> LABEL_LINE_LENGTH = 
+
+         private static final CssMetaData<PieChart,Number> LABEL_LINE_LENGTH =
              new CssMetaData<PieChart,Number>("-fx-label-line-length",
                  SizeConverter.getInstance(), 20d) {
 
@@ -944,8 +938,8 @@ public class PieChart extends Chart {
                 return (StyleableProperty<Number>)node.labelLineLengthProperty();
             }
         };
-         
-         private static final CssMetaData<PieChart,Number> START_ANGLE = 
+
+         private static final CssMetaData<PieChart,Number> START_ANGLE =
              new CssMetaData<PieChart,Number>("-fx-start-angle",
                  SizeConverter.getInstance(), 0d) {
 

@@ -25,11 +25,9 @@
 
 package javafx.scene.paint;
 
+import javafx.animation.Interpolatable;
 import java.util.HashMap;
 import java.util.Map;
-
-import javafx.animation.Interpolatable;
-
 import com.sun.javafx.Utils;
 import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.tk.Toolkit;
@@ -105,7 +103,7 @@ import com.sun.javafx.tk.Toolkit;
  * </p>
  * @since JavaFX 2.0
  */
-public class Color extends Paint implements Interpolatable<Color> { // final
+public final class Color extends Paint implements Interpolatable<Color> {
 
     /**
      * Brightness change factor for darker() and brighter() methods.

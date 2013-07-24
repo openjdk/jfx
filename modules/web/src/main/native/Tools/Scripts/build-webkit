@@ -203,7 +203,7 @@ for my $dir (@projects) {
     }
 }
 
-if (!isQt() && !-d "WebKitLibraries") {
+if (!isQt() && !isJava() && !-d "WebKitLibraries") {
     die "Error: No WebKitLibraries directory found. Please do a fresh checkout.\n";
 }
 

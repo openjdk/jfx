@@ -12,7 +12,7 @@
     <orderEntry type="module" module-name="graphics" exported="" />
     <orderEntry type="module" module-name="controls" exported="" />
     <orderEntry type="module" module-name="media" exported="" />
-    <orderEntry type="module-library" exported="">
+    <orderEntry type="module-library">
       <library>
         <CLASSES>
           <root url="jar://$MODULE_DIR$/../caches/sdk/rt/lib/ext/jfxrt.jar!/" />
