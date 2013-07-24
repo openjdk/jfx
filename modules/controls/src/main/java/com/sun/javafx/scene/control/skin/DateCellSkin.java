@@ -63,17 +63,27 @@ public class DateCellSkin extends CellSkinBase<DateCell, DateCellBehavior> {
         }
     }
 
+    private double cellSize() {
+        double cellSize = getCellSize();
+        Text secondaryText = (Text)getSkinnable().getProperties().get("DateCell.secondaryText");
+        if (secondaryText != null && cellSize == DEFAULT_CELL_SIZE) {
+            // Workaround for RT-31643. The cellSize property was not yet set from CSS.
+            cellSize = 36;
+        }
+        return cellSize;
+    }
+
     @Override protected double computePrefWidth(double height,
                                                 double topInset, double rightInset,
                                                 double bottomInset, double leftInset) {
         double pref = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
-        return Math.max(pref, getCellSize());
+        return snapSize(Math.max(pref, cellSize()));
     }
 
     @Override protected double computePrefHeight(double width,
                                                  double topInset, double rightInset,
                                                  double bottomInset, double leftInset) {
         double pref = super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
-        return Math.max(pref, getCellSize());
+        return snapSize(Math.max(pref, cellSize()));
     }
 }
