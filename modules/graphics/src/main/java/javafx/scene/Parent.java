@@ -823,14 +823,22 @@ public abstract class Parent extends Node {
         Parent parent = getParent();
         while (parent != null && parent.layoutFlag == LayoutFlags.CLEAN) {
             parent.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
+            if (parent.sceneRoot) {
+                Toolkit.getToolkit().requestNextPulse();
+            }
             parent = parent.getParent();
         }
+
     }
 
     private void markDirtyLayout(boolean local) {
         setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
         if (local || layoutRoot) {
-            markDirtyLayoutBranch();
+            if (sceneRoot) {
+                Toolkit.getToolkit().requestNextPulse();
+            } else {
+                markDirtyLayoutBranch();
+            }
         } else {
             requestParentLayout();
         }
