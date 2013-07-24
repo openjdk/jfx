@@ -30,7 +30,6 @@ import javafx.beans.property.BooleanPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.HyperlinkSkin;
 import javafx.css.StyleableProperty;

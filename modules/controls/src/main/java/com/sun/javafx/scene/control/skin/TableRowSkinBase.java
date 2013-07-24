@@ -549,6 +549,22 @@ public abstract class TableRowSkinBase<T,
         return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
     }
 
+    // protected to allow subclasses to ensure a consistent state during layout
+    protected final void checkState(boolean doRecreateIfNecessary) {
+        if (isDirty) {
+            // doRecreateIfNecessary was added to resolve RT-29382, which was
+            // introduced by the fix for RT-29080 above in computePrefHeight
+            if (doRecreateIfNecessary) {
+                recreateCells();
+            }
+            updateCells(true);
+            isDirty = false;
+        } else if (updateCells) {
+            updateCells(false);
+            updateCells = false;
+        }
+    }
+
 
 
     /***************************************************************************
@@ -602,21 +618,6 @@ public abstract class TableRowSkinBase<T,
         cellsMap.put(col, cell);
 
         return cell;
-    }
-
-    private void checkState(boolean doRecreateIfNecessary) {
-        if (isDirty) {
-            // doRecreateIfNecessary was added to resolve RT-29382, which was
-            // introduced by the fix for RT-29080 above in computePrefHeight
-            if (doRecreateIfNecessary) {
-                recreateCells();
-            }
-            updateCells(true);
-            isDirty = false;
-        } else if (updateCells) {
-            updateCells(false);
-            updateCells = false;
-        }
     }
 
     private void fadeOut(final Node node) {

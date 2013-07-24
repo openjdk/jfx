@@ -37,7 +37,7 @@ import javafx.scene.input.MouseEvent;
 
 /**
  */
-public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<S, TreeTableCell<S,T>> {
+public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S>, T, TreeTableColumn<S, ?>, TreeTableCell<S,T>> {
     
     /***************************************************************************
      *                                                                         *
@@ -63,7 +63,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<S, TreeTab
     }
 
     /** @{@inheritDoc} */
-    @Override TreeTableColumn getTableColumn() {
+    @Override TreeTableColumn<S,T> getTableColumn() {
         return getControl().getTableColumn();
     }
 

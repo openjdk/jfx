@@ -66,6 +66,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
     public TreeTablePosition(TreeTableView<S> treeTableView, int row, TreeTableColumn<S,T> tableColumn) {
         super(row, tableColumn);
         this.controlRef = new WeakReference<TreeTableView<S>>(treeTableView);
+        this.treeItemRef = new WeakReference<TreeItem<S>>(treeTableView.getTreeItem(row));
     }
     
     
@@ -77,6 +78,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
      **************************************************************************/
 
     private final WeakReference<TreeTableView<S>> controlRef;
+    private final WeakReference<TreeItem<S>> treeItemRef;
 
 
     /***************************************************************************
@@ -106,5 +108,12 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
     @Override public final TreeTableColumn<S,T> getTableColumn() {
         // Forcing the return type to be TreeTableColumn<S,T>, not TableColumnBase<S,T>
         return super.getTableColumn();
+    }
+
+    /**
+     * Returns the {@link TreeItem} that backs the {@link #getRow()} row}.
+     */
+    public final TreeItem<S> getTreeItem() {
+        return treeItemRef.get();
     }
 }

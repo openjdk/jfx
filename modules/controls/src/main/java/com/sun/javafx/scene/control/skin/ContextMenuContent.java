@@ -30,8 +30,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,7 +41,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -75,13 +72,10 @@ import javafx.util.Duration;
 
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
-import java.util.Iterator;
 import javafx.geometry.NodeOrientation;
-import javafx.stage.Window;
 
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
-import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.css.Styleable;
 

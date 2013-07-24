@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.behavior;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import javafx.application.ConditionalFeature;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -43,7 +42,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 import com.sun.javafx.PlatformUtil;
-import javafx.css.PseudoClass;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.scene.control.skin.TextAreaSkin;

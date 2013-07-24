@@ -42,7 +42,6 @@ import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
-import javafx.collections.ObservableMap;
 import javafx.event.EventType;
 import javafx.scene.control.*;
 import javafx.util.Callback;

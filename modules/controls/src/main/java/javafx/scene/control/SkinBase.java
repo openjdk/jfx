@@ -29,8 +29,6 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import java.util.Collections;
 import java.util.List;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;

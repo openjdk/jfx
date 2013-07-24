@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,7 +45,6 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -63,7 +61,6 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
@@ -71,7 +68,6 @@ import javafx.util.Callback;
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
@@ -1216,8 +1212,15 @@ public class TableView<S> extends Control {
      * TableView and column are also editable.
      */
     public void edit(int row, TableColumn<S,?> column) {
-        if (!isEditable() || (column != null && ! column.isEditable())) return;
-        setEditingCell(new TablePosition(this, row, column));
+        if (!isEditable() || (column != null && ! column.isEditable())) {
+            return;
+        }
+
+        if (row < 0 && column == null) {
+            setEditingCell(null);
+        } else {
+            setEditingCell(new TablePosition(this, row, column));
+        }
     }
     
     /**

@@ -133,7 +133,7 @@ public class EmbeddedTextContextMenuContent extends StackPane {
         double pointerX = 0;
 
         // Get the positions of the cursor from the TextArea/TextField and draw the arrow underneath it.
-        Map properties = null;
+        Map<Object,Object> properties = null;
         if (contextMenu.getOwnerNode() instanceof TextArea) {
             properties = ((TextArea)contextMenu.getOwnerNode()).getProperties();
         } else if (contextMenu.getOwnerNode() instanceof TextField) {

@@ -48,7 +48,7 @@ public class TableRowBehavior<T> extends CellBehaviorBase<TableRow<T>> {
         final TableRow<T> tableRow = getControl();
         final TableView<T> table = tableRow.getTableView();
         if (table == null) return;
-        final TableSelectionModel sm = table.getSelectionModel();
+        final TableSelectionModel<T> sm = table.getSelectionModel();
         if (sm == null || sm.isCellSelectionEnabled()) return;
         
         final int index = getControl().getIndex();

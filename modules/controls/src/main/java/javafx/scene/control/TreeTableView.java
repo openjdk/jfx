@@ -30,7 +30,6 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 
@@ -45,11 +44,9 @@ import javafx.css.StyleableProperty;
 import javafx.event.WeakEventHandler;
 
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
-import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -62,7 +59,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -70,7 +66,6 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -78,14 +73,12 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
-import javafx.collections.MapChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.control.MultipleSelectionModelBase.ShiftParams;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
@@ -195,7 +188,7 @@ import javafx.util.Callback;
  * required to create a TreeTableView instance. Running this code (assuming the
  * file system structure is probably built up in memory) will result in a TreeTableView being
  * shown with two columns for name and lastModified. Any other properties of the
- * File class will not be shown, as no TreeTableColumnss are defined for them.
+ * File class will not be shown, as no TreeTableColumns are defined for them.
  * 
  * <h3>TreeTableView support for classes that don't contain properties</h3>
  *
@@ -884,35 +877,7 @@ public class TreeTableView<S> extends Control {
         }
         return focusModel;
     }
-    
-    
-    
-//    // --- Span Model
-//    private ObjectProperty<SpanModel<TreeItem<S>>> spanModel 
-//            = new SimpleObjectProperty<SpanModel<TreeItem<S>>>(this, "spanModel") {
-//
-//        @Override protected void invalidated() {
-//            ObservableList<String> styleClass = getStyleClass();
-//            if (getSpanModel() == null) {
-//                styleClass.remove(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-//            } else if (! styleClass.contains(CELL_SPAN_TABLE_VIEW_STYLE_CLASS)) {
-//                styleClass.add(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-//            }
-//        }
-//    };
-//
-//    public final ObjectProperty<SpanModel<TreeItem<S>>> spanModelProperty() {
-//        return spanModel;
-//    }
-//    public final void setSpanModel(SpanModel<TreeItem<S>> value) {
-//        spanModelProperty().set(value);
-//    }
-//
-//    public final SpanModel<TreeItem<S>> getSpanModel() {
-//        return spanModel.get();
-//    }
-    
-    
+
     
     // --- Tree node count
     /**
@@ -958,41 +923,32 @@ public class TreeTableView<S> extends Control {
         }
         return editable;
     }
-    
-    
-    // --- Editing Item
-    private ReadOnlyObjectWrapper<TreeItem<S>> editingItem;
 
-    private void setEditingItem(TreeItem<S> value) {
-        editingItemPropertyImpl().set(value);
+
+    // --- Editing Cell
+    private ReadOnlyObjectWrapper<TreeTablePosition<S,?>> editingCell;
+    private void setEditingCell(TreeTablePosition<S,?> value) {
+        editingCellPropertyImpl().set(value);
+    }
+    public final TreeTablePosition<S,?> getEditingCell() {
+        return editingCell == null ? null : editingCell.get();
     }
 
     /**
-     * Returns the TreeItem that is currently being edited in the TreeTableView,
-     * or null if no item is being edited.
+     * Represents the current cell being edited, or null if
+     * there is no cell being edited.
      */
-    public final TreeItem<S> getEditingItem() {
-        return editingItem == null ? null : editingItem.get();
+    public final ReadOnlyObjectProperty<TreeTablePosition<S,?>> editingCellProperty() {
+        return editingCellPropertyImpl().getReadOnlyProperty();
     }
 
-    /**
-     * <p>A property used to represent the TreeItem currently being edited
-     * in the TreeTableView, if editing is taking place, or -1 if no item is being edited.
-     * 
-     * <p>It is not possible to set the editing item, instead it is required that
-     * you call {@link #edit(javafx.scene.control.TreeItem)}.
-     */
-    public final ReadOnlyObjectProperty<TreeItem<S>> editingItemProperty() {
-        return editingItemPropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyObjectWrapper<TreeItem<S>> editingItemPropertyImpl() {
-        if (editingItem == null) {
-            editingItem = new ReadOnlyObjectWrapper<TreeItem<S>>(this, "editingItem");
+    private ReadOnlyObjectWrapper<TreeTablePosition<S,?>> editingCellPropertyImpl() {
+        if (editingCell == null) {
+            editingCell = new ReadOnlyObjectWrapper<TreeTablePosition<S,?>>(this, "editingCell");
         }
-        return editingItem;
+        return editingCell;
     }
-    
+
     
     // --- On Edit Start
     private ObjectProperty<EventHandler<TreeTableView.EditEvent<S>>> onEditStart;
@@ -1288,31 +1244,6 @@ public class TreeTableView<S> extends Control {
     }
 
     
-    // --- Editing Cell
-    private ReadOnlyObjectWrapper<TreeTablePosition<S,?>> editingCell;
-    private void setEditingCell(TreeTablePosition<S,?> value) {
-        editingCellPropertyImpl().set(value);
-    }
-    public final TreeTablePosition<S,?> getEditingCell() {
-        return editingCell == null ? null : editingCell.get();
-    }
-
-    /**
-     * Represents the current cell being edited, or null if
-     * there is no cell being edited.
-     */
-    public final ReadOnlyObjectProperty<TreeTablePosition<S,?>> editingCellProperty() {
-        return editingCellPropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyObjectWrapper<TreeTablePosition<S,?>> editingCellPropertyImpl() {
-        if (editingCell == null) {
-            editingCell = new ReadOnlyObjectWrapper<TreeTablePosition<S,?>>(this, "editingCell");
-        }
-        return editingCell;
-    }
-
-
     // --- SortMode
     /**
      * Specifies the sort mode to use when sorting the contents of this TreeTableView,
@@ -1452,22 +1383,6 @@ public class TreeTableView<S> extends Control {
         super.layoutChildren();
     }
     
-    
-    /**
-     * Instructs the TreeTableView to begin editing the given TreeItem, if 
-     * the TreeTableView is {@link #editableProperty() editable}. Once
-     * this method is called, if the current 
-     * {@link javafx.scene.control.TreeTableColumn#cellFactoryProperty()} cell factory} is set up to support editing,
-     * the Cell will switch its visual state to enable the user input to take place.
-     * 
-     * @param item The TreeItem in the TreeTableView that should be edited.
-     */
-    public void edit(TreeItem<S> item) {
-        if (!isEditable()) return;
-        setEditingItem(item);
-    }
-    
-
     /**
      * Scrolls the TreeTableView such that the item in the given index is visible to
      * the end user.
@@ -1519,7 +1434,7 @@ public class TreeTableView<S> extends Control {
      * Scrolls the TreeTableView so that the given column is visible within the viewport.
      * @param column The column that should be visible to the user.
      */
-    public void scrollToColumn(TableColumn<S, ?> column) {
+    public void scrollToColumn(TreeTableColumn<S, ?> column) {
         ControlUtils.scrollToColumn(this, column);
     }
     
@@ -1534,7 +1449,7 @@ public class TreeTableView<S> extends Control {
     }
     
     /**
-     * Called when there's a request to scroll a column into view using {@link #scrollToColumn(TableColumn)} 
+     * Called when there's a request to scroll a column into view using {@link #scrollToColumn(TreeTableColumn)}
      * or {@link #scrollToColumnIndex(int)}
      */
     private ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumn;
@@ -1656,10 +1571,17 @@ public class TreeTableView<S> extends Control {
      * TableView and column are also editable.
      */
     public void edit(int row, TreeTableColumn<S,?> column) {
-        if (!isEditable() || (column != null && ! column.isEditable())) return;
-        setEditingCell(new TreeTablePosition(this, row, column));
+        if (!isEditable() || (column != null && ! column.isEditable())) {
+            return;
+        }
+
+        if (row < 0 && column == null) {
+            setEditingCell(null);
+        } else {
+            setEditingCell(new TreeTablePosition(this, row, column));
+        }
     }
-    
+
     /**
      * Returns an unmodifiable list containing the currently visible leaf columns.
      */
@@ -1677,7 +1599,7 @@ public class TreeTableView<S> extends Control {
     }
 
     /**
-     * Returns the TableColumn in the given column index, relative to all other
+     * Returns the TreeTableColumn in the given column index, relative to all other
      * visible leaf columns.
      */
     public TreeTableColumn<S,?> getVisibleLeafColumn(int column) {
@@ -1690,7 +1612,7 @@ public class TreeTableView<S> extends Control {
      * often than not it is not necessary to call this method directly, as it is
      * automatically called when the {@link #getSortOrder() sort order}, 
      * {@link #sortPolicyProperty() sort policy}, or the state of the 
-     * TableColumn {@link TableColumn#sortTypeProperty() sort type} properties 
+     * TreeTableColumn {@link TreeTableColumn#sortTypeProperty() sort type} properties
      * change. In other words, this method should only be called directly when
      * something external changes and a sort is required.
      */
@@ -2827,10 +2749,6 @@ public class TreeTableView<S> extends Control {
         private TreeTableColumn<S,?> getTableColumn(int pos) {
             return getTreeTableView().getVisibleLeafColumn(pos);
         }
-        
-//        private TableColumn<S,?> getTableColumn(TableColumn<S,?> column) {
-//            return getTableColumn(column, 0);
-//        }
 
         // Gets a table column to the left or right of the current one, given an offset
         private TreeTableColumn<S,?> getTableColumn(TreeTableColumn<S,?> column, int offset) {

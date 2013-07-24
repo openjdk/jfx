@@ -28,7 +28,6 @@ package com.sun.javafx.scene.control.behavior;
 import com.sun.javafx.application.PlatformImpl;
 
 import java.util.List;
-import java.util.WeakHashMap;
 import javafx.application.ConditionalFeature;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
@@ -42,7 +41,7 @@ import javafx.scene.input.MouseEvent;
 
 /**
  */
-public abstract class TableCellBehaviorBase<S, T extends IndexedCell> extends CellBehaviorBase<T> {
+public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, ?>, C extends IndexedCell<T>> extends CellBehaviorBase<C> {
     
     /***************************************************************************
      *                                                                         *
@@ -103,7 +102,7 @@ public abstract class TableCellBehaviorBase<S, T extends IndexedCell> extends Ce
      *                                                                         *
      **************************************************************************/    
 
-    public TableCellBehaviorBase(T control) {
+    public TableCellBehaviorBase(C control) {
         super(control);
     }
     
@@ -118,20 +117,20 @@ public abstract class TableCellBehaviorBase<S, T extends IndexedCell> extends Ce
     abstract Control getTableControl(); // tableCell.getTreeTableView()
     abstract TableColumnBase<S, T> getTableColumn(); // getControl().getTableColumn()
     abstract int getItemCount();        // tableView.impl_getTreeItemCount()
-    abstract TableSelectionModel getSelectionModel();
-    abstract TableFocusModel getFocusModel();
+    abstract TableSelectionModel<S> getSelectionModel();
+    abstract TableFocusModel<S,TC> getFocusModel();
     abstract TablePositionBase getFocusedCell();
     abstract boolean isTableRowSelected(); // tableCell.getTreeTableRow().isSelected()
-    abstract TableColumnBase getVisibleLeafColumn(int index);
+    abstract TableColumnBase<S,T> getVisibleLeafColumn(int index);
     
     /**
      * Returns the position of the given table column in the visible leaf columns
      * list of the underlying control.
      */
-    protected abstract int getVisibleLeafIndex(TableColumnBase tc);
+    protected abstract int getVisibleLeafIndex(TableColumnBase<S,T> tc);
     
-    abstract void focus(int row, TableColumnBase tc); //fm.focus(new TreeTablePosition(tableView, row, tableColumn));
-    abstract void edit(int row, TableColumnBase tc); 
+    abstract void focus(int row, TableColumnBase<S,T> tc); //fm.focus(new TreeTablePosition(tableView, row, tableColumn));
+    abstract void edit(int row, TableColumnBase<S,T> tc); 
     
     
     
@@ -187,7 +186,7 @@ public abstract class TableCellBehaviorBase<S, T extends IndexedCell> extends Ce
     private void doSelect(MouseEvent e) {
         // Note that table.select will reset selection
         // for out of bounds indexes. So, need to check
-        final IndexedCell tableCell = getControl();
+        final C tableCell = getControl();
 
         // If the mouse event is not contained within this tableCell, then
         // we don't want to react to it.
@@ -199,13 +198,13 @@ public abstract class TableCellBehaviorBase<S, T extends IndexedCell> extends Ce
         int count = getItemCount();
         if (tableCell.getIndex() >= count) return;
 
-        TableSelectionModel sm = getSelectionModel();
+        TableSelectionModel<S> sm = getSelectionModel();
         if (sm == null) return;
 
         final boolean selected = ! sm.isCellSelectionEnabled() ? isTableRowSelected() : tableCell.isSelected();
         final int row = tableCell.getIndex();
         final int column = getColumn();
-        final TableColumnBase<?,?> tableColumn = getTableColumn();
+        final TableColumnBase<S,T> tableColumn = getTableColumn();
 
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
@@ -283,9 +282,9 @@ public abstract class TableCellBehaviorBase<S, T extends IndexedCell> extends Ce
     }
 
     protected void simpleSelect(MouseEvent e) {
-        TableSelectionModel sm = getSelectionModel();
+        TableSelectionModel<S> sm = getSelectionModel();
         int row = getControl().getIndex();
-        TableColumnBase column = getTableColumn();
+        TableColumnBase<S,T> column = getTableColumn();
         boolean isAlreadySelected = sm.isSelected(row, column);
 
         if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
@@ -311,7 +310,7 @@ public abstract class TableCellBehaviorBase<S, T extends IndexedCell> extends Ce
 
     private int getColumn() {
         if (getSelectionModel().isCellSelectionEnabled()) {
-            TableColumnBase tc = getTableColumn();
+            TableColumnBase<S,T> tc = getTableColumn();
             return getVisibleLeafIndex(tc);
         }
 

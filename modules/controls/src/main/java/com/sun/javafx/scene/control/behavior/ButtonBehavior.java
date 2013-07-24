@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
@@ -39,7 +38,6 @@ import javafx.scene.control.ButtonBase;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
-import com.sun.javafx.PlatformUtil;
 
 /**
  * All of the "button" types (CheckBox, RadioButton, ToggleButton, and Button)

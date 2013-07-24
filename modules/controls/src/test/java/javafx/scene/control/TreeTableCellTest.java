@@ -242,7 +242,7 @@ public class TreeTableCellTest {
         tree.setEditable(true);
         cell.updateTreeTableView(tree);
         cell.updateIndex(1);
-        tree.edit(apples);
+        tree.edit(1, null);
         assertTrue(cell.isEditing());
     }
 
@@ -250,7 +250,7 @@ public class TreeTableCellTest {
         tree.setEditable(true);
         cell.updateTreeTableView(tree);
         cell.updateIndex(1);
-        tree.edit(root);
+        tree.edit(0, null);
         assertFalse(cell.isEditing());
     }
 
@@ -265,7 +265,7 @@ public class TreeTableCellTest {
         cell.updateTreeTableView(tree);
         cell.startEdit();
         assertFalse(cell.isEditing());
-        assertNull(tree.getEditingItem());
+        assertNull(tree.getEditingCell());
     }
 
     @Ignore // TODO file bug!
@@ -274,7 +274,7 @@ public class TreeTableCellTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(1);
         cell.startEdit();
-        assertEquals(apples, tree.getEditingItem());
+        assertEquals(apples, tree.getEditingCell().getTreeItem());
     }
 
     @Ignore // TODO file bug!
@@ -326,13 +326,13 @@ public class TreeTableCellTest {
         assertTrue(called[0]);
     }
 
-    @Test public void afterCommitTreeTableViewEditingIndexIsNegativeOne() {
+    @Test public void afterCommitTreeTableViewEditingCellIsNull() {
         tree.setEditable(true);
         cell.updateTreeTableView(tree);
         cell.updateIndex(1);
         cell.startEdit();
         cell.commitEdit("Watermelon");
-        assertNull(tree.getEditingItem());
+        assertNull(tree.getEditingCell());
         assertFalse(cell.isEditing());
     }
 
@@ -366,7 +366,7 @@ public class TreeTableCellTest {
         cell.updateIndex(1);
         cell.startEdit();
         cell.cancelEdit();
-        assertNull(tree.getEditingItem());
+        assertNull(tree.getEditingCell());
         assertFalse(cell.isEditing());
     }
 

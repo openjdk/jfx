@@ -28,11 +28,11 @@ package com.sun.javafx.scene.control.behavior;
 import java.util.List;
 
 import javafx.scene.Node;
-import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
@@ -48,7 +48,7 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         if (e.getButton() != MouseButton.PRIMARY) return;
         
         TreeTableRow<T> treeTableRow = getControl();
-        TreeItem treeItem = treeTableRow.getTreeItem();
+        TreeItem<T> treeItem = treeTableRow.getTreeItem();
         if (treeItem == null) return;
         
         // if the user has clicked on the disclosure node, we do nothing other
@@ -61,9 +61,9 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
             }
         }
 
-        TreeTableView table = treeTableRow.getTreeTableView();
+        TreeTableView<T> table = treeTableRow.getTreeTableView();
         if (table == null) return;
-        final TableSelectionModel sm = table.getSelectionModel();
+        final TreeTableViewSelectionModel<T> sm = table.getSelectionModel();
         if (sm == null || sm.isCellSelectionEnabled()) return;
         
         final int index = getControl().getIndex();
