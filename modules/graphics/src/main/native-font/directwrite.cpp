@@ -1720,6 +1720,23 @@ JNIEXPORT jint JNICALL OS_NATIVE(GetWeight)
     return (jint)((IDWriteFont *)arg0)->GetWeight();
 }
 
+JNIEXPORT jlong JNICALL OS_NATIVE(GetInformationalStrings)
+    (JNIEnv *env, jclass that, jlong arg0, jint arg1)
+{
+    IDWriteLocalizedStrings* result = NULL;
+    BOOL exists = FALSE;
+    HRESULT hr = ((IDWriteFont *)arg0)->GetInformationalStrings((DWRITE_INFORMATIONAL_STRING_ID)arg1,
+                                                                &result,
+                                                                &exists);
+    return SUCCEEDED(hr) && exists ? (jlong)result : NULL;
+}
+
+JNIEXPORT jint JNICALL OS_NATIVE(GetSimulations)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    return (jint)((IDWriteFont *)arg0)->GetSimulations();
+}
+
 /* IDWriteFontList */
 JNIEXPORT jint JNICALL OS_NATIVE(GetFontCount)
     (JNIEnv *env, jclass that, jlong arg0)

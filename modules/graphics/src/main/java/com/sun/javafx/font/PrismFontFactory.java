@@ -345,10 +345,10 @@ public abstract class PrismFontFactory implements FontFactory {
 
     /* familyName is expected to be a physical font family name.
      */
-    synchronized FontResource getFontResource(String familyName,
-                                              boolean bold,
-                                              boolean italic,
-                                              boolean wantComp) {
+    public synchronized FontResource getFontResource(String familyName,
+                                                     boolean bold,
+                                                     boolean italic,
+                                                     boolean wantComp) {
 
         if (familyName == null || familyName.isEmpty()) {
             return null;
@@ -596,8 +596,8 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
-    synchronized FontResource getFontResource(String name, String file,
-                                              boolean wantComp) {
+    public synchronized FontResource getFontResource(String name, String file,
+                                                     boolean wantComp) {
         FontResource fr = null;
 
         // First check if the font is already known.
