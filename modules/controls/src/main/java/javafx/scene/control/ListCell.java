@@ -325,7 +325,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ListCellSkin(this);
+        return new ListCellSkin<T>(this);
     }
 
 

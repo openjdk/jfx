@@ -913,19 +913,19 @@ public class ListView<T> extends Control {
                 Orientation.VERTICAL) {
 
             @Override
-            public Orientation getInitialValue(ListView node) {
+            public Orientation getInitialValue(ListView<?> node) {
                 // A vertical ListView should remain vertical 
                 return node.getOrientation();
             }
 
             @Override
-            public boolean isSettable(ListView n) {
+            public boolean isSettable(ListView<?> n) {
                 return n.orientation == null || !n.orientation.isBound();
             }
 
             @SuppressWarnings("unchecked") // orientationProperty() is a StyleableProperty<Orientation>
             @Override
-            public StyleableProperty<Orientation> getStyleableProperty(ListView n) {
+            public StyleableProperty<Orientation> getStyleableProperty(ListView<?> n) {
                 return (StyleableProperty<Orientation>)n.orientationProperty();
             }
         };
@@ -935,15 +935,15 @@ public class ListView<T> extends Control {
                                                 SizeConverter.getInstance(),
                                                 Region.USE_COMPUTED_SIZE) {
 
-                @Override public Double getInitialValue(ListView node) {
+                @Override public Double getInitialValue(ListView<?> node) {
                     return node.getFixedCellSize();
                 }
 
-                @Override public boolean isSettable(ListView n) {
+                @Override public boolean isSettable(ListView<?> n) {
                     return n.fixedCellSize == null || !n.fixedCellSize.isBound();
                 }
 
-                @Override public StyleableProperty<Number> getStyleableProperty(ListView n) {
+                @Override public StyleableProperty<Number> getStyleableProperty(ListView<?> n) {
                     return (StyleableProperty<Number>) n.fixedCellSizeProperty();
                 }
             };
@@ -1008,6 +1008,8 @@ public class ListView<T> extends Control {
     public static class EditEvent<T> extends Event {
         private final T newValue;
         private final int editIndex;
+        
+        private static final long serialVersionUID = 20130724L;
 
         /**
          * Common supertype for all edit event types.

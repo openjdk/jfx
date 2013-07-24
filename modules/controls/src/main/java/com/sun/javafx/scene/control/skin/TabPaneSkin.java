@@ -844,7 +844,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             headersRegion.getChildren().add(addToIndex, tabHeaderSkin);
         }
 
-        private List<TabHeaderSkin> removeTab = new ArrayList();
+        private List<TabHeaderSkin> removeTab = new ArrayList<>();
         private void removeTab(Tab tab) {
             TabHeaderSkin tabHeaderSkin = getTabHeaderSkin(tab);
             if (tabHeaderSkin != null) {

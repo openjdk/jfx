@@ -233,7 +233,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                 (!country.isEmpty() &&
                  ControlResources.getNonTranslatableString("DatePicker.showWeekNumbers").contains(country));
             showWeekNumbers = new StyleableBooleanProperty(localizedDefault) {
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<DatePicker,Boolean> getCssMetaData() {
                     return StyleableProperties.SHOW_WEEK_NUMBERS;
                 }
 
