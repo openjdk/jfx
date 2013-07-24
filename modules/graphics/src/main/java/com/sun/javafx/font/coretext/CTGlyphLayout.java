@@ -75,6 +75,7 @@ class CTGlyphLayout extends GlyphLayout {
             composite = (CompositeFontResource)strike.getFontResource();
             strike = ((CompositeStrike)strike).getStrikeSlot(0);
         }
+        float size = strike.getSize();
         String fontName = strike.getFontResource().getFullName();
         long fontRef = ((CTFontStrike)strike).getFontRef();
         long lineRef = createCTLine(fontRef, text, run.getStart(), run.getLength());
@@ -93,11 +94,15 @@ class CTGlyphLayout extends GlyphLayout {
             } else {
                 glyphStart += OS.CTRunGetGlyphCount(runRef);
             }
-            posStart += OS.CTRunGetPositions(runRef, posStart, positions);
+            if (size > 0) {
+                posStart += OS.CTRunGetPositions(runRef, posStart, positions);
+            }
             indicesStart += OS.CTRunGetStringIndices(runRef, indicesStart, indices);
 
         }
-        positions[posStart] = (float)OS.CTLineGetTypographicBounds(lineRef);
+        if (size > 0) {
+            positions[posStart] = (float)OS.CTLineGetTypographicBounds(lineRef);
+        }
         run.shape(glyphCount, glyphs, positions, indices);
         OS.CFRelease(lineRef);
     }

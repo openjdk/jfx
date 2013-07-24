@@ -131,7 +131,7 @@ class PangoGlyphLayout extends GlyphLayout {
             for (int j = 0; j < glyphCount; j++) {
                 info = glyphString.glyphs[j];
                 glyphs[j] = slot | info.glyph;
-                width += info.width;
+                if (size != 0) width += info.width;
                 pos[k] = ((float)width) / OS.PANGO_SCALE;
                 k += 2;
             }

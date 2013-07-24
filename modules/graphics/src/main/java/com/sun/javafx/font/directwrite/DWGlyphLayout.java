@@ -297,6 +297,9 @@ public class DWGlyphLayout extends GlyphLayout {
                                     OS.DWRITE_FONT_STYLE_NORMAL;
         float size = font.getSize();
 
+        /* zero is not a valid size for IDWriteTextFormat */
+        float fontsize = size > 0 ? size : 1;
+
         IDWriteFactory factory = DWFactory.getDWriteFactory();
         /* Note this collection is not correct for embedded fonts,
          * currently this is not a problem since embedded fonts do
@@ -309,7 +312,7 @@ public class DWGlyphLayout extends GlyphLayout {
                                                             weight,
                                                             style,
                                                             stretch,
-                                                            size,
+                                                            fontsize,
                                                             LOCALE);
 
         int start = run.getStart();
@@ -333,7 +336,10 @@ public class DWGlyphLayout extends GlyphLayout {
                 renderer.GetGlyphIndices(glyphs, glyphStart, slot << 24);
                 renderer.GetGlyphOffsets(offsets, glyphStart * 2);
             }
-            renderer.GetGlyphAdvances(advances, glyphStart);
+            if (size > 0) {
+                /* Keep advances to zero if font size is zero */
+                renderer.GetGlyphAdvances(advances, glyphStart);
+            }
             renderer.GetClusterMap(clusterMap, textStart);
             glyphStart += renderer.GetGlyphCount();
             textStart += renderer.GetLength();

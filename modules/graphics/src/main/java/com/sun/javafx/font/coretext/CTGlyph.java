@@ -72,6 +72,8 @@ class CTGlyph implements Glyph {
 
     private void checkBounds() {
         if (bounds != null) return;
+        bounds = new CGRect();
+        if (strike.getSize() == 0) return;
 
         long fontRef = strike.getFontRef();
         int orientation = OS.kCTFontOrientationDefault;
@@ -79,7 +81,6 @@ class CTGlyph implements Glyph {
         OS.CTFontGetAdvancesForGlyphs(fontRef, orientation, (short)glyphCode, size, 1);
         xAdvance = size.width;
         yAdvance = -size.height;   /*Inverted coordinates system */
-        bounds = new CGRect();
 
         if (drawShapes) return;
 

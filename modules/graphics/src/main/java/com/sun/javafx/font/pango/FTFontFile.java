@@ -116,7 +116,13 @@ class FTFontFile extends PrismFontFile {
     }
 
     synchronized void initGlyph(FTGlyph glyph, FTFontStrike strike) {
-        int size26dot6 = (int)(strike.getSize() * 64);
+        float size = strike.getSize();
+        if (size == 0) {
+            glyph.buffer = new byte[0];
+            glyph.bitmap = new FT_Bitmap();
+            return;
+        }
+        int size26dot6 = (int)(size * 64);
         OS.FT_Set_Char_Size(face, 0, size26dot6, 72, 72);
 
         boolean lcd = strike.getAAMode() == FontResource.AA_LCD &&
