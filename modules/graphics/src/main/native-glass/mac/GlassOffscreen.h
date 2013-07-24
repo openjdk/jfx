@@ -45,7 +45,6 @@
 
 @interface GlassOffscreen : NSObject <GlassOffscreenProtocol>
 {
-    NSRecursiveLock             *_lock;
     CGLContextObj               _ctx;
     CGLContextObj               _ctxToRestore;
     
@@ -57,6 +56,8 @@
     GLfloat                     _backgroundG;
     GLfloat                     _backgroundB;
     GLfloat                     _backgroundA;
+
+    CAOpenGLLayer*              _layer;
 }
 
 - (id)initWithContext:(CGLContextObj)ctx;
@@ -67,10 +68,11 @@
 - (void)blit;
 - (GLuint)texture;
 
-// need locks to set contexts, which may differ for OffscreenProtocol bind/unbind and blit
-- (void)lock;
-- (void)unlock;
+- (CAOpenGLLayer*)getLayer;
+- (void)setLayer:(CAOpenGLLayer*)new_layer;
 
 - (GLboolean)isDirty;
+
+- (void)blitFromOffscreen:(GlassOffscreen*) other_offscreen;
 
 @end

@@ -70,7 +70,7 @@
         
         if ([layer isKindOfClass:[GlassLayer3D class]] == YES)
         {
-            GlassOffscreen *offscreen = [((GlassLayer3D*)layer) getOffscreen];
+            GlassOffscreen *offscreen = [((GlassLayer3D*)layer) getGlassOffscreen];
             
             layer = [self->parent->gWindow->view layer];
             if ([layer isKindOfClass:[GlassLayer3D class]] == YES)
