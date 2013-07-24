@@ -62,7 +62,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
 
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 
 /**

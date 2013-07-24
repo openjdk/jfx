@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.property.ObjectProperty;
 import javafx.css.*;
 import javafx.scene.control.Labeled;
 import javafx.scene.paint.Color;

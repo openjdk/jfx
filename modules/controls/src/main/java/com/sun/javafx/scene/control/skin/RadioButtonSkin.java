@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.geometry.HPos;
-import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.control.RadioButton;
 import javafx.scene.layout.StackPane;
 

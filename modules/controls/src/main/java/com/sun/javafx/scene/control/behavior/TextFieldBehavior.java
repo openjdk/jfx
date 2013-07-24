@@ -25,39 +25,29 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.List;
-import java.util.Set;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
-import javafx.geometry.HorizontalDirection;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
-import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
 import static com.sun.javafx.PlatformUtil.*;
-import javafx.css.PseudoClass;
 
 /**
  * Text field behavior.

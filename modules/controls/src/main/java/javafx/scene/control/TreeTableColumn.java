@@ -46,7 +46,6 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.control.TableColumn.SortType;
 import javafx.util.Callback;
 import javafx.css.Styleable;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;

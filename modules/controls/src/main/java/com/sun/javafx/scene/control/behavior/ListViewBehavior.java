@@ -42,12 +42,10 @@ import static javafx.scene.input.KeyCode.PAGE_DOWN;
 import static javafx.scene.input.KeyCode.PAGE_UP;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.TAB;
 import static javafx.scene.input.KeyCode.UP;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;

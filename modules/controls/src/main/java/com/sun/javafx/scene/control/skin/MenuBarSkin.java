@@ -38,7 +38,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
-import javafx.css.Styleable;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;

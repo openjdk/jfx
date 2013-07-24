@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.css.PseudoClass;
-import java.util.List;
-import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;

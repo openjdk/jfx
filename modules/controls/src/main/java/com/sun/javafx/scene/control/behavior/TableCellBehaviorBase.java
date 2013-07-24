@@ -28,7 +28,6 @@ package com.sun.javafx.scene.control.behavior;
 import com.sun.javafx.application.PlatformImpl;
 
 import java.util.List;
-import java.util.WeakHashMap;
 import javafx.application.ConditionalFeature;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;

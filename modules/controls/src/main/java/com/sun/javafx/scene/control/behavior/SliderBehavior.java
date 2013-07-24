@@ -35,13 +35,11 @@ import static javafx.scene.input.KeyCode.KP_RIGHT;
 import static javafx.scene.input.KeyCode.KP_UP;
 import static javafx.scene.input.KeyCode.LEFT;
 import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.TAB;
 import static javafx.scene.input.KeyCode.UP;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;

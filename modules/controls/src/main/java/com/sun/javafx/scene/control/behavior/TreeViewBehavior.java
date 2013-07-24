@@ -37,13 +37,11 @@ import javafx.scene.control.TreeView;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
-import com.sun.javafx.PlatformUtil;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
-import javafx.scene.input.KeyCode;
 import javafx.util.Callback;
 
 public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
