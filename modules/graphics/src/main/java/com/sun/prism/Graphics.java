@@ -27,16 +27,19 @@ package com.sun.prism;
 
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.font.FontStrike;
-import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 
+/**
+ * 
+ */
 public interface Graphics {
 
     public BaseTransform getTransformNoClone();
@@ -52,10 +55,7 @@ public interface Graphics {
     public void translate(float tx, float ty, float tz);
     public void scale(float sx, float sy);
     public void scale(float sx, float sy, float sz);
-    public void setWindowProjViewTx(GeneralTransform3D pvTx);
-    public GeneralTransform3D getWindowProjViewTxNoClone();
 
-    public boolean hasOrthoCamera();
     public void setCamera(PrismCameraImpl camera);
     public PrismCameraImpl getCameraNoClone();
     public void setDepthTest(boolean depthTest);
@@ -72,8 +72,8 @@ public interface Graphics {
     public int getClipRectIndex();
     public float getExtraAlpha();
     public void setExtraAlpha(float extraAlpha);
-    public void setLights(Object lights[]);
-    public Object[] getLights();
+    public void setLights(NGLightBase[] lights);
+    public NGLightBase[] getLights();
     public Paint getPaint();
     public void setPaint(Paint paint);
     public BasicStroke getStroke();
@@ -122,7 +122,7 @@ public interface Graphics {
     public void drawRoundRect(float x, float y, float width, float height, float arcw, float arch);
     public void drawEllipse(float x, float y, float width, float height);
 
-    /*
+    /**
      * Set the node bounds for any node that would like to render objects of a
      * different size to self.
      *
@@ -190,7 +190,8 @@ public interface Graphics {
     public void setState3D(boolean flag);
     public boolean isState3D();
 
-    // TODO: 3D Get better name, and may want to move this into node render method
+    // TODO: 3D Get better name, and may want to move this into node render method.
+    // TODO this is dangerous, must be called *after* setState3D is called, or it won't work
     public void setup3DRendering();
 
 }

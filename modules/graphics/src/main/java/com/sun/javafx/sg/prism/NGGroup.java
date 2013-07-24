@@ -209,7 +209,7 @@ public class NGGroup extends NGNode {
             startPos = children.indexOf(renderRoot.getCurrentNode());
 
             for (int i = 0; i < startPos; ++i) {
-                ((NGNode)children.get(i)).clearDirtyTree();
+                children.get(i).clearDirtyTree();
             }
             if (renderRoot.hasNext()) {
                 renderRoot.next();
@@ -224,7 +224,7 @@ public class NGGroup extends NGNode {
             for (int i = startPos; i < children.size(); i++) {
                 NGNode child;
                 try {
-                    child = (NGNode)children.get(i);
+                    child = children.get(i);
                 } catch (Exception e) {
                     child = null;
                 }
@@ -250,7 +250,7 @@ public class NGGroup extends NGNode {
             }
             Rectangle rclip = PrEffectHelper.getGraphicsClipNoClone(g);
             for (int i = startPos; i < children.size(); i++) {
-                NGNode child = (NGNode)children.get(i);
+                NGNode child = children.get(i);
                 ImageData top = NodeEffectInput.
                     getImageDataForNode(fctx, child, false, transform, rclip);
                 if (bot == null) {
@@ -285,7 +285,7 @@ public class NGGroup extends NGNode {
         }
         int n = (children == null ? 0 : children.size());
         if (n == 1) {
-            return ((NGNode)children.get(0)).hasOverlappingContents();
+            return children.get(0).hasOverlappingContents();
         }
         return (n != 0);
     }

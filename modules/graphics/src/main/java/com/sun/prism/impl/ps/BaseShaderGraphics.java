@@ -25,48 +25,49 @@
 
 package com.sun.prism.impl.ps;
 
-import com.sun.javafx.geom.Rectangle;
-import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.geom.Point2D;
-import com.sun.javafx.geom.Shape;
-import com.sun.javafx.geom.transform.NoninvertibleTransformException;
-import com.sun.prism.RTTexture;
-import com.sun.prism.RenderTarget;
-import com.sun.prism.BasicStroke;
-import com.sun.prism.Texture;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
-import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.font.PrismFontFactory;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.Point2D;
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.AffineBase;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.sg.prism.NGLightBase;
+import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.MaskTextureGraphics;
 import com.sun.prism.MultiTexture;
 import com.sun.prism.PixelFormat;
+import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.ReadbackRenderTarget;
+import com.sun.prism.RenderTarget;
+import com.sun.prism.Texture;
 import com.sun.prism.impl.BaseGraphics;
 import com.sun.prism.impl.GlyphCache;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.VertexBuffer;
-import com.sun.prism.paint.Paint;
-import com.sun.prism.ps.Shader;
-import com.sun.prism.ps.ShaderGraphics;
 import com.sun.prism.impl.ps.BaseShaderContext.MaskType;
-import com.sun.prism.impl.shape.ShapeUtil;
 import com.sun.prism.impl.shape.MaskData;
+import com.sun.prism.impl.shape.ShapeUtil;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
 import com.sun.prism.paint.ImagePattern;
 import com.sun.prism.paint.LinearGradient;
+import com.sun.prism.paint.Paint;
 import com.sun.prism.paint.RadialGradient;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import com.sun.prism.ps.Shader;
+import com.sun.prism.ps.ShaderGraphics;
 
 public abstract class BaseShaderGraphics
     extends BaseGraphics
@@ -118,11 +119,11 @@ public abstract class BaseShaderGraphics
         super.setPaint(paint);
     }
 
-    private Object lights[] = null;
+    private NGLightBase lights[] = null;
 
-    public void setLights(Object lights[]) { this.lights = lights; }
+    public void setLights(NGLightBase lights[]) { this.lights = lights; }
 
-    public final Object[] getLights() { return this.lights; }
+    public final NGLightBase[] getLights() { return this.lights; }
 
     @Override
     public void drawTexture(Texture tex,

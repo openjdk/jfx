@@ -289,11 +289,11 @@ public class TestGraphics extends BaseGraphics {
     }
 
     @Override
-    public void setLights(Object[] lights) {
+    public void setLights(NGLightBase[] lights) {
     }
 
     @Override
-    public Object[] getLights() {
+    public NGLightBase[] getLights() {
         return null;
     }
 }

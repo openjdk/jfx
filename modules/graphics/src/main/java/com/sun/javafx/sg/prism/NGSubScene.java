@@ -97,11 +97,11 @@ public class NGSubScene extends NGNode {
         }
     }
 
-    private Object lights[];
+    private NGLightBase[] lights;
 
-    public Object[] getLights() { return lights; }
+    public NGLightBase[] getLights() { return lights; }
 
-    public void setLights(Object[] lights) {
+    public void setLights(NGLightBase[] lights) {
         this.lights = lights;
     }
 

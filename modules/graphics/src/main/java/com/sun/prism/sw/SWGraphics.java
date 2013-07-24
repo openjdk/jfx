@@ -31,7 +31,6 @@ import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Glyph;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.font.PrismFontFactory;
-import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.Line2D;
 import com.sun.javafx.geom.Point2D;
@@ -41,8 +40,9 @@ import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.pisces.GradientColorMap;
 import com.sun.pisces.PiscesRenderer;
 import com.sun.pisces.RendererBase;
@@ -51,9 +51,9 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
+import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.RenderTarget;
-import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
 import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.PrismSettings;
@@ -207,18 +207,6 @@ final class SWGraphics implements ReadbackGraphics {
 
     public void scale(float sx, float sy, float sz) {
         throw new UnsupportedOperationException("scale3D: unimp");
-    }
-
-    public void setWindowProjViewTx(GeneralTransform3D pvTx) {
-        throw new UnsupportedOperationException("setWindowProjViewTx: unimp");
-    }
-
-    public GeneralTransform3D getWindowProjViewTxNoClone() {
-        throw new UnsupportedOperationException("getWindowProjViewTxNoClone: unimp");
-    }
-
-    public boolean hasOrthoCamera() {
-        throw new UnsupportedOperationException("hasOrthoCamera: unimp");
     }
 
     public void setCamera(PrismCameraImpl camera) {
@@ -1036,12 +1024,12 @@ final class SWGraphics implements ReadbackGraphics {
     }
 
     @Override
-    public void setLights(Object[] lights) {
+    public void setLights(NGLightBase[] lights) {
         // Light are not supported by SW pipeline
     }
 
     @Override
-    public Object[] getLights() {
+    public NGLightBase[] getLights() {
         // Light are not supported by SW pipeline
         return null;
     }

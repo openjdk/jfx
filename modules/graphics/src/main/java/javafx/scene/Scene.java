@@ -2132,7 +2132,7 @@ public class Scene implements EventTarget {
             return;
         }
         inSynchronizer = true;
-        Object peerLights[] = impl_peer.getLights();
+        NGLightBase peerLights[] = impl_peer.getLights();
         if (!lights.isEmpty() || (peerLights != null)) {
             if (lights.isEmpty()) {
                 impl_peer.setLights(null);

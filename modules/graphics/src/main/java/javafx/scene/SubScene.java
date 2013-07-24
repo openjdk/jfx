@@ -750,7 +750,7 @@ public class SubScene extends Node {
             return lightOwnerChanged;
         }
         NGSubScene pgSubScene = impl_getPeer();
-        Object peerLights[] = pgSubScene.getLights();
+        NGLightBase peerLights[] = pgSubScene.getLights();
         if (!lights.isEmpty() || (peerLights != null)) {
             if (lights.isEmpty()) {
                 pgSubScene.setLights(null);

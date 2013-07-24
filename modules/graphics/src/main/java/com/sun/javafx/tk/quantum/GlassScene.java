@@ -29,6 +29,7 @@ import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.View;
 import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKDragGestureListener;
@@ -174,11 +175,11 @@ abstract class GlassScene implements TKScene {
     }
 
     // List of all attached PGLights
-    private Object lights[];
+    private NGLightBase[] lights;
 
-    public Object[] getLights() { return lights; }
+    public NGLightBase[] getLights() { return lights; }
 
-    public void setLights(Object[] lights) { this.lights = lights; }
+    public void setLights(NGLightBase[] lights) { this.lights = lights; }
 
     @Override
     public void setCamera(NGCamera camera) {
