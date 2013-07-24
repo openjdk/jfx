@@ -378,9 +378,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /**
      * This Node is shown to the user when the ComboBox has no content to show.
      * The placeholder node is shown in the ComboBox popup area
-     * when the items list is null or empty. This is different than the 
-     * {@link #emptyTextProperty() emptyText} property, which is shown in the
-     * ComboBox Button / TextField area when there is no user-input value.
+     * when the items list is null or empty.
      * @since JavaFX 8.0
      */
     public final ObjectProperty<Node> placeholderProperty() {
