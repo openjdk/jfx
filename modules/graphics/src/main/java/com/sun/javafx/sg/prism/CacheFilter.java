@@ -44,7 +44,7 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 
-/*
+/**
  * Base implementation of the Node.cache and cacheHint APIs.
  *
  * When all or a portion of the cacheHint becomes enabled, we should try *not*
@@ -62,17 +62,61 @@ import com.sun.scenario.effect.impl.prism.PrFilterContext;
  *
  * Ideally, a simple change to a Node's translation should never regenerate the
  * cached image.
+ *
+ * The CacheFilter is also capable of optimizing the scrolling of the cached contents.
+ * For example, the ScrollView UI Control can define its content area as being cached,
+ * such that when the user scrolls, we can shift the old content area and adjust the
+ * dirty region so that it only includes the "newly exposed" area.
  */
 public class CacheFilter {
+    /**
+     * Defines the state when we're in the midst of scrolling a cached image
+     */
+    private static enum ScrollCacheState {
+        CHECKING_PRECONDITIONS,
+        ENABLED,
+        DISABLED
+    }
+
     // Garbage-reduction variables:
-    private final RectBounds TEMP_BOUNDS = new RectBounds();
+    private static final Rectangle TEMP_RECT = new Rectangle();
     private static final DirtyRegionContainer TEMP_CONTAINER = new DirtyRegionContainer(1);
     private static final Affine3D TEMP_CACHEFILTER_TRANSFORM = new Affine3D();
+    private static final RectBounds TEMP_BOUNDS = new RectBounds();
+    // Fun with floating point
+    private static final double EPSILON = 0.0000001;
+
     private RTTexture tempTexture;
     private double lastXDelta;
     private double lastYDelta;
-    
-    private static final Rectangle TEMP_RECT = new Rectangle();
+    private ScrollCacheState scrollCacheState = ScrollCacheState.CHECKING_PRECONDITIONS;
+    // Note: this ImageData is always created and assumed to be untransformed.
+    private ImageData cachedImageData;
+    private Rectangle cacheBounds = new Rectangle();
+    // Used to draw into the cache
+    private final Affine2D cachedXform = new Affine2D();
+
+    // The scale and rotate used to draw into the cache
+    private double cachedScaleX;
+    private double cachedScaleY;
+    private double cachedRotate;
+
+    private double cachedX;
+    private double cachedY;
+    private NGNode node;
+
+    // Used to draw the cached image to the screen
+    private final Affine2D screenXform = new Affine2D();
+
+    // Cache hint settings
+    private boolean scaleHint;
+    private boolean rotateHint;
+    // We keep this around for the sake of matchesHint
+    private CacheHint cacheHint;
+
+    // Was the last paint unsupported by the cache?  If so, will need to
+    // regenerate the cache next time.
+    private boolean wasUnsupported = false;
 
     /**
      * Compute the dirty region that must be re-rendered after scrolling
@@ -93,46 +137,6 @@ public class CacheFilter {
         }
         return TEMP_RECT;
     }
-
-    private static enum ScrollCacheState {
-        CHECKING_PRECONDITIONS,
-        ENABLED,
-        DISABLED
-    }
-    private ScrollCacheState scrollCacheState = ScrollCacheState.CHECKING_PRECONDITIONS;
-    
-    // Note: this ImageData is always created and assumed to be untransformed.
-    protected ImageData cachedImageData;
-    private Rectangle cacheBounds = new Rectangle();
-    
-
-    // Used to draw into the cache
-    private Affine2D cachedXform = new Affine2D();
-
-    // The scale and rotate used to draw into the cache
-    private double cachedScaleX;
-    private double cachedScaleY;
-    private double cachedRotate;
-
-    protected double cachedX;
-    protected double cachedY;
-    protected NGNode node;
-
-    // Used to draw the cached image to the screen
-    protected Affine2D screenXform = new Affine2D();
-
-    // Cache hint settings
-    private boolean scaleHint;
-    private boolean rotateHint;
-    // We keep this around for the sake of matchesHint
-    private CacheHint cacheHint;
-
-    // Was the last paint unsupported by the cache?  If so, will need to
-    // regenerate the cache next time.
-    private boolean wasUnsupported = false;
-
-    // Fun with floating point
-    private static final double EPSILON = 0.0000001;
 
     protected CacheFilter(NGNode node, CacheHint cacheHint) {
         this.node = node;
@@ -300,7 +304,7 @@ public class CacheFilter {
         lastXDelta = lastYDelta = 0;
     }
 
-    protected void imageDataUnref() {
+    void imageDataUnref() {
         if (tempTexture != null) {
             tempTexture.dispose();
             tempTexture = null;
@@ -471,14 +475,12 @@ public class CacheFilter {
      *
      * From V3Scale() in GGVecLib.c
      */
-    double[] v2scale(double v[], double newLen) {
+    void v2scale(double v[], double newLen) {
         double len = v2length(v);
-        double[] retVal = v;
         if (len != 0) {
             v[0] *= newLen / len;
             v[1] *= newLen / len;
         }
-        return retVal;
     }
 
     /**
@@ -576,7 +578,7 @@ public class CacheFilter {
 
         Filterable implImage = cachedImageData.getUntransformedImage();
         if (implImage == null) {
-            impl_renderNodeToScreen(g, xform);
+            impl_renderNodeToScreen(g);
         } else {
             impl_renderCacheToScreen(g, implImage, mxt, myt);
             implImage.unlock();
@@ -586,9 +588,7 @@ public class CacheFilter {
     /**
      * Create the ImageData for the cached bitmap, with the specified bounds.
      */
-    protected ImageData impl_createImageData(FilterContext fctx,
-                                             Rectangle bounds)
-    {
+    ImageData impl_createImageData(FilterContext fctx, Rectangle bounds) {
         Filterable ret;
         try {
             ret = Effect.getCompatibleImage(fctx,
@@ -609,10 +609,10 @@ public class CacheFilter {
      * @param xform transformation
      * @param dirtyBounds null or dirty rectangle to be rendered
      */
-    protected void impl_renderNodeToCache(ImageData cacheData,
-                                          Rectangle cacheBounds,
-                                          BaseTransform xform,
-                                          Rectangle dirtyBounds) {
+    void impl_renderNodeToCache(ImageData cacheData,
+                                Rectangle cacheBounds,
+                                BaseTransform xform,
+                                Rectangle dirtyBounds) {
         final PrDrawable image = (PrDrawable) cacheData.getUntransformedImage();
 
         if (image != null) {
@@ -644,11 +644,8 @@ public class CacheFilter {
     /**
      * Render the node directly to the screen, in the case that the cached
      * image is unexpectedly null.  See RT-6428.
-     * Note that for Prism, xform is not needed and is ignored.
      */
-    protected void impl_renderNodeToScreen(Object implGraphics,
-                                           BaseTransform xform/* ignored */)
-    {
+    void impl_renderNodeToScreen(Object implGraphics) {
         Graphics g = (Graphics)implGraphics;
         if (node.getEffectFilter() != null) {
             node.renderEffect(g);
@@ -660,9 +657,8 @@ public class CacheFilter {
     /**
      * Render the cached image to the screen, translated by mxt, myt.
      */
-    protected void impl_renderCacheToScreen(Object implGraphics,
-                                            Filterable implImage,
-                                            double mxt, double myt)
+    void impl_renderCacheToScreen(Object implGraphics, Filterable implImage,
+                                  double mxt, double myt)
     {
         Graphics g = (Graphics)implGraphics;
 
@@ -682,7 +678,7 @@ public class CacheFilter {
     /**
      * True if we can use scrolling optimization on this node.
      */
-    protected boolean impl_scrollCacheCapable() {
+    boolean impl_scrollCacheCapable() {
         if (!(node instanceof NGGroup)) {
             return false;
         }
@@ -707,7 +703,7 @@ public class CacheFilter {
      * @param xDelta x-axis delta
      * @param yDelta y-axis delta
      */
-    protected void impl_moveCacheBy(ImageData cachedImageData, double xDelta, double yDelta) {
+    void impl_moveCacheBy(ImageData cachedImageData, double xDelta, double yDelta) {
         PrDrawable drawable = (PrDrawable) cachedImageData.getUntransformedImage();
         final Rectangle r = cachedImageData.getUntransformedBounds();
         int x = (int)Math.max(0, (-xDelta));
@@ -744,7 +740,7 @@ public class CacheFilter {
      * @param bounds rectangle to store bounds to
      * @param xform transformation
      */
-    protected Rectangle impl_getCacheBounds(Rectangle bounds, BaseTransform xform) {
+    Rectangle impl_getCacheBounds(Rectangle bounds, BaseTransform xform) {
         final BaseBounds b = node.getClippedBounds(TEMP_BOUNDS, xform);
         bounds.setBounds(b);
         return bounds;
