@@ -27,33 +27,38 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.prism.Graphics;
 import com.sun.scenario.effect.Effect;
+import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 
 /**
  */
-public abstract class BaseEffectFilter {
+public class EffectFilter {
     private Effect effect;
-    private BaseNodeEffectInput nodeInput;
+    private NodeEffectInput nodeInput;
 
-    protected BaseEffectFilter(Effect effect, NGNode node) {
+    EffectFilter(Effect effect, NGNode node) {
         this.effect = effect;
-        this.nodeInput = createNodeEffectInput(node);
+        this.nodeInput = new NodeEffectInput(node);
     }
 
-    public Effect getEffect() { return effect; }
+    Effect getEffect() { return effect; }
+    NodeEffectInput getNodeInput() { return nodeInput; }
 
-    public BaseNodeEffectInput getNodeInput() { return nodeInput; }
-
-    protected void dispose() {
+    void dispose() {
         effect = null;
         nodeInput.setNode(null);
         nodeInput = null;
     }
 
-    public BaseBounds getBounds(BaseBounds bounds, BaseTransform xform) {
+    BaseBounds getBounds(BaseBounds bounds, BaseTransform xform) {
         BaseBounds r = getEffect().getBounds(xform, nodeInput);
         return bounds.deriveWithNewBounds(r);
     }
 
-    protected abstract BaseNodeEffectInput createNodeEffectInput(NGNode node);
+    void render(Graphics g) {
+        NodeEffectInput nodeInput = getNodeInput();
+        PrEffectHelper.render(getEffect(), g, 0, 0, nodeInput);
+        nodeInput.flush();
+    }
 }
