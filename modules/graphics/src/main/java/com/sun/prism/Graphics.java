@@ -32,8 +32,8 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
-import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 
@@ -56,8 +56,8 @@ public interface Graphics {
     public void scale(float sx, float sy);
     public void scale(float sx, float sy, float sz);
 
-    public void setCamera(PrismCameraImpl camera);
-    public PrismCameraImpl getCameraNoClone();
+    public void setCamera(NGCamera camera);
+    public NGCamera getCameraNoClone();
     public void setDepthTest(boolean depthTest);
     public boolean isDepthTest();
     public void setDepthBuffer(boolean depthBuffer);

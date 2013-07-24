@@ -25,17 +25,18 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.prism.camera.PrismParallelCameraImpl;
+import com.sun.javafx.geom.PickRay;
 
 /**
  * TODO: 3D - Need documentation
  */
 public class NGParallelCamera extends NGCamera {
 
-    public NGParallelCamera() {
-        //TODO: 3D - Need to merge the logic in PrismParallelCameraImpl to NGParallelCamera
-        //      We shouldn't need PrismParallelCameraImpl class in the future.
-        setCameraImpl(new PrismParallelCameraImpl());
-    }
+    public NGParallelCamera() { }
 
+    @Override
+    public PickRay computePickRay(float x, float y, PickRay pickRay) {
+        return PickRay.computeParallelPickRay(x, y, worldTransform, zNear, zFar,
+                pickRay);
+    }
 }

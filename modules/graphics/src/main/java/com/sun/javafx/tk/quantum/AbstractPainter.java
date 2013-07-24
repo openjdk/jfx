@@ -27,7 +27,6 @@ package com.sun.javafx.tk.quantum;
 
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
-
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
@@ -36,21 +35,20 @@ import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.jmx.HighlightRegion;
 import com.sun.javafx.runtime.SystemProperties;
-import com.sun.javafx.sg.prism.NodePath;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGPerspectiveCamera;
+import com.sun.javafx.sg.prism.NodePath;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsResource;
 import com.sun.prism.Presentable;
 import com.sun.prism.ResourceFactory;
-import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
-
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
-import com.sun.prism.camera.PrismCameraImpl;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 abstract class AbstractPainter implements Runnable {
     
@@ -130,9 +128,9 @@ abstract class AbstractPainter implements Runnable {
     
     protected abstract void doPaint(Graphics g, NodePath<NGNode> renderRoot);
     
-    private void adjustPerspective(PrismCameraImpl camera) {
-        if (camera instanceof PrismPerspectiveCameraImpl) {
-            PrismPerspectiveCameraImpl perspCamera = (PrismPerspectiveCameraImpl) camera;
+    private void adjustPerspective(NGCamera camera) {
+        if (camera instanceof NGPerspectiveCamera) {
+            NGPerspectiveCamera perspCamera = (NGPerspectiveCamera) camera;
             scaleTx.setToScale(width / 2.0, -height / 2.0, 1);
             scaleTx.translate(1, -1);
             projTx.mul(scaleTx);
@@ -209,7 +207,7 @@ abstract class AbstractPainter implements Runnable {
             g.setClipRect(null);
             this.doPaint(g, null);
         }
-        
+
         if (PrismSettings.showDirtyRegions) {
             if (PrismSettings.showCull) {
                  root.drawCullBits(g);
@@ -219,15 +217,15 @@ abstract class AbstractPainter implements Runnable {
                 g.setPaint(new Color(1, 0, 0, .3f));
                 for (int i = 0; i < dirtyRegionContainer.size(); i++) {
                     RectBounds reg = dirtyRegionContainer.getDirtyRegion(i);
-                    g.fillRect(reg.getMinX(), reg.getMinY(), 
-                               reg.getWidth(), reg.getHeight());                        
+                    g.fillRect(reg.getMinX(), reg.getMinY(),
+                               reg.getWidth(), reg.getHeight());
                 }
             } else {
                 g.setPaint(new Color(1, 0, 0, .3f));
                 g.fillRect(0, 0, width, height);
             }
         }
-        
+
         if (SystemProperties.isDebug()) {
             Set<HighlightRegion> highlightRegions =
                     Toolkit.getToolkit().getHighlightedRegions();

@@ -1355,7 +1355,7 @@ public final class QuantumToolkit extends Toolkit {
 
                 if (params.root != null) {
                     if (params.camera != null) {
-                        g.setCamera(params.camera.getCameraImpl());
+                        g.setCamera(params.camera);
                     }
                     NGNode ngNode = params.root;
                     ngNode.render(g);

@@ -23,37 +23,17 @@
  * questions.
  */
 
-package com.sun.prism.camera;
+package com.sun.javafx.sg.prism;
 
-public class PrismDefaultCamera extends PrismParallelCameraImpl {
-
-    private static final PrismDefaultCamera theInstance = new PrismDefaultCamera();
-
-    public static PrismDefaultCamera getInstance() {
-        return theInstance;
-    }
-
-    /**
-     * Constructs a orthographic camera object with default parameters.
-     */
-    private PrismDefaultCamera() {}
-
-    @Override
-    public void setNearClip(float nearClip) {
-        super.setNearClip(nearClip);
-    }
-
-    @Override
-    public void setFarClip(float farClip) {
-        super.setFarClip(farClip);
-    }
-
-    public void validate(int w, int h) {
+/**
+ */
+public class NGDefaultCamera extends NGParallelCamera {
+    public void validate(final int w, final int h) {
         if ((w != viewWidth) || (h != viewHeight)) {
             setViewWidth(w);
             setViewHeight(h);
 
-            double halfDepth = (w > h) ? w / 2.0 : h / 2.0;
+            final double halfDepth = (w > h) ? w / 2.0 : h / 2.0;
             projViewTx.ortho(0.0, w, h, 0.0, -halfDepth, halfDepth);
         }
     }

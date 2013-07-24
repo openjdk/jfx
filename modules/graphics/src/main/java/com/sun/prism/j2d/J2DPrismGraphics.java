@@ -46,6 +46,7 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
@@ -56,8 +57,6 @@ import com.sun.prism.RenderTarget;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.j2d.paint.MultipleGradientPaint.ColorSpaceType;
 import com.sun.prism.j2d.paint.RadialGradientPaint;
 import com.sun.prism.paint.Color;
@@ -108,7 +107,6 @@ public class J2DPrismGraphics
         RadialGradientPaint.CycleMethod.REPEAT,
     };
 
-    private static final PrismDefaultCamera DEFAULT_CAMERA = PrismDefaultCamera.getInstance();
     private static final BasicStroke DEFAULT_STROKE =
         new BasicStroke(1.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10.0f);
     private static final Paint DEFAULT_PAINT = Color.WHITE;
@@ -1210,7 +1208,7 @@ public class J2DPrismGraphics
 //        target.getReadbackBuffer().unlock();
     }
 
-    public PrismCameraImpl getCameraNoClone() {
+    public NGCamera getCameraNoClone() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -1238,7 +1236,7 @@ public class J2DPrismGraphics
         setTransform(mxx, myx, mxy, myy, mxt, myt);
     }
 
-    public void setCamera(PrismCameraImpl camera) {
+    public void setCamera(NGCamera camera) {
         // No-op until we support 3D
         /*
         if (!(camera instanceof PrismParallelCameraImpl)) {

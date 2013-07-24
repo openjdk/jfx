@@ -25,6 +25,13 @@
 
 package com.sun.javafx.tk.quantum;
 
+import javafx.application.Platform;
+import javafx.scene.input.InputMethodRequests;
+import javafx.stage.StageStyle;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.View;
@@ -38,19 +45,9 @@ import com.sun.javafx.tk.TKDropTargetListener;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
-import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
-import javafx.application.Platform;
-import javafx.scene.input.InputMethodRequests;
-import javafx.stage.StageStyle;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 abstract class GlassScene implements TKScene {
 
@@ -66,7 +63,7 @@ abstract class GlassScene implements TKScene {
     private TKClipboard dragSourceClipboard;
 
     private NGNode root;
-    private PrismCameraImpl camera;
+    private NGCamera camera;
     private Paint fillPaint;
 
     private boolean entireSceneDirty = true;
@@ -170,7 +167,7 @@ abstract class GlassScene implements TKScene {
         return root;
     }
 
-    PrismCameraImpl getCamera() {
+    NGCamera getCamera() {
         return camera;
     }
 
@@ -183,11 +180,7 @@ abstract class GlassScene implements TKScene {
 
     @Override
     public void setCamera(NGCamera camera) {
-        if (camera != null) {
-            this.camera = camera.getCameraImpl();
-        } else {
-            this.camera = PrismDefaultCamera.getInstance();
-        }
+        this.camera = camera == null ? NGCamera.INSTANCE : camera;
         entireSceneNeedsRepaint();
     }
 

@@ -42,6 +42,7 @@ import com.sun.javafx.geom.transform.AffineBase;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;

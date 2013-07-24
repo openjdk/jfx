@@ -42,6 +42,7 @@ import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.pisces.GradientColorMap;
 import com.sun.pisces.PiscesRenderer;
@@ -55,7 +56,6 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
@@ -209,10 +209,10 @@ final class SWGraphics implements ReadbackGraphics {
         throw new UnsupportedOperationException("scale3D: unimp");
     }
 
-    public void setCamera(PrismCameraImpl camera) {
+    public void setCamera(NGCamera camera) {
     }
 
-    public PrismCameraImpl getCameraNoClone() {
+    public NGCamera getCameraNoClone() {
         throw new UnsupportedOperationException("getCameraNoClone: unimp");
     }
 

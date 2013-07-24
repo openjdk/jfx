@@ -36,14 +36,14 @@ import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.AffineBase;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGPerspectiveCamera;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
@@ -394,7 +394,7 @@ class PaintHelper {
                 inv = at;
             }
 
-            PrismCameraImpl cam = g.getCameraNoClone();
+            NGCamera cam = g.getCameraNoClone();
             Vec3d tmpVec = new Vec3d();
             PickRay tmpvec = new PickRay();
 
@@ -566,7 +566,7 @@ class PaintHelper {
         }
 
         if (!at.is2D()) {
-            PrismCameraImpl cam = g.getCameraNoClone();
+            NGCamera cam = g.getCameraNoClone();
             Vec3d tmpVec = new Vec3d();
             PickRay tmpvec = new PickRay();
 
@@ -769,7 +769,7 @@ class PaintHelper {
         }
 
         if (!at.is2D()) {
-            PrismCameraImpl cam = g.getCameraNoClone();
+            NGCamera cam = g.getCameraNoClone();
             Vec3d tmpVec = new Vec3d();
             PickRay tmpvec = new PickRay();
             PickRay ray00 = project(0,0,cam,at,tmpvec,tmpVec,null);
@@ -891,11 +891,11 @@ class PaintHelper {
     }
 
     static PickRay project(float x, float y,
-                           PrismCameraImpl cam, BaseTransform inv,
+                           NGCamera cam, BaseTransform inv,
                            PickRay tmpray, Vec3d tmpvec, Point2D ret)
     {
         tmpray = cam.computePickRay(x, y, tmpray);
-        return tmpray.project(inv, cam instanceof PrismPerspectiveCameraImpl,
+        return tmpray.project(inv, cam instanceof NGPerspectiveCamera,
                                          tmpvec, ret);
     }
 

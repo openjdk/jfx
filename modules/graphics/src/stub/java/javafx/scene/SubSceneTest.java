@@ -24,13 +24,14 @@
  */
 package javafx.scene;
 
+import javafx.stage.Stage;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.prism.camera.PrismCameraImpl;
-import javafx.stage.Stage;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 public class SubSceneTest {
 
@@ -168,7 +169,7 @@ public class SubSceneTest {
         Toolkit.getToolkit().firePulse();
         assertEquals(40, peer.getCamera().getNearClip(), 0.00001);
 
-        PrismCameraImpl oldCam = peer.getCamera();
+        NGCamera oldCam = peer.getCamera();
         sub.setCamera(new ParallelCamera());
         Toolkit.getToolkit().firePulse();
         // verify owner was removed

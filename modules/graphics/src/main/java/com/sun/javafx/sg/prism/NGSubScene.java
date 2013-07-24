@@ -30,8 +30,6 @@ import com.sun.prism.Graphics;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 
@@ -70,13 +68,9 @@ public class NGSubScene extends NGNode {
         fillPaint = (Paint)paint;
     }
 
-    private PrismCameraImpl camera;
+    private NGCamera camera;
     public void setCamera(NGCamera camera) {
-        if (camera != null) {
-            this.camera = camera.getCameraImpl();
-        } else {
-            this.camera = PrismDefaultCamera.getInstance();
-        }
+        this.camera = camera == null ? NGCamera.INSTANCE : camera;
     }
 
     public void setWidth(float width) {
@@ -231,7 +225,7 @@ public class NGSubScene extends NGNode {
         rtt.unlock();
     }
 
-    public PrismCameraImpl getCamera() {
+    public NGCamera getCamera() {
         return camera;
     }
 }
