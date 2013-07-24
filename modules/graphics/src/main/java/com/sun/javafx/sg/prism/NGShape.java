@@ -29,6 +29,7 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 import com.sun.javafx.geom.Shape;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.PrinterGraphics;
