@@ -762,9 +762,6 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
             if (table == null) {
                 throw new NullPointerException("TableView can not be null");
             }
-            if (pos == null) {
-                throw new NullPointerException("TablePosition can not be null");
-            }
             this.pos = pos;
             this.newValue = newValue;
         }

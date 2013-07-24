@@ -1216,8 +1216,15 @@ public class TableView<S> extends Control {
      * TableView and column are also editable.
      */
     public void edit(int row, TableColumn<S,?> column) {
-        if (!isEditable() || (column != null && ! column.isEditable())) return;
-        setEditingCell(new TablePosition(this, row, column));
+        if (!isEditable() || (column != null && ! column.isEditable())) {
+            return;
+        }
+
+        if (row < 0 && column == null) {
+            setEditingCell(null);
+        } else {
+            setEditingCell(new TablePosition(this, row, column));
+        }
     }
     
     /**

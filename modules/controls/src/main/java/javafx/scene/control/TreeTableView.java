@@ -883,35 +883,7 @@ public class TreeTableView<S> extends Control {
         }
         return focusModel;
     }
-    
-    
-    
-//    // --- Span Model
-//    private ObjectProperty<SpanModel<TreeItem<S>>> spanModel 
-//            = new SimpleObjectProperty<SpanModel<TreeItem<S>>>(this, "spanModel") {
-//
-//        @Override protected void invalidated() {
-//            ObservableList<String> styleClass = getStyleClass();
-//            if (getSpanModel() == null) {
-//                styleClass.remove(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-//            } else if (! styleClass.contains(CELL_SPAN_TABLE_VIEW_STYLE_CLASS)) {
-//                styleClass.add(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-//            }
-//        }
-//    };
-//
-//    public final ObjectProperty<SpanModel<TreeItem<S>>> spanModelProperty() {
-//        return spanModel;
-//    }
-//    public final void setSpanModel(SpanModel<TreeItem<S>> value) {
-//        spanModelProperty().set(value);
-//    }
-//
-//    public final SpanModel<TreeItem<S>> getSpanModel() {
-//        return spanModel.get();
-//    }
-    
-    
+
     
     // --- Tree node count
     /**
@@ -957,6 +929,31 @@ public class TreeTableView<S> extends Control {
         }
         return editable;
     }
+
+
+    // --- Editing Cell
+    private ReadOnlyObjectWrapper<TreeTablePosition<S,?>> editingCell;
+    private void setEditingCell(TreeTablePosition<S,?> value) {
+        editingCellPropertyImpl().set(value);
+    }
+    public final TreeTablePosition<S,?> getEditingCell() {
+        return editingCell == null ? null : editingCell.get();
+    }
+
+    /**
+     * Represents the current cell being edited, or null if
+     * there is no cell being edited.
+     */
+    public final ReadOnlyObjectProperty<TreeTablePosition<S,?>> editingCellProperty() {
+        return editingCellPropertyImpl().getReadOnlyProperty();
+    }
+
+    private ReadOnlyObjectWrapper<TreeTablePosition<S,?>> editingCellPropertyImpl() {
+        if (editingCell == null) {
+            editingCell = new ReadOnlyObjectWrapper<TreeTablePosition<S,?>>(this, "editingCell");
+        }
+        return editingCell;
+    }
     
     
     // --- Editing Item
@@ -977,7 +974,7 @@ public class TreeTableView<S> extends Control {
     /**
      * <p>A property used to represent the TreeItem currently being edited
      * in the TreeTableView, if editing is taking place, or -1 if no item is being edited.
-     * 
+     *
      * <p>It is not possible to set the editing item, instead it is required that
      * you call {@link #edit(javafx.scene.control.TreeItem)}.
      */
@@ -1287,31 +1284,6 @@ public class TreeTableView<S> extends Control {
     }
 
     
-    // --- Editing Cell
-    private ReadOnlyObjectWrapper<TreeTablePosition<S,?>> editingCell;
-    private void setEditingCell(TreeTablePosition<S,?> value) {
-        editingCellPropertyImpl().set(value);
-    }
-    public final TreeTablePosition<S,?> getEditingCell() {
-        return editingCell == null ? null : editingCell.get();
-    }
-
-    /**
-     * Represents the current cell being edited, or null if
-     * there is no cell being edited.
-     */
-    public final ReadOnlyObjectProperty<TreeTablePosition<S,?>> editingCellProperty() {
-        return editingCellPropertyImpl().getReadOnlyProperty();
-    }
-
-    private ReadOnlyObjectWrapper<TreeTablePosition<S,?>> editingCellPropertyImpl() {
-        if (editingCell == null) {
-            editingCell = new ReadOnlyObjectWrapper<TreeTablePosition<S,?>>(this, "editingCell");
-        }
-        return editingCell;
-    }
-
-
     // --- SortMode
     /**
      * Specifies the sort mode to use when sorting the contents of this TreeTableView,
@@ -1451,22 +1423,6 @@ public class TreeTableView<S> extends Control {
         super.layoutChildren();
     }
     
-    
-    /**
-     * Instructs the TreeTableView to begin editing the given TreeItem, if 
-     * the TreeTableView is {@link #editableProperty() editable}. Once
-     * this method is called, if the current 
-     * {@link javafx.scene.control.TreeTableColumn#cellFactoryProperty()} cell factory} is set up to support editing,
-     * the Cell will switch its visual state to enable the user input to take place.
-     * 
-     * @param item The TreeItem in the TreeTableView that should be edited.
-     */
-    public void edit(TreeItem<S> item) {
-        if (!isEditable()) return;
-        setEditingItem(item);
-    }
-    
-
     /**
      * Scrolls the TreeTableView such that the item in the given index is visible to
      * the end user.
@@ -1655,8 +1611,29 @@ public class TreeTableView<S> extends Control {
      * TableView and column are also editable.
      */
     public void edit(int row, TreeTableColumn<S,?> column) {
-        if (!isEditable() || (column != null && ! column.isEditable())) return;
-        setEditingCell(new TreeTablePosition(this, row, column));
+        if (!isEditable() || (column != null && ! column.isEditable())) {
+            return;
+        }
+
+        if (row < 0 && column == null) {
+            setEditingCell(null);
+        } else {
+            setEditingCell(new TreeTablePosition(this, row, column));
+        }
+    }
+
+    /**
+     * Instructs the TreeTableView to begin editing the given TreeItem, if
+     * the TreeTableView is {@link #editableProperty() editable}. Once
+     * this method is called, if the current
+     * {@link javafx.scene.control.TreeTableColumn#cellFactoryProperty()} cell factory} is set up to support editing,
+     * the Cell will switch its visual state to enable the user input to take place.
+     *
+     * @param item The TreeItem in the TreeTableView that should be edited.
+     */
+    public void edit(TreeItem<S> item) {
+        if (!isEditable()) return;
+        setEditingItem(item);
     }
     
     /**

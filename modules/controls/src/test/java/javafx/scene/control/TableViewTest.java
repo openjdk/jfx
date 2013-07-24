@@ -1488,4 +1488,35 @@ public class TableViewTest {
         Toolkit.getToolkit().firePulse();
         assertEquals(0, rt_31200_count);
     }
+
+    @Test public void test_rt_31727() {
+        TableView table = new TableView();
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        TableColumn<String,String> second = new TableColumn<String,String>("second");
+        second.setCellValueFactory(new PropertyValueFactory("lastName"));
+        table.getColumns().addAll(first, second);
+
+        table.setItems(FXCollections.observableArrayList(
+                new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                new Person("Jim", "Bob", "jim.bob@example.com")
+        ));
+
+        table.setEditable(true);
+        first.setEditable(true);
+
+        // do a normal edit
+        table.edit(0, first);
+        TablePosition editingCell = table.getEditingCell();
+        assertNotNull(editingCell);
+        assertEquals(0, editingCell.getRow());
+        assertEquals(0, editingCell.getColumn());
+        assertEquals(first, editingCell.getTableColumn());
+        assertEquals(table, editingCell.getTableView());
+
+        // cancel editing
+        table.edit(-1, null);
+        editingCell = table.getEditingCell();
+        assertNull(editingCell);
+    }
 }

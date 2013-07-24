@@ -2288,4 +2288,37 @@ public class TreeTableViewTest {
         Toolkit.getToolkit().firePulse();
         assertEquals(0, rt_31200_count);
     }
+
+    @Test public void test_rt_31727() {
+        installChildren();
+        treeTableView.setEditable(true);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
+            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures param) {
+                return new ReadOnlyStringWrapper("TEST");
+            }
+        });
+        firstNameCol.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        firstNameCol.setEditable(true);
+
+        treeTableView.getColumns().add(firstNameCol);
+
+        treeTableView.setEditable(true);
+        firstNameCol.setEditable(true);
+
+        // do a normal edit
+        treeTableView.edit(0, firstNameCol);
+        TreeTablePosition editingCell = treeTableView.getEditingCell();
+        assertNotNull(editingCell);
+        assertEquals(0, editingCell.getRow());
+        assertEquals(0, editingCell.getColumn());
+        assertEquals(firstNameCol, editingCell.getTableColumn());
+        assertEquals(treeTableView, editingCell.getTreeTableView());
+
+        // cancel editing
+        treeTableView.edit(-1, null);
+        editingCell = treeTableView.getEditingCell();
+        assertNull(editingCell);
+    }
 }
