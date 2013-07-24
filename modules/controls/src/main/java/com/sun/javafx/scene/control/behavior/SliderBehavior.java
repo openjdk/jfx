@@ -52,7 +52,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.Utils;
-import javafx.css.PseudoClass;
 
 public class SliderBehavior extends BehaviorBase<Slider> {
     /**************************************************************************

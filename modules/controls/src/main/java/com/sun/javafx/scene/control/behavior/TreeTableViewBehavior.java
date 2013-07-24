@@ -214,7 +214,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     }
     
     private void collapseRow() {
-        TreeTableView control = getControl();
+        TreeTableView<T> control = getControl();
         TreeViewBehavior.collapseRow(control.getSelectionModel(), control.getRoot(), control.isShowRoot());
     }
 }

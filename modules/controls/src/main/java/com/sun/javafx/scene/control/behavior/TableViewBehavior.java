@@ -81,7 +81,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
         
         // Fix for RT-16565
         control.selectionModelProperty().addListener(weakSelectionModelListener);
-        TableViewSelectionModel sm = control.getSelectionModel();
+        TableViewSelectionModel<T> sm = control.getSelectionModel();
         if (sm != null) {
             sm.getSelectedCells().addListener(selectedCellsListener);
         }
@@ -119,8 +119,8 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
     }
 
     /** {@inheritDoc}  */
-    @Override protected ObservableList<TablePosition<T,?>> getSelectedCells() {
-        return (ObservableList<TablePosition<T,?>>) (Object) getControl().getSelectionModel().getSelectedCells();
+    @Override protected ObservableList<TablePosition> getSelectedCells() {
+        return getControl().getSelectionModel().getSelectedCells();
     }
 
     /** {@inheritDoc}  */
@@ -134,7 +134,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
     }
 
     /** {@inheritDoc}  */
-    @Override protected TableColumn getVisibleLeafColumn(int index) {
+    @Override protected TableColumn<T,?> getVisibleLeafColumn(int index) {
         return getControl().getVisibleLeafColumn(index);
     }
 
