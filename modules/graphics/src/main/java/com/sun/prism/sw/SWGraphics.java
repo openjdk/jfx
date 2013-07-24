@@ -778,24 +778,19 @@ final class SWGraphics implements ReadbackGraphics {
 
         final Glyph g = strike.getGlyph(gl.getGlyphCode(idx));
         if (drawAsMasks) {
-            final byte pixelData[] = g.getPixelData();
+            final float posX = (float)(x + tx.getMxt() + gl.getPosX(idx));
+            final float posY = (float)(y + tx.getMyt() + gl.getPosY(idx));
+            final float subPosX = getSubPos(posX);
+            final byte pixelData[] = g.getPixelData(subPosX, 0);
             if (pixelData != null) {
+                final int intPosX = g.getOriginX() + (int)posX;
+                final int intPosY = g.getOriginY() + (int)posY;
                 if (g.isLCDGlyph()) {
-                    final double posX = x + tx.getMxt() + g.getOriginX() + gl.getPosX(idx) + 0.5f;
-                    int subPosX = ((int)(3*posX)) % 3;
-                    if (subPosX < 0) {
-                        subPosX += 3;
-                    }
-                    this.pr.fillLCDAlphaMask(pixelData,
-                            (int)posX,
-                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(idx) + 0.5f),
-                            subPosX,
+                    this.pr.fillLCDAlphaMask(pixelData, intPosX, intPosY,
                             g.getWidth(), g.getHeight(),
                             0, g.getWidth());
                 } else {
-                    this.pr.fillAlphaMask(pixelData,
-                            (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(idx) + 0.5f),
-                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(idx) + 0.5f),
+                    this.pr.fillAlphaMask(pixelData, intPosX, intPosY,
                             g.getWidth(), g.getHeight(),
                             0, g.getWidth());
                 }
@@ -805,6 +800,22 @@ final class SWGraphics implements ReadbackGraphics {
             glyphTx.deriveWithTranslation(x + gl.getPosX(idx), y + gl.getPosY(idx));
             this.paintShapePaintAlreadySet(g.getShape(), null, glyphTx);
         }
+    }
+
+    private float getSubPos(float value) {
+        float v = value - ((int)value);
+        if (v != 0f) {
+            if (v < 0.25f) {
+                v = 0;
+            } else if (v < 0.50f) {
+                v = 0.25f;
+            } else if (v < 0.75f) {
+                v = 0.50f;
+            } else {
+                v = 0.75f;
+            }
+        }
+        return v;
     }
 
     public void drawTexture(Texture tex, float x, float y, float w, float h) {
