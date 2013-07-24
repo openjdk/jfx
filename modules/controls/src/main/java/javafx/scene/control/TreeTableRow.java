@@ -225,7 +225,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                         fm.focusedIndexProperty().removeListener(weakFocusedListener);
                     }
 
-                    oldTreeTableView.editingItemProperty().removeListener(weakEditingListener);
+                    oldTreeTableView.editingCellProperty().removeListener(weakEditingListener);
                 }
                 
                 weakTreeTableViewRef = null;
@@ -245,7 +245,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                     fm.focusedIndexProperty().addListener(weakFocusedListener);
                 }
 
-                get().editingItemProperty().addListener(weakEditingListener);
+                get().editingCellProperty().addListener(weakEditingListener);
                 
                 weakTreeTableViewRef = new WeakReference<TreeTableView<T>>(get());
             }
@@ -341,7 +341,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
         if (treeTable != null) {
             // reset the editing item in the TreetView
-            treeTable.edit(null);
+            treeTable.edit(-1, null);
             treeTable.requestFocus();
         }
     }
@@ -363,7 +363,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
         if (treeTable != null) {
             // reset the editing index on the TreeView
-            treeTable.edit(null);
+            treeTable.edit(-1, null);
             treeTable.requestFocus();
         }
     }
@@ -436,8 +436,9 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
     private void updateEditing() {
         if (getIndex() == -1 || getTreeTableView() == null || getTreeItem() == null) return;
-        
-        TreeItem<T> editItem = getTreeTableView().getEditingItem();
+
+        final TreeTablePosition editingCell = getTreeTableView().getEditingCell();
+        final TreeItem<T> editItem = editingCell == null ? null : editingCell.getTreeItem();
         if (! isEditing() && getTreeItem().equals(editItem)) {
             startEdit();
         } else if (isEditing() && ! getTreeItem().equals(editItem)) {
