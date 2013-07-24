@@ -527,6 +527,27 @@ public class ParentTest {
     }
 
     @Test
+    public void requestLayoutTriggersPulse() {
+        final Group root = new Group();
+        final LGroup lroot = new LGroup();
+        lroot.setManaged(false);
+        root.getChildren().add(lroot);
+        final LGroup sub = new LGroup();
+        lroot.getChildren().add(sub);
+
+        toolkit.clearPulseRequested();
+        sub.requestLayout();
+        Scene scene = new Scene(root);
+        assertTrue(toolkit.isPulseRequested());
+        toolkit.clearPulseRequested();
+        root.layout();
+
+        sub.requestLayout();
+
+        assertTrue(toolkit.isPulseRequested());
+    }
+
+    @Test
     public void requestLayoutNotPropagatingDuringLayout() {
         final LGroup lroot = new LGroup();
         lroot.setManaged(false);
