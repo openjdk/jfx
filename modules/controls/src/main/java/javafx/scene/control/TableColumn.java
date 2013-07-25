@@ -624,7 +624,12 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return getClassCssMetaData();
     }                
 
-   public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     * @since JavaFX 8.0
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return Collections.emptyList();
     }                
    
