@@ -43,6 +43,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.util.Callback;
 
 import javafx.collections.WeakListChangeListener;
