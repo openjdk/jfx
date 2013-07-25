@@ -205,7 +205,7 @@ public class TreeView<T> extends Control {
         if (node == null) return -1;
 
         int level = 0;
-        TreeItem parent = node.getParent();
+        TreeItem<?> parent = node.getParent();
         while (parent != null) {
             level++;
             parent = parent.getParent();
@@ -240,14 +240,14 @@ public class TreeView<T> extends Control {
      * @param root The node to be the root in this TreeView.
      */
     public TreeView(TreeItem<T> root) {
-        getStyleClass().setAll("tree-view");
+        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
 
         setRoot(root);
         updateExpandedItemCount(root);
 
         // install default selection and focus models - it's unlikely this will be changed
         // by many users.
-        MultipleSelectionModel sm = new TreeViewBitSetSelectionModel<T>(this);
+        MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<T>(this);
         setSelectionModel(sm);
         setFocusModel(new TreeViewFocusModel<T>(this));
     }
@@ -279,7 +279,7 @@ public class TreeView<T> extends Control {
         @Override public void handle(TreeModificationEvent<T> e) {
             // this forces layoutChildren at the next pulse, and therefore
             // updates the item count if necessary
-            EventType eventType = e.getEventType();
+            EventType<?> eventType = e.getEventType();
             boolean match = false;
             while (eventType != null) {
                 if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
@@ -296,7 +296,7 @@ public class TreeView<T> extends Control {
         }
     };
     
-    private WeakEventHandler weakRootEventListener;
+    private WeakEventHandler<TreeModificationEvent<T>> weakRootEventListener;
     
     
     /***************************************************************************
@@ -360,7 +360,7 @@ public class TreeView<T> extends Control {
 
             TreeItem<T> root = getRoot();
             if (root != null) {
-                weakRootEventListener = new WeakEventHandler(rootEvent);
+                weakRootEventListener = new WeakEventHandler<>(rootEvent);
                 getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootEventListener);
                 weakOldItem = new WeakReference<TreeItem<T>>(root);
             }
@@ -871,7 +871,7 @@ public class TreeView<T> extends Control {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TreeViewSkin(this);
+        return new TreeViewSkin<T>(this);
     }
     
     /***************************************************************************
@@ -880,7 +880,7 @@ public class TreeView<T> extends Control {
      *                                                                         *
      **************************************************************************/  
     
-    private void updateExpandedItemCount(TreeItem treeItem) {
+    private void updateExpandedItemCount(TreeItem<T> treeItem) {
         setExpandedItemCount(TreeUtil.updateExpandedItemCount(treeItem, expandedItemCountDirty, isShowRoot()));
         expandedItemCountDirty = false;
     }
@@ -901,7 +901,7 @@ public class TreeView<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    private static final String DEFAULT_STYLE_CLASS = "table-view";
+    private static final String DEFAULT_STYLE_CLASS = "tree-view";
 
     /** @treatAsPrivate */
     private static class StyleableProperties {
@@ -910,15 +910,15 @@ public class TreeView<T> extends Control {
                                                      SizeConverter.getInstance(),
                                                      Region.USE_COMPUTED_SIZE) {
 
-                    @Override public Double getInitialValue(TreeView node) {
+                    @Override public Double getInitialValue(TreeView<?> node) {
                         return node.getFixedCellSize();
                     }
 
-                    @Override public boolean isSettable(TreeView n) {
+                    @Override public boolean isSettable(TreeView<?> n) {
                         return n.fixedCellSize == null || !n.fixedCellSize.isBound();
                     }
 
-                    @Override public StyleableProperty<Number> getStyleableProperty(TreeView n) {
+                    @Override public StyleableProperty<Number> getStyleableProperty(TreeView<?> n) {
                         return (StyleableProperty<Number>) n.fixedCellSizeProperty();
                     }
                 };
@@ -1008,7 +1008,7 @@ public class TreeView<T> extends Control {
          * Returns the TreeView upon which the edit took place.
          */
         @Override public TreeView<T> getSource() {
-            return (TreeView) super.getSource();
+            return (TreeView<T>) super.getSource();
         }
 
         /**
@@ -1066,12 +1066,12 @@ public class TreeView<T> extends Control {
             }
             
             if (newRoot != null) {
-                weakTreeItemListener = new WeakEventHandler(treeItemListener);
+                weakTreeItemListener = new WeakEventHandler<>(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
         }
         
-        private ChangeListener rootPropertyListener = new ChangeListener<TreeItem<T>>() {
+        private ChangeListener<TreeItem<T>> rootPropertyListener = new ChangeListener<TreeItem<T>>() {
             @Override public void changed(ObservableValue<? extends TreeItem<T>> observable, 
                     TreeItem<T> oldValue, TreeItem<T> newValue) {
                 clearSelection();
@@ -1158,10 +1158,10 @@ public class TreeView<T> extends Control {
             }
         };
         
-        private WeakChangeListener weakRootPropertyListener =
-                new WeakChangeListener(rootPropertyListener);
+        private WeakChangeListener<TreeItem<T>> weakRootPropertyListener =
+                new WeakChangeListener<>(rootPropertyListener);
         
-        private WeakEventHandler weakTreeItemListener;
+        private WeakEventHandler<TreeModificationEvent<T>> weakTreeItemListener;
 
 
         /***********************************************************************
@@ -1271,15 +1271,15 @@ public class TreeView<T> extends Control {
             updateTreeEventListener(null, treeView.getRoot());
         }
         
-        private final ChangeListener rootPropertyListener = new ChangeListener<TreeItem<T>>() {
+        private final ChangeListener<TreeItem<T>> rootPropertyListener = new ChangeListener<TreeItem<T>>() {
             @Override
             public void changed(ObservableValue<? extends TreeItem<T>> observable, TreeItem<T> oldValue, TreeItem<T> newValue) {
                 updateTreeEventListener(oldValue, newValue);
             }
         };
                 
-        private final WeakChangeListener weakRootPropertyListener =
-                new WeakChangeListener(rootPropertyListener);
+        private final WeakChangeListener<TreeItem<T>> weakRootPropertyListener =
+                new WeakChangeListener<>(rootPropertyListener);
         
         private void updateTreeEventListener(TreeItem<T> oldRoot, TreeItem<T> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {
@@ -1287,7 +1287,7 @@ public class TreeView<T> extends Control {
             }
             
             if (newRoot != null) {
-                weakTreeItemListener = new WeakEventHandler(treeItemListener);
+                weakTreeItemListener = new WeakEventHandler<>(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
         }
@@ -1313,7 +1313,7 @@ public class TreeView<T> extends Control {
                     }
                 } else if (e.wasAdded()) {
                     for (int i = 0; i < e.getAddedChildren().size(); i++) {
-                        TreeItem item = e.getAddedChildren().get(i);
+                        TreeItem<T> item = e.getAddedChildren().get(i);
                         row = treeView.getRow(item);
                         
                         if (item != null && row <= getFocusedIndex()) {
@@ -1323,7 +1323,7 @@ public class TreeView<T> extends Control {
                     }
                 } else if (e.wasRemoved()) {
                     for (int i = 0; i < e.getRemovedChildren().size(); i++) {
-                        TreeItem item = e.getRemovedChildren().get(i);
+                        TreeItem<T> item = e.getRemovedChildren().get(i);
                         if (item != null && item.equals(getFocusedItem())) {
                             focus(-1);
                             return;
@@ -1347,7 +1347,7 @@ public class TreeView<T> extends Control {
             }
         };
         
-        private WeakEventHandler weakTreeItemListener;
+        private WeakEventHandler<TreeModificationEvent<T>> weakTreeItemListener;
 
         @Override protected int getItemCount() {
             return treeView == null ? -1 : treeView.getExpandedItemCount();

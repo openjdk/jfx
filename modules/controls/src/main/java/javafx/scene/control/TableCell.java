@@ -103,8 +103,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * be mutated, we create this observer here, and add/remove it from the
      * storeTableView method.
      */
-    private ListChangeListener<TablePosition> selectedListener = new ListChangeListener<TablePosition>() {
-        @Override public void onChanged(Change<? extends TablePosition> c) {
+    private ListChangeListener<TablePosition<S,?>> selectedListener = new ListChangeListener<TablePosition<S,?>>() {
+        @Override public void onChanged(Change<? extends TablePosition<S,?>> c) {
             updateSelection();
         }
     };
@@ -130,8 +130,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     };
     
-    private ListChangeListener<TableColumn<S,T>> visibleLeafColumnsListener = new ListChangeListener<TableColumn<S,T>>() {
-        @Override public void onChanged(Change<? extends TableColumn<S,T>> c) {
+    private ListChangeListener<TableColumn<S,?>> visibleLeafColumnsListener = new ListChangeListener<TableColumn<S,?>>() {
+        @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
             updateColumnIndex();
         }
     };
@@ -150,16 +150,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     };
     
-    private final WeakListChangeListener weakSelectedListener = 
-            new WeakListChangeListener(selectedListener);
+    private final WeakListChangeListener<TablePosition<S,?>> weakSelectedListener = 
+            new WeakListChangeListener<>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = 
             new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weaktableRowUpdateObserver = 
             new WeakInvalidationListener(tableRowUpdateObserver);
     private final WeakInvalidationListener weakEditingListener = 
             new WeakInvalidationListener(editingListener);
-    private final WeakListChangeListener weakVisibleLeafColumnsListener =
-            new WeakListChangeListener(visibleLeafColumnsListener);
+    private final WeakListChangeListener<TableColumn<S,?>> weakVisibleLeafColumnsListener =
+            new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakColumnStyleClassListener =
             new WeakListChangeListener<String>(columnStyleClassListener);
 
@@ -213,8 +213,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
             tableView = new ReadOnlyObjectWrapper<TableView<S>>() {
                 private WeakReference<TableView<S>> weakTableViewRef;
                 @Override protected void invalidated() {
-                    TableView.TableViewSelectionModel sm;
-                    TableViewFocusModel fm;
+                    TableView.TableViewSelectionModel<S> sm;
+                    TableViewFocusModel<S> fm;
                     
                     if (weakTableViewRef != null) {
                         cleanUpTableViewListeners(weakTableViewRef.get());

@@ -71,7 +71,7 @@ class DatePickerHijrahContent extends DatePickerContent {
         hijrahMonthYearLabel = new Label();
         hijrahMonthYearLabel.getStyleClass().add("secondary-label");
         monthYearPane.setBottom(hijrahMonthYearLabel);
-        monthYearPane.setAlignment(hijrahMonthYearLabel, Pos.CENTER);
+        BorderPane.setAlignment(hijrahMonthYearLabel, Pos.CENTER);
 
         return monthYearPane;
     }
