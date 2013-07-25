@@ -1655,26 +1655,45 @@ fail:
 JNIEXPORT jint JNICALL OS_NATIVE(Analyze)
     (JNIEnv *env, jclass that, jlong arg0, jbooleanArray arg1, jintArray arg2, jintArray arg3, jintArray arg4)
 {
-    HRESULT hr = E_FAIL;
-    jboolean *lparg1 = NULL;
-    jint *lparg2 = NULL;
-    jint *lparg3 = NULL;
-    jint *lparg4 = NULL;
+    if (arg0 == NULL) return E_FAIL;
+    IDWriteFontFile* fontFile = (IDWriteFontFile*)arg0;
+    BOOL isSupportedFontType;
+    DWRITE_FONT_FILE_TYPE fontFileType;
+    DWRITE_FONT_FACE_TYPE fontFaceType;
+    UINT32 numberOfFaces;
+    HRESULT hr = fontFile->Analyze(&isSupportedFontType,
+                                   &fontFileType,
+                                   &fontFaceType,
+                                   &numberOfFaces);
 
-    if (arg1) if ((lparg1 = env->GetBooleanArrayElements(arg1, NULL)) == NULL) goto fail;
-    if (arg2) if ((lparg2 = env->GetIntArrayElements(arg2, NULL)) == NULL) goto fail;
-    if (arg3) lparg3 = env->GetIntArrayElements(arg3, NULL); /* Optional */
-    if (arg4) if ((lparg4 = env->GetIntArrayElements(arg4, NULL)) == NULL) goto fail;
-
-    hr = ((IDWriteFontFile *)arg0)->Analyze((BOOL *)lparg1,
-                                            (DWRITE_FONT_FILE_TYPE *)lparg2,
-                                            (DWRITE_FONT_FACE_TYPE *)lparg3,
-                                            (UINT32 *)lparg4);
-fail:
-    if (arg1 && lparg1) env->ReleaseBooleanArrayElements(arg1, lparg1, 0);
-    if (arg2 && lparg2) env->ReleaseIntArrayElements(arg2, lparg2, 0);
-    if (arg3 && lparg3) env->ReleaseIntArrayElements(arg3, lparg3, 0);
-    if (arg4 && lparg4) env->ReleaseIntArrayElements(arg4, lparg4, 0);
+    if (arg1 && env->GetArrayLength(arg1) == 1) {
+        jboolean *lparg1 = env->GetBooleanArrayElements(arg1, NULL);
+        if (lparg1) {
+            lparg1[0] = isSupportedFontType;
+            env->ReleaseBooleanArrayElements(arg1, lparg1, 0);
+        }
+    }
+    if (arg2 && env->GetArrayLength(arg2) == 1) {
+        jint *lparg2 = env->GetIntArrayElements(arg2, NULL);
+        if (lparg2) {
+            lparg2[0] = fontFileType;
+            env->ReleaseIntArrayElements(arg2, lparg2, 0);
+        }
+    }
+    if (arg3 && env->GetArrayLength(arg3) == 1) {
+        jint *lparg3 = env->GetIntArrayElements(arg3, NULL);
+        if (lparg3) {
+            lparg3[0] = fontFaceType;
+            env->ReleaseIntArrayElements(arg3, lparg3, 0);
+        }
+    }
+    if (arg4 && env->GetArrayLength(arg4) == 1) {
+        jint *lparg4 = env->GetIntArrayElements(arg4, NULL);
+        if (lparg4) {
+            lparg4[0] = numberOfFaces;
+            env->ReleaseIntArrayElements(arg4, lparg4, 0);
+        }
+    }
     return hr;
 }
 
