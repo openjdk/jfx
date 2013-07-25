@@ -40,8 +40,12 @@
 
 + (NSDragOperation)mapJavaMaskToNsOperation:(jint)mask;
 + (jint)mapNsOperationToJavaMask:(NSDragOperation)operation;
++ (jint)getRecommendedActionForMask:(NSDragOperation)operation;
 
 + (void)setMask:(jint)mask;
 + (jint)getMask;
+
++ (jint)getSupportedActions;
++ (void)setSupportedActions:(jint)actions;
 
 @end

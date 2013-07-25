@@ -38,6 +38,7 @@
 
 static NSObject<GlassDragSourceDelegate> *gDelegate = nil;
 static jint gMask = com_sun_glass_ui_Clipboard_ACTION_NONE;
+static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
 
 @implementation GlassDragSource
 
@@ -54,6 +55,7 @@ static jint gMask = com_sun_glass_ui_Clipboard_ACTION_NONE;
     
     if ([NSThread isMainThread] == YES)
     {
+        supportedActions = mask;
         NSDragOperation operation = [GlassDragSource mapJavaMaskToNsOperation:mask];        
         if (operation != NSDragOperationNone)
         {
@@ -74,77 +76,75 @@ static jint gMask = com_sun_glass_ui_Clipboard_ACTION_NONE;
 + (NSDragOperation)mapJavaMaskToNsOperation:(jint)mask
 {
     LOG("GlassDragSource:mapJavaMaskToNsOperation: %d", mask);
-    
+
     NSDragOperation operation = NSDragOperationNone;
-    if (mask == com_sun_glass_ui_Clipboard_ACTION_NONE)
+  
+    if ((com_sun_glass_ui_Clipboard_ACTION_COPY&mask)==com_sun_glass_ui_Clipboard_ACTION_COPY)
     {
-        LOG("   com_sun_glass_ui_Clipboard_ACTION_NONE");
-        operation = NSDragOperationNone;
+        LOG("   masked com_sun_glass_ui_Clipboard_ACTION_COPY");
+        operation |= NSDragOperationCopy;
     }
-    else if (mask == com_sun_glass_ui_Clipboard_ACTION_COPY)
+    
+    if ((com_sun_glass_ui_Clipboard_ACTION_MOVE&mask)==com_sun_glass_ui_Clipboard_ACTION_MOVE)
     {
-        LOG("   com_sun_glass_ui_Clipboard_ACTION_COPY");
-        operation = NSDragOperationCopy;
+        LOG("   masked com_sun_glass_ui_Clipboard_ACTION_MOVE");
+        operation |= NSDragOperationMove;
     }
-    else if (mask == com_sun_glass_ui_Clipboard_ACTION_MOVE)
+    
+    if ((com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE&mask)==com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE)
     {
-        LOG("   com_sun_glass_ui_Clipboard_ACTION_MOVE");
-        operation = NSDragOperationMove;
+        LOG("   masked com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE");
+        operation |= NSDragOperationCopy|NSDragOperationMove;
     }
-    else if (mask == com_sun_glass_ui_Clipboard_ACTION_REFERENCE)
+
+    if ((com_sun_glass_ui_Clipboard_ACTION_REFERENCE&mask)==com_sun_glass_ui_Clipboard_ACTION_REFERENCE)
     {
-        LOG("   com_sun_glass_ui_Clipboard_ACTION_REFERENCE");
-        operation = NSDragOperationLink;
+        LOG("   masked com_sun_glass_ui_Clipboard_ACTION_REFERENCE");
+        operation |= NSDragOperationLink;
     }
-    else if (mask == com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE)
+
+    if ((com_sun_glass_ui_Clipboard_ACTION_ANY&mask)==com_sun_glass_ui_Clipboard_ACTION_ANY)
     {
-        LOG("   com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE");
-        operation = NSDragOperationCopy|NSDragOperationMove;
-    }
-    else if (mask == com_sun_glass_ui_Clipboard_ACTION_ANY)
-    {
-        LOG("   com_sun_glass_ui_Clipboard_ACTION_ANY");
-        operation = NSDragOperationEvery;
-    }
-    else
-    {
-        if ((com_sun_glass_ui_Clipboard_ACTION_COPY&mask)==com_sun_glass_ui_Clipboard_ACTION_COPY)
-        {
-            LOG("   masked com_sun_glass_ui_Clipboard_ACTION_COPY");
-            operation |= NSDragOperationCopy;
-        }
-        
-        if ((com_sun_glass_ui_Clipboard_ACTION_MOVE&mask)==com_sun_glass_ui_Clipboard_ACTION_MOVE)
-        {
-            LOG("   masked com_sun_glass_ui_Clipboard_ACTION_MOVE");
-            operation |= NSDragOperationMove;
-        }
-        
-        if ((com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE&mask)==com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE)
-        {
-            LOG("   masked com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE");
-            operation |= NSDragOperationCopy|NSDragOperationMove;
-        }
-        
-        if ((com_sun_glass_ui_Clipboard_ACTION_REFERENCE&mask)==com_sun_glass_ui_Clipboard_ACTION_REFERENCE)
-        {
-            LOG("   masked com_sun_glass_ui_Clipboard_ACTION_REFERENCE");
-            operation |= NSDragOperationLink;
-        }
-        
-        if ((com_sun_glass_ui_Clipboard_ACTION_ANY&mask)==com_sun_glass_ui_Clipboard_ACTION_ANY)
-        {
-            LOG("   masked com_sun_glass_ui_Clipboard_ACTION_ANY");
-            operation |= NSDragOperationEvery;
-        }
+        LOG("   masked com_sun_glass_ui_Clipboard_ACTION_ANY");
+        operation |= NSDragOperationEvery;
     }
     return operation;
 }
 
-// Return a recommendedAction (one), but the input is a mask
 + (jint)mapNsOperationToJavaMask:(NSDragOperation)operation
 {
     LOG("GlassDragSource:mapNsOperationToJavaMask: %d", operation);
+
+    jint mask = com_sun_glass_ui_Clipboard_ACTION_NONE;
+    if ((operation&NSDragOperationEvery)==NSDragOperationEvery
+       || (operation & NSDragOperationGeneric))
+    {
+        mask |= com_sun_glass_ui_Clipboard_ACTION_ANY;
+    }
+    if (operation & NSDragOperationLink)
+    {
+        mask |= com_sun_glass_ui_Clipboard_ACTION_REFERENCE;
+    }
+    if (  (operation & NSDragOperationCopy)
+       && (operation & NSDragOperationMove))
+    {
+        mask |= com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE;
+    }
+    else if (operation & NSDragOperationCopy)
+    {
+        mask |= com_sun_glass_ui_Clipboard_ACTION_COPY;
+    }
+    else if (operation & NSDragOperationMove)
+    {
+        mask |= com_sun_glass_ui_Clipboard_ACTION_MOVE;
+    }
+    return mask;
+}
+
+// Return a recommendedAction (one), but the input is a mask
++ (jint)getRecommendedActionForMask:(NSDragOperation)operation
+{
+    LOG("GlassDragSource:getRecommendedActionForMask: %d", operation);
     
     switch (operation) {
         case NSDragOperationNone: 
@@ -185,6 +185,16 @@ static jint gMask = com_sun_glass_ui_Clipboard_ACTION_NONE;
     LOG("GlassDragSource:getMask");
     
     return gMask;
+}
+
++ (jint)getSupportedActions
+{
+    return supportedActions;
+}
+
++ (void)setSupportedActions:(jint)actions
+{
+    supportedActions = actions;
 }
 
 @end

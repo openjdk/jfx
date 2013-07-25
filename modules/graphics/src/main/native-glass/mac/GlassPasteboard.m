@@ -788,7 +788,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getAllowedOpera
         if (pasteboard == [NSPasteboard pasteboardWithName:NSDragPboard])
         {
             // retrieve the mask for DnD
-            mask = [GlassDragSource getMask];
+            mask = [GlassDragSource getSupportedActions];
         }
         else
         {
