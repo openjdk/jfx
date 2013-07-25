@@ -74,7 +74,8 @@ class SceneState extends PresentableState {
      *
      * @return true if drawing can occur; false otherwise
      *
-     * May be called on any thread.
+     * May be called on any thread. Must be called under the
+     * render lock.
      */
     public boolean isValid() {
         return getWindow() != null && getView() != null && !isViewClosed() && getWidth() > 0 && getHeight() > 0;
@@ -83,7 +84,8 @@ class SceneState extends PresentableState {
     /** Updates the state of this object based on the current
      * state of the glass scene.
      *
-     * May only be called from the event thread.
+     * May only be called from the event thread. Must be called
+     * under the render lock.
      */
     public void update() {
         // When the state is created, the platform view has not yet been

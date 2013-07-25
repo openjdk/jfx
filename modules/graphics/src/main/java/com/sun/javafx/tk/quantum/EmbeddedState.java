@@ -51,8 +51,7 @@ final class EmbeddedState extends SceneState {
         if (isValid()) {
             EmbeddedScene escene = (EmbeddedScene) scene;
             // Pixels are always stored in an IntBuffer for uploading
-            escene.textureBits = (IntBuffer) pixels.getPixels();
-            escene.host.repaint();
+            escene.uploadPixels((IntBuffer)pixels.getPixels());
             if (uploadCount != null) {
                 uploadCount.decrementAndGet();
             }
@@ -68,7 +67,7 @@ final class EmbeddedState extends SceneState {
      */
     public boolean isValid() {
         EmbeddedScene escene = (EmbeddedScene) scene;
-        return escene != null && escene.host != null && getWidth() > 0 && getHeight() > 0;
+        return escene != null && getWidth() > 0 && getHeight() > 0;
     }
 
     /** Updates the state of this object based on the current state of its

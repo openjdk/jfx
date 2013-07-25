@@ -46,7 +46,7 @@ import com.sun.javafx.tk.Toolkit;
 final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     // TODO: synchronize access to embedder from ET and RT
-    HostInterface host;
+    private HostInterface host;
 
     private UploadingPainter        painter;
     private PaintRenderJob          paintRenderJob;
@@ -114,7 +114,8 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     // Called by EmbeddedPainter on the render thread under renderLock
-    void sceneRepainted() {
+    void uploadPixels(IntBuffer pixels) {
+        textureBits = pixels;
         if (host != null) {
             host.repaint();
         }
