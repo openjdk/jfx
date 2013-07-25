@@ -1746,7 +1746,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     cell = pile.removeFirst();
                 }
             } else {
-                cell = createCell.call(this);
+                cell = getCreateCell().call(this);
                 cell.getProperties().put(NEW_CELL, null);
             }
         }
@@ -2029,11 +2029,27 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
+            // Now throw away any cells that don't fit
+            cull();
+
             // Add any necessary leading cells
             T firstCell = cells.getFirst();
-            int firstIndex = getCellIndex(firstCell);
-            double prevIndexSize = getCellLength(firstIndex - 1);
-            addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
+            if (firstCell != null) {
+                int firstIndex = getCellIndex(firstCell);
+                double prevIndexSize = getCellLength(firstIndex - 1);
+                addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
+            } else {
+                int currentIndex = computeCurrentIndex();
+
+                // The distance from the top of the viewport to the top of the
+                // cell for the current index.
+                double offset = -computeViewportOffset(getPosition());
+
+                // Add all the leading and trailing cells (the call to add leading
+                // cells will add the current cell as well -- that is, the one that
+                // represents the current position on the mapper).
+                addLeadingCells(currentIndex, offset);
+            }
 
             // Starting at the tail of the list, loop adding cells until
             // all the space on the table is filled up. We want to make
@@ -2057,9 +2073,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     setPosition(1.0f);
                 }
             }
-
-            // Now throw away any cells that don't fit
-            cull();
         }
 
         // Finally, update the scroll bars
