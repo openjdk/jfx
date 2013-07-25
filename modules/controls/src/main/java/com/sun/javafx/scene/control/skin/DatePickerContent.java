@@ -160,7 +160,22 @@ public class DatePickerContent extends VBox {
 
         getChildren().add(createMonthYearPane());
 
-        gridPane = new GridPane();
+        gridPane = new GridPane() {
+            @Override protected double computePrefWidth(double height) {
+                final double width = super.computePrefWidth(height);
+
+                // RT-30903: Make sure width snaps to pixel when divided by
+                // number of columns. GridPane doesn't do this with percentage
+                // width constraints. See GridPane.adjustColumnWidths().
+                final int nCols = daysPerWeek + (datePicker.isShowWeekNumbers() ? 1 : 0);
+                final double snaphgap = snapSpace(getHgap());
+                final double left = snapSpace(getInsets().getLeft());
+                final double right = snapSpace(getInsets().getRight());
+                final double hgaps = snaphgap * (nCols - 1);
+                final double contentWidth = width - left - right - hgaps;
+                return ((snapSize(contentWidth / nCols)) * nCols) + left + right + hgaps;
+            }
+        };
         gridPane.setFocusTraversable(true);
         gridPane.getStyleClass().add("calendar-grid");
         gridPane.setVgap(-1);
