@@ -74,6 +74,8 @@ public class DisplayShelfApp extends Application {
         DisplayShelf displayShelf = new DisplayShelf(images);
         displayShelf.setPrefSize(WIDTH, HEIGHT);
         
+        String displayShelfCss = DisplayShelfApp.class.getResource("DisplayShelf.css").toExternalForm();
+        displayShelf.getStylesheets().add(displayShelfCss);       
         return displayShelf;
     }
       
