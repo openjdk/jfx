@@ -51,7 +51,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     private UploadingPainter        painter;
     private PaintRenderJob          paintRenderJob;
 
-    IntBuffer textureBits;
+    volatile IntBuffer textureBits;
 
     int width;
     int height;
