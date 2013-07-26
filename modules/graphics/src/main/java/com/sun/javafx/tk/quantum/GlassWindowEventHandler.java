@@ -67,14 +67,14 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 stage.stageListener.changedLocation(window.getX(), window.getY());
                 //We need to sync the new x,y for painting
                 if (!Application.GetApplication().hasWindowManager()) {
-                    AbstractPainter.renderLock.lock();
+                    ViewPainter.renderLock.lock();
                     try { 
                         GlassScene scene = stage.getScene();
                         if (scene != null) {
                             scene.updateSceneState();
                         }
                     } finally { 
-                        AbstractPainter.renderLock.unlock(); 
+                        ViewPainter.renderLock.unlock();
                     }
                 }
                 break;
@@ -134,12 +134,12 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
     public void handleScreenChangedEvent(Window window, long time, Screen oldScreen, Screen newScreen) {
         GlassScene scene = stage.getScene();
         if (scene != null) {
-            AbstractPainter.renderLock.lock();
+            ViewPainter.renderLock.lock();
             try { 
                 scene.entireSceneNeedsRepaint();
                 scene.updateSceneState();
             } finally { 
-                AbstractPainter.renderLock.unlock(); 
+                ViewPainter.renderLock.unlock();
             }
         }
     }

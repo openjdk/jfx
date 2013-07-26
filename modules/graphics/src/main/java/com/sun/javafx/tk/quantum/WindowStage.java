@@ -192,18 +192,18 @@ class WindowStage extends GlassStage {
         if (scene != null) {
             GlassScene newScene = getViewScene();
             View view = newScene.getPlatformView();
-            AbstractPainter.renderLock.lock();
+            ViewPainter.renderLock.lock();
             try {
                 platformWindow.setView(view);
                 if (oldScene != null) oldScene.updateSceneState();
                 newScene.updateSceneState();
             } finally {
-                AbstractPainter.renderLock.unlock();
+                ViewPainter.renderLock.unlock();
             }
             requestFocus();
             applyFullScreen();
         } else {
-            AbstractPainter.renderLock.lock();
+            ViewPainter.renderLock.lock();
             try {
                 // platformWindow can be null here, if this window is owned,
                 // and its owner is being closed.
@@ -214,7 +214,7 @@ class WindowStage extends GlassStage {
                     oldScene.updateSceneState();
                 }
             } finally {
-                AbstractPainter.renderLock.unlock();
+                ViewPainter.renderLock.unlock();
             }
         }
         if (oldScene != null) {
@@ -393,7 +393,7 @@ class WindowStage extends GlassStage {
             }
         }
         try {
-            AbstractPainter.renderLock.lock();
+            ViewPainter.renderLock.lock();
             // platformWindow can be null here, if this window is owned,
             // and its owner is being closed.
             if (platformWindow != null) {
@@ -401,7 +401,7 @@ class WindowStage extends GlassStage {
             }
             super.setVisible(visible);
         } finally {
-            AbstractPainter.renderLock.unlock();
+            ViewPainter.renderLock.unlock();
         }
         // After setting visible to true on the native window, we block
         // other windows.
@@ -580,7 +580,7 @@ class WindowStage extends GlassStage {
     
     @Override public void close() {
         super.close();
-        AbstractPainter.renderLock.lock();
+        ViewPainter.renderLock.lock();
         try {
             // prevents closing a closed platform window
             if (platformWindow != null) {
@@ -593,7 +593,7 @@ class WindowStage extends GlassStage {
                 oldScene.updateSceneState();
             }
         } finally {
-            AbstractPainter.renderLock.unlock();
+            ViewPainter.renderLock.unlock();
         }
     }
 

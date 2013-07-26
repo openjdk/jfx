@@ -109,7 +109,7 @@ abstract class GlassScene implements TKScene {
 
     @Override
     public void waitForSynchronization() {
-        AbstractPainter.renderLock.lock();
+        ViewPainter.renderLock.lock();
     }
 
     @Override
@@ -120,7 +120,7 @@ abstract class GlassScene implements TKScene {
         // the view (such as the width and height) so that the view
         // state matches the state in the render tree
         updateSceneState();
-        AbstractPainter.renderLock.unlock();
+        ViewPainter.renderLock.unlock();
     }
 
     boolean getDepthBuffer() {

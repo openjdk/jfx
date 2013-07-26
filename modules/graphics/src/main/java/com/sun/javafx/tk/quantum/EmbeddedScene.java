@@ -73,13 +73,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     @Override
     public void dispose() {
         assert host != null;
-        AbstractPainter.renderLock.lock();
+        ViewPainter.renderLock.lock();
         try {
             host.setEmbeddedScene(null);
             host = null;
             updateSceneState();
         } finally {
-            AbstractPainter.renderLock.unlock();
+            ViewPainter.renderLock.unlock();
         }
         super.dispose();
     }
@@ -141,13 +141,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public void setSize(final int width, final int height) {
-        AbstractPainter.renderLock.lock();
+        ViewPainter.renderLock.lock();
         try {
             this.width = width;
             this.height = height;
             updateSceneState();
         } finally {
-            AbstractPainter.renderLock.unlock();
+            ViewPainter.renderLock.unlock();
         }
 
         Platform.runLater(new Runnable() {
@@ -170,7 +170,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public boolean getPixels(IntBuffer dest, int width, int height) {
-        AbstractPainter.renderLock.lock();
+        ViewPainter.renderLock.lock();
         try {
             if (textureBits == null) return false;
             dest.rewind();
@@ -181,7 +181,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
             dest.put(textureBits);
             return true;
         } finally {
-            AbstractPainter.renderLock.unlock();
+            ViewPainter.renderLock.unlock();
         }
     }
 

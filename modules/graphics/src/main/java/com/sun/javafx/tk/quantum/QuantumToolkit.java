@@ -731,14 +731,14 @@ public final class QuantumToolkit extends Toolkit {
             notifyShutdownHooks();
             pulseTimer.stop();
 
-            AbstractPainter.renderLock.lock();
+            ViewPainter.renderLock.lock();
             try {
                 //TODO - should update glass scene view state
                 //TODO - doesn't matter because we are exiting
                 Application app = Application.GetApplication();
                 app.terminate();
             } finally {
-                AbstractPainter.renderLock.unlock();
+                ViewPainter.renderLock.unlock();
             }
 
             dispose();

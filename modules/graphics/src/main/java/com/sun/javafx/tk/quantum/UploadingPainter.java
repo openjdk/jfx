@@ -29,7 +29,6 @@ import java.nio.IntBuffer;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
-import com.sun.glass.ui.View;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RTTexture;

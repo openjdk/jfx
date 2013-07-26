@@ -319,9 +319,9 @@ final class PaintCollector implements CompletionListener {
          QuantumToolkit quantum = (QuantumToolkit)QuantumToolkit.getToolkit();
          quantum.pulse(false);
          final CountDownLatch latch = new CountDownLatch(1);
-         boolean locked =  AbstractPainter.renderLock.isHeldByCurrentThread();
+         boolean locked =  ViewPainter.renderLock.isHeldByCurrentThread();
          if (locked) {
-             AbstractPainter.renderLock.unlock();
+             ViewPainter.renderLock.unlock();
          }
          try {
              quantum.addRenderJob(new RenderJob(viewPainter, new CompletionListener() {
@@ -336,7 +336,7 @@ final class PaintCollector implements CompletionListener {
              }
          } finally {
              if (locked) {
-                 AbstractPainter.renderLock.lock();
+                 ViewPainter.renderLock.lock();
              }
          }
      }

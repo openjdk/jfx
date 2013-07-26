@@ -65,7 +65,7 @@ public class OverlayWarning {
     private ViewScene               view;
     private Group                   sceneRoot;
     private SequentialTransition    overlayTransition;
-    private AbstractPainter         painter;
+    private ViewPainter             painter;
     private boolean                 warningTransition;
     
     public OverlayWarning(final ViewScene vs) {
