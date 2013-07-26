@@ -415,7 +415,7 @@ public class NGGroup extends NGNode {
 
             NGNode child;
             for (int chldIdx = 0; chldIdx < children.size(); chldIdx++) {
-                child = (NGNode)children.get(chldIdx);
+                child = children.get(chldIdx);
                 child.markCullRegions(
                         drc,
                         cullingBits,

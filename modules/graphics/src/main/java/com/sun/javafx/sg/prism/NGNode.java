@@ -783,7 +783,7 @@ public abstract class NGNode {
         }
         // if we stopped on a parent that already has dirty children, increase it's
         // dirty children count.
-        // Note that when incrementDirty is false, we dont increment in this case.
+        // Note that when incrementDirty is false, we don't increment in this case.
         if (p != null && p.dirty == DirtyFlag.CLEAN && !atClip && !byTranslation) {
             p.dirtyChildrenAccumulated++;
         }
