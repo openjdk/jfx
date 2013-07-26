@@ -1964,7 +1964,8 @@ if (BUILD_CLOSED) {
 project(":web") {
     def platform = IS_MAC ? "mac" :
             IS_WINDOWS ? (IS_64 ? "win-amd64" : "win-i586") :
-                IS_64 ? "linux-amd64" : "linux-i586"
+                COMPILE_TARGETS.contains("armv6sf") ? "armv6sf" :
+                    IS_64 ? "linux-amd64" : "linux-i586"
                 
     if (COMPILE_WEBKIT) {
         configurations {
@@ -2075,39 +2076,31 @@ project(":web") {
                         "QMAKE_LFLAGS"   : "-m64",
                         "JAVA_HOME"      : JDK_HOME
                     ])
-                // TODO need to re-enable. It looks like linux doesn't ever build
-                // webkit at all which is also not right.
-                // } else if (IS_LINUX && COMPILE_TARGETS != "linux") {
-                // We need some way to detect cross build here. The CompileTarget
-                // enum from rt/build.gradle is out of scope here, so I cannot write
-                //     COMPILE_TARGET != CompileTarget.LINUX
-                // Once web module is open sourced, this target will be moved into
-                // rt/build.gradle, thus eliminating the problem.
-                // For now, work around it with a name check.
-                //            } else if (IS_LINUX && (! "LINUX".equals(COMPILE_TARGET.name()))) {
-                //                // Linux cross build
-                //                mkdir "$webkitOutputDir"
-                //                File qmakeSpec = new File("$webkitOutputDir/qmake.conf")
-                //                qmakeSpec.append(
-                //"""TARGET_PLATFORM         = unix
-                //include(/usr/share/qt4/mkspecs/common/linux.conf)
-                //include(/usr/share/qt4/mkspecs/common/g++.conf)
-                //include(/usr/share/qt4/mkspecs/common/qws.conf)
-                //QMAKE_CC                = $crosstools.gcc.bin
-                //QMAKE_CXX               = $crosstools.gpp.bin
-                //QMAKE_LINK              = $crosstools.gpp.bin
-                //QMAKE_LINK_SHLIB        = $crosstools.gpp.bin
-                //QMAKE_AR                = $crosstools.ar.bin cqs
-                //QMAKE_OBJCOPY           = $crosstools.objcopy.bin
-                //QMAKE_STRIP             = $crosstools.strip.bin
-                //load(qt_config)""")
-                //                environment([
-                //                    "QMAKESPEC" : webkitOutputDir,
-                //                    "WK_CFLAGS" : crosstools.extra_cflags,
-                //                    "WK_LFLAGS" : crosstools.extra_ldflags,
-                //                    "PATH"      : "$cross.tools/bin:$PATH",
-                //                ])
-                //                args("--nocache")
+                } else if (COMPILE_TARGETS.contains("armv6sf")) {
+                    // ARM cross build
+                    def qmakeSpecDir = "$webkitOutputDir/qws/linux-cross-armv6sf-g++"
+                    mkdir qmakeSpecDir
+                    File qmakeSpec = new File("modules/web/$qmakeSpecDir/qmake.conf")
+                    qmakeSpec.append(
+"""TARGET_PLATFORM         = unix
+include(/usr/share/qt4/mkspecs/common/linux.conf)
+include(/usr/share/qt4/mkspecs/common/g++.conf)
+include(/usr/share/qt4/mkspecs/common/qws.conf)
+QMAKE_CC                = $ARMV6SF.webkit.compiler
+QMAKE_CXX               = $ARMV6SF.webkit.linker
+QMAKE_LINK              = $ARMV6SF.webkit.linker
+QMAKE_LINK_SHLIB        = $ARMV6SF.webkit.linker
+QMAKE_AR                = $ARMV6SF.webkit.ar cqs
+QMAKE_OBJCOPY           = $ARMV6SF.webkit.objcopy
+QMAKE_STRIP             = $ARMV6SF.webkit.strip
+QMAKE_CXXFLAGS          = $ARMV6SF.webkit.ccFlags
+QMAKE_LFLAGS            = $ARMV6SF.webkit.linkFlags
+load(qt_config)""")
+                    environment([
+                        "QMAKESPEC" : file(qmakeSpecDir).getAbsolutePath(),
+                        "PATH"      : "$ARMV6SF.webkit.binDir:$System.env.PATH",
+                    ])
+                    args("--nocache")
                 } else {
                     environment([
                         "JAVA_HOME"   : JDK_HOME

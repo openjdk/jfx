@@ -438,3 +438,13 @@ ARMV6SF.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 ARMV6SF.fontPango.linker = linker
 ARMV6SF.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
 ARMV6SF.fontPango.lib = "javafx-font-pango"
+
+ARMV6SF.webkit = [:]
+ARMV6SF.webkit.binDir   = "$compilerHome/bin"
+ARMV6SF.webkit.compiler = compiler
+ARMV6SF.webkit.linker   = linker
+ARMV6SF.webkit.ar       = file("$compilerHome/bin/arm-none-linux-gnueabi-ar").getAbsolutePath()
+ARMV6SF.webkit.objcopy  = file("$compilerHome/bin/arm-none-linux-gnueabi-objcopy").getAbsolutePath()
+ARMV6SF.webkit.strip    = file("$compilerHome/bin/arm-none-linux-gnueabi-strip").getAbsolutePath()
+ARMV6SF.webkit.ccFlags  = extraCFlags.join(' ')
+ARMV6SF.webkit.linkFlags = extraLFlags.join(' ')
