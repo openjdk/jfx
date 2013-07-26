@@ -32,7 +32,6 @@ import javafx.scene.Node;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
@@ -45,13 +44,13 @@ import com.sun.javafx.scene.BoundsAccessor;
  * Note that the reflection of a {@code Node} with a {@code Reflection}
  * effect installed will not respond to mouse events or the containment
  * methods on the {@code Node}.
- * 
+ *
  * <p>
  * Example:
  * <pre><code>
  * Reflection reflection = new Reflection();
  * reflection.setFraction(0.7);
- * 
+ *
  * Text text = new Text();
  * text.setX(10.0);
  * text.setY(50.0);
@@ -60,7 +59,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * text.setFill(Color.web("0x3b596d"));
  * text.setFont(Font.font(null, FontWeight.BOLD, 40));
  * text.setEffect(reflection);
- * </pre></code> 
+ * </pre></code>
  * <p> The code above produces the following: </p>
  * <p>
  * <img src="doc-files/reflection.png"/>
@@ -82,14 +81,14 @@ public class Reflection extends Effect {
      * @param bottomOpacity the opacity of the reflection at its bottom extreme
      * @since JavaFX 2.1
      */
-    public Reflection(double topOffset, double fraction, 
+    public Reflection(double topOffset, double fraction,
                       double topOpacity, double bottomOpacity) {
         setBottomOpacity(bottomOpacity);
         setTopOffset(topOffset);
         setTopOpacity(topOpacity);
         setFraction(fraction);
     }
- 
+
     @Override
     com.sun.scenario.effect.Reflection impl_createImpl() {
         return new com.sun.scenario.effect.Reflection();
@@ -350,10 +349,10 @@ public class Reflection extends Effect {
                                      BaseTransform tx,
                                      Node node,
                                      BoundsAccessor boundsAccessor) {
-        bounds = EffectUtils.getInputBounds(bounds,
-                                            BaseTransform.IDENTITY_TRANSFORM,
-                                            node, boundsAccessor,
-                                            getInput());
+        bounds = getInputBounds(bounds,
+                                BaseTransform.IDENTITY_TRANSFORM,
+                                node, boundsAccessor,
+                                getInput());
         bounds.roundOut();
 
         float x1 = bounds.getMinX();
@@ -366,20 +365,19 @@ public class Reflection extends Effect {
         BaseBounds ret = BaseBounds.getInstance(x1, y1, z1, x2, y2, z2);
         ret = ret.deriveWithUnion(bounds);
 
-        return EffectUtils.transformBounds(tx, ret);
+        return transformBounds(tx, ret);
     }
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     @Override
     public Effect impl_copy() {
-        Reflection ref = new Reflection(this.getTopOffset(), this.getFraction(), 
+        Reflection ref = new Reflection(this.getTopOffset(), this.getFraction(),
                 this.getTopOpacity(), this.getBottomOpacity());
-        ref.setInput(ref.getInput());        
+        ref.setInput(ref.getInput());
         return ref;
     }
 }

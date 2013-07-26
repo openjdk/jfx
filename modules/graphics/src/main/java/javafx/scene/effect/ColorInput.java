@@ -34,7 +34,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -65,7 +64,7 @@ public class ColorInput extends Effect {
      * @param paint the {@code Paint} used to flood the region
      * @since JavaFX 2.1
      */
-    public ColorInput(double x, 
+    public ColorInput(double x,
                       double y,
                       double width,
                       double height,
@@ -345,11 +344,10 @@ public class ColorInput extends Effect {
                 (float)getX(), (float)getY(),
                 (float)(getX() + getWidth()),
                 (float)(getY() + getHeight()));
-        return EffectUtils.transformBounds(tx, ret);
+        return transformBounds(tx, ret);
     }
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */

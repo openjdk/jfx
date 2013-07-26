@@ -34,7 +34,6 @@ import javafx.scene.Node;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
@@ -314,23 +313,22 @@ public class BoxBlur extends Effect {
                                      BaseTransform tx,
                                      Node node,
                                      BoundsAccessor boundsAccessor) {
-        bounds = EffectUtils.getInputBounds(bounds,
-                                            BaseTransform.IDENTITY_TRANSFORM,
-                                            node, boundsAccessor,
-                                            getInput());
+        bounds = getInputBounds(bounds,
+                                BaseTransform.IDENTITY_TRANSFORM,
+                                node, boundsAccessor,
+                                getInput());
 
         int localIterations = getClampedIterations();
 
-        int hgrow = EffectUtils.getKernelSize(getClampedWidth(), localIterations);
-        int vgrow = EffectUtils.getKernelSize(getClampedHeight(), localIterations);
+        int hgrow = getKernelSize(getClampedWidth(), localIterations);
+        int vgrow = getKernelSize(getClampedHeight(), localIterations);
 
         bounds = bounds.deriveWithPadding(hgrow, vgrow, 0);
 
-        return EffectUtils.transformBounds(tx, bounds);
+        return transformBounds(tx, bounds);
     }
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */

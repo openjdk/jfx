@@ -32,7 +32,6 @@ import javafx.scene.Node;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
@@ -47,7 +46,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <pre><code>
  * Bloom bloom = new Bloom();
  * bloom.setThreshold(0.1);
- * 
+ *
  * Rectangle rect = new Rectangle();
  * rect.setX(10);
  * rect.setY(10);
@@ -191,13 +190,10 @@ public class Bloom extends Effect {
                                      BaseTransform tx,
                                      Node node,
                                      BoundsAccessor boundsAccessor) {
-        return EffectUtils.getInputBounds(bounds, tx,
-                                          node, boundsAccessor,
-                                          getInput());
+        return getInputBounds(bounds, tx,node, boundsAccessor, getInput());
     }
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */

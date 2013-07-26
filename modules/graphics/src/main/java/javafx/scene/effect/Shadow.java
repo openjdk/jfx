@@ -34,7 +34,6 @@ import javafx.scene.paint.Color;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
@@ -474,18 +473,17 @@ public class Shadow extends Effect {
                                      BaseTransform tx,
                                      Node node,
                                      BoundsAccessor boundsAccessor) {
-        bounds = EffectUtils.getInputBounds(bounds,
-                                            BaseTransform.IDENTITY_TRANSFORM,
-                                            node, boundsAccessor,
-                                            getInput());
-        return EffectUtils.getShadowBounds(bounds, tx,
-                                           getClampedWidth(),
-                                           getClampedHeight(),
-                                           getBlurTypeInternal());
+        bounds = getInputBounds(bounds,
+                                BaseTransform.IDENTITY_TRANSFORM,
+                                node, boundsAccessor,
+                                getInput());
+        return getShadowBounds(bounds, tx,
+                               getClampedWidth(),
+                               getClampedHeight(),
+                               getBlurTypeInternal());
     }
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
