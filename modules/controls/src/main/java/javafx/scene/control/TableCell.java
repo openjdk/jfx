@@ -103,8 +103,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * be mutated, we create this observer here, and add/remove it from the
      * storeTableView method.
      */
-    private ListChangeListener<TablePosition<S,?>> selectedListener = new ListChangeListener<TablePosition<S,?>>() {
-        @Override public void onChanged(Change<? extends TablePosition<S,?>> c) {
+    private ListChangeListener<TablePosition> selectedListener = new ListChangeListener<TablePosition>() {
+        @Override public void onChanged(Change<? extends TablePosition> c) {
             updateSelection();
         }
     };
@@ -150,7 +150,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     };
     
-    private final WeakListChangeListener<TablePosition<S,?>> weakSelectedListener = 
+    private final WeakListChangeListener<TablePosition> weakSelectedListener =
             new WeakListChangeListener<>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = 
             new WeakInvalidationListener(focusedListener);
