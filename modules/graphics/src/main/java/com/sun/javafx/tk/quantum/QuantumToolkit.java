@@ -1447,13 +1447,14 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override
-    public List<File> showFileChooser(final TKStage ownerWindow,
+    public FileChooserResult showFileChooser(final TKStage ownerWindow,
                                       final String title,
                                       final File initialDirectory,
                                       final String initialFileName,
                                       final FileChooserType fileChooserType,
                                       final List<FileChooser.ExtensionFilter>
-                                              extensionFilters) {
+                                              extensionFilters,
+                                      final FileChooser.ExtensionFilter selectedFilter) {
         WindowStage blockedStage = null;
         try {
             // NOTE: we block the owner of the owner deliberately.
@@ -1461,7 +1462,7 @@ public final class QuantumToolkit extends Toolkit {
             //       Otherwise sheets on Mac are unusable.
             blockedStage = blockOwnerStage(ownerWindow);
 
-            FileChooserResult result = CommonDialogs.showFileChooser(
+            return CommonDialogs.showFileChooser(
                     (ownerWindow instanceof WindowStage)
                             ? ((WindowStage) ownerWindow).getPlatformWindow()
                             : null,
@@ -1473,9 +1474,7 @@ public final class QuantumToolkit extends Toolkit {
                             : CommonDialogs.Type.OPEN,
                     (fileChooserType == FileChooserType.OPEN_MULTIPLE),
                     convertExtensionFilters(extensionFilters),
-                    0);
-
-            return result.getFiles();
+                    extensionFilters.indexOf(selectedFilter));
         } finally {
             if (blockedStage != null) {
                 blockedStage.setEnabled(true);

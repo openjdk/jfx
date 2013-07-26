@@ -25,6 +25,7 @@
 
 package javafx.stage;
 
+import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.pgstub.StubToolkit.CommonDialogsSupport;
 import com.sun.javafx.tk.FileChooserType;
@@ -68,6 +69,7 @@ public final class CommonDialogsTest {
         fileChooser.setInitialDirectory(initialDirectory);
         fileChooser.setInitialFileName("open.txt");
         fileChooser.getExtensionFilters().addAll(txtFiles, jpgFiles);
+        fileChooser.setSelectedExtensionFilter(txtFiles);
 
         Assert.assertEquals(
                 null, fileChooser.showOpenDialog(null));
@@ -81,6 +83,7 @@ public final class CommonDialogsTest {
         Assert.assertArrayEquals(
                 new Object[] { txtFiles, jpgFiles },
                 stubDialogs.getExtensionFilters().toArray());
+        Assert.assertEquals(txtFiles, stubDialogs.getSelectedExtensionFilter());
     }
 
     @Test
@@ -103,6 +106,7 @@ public final class CommonDialogsTest {
         Assert.assertArrayEquals(
                 new Object[] { allFiles },
                 stubDialogs.getExtensionFilters().toArray());
+        Assert.assertEquals(null, stubDialogs.getSelectedExtensionFilter());
     }
 
     @Test
@@ -124,6 +128,7 @@ public final class CommonDialogsTest {
                             stubDialogs.getInitialDirectory());
         Assert.assertEquals("save.txt", stubDialogs.getInitialFileName());
         Assert.assertEquals(0, stubDialogs.getExtensionFilters().size());
+        Assert.assertEquals(null, stubDialogs.getSelectedExtensionFilter());
     }
 
     @Test
@@ -150,6 +155,7 @@ public final class CommonDialogsTest {
         private File initialDirectory;
         private String initialFileName;
         private List<ExtensionFilter> extensionFilters;
+        private ExtensionFilter selectedExtensionFilter;
 
         public FileChooserType getFileChooserType() {
             return fileChooserType;
@@ -175,20 +181,26 @@ public final class CommonDialogsTest {
             return extensionFilters;
         }
 
+        public ExtensionFilter getSelectedExtensionFilter() {
+            return selectedExtensionFilter;
+        }
+
         @Override
-        public List<File> showFileChooser(
+        public FileChooserResult showFileChooser(
                               final TKStage ownerWindow,
                               final String title,
                               final File initialDirectory,
                               final String initialFileName,
                               final FileChooserType fileChooserType,
-                              final List<ExtensionFilter> extensionFilters) {
+                              final List<ExtensionFilter> extensionFilters,
+                              final ExtensionFilter selectedFilter) {
             this.ownerWindow = ownerWindow;
             this.title = title;
             this.initialDirectory = initialDirectory;
             this.initialFileName = initialFileName;
             this.fileChooserType = fileChooserType;
             this.extensionFilters = extensionFilters;
+            this.selectedExtensionFilter = selectedFilter;
 
             return null;
         }
