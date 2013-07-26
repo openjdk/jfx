@@ -3323,6 +3323,15 @@ public class Scene implements EventTarget {
         }
     }
 
+    /**
+     * Generates mouse exited event for a node which is going to be removed
+     * and its children, where appropriate.
+     * @param removing Node which is going to be removed
+     */
+    void generateMouseExited(Node removing) {
+        mouseHandler.handleNodeRemoval(removing);
+    }
+
     class MouseHandler {
         private TargetWrapper pdrEventTarget = new TargetWrapper(); // pdr - press-drag-release
         private boolean pdrInProgress = false;
@@ -3404,6 +3413,43 @@ public class Scene implements EventTarget {
             fullPDRSource = null;
             fullPDRCurrentEventTargets.clear();
             fullPDRCurrentTarget = null;
+        }
+
+        private void handleNodeRemoval(Node removing) {
+            if (lastEvent == null) {
+                // this can happen only if everything has been exited anyway
+                return;
+            }
+
+
+            if (currentEventTargets.contains(removing)) {
+                int i = 0;
+                EventTarget trg = null;
+                while(trg != removing) {
+                    trg = currentEventTargets.get(i++);
+
+                    queue.postEvent(lastEvent.copyFor(trg, trg,
+                            MouseEvent.MOUSE_EXITED_TARGET));
+                }
+                currentEventTargets.subList(0, i).clear();
+            }
+
+            if (fullPDREntered && fullPDRCurrentEventTargets.contains(removing)) {
+                int i = 0;
+                EventTarget trg = null;
+                while (trg != removing) {
+                    trg = fullPDRCurrentEventTargets.get(i++);
+
+                    queue.postEvent(
+                            MouseEvent.copyForMouseDragEvent(lastEvent, trg, trg,
+                            MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
+                            fullPDRSource, lastEvent.getPickResult()));
+                }
+
+                fullPDRCurrentEventTargets.subList(0, i).clear();
+            }
+
+            queue.fire();
         }
 
         private void handleEnterExit(MouseEvent e, TargetWrapper pickedTarget) {
@@ -3579,6 +3625,9 @@ public class Scene implements EventTarget {
                     !(primaryButtonDown || secondaryButtonDown || middleButtonDown)) {
                 clearPDREventTargets();
                 exitFullPDR(e);
+                // we need to do new picking in case the originally picked node
+                // was moved or removed by the event handlers
+                pick(tmpTargetWrapper, e.getSceneX(), e.getSceneY());
                 handleEnterExit(e, tmpTargetWrapper);
             }
 

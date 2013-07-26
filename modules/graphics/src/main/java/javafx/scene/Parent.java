@@ -472,6 +472,10 @@ public abstract class Parent extends Node {
             for (int i = 0; i < toBeRemoved.length; i += 2) {
                 for (int j = toBeRemoved[i]; j < toBeRemoved[i + 1]; j++) {
                     Node old = children.get(j);
+                    final Scene oldScene = old.getScene();
+                    if (oldScene != null) {
+                        oldScene.generateMouseExited(old);
+                    }
                     if (dirtyChildren != null) {
                         dirtyChildren.remove(old);
                     }
