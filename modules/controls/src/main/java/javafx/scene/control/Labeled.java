@@ -159,7 +159,7 @@ public abstract class Labeled extends Control {
         if (alignment == null) {
             alignment = new StyleableObjectProperty<Pos>(Pos.CENTER_LEFT) {
 
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<Labeled,Pos> getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -191,7 +191,7 @@ public abstract class Labeled extends Control {
             textAlignment = new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,TextAlignment> getCssMetaData() {
                     return StyleableProperties.TEXT_ALIGNMENT;
                 }
 
@@ -221,7 +221,7 @@ public abstract class Labeled extends Control {
             textOverrun = new StyleableObjectProperty<OverrunStyle>(OverrunStyle.ELLIPSIS) {
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,OverrunStyle> getCssMetaData() {
                     return StyleableProperties.TEXT_OVERRUN;
                 }
 
@@ -269,7 +269,7 @@ public abstract class Labeled extends Control {
                     return "ellipsisString";
                 }
 
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<Labeled,String> getCssMetaData() {
                     return StyleableProperties.ELLIPSIS_STRING;
                 }                
             };
@@ -290,7 +290,7 @@ public abstract class Labeled extends Control {
             wrapText = new StyleableBooleanProperty() {
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,Boolean> getCssMetaData() {
                     return StyleableProperties.WRAP_TEXT;
                 }
 
@@ -371,7 +371,7 @@ public abstract class Labeled extends Control {
                 }
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,Font> getCssMetaData() {
                     return StyleableProperties.FONT;
                 }
 
@@ -484,7 +484,7 @@ public abstract class Labeled extends Control {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,String> getCssMetaData() {
                     return StyleableProperties.GRAPHIC;
                 }
                 
@@ -501,7 +501,7 @@ public abstract class Labeled extends Control {
             underline = new StyleableBooleanProperty(false) {
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled, Boolean> getCssMetaData() {
                     return StyleableProperties.UNDERLINE;
                 }
 
@@ -560,7 +560,7 @@ public abstract class Labeled extends Control {
             contentDisplay = new StyleableObjectProperty<ContentDisplay>(ContentDisplay.LEFT) {
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,ContentDisplay> getCssMetaData() {
                     return StyleableProperties.CONTENT_DISPLAY;
                 }
 
@@ -608,7 +608,7 @@ public abstract class Labeled extends Control {
                 }
                 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,Insets> getCssMetaData() {
                     return StyleableProperties.LABEL_PADDING;
                 }
 
@@ -677,7 +677,7 @@ public abstract class Labeled extends Control {
             textFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,Paint> getCssMetaData() {
                     return StyleableProperties.TEXT_FILL;
                 }
 

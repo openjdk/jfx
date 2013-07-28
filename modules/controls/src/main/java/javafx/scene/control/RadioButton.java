@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import javafx.geometry.Pos;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
-import javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.accessible.AccessibleRadioButton;
 import com.sun.javafx.scene.control.skin.RadioButtonSkin;
 import javafx.css.StyleableProperty;

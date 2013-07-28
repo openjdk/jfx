@@ -352,7 +352,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Slider s = getSkinnable();
-        if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
+        if (s.getOrientation() == Orientation.HORIZONTAL) {
             return (leftInset + minTrackLength() + thumb.minWidth(-1) + rightInset);
         } else {
             return(leftInset + thumb.prefWidth(-1) + rightInset);
@@ -361,7 +361,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Slider s = getSkinnable();
-         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
+         if (s.getOrientation() == Orientation.HORIZONTAL) {
             return(topInset + thumb.prefHeight(-1) + bottomInset);
         } else {
             return(topInset + minTrackLength() + thumb.prefHeight(-1) + bottomInset);

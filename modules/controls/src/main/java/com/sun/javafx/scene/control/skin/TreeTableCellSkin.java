@@ -94,10 +94,11 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
         int nodeLevel = TreeTableView.getNodeLevel(treeItem);
         if (! treeTable.isShowRoot()) nodeLevel--;
 
-        // FIXME we're assuming an indent of 10px here, which is not
-        // necessarily accurate as it is configurable via -fx-indent.
-        // Unfortunately this value is stored in TreeTableRowSkin.
-        leftPadding += nodeLevel * 10;
+        double indentPerLevel = 10;
+        if (treeTableRow.getSkin() instanceof TreeTableRowSkin) {
+            indentPerLevel = ((TreeTableRowSkin)treeTableRow.getSkin()).getIndentationPerLevel();
+        }
+        leftPadding += nodeLevel * indentPerLevel;
 
         // add in the width of the disclosure node, if one exists
         Map<Control, Double> mdwp = TableRowSkinBase.maxDisclosureWidthMap;

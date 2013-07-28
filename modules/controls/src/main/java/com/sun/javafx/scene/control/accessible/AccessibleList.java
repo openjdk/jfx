@@ -25,15 +25,11 @@
 
 package com.sun.javafx.scene.control.accessible;
 
-import com.sun.javafx.accessible.AccessibleNode;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.GridProvider;
 import com.sun.javafx.accessible.providers.SelectionProvider;
 import com.sun.javafx.accessible.utils.ControlTypeIds;
 import com.sun.javafx.accessible.utils.OrientationType;
 import com.sun.javafx.accessible.utils.PropertyIds;
-import javafx.scene.Node;
-import javafx.scene.control.Cell;
 import javafx.scene.control.ListView;
 
 public class AccessibleList extends AccessibleControl

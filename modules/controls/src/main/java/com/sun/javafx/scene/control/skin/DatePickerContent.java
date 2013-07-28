@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DecimalStyle;
 import java.time.chrono.Chronology;
 import java.time.chrono.ChronoLocalDate;
@@ -59,7 +58,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.ContextMenuEvent;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -162,7 +160,22 @@ public class DatePickerContent extends VBox {
 
         getChildren().add(createMonthYearPane());
 
-        gridPane = new GridPane();
+        gridPane = new GridPane() {
+            @Override protected double computePrefWidth(double height) {
+                final double width = super.computePrefWidth(height);
+
+                // RT-30903: Make sure width snaps to pixel when divided by
+                // number of columns. GridPane doesn't do this with percentage
+                // width constraints. See GridPane.adjustColumnWidths().
+                final int nCols = daysPerWeek + (datePicker.isShowWeekNumbers() ? 1 : 0);
+                final double snaphgap = snapSpace(getHgap());
+                final double left = snapSpace(getInsets().getLeft());
+                final double right = snapSpace(getInsets().getRight());
+                final double hgaps = snaphgap * (nCols - 1);
+                final double contentWidth = width - left - right - hgaps;
+                return ((snapSize(contentWidth / nCols)) * nCols) + left + right + hgaps;
+            }
+        };
         gridPane.setFocusTraversable(true);
         gridPane.getStyleClass().add("calendar-grid");
         gridPane.setVgap(-1);

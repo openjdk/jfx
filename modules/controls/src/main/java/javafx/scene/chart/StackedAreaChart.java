@@ -48,7 +48,6 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
-import javafx.scene.paint.Color;
 
 /**
  * StackedAreaChart is a variation of {@link AreaChart} that displays trends of the 

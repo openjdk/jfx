@@ -78,7 +78,7 @@ public class LabeledImpl extends Label {
                 // set this LabeledImpl's property to the same value as the Labeled. 
                 final StyleOrigin origin = fromVal.getStyleOrigin();
                 if (origin == null) continue;
-                final StyleableProperty styleableProperty = styleable.getStyleableProperty(labeledImpl);
+                final StyleableProperty<Object> styleableProperty = styleable.getStyleableProperty(labeledImpl);
                 styleableProperty.applyStyle(origin, fromVal.getValue());
             }
         }
@@ -104,18 +104,18 @@ public class LabeledImpl extends Label {
                 // If the user set the graphic, then mirror that.
                 // Otherwise, the graphic was set via the imageUrlProperty which
                 // will be mirrored onto the labeledImpl by the next block.
-                StyleOrigin origin = ((StyleableProperty)labeled.graphicProperty()).getStyleOrigin();
+                StyleOrigin origin = ((StyleableProperty<?>)labeled.graphicProperty()).getStyleOrigin();
                 if (origin == null || origin == StyleOrigin.USER) {
                     labeledImpl.setGraphic(labeled.getGraphic());
                 }
                 
             } else if (valueModel instanceof StyleableProperty) { 
-                StyleableProperty<?> styleableProperty = (StyleableProperty)valueModel;
+                StyleableProperty<?> styleableProperty = (StyleableProperty<?>)valueModel;
                 @SuppressWarnings("unchecked")
                 CssMetaData<Styleable,Object> cssMetaData = (CssMetaData<Styleable,Object>)styleableProperty.getCssMetaData();
                 if (cssMetaData != null) {
                     StyleOrigin origin = styleableProperty.getStyleOrigin();
-                    StyleableProperty targetProperty = cssMetaData.getStyleableProperty(labeledImpl);
+                    StyleableProperty<Object> targetProperty = cssMetaData.getStyleableProperty(labeledImpl);
                     targetProperty.applyStyle(origin, styleableProperty.getValue());
                 }
             }

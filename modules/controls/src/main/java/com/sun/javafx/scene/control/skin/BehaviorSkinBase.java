@@ -172,7 +172,7 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
      * @param property
      * @param reference
      */
-    protected final void registerChangeListener(ObservableValue property, String reference) {
+    protected final void registerChangeListener(ObservableValue<?> property, String reference) {
         if (changeListenerHandler == null) {
             changeListenerHandler = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
                 @Override public Void call(String p) {

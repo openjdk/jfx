@@ -46,7 +46,7 @@ import javafx.scene.control.TableColumnBase;
 public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehaviorBase<TableRow<T>>, TableCell<T,?>> {
 
     private TableView<T> tableView;
-    private TableViewSkin tableViewSkin;
+    private TableViewSkin<T> tableViewSkin;
     
     public TableRowSkin(TableRow<T> tableRow) {
         super(tableRow, new TableRowBehavior<T>(tableRow));
@@ -116,7 +116,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
     }
     
     private void updateTableViewSkin() {
-        TableView tableView = getSkinnable().getTableView();
+        TableView<T> tableView = getSkinnable().getTableView();
         if (tableView.getSkin() instanceof TableViewSkin) {
             tableViewSkin = (TableViewSkin)tableView.getSkin();
         }

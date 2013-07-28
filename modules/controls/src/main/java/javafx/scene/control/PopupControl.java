@@ -1013,6 +1013,8 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     /**
+     * The link between the popup window and the scenegraph.
+     *
      * @since JavaFX 2.1
      */
     protected class CSSBridge extends Group {
@@ -1191,6 +1193,9 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             return skinClassName;
         }
 
+        /**
+         * Sets a reference to the name of the class currently acting as the skin.
+         */
         protected void setSkinClassName(String skinClassName) {
             skinClassNameProperty().set(skinClassName);
         }

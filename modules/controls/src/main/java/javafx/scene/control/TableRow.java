@@ -315,7 +315,7 @@ public class TableRow<T> extends IndexedCell<T> {
         if (sm == null || sm.isCellSelectionEnabled()) return;
 
         TablePosition editCell = table.getEditingCell();
-        boolean rowMatch = editCell.getRow() == getIndex();
+        boolean rowMatch = editCell == null ? false : editCell.getRow() == getIndex();
 
         if (! isEditing() && rowMatch) {
             startEdit();

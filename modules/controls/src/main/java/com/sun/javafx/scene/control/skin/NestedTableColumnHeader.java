@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.PlatformUtil;
 import javafx.collections.WeakListChangeListener;
 import java.util.ArrayList;
 import java.util.List;

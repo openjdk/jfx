@@ -43,6 +43,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.util.Callback;
 
 import javafx.collections.WeakListChangeListener;
@@ -624,7 +625,12 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return getClassCssMetaData();
     }                
 
-   public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     * @since JavaFX 8.0
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return Collections.emptyList();
     }                
    
@@ -761,9 +767,6 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
             if (table == null) {
                 throw new NullPointerException("TableView can not be null");
-            }
-            if (pos == null) {
-                throw new NullPointerException("TablePosition can not be null");
             }
             this.pos = pos;
             this.newValue = newValue;

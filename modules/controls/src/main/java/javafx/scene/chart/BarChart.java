@@ -28,7 +28,6 @@ package javafx.scene.chart;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -57,8 +56,6 @@ import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.event.EventType;
-import static javafx.scene.chart.XYChart.DEFAULT_COLOR;
 
 /**
  * A chart that plots bars indicating data values for a category. The bars can be vertical or horizontal depending on

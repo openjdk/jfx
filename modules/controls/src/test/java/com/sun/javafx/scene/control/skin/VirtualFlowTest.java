@@ -134,7 +134,7 @@ public class VirtualFlowTest {
             assertTrue("There is a gap between the top of the viewport and the first cell",
                        firstCell.getLayoutY() <= 0);
             assertTrue("There is a gap between the bottom of the last cell and the bottom of the viewport",
-                       lastCell.getLayoutY() + lastCell.getHeight() >= flow.viewportLength);
+                       lastCell.getLayoutY() + lastCell.getHeight() >= flow.getViewportLength());
 
             // Now make sure that no extra cells were created.
             if (flow.cells.size() > 3) {
@@ -145,14 +145,14 @@ public class VirtualFlowTest {
                             secondCell.getLayoutY() <= 0);
                 assertFalse("There are more cells created after the end of the " +
                             "flow than necessary",
-                            secondLastCell.getLayoutY() + secondLastCell.getHeight() >= flow.viewportLength);
+                            secondLastCell.getLayoutY() + secondLastCell.getHeight() >= flow.getViewportLength());
             }
         } else {
             // First make sure that enough cells were created
             assertTrue("There is a gap between the left of the viewport and the first cell",
                        firstCell.getLayoutX() <= 0);
             assertTrue("There is a gap between the right of the last cell and the right of the viewport",
-                       lastCell.getLayoutX() + lastCell.getWidth() >= flow.viewportLength);
+                       lastCell.getLayoutX() + lastCell.getWidth() >= flow.getViewportLength());
 
             // Now make sure that no extra cells were created.
             if (flow.cells.size() > 3) {
@@ -163,7 +163,7 @@ public class VirtualFlowTest {
                             secondCell.getLayoutX() <= 0);
                 assertFalse("There are more cells created after the end of the " +
                             "flow than necessary",
-                            secondLastCell.getLayoutX() + secondLastCell.getWidth() >= flow.viewportLength);
+                            secondLastCell.getLayoutX() + secondLastCell.getWidth() >= flow.getViewportLength());
             }
         }
     }
@@ -431,26 +431,26 @@ public class VirtualFlowTest {
         flow.resize(50, flow.getHeight());
         pulse();
         assertEquals(0, flow.getHbar().getMin(), 0.0);
-        assertEquals(flow.maxPrefBreadth - flow.clipView.getWidth(), flow.getHbar().getMax(), 0.0);
-        assertEquals((flow.clipView.getWidth()/flow.maxPrefBreadth) * flow.getHbar().getMax(), flow.getHbar().getVisibleAmount(), 0.0);
+        assertEquals(flow.getMaxPrefBreadth() - flow.clipView.getWidth(), flow.getHbar().getMax(), 0.0);
+        assertEquals((flow.clipView.getWidth()/flow.getMaxPrefBreadth()) * flow.getHbar().getMax(), flow.getHbar().getVisibleAmount(), 0.0);
         flow.setPosition(.28f);
         pulse();
         assertEquals(0, flow.getHbar().getMin(), 0.0);
-        assertEquals(flow.maxPrefBreadth - flow.clipView.getWidth(), flow.getHbar().getMax(), 0.0);
-        assertEquals((flow.clipView.getWidth()/flow.maxPrefBreadth) * flow.getHbar().getMax(), flow.getHbar().getVisibleAmount(), 0.0);
+        assertEquals(flow.getMaxPrefBreadth() - flow.clipView.getWidth(), flow.getHbar().getMax(), 0.0);
+        assertEquals((flow.clipView.getWidth()/flow.getMaxPrefBreadth()) * flow.getHbar().getMax(), flow.getHbar().getVisibleAmount(), 0.0);
 
         flow.setVertical(false);
         flow.setPosition(0);
         flow.resize(300, 50);
         pulse();
         assertEquals(0, flow.getVbar().getMin(), 0.0);
-        assertEquals(flow.maxPrefBreadth - flow.clipView.getHeight(), flow.getVbar().getMax(), 0.0);
-        assertEquals((flow.clipView.getHeight()/flow.maxPrefBreadth) * flow.getVbar().getMax(), flow.getVbar().getVisibleAmount(), 0.0);
+        assertEquals(flow.getMaxPrefBreadth() - flow.clipView.getHeight(), flow.getVbar().getMax(), 0.0);
+        assertEquals((flow.clipView.getHeight()/flow.getMaxPrefBreadth()) * flow.getVbar().getMax(), flow.getVbar().getVisibleAmount(), 0.0);
         flow.setPosition(.28);
         pulse();
         assertEquals(0, flow.getVbar().getMin(), 0.0);
-        assertEquals(flow.maxPrefBreadth - flow.clipView.getHeight(), flow.getVbar().getMax(), 0.0);
-        assertEquals((flow.clipView.getHeight()/flow.maxPrefBreadth) * flow.getVbar().getMax(), flow.getVbar().getVisibleAmount(), 0.0);
+        assertEquals(flow.getMaxPrefBreadth() - flow.clipView.getHeight(), flow.getVbar().getMax(), 0.0);
+        assertEquals((flow.clipView.getHeight()/flow.getMaxPrefBreadth()) * flow.getVbar().getMax(), flow.getVbar().getVisibleAmount(), 0.0);
     }
 
     /**
@@ -458,7 +458,7 @@ public class VirtualFlowTest {
      * In our test case, the first page of cells have a uniform pref.
      */
     @Test public void testGeneralLayout_maxPrefBreadth() {
-        assertEquals(100, flow.maxPrefBreadth, 0.0);
+        assertEquals(100, flow.getMaxPrefBreadth(), 0.0);
     }
 
     /**
@@ -470,7 +470,7 @@ public class VirtualFlowTest {
     @Test public void testGeneralLayout_maxPrefBreadthUpdatedWhenEncounterLargerPref() {
         flow.setPosition(.28);
         pulse();
-        assertEquals(200, flow.maxPrefBreadth, 0.0);
+        assertEquals(200, flow.getMaxPrefBreadth(), 0.0);
     }
 
     /**
@@ -483,7 +483,7 @@ public class VirtualFlowTest {
         pulse();
         flow.setPosition(.8);
         pulse();
-        assertEquals(200, flow.maxPrefBreadth, 0.0);
+        assertEquals(200, flow.getMaxPrefBreadth(), 0.0);
     }
 
     /**
@@ -491,7 +491,7 @@ public class VirtualFlowTest {
      */
     @Test public void testGeneralLayout_VerticalChangeClearsmaxPrefBreadth() {
         flow.setVertical(false);
-        assertEquals(-1, flow.maxPrefBreadth, 0.0);
+        assertEquals(-1, flow.getMaxPrefBreadth(), 0.0);
     }
 
     /**
@@ -501,15 +501,15 @@ public class VirtualFlowTest {
     @Test public void testGeneralLayout_maxPrefBreadthUnaffectedByCellCountChanges() {
         flow.setCellCount(10);
         pulse();
-        assertEquals(100, flow.maxPrefBreadth, 0.0);
+        assertEquals(100, flow.getMaxPrefBreadth(), 0.0);
         flow.setCellCount(100);
         pulse();
         flow.setPosition(.28);
         pulse();
-        assertEquals(200, flow.maxPrefBreadth, 0.0);
+        assertEquals(200, flow.getMaxPrefBreadth(), 0.0);
         flow.setCellCount(10);
         pulse();
-        assertEquals(200, flow.maxPrefBreadth, 0.0);
+        assertEquals(200, flow.getMaxPrefBreadth(), 0.0);
     }
 
     /**
@@ -533,7 +533,7 @@ public class VirtualFlowTest {
         flow.setVertical(false);
         flow.setVertical(true);
         pulse();
-        assertEquals(100, flow.maxPrefBreadth, 0.0);
+        assertEquals(100, flow.getMaxPrefBreadth(), 0.0);
         flow.getHbar().setValue(flow.getHbar().getMax()); // scroll to the end
         flow.setPosition(.28);
         pulse();
@@ -556,7 +556,7 @@ public class VirtualFlowTest {
         flow.setVertical(true);
         flow.setVertical(false);
         pulse();
-        assertEquals(100, flow.maxPrefBreadth, 0.0);
+        assertEquals(100, flow.getMaxPrefBreadth(), 0.0);
         flow.getVbar().setValue(flow.getVbar().getMax()); // scroll to the end
         flow.setPosition(.28);
         pulse();
@@ -668,19 +668,19 @@ public class VirtualFlowTest {
     @Test public void testCellLayout_ViewportShorterThanmaxPrefBreadth() {
         flow.resize(50, flow.getHeight());
         pulse();
-        assertEquals(100, flow.maxPrefBreadth, 0.0);
+        assertEquals(100, flow.getMaxPrefBreadth(), 0.0);
         for (int i = 0; i < flow.cells.size(); i++) {
             IndexedCell cell = flow.cells.get(i);
-            assertEquals(flow.maxPrefBreadth, cell.getWidth(), 0.0);
+            assertEquals(flow.getMaxPrefBreadth(), cell.getWidth(), 0.0);
         }
 
         flow.setVertical(false);
         flow.resize(flow.getWidth(), 50);
         pulse();
-        assertEquals(100, flow.maxPrefBreadth, 0.0);
+        assertEquals(100, flow.getMaxPrefBreadth(), 0.0);
         for (int i = 0; i < flow.cells.size(); i++) {
             IndexedCell cell = flow.cells.get(i);
-            assertEquals(flow.maxPrefBreadth, cell.getHeight(), 0.0);
+            assertEquals(flow.getMaxPrefBreadth(), cell.getHeight(), 0.0);
         }
     }
 
@@ -695,10 +695,10 @@ public class VirtualFlowTest {
         flow.resize(50, flow.getHeight());
         flow.setPosition(.28); // happens to position such that #29 is visible
         pulse();
-        assertEquals(200, flow.maxPrefBreadth, 0.0);
+        assertEquals(200, flow.getMaxPrefBreadth(), 0.0);
         for (int i = 0; i < flow.cells.size(); i++) {
             IndexedCell cell = flow.cells.get(i);
-            assertEquals(flow.maxPrefBreadth, cell.getWidth(), 0.0);
+            assertEquals(flow.getMaxPrefBreadth(), cell.getWidth(), 0.0);
         }
 
         flow.setVertical(false);
@@ -707,10 +707,10 @@ public class VirtualFlowTest {
         pulse();
         flow.setPosition(.28);
         pulse();
-        assertEquals(200, flow.maxPrefBreadth, 0.0);
+        assertEquals(200, flow.getMaxPrefBreadth(), 0.0);
         for (int i = 0; i < flow.cells.size(); i++) {
             IndexedCell cell = flow.cells.get(i);
-            assertEquals(flow.maxPrefBreadth, cell.getHeight(), 0.0);
+            assertEquals(flow.getMaxPrefBreadth(), cell.getHeight(), 0.0);
         }
     }
 

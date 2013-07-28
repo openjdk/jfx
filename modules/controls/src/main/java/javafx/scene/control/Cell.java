@@ -36,7 +36,6 @@ import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
-import javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.accessible.AccessibleListItem;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;

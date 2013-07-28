@@ -1188,15 +1188,43 @@ public class TreeTableViewTest {
     }
     
     @Test public void test_rt18339_onlyEditWhenTreeTableViewIsEditable_editableIsFalse() {
-        treeTableView.setEditable(false);
-        treeTableView.edit(root);
-        assertEquals(null, treeTableView.getEditingItem());
+        TreeItem root = new TreeItem("root");
+        root.getChildren().setAll(
+                new TreeItem(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
+        root.setExpanded(true);
+
+        TreeTableView<Person> table = new TreeTableView<Person>(root);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        table.setEditable(false);
+        table.edit(0,firstNameCol);
+        assertNull(table.getEditingCell());
     }
     
     @Test public void test_rt18339_onlyEditWhenTreeTableViewIsEditable_editableIsTrue() {
-        treeTableView.setEditable(true);
-        treeTableView.edit(root);
-        assertEquals(root, treeTableView.getEditingItem());
+        TreeItem root = new TreeItem("root");
+        root.getChildren().setAll(
+                new TreeItem(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
+        root.setExpanded(true);
+
+        TreeTableView<Person> table = new TreeTableView<Person>(root);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        table.setEditable(true);
+        table.edit(0,firstNameCol);
+        assertEquals(root, table.getEditingCell().getTreeItem());
     }
     
     @Test public void test_rt14451() {
@@ -2086,15 +2114,15 @@ public class TreeTableViewTest {
         assertEquals("TEST", cell.getText());
         assertFalse(cell.isEditing());
 
-        treeTableView.edit(child1);
+        treeTableView.edit(1, firstNameCol);
 
-        assertEquals(child1, treeTableView.getEditingItem());
+        assertEquals(child1, treeTableView.getEditingCell().getTreeItem());
         assertTrue(cell.isEditing());
 
         VirtualFlowTestUtils.getVirtualFlow(treeTableView).requestLayout();
         Toolkit.getToolkit().firePulse();
 
-        assertEquals(child1, treeTableView.getEditingItem());
+        assertEquals(child1, treeTableView.getEditingCell().getTreeItem());
         assertTrue(cell.isEditing());
     }
 
@@ -2287,5 +2315,38 @@ public class TreeTableViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(0, rt_31200_count);
+    }
+
+    @Test public void test_rt_31727() {
+        installChildren();
+        treeTableView.setEditable(true);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
+            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures param) {
+                return new ReadOnlyStringWrapper("TEST");
+            }
+        });
+        firstNameCol.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        firstNameCol.setEditable(true);
+
+        treeTableView.getColumns().add(firstNameCol);
+
+        treeTableView.setEditable(true);
+        firstNameCol.setEditable(true);
+
+        // do a normal edit
+        treeTableView.edit(0, firstNameCol);
+        TreeTablePosition editingCell = treeTableView.getEditingCell();
+        assertNotNull(editingCell);
+        assertEquals(0, editingCell.getRow());
+        assertEquals(0, editingCell.getColumn());
+        assertEquals(firstNameCol, editingCell.getTableColumn());
+        assertEquals(treeTableView, editingCell.getTreeTableView());
+
+        // cancel editing
+        treeTableView.edit(-1, null);
+        editingCell = treeTableView.getEditingCell();
+        assertNull(editingCell);
     }
 }

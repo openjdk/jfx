@@ -34,7 +34,6 @@ import javafx.collections.ListChangeListener;
 import javafx.event.Event;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
-import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.skin.TableCellSkin;
 import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
@@ -131,8 +130,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     };
     
-    private ListChangeListener<TableColumn<S,T>> visibleLeafColumnsListener = new ListChangeListener<TableColumn<S,T>>() {
-        @Override public void onChanged(Change<? extends TableColumn<S,T>> c) {
+    private ListChangeListener<TableColumn<S,?>> visibleLeafColumnsListener = new ListChangeListener<TableColumn<S,?>>() {
+        @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
             updateColumnIndex();
         }
     };
@@ -151,16 +150,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     };
     
-    private final WeakListChangeListener weakSelectedListener = 
-            new WeakListChangeListener(selectedListener);
+    private final WeakListChangeListener<TablePosition> weakSelectedListener =
+            new WeakListChangeListener<>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = 
             new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weaktableRowUpdateObserver = 
             new WeakInvalidationListener(tableRowUpdateObserver);
     private final WeakInvalidationListener weakEditingListener = 
             new WeakInvalidationListener(editingListener);
-    private final WeakListChangeListener weakVisibleLeafColumnsListener =
-            new WeakListChangeListener(visibleLeafColumnsListener);
+    private final WeakListChangeListener<TableColumn<S,?>> weakVisibleLeafColumnsListener =
+            new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakColumnStyleClassListener =
             new WeakListChangeListener<String>(columnStyleClassListener);
 
@@ -214,8 +213,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
             tableView = new ReadOnlyObjectWrapper<TableView<S>>() {
                 private WeakReference<TableView<S>> weakTableViewRef;
                 @Override protected void invalidated() {
-                    TableView.TableViewSelectionModel sm;
-                    TableViewFocusModel fm;
+                    TableView.TableViewSelectionModel<S> sm;
+                    TableViewFocusModel<S> fm;
                     
                     if (weakTableViewRef != null) {
                         cleanUpTableViewListeners(weakTableViewRef.get());

@@ -32,7 +32,6 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
 import javafx.css.StyleableProperty;

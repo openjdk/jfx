@@ -31,13 +31,13 @@ import javafx.scene.control.ListView;
 
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 
-public class ListCellSkin extends CellSkinBase<ListCell, ListCellBehavior> {
+public class ListCellSkin<T> extends CellSkinBase<ListCell<T>, ListCellBehavior<T>> {
 
     private double fixedCellSize;
     private boolean fixedCellSizeEnabled;
 
-    public ListCellSkin(ListCell control) {
-        super(control, new ListCellBehavior(control));
+    public ListCellSkin(ListCell<T> control) {
+        super(control, new ListCellBehavior<T>(control));
 
         this.fixedCellSize = control.getListView().getFixedCellSize();
         this.fixedCellSizeEnabled = fixedCellSize > 0;
@@ -55,7 +55,7 @@ public class ListCellSkin extends CellSkinBase<ListCell, ListCellBehavior> {
     
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double pref = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
-        ListView listView = getSkinnable().getListView();
+        ListView<T> listView = getSkinnable().getListView();
         return listView == null ? 0 :
             listView.getOrientation() == Orientation.VERTICAL ? pref : Math.max(pref, getCellSize());
     }
@@ -71,7 +71,7 @@ public class ListCellSkin extends CellSkinBase<ListCell, ListCellBehavior> {
         final double prefHeight = cellSize == DEFAULT_CELL_SIZE ? super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset) : cellSize;
         
         // RT-30212: ListCell does not honor minSize of cells
-        final ListCell cell = getSkinnable();
+        final ListCell<T> cell = getSkinnable();
         return Math.max(cell.getMinHeight(), prefHeight);
     }
 

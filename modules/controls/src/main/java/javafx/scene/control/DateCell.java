@@ -27,11 +27,6 @@ package javafx.scene.control;
 
 import java.time.LocalDate;
 
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.collections.ObservableList;
-import javafx.scene.Node;
-
 import com.sun.javafx.scene.control.skin.DateCellSkin;
 
 /**

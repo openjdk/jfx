@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.A;
-import static javafx.scene.input.KeyCode.BACK_SLASH;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.END;
 import static javafx.scene.input.KeyCode.ENTER;
@@ -57,7 +56,6 @@ import com.sun.javafx.PlatformUtil;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.Control;
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;

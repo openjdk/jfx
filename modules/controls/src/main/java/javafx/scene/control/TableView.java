@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -43,10 +42,10 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -63,7 +62,6 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
@@ -71,7 +69,6 @@ import javafx.util.Callback;
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
@@ -517,7 +514,7 @@ public class TableView<S> extends Control {
     
     private final InvalidationListener columnSortableObserver = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            TableColumn col = (TableColumn) ((BooleanProperty)valueModel).getBean();
+            Object col = ((Property<?>)valueModel).getBean();
             if (! getSortOrder().contains(col)) return;
             doSort(TableUtil.SortEventType.COLUMN_SORTABLE_CHANGE, col);
         }
@@ -525,7 +522,7 @@ public class TableView<S> extends Control {
 
     private final InvalidationListener columnSortTypeObserver = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            TableColumn col = (TableColumn) ((ObjectProperty)valueModel).getBean();
+            Object col = ((Property<?>)valueModel).getBean();
             if (! getSortOrder().contains(col)) return;
             doSort(TableUtil.SortEventType.COLUMN_SORT_TYPE_CHANGE, col);
         }
@@ -533,7 +530,7 @@ public class TableView<S> extends Control {
     
     private final InvalidationListener columnComparatorObserver = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            TableColumn col = (TableColumn) ((SimpleObjectProperty)valueModel).getBean();
+            Object col = ((Property<?>)valueModel).getBean();
             if (! getSortOrder().contains(col)) return;
             doSort(TableUtil.SortEventType.COLUMN_COMPARATOR_CHANGE, col);
         }
@@ -590,13 +587,13 @@ public class TableView<S> extends Control {
                 // FIXME temporary fix for RT-15793. This will need to be
                 // properly fixed when time permits
                 if (getSelectionModel() instanceof TableViewArrayListSelectionModel) {
-                    ((TableViewArrayListSelectionModel)getSelectionModel()).updateItemsObserver(oldItems, getItems());
+                    ((TableViewArrayListSelectionModel<S>)getSelectionModel()).updateItemsObserver(oldItems, getItems());
                 }
                 if (getFocusModel() != null) {
-                    ((TableViewFocusModel)getFocusModel()).updateItemsObserver(oldItems, getItems());
+                    ((TableViewFocusModel<S>)getFocusModel()).updateItemsObserver(oldItems, getItems());
                 }
                 if (getSkin() instanceof TableViewSkin) {
-                    TableViewSkin skin = (TableViewSkin) getSkin();
+                    TableViewSkin<S> skin = (TableViewSkin<S>) getSkin();
                     skin.updateTableItems(oldItems, getItems());
                 }
                 
@@ -1216,8 +1213,15 @@ public class TableView<S> extends Control {
      * TableView and column are also editable.
      */
     public void edit(int row, TableColumn<S,?> column) {
-        if (!isEditable() || (column != null && ! column.isEditable())) return;
-        setEditingCell(new TablePosition(this, row, column));
+        if (!isEditable() || (column != null && ! column.isEditable())) {
+            return;
+        }
+
+        if (row < 0 && column == null) {
+            setEditingCell(null);
+        } else {
+            setEditingCell(new TablePosition<>(this, row, column));
+        }
     }
     
     /**
@@ -1247,7 +1251,7 @@ public class TableView<S> extends Control {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TableViewSkin(this);
+        return new TableViewSkin<S>(this);
     }
     
     /**
@@ -1261,7 +1265,7 @@ public class TableView<S> extends Control {
      * @since JavaFX 8.0
      */
     public void sort() {
-        final ObservableList<? extends TableColumnBase> sortOrder = getSortOrder();
+        final ObservableList<? extends TableColumnBase<S,?>> sortOrder = getSortOrder();
         
         // update the Comparator property
         final Comparator<S> oldComparator = getComparator();
@@ -1408,15 +1412,15 @@ public class TableView<S> extends Control {
                                                     SizeConverter.getInstance(),
                                                     Region.USE_COMPUTED_SIZE) {
 
-                    @Override public Double getInitialValue(TableView node) {
+                    @Override public Double getInitialValue(TableView<?> node) {
                         return node.getFixedCellSize();
                     }
 
-                    @Override public boolean isSettable(TableView n) {
+                    @Override public boolean isSettable(TableView<?> n) {
                         return n.fixedCellSize == null || !n.fixedCellSize.isBound();
                     }
 
-                    @Override public StyleableProperty<Number> getStyleableProperty(TableView n) {
+                    @Override public StyleableProperty<Number> getStyleableProperty(TableView<?> n) {
                         return (StyleableProperty<Number>) n.fixedCellSizeProperty();
                     }
                 };
@@ -1487,7 +1491,7 @@ public class TableView<S> extends Control {
          * TableView resize operation.
          */
         @Override public TableColumn<S,?> getColumn() { 
-            return (TableColumn) super.getColumn(); 
+            return (TableColumn<S,?>) super.getColumn(); 
         }
         
         /**
@@ -1561,7 +1565,6 @@ public class TableView<S> extends Control {
         public abstract ObservableList<TablePosition> getSelectedCells();
 
 
-
         /***********************************************************************
          *                                                                     *
          * Generic (type erasure) bridging                                     *
@@ -1571,7 +1574,7 @@ public class TableView<S> extends Control {
         // --- isSelected
         /** {@inheritDoc} */
         @Override public boolean isSelected(int row, TableColumnBase<S, ?> column) {
-            return isSelected(row, (TableColumn)column);
+            return isSelected(row, (TableColumn<S,?>)column);
         }
 
         /**
@@ -1584,7 +1587,7 @@ public class TableView<S> extends Control {
         // --- select
         /** {@inheritDoc} */
         @Override public void select(int row, TableColumnBase<S, ?> column) {
-            select(row, (TableColumn)column);
+            select(row, (TableColumn<S,?>)column);
         }
 
         /**
@@ -1596,7 +1599,7 @@ public class TableView<S> extends Control {
         // --- clearAndSelect
         /** {@inheritDoc} */
         @Override public void clearAndSelect(int row, TableColumnBase<S,?> column) {
-            clearAndSelect(row, (TableColumn) column);
+            clearAndSelect(row, (TableColumn<S,?>) column);
         }
 
         /**
@@ -1609,7 +1612,7 @@ public class TableView<S> extends Control {
         // --- clearSelection
         /** {@inheritDoc} */
         @Override public void clearSelection(int row, TableColumnBase<S,?> column) {
-            clearSelection(row, (TableColumn) column);
+            clearSelection(row, (TableColumn<S,?>) column);
         }
 
         /**
@@ -1672,18 +1675,18 @@ public class TableView<S> extends Control {
          **********************************************************************/
 
         void focus(int row, TableColumn<S,?> column) {
-            focus(new TablePosition(getTableView(), row, column));
+            focus(new TablePosition<>(getTableView(), row, column));
         }
 
-        void focus(TablePosition pos) {
+        void focus(TablePosition<S,?> pos) {
             if (getTableView().getFocusModel() == null) return;
 
             getTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
         }
 
-        TablePosition getFocusedCell() {
+        TablePosition<S,?> getFocusedCell() {
             if (getTableView().getFocusModel() == null) {
-                return new TablePosition(getTableView(), -1, null);
+                return new TablePosition<>(getTableView(), -1, null);
             }
             return getTableView().getFocusModel().getFocusedCell();
         }
@@ -1727,7 +1730,7 @@ public class TableView<S> extends Control {
             };
             
             final MappingChange.Map<TablePosition<S,?>,Integer> cellToIndicesMap = new MappingChange.Map<TablePosition<S,?>, Integer>() {
-                @Override public Integer map(TablePosition f) {
+                @Override public Integer map(TablePosition<S,?> f) {
                     return f.getRow();
                 }
             };
@@ -1910,8 +1913,8 @@ public class TableView<S> extends Control {
             }
         };
         
-        final WeakListChangeListener weakItemsContentListener 
-                = new WeakListChangeListener(itemsContentListener);
+        final WeakListChangeListener<S> weakItemsContentListener 
+                = new WeakListChangeListener<S>(itemsContentListener);
         
         private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
             // the listview items list has changed, we need to observe
@@ -2007,12 +2010,12 @@ public class TableView<S> extends Control {
                         // Essentially the selectedItem was correct, but selectedItems
                         // was empty.
                         if (oldRow == 0 && shift == -1) {
-                            newIndices.add(new TablePosition(getTableView(), 0, old.getTableColumn()));
+                            newIndices.add(new TablePosition<>(getTableView(), 0, old.getTableColumn()));
                             continue;
                         }
                         
                         if (newRow < 0) continue;
-                        newIndices.add(new TablePosition(getTableView(), newRow, old.getTableColumn()));
+                        newIndices.add(new TablePosition<>(getTableView(), newRow, old.getTableColumn()));
                     }
                     
                     quietClearSelection();
@@ -2058,7 +2061,7 @@ public class TableView<S> extends Control {
 
                         if (pMap.containsKey(oldIndex.getRow())) {
                             Integer newIndex = pMap.get(oldIndex.getRow());
-                            newIndices.add(new TablePosition(oldIndex.getTableView(), newIndex, oldIndex.getTableColumn()));
+                            newIndices.add(new TablePosition<>(oldIndex.getTableView(), newIndex, oldIndex.getTableColumn()));
                         }
                     }
 
@@ -2103,7 +2106,7 @@ public class TableView<S> extends Control {
 //            // if a column is given, I return
 //            if (! isCellSelectionEnabled() && column != null) return;
 
-            TablePosition pos = new TablePosition(getTableView(), row, column);
+            TablePosition<S,?> pos = new TablePosition<>(getTableView(), row, column);
             
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
@@ -2239,12 +2242,12 @@ public class TableView<S> extends Control {
 
             if (isCellSelectionEnabled()) {
                 List<TablePosition<S,?>> indices = new ArrayList<TablePosition<S,?>>();
-                TableColumn column;
+                TableColumn<S,?> column;
                 TablePosition<S,?> tp = null;
                 for (int col = 0; col < getTableView().getVisibleLeafColumns().size(); col++) {
                     column = getTableView().getVisibleLeafColumns().get(col);
                     for (int row = 0; row < getItemCount(); row++) {
-                        tp = new TablePosition(getTableView(), row, column);
+                        tp = new TablePosition<>(getTableView(), row, column);
                         indices.add(tp);
                     }
                 }
@@ -2257,7 +2260,7 @@ public class TableView<S> extends Control {
             } else {
                 List<TablePosition<S,?>> indices = new ArrayList<TablePosition<S,?>>();
                 for (int i = 0; i < getItemCount(); i++) {
-                    indices.add(new TablePosition(getTableView(), i, null));
+                    indices.add(new TablePosition<>(getTableView(), i, null));
                 }
                 selectedCells.setAll(indices);
                 
@@ -2278,7 +2281,7 @@ public class TableView<S> extends Control {
 
         @Override
         public void clearSelection(int row, TableColumn<S,?> column) {
-            TablePosition tp = new TablePosition(getTableView(), row, column);
+            TablePosition<S,?> tp = new TablePosition<>(getTableView(), row, column);
 
             boolean csMode = isCellSelectionEnabled();
             
@@ -2376,7 +2379,7 @@ public class TableView<S> extends Control {
         }
 
         @Override public void selectAboveCell() {
-            TablePosition pos = getFocusedCell();
+            TablePosition<S,?> pos = getFocusedCell();
             if (pos.getRow() == -1) {
                 select(getItemCount() - 1);
             } else if (pos.getRow() > 0) {
@@ -2385,7 +2388,7 @@ public class TableView<S> extends Control {
         }
 
         @Override public void selectBelowCell() {
-            TablePosition pos = getFocusedCell();
+            TablePosition<S,?> pos = getFocusedCell();
 
             if (pos.getRow() == -1) {
                 select(0);
@@ -2395,7 +2398,7 @@ public class TableView<S> extends Control {
         }
 
         @Override public void selectFirst() {
-            TablePosition focusedCell = getFocusedCell();
+            TablePosition<S,?> focusedCell = getFocusedCell();
 
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
@@ -2411,7 +2414,7 @@ public class TableView<S> extends Control {
         }
 
         @Override public void selectLast() {
-            TablePosition focusedCell = getFocusedCell();
+            TablePosition<S,?> focusedCell = getFocusedCell();
 
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
@@ -2431,7 +2434,7 @@ public class TableView<S> extends Control {
         public void selectLeftCell() {
             if (! isCellSelectionEnabled()) return;
 
-            TablePosition pos = getFocusedCell();
+            TablePosition<S,?> pos = getFocusedCell();
             if (pos.getColumn() - 1 >= 0) {
                 select(pos.getRow(), getTableColumn(pos.getTableColumn(), -1));
             }
@@ -2441,7 +2444,7 @@ public class TableView<S> extends Control {
         public void selectRightCell() {
             if (! isCellSelectionEnabled()) return;
 
-            TablePosition pos = getFocusedCell();
+            TablePosition<S,?> pos = getFocusedCell();
             if (pos.getColumn() + 1 < getTableView().getVisibleLeafColumns().size()) {
                 select(pos.getRow(), getTableColumn(pos.getTableColumn(), 1));
             }
@@ -2504,7 +2507,7 @@ public class TableView<S> extends Control {
 
         private final TableView<S> tableView;
 
-        private final TablePosition EMPTY_CELL;
+        private final TablePosition<S,?> EMPTY_CELL;
 
         /**
          * Creates a default TableViewFocusModel instance that will be used to
@@ -2525,7 +2528,7 @@ public class TableView<S> extends Control {
                 this.tableView.getItems().addListener(weakItemsContentListener);
             }
 
-            TablePosition pos = new TablePosition(tableView, -1, null);
+            TablePosition<S,?> pos = new TablePosition<>(tableView, -1, null);
             setFocusedCell(pos);
             EMPTY_CELL = pos;
         }
@@ -2641,7 +2644,7 @@ public class TableView<S> extends Control {
             if (row < 0 || row >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {
-                setFocusedCell(new TablePosition(tableView, row, column));
+                setFocusedCell(new TablePosition<>(tableView, row, column));
             }
         }
 
@@ -2688,7 +2691,7 @@ public class TableView<S> extends Control {
             if (index < 0 || index >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {
-                setFocusedCell(new TablePosition(tableView, index, null));
+                setFocusedCell(new TablePosition<>(tableView, index, null));
             }
         }
 

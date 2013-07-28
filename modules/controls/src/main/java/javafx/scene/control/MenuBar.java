@@ -40,7 +40,6 @@ import javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 
 /**
  * <p>
