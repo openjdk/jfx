@@ -642,6 +642,22 @@ ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
  * @param optional If the task is optional or not
  */
 void addNative(Project project, String name, boolean optional = false) {
+    addNative(project, name, null, optional)
+}
+
+/**
+ * Convenience method for creating javah, cc, link, and "native" tasks in the given project. These
+ * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
+ * named tasks.
+ * 
+ * @param project The project to add tasks to
+ * @param name The name of the project, such as "prism-common". This name is used
+ *        in the name of the generated task, such as ccPrismCommon, and also
+ *        in the name of the final library, such as libprism-common.dylib.
+ * @param list of compile targets. Library is applicable only for these targets.
+ * @param optional If the task is optional or not
+ */
+void addNative(Project project, String name, List<String> includeTargets, boolean optional = false) {
     // TODO if we want to handle 32/64 bit windows in the same build,
     // Then we will need to modify the win compile target to be win32 or win64
     def capitalName = name.split("-").collect{it.capitalize()}.join()
@@ -658,11 +674,15 @@ void addNative(Project project, String name, boolean optional = false) {
     def libRootDir = project.file("$project.buildDir/libs/$name")
     // For each compile target, create a javah / cc / link triplet
     compileTargets { t ->
+        if (includeTargets != null && !includeTargets.contains(t.name)) {
+            return
+        }
         def targetProperties = project.rootProject.ext[t.upper]
         def library = targetProperties.library
         def properties = targetProperties.get(name)
         def nativeDir = file("$nativeRootDir/${t.name}")
         def headerDir = file("$headerRootDir/${t.name}")
+        
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
             description = "Generates JNI Headers for ${name} for ${t.name}"
             if (properties.javahSource == null) {
@@ -981,7 +1001,7 @@ project(":graphics") {
 
     // Currently lets not build pango by default
     if (IS_LINUX) {
-        addNative(project, "fontPango", !COMPILE_PANGO)
+        addNative(project, "fontPango", ["linux","armv6hf", "armv6sf"],!COMPILE_PANGO)
     }
 
     if (IS_WINDOWS) {
