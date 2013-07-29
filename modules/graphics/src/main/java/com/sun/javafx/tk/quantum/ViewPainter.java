@@ -60,7 +60,6 @@ abstract class ViewPainter implements Runnable {
      * FX handlers called in GlassViewEventHandler would not modify other scenes.
      */
     protected static final ReentrantLock renderLock = new ReentrantLock();
-    protected static final PaintCollector collector = PaintCollector.getInstance();
 
     // Pen dimensions. Pen width and height are checked on every repaint
     // to match its scene width/height. If any difference is found, the
@@ -70,27 +69,26 @@ abstract class ViewPainter implements Runnable {
     protected int viewWidth;
     protected int viewHeight;
     
-    protected boolean valid;
-    protected SceneState sceneState;
+    protected final SceneState sceneState;
 
     protected Presentable presentable;
     protected ResourceFactory factory;
 
-    protected int width;
-    protected int height;
+    private int width;
+    private int height;
 
     private boolean renderOverlay = false;
 
-    Rectangle dirtyRect;
-    RectBounds clip;
-    RectBounds dirtyRegionTemp;
-    DirtyRegionPool dirtyRegionPool;
-    DirtyRegionContainer dirtyRegionContainer;
-    Affine3D tx;
-    Affine3D scaleTx;
-    GeneralTransform3D viewProjTx;
-    GeneralTransform3D projTx;
-    NGNode root, overlayRoot;
+    private Rectangle dirtyRect;
+    private RectBounds clip;
+    private RectBounds dirtyRegionTemp;
+    private DirtyRegionPool dirtyRegionPool;
+    private DirtyRegionContainer dirtyRegionContainer;
+    private Affine3D tx;
+    private Affine3D scaleTx;
+    private GeneralTransform3D viewProjTx;
+    private GeneralTransform3D projTx;
+    private NGNode root, overlayRoot;
 
     protected ViewPainter(GlassScene gs) {
         sceneState = gs.getSceneState();
@@ -110,25 +108,12 @@ abstract class ViewPainter implements Runnable {
         }
     }
         
-    protected void setPaintBounds(int w, int h) {
-        width  = w;
-        height = h;
-    }
-
     protected void setRoot(NGNode node) {
         root = node;
     }
 
-    protected NGNode getRoot() {
-        return (root);
-    }
-
     protected void setOverlayRoot(NGNode node) {
         overlayRoot = node;
-    }
-
-    protected NGNode getOverlayRoot() {
-        return (overlayRoot);
     }
 
     protected void setRenderOverlay(boolean val) {
@@ -146,7 +131,7 @@ abstract class ViewPainter implements Runnable {
         }
     }
 
-    private int setDirtyRect(Graphics g) {
+    private int setDirtyRect() {
         clip.setBounds(0, 0, width, height);
         dirtyRegionTemp.makeEmpty();
         dirtyRegionContainer.reset();
@@ -161,12 +146,12 @@ abstract class ViewPainter implements Runnable {
         return status;
     }
 
-    public void paintImpl(Graphics g) {
+    protected void paintImpl(Graphics g) {
         int status = DirtyRegionContainer.DTR_CONTAINS_CLIP;
         if (PrismSettings.dirtyOptsEnabled) {
             long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
             if (!sceneState.getScene().isEntireSceneDirty() && !renderOverlay) {
-                status = setDirtyRect(g);
+                status = setDirtyRect();
                 if (status == DirtyRegionContainer.DTR_OK) {
                     root.doPreCulling(dirtyRegionContainer,
                                       tx, projTx);
@@ -262,7 +247,7 @@ abstract class ViewPainter implements Runnable {
         }
     }
 
-    void disposePresentable() {
+    protected void disposePresentable() {
         if (presentable instanceof GraphicsResource) {
             ((GraphicsResource)presentable).dispose();
         }
@@ -270,27 +255,19 @@ abstract class ViewPainter implements Runnable {
     }
 
     protected boolean validateStageGraphics() {
-        valid = true;
-        
-        if (!valid) {
-            return false;
-        }
-
         if (!sceneState.isValid()) {
             // indicates something happened between the scheduling of the 
             // job and the running of this job. 
             return false;
         }
 
-        viewWidth = sceneState.getWidth();
-        viewHeight = sceneState.getHeight();
-
-        setPaintBounds(viewWidth, viewHeight);
+        width = viewWidth = sceneState.getWidth();
+        height = viewHeight = sceneState.getHeight();
 
         return sceneState.isWindowVisible() && !sceneState.isWindowMinimized();
     }
     
-    protected void doPaint(Graphics g, NodePath<NGNode> renderRootPath) {
+    private void doPaint(Graphics g, NodePath<NGNode> renderRootPath) {
         if (PrismSettings.showDirtyRegions) {
             g.setClipRect(null);
         }

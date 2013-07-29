@@ -26,7 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.IntBuffer;
-
+import java.util.concurrent.atomic.AtomicInteger;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.prism.Graphics;
@@ -37,7 +37,6 @@ import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.ManagedResource;
 import com.sun.prism.impl.PrismSettings;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * UploadingPainter is used when we need to render into an offscreen buffer.
@@ -67,7 +66,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         renderLock.lock();
 
         boolean locked = false;
-
+        boolean valid = false;
         try {
             valid = validateStageGraphics();
 

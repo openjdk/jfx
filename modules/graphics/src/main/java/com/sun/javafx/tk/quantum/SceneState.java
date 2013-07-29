@@ -32,7 +32,7 @@ import com.sun.glass.ui.Pixels;
 import com.sun.prism.PresentableState;
 
 /**
- * ViewState is intended to provide for a shadow copy the View/Scene state
+ * SceneState is intended to provide for a shadow copy the View/Scene state
  * similar to the shadow Graph, providing a static snapshot until the Scene 
  * is rendered.
  */

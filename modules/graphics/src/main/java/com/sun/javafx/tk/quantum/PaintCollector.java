@@ -324,6 +324,7 @@ final class PaintCollector implements CompletionListener {
              ViewPainter.renderLock.unlock();
          }
          try {
+             System.err.println("PaintCollector#liveRepaintRenderJob called on " + Thread.currentThread().getName());
              quantum.addRenderJob(new RenderJob(viewPainter, new CompletionListener() {
                  @Override public void done(final RenderJob rj) {
                      latch.countDown();
@@ -392,13 +393,13 @@ final class PaintCollector implements CompletionListener {
 
             // Obtain a z-ordered window list from glass.  For platforms without a native window manager,
             // we need to recopy the all of the window contents to the screen on every frame.
-            List<com.sun.glass.ui.Window> glassWindowList = com.sun.glass.ui.Window.getWindows();
+            final List<com.sun.glass.ui.Window> glassWindowList = com.sun.glass.ui.Window.getWindows();
             allWorkCompletedLatch = new CountDownLatch(glassWindowList.size());
             for (int i = 0, n = glassWindowList.size(); i < n; i++) {
                 final Window w = glassWindowList.get(i);
                 final WindowStage ws = WindowStage.findWindowStage(w);
                 if (ws != null) {
-                    ViewScene vs = ws.getViewScene();
+                    final ViewScene vs = ws.getViewScene();
 
                     // Check to see if this scene is in our dirty list.  If so, we will need to render
                     // the scene before we recopy it to the screen.  If not, we can skip this step.

@@ -456,7 +456,7 @@ public final class QuantumToolkit extends Toolkit {
         if (noRenderJobs) {
             CompletionListener listener = r.getCompletionListener();
             if (r instanceof PaintRenderJob) {
-                ((ViewScene)(((PaintRenderJob)r).getScene())).setPainting(false);
+                ((PaintRenderJob)r).getScene().setPainting(false);
             }
             if (listener != null) {
                 try {

@@ -36,7 +36,7 @@ import com.sun.prism.impl.PrismSettings;
  * UploadingPainter is used when we need to render into an offscreen buffer.
  */
 final class PresentingPainter extends ViewPainter {
-    
+
     PresentingPainter(ViewScene view) {
         super(view);
     }
@@ -45,6 +45,7 @@ final class PresentingPainter extends ViewPainter {
         renderLock.lock();
 
         boolean locked = false;
+        boolean valid = false;
 
         try {
             valid = validateStageGraphics();
