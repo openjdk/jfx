@@ -324,7 +324,6 @@ final class PaintCollector implements CompletionListener {
              ViewPainter.renderLock.unlock();
          }
          try {
-             System.err.println("PaintCollector#liveRepaintRenderJob called on " + Thread.currentThread().getName());
              quantum.addRenderJob(new RenderJob(viewPainter, new CompletionListener() {
                  @Override public void done(final RenderJob rj) {
                      latch.countDown();
