@@ -251,6 +251,26 @@ public class LogicalFont implements CompositeFontResource {
             }
         }
 
+        if (i >= 0x7E) {
+            /* There are 8bits (0xFF) reserved in a glyph code to store the slot
+             * number. The first bit cannot be set to avoid negative values
+             * (leaving 0x7F). The extra -1 (leaving 0x7E) is to account for
+             * the primary font resource in PrismCompositeFontResource.
+             */
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("\tToo many font fallbacks!");
+            }
+            return -1;
+        }
+        PrismFontFactory factory = PrismFontFactory.getFontFactory();
+        FontResource fr = factory.getFontResource(fontName, null, false);
+        if (fr == null) {
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("\t Font name not supported \"" + fontName + "\".");
+            }
+            return -1;
+        }
+
         /* Add the font to the list of native fallbacks */
         FontResource[] tmp;
         if (nativeFallbacks == null) {
@@ -259,8 +279,7 @@ public class LogicalFont implements CompositeFontResource {
             tmp = new FontResource[nativeFallbacks.length + 1];
             System.arraycopy(nativeFallbacks, 0, tmp, 0, nativeFallbacks.length);
         }
-        PrismFontFactory factory = PrismFontFactory.getFontFactory();
-        tmp[tmp.length - 1] = factory.getFontResource(fontName, null, false);
+        tmp[tmp.length - 1] = fr;
         nativeFallbacks = tmp;
 
         return i;
