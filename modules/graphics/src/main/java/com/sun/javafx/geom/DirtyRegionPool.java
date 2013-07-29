@@ -28,7 +28,7 @@ package com.sun.javafx.geom;
 import java.util.Deque;
 import java.util.LinkedList;
 
-public final class UDirtyRegionPool {
+public final class DirtyRegionPool {
 
     private class PoolItem {
 
