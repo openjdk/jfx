@@ -30,12 +30,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 .chart {
-    -fx-background-image: url("/ensemble/samples/shared-resources/Curve-fitted-background.png");
+    -fx-background-image: url("../../../shared-resources/Curve-fitted-background.png");
     -fx-padding: 15 25 15 15;
 }
 .chart-plot-background {
     -fx-background-color: red;
-    -fx-background-image: url("/ensemble/samples/shared-resources/Curve-fitted-chart-background.png"), url("/ensemble/samples/shared-resources/Curve-fitted-graph-gridlines.png");
+    -fx-background-image: url("../../../shared-resources/Curve-fitted-chart-background.png"), url("../../../shared-resources/Curve-fitted-graph-gridlines.png");
     -fx-background-size: cover, auto;
     -fx-background-repeat: no-repeat, repeat;
     -fx-background-position: 0% 0%, 0% 100%;
