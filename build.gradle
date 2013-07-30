@@ -1824,12 +1824,15 @@ compileTargets { t ->
                         from ("modules/web/src/main/native/WebKitLibraries/import/runtime")
                     }
                 } else {
-                    if (IS_MAC && COMPILE_TARGETS != "ios") from ("$LIBRARY_STUB/libjfxwebkit.dylib")
+                    if (t.name == "android") {
+                        //don't copy anything, use built in webkit.
+                    }
+                    else if (IS_MAC && COMPILE_TARGETS != "ios") from ("$LIBRARY_STUB/libjfxwebkit.dylib")
                     else if (IS_WINDOWS) {
                         from ("$LIBRARY_STUB/jfxwebkit.dll")
                         from ("$LIBRARY_STUB/libxml2.dll")
                         from ("$LIBRARY_STUB/libxslt.dll")
-                    }
+                    }                    
                     else from ("$LIBRARY_STUB/libjfxwebkit.so")
                 }
                 def libDest = targetProperties.libDest
