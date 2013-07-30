@@ -16,6 +16,7 @@ import java.util.concurrent.Callable;
 import javafx.concurrent.Worker.State;
 import javafx.event.EventHandler;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -89,6 +90,7 @@ public class LoadTest extends TestBase {
         }});
     }
 
+    @Ignore("RT-31990")
     @Test public void testLoadNull() {
         load((String) null);
         final WebEngine web = getEngine();
