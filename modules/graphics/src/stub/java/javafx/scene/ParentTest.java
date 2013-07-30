@@ -613,6 +613,29 @@ public class ParentTest {
     }
 
     @Test
+    public void testChildrenPermutationInvalidatesManagedChildrenAndLayout() {
+        LGroup root = new LGroup();
+        Rectangle r1 = new Rectangle();
+        Rectangle r2 = new Rectangle();
+
+        root.getChildren().addAll(r1, r2);
+
+        root.clear();
+
+        root.getManagedChildren().equals(root.getChildren());
+
+        root.getChildren().setAll(r2, r1);
+
+        root.getManagedChildren().equals(root.getChildren());
+        root.assertAndClear(true);
+
+        r2.toFront();
+
+        root.getManagedChildren().equals(root.getChildren());
+        root.assertAndClear(true);
+    }
+
+    @Test
     public void sceneListenerCanAddChild() {
         final Group root = new Group();
         final Scene scene = new Scene(root, 600, 450);
