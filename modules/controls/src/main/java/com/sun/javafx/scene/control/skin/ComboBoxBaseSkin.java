@@ -25,8 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.List;
-
+import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.HPos;
@@ -36,7 +35,7 @@ import javafx.scene.control.ComboBoxBase;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
-import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
+import java.util.List;
 
 public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<T>, ComboBoxBaseBehavior<T>> {
     
@@ -209,5 +208,19 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
 
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefHeight(width);
+    }
+
+    // Overridden so that we use the displayNode as the baseline, rather than the arrow.
+    // See RT-30754 for more information.
+    @Override protected double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (displayNode == null) {
+            updateDisplayArea();
+        }
+
+        if (displayNode != null) {
+            return displayNode.getLayoutBounds().getMinY() + displayNode.getLayoutY() + displayNode.getBaselineOffset();
+        }
+
+        return super.computeBaselineOffset(topInset, rightInset, bottomInset, leftInset);
     }
 }
