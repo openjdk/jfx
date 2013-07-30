@@ -29,6 +29,10 @@
 #include "com_sun_glass_events_WindowEvent.h"
 #include "com_sun_glass_events_MouseEvent.h"
 
+#include <pthread.h>
+
+#define LENS_STATIC_WINDOWS_LIST_SIZE 4
+
 LensResult glass_window_NativeWindow_release(JNIEnv *env,
                                              NativeWindow window) {    
 
@@ -37,9 +41,18 @@ LensResult glass_window_NativeWindow_release(JNIEnv *env,
                    window);
 
     //Check to see if this window is an owner of other windows, if so close them
+    glass_window_list_lock();
     NativeWindow w = glass_window_list_getHead();
-    while (w) {
+    int windowsListSize = glass_window_list_getSize();
+    int notifyListIndex = -1;
+    NativeWindow tmpStaticWindowsList[LENS_STATIC_WINDOWS_LIST_SIZE];
+    NativeWindow *notifList = tmpStaticWindowsList;
 
+    if (windowsListSize > LENS_STATIC_WINDOWS_LIST_SIZE) {
+        notifList = (NativeWindow*)malloc(windowsListSize * sizeof(NativeWindow));
+    }
+   
+    while (w) {
         GLASS_LOG_FINER("checking if w(%i)->owner(%i[%p]) == window %i[%p]", 
                         w->id,
                         w->owner?w->owner->id:-1,
@@ -47,17 +60,28 @@ LensResult glass_window_NativeWindow_release(JNIEnv *env,
                         window->id,window);
 
         if (w->owner == window) {
-
             GLASS_LOG_FINE("Closing window %i[%p] - owned by closing window %i[%p]", 
                            w->id,w,
                            window->id,window);
 
-            GLASS_LOG_FINER("Sending CLOSE event to window %i[%p]", w->id, w);
-
-            glass_application_notifyWindowEvent(env,w,com_sun_glass_events_WindowEvent_CLOSE);
-
+            notifList[++notifyListIndex] = w;
         }
         w = w->nextWindow;
+    }
+
+    glass_window_list_unlock();
+
+    {   
+        int i;
+        for (i = 0; i <= notifyListIndex; ++i) {
+            GLASS_LOG_FINER("Sending CLOSE event to window %i[%p]", notifList[i]->id, notifList[i]);
+            glass_application_notifyWindowEvent(env, notifList[i], com_sun_glass_events_WindowEvent_CLOSE);
+        }
+    }
+
+    if (notifList != tmpStaticWindowsList) {
+        free(notifList);
+        notifList = NULL;
     }
 
     GLASS_LOG_FINE("Removing window from window's list");
@@ -121,6 +145,8 @@ static jlong glass_create_native_window
             window->state = NWS_NORMAL;
             window->view = NULL;
             window->alpha = 1.0;
+            window->previousWindow = NULL;
+            window->nextWindow = NULL;
 
             // set the root of the tree, which could be us.
             window->root = owner ? owner->root : window;
@@ -737,6 +763,34 @@ char *lens_window_getNativeStateName(NativeWindowState state) {
  */
 static NativeWindow windowList_head = NULL;
 static NativeWindow windowList_tail = NULL;
+static int windowList_size = 0;
+static pthread_mutex_t windowListMutex = PTHREAD_MUTEX_INITIALIZER;
+
+void glass_window_list_lock(){
+    pthread_mutex_lock(&windowListMutex);
+}
+
+void glass_window_list_unlock(){
+    pthread_mutex_unlock(&windowListMutex);
+}
+
+int glass_window_list_getSize(){
+    return windowList_size;
+}
+
+static jboolean glass_window_isExist(NativeWindow window){
+
+    NativeWindow w = glass_window_list_getHead();
+    while (w) {
+         if (w == window) {
+             return JNI_TRUE;
+         }
+         w = w->nextWindow;
+    }
+
+    return JNI_FALSE;
+}
+
 
 NativeWindow glass_window_list_getHead() {
     return windowList_head;
@@ -747,9 +801,18 @@ NativeWindow glass_window_list_getTail() {
 }
 
 jboolean glass_window_list_toFront(NativeWindow window) {
+
+    glass_window_list_lock();
     // don't bother if we are already at the tail
     if (window == windowList_tail) {
         //already at head
+        glass_window_list_unlock();
+        return JNI_FALSE;
+    }
+
+    if (glass_window_isExist(window) == JNI_FALSE) {
+        glass_window_list_unlock();
+        GLASS_LOG_SEVERE("window %p is not part of the windows list", window);
         return JNI_FALSE;
     }
 
@@ -771,15 +834,26 @@ jboolean glass_window_list_toFront(NativeWindow window) {
     windowList_tail->nextWindow = window;
     windowList_tail = window;
 
+    glass_window_list_unlock();
     return JNI_TRUE;
 }
 
 jboolean glass_window_list_toBack(NativeWindow window) {
+
+    glass_window_list_lock();
     // don't bother if we are already at the head
     if (window == windowList_head) {
         //already at tail
+        glass_window_list_unlock();
         return JNI_FALSE;
     }
+
+    if (glass_window_isExist(window) == JNI_FALSE) {
+        glass_window_list_unlock();
+        GLASS_LOG_SEVERE("window %p is not part of the windows list", window);
+        return JNI_FALSE;
+    }
+
 
     //disconnect first
     if (window->previousWindow) {
@@ -799,6 +873,7 @@ jboolean glass_window_list_toBack(NativeWindow window) {
     windowList_head->previousWindow = window;
     windowList_head = window;
 
+    glass_window_list_unlock();
     return JNI_TRUE;
 }
 
@@ -814,6 +889,8 @@ void glass_window_list_add(NativeWindow window) {
         return;
     }
 
+    glass_window_list_lock();
+
     if (windowList_head == NULL) {
         //create the head
         windowList_head = window;
@@ -826,8 +903,12 @@ void glass_window_list_add(NativeWindow window) {
 
     window->previousWindow = windowList_tail; 
     window->nextWindow = NULL; //we are now the tail
-
+ 
     windowList_tail = window; //update the tail
+    
+    windowList_size++;
+
+    glass_window_list_unlock();
 }
 
 /*
@@ -838,6 +919,15 @@ void glass_window_list_remove(NativeWindow window) {
         GLASS_LOG_WARNING("glass_window_list_remove called with NULL window");
         return;
     }
+
+    glass_window_list_lock();
+
+    if (glass_window_isExist(window) == JNI_FALSE) {
+        glass_window_list_unlock();
+        GLASS_LOG_SEVERE("window %p is not part of the windows list", window);
+        return;
+    }
+
 
     if (window->previousWindow != NULL) {
         //we have someone before us, attach it to the next window inline
@@ -856,9 +946,17 @@ void glass_window_list_remove(NativeWindow window) {
         //we are the tail, replace with previous window (can be null)
         windowList_tail = window->previousWindow;
     }
+
+    windowList_size--;
+
+    glass_window_list_unlock();
 }
 
+
 void glass_window_listPrint() {
+
+    glass_window_list_lock();
+
     NativeWindow w = windowList_head;
     GLASS_LOG_FINE("Window list head %i[%p] tail %i[%p]\n",
                    windowList_head?windowList_head->id : -1,
@@ -872,6 +970,8 @@ void glass_window_listPrint() {
                        w->nextWindow?w->nextWindow->id : -1, w->nextWindow);
         w = w->nextWindow;
     }
+
+    glass_window_list_unlock();
 }
 
 /* 
