@@ -1821,7 +1821,7 @@ compileTargets { t ->
                 if (COMPILE_WEBKIT) {
                     from ("modules/web/build/libs/${library('jfxwebkit')}")
                     if (IS_WINDOWS) {
-                        from ("modules/web/src/main/native/WebKitLibraries/import/runtime")
+                        from ("modules/web/src/main/native/WebKitBuild/import/runtime")
                     }
                 } else {
                     if (IS_MAC && COMPILE_TARGETS != "ios") from ("$LIBRARY_STUB/libjfxwebkit.dylib")
