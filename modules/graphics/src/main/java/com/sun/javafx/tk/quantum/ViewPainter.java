@@ -186,7 +186,8 @@ abstract class ViewPainter implements Runnable {
                     g.setClipRect(dirtyRect);
                     g.setClipRectIndex(i);
 
-                    if (g.isDepthTest()) {
+                    // Disable occlusion culling if depth buffer is enabled for the scene.
+                    if (sceneState.getScene().getDepthBuffer()) {
                         doPaint(g, null);
                     } else {
                         doPaint(g, root.getRenderRoot(NODE_PATH, dirtyRegion, i, tx, projTx));
