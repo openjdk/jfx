@@ -77,7 +77,7 @@ import javafx.util.StringConverter;
  *      instances.
  * @since JavaFX 2.2
  */
-public class CheckBoxTreeCell<T> extends TreeCell<T> {
+public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     
     /***************************************************************************
      *                                                                         *

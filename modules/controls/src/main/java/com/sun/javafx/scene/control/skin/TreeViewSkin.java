@@ -247,6 +247,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         return cell;
     }
 
+    // Note: This is a copy/paste of javafx.scene.control.cell.DefaultTreeCell,
+    // which is package-protected
     private TreeCell<T> createDefaultCellImpl() {
         return new TreeCell<T>() {
             private HBox hbox;

@@ -25,7 +25,6 @@
 
 package javafx.scene.control.cell;
 
-import static javafx.scene.control.cell.CellUtils.createComboBox;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -37,6 +36,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+
+import static javafx.scene.control.cell.CellUtils.createComboBox;
 
 /**
  * A class containing a {@link TreeCell} implementation that draws a 
@@ -55,7 +56,7 @@ import javafx.util.StringConverter;
  * @param <T> The type of the TreeItems contained within the TreeView.
  * @since JavaFX 2.2
  */
-public class ComboBoxTreeCell<T> extends TreeCell<T> {
+public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
     
     /***************************************************************************
      *                                                                         *
