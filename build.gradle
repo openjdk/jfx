@@ -119,6 +119,23 @@ String cygpath(String path) {
     return out.toString().trim();
 }
 
+
+void loadProperties(String sourceFileName) {
+    def config = new Properties()
+    def propFile = new File(sourceFileName)
+    if (propFile.canRead()) {
+        config.load(new FileInputStream(propFile))
+        for (Map.Entry property in config) {
+            def keySplit = property.key.split("\\.");
+            def key = keySplit[0];
+            for (int i = 1; i < keySplit.length; i++) {
+                key = key + keySplit[i].capitalize();
+            }
+            ext[key] = property.value;
+        }
+    }
+}
+
 /**
  * Struct used to contain some information passed to the closure
  * passed to compileTargets.
@@ -257,6 +274,12 @@ defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"
 defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api")
+
+defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
+defineProperty("javaVersion", javaRuntimeVersion.split("[_\\-]")[0])
+defineProperty("javaBuildNumber", javaRuntimeVersion.substring(javaRuntimeVersion.lastIndexOf("-b") + 2))
+
+loadProperties("$projectDir/build.properties")
 
 def String closedCacheStubRuntime = cygpath("$projectDir") + "/../caches/sdk/rt"
 defineProperty("STUB_RUNTIME", BUILD_CLOSED ? closedCacheStubRuntime : cygpath("$JDK_HOME/jre"))
@@ -595,6 +618,10 @@ logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
 logger.quiet("JDK_HOME: $JDK_HOME")
+logger.quiet("java.runtime.version: ${javaRuntimeVersion}")
+logger.quiet("java version: ${javaVersion}")
+logger.quiet("java build number: ${javaBuildNumber}")
+logger.quiet("minimum java build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
 logger.quiet("COMPILE_FLAGS_FILES: $COMPILE_FLAGS_FILES")
 logger.quiet("BINARY_STUB: ${BINARY_STUB == null ? '' : BINARY_STUB.asPath}")
@@ -792,6 +819,20 @@ void addJSL(Project project, String name, String pkg, Closure compile) {
     }
 }
 
+// Task to verify the minimum level of Java needed to build JavaFX
+task verifyJava() {
+    doLast {
+        if (javaVersion != jfxBuildJdkVersion) {
+            fail("java version mismatch: ${javaVersion} must be ${jfxBuildJdkVersion}")
+        }
+        def buildNum = Integer.parseInt(javaBuildNumber)
+        def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
+        if (buildNum < minBuildNum) {
+            fail("java build number ($buildNum) < minimum build number ($minBuildNum)")
+        }
+    }
+}
+
 task updateCacheIfNeeded() {
     // an empty task we can add to as needed for UPDATE_STUB_CACHE
 }
@@ -958,6 +999,7 @@ project(":base") {
     }
 
     compileJava.dependsOn updateCacheIfNeeded
+    compileJava.dependsOn verifyJava
 
     // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
