@@ -4356,7 +4356,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Currently used only by AnimationPath.createAnimationPathHelper().
+     * Currently used only by PathTransition
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */

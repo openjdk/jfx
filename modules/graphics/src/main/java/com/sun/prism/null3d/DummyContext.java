@@ -28,11 +28,11 @@ package com.sun.prism.null3d;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.ps.BaseShaderContext;
 import com.sun.prism.ps.Shader;
 
@@ -51,7 +51,7 @@ class DummyContext extends BaseShaderContext {
     }
 
     @Override
-    protected State updateRenderTarget(RenderTarget target, PrismCameraImpl camera, boolean depthTest) {
+    protected State updateRenderTarget(RenderTarget target, NGCamera camera, boolean depthTest) {
         return state;
     }
 

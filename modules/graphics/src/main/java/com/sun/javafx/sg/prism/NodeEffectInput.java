@@ -40,7 +40,7 @@ import com.sun.scenario.effect.impl.prism.PrRenderInfo;
 
 /**
  */
-public class NodeEffectInput extends BaseNodeEffectInput {
+public final class NodeEffectInput extends Effect {
     public static enum RenderType {
         EFFECT_CONTENT,
         CLIPPED_CONTENT,
@@ -49,6 +49,7 @@ public class NodeEffectInput extends BaseNodeEffectInput {
 
     private NGNode node;
     private RenderType renderType;
+    private BaseBounds tempBounds = new RectBounds();
 
     private ImageData cachedIdentityImageData;
     private ImageData cachedTransformedImageData;
@@ -59,15 +60,37 @@ public class NodeEffectInput extends BaseNodeEffectInput {
     }
 
     public NodeEffectInput(NGNode node, RenderType renderType) {
-        super(node);
         this.node = node;
         this.renderType = renderType;
+    }
+
+    public NGNode getNode() {
+        return node;
+    }
+
+    public void setNode(NGNode node) {
+        if (this.node != node) {
+            this.node = node;
+            flush();
+        }
     }
 
     static boolean contains(ImageData cachedImage, Rectangle imgbounds) {
         // We only cache ImageData objects with Identity transforms installed...
         Rectangle cachedBounds = cachedImage.getUntransformedBounds();
         return cachedBounds.contains(imgbounds);
+    }
+
+    @Override
+    public BaseBounds getBounds(BaseTransform transform,
+                              Effect defaultInput)
+    {
+        // TODO: update Effect.getBounds() to take Rectangle2D param so
+        // that we can avoid creating garbage here? (RT-23958)
+        BaseTransform t = transform == null ?
+                BaseTransform.IDENTITY_TRANSFORM : transform;
+        tempBounds = node.getContentBounds(tempBounds, t);
+        return tempBounds.copy();
     }
 
     @Override
@@ -139,7 +162,7 @@ public class NodeEffectInput extends BaseNodeEffectInput {
         cachedTransform = null;
     }
 
-    @Override public void flush() {
+    public void flush() {
         flushIdentityImage();
         flushTransformedImage();
     }

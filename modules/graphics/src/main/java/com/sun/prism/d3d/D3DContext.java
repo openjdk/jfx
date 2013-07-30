@@ -30,13 +30,13 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGDefaultCamera;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.MeshView;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.impl.ps.BaseShaderContext;
@@ -84,7 +84,7 @@ class D3DContext extends BaseShaderContext {
 
     private final long pContext;
 
-    PrismCameraImpl camera = null;
+    NGCamera camera = null;
     private int targetWidth = 0, targetHeight = 0;
     private boolean depthTest;
 
@@ -186,7 +186,7 @@ class D3DContext extends BaseShaderContext {
     }
 
     @Override
-    protected State updateRenderTarget(RenderTarget target, PrismCameraImpl camera,
+    protected State updateRenderTarget(RenderTarget target, NGCamera camera,
                                        boolean depthTest)  {
         long resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
         int res = nSetRenderTarget(pContext, resourceHandle);
@@ -198,8 +198,8 @@ class D3DContext extends BaseShaderContext {
         targetHeight = target.getPhysicalHeight();
 
         // Need to validate the camera before getting its computed data.
-        if (camera instanceof PrismDefaultCamera) {
-            ((PrismDefaultCamera) camera).validate(targetWidth, targetHeight);
+        if (camera instanceof NGDefaultCamera) {
+            ((NGDefaultCamera) camera).validate(targetWidth, targetHeight);
         }
 
         // Set projection view matrix

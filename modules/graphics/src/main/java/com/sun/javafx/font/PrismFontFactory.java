@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 
+import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.text.GlyphLayout;
@@ -344,10 +345,10 @@ public abstract class PrismFontFactory implements FontFactory {
 
     /* familyName is expected to be a physical font family name.
      */
-    synchronized FontResource getFontResource(String familyName,
-                                              boolean bold,
-                                              boolean italic,
-                                              boolean wantComp) {
+    public synchronized FontResource getFontResource(String familyName,
+                                                     boolean bold,
+                                                     boolean italic,
+                                                     boolean wantComp) {
 
         if (familyName == null || familyName.isEmpty()) {
             return null;
@@ -595,8 +596,8 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
-    synchronized FontResource getFontResource(String name, String file,
-                                              boolean wantComp) {
+    public synchronized FontResource getFontResource(String name, String file,
+                                                     boolean wantComp) {
         FontResource fr = null;
 
         // First check if the font is already known.
@@ -1804,6 +1805,14 @@ public abstract class PrismFontFactory implements FontFactory {
                 systemFontSize = MacFontFinder.getSystemFontSize();
             } else if (isAndroid) {
                systemFontSize = AndroidFontFinder.getSystemFontSize();
+            } else if (isEmbedded) {
+                try {
+                    int screenDPI = Screen.getMainScreen().getResolutionY();
+                    systemFontSize = ((float) screenDPI) / 6f; // 12 points
+                } catch (NullPointerException npe) {
+                    // if no screen is defined
+                    systemFontSize = 13f; // same as desktop Linux
+                }
             } else {
                 systemFontSize = 13f; // Gnome uses 13.
             }

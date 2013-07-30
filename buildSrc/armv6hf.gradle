@@ -151,6 +151,8 @@ def webLFlags = [extraLFlags].flatten()
 //  libprism-es2-eglx11.so \
 //  libglass_lens_fb.so \
 
+def gtkCFlags = [extraCFlags].flatten()
+def gtkLFlags = [extraLFlags].flatten()
 setupTools("armv6hf_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
@@ -168,9 +170,8 @@ setupTools("armv6hf_tools",
         propFile << "libs=" << results.toString().trim();
     },
     { properties ->
-        // TODO ONLY TO BE USED WITH GTK COMPILATION
-//        extraCFlags.addAll(properties.getProperty("cflags").split(" "))
-//        extraLFlags.addAll(properties.getProperty("libs").split(" "))
+        gtkCFlags.addAll(properties.getProperty("cflags").split(" "))
+        gtkLFlags.addAll(properties.getProperty("libs").split(" "))
     }
 )
 
@@ -247,7 +248,9 @@ ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "eglx11", "gtk"]
 ARMV6HF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
-    "com/sun/glass/ui/lens/*"]
+    "com/sun/glass/ui/lens/*",
+    "com/sun/glass/ui/gtk/*",
+    "com/sun/glass/ui/accessible/gtk/*"]
 ARMV6HF.glass.lib = "glass"
 
 ARMV6HF.glass.eglfb = [:]
@@ -314,13 +317,11 @@ ARMV6HF.glass.eglx11.linkFlags = [lensLFlags].flatten()
 ARMV6HF.glass.eglx11.lib = "glass_lens_eglx11"
 
 ARMV6HF.glass.gtk = [:]
-ARMV6HF.glass.gtk.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm")]
+ARMV6HF.glass.gtk.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
 ARMV6HF.glass.gtk.compiler = compiler
-ARMV6HF.glass.gtk.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
+ARMV6HF.glass.gtk.ccFlags = ["-ffast-math", gtkCFlags, "-DLINUX"].flatten()
 ARMV6HF.glass.gtk.linker = linker
-ARMV6HF.glass.gtk.linkFlags = [lensLFlags, "-lstdc++"].flatten()
+ARMV6HF.glass.gtk.linkFlags = [gtkLFlags, "-lstdc++"].flatten()
 ARMV6HF.glass.gtk.lib = "glass"
 
 ARMV6HF.decora = [:]

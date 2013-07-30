@@ -56,16 +56,19 @@ class CTGlyphLayout extends GlyphLayout {
     private int getFontSlot(long runRef, CompositeFontResource fr, String name) {
         long runAttrs = OS.CTRunGetAttributes(runRef);
         long actualFont = OS.CFDictionaryGetValue(runAttrs, OS.kCTFontAttributeName());
-        String fontName = OS.CTFontCopyDisplayName(actualFont);
+
+        /* Use the display name from the kCTFontDisplayNameAttribute attribute
+         * instead of CTFontCopyDisplayName() to avoid localized names*/
+        String fontName = OS.CTFontCopyAttributeDisplayName(actualFont);
         int slot = 0;
         if (!fontName.equalsIgnoreCase(name)) {
             if (fr == null) return -1;
             slot = fr.getSlotForFont(fontName);
             if (PrismFontFactory.debugFonts) {
-                System.err.println("\tFallback front= "+ fontName + " slot=" + slot);
+                System.err.println("\tFallback font= "+ fontName + " slot=" + slot);
             }
         }
-        return slot << 24;
+        return slot;
     }
 
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
@@ -75,6 +78,7 @@ class CTGlyphLayout extends GlyphLayout {
             composite = (CompositeFontResource)strike.getFontResource();
             strike = ((CompositeStrike)strike).getStrikeSlot(0);
         }
+        float size = strike.getSize();
         String fontName = strike.getFontResource().getFullName();
         long fontRef = ((CTFontStrike)strike).getFontRef();
         long lineRef = createCTLine(fontRef, text, run.getStart(), run.getLength());
@@ -89,15 +93,19 @@ class CTGlyphLayout extends GlyphLayout {
             long runRef = OS.CFArrayGetValueAtIndex(runs, i);
             int slot = getFontSlot(runRef, composite, fontName) ;
             if (slot != -1) {
-                glyphStart += OS.CTRunGetGlyphs(runRef, slot, glyphStart, glyphs);
+                glyphStart += OS.CTRunGetGlyphs(runRef, slot << 24, glyphStart, glyphs);
             } else {
                 glyphStart += OS.CTRunGetGlyphCount(runRef);
             }
-            posStart += OS.CTRunGetPositions(runRef, posStart, positions);
+            if (size > 0) {
+                posStart += OS.CTRunGetPositions(runRef, posStart, positions);
+            }
             indicesStart += OS.CTRunGetStringIndices(runRef, indicesStart, indices);
 
         }
-        positions[posStart] = (float)OS.CTLineGetTypographicBounds(lineRef);
+        if (size > 0) {
+            positions[posStart] = (float)OS.CTLineGetTypographicBounds(lineRef);
+        }
         run.shape(glyphCount, glyphs, positions, indices);
         OS.CFRelease(lineRef);
     }

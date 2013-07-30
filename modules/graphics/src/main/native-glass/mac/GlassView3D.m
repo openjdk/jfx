@@ -142,7 +142,6 @@
             {
                 NSOpenGLContext *sharedContextNS = (NSOpenGLContext*)jlong_to_ptr(jsharedContextPtr);
                 sharedCGL = [sharedContextNS CGLContextObj];
-                CGLSetCurrentContext(sharedCGL);
             }
         }
     }
@@ -172,10 +171,7 @@
         // this can happen in Rain or clients other than Prism (ie. device details do not have the shared context set)
         sharedCGL = clientCGL;
     }
-    
-    // the offscreen is the buffered context (ex. Fbo) that the client can draw into at any time
-    GlassOffscreen *offscreen = [[GlassOffscreen alloc] initWithContext:clientCGL];
-    
+
     self->isHiDPIAware = NO;
     if (jproperties != NULL)
     {
@@ -187,9 +183,8 @@
         }
     }
 
-    GlassLayer3D *layer = [[GlassLayer3D alloc] initWithSharedContext:sharedCGL withHiDPIAware:self->isHiDPIAware];
-    [layer hostOffscreen:offscreen];
-    
+    GlassLayer3D *layer = [[GlassLayer3D alloc] initWithSharedContext:sharedCGL andClientContext:clientCGL withHiDPIAware:self->isHiDPIAware];
+
     // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/nsview_Class/Reference/NSView.html#//apple_ref/occ/instm/NSView/setWantsLayer:
     // the order of the following 2 calls is important: here we indicate we want a layer-hosting view
     {
@@ -226,11 +221,11 @@
     if (self->_texture != 0)
     {
         GlassLayer3D *layer = (GlassLayer3D*)[self layer];
-        [[layer getOffscreen] bindForWidth:(GLuint)[self bounds].size.width andHeight:(GLuint)[self bounds].size.height];
+        [[layer getPainterOffscreen] bindForWidth:(GLuint)[self bounds].size.width andHeight:(GLuint)[self bounds].size.height];
         {
             glDeleteTextures(1, &self->_texture);
         }
-        [[layer getOffscreen] unbind];
+        [[layer getPainterOffscreen] unbind];
     }
     
     [[self layer] release];
@@ -295,9 +290,9 @@
     if ([self window] != nil)
     {
         GlassLayer3D *layer = (GlassLayer3D*)[self layer];
-        [[layer getOffscreen] setBackgroundColor:[[[self window] backgroundColor] colorUsingColorSpaceName:NSDeviceRGBColorSpace]];
+        [[layer getPainterOffscreen] setBackgroundColor:[[[self window] backgroundColor] colorUsingColorSpaceName:NSDeviceRGBColorSpace]];
     }
-    
+
     [self->_delegate viewDidMoveToWindow];
 }
 
@@ -555,7 +550,7 @@
         GlassLayer3D *layer = (GlassLayer3D*)[self layer];
         NSRect bounds = (self->isHiDPIAware && [self respondsToSelector:@selector(convertRectToBacking:)]) ?
             [self convertRectToBacking:[self bounds]] : [self bounds];
-        [[layer getOffscreen] bindForWidth:(GLuint)bounds.size.width andHeight:(GLuint)bounds.size.height];
+        [[layer getPainterOffscreen] bindForWidth:(GLuint)bounds.size.width andHeight:(GLuint)bounds.size.height];
     }
     self->_drawCounter++;
 }
@@ -568,7 +563,8 @@
     if (self->_drawCounter == 0)
     {
         GlassLayer3D *layer = (GlassLayer3D*)[self layer];
-        [[layer getOffscreen] unbind];
+        [[layer getPainterOffscreen] unbind];
+        [layer flush];
     }
     LOG("end:%d", flush);
 }

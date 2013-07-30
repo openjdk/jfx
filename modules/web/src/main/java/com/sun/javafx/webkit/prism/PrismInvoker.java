@@ -3,13 +3,13 @@
  */
 package com.sun.javafx.webkit.prism;
 
-import com.sun.javafx.tk.RenderJob;
-import com.sun.javafx.tk.Toolkit;
-import com.sun.webkit.Invoker;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import com.sun.javafx.tk.RenderJob;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.webkit.Invoker;
 
 public final class PrismInvoker extends Invoker {
 

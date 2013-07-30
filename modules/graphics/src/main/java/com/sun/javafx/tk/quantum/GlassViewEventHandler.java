@@ -658,11 +658,11 @@ class GlassViewEventHandler extends View.EventHandler {
                     Window w = view.getWindow();
                     scene.sceneListener.changedSize(view.getWidth(), view.getHeight());
                     scene.entireSceneNeedsRepaint();
-                    AbstractPainter.renderLock.lock();
+                    ViewPainter.renderLock.lock();
                     try {
                         scene.updateSceneState();
                     } finally {
-                        AbstractPainter.renderLock.unlock();
+                        ViewPainter.renderLock.unlock();
                     }
                     if (QuantumToolkit.liveResize && w != null && w.isVisible()) {
                         WindowStage stage = scene.getWindowStage();

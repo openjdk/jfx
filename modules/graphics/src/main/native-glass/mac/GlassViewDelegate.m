@@ -793,35 +793,35 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     
     int mask;
     NSDragOperation operation = [info draggingSourceOperationMask];
-    jint recommendedAction = [GlassDragSource mapNsOperationToJavaMask:operation];
-    [GlassDragSource setMask:recommendedAction];
+
+    [GlassDragSource setSupportedActions:[GlassDragSource mapNsOperationToJavaMask:operation]];
+
+    jint recommendedAction = [GlassDragSource getRecommendedActionForMask:operation];
     switch (type)
     {
         case com_sun_glass_events_DndEvent_ENTER:
             DNDLOG("com_sun_glass_events_DndEvent_ENTER");
             copyToDragPasteboardIfNeeded(info);
-            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragEnter, x, y, xAbs, yAbs, recommendedAction);
-            [GlassDragSource setMask:mask];
+            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragEnter, x, y, xAbs, yAbs, recommendedAction);           
             break;
         case com_sun_glass_events_DndEvent_UPDATE:
             DNDLOG("com_sun_glass_events_DndEvent_UPDATE");
-            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragOver, x, y, xAbs, yAbs, recommendedAction);
-            [GlassDragSource setMask:mask];
+            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragOver, x, y, xAbs, yAbs, recommendedAction);        
             break;
         case com_sun_glass_events_DndEvent_PERFORM:
             DNDLOG("com_sun_glass_events_DndEvent_PERFORM");
-            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragDrop, x, y, xAbs, yAbs, recommendedAction);
-            [GlassDragSource setMask:mask];
+            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragDrop, x, y, xAbs, yAbs, recommendedAction);            
             break;
         case com_sun_glass_events_DndEvent_EXIT:
             DNDLOG("com_sun_glass_events_DndEvent_EXIT");
             (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragLeave);
-            [GlassDragSource setMask:com_sun_glass_ui_Clipboard_ACTION_NONE];
+            mask = com_sun_glass_ui_Clipboard_ACTION_NONE;
             break;
         default:
-            [GlassDragSource setMask:com_sun_glass_ui_Clipboard_ACTION_NONE];
+            mask = com_sun_glass_ui_Clipboard_ACTION_NONE;
             break;
     }
+    [GlassDragSource setMask:mask];
     
     GLASS_CHECK_EXCEPTION(env);
     

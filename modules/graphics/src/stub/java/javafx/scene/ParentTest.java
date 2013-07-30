@@ -28,8 +28,12 @@ package javafx.scene;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.geometry.Bounds;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.After;
@@ -527,6 +531,27 @@ public class ParentTest {
     }
 
     @Test
+    public void requestLayoutTriggersPulse() {
+        final Group root = new Group();
+        final LGroup lroot = new LGroup();
+        lroot.setManaged(false);
+        root.getChildren().add(lroot);
+        final LGroup sub = new LGroup();
+        lroot.getChildren().add(sub);
+
+        toolkit.clearPulseRequested();
+        sub.requestLayout();
+        Scene scene = new Scene(root);
+        assertTrue(toolkit.isPulseRequested());
+        toolkit.clearPulseRequested();
+        root.layout();
+
+        sub.requestLayout();
+
+        assertTrue(toolkit.isPulseRequested());
+    }
+
+    @Test
     public void requestLayoutNotPropagatingDuringLayout() {
         final LGroup lroot = new LGroup();
         lroot.setManaged(false);
@@ -551,6 +576,63 @@ public class ParentTest {
 
         lroot.assertAndClear(false);
         sub.assertAndClear(true);
+    }
+
+    @Test
+    public void newChildInvalidatesLayoutWhenLayoutBoundsAreValidatedImmediately() {
+        Group root = new Group();
+        final AtomicBoolean layoutCalled = new AtomicBoolean();
+        final AtomicBoolean testReady = new AtomicBoolean();
+        LGroup sub = new LGroup() {
+
+            @Override
+            protected void layoutChildren() {
+                if (testReady.get()) {
+                    assertAndClear(true);
+                    layoutCalled.set(true);
+                }
+            }
+
+        };
+        root.getChildren().add(sub);
+        root.getLayoutBounds(); // validate
+        sub.getBoundsInParent(); // validate
+
+        root.layoutBoundsProperty().addListener(new ChangeListener<Bounds>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Bounds> observable, Bounds oldValue, Bounds newValue) {
+                // ChangeListener will immediately validate the bounds
+            }
+        });
+        sub.clear();
+
+        testReady.set(true);
+        sub.getChildren().add(new Rectangle());
+        assertTrue(layoutCalled.get());
+    }
+
+    @Test
+    public void testChildrenPermutationInvalidatesManagedChildrenAndLayout() {
+        LGroup root = new LGroup();
+        Rectangle r1 = new Rectangle();
+        Rectangle r2 = new Rectangle();
+
+        root.getChildren().addAll(r1, r2);
+
+        root.clear();
+
+        root.getManagedChildren().equals(root.getChildren());
+
+        root.getChildren().setAll(r2, r1);
+
+        root.getManagedChildren().equals(root.getChildren());
+        root.assertAndClear(true);
+
+        r2.toFront();
+
+        root.getManagedChildren().equals(root.getChildren());
+        root.assertAndClear(true);
     }
 
     @Test

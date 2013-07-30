@@ -62,9 +62,9 @@ class PangoGlyphLayout extends GlyphLayout {
 
         int slot = 0;
         if (!fallbackFullname.equalsIgnoreCase(primaryFullname)) {
-            slot = fr.getSlotForFont(fallbackFullname) << 24;
+            slot = fr.getSlotForFont(fallbackFullname);
             if (PrismFontFactory.debugFonts) {
-                System.err.println("\tFallback front= "+ fallbackFullname + " slot=" + (slot>>24));
+                System.err.println("\tFallback font= "+ fallbackFullname + " slot=" + (slot>>24));
             }
         }
         return slot;
@@ -130,8 +130,10 @@ class PangoGlyphLayout extends GlyphLayout {
             int width = 0;
             for (int j = 0; j < glyphCount; j++) {
                 info = glyphString.glyphs[j];
-                glyphs[j] = slot | info.glyph;
-                width += info.width;
+                if (slot != -1) {
+                    glyphs[j] = (slot << 24) | info.glyph;
+                }
+                if (size != 0) width += info.width;
                 pos[k] = ((float)width) / OS.PANGO_SCALE;
                 k += 2;
             }

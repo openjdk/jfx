@@ -71,4 +71,36 @@
     nbproject/build-impl.xml file. 
 
     -->
+
+    <target name="install-to-maven-repo" depends="jar">
+        <property name="maven.home" location="${ant.home}\..\maven"/>
+        <macrodef name="maven">
+            <attribute name="options" default="" />
+            <attribute name="goal" />
+            <attribute name="basedir" />
+            <attribute name="resultproperty" default="maven.result" />
+            <element name="args" implicit="true" optional="true" />
+            <sequential>
+                <java classname="org.codehaus.classworlds.Launcher" fork="true"
+                      dir="@{basedir}" resultproperty="@{resultproperty}">
+                    <jvmarg value="-Xmx512m"/>
+                    <classpath>
+                        <fileset dir="${maven.home}/boot">
+                            <include name="*.jar" />
+                        </fileset>
+                        <fileset dir="${maven.home}/lib">
+                            <include name="*.jar" />
+                        </fileset>
+                    </classpath>
+                    <sysproperty key="classworlds.conf" value="${maven.home}/bin/m2.conf" />
+                    <sysproperty key="maven.home" value="${maven.home}" />
+                    <arg line="--batch-mode @{options} @{goal}" />
+                </java>
+            </sequential>
+        </macrodef>
+        <maven basedir="${basedir}"
+             options="-Dfile=${dist.jar} -DgroupId=com.oracle.javafx.experiments -DartifactId=3DViewer -Dversion=1.0-SNAPSHOT -Dpackaging=jar"
+             goal="install:install-file"
+             resultproperty="maven.build.result"/>
+    </target>
 </project>

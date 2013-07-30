@@ -105,21 +105,6 @@ class DWFontFile extends PrismFontFile {
         return face;
     }
 
-    /* This is called only for fonts where a temp file was created */
-    protected synchronized void disposeOnShutdown() {
-        if (fontFace != null) {
-            fontFace.Release();
-            if (PrismFontFactory.debugFonts) {
-                System.err.println("fontFace freed: " + fontFace);
-            }
-            fontFace = null;
-        }
-        if (disposer != null) {
-            disposer.resource = null;
-            disposer = null;
-        }
-    }
-
     IDWriteFontFace getFontFace() {
         return fontFace;
     }

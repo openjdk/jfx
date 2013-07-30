@@ -46,12 +46,12 @@ import com.sun.javafx.tk.Toolkit;
 final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     // TODO: synchronize access to embedder from ET and RT
-    HostInterface host;
+    private HostInterface host;
 
     private UploadingPainter        painter;
     private PaintRenderJob          paintRenderJob;
 
-    IntBuffer textureBits;
+    volatile IntBuffer textureBits;
 
     int width;
     int height;
@@ -73,13 +73,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     @Override
     public void dispose() {
         assert host != null;
-        AbstractPainter.renderLock.lock();
+        ViewPainter.renderLock.lock();
         try {
             host.setEmbeddedScene(null);
             host = null;
             updateSceneState();
         } finally {
-            AbstractPainter.renderLock.unlock();
+            ViewPainter.renderLock.unlock();
         }
         super.dispose();
     }
@@ -114,7 +114,8 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     // Called by EmbeddedPainter on the render thread under renderLock
-    void sceneRepainted() {
+    void uploadPixels(IntBuffer pixels) {
+        textureBits = pixels;
         if (host != null) {
             host.repaint();
         }
@@ -140,13 +141,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public void setSize(final int width, final int height) {
-        AbstractPainter.renderLock.lock();
+        ViewPainter.renderLock.lock();
         try {
             this.width = width;
             this.height = height;
             updateSceneState();
         } finally {
-            AbstractPainter.renderLock.unlock();
+            ViewPainter.renderLock.unlock();
         }
 
         Platform.runLater(new Runnable() {
@@ -169,7 +170,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public boolean getPixels(IntBuffer dest, int width, int height) {
-        AbstractPainter.renderLock.lock();
+        ViewPainter.renderLock.lock();
         try {
             if (textureBits == null) return false;
             dest.rewind();
@@ -180,7 +181,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
             dest.put(textureBits);
             return true;
         } finally {
-            AbstractPainter.renderLock.unlock();
+            ViewPainter.renderLock.unlock();
         }
     }
 

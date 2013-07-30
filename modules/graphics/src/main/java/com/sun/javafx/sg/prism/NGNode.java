@@ -44,14 +44,11 @@ import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
-import com.sun.prism.Texture;
-import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
-import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
@@ -211,7 +208,7 @@ public abstract class NGNode {
      * the implementation due to some form of heuristic, currently we
      * only set this if the application has requested that the node be cached.
      */
-    private BaseCacheFilter cacheFilter;
+    private CacheFilter cacheFilter;
 
     /**
      * A filter used whenever an effect is placed on the node. Of course
@@ -219,7 +216,7 @@ public abstract class NGNode {
      * an accumulation of several different effects. This will be null if
      * there are no effects on the FX scene graph node.
      */
-    private BaseEffectFilter effectFilter;
+    private EffectFilter effectFilter;
 
     /**
      * If this node is an NGGroup, then this flag will be used to indicate
@@ -454,7 +451,7 @@ public abstract class NGNode {
 
         if (cached) {
             if (cacheFilter == null) {
-                cacheFilter = createCacheFilter(cacheHint);
+                cacheFilter = new CacheFilter(this, cacheHint);
                 // We do not technically need to do a render pass here, but if
                 // we wait for the next render pass to cache it, then we will
                 // cache not the current visuals, but the visuals as defined
@@ -505,13 +502,13 @@ public abstract class NGNode {
         // the cache for this node (if there is one) and all parents, and mark
         // this node as dirty.
         if (effectFilter == null && effect != null) {
-            effectFilter = createEffectFilter((Effect)effect);
+            effectFilter = new EffectFilter((Effect)effect, this);
             visualsChanged();
         } else if (effectFilter != null && effectFilter.getEffect() != effect) {
             effectFilter.dispose();
             effectFilter = null;
             if (effect != null) {
-                effectFilter = createEffectFilter((Effect)effect);
+                effectFilter = new EffectFilter((Effect)effect, this);
             }
             visualsChanged();
         }
@@ -572,8 +569,8 @@ public abstract class NGNode {
     public final float getOpacity() { return opacity; }
     public final Blend.Mode getNodeBlendMode() { return nodeBlendMode; }
     public final boolean isDepthTest() { return depthTest; }
-    public final BaseCacheFilter getCacheFilter() { return cacheFilter; }
-    public final BaseEffectFilter getEffectFilter() { return effectFilter; }
+    public final CacheFilter getCacheFilter() { return cacheFilter; }
+    public final EffectFilter getEffectFilter() { return effectFilter; }
     public final NGNode getClipNode() { return clipNode; }
 
     public BaseBounds getContentBounds(BaseBounds bounds, BaseTransform tx) {
@@ -786,7 +783,7 @@ public abstract class NGNode {
         }
         // if we stopped on a parent that already has dirty children, increase it's
         // dirty children count.
-        // Note that when incrementDirty is false, we dont increment in this case.
+        // Note that when incrementDirty is false, we don't increment in this case.
         if (p != null && p.dirty == DirtyFlag.CLEAN && !atClip && !byTranslation) {
             p.dirtyChildrenAccumulated++;
         }
@@ -1582,7 +1579,7 @@ public abstract class NGNode {
         //   clip
         //   effect
         // The clip must be below the cache filter, as this is expected in the
-        // BaseCacheFilter in order to apply scrolling optimization
+        // CacheFilter in order to apply scrolling optimization
         g.transform(getTransform());
         if (g instanceof ReadbackGraphics && needsBlending()) {
             renderNodeBlendMode(g);
@@ -1716,7 +1713,7 @@ public abstract class NGNode {
                                // make sure the dirty flags are cleared
     }
 
-    private void renderClip(Graphics g) {
+    void renderClip(Graphics g) {
         //  if clip's opacity is 0 there's nothing to render
         if (getClipNode().getOpacity() == 0.0) {
             clearDirtyTree();
@@ -1908,237 +1905,8 @@ public abstract class NGNode {
      *                                                                         *
      **************************************************************************/
 
-    BaseCacheFilter createCacheFilter(CacheHint cacheHint) {
-        return new CacheFilter(this, cacheHint);
-    }
-
-    BaseEffectFilter createEffectFilter(Effect effect) {
-        return new EffectFilter(effect, this);
-    }
-
     static FilterContext getFilterContext(Graphics g) {
         return PrFilterContext.getInstance(g.getAssociatedScreen());
-    }
-
-    static class CacheFilter extends BaseCacheFilter {
-        // Garbage-reduction variables:
-        private final RectBounds TEMP_BOUNDS = new RectBounds();
-        private static final DirtyRegionContainer TEMP_CONTAINER = new DirtyRegionContainer(1);
-        private static final Affine3D TEMP_CACHEFILTER_TRANSFORM = new Affine3D();
-        private RTTexture tempTexture;
-
-        CacheFilter(NGNode node, CacheHint cacheHint) {
-            super(node, cacheHint);
-        }
-
-        void render(Graphics g) {
-            // The following is safe; xform will not be mutated below
-            BaseTransform xform = g.getTransformNoClone();
-            FilterContext fctx = getFilterContext(g);
-
-            super.render(g, xform, fctx);
-        }
-
-        /**
-         * Create the ImageData for the cached bitmap, with the specified bounds.
-         */
-        @Override
-        protected ImageData impl_createImageData(FilterContext fctx,
-                                                 Rectangle bounds)
-        {
-            Filterable ret;
-            try {
-                ret = Effect.getCompatibleImage(fctx,
-                                          bounds.width, bounds.height);
-                Texture cachedTex = ((PrDrawable) ret).getTextureObject();
-                cachedTex.contentsUseful();
-            } catch (Throwable e) {
-                ret = null;
-            }
-            
-            return new ImageData(fctx, ret, bounds);
-        }
-        
-        /**
-         * Render node to cache.
-         * @param cacheData the cache
-         * @param cacheBounds cache bounds
-         * @param xform transformation
-         * @param dirtyBounds null or dirty rectangle to be rendered
-         */
-        protected void impl_renderNodeToCache(ImageData cacheData,
-                                              Rectangle cacheBounds,
-                                              BaseTransform xform,
-                                              Rectangle dirtyBounds) {
-            final PrDrawable image = (PrDrawable) cacheData.getUntransformedImage();
-            
-            if (image != null) {
-                Graphics g = image.createGraphics();
-                TEMP_CACHEFILTER_TRANSFORM.setToIdentity();
-                TEMP_CACHEFILTER_TRANSFORM.translate(-cacheBounds.x, -cacheBounds.y);
-                if (xform != null) {
-                    TEMP_CACHEFILTER_TRANSFORM.concatenate(xform);
-                }
-                if (dirtyBounds != null) {
-                    TEMP_CONTAINER.deriveWithNewRegion((RectBounds)TEMP_BOUNDS.deriveWithNewBounds(dirtyBounds));
-                    // Culling might save us a lot when there's a dirty region
-                    node.doPreCulling(TEMP_CONTAINER, TEMP_CACHEFILTER_TRANSFORM, null);
-                    g.setHasPreCullingBits(true);
-                    g.setClipRectIndex(0);
-                    g.setClipRect(dirtyBounds);
-                }
-                g.transform(TEMP_CACHEFILTER_TRANSFORM);
-                if (node.getClipNode() != null) {
-                    node.renderClip(g);
-                } else if (node.getEffectFilter() != null) {
-                    node.renderEffect(g);
-                } else {
-                    node.renderContent(g);
-                }
-            }
-        }
-
-        /**
-         * Render the node directly to the screen, in the case that the cached
-         * image is unexpectedly null.  See RT-6428.
-         * Note that for Prism, xform is not needed and is ignored.
-         */
-        @Override
-        protected void impl_renderNodeToScreen(Object implGraphics,
-                                               BaseTransform xform/* ignored */)
-        {
-            Graphics g = (Graphics)implGraphics;
-            if (node.getEffectFilter() != null) {
-                node.renderEffect(g);
-            } else {
-                node.renderContent(g);
-            }
-        }
-
-        /**
-         * Render the cached image to the screen, translated by mxt, myt.
-         */
-        @Override
-        protected void impl_renderCacheToScreen(Object implGraphics,
-                                                Filterable implImage,
-                                                double mxt, double myt)
-        {
-            Graphics g = (Graphics)implGraphics;
-
-            g.setTransform(screenXform.getMxx(),
-                           screenXform.getMyx(),
-                           screenXform.getMxy(),
-                           screenXform.getMyy(),
-                           mxt, myt);
-            g.translate((float)cachedX, (float)cachedY);
-            Texture cachedTex = ((PrDrawable)implImage).getTextureObject();
-            Rectangle cachedBounds = cachedImageData.getUntransformedBounds();
-            g.drawTexture(cachedTex, 0, 0,
-                          cachedBounds.width, cachedBounds.height);
-            // FYI: transform state is restored by the NGNode.render() method
-        }
-
-        /**
-         * True if we can use scrolling optimization on this node.
-         */
-        @Override
-        protected boolean impl_scrollCacheCapable() {
-            if (!(node instanceof NGGroup)) {
-                return false;
-            }
-            List<NGNode> children = ((NGGroup)node).getChildren();
-            if (children.size() != 1) {
-                return false;
-            }
-            NGNode child = children.get(0);
-            if (!child.getTransform().is2D()) {
-                return false;
-            }
-            
-            NGNode clip = node.getClipNode();
-            return clip != null && clip instanceof NGRectangle && 
-                    ((NGRectangle)clip).isRectClip(BaseTransform.IDENTITY_TRANSFORM, false);
-        }
-
-        @Override
-        protected void imageDataUnref() {
-            if (tempTexture != null) {
-                tempTexture.dispose();
-                tempTexture = null;
-            }
-            super.imageDataUnref();
-        }
-
-
-        /**
-         * Moves a subregion of the cache, "scrolling" the cache by x/y Delta.
-         * On of xDelta/yDelta must be zero. The rest of the pixels will be cleared.
-         * @param cachedImageData cache
-         * @param xDelta x-axis delta
-         * @param yDelta y-axis delta
-         */
-        @Override
-        protected void impl_moveCacheBy(ImageData cachedImageData, double xDelta, double yDelta) {
-            PrDrawable drawable = (PrDrawable) cachedImageData.getUntransformedImage();
-            final Rectangle r = cachedImageData.getUntransformedBounds();
-            int x = (int)Math.max(0, (-xDelta));
-            int y = (int)Math.max(0, (-yDelta));
-            int destX = (int)Math.max(0, (xDelta));
-            int destY = (int) Math.max(0, yDelta);
-            int w = r.width - (int) Math.abs(xDelta);
-            int h = r.height - (int) Math.abs(yDelta);
-
-            final Graphics g = drawable.createGraphics();
-            if (tempTexture != null) {
-                tempTexture.lock();
-                if (tempTexture.isSurfaceLost()) {
-                    tempTexture = null;
-                }
-            }
-            if (tempTexture == null) {
-                tempTexture = g.getResourceFactory().
-                    createRTTexture(drawable.getPhysicalWidth(), drawable.getPhysicalHeight(),
-                                    WrapMode.CLAMP_NOT_NEEDED);
-            }
-            final Graphics tempG = tempTexture.createGraphics();
-            tempG.clear();
-            tempG.drawTexture(drawable.getTextureObject(), 0, 0, w, h, x, y, x + w, y + h);
-            tempG.sync();
-
-            g.clear();
-            g.drawTexture(tempTexture, destX, destY, destX + w, destY + h, 0, 0, w, h);
-            tempTexture.unlock();
-        }
-
-        /**
-         * Get the cache bounds.
-         * @param bounds rectangle to store bounds to
-         * @param xform transformation
-         */
-        @Override
-        protected Rectangle impl_getCacheBounds(Rectangle bounds, BaseTransform xform) {
-            final BaseBounds b = node.getClippedBounds(TEMP_BOUNDS, xform);
-            bounds.setBounds(b);
-            return bounds;
-        }
-        
-    }
-
-    protected static class EffectFilter extends BaseEffectFilter {
-
-        EffectFilter(Effect effect, NGNode node) {
-            super(effect, node);
-        }
-
-        void render(Graphics g) {
-            NodeEffectInput nodeInput = (NodeEffectInput)getNodeInput();
-            PrEffectHelper.render(getEffect(), g, 0, 0, nodeInput);
-            nodeInput.flush();
-        }
-
-        @Override protected BaseNodeEffectInput createNodeEffectInput(NGNode node) {
-            return new NodeEffectInput(node);
-        }
     }
 
     /**
@@ -2217,7 +1985,7 @@ public abstract class NGNode {
         }
     }
 
-    public void applyEffect(final BaseEffectFilter effectFilter, DirtyRegionContainer drc, DirtyRegionPool regionPool) {
+    public void applyEffect(final EffectFilter effectFilter, DirtyRegionContainer drc, DirtyRegionPool regionPool) {
         Effect effect = effectFilter.getEffect();
         EffectDirtyBoundsHelper helper = EffectDirtyBoundsHelper.getInstance();
         helper.setInputBounds(contentBounds);

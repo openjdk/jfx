@@ -319,9 +319,9 @@ final class PaintCollector implements CompletionListener {
          QuantumToolkit quantum = (QuantumToolkit)QuantumToolkit.getToolkit();
          quantum.pulse(false);
          final CountDownLatch latch = new CountDownLatch(1);
-         boolean locked =  AbstractPainter.renderLock.isHeldByCurrentThread();
+         boolean locked =  ViewPainter.renderLock.isHeldByCurrentThread();
          if (locked) {
-             AbstractPainter.renderLock.unlock();
+             ViewPainter.renderLock.unlock();
          }
          try {
              quantum.addRenderJob(new RenderJob(viewPainter, new CompletionListener() {
@@ -336,7 +336,7 @@ final class PaintCollector implements CompletionListener {
              }
          } finally {
              if (locked) {
-                 AbstractPainter.renderLock.lock();
+                 ViewPainter.renderLock.lock();
              }
          }
      }
@@ -392,13 +392,13 @@ final class PaintCollector implements CompletionListener {
 
             // Obtain a z-ordered window list from glass.  For platforms without a native window manager,
             // we need to recopy the all of the window contents to the screen on every frame.
-            List<com.sun.glass.ui.Window> glassWindowList = com.sun.glass.ui.Window.getWindows();
+            final List<com.sun.glass.ui.Window> glassWindowList = com.sun.glass.ui.Window.getWindows();
             allWorkCompletedLatch = new CountDownLatch(glassWindowList.size());
             for (int i = 0, n = glassWindowList.size(); i < n; i++) {
                 final Window w = glassWindowList.get(i);
                 final WindowStage ws = WindowStage.findWindowStage(w);
                 if (ws != null) {
-                    ViewScene vs = ws.getViewScene();
+                    final ViewScene vs = ws.getViewScene();
 
                     // Check to see if this scene is in our dirty list.  If so, we will need to render
                     // the scene before we recopy it to the screen.  If not, we can skip this step.

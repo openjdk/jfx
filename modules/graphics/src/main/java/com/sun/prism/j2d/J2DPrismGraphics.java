@@ -25,6 +25,13 @@
 
 package com.sun.prism.j2d;
 
+import java.awt.LinearGradientPaint;
+import java.awt.font.GlyphVector;
+import java.awt.geom.NoninvertibleTransformException;
+import java.awt.geom.Rectangle2D;
+import java.lang.ref.WeakReference;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.font.CompositeGlyphMapper;
@@ -32,14 +39,15 @@ import com.sun.javafx.font.CompositeStrike;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
-import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.PathIterator;
+import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.MaskTextureGraphics;
@@ -49,8 +57,8 @@ import com.sun.prism.RenderTarget;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismDefaultCamera;
+import com.sun.prism.j2d.paint.MultipleGradientPaint.ColorSpaceType;
+import com.sun.prism.j2d.paint.RadialGradientPaint;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
 import com.sun.prism.paint.ImagePattern;
@@ -58,17 +66,12 @@ import com.sun.prism.paint.LinearGradient;
 import com.sun.prism.paint.Paint;
 import com.sun.prism.paint.RadialGradient;
 import com.sun.prism.paint.Stop;
-
-import static java.awt.RenderingHints.*;
-import com.sun.prism.j2d.paint.MultipleGradientPaint.ColorSpaceType;
-import com.sun.prism.j2d.paint.RadialGradientPaint;
-import java.awt.LinearGradientPaint;
-import java.awt.font.GlyphVector;
-import java.awt.geom.NoninvertibleTransformException;
-import java.awt.geom.Rectangle2D;
-import java.lang.ref.WeakReference;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import static java.awt.RenderingHints.KEY_ANTIALIASING;
+import static java.awt.RenderingHints.KEY_TEXT_ANTIALIASING;
+import static java.awt.RenderingHints.VALUE_ANTIALIAS_OFF;
+import static java.awt.RenderingHints.VALUE_ANTIALIAS_ON;
+import static java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB;
+import static java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON;
 
 public class J2DPrismGraphics
     // Do not subclass BaseGraphics without fixing drawTextureVO below...
@@ -104,13 +107,11 @@ public class J2DPrismGraphics
         RadialGradientPaint.CycleMethod.REPEAT,
     };
 
-    private static final PrismDefaultCamera DEFAULT_CAMERA = PrismDefaultCamera.getInstance();
     private static final BasicStroke DEFAULT_STROKE =
         new BasicStroke(1.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10.0f);
     private static final Paint DEFAULT_PAINT = Color.WHITE;
     static java.awt.geom.AffineTransform J2D_IDENTITY =
         new java.awt.geom.AffineTransform();
-    private GeneralTransform3D pvTx;
     private int clipRectIndex;
     private boolean hasPreCullingBits = false;
 
@@ -957,9 +958,9 @@ public class J2DPrismGraphics
         // Simply casting the subimage coordinates to integers does not
         // produce the same behavior as the Prism hw pipelines (see RT-19270).
         g2d.drawImage(img,
-                      (int) dx1, (int) dy1, (int) dx2, (int) dy2,
-                      (int) sx1, (int) sy1, (int) sx2, (int) sy2,
-                      null);
+                (int) dx1, (int) dy1, (int) dx2, (int) dy2,
+                (int) sx1, (int) sy1, (int) sx2, (int) sy2,
+                null);
     }
 
     public void drawTextureRaw(Texture tex,
@@ -1207,11 +1208,7 @@ public class J2DPrismGraphics
 //        target.getReadbackBuffer().unlock();
     }
 
-    public PrismCameraImpl getCameraNoClone() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public boolean hasOrthoCamera() {
+    public NGCamera getCameraNoClone() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -1239,7 +1236,7 @@ public class J2DPrismGraphics
         setTransform(mxx, myx, mxy, myy, mxt, myt);
     }
 
-    public void setCamera(PrismCameraImpl camera) {
+    public void setCamera(NGCamera camera) {
         // No-op until we support 3D
         /*
         if (!(camera instanceof PrismParallelCameraImpl)) {
@@ -1262,14 +1259,6 @@ public class J2DPrismGraphics
 
     public void translate(float tx, float ty, float tz) {
         throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public void setWindowProjViewTx(GeneralTransform3D pvTx) {
-        this.pvTx = pvTx;
-    }
-
-    public GeneralTransform3D getWindowProjViewTxNoClone() {
-        return this.pvTx;
     }
 
     public void setCulling(boolean cull) {
@@ -1696,12 +1685,12 @@ public class J2DPrismGraphics
     }
 
     @Override
-    public void setLights(Object[] lights) {
+    public void setLights(NGLightBase[] lights) {
         // Light are not supported by J2d
     }
 
     @Override
-    public Object[] getLights() {
+    public NGLightBase[] getLights() {
         // Light are not supported by J2d
         return null;
     }

@@ -1566,6 +1566,9 @@ public class Text extends Shape {
                     }
                     @Override public void invalidated() {
                         impl_markDirty(DirtyBits.TEXT_ATTRS);
+                        if (getBoundsType() == TextBoundsType.VISUAL) {
+                            impl_geomChanged();
+                        }
                     }
                 };
             }
@@ -1588,6 +1591,9 @@ public class Text extends Shape {
                     }
                     @Override public void invalidated() {
                         impl_markDirty(DirtyBits.TEXT_ATTRS);
+                        if (getBoundsType() == TextBoundsType.VISUAL) {
+                            impl_geomChanged();
+                        }
                     }
                 };
             }

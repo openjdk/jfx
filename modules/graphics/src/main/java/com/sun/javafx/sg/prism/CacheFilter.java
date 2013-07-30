@@ -26,14 +26,25 @@
 package com.sun.javafx.sg.prism;
 
 import javafx.scene.CacheHint;
+import java.util.List;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.DirtyRegionContainer;
+import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.prism.Graphics;
+import com.sun.prism.RTTexture;
+import com.sun.prism.Texture;
+import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.ImageData;
+import com.sun.scenario.effect.impl.prism.PrDrawable;
+import com.sun.scenario.effect.impl.prism.PrFilterContext;
 
-/*
+/**
  * Base implementation of the Node.cache and cacheHint APIs.
  *
  * When all or a portion of the cacheHint becomes enabled, we should try *not*
@@ -51,12 +62,61 @@ import com.sun.scenario.effect.ImageData;
  *
  * Ideally, a simple change to a Node's translation should never regenerate the
  * cached image.
+ *
+ * The CacheFilter is also capable of optimizing the scrolling of the cached contents.
+ * For example, the ScrollView UI Control can define its content area as being cached,
+ * such that when the user scrolls, we can shift the old content area and adjust the
+ * dirty region so that it only includes the "newly exposed" area.
  */
-public abstract class BaseCacheFilter {
+public class CacheFilter {
+    /**
+     * Defines the state when we're in the midst of scrolling a cached image
+     */
+    private static enum ScrollCacheState {
+        CHECKING_PRECONDITIONS,
+        ENABLED,
+        DISABLED
+    }
+
+    // Garbage-reduction variables:
+    private static final Rectangle TEMP_RECT = new Rectangle();
+    private static final DirtyRegionContainer TEMP_CONTAINER = new DirtyRegionContainer(1);
+    private static final Affine3D TEMP_CACHEFILTER_TRANSFORM = new Affine3D();
+    private static final RectBounds TEMP_BOUNDS = new RectBounds();
+    // Fun with floating point
+    private static final double EPSILON = 0.0000001;
+
+    private RTTexture tempTexture;
     private double lastXDelta;
     private double lastYDelta;
-    
-    private static final Rectangle TEMP_RECT = new Rectangle();
+    private ScrollCacheState scrollCacheState = ScrollCacheState.CHECKING_PRECONDITIONS;
+    // Note: this ImageData is always created and assumed to be untransformed.
+    private ImageData cachedImageData;
+    private Rectangle cacheBounds = new Rectangle();
+    // Used to draw into the cache
+    private final Affine2D cachedXform = new Affine2D();
+
+    // The scale and rotate used to draw into the cache
+    private double cachedScaleX;
+    private double cachedScaleY;
+    private double cachedRotate;
+
+    private double cachedX;
+    private double cachedY;
+    private NGNode node;
+
+    // Used to draw the cached image to the screen
+    private final Affine2D screenXform = new Affine2D();
+
+    // Cache hint settings
+    private boolean scaleHint;
+    private boolean rotateHint;
+    // We keep this around for the sake of matchesHint
+    private CacheHint cacheHint;
+
+    // Was the last paint unsupported by the cache?  If so, will need to
+    // regenerate the cache next time.
+    private boolean wasUnsupported = false;
 
     /**
      * Compute the dirty region that must be re-rendered after scrolling
@@ -78,47 +138,7 @@ public abstract class BaseCacheFilter {
         return TEMP_RECT;
     }
 
-    private static enum ScrollCacheState {
-        CHECKING_PRECONDITIONS,
-        ENABLED,
-        DISABLED
-    }
-    private ScrollCacheState scrollCacheState = ScrollCacheState.CHECKING_PRECONDITIONS;
-    
-    // Note: this ImageData is always created and assumed to be untransformed.
-    protected ImageData cachedImageData;
-    private Rectangle cacheBounds = new Rectangle();
-    
-
-    // Used to draw into the cache
-    private Affine2D cachedXform = new Affine2D();
-
-    // The scale and rotate used to draw into the cache
-    private double cachedScaleX;
-    private double cachedScaleY;
-    private double cachedRotate;
-
-    protected double cachedX;
-    protected double cachedY;
-    protected NGNode node;
-
-    // Used to draw the cached image to the screen
-    protected Affine2D screenXform = new Affine2D();
-
-    // Cache hint settings
-    private boolean scaleHint;
-    private boolean rotateHint;
-    // We keep this around for the sake of matchesHint
-    private CacheHint cacheHint;
-
-    // Was the last paint unsupported by the cache?  If so, will need to
-    // regenerate the cache next time.
-    private boolean wasUnsupported = false;
-
-    // Fun with floating point
-    private static final double EPSILON = 0.0000001;
-
-    protected BaseCacheFilter(NGNode node, CacheHint cacheHint) {
+    protected CacheFilter(NGNode node, CacheHint cacheHint) {
         this.node = node;
         this.scrollCacheState = ScrollCacheState.CHECKING_PRECONDITIONS;
         setHint(cacheHint);
@@ -133,153 +153,11 @@ public abstract class BaseCacheFilter {
     }
 
     /**
-     * Indicates whether this BaseCacheFilter's hint matches the CacheHint
+     * Indicates whether this CacheFilter's hint matches the CacheHint
      * passed in.
      */
     boolean matchesHint(CacheHint cacheHint) {
         return this.cacheHint == cacheHint;
-    }
-
-    /**
-     * Implemented by concrete subclasses to create the ImageData for the bitmap
-     * cache.
-     */
-    protected abstract ImageData impl_createImageData(FilterContext fctx,
-                                                      Rectangle bounds);
-    
-    /**
-     * The bounds of the cache
-     */
-    protected abstract Rectangle impl_getCacheBounds(Rectangle bounds, BaseTransform xform);
-    
-    /**
-     * Render node to cache
-     */
-    protected abstract void impl_renderNodeToCache(ImageData imageData,
-                                                   Rectangle cacheBounds,
-                                                   BaseTransform xform,
-                                                   Rectangle dirtyBounds);
-
-    /**
-     * Called on concrete subclasses to render the node directly to the screen,
-     * in the case that the cached image is unexpectedly null.  See RT-6428.
-     */
-    protected abstract void impl_renderNodeToScreen(Object implGraphics,
-                                                    BaseTransform xform);
-
-    /**
-     * Called on concrete subclasses to render the cached image to the screen,
-     * translated by mxt, myt.
-     */
-    protected abstract void impl_renderCacheToScreen(Object implGraphics,
-                                                Filterable implImage,
-                                                double mxt, double myt);
-    
-    /**
-     * Is it possible to use scroll optimization?
-     */
-    protected abstract boolean impl_scrollCacheCapable();
-    
-    /**
-     * Move the subregion of the cache by specified delta
-     */
-    protected abstract void impl_moveCacheBy(ImageData cachedImageData,
-            double lastXDelta, double lastYDelta);
-
-    /**
-     * Render the cached node to the screen, updating the cached image as
-     * necessary given the current cacheHint and specified xform.
-     */
-    public void render(Object implGraphics, BaseTransform xform,
-                       FilterContext fctx) {
-
-        // Note: xform should not be modified, for the sake of Prism
-
-        double mxx = xform.getMxx();
-        double myx = xform.getMyx();
-        double mxy = xform.getMxy();
-        double myy = xform.getMyy();
-        double mxt = xform.getMxt();
-        double myt = xform.getMyt();
-
-        double[] xformInfo = unmatrix(xform);
-        boolean isUnsupported = unsupported(xformInfo);
-
-        
-        lastXDelta = lastXDelta * xformInfo[0];
-        lastYDelta = lastYDelta * xformInfo[1];
-
-        if (cachedImageData != null) {
-            Filterable implImage = cachedImageData.getUntransformedImage();
-            if (implImage != null) {
-                implImage.lock();
-                if (!cachedImageData.validate(fctx)) {
-                    implImage.unlock();
-                    invalidate();
-                }
-            }
-        }
-        if (needToRenderCache(fctx, xform, xformInfo)) {
-            if (cachedImageData != null) {
-                Filterable implImage = cachedImageData.getUntransformedImage();
-                if (implImage != null) {
-                    implImage.unlock();
-                }
-                invalidate();
-            }
-            // Update the cachedXform to the current xform (ignoring translate).
-            cachedXform.setTransform(mxx, myx, mxy, myy, 0.0, 0.0);
-            cachedScaleX = xformInfo[0];
-            cachedScaleY = xformInfo[1];
-            cachedRotate = xformInfo[2];
-            
-            cacheBounds = impl_getCacheBounds(cacheBounds, cachedXform);
-            cachedImageData = impl_createImageData(fctx, cacheBounds);
-            impl_renderNodeToCache(cachedImageData, cacheBounds, cachedXform, null);
-
-            // cachedBounds includes effects, and is in *scene* coords
-            Rectangle cachedBounds = cachedImageData.getUntransformedBounds();
-
-            // Save out the (un-transformed) x & y coordinates.  This accounts
-            // for effects and other reasons the untranslated location may not
-            // be 0,0.
-            cachedX = cachedBounds.x;
-            cachedY = cachedBounds.y;
-
-            // screenXform is always identity in this case, as we've just
-            // rendered into the cache using the render xform.
-            screenXform.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-        } else {
-            if (scrollCacheState == ScrollCacheState.ENABLED && 
-                    (lastXDelta != 0 || lastYDelta != 0) ) {
-                impl_moveCacheBy(cachedImageData, lastXDelta, lastYDelta);
-                impl_renderNodeToCache(cachedImageData, cacheBounds, cachedXform, computeDirtyRegionForTranslate());
-                lastXDelta = lastYDelta = 0;
-            }
-            // Using the cached image; calculate screenXform to paint to screen.
-            if (isUnsupported) {
-                // Only way we should be using the cached image in the
-                // unsupported case is for a change in translate only.  No other
-                // xform should be needed, so use identity.
-
-                // TODO: assert cachedXform == render xform (ignoring translate)
-                //   or  assert xforminfo == cachedXform info (RT-23962)
-                screenXform.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-            } else {
-                updateScreenXform(xformInfo);
-            }
-        }
-        // If this render is unsupported, remember for next time.  We'll need
-        // to regenerate the cache once we're in a supported scenario again.
-        wasUnsupported = isUnsupported;
-
-        Filterable implImage = cachedImageData.getUntransformedImage();
-        if (implImage == null) {
-            impl_renderNodeToScreen(implGraphics, xform);
-        } else {
-            impl_renderCacheToScreen(implGraphics, implImage, mxt, myt);
-            implImage.unlock();
-        }
     }
 
     /**
@@ -321,8 +199,7 @@ public abstract class BaseCacheFilter {
      * Assumes that caller locked and validated the cachedImageData.untximage
      * if not null...
      */
-    private boolean needToRenderCache(FilterContext fctx, BaseTransform renderXform,
-                                      double[] xformInfo) {
+    private boolean needToRenderCache(BaseTransform renderXform, double[] xformInfo) {
         if (cachedImageData == null) {
             return true;
         }
@@ -427,7 +304,11 @@ public abstract class BaseCacheFilter {
         lastXDelta = lastYDelta = 0;
     }
 
-    protected void imageDataUnref() {
+    void imageDataUnref() {
+        if (tempTexture != null) {
+            tempTexture.dispose();
+            tempTexture = null;
+        }
         if (cachedImageData != null) {
             // While we hold on to this ImageData we leave the texture
             // unlocked so it can be reclaimed, but the default unref()
@@ -558,7 +439,6 @@ public abstract class BaseCacheFilter {
         return retVal;
     }
 
-
     /**
      * make a linear combination of two vectors and return the result
      * result = (v0 * scalarA) + (v1 * scalarB)
@@ -583,7 +463,6 @@ public abstract class BaseCacheFilter {
         result[1] = scalarA*v0[1] + scalarB*v1[1];
     }
 
-
     /**
      * dot product of 2 vectors of length 2
      */
@@ -596,14 +475,12 @@ public abstract class BaseCacheFilter {
      *
      * From V3Scale() in GGVecLib.c
      */
-    double[] v2scale(double v[], double newLen) {
+    void v2scale(double v[], double newLen) {
         double len = v2length(v);
-        double[] retVal = v;
         if (len != 0) {
             v[0] *= newLen / len;
             v[1] *= newLen / len;
         }
-        return retVal;
     }
 
     /**
@@ -613,6 +490,260 @@ public abstract class BaseCacheFilter {
      */
     double v2length(double v[]) {
         return Math.sqrt(v[0]*v[0] + v[1]*v[1]);
+    }
+
+    void render(Graphics g) {
+        // The following is safe; xform will not be mutated below
+        BaseTransform xform = g.getTransformNoClone();
+        FilterContext fctx = PrFilterContext.getInstance(g.getAssociatedScreen()); // getFilterContext
+
+        // Note: xform should not be modified, for the sake of Prism
+        double mxx = xform.getMxx();
+        double myx = xform.getMyx();
+        double mxy = xform.getMxy();
+        double myy = xform.getMyy();
+        double mxt = xform.getMxt();
+        double myt = xform.getMyt();
+
+        double[] xformInfo = unmatrix(xform);
+        boolean isUnsupported = unsupported(xformInfo);
+
+
+        lastXDelta = lastXDelta * xformInfo[0];
+        lastYDelta = lastYDelta * xformInfo[1];
+
+        if (cachedImageData != null) {
+            Filterable implImage = cachedImageData.getUntransformedImage();
+            if (implImage != null) {
+                implImage.lock();
+                if (!cachedImageData.validate(fctx)) {
+                    implImage.unlock();
+                    invalidate();
+                }
+            }
+        }
+        if (needToRenderCache(xform, xformInfo)) {
+            if (cachedImageData != null) {
+                Filterable implImage = cachedImageData.getUntransformedImage();
+                if (implImage != null) {
+                    implImage.unlock();
+                }
+                invalidate();
+            }
+            // Update the cachedXform to the current xform (ignoring translate).
+            cachedXform.setTransform(mxx, myx, mxy, myy, 0.0, 0.0);
+            cachedScaleX = xformInfo[0];
+            cachedScaleY = xformInfo[1];
+            cachedRotate = xformInfo[2];
+
+            cacheBounds = impl_getCacheBounds(cacheBounds, cachedXform);
+            cachedImageData = impl_createImageData(fctx, cacheBounds);
+            impl_renderNodeToCache(cachedImageData, cacheBounds, cachedXform, null);
+
+            // cachedBounds includes effects, and is in *scene* coords
+            Rectangle cachedBounds = cachedImageData.getUntransformedBounds();
+
+            // Save out the (un-transformed) x & y coordinates.  This accounts
+            // for effects and other reasons the untranslated location may not
+            // be 0,0.
+            cachedX = cachedBounds.x;
+            cachedY = cachedBounds.y;
+
+            // screenXform is always identity in this case, as we've just
+            // rendered into the cache using the render xform.
+            screenXform.setTransform(BaseTransform.IDENTITY_TRANSFORM);
+        } else {
+            if (scrollCacheState == ScrollCacheState.ENABLED &&
+                    (lastXDelta != 0 || lastYDelta != 0) ) {
+                impl_moveCacheBy(cachedImageData, lastXDelta, lastYDelta);
+                impl_renderNodeToCache(cachedImageData, cacheBounds, cachedXform, computeDirtyRegionForTranslate());
+                lastXDelta = lastYDelta = 0;
+            }
+            // Using the cached image; calculate screenXform to paint to screen.
+            if (isUnsupported) {
+                // Only way we should be using the cached image in the
+                // unsupported case is for a change in translate only.  No other
+                // xform should be needed, so use identity.
+
+                // TODO: assert cachedXform == render xform (ignoring translate)
+                //   or  assert xforminfo == cachedXform info (RT-23962)
+                screenXform.setTransform(BaseTransform.IDENTITY_TRANSFORM);
+            } else {
+                updateScreenXform(xformInfo);
+            }
+        }
+        // If this render is unsupported, remember for next time.  We'll need
+        // to regenerate the cache once we're in a supported scenario again.
+        wasUnsupported = isUnsupported;
+
+        Filterable implImage = cachedImageData.getUntransformedImage();
+        if (implImage == null) {
+            impl_renderNodeToScreen(g);
+        } else {
+            impl_renderCacheToScreen(g, implImage, mxt, myt);
+            implImage.unlock();
+        }
+    }
+
+    /**
+     * Create the ImageData for the cached bitmap, with the specified bounds.
+     */
+    ImageData impl_createImageData(FilterContext fctx, Rectangle bounds) {
+        Filterable ret;
+        try {
+            ret = Effect.getCompatibleImage(fctx,
+                    bounds.width, bounds.height);
+            Texture cachedTex = ((PrDrawable) ret).getTextureObject();
+            cachedTex.contentsUseful();
+        } catch (Throwable e) {
+            ret = null;
+        }
+
+        return new ImageData(fctx, ret, bounds);
+    }
+
+    /**
+     * Render node to cache.
+     * @param cacheData the cache
+     * @param cacheBounds cache bounds
+     * @param xform transformation
+     * @param dirtyBounds null or dirty rectangle to be rendered
+     */
+    void impl_renderNodeToCache(ImageData cacheData,
+                                Rectangle cacheBounds,
+                                BaseTransform xform,
+                                Rectangle dirtyBounds) {
+        final PrDrawable image = (PrDrawable) cacheData.getUntransformedImage();
+
+        if (image != null) {
+            Graphics g = image.createGraphics();
+            TEMP_CACHEFILTER_TRANSFORM.setToIdentity();
+            TEMP_CACHEFILTER_TRANSFORM.translate(-cacheBounds.x, -cacheBounds.y);
+            if (xform != null) {
+                TEMP_CACHEFILTER_TRANSFORM.concatenate(xform);
+            }
+            if (dirtyBounds != null) {
+                TEMP_CONTAINER.deriveWithNewRegion((RectBounds)TEMP_BOUNDS.deriveWithNewBounds(dirtyBounds));
+                // Culling might save us a lot when there's a dirty region
+                node.doPreCulling(TEMP_CONTAINER, TEMP_CACHEFILTER_TRANSFORM, null);
+                g.setHasPreCullingBits(true);
+                g.setClipRectIndex(0);
+                g.setClipRect(dirtyBounds);
+            }
+            g.transform(TEMP_CACHEFILTER_TRANSFORM);
+            if (node.getClipNode() != null) {
+                node.renderClip(g);
+            } else if (node.getEffectFilter() != null) {
+                node.renderEffect(g);
+            } else {
+                node.renderContent(g);
+            }
+        }
+    }
+
+    /**
+     * Render the node directly to the screen, in the case that the cached
+     * image is unexpectedly null.  See RT-6428.
+     */
+    void impl_renderNodeToScreen(Object implGraphics) {
+        Graphics g = (Graphics)implGraphics;
+        if (node.getEffectFilter() != null) {
+            node.renderEffect(g);
+        } else {
+            node.renderContent(g);
+        }
+    }
+
+    /**
+     * Render the cached image to the screen, translated by mxt, myt.
+     */
+    void impl_renderCacheToScreen(Object implGraphics, Filterable implImage,
+                                  double mxt, double myt)
+    {
+        Graphics g = (Graphics)implGraphics;
+
+        g.setTransform(screenXform.getMxx(),
+                       screenXform.getMyx(),
+                       screenXform.getMxy(),
+                       screenXform.getMyy(),
+                       mxt, myt);
+        g.translate((float)cachedX, (float)cachedY);
+        Texture cachedTex = ((PrDrawable)implImage).getTextureObject();
+        Rectangle cachedBounds = cachedImageData.getUntransformedBounds();
+        g.drawTexture(cachedTex, 0, 0,
+                      cachedBounds.width, cachedBounds.height);
+        // FYI: transform state is restored by the NGNode.render() method
+    }
+
+    /**
+     * True if we can use scrolling optimization on this node.
+     */
+    boolean impl_scrollCacheCapable() {
+        if (!(node instanceof NGGroup)) {
+            return false;
+        }
+        List<NGNode> children = ((NGGroup)node).getChildren();
+        if (children.size() != 1) {
+            return false;
+        }
+        NGNode child = children.get(0);
+        if (!child.getTransform().is2D()) {
+            return false;
+        }
+
+        NGNode clip = node.getClipNode();
+        return clip != null && clip instanceof NGRectangle &&
+                ((NGRectangle)clip).isRectClip(BaseTransform.IDENTITY_TRANSFORM, false);
+    }
+
+    /**
+     * Moves a subregion of the cache, "scrolling" the cache by x/y Delta.
+     * On of xDelta/yDelta must be zero. The rest of the pixels will be cleared.
+     * @param cachedImageData cache
+     * @param xDelta x-axis delta
+     * @param yDelta y-axis delta
+     */
+    void impl_moveCacheBy(ImageData cachedImageData, double xDelta, double yDelta) {
+        PrDrawable drawable = (PrDrawable) cachedImageData.getUntransformedImage();
+        final Rectangle r = cachedImageData.getUntransformedBounds();
+        int x = (int)Math.max(0, (-xDelta));
+        int y = (int)Math.max(0, (-yDelta));
+        int destX = (int)Math.max(0, (xDelta));
+        int destY = (int) Math.max(0, yDelta);
+        int w = r.width - (int) Math.abs(xDelta);
+        int h = r.height - (int) Math.abs(yDelta);
+
+        final Graphics g = drawable.createGraphics();
+        if (tempTexture != null) {
+            tempTexture.lock();
+            if (tempTexture.isSurfaceLost()) {
+                tempTexture = null;
+            }
+        }
+        if (tempTexture == null) {
+            tempTexture = g.getResourceFactory().
+                createRTTexture(drawable.getPhysicalWidth(), drawable.getPhysicalHeight(),
+                                Texture.WrapMode.CLAMP_NOT_NEEDED);
+        }
+        final Graphics tempG = tempTexture.createGraphics();
+        tempG.clear();
+        tempG.drawTexture(drawable.getTextureObject(), 0, 0, w, h, x, y, x + w, y + h);
+        tempG.sync();
+
+        g.clear();
+        g.drawTexture(tempTexture, destX, destY, destX + w, destY + h, 0, 0, w, h);
+        tempTexture.unlock();
+    }
+
+    /**
+     * Get the cache bounds.
+     * @param bounds rectangle to store bounds to
+     * @param xform transformation
+     */
+    Rectangle impl_getCacheBounds(Rectangle bounds, BaseTransform xform) {
+        final BaseBounds b = node.getClippedBounds(TEMP_BOUNDS, xform);
+        bounds.setBounds(b);
+        return bounds;
     }
 }
 

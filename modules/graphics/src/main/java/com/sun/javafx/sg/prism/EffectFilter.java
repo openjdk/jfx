@@ -26,46 +26,39 @@
 package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.prism.Graphics;
 import com.sun.scenario.effect.Effect;
+import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 
 /**
  */
-public abstract class BaseNodeEffectInput extends Effect {
-    private NGNode node;
-    private BaseBounds tempBounds = new RectBounds();
+public class EffectFilter {
+    private Effect effect;
+    private NodeEffectInput nodeInput;
 
-    public BaseNodeEffectInput() {
-        this(null);
+    EffectFilter(Effect effect, NGNode node) {
+        this.effect = effect;
+        this.nodeInput = new NodeEffectInput(node);
     }
 
-    public BaseNodeEffectInput(NGNode node) {
-        setNode(node);
+    Effect getEffect() { return effect; }
+    NodeEffectInput getNodeInput() { return nodeInput; }
+
+    void dispose() {
+        effect = null;
+        nodeInput.setNode(null);
+        nodeInput = null;
     }
 
-    public NGNode getNode() {
-        return node;
+    BaseBounds getBounds(BaseBounds bounds, BaseTransform xform) {
+        BaseBounds r = getEffect().getBounds(xform, nodeInput);
+        return bounds.deriveWithNewBounds(r);
     }
 
-    public void setNode(NGNode node) {
-        if (this.node != node) {
-            this.node = node;
-            flush();
-        }
+    void render(Graphics g) {
+        NodeEffectInput nodeInput = getNodeInput();
+        PrEffectHelper.render(getEffect(), g, 0, 0, nodeInput);
+        nodeInput.flush();
     }
-
-    @Override
-    public BaseBounds getBounds(BaseTransform transform,
-                              Effect defaultInput)
-    {
-        // TODO: update Effect.getBounds() to take Rectangle2D param so
-        // that we can avoid creating garbage here? (RT-23958)
-        BaseTransform t = transform == null ? 
-                BaseTransform.IDENTITY_TRANSFORM : transform;
-        tempBounds = node.getContentBounds(tempBounds, t);
-        return tempBounds.copy();
-    }
-
-    public abstract void flush();
 }

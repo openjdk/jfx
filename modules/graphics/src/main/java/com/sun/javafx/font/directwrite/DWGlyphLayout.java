@@ -183,16 +183,122 @@ public class DWGlyphLayout extends GlyphLayout {
         }
     }
 
+    private String getName(IDWriteLocalizedStrings localizedStrings) {
+        if (localizedStrings == null) return null;
+        int index = localizedStrings.FindLocaleName(LOCALE);
+        String name = null;
+        if (index >= 0) {
+            int size = localizedStrings.GetStringLength(index);
+            name = localizedStrings.GetString(index, size);
+        }
+        localizedStrings.Release();
+        return name;
+    }
+
+    private FontResource checkFontResource(FontResource fr, String psName,
+                                           String win32Name) {
+        if (fr == null) return null;
+
+        /* Postscript name is only available on newer version of DirectWrite */
+        if (psName != null) {
+            if (psName.equals(fr.getPSName())) return fr;
+            /* In some case the postscript name returned by DirectWrite
+             * and Prism are different. For example, Leelawadee Bold is
+             * reported as Leelawadee-Bold by DirectWrite and LeelawadeeBold
+             * by JFX. */
+        }
+
+        if (win32Name != null) {
+            if (win32Name.equals(fr.getFullName())) return fr;
+            /* JFX generally omits the style name in the full name for regular
+             * style. */
+            String name = fr.getFamilyName() + " " + fr.getStyleName();
+            if (win32Name.equals(name)) return fr;
+        }
+        return null;
+    }
+
+    private int getFontSlot(IDWriteFontFace face, CompositeFontResource composite,
+                            String primaryFont) {
+        IDWriteFontCollection collection = DWFactory.getFontCollection();
+        PrismFontFactory prismFactory = PrismFontFactory.getFontFactory();
+
+
+        /* Collecting information about the font */
+        IDWriteFont font = collection.GetFontFromFontFace(face);
+        IDWriteFontFamily fallbackFamily = font.GetFontFamily();
+        String family = getName(fallbackFamily.GetFamilyNames());
+        fallbackFamily.Release();
+        boolean italic = font.GetStyle() != OS.DWRITE_FONT_STYLE_NORMAL;
+        boolean bold = font.GetWeight() > OS.DWRITE_FONT_WEIGHT_NORMAL;
+        int simulation = font.GetSimulations();
+        int info = OS.DWRITE_INFORMATIONAL_STRING_POSTSCRIPT_NAME;
+        String psName = getName(font.GetInformationalStrings(info));
+        info = OS.DWRITE_INFORMATIONAL_STRING_WIN32_FAMILY_NAMES;
+        String win32Family = getName(font.GetInformationalStrings(info));
+        info = OS.DWRITE_INFORMATIONAL_STRING_WIN32_SUBFAMILY_NAMES;
+        String win32SubFamily = getName(font.GetInformationalStrings(info));
+        String win32Name = win32Family + " " + win32SubFamily;
+
+        if (PrismFontFactory.debugFonts) {
+            String styleName = getName(font.GetFaceNames());
+            System.err.println("Mapping IDWriteFont=\"" + (family + " " + styleName) +
+                               "\" Postscript name=\"" + psName +
+                               "\" Win32 name=\"" + win32Name + "\"");
+        }
+        font.Release();
+
+        /* Map the IDWriteFont to a Prism font and check */
+        FontResource fr = prismFactory.getFontResource(family, bold, italic, false);
+        fr = checkFontResource(fr, psName, win32Name);
+        if (fr == null) {
+            /* The most common case for the lookup to fail is due to font
+             * simulations. */
+            italic &= (simulation & OS.DWRITE_FONT_SIMULATIONS_OBLIQUE) == 0;
+            bold &= (simulation & OS.DWRITE_FONT_SIMULATIONS_BOLD) == 0;
+            fr = prismFactory.getFontResource(family, bold, italic, false);
+            fr = checkFontResource(fr, psName, win32Name);
+        }
+        if (fr == null) {
+            /* Look up by name */
+            fr = prismFactory.getFontResource(win32Name, null, false);
+            fr = checkFontResource(fr, psName, win32Name);
+        }
+        if (fr == null) {
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("\t**** Failed to map IDWriteFont to Prism ****");
+            }
+            return -1;
+        }
+
+        String fallbackName = fr.getFullName();
+        int slot = 0;
+        if (!primaryFont.equalsIgnoreCase(fallbackName)) {
+            slot = composite.getSlotForFont(fallbackName);
+        }
+        if (PrismFontFactory.debugFonts) {
+            System.err.println("\tFallback full name=\""+ fallbackName +
+                               "\" Postscript name=\"" + fr.getPSName() +
+                               "\" Style name=\"" + fr.getStyleName() +
+                               "\" slot=" + slot);
+        }
+        return slot;
+    }
+
     private void renderShape(char[] text, TextRun run, PGFont font) {
         CompositeFontResource composite = (CompositeFontResource)font.getFontResource();
         FontResource fr = composite.getSlotResource(0);
         String family = fr.getFamilyName();
+        String fullName = fr.getFullName();
         int weight = fr.isBold() ? OS.DWRITE_FONT_WEIGHT_BOLD :
                                    OS.DWRITE_FONT_WEIGHT_NORMAL;
         int stretch = OS.DWRITE_FONT_STRETCH_NORMAL;
         int style = fr.isItalic() ? OS.DWRITE_FONT_STYLE_ITALIC :
                                     OS.DWRITE_FONT_STYLE_NORMAL;
         float size = font.getSize();
+
+        /* zero is not a valid size for IDWriteTextFormat */
+        float fontsize = size > 0 ? size : 1;
 
         IDWriteFactory factory = DWFactory.getDWriteFactory();
         /* Note this collection is not correct for embedded fonts,
@@ -206,7 +312,7 @@ public class DWGlyphLayout extends GlyphLayout {
                                                             weight,
                                                             style,
                                                             stretch,
-                                                            size,
+                                                            fontsize,
                                                             LOCALE);
 
         int start = run.getStart();
@@ -225,31 +331,15 @@ public class DWGlyphLayout extends GlyphLayout {
         int textStart = 0;
         while (renderer.Next()) {
             IDWriteFontFace fallback = renderer.GetFontFace();
-            IDWriteFont fallbackFont = collection.GetFontFromFontFace(fallback);
-            IDWriteFontFamily fallbackFontFamily = fallbackFont.GetFontFamily();
-            IDWriteLocalizedStrings names = fallbackFontFamily.GetFamilyNames();
-            int localeIndex = names.FindLocaleName(LOCALE);
-            int nameSize = names.GetStringLength(localeIndex);
-            String fallbackFamily = names.GetString(localeIndex, nameSize);
-            boolean italic = fallbackFont.GetStyle() != OS.DWRITE_FONT_STYLE_NORMAL;
-            boolean bold = fallbackFont.GetWeight() > OS.DWRITE_FONT_WEIGHT_NORMAL;
-            names.Release();
-            fallbackFontFamily.Release();
-            fallbackFont.Release();
-            PrismFontFactory prismFactory = PrismFontFactory.getFontFactory();
-            PGFont fallbackPGFont = prismFactory.createFont(fallbackFamily, bold, italic, size);
-            String fallbackFullname =  fallbackPGFont.getFullName();
-
-            int slot = 0;
-            if (!fallbackFullname.equalsIgnoreCase(fr.getFullName())) {
-                slot = composite.getSlotForFont(fallbackFullname) << 24;
-                if (PrismFontFactory.debugFonts) {
-                    System.err.println("\tFallback front= "+ fallbackFullname + " slot=" + (slot>>24));
-                }
+            int slot = getFontSlot(fallback, composite, fullName);
+            if (slot >= 0) {
+                renderer.GetGlyphIndices(glyphs, glyphStart, slot << 24);
+                renderer.GetGlyphOffsets(offsets, glyphStart * 2);
             }
-            renderer.GetGlyphIndices(glyphs, glyphStart, slot);
-            renderer.GetGlyphAdvances(advances, glyphStart);
-            renderer.GetGlyphOffsets(offsets, glyphStart * 2);
+            if (size > 0) {
+                /* Keep advances to zero if font size is zero */
+                renderer.GetGlyphAdvances(advances, glyphStart);
+            }
             renderer.GetClusterMap(clusterMap, textStart);
             glyphStart += renderer.GetGlyphCount();
             textStart += renderer.GetLength();

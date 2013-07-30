@@ -33,6 +33,7 @@ import javafx.scene.Node;
 
 import com.sun.javafx.effect.EffectDirtyBits;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
 
@@ -191,7 +192,7 @@ public abstract class Effect {
         private final String propertyName;
 
         private Effect validInput = null;
-        
+
         private final EffectInputChangeListener effectChangeListener =
                 new EffectInputChangeListener();
 
@@ -253,11 +254,78 @@ public abstract class Effect {
                                               Node node,
                                               BoundsAccessor boundsAccessor);
     /**
-     * 
+     *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     public abstract Effect impl_copy();
-    
+
+    static BaseBounds transformBounds(BaseTransform tx, BaseBounds r) {
+        if (tx == null || tx.isIdentity()) {
+            return r;
+        }
+        BaseBounds ret = new RectBounds();
+        ret = tx.transform(r, ret);
+        return ret;
+    }
+
+    // utility method used in calculation of bounds in BoxBlur and DropShadow effects
+    static int getKernelSize(int ksize, int iterations) {
+        if (ksize < 1) ksize = 1;
+        ksize = (ksize-1) * iterations + 1;
+        ksize |= 1;
+        return ksize / 2;
+    }
+
+    // utility method used for calculation of bounds in Shadow and DropShadow effects
+    static BaseBounds getShadowBounds(BaseBounds bounds,
+                                      BaseTransform tx,
+                                      float width,
+                                      float height,
+                                      BlurType blurType) {
+        int hgrow = 0;
+        int vgrow = 0;
+
+        switch (blurType) {
+            case GAUSSIAN:
+                float hradius = width < 1.0f ? 0.0f : ((width - 1.0f) / 2.0f);
+                float vradius = height < 1.0f ? 0.0f : ((height - 1.0f) / 2.0f);
+                hgrow = (int) Math.ceil(hradius);
+                vgrow = (int) Math.ceil(vradius);
+                break;
+            case ONE_PASS_BOX:
+                hgrow = getKernelSize(Math.round(width/3.0f), 1);
+                vgrow = getKernelSize(Math.round(height/3.0f), 1);
+                break;
+            case TWO_PASS_BOX:
+                hgrow = getKernelSize(Math.round(width/3.0f), 2);
+                vgrow = getKernelSize(Math.round(height/3.0f), 2);
+                break;
+            case THREE_PASS_BOX:
+                hgrow = getKernelSize(Math.round(width/3.0f), 3);
+                vgrow = getKernelSize(Math.round(height/3.0f), 3);
+                break;
+        }
+
+        bounds = bounds.deriveWithPadding(hgrow, vgrow, 0);
+
+        return transformBounds(tx, bounds);
+    }
+
+    // Returns input bounds for an effect. These are either bounds of input effect or
+    // geometric bounds of the node on which the effect calling this method is applied.
+    static BaseBounds getInputBounds(BaseBounds bounds,
+                                     BaseTransform tx,
+                                     Node node,
+                                     BoundsAccessor boundsAccessor,
+                                     Effect input) {
+        if (input != null) {
+            bounds = input.impl_getBounds(bounds, tx, node, boundsAccessor);
+        } else {
+            bounds = boundsAccessor.getGeomBounds(bounds, tx, node);
+        }
+
+        return bounds;
+    }
 }

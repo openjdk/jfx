@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
+import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Shape;
@@ -359,12 +360,13 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public List<File> showFileChooser(TKStage ownerWindow,
+    public FileChooserResult showFileChooser(TKStage ownerWindow,
                                       String title,
                                       File initialDirectory,
                                       String initialFileName,
                                       FileChooserType fileChooserType,
-                                      List<ExtensionFilter> extensionFilters) {
+                                      List<ExtensionFilter> extensionFilters,
+                                      ExtensionFilter selectedFilter) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

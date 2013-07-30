@@ -303,6 +303,19 @@
     }
 }
 
+- (void)blitFromFBO:(GlassFrameBufferObject*)other_fbo
+{
+    self->_fboToRestore = 0; // default to screen
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, (GLint*)&self->_fboToRestore);
+    [self _createFboIfNeededForWidth:other_fbo->_width andHeight:other_fbo->_height];
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, other_fbo->_fbo);
+    glBlitFramebuffer(0,0, other_fbo->_width, other_fbo->_height,
+                      0,0, self->_width, self->_height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, self->_fboToRestore);
+}
+
+
 - (GLuint)texture
 {
     return self->_texture;

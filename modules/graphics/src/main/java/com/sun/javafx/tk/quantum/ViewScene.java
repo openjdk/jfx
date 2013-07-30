@@ -92,13 +92,13 @@ class ViewScene extends GlassScene {
     @Override
     public void dispose() {
         if (platformView != null) {
-            AbstractPainter.renderLock.lock();
+            ViewPainter.renderLock.lock();
             try {
                 platformView.close();
                 platformView = null;
                 updateSceneState();
             } finally {
-                AbstractPainter.renderLock.unlock();
+                ViewPainter.renderLock.unlock();
             }
         }
         super.dispose();

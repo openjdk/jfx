@@ -508,7 +508,11 @@ public class TextRun implements GlyphList {
         if (run != null) {
             length += run.length;
             glyphCount += run.glyphCount;
-            width += run.width;
+            if (width != -1 && run.width != -1) {
+                width += run.width;
+            } else {
+                width = -1;
+            }
         }
         flags &= ~FLAGS_SPLIT;
         flags &= ~FLAGS_SPLIT_LAST;

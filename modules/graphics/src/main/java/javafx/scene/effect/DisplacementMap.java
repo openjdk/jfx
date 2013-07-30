@@ -35,7 +35,6 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.scene.Node;
 
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
@@ -72,7 +71,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * <pre><code>
  * int width = 220;
  * int height = 100;
- * 
+ *
  * FloatMap floatMap = new FloatMap();
  * floatMap.setWidth(width);
  * floatMap.setHeight(height);
@@ -139,7 +138,7 @@ public class DisplacementMap extends Effect {
      * {@code FloatMap} are multiplied
      * @since JavaFX 2.1
      */
-    public DisplacementMap(FloatMap mapData, 
+    public DisplacementMap(FloatMap mapData,
                            double offsetX, double offsetY,
                            double scaleX, double scaleY) {
         setMapData(mapData);
@@ -505,23 +504,22 @@ public class DisplacementMap extends Effect {
                                      BaseTransform tx,
                                      Node node,
                                      BoundsAccessor boundsAccessor) {
-        bounds = EffectUtils.getInputBounds(bounds,
-                                            BaseTransform.IDENTITY_TRANSFORM,
-                                            node, boundsAccessor,
-                                            getInput());
-        return EffectUtils.transformBounds(tx, bounds);
+        bounds = getInputBounds(bounds,
+                                BaseTransform.IDENTITY_TRANSFORM,
+                                node, boundsAccessor,
+                                getInput());
+        return transformBounds(tx, bounds);
     }
-    
+
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     @Override
-    public Effect impl_copy() {    
-        DisplacementMap dm = new DisplacementMap(this.getMapData().impl_copy(), 
-                this.getOffsetX(), this.getOffsetY(), this.getScaleX(), 
+    public Effect impl_copy() {
+        DisplacementMap dm = new DisplacementMap(this.getMapData().impl_copy(),
+                this.getOffsetX(), this.getOffsetY(), this.getScaleX(),
                 this.getScaleY());
         dm.setInput(this.getInput());
         return dm;

@@ -25,25 +25,24 @@
 
 package com.sun.prism.impl;
 
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.paint.PaintUtil;
 import com.sun.prism.impl.shape.MaskData;
 import com.sun.prism.paint.Gradient;
-
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 
 public abstract class BaseContext {
 
@@ -110,7 +109,7 @@ public abstract class BaseContext {
         // Default implementation is a no-op. A pipeline may override if needed.
     }
 
-    protected abstract void setRenderTarget(RenderTarget target, PrismCameraImpl camera,
+    protected abstract void setRenderTarget(RenderTarget target, NGCamera camera,
                                             boolean depthTest, boolean state3D);
 
     public void validateClearOp(BaseGraphics g) {

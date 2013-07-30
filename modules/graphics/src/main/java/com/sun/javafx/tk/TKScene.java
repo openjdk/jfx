@@ -26,9 +26,8 @@
 package com.sun.javafx.tk;
 
 import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
-
-import java.security.AccessControlContext;
 
 /**
  * TKScene
@@ -65,8 +64,8 @@ public interface TKScene {
 
     public void setCamera(NGCamera camera);
 
-    Object[] getLights();
-    public void setLights(Object lights[]);
+    NGLightBase[] getLights();
+    public void setLights(NGLightBase[] lights);
 
     /**
      * Set the background fill for the scene

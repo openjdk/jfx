@@ -159,13 +159,13 @@ class GlassAppletWindow implements AppletWindow {
     }
 
     void dispose() {
-        AbstractPainter.renderLock.lock();
+        ViewPainter.renderLock.lock();
         try {
             glassWindow.close();
             //TODO - should update glass scene view state
             //TODO - doesn't matter because we are disposing
         } finally {
-            AbstractPainter.renderLock.unlock();
+            ViewPainter.renderLock.unlock();
         }
     }
 

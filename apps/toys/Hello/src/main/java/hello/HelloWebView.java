@@ -23,38 +23,26 @@
  * questions.
  */
 
-package com.sun.prism.camera;
+package hello;
 
-public class PrismDefaultCamera extends PrismParallelCameraImpl {
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.web.WebView;
+import javafx.stage.Stage;
 
-    private static final PrismDefaultCamera theInstance = new PrismDefaultCamera();
-
-    public static PrismDefaultCamera getInstance() {
-        return theInstance;
+/**
+ */
+public class HelloWebView extends Application {
+    @Override public void start(Stage stage) throws Exception {
+        WebView web = new WebView();
+        web.getEngine().load("http://www.google.com/");
+        Scene scene = new Scene(web);
+        stage.setScene(scene);
+        stage.setTitle("HelloWebView");
+        stage.show();
     }
 
-    /**
-     * Constructs a orthographic camera object with default parameters.
-     */
-    private PrismDefaultCamera() {}
-
-    @Override
-    public void setNearClip(float nearClip) {
-        super.setNearClip(nearClip);
-    }
-
-    @Override
-    public void setFarClip(float farClip) {
-        super.setFarClip(farClip);
-    }
-
-    public void validate(int w, int h) {
-        if ((w != viewWidth) || (h != viewHeight)) {
-            setViewWidth(w);
-            setViewHeight(h);
-
-            double halfDepth = (w > h) ? w / 2.0 : h / 2.0;
-            projViewTx.ortho(0.0, w, h, 0.0, -halfDepth, halfDepth);
-        }
+    public static void main(String[] args) {
+        launch(args);
     }
 }

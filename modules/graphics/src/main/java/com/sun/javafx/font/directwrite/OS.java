@@ -136,8 +136,27 @@ class OS {
     static final int DWRITE_READING_DIRECTION_RIGHT_TO_LEFT = 1;
     static final int DWRITE_FONT_SIMULATIONS_NONE     = 0x0000;
     static final int DWRITE_FONT_SIMULATIONS_BOLD     = 0x0001;
-    static final int DWRITE_FONT_SIMULATIONS_OBLIQUE  = 0x000;
-
+    static final int DWRITE_FONT_SIMULATIONS_OBLIQUE  = 0x0002;
+    static final int DWRITE_INFORMATIONAL_STRING_NONE = 0;
+    static final int DWRITE_INFORMATIONAL_STRING_COPYRIGHT_NOTICE = 1;
+    static final int DWRITE_INFORMATIONAL_STRING_VERSION_STRINGS = 2;
+    static final int DWRITE_INFORMATIONAL_STRING_TRADEMARK = 3;
+    static final int DWRITE_INFORMATIONAL_STRING_MANUFACTURER = 4;
+    static final int DWRITE_INFORMATIONAL_STRING_DESIGNER = 5;
+    static final int DWRITE_INFORMATIONAL_STRING_DESIGNER_URL = 6;
+    static final int DWRITE_INFORMATIONAL_STRING_DESCRIPTION = 7;
+    static final int DWRITE_INFORMATIONAL_STRING_FONT_VENDOR_URL = 8;
+    static final int DWRITE_INFORMATIONAL_STRING_LICENSE_DESCRIPTION = 9;
+    static final int DWRITE_INFORMATIONAL_STRING_LICENSE_INFO_URL = 10;
+    static final int DWRITE_INFORMATIONAL_STRING_WIN32_FAMILY_NAMES = 11;
+    static final int DWRITE_INFORMATIONAL_STRING_WIN32_SUBFAMILY_NAMES = 12;
+    static final int DWRITE_INFORMATIONAL_STRING_PREFERRED_FAMILY_NAMES = 13;
+    static final int DWRITE_INFORMATIONAL_STRING_PREFERRED_SUBFAMILY_NAMES = 14;
+    static final int DWRITE_INFORMATIONAL_STRING_SAMPLE_TEXT = 15;
+    /* Only on newer versions of Dwrite */
+    static final int DWRITE_INFORMATIONAL_STRING_FULL_NAME = 16;
+    static final int DWRITE_INFORMATIONAL_STRING_POSTSCRIPT_NAME = 17;
+    static final int DWRITE_INFORMATIONAL_STRING_POSTSCRIPT_CID_NAME = 18;
 
     /* Constructors */
     private static final native long _DWriteCreateFactory(int factoryType);
@@ -221,6 +240,8 @@ class OS {
     static final native int GetStretch(long ptr);
     static final native int GetStyle(long ptr);
     static final native int GetWeight(long ptr);
+    static final native long GetInformationalStrings(long ptr, int informationalStringID);
+    static final native int GetSimulations(long ptr);
 
     //IDWriteFontList
     static final native int GetFontCount(long ptr);

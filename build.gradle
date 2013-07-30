@@ -119,6 +119,23 @@ String cygpath(String path) {
     return out.toString().trim();
 }
 
+
+void loadProperties(String sourceFileName) {
+    def config = new Properties()
+    def propFile = new File(sourceFileName)
+    if (propFile.canRead()) {
+        config.load(new FileInputStream(propFile))
+        for (Map.Entry property in config) {
+            def keySplit = property.key.split("\\.");
+            def key = keySplit[0];
+            for (int i = 1; i < keySplit.length; i++) {
+                key = key + keySplit[i].capitalize();
+            }
+            ext[key] = property.value;
+        }
+    }
+}
+
 /**
  * Struct used to contain some information passed to the closure
  * passed to compileTargets.
@@ -257,6 +274,12 @@ defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"
 defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api")
+
+defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
+defineProperty("javaVersion", javaRuntimeVersion.split("[_\\-]")[0])
+defineProperty("javaBuildNumber", javaRuntimeVersion.substring(javaRuntimeVersion.lastIndexOf("-b") + 2))
+
+loadProperties("$projectDir/build.properties")
 
 def String closedCacheStubRuntime = cygpath("$projectDir") + "/../caches/sdk/rt"
 defineProperty("STUB_RUNTIME", BUILD_CLOSED ? closedCacheStubRuntime : cygpath("$JDK_HOME/jre"))
@@ -595,6 +618,10 @@ logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
 logger.quiet("JDK_HOME: $JDK_HOME")
+logger.quiet("java.runtime.version: ${javaRuntimeVersion}")
+logger.quiet("java version: ${javaVersion}")
+logger.quiet("java build number: ${javaBuildNumber}")
+logger.quiet("minimum java build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
 logger.quiet("COMPILE_FLAGS_FILES: $COMPILE_FLAGS_FILES")
 logger.quiet("BINARY_STUB: ${BINARY_STUB == null ? '' : BINARY_STUB.asPath}")
@@ -642,6 +669,22 @@ ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
  * @param optional If the task is optional or not
  */
 void addNative(Project project, String name, boolean optional = false) {
+    addNative(project, name, null, optional)
+}
+
+/**
+ * Convenience method for creating javah, cc, link, and "native" tasks in the given project. These
+ * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
+ * named tasks.
+ * 
+ * @param project The project to add tasks to
+ * @param name The name of the project, such as "prism-common". This name is used
+ *        in the name of the generated task, such as ccPrismCommon, and also
+ *        in the name of the final library, such as libprism-common.dylib.
+ * @param list of compile targets. Library is applicable only for these targets.
+ * @param optional If the task is optional or not
+ */
+void addNative(Project project, String name, List<String> includeTargets, boolean optional = false) {
     // TODO if we want to handle 32/64 bit windows in the same build,
     // Then we will need to modify the win compile target to be win32 or win64
     def capitalName = name.split("-").collect{it.capitalize()}.join()
@@ -658,11 +701,15 @@ void addNative(Project project, String name, boolean optional = false) {
     def libRootDir = project.file("$project.buildDir/libs/$name")
     // For each compile target, create a javah / cc / link triplet
     compileTargets { t ->
+        if (includeTargets != null && !includeTargets.contains(t.name)) {
+            return
+        }
         def targetProperties = project.rootProject.ext[t.upper]
         def library = targetProperties.library
         def properties = targetProperties.get(name)
         def nativeDir = file("$nativeRootDir/${t.name}")
         def headerDir = file("$headerRootDir/${t.name}")
+        
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
             description = "Generates JNI Headers for ${name} for ${t.name}"
             if (properties.javahSource == null) {
@@ -769,6 +816,20 @@ void addJSL(Project project, String name, String pkg, Closure compile) {
             include("**/*.frag")
         }
         into "$project.buildDir/resources/jsl-$lowerName"
+    }
+}
+
+// Task to verify the minimum level of Java needed to build JavaFX
+task verifyJava() {
+    doLast {
+        if (javaVersion != jfxBuildJdkVersion) {
+            fail("java version mismatch: ${javaVersion} must be ${jfxBuildJdkVersion}")
+        }
+        def buildNum = Integer.parseInt(javaBuildNumber)
+        def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
+        if (buildNum < minBuildNum) {
+            fail("java build number ($buildNum) < minimum build number ($minBuildNum)")
+        }
     }
 }
 
@@ -938,6 +999,7 @@ project(":base") {
     }
 
     compileJava.dependsOn updateCacheIfNeeded
+    compileJava.dependsOn verifyJava
 
     // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
@@ -981,7 +1043,7 @@ project(":graphics") {
 
     // Currently lets not build pango by default
     if (IS_LINUX) {
-        addNative(project, "fontPango", !COMPILE_PANGO)
+        addNative(project, "fontPango", ["linux","armv6hf", "armv6sf"],!COMPILE_PANGO)
     }
 
     if (IS_WINDOWS) {
@@ -1801,15 +1863,18 @@ compileTargets { t ->
                 if (COMPILE_WEBKIT) {
                     from ("modules/web/build/libs/${library('jfxwebkit')}")
                     if (IS_WINDOWS) {
-                        from ("modules/web/src/main/native/WebKitLibraries/import/runtime")
+                        from ("modules/web/src/main/native/WebKitBuild/import/runtime")
                     }
                 } else {
-                    if (IS_MAC && COMPILE_TARGETS != "ios") from ("$LIBRARY_STUB/libjfxwebkit.dylib")
+                    if (t.name == "android") {
+                        //don't copy anything, use built in webkit.
+                    }
+                    else if (IS_MAC && COMPILE_TARGETS != "ios") from ("$LIBRARY_STUB/libjfxwebkit.dylib")
                     else if (IS_WINDOWS) {
                         from ("$LIBRARY_STUB/jfxwebkit.dll")
                         from ("$LIBRARY_STUB/libxml2.dll")
                         from ("$LIBRARY_STUB/libxslt.dll")
-                    }
+                    }                    
                     else from ("$LIBRARY_STUB/libjfxwebkit.so")
                 }
                 def libDest = targetProperties.libDest
@@ -1964,7 +2029,8 @@ if (BUILD_CLOSED) {
 project(":web") {
     def platform = IS_MAC ? "mac" :
             IS_WINDOWS ? (IS_64 ? "win-amd64" : "win-i586") :
-                IS_64 ? "linux-amd64" : "linux-i586"
+                COMPILE_TARGETS.contains("armv6sf") ? "armv6sf" :
+                    IS_64 ? "linux-amd64" : "linux-i586"
                 
     if (COMPILE_WEBKIT) {
         configurations {
@@ -2075,39 +2141,31 @@ project(":web") {
                         "QMAKE_LFLAGS"   : "-m64",
                         "JAVA_HOME"      : JDK_HOME
                     ])
-                // TODO need to re-enable. It looks like linux doesn't ever build
-                // webkit at all which is also not right.
-                // } else if (IS_LINUX && COMPILE_TARGETS != "linux") {
-                // We need some way to detect cross build here. The CompileTarget
-                // enum from rt/build.gradle is out of scope here, so I cannot write
-                //     COMPILE_TARGET != CompileTarget.LINUX
-                // Once web module is open sourced, this target will be moved into
-                // rt/build.gradle, thus eliminating the problem.
-                // For now, work around it with a name check.
-                //            } else if (IS_LINUX && (! "LINUX".equals(COMPILE_TARGET.name()))) {
-                //                // Linux cross build
-                //                mkdir "$webkitOutputDir"
-                //                File qmakeSpec = new File("$webkitOutputDir/qmake.conf")
-                //                qmakeSpec.append(
-                //"""TARGET_PLATFORM         = unix
-                //include(/usr/share/qt4/mkspecs/common/linux.conf)
-                //include(/usr/share/qt4/mkspecs/common/g++.conf)
-                //include(/usr/share/qt4/mkspecs/common/qws.conf)
-                //QMAKE_CC                = $crosstools.gcc.bin
-                //QMAKE_CXX               = $crosstools.gpp.bin
-                //QMAKE_LINK              = $crosstools.gpp.bin
-                //QMAKE_LINK_SHLIB        = $crosstools.gpp.bin
-                //QMAKE_AR                = $crosstools.ar.bin cqs
-                //QMAKE_OBJCOPY           = $crosstools.objcopy.bin
-                //QMAKE_STRIP             = $crosstools.strip.bin
-                //load(qt_config)""")
-                //                environment([
-                //                    "QMAKESPEC" : webkitOutputDir,
-                //                    "WK_CFLAGS" : crosstools.extra_cflags,
-                //                    "WK_LFLAGS" : crosstools.extra_ldflags,
-                //                    "PATH"      : "$cross.tools/bin:$PATH",
-                //                ])
-                //                args("--nocache")
+                } else if (COMPILE_TARGETS.contains("armv6sf")) {
+                    // ARM cross build
+                    def qmakeSpecDir = "$webkitOutputDir/qws/linux-cross-armv6sf-g++"
+                    mkdir qmakeSpecDir
+                    File qmakeSpec = new File("modules/web/$qmakeSpecDir/qmake.conf")
+                    qmakeSpec.append(
+"""TARGET_PLATFORM         = unix
+include(/usr/share/qt4/mkspecs/common/linux.conf)
+include(/usr/share/qt4/mkspecs/common/g++.conf)
+include(/usr/share/qt4/mkspecs/common/qws.conf)
+QMAKE_CC                = $ARMV6SF.webkit.compiler
+QMAKE_CXX               = $ARMV6SF.webkit.linker
+QMAKE_LINK              = $ARMV6SF.webkit.linker
+QMAKE_LINK_SHLIB        = $ARMV6SF.webkit.linker
+QMAKE_AR                = $ARMV6SF.webkit.ar cqs
+QMAKE_OBJCOPY           = $ARMV6SF.webkit.objcopy
+QMAKE_STRIP             = $ARMV6SF.webkit.strip
+QMAKE_CXXFLAGS          = $ARMV6SF.webkit.ccFlags
+QMAKE_LFLAGS            = $ARMV6SF.webkit.linkFlags
+load(qt_config)""")
+                    environment([
+                        "QMAKESPEC" : file(qmakeSpecDir).getAbsolutePath(),
+                        "PATH"      : "$ARMV6SF.webkit.binDir:$System.env.PATH",
+                    ])
+                    args("--nocache")
                 } else {
                     environment([
                         "JAVA_HOME"   : JDK_HOME

@@ -34,7 +34,6 @@ import javafx.scene.Node;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
@@ -137,7 +136,6 @@ public class Lighting extends Effect {
     private final LightChangeListener lightChangeListener = new LightChangeListener();
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
@@ -454,8 +452,6 @@ public class Lighting extends Effect {
                                      BaseTransform tx,
                                      Node node,
                                      BoundsAccessor boundsAccessor) {
-        return EffectUtils.getInputBounds(bounds, tx,
-                                          node, boundsAccessor,
-                                          getContentInput());
+        return getInputBounds(bounds, tx, node, boundsAccessor, getContentInput());
     }
 }

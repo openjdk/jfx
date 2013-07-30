@@ -26,13 +26,12 @@
 package com.sun.javafx.pgstub;
 
 import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
-
-import java.security.AccessControlContext;
 
 public class StubScene implements TKScene {
 
@@ -108,13 +107,13 @@ public class StubScene implements TKScene {
     }
 
     @Override
-    public Object[] getLights() {
+    public NGLightBase[] getLights() {
         // ignore
         return null;
     }
 
     @Override
-    public void setLights(Object[] lights) {
+    public void setLights(NGLightBase[] lights) {
         // ignore
     }
 

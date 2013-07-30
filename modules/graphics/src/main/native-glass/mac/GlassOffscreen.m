@@ -35,6 +35,11 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
+@interface GlassOffscreen ()
+- (void)setContext;
+- (void)unsetContext;
+@end
+
 @implementation GlassOffscreen
 
 - (id)initWithContext:(CGLContextObj)ctx
@@ -42,7 +47,6 @@
     self = [super init];
     if (self != nil)
     {
-        self->_lock = [[NSRecursiveLock alloc] init];
         self->_ctx = CGLRetainContext(ctx);
         
         self->_backgroundR = 1.0f;
@@ -50,9 +54,8 @@
         self->_backgroundB = 1.0f;
         self->_backgroundA = 1.0f;
         
-        self->_ctxToRestore = CGLGetCurrentContext();
+        [self setContext];
         {
-            CGLSetCurrentContext(self->_ctx);
             self->_offscreen = [[GlassFrameBufferObject alloc] init];
             if (self->_offscreen == nil)
             {
@@ -60,8 +63,7 @@
                 //self->_offscreen = [[GlassPBuffer alloc] init];
             }
         }
-        CGLSetCurrentContext(self->_ctxToRestore);
-        self->_ctxToRestore = NULL;
+        [self unsetContext];
     }
     return self;
 }
@@ -73,12 +75,16 @@
 
 - (void)dealloc
 {
-    [self->_lock release];
-    self->_lock = nil;
-    
+    [self setContext];
+    {
+        [(NSObject*)self->_offscreen release];
+        self->_offscreen = NULL;
+    }
+    [self unsetContext];
+
     CGLReleaseContext(self->_ctx);
     self->_ctx = NULL;
-    
+
     [super dealloc];
 }
 
@@ -88,16 +94,6 @@
     self->_backgroundG = (GLfloat)[color greenComponent];
     self->_backgroundB = (GLfloat)[color blueComponent];
     self->_backgroundA = (GLfloat)[color alphaComponent];
-}
-
-- (void)lock
-{
-    [self->_lock lock];
-}
-
-- (void)unlock;
-{
-    [self->_lock unlock];
 }
 
 - (GLuint)width
@@ -110,43 +106,46 @@
     return [self->_offscreen height];
 }
 
+- (CAOpenGLLayer*)getLayer
+{
+    return _layer;
+}
+
+- (void)setLayer:(CAOpenGLLayer*)new_layer
+{
+    //Set a weak reference as layer owns offscreen
+    self->_layer = new_layer;
+}
+
+- (void)setContext
+{
+    self->_ctxToRestore = CGLGetCurrentContext();
+    CGLLockContext(self->_ctx);
+    CGLSetCurrentContext(self->_ctx);
+}
+
+- (void)unsetContext
+{
+    CGLSetCurrentContext(self->_ctxToRestore);    
+    CGLUnlockContext(self->_ctx);
+}
+
 - (void)bindForWidth:(GLuint)width andHeight:(GLuint)height
 {
-    [self lock];
-    {
-        self->_ctxToRestore = CGLGetCurrentContext();
-        {
-            CGLSetCurrentContext(self->_ctx);
-            
-            [self->_offscreen bindForWidth:width andHeight:height];
-            self->_dirty = GL_TRUE;
-        }
-    }
-    // will be unlocked later by [GlassOffscreen unbind]
+    [self setContext];       
+    [self->_offscreen bindForWidth:width andHeight:height];
 }
 
 - (void)unbind
 {
-    // already locked earlier by [GlassOffscreen bindForWidth:andHeight];
-    {
-        assert(CGLGetCurrentContext() == self->_ctx);
-        {
-            self->_dirty = GL_TRUE;
-            [self->_offscreen unbind];
-        }
-        CGLSetCurrentContext(self->_ctxToRestore);
-        self->_ctxToRestore = NULL;
-    }
-    [self unlock];
+    assert(CGLGetCurrentContext() == self->_ctx);
+    [self->_offscreen unbind];
+    [self unsetContext];
 }
 
 - (void)blit
 {
-    [self lock];
-    {
-        [self blitForWidth:[self->_offscreen width] andHeight:[self->_offscreen height]];
-    }
-    [self unlock];
+    [self blitForWidth:[self->_offscreen width] andHeight:[self->_offscreen height]];
 }
 
 - (GLuint)texture
@@ -156,7 +155,6 @@
 
 - (void)blitForWidth:(GLuint)width andHeight:(GLuint)height
 {
-    [self lock];
     {
 #if 1
         glClearColor(self->_backgroundR, self->_backgroundG, self->_backgroundB, self->_backgroundA);
@@ -183,18 +181,26 @@
                 break;
         }
         glClear(GL_COLOR_BUFFER_BIT);
-#endif
-        
+#endif        
         [self->_offscreen blitForWidth:width andHeight:height];
         
         self->_dirty = GL_FALSE;
     }
-    [self unlock];
 }
 
 - (GLboolean)isDirty
 {
     return self->_dirty;
+}
+
+- (void)blitFromOffscreen:(GlassOffscreen*) other_offscreen
+{
+    [self setContext];
+    {
+        [(GlassFrameBufferObject*)self->_offscreen blitFromFBO:(GlassFrameBufferObject*)other_offscreen->_offscreen];
+        self->_dirty = GL_TRUE;
+    }
+    [self unsetContext];
 }
 
 @end

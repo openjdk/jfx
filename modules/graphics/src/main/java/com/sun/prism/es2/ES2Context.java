@@ -25,26 +25,26 @@
 
 package com.sun.prism.es2;
 
+import java.util.HashMap;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGDefaultCamera;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Material;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.ps.BaseShaderContext;
 import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderFactory;
-import java.util.HashMap;
 
 class ES2Context extends BaseShaderContext {
 
@@ -206,7 +206,7 @@ class ES2Context extends BaseShaderContext {
     }
 
     @Override
-    protected State updateRenderTarget(RenderTarget target, PrismCameraImpl camera,
+    protected State updateRenderTarget(RenderTarget target, NGCamera camera,
             boolean depthTest) {
         int fboID = ((ES2RenderTarget)target).getFboID();
         glContext.bindFBO(fboID);
@@ -229,10 +229,10 @@ class ES2Context extends BaseShaderContext {
         glContext.updateViewportAndDepthTest(x, y, w, h, depthTest);
         glContext.updateMSAAState(antiAliasing);
 
-        if (camera instanceof PrismDefaultCamera) {
+        if (camera instanceof NGDefaultCamera) {
             // update projection matrix; this will be uploaded to the shader
             // along with the modelview matrix in updateShaderTransform()
-            ((PrismDefaultCamera) camera).validate(w, h);
+            ((NGDefaultCamera) camera).validate(w, h);
             scratchTx = camera.getProjViewTx(scratchTx);
         } else {
             scratchTx = camera.getProjViewTx(scratchTx);

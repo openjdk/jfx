@@ -456,7 +456,7 @@ public final class QuantumToolkit extends Toolkit {
         if (noRenderJobs) {
             CompletionListener listener = r.getCompletionListener();
             if (r instanceof PaintRenderJob) {
-                ((ViewScene)(((PaintRenderJob)r).getScene())).setPainting(false);
+                ((PaintRenderJob)r).getScene().setPainting(false);
             }
             if (listener != null) {
                 try {
@@ -731,14 +731,14 @@ public final class QuantumToolkit extends Toolkit {
             notifyShutdownHooks();
             pulseTimer.stop();
 
-            AbstractPainter.renderLock.lock();
+            ViewPainter.renderLock.lock();
             try {
                 //TODO - should update glass scene view state
                 //TODO - doesn't matter because we are exiting
                 Application app = Application.GetApplication();
                 app.terminate();
             } finally {
-                AbstractPainter.renderLock.unlock();
+                ViewPainter.renderLock.unlock();
             }
 
             dispose();
@@ -1355,7 +1355,7 @@ public final class QuantumToolkit extends Toolkit {
 
                 if (params.root != null) {
                     if (params.camera != null) {
-                        g.setCamera(params.camera.getCameraImpl());
+                        g.setCamera(params.camera);
                     }
                     NGNode ngNode = params.root;
                     ngNode.render(g);
@@ -1447,13 +1447,14 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override
-    public List<File> showFileChooser(final TKStage ownerWindow,
+    public FileChooserResult showFileChooser(final TKStage ownerWindow,
                                       final String title,
                                       final File initialDirectory,
                                       final String initialFileName,
                                       final FileChooserType fileChooserType,
                                       final List<FileChooser.ExtensionFilter>
-                                              extensionFilters) {
+                                              extensionFilters,
+                                      final FileChooser.ExtensionFilter selectedFilter) {
         WindowStage blockedStage = null;
         try {
             // NOTE: we block the owner of the owner deliberately.
@@ -1461,7 +1462,7 @@ public final class QuantumToolkit extends Toolkit {
             //       Otherwise sheets on Mac are unusable.
             blockedStage = blockOwnerStage(ownerWindow);
 
-            FileChooserResult result = CommonDialogs.showFileChooser(
+            return CommonDialogs.showFileChooser(
                     (ownerWindow instanceof WindowStage)
                             ? ((WindowStage) ownerWindow).getPlatformWindow()
                             : null,
@@ -1473,9 +1474,7 @@ public final class QuantumToolkit extends Toolkit {
                             : CommonDialogs.Type.OPEN,
                     (fileChooserType == FileChooserType.OPEN_MULTIPLE),
                     convertExtensionFilters(extensionFilters),
-                    0);
-
-            return result.getFiles();
+                    extensionFilters.indexOf(selectedFilter));
         } finally {
             if (blockedStage != null) {
                 blockedStage.setEnabled(true);

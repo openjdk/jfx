@@ -37,7 +37,7 @@ import com.sun.glass.ui.Window;
  * PresentableState is intended to provide for a shadow copy of View/Window
  * state for use off the event thread. It is the task of the invoker of 
  * Prism to make sure that the state is consistent for a rendering probably
- * by use of the Abstractpainter.renderLock to ensure consistent state.
+ * by use of the AbstractPainter.renderLock to ensure consistent state.
  */
 public class PresentableState {
 
