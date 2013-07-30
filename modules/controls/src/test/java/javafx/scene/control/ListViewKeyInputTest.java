@@ -25,12 +25,10 @@
 
 package javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.util.List;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
@@ -50,6 +48,8 @@ import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
+
+import static org.junit.Assert.*;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewKeyInputTest {
@@ -1136,5 +1136,41 @@ public class ListViewKeyInputTest {
         assertFalse(cell.isEditing());
         assertEquals(1, rt29849_start_count);
         assertEquals(1, rt29849_cancel_count);
+    }
+
+    private int rt31577_count = 0;
+    @Test public void test_rt31577() {
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearSelection();
+
+        // the actual bug is that the selectedItem property does not fire an
+        // event when the selected items list changes (due to deselection).
+        // It actually does always contain the right value - it just doesn't
+        // let anyone know it!
+        sm.selectedItemProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                rt31577_count++;
+            }
+        });
+
+        assertTrue(sm.getSelectedItems().isEmpty());
+        assertFalse(sm.isSelected(1));
+        assertEquals(0, rt31577_count);
+
+        // select the first row
+        keyboard.doKeyPress(KeyCode.KP_DOWN);
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.isSelected(0));
+        assertTrue(sm.getSelectedItems().contains("1"));
+        assertEquals("1", sm.getSelectedItem());
+        assertEquals(1, rt31577_count);
+
+        // deselect the row
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.CTRL);
+        assertTrue(sm.getSelectedItems().isEmpty());
+        assertFalse(sm.isSelected(1));
+        assertNull(sm.getSelectedItem());
+        assertEquals(2, rt31577_count);
     }
 }

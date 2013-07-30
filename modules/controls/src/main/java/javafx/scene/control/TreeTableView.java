@@ -2158,6 +2158,15 @@ public class TreeTableView<S> extends Control {
                     selectedItems.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeItem<S>>(c, cellToItemsMap, selectedItems));
                     c.reset();
 
+                    // Fix for RT-31577 - the selectedItems list was going to
+                    // empty, but the selectedItem property was staying non-null.
+                    // There is a unit test for this, so if a more elegant solution
+                    // can be found in the future and this code removed, the unit
+                    // test will fail if it isn't fixed elsewhere.
+                    if (selectedItems.isEmpty() && getSelectedItem() != null) {
+                        setSelectedItem(null);
+                    }
+
                     final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq = 
                             (ReadOnlyUnbackedObservableList<Integer>)getSelectedIndices();
                     
