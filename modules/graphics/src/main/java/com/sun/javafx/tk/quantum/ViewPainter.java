@@ -205,6 +205,10 @@ abstract class ViewPainter implements Runnable {
             if (PrismSettings.showCull) {
                  root.drawCullBits(g);
             }
+
+            // save current depth test state
+            boolean prevDepthTest = g.isDepthTest();
+
             g.setDepthTest(false);
             if (status == DirtyRegionContainer.DTR_OK) {
                 g.setPaint(new Color(1, 0, 0, .3f));
@@ -217,6 +221,10 @@ abstract class ViewPainter implements Runnable {
                 g.setPaint(new Color(1, 0, 0, .3f));
                 g.fillRect(0, 0, width, height);
             }
+
+            // restore previous depth test state
+            g.setDepthTest(prevDepthTest);
+
         }
 
         if (SystemProperties.isDebug()) {
