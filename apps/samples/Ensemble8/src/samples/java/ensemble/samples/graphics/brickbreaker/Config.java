@@ -111,6 +111,10 @@ public final class Config {
 
     public static void initialize() {
 
+        images.clear();
+        bricksImages.clear();
+        bonusesImages.clear();
+
         images.add(new Image(Config.class.getResourceAsStream("/ensemble/samples/shared-resources/brickImages/background.png")));
         images.add(new Image(Config.class.getResourceAsStream("/ensemble/samples/shared-resources/brickImages/bat/left.png")));
         images.add(new Image(Config.class.getResourceAsStream("/ensemble/samples/shared-resources/brickImages/bat/center.png")));
