@@ -961,43 +961,76 @@ jboolean glass_window_minimize(JNIEnv *env,
                                NativeWindow window,
                                jboolean toMinimize);
 
+
 /**
- * Get the first (farthest) window in the window list.
+ * Lock the windows list. 
+ * Blocks until the window list lock is available. May not be
+ * called twice from the same thread without unlocking in
+ * between.
+ */
+void glass_window_list_lock();
+
+/**
+ * Unlock the windows list.
+ */
+void glass_window_list_unlock();
+
+/**
+ * Return the list size. Not protected by Mutex. Use
+ * glass_window_list_lock/unlock in the calling context
+ *  
+ * @return int - the list size
+ */
+int glass_window_list_getSize();
+
+/**
+ * Get the first (farthest) window in the window list. Not 
+ * protected by Mutex. Use glass_window_list_lock/unlock in the 
+ * calling context
  *
  * @return First window or NULL for empty list
  */
 NativeWindow glass_window_list_getHead();
 
 /**
- * Get the last (closest)  window in the window list.
+ * Get the last (closest)  window in the window list. Not 
+ * protected by Mutex. Use glass_window_list_lock/unlock in the 
+ * calling context
  *
  * @return last window or NULL for empty list
  */
 NativeWindow glass_window_list_getTail();
 
 /**
- * Reorder window list putting Window in the Front
+ * Reorder windows list putting window in the front. This 
+ * function is thread safe and uses 
+ * glass_window_list_lock/unlock during operation 
  *
  * @param window window
  */
 jboolean glass_window_list_toFront(NativeWindow window);
 
 /**
- * Reorder window list putting Window in the back
+ * Reorder windows list putting window in the back. This 
+ * function is thread safe and uses 
+ * glass_window_list_lock/unlock during operation
  *
  * @param window window
  */
 jboolean glass_window_list_toBack(NativeWindow window);
 
 /**
- * Add a window to the window list
+ * Add a window to the windows list. This function is thread safe
+ * and uses glass_window_list_lock/unlock during operation 
  *
  * @param window window
  */
 void glass_window_list_add(NativeWindow window);
 
 /**
- * Remove a window from the window list
+ * Remove a window from the windows list. This 
+ * function is thread safe and uses 
+ * glass_window_list_lock/unlock during operation
  *
  * @param window window
  */
@@ -1005,7 +1038,8 @@ void glass_window_list_remove(NativeWindow window);
 
 /**
  * Print the content of the windows list to the console. Used 
- * for debugging. 
+ * for debugging.This function is thread safe and uses 
+ * glass_window_list_lock/unlock during operation 
  */
 void glass_window_listPrint();
 

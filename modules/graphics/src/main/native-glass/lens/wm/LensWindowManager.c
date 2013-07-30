@@ -140,7 +140,10 @@ LensResult lens_wm_notifyPlatformWindowRelease(JNIEnv *env, NativeWindow window)
         glass_window_setFocusedWindow(NULL);
     }
 
+
+    glass_window_list_lock();
     NativeWindow head = glass_window_list_getHead();
+    glass_window_list_unlock();
     if (head && head->view) {
         lens_wm_repaint(env, head);
     }
@@ -893,6 +896,7 @@ jboolean glass_window_maximize(JNIEnv *env,
 NativeWindow glass_window_findWindowAtLocation(int absX, int absY,
                                                int *pRelX, int *pRelY) {
 
+    glass_window_list_lock();
     NativeWindow w = glass_window_list_getTail();
     while (w) {
         GLASS_LOG_FINEST("Window %d[%p] isVisible=%s, state=%s",
@@ -912,6 +916,8 @@ NativeWindow glass_window_findWindowAtLocation(int absX, int absY,
                     "Absolute coordinates %i,%i are on window %i[%p] "
                     "as relative coordinates %i,%i",
                     absX, absY, w->id, w, *pRelX, *pRelY);
+
+                glass_window_list_unlock();
                 return w;
             }
         } else {
@@ -920,8 +926,11 @@ NativeWindow glass_window_findWindowAtLocation(int absX, int absY,
         }
         w = w->previousWindow;
     }
+    glass_window_list_unlock();
+
     GLASS_LOG_FINER("Absolute coordinates %i,%i are not on a window",
                     absX, absY);
+
     return NULL;
 }
 
@@ -1315,7 +1324,6 @@ NativeWindow lens_wm_unsetFocusedWindow(JNIEnv *env, NativeWindow window){
     GLASS_LOG_FINE("unsetting focus for window %i[%p]",
                    window->id, window);
     
-
     NativeWindow _focusedWindow = glass_window_getFocusedWindow();
 
     if (window == _focusedWindow) {
@@ -1329,6 +1337,7 @@ NativeWindow lens_wm_unsetFocusedWindow(JNIEnv *env, NativeWindow window){
         _focusedWindow = NULL;
 
         //search for the next focusable window
+        glass_window_list_lock();
         NativeWindow w = glass_window_list_getTail();
 
         while (w) {
@@ -1336,14 +1345,19 @@ NativeWindow lens_wm_unsetFocusedWindow(JNIEnv *env, NativeWindow window){
                 if (!w->owner && w->isFocusable) {
                     GLASS_LOG_FINE("Granting window %i[%p] the focus",
                                    w->id, w);
-
-                    lens_wm_setFocusedWindow(env, w);
                     _focusedWindow = w;
                     break;
                 }
             }
             w = w->previousWindow;
         }
+
+        glass_window_list_unlock();
+
+        if (_focusedWindow != NULL) {
+            lens_wm_setFocusedWindow(env, _focusedWindow);
+        }
+
     }else {
         GLASS_LOG_FINE("Window %i[%p] doesn't have the focus",
                        window?window->id : -1,
