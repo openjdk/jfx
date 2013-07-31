@@ -833,6 +833,22 @@ task verifyJava() {
     }
 }
 
+// Task to check whether jfxrt.jar is present in the JDK
+task checkJfxrtJar {
+    doLast {
+        def jfxrtFile = new File("$JAVA_HOME/jre/lib/ext/jfxrt.jar");
+        if (jfxrtFile.exists()) {
+            if (BUILD_CLOSED) {
+                fail("$jfxrtFile must be removed before building closed sdk")
+            } else {
+                logger.warn("****************************************************************")
+                logger.warn("$jfxrtFile may interfere with testing or running applications against locally build jfxrt.jar")
+                logger.warn("****************************************************************")
+            }
+        }
+    }
+}
+
 task updateCacheIfNeeded() {
     // an empty task we can add to as needed for UPDATE_STUB_CACHE
 }
@@ -1702,7 +1718,9 @@ task javadoc(type: Javadoc) {
 
 task jfxrt()
 
-task sdk()
+task sdk() {
+    dependsOn(checkJfxrtJar)
+}
 
 // this is empty, allowing us to depend on the task, which may have other
 // real intances added later.
