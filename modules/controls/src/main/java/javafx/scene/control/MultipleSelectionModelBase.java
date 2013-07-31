@@ -95,7 +95,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                     Number n = (Number) o;
                     int index = n.intValue();
 
-                    return index > 0 && index < selectedIndices.length() &&
+                    return index >= 0 && index < selectedIndices.length() &&
                             selectedIndices.get(index);
                 }
 

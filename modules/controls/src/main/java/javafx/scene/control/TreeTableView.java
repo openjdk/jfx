@@ -2239,6 +2239,9 @@ public class TreeTableView<S> extends Control {
                 
                 final TreeItem<S> treeItem = e.getTreeItem();
                 if (treeItem == null) return;
+
+                final int oldSelectedIndex = getSelectedIndex();
+                final TreeItem<S> oldSelectedItem = getSelectedItem();
                 
                 // we only shift selection from this row - everything before it
                 // is safe. We might change this below based on certain criteria
@@ -2279,7 +2282,6 @@ public class TreeTableView<S> extends Control {
                     // are part of the selectedItems list - and remove them
                     // from selection if they are (as per RT-15446)
                     final List<Integer> selectedIndices = getSelectedIndices();
-                    final int selectedIndex = getSelectedIndex();
                     final List<TreeItem<S>> selectedItems = getSelectedItems();
                     final TreeItem<S> selectedItem = getSelectedItem();
                     final List<? extends TreeItem<S>> removedChildren = e.getRemovedChildren();
@@ -2296,14 +2298,21 @@ public class TreeTableView<S> extends Control {
                                 selectedItem != null && 
                                 selectedItem.equals(removedChildren.get(0))) {
                             // Bug fix for RT-28637
-                            if (selectedIndex < getItemCount()) {
-                                TreeItem<S> newSelectedItem = getModelItem(selectedIndex);
+                            if (oldSelectedIndex < getItemCount()) {
+                                TreeItem<S> newSelectedItem = getModelItem(oldSelectedIndex);
                                 if (! selectedItem.equals(newSelectedItem)) {
                                     setSelectedItem(newSelectedItem);
                                 }
                             }
                         }
                     }
+                } else if (e.wasPermutated()) {
+                    // This handles the sorting case where nothing was added or
+                    // removed, but the location of the selected index / item
+                    // has likely changed. This was added to fix RT-30156 and
+                    // unit tests exist to prevent it from regressing.
+                    quietClearSelection();
+                    select(oldSelectedItem);
                 }
                 
                 treeTableView.expandedItemCountDirty = true;

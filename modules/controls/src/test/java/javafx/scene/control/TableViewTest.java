@@ -1519,4 +1519,78 @@ public class TableViewTest {
         editingCell = table.getEditingCell();
         assertNull(editingCell);
     }
+
+    @Test public void test_rt_21517() {
+        TableView table = new TableView();
+        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        TableColumn<String,String> second = new TableColumn<String,String>("second");
+        second.setCellValueFactory(new PropertyValueFactory("lastName"));
+        table.getColumns().addAll(first, second);
+
+        Person aaa,bbb,ccc;
+        table.setItems(FXCollections.observableArrayList(
+                aaa = new Person("AAA", "Smith", "jacob.smith@example.com"),
+                bbb = new Person("BBB", "Bob", "jim.bob@example.com"),
+                ccc = new Person("CCC", "Giles", "jim.bob@example.com")
+        ));
+
+        final TableSelectionModel sm = table.getSelectionModel();
+
+        // test pre-conditions
+        assertTrue(sm.isEmpty());
+
+        // select the 3rd row (that is, CCC)
+        sm.select(2);
+        assertTrue(sm.isSelected(2));
+        assertEquals(2, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertTrue(sm.getSelectedIndices().contains(2));
+        assertEquals(ccc, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedItems().contains(ccc));
+
+        // we also want to test visually
+        TableRow aaaRow = (TableRow) VirtualFlowTestUtils.getCell(table, 0);
+        assertFalse(aaaRow.isSelected());
+        TableRow cccRow = (TableRow) VirtualFlowTestUtils.getCell(table, 2);
+        assertTrue(cccRow.isSelected());
+
+        // sort tableview by firstname column in ascending (default) order
+        // (so aaa continues to come first)
+        table.getSortOrder().add(first);
+
+        // nothing should have changed
+        assertTrue(sm.isSelected(2));
+        assertEquals(2, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertTrue(sm.getSelectedIndices().contains(2));
+        assertEquals(ccc, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedItems().contains(ccc));
+        aaaRow = (TableRow) VirtualFlowTestUtils.getCell(table, 0);
+        assertFalse(aaaRow.isSelected());
+        cccRow = (TableRow) VirtualFlowTestUtils.getCell(table, 2);
+        assertTrue(cccRow.isSelected());
+
+        // continue to sort tableview by firstname column, but now in descending
+        // order, (so ccc to come first)
+        first.setSortType(TableColumn.SortType.DESCENDING);
+
+        // now test to ensure that CCC is still the only selected item, but now
+        // located in index 0
+        assertTrue(sm.isSelected(0));
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertTrue(sm.getSelectedIndices().contains(0));
+        assertEquals(ccc, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedItems().contains(ccc));
+
+        // we also want to test visually
+        aaaRow = (TableRow) VirtualFlowTestUtils.getCell(table, 1);
+        assertFalse(aaaRow.isSelected());
+        cccRow = (TableRow) VirtualFlowTestUtils.getCell(table, 0);
+        assertTrue(cccRow.isSelected());
+    }
 }

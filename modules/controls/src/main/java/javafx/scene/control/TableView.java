@@ -580,23 +580,29 @@ public class TableView<S> extends Control {
     private ObjectProperty<ObservableList<S>> items = 
         new SimpleObjectProperty<ObservableList<S>>(this, "items") {
             WeakReference<ObservableList<S>> oldItemsRef;
-            
-            @Override protected void invalidated() {
+
+            // need to override set() rather than invalidated() as we need to
+            // be notified of all changes (even when the item is the same, such
+            // as in the case of a new empty items list replacing an old (but
+            // equal) empty items list
+            @Override public void set(ObservableList<S> newValue) {
+                super.set(newValue);
+
                 ObservableList<S> oldItems = oldItemsRef == null ? null : oldItemsRef.get();
-                
+
                 // FIXME temporary fix for RT-15793. This will need to be
                 // properly fixed when time permits
                 if (getSelectionModel() instanceof TableViewArrayListSelectionModel) {
                     ((TableViewArrayListSelectionModel<S>)getSelectionModel()).updateItemsObserver(oldItems, getItems());
                 }
                 if (getFocusModel() != null) {
-                    ((TableViewFocusModel<S>)getFocusModel()).updateItemsObserver(oldItems, getItems());
+                    getFocusModel().updateItemsObserver(oldItems, getItems());
                 }
                 if (getSkin() instanceof TableViewSkin) {
                     TableViewSkin<S> skin = (TableViewSkin<S>) getSkin();
                     skin.updateTableItems(oldItems, getItems());
                 }
-                
+
                 oldItemsRef = new WeakReference<ObservableList<S>>(getItems());
             }
         };
@@ -1855,7 +1861,7 @@ public class TableView<S> extends Control {
 
 
             /*
-             * The following two listeners are used in conjunction with
+             * The following listener is used in conjunction with
              * SelectionModel.select(T obj) to allow for a developer to select
              * an item that is not actually in the data model. When this occurs,
              * we actively try to find an index that matches this object, going
@@ -1863,11 +1869,8 @@ public class TableView<S> extends Control {
              * rechecking each time.
              */
 
-            // watching for changes to the items list
-            tableView.itemsProperty().addListener(weakItemsPropertyListener);
-            
             // watching for changes to the items list content
-            ObservableList<S> items = getTableView().getItems();//getTableModel();
+            ObservableList<S> items = getTableView().getItems();
             if (items != null) {
                 items.addListener(weakItemsContentListener);
             }
@@ -1875,17 +1878,6 @@ public class TableView<S> extends Control {
         
         private final TableView<S> tableView;
         
-        private ChangeListener<ObservableList<S>> itemsPropertyListener = new ChangeListener<ObservableList<S>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<S>> observable, 
-                ObservableList<S> oldList, ObservableList<S> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
-        };
-        
-        private WeakChangeListener<ObservableList<S>> weakItemsPropertyListener = 
-                new WeakChangeListener<ObservableList<S>>(itemsPropertyListener);
-
         final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
             @Override public void onChanged(Change<? extends S> c) {
                 updateItemCount();
@@ -1917,7 +1909,7 @@ public class TableView<S> extends Control {
                         }
                     }
                 }
-                
+
                 updateSelection(c);
             }
         };
@@ -1926,7 +1918,7 @@ public class TableView<S> extends Control {
                 = new WeakListChangeListener<S>(itemsContentListener);
         
         private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
-            // the listview items list has changed, we need to observe
+            // the items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
             if (oldList != null) {
                 oldList.removeListener(weakItemsContentListener);
@@ -2046,6 +2038,8 @@ public class TableView<S> extends Control {
                     //       -- add the new index to the new indices list
                     //   -- Perform batch selection (6)
 
+                    final int oldSelectedIndex = getSelectedIndex();
+
                     // (1)
                     int length = c.getTo() - c.getFrom();
                     HashMap<Integer, Integer> pMap = new HashMap<Integer, Integer> (length);
@@ -2077,7 +2071,11 @@ public class TableView<S> extends Control {
                     // (6)
                     quietClearSelection();
                     selectedCells.setAll(newIndices);
-                    selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<TablePosition<S,?>>(0, newIndices.size(), selectedCellsSeq));
+                    selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<>(0, newIndices.size(), selectedCellsSeq));
+
+                    if (oldSelectedIndex >= 0 && oldSelectedIndex < itemCount) {
+                        setSelectedIndex(c.getPermutation(oldSelectedIndex));
+                    }
                 }
             }
             
@@ -2532,7 +2530,6 @@ public class TableView<S> extends Control {
 
             this.tableView = tableView;
             
-            this.tableView.itemsProperty().addListener(weakItemsPropertyListener);
             if (tableView.getItems() != null) {
                 this.tableView.getItems().addListener(weakItemsContentListener);
             }
@@ -2541,17 +2538,6 @@ public class TableView<S> extends Control {
             setFocusedCell(pos);
             EMPTY_CELL = pos;
         }
-        
-        private ChangeListener<ObservableList<S>> itemsPropertyListener = new ChangeListener<ObservableList<S>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<S>> observable, 
-                ObservableList<S> oldList, ObservableList<S> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
-        };
-        
-        private WeakChangeListener<ObservableList<S>> weakItemsPropertyListener = 
-                new WeakChangeListener<ObservableList<S>>(itemsPropertyListener);
         
         // Listen to changes in the tableview items list, such that when it
         // changes we can update the focused index to refer to the new indices.

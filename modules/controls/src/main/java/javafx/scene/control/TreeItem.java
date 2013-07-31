@@ -809,7 +809,9 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         // if we're at the root node, we'll fire an event so that the control
         // can update its display
         if (getParent() == null) {
-            fireEvent(new TreeItem.TreeModificationEvent<T>(TreeItem.childrenModificationEvent(), this));
+            TreeModificationEvent e = new TreeModificationEvent<T>(TreeItem.childrenModificationEvent(), this);
+            e.wasPermutated = true;
+            fireEvent(e);
         }
     }
     
@@ -956,6 +958,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         
         private final boolean wasExpanded;
         private final boolean wasCollapsed;
+        private boolean wasPermutated;
         
         /**
          * Constructs a basic TreeModificationEvent - this is useful in situations
@@ -1122,5 +1125,11 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
          * TreeItems were removed.
          */
         public boolean wasRemoved() { return getRemovedSize() > 0; }
+
+        /**
+         * Returns true if the order of the TreeItem children list has changed,
+         * but that there have been no additions or removals.
+         */
+        public boolean wasPermutated() { return wasPermutated; }
     }
 }
