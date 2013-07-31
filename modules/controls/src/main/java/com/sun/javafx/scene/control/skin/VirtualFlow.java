@@ -2048,10 +2048,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // if we find that the maxPrefBreadth exceeds the viewportBreadth,
         // then we will be sure to show the breadthBar and update it
         // accordingly.
-        int cellsSize = cells.size();
-        if (cellsSize > 0) {
-            for (int i = 0; i < cellsSize; i++) {
+        if (cells.size() > 0) {
+            for (int i = 0; i < cells.size(); i++) {
                 T cell = cells.get(i);
+                assert cell != null;
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
