@@ -1,11 +1,21 @@
 <classpath>
   <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="src" exported="true" path="/web"/>
   <classpathentry kind="src" exported="true" path="/fxml"/>
   <classpathentry kind="src" exported="true" path="/fxpackager"/>
   <classpathentry kind="src" exported="true" path="/swt"/>
   <classpathentry kind="src" exported="true" path="/swing"/>
   <classpathentry kind="src" exported="true" path="/media"/>
-  <classpathentry kind="src" exported="true" path="/web"/>
   <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+    <classpathentry exported="true" kind="src" path="/javafx-ui-desktop">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
+    <classpathentry kind="lib" exported="true" path="../caches/sdk/rt/lib/ext/jfxrt.jar">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
   <classpathentry kind="output" path="bin"/>
 </classpath>
