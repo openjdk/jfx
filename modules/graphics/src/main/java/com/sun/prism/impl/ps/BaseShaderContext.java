@@ -167,6 +167,10 @@ public abstract class BaseShaderContext extends BaseContext {
         private boolean lastState3D = false;
     }
 
+    protected void resetLastClip(State state) {
+        state.lastClip = null;
+    }
+
     protected abstract State updateRenderTarget(RenderTarget target, NGCamera camera,
                                                 boolean depthTest);
 
