@@ -272,8 +272,14 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                         sm.selectRange(minRow, maxRow + 1);
                     }
 
+                    // This line of code below was disabled as a fix for RT-30394.
+                    // Unit tests were written, so if by disabling this code I
+                    // have introduced regressions elsewhere, it is allowable to
+                    // re-enable this code as tests will fail if it is done so
+                    // without taking care of RT-30394 in an alternative manner.
+
                     // return selection back to the focus owner
-                    focus(anchor.getRow(), tableColumn);
+                    // focus(anchor.getRow(), tableColumn);
                 } else {
                     simpleSelect(e);
                 }
