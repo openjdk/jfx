@@ -43,6 +43,10 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Background;
@@ -50,6 +54,7 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -335,6 +340,39 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             impl_treeVisibleProperty().addListener(treeVisibilityListener);
         }
     }
+    
+    private boolean isInvisibleOrDisconnected() {
+        Scene s = getSkinnable().getScene();
+        if (s == null) {
+            return true;
+        }
+        Window w = s.getWindow();
+        if (w == null) {
+            return true;
+        }
+        if (w.impl_getPeer() == null) {
+            return true;
+        }
+        if (!getSkinnable().impl_isTreeVisible()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean stopIfInvisibleOrDisconnected() {
+        if (isInvisibleOrDisconnected()) {
+            indeterminateTimeline.stop();
+            indeterminateTimeline = null;
+            return true;
+        }
+        return false;
+    }
+
+    private void stopIfNotNeeded() {
+        stopIfInvisibleOrDisconnected();
+    }
+
 
     private void createIndeterminateTimeline() {
         if (indeterminateTimeline != null) indeterminateTimeline.stop();
@@ -355,6 +393,14 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                             new EventHandler<ActionEvent>() {
                                 @Override public void handle(ActionEvent event) {
                                     bar.setScaleX(-1);
+
+                                    /*
+                                    ** Stop the animation if the ProgressBar is removed
+                                    ** from a Scene, or is invisible.
+                                    ** Pause the animation if it's outside of a clipped
+                                    ** region (e.g. not visible in a ScrollPane)
+                                    */
+                                    stopIfNotNeeded();
                                 }
                             },
                             new KeyValue(clipRegion.translateXProperty(), startX-(w - getIndeterminateBarLength())),
@@ -383,6 +429,18 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             indeterminateTimeline.getKeyFrames().addAll(
                     new KeyFrame(
                             Duration.millis(0),
+                            new EventHandler<ActionEvent>() {
+                                @Override public void handle(ActionEvent event) {
+                                    /*
+                                    ** Stop the animation if the ProgressBar is removed
+                                    ** from a Scene, or is invisible.
+                                    ** Pause the animation if it's outside of a clipped
+                                    ** region (e.g. not visible in a ScrollPane)
+                                    */
+                                    stopIfNotNeeded();
+                                }
+                            },
+
                             new KeyValue(clipRegion.translateXProperty(), startX-(w - getIndeterminateBarLength())),
                             new KeyValue(bar.translateXProperty(), startX)
                     ),
