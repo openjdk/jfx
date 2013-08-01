@@ -27,10 +27,14 @@
 private float[] getOffset() {
     float xoff = getEffect().getOffsetX();
     float yoff = getEffect().getOffsetY();
-    return new float[] {
-        xoff / getInputNativeBounds(0).width,
-        yoff / getInputNativeBounds(0).height,
-    };
+    float offsets[] = new float[] { xoff, yoff };
+    try {
+        getInputTransform(0).inverseDeltaTransform(offsets, 0, offsets, 0, 1);
+    } catch (Exception e) {
+    }
+    offsets[0] /= getInputNativeBounds(0).width;
+    offsets[1] /= getInputNativeBounds(0).height;
+    return offsets;
 }
 >>
 
