@@ -349,7 +349,14 @@ public class Text extends Shape {
     }
 
     private BaseBounds getVisualBounds() {
-        return getShape().getBounds();
+        if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+            int type = TextLayout.TYPE_TEXT;
+            if (isStrikethrough()) type |= TextLayout.TYPE_STRIKETHROUGH;
+            if (isUnderline()) type |= TextLayout.TYPE_UNDERLINE;
+            return getTextLayout().getVisualBounds(type);
+        } else {
+            return getShape().getBounds();
+        }
     }
 
     private BaseBounds getLogicalBounds() {
@@ -1164,9 +1171,19 @@ public class Text extends Shape {
             if (getTextInternal().length() == 0 || impl_mode == NGShape.Mode.EMPTY) {
                 return bounds.makeEmpty();
             }
-
-            /* Let the super class compute the bounds using shape */
-            return super.impl_computeGeomBounds(bounds, tx);
+            if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+                /* Optimize for FILL and INNER STROKE: save the cost of shaping each glyph */
+                BaseBounds visualBounds = getVisualBounds();
+                float x = visualBounds.getMinX() + (float) getX();
+                float yadj = getYAdjustment(visualBounds);
+                float y = visualBounds.getMinY() + yadj + (float) getY();
+                bounds.deriveWithNewBounds(x, y, 0, x + visualBounds.getWidth(),
+                        y + visualBounds.getHeight(), 0);
+                return tx.transform(bounds, bounds);
+            } else {
+                /* Let the super class compute the bounds using shape */
+                return super.impl_computeGeomBounds(bounds, tx);
+            }
         }
 
         BaseBounds textBounds = getLogicalBounds();

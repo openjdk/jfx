@@ -126,9 +126,9 @@ class DWFontFile extends PrismFontFile {
         DWRITE_GLYPH_METRICS metrics = fontFace.GetDesignGlyphMetrics((short)gc, false);
         int[] bb = new int[4];
         bb[0] = metrics.leftSideBearing;
-        bb[1] = metrics.topSideBearing;
+        bb[1] = metrics.verticalOriginY - metrics.advanceHeight + metrics.bottomSideBearing;
         bb[2] = metrics.advanceWidth - metrics.rightSideBearing;
-        bb[3] = metrics.verticalOriginY;
+        bb[3] = metrics.verticalOriginY - metrics.topSideBearing;
         return bb;
     }
 
