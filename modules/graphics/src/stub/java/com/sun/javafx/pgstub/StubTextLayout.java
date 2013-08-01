@@ -153,7 +153,7 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
-    public BaseBounds getVisualBounds() {
+    public BaseBounds getVisualBounds(int type) {
         return new RectBounds();
     }
 
