@@ -341,6 +341,46 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         }
     }
     
+    private boolean isVisibleInClip() {
+        Parent p1 = getSkinnable();
+
+        Bounds ourBounds1 = p1.localToScene(getSkinnable().getLayoutBounds());
+        while (p1 != null) {
+            Node clip = p1.getClip();
+            if (clip != null) {
+                Bounds clipBounds1 = p1.localToScene(clip.getLayoutBounds());
+                if (!ourBounds1.intersects(clipBounds1)) {
+                    return false;
+                }
+            }
+            p1 = p1.getParent();
+        }
+        return true;
+    }
+
+    /*
+    ** see if we're clipped...
+    */
+    private void pauseIfNotVisibleInClip() {
+        if (!isVisibleInClip()) {
+            indeterminateTimeline.pause();
+            
+            Thread t = new Thread(new Runnable() {
+                 @Override
+                     public void run() {
+                        while (!isVisibleInClip()) {
+                            try {
+                                Thread.sleep(500);
+                            }
+                            catch (Exception e) {};
+                        }
+                        indeterminateTimeline.play();
+                    }
+                });
+            t.start();
+        }
+    }
+
     private boolean isInvisibleOrDisconnected() {
         Scene s = getSkinnable().getScene();
         if (s == null) {
@@ -369,9 +409,13 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         return false;
     }
 
+
     private void stopIfNotNeeded() {
-        stopIfInvisibleOrDisconnected();
+        if (!stopIfInvisibleOrDisconnected()) {
+            pauseIfNotVisibleInClip();
+        }
     }
+
 
 
     private void createIndeterminateTimeline() {
