@@ -2238,7 +2238,7 @@ load(qt_config)""")
 
     task copyClassesFromBinaryStub << {
         copy {
-            from zipTree(BINARY_STUB.getSingleFile())
+            from zipTree(rootProject.BINARY_STUB.getSingleFile())
             into "$buildDir/classes/main"
             include("javafx/scene/web/**",
                 "com/sun/javafx/scene/web/**",

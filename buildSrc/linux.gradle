@@ -72,7 +72,7 @@ LINUX.library = { name -> return "lib${name}.so" as String }
 // A set of common parameters to use for both compiling and linking
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
-        "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
+        "-W", "-Wall", "-Wno-unused", "-Wno-parentheses"] // warning flags
 
 // Specify the compilation parameters and link parameters
 def ccFlags = [
