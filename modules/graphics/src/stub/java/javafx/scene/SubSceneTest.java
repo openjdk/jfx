@@ -28,6 +28,7 @@ import javafx.stage.Stage;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.layout.Pane;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -226,5 +227,23 @@ public class SubSceneTest {
         } catch (IllegalArgumentException e) {
             fail("It didn't allow to 'share' camera with myslef");
         }
+    }
+
+    @Test
+    public void testLayout() {
+        Pane pane = new Pane();
+        pane.setPrefWidth(100);
+
+        SubScene sub = new SubScene(new Group(pane), 500, 500);
+        Scene scene = new Scene(new Group(sub), 600, 600);
+
+        scene.getRoot().layout();
+        assertEquals(100, pane.getWidth(), 1e-10);
+
+        pane.setPrefWidth(110);
+        scene.getRoot().layout();
+        assertEquals(110, pane.getWidth(), 1e-10);
+
+
     }
 }

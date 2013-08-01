@@ -7601,6 +7601,18 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
+    void markDirtyLayoutBranch() {
+        Parent p = getParent();
+        while (p != null && p.layoutFlag == LayoutFlags.CLEAN) {
+            p.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
+            if (p.isSceneRoot()) {
+                Toolkit.getToolkit().requestNextPulse();
+            }
+            p = p.getParent();
+        }
+
+    }
+
     private void updateTreeVisible() {
         boolean isTreeVisible = isVisible();
         if (isTreeVisible) {
