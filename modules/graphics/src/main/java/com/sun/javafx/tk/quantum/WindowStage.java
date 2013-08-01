@@ -69,6 +69,7 @@ class WindowStage extends GlassStage {
     private boolean transparent = false;
     private boolean isPrimaryStage = false;
     private boolean isAppletStage = false; // true if this is an embedded applet window
+    private boolean isPopupStage = false;
     private boolean isInFullScreen = false;
 
     // A flag to indicate whether a call was generated from
@@ -93,22 +94,29 @@ class WindowStage extends GlassStage {
         return appletWindow;
     }
 
-    public WindowStage(final StageStyle stageStyle, final boolean isPrimary, Modality modality, TKStage owner) {
-        transparent = stageStyle == StageStyle.TRANSPARENT;
-
+    public WindowStage(final StageStyle stageStyle, Modality modality, TKStage owner) {
         this.style = stageStyle;
-        this.isPrimaryStage = isPrimary;
-        if (null != appletWindow && isPrimary) {
+        this.owner = (GlassStage)owner;
+        this.modality = modality;
+
+        transparent = stageStyle == StageStyle.TRANSPARENT;
+        if (owner == null) {
+            if (this.modality == Modality.WINDOW_MODAL) {
+                this.modality = Modality.NONE;
+            }
+        }
+    }
+
+    final void setIsPrimary() {
+        isPrimaryStage = true;
+        if (appletWindow != null) {
             // this is an embedded applet stage
             isAppletStage = true;
         }
-        if (owner == null) {
-            if (modality == Modality.WINDOW_MODAL) {
-                modality = Modality.NONE;
-            }
-        }
-        this.owner = (GlassStage)owner;
-        this.modality = modality;
+    }
+
+    final void setIsPopup() {
+        isPopupStage = true;
     }
 
     // Called by QuantumToolkit, so we can override initPlatformWindow in subclasses
@@ -122,34 +130,47 @@ class WindowStage extends GlassStage {
         return this;
     }
 
-    protected void initPlatformWindow() {
+    private void initPlatformWindow() {
         if (platformWindow == null) {
             Application app = Application.GetApplication();
-            Window ownerWindow = null;
-            if (owner instanceof WindowStage) {
-                ownerWindow = ((WindowStage)owner).platformWindow;
-            }
-            int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
             if (isPrimaryStage && (null != appletWindow)) {
                 platformWindow = app.createWindow(appletWindow.getGlassWindow().getNativeWindow());
-            } else if (style == StageStyle.DECORATED || style == StageStyle.UNIFIED) {
-                windowMask |= Window.TITLED | Window.CLOSABLE | Window.MINIMIZABLE |
-                        Window.MAXIMIZABLE;
-                if (style == StageStyle.UNIFIED && app.supportsUnifiedWindows()) {
-                    windowMask |= Window.UNIFIED;
+            } else {
+                Window ownerWindow = null;
+                if (owner instanceof WindowStage) {
+                    ownerWindow = ((WindowStage)owner).platformWindow;
+                }
+                boolean resizable = false;
+                boolean focusable = true;
+                int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
+                if (isPopupStage) { // TODO: make it a stage style?
+                    windowMask |= Window.TRANSPARENT | Window.POPUP;
+                    focusable = false;
+                } else {
+                    switch (style) {
+                        case UNIFIED:
+                            if (app.supportsUnifiedWindows()) {
+                                windowMask |= Window.UNIFIED;
+                            }
+                            // fall through
+                        case DECORATED:
+                            windowMask |=
+                                    Window.TITLED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
+                            resizable = true;
+                            break;
+                        case UTILITY:
+                            windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
+                            break;
+                        default:
+                            windowMask |=
+                                    (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
+                            break;
+                    }
                 }
                 platformWindow =
                         app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
-                platformWindow.setResizable(true);
-            } else if (style == StageStyle.UTILITY) {
-                windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
-                platformWindow =
-                        app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
-            } else {
-                windowMask |= (transparent ? Window.TRANSPARENT : Window.UNTITLED) |
-                        Window.CLOSABLE;
-                platformWindow =
-                        app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+                platformWindow.setResizable(resizable);
+                platformWindow.setFocusable(focusable);
             }
         }
         platformWindows.put(platformWindow, this);

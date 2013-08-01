@@ -516,8 +516,11 @@ public final class QuantumToolkit extends Toolkit {
     @Override public TKStage createTKStage(StageStyle stageStyle,
             boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(stageStyle, primary, modality, owner);
+        WindowStage stage = new WindowStage(stageStyle, modality, owner);
         stage.setSecurityContext(acc);
+        if (primary) {
+            stage.setIsPrimary();
+        }
         stage.setRTL(rtl);
         stage.init(systemMenu);
         return stage;
@@ -563,11 +566,13 @@ public final class QuantumToolkit extends Toolkit {
         eventLoop.leave(rval);
     }
 
-    @Override public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner,
+    @Override public TKStage createTKPopupStage(TKStage owner,
                                                 AccessControlContext acc) {
         assertToolkitRunning();
-        WindowStage stage = new PopupStage(owner).init(systemMenu);
+        WindowStage stage = new WindowStage(StageStyle.TRANSPARENT, null, owner);
         stage.setSecurityContext(acc);
+        stage.setIsPopup();
+        stage.init(systemMenu);
         return stage;
     }
 

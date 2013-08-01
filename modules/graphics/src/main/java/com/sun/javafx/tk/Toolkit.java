@@ -273,7 +273,7 @@ public abstract class Toolkit {
     public abstract TKStage createTKStage(StageStyle stageStyle, boolean primary,
             Modality modality, TKStage owner, boolean rtl, AccessControlContext acc);
 
-    public abstract TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner, AccessControlContext acc);
+    public abstract TKStage createTKPopupStage(TKStage owner, AccessControlContext acc);
     public abstract TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc);
 
     /**

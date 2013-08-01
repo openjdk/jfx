@@ -95,7 +95,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner, AccessControlContext acc) {
+    public TKStage createTKPopupStage(TKStage owner, AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
