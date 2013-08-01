@@ -162,7 +162,7 @@ project(":web") {
             )
             destinationDir = file("modules/web/build/classes/android")
             dependencyCacheDir = file("modules/web/build/dependency-cache")
-            source file("${closedDir}/javafx-android/webnode/src")
+            source file("modules/web/src/android/java")
         }
 
         def jarWebJavaAndroid = task("jarWebJavaAndroid",
@@ -299,8 +299,7 @@ ANDROID.webview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]
 ANDROID.webview.nativeSource = [
-    //file("modules/web/src/android/native/native_webview.c")
-    file("${closedDir}/javafx-android/webnode/jni/native_webview.c")
+    file("modules/web/src/android/native/native_webview.c")
 ]
 ANDROID.webview.compiler = compiler
 ANDROID.webview.linker = linker
@@ -316,8 +315,7 @@ ANDROID.dvkwebview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]
 ANDROID.dvkwebview.nativeSource = [
-    //file("modules/web/src/android/native/android_webview.c")
-    file("${closedDir}/javafx-android/webnode/jni/android_webview.c")
+    file("modules/web/src/android/native/android_webview.c")
 ]
 ANDROID.dvkwebview.compiler = compiler
 ANDROID.dvkwebview.linker = linker
