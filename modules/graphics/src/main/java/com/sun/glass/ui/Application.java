@@ -41,7 +41,8 @@ import java.util.Vector;
 
 public abstract class Application {
 
-    protected String name;
+    private final static String DEFAULT_NAME = "java";
+    protected String name = DEFAULT_NAME;
 
     public static class EventHandler {
         // currently used only on Mac OS X
@@ -146,7 +147,7 @@ public abstract class Application {
         // on Mac OS X - use NSBundle info, which can be overriden by -Xdock:name
         // on Windows - TODO
         // on Linux - TODO
-        application.name = "java"; // default
+        //application.name = DEFAULT_NAME; // default
         try {
             application.runLoop(new Runnable() {
                 @Override public void run() {
@@ -169,9 +170,49 @@ public abstract class Application {
         // The eventThread is null at this point, no need to check it
     }
     
+    /**
+     * Gets the name for the application.  The application name may
+     * be used to identify the application in the user interface or
+     * as part of the platform specific path used to store application
+     * data.
+     * 
+     * This is a hint and may not be used on some platforms.
+     * 
+     * @return the application name
+     */
     public String getName() {
         checkEventThread();
         return name;
+    }
+    
+    /**
+     * Sets the name for the application.  The application name may
+     * be used to identify the application in the user interface or
+     * as part of the platform specific path used to store application
+     * data.
+     * 
+     * This is a hint and may not be used on some platforms.
+     * 
+     * @param name the new application name
+     */
+    public void setName(String name) {
+        checkEventThread();
+        this.name = name == null ? DEFAULT_NAME : name;
+    }
+
+    /**
+     * Gets a platform specific path that can be used to store
+     * application data.  The application name typically appears
+     * as part of the path.
+     * 
+     * On some platforms, the path may not yet exist and the caller
+     * will need to create it.
+     * 
+     * @return the platform specific path for the application data
+     */
+    public String getDataDirectory() {
+        checkEventThread();
+        return System.getProperty("user.home") + File.separator + "." + name + File.separator;
     }
 
     private void notifyWillFinishLaunching() {

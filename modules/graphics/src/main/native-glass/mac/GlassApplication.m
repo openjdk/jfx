@@ -998,3 +998,27 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1unhideAllAppli
     [NSApp unhideAllApplications:NSApp];
 }
 
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _getDataDirectory
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getDataDirectory
+(JNIEnv * env, jobject japplication)
+{
+    jstring string = nil;
+    
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
+    if (paths && [paths count] > 0) {
+        string = (*env)->NewStringUTF(jEnv, [[paths lastObject] UTF8String]);
+    }
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+    
+    return string;
+}
+
