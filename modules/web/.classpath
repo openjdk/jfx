@@ -25,6 +25,11 @@
       <attribute name="optional" value="true"/>
     </attributes>
   </classpathentry>
+  <classpathentry exported="true" kind="src" path="/javafx-ui-desktop">
+    <attributes>
+      <attribute name="optional" value="true"/>
+    </attributes>
+  </classpathentry>
   <classpathentry kind="src" exported="true" path="/controls"/>
   <classpathentry kind="src" exported="true" path="/media"/>
 </classpath>
