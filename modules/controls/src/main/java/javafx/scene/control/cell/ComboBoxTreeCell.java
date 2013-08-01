@@ -56,7 +56,7 @@ import static javafx.scene.control.cell.CellUtils.createComboBox;
  * @param <T> The type of the TreeItems contained within the TreeView.
  * @since JavaFX 2.2
  */
-public class ComboBoxTreeCell<T> extends TreeCell<T> {
+public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
     
     /***************************************************************************
      *                                                                         *

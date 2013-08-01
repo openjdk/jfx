@@ -49,7 +49,7 @@ import javafx.util.converter.DefaultStringConverter;
  * @param <T> The type of the elements contained within the TreeView.
  * @since JavaFX 2.2
  */
-public class TextFieldTreeCell<T> extends TreeCell<T> {
+public class TextFieldTreeCell<T> extends DefaultTreeCell<T> {
     
     /***************************************************************************
      *                                                                         *
