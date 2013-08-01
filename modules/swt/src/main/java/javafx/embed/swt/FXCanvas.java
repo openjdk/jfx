@@ -224,6 +224,7 @@ public class FXCanvas extends Canvas {
         PlatformImpl.startup(new Runnable() {
             @Override
             public void run() {
+                Application.GetApplication().setName(Display.getAppName());
             }
         });
     }
