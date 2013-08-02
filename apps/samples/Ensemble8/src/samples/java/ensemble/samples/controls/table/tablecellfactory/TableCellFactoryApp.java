@@ -48,9 +48,10 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 /**
- *  A simple table that uses cell factories to add a checkbox to a table
- * column and to enable editing of first/last name and email.
- * 
+ * A simple table that uses cell factories to add a checkbox to a table column
+ * and to add textfields to table columns. The latter enables editing of first 
+ * name, last name, and email.
+ *
  * @sampleName TableCellFactory
  * @preview preview.png
  * @see javafx.scene.control.TableCell
@@ -76,7 +77,6 @@ public class TableCellFactoryApp extends Application {
 
             @Override
             public Object fromString(String string) {
-
                 return string;
             }
         };
@@ -111,7 +111,6 @@ public class TableCellFactoryApp extends Application {
         tableView.setEditable(true);
         tableView.getColumns().addAll(invitedCol, firstNameCol, lastNameCol, emailCol);
         return tableView;
-
     }
 
     @Override
