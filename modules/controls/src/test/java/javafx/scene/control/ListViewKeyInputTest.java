@@ -25,31 +25,24 @@
 
 package javafx.scene.control;
 
-import java.util.List;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
-import javafx.scene.Group;
-import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
-import javafx.stage.Stage;
-import javafx.util.Callback;
-
-import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import java.util.List;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
-
-import static org.junit.Assert.*;
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewKeyInputTest {
@@ -238,7 +231,7 @@ public class ListViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doKeyPress(KeyCode.SPACE, 
-                KeyModifier.getShortcutKey(), 
+                KeyModifier.getShortcutKey(),
                 (Utils.isMac() ? KeyModifier.CTRL : null));  // select 2
         
         assertTrue(isSelected(0, 2));
@@ -424,7 +417,7 @@ public class ListViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doKeyPress(KeyCode.SPACE, 
-                KeyModifier.getShortcutKey(), 
+                KeyModifier.getShortcutKey(),
                 (Utils.isMac() ? KeyModifier.CTRL : null));  // select 2
         
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
@@ -1167,7 +1160,8 @@ public class ListViewKeyInputTest {
         assertEquals(1, rt31577_count);
 
         // deselect the row
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.CTRL,
+                Utils.isMac() ? KeyModifier.getShortcutKey() : null);
         assertTrue(sm.getSelectedItems().isEmpty());
         assertFalse(sm.isSelected(1));
         assertNull(sm.getSelectedItem());

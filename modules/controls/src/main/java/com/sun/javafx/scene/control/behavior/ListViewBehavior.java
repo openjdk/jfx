@@ -25,6 +25,27 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
+import javafx.event.EventType;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Orientation;
+import javafx.scene.control.Control;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.ListView;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.util.Callback;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.skin.Utils;
 import static javafx.scene.input.KeyCode.A;
 import static javafx.scene.input.KeyCode.BACK_SLASH;
 import static javafx.scene.input.KeyCode.DOWN;
@@ -43,32 +64,6 @@ import static javafx.scene.input.KeyCode.PAGE_UP;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javafx.event.EventType;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Orientation;
-import javafx.scene.control.Control;
-import javafx.scene.control.FocusModel;
-import javafx.scene.control.ListView;
-import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.PlatformUtil;
-
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WeakChangeListener;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
-import javafx.collections.WeakListChangeListener;
-import javafx.util.Callback;
-
-import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  *
@@ -109,7 +104,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         } else {
             LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
         }
-
 
         // if listView is vertical...
         LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(UP, "SelectPreviousRow").vertical());

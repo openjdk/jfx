@@ -25,24 +25,41 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.*;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WeakChangeListener;
-import javafx.collections.ListChangeListener;
-import javafx.collections.WeakListChangeListener;
 import javafx.util.Callback;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.PlatformUtil;
+import static javafx.scene.input.KeyCode.A;
+import static javafx.scene.input.KeyCode.ADD;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.END;
+import static javafx.scene.input.KeyCode.ENTER;
+import static javafx.scene.input.KeyCode.ESCAPE;
+import static javafx.scene.input.KeyCode.F2;
+import static javafx.scene.input.KeyCode.HOME;
+import static javafx.scene.input.KeyCode.KP_DOWN;
+import static javafx.scene.input.KeyCode.KP_LEFT;
+import static javafx.scene.input.KeyCode.KP_RIGHT;
+import static javafx.scene.input.KeyCode.KP_UP;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.MULTIPLY;
+import static javafx.scene.input.KeyCode.PAGE_DOWN;
+import static javafx.scene.input.KeyCode.PAGE_UP;
+import static javafx.scene.input.KeyCode.RIGHT;
+import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyCode.SUBTRACT;
+import static javafx.scene.input.KeyCode.UP;
 
 public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
@@ -67,8 +84,13 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "ScrollUp"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "ScrollDown"));
         
+        if (PlatformUtil.isMac()) {
+            TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().shortcut());
+        } else {
+            TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
+        }
+
         TREE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").shortcut());
-        TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").shortcut());
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").shortcut());
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").shortcut());
         TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").shortcut());

@@ -25,6 +25,21 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
+import javafx.scene.control.Control;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableFocusModel;
+import javafx.scene.control.TablePositionBase;
+import javafx.scene.control.TableSelectionModel;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.util.Callback;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.PlatformUtil;
 import static javafx.scene.input.KeyCode.A;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.END;
@@ -43,24 +58,6 @@ import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.TAB;
 import static javafx.scene.input.KeyCode.UP;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javafx.collections.ObservableList;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.PlatformUtil;
-import javafx.collections.ListChangeListener;
-import javafx.collections.WeakListChangeListener;
-import javafx.scene.control.Control;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableFocusModel;
-import javafx.scene.control.TablePositionBase;
-import javafx.scene.control.TableSelectionModel;
-import javafx.util.Callback;
 
 public abstract class TableViewBehaviorBase<C extends Control, T, TC extends TableColumnBase<T,?>> extends BehaviorBase<C> {
 

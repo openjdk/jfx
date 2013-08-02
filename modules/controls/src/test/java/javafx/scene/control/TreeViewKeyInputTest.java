@@ -25,35 +25,25 @@
 
 package javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.List;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
-import javafx.scene.Group;
-import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
-import javafx.stage.Stage;
-import javafx.util.Callback;
-
+import java.util.List;
+import com.sun.javafx.Utils;
+import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
-import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import com.sun.javafx.scene.control.infrastructure.KeyModifier;
-import com.sun.javafx.scene.control.infrastructure.StageLoader;
-import com.sun.javafx.scene.control.skin.TreeViewSkin;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeViewKeyInputTest {
@@ -281,7 +271,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1));
         assertTrue(isAnchor(2));
@@ -292,7 +283,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(2);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1));
         assertTrue(isAnchor(0));
@@ -335,7 +327,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(5);
         assertTrue(isSelected(5));
         assertTrue(fm.isFocused(5));
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isNotSelected(5));
         assertTrue(debug(), fm.isFocused(5));
         assertTrue(isAnchor(5));
@@ -457,11 +450,13 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
         
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // deselect 0
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // deselect 0
         assertTrue(isSelected(2));
         assertTrue(isNotSelected(0, 1));
         assertTrue(isAnchor(0));
@@ -472,11 +467,13 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(2);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0
         
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // deselect 2
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // deselect 2
         assertTrue(isSelected(0));
         assertTrue(isNotSelected(1, 2));
         assertTrue(isAnchor(2));
@@ -487,11 +484,13 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
         
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 4
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 4
         assertTrue(isSelected(0, 2, 4));
         assertTrue(isNotSelected(1, 3, 5));
         assertTrue(isAnchor(4));
@@ -502,11 +501,13 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(4);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
         
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0
         assertTrue(isSelected(0, 2, 4));
         assertTrue(isNotSelected(1, 3));
         assertTrue(isAnchor(0));
@@ -539,7 +540,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2, keeping 0 selected
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2, keeping 0 selected
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1, 3));
         assertTrue(isAnchor(2));
@@ -557,7 +559,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(4);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2, keeping 4 selected
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2, keeping 4 selected
         assertTrue(isSelected(2, 4));
         assertTrue(isNotSelected(0, 1, 3));
         assertTrue(isAnchor(2));
@@ -616,7 +619,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0,2
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0,2
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1, 3));
         assertTrue(isAnchor(2));
@@ -634,7 +638,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 3,5
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 3,5
         assertTrue(isSelected(3,5));
         assertTrue(isNotSelected(0,1,2,4));
         assertTrue(isAnchor(3));
@@ -653,7 +658,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0,2
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0,2
         assertTrue(isSelected(0,2));
         assertTrue(isNotSelected(1,3,4));
         assertTrue(isAnchor(2));
@@ -672,7 +678,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0,2
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0,2
         assertTrue(isSelected(0,2));
         assertTrue(isNotSelected(1,3,4));
         assertTrue(isAnchor(2));
@@ -690,7 +697,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 3,5
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 3,5
         assertTrue(isSelected(3,5));
         assertTrue(isNotSelected(1,2,4));
         assertTrue(isAnchor(3));
@@ -708,7 +716,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 3,5
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 3,5
         assertTrue(isSelected(3,5));
         assertTrue(isNotSelected(0,1,2,4));
         assertTrue(isAnchor(3));
@@ -774,7 +783,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -802,7 +812,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -817,7 +828,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(3,5));
         assertTrue(isAnchor(3));
         
@@ -832,7 +844,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -853,7 +866,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(3,5));
         assertTrue(isAnchor(3));
         
@@ -876,7 +890,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -890,7 +905,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(9);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(7,9));
         assertTrue(isAnchor(7));
         
@@ -916,7 +932,8 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -932,7 +949,8 @@ public class TreeViewKeyInputTest {
         assertTrue(isAnchor(2));
 
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE,KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE,KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(1,2,3,4));
         assertTrue(fm.isFocused(0));
         assertTrue(isAnchor(0));
@@ -1168,10 +1186,12 @@ public class TreeViewKeyInputTest {
         sm.clearAndSelect(1);                          // select 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 2
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 3
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set anchor, and also select, 3
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null)); // set anchor, and also select, 3
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 4
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 5
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set anchor, and also select, 5
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null)); // set anchor, and also select, 5
         
         assertTrue(isSelected(1, 3, 5));
         assertTrue(isNotSelected(0, 2, 4));
@@ -1260,7 +1280,8 @@ public class TreeViewKeyInputTest {
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(0, getAnchor());
         
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set new anchor point
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null)); // set new anchor point
         assertTrue(isSelected(0,1));
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(2, getAnchor());
@@ -1340,7 +1361,8 @@ public class TreeViewKeyInputTest {
         assertEquals(1, rt31577_count);
 
         // deselect the row
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.CTRL,
+                Utils.isMac() ? KeyModifier.getShortcutKey() : null);
         assertTrue(sm.getSelectedItems().isEmpty());
         assertFalse(sm.isSelected(1));
         assertNull(sm.getSelectedItem());

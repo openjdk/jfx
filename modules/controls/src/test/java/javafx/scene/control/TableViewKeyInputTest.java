@@ -25,40 +25,28 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.Utils;
-import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
-import com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
-import com.sun.javafx.scene.control.behavior.TableViewBehavior;
-import com.sun.javafx.scene.control.behavior.TableViewBehaviorBase;
-import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import com.sun.javafx.scene.control.infrastructure.KeyModifier;
-import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import com.sun.javafx.scene.control.infrastructure.StageLoader;
-import com.sun.javafx.scene.control.skin.TableViewSkin;
-
-import static org.junit.Assert.*;
-
-import java.util.List;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
-import javafx.scene.Group;
-import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseEvent;
-import javafx.stage.Stage;
 import javafx.util.Callback;
-
-import com.sun.javafx.tk.Toolkit;
+import java.util.List;
+import com.sun.javafx.Utils;
+import com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TableViewKeyInputTest {
@@ -1904,7 +1892,8 @@ public class TableViewKeyInputTest {
         assertEquals(1, rt31577_count);
 
         // deselect the row
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.CTRL,
+                Utils.isMac() ? KeyModifier.getShortcutKey() : null);
         assertTrue(sm.getSelectedItems().isEmpty());
         assertFalse(sm.isSelected(1));
         assertNull(sm.getSelectedItem());
