@@ -107,7 +107,7 @@ public class BehaviorBase<C extends Control> {
     /**
      * The key bindings for this Behavior.
      */
-    private final List<KeyBinding> keyBindings = createKeyBindings();
+    private final List<KeyBinding> keyBindings = Collections.unmodifiableList(createKeyBindings());
 
     /**
      * Create a new BehaviorBase for the given control. The Control must not
@@ -131,7 +131,8 @@ public class BehaviorBase<C extends Control> {
     /**
      * Called during initialization to compute the set of key bindings which
      * should be applied for this behavior. This method should NOT mutate the
-     * List after having returned it.
+     * List after having returned it. Any modifications to the list after it
+     * has been returned will be ignored.
      *
      * @return a non-null list of key bindings.
      */
@@ -215,7 +216,7 @@ public class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node above the current one.
      */
-    public void traverseUp() {
+    public final void traverseUp() {
         traverse(control, com.sun.javafx.scene.traversal.Direction.UP);
     }
 
@@ -223,7 +224,7 @@ public class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node below the current one.
      */
-    public void traverseDown() {
+    public final void traverseDown() {
         traverse(control, com.sun.javafx.scene.traversal.Direction.DOWN);
     }
 
@@ -231,7 +232,7 @@ public class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node left of the current one.
      */
-    public void traverseLeft() {
+    public final void traverseLeft() {
         traverse(control, com.sun.javafx.scene.traversal.Direction.LEFT);
     }
 
@@ -239,7 +240,7 @@ public class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node right of the current one.
      */
-    public void traverseRight() {
+    public final void traverseRight() {
         traverse(control, com.sun.javafx.scene.traversal.Direction.RIGHT);
     }
 
@@ -247,7 +248,7 @@ public class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node in the focus traversal cycle.
      */
-    public void traverseNext() {
+    public final void traverseNext() {
         traverse(control, com.sun.javafx.scene.traversal.Direction.NEXT);
     }
 
@@ -255,7 +256,7 @@ public class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the previous focusTraversable Node in the focus traversal cycle.
      */
-    public void traversePrevious() {
+    public final void traversePrevious() {
         traverse(control, com.sun.javafx.scene.traversal.Direction.PREVIOUS);
     }
 
