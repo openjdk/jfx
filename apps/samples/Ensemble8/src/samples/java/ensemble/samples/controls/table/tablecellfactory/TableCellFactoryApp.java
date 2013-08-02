@@ -43,11 +43,12 @@ import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.stage.Stage;
-import javafx.util.Callback;
+import javafx.util.StringConverter;
 
 /**
- *  A simple table that uses cell factories to add a control to a table
+ *  A simple table that uses cell factories to add a checkbox to a table
  * column and to enable editing of first/last name and email.
  * 
  * @sampleName TableCellFactory
@@ -67,43 +68,40 @@ public class TableCellFactoryApp extends Application {
                 new Person(true, "Ethan", "Williams", "ethan.williams@example.com"),
                 new Person(true, "Emma", "Jones", "emma.jones@example.com"),
                 new Person(false, "Michael", "Brown", "michael.brown@example.com"));
-        //"Invited" column
-        TableColumn invitedCol = new TableColumn<Person, Boolean>();
-        invitedCol.setText("Invited");
-        invitedCol.setMinWidth(50);
-        invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
-        invitedCol.setCellFactory(new Callback<TableColumn<Person, Boolean>, TableCell<Person, Boolean>>() {
-
-            public TableCell<Person, Boolean> call(TableColumn<Person, Boolean> p) {
-                return new CheckBoxTableCell<Person, Boolean>();
+        StringConverter<Object> sc = new StringConverter<Object>() {
+            @Override
+            public String toString(Object t) {
+                return t == null ? null : t.toString();
             }
-        });
+
+            @Override
+            public Object fromString(String string) {
+
+                return string;
+            }
+        };
+        //"Invited" column
+        TableColumn invitedCol = new TableColumn<>();
+        invitedCol.setText("Invited");
+        invitedCol.setMinWidth(70);
+        invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
+        invitedCol.setCellFactory(CheckBoxTableCell.forTableColumn(invitedCol));
         //"First Name" column
         TableColumn firstNameCol = new TableColumn();
         firstNameCol.setText("First");
         firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+        firstNameCol.setCellFactory(TextFieldTableCell.forTableColumn(sc));
         //"Last Name" column
         TableColumn lastNameCol = new TableColumn();
         lastNameCol.setText("Last");
         lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+        lastNameCol.setCellFactory(TextFieldTableCell.forTableColumn(sc));
         //"Email" column
         TableColumn emailCol = new TableColumn();
         emailCol.setText("Email");
         emailCol.setMinWidth(200);
         emailCol.setCellValueFactory(new PropertyValueFactory("email"));
-
-        //Set cell factory for cells that allow editing
-        Callback<TableColumn, TableCell> cellFactory =
-                new Callback<TableColumn, TableCell>() {
-
-                    public TableCell call(TableColumn p) {
-                        return new EditingCell();
-                    }
-                };
-        emailCol.setCellFactory(cellFactory);
-        firstNameCol.setCellFactory(cellFactory);
-        lastNameCol.setCellFactory(cellFactory);
-
+        emailCol.setCellFactory(TextFieldTableCell.forTableColumn(sc));
         //Set handler to update ObservableList properties. Applicable if cell is edited
         updateObservableListProperties(emailCol, firstNameCol, lastNameCol);
 
@@ -115,8 +113,9 @@ public class TableCellFactoryApp extends Application {
         return tableView;
 
     }
-   
-    @Override public void start(Stage primaryStage) throws Exception {
+
+    @Override
+    public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
     }
@@ -127,30 +126,32 @@ public class TableCellFactoryApp extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-    
- private void updateObservableListProperties(TableColumn emailCol, TableColumn firstNameCol,
+
+    private void updateObservableListProperties(TableColumn emailCol, TableColumn firstNameCol,
             TableColumn lastNameCol) {
         //Modifying the email property in the ObservableList
         emailCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
-            @Override public void handle(CellEditEvent<Person, String> t) {
+            @Override
+            public void handle(CellEditEvent<Person, String> t) {
                 ((Person) t.getTableView().getItems().get(
                         t.getTablePosition().getRow())).setEmail(t.getNewValue());
             }
         });
         //Modifying the firstName property in the ObservableList
         firstNameCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
-            @Override public void handle(CellEditEvent<Person, String> t) {
+            @Override
+            public void handle(CellEditEvent<Person, String> t) {
                 ((Person) t.getTableView().getItems().get(
                         t.getTablePosition().getRow())).setFirstName(t.getNewValue());
             }
         });
         //Modifying the lastName property in the ObservableList
         lastNameCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
-            @Override public void handle(CellEditEvent<Person, String> t) {
+            @Override
+            public void handle(CellEditEvent<Person, String> t) {
                 ((Person) t.getTableView().getItems().get(
                         t.getTablePosition().getRow())).setLastName(t.getNewValue());
             }
         });
-    }   
-    
+    }
 }
