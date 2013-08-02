@@ -73,6 +73,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private UndoManager undoManager = new UndoManager();
 
+    private InvalidationListener textListener = new InvalidationListener() {
+        @Override public void invalidated(Observable observable) {
+            if (!isEditing()) {
+                // Text changed, but not by user action
+                undoManager.reset();
+            }
+            invalidateBidi();
+        }
+    };
+
     /**************************************************************************
      * Constructors                                                           *
      *************************************************************************/
@@ -86,15 +96,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
         this.textInputControl = textInputControl;
 
-        textInputControl.textProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                if (!isEditing()) {
-                    // Text changed, but not by user action
-                    undoManager.reset();
-                }
-                invalidateBidi();
-            }
-        });
+        textInputControl.textProperty().addListener(textListener);
+    }
+
+    /**************************************************************************
+     * Disposal methods                                                       *
+     *************************************************************************/
+
+    @Override public void dispose() {
+        textInputControl.textProperty().removeListener(textListener);
+        super.dispose();
     }
 
     /**************************************************************************

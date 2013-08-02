@@ -75,13 +75,15 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
         });
 
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(textField); // needs to be last.
         }
+    }
+
+    @Override public void dispose() {
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
     }
 
     private void handleFocusChange() {

@@ -25,8 +25,14 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
+import javafx.event.WeakEventHandler;
 import javafx.scene.Node;
+import javafx.scene.control.FocusModel;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
@@ -34,17 +40,9 @@ import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-
-import javafx.event.WeakEventHandler;
-import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
-import java.lang.ref.WeakReference;
-
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.WeakInvalidationListener;
-import javafx.event.EventType;
-import javafx.scene.control.*;
 import javafx.util.Callback;
+import java.lang.ref.WeakReference;
+import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 
 public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewBehavior<T>, TreeCell<T>> {
 
@@ -116,11 +114,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         registerChangeListener(treeView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
         
         updateRowCount();
-    }
-    
-    @Override public void dispose() {
-        getBehavior().dispose();
-        super.dispose();
     }
     
     @Override protected void handleControlPropertyChanged(String p) {

@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
@@ -110,6 +112,26 @@ public class BehaviorBase<C extends Control> {
     private final List<KeyBinding> keyBindings = Collections.unmodifiableList(createKeyBindings());
 
     /**
+     * Listens to any key events on the Control and responds to them
+     */
+    private final EventHandler<KeyEvent> keyEventListener = new EventHandler<KeyEvent>() {
+        @Override public void handle(KeyEvent e) {
+            if (!e.isConsumed()) {
+                callActionForEvent(e);
+            }
+        }
+    };
+
+    /**
+     * Listens to any focus events on the Control and calls protected methods as a result
+     */
+    private final InvalidationListener focusListener = new InvalidationListener() {
+        @Override public void invalidated(Observable property) {
+            focusChanged();
+        }
+    };
+
+    /**
      * Create a new BehaviorBase for the given control. The Control must not
      * be null.
      * @param control
@@ -118,15 +140,18 @@ public class BehaviorBase<C extends Control> {
         this.control = control;
 
         control.addEventHandler(KeyEvent.ANY, keyEventListener);
+        control.focusedProperty().addListener(focusListener);
     }
 
-    private final EventHandler<KeyEvent> keyEventListener = new EventHandler<KeyEvent>() {
-        @Override public void handle(KeyEvent e) {
-            if (!e.isConsumed()) {
-                callActionForEvent(e);
-            }
-        }
-    };
+    /**
+     * Called by a Skin when the Skin is disposed. This method
+     * allows a Behavior to implement any logic necessary to clean up itself after
+     * the Behavior is no longer needed. Calling dispose twice has no effect.
+     */
+    public void dispose() {
+        control.removeEventHandler(KeyEvent.ANY, keyEventListener);
+        control.focusedProperty().removeListener(focusListener);
+    }
 
     /**
      * Called during initialization to compute the set of key bindings which
@@ -140,13 +165,18 @@ public class BehaviorBase<C extends Control> {
         return Collections.emptyList();
     }
 
+    /**
+     * Called whenever the focus on the control has changed
+     */
+    protected void focusChanged() { }
+
     /***************************************************************************
      * Implementation of the Behavior interface                                *
      **************************************************************************/
 
     public final C getControl() { return control; }
 
-    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+    protected String matchActionForEvent(KeyEvent e) {
         KeyBinding match = null;
         int specificity = 0;
         // keyBindings may be null...

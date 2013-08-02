@@ -25,23 +25,20 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.CANCEL;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
-import static javafx.scene.input.KeyEvent.KEY_RELEASED;
-import static javafx.scene.input.KeyCode.DOWN;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.SelectionModel;
-import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.scene.control.skin.Utils;
+import static javafx.scene.input.KeyCode.CANCEL;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.ENTER;
+import static javafx.scene.input.KeyCode.ESCAPE;
+import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyEvent.KEY_PRESSED;
+import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 /**
  * ChoiceBoxBehavior - default implementation
@@ -72,6 +69,8 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
 
     }
 
+    private TwoLevelFocusComboBehavior tlFocus;
+
     /**************************************************************************
      *                          Setup KeyBindings                             *
      *************************************************************************/
@@ -85,13 +84,15 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
 
     public ChoiceBoxBehavior(ChoiceBox<T> control) {
         super(control);
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
-            new TwoLevelFocusComboBehavior(control); // needs to be last.
+            tlFocus = new TwoLevelFocusComboBehavior(control); // needs to be last.
         }
+    }
+
+    @Override public void dispose() {
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {

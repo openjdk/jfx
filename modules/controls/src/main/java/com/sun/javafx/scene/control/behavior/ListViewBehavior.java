@@ -291,18 +291,16 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     };
     
     private final ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<ObservableList<T>>() {
-
-		@Override
-		public void changed(
-				ObservableValue<? extends ObservableList<T>> observable,
-				ObservableList<T> oldValue, ObservableList<T> newValue) {
-			if (oldValue != null) {
-	             oldValue.removeListener(weakItemsListListener);
-	         } if (newValue != null) {
-	             newValue.addListener(weakItemsListListener);
-	         }
-		}
-       
+        @Override
+        public void changed(
+                ObservableValue<? extends ObservableList<T>> observable,
+                ObservableList<T> oldValue, ObservableList<T> newValue) {
+            if (oldValue != null) {
+                 oldValue.removeListener(weakItemsListListener);
+             } if (newValue != null) {
+                 newValue.addListener(weakItemsListListener);
+             }
+        }
     };
     
     private final ChangeListener<MultipleSelectionModel<T>> selectionModelListener = new ChangeListener<MultipleSelectionModel<T>>() {
@@ -344,17 +342,16 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
         }
 
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusListBehavior(control); // needs to be last.
         }
     }
     
-    public void dispose() {
+    @Override public void dispose() {
         ListCellBehavior.removeAnchor(getControl());
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
     }
 
     private void setAnchor(int anchor) {
