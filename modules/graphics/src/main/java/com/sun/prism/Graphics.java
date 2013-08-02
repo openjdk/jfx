@@ -153,6 +153,19 @@ public interface Graphics {
     public void drawTexture(Texture tex,
                             float dx1, float dy1, float dx2, float dy2,
                             float sx1, float sy1, float sx2, float sy2);
+    public void drawTexture3SliceH(Texture tex,
+                                   float dx1, float dy1, float dx2, float dy2,
+                                   float sx1, float sy1, float sx2, float sy2,
+                                   float dh1, float dh2, float sh1, float sh2);
+    public void drawTexture3SliceV(Texture tex,
+                                   float dx1, float dy1, float dx2, float dy2,
+                                   float sx1, float sy1, float sx2, float sy2,
+                                   float dv1, float dv2, float sv1, float sv2);
+    public void drawTexture9Slice(Texture tex,
+                                  float dx1, float dy1, float dx2, float dy2,
+                                  float sx1, float sy1, float sx2, float sy2,
+                                  float dh1, float dv1, float dh2, float dv2,
+                                  float sh1, float sv1, float sh2, float sv2);
     public void drawTextureVO(Texture tex,
                               float topopacity, float botopacity,
                               float dx1, float dy1, float dx2, float dy2,

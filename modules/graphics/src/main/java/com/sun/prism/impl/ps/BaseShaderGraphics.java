@@ -141,6 +141,95 @@ public abstract class BaseShaderGraphics
         }
     }
 
+    @Override
+    public void drawTexture3SliceH(Texture tex,
+                                   float dx1, float dy1, float dx2, float dy2,
+                                   float sx1, float sy1, float sx2, float sy2,
+                                   float dh1, float dh2, float sh1, float sh2)
+    {
+        if (!(tex instanceof MultiTexture)) {
+            super.drawTexture3SliceH(tex,
+                                     dx1, dy1, dx2, dy2,
+                                     sx1, sy1, sx2, sy2,
+                                     dh1, dh2, sh1, sh2);
+            return;
+        }
+        MultiTexture mtex = (MultiTexture) tex;
+        if (dh1 == dh2 && sh1 == sh2) {
+            drawMultiTexture(mtex, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
+        } else {
+            drawMultiTexture(mtex, dx1, dy1, dh1, dy2, sx1, sy1, sh1, sy2);
+            drawMultiTexture(mtex, dh1, dy1, dh2, dy2, sh1, sy1, sh2, sy2);
+            drawMultiTexture(mtex, dh2, dy1, dx2, dy2, sh2, sy1, sx2, sy2);
+        }
+    }
+
+    @Override
+    public void drawTexture3SliceV(Texture tex,
+                                   float dx1, float dy1, float dx2, float dy2,
+                                   float sx1, float sy1, float sx2, float sy2,
+                                   float dv1, float dv2, float sv1, float sv2)
+    {
+        if (!(tex instanceof MultiTexture)) {
+            super.drawTexture3SliceV(tex,
+                                     dx1, dy1, dx2, dy2,
+                                     sx1, sy1, sx2, sy2,
+                                     dv1, dv2, sv1, sv2);
+            return;
+        }
+        MultiTexture mtex = (MultiTexture) tex;
+        if (dv1 == dv2 && sv1 == sv2) {
+            drawMultiTexture(mtex, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
+        } else {
+            drawMultiTexture(mtex, dx1, dy1, dx2, dv1, sx1, sy1, sx2, sv1);
+            drawMultiTexture(mtex, dx1, dv1, dx2, dv2, sx1, sv1, sx2, sv2);
+            drawMultiTexture(mtex, dx1, dv2, dx2, dy2, sx1, sv2, sx2, sy2);
+        }
+    }
+
+    @Override
+    public void drawTexture9Slice(Texture tex,
+                                  float dx1, float dy1, float dx2, float dy2,
+                                  float sx1, float sy1, float sx2, float sy2,
+                                  float dh1, float dv1, float dh2, float dv2,
+                                  float sh1, float sv1, float sh2, float sv2)
+    {
+        if (!(tex instanceof MultiTexture)) {
+            super.drawTexture9Slice(tex,
+                                    dx1, dy1, dx2, dy2,
+                                    sx1, sy1, sx2, sy2,
+                                    dh1, dv1, dh2, dv2,
+                                    sh1, sv1, sh2, sv2);
+            return;
+        }
+        MultiTexture mtex = (MultiTexture) tex;
+        if (dh1 == dh2 && sh1 == sh2) {
+            if (dv1 == dv2 && sv1 == sv2) {
+                drawMultiTexture(mtex, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
+            } else {
+                drawMultiTexture(mtex, dx1, dy1, dx2, dv1, sx1, sy1, sx2, sv1);
+                drawMultiTexture(mtex, dx1, dv1, dx2, dv2, sx1, sv1, sx2, sv2);
+                drawMultiTexture(mtex, dx1, dv2, dx2, dy2, sx1, sv2, sx2, sy2);
+            }
+        } else if (dv1 == dv2 && sv1 == sv2) {
+            drawMultiTexture(mtex, dx1, dy1, dh1, dy2, sx1, sy1, sh1, sy2);
+            drawMultiTexture(mtex, dh1, dy1, dh2, dy2, sh1, sy1, sh2, sy2);
+            drawMultiTexture(mtex, dh2, dy1, dx2, dy2, sh2, sy1, sx2, sy2);
+        } else {
+            drawMultiTexture(mtex, dx1, dy1, dh1, dv1, sx1, sy1, sh1, sv1);
+            drawMultiTexture(mtex, dh1, dy1, dh2, dv1, sh1, sy1, sh2, sv1);
+            drawMultiTexture(mtex, dh2, dy1, dx2, dv1, sh2, sy1, sx2, sv1);
+
+            drawMultiTexture(mtex, dx1, dv1, dh1, dv2, sx1, sv1, sh1, sv2);
+            drawMultiTexture(mtex, dh1, dv1, dh2, dv2, sh1, sv1, sh2, sv2);
+            drawMultiTexture(mtex, dh2, dv1, dx2, dv2, sh2, sv1, sx2, sv2);
+
+            drawMultiTexture(mtex, dx1, dv2, dh1, dy2, sx1, sv2, sh1, sy2);
+            drawMultiTexture(mtex, dh1, dv2, dh2, dy2, sh1, sv2, sh2, sy2);
+            drawMultiTexture(mtex, dh2, dv2, dx2, dy2, sh2, sv2, sx2, sy2);
+        }
+    }
+
     private static float calculateScaleFactor(float contentDim, float physicalDim) {
         if (contentDim == physicalDim) {
             return 1f;

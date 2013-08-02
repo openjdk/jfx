@@ -902,6 +902,70 @@ final class SWGraphics implements ReadbackGraphics {
         }
     }
 
+    @Override
+    public void drawTexture3SliceH(Texture tex,
+                                   float dx1, float dy1, float dx2, float dy2,
+                                   float sx1, float sy1, float sx2, float sy2,
+                                   float dh1, float dh2, float sh1, float sh2)
+    {
+        if (dh1 == dh2 && sh1 == sh2) {
+            drawTexture(tex, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
+        } else {
+            drawTexture(tex, dx1, dy1, dh1, dy2, sx1, sy1, sh1, sy2);
+            drawTexture(tex, dh1, dy1, dh2, dy2, sh1, sy1, sh2, sy2);
+            drawTexture(tex, dh2, dy1, dx2, dy2, sh2, sy1, sx2, sy2);
+        }
+    }
+
+    @Override
+    public void drawTexture3SliceV(Texture tex,
+                                   float dx1, float dy1, float dx2, float dy2,
+                                   float sx1, float sy1, float sx2, float sy2,
+                                   float dv1, float dv2, float sv1, float sv2)
+    {
+        if (dv1 == dv2 && sv1 == sv2) {
+            drawTexture(tex, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
+        } else {
+            drawTexture(tex, dx1, dy1, dx2, dv1, sx1, sy1, sx2, sv1);
+            drawTexture(tex, dx1, dv1, dx2, dv2, sx1, sv1, sx2, sv2);
+            drawTexture(tex, dx1, dv2, dx2, dy2, sx1, sv2, sx2, sy2);
+        }
+    }
+
+    @Override
+    public void drawTexture9Slice(Texture tex,
+                                  float dx1, float dy1, float dx2, float dy2,
+                                  float sx1, float sy1, float sx2, float sy2,
+                                  float dh1, float dv1, float dh2, float dv2,
+                                  float sh1, float sv1, float sh2, float sv2)
+    {
+        if (dh1 == dh2 && sh1 == sh2) {
+            if (dv1 == dv2 && sv1 == sv2) {
+                drawTexture(tex, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
+            } else {
+                drawTexture(tex, dx1, dy1, dx2, dv1, sx1, sy1, sx2, sv1);
+                drawTexture(tex, dx1, dv1, dx2, dv2, sx1, sv1, sx2, sv2);
+                drawTexture(tex, dx1, dv2, dx2, dy2, sx1, sv2, sx2, sy2);
+            }
+        } else if (dv1 == dv2 && sv1 == sv2) {
+            drawTexture(tex, dx1, dy1, dh1, dy2, sx1, sy1, sh1, sy2);
+            drawTexture(tex, dh1, dy1, dh2, dy2, sh1, sy1, sh2, sy2);
+            drawTexture(tex, dh2, dy1, dx2, dy2, sh2, sy1, sx2, sy2);
+        } else {
+            drawTexture(tex, dx1, dy1, dh1, dv1, sx1, sy1, sh1, sv1);
+            drawTexture(tex, dh1, dy1, dh2, dv1, sh1, sy1, sh2, sv1);
+            drawTexture(tex, dh2, dy1, dx2, dv1, sh2, sy1, sx2, sv1);
+
+            drawTexture(tex, dx1, dv1, dh1, dv2, sx1, sv1, sh1, sv2);
+            drawTexture(tex, dh1, dv1, dh2, dv2, sh1, sv1, sh2, sv2);
+            drawTexture(tex, dh2, dv1, dx2, dv2, sh2, sv1, sx2, sv2);
+
+            drawTexture(tex, dx1, dv2, dh1, dy2, sx1, sv2, sh1, sy2);
+            drawTexture(tex, dh1, dv2, dh2, dy2, sh1, sv2, sh2, sy2);
+            drawTexture(tex, dh2, dv2, dx2, dy2, sh2, sv2, sx2, sy2);
+        }
+    }
+
     private void computeScaleAndPixelCorrection(float[] target, float dv1, float dv2, float sv1, float sv2) {
         final float dv_diff = dv2 - dv1;
         float scale = dv_diff / (sv2 - sv1);
