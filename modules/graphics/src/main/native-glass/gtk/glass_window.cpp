@@ -46,6 +46,7 @@
 #include <algorithm>
 
 WindowContext * WindowContextBase::sm_grab_window = NULL;
+WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
 
 GdkWindow* WindowContextBase::get_gdk_window(){
     return gdk_window;
@@ -114,6 +115,10 @@ void destroy_and_delete_ctx(WindowContext* ctx) {
 }
 
 void WindowContextBase::process_destroy() {
+    if (WindowContextBase::sm_mouse_drag_window == this) {
+        ungrab_mouse_drag_focus();
+    }
+
     if (WindowContextBase::sm_grab_window == this) {
         ungrab_focus();
     }
@@ -209,7 +214,7 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
     }
 
     jint button = gtk_button_number_to_mouse_button(event->button);
-    
+
     if (jview && button != com_sun_glass_events_MouseEvent_BUTTON_NONE) {
         mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
                 press ? com_sun_glass_events_MouseEvent_DOWN : com_sun_glass_events_MouseEvent_UP,
@@ -230,6 +235,16 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
         }
     }
 
+    // Upper layers expects from us Windows behavior:
+    // all mouse events should be delivered to window where drag begins 
+    // and no exit/enter event should be reported during this drag.
+    // We can grab mouse pointer for these needs.
+    if (press) {
+        grab_mouse_drag_focus();
+    } else if ((event->state & MOUSE_BUTTONS_MASK)
+            && !(state & MOUSE_BUTTONS_MASK)) { // all buttons released
+        ungrab_mouse_drag_focus();
+    }
 }
 
 void WindowContextBase::process_mouse_motion(GdkEventMotion* event) {
@@ -300,19 +315,21 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
     if (jview) {
         guint state = event->state;
         if (enter) { // workaround for RT-21590
-            state &= ~(GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK);
+            state &= ~MOUSE_BUTTONS_MASK;
         }
 
-        is_mouse_entered = enter;
-        mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
-                enter ? com_sun_glass_events_MouseEvent_ENTER : com_sun_glass_events_MouseEvent_EXIT,
-                com_sun_glass_events_MouseEvent_BUTTON_NONE,
-                (jint) event->x, (jint) event->y,
-                (jint) event->x_root, (jint) event->y_root,
-                gdk_modifier_mask_to_glass(state),
-                JNI_FALSE,
-                JNI_FALSE);
-        CHECK_JNI_EXCEPTION(mainEnv)
+        if (enter != is_mouse_entered) {
+            is_mouse_entered = enter;
+            mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+                    enter ? com_sun_glass_events_MouseEvent_ENTER : com_sun_glass_events_MouseEvent_EXIT,
+                    com_sun_glass_events_MouseEvent_BUTTON_NONE,
+                    (jint) event->x, (jint) event->y,
+                    (jint) event->x_root, (jint) event->y_root,
+                    gdk_modifier_mask_to_glass(state),
+                    JNI_FALSE,
+                    JNI_FALSE);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
     }
 }
 
@@ -468,8 +485,27 @@ bool WindowContextBase::set_view(jobject view) {
     return TRUE;
 }
 
+bool WindowContextBase::grab_mouse_drag_focus() {
+    if (glass_gdk_mouse_devices_grab_with_cursor(
+            gdk_window, gdk_window_get_cursor(gdk_window), FALSE)) {
+        WindowContextBase::sm_mouse_drag_window = this;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void WindowContextBase::ungrab_mouse_drag_focus() {
+    WindowContextBase::sm_mouse_drag_window = NULL;
+    glass_gdk_mouse_devices_ungrab();
+    if (WindowContextBase::sm_grab_window) {
+        WindowContextBase::sm_grab_window->grab_focus();
+    }
+}
+
 bool WindowContextBase::grab_focus() {
-    if (glass_gdk_mouse_devices_grab(gdk_window)) {
+    if (WindowContextBase::sm_mouse_drag_window
+            || glass_gdk_mouse_devices_grab(gdk_window)) {
         WindowContextBase::sm_grab_window = this;
         return true;
     } else {
@@ -478,7 +514,9 @@ bool WindowContextBase::grab_focus() {
 }
 
 void WindowContextBase::ungrab_focus() {
-    glass_gdk_mouse_devices_ungrab();
+    if (!WindowContextBase::sm_mouse_drag_window) {
+        glass_gdk_mouse_devices_ungrab();
+    }
     WindowContextBase::sm_grab_window = NULL;
 
     if (jwindow) {
@@ -488,7 +526,10 @@ void WindowContextBase::ungrab_focus() {
 }
 
 void WindowContextBase::set_cursor(GdkCursor* cursor) {
-    if (WindowContextBase::sm_grab_window) {
+    if (WindowContextBase::sm_mouse_drag_window) {
+        glass_gdk_mouse_devices_grab_with_cursor(
+                WindowContextBase::sm_mouse_drag_window->get_gdk_window(), cursor, FALSE);
+    } else if (WindowContextBase::sm_grab_window) {
         glass_gdk_mouse_devices_grab_with_cursor(
                 WindowContextBase::sm_grab_window->get_gdk_window(), cursor);
     }
