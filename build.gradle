@@ -1880,9 +1880,6 @@ compileTargets { t ->
                 }
                 if (COMPILE_WEBKIT) {
                     from ("modules/web/build/libs/${library('jfxwebkit')}")
-                    if (IS_WINDOWS) {
-                        from ("modules/web/src/main/native/WebKitBuild/import/runtime")
-                    }
                 } else {
                     if (t.name == "android") {
                         //don't copy anything, use built in webkit.
