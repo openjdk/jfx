@@ -25,22 +25,10 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.prism.Graphics;
-
 /**
  * TODO: 3D - Need documentation
  */
 public class NGCylinder extends NGShape3D {
-
-    private NGTriangleMesh mesh;
-
-    @Override
-    protected void renderMeshView(Graphics g) {
-        if (getMesh() == null) {
-            setMesh(mesh);
-        }
-        super.renderMeshView(g);
-    }
 
     public void updateMesh(NGTriangleMesh mesh) {
         this.mesh = mesh;

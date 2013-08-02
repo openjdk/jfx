@@ -46,7 +46,7 @@ public abstract class NGShape3D extends NGNode {
     protected boolean materialDirty = false;
     protected boolean drawModeDirty = false;
     protected boolean cullFaceDirty = false;
-    private NGTriangleMesh mesh;
+    protected NGTriangleMesh mesh;
     private MeshView meshView;
 
     public void setMaterial(NGPhongMaterial material) {
@@ -67,7 +67,8 @@ public abstract class NGShape3D extends NGNode {
     }
 
     protected void invalidate() {
-        setMesh(null);
+        meshView = null;
+        visualsChanged();
     }
 
     protected void renderMeshView(Graphics g) {
