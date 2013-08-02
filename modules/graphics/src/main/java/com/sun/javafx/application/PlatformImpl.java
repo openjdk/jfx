@@ -98,6 +98,15 @@ public class PlatformImpl {
     }
 
     /**
+     * Sets the name of the this application based on the Application class.
+     *
+     * @param appClass the Application class.
+     */
+    public static void setApplicationName(Class appClass) {
+        com.sun.glass.ui.Application.GetApplication().setName(appClass.getName());
+    }
+
+    /**
      * Return whether or not focus navigation between controls is context-
      * sensitive.
      * @return true if the context-sensitive algorithm for focus navigation is
