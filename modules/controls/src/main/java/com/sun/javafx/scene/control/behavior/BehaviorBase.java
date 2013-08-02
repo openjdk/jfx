@@ -33,6 +33,7 @@ import javafx.scene.control.Control;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import com.sun.javafx.scene.traversal.Direction;
 import static javafx.scene.input.KeyCode.DOWN;
@@ -97,8 +98,6 @@ public class BehaviorBase<C extends Control> {
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").alt().ctrl());
     }
 
-    protected static final List<KeyBinding> EMPTY_BINDINGS = new ArrayList<>();
-
     /**
      * The Control with which this Behavior is used. This must be specified in
      * the constructor and must not be null.
@@ -137,7 +136,7 @@ public class BehaviorBase<C extends Control> {
      * @return a non-null list of key bindings.
      */
     protected List<KeyBinding> createKeyBindings() {
-        return EMPTY_BINDINGS;
+        return Collections.emptyList();
     }
 
     /***************************************************************************
