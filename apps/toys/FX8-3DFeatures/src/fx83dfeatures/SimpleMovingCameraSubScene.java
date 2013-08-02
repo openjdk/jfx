@@ -154,7 +154,7 @@ public class SimpleMovingCameraSubScene extends Application {
     @Override
     public void start(Stage primaryStage) {
         Scene scene = buildScene();
-        primaryStage.setTitle("SimpleMovingCamera");
+        primaryStage.setTitle("SimpleMovingCameraSubScene");
         primaryStage.setScene(scene);
         primaryStage.show();
     }
