@@ -34,10 +34,12 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-
 import com.sun.javafx.scene.traversal.Direction;
-
-import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.RIGHT;
+import static javafx.scene.input.KeyCode.TAB;
+import static javafx.scene.input.KeyCode.UP;
 
 /**
  * A convenient base class from which all our built-in behaviors extend. The
@@ -78,7 +80,7 @@ public class BehaviorBase<C extends Control> {
      *  <li>TraversePrevious</li>
      * </ul>
      */
-    protected static final List<KeyBinding> TRAVERSAL_BINDINGS = new ArrayList<KeyBinding>();
+    protected static final List<KeyBinding> TRAVERSAL_BINDINGS = new ArrayList<>();
     static {
         TRAVERSAL_BINDINGS.add(new KeyBinding(UP, "TraverseUp"));
         TRAVERSAL_BINDINGS.add(new KeyBinding(DOWN, "TraverseDown"));
@@ -95,18 +97,18 @@ public class BehaviorBase<C extends Control> {
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").alt().ctrl());
     }
 
-    protected static final List<KeyBinding> EMPTY_BINDINGS = new ArrayList<KeyBinding>();
+    protected static final List<KeyBinding> EMPTY_BINDINGS = new ArrayList<>();
 
     /**
      * The Control with which this Behavior is used. This must be specified in
      * the constructor and must not be null.
      */
-    private C control;
+    private final C control;
 
     /**
      * The key bindings for this Behavior.
      */
-    private List<KeyBinding> keyBindings = createKeyBindings();
+    private final List<KeyBinding> keyBindings = createKeyBindings();
 
     /**
      * Create a new BehaviorBase for the given control. The Control must not
@@ -321,7 +323,7 @@ public class BehaviorBase<C extends Control> {
     }
 
     /**
-     * @see Node#pseudoClassStateChanged()
+     * @see Node#pseudoClassStateChanged(javafx.css.PseudoClass, boolean)
      */
     public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
         Control ctl = getControl();
