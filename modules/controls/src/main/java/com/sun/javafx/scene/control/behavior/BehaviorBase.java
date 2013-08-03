@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
@@ -342,15 +341,5 @@ public class BehaviorBase<C extends Control> {
      * @param e
      */
     public void mouseExited(MouseEvent e) {
-    }
-
-    /**
-     * @see Node#pseudoClassStateChanged(javafx.css.PseudoClass, boolean)
-     */
-    public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
-        Control ctl = getControl();
-        if (ctl != null) {
-            ctl.pseudoClassStateChanged(pseudoClass, active);
-        }
     }
 }
