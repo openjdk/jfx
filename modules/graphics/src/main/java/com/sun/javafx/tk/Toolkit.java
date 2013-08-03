@@ -31,6 +31,7 @@ import javafx.geometry.Dimension2D;
 import javafx.scene.Scene;
 import javafx.scene.effect.BlurType;
 import javafx.scene.image.Image;
+import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.InputMethodRequests;
@@ -55,6 +56,7 @@ import javafx.stage.Window;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -856,6 +858,8 @@ public abstract class Toolkit {
     public interface ImageAccessor {
         public boolean isAnimation(Image image);
         public ReadOnlyObjectProperty<PlatformImage>getImageProperty(Image image);
+        public int[] getPreColors(PixelFormat<ByteBuffer> pf);
+        public int[] getNonPreColors(PixelFormat<ByteBuffer> pf);
     }
 
     private static ImageAccessor imageAccessor = null;

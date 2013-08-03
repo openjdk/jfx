@@ -407,7 +407,7 @@ public abstract class PixelFormat<T extends Buffer> {
             return premult;
         }
 
-        private int[] getPreColors() {
+        int[] getPreColors() {
             if (precolors == null) {
                 int colors[] = new int[nonprecolors.length];
                 for (int i = 0; i < colors.length; i++) {
@@ -418,7 +418,7 @@ public abstract class PixelFormat<T extends Buffer> {
             return precolors;
         }
 
-        private int[] getNonPreColors() {
+        int[] getNonPreColors() {
             if (nonprecolors == null) {
                 int colors[] = new int[precolors.length];
                 for (int i = 0; i < colors.length; i++) {
